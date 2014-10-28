@@ -29,7 +29,4 @@ def artificial_traces(nsamples, nchannels):
     assert isinstance(nchannels, six.integer_types)
 
     # TODO: more realistic traces.
-    return
-
-# def artificial_features(nspikes, nfeatures, use_masks=True):
-    # pass
+    return .25 * np.random.normal(size=(nsamples, nchannels))

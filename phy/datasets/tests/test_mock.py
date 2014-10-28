@@ -17,10 +17,6 @@ def test_artificial(plot=False):
                                      nchannels=nchannels)
     assert waveforms.shape == (nspikes, nsamples, nchannels)
 
-    if plot:
-        import matplotlib.pyplot as plt
-        plt.plot(waveforms[..., 0])
-        plt.show()
-
-if __name__ == '__main__':
-    test_artificial(True)
+    # import matplotlib.pyplot as plt
+    # plt.plot(waveforms[..., 0].T)
+    # plt.show()
