@@ -1,0 +1,21 @@
+*.py[cod]
+
+# C extensions
+*.so
+
+# Packages
+*.egg
+*.egg-info
+dist
+build
+eggs
+parts
+bin
+var
+sdist
+develop-eggs
+lib
+lib64
+
+# Sphinx
+docs/_build
