@@ -20,10 +20,16 @@ def artificial_waveforms(nspikes=None, nsamples=None, nchannels=None):
     assert isinstance(nchannels, six.integer_types)
 
     # TODO: more realistic waveforms.
-    return .2 * np.random.random_sample((nspikes, nsamples, nchannels))
+    return .25 * np.random.normal(size=(nspikes, nsamples, nchannels))
 
-# def artificial_traces(nsamples, nchannels):
-    # pass
+
+def artificial_traces(nsamples, nchannels):
+    # Check arguments.
+    assert isinstance(nsamples, six.integer_types)
+    assert isinstance(nchannels, six.integer_types)
+
+    # TODO: more realistic traces.
+    return
 
 # def artificial_features(nspikes, nfeatures, use_masks=True):
     # pass
