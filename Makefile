@@ -21,7 +21,7 @@ clean-pyc:
 	find . -name '__pycache__' -exec rm -fr {} +
 
 lint:
-	flake8 phy --ignore=E226,E241,E265,W291,W293
+	flake8 phy --exclude=phy/ext/six.py --ignore=E226,E265
 
 test: lint
 	nosetests --exe
