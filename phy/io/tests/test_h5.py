@@ -6,9 +6,40 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import numpy as np
+import os
 
+import numpy as np
+try:
+    import h5py
+except ImportError as exception:
+    # TODO: logging.
+    raise exception
+
+from ...utils.tempdir import TemporaryDirectory
 from ..h5 import open_h5
+
+
+#------------------------------------------------------------------------------
+# Fixtures
+#------------------------------------------------------------------------------
+
+def setup():
+    pass
+
+
+def teardown():
+    pass
+
+
+#------------------------------------------------------------------------------
+# Utility test routines
+#------------------------------------------------------------------------------
+
+def _create_test_file():
+    with open_h5('_test.h5', 'w') as tempfile:
+        dset = tempfile.create_dataset("mydataset", (100,),
+                                       dtype=np.float32)
+        return tempfile.filename
 
 
 #------------------------------------------------------------------------------
@@ -16,4 +47,10 @@ from ..h5 import open_h5
 #------------------------------------------------------------------------------
 
 def test_h5_read():
-    pass
+    with TemporaryDirectory() as tempdir:
+        cwd = os.getcwd()
+        os.chdir(tempdir)
+        filename = _create_test_file()
+        with open_h5(filename) as f:
+            pass
+        os.chdir(cwd)
