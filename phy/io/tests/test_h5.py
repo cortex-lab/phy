@@ -9,14 +9,11 @@
 import os
 
 import numpy as np
-try:
-    import h5py
-except ImportError as exception:
-    # TODO: logging.
-    raise exception
+import h5py
+from nose.tools import assert_raises
 
 from ...utils.tempdir import TemporaryDirectory
-from ..h5 import open_h5
+from ..h5 import open_h5, _split_hdf5_path
 
 
 #------------------------------------------------------------------------------
@@ -50,6 +47,32 @@ def _create_test_file():
 # Tests
 #------------------------------------------------------------------------------
 
+def test_split_hdf5_path():
+    # The path should always start with a leading '/'.
+    assert_raises(ValueError, _split_hdf5_path, '')
+    assert_raises(ValueError, _split_hdf5_path, 'path')
+
+    h, t = _split_hdf5_path('/')
+    assert (h == '/') and (t == '')
+
+    h, t = _split_hdf5_path('/path')
+    assert (h == '/') and (t == 'path')
+
+    h, t = _split_hdf5_path('/path/')
+    assert (h == '/path') and (t == '')
+
+    h, t = _split_hdf5_path('/path/to')
+    assert (h == '/path') and (t == 'to')
+
+    h, t = _split_hdf5_path('/path/to/')
+    assert (h == '/path/to') and (t == '')
+
+    # Check that invalid paths raise errors.
+    assert_raises(ValueError, _split_hdf5_path, 'path/')
+    assert_raises(ValueError, _split_hdf5_path, '/path//')
+    assert_raises(ValueError, _split_hdf5_path, '/path//to')
+
+
 def test_h5_read():
     with TemporaryDirectory() as tempdir:
         # Save the currrent working directory.
@@ -77,5 +100,25 @@ def test_h5_read():
             # Check HDF5 group attribute.
             value = f.read_attr('/mygroup', 'myattr')
             assert value == 123
+
+        os.chdir(cwd)
+
+
+def test_h5_write():
+    with TemporaryDirectory() as tempdir:
+        # Save the currrent working directory.
+        cwd = os.getcwd()
+        # Change to the temporary directory.
+        os.chdir(tempdir)
+        # Create the test HDF5 file in the temporary directory.
+        filename = _create_test_file()
+
+        # Create some arrays.
+        temp_array = np.zeros(10, dtype=np.float32)
+        # Open the test HDF5 file.
+        with open_h5(filename) as f:
+            # This should raise an exception because the file has not been
+            # opened in write mode.
+            assert_raises(Exception, lambda: f.write('/ds1', temp_array))
 
         os.chdir(cwd)
