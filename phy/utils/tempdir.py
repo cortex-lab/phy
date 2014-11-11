@@ -27,6 +27,9 @@ class TemporaryDirectory(object):
 
     Upon exiting the context, the directory and everything contained
     in it are removed.
+
+    The code comes from http://stackoverflow.com/a/19299884/1595060
+
     """
     def __init__(self, suffix="", prefix="tmp", dir=None):
         self._closed = False
