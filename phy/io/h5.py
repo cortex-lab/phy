@@ -78,11 +78,27 @@ class File(object):
     # Writing functions
     #--------------------------------------------------------------------------
 
-    def write(self, path, array):
-        """Write a NumPy array in the file."""
+    def write(self, path, array, overwrite=False):
+        """Write a NumPy array in the file.
+
+        Parameters
+        ----------
+        path : str
+            Full HDF5 path to the dataset to create.
+        array : ndarray
+            Array to write in the file.
+        overwrite : bool
+            If False, raise an error if the dataset already exists. Defaults
+            to False.
+
+        """
         # Get the group path and the dataset name.
         group_path, dset_name = _split_hdf5_path(path)
         group = self._h5py_file[group_path]
+        # Check that the dataset does not already exists.
+        if path in self._h5py_file and not overwrite:
+            raise ValueError(("The dataset '{0:s}' already exists."
+                              ).format(path))
         group.create_dataset(dset_name, data=array)
 
     def write_attr(self, path, attr_name, value):

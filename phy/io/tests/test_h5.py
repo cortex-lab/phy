@@ -101,6 +101,12 @@ def test_h5_read():
             value = f.read_attr('/mygroup', 'myattr')
             assert value == 123
 
+            # Check that errors are raised when the paths are invalid.
+            assert_raises(Exception, f.read, '//path')
+            assert_raises(Exception, f.read, '/path//')
+            assert_raises(KeyError, f.read, '/nonexistinggroup')
+            assert_raises(KeyError, f.read, '/nonexistinggroup/ds34')
+
         os.chdir(cwd)
 
 
@@ -113,12 +119,18 @@ def test_h5_write():
         # Create the test HDF5 file in the temporary directory.
         filename = _create_test_file()
 
-        # Create some arrays.
+        # Create some array.
         temp_array = np.zeros(10, dtype=np.float32)
-        # Open the test HDF5 file.
+
+        # Open the test HDF5 file in read-only mode (the default) and
+        # try to write in it. This should raise an exception.
         with open_h5(filename) as f:
-            # This should raise an exception because the file has not been
-            # opened in write mode.
             assert_raises(Exception, lambda: f.write('/ds1', temp_array))
+
+        # Open the test HDF5 file in read/write mode and
+        # try to write in an existing dataset.
+        with open_h5(filename, 'w') as f:
+            f.write('/ds1', temp_array)
+            # assert_raises(Exception, lambda: f.write('/ds1', temp_array))
 
         os.chdir(cwd)
