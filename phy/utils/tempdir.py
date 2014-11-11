@@ -8,6 +8,7 @@
 
 import warnings as _warnings
 import os as _os
+import sys as _sys
 from tempfile import mkdtemp
 
 from ..ext import six

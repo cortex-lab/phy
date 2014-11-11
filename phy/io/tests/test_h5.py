@@ -39,6 +39,7 @@ def _create_test_file():
     with open_h5('_test.h5', 'w') as tempfile:
         dset = tempfile.create_dataset("mydataset", (100,),
                                        dtype=np.float32)
+        assert dset is not None
         return tempfile.filename
 
 
@@ -52,5 +53,5 @@ def test_h5_read():
         os.chdir(tempdir)
         filename = _create_test_file()
         with open_h5(filename) as f:
-            pass
+            assert f is not None
         os.chdir(cwd)
