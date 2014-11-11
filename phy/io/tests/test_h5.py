@@ -37,9 +37,12 @@ def teardown():
 
 def _create_test_file():
     with open_h5('_test.h5', 'w') as tempfile:
-        dset = tempfile.create_dataset("mydataset", (100,),
-                                       dtype=np.float32)
-        assert dset is not None
+        # Create a random dataset using h5py directly.
+        h5file = tempfile.h5py_file
+        h5file.create_dataset('ds1', (10,), dtype=np.float32)
+        group = h5file.create_group('/mygroup')
+        h5file.create_dataset('/mygroup/ds1', (10,), dtype=np.int8)
+        group.attrs['myattr'] = 123
         return tempfile.filename
 
 
@@ -53,5 +56,8 @@ def test_h5_read():
         os.chdir(tempdir)
         filename = _create_test_file()
         with open_h5(filename) as f:
-            assert f is not None
+            # TODO
+            pass
+            # data = f.read('/mydataset')
+            # value = f.read_attr('/path/to/node', 'myattr')
         os.chdir(cwd)

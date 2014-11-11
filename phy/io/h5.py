@@ -28,11 +28,15 @@ class File(object):
         self.mode = mode
 
     def __enter__(self):
-        self._file_handle = h5py.File(self.filename, self.mode)
-        return self._file_handle
+        self._h5py_file = h5py.File(self.filename, self.mode)
+        return self
 
     def __exit__(self, type, value, tb):
-        self._file_handle.close()
+        self._h5py_file.close()
+
+    @property
+    def h5py_file(self):
+        return self._h5py_file
 
 
 def open_h5(filename, mode=None):
