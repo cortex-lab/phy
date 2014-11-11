@@ -129,8 +129,11 @@ def test_h5_write():
 
         # Open the test HDF5 file in read/write mode and
         # try to write in an existing dataset.
-        with open_h5(filename, 'w') as f:
-            f.write('/ds1', temp_array)
-            # assert_raises(Exception, lambda: f.write('/ds1', temp_array))
+        with open_h5(filename, 'a') as f:
+            # This raises an exception because the file already exists,
+            # and by default this is forbidden.
+            assert_raises(ValueError, lambda: f.write('/ds1', temp_array))
+            # This works, though, because we force overwriting the dataset.
+            f.write('/ds1', temp_array, overwrite=True)
 
         os.chdir(cwd)
