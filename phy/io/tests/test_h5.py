@@ -133,7 +133,27 @@ def test_h5_write():
             # This raises an exception because the file already exists,
             # and by default this is forbidden.
             assert_raises(ValueError, lambda: f.write('/ds1', temp_array))
+
             # This works, though, because we force overwriting the dataset.
             f.write('/ds1', temp_array, overwrite=True)
+
+            # Write a new array.
+            f.write('/ds2', temp_array)
+
+            # Write an existing attribute.
+            f.write_attr('/ds1', 'myattr', 456)
+            assert f.read_attr('/ds1', 'myattr') == 456
+
+            # Write a new attribute in a dataset.
+            f.write_attr('/ds1', 'mynewattr', 789)
+            assert f.read_attr('/ds1', 'mynewattr') == 789
+
+            # Write a new attribute in a group.
+            f.write_attr('/mygroup', 'mynewattr', 1)
+
+            # Write a new attribute in a non existing group: should raise
+            # an error.
+            assert_raises(KeyError, f.write_attr,
+                          '/nonexistinggroup', 'mynewattr', 2)
 
         os.chdir(cwd)
