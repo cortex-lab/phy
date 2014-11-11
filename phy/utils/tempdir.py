@@ -53,13 +53,16 @@ class TemporaryDirectory(object):
                 # up due to missing globals
                 if "None" not in str(ex):
                     raise
-                six.print_("ERROR: {!r} while cleaning up {!r}".format(ex, self,),
-                      file=_sys.stderr)
+                six.print_("ERROR: {!r} while cleaning up {!r}".format(ex,
+                                                                       self,),
+                           file=_sys.stderr)
                 return
             self._closed = True
             if _warn:
+                # This should be a ResourceWarning, but it is not available in
+                # Python 2.x.
                 self._warn("Implicitly cleaning up {!r}".format(self),
-                           ResourceWarning)
+                           Warning)
 
     def __exit__(self, exc, value, tb):
         self.cleanup()

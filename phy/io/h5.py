@@ -27,12 +27,30 @@ class File(object):
         self.filename = filename
         self.mode = mode
 
+    #--------------------------------------------------------------------------
+    # Main functions
+    #--------------------------------------------------------------------------
+
+    def read(self, path):
+        return self._h5py_file[path]
+
+    def read_attr(self, path, attr_name):
+        return self._h5py_file[path].attrs[attr_name]
+
+    #--------------------------------------------------------------------------
+    # Context manager
+    #--------------------------------------------------------------------------
+
     def __enter__(self):
         self._h5py_file = h5py.File(self.filename, self.mode)
         return self
 
     def __exit__(self, type, value, tb):
         self._h5py_file.close()
+
+    #--------------------------------------------------------------------------
+    # Miscellaneous properties
+    #--------------------------------------------------------------------------
 
     @property
     def h5py_file(self):
