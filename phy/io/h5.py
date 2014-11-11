@@ -32,9 +32,11 @@ class File(object):
     #--------------------------------------------------------------------------
 
     def read(self, path):
+        """Read an HDF5 dataset, given its HDF5 path in the file."""
         return self._h5py_file[path]
 
     def read_attr(self, path, attr_name):
+        """Read an attribute of an HDF5 group."""
         return self._h5py_file[path].attrs[attr_name]
 
     #--------------------------------------------------------------------------
@@ -54,6 +56,7 @@ class File(object):
 
     @property
     def h5py_file(self):
+        """Native h5py file handle."""
         return self._h5py_file
 
 
