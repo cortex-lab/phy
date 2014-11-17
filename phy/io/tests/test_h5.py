@@ -83,8 +83,15 @@ def test_h5_read():
         # Create the test HDF5 file in the temporary directory.
         filename = _create_test_file()
 
+        # Test close() method.
+        f = open_h5(filename)
+        assert f.is_open()
+        f.close()
+        assert not f.is_open()
+
         # Open the test HDF5 file.
         with open_h5(filename) as f:
+            assert f.is_open()
 
             # Check dataset ds1.
             ds1 = f.read('/ds1')[:]
@@ -108,9 +115,7 @@ def test_h5_read():
             assert_raises(KeyError, f.read, '/nonexistinggroup')
             assert_raises(KeyError, f.read, '/nonexistinggroup/ds34')
 
-        # Test close() method.
-        f = open_h5(filename)
-        f.close()
+        assert not f.is_open()
 
         os.chdir(cwd)
 

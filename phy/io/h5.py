@@ -112,19 +112,31 @@ class File(object):
         self._h5py_file[path].attrs[attr_name] = value
 
     #--------------------------------------------------------------------------
+    # Open and close
+    #--------------------------------------------------------------------------
+
+    def is_open(self):
+        return self._h5py_file is not None
+
+    def open(self):
+        if not self.is_open():
+            self._h5py_file = h5py.File(self.filename, self.mode)
+
+    def close(self):
+        if self.is_open():
+            self._h5py_file.close()
+            self._h5py_file = None
+
+    #--------------------------------------------------------------------------
     # Context manager
     #--------------------------------------------------------------------------
 
     def __enter__(self):
-        self._h5py_file = h5py.File(self.filename, self.mode)
+        self.open()
         return self
 
     def __exit__(self, type, value, tb):
         self.close()
-
-    def close(self):
-        if self._h5py_file is not None:
-            self._h5py_file.close()
 
     #--------------------------------------------------------------------------
     # Miscellaneous properties
@@ -141,14 +153,19 @@ class File(object):
         if isinstance(node, h5py.Group):
             pass
         elif isinstance(node, h5py.Dataset):
-            info += str(node.shape).ljust(10)
-            info += str(node.dtype).ljust(10)
+            info += str(node.shape).ljust(20)
+            info += str(node.dtype).ljust(8)
         print(info)
 
     def describe(self):
         """Display the list of all groups and datasets in the file."""
+        if not self.is_open():
+            raise IOError("Cannot display file information because the file"
+                          " '{0:s}' is not open.".format(self.filename))
         self._h5py_file['/'].visititems(self._print_node_info)
 
 
 def open_h5(filename, mode=None):
-    return File(filename, mode=mode)
+    file = File(filename, mode=mode)
+    file.open()
+    return file
