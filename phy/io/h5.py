@@ -119,6 +119,9 @@ class File(object):
         return self
 
     def __exit__(self, type, value, tb):
+        self.close()
+
+    def close(self):
         self._h5py_file.close()
 
     #--------------------------------------------------------------------------
