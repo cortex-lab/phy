@@ -13,6 +13,7 @@ import h5py
 from nose.tools import assert_raises
 
 from ...utils.tempdir import TemporaryDirectory
+from ...utils.testing import captured_output
 from ..h5 import open_h5, _split_hdf5_path
 
 
@@ -155,5 +156,25 @@ def test_h5_write():
             # an error.
             assert_raises(KeyError, f.write_attr,
                           '/nonexistinggroup', 'mynewattr', 2)
+
+        os.chdir(cwd)
+
+
+def test_h5_describe():
+    with TemporaryDirectory() as tempdir:
+        # Save the currrent working directory.
+        cwd = os.getcwd()
+        # Change to the temporary directory.
+        os.chdir(tempdir)
+        # Create the test HDF5 file in the temporary directory.
+        filename = _create_test_file()
+
+        # Open the test HDF5 file.
+        with open_h5(filename) as f:
+            with captured_output() as (out, err):
+                f.describe()
+        output = out.getvalue().strip()
+        output_lines = output.split('\n')
+        assert len(output_lines) == 3
 
         os.chdir(cwd)

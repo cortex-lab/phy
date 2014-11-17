@@ -130,6 +130,20 @@ class File(object):
         """Native h5py file handle."""
         return self._h5py_file
 
+    def _print_node_info(self, name, node):
+        """Print node information."""
+        info = ('/' + name).ljust(50)
+        if isinstance(node, h5py.Group):
+            pass
+        elif isinstance(node, h5py.Dataset):
+            info += str(node.shape).ljust(10)
+            info += str(node.dtype).ljust(10)
+        print(info)
+
+    def describe(self):
+        """Display the list of all groups and datasets in the file."""
+        self._h5py_file['/'].visititems(self._print_node_info)
+
 
 def open_h5(filename, mode=None):
     return File(filename, mode=mode)
