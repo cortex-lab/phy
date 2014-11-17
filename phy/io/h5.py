@@ -61,6 +61,7 @@ class File(object):
             mode = 'r'
         self.filename = filename
         self.mode = mode
+        self._h5py_file = None
 
     #--------------------------------------------------------------------------
     # Reading functions
@@ -122,7 +123,8 @@ class File(object):
         self.close()
 
     def close(self):
-        self._h5py_file.close()
+        if self._h5py_file is not None:
+            self._h5py_file.close()
 
     #--------------------------------------------------------------------------
     # Miscellaneous properties

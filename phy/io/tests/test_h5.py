@@ -108,6 +108,10 @@ def test_h5_read():
             assert_raises(KeyError, f.read, '/nonexistinggroup')
             assert_raises(KeyError, f.read, '/nonexistinggroup/ds34')
 
+        # Test close() method.
+        f = open_h5(filename)
+        f.close()
+
         os.chdir(cwd)
 
 
