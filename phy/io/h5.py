@@ -9,9 +9,10 @@
 import numpy as np
 try:
     import h5py
+    raise ImportError('hey')
 except ImportError as exception:
-    # TODO: logging.
-    raise exception
+    from ..utils import warn
+    warn("The h5py module is not installed.")
 
 from ..ext import six
 
