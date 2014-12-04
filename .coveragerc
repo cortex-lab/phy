@@ -1,0 +1,6 @@
+[run]
+branch = True
+source = phy
+omit =
+    */phy/ext/*
+    */phy/utils/tempdir.py

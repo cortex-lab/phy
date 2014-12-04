@@ -88,6 +88,7 @@ def test_h5_read():
         assert f.is_open()
         f.close()
         assert not f.is_open()
+        assert_raises(IOError, f.describe)
 
         # Open the test HDF5 file.
         with open_h5(filename) as f:
