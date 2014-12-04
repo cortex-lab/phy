@@ -24,7 +24,7 @@ lint:
 	flake8 phy --exclude=phy/ext/six.py --ignore=E226,E265,F401
 
 test: lint
-	nosetests --exe --with-coverage --cover-package=phy
+	nosetests --exe --with-coverage --cover-package=phy --nocapture
 
 release: clean
 	python setup.py sdist upload
