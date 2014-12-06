@@ -1,26 +1,6 @@
 # phy project
 
-This is a data analysis framework for large-scale electrophysiological data. The primary focus is on multielectrode extracellular recordings: raw data, LFP, and spike sorting. The scope may be expanded later on.
+[![Build Status](https://travis-ci.org/kwikteam/phy.svg?branch=master)](https://travis-ci.org/kwikteam/phy)
+[![Coverage Status](https://coveralls.io/repos/rossant/phy/badge.png)](https://coveralls.io/r/rossant/phy)
 
-
-## Highlights
-
-* Pure Python 2/3 framework
-* Flexible and extendable
-* Should be primarily used by experimentalists who like to code (= not idiot-proof library)
-* At first, the development version on GitHub (master branch) should be the main version people will use: no more packaging pain
-* Users can submit their own code through pull requests
-* Out-of-the-box IPython notebook integration
-* Data visualization with d3.js and Vispy
-* Agnostic to the file format: can work with kwik files, Buzsaki files, Neo files, etc.
-* Compatible with Apache Spark
-* *Optionally*: can accept MATLAB code using one of the existing (I)Python/MATLAB wrappers. Will require some work on these wrappers.
-
-
-## Focus
-
-* Raw data visualization in the IPython notebook with Vispy and WebGL
-* Entire spike sorting toolchain: spike detection, feature extraction, clustering, manual stage
-* Entirely customizable: users should be able to provide their own code for any part of the analysis
-* Use the IPython notebook widgets to create light GUI elements within the notebook
-
+This is a WIP data analysis framework for large-scale electrophysiological data. The primary focus is on multielectrode extracellular recordings: raw data, LFP, spike sorting, and post-sorting analyses. The scope may be expanded later on.
