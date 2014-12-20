@@ -26,14 +26,14 @@ A few rules:
 
 ### GitHub flow
 
-* Work through PR from `yourfork/specialbranch` against `phy/master` exclusively.
+* Work through PRs from `yourfork/specialbranch` against `phy/master` exclusively.
 * Set `upstream` to `kwikteam/phy` and `origin` to your fork.
-* When master and your PR's branch are out of sync, [rebase](https://groups.google.com/forum/#!msg/vispy-dev/q-UNjxburGA/wYNkZRXiySwJ).
+* When master and your PR's branch are out of sync, [rebase your branch in your fork](https://groups.google.com/forum/#!msg/vispy-dev/q-UNjxburGA/wYNkZRXiySwJ).
 * Two-pairs-of-eyes rules: every line of code needs to be reviewed by 2 people, including the author.
 * Never merge your own PR (but exceptions happen).
 * Many small commits are better than few huge commits.
 * A PR is assumed to be **not ready for merge** unless explicitely stated otherwise.
-* Always run `make test` before stating a PR has ready for merge (and ideally before pushing on your PR's branch).
+* Always run `make test` before stating that a PR is ready to merge (and ideally before pushing on your PR's branch).
 * We try to have a code coverage close to 100%: always test all features you implement, and verify through code coverage that all lines are covered by your tests.
 * Always wait for Travis to be green before merging.
 * `phy/master` should always be stable and deployable.
@@ -47,7 +47,7 @@ A few rules:
 
 Make sure your text editor is configured to:
 
-* remove automatically blank lines (containing only spaces)
+* automatically clean blank lines (containing only spaces)
 * only use spaces and **never** tab indents
 * enforce an empty blank line at the end of every text file
 * display a vertical ruler at 79 characters (size limit of every line)
