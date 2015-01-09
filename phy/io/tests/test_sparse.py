@@ -37,4 +37,5 @@ def test_sparse_csr():
     arr[1, 0] = 3
     arr[1, 3] = 4
     arr[3, 4] = 5
-    arr_csr = csr_matrix(arr)
+
+    assert_raises(NotImplementedError, csr_matrix, (arr,))

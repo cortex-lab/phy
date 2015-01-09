@@ -44,7 +44,17 @@ class SparseCSR(object):
         nitems = data.shape[-1]
         if np.prod(shape) < nitems:
             raise ValueError("'data' is too large for the specified shape "
-                             "{shape}".format(shape=shape))
+                             "{shape}.".format(shape=shape))
+        if len(channels) != (shape[1] + 1):
+            raise ValueError(("'channels' should have "
+                              "{nexp} elements, "
+                              "not {nact}.").format(nexp=(shape[1] + 1),
+                                                    nact=len(channels)))
+        if len(spikes_ptr) != shape[0]:
+            raise ValueError(("'spikes_ptr' should have "
+                              "{nexp} elements, "
+                              "not {nact}.").format(nexp=(shape[0]),
+                                                    nact=len(spikes_ptr)))
         # Structure info.
         self._nitems = nitems
         # Create the structure.
