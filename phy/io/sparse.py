@@ -24,19 +24,44 @@ def _csr_from_dense(dense):
 
 class SparseCSR(object):
     """Sparse CSR matrix data structure."""
-    def __init__(self, data=None, channels=None, spikes_ptr=None):
+    def __init__(self, shape=None, data=None, channels=None, spikes_ptr=None):
+        # Ennsure the arguments are all arrays.
+        data = np.asarray(data)
+        channels = np.asarray(channels)
+        spikes_ptr = np.asarray(spikes_ptr)
+        # Ensure the arguments are consistent.
+        if not isinstance(shape, tuple):
+            raise ValueError("shape {shape} should be a tuple.".format(
+                             shape=shape))
+        if len(shape) != data.ndim + 1:
+            raise ValueError("'shape' {shape} and {ndim}D-array 'data' are "
+                             "not consistent.".format(shape=shape,
+                                                      ndim=data.ndim))
+        if channels.ndim != 1:
+            raise ValueError("'channels' should be a 1D array.")
+        if spikes_ptr.ndim != 1:
+            raise ValueError("'spikes_ptr' should be a 1D array.")
+        nitems = data.shape[-1]
+        if np.prod(shape) < nitems:
+            raise ValueError("'data' is too large for the specified shape "
+                             "{shape}".format(shape=shape))
+        # Structure info.
+        self._nitems = nitems
+        # Create the structure.
+        self._shape = shape
         self._data = data
         self._channels = channels
         self._spikes_ptr = spikes_ptr
 
 
-def csr_matrix(dense=None, data=None, channels=None, spikes_ptr=None):
+def csr_matrix(dense=None, shape=None,
+               data=None, channels=None, spikes_ptr=None):
     """Create a CSR matrix from a dense matrix, or from sparse data."""
     if dense is not None:
         # Ensure 'dense' is a ndarray.
-        if not isinstance(dense, np.ndarray):
-            dense = np.array(dense)
+        dense = np.asarray(dense)
         return _csr_from_dense(dense)
     if data is None or channels is None or spikes_ptr is None:
         raise ValueError("data, channels, and spikes_ptr must be specified.")
-    return SparseCSR(data=data, channels=channels, spikes_ptr=spikes_ptr)
+    return SparseCSR(shape=shape,
+                     data=data, channels=channels, spikes_ptr=spikes_ptr)

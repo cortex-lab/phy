@@ -11,7 +11,7 @@ import os
 import numpy as np
 from nose.tools import assert_raises
 
-from ..sparse import SparseCSR
+from ..sparse import csr_matrix
 
 
 #------------------------------------------------------------------------------
@@ -37,4 +37,4 @@ def test_sparse_csr():
     arr[1, 0] = 3
     arr[1, 3] = 4
     arr[3, 4] = 5
-    arr_csr = SparseCSR(arr)
+    arr_csr = csr_matrix(arr)
