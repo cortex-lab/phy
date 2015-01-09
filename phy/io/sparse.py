@@ -25,14 +25,14 @@ def _csr_from_dense(dense):
 class SparseCSR(object):
     """Sparse CSR matrix data structure."""
     def __init__(self, shape=None, data=None, channels=None, spikes_ptr=None):
-        # Ennsure the arguments are all arrays.
+        # Ensure the arguments are all arrays.
         data = np.asarray(data)
         channels = np.asarray(channels)
         spikes_ptr = np.asarray(spikes_ptr)
         # Ensure the arguments are consistent.
         if not isinstance(shape, tuple):
-            raise ValueError("shape {shape} should be a tuple.".format(
-                             shape=shape))
+            raise ValueError("The shape is required and should be a tuple "
+                             "({shape} was provided).".format(shape=shape))
         if len(shape) != data.ndim + 1:
             raise ValueError("'shape' {shape} and {ndim}D-array 'data' are "
                              "not consistent.".format(shape=shape,
@@ -45,15 +45,15 @@ class SparseCSR(object):
         if np.prod(shape) < nitems:
             raise ValueError("'data' is too large for the specified shape "
                              "{shape}.".format(shape=shape))
-        if len(channels) != (shape[1] + 1):
+        if len(channels) != (shape[1]):
             raise ValueError(("'channels' should have "
                               "{nexp} elements, "
-                              "not {nact}.").format(nexp=(shape[1] + 1),
+                              "not {nact}.").format(nexp=(shape[1]),
                                                     nact=len(channels)))
-        if len(spikes_ptr) != shape[0]:
+        if len(spikes_ptr) != (shape[0] + 1):
             raise ValueError(("'spikes_ptr' should have "
                               "{nexp} elements, "
-                              "not {nact}.").format(nexp=(shape[0]),
+                              "not {nact}.").format(nexp=(shape[0] + 1),
                                                     nact=len(spikes_ptr)))
         # Structure info.
         self._nitems = nitems
