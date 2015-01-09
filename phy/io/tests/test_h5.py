@@ -10,7 +10,7 @@ import os
 
 import numpy as np
 import h5py
-from nose.tools import assert_raises
+from pytest import raises
 
 from ...utils.tempdir import TemporaryDirectory
 from ...utils.testing import captured_output
@@ -50,8 +50,10 @@ def _create_test_file():
 
 def test_split_hdf5_path():
     # The path should always start with a leading '/'.
-    assert_raises(ValueError, _split_hdf5_path, '')
-    assert_raises(ValueError, _split_hdf5_path, 'path')
+    with raises(ValueError):
+        _split_hdf5_path('')
+    with raises(ValueError):
+        _split_hdf5_path('path')
 
     h, t = _split_hdf5_path('/')
     assert (h == '/') and (t == '')
@@ -69,9 +71,12 @@ def test_split_hdf5_path():
     assert (h == '/path/to') and (t == '')
 
     # Check that invalid paths raise errors.
-    assert_raises(ValueError, _split_hdf5_path, 'path/')
-    assert_raises(ValueError, _split_hdf5_path, '/path//')
-    assert_raises(ValueError, _split_hdf5_path, '/path//to')
+    with raises(ValueError):
+        _split_hdf5_path('path/')
+    with raises(ValueError):
+        _split_hdf5_path('/path//')
+    with raises(ValueError):
+        _split_hdf5_path('/path//to')
 
 
 def test_h5_read():
@@ -88,7 +93,8 @@ def test_h5_read():
         assert f.is_open()
         f.close()
         assert not f.is_open()
-        assert_raises(IOError, f.describe)
+        with raises(IOError):
+            f.describe()
 
         # Open the test HDF5 file.
         with open_h5(filename) as f:
@@ -111,10 +117,14 @@ def test_h5_read():
             assert value == 123
 
             # Check that errors are raised when the paths are invalid.
-            assert_raises(Exception, f.read, '//path')
-            assert_raises(Exception, f.read, '/path//')
-            assert_raises(KeyError, f.read, '/nonexistinggroup')
-            assert_raises(KeyError, f.read, '/nonexistinggroup/ds34')
+            with raises(Exception):
+                f.read('//path')
+            with raises(Exception):
+                f.read('/path//')
+            with raises(KeyError):
+                f.read('/nonexistinggroup')
+            with raises(KeyError):
+                f.read('/nonexistinggroup/ds34')
 
         assert not f.is_open()
 
@@ -136,14 +146,16 @@ def test_h5_write():
         # Open the test HDF5 file in read-only mode (the default) and
         # try to write in it. This should raise an exception.
         with open_h5(filename) as f:
-            assert_raises(Exception, lambda: f.write('/ds1', temp_array))
+            with raises(Exception):
+                f.write('/ds1', temp_array)
 
         # Open the test HDF5 file in read/write mode and
         # try to write in an existing dataset.
         with open_h5(filename, 'a') as f:
             # This raises an exception because the file already exists,
             # and by default this is forbidden.
-            assert_raises(ValueError, lambda: f.write('/ds1', temp_array))
+            with raises(ValueError):
+                f.write('/ds1', temp_array)
 
             # This works, though, because we force overwriting the dataset.
             f.write('/ds1', temp_array, overwrite=True)
@@ -164,8 +176,8 @@ def test_h5_write():
 
             # Write a new attribute in a non existing group: should raise
             # an error.
-            assert_raises(KeyError, f.write_attr,
-                          '/nonexistinggroup', 'mynewattr', 2)
+            with raises(KeyError):
+                f.write_attr('/nonexistinggroup', 'mynewattr', 2)
 
         os.chdir(cwd)
 
