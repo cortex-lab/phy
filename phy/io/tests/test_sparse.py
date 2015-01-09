@@ -89,3 +89,4 @@ def test_sparse_csr_check():
     # This one should pass.
     sparse = csr_matrix(shape=shape,
                         data=data, channels=channels, spikes_ptr=spikes_ptr)
+    assert sparse is not None
