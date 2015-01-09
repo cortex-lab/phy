@@ -54,7 +54,7 @@ def _dense_matrix_example():
 def _sparse_matrix_example():
     """Return a sparse representation of the sparse matrix example."""
     shape = (4, 5)
-    data = np.arange(1, 6)
+    data = np.array([1, 2, 3, 4, 5])
     channels = np.array([1, 2, 0, 3, 2])
     spikes_ptr = np.array([0, 2, 4, 4, 5])
     return shape, data, channels, spikes_ptr
@@ -78,6 +78,14 @@ def test_sparse_csr_check():
         csr_matrix(channels=channels, spikes_ptr=spikes_ptr)
     with raises(ValueError):
         csr_matrix(data=data, channels=channels, spikes_ptr=spikes_ptr)
+    with raises(ValueError):
+        csr_matrix(shape=shape,
+                   data=data[:-1], channels=channels, spikes_ptr=spikes_ptr)
+    with raises(ValueError):
+        csr_matrix(shape=shape, channels=[[0]])
+    with raises(ValueError):
+        csr_matrix(shape=shape, spikes_ptr=[0])
 
+    # This one should pass.
     sparse = csr_matrix(shape=shape,
                         data=data, channels=channels, spikes_ptr=spikes_ptr)
