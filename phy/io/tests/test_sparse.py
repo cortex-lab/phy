@@ -9,7 +9,7 @@
 import os
 
 import numpy as np
-from nose.tools import assert_raises
+from pytest import raises
 
 from ..sparse import csr_matrix
 
@@ -43,11 +43,13 @@ def _dense_matrix_example():
 
 def test_sparse_csr_check():
     arr = _dense_matrix_example()
-    assert_raises(NotImplementedError, csr_matrix, (arr,))
+    with raises(NotImplementedError):
+        csr_matrix(arr)
 
     data_exp = np.arange(1, 6)
 
     data = data_exp
     channels = None
     spikes_ptr = None
-    csr_matrix(data=data, channels=channels, spikes_ptr=spikes_ptr)
+    with raises(ValueError):
+        csr_matrix(data=data, channels=channels, spikes_ptr=spikes_ptr)
