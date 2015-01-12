@@ -26,6 +26,7 @@ install:
   - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION numpy h5py pytest pip flake8 coverage
   - source activate testenv
   - pip install coveralls
+  - pip install python-coveralls
   - pip install pytest-cov
   - python setup.py install
 
