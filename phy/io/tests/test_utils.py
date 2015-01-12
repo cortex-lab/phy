@@ -27,5 +27,25 @@ class _SliceTest(object):
 
 
 def test_range_from_slice():
+    """Test '_range_from_slice'."""
+    with raises(ValueError):
+        _SliceTest()[:]
+    with raises(ValueError):
+        _SliceTest()[1:]
+    assert ae(_SliceTest()[:5], [0, 1, 2, 3, 4])
     assert ae(_SliceTest()[1:5], [1, 2, 3, 4])
+
+    with raises(ValueError):
+        _SliceTest()[::2]
+    with raises(ValueError):
+        _SliceTest()[1::2]
+    assert ae(_SliceTest()[1:5:2], [1, 3])
+
+    with raises(ValueError):
+        _SliceTest(start=0)[:]
+    with raises(ValueError):
+        _SliceTest(start=1)[:]
+    assert ae(_SliceTest(stop=5)[:], [0, 1, 2, 3, 4])
+
+
     # _range_from_slice(myslice, start=None, stop=None, length=None)

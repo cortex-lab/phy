@@ -29,6 +29,8 @@ def _range_from_slice(myslice, start=None, stop=None, length=None):
         stop = floor(start + step * length)
     else:
         stop = stop if stop is not None else myslice.stop
+    if stop is None and length is None:
+        raise ValueError("'stop' and 'length' cannot be both unspecified.")
     myrange = np.arange(start, stop, step)
     # Check the length if it was specified.
     if length is not None:
