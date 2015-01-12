@@ -33,4 +33,4 @@ script:
   # Your test script goes here
   - make test
 after_success:
-  coveralls
+  - coveralls
