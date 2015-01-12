@@ -18,6 +18,7 @@ from ..utils import _range_from_slice
 #------------------------------------------------------------------------------
 
 class _SliceTest(object):
+    """Utility class to make it more convenient to test slice objects."""
     def __init__(self, **kwargs):
         self._kwargs = kwargs
 
@@ -45,7 +46,21 @@ def test_range_from_slice():
         _SliceTest(start=0)[:]
     with raises(ValueError):
         _SliceTest(start=1)[:]
+    with raises(ValueError):
+        _SliceTest(step=2)[:]
+
     assert ae(_SliceTest(stop=5)[:], [0, 1, 2, 3, 4])
+    assert ae(_SliceTest(start=1, stop=5)[:], [1, 2, 3, 4])
+    assert ae(_SliceTest(stop=5)[1:], [1, 2, 3, 4])
+    assert ae(_SliceTest(start=1)[:5], [1, 2, 3, 4])
+    assert ae(_SliceTest(start=1, step=2)[:5], [1, 3])
+    assert ae(_SliceTest(start=1)[:5:2], [1, 3])
+
+    assert ae(_SliceTest(length=5)[:], [0, 1, 2, 3, 4])
+    with raises(ValueError):
+        assert ae(_SliceTest(length=5)[:3], [0, 1, 2, 3, 4])
+    assert ae(_SliceTest(length=5)[:10], [0, 1, 2, 3, 4])
+    assert ae(_SliceTest(length=5)[:5], [0, 1, 2, 3, 4])
 
 
     # _range_from_slice(myslice, start=None, stop=None, length=None)
