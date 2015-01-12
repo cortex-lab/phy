@@ -65,6 +65,6 @@ def test_range_from_slice():
     assert ae(_SliceTest(start=1, length=5)[:6], [1, 2, 3, 4, 5])
     with raises(ValueError):
         _SliceTest(start=1, length=5)[:4]
-
-
-    # _range_from_slice(myslice, start=None, stop=None, length=None)
+    assert ae(_SliceTest(start=1, step=2, stop=5)[:], [1, 3])
+    assert ae(_SliceTest(start=1, stop=5)[::2], [1, 3])
+    assert ae(_SliceTest(stop=5)[1::2], [1, 3])
