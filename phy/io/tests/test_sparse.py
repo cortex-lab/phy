@@ -11,7 +11,7 @@ import os
 import numpy as np
 from pytest import raises
 
-from ..sparse import csr_matrix
+from ..sparse import csr_matrix, SparseCSR
 
 
 #------------------------------------------------------------------------------
@@ -89,4 +89,4 @@ def test_sparse_csr_check():
     # This one should pass.
     sparse = csr_matrix(shape=shape,
                         data=data, channels=channels, spikes_ptr=spikes_ptr)
-    assert sparse is not None
+    assert isinstance(sparse, SparseCSR)
