@@ -37,6 +37,9 @@ def test_clustering():
     assert clustering.new_cluster_label() == n_clusters
     assert clustering.n_clusters == n_clusters
 
+    assert clustering.cluster_counts.shape[0] == n_clusters
+    assert clustering.cluster_counts.sum() == n_spikes
+
     # Updating a cluster, method 1.
     spike_clusters_new = spike_clusters.copy()
     spike_clusters_new[:10] = 100

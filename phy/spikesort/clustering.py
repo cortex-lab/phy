@@ -28,8 +28,10 @@ class Clustering(object):
     def update(self):
         """Update the cluster counts and labels."""
         if self._spike_clusters is not None:
-            self._cluster_counts = np.bincount(self._spike_clusters)
-            self._cluster_labels = np.nonzero(self._cluster_counts)[0]
+            _cluster_counts = np.bincount(self._spike_clusters)
+            self._cluster_labels = np.nonzero(_cluster_counts)[0]
+            # Only keep the non-empty clusters.
+            self._cluster_counts = _cluster_counts[self._cluster_labels]
 
     @property
     def spike_clusters(self):
@@ -50,6 +52,11 @@ class Clustering(object):
     def cluster_labels(self, value):
         raise NotImplementedError("Relabeling clusters has not been "
                                   "implemented yet.")
+
+    @property
+    def cluster_counts(self):
+        """Number of spikes in each cluster."""
+        return self._cluster_counts
 
     def new_cluster_label(self):
         """Return a new cluster label."""
