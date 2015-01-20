@@ -18,12 +18,6 @@ from ..mock import (artificial_waveforms,
 # Tests
 #------------------------------------------------------------------------------
 
-def _plot(arr):
-    import matplotlib.pyplot as plt
-    plt.plot(arr)
-    plt.show()
-
-
 def test_artificial():
     n_spikes = 100
     n_samples_waveforms = 32
@@ -42,6 +36,7 @@ def test_artificial():
                                n_channels=n_channels)
     assert traces.shape == (n_samples_traces, n_channels)
 
+    # Spike clusters.
     spike_clusters = artificial_spike_clusters(n_spikes=n_spikes,
                                                n_clusters=n_clusters)
     assert spike_clusters.shape == (n_spikes,)

@@ -60,10 +60,10 @@ class Clustering(object):
         """Number of different clusters."""
         return len(self._cluster_labels)
 
-    def merge(cluster_labels, to=None):
+    def merge(self, cluster_labels, to=None):
         """Merge several clusters to a new cluster."""
         raise NotImplementedError("Merging has not been implemented yet.")
 
-    def split(spike_labels, to=None):
+    def split(self, spike_labels, to=None):
         """Split a number of spikes into a new cluster."""
         raise NotImplementedError("Splitting has not been implemented yet.")
