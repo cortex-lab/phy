@@ -21,8 +21,6 @@ from ..clustering import Clustering
 #------------------------------------------------------------------------------
 
 def test_clustering():
-    clustering = Clustering()
-
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
