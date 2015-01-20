@@ -21,6 +21,7 @@ from ..selector import Selector, _spikes_in_clusters
 #------------------------------------------------------------------------------
 
 def test_selector_spikes():
+    """Test selecting spikes."""
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
@@ -46,19 +47,39 @@ def test_selector_spikes():
     selector.selected_spikes = my_spikes[:3]
     assert_array_equal(selector.selected_spikes, my_spikes[:3])
     selector.selected_spikes = my_spikes
-    assert_array_equal(selector.selected_spikes, my_spikes[:3])
+    assert_array_equal(selector.selected_spikes, [10, 30, 40])
 
 
 def test_selector_clusters():
+    """Test selecting clusters."""
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
     selector = Selector(spike_clusters)
-    selector.n_spikes_max = None
     selector.selected_clusters = []
     assert_array_equal(selector.selected_spikes, [])
 
+    # Select 1 cluster.
     selector.selected_clusters = [0]
     assert_array_equal(selector.selected_spikes,
                        _spikes_in_clusters(spike_clusters, [0]))
+    assert np.all(spike_clusters[selector.selected_spikes] == 0)
+
+    # Select 2 clusters.
+    selector.selected_clusters = [1, 3]
+    assert_array_equal(selector.selected_spikes,
+                       _spikes_in_clusters(spike_clusters, [1, 3]))
+    assert np.all(np.in1d(spike_clusters[selector.selected_spikes], (1, 3)))
+
+    # Specify a maximum number of spikes.
+    selector.n_spikes_max = 10
+    selector.selected_clusters = [2, 4]
+    assert len(selector.selected_spikes) <= 10
+    assert np.all(np.in1d(spike_clusters[selector.selected_spikes], (2, 4)))
+
+    # Reduce the number of maximum spikes: the selection should update
+    # accordingly.
+    selector.n_spikes_max = 5
+    assert len(selector.selected_spikes) <= 5
+    assert np.all(np.in1d(spike_clusters[selector.selected_spikes], (2, 4)))

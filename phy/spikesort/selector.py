@@ -51,6 +51,37 @@ class Selector(object):
     @n_spikes_max.setter
     def n_spikes_max(self, value):
         self._n_spikes_max = value
+        # Update the selected spikes accordingly.
+        self.selected_spikes = self._subset()
+        if self._n_spikes_max is not None:
+            assert len(self._selected_spikes) <= self._n_spikes_max
+
+    def _subset(self, spikes=None, n_spikes_max=None):
+        """Prune the current selection to get at most n_spikes_max spikes."""
+        if n_spikes_max is None:
+            n_spikes_max = self._n_spikes_max
+        if spikes is None:
+            spikes = self._selected_spikes
+        # Nothing to do if the selection already satisfies n_spikes_max.
+        if n_spikes_max is None or len(spikes) <= n_spikes_max:
+            return spikes
+        # Fill 50% regularly sampled spikes for the selection.
+        step = int(np.clip(2. / n_spikes_max * len(spikes),
+                           1, len(spikes)))
+        my_spikes = spikes[::step]
+        assert len(my_spikes) <= len(spikes)
+        assert len(my_spikes) <= n_spikes_max
+        # Number of remaining spikes to find in the selection.
+        n_start = (n_spikes_max - len(my_spikes)) // 2
+        n_end = n_spikes_max - len(my_spikes) - n_start
+        assert (n_start >= 0) & (n_end >= 0)
+        # The other 50% come from the start and end of the selection.
+        my_spikes = np.r_[spikes[:n_start],
+                          my_spikes,
+                          spikes[-n_end:]]
+        my_spikes = _unique(my_spikes)
+        assert len(my_spikes) <= n_spikes_max
+        return my_spikes
 
     @property
     def selected_spikes(self):
@@ -61,15 +92,8 @@ class Selector(object):
     def selected_spikes(self, value):
         """Explicitely select a number of spikes."""
         value = np.asarray(value)
-        size = len(value)
-        size_max = self._n_spikes_max
-        if self._n_spikes_max is not None and size > size_max:
-            debug("{0:d} spikes were selected whereas ".format(size) +
-                  "no more than {0:d} are allowed; ".format(size_max) +
-                  "keeping only the first {0:d} now.".format(size_max))
-            self._selected_spikes = value[:size_max]
-        else:
-            self._selected_spikes = value
+        # Make sure there are less spikes than n_spikes_max.
+        self._selected_spikes = self._subset(value)
 
     @property
     def selected_clusters(self):
@@ -79,24 +103,11 @@ class Selector(object):
     @selected_clusters.setter
     def selected_clusters(self, value):
         """Select spikes belonging to a number of clusters."""
+        # TODO: smarter subselection: select n_spikes_max/n_clusters spikes
+        # per cluster, so that the number of spikes per cluster is independent
+        # from the sizes of the clusters.
         value = np.asarray(value)
-        all_spikes = _spikes_in_clusters(self._spike_clusters, value)
-        # Select all spikes from the selected clusters.
-        if ((self._n_spikes_max is None) or
-           (len(all_spikes) <= self._n_spikes_max)):
-            self.selected_spikes = all_spikes
-        else:
-            # Select a carefully chosen subset of spikes from the selected
-            # clusters.
-            # Fill 50% regularly sampled spikes for the selection.
-            n_max = self._n_spikes_max
-            step = int(np.clip(2. / n_max * len(all_spikes),
-                               1, len(all_spikes)))
-            my_spikes = all_spikes[::step]
-            n_rest = n_max - len(my_spikes)
-            # The other 50% come from the start and end of the selection.
-            my_spikes = np.r_[all_spikes[:n_rest // 2],
-                              my_spikes,
-                              all_spikes[-(n_max - nrest // 2):]]
-            assert len(my_spikes) == n_max
-            self.selected_spikes = np.sort(my_spikes)
+        # All spikes from the selected clusters.
+        spikes = _spikes_in_clusters(self._spike_clusters, value)
+        # Make sure there are less spikes than n_spikes_max.
+        self.selected_spikes = self._subset(spikes)
