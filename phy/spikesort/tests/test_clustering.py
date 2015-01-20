@@ -11,7 +11,7 @@ import os
 import numpy as np
 from pytest import raises
 
-# from ..clustering import
+from ..clustering import Clustering
 
 
 #------------------------------------------------------------------------------
@@ -30,6 +30,5 @@ def teardown():
 # Tests
 #------------------------------------------------------------------------------
 
-
 def test_clustering():
-    pass
+    clustering = Clustering()

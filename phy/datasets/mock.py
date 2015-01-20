@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+import numpy.random as nr
 
 from ..ext import six
 
@@ -15,20 +16,15 @@ from ..ext import six
 # Artificial data
 #------------------------------------------------------------------------------
 
-def artificial_waveforms(nspikes=None, nsamples=None, nchannels=None):
-    # Check arguments.
-    assert isinstance(nspikes, six.integer_types)
-    assert isinstance(nsamples, six.integer_types)
-    assert isinstance(nchannels, six.integer_types)
-
+def artificial_waveforms(n_spikes=None, n_samples=None, n_channels=None):
     # TODO: more realistic waveforms.
-    return .25 * np.random.normal(size=(nspikes, nsamples, nchannels))
+    return .25 * nr.normal(size=(n_spikes, n_samples, n_channels))
 
 
-def artificial_traces(nsamples, nchannels):
-    # Check arguments.
-    assert isinstance(nsamples, six.integer_types)
-    assert isinstance(nchannels, six.integer_types)
-
+def artificial_traces(n_samples, n_channels):
     # TODO: more realistic traces.
-    return .25 * np.random.normal(size=(nsamples, nchannels))
+    return .25 * nr.normal(size=(n_samples, n_channels))
+
+
+def artificial_spike_clusters(n_spikes, n_clusters):
+    return nr.randint(size=n_spikes, low=0, high=n_clusters)
