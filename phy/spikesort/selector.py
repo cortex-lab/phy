@@ -13,7 +13,7 @@ from ..utils.logging import debug, info, warn
 
 
 #------------------------------------------------------------------------------
-# Selector class
+# Utility functions
 #------------------------------------------------------------------------------
 
 def _unique(x):
@@ -26,6 +26,15 @@ def _unique(x):
     """
     return np.nonzero(np.bincount(x))[0]
 
+
+def _spikes_in_clusters(spike_clusters, clusters):
+    """Return the labels of all spikes belonging to the specified clusters."""
+    return np.nonzero(np.in1d(spike_clusters, clusters))[0]
+
+
+#------------------------------------------------------------------------------
+# Selector class
+#------------------------------------------------------------------------------
 
 class Selector(object):
     """Object representing a selection of spikes or clusters."""
@@ -50,6 +59,7 @@ class Selector(object):
 
     @selected_spikes.setter
     def selected_spikes(self, value):
+        """Explicitely select a number of spikes."""
         value = np.asarray(value)
         size = len(value)
         size_max = self._n_spikes_max
@@ -68,5 +78,25 @@ class Selector(object):
 
     @selected_clusters.setter
     def selected_clusters(self, value):
-        raise NotImplementedError("Cluster selection has not been "
-                                  "implemented yet.")
+        """Select spikes belonging to a number of clusters."""
+        value = np.asarray(value)
+        all_spikes = _spikes_in_clusters(self._spike_clusters, value)
+        # Select all spikes from the selected clusters.
+        if ((self._n_spikes_max is None) or
+           (len(all_spikes) <= self._n_spikes_max)):
+            self.selected_spikes = all_spikes
+        else:
+            # Select a carefully chosen subset of spikes from the selected
+            # clusters.
+            # Fill 50% regularly sampled spikes for the selection.
+            n_max = self._n_spikes_max
+            step = int(np.clip(2. / n_max * len(all_spikes),
+                               1, len(all_spikes)))
+            my_spikes = all_spikes[::step]
+            n_rest = n_max - len(my_spikes)
+            # The other 50% come from the start and end of the selection.
+            my_spikes = np.r_[all_spikes[:n_rest // 2],
+                              my_spikes,
+                              all_spikes[-(n_max - nrest // 2):]]
+            assert len(my_spikes) == n_max
+            self.selected_spikes = np.sort(my_spikes)
