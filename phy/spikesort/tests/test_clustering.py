@@ -94,6 +94,7 @@ def test_clustering():
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    spike_clusters_base = spike_clusters.copy()
 
     # Instanciate a Clustering instance.
     clustering = Clustering(spike_clusters)
@@ -127,17 +128,40 @@ def test_clustering():
     assert_array_equal(clustering.cluster_labels,
                        np.r_[np.arange(n_clusters), 100])
 
+    # Assign.
+    clustering.assign(slice(None, 10, None), 1000)
+    assert 1000 in clustering.cluster_labels
+    assert clustering.cluster_counts[-1] == 10
+    assert np.all(clustering.spike_clusters[:10] == 1000)
+
+    # Merge.
+    count = clustering.cluster_counts.copy()
+    my_spikes_0 = np.nonzero(np.in1d(clustering.spike_clusters, [2, 3]))[0]
+    my_spikes = clustering.merge([2, 3])
+    assert_array_equal(my_spikes, my_spikes_0)
+    assert 1001 in clustering.cluster_labels
+    assert clustering.cluster_counts[-1] == count[2] + count[3]
+    assert np.all(clustering.spike_clusters[my_spikes] == 1001)
+
+    # Merge to a given cluster.
+    clustering.spike_clusters = spike_clusters_base
+    my_spikes_0 = np.nonzero(np.in1d(clustering.spike_clusters, [4, 6]))[0]
+    count = clustering.cluster_counts.copy()
+    my_spikes = clustering.merge([4, 6], 11)
+    assert_array_equal(my_spikes, my_spikes_0)
+    assert 11 in clustering.cluster_labels
+    assert clustering.cluster_counts[-1] == count[4] + count[6]
+    assert np.all(clustering.spike_clusters[my_spikes] == 11)
+
+    # Split
+    my_spikes = [1, 3, 5]
+    clustering.split(my_spikes)
+    assert np.all(clustering.spike_clusters[my_spikes] == 12)
+
+    clusters = [20, 30, 40]
+    clustering.split(my_spikes, clusters)
+    assert np.all(clustering.spike_clusters[my_spikes] == clusters)
+
     # Not implemented (yet) features.
     with raises(NotImplementedError):
         clustering.cluster_labels = np.arange(n_clusters)
-
-    # # Merge.
-    # with raises(NotImplementedError):
-    #     clustering.merge([2, 3])
-    # with raises(NotImplementedError):
-    #     clustering.merge([2, 3], 11)
-    # # Split.
-    # with raises(NotImplementedError):
-    #     clustering.split([1, 3, 5])
-    # with raises(NotImplementedError):
-    #     clustering.split([1, 3, 5], 11)

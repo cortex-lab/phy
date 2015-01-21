@@ -152,11 +152,17 @@ class Clustering(object):
         return len(self._cluster_labels)
 
     def merge(self, cluster_labels, to=None):
-        """Merge several clusters to a new cluster."""
+        """Merge several clusters to a new cluster.
+
+        Return the modified spikes.
+
+        """
         if to is None:
             to = self.new_cluster_label()
-        spike_labels = _spikes_in_clusters(self.spike_clusters, cluster_labels)
-        self.assign(spike_labels, to)
+        # Find all spikes in the specified clusters.
+        spikes = _spikes_in_clusters(self.spike_clusters, cluster_labels)
+        self.assign(spikes, to)
+        return spikes
 
     def assign(self, spike_labels, cluster_labels):
         """Assign clusters to a number of spikes."""
@@ -165,4 +171,6 @@ class Clustering(object):
 
     def split(self, spike_labels, to=None):
         """Split a number of spikes into a new cluster."""
-        raise NotImplementedError("Splitting has not been implemented yet.")
+        if to is None:
+            to = self.new_cluster_label()
+        self.assign(spike_labels, to)
