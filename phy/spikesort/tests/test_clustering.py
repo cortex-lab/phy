@@ -81,10 +81,12 @@ def test_iter_history():
 
     for i, item in enumerate(history.iter(1)):
         # Assert item<i>
+        assert i == 0
         assert id(item) == id(locals()['item{0:d}'.format(i)])
 
     for i, item in enumerate(history.iter(2, start_at=1)):
         # Assert item<i>
+        assert i == 1
         assert id(item) == id(locals()['item{0:d}'.format(i + 1)])
 
 
