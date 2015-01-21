@@ -37,28 +37,27 @@ def test_history():
     history.add(item1)
     _assert_current(item1)
 
-    assert history.back()
+    assert history.back() is not None
     _assert_current(item0)
 
-    assert history.forward()
+    assert history.forward() is not None
     _assert_current(item1)
 
-    assert history.forward() is False
+    assert history.forward() is None
     _assert_current(item1)
 
-    assert history.back()
+    assert history.back() is not None
     _assert_current(item0)
-    assert history.back()
-    _assert_current(None)
-    assert history.back() is False
+    assert history.back() is None
+    assert history.back() is None
     assert len(history) == 2
 
     history.add(item2)
     assert len(history) == 1
     _assert_current(item2)
-    assert history.forward() is False
-    assert history.back()
-    assert history.back() is False
+    assert history.forward() is None
+    assert history.back() is None
+    assert history.back() is None
 
 
 def test_iter_history():
@@ -121,7 +120,7 @@ def test_clustering():
                        np.r_[np.arange(n_clusters), 100])
 
     # Updating a cluster, method 2.
-    clustering.spike_clusters = spike_clusters
+    clustering.spike_clusters = spike_clusters_base
     clustering.spike_clusters[:10] = 100
     # No automatic update (yet?).
     assert_array_equal(clustering.cluster_labels,

@@ -43,19 +43,6 @@ class History(object):
         """Check that the index is without the bounds of _history."""
         assert 0 <= self._index <= len(self._history)
 
-    def add(self, item):
-        """Add an item in the history."""
-        self._check_index()
-        # Possibly truncate the history up to the current point.
-        self._history = self._history[:self._index]
-        # Append the item
-        self._history.append(item)
-        # Increment the index.
-        self._index += 1
-        self._check_index()
-        # Check that the current element is what was provided to the function.
-        assert id(self.current_item) == id(item)
-
     def iter(self, until=None, start_at=0):
         """Iterate through successive history items."""
         if until is None:
@@ -76,21 +63,42 @@ class History(object):
     def __len__(self):
         return len(self._history)
 
-    def back(self):
-        """Go back in history if possible."""
-        if self._index <= 0:
-            return False
-        self._index -= 1
+    def add(self, item):
+        """Add an item in the history."""
         self._check_index()
-        return True
-
-    def forward(self):
-        """Go forward in history if possible."""
-        if self._index >= len(self._history):
-            return False
+        # Possibly truncate the history up to the current point.
+        self._history = self._history[:self._index]
+        # Append the item
+        self._history.append(item)
+        # Increment the index.
         self._index += 1
         self._check_index()
-        return True
+        # Check that the current element is what was provided to the function.
+        assert id(self.current_item) == id(item)
+
+    def back(self):
+        """Go back in history if possible.
+
+        Return the current item after going back.
+
+        """
+        if self._index <= 0:
+            return None
+        self._index -= 1
+        self._check_index()
+        return self.current_item
+
+    def forward(self):
+        """Go forward in history if possible.
+
+        Return the current item after going forward.
+
+        """
+        if self._index >= len(self._history):
+            return None
+        self._index += 1
+        self._check_index()
+        return self.current_item
 
 
 #------------------------------------------------------------------------------
@@ -106,6 +114,7 @@ class Clustering(object):
         # Spike -> cluster mapping.
         spike_clusters = np.asarray(spike_clusters)
         self._spike_clusters = spike_clusters
+        self._undo_stack = History()
         if spike_clusters is not None:
             self.update()
 
@@ -124,8 +133,7 @@ class Clustering(object):
 
     @spike_clusters.setter
     def spike_clusters(self, value):
-        self._spike_clusters = value
-        self.update()
+        self.assign(slice(None, None, None), value)
 
     @property
     def cluster_labels(self):
@@ -151,6 +159,9 @@ class Clustering(object):
         """Number of different clusters."""
         return len(self._cluster_labels)
 
+    # Actions
+    #--------------------------------------------------------------------------
+
     def merge(self, cluster_labels, to=None):
         """Merge several clusters to a new cluster.
 
@@ -167,6 +178,7 @@ class Clustering(object):
     def assign(self, spike_labels, cluster_labels):
         """Assign clusters to a number of spikes."""
         self.spike_clusters[spike_labels] = cluster_labels
+        self._undo_stack.add((spike_labels, cluster_labels))
         self.update()
 
     def split(self, spike_labels, to=None):
@@ -174,3 +186,9 @@ class Clustering(object):
         if to is None:
             to = self.new_cluster_label()
         self.assign(spike_labels, to)
+
+    def undo(self):
+        pass
+
+    def redo(self):
+        pass
