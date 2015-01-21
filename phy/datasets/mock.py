@@ -26,5 +26,5 @@ def artificial_traces(n_samples, n_channels):
     return .25 * nr.normal(size=(n_samples, n_channels))
 
 
-def artificial_spike_clusters(n_spikes, n_clusters):
-    return nr.randint(size=n_spikes, low=0, high=n_clusters)
+def artificial_spike_clusters(n_spikes, n_clusters, low=0):
+    return nr.randint(size=n_spikes, low=low, high=n_clusters)

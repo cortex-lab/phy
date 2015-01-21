@@ -21,7 +21,25 @@ from ..cluster_metadata import ClusterMetadata
 #------------------------------------------------------------------------------
 
 def test_cluster_metadata():
+    n_spikes = 1000
+    n_clusters = 10
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters, low=2)
+
     meta = ClusterMetadata()
 
     with raises(ValueError):
-        assert meta[3]['group']
+        assert meta[0]['group']
+
+    meta.spike_clusters = spike_clusters
+
+    with raises(ValueError):
+        assert meta[0]['group']
+
+    assert meta[2]['color'] == 1
+    assert meta[2]['group'] == 3
+
+    spike_clusters[spike_clusters == 2] = 10
+    meta.update()
+
+    with raises(ValueError):
+        assert meta[2]

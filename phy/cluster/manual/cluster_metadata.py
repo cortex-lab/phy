@@ -72,7 +72,7 @@ class ClusterMetadata(object):
     @spike_clusters.setter
     def spike_clusters(self, value):
         self._spike_clusters = value
-        self._update()
+        self.update()
 
     @property
     def cluster_labels(self):
@@ -89,7 +89,7 @@ class ClusterMetadata(object):
         for cluster in clusters:
             del self._data[cluster]
 
-    def _update(self, cluster_labels=None):
+    def update(self, cluster_labels=None):
         """Remove empty clusters in the structure.
 
         Parameters
