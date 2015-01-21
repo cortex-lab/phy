@@ -79,6 +79,11 @@ class ClusterMetadata(object):
         """Sorted list of non-empty cluster labels."""
         return self._cluster_labels
 
+    def add_clusters(self, clusters):
+        """Add new clusters in the structure."""
+        for cluster in clusters:
+            self._data[cluster] = OrderedDict()
+
     def delete_clusters(self, clusters):
         """Delete clusters from the structure."""
         for cluster in clusters:
@@ -99,10 +104,14 @@ class ClusterMetadata(object):
             cluster_labels = _unique(self._spike_clusters)
         # Update the list of unique cluster labels.
         self._cluster_labels = cluster_labels
-        # Find the clusters in the structure but not in the up-to-date
-        # list of clusters.
-        to_delete = set(iterkeys(self._data)) - set(self._cluster_labels)
-        # Delete these clusters.
+        # Find the clusters to add and remove in the structure.
+        data_keys = set(iterkeys(self._data))
+        clusters = set(self._cluster_labels)
+        # Add the new clusters.
+        to_add = clusters - data_keys
+        self.add_clusters(to_add)
+        # Delete the empty clusters.
+        to_delete = data_keys - clusters
         self.delete_clusters(to_delete)
 
     def set(self, cluster, field, value):
@@ -137,5 +146,5 @@ class ClusterMetadata(object):
             return OrderedDict((cluster, self.get(cluster, key))
                                for cluster in self.cluster_labels)
         else:
-            raise ValueError("Key {0:s} not in the list ".format(key) +
-                             "of fields {1:s}".format(str(self._field_names)))
+            raise ValueError("Key {0:s} not in the list ".format(str(key)) +
+                             "of fields {0:s}".format(str(self._field_names)))

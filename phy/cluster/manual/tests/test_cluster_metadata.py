@@ -22,4 +22,6 @@ from ..cluster_metadata import ClusterMetadata
 
 def test_cluster_metadata():
     meta = ClusterMetadata()
-    assert meta
+
+    with raises(ValueError):
+        assert meta[3]['group']
