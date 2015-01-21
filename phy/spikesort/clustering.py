@@ -64,9 +64,8 @@ class History(object):
         if start_at >= until:
             return
         # Check arguments.
-        assert until >= 0
-        assert start_at >= 0
-        assert start_at < until
+        assert 0 <= until <= len(self._history)
+        assert 0 <= start_at < until
         for i in range(start_at, until):
             yield self._history[i]
 

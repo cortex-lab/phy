@@ -51,7 +51,7 @@ def test_history():
     assert history.back()
     _assert_current(None)
     assert history.back() is False
-    assert len(history) == 3
+    assert len(history) == 2
 
     history.add(item2)
     assert len(history) == 1
@@ -59,6 +59,33 @@ def test_history():
     assert history.forward() is False
     assert history.back()
     assert history.back() is False
+
+
+def test_iter_history():
+    history = History()
+
+    def _assert_current(item):
+        assert id(history.current_item) == id(item)
+
+    item0 = np.zeros(3)
+    item1 = np.ones(4)
+    item2 = 2 * np.ones(5)
+
+    history.add(item0)
+    history.add(item1)
+    history.add(item2)
+
+    for i, item in enumerate(history):
+        # Assert item<i>
+        assert id(item) == id(locals()['item{0:d}'.format(i)])
+
+    for i, item in enumerate(history.iter(1)):
+        # Assert item<i>
+        assert id(item) == id(locals()['item{0:d}'.format(i)])
+
+    for i, item in enumerate(history.iter(2, start_at=1)):
+        # Assert item<i>
+        assert id(item) == id(locals()['item{0:d}'.format(i + 1)])
 
 
 def test_clustering():
