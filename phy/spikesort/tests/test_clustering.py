@@ -76,23 +76,21 @@ def test_iter_history():
     history.add(item2)
 
     for i, item in enumerate(history):
-        if i == 0: break
         # Assert item<i>
-        assert id(item) == id(locals()['item{0:d}'.format(i - 1)])
-
-    for i, item in enumerate(history.iter(0, 1)):
-        if i == 0: break
-        # Assert item<i>
-        assert i == 1
-        assert history.current_position == 3
-        assert id(item) == id(locals()['item{0:d}'.format(i - 1)])
+        if i > 0:
+            assert id(item) == id(locals()['item{0:d}'.format(i - 1)])
 
     for i, item in enumerate(history.iter(1, 2)):
-        if i == 0: break
+        assert i == 0
         # Assert item<i>
-        assert i == 1
         assert history.current_position == 3
         assert id(item) == id(locals()['item{0:d}'.format(i)])
+
+    for i, item in enumerate(history.iter(2, 3)):
+        assert i == 0
+        # Assert item<i>
+        assert history.current_position == 3
+        assert id(item) == id(locals()['item{0:d}'.format(i + 1)])
 
 
 def test_clustering():
@@ -187,8 +185,6 @@ def test_clustering_actions():
 
     def _assert_is_checkpoint(index):
         assert_array_equal(clustering.spike_clusters, checkpoints[index])
-
-    # TODO: fix index issues, history[0] = base
 
     # Checkpoint 0.
     _checkpoint()

@@ -23,9 +23,10 @@ class History(object):
 
     def clear(self, base_item=None):
         """Clear the history."""
-        self._history = [base_item]  # List of changes, contains at least the
-                                     # base item.
-        self._index = 0  # Index of the current item.
+        # List of changes, contains at least the base item.
+        self._history = [base_item]
+        # Index of the current item.
+        self._index = 0
 
     @property
     def current_item(self):
