@@ -211,3 +211,39 @@ def test_clustering_actions():
     # No redo.
     clustering.redo()
     _assert_is_checkpoint(2)
+
+    # Merge again.
+    clustering.merge([4, 5, 6], 13)
+    _checkpoint()
+    _assert_is_checkpoint(3)
+
+    # One more merge.
+    clustering.merge([8, 7])  # merged to 14
+    _checkpoint()
+    _assert_is_checkpoint(4)
+
+    # Now we undo.
+    clustering.undo()
+    _assert_is_checkpoint(3)
+
+    # We merge again.
+    assert clustering.new_cluster_label() == 14
+    assert any(clustering.spike_clusters == 13)
+    assert all(clustering.spike_clusters != 14)
+    clustering.merge([8, 7], 15)
+    # Same as checkpoint with 4, but replace 14 with 15.
+    res = checkpoints[4]
+    res[res == 14] = 15
+    assert_array_equal(clustering.spike_clusters, res)
+
+    # Undo all.
+    for i in range(3, -1, -1):
+        clustering.undo()
+        _assert_is_checkpoint(i)
+
+    _assert_is_checkpoint(0)
+
+    # Redo all.
+    for i in range(5):
+        _assert_is_checkpoint(i)
+        clustering.redo()
