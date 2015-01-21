@@ -204,10 +204,7 @@ class Clustering(object):
 
     def undo(self):
         """Undo the last cluster assignement operation."""
-        item = self._undo_stack.back()
-        # if item is None:
-        #     # No undo has been performed: abort.
-        #     return
+        self._undo_stack.back()
         # Retrieve the initial spike_cluster structure.
         spike_clusters_new = self._spike_clusters_base.copy()
         # Loop over the history (except the last item because we undo).
