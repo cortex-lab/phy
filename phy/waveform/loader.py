@@ -43,15 +43,13 @@ def _slice(index, n_samples, margin=None):
 class WaveformLoader(object):
     """Load waveforms from filtered or unfiltered traces."""
 
-    def __init__(self, traces, spike_times=None, offset=0, filter=None,
+    def __init__(self, traces, offset=0, filter=None,
                  n_samples=None, filter_margin=0):
         # A (possibly memmapped) array-like structure with traces.
         self._traces = traces
         self.n_samples_trace, self.n_channels = traces.shape
         # Offset of the traces: time (in samples) of the first trace sample.
         self._offset = 0
-        # Array with all spike times.
-        self._spike_times = spike_times
         # A filter function that takes a (n_samples, n_channels) array as
         # input.
         self._filter = filter
