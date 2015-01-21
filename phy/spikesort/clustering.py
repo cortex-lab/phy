@@ -61,9 +61,9 @@ class History(object):
         if until is None:
             until = self._index
         elif until == 0:
-            return
+            raise StopIteration()
         if start_at >= until:
-            return
+            raise StopIteration()
         # Check arguments.
         assert 0 <= until <= len(self._history)
         assert 0 <= start_at < until

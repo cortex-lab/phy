@@ -64,8 +64,9 @@ def test_history():
 def test_iter_history():
     history = History()
 
-    def _assert_current(item):
-        assert id(history.current_item) == id(item)
+    # Wrong arguments to iter().
+    assert len([_ for _ in history.iter(0)]) == 0
+    assert len([_ for _ in history.iter(1, 2)]) == 0
 
     item0 = np.zeros(3)
     item1 = np.ones(4)
@@ -82,13 +83,13 @@ def test_iter_history():
     for i, item in enumerate(history.iter(1)):
         # Assert item<i>
         assert i == 0
-        assert history.current_position == 0
+        assert history.current_position == 2
         assert id(item) == id(locals()['item{0:d}'.format(i)])
 
     for i, item in enumerate(history.iter(2, start_at=1)):
         # Assert item<i>
         assert i == 0
-        assert history.current_position == 1
+        assert history.current_position == 2
         assert id(item) == id(locals()['item{0:d}'.format(i + 1)])
 
 
