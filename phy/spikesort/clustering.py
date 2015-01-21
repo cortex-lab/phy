@@ -18,43 +18,55 @@ from ._utils import _unique, _spikes_in_clusters
 
 class History(object):
     """Implement a history of actions with an undo stack."""
-    def __init__(self):
-        self.clear()
+    def __init__(self, base_item=None):
+        self.clear(base_item)
 
-    def clear(self):
+    def clear(self, base_item=None):
         """Clear the history."""
-        self._history = []
-        self._index = 0  # index of the next history item
+        self._history = [base_item]  # List of changes, contains at least the
+                                     # base item.
+        self._index = 0  # Index of the current item.
 
     @property
     def current_item(self):
         """Return the current element."""
-        if self._history and self._index >= 1:
+        if self._history and self._index >= 0:
             self._check_index()
-            return self._history[self._index - 1]
+            return self._history[self._index]
 
     @property
     def current_position(self):
         """Current position in the history."""
-        if self._index >= 1:
-            return self._index - 1
+        return self._index
 
     def _check_index(self):
         """Check that the index is without the bounds of _history."""
-        assert 0 <= self._index <= len(self._history)
+        assert 0 <= self._index <= len(self._history) - 1
+        # There should always be the base item at least.
+        assert len(self._history) >= 1
 
-    def iter(self, until=None, start_at=0):
-        """Iterate through successive history items."""
-        if until is None:
-            until = self._index
-        elif until == 0:
+    def iter(self, start=0, end=None):
+        """Iterate through successive history items.
+
+        Parameters
+        ----------
+        end : int
+            Index of the last item to loop through + 1.
+
+        start : int
+            Initial index for the loop (0 by default).
+
+        """
+        if end is None:
+            end = self._index + 1
+        elif end == 0:
             raise StopIteration()
-        if start_at >= until:
+        if start >= end:
             raise StopIteration()
         # Check arguments.
-        assert 0 <= until <= len(self._history)
-        assert 0 <= start_at < until
-        for i in range(start_at, until):
+        assert 0 <= end <= len(self._history)
+        assert 0 <= start <= end - 1
+        for i in range(start, end):
             yield self._history[i]
 
     def __iter__(self):
@@ -67,7 +79,7 @@ class History(object):
         """Add an item in the history."""
         self._check_index()
         # Possibly truncate the history up to the current point.
-        self._history = self._history[:self._index]
+        self._history = self._history[:self._index + 1]
         # Append the item
         self._history.append(item)
         # Increment the index.
@@ -94,7 +106,7 @@ class History(object):
         Return the current item after going forward.
 
         """
-        if self._index >= len(self._history):
+        if self._index >= len(self._history) - 1:
             return None
         self._index += 1
         self._check_index()
@@ -114,7 +126,9 @@ class Clustering(object):
         # Spike -> cluster mapping.
         spike_clusters = np.asarray(spike_clusters)
         self._spike_clusters = spike_clusters
-        self._undo_stack = History()
+        # Keep a copy of the original spike clusters assignement.
+        self._spike_clusters_base = spike_clusters.copy()
+        self._undo_stack = History(base_item=(None, None))
         if spike_clusters is not None:
             self.update()
 
@@ -188,7 +202,35 @@ class Clustering(object):
         self.assign(spike_labels, to)
 
     def undo(self):
-        pass
+        """Undo the last cluster assignement operation."""
+        item = self._undo_stack.back()
+        # if item is None:
+        #     # No undo has been performed: abort.
+        #     return
+        # Retrieve the initial spike_cluster structure.
+        spike_clusters_new = self._spike_clusters_base.copy()
+        # Loop over the history (except the last item because we undo).
+        for spike_labels, cluster_labels in self._undo_stack:
+            # We update the spike clusters accordingly.
+            if spike_labels is not None:
+                spike_clusters_new[spike_labels] = cluster_labels
+        # Finally, we update the spike clusters.
+        # WARNING: we do not call self.assign because we don't want to update
+        # the undo stack with this action.
+        self._spike_clusters = spike_clusters_new
+        self.update()
 
     def redo(self):
-        pass
+        """Redo the last cluster assignement operation."""
+        # Go forward in the stack, and retrieve the new assignement.
+        item = self._undo_stack.forward()
+        if item is None:
+            # No redo has been performed: abort.
+            return
+        spike_labels, cluster_labels = item
+        assert spike_labels is not None
+        # We apply the new assignement.
+        # WARNING: we do not call self.assign because we don't want to update
+        # the undo stack with this action.
+        self._spike_clusters[spike_labels] = cluster_labels
+        self.update()

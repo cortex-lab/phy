@@ -50,10 +50,10 @@ def test_history():
     _assert_current(item0)
     assert history.back() is None
     assert history.back() is None
-    assert len(history) == 2
+    assert len(history) == 3
 
     history.add(item2)
-    assert len(history) == 1
+    assert len(history) == 2
     _assert_current(item2)
     assert history.forward() is None
     assert history.back() is None
@@ -64,8 +64,8 @@ def test_iter_history():
     history = History()
 
     # Wrong arguments to iter().
-    assert len([_ for _ in history.iter(0)]) == 0
-    assert len([_ for _ in history.iter(1, 2)]) == 0
+    assert len([_ for _ in history.iter(0, 0)]) == 0
+    assert len([_ for _ in history.iter(2, 1)]) == 0
 
     item0 = np.zeros(3)
     item1 = np.ones(4)
@@ -76,20 +76,23 @@ def test_iter_history():
     history.add(item2)
 
     for i, item in enumerate(history):
+        if i == 0: break
         # Assert item<i>
-        assert id(item) == id(locals()['item{0:d}'.format(i)])
+        assert id(item) == id(locals()['item{0:d}'.format(i - 1)])
 
-    for i, item in enumerate(history.iter(1)):
+    for i, item in enumerate(history.iter(0, 1)):
+        if i == 0: break
         # Assert item<i>
-        assert i == 0
-        assert history.current_position == 2
-        assert id(item) == id(locals()['item{0:d}'.format(i)])
+        assert i == 1
+        assert history.current_position == 3
+        assert id(item) == id(locals()['item{0:d}'.format(i - 1)])
 
-    for i, item in enumerate(history.iter(2, start_at=1)):
+    for i, item in enumerate(history.iter(1, 2)):
+        if i == 0: break
         # Assert item<i>
-        assert i == 0
-        assert history.current_position == 2
-        assert id(item) == id(locals()['item{0:d}'.format(i + 1)])
+        assert i == 1
+        assert history.current_position == 3
+        assert id(item) == id(locals()['item{0:d}'.format(i)])
 
 
 def test_clustering():
@@ -167,3 +170,48 @@ def test_clustering():
     # Not implemented (yet) features.
     with raises(NotImplementedError):
         clustering.cluster_labels = np.arange(n_clusters)
+
+
+def test_clustering_actions():
+    n_spikes = 1000
+    n_clusters = 10
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+
+    clustering = Clustering(spike_clusters)
+
+    checkpoints = {}
+
+    def _checkpoint():
+        index = len(checkpoints)
+        checkpoints[index] = clustering.spike_clusters.copy()
+
+    def _assert_is_checkpoint(index):
+        assert_array_equal(clustering.spike_clusters, checkpoints[index])
+
+    # TODO: fix index issues, history[0] = base
+
+    # Checkpoint 0.
+    _checkpoint()
+    _assert_is_checkpoint(0)
+
+    # Checkpoint 1.
+    clustering.merge([0, 1], 11)
+    _checkpoint()
+    _assert_is_checkpoint(1)
+
+    # Checkpoint 2.
+    clustering.merge([2, 3], 12)
+    _checkpoint()
+    _assert_is_checkpoint(2)
+
+    # Undo once.
+    clustering.undo()
+    _assert_is_checkpoint(1)
+
+    # Redo.
+    clustering.redo()
+    _assert_is_checkpoint(2)
+
+    # No redo.
+    clustering.redo()
+    _assert_is_checkpoint(2)
