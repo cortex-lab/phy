@@ -13,7 +13,8 @@ from numpy.testing import assert_array_equal
 from pytest import raises
 
 from ...datasets.mock import artificial_spike_clusters
-from ..selector import Selector, _spikes_in_clusters
+from .._utils import _spikes_in_clusters
+from ..selector import Selector
 
 
 #------------------------------------------------------------------------------

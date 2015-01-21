@@ -9,6 +9,7 @@
 import numpy as np
 
 from ..ext import six
+from ._utils import _unique, _spikes_in_clusters
 
 
 #------------------------------------------------------------------------------
@@ -152,7 +153,15 @@ class Clustering(object):
 
     def merge(self, cluster_labels, to=None):
         """Merge several clusters to a new cluster."""
-        raise NotImplementedError("Merging has not been implemented yet.")
+        if to is None:
+            to = self.new_cluster_label()
+        spike_labels = _spikes_in_clusters(self.spike_clusters, cluster_labels)
+        self.assign(spike_labels, to)
+
+    def assign(self, spike_labels, cluster_labels):
+        """Assign clusters to a number of spikes."""
+        self.spike_clusters[spike_labels] = cluster_labels
+        self.update()
 
     def split(self, spike_labels, to=None):
         """Split a number of spikes into a new cluster."""

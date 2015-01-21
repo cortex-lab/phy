@@ -9,27 +9,8 @@
 import numpy as np
 
 from ..ext import six
+from ._utils import _unique, _spikes_in_clusters
 from ..utils.logging import debug, info, warn
-
-
-#------------------------------------------------------------------------------
-# Utility functions
-#------------------------------------------------------------------------------
-
-def _unique(x):
-    """Faster version of np.unique().
-
-    This version is restricted to 1D arrays of non-negative integers.
-
-    It is only faster if len(x) >> len(unique(x)).
-
-    """
-    return np.nonzero(np.bincount(x))[0]
-
-
-def _spikes_in_clusters(spike_clusters, clusters):
-    """Return the labels of all spikes belonging to the specified clusters."""
-    return np.nonzero(np.in1d(spike_clusters, clusters))[0]
 
 
 #------------------------------------------------------------------------------

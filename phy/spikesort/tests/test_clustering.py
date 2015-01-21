@@ -130,13 +130,14 @@ def test_clustering():
     # Not implemented (yet) features.
     with raises(NotImplementedError):
         clustering.cluster_labels = np.arange(n_clusters)
-    # Merge.
-    with raises(NotImplementedError):
-        clustering.merge([2, 3])
-    with raises(NotImplementedError):
-        clustering.merge([2, 3], 11)
-    # Split.
-    with raises(NotImplementedError):
-        clustering.split([1, 3, 5])
-    with raises(NotImplementedError):
-        clustering.split([1, 3, 5], 11)
+
+    # # Merge.
+    # with raises(NotImplementedError):
+    #     clustering.merge([2, 3])
+    # with raises(NotImplementedError):
+    #     clustering.merge([2, 3], 11)
+    # # Split.
+    # with raises(NotImplementedError):
+    #     clustering.split([1, 3, 5])
+    # with raises(NotImplementedError):
+    #     clustering.split([1, 3, 5], 11)
