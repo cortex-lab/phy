@@ -10,7 +10,7 @@ from collections import namedtuple, defaultdict, OrderedDict
 
 import numpy as np
 
-from ..ext.six import iterkeys, itervalues
+from ...ext.six import iterkeys, itervalues
 from ._utils import _unique, _spikes_in_clusters
 
 

@@ -8,9 +8,9 @@
 
 import numpy as np
 
-from ..ext import six
+from ...ext import six
 from ._utils import _unique, _spikes_in_clusters
-from ..utils.logging import debug, info, warn
+from ...utils.logging import debug, info, warn
 
 
 #------------------------------------------------------------------------------
