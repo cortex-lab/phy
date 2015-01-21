@@ -23,6 +23,7 @@ def _before_after(n_samples):
         after = n_samples - before
     else:
         before, after = n_samples
+        n_samples = before + after
     assert before >= 0
     assert after >= 0
     assert before + after == n_samples

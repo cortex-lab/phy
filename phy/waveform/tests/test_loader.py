@@ -49,15 +49,27 @@ def test_loader():
     with raises(ValueError):
         loader.load_at(2000)
 
+
+def test_loader_filter():
+    n_samples_trace, n_channels = 1000, 100
+    n_samples = 40
+    n_spikes = n_samples_trace // (2 * n_samples)
+
+    traces = artificial_traces(n_samples_trace, n_channels)
+    spike_times = np.cumsum(npr.randint(low=0, high=2 * n_samples,
+                                        size=n_spikes))
+
     # With filter.
     def my_filter(x):
         return x * x
 
-    traces_filtered = my_filter(traces)
-
-    loader = WaveformLoader(traces, n_samples=n_samples, filter=my_filter)
+    loader = WaveformLoader(traces,
+                            n_samples=(n_samples // 2, n_samples // 2),
+                            filter=my_filter,
+                            filter_margin=5)
 
     t = spike_times[5]
     waveform_filtered = loader.load_at(t)
-
+    traces_filtered = my_filter(traces)
+    traces_filtered[t - 20:t + 20, :]
     assert np.allclose(waveform_filtered, traces_filtered[t - 20:t + 20, :])
