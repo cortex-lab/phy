@@ -13,12 +13,51 @@ from numpy.testing import assert_array_equal
 from pytest import raises
 
 from ...datasets.mock import artificial_spike_clusters
-from ..clustering import Clustering
+from ..clustering import Clustering, History
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
+
+def test_history():
+    history = History()
+    assert history.current_item is None
+
+    def _assert_current(item):
+        assert id(history.current_item) == id(item)
+
+    item0 = np.zeros(3)
+    item1 = np.ones(4)
+    item2 = 2 * np.ones(5)
+
+    history.add(item0)
+    _assert_current(item0)
+
+    history.add(item1)
+    _assert_current(item1)
+
+    assert history.back()
+    _assert_current(item0)
+
+    assert history.forward()
+    _assert_current(item1)
+
+    assert history.forward() is False
+    _assert_current(item1)
+
+    assert history.back()
+    _assert_current(item0)
+    assert history.back()
+    _assert_current(None)
+    assert history.back() is False
+
+    history.add(item2)
+    _assert_current(item2)
+    assert history.forward() is False
+    assert history.back()
+    assert history.back() is False
+
 
 def test_clustering():
     n_spikes = 1000

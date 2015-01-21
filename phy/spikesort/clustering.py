@@ -12,6 +12,88 @@ from ..ext import six
 
 
 #------------------------------------------------------------------------------
+# History class
+#------------------------------------------------------------------------------
+
+class History(object):
+    """Implement a history of actions with an undo stack."""
+    def __init__(self):
+        self.clear()
+
+    def clear(self):
+        """Clear the history."""
+        self._history = []
+        self._index = 0  # index of the next history item
+
+    @property
+    def current_item(self):
+        """Return the current element."""
+        if self._history and self._index >= 1:
+            self._check_index()
+            return self._history[self._index - 1]
+
+    @property
+    def current_position(self):
+        """Current position in the history."""
+        if self._index >= 1:
+            return self._index - 1
+
+    def _check_index(self):
+        """Check that the index is without the bounds of _history."""
+        assert 0 <= self._index <= len(self._history)
+
+    def add(self, item):
+        """Add an item in the history."""
+        self._check_index()
+        # Possibly truncate the history up to the current point.
+        self._history = self._history[:self._index]
+        # Append the item
+        self._history.append(item)
+        # Increment the index.
+        self._index += 1
+        self._check_index()
+        # Check that the current element is what was provided to the function.
+        assert id(self.current_item) == id(item)
+
+    def iter(self, until=None, start_at=0):
+        """Iterate through successive history items."""
+        if until is None:
+            until = self._index
+        elif until == 0:
+            return
+        if start_at >= until:
+            return
+        # Check arguments.
+        assert until >= 0
+        assert start_at >= 0
+        assert start_at < until
+        for i in range(start_at, until):
+            yield self._history[i]
+
+    def __iter__(self):
+        return self.iter()
+
+    def __len__(self):
+        return len(self._history)
+
+    def back(self):
+        """Go back in history if possible."""
+        if self._index <= 0:
+            return False
+        self._index -= 1
+        self._check_index()
+        return True
+
+    def forward(self):
+        """Go forward in history if possible."""
+        if self._index >= len(self._history):
+            return False
+        self._index += 1
+        self._check_index()
+        return True
+
+
+#------------------------------------------------------------------------------
 # Clustering class
 #------------------------------------------------------------------------------
 
@@ -26,8 +108,6 @@ class Clustering(object):
         self._spike_clusters = spike_clusters
         if spike_clusters is not None:
             self.update()
-        # Clustering history.
-        self.clear_history()
 
     def update(self):
         """Update the cluster counts and labels."""
@@ -78,58 +158,3 @@ class Clustering(object):
     def split(self, spike_labels, to=None):
         """Split a number of spikes into a new cluster."""
         raise NotImplementedError("Splitting has not been implemented yet.")
-
-    #--------------------------------------------------------------------------
-    # Clustering history
-
-    def clear_history(self):
-        """Clear the history and save the current clustering."""
-        self._history_start = self._spike_clusters.copy()
-        self._history = []
-        self._history_index = 0  # index of the next history item
-
-    def _add_history_item(self, spikes_changed, cluster):
-        """Add a (spikes_changed, cluster) tuple in the clustering history."""
-        assert 0 <= self._history_index <= len(self._history)
-        self._history = self._history[:self._history_index]
-        self._history.append((spikes_changed, cluster))
-
-    def _apply_history(self, until=None, start_at=0):
-        """Apply all history items until a given point in the history."""
-        if until is None:
-            until = self._history_index
-        elif until == 0:
-            return
-        if start_at > until:
-            return
-        # Check arguments.
-        assert until >= 0
-        assert start_at >= 0
-        assert start_at <= until
-        # Start from the first clustering.
-        _spike_clusters = self._history_start.copy()
-        # Apply all changes successively.
-        for i in range(start_at, until):
-            _spikes_changed, cluster = self._history[i]
-            _spike_clusters[_spikes_changed] = cluster
-        # Return the updated clustering.
-        return _spike_clusters
-
-    def undo(self):
-        """Undo the last clustering action."""
-        if self._history_index <= 0:
-            return False
-        self._history_index -= 1
-        # Apply all clustering changes until the penultimate one.
-        self.spike_clusters = self._apply_history(self._history_index)
-        return True
-
-    def redo(self):
-        """Redo the last clustering action."""
-        if self._history_index >= len(self._history):
-            return False
-        self._history_index += 1
-        # Apply the latest change.
-        self.spike_clusters = self._apply_history(self._history_index,
-                                                  self._history_index - 1)
-        return True
