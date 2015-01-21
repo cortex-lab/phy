@@ -51,8 +51,10 @@ def test_history():
     assert history.back()
     _assert_current(None)
     assert history.back() is False
+    assert len(history) == 3
 
     history.add(item2)
+    assert len(history) == 1
     _assert_current(item2)
     assert history.forward() is False
     assert history.back()
