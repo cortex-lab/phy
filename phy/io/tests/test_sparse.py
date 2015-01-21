@@ -72,6 +72,24 @@ def test_sparse_csr_check():
         csr_matrix(shape=shape, channels=[[0]])
     with raises(ValueError):
         csr_matrix(shape=shape, spikes_ptr=[0])
+    with raises(ValueError):
+        csr_matrix(shape=(4, 5, 6), data=data, channels=np.zeros((2, 2)),
+                   spikes_ptr=spikes_ptr)
+    with raises(ValueError):
+        csr_matrix(shape=shape, data=data, channels=np.zeros((2, 2)),
+                   spikes_ptr=spikes_ptr)
+    with raises(ValueError):
+        csr_matrix(shape=shape, data=data, channels=channels,
+                   spikes_ptr=np.zeros((2, 2)))
+    with raises(ValueError):
+        csr_matrix(shape=shape, data=np.zeros((100)), channels=channels,
+                   spikes_ptr=spikes_ptr)
+    with raises(ValueError):
+        csr_matrix(shape=shape, data=data, channels=np.zeros(100),
+                   spikes_ptr=spikes_ptr)
+    with raises(ValueError):
+        csr_matrix(shape=shape, data=data, channels=channels,
+                   spikes_ptr=np.zeros(100))
 
     # This one should pass.
     sparse = csr_matrix(shape=shape,
