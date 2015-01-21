@@ -15,6 +15,24 @@ from ._utils import _unique, _spikes_in_clusters
 
 
 #------------------------------------------------------------------------------
+# Global variables related to cluster metadata
+#------------------------------------------------------------------------------
+
+DEFAULT_GROUPS = [
+    (0, 'Noise'),
+    (1, 'MUA'),
+    (2, 'Good'),
+    (3, 'Unsorted'),
+]
+
+
+DEFAULT_FIELDS = [
+    ('group', 3),
+    ('color', 1),  # TODO: random_color function
+]
+
+
+#------------------------------------------------------------------------------
 # ClusterMetadata class
 #------------------------------------------------------------------------------
 
@@ -29,7 +47,9 @@ class ClusterMetadata(object):
 
     """
 
-    def __init__(self, fields):
+    def __init__(self, fields=None):
+        if fields is None:
+            fields = DEFAULT_FIELDS
         # 'fields' is a list of tuples (field_name, default_value).
         # 'self._fields' is an OrderedDict {field_name ==> default_value}.
         self._fields = OrderedDict(fields)
@@ -98,7 +118,12 @@ class ClusterMetadata(object):
                 return info[field]
             else:
                 # Or return the default value.
-                return self._fields[field]
+                default = self._fields[field]
+                # Default is a function ==> call it with the cluster label.
+                if hasattr(default, '__call__'):
+                    return default(cluster)
+                else:
+                    return default
 
     def __getitem__(self, key):
         """Return the field values of all clusters, or all information of a

@@ -19,3 +19,7 @@ from ..cluster_metadata import ClusterMetadata
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
+
+def test_cluster_metadata():
+    meta = ClusterMetadata()
+    assert meta
