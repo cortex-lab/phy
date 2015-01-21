@@ -43,7 +43,7 @@ def _slice(index, n_samples, margin=None):
 class WaveformLoader(object):
     """Load waveforms from filtered or unfiltered traces."""
 
-    def __init__(self, traces, spike_times, offset=0, filter=None,
+    def __init__(self, traces, spike_times=None, offset=0, filter=None,
                  n_samples=None, filter_margin=0):
         # A (possibly memmapped) array-like structure with traces.
         self._traces = traces
@@ -74,7 +74,8 @@ class WaveformLoader(object):
     def load_at(self, time):
         """Load a waveform at a given time."""
         time_o = time - self._offset
-        assert 0 <= time_o < self.n_samples_trace
+        if not (0 <= time_o < self.n_samples_trace):
+            raise ValueError("Invalid time {0:d}.".format(time_o))
         slice_extract = _slice(time_o, self._n_samples, self._filter_margin)
         extract = self._traces[slice_extract, :]
         # Filter the waveforms.
