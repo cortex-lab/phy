@@ -15,7 +15,6 @@ from ..ext import six
 # Waveform loader from traces
 #------------------------------------------------------------------------------
 
-
 def _before_after(n_samples):
     """Get the number of samples before and after."""
     if not isinstance(n_samples, (tuple, list)):

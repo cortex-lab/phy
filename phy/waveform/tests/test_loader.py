@@ -40,7 +40,7 @@ def test_loader():
     loader.traces = traces
 
     # Extract a waveform.
-    t = spike_times[0]
+    t = spike_times[10]
     waveform = loader.load_at(t)
     assert waveform.shape == (n_samples, n_channels)
     assert_array_equal(waveform, traces[t - 20:t + 20, :])
