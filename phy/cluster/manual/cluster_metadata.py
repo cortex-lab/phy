@@ -10,7 +10,7 @@ from collections import defaultdict, OrderedDict
 from functools import partial
 from copy import deepcopy
 
-from ...ext.six import iterkeys, itervalues
+from ...ext.six import iterkeys, itervalues, iteritems
 from ._utils import _unique, _spikes_in_clusters
 from ._history import History
 
@@ -55,7 +55,15 @@ def _cluster_info(fields, data=None):
     """Initialize a structure holding cluster metadata."""
     if data is None:
         data = {}
-    return defaultdict(partial(_default_info, fields), data)
+    out = defaultdict(partial(_default_info, fields))
+    for cluster, values in iteritems(out):
+        # Create the default cluster info dict.
+        info = out[cluster]
+        # Update the specified values, so that the default values are used
+        # for the unspecified values.
+        for key, value in iteritems(values):
+            info[key] = value
+    return out
 
 
 class ClusterMetadata(object):
@@ -94,6 +102,9 @@ class ClusterMetadata(object):
 
     def __getitem__(self, key):
         return self._data[key]
+
+    def get(self, key, field):
+        return self._data[key][field]
 
     def _set_one(self, cluster, field, value):
         """Set information for a given cluster."""
