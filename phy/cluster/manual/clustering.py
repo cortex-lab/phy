@@ -11,7 +11,7 @@ from copy import deepcopy
 
 import numpy as np
 
-from ...ext.six import iterkeys, itervalues, viewkeys, iteritems
+from ...ext.six import iterkeys, itervalues, iteritems
 from ._utils import _unique, _spikes_in_clusters
 from ._update_info import UpdateInfo
 from ._history import History
@@ -20,6 +20,20 @@ from ._history import History
 #------------------------------------------------------------------------------
 # Clustering class
 #------------------------------------------------------------------------------
+
+def _count_clusters(spike_clusters):
+    """Compute cluster counts."""
+    # Reinitializes the counter.
+    _cluster_counts = defaultdict(lambda: 0)
+    # Count the number of spikes in each cluster.
+    cluster_counts = np.bincount(spike_clusters)
+    # The following is much faster than np.unique().
+    clusters_labels = np.nonzero(cluster_counts)[0]
+    # Update the counter.
+    for cluster in clusters_labels:
+        _cluster_counts[cluster] = cluster_counts[cluster]
+    return _cluster_counts
+
 
 def _get_update_info(spike_labels, cluster_labels,
                      cluster_counts_before=None, cluster_counts_after=None):
@@ -53,15 +67,7 @@ class Clustering(object):
 
     def update_cluster_counts(self):
         """Update the cluster counts and labels."""
-        # Reinitializes the counter.
-        self._cluster_counts = defaultdict(0)
-        # Count the number of spikes in each cluster.
-        cluster_counts = np.bincount(self._spike_clusters)
-        # The following is much faster than np.unique().
-        clusters_labels = np.nonzero(cluster_counts)[0]
-        # Update the counter.
-        for cluster in clusters_labels:
-            self._cluster_counts[cluster] = cluster_counts[cluster]
+        self._cluster_counts = _count_clusters(self._spike_clusters)
 
     @property
     def spike_clusters(self):

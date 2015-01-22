@@ -12,15 +12,43 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from pytest import raises
 
+from ....ext.six import itervalues
 from ....datasets.mock import artificial_spike_clusters
-from ..clustering import Clustering
+from ..clustering import _get_update_info, _count_clusters, Clustering
+from .._utils import _unique
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
 
-def test_clustering():
+def test_update_info():
+
+    n_spikes = 1000
+    n_clusters = 10
+
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    cluster_counts_before = _count_clusters(spike_clusters)
+
+    assert len(cluster_counts_before) == 10
+    assert sum(itervalues(cluster_counts_before)) == 1000
+    assert cluster_counts_before[5] > 0
+
+    assert cluster_counts_before[100] == 0
+
+    spike_labels = np.arange(100)
+    cluster_labels = 100 * np.ones(100, dtype=np.int32)
+
+    spike_clusters[spike_labels] = cluster_labels
+    cluster_counts_after = _count_clusters(spike_clusters)
+
+    info = _get_update_info(spike_labels, cluster_labels,
+                            cluster_counts_before,
+                            cluster_counts_after)
+    assert info
+
+
+def teast_clustering():
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
@@ -36,25 +64,23 @@ def test_clustering():
     assert clustering.new_cluster_label() == n_clusters
     assert clustering.n_clusters == n_clusters
 
-    assert clustering.cluster_counts.shape[0] == n_clusters
-    assert clustering.cluster_counts.sum() == n_spikes
+    assert len(clustering.cluster_counts) == n_clusters
+    assert sum(itervalues(clustering.cluster_counts)) == n_spikes
 
     # Updating a cluster, method 1.
     spike_clusters_new = spike_clusters.copy()
     spike_clusters_new[:10] = 100
-    # This automatically updates the Clustering instance.
-    clustering.spike_clusters = spike_clusters_new
+    clustering.spike_clusters[:] = spike_clusters_new[:]
+    # Need to update explicitely.
+    clustering.update_cluster_counts()
     assert_array_equal(clustering.cluster_labels,
                        np.r_[np.arange(n_clusters), 100])
 
     # Updating a cluster, method 2.
-    clustering.spike_clusters = spike_clusters_base
+    clustering.spike_clusters[:] = spike_clusters_base[:]
     clustering.spike_clusters[:10] = 100
-    # No automatic update (yet?).
-    assert_array_equal(clustering.cluster_labels,
-                       np.arange(n_clusters))
     # Need to update manually.
-    clustering.update()
+    clustering.update_cluster_counts()
     assert_array_equal(clustering.cluster_labels,
                        np.r_[np.arange(n_clusters), 100])
 
@@ -97,7 +123,7 @@ def test_clustering():
         clustering.cluster_labels = np.arange(n_clusters)
 
 
-def test_clustering_actions():
+def teast_clustering_actions():
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
