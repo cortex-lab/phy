@@ -22,6 +22,8 @@ from ....datasets.mock import artificial_spike_clusters
 
 def test_utils():
     """Test clustering utility functions."""
+    _unique([])
+
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
