@@ -117,8 +117,37 @@ def test_metadata_history():
     assert meta.get(4, 'group') == 5
     assert meta.get(4, 'color') == 1
 
-    meta.set([2], 'group', 20)
-    assert meta.get
+    ###########
 
-    meta.set([3], 'color', 30)
-    meta.set([2], 'color', 40)
+    # Action 1.
+    meta.set(2, 'group', 20)
+    assert meta.get(2, 'group') == 20
+
+    # Action 2.
+    meta.set(3, 'color', 30)
+    assert meta.get(3, 'color') == 30
+
+    # Action 3.
+    meta.set(2, 'color', 40)
+    assert meta.get(2, 'color') == 40
+
+    ###########
+
+    # Undo 3.
+    meta.undo()
+    assert meta.get(2, 'color') == 7
+
+    # Undo 2.
+    meta.undo()
+    assert meta.get(3, 'color') == 1
+
+    # Redo 2.
+    meta.redo()
+    assert meta.get(3, 'color') == 30
+    assert meta.get(2, 'group') == 20
+
+    # Undo 2.
+    meta.undo()
+    # Undo 1.
+    meta.undo()
+    assert meta.get(2, 'group') == 2

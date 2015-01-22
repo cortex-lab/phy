@@ -61,7 +61,7 @@ class ClusterMetadata(object):
         self._spike_clusters = None
         self._cluster_labels = None
         # The stack contains (clusters, field, value) tuples.
-        self._undo_stack = History()
+        self._undo_stack = History((None, None, None))
         # Keep a deep copy of the original structure for the undo stack.
         self._data_base = deepcopy(self._data)
 
@@ -124,6 +124,9 @@ class ClusterMetadata(object):
         self._data[cluster][field] = value
 
     def _set_multi(self, clusters, field, values):
+        # Ensure 'clusters' is a list of clusters.
+        if not hasattr(clusters, '__len__'):
+            clusters = [clusters]
         if hasattr(values, '__len__'):
             assert len(clusters) == len(values)
             for cluster, value in zip(clusters, values):
@@ -148,14 +151,15 @@ class ClusterMetadata(object):
             if field in info:
                 # Return the value.
                 return info[field]
+            # Or return the default value.
+            default = self._fields[field]
+            # Default is a function ==> call it with the cluster label.
+            if hasattr(default, '__call__'):
+                return default(cluster)
             else:
-                # Or return the default value.
-                default = self._fields[field]
-                # Default is a function ==> call it with the cluster label.
-                if hasattr(default, '__call__'):
-                    return default(cluster)
-                else:
-                    return default
+                return default
+        raise ValueError("Cluster {0:d} is not in the ".format(cluster) +
+                         "metadata structure.")
 
     def _get_multi(self, clusters, field):
         return OrderedDict((cluster, self._get_one(cluster, field))
@@ -173,7 +177,7 @@ class ClusterMetadata(object):
                 assert field is not None
                 return self._get_multi(key, field)
             # 'key' is one or several clusters: return the given field
-            elif key in self._data:
+            else:
                 # 'key' is a cluster.
                 if field is not None:
                     # 'field' is specified: return just one value.
@@ -194,13 +198,17 @@ class ClusterMetadata(object):
 
     def undo(self):
         """Undo the last metadata change."""
-        self._undo_stack.back()
+        args = self._undo_stack.back()
+        if args is None:
+            return
         self._data = deepcopy(self._data_base)
         for clusters, field, values in self._undo_stack:
-            self._set_multi(clusters, field, values)
+            if clusters is not None:
+                self._set_multi(clusters, field, values)
 
     def redo(self):
         """Redo the next metadata change."""
         args = self._undo_stack.forward()
-        if args is not None:
-            self.set(*args)
+        if args is None:
+            return
+        self._set_multi(*args)
