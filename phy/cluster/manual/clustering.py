@@ -21,10 +21,14 @@ from ._history import History
 # Clustering class
 #------------------------------------------------------------------------------
 
+def _empty_cluster_counts():
+    return defaultdict(lambda: 0)
+
+
 def _count_clusters(spike_clusters):
     """Compute cluster counts."""
     # Reinitializes the counter.
-    _cluster_counts = defaultdict(lambda: 0)
+    _cluster_counts = _empty_cluster_counts()
     # Count the number of spikes in each cluster.
     cluster_counts = np.bincount(spike_clusters)
     # The following is much faster than np.unique().
@@ -35,21 +39,29 @@ def _count_clusters(spike_clusters):
     return _cluster_counts
 
 
+def _non_empty(cluster_counts):
+    clusters = sorted(iterkeys(cluster_counts))
+    for cluster in clusters:
+        if cluster_counts[cluster] == 0:
+            del cluster_counts[cluster]
+    return cluster_counts
+
+
 def _get_update_info(spike_labels, cluster_labels,
                      cluster_counts_before, cluster_counts_after):
     """Return an UpdateInfo instance as a function of new spike->cluster
     assignements."""
     # List of all non-empty clusters before and after.
-    clusters_before = set(cluster_counts_before)
-    clusters_after = set(cluster_counts_after)
+    clusters_before = set(_non_empty(cluster_counts_before))
+    clusters_after = set(_non_empty(cluster_counts_after))
     # Added and deleted clusters.
     added_clusters = clusters_after - clusters_before
     deleted_clusters = clusters_before - clusters_after
     changed_clusters = set(_unique(cluster_labels)) - added_clusters
     update_info = UpdateInfo(spikes=spike_labels,
-                             added_clusters=added_clusters,
-                             deleted_clusters=deleted_clusters,
-                             changed_clusters=changed_clusters)
+                             added_clusters=sorted(added_clusters),
+                             deleted_clusters=sorted(deleted_clusters),
+                             changed_clusters=sorted(changed_clusters))
     return update_info
 
 
@@ -77,8 +89,8 @@ class Clustering(object):
     @property
     def cluster_labels(self):
         """Labels of all non-empty clusters, sorted by label."""
-        return [cluster for cluster in sorted(self._cluster_counts)
-                if self._cluster_counts[cluster] > 0]
+        return [cluster
+                for cluster in sorted(_non_empty(self._cluster_counts))]
 
     @cluster_labels.setter
     def cluster_labels(self, value):

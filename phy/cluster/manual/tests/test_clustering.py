@@ -15,6 +15,7 @@ from pytest import raises
 from ....ext.six import itervalues
 from ....datasets.mock import artificial_spike_clusters
 from ..clustering import _get_update_info, _count_clusters, Clustering
+from .._update_info import UpdateInfo
 from .._utils import _unique
 
 
@@ -23,6 +24,11 @@ from .._utils import _unique
 #------------------------------------------------------------------------------
 
 def test_update_info():
+
+    # Check default values in UpdateInfo.
+    info = UpdateInfo(deleted_clusters=[1, 2])
+    assert info.added_clusters == []
+    assert info.deleted_clusters == [1, 2]
 
     n_spikes = 1000
     n_clusters = 10
@@ -36,8 +42,9 @@ def test_update_info():
 
     assert cluster_counts_before[100] == 0
 
-    spike_labels = np.arange(100)
-    cluster_labels = 100 * np.ones(100, dtype=np.int32)
+    # Change the first 10 spikes and assign them to cluster 100.
+    spike_labels = np.arange(10)
+    cluster_labels = 100 * np.ones(10, dtype=np.int32)
 
     spike_clusters[spike_labels] = cluster_labels
     cluster_counts_after = _count_clusters(spike_clusters)
@@ -45,10 +52,13 @@ def test_update_info():
     info = _get_update_info(spike_labels, cluster_labels,
                             cluster_counts_before,
                             cluster_counts_after)
-    assert info
+    assert_array_equal(info.spikes, spike_labels)
+    assert info.added_clusters == [100]
+    assert info.deleted_clusters == []
+    assert info.changed_clusters == []
 
 
-def test_clustering():
+def teast_clustering():
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
@@ -148,8 +158,11 @@ def teast_clustering_actions():
     _assert_is_checkpoint(0)
 
     # Checkpoint 1.
-    clustering.merge([0, 1], 11)
+    info = clustering.merge([0, 1], 11)
     _checkpoint()
+    assert info.added_clusters == [11]
+    assert info.deleted_clusters == []
+    assert info.changed_clusters == []
     _assert_is_checkpoint(1)
 
     # Checkpoint 2.
@@ -158,7 +171,7 @@ def teast_clustering_actions():
     _assert_is_checkpoint(2)
 
     # Undo once.
-    clustering.undo()
+    print(clustering.undo())
     _assert_is_checkpoint(1)
 
     # Redo.
