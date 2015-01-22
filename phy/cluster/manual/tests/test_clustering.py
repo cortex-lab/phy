@@ -48,7 +48,7 @@ def test_update_info():
     assert info
 
 
-def teast_clustering():
+def test_clustering():
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
@@ -87,26 +87,30 @@ def teast_clustering():
     # Assign.
     clustering.assign(slice(None, 10, None), 1000)
     assert 1000 in clustering.cluster_labels
-    assert clustering.cluster_counts[-1] == 10
+    assert clustering.cluster_counts[1000] == 10
     assert np.all(clustering.spike_clusters[:10] == 1000)
 
     # Merge.
     count = clustering.cluster_counts.copy()
     my_spikes_0 = np.nonzero(np.in1d(clustering.spike_clusters, [2, 3]))[0]
-    my_spikes = clustering.merge([2, 3])
+    info = clustering.merge([2, 3])
+    my_spikes = info.spikes
     assert_array_equal(my_spikes, my_spikes_0)
     assert 1001 in clustering.cluster_labels
-    assert clustering.cluster_counts[-1] == count[2] + count[3]
+    assert clustering.cluster_counts[1001] == count[2] + count[3]
     assert np.all(clustering.spike_clusters[my_spikes] == 1001)
 
     # Merge to a given cluster.
-    clustering.spike_clusters = spike_clusters_base
+    clustering.spike_clusters[:] = spike_clusters_base[:]
+    clustering.update_cluster_counts()
     my_spikes_0 = np.nonzero(np.in1d(clustering.spike_clusters, [4, 6]))[0]
-    count = clustering.cluster_counts.copy()
-    my_spikes = clustering.merge([4, 6], 11)
+    count = clustering.cluster_counts
+    count4, count6 = count[4], count[6]
+    info = clustering.merge([4, 6], 11)
+    my_spikes = info.spikes
     assert_array_equal(my_spikes, my_spikes_0)
     assert 11 in clustering.cluster_labels
-    assert clustering.cluster_counts[-1] == count[4] + count[6]
+    assert clustering.cluster_counts[11] == count4 + count6
     assert np.all(clustering.spike_clusters[my_spikes] == 11)
 
     # Split

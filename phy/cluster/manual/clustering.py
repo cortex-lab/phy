@@ -36,7 +36,7 @@ def _count_clusters(spike_clusters):
 
 
 def _get_update_info(spike_labels, cluster_labels,
-                     cluster_counts_before=None, cluster_counts_after=None):
+                     cluster_counts_before, cluster_counts_after):
     """Return an UpdateInfo instance as a function of new spike->cluster
     assignements."""
     # List of all non-empty clusters before and after.
@@ -115,6 +115,10 @@ class Clustering(object):
                                   added_clusters=[to])
         # And update the cluster counts directly.
         n_spikes = len(spikes)
+        # This is just for debugging.
+        # n_spikes_bis = sum([self._cluster_counts[cluster]
+        #                     for cluster in cluster_labels])
+        # assert n_spikes_bis == n_spikes
         for cluster in cluster_labels:
             del self._cluster_counts[cluster]
         self._cluster_counts[to] = n_spikes
@@ -125,6 +129,9 @@ class Clustering(object):
     def _assign(self, spike_labels, cluster_labels, _update_info=None):
         """Assign clusters to a number of spikes, but do not add
         the change to the undo stack."""
+        # Ensure 'cluster_labels' is an array-like.
+        if not hasattr(cluster_labels, '__len__'):
+            cluster_labels = [cluster_labels]
         self.spike_clusters[spike_labels] = cluster_labels
         # If the UpdateInfo is passed, it means the _cluster_counts structure
         # has already been updated. Otherwise, we need to update it here.
@@ -132,7 +139,8 @@ class Clustering(object):
             counts_before = self._cluster_counts
             self.update_cluster_counts()
             counts_after = self._cluster_counts
-            _update_info = _get_update_info(counts_before, counts_after)
+            _update_info = _get_update_info(spike_labels, cluster_labels,
+                                            counts_before, counts_after)
         return _update_info
 
     def assign(self, spike_labels, cluster_labels, _update_info=None):
