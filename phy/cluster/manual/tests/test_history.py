@@ -118,3 +118,25 @@ def test_global_history():
 
     # Undo once.
     assert gh.undo() == ('h1 third',)
+
+    # Undo once more.
+    assert gh.undo() == ('h2 second', 'h1 second')
+
+    # Redo once.
+    assert gh.redo() == ('h1 second', 'h2 second')
+
+    # New fourth action.
+    h1.add('h1 third')
+    h2.add('h2 third')
+    gh.action(h1, h2)
+
+    assert gh.redo() is ()
+    assert gh.undo() == ('h2 third', 'h1 third')
+    assert gh.undo() == ('h2 second', 'h1 second')
+    assert gh.undo() == ('h2 first',)
+    assert gh.undo() == ('h1 first',)
+    assert gh.undo() == ()
+    assert gh.undo() == ()
+    assert gh.redo() == ('h1 first',)
+    assert gh.redo() == ('h2 first',)
+    assert gh.redo() == ('h1 second', 'h2 second')

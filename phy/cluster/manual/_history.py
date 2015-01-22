@@ -146,6 +146,8 @@ class GlobalHistory(History):
 
         """
         controllers = self.back()
+        if controllers is None:
+            return ()
         return tuple([controller.undo() for controller in controllers[::-1]])
 
     def redo(self):
@@ -155,4 +157,6 @@ class GlobalHistory(History):
 
         """
         controllers = self.forward()
+        if controllers is None:
+            return ()
         return tuple([controller.redo() for controller in controllers])
