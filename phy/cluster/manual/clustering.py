@@ -122,10 +122,10 @@ class Clustering(object):
         spikes = _spikes_in_clusters(self.spike_clusters, cluster_labels)
         # Create the UpdateInfo instance here, it's faster.
         _update_info = UpdateInfo(description='merge',
-                                  clusters=cluster_labels,
+                                  clusters=sorted(cluster_labels),
                                   spikes=spikes,
                                   added=[to],
-                                  deleted=cluster_labels)
+                                  deleted=sorted(cluster_labels))
         # And update the cluster counts directly.
         n_spikes = len(spikes)
         # This is just for debugging.

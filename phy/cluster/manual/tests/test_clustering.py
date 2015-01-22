@@ -209,11 +209,19 @@ def test_clustering_actions():
     # Merge again.
     info = clustering.merge([4, 5, 6], 13)
     _checkpoint()
+    _assert_spikes([13])
+    assert info.added == [13]
+    assert info.deleted == [4, 5, 6]
+    assert info.count_changed == []
     _assert_is_checkpoint(3)
 
     # One more merge.
     info = clustering.merge([8, 7])  # merged to 14
     _checkpoint()
+    _assert_spikes([14])
+    assert info.added == [14]
+    assert info.deleted == [7, 8]
+    assert info.count_changed == []
     _assert_is_checkpoint(4)
 
     # Now we undo.
