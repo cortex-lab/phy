@@ -26,9 +26,10 @@ def update_info(**kwargs):
     d = dict(
         description=None,  # optional information about the update
         spikes=[],  # all spikes affected by the update
-        added_clusters=[],  # new clusters
-        deleted_clusters=[],  # deleted clusters
-        changed_clusters=[]  # clusters with updated metadata
+        added=[],  # new clusters
+        deleted=[],  # deleted clusters
+        count_changed=[],  # clusters with changed count
+        metadata_changed=[]  # clusters with changed metadata
     )
     d.update(kwargs)
     return AttrDict(d)

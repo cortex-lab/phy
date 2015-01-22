@@ -14,7 +14,8 @@ from pytest import raises
 
 from ....ext.six import itervalues
 from ....datasets.mock import artificial_spike_clusters
-from ..clustering import _get_update_info, _count_clusters, Clustering
+from ..clustering import (_get_update_info, _count_clusters, _diff_counts,
+                          Clustering)
 from .._update_info import UpdateInfo
 from .._utils import _unique
 
@@ -23,12 +24,21 @@ from .._utils import _unique
 # Tests
 #------------------------------------------------------------------------------
 
+def test_counts():
+    c1 = {1: 10, 2: 20, 3: 30, 5: 50}
+    c2 = {0: 5, 2: 20, 3: 31}
+    ui = _diff_counts(c1, c2)
+    assert ui.added == [0]
+    assert ui.deleted == [1, 5]
+    assert ui.count_changed == [3]
+
+
 def test_update_info():
 
     # Check default values in UpdateInfo.
-    info = UpdateInfo(deleted_clusters=[1, 2])
-    assert info.added_clusters == []
-    assert info.deleted_clusters == [1, 2]
+    info = UpdateInfo(deleted=[1, 2])
+    assert info.added == []
+    assert info.deleted == [1, 2]
 
     n_spikes = 1000
     n_clusters = 10
@@ -49,16 +59,16 @@ def test_update_info():
     spike_clusters[spike_labels] = cluster_labels
     cluster_counts_after = _count_clusters(spike_clusters)
 
-    info = _get_update_info(spike_labels, cluster_labels,
+    info = _get_update_info(spike_labels,
                             cluster_counts_before,
                             cluster_counts_after)
     assert_array_equal(info.spikes, spike_labels)
-    assert info.added_clusters == [100]
-    assert info.deleted_clusters == []
-    assert info.changed_clusters == []
+    assert info.added == [100]
+    assert info.deleted == []
+    assert len(info.count_changed) > 0
 
 
-def teast_clustering():
+def test_clustering():
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
@@ -137,7 +147,7 @@ def teast_clustering():
         clustering.cluster_labels = np.arange(n_clusters)
 
 
-def teast_clustering_actions():
+def test_clustering_actions():
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
@@ -160,18 +170,24 @@ def teast_clustering_actions():
     # Checkpoint 1.
     info = clustering.merge([0, 1], 11)
     _checkpoint()
-    assert info.added_clusters == [11]
-    assert info.deleted_clusters == []
-    assert info.changed_clusters == []
+    assert info.added == [11]
+    assert info.deleted == []
+    assert info.count_changed == []
     _assert_is_checkpoint(1)
 
     # Checkpoint 2.
-    clustering.merge([2, 3], 12)
+    info = clustering.merge([2, 3], 12)
     _checkpoint()
+    assert info.added == [12]
+    assert info.deleted == []
+    assert info.count_changed == []
     _assert_is_checkpoint(2)
 
     # Undo once.
-    print(clustering.undo())
+    info = clustering.undo()
+    assert info.added == [2, 3]
+    assert info.deleted == [12]
+    assert info.count_changed == []
     _assert_is_checkpoint(1)
 
     # Redo.

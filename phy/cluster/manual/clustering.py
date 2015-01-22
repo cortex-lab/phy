@@ -25,6 +25,24 @@ def _empty_cluster_counts():
     return defaultdict(lambda: 0)
 
 
+def _diff_counts(count_1, count_2):
+    # List of all non-empty clusters before and after.
+    clusters_before = set(_non_empty(count_1))
+    clusters_after = set(_non_empty(count_2))
+    # Added and deleted clusters.
+    added = clusters_after - clusters_before
+    deleted = clusters_before - clusters_after
+    # Find the clusters that have their counts changed.
+    intersection = clusters_before.intersection(clusters_after)
+    count_changed = [cluster for cluster in sorted(intersection)
+                     if count_1[cluster] != count_2[cluster]]
+    # Return the UpdateInfo object.
+    update_info = UpdateInfo(added=sorted(added),
+                             deleted=sorted(deleted),
+                             count_changed=sorted(count_changed))
+    return update_info
+
+
 def _count_clusters(spike_clusters):
     """Compute cluster counts."""
     # Reinitializes the counter.
@@ -47,21 +65,12 @@ def _non_empty(cluster_counts):
     return cluster_counts
 
 
-def _get_update_info(spike_labels, cluster_labels,
+def _get_update_info(spike_labels,
                      cluster_counts_before, cluster_counts_after):
     """Return an UpdateInfo instance as a function of new spike->cluster
     assignements."""
-    # List of all non-empty clusters before and after.
-    clusters_before = set(_non_empty(cluster_counts_before))
-    clusters_after = set(_non_empty(cluster_counts_after))
-    # Added and deleted clusters.
-    added_clusters = clusters_after - clusters_before
-    deleted_clusters = clusters_before - clusters_after
-    changed_clusters = set(_unique(cluster_labels)) - added_clusters
-    update_info = UpdateInfo(spikes=spike_labels,
-                             added_clusters=sorted(added_clusters),
-                             deleted_clusters=sorted(deleted_clusters),
-                             changed_clusters=sorted(changed_clusters))
+    update_info = _diff_counts(cluster_counts_before, cluster_counts_after)
+    update_info.spikes = spike_labels
     return update_info
 
 
@@ -124,7 +133,7 @@ class Clustering(object):
         _update_info = UpdateInfo(description='merge',
                                   clusters=cluster_labels,
                                   spikes=spikes,
-                                  added_clusters=[to])
+                                  added=[to])
         # And update the cluster counts directly.
         n_spikes = len(spikes)
         # This is just for debugging.
@@ -151,7 +160,7 @@ class Clustering(object):
             counts_before = self._cluster_counts
             self.update_cluster_counts()
             counts_after = self._cluster_counts
-            _update_info = _get_update_info(spike_labels, cluster_labels,
+            _update_info = _get_update_info(spike_labels,
                                             counts_before, counts_after)
         return _update_info
 
@@ -173,17 +182,17 @@ class Clustering(object):
         # Retrieve the initial spike_cluster structure.
         spike_clusters_new = self._spike_clusters_base.copy()
         # This structure contains True when the spike has been updated.
-        spike_changes = np.zeros_like(spike_clusters_new, dtype=np.bool)
+        # spike_changes = np.zeros_like(spike_clusters_new, dtype=np.bool)
         # Loop over the history (except the last item because we undo).
         for spike_labels, cluster_labels in self._undo_stack:
             # We update the spike clusters accordingly.
             if spike_labels is not None:
                 spike_clusters_new[spike_labels] = cluster_labels
-                spike_changes[spike_labels] = True
-        # Finally, we update the spike clusters that have changed.
-        spike_changed = np.nonzero(spike_changes)[0]
+                # spike_changes[spike_labels] = True
+        # spike_changed = np.nonzero(spike_changes)[0]
+        # Finally, we update all spike clusters.
         # WARNING: do not add an item in the stack (_assign and not assign).
-        return self._assign(spike_changed, spike_clusters_new[spike_changed])
+        return self._assign(slice(None, None, None), spike_clusters_new)
 
     def redo(self):
         """Redo the last cluster assignement operation."""
