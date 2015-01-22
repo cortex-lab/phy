@@ -12,6 +12,7 @@ from copy import deepcopy
 
 from ...ext.six import iterkeys, itervalues, iteritems
 from ._utils import _unique, _spikes_in_clusters
+from ._update_info import UpdateInfo
 from ._history import History
 
 
@@ -90,8 +91,8 @@ class ClusterMetadata(object):
         self._data = _cluster_info(fields, data=data)
         self._spike_clusters = None
         self._cluster_labels = None
-        # The stack contains (clusters, field, value) tuples.
-        self._undo_stack = History((None, None, None))
+        # The stack contains (clusters, field, value, update_info) tuples.
+        self._undo_stack = History((None, None, None, None))
         # Keep a deep copy of the original structure for the undo stack.
         self._data_base = deepcopy(self._data)
 
@@ -112,9 +113,6 @@ class ClusterMetadata(object):
 
     def _set_multi(self, clusters, field, values):
         """Set some information for a number of clusters."""
-        # Ensure 'clusters' is a list of clusters.
-        if not hasattr(clusters, '__len__'):
-            clusters = [clusters]
         if hasattr(values, '__len__'):
             assert len(clusters) == len(values)
             for cluster, value in zip(clusters, values):
@@ -126,8 +124,13 @@ class ClusterMetadata(object):
     def set(self, clusters, field, values):
         """Set some information for a number of clusters and add the changes
         to the undo stack."""
+        # Ensure 'clusters' is a list of clusters.
+        if not hasattr(clusters, '__len__'):
+            clusters = [clusters]
         self._set_multi(clusters, field, values)
-        self._undo_stack.add((clusters, field, values))
+        info = UpdateInfo(description=field, metadata_changed=clusters)
+        self._undo_stack.add((clusters, field, values, info))
+        return info
 
     def undo(self):
         """Undo the last metadata change."""
@@ -135,13 +138,19 @@ class ClusterMetadata(object):
         if args is None:
             return
         self._data = deepcopy(self._data_base)
-        for clusters, field, values in self._undo_stack:
+        for clusters, field, values, _ in self._undo_stack:
             if clusters is not None:
                 self._set_multi(clusters, field, values)
+        # Return the UpdateInfo instance of the undo action.
+        info = args[-1]
+        return info
 
     def redo(self):
         """Redo the next metadata change."""
         args = self._undo_stack.forward()
         if args is None:
             return
-        self._set_multi(*args)
+        clusters, field, values, info = args
+        self._set_multi(clusters, field, values)
+        # Return the UpdateInfo instance of the redo action.
+        return info

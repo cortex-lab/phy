@@ -157,6 +157,7 @@ class Clustering(object):
             self.update_cluster_counts()
             counts_after = self._cluster_counts
             _update_info = _diff_counts(counts_before, counts_after)
+            _update_info.description = 'assign'
             _update_info.spikes = spike_labels
         return _update_info
 
