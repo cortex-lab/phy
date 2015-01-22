@@ -49,17 +49,23 @@ def test_cluster_metadata():
     assert meta[10]['color'] == 1
     assert meta[10]['group'] == 3
 
-    meta.set([10], 'color', 5)
+    info = meta.set([10], 'color', 5)
     assert meta[10]['color'] == 5
+    assert info.description == 'color'
+    assert info.metadata_changed == [10]
 
     # Alternative __setitem__ syntax.
-    meta.set([10, 11], 'color', 5)
+    info = meta.set([10, 11], 'color', 5)
     assert meta[10]['color'] == 5
     assert meta[11]['color'] == 5
+    assert info.description == 'color'
+    assert info.metadata_changed == [10, 11]
 
-    meta.set([10, 11], 'color', [6, 7])
+    info = meta.set([10, 11], 'color', [6, 7])
     assert meta[10]['color'] == 6
     assert meta.data[11]['color'] == 7
+    assert info.description == 'color'
+    assert info.metadata_changed == [10, 11]
 
     meta[10]['color'] = 10
     assert meta[10]['color'] == 10
@@ -89,37 +95,57 @@ def test_metadata_history():
     meta.redo()
 
     # Action 1.
-    meta.set(2, 'group', 20)
+    info = meta.set(2, 'group', 20)
     assert meta.get(2, 'group') == 20
+    assert info.description == 'group'
+    assert info.metadata_changed == [2]
 
     # Action 2.
-    meta.set(3, 'color', 30)
+    info = meta.set(3, 'color', 30)
     assert meta.get(3, 'color') == 30
+    assert info.description == 'color'
+    assert info.metadata_changed == [3]
 
     # Action 3.
-    meta.set(2, 'color', 40)
+    info = meta.set(2, 'color', 40)
     assert meta.get(2, 'color') == 40
+    assert info.description == 'color'
+    assert info.metadata_changed == [2]
 
     ###########
 
     # Undo 3.
-    meta.undo()
+    info = meta.undo()
     assert meta.get(2, 'color') == 7
+    assert info.description == 'color'
+    assert info.metadata_changed == [2]
 
     # Undo 2.
-    meta.undo()
+    info = meta.undo()
     assert meta.get(3, 'color') == 1
+    assert info.description == 'color'
+    assert info.metadata_changed == [3]
 
     # Redo 2.
-    meta.redo()
+    info = meta.redo()
     assert meta.get(3, 'color') == 30
     assert meta.get(2, 'group') == 20
+    assert info.description == 'color'
+    assert info.metadata_changed == [3]
 
     # Undo 2.
-    meta.undo()
-    # Undo 1.
-    meta.undo()
-    assert meta.get(2, 'group') == 2
+    info = meta.undo()
+    assert info.description == 'color'
+    assert info.metadata_changed == [3]
 
-    meta.undo()
-    meta.undo()
+    # Undo 1.
+    info = meta.undo()
+    assert meta.get(2, 'group') == 2
+    assert info.description == 'group'
+    assert info.metadata_changed == [2]
+
+    info = meta.undo()
+    assert info is None
+
+    info = meta.undo()
+    assert info is None
