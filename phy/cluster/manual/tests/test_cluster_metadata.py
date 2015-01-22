@@ -70,9 +70,17 @@ def test_cluster_metadata():
     meta.set([10], 'color', 5)
     assert meta[10]['color'] == 5
 
-    # WARNING: __getitem__ returns a copy so changing this has no effect.
-    meta[10]['color'] == 7
+    meta.set([10, 11], 'color', 5)
     assert meta[10]['color'] == 5
+    assert meta[11]['color'] == 5
+
+    meta.set([10, 11], 'color', [6, 7])
+    assert meta[10]['color'] == 6
+    assert meta[11]['color'] == 7
+
+    # WARNING: __getitem__ returns a copy so changing this has no effect.
+    meta[10]['color'] == 10
+    assert meta[10]['color'] == 6
 
 
 def test_default_function():
