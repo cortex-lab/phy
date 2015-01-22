@@ -14,7 +14,7 @@ from pytest import raises
 
 from ....datasets.mock import artificial_spike_clusters
 from ....ext.six import itervalues, iterkeys
-from ..cluster_metadata import _cluster_info_structure, ClusterMetadata
+from ..cluster_metadata import _cluster_info, ClusterMetadata
 
 
 #------------------------------------------------------------------------------
@@ -23,7 +23,7 @@ from ..cluster_metadata import _cluster_info_structure, ClusterMetadata
 
 def test_structure():
     """Test the structure holding all cluster metadata."""
-    data = _cluster_info_structure([('a', 1), ('b', 2)])
+    data = _cluster_info([('a', 1), ('b', 2)])
 
     assert isinstance(data[3], dict)
     assert data[3]['a'] == 1
@@ -36,14 +36,12 @@ def test_structure():
         data[3]['c']
 
 
-def tAest_default_function():
-    meta = ClusterMetadata([('field', lambda x: x * x)])
-    meta._add_clusters([3])
-
-    assert meta[3]['field'] == 9
+def test_default_function():
+    meta = ClusterMetadata([('field', lambda: 9)])
+    assert meta.data[3]['field'] == 9
 
 
-def tAest_cluster_metadata():
+def taest_cluster_metadata():
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters, low=2)
@@ -108,7 +106,7 @@ def tAest_cluster_metadata():
     assert meta[10]['color'] == 6
 
 
-def tAest_metadata_history():
+def taest_metadata_history():
     """Test ClusterMetadata history."""
 
     n_spikes = 1000

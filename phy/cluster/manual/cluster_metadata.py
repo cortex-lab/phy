@@ -37,25 +37,25 @@ DEFAULT_FIELDS = [
 # ClusterMetadata class
 #------------------------------------------------------------------------------
 
-def _default_value(field, default, cluster=None):
+def _default_value(field, default):
     """Return the default value of a field."""
     if hasattr(default, '__call__'):
-        return default(cluster)
+        return default()
     else:
         return default
 
 
-def _default_info(fields, cluster=None):
+def _default_info(fields):
     """Default structure holding info of a cluster."""
-    return OrderedDict([(field, _default_value(field, default, cluster))
-                        for field, default in fields])
+    return dict([(field, _default_value(field, default))
+                 for field, default in fields])
 
 
-def _cluster_info_structure(fields=None):
-    if fields is None:
-        fields = DEFAULT_FIELDS
+def _cluster_info(fields, data=None):
     """Initialize a structure holding cluster metadata."""
-    return defaultdict(partial(_default_info, fields))
+    if data is None:
+        data = {}
+    return defaultdict(partial(_default_info, fields), data)
 
 
 class ClusterMetadata(object):
@@ -79,9 +79,7 @@ class ClusterMetadata(object):
         self._fields = OrderedDict(fields)
         self._field_names = list(iterkeys(self._fields))
         # '_data' maps cluster labels to dict (field => value).
-        if data is None:
-            data = {}
-        self._data = defaultdict(dict, data)
+        self._data = _cluster_info(fields, data=data)
         self._spike_clusters = None
         self._cluster_labels = None
         # The stack contains (clusters, field, value) tuples.
@@ -94,60 +92,15 @@ class ClusterMetadata(object):
         """Dictionary holding data for all clusters."""
         return self._data
 
-    @property
-    def spike_clusters(self):
-        """Mapping spike ==> cluster label."""
-        return self._spike_clusters
-
-    @spike_clusters.setter
-    def spike_clusters(self, value):
-        self._spike_clusters = value
-        self.update()
-
-    @property
-    def cluster_labels(self):
-        """Sorted list of non-empty cluster labels."""
-        return self._cluster_labels
-
-    def _add_clusters(self, clusters):
-        """Add new clusters in the structure."""
-        for cluster in clusters:
-            self._data[cluster] = OrderedDict()
-
-    def _delete_clusters(self, clusters):
-        """Delete clusters from the structure."""
-        for cluster in clusters:
-            del self._data[cluster]
-
-    def update(self, cluster_labels=None):
-        """Remove empty clusters in the structure.
-
-        Parameters
-        ----------
-
-        cluster_labels : array_like
-            Sorted list of all cluster labels. By default, the list of unique
-            clusters appearing in `self.spike_clusters`.
-
-        """
-        if cluster_labels is None:
-            cluster_labels = _unique(self._spike_clusters)
-        # Update the list of unique cluster labels.
-        self._cluster_labels = cluster_labels
-        # Find the clusters to add and remove in the structure.
-        data_keys = set(iterkeys(self._data))
-        clusters = set(self._cluster_labels)
-        # Add the new clusters.
-        to_add = clusters - data_keys
-        self._add_clusters(to_add)
-        # Delete the empty clusters.
-        to_delete = data_keys - clusters
-        self._delete_clusters(to_delete)
+    def __getitem__(self, key):
+        return self._data[key]
 
     def _set_one(self, cluster, field, value):
+        """Set information for a given cluster."""
         self._data[cluster][field] = value
 
     def _set_multi(self, clusters, field, values):
+        """Set some information for a number of clusters."""
         # Ensure 'clusters' is a list of clusters.
         if not hasattr(clusters, '__len__'):
             clusters = [clusters]
@@ -160,65 +113,10 @@ class ClusterMetadata(object):
                 self._set_one(cluster, field, values)
 
     def set(self, clusters, field, values):
-        """Set some information for a number of clusters."""
+        """Set some information for a number of clusters and add the changes
+        to the undo stack."""
         self._set_multi(clusters, field, values)
         self._undo_stack.add((clusters, field, values))
-
-    def __setitem__(self, item, value):
-        clusters, field = item
-        self.set(clusters, field, value)
-
-    def _get_one(self, cluster, field):
-        """Get a specific information for a given cluster."""
-        if cluster in self._data:
-            info = self._data[cluster]
-            if field in info:
-                # Return the value.
-                return info[field]
-            # Or return the default value.
-            default = self._fields[field]
-            # Default is a function ==> call it with the cluster label.
-            if hasattr(default, '__call__'):
-                return default(cluster)
-            else:
-                return default
-        raise ValueError("Cluster {0:d} is not in the ".format(cluster) +
-                         "metadata structure.")
-
-    def _get_multi(self, clusters, field):
-        return OrderedDict((cluster, self._get_one(cluster, field))
-                           for cluster in clusters)
-
-    def get(self, key, field=None):
-        """Get information about one or several clusters."""
-        if key in self._field_names:
-            # 'key' is a field name; return that field for all clusters.
-            assert field is None
-            return self._get_multi(self._cluster_labels, key)
-        else:
-            if hasattr(key, '__len__'):
-                # 'key' is a list of clusters, and 'field' must be specified.
-                assert field is not None
-                return self._get_multi(key, field)
-            # 'key' is one or several clusters: return the given field
-            else:
-                # 'key' is a cluster.
-                if field is not None:
-                    # 'field' is specified: return just one value.
-                    return self._get_one(key, field)
-                else:
-                    # 'field' is unspecified: return all fields.
-                    return OrderedDict((field, self._get_one(key, field))
-                                       for field in self._field_names)
-        raise ValueError("Key {0:s} not in the list ".format(str(key)) +
-                         "of fields {0:s}".format(str(self._field_names)))
-
-    def __getitem__(self, key):
-        if isinstance(key, (tuple, list)):
-            key, field = key
-        else:
-            field = None
-        return self.get(key, field)
 
     def undo(self):
         """Undo the last metadata change."""
