@@ -41,7 +41,7 @@ def test_default_function():
     assert meta.data[3]['field'] == 9
 
 
-def taest_cluster_metadata():
+def test_cluster_metadata():
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters, low=2)
@@ -101,9 +101,8 @@ def taest_cluster_metadata():
     assert meta[11, 'color'] == 7
     assert meta[[10, 11], 'color'][10] == 6
 
-    # WARNING: __getitem__ returns a copy so changing this has no effect.
-    meta[10]['color'] == 10
-    assert meta[10]['color'] == 6
+    meta[10]['color'] = 10
+    assert meta[10]['color'] == 10
 
 
 def taest_metadata_history():
