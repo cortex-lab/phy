@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 from collections import defaultdict, OrderedDict
+from functools import partial
 from copy import deepcopy
 
 from ...ext.six import iterkeys, itervalues
@@ -36,6 +37,27 @@ DEFAULT_FIELDS = [
 # ClusterMetadata class
 #------------------------------------------------------------------------------
 
+def _default_value(field, default, cluster=None):
+    """Return the default value of a field."""
+    if hasattr(default, '__call__'):
+        return default(cluster)
+    else:
+        return default
+
+
+def _default_info(fields, cluster=None):
+    """Default structure holding info of a cluster."""
+    return OrderedDict([(field, _default_value(field, default, cluster))
+                        for field, default in fields])
+
+
+def _cluster_info_structure(fields=None):
+    if fields is None:
+        fields = DEFAULT_FIELDS
+    """Initialize a structure holding cluster metadata."""
+    return defaultdict(partial(_default_info, fields))
+
+
 class ClusterMetadata(object):
     """Object holding cluster metadata.
 
@@ -44,6 +66,8 @@ class ClusterMetadata(object):
 
     fields : list
         List of tuples (field_name, default_value).
+    data : dict-like
+        Initial data.
 
     """
 
