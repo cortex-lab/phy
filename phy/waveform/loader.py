@@ -21,6 +21,7 @@ def _before_after(n_samples):
         before = n_samples // 2
         after = n_samples - before
     else:
+        assert len(n_samples) == 2
         before, after = n_samples
         n_samples = before + after
     assert before >= 0
@@ -33,7 +34,11 @@ def _slice(index, n_samples, margin=None):
     """Return a waveform slice."""
     if margin is None:
         margin = (0, 0)
+    assert isinstance(n_samples, (tuple, list))
+    assert len(n_samples) == 2
     before, after = n_samples
+    assert isinstance(margin, (tuple, list))
+    assert len(margin) == 2
     margin_before, margin_after = margin
     before += margin_before
     after += margin_after
