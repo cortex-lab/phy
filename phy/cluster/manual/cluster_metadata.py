@@ -56,7 +56,7 @@ def _cluster_info(fields, data=None):
     if data is None:
         data = {}
     out = defaultdict(partial(_default_info, fields))
-    for cluster, values in iteritems(out):
+    for cluster, values in iteritems(data):
         # Create the default cluster info dict.
         info = out[cluster]
         # Update the specified values, so that the default values are used

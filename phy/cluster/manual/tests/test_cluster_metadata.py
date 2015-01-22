@@ -65,7 +65,7 @@ def test_cluster_metadata():
     assert meta[10]['color'] == 10
 
 
-def taest_metadata_history():
+def test_metadata_history():
     """Test ClusterMetadata history."""
 
     data = {2: {'group': 2, 'color': 7}, 4: {'group': 5}}
@@ -84,6 +84,9 @@ def taest_metadata_history():
     assert meta.get(4, 'color') == 1
 
     ###########
+
+    meta.undo()
+    meta.redo()
 
     # Action 1.
     meta.set(2, 'group', 20)
@@ -117,3 +120,6 @@ def taest_metadata_history():
     # Undo 1.
     meta.undo()
     assert meta.get(2, 'group') == 2
+
+    meta.undo()
+    meta.undo()
