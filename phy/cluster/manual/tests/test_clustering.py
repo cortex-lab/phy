@@ -144,7 +144,7 @@ def test_clustering():
         clustering.cluster_labels = np.arange(n_clusters)
 
 
-def test_clustering_actions():
+def test_clustering_merge():
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
@@ -226,6 +226,10 @@ def test_clustering_actions():
 
     # Now we undo.
     info = clustering.undo()
+    _assert_spikes([7, 8])
+    assert info.added == [7, 8]
+    assert info.deleted == [14]
+    assert info.count_changed == []
     _assert_is_checkpoint(3)
 
     # We merge again.
@@ -233,6 +237,10 @@ def test_clustering_actions():
     assert any(clustering.spike_clusters == 13)
     assert all(clustering.spike_clusters != 14)
     info = clustering.merge([8, 7], 15)
+    _assert_spikes([15])
+    assert info.added == [15]
+    assert info.deleted == [7, 8]
+    assert info.count_changed == []
     # Same as checkpoint with 4, but replace 14 with 15.
     res = checkpoints[4]
     res[res == 14] = 15
@@ -249,3 +257,60 @@ def test_clustering_actions():
     for i in range(5):
         _assert_is_checkpoint(i)
         info = clustering.redo()
+
+
+def test_clustering_assign():
+    n_spikes = 1000
+    n_clusters = 10
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+
+    clustering = Clustering(spike_clusters)
+
+    checkpoints = {}
+
+    def _checkpoint():
+        index = len(checkpoints)
+        checkpoints[index] = clustering.spike_clusters.copy()
+
+    def _assert_is_checkpoint(index):
+        assert_array_equal(clustering.spike_clusters, checkpoints[index])
+
+    def _assert_spikes(spikes):
+        assert_array_equal(info.spikes,
+                           spikes)
+
+    # Checkpoint 0.
+    _checkpoint()
+    _assert_is_checkpoint(0)
+
+    my_spikes_1 = np.random.randint(low=0, high=n_spikes, size=5)
+    my_spikes_2 = np.random.randint(low=0, high=n_spikes, size=10)
+    my_spikes_3 = np.random.randint(low=0, high=n_spikes, size=950)
+    my_spikes_4 = np.random.randint(low=0, high=n_spikes, size=975)
+
+    # Checkpoint 1.
+    info = clustering.split(my_spikes_1)  # Split to 10.
+    _checkpoint()
+    _assert_spikes(my_spikes_1)
+    assert info.added == [10]
+    assert info.deleted == []
+    assert len(info.count_changed) <= 5
+    _assert_is_checkpoint(1)
+
+    # Checkpoint 2.
+    info = clustering.split(my_spikes_2)  # Split to 11.
+    _checkpoint()
+    _assert_spikes(my_spikes_2)
+    assert info.added == [11]
+    assert info.deleted == []
+    assert len(info.count_changed) <= 10
+    _assert_is_checkpoint(2)
+
+    # Checkpoint 3.
+    info = clustering.split(my_spikes_3, 20)  # Assign to 20.
+    _checkpoint()
+    _assert_spikes(my_spikes_3)
+    assert info.added == [20]
+    assert len(info.count_changed) >= 5
+    _assert_is_checkpoint(3)
+
