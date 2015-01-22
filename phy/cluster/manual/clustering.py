@@ -145,6 +145,10 @@ class Clustering(object):
         # Ensure 'cluster_labels' is an array-like.
         if not hasattr(cluster_labels, '__len__'):
             cluster_labels = [cluster_labels]
+        # Check the sizes of spike_labels and cluster_labels.
+        if (isinstance(spike_labels, (np.ndarray, list)) and
+           len(cluster_labels) > 1):
+            assert len(spike_labels) == len(cluster_labels)
         self.spike_clusters[spike_labels] = cluster_labels
         # If the UpdateInfo is passed, it means the _cluster_counts structure
         # has already been updated. Otherwise, we need to update it here.
@@ -184,7 +188,9 @@ class Clustering(object):
         # spike_changed = np.nonzero(spike_changes)[0]
         # Finally, we update all spike clusters.
         # WARNING: do not add an item in the stack (_assign and not assign).
-        return self._assign(slice(None, None, None), spike_clusters_new)
+        spikes_changed = np.nonzero(self._spike_clusters -
+                                    spike_clusters_new)[0]
+        return self._assign(spikes_changed, spike_clusters_new[spikes_changed])
 
     def redo(self):
         """Redo the last cluster assignement operation."""

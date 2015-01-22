@@ -17,7 +17,7 @@ from ....datasets.mock import artificial_spike_clusters
 from ..clustering import (_count_clusters, _diff_counts,
                           Clustering)
 from .._update_info import UpdateInfo
-from .._utils import _unique
+from .._utils import _unique, _spikes_in_clusters
 
 
 #------------------------------------------------------------------------------
@@ -160,6 +160,10 @@ def test_clustering_actions():
     def _assert_is_checkpoint(index):
         assert_array_equal(clustering.spike_clusters, checkpoints[index])
 
+    def _assert_spikes(clusters):
+        assert_array_equal(info.spikes,
+                           _spikes_in_clusters(spike_clusters, clusters))
+
     # Checkpoint 0.
     _checkpoint()
     _assert_is_checkpoint(0)
@@ -167,6 +171,7 @@ def test_clustering_actions():
     # Checkpoint 1.
     info = clustering.merge([0, 1], 11)
     _checkpoint()
+    _assert_spikes([11])
     assert info.added == [11]
     assert info.deleted == [0, 1]
     assert info.count_changed == []
@@ -175,6 +180,7 @@ def test_clustering_actions():
     # Checkpoint 2.
     info = clustering.merge([2, 3], 12)
     _checkpoint()
+    _assert_spikes([12])
     assert info.added == [12]
     assert info.deleted == [2, 3]
     assert info.count_changed == []
@@ -182,6 +188,7 @@ def test_clustering_actions():
 
     # Undo once.
     info = clustering.undo()
+    _assert_spikes([2, 3])
     assert info.added == [2, 3]
     assert info.deleted == [12]
     assert info.count_changed == []
@@ -189,34 +196,35 @@ def test_clustering_actions():
 
     # Redo.
     info = clustering.redo()
+    _assert_spikes([12])
     assert info.added == [12]
     assert info.deleted == [2, 3]
     assert info.count_changed == []
     _assert_is_checkpoint(2)
 
     # No redo.
-    clustering.redo()
+    info = clustering.redo()
     _assert_is_checkpoint(2)
 
     # Merge again.
-    clustering.merge([4, 5, 6], 13)
+    info = clustering.merge([4, 5, 6], 13)
     _checkpoint()
     _assert_is_checkpoint(3)
 
     # One more merge.
-    clustering.merge([8, 7])  # merged to 14
+    info = clustering.merge([8, 7])  # merged to 14
     _checkpoint()
     _assert_is_checkpoint(4)
 
     # Now we undo.
-    clustering.undo()
+    info = clustering.undo()
     _assert_is_checkpoint(3)
 
     # We merge again.
     assert clustering.new_cluster_label() == 14
     assert any(clustering.spike_clusters == 13)
     assert all(clustering.spike_clusters != 14)
-    clustering.merge([8, 7], 15)
+    info = clustering.merge([8, 7], 15)
     # Same as checkpoint with 4, but replace 14 with 15.
     res = checkpoints[4]
     res[res == 14] = 15
@@ -224,7 +232,7 @@ def test_clustering_actions():
 
     # Undo all.
     for i in range(3, -1, -1):
-        clustering.undo()
+        info = clustering.undo()
         _assert_is_checkpoint(i)
 
     _assert_is_checkpoint(0)
@@ -232,4 +240,4 @@ def test_clustering_actions():
     # Redo all.
     for i in range(5):
         _assert_is_checkpoint(i)
-        clustering.redo()
+        info = clustering.redo()
