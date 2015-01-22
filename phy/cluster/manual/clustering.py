@@ -25,6 +25,14 @@ def _empty_cluster_counts():
     return defaultdict(lambda: 0)
 
 
+def _non_empty(cluster_counts):
+    clusters = sorted(iterkeys(cluster_counts))
+    for cluster in clusters:
+        if cluster_counts[cluster] == 0:
+            del cluster_counts[cluster]
+    return cluster_counts
+
+
 def _diff_counts(count_1, count_2):
     # List of all non-empty clusters before and after.
     clusters_before = set(_non_empty(count_1))
@@ -55,23 +63,6 @@ def _count_clusters(spike_clusters):
     for cluster in clusters_labels:
         _cluster_counts[cluster] = cluster_counts[cluster]
     return _cluster_counts
-
-
-def _non_empty(cluster_counts):
-    clusters = sorted(iterkeys(cluster_counts))
-    for cluster in clusters:
-        if cluster_counts[cluster] == 0:
-            del cluster_counts[cluster]
-    return cluster_counts
-
-
-def _get_update_info(spike_labels,
-                     cluster_counts_before, cluster_counts_after):
-    """Return an UpdateInfo instance as a function of new spike->cluster
-    assignements."""
-    update_info = _diff_counts(cluster_counts_before, cluster_counts_after)
-    update_info.spikes = spike_labels
-    return update_info
 
 
 class Clustering(object):
@@ -133,7 +124,8 @@ class Clustering(object):
         _update_info = UpdateInfo(description='merge',
                                   clusters=cluster_labels,
                                   spikes=spikes,
-                                  added=[to])
+                                  added=[to],
+                                  deleted=cluster_labels)
         # And update the cluster counts directly.
         n_spikes = len(spikes)
         # This is just for debugging.
@@ -160,8 +152,8 @@ class Clustering(object):
             counts_before = self._cluster_counts
             self.update_cluster_counts()
             counts_after = self._cluster_counts
-            _update_info = _get_update_info(spike_labels,
-                                            counts_before, counts_after)
+            _update_info = _diff_counts(counts_before, counts_after)
+            _update_info.spikes = spike_labels
         return _update_info
 
     def assign(self, spike_labels, cluster_labels, _update_info=None):

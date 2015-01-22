@@ -14,7 +14,7 @@ from pytest import raises
 
 from ....ext.six import itervalues
 from ....datasets.mock import artificial_spike_clusters
-from ..clustering import (_get_update_info, _count_clusters, _diff_counts,
+from ..clustering import (_count_clusters, _diff_counts,
                           Clustering)
 from .._update_info import UpdateInfo
 from .._utils import _unique
@@ -59,10 +59,7 @@ def test_update_info():
     spike_clusters[spike_labels] = cluster_labels
     cluster_counts_after = _count_clusters(spike_clusters)
 
-    info = _get_update_info(spike_labels,
-                            cluster_counts_before,
-                            cluster_counts_after)
-    assert_array_equal(info.spikes, spike_labels)
+    info = _diff_counts(cluster_counts_before, cluster_counts_after)
     assert info.added == [100]
     assert info.deleted == []
     assert len(info.count_changed) > 0
@@ -171,7 +168,7 @@ def test_clustering_actions():
     info = clustering.merge([0, 1], 11)
     _checkpoint()
     assert info.added == [11]
-    assert info.deleted == []
+    assert info.deleted == [0, 1]
     assert info.count_changed == []
     _assert_is_checkpoint(1)
 
@@ -179,7 +176,7 @@ def test_clustering_actions():
     info = clustering.merge([2, 3], 12)
     _checkpoint()
     assert info.added == [12]
-    assert info.deleted == []
+    assert info.deleted == [2, 3]
     assert info.count_changed == []
     _assert_is_checkpoint(2)
 
@@ -191,7 +188,10 @@ def test_clustering_actions():
     _assert_is_checkpoint(1)
 
     # Redo.
-    clustering.redo()
+    info = clustering.redo()
+    assert info.added == [12]
+    assert info.deleted == [2, 3]
+    assert info.count_changed == []
     _assert_is_checkpoint(2)
 
     # No redo.
