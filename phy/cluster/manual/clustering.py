@@ -177,20 +177,14 @@ class Clustering(object):
         self._undo_stack.back()
         # Retrieve the initial spike_cluster structure.
         spike_clusters_new = self._spike_clusters_base.copy()
-        # This structure contains True when the spike has been updated.
-        # spike_changes = np.zeros_like(spike_clusters_new, dtype=np.bool)
         # Loop over the history (except the last item because we undo).
         for spike_labels, cluster_labels in self._undo_stack:
             # We update the spike clusters accordingly.
             if spike_labels is not None:
                 spike_clusters_new[spike_labels] = cluster_labels
-                # spike_changes[spike_labels] = True
-        # spike_changed = np.nonzero(spike_changes)[0]
         # Finally, we update all spike clusters.
         # WARNING: do not add an item in the stack (_assign and not assign).
-        spikes_changed = np.nonzero(self._spike_clusters -
-                                    spike_clusters_new)[0]
-        return self._assign(spikes_changed, spike_clusters_new[spikes_changed])
+        return self._assign(slice(None, None, None), spike_clusters_new)
 
     def redo(self):
         """Redo the last cluster assignement operation."""

@@ -188,7 +188,6 @@ def test_clustering_merge():
 
     # Undo once.
     info = clustering.undo()
-    _assert_spikes([2, 3])
     assert info.added == [2, 3]
     assert info.deleted == [12]
     assert info.count_changed == []
@@ -226,7 +225,6 @@ def test_clustering_merge():
 
     # Now we undo.
     info = clustering.undo()
-    _assert_spikes([7, 8])
     assert info.added == [7, 8]
     assert info.deleted == [14]
     assert info.count_changed == []
@@ -268,8 +266,9 @@ def test_clustering_assign():
 
     checkpoints = {}
 
-    def _checkpoint():
-        index = len(checkpoints)
+    def _checkpoint(index=None):
+        if index is None:
+            index = len(checkpoints)
         checkpoints[index] = clustering.spike_clusters.copy()
 
     def _assert_is_checkpoint(index):
@@ -283,10 +282,10 @@ def test_clustering_assign():
     _checkpoint()
     _assert_is_checkpoint(0)
 
-    my_spikes_1 = np.random.randint(low=0, high=n_spikes, size=5)
-    my_spikes_2 = np.random.randint(low=0, high=n_spikes, size=10)
-    my_spikes_3 = np.random.randint(low=0, high=n_spikes, size=950)
-    my_spikes_4 = np.random.randint(low=0, high=n_spikes, size=975)
+    my_spikes_1 = np.unique(np.random.randint(low=0, high=n_spikes, size=5))
+    my_spikes_2 = np.unique(np.random.randint(low=0, high=n_spikes, size=10))
+    my_spikes_3 = np.unique(np.random.randint(low=0, high=n_spikes, size=1000))
+    my_spikes_4 = np.arange(n_spikes - 5)
 
     # Checkpoint 1.
     info = clustering.split(my_spikes_1)  # Split to 10.
@@ -314,3 +313,19 @@ def test_clustering_assign():
     assert len(info.count_changed) >= 5
     _assert_is_checkpoint(3)
 
+    # Undo checkpoint 3.
+    info = clustering.undo()
+    _checkpoint()
+    # _assert_spikes(my_spikes_3)
+    assert info.deleted == [20]
+    assert len(info.count_changed) >= 5
+    _assert_is_checkpoint(2)
+
+    # Checkpoint 4.
+    info = clustering.assign(my_spikes_4, 30)  # Assign to 30.
+    _checkpoint(4)
+    _assert_spikes(my_spikes_4)
+    assert info.added == [30]
+    assert len(info.deleted) >= 2
+    assert len(info.count_changed) >= 2
+    _assert_is_checkpoint(4)
