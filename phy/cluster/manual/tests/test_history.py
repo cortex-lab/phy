@@ -13,7 +13,7 @@ from numpy.testing import assert_array_equal
 from pytest import raises
 
 from ....datasets.mock import artificial_spike_clusters
-from .._history import History
+from .._history import History, GlobalHistory
 
 
 #------------------------------------------------------------------------------
@@ -48,7 +48,7 @@ def test_history():
 
     assert history.back() is not None
     _assert_current(item0)
-    assert history.back() is None
+    assert history.back() is not None
     assert history.back() is None
     assert len(history) == 3
 
@@ -56,7 +56,7 @@ def test_history():
     assert len(history) == 2
     _assert_current(item2)
     assert history.forward() is None
-    assert history.back() is None
+    assert history.back() is not None
     assert history.back() is None
 
 
@@ -91,3 +91,30 @@ def test_iter_history():
         # Assert item<i>
         assert history.current_position == 3
         assert id(item) == id(locals()['item{0:d}'.format(i + 1)])
+
+
+def test_global_history():
+    gh = GlobalHistory()
+
+    h1 = History()
+    h2 = History()
+
+    # First action.
+    h1.add('h1 first')
+    gh.action(h1)
+
+    # Second action.
+    h2.add('h2 first')
+    gh.action(h2)
+
+    # Third action.
+    h1.add('h1 second')
+    h2.add('h2 second')
+    gh.action(h1, h2)
+
+    # Fourth action.
+    h1.add('h1 third')
+    gh.action(h1)
+
+    # Undo once.
+    assert gh.undo() == ('h1 third',)

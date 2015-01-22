@@ -20,6 +20,7 @@ from ._utils import _unique, _spikes_in_clusters
 
 class History(object):
     """Implement a history of actions with an undo stack."""
+
     def __init__(self, base_item=None):
         self.clear(base_item)
 
@@ -99,9 +100,13 @@ class History(object):
         """
         if self._index <= 0:
             return None
+        undone = self.current_item
         self._index -= 1
         self._check_index()
-        return self.current_item
+        return undone
+
+    def undo(self):
+        return self.back()
 
     def forward(self):
         """Go forward in history if possible.
@@ -114,3 +119,40 @@ class History(object):
         self._index += 1
         self._check_index()
         return self.current_item
+
+    def redo(self):
+        return self.forward()
+
+
+class GlobalHistory(History):
+    """Merge several controllers with different undo stacks."""
+
+    def __init__(self):
+        super(GlobalHistory, self).__init__(())
+
+    def action(self, *controllers):
+        """Register one or several controllers for this action.
+
+        The order matters: the first controller does the first action, etc.
+
+        """
+        self.add(tuple(controllers))
+
+    def undo(self):
+        """Undo the last action.
+
+        This will call `undo()` on all controllers involved in this action.
+        The last controller to perform an action will be undone first, etc.
+
+        """
+        controllers = self.back()
+        return tuple([controller.undo() for controller in controllers[::-1]])
+
+    def redo(self):
+        """Redo the last action.
+
+        This will call `redo()` on all controllers involved in this action.
+
+        """
+        controllers = self.forward()
+        return tuple([controller.redo() for controller in controllers])
