@@ -79,12 +79,12 @@ class ClusterMetadata(object):
         """Sorted list of non-empty cluster labels."""
         return self._cluster_labels
 
-    def add_clusters(self, clusters):
+    def _add_clusters(self, clusters):
         """Add new clusters in the structure."""
         for cluster in clusters:
             self._data[cluster] = OrderedDict()
 
-    def delete_clusters(self, clusters):
+    def _delete_clusters(self, clusters):
         """Delete clusters from the structure."""
         for cluster in clusters:
             del self._data[cluster]
@@ -109,16 +109,22 @@ class ClusterMetadata(object):
         clusters = set(self._cluster_labels)
         # Add the new clusters.
         to_add = clusters - data_keys
-        self.add_clusters(to_add)
+        self._add_clusters(to_add)
         # Delete the empty clusters.
         to_delete = data_keys - clusters
-        self.delete_clusters(to_delete)
+        self._delete_clusters(to_delete)
 
-    def set(self, cluster, field, value):
-        """Set some information for a cluster."""
-        self._data[cluster][field] = value
+    def set(self, clusters, field, values):
+        """Set some information for a number of clusters."""
+        if hasattr(values, '__len__'):
+            assert len(clusters) == len(values)
+            for cluster, value in zip(clusters, values):
+                self._data[cluster][field] = value
+        else:
+            for cluster in clusters:
+                self._data[cluster][field] = values
 
-    def get(self, cluster, field):
+    def _get_one(self, cluster, field):
         """Get a specific information for a given cluster."""
         if cluster in self._data:
             info = self._data[cluster]
@@ -134,17 +140,20 @@ class ClusterMetadata(object):
                 else:
                     return default
 
-    def __getitem__(self, key):
+    def get(self, key):
         """Return the field values of all clusters, or all information of a
         cluster."""
         if key in self._data:
             # 'key' is a cluster label.
-            return OrderedDict((field, self.get(key, field))
+            return OrderedDict((field, self._get_one(key, field))
                                for field in self._field_names)
         elif key in self._field_names:
             # 'key' is a field name.
-            return OrderedDict((cluster, self.get(cluster, key))
+            return OrderedDict((cluster, self._get_one(cluster, key))
                                for cluster in self.cluster_labels)
         else:
             raise ValueError("Key {0:s} not in the list ".format(str(key)) +
                              "of fields {0:s}".format(str(self._field_names)))
+
+    def __getitem__(self, key):
+        return self.get(key)

@@ -67,7 +67,7 @@ def test_cluster_metadata():
     assert meta[10]['color'] == 1
     assert meta[10]['group'] == 3
 
-    meta.set(10, 'color', 5)
+    meta.set([10], 'color', 5)
     assert meta[10]['color'] == 5
 
     # WARNING: __getitem__ returns a copy so changing this has no effect.
@@ -77,6 +77,6 @@ def test_cluster_metadata():
 
 def test_default_function():
     meta = ClusterMetadata([('field', lambda x: x * x)])
-    meta.add_clusters([3])
+    meta._add_clusters([3])
 
     assert meta[3]['field'] == 9
