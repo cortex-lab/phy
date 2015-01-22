@@ -21,6 +21,13 @@ from ..cluster_metadata import ClusterMetadata
 # Tests
 #------------------------------------------------------------------------------
 
+def test_default_function():
+    meta = ClusterMetadata([('field', lambda x: x * x)])
+    meta._add_clusters([3])
+
+    assert meta[3]['field'] == 9
+
+
 def test_cluster_metadata():
     n_spikes = 1000
     n_clusters = 10
@@ -30,7 +37,7 @@ def test_cluster_metadata():
     assert meta.data is not None
 
     with raises(ValueError):
-        assert meta[0]['group']
+        meta[0]['group']
 
     # Specify spike_clusters.
     meta.spike_clusters = spike_clusters
@@ -39,13 +46,13 @@ def test_cluster_metadata():
     assert_array_equal(meta.cluster_labels, np.arange(2, 10))
 
     with raises(ValueError):
-        assert meta[0]['group']
+        meta[0]['group']
 
     assert meta[2]['color'] == 1
     assert meta[2]['group'] == 3
 
     with raises(ValueError):
-        assert meta[10]
+        meta[10]
 
     # Change a cluster.
     spike_clusters[spike_clusters == 2] = 10
@@ -62,7 +69,7 @@ def test_cluster_metadata():
     assert_array_equal(list(itervalues(meta['group'])), 3 * np.ones(8))
 
     with raises(ValueError):
-        assert meta[2]
+        meta[2]
 
     assert meta[10]['color'] == 1
     assert meta[10]['group'] == 3
@@ -70,21 +77,48 @@ def test_cluster_metadata():
     meta.set([10], 'color', 5)
     assert meta[10]['color'] == 5
 
-    meta.set([10, 11], 'color', 5)
+    # Alternative __setitem__ syntax.
+    meta[[10, 11], 'color'] = 5
     assert meta[10]['color'] == 5
     assert meta[11]['color'] == 5
 
     meta.set([10, 11], 'color', [6, 7])
     assert meta[10]['color'] == 6
-    assert meta[11]['color'] == 7
+    # Alternative syntax with __getitem__.
+    assert meta[11, 'color'] == 7
+    assert meta[[10, 11], 'color'][10] == 6
 
     # WARNING: __getitem__ returns a copy so changing this has no effect.
     meta[10]['color'] == 10
     assert meta[10]['color'] == 6
 
 
-def test_default_function():
-    meta = ClusterMetadata([('field', lambda x: x * x)])
-    meta._add_clusters([3])
+def test_metadata_history():
+    """Test ClusterMetadata history."""
 
-    assert meta[3]['field'] == 9
+    n_spikes = 1000
+    n_clusters = 10
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters, low=2)
+
+    data = {2: {'group': 2, 'color': 7}, 4: {'group': 5}}
+
+    meta = ClusterMetadata(data=data)
+    meta.spike_clusters = spike_clusters
+    assert_array_equal(meta.cluster_labels, np.arange(2, 10))
+
+    # Values set in 'data'.
+    assert meta.get(2, 'group') == 2
+    assert meta.get(2, 'color') == 7
+
+    # Default values.
+    assert meta.get(3, 'group') == 3
+    assert meta.get(3, 'color') == 1
+
+    assert meta.get(4, 'group') == 5
+    assert meta.get(4, 'color') == 1
+
+    meta.set([2], 'group', 20)
+    assert meta.get
+
+    meta.set([3], 'color', 30)
+    meta.set([2], 'color', 40)
