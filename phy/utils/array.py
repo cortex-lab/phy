@@ -24,9 +24,9 @@ def _unique(x):
 
 
 def _normalize(positions):
-    """Normalize an array into [-1, 1]."""
+    """Normalize an array into [0, 1]."""
     # TODO: add 'keep_ratio' option.
-    min, max = positions.min(), positions.max()
-    positions_n = (positions - min) / float(max - min)
-    positions_n = -1. + 2. * positions_n
+    positions = positions.astype(np.float32)
+    min, max = positions.min(axis=0), positions.max(axis=0)
+    positions_n = (positions - min) / (max - min)
     return positions_n

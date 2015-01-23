@@ -11,6 +11,7 @@ from vispy import app
 
 from ...utils.logging import set_level
 from ..waveforms import Waveforms, WaveformView
+from ...utils.array import _normalize
 
 
 #------------------------------------------------------------------------------
@@ -65,10 +66,8 @@ def test_waveforms():
                                   (5, 10),
                                   (0, 0)], dtype=np.float32)
 
-    # TODO: refactor this
-    channel_positions -= channel_positions.min(axis=0)
-    channel_positions /= channel_positions.max(axis=0)
-    channel_positions = .2 + .6 * channel_positions
+    channel_positions = _normalize(channel_positions)
+    print(channel_positions)
 
     n_clusters = 2
     n_channels = 32

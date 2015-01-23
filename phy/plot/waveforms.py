@@ -181,6 +181,8 @@ class Waveforms(Visual):
 
     def bake_channel_positions(self):
         debug("bake channel pos")
+        # WARNING: channel_positions must be in [0,1] because we have a
+        # texture.
         u_channel_pos = np.dstack((self.channel_positions.
                                   reshape((1, self.n_channels, 2)),
                                   np.zeros((1, self.n_channels, 1),
