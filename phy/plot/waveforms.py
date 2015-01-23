@@ -191,7 +191,7 @@ class Waveforms(Visual):
 
     @property
     def box_scale(self):
-        return self.program['u_data_scale']
+        return tuple(self.program['u_data_scale'])
 
     @box_scale.setter
     def box_scale(self, value):
