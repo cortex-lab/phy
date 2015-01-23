@@ -9,7 +9,20 @@
 import numpy as np
 from vispy import app
 
+from ...utils.logging import set_level
 from ..waveforms import Waveforms, WaveformView
+
+
+#------------------------------------------------------------------------------
+# Fixtures
+#------------------------------------------------------------------------------
+
+def setup():
+    set_level('debug')
+
+
+def teardown():
+    pass
 
 
 #------------------------------------------------------------------------------
@@ -18,38 +31,38 @@ from ..waveforms import Waveforms, WaveformView
 
 def test_waveforms():
 
-    channel_positions = np.array([  (35, 310),
-                                    (-34, 300),
-                                    (33, 290),
-                                    (-32, 280),
-                                    (31, 270),
-                                    (-30, 260),
-                                    (29, 250),
-                                    (-28, 240),
-                                    (27, 230),
-                                    (-26, 220),
-                                    (25, 210),
-                                    (-24, 200),
-                                    (23, 190),
-                                    (-22, 180),
-                                    (21, 170),
-                                    (-20, 160),
-                                    (19, 150),
-                                    (-18, 140),
-                                    (17, 130),
-                                    (-16, 120),
-                                    (15, 110),
-                                    (-14, 100),
-                                    (13, 90),
-                                    (-12, 80),
-                                    (11, 70),
-                                    (-10, 60),
-                                    (9, 50),
-                                    (-8, 40),
-                                    (7, 30),
-                                    (-6, 20),
-                                    (5, 10),
-                                    (0, 0)], dtype=np.float32)
+    channel_positions = np.array([(35, 310),
+                                  (-34, 300),
+                                  (33, 290),
+                                  (-32, 280),
+                                  (31, 270),
+                                  (-30, 260),
+                                  (29, 250),
+                                  (-28, 240),
+                                  (27, 230),
+                                  (-26, 220),
+                                  (25, 210),
+                                  (-24, 200),
+                                  (23, 190),
+                                  (-22, 180),
+                                  (21, 170),
+                                  (-20, 160),
+                                  (19, 150),
+                                  (-18, 140),
+                                  (17, 130),
+                                  (-16, 120),
+                                  (15, 110),
+                                  (-14, 100),
+                                  (13, 90),
+                                  (-12, 80),
+                                  (11, 70),
+                                  (-10, 60),
+                                  (9, 50),
+                                  (-8, 40),
+                                  (7, 30),
+                                  (-6, 20),
+                                  (5, 10),
+                                  (0, 0)], dtype=np.float32)
 
     # TODO: refactor this
     channel_positions -= channel_positions.min(axis=0)
@@ -67,7 +80,7 @@ def test_waveforms():
     cluster_colors = np.random.uniform(size=(n_clusters, 3),
                                        low=.5, high=.9).astype(np.float32)
     cluster_metadata = {cluster: {'color': color}
-                      for cluster, color in enumerate(cluster_colors)}
+                        for cluster, color in enumerate(cluster_colors)}
 
     spike_clusters = np.random.randint(size=n_spikes,
                                        low=0,

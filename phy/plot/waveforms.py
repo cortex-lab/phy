@@ -10,6 +10,7 @@
 import numpy as np
 
 from vispy import gloo
+from vispy.gloo import Texture2D
 from vispy.visuals import Visual
 from vispy.visuals.shaders import ModularProgram, Function, Variable
 
@@ -17,6 +18,7 @@ from vispy.visuals.shaders import ModularProgram, Function, Variable
 # TODO: use ST instead of PanZoom
 from ..utils.array import _unique
 from ._utils import PanZoomCanvas
+from ..utils.logging import debug
 
 
 #------------------------------------------------------------------------------
@@ -173,35 +175,35 @@ class Waveforms(Visual):
     # -------------------------------------------------------------------------
 
     def bake_metadata(self):
-        print("bake metadata")
+        debug("bake metadata")
         u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
-        self.program['u_cluster_color'] = gloo.Texture2D(u_cluster_color)
+        self.program['u_cluster_color'] = Texture2D(u_cluster_color)
 
     def bake_channel_positions(self):
-        print("bake channel pos")
-        u_channel_pos = np.dstack((self.channel_positions. \
+        debug("bake channel pos")
+        u_channel_pos = np.dstack((self.channel_positions.
                                   reshape((1, self.n_channels, 2)),
                                   np.zeros((1, self.n_channels, 1),
                                            dtype=np.float32)))
-        self.program['u_channel_pos'] = gloo.Texture2D(u_channel_pos,
-                                                      wrapping='clamp_to_edge')
+        self.program['u_channel_pos'] = Texture2D(u_channel_pos,
+                                                  wrapping='clamp_to_edge')
 
     def bake_spikes(self):
-        print("bake spikes")
+        debug("bake spikes")
         self.program['a_data'] = self._waveforms
         # TODO: SparseCSR, this should just be 'channel'
-        self._channels_per_spike = np.tile(np.arange(self.n_channels). \
+        self._channels_per_spike = np.tile(np.arange(self.n_channels).
                                            astype(np.float32),
                                            self.n_spikes)
 
         # TODO: SparseCSR, this should be np.diff(spikes_ptr)
         self._n_channels_per_spike = self.n_channels * np.ones(self.n_spikes,
-                                                         dtype=np.int32)
+                                                               dtype=np.int32)
 
         self._n_waveforms = np.sum(self._n_channels_per_spike)
 
         # TODO: precompute this with a maximum number of waveforms?
-        a_time = np.tile(np.linspace(-1., 1., self.n_samples). \
+        a_time = np.tile(np.linspace(-1., 1., self.n_samples).
                          astype(np.float32),
                          self._n_waveforms)
 
@@ -210,7 +212,7 @@ class Waveforms(Visual):
         self.program['n_channels'] = self.n_channels
 
     def bake_clusters(self):
-        print("bake clusters")
+        debug("bake clusters")
         a_cluster = np.repeat(self.spike_clusters[self.spike_labels],
                               self._n_channels_per_spike * self.n_samples)
         a_channel = np.repeat(self._channels_per_spike, self.n_samples)
@@ -268,4 +270,3 @@ class WaveformView(PanZoomCanvas):
         if event.key == '-':
             u, v = self.visual.box_scale
             self.visual.box_scale = (u, v/1.1)
-
