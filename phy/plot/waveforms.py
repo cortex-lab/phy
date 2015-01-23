@@ -43,7 +43,7 @@ def _check_order(changed, compare_to):
 class Waveforms(Visual):
     VERT_SHADER = """
     // TODO: add masks, alpha, depth
-    attribute float a_data;  // -1..1
+    attribute vec2 a_data;  // -1..1
     attribute float a_time;  // -1..1
     attribute vec2 a_box;  // 0..(n_clusters-1, n_channels-1)
 
@@ -55,6 +55,7 @@ class Waveforms(Visual):
 
     varying vec3 v_color;
     varying vec2 v_box;
+    varying float v_mask;
 
     // TODO: use VisPy transforms
     vec2 get_box_pos(vec2 box) {  // box = (cluster, channel)
@@ -71,22 +72,25 @@ class Waveforms(Visual):
     }
 
     void main() {
-        vec2 pos = u_data_scale * vec2(a_time, a_data);  // -1..1
+        vec2 pos = u_data_scale * vec2(a_time, a_data.x);  // -1..1
         vec2 box_pos = get_box_pos(a_box);
         v_color = get_color(a_box.x);
         v_box = a_box;
         gl_Position = vec4($transform(pos + box_pos), 0., 1.);
+
+        v_mask = a_data.y;
     }
     """
 
     FRAG_SHADER = """
     varying vec3 v_color;
     varying vec2 v_box;
+    varying float v_mask;
 
     void main() {
         if ((fract(v_box.x) > 0.) || (fract(v_box.y) > 0.))
             discard;
-        gl_FragColor = vec4(v_color, 1.);
+        gl_FragColor = vec4(v_color, v_mask);
     }
     """
 
@@ -95,6 +99,8 @@ class Waveforms(Visual):
 
     @property
     def spike_clusters(self):
+        """The clusters assigned to *all* spikes, not just the displayed
+        spikes."""
         return self._spike_clusters
 
     @spike_clusters.setter
@@ -103,6 +109,7 @@ class Waveforms(Visual):
 
     @property
     def waveforms(self):
+        """Displayed waveforms."""
         return self._waveforms
 
     @waveforms.setter
@@ -112,6 +119,19 @@ class Waveforms(Visual):
         assert value.ndim == 3
         self.n_spikes, self.n_channels, self.n_samples = value.shape
         self._waveforms = value
+
+    @property
+    def masks(self):
+        """Masks of the displayed waveforms."""
+        return self._masks
+
+    @masks.setter
+    def masks(self, value):
+        assert isinstance(value, np.ndarray)
+        # TODO: support sparse structures
+        assert value.ndim == 2
+        assert value.shape == (self.n_spikes, self.n_channels)
+        self._masks = value
 
     @property
     def spike_labels(self):
@@ -128,7 +148,7 @@ class Waveforms(Visual):
 
     @property
     def cluster_metadata(self):
-        """A ClusterMetadata instance that holds information about the
+        """A ClusterMetadata instance that holds information about all
         clusters."""
         return self._cluster_metadata
 
@@ -138,7 +158,7 @@ class Waveforms(Visual):
 
     @property
     def channel_positions(self):
-        """Array with the coordinates of each channel."""
+        """Array with the coordinates of all channels."""
         return self._channel_positions
 
     @channel_positions.setter
@@ -192,7 +212,12 @@ class Waveforms(Visual):
 
     def bake_spikes(self):
         debug("bake spikes")
-        self.program['a_data'] = self._waveforms
+
+        # Bake masks.
+        masks = np.repeat(self._masks.ravel(), self.n_samples)
+        self.program['a_data'] = np.c_[self._waveforms.ravel(),
+                                       masks.ravel()]
+
         # TODO: SparseCSR, this should just be 'channel'
         self._channels_per_spike = np.tile(np.arange(self.n_channels).
                                            astype(np.float32),

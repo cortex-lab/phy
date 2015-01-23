@@ -67,7 +67,6 @@ def test_waveforms():
                                   (0, 0)], dtype=np.float32)
 
     channel_positions = _normalize(channel_positions)
-    print(channel_positions)
 
     n_clusters = 2
     n_channels = 32
@@ -76,7 +75,7 @@ def test_waveforms():
 
     waveforms = .25 * np.random.randn(n_spikes, n_channels,
                                       n_samples).astype(np.float32)
-
+    masks = np.random.rand(n_spikes, n_channels).astype(np.float32)
     cluster_colors = np.random.uniform(size=(n_clusters, 3),
                                        low=.5, high=.9).astype(np.float32)
     cluster_metadata = {cluster: {'color': color}
@@ -88,6 +87,7 @@ def test_waveforms():
 
     c = WaveformView()
     c.visual.waveforms = waveforms
+    c.visual.masks = masks
     c.visual.spike_clusters = spike_clusters
     c.visual.cluster_metadata = cluster_metadata
     c.visual.channel_positions = channel_positions
