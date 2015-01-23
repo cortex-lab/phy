@@ -43,7 +43,7 @@ def _check_order(changed, compare_to):
 
 class Waveforms(Visual):
     VERT_SHADER = """
-    // TODO: add masks, alpha, depth
+    // TODO: add depth
     attribute vec2 a_data;  // -1..1
     attribute float a_time;  // -1..1
     attribute vec2 a_box;  // 0..(n_clusters-1, n_channels-1)
@@ -80,9 +80,12 @@ class Waveforms(Visual):
         // Compute the waveform color as a function of the cluster color
         // and the mask.
         float mask = a_data.y;
+        // TODO: store the colors in HSV in the texture?
         vec3 rgb = get_color(a_box.x);
         vec3 hsv = $rgb_to_hsv(rgb);
-        hsv.y = .5 * mask;
+        // Change the saturation and value as a function of the mask.
+        hsv.y = mask;
+        hsv.z = .5 * (1. + mask);
         v_color.rgb = $hsv_to_rgb(hsv);
         v_color.a = .5;
     }

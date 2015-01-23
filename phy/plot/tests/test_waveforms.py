@@ -68,10 +68,10 @@ def test_waveforms():
 
     channel_positions = _normalize(channel_positions)
 
-    n_clusters = 2
+    n_clusters = 3
     n_channels = 32
     n_samples = 40
-    n_spikes = 10
+    n_spikes = 100
 
     waveforms = .25 * np.random.randn(n_spikes, n_channels,
                                       n_samples).astype(np.float32)
