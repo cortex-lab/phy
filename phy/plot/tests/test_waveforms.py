@@ -12,6 +12,7 @@ from vispy import app
 from ...utils.logging import set_level
 from ..waveforms import Waveforms, WaveformView
 from ...utils.array import _normalize
+from ...utils.testing import show_test
 
 
 #------------------------------------------------------------------------------
@@ -92,5 +93,4 @@ def test_waveforms():
     c.visual.cluster_metadata = cluster_metadata
     c.visual.channel_positions = channel_positions
 
-    c.show()
-    app.run()
+    show_test(c)

@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import sys
+import time
 from contextlib import contextmanager
 from ..ext.six import StringIO
 
@@ -24,3 +25,11 @@ def captured_output():
         yield sys.stdout, sys.stderr
     finally:
         sys.stdout, sys.stderr = old_out, old_err
+
+
+def show_test(canvas):
+    with canvas as c:
+        for _ in range(5):
+            c.update()
+            c.app.process_events()
+            time.sleep(1./60.)
