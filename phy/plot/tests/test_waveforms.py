@@ -31,6 +31,7 @@ def teardown():
 
 def test_waveforms():
 
+    # TODO: put this in mock dataset module.
     channel_positions = np.array([(35, 310),
                                   (-34, 300),
                                   (33, 290),

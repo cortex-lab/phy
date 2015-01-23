@@ -14,15 +14,6 @@ import numpy as np
 # MEA facilities
 #------------------------------------------------------------------------------
 
-def normalize_positions(positions):
-    """Normalize channel positions into [-1, 1]."""
-    # TODO: add 'keep_ratio' option.
-    min, max = positions.min(), positions.max()
-    positions_n = (positions - min) / float(max - min)
-    positions_n = -1. + 2. * positions_n
-    return positions_n
-
-
 class MEA(object):
     def __init__(self, positions=None, adjacency=None, n_channels=None):
         if positions is not None and n_channels is None:

@@ -21,3 +21,12 @@ def _unique(x):
     if len(x) == 0:
         return np.array([], dtype=np.int)
     return np.nonzero(np.bincount(x))[0]
+
+
+def _normalize(positions):
+    """Normalize an array into [-1, 1]."""
+    # TODO: add 'keep_ratio' option.
+    min, max = positions.min(), positions.max()
+    positions_n = (positions - min) / float(max - min)
+    positions_n = -1. + 2. * positions_n
+    return positions_n

@@ -9,7 +9,7 @@
 from pytest import raises
 import numpy as np
 
-from ..mea import MEA, normalize_positions
+from ..mea import MEA
 
 
 #------------------------------------------------------------------------------
@@ -38,7 +38,3 @@ def test_mea():
     mea.positions = positions
     with raises(ValueError):
         mea.positions = positions[:-1, :]
-
-    positions_n = normalize_positions(positions)
-    assert positions_n.min() >= -1
-    assert positions_n.max() <= 1
