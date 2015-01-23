@@ -1,3 +1,12 @@
+# -*- coding: utf-8 -*-
+
+"""Plotting/VisPy utilities."""
+
+
+#------------------------------------------------------------------------------
+# Imports
+#------------------------------------------------------------------------------
+
 import math
 import os.path as op
 
@@ -9,6 +18,10 @@ from vispy.visuals import Visual
 from vispy.visuals.transforms import TransformSystem, BaseTransform
 from vispy.visuals.shaders import Variable
 
+
+#------------------------------------------------------------------------------
+# PanZoom facilities
+#------------------------------------------------------------------------------
 
 class PanZoomTransform(BaseTransform):
     glsl_map = """
