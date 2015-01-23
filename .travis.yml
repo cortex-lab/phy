@@ -28,6 +28,13 @@ install:
   - pip install coveralls
   - pip install python-coveralls
   - pip install pytest-cov
+  # Install VisPy master
+  - pushd ~
+  - git clone https://github.com/vispy/vispy.git
+  - cd vispy
+  - python setup.py install
+  - popd
+  # Install phy.
   - python setup.py install
 
 script:
