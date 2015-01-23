@@ -23,7 +23,7 @@ install:
   - conda info -a
 
   # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION numpy h5py pytest pip flake8 coverage
+  - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION numpy h5py pytest pip flake8 coverage pyqt
   - source activate testenv
   - pip install coveralls
   - pip install python-coveralls
