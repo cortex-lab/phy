@@ -13,6 +13,7 @@ from vispy import gloo
 from vispy.gloo import Texture2D
 from vispy.visuals import Visual
 from vispy.visuals.shaders import ModularProgram, Function, Variable
+from vispy.visuals.glsl.color import HSV_TO_RGB, RGB_TO_HSV
 
 
 # TODO: use ST instead of PanZoom
@@ -53,9 +54,8 @@ class Waveforms(Visual):
     uniform sampler2D u_channel_pos;
     uniform sampler2D u_cluster_color;
 
-    varying vec3 v_color;
+    varying vec4 v_color;
     varying vec2 v_box;
-    varying float v_mask;
 
     // TODO: use VisPy transforms
     vec2 get_box_pos(vec2 box) {  // box = (cluster, channel)
@@ -74,23 +74,28 @@ class Waveforms(Visual):
     void main() {
         vec2 pos = u_data_scale * vec2(a_time, a_data.x);  // -1..1
         vec2 box_pos = get_box_pos(a_box);
-        v_color = get_color(a_box.x);
         v_box = a_box;
         gl_Position = vec4($transform(pos + box_pos), 0., 1.);
 
-        v_mask = a_data.y;
+        // Compute the waveform color as a function of the cluster color
+        // and the mask.
+        float mask = a_data.y;
+        vec3 rgb = get_color(a_box.x);
+        vec3 hsv = $rgb_to_hsv(rgb);
+        hsv.y = .5 * mask;
+        v_color.rgb = $hsv_to_rgb(hsv);
+        v_color.a = .5;
     }
     """
 
     FRAG_SHADER = """
-    varying vec3 v_color;
+    varying vec4 v_color;
     varying vec2 v_box;
-    varying float v_mask;
 
     void main() {
         if ((fract(v_box.x) > 0.) || (fract(v_box.y) > 0.))
             discard;
-        gl_FragColor = vec4(v_color, v_mask);
+        gl_FragColor = v_color;
     }
     """
 
@@ -271,6 +276,8 @@ class Waveforms(Visual):
         self._is_baked = False
 
         self.program = ModularProgram(self.VERT_SHADER, self.FRAG_SHADER)
+        self.program.vert['rgb_to_hsv'] = Function(RGB_TO_HSV)
+        self.program.vert['hsv_to_rgb'] = Function(HSV_TO_RGB)
         self.program['u_data_scale'] = (.03, .02)
 
         gloo.set_state(clear_color='black', blend=True,
