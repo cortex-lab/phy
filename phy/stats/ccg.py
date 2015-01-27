@@ -39,12 +39,15 @@ winsize_bins : int
 def _increment(arr, indices):
     """Increment some indices in a 1D vector of non-negative integers.
     Repeated indices are taken into account."""
+    arr = np.asarray(arr)
+    indices = np.asarray(indices)
     bbins = np.bincount(indices)
     arr[:len(bbins)] += bbins
     return arr
 
 
-def _shiftdiff(arr, steps):
+def _diff_shifted(arr, steps=1):
+    arr = np.asarray(arr)
     return arr[steps:] - arr[:len(arr)-steps]
 
 
@@ -84,7 +87,7 @@ class Correlograms(object):
         # a matching spike.
         while mask[:-shift].any():
             # Number of time samples between spike i and spike i+shift.
-            spikediff = _shiftdiff(self.spiketimes, shift)
+            spikediff = _diff_shifted(self.spiketimes, shift)
 
             # Binarize the delays between spike i and spike i+shift.
             spikediff_b = spikediff // binsize

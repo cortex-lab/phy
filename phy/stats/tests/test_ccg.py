@@ -10,7 +10,7 @@ import numpy as np
 from numpy import array_equal as ae
 from pytest import raises
 
-from ..ccg import _increment, _shiftdiff, Correlograms
+from ..ccg import _increment, _diff_shifted, Correlograms
 
 
 #------------------------------------------------------------------------------
@@ -18,12 +18,26 @@ from ..ccg import _increment, _shiftdiff, Correlograms
 #------------------------------------------------------------------------------
 
 def test_utils():
-    a = np.arange(10)
-    b = [0, 2, 4, 2, 2, 2, 2, 2, 2]
-    print(_increment(a, b))
+    # First, test _increment().
 
-    print(_shiftdiff(np.array([2, 3, 5, 7, 11, 13, 17]), 1))
-    print(_shiftdiff(np.array([2, 3, 5, 7, 11, 13, 17]), 2))
+    # Original array.
+    arr = np.arange(10)
+    # Indices of elements to increment.
+    indices = [0, 2, 4, 2, 2, 2, 2, 2, 2]
+
+    ae(_increment(arr, indices), [1, 1, 9, 3, 5, 5, 6, 7, 8, 9])
+
+    # Then, test _shitdiff.
+    # Original array.
+    arr = [2, 3, 5, 7, 11, 13, 17]
+    # Shifted once.
+    ds1 = [1, 2, 2, 4, 2, 4]
+    # Shifted twice.
+    ds2 = [3, 4, 6, 6, 6]
+
+    ae(_diff_shifted(arr, 1), ds1)
+    ae(_diff_shifted(arr, 2), ds2)
+    ae(_diff_shifted(_diff_shifted(arr)), ds2)
 
 
 def test_ccg():
@@ -41,4 +55,4 @@ def test_ccg():
 
     c = Correlograms(spiketimes, binsize, winsize_bins)
     correlograms = c.compute(spike_clusters, [])
-    assert correlograms is not None
+    assert correlograms.shape == (1000, 1000, 26)
