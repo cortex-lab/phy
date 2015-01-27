@@ -77,6 +77,14 @@ def _create_correlograms_array(n_clusters, winsize_bins):
 def correlograms(spike_times, spike_clusters,
                  binsize=None, winsize_bins=None):
 
+    spike_clusters = np.asarray(spike_clusters)
+    spike_times = np.asarray(spike_times)
+
+    assert spike_times.ndim == 1
+    assert spike_times.shape == spike_clusters.shape
+
+    assert winsize_bins % 2 == 1
+
     # TODO: use _unique()
     clusters = np.unique(spike_clusters)
     n_clusters = len(clusters)
@@ -97,23 +105,23 @@ def correlograms(spike_times, spike_clusters,
     # a matching spike.
     while mask[:-shift].any():
         # Number of time samples between spike i and spike i+shift.
-        spikediff = _diff_shifted(spike_times, shift)
+        spike_diff = _diff_shifted(spike_times, shift)
 
         # Binarize the delays between spike i and spike i+shift.
-        spikediff_b = spikediff // binsize
+        spike_diff_b = spike_diff // binsize
 
         # Spikes with no matching spikes are masked.
-        mask[:-shift][spikediff_b > (winsize_bins//2)] = False
+        mask[:-shift][spike_diff_b > (winsize_bins//2)] = False
 
         # Cache the masked spike delays.
         m = mask[:-shift].copy()
-        d = spikediff_b[m]
+        d = spike_diff_b[m]
 
         # # Update the masks given the clusters to update.
         # m0 = np.in1d(spike_clusters[:-shift], clusters)
         # m = m & m0
-        # d = spikediff_b[m]
-        d = spikediff_b[m]
+        # d = spike_diff_b[m]
+        d = spike_diff_b[m]
 
         # Find the indices in the raveled correlograms array that need
         # to be incremented, taking into account the spike clusters.

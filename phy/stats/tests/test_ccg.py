@@ -45,7 +45,24 @@ def test_utils():
     _index_of(arr, lookup)
 
 
-def test_ccg():
+def test_ccg_1():
+
+    spike_times = [2, 3, 10, 12, 20, 24, 30, 40]
+    spike_clusters = [0, 1, 0, 0, 2, 1, 0, 2]
+    binsize = 1
+    winsize_bins = 3 * 2 + 1
+
+    c_expected = np.zeros((3, 3, 3))
+    c_expected[0, 1, 1] = 1
+    c_expected[0, 0, 2] = 1
+
+    c = correlograms(spike_times, spike_clusters,
+                     binsize=binsize, winsize_bins=winsize_bins)
+
+    ae(c, c_expected)
+
+
+def test_ccg_2():
     sr = 20000
     nspikes = 10000
     spike_times = np.cumsum(np.random.exponential(scale=.002, size=nspikes))
