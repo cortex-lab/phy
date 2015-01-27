@@ -54,5 +54,5 @@ def test_ccg():
     assert winsize_bins % 2 == 1
 
     c = Correlograms(spiketimes, binsize, winsize_bins)
-    correlograms = c.compute(spike_clusters, [])
-    assert correlograms.shape == (1000, 1000, 26)
+    correlograms = c.compute(spike_clusters, np.unique(spike_clusters))
+    assert correlograms.shape == (maxcluster, maxcluster, 26)
