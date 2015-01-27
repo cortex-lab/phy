@@ -10,7 +10,7 @@ import numpy as np
 from numpy import array_equal as ae
 from pytest import raises
 
-from ..ccg import _increment, _diff_shifted, _index_of, correlograms
+from ..ccg import _increment, _diff_shifted, correlograms
 
 
 #------------------------------------------------------------------------------
@@ -38,11 +38,6 @@ def test_utils():
     ae(_diff_shifted(arr, 1), ds1)
     ae(_diff_shifted(arr, 2), ds2)
     ae(_diff_shifted(_diff_shifted(arr)), ds2)
-
-    # Test _index_of.
-    arr = [36, 42, 42, 36, 36, 2, 42]
-    lookup = np.unique(arr)
-    _index_of(arr, lookup)
 
 
 def test_ccg_1():
