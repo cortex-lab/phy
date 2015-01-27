@@ -64,6 +64,11 @@ def test_chunk():
     data = np.random.randn(200, 4)
     chunks = chunk_bounds(data.shape[0], 100, overlap=20)
 
+    with raises(ValueError):
+        data_chunk(data, (0, 0, 0))
+
+    assert data_chunk(data, (0, 0)).shape == (0, 4)
+
     # Chunk 1.
     ch = next(chunks)
     d = data_chunk(data, ch)
