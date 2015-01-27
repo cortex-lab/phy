@@ -10,7 +10,7 @@ import numpy as np
 from numpy import array_equal as ae
 from pytest import raises
 
-from ..ccg import _increment, _diff_shifted, Correlograms
+from ..ccg import _increment, _diff_shifted, _index_of, correlograms
 
 
 #------------------------------------------------------------------------------
@@ -39,20 +39,25 @@ def test_utils():
     ae(_diff_shifted(arr, 2), ds2)
     ae(_diff_shifted(_diff_shifted(arr)), ds2)
 
+    # Test _index_of.
+    arr = [36, 42, 42, 36, 36, 2, 42]
+    lookup = np.unique(arr)
+    _index_of(arr, lookup)
 
-def test_ccg():
+
+def teast_ccg():
     sr = 20000
     nspikes = 10000
-    spiketimes = np.cumsum(np.random.exponential(scale=.002, size=nspikes))
-    spiketimes = (spiketimes * sr).astype(np.int64)
-    maxcluster = 10
-    spike_clusters = np.random.randint(0, maxcluster, nspikes)
+    spike_times = np.cumsum(np.random.exponential(scale=.002, size=nspikes))
+    spike_times = (spike_times * sr).astype(np.int64)
+    max_cluster = 10
+    spike_clusters = np.random.randint(0, max_cluster, nspikes)
 
     winsize_samples = 2*(25 * 20) + 1
     binsize = 1 * 20  # 1 ms
     winsize_bins = 2 * ((winsize_samples // 2) // binsize) + 1
     assert winsize_bins % 2 == 1
 
-    c = Correlograms(spiketimes, binsize, winsize_bins)
-    correlograms = c.compute(spike_clusters, np.unique(spike_clusters))
-    assert correlograms.shape == (maxcluster, maxcluster, 26)
+    c = correlograms(spike_times, spike_clusters,
+                     binsize=binsize, winsize_bins=winsize_bins)
+    assert c.shape == (max_cluster, max_cluster, 26)

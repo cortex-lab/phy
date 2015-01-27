@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from numpy.lib.stride_tricks import as_strided
 
 from ..ext import six
 
@@ -51,100 +50,80 @@ def _diff_shifted(arr, steps=1):
     return arr[steps:] - arr[:len(arr)-steps]
 
 
+def _index_of(arr, lookup):
+    """Replace scalars in an array by their indices in a lookup table.
+
+    Implicitely assume that:
+
+    * All elements of arr and lookup are non-negative integers.
+    * All elements or arr belong to lookup.
+
+    This is not checked for performance reasons.
+
+    """
+    # Equivalent of np.digitize(arr, lookup) - 1, but much faster.
+    # TODO: assertions to disable in production for performance reasons.
+    m = lookup.max() + 1
+    tmp = np.zeros(m, dtype=np.int)
+    tmp[lookup] = np.arange(len(lookup))
+    return tmp[arr]
+
+
 def _create_correlograms_array(n_clusters, winsize_bins):
     return np.zeros((n_clusters, n_clusters, winsize_bins // 2 + 1),
                     dtype=np.int32)
 
 
-class Correlograms(object):
-    def __init__(self, spike_times, binsize=None, winsize_bins=None):
-        """We compute a few data structures at initialization time, as
-        these can be reused for the computation of the CCGs with different
-        clusterings."""
-        self.spike_times = spike_times
-        if binsize is not None and winsize_bins is not None:
-            self.initialize(binsize, winsize_bins)
+def correlograms(spike_times, spike_clusters,
+                 binsize=None, winsize_bins=None):
 
-    def initialize(self, binsize, winsize_bins):
-        """Need to be called whenever binsize of winsize_bins changes."""
-        self.binsize = binsize
-        self.winsize_bins = winsize_bins
+    # TODO: use _unique()
+    clusters = np.unique(spike_clusters)
+    n_clusters = len(clusters)
 
-        # Internal cache that can be reused during manual clustering.
-        self._cache = []
+    # Like spike_clusters, but with 0..n_clusters-1 indices.
+    spike_clusters_i = _index_of(spike_clusters, clusters)
 
-        shift = 1  # Shift between the two copies of the spike trains.
+    # Shift between the two copies of the spike trains.
+    shift = 1
 
-        # At a given shift, the mask precises which spikes have matching spikes
-        # within the correlogram time window.
-        mask = np.ones_like(self.spike_times, dtype=np.bool)
+    # At a given shift, the mask precises which spikes have matching spikes
+    # within the correlogram time window.
+    mask = np.ones_like(spike_times, dtype=np.bool)
 
-        # The loop continues as long as there is at least one spike with
-        # a matching spike.
-        while mask[:-shift].any():
-            # Number of time samples between spike i and spike i+shift.
-            spikediff = _diff_shifted(self.spike_times, shift)
+    correlograms = _create_correlograms_array(n_clusters, winsize_bins)
 
-            # Binarize the delays between spike i and spike i+shift.
-            spikediff_b = spikediff // binsize
+    # The loop continues as long as there is at least one spike with
+    # a matching spike.
+    while mask[:-shift].any():
+        # Number of time samples between spike i and spike i+shift.
+        spikediff = _diff_shifted(spike_times, shift)
 
-            # Spikes with no matching spikes are masked.
-            mask[:-shift][spikediff_b > (self.winsize_bins//2)] = False
+        # Binarize the delays between spike i and spike i+shift.
+        spikediff_b = spikediff // binsize
 
-            # Cache the masked spike delays.
-            m = mask[:-shift].copy()
-            d = spikediff_b[m]
+        # Spikes with no matching spikes are masked.
+        mask[:-shift][spikediff_b > (winsize_bins//2)] = False
 
-            self._cache.append((shift, m, d, spikediff_b))
+        # Cache the masked spike delays.
+        m = mask[:-shift].copy()
+        d = spikediff_b[m]
 
-            shift += 1
+        # # Update the masks given the clusters to update.
+        # m0 = np.in1d(spike_clusters[:-shift], clusters)
+        # m = m & m0
+        # d = spikediff_b[m]
+        d = spikediff_b[m]
 
-    def compute(self, spike_clusters, clusters):
-        """Compute pairwise CCGs.
+        # Find the indices in the raveled correlograms array that need
+        # to be incremented, taking into account the spike clusters.
+        indices = np.ravel_multi_index((spike_clusters_i[:-shift][m],
+                                        spike_clusters_i[shift:][m], d),
+                                       correlograms.shape)
 
-        The clusters which CCGs need to be recomputed can be precised.
+        # Increment the matching spikes in the correlograms array.
+        _increment(correlograms.ravel(), indices)
 
-        Assume `initialize()` has been called if binsize, or winsize_bins
-        have changed.
+        shift += 1
 
-        Arguments
-        ---------
-
-        spike_clusters : array-like
-            Spike-cluster mapping.
-
-        clusters : array-like
-            List of clusters to compute the CCGs from.
-
-        """
-
-        assert clusters is not None
-        clusters = np.asarray(clusters)
-        n_clusters = len(clusters)
-        assert n_clusters > 0
-
-        correlograms = _create_correlograms_array(n_clusters,
-                                                  self.winsize_bins)
-
-        # Loop over all shifts.
-        for shift, m, d, spikediff_b in self._cache:
-
-            # Update the masks given the clusters to update.
-            m0 = np.in1d(spike_clusters[:-shift], clusters)
-            m = m & m0
-            d = spikediff_b[m]
-
-            # Find the indices in the raveled correlograms array that need
-            # to be incremented, taking into account the spike clusters.
-            indices = np.ravel_multi_index((spike_clusters[:-shift][m],
-                                            spike_clusters[shift:][m], d),
-                                           correlograms.shape)
-
-            # Increment the matching spikes in the correlograms array.
-            _increment(correlograms.ravel(), indices)
-
-        return correlograms
-
-    def merged(self, clusters, to):
-        """Efficiently update the CCGs after a merge."""
-        raise NotImplementedError()
+    return correlograms
