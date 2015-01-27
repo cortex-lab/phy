@@ -24,7 +24,7 @@ lint:
 	flake8 phy --exclude=phy/ext/six.py --ignore=E226,E265,F401
 
 test: lint
-	py.test --cov phy
+	py.test --cov-report term-missing --cov phy
 
 release: clean
 	python setup.py sdist upload
