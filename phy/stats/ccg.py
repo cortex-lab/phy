@@ -16,26 +16,6 @@ from ..utils.array import _index_of, _unique
 # Cross-correlograms
 #------------------------------------------------------------------------------
 
-"""
-
-Variables
----------
-
-winsize_samples : int
-    Number of time samples in the window. Needs to be an odd number.
-
-binsize : int
-    Number of time samples in one bin.
-
-winsize_bins : int
-    Number of bins in the window.
-
-    winsize_bins = 2 * ((winsize_samples // 2) // binsize) + 1
-    assert winsize_bins % 2 == 1
-
-"""
-
-
 def _increment(arr, indices):
     """Increment some indices in a 1D vector of non-negative integers.
     Repeated indices are taken into account."""
@@ -58,6 +38,41 @@ def _create_correlograms_array(n_clusters, winsize_bins):
 
 def correlograms(spike_times, spike_clusters,
                  binsize=None, winsize_bins=None):
+    """Compute all pairwise cross-correlograms among the clusters appearing
+    in 'spike_clusters'.
+
+    Arguments
+    ---------
+
+    spike_times : array-like
+        Spike times in samples (integers).
+    spike_clusters : array-like
+        Spike-cluster mapping.
+    binsize : int
+        Number of time samples in one bin.
+    winsize_bins : int
+        Number of bins in the window.
+
+    Returns
+    -------
+
+    correlograms : array
+        A (n_clusters, n_clusters, winsize_samples) array with all pairwise
+        CCGs.
+
+    Notes
+    -----
+
+    If winsize_samples is the (odd) number of time samples in the window
+    then:
+
+        winsize_bins = 2 * ((winsize_samples // 2) // binsize) + 1
+        assert winsize_bins % 2 == 1
+
+    For performance reasons, it is recommended to compute the CCGs on a subset
+    with only a few thousands or tens of thousands of spikes.
+
+    """
 
     spike_clusters = np.asarray(spike_clusters)
     spike_times = np.asarray(spike_times)
