@@ -45,7 +45,7 @@ def test_utils():
     _index_of(arr, lookup)
 
 
-def teast_ccg():
+def test_ccg():
     sr = 20000
     nspikes = 10000
     spike_times = np.cumsum(np.random.exponential(scale=.002, size=nspikes))
@@ -53,11 +53,15 @@ def teast_ccg():
     max_cluster = 10
     spike_clusters = np.random.randint(0, max_cluster, nspikes)
 
-    winsize_samples = 2*(25 * 20) + 1
-    binsize = 1 * 20  # 1 ms
+    # window = 50 ms
+    winsize_samples = 2 * (25 * 20) + 1
+    # bin = 1 ms
+    binsize = 1 * 20
+    # 51 bins
     winsize_bins = 2 * ((winsize_samples // 2) // binsize) + 1
     assert winsize_bins % 2 == 1
 
     c = correlograms(spike_times, spike_clusters,
                      binsize=binsize, winsize_bins=winsize_bins)
+
     assert c.shape == (max_cluster, max_cluster, 26)
