@@ -32,6 +32,25 @@ def _normalize(positions):
     return positions_n
 
 
+def _index_of(arr, lookup):
+    """Replace scalars in an array by their indices in a lookup table.
+
+    Implicitely assume that:
+
+    * All elements of arr and lookup are non-negative integers.
+    * All elements or arr belong to lookup.
+
+    This is not checked for performance reasons.
+
+    """
+    # Equivalent of np.digitize(arr, lookup) - 1, but much faster.
+    # TODO: assertions to disable in production for performance reasons.
+    m = lookup.max() + 1
+    tmp = np.zeros(m, dtype=np.int)
+    tmp[lookup] = np.arange(len(lookup))
+    return tmp[arr]
+
+
 # -----------------------------------------------------------------------------
 # Chunking functions
 # -----------------------------------------------------------------------------

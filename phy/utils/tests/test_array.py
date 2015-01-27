@@ -10,8 +10,9 @@ import numpy as np
 from numpy.testing import assert_array_equal
 from pytest import raises
 
-from ..array import _unique, _normalize, chunk_bounds, excerpts, data_chunk
-# from ...datasets.mock import artificial_spike_clusters
+from ..array import (_unique, _normalize, _index_of,
+                     chunk_bounds, excerpts, data_chunk)
+from ...datasets.mock import artificial_spike_clusters
 
 
 #------------------------------------------------------------------------------
@@ -38,6 +39,13 @@ def test_normalize():
     positions_n = _normalize(positions)
     assert positions_n.min() >= -1
     assert positions_n.max() <= 1
+
+
+def test_index_of():
+    """Test _index_of."""
+    arr = [36, 42, 42, 36, 36, 2, 42]
+    lookup = _unique(arr)
+    _index_of(arr, lookup)
 
 
 #------------------------------------------------------------------------------

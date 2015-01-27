@@ -9,6 +9,7 @@
 import numpy as np
 
 from ..ext import six
+from ..utils.array import _index_of, _unique
 
 
 #------------------------------------------------------------------------------
@@ -50,25 +51,6 @@ def _diff_shifted(arr, steps=1):
     return arr[steps:] - arr[:len(arr)-steps]
 
 
-def _index_of(arr, lookup):
-    """Replace scalars in an array by their indices in a lookup table.
-
-    Implicitely assume that:
-
-    * All elements of arr and lookup are non-negative integers.
-    * All elements or arr belong to lookup.
-
-    This is not checked for performance reasons.
-
-    """
-    # Equivalent of np.digitize(arr, lookup) - 1, but much faster.
-    # TODO: assertions to disable in production for performance reasons.
-    m = lookup.max() + 1
-    tmp = np.zeros(m, dtype=np.int)
-    tmp[lookup] = np.arange(len(lookup))
-    return tmp[arr]
-
-
 def _create_correlograms_array(n_clusters, winsize_bins):
     return np.zeros((n_clusters, n_clusters, winsize_bins // 2 + 1),
                     dtype=np.int32)
@@ -86,7 +68,7 @@ def correlograms(spike_times, spike_clusters,
     assert winsize_bins % 2 == 1
 
     # TODO: use _unique()
-    clusters = np.unique(spike_clusters)
+    clusters = _unique(spike_clusters)
     n_clusters = len(clusters)
 
     # Like spike_clusters, but with 0..n_clusters-1 indices.
