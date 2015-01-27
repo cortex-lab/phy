@@ -67,7 +67,6 @@ def correlograms(spike_times, spike_clusters,
 
     assert winsize_bins % 2 == 1
 
-    # TODO: use _unique()
     clusters = _unique(spike_clusters)
     n_clusters = len(clusters)
 

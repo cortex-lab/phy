@@ -41,7 +41,6 @@ def test_utils():
 
 
 def test_ccg_1():
-
     spike_times = [2, 3, 10, 12, 20, 24, 30, 40]
     spike_clusters = [0, 1, 0, 0, 2, 1, 0, 2]
     binsize = 1
