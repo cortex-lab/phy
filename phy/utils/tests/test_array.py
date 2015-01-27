@@ -23,11 +23,10 @@ def test_unique():
     """Test _unique() function"""
     _unique([])
 
-    # TODO: uncomment once artificial_spike_clusters is available.
-    # n_spikes = 1000
-    # n_clusters = 10
-    # spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
-    # assert_array_equal(_unique(spike_clusters), np.arange(n_clusters))
+    n_spikes = 1000
+    n_clusters = 10
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    assert_array_equal(_unique(spike_clusters), np.arange(n_clusters))
 
 
 def test_normalize():
