@@ -60,6 +60,7 @@ class MockExperiment(BaseExperiment):
     n_clusters = 10
 
     def __init__(self):
+        super(BaseExperiment, self).__init__()
         self._metadata = {'description': 'A mock experiment.'}
         self._cluster_metadata = ClusterMetadata()
         self._probe = MEA(positions=staggered_positions(self.n_channels))
