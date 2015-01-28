@@ -125,7 +125,7 @@ class Waveforms(Visual):
         assert isinstance(value, np.ndarray)
         # TODO: support sparse structures
         assert value.ndim == 3
-        self.n_spikes, self.n_channels, self.n_samples = value.shape
+        self.n_spikes, self.n_samples, self.n_channels = value.shape
         self._waveforms = value
 
     @property
@@ -222,8 +222,10 @@ class Waveforms(Visual):
         debug("bake spikes")
 
         # Bake masks.
+        # WARNING: swap channel/time axes in the waveforms array.
+        waveforms = np.swapaxes(self._waveforms, 1, 2)
         masks = np.repeat(self._masks.ravel(), self.n_samples)
-        self.program['a_data'] = np.c_[self._waveforms.ravel(),
+        self.program['a_data'] = np.c_[waveforms.ravel(),
                                        masks.ravel()]
 
         # TODO: SparseCSR, this should just be 'channel'
