@@ -11,6 +11,8 @@ import numpy.random as nr
 
 from ..ext import six
 from ..io.experiment import BaseExperiment
+from ..cluster.manual.cluster_metadata import ClusterMetadata
+from ..electrode.mea import MEA, staggered_positions
 
 
 #------------------------------------------------------------------------------
@@ -55,55 +57,44 @@ class MockExperiment(BaseExperiment):
     n_samples_traces = 20000
     n_samples_waveforms = 40
 
+    def __init__(self):
+        self._metadata = {'description': 'A mock experiment.'}
+        self._cluster_metadata = ClusterMetadata()
+        self._probe = MEA(positions=staggered_positions(self.n_channels))
+        self._traces = artificial_traces(self.n_samples_traces,
+                                         self.n_channels)
+        self._spike_clusters = artificial_spike_clusters(self.n_spikes,
+                                                         self.n_clusters)
+        self._spike_times = artificial_spike_times(self.n_spikes)
+        self._features = artificial_features(self.n_spikes, self.n_features)
+        self._masks = artificial_masks(self.n_spikes, self.n_channels)
+        self._waveforms = artificial_waveforms(self.n_spikes, self.n_samples,
+                                               self.n_channels)
+
     def metadata(self):
-        return {'description': 'A mock experiment.'}
+        return self._metadata
 
     def traces(self, recording=0):
-        return artificial_traces(self.n_samples_traces, self.n_channels)
+        return self._traces
 
     def spike_times(self, channel_group=0):
-        return artificial_spike_times(self.n_spikes)
+        return self._spike_times
 
     def spike_clusters(self, channel_group=0):
-        return artificial_spike_clusters(self.n_spikes, self.n_clusters)
+        return self._spike_clusters
 
     def cluster_metadata(self, channel_group=0):
-        """ClusterMetadata instance holding information about the clusters.
-
-        Must be implemented by child classes.
-
-        """
-        raise NotImplementedError()
+        return self._cluster_metadata
 
     def features(self, channel_group=0):
-        """Features from a given channel_group (may be memory-mapped).
-
-        May be implemented by child classes.
-
-        """
-        raise NotImplementedError()
+        return self._features
 
     def masks(self, channel_group=0):
-        """Masks from a given channel_group (may be memory-mapped).
-
-        May be implemented by child classes.
-
-        """
-        raise NotImplementedError()
+        return self._masks
 
     def waveforms(self, channel_group=0):
-        """Waveforms from a given channel_group (may be memory-mapped).
-
-        May be implemented by child classes.
-
-        """
-        raise NotImplementedError()
+        return self._waveforms
 
     @property
     def probe(self):
-        """A Probe instance.
-
-        May be implemented by child classes.
-
-        """
-        raise NotImplementedError()
+        return self._probe
