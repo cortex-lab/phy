@@ -61,14 +61,14 @@ def test_artificial():
 def test_mock_experiment():
     exp = MockExperiment()
 
-    assert exp.metadata()['description'] == 'A mock experiment.'
-    assert exp.traces().ndim == 2
-    assert exp.spike_times().ndim == 1
-    assert exp.spike_clusters().ndim == 1
-    assert exp.cluster_metadata()[3]['color'] == 1
-    assert exp.features().ndim == 2
-    assert exp.masks().ndim == 2
-    assert exp.waveforms().ndim == 3
+    assert exp.metadata['description'] == 'A mock experiment.'
+    assert exp.traces.ndim == 2
+    assert exp.spike_times.ndim == 1
+    assert exp.spike_clusters.ndim == 1
+    assert exp.cluster_metadata[3]['color'] == 1
+    assert exp.features.ndim == 2
+    assert exp.masks.ndim == 2
+    assert exp.waveforms.ndim == 3
 
     assert isinstance(exp.probe, MEA)
     with raises(NotImplementedError):

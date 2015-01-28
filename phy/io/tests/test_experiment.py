@@ -20,21 +20,21 @@ def test_base_experiment():
     exp = BaseExperiment()
 
     with raises(NotImplementedError):
-        exp.metadata()
+        exp.metadata
     with raises(NotImplementedError):
-        exp.traces()
+        exp.traces
     with raises(NotImplementedError):
-        exp.spike_times()
+        exp.spike_times
     with raises(NotImplementedError):
-        exp.spike_clusters()
+        exp.spike_clusters
     with raises(NotImplementedError):
-        exp.cluster_metadata()
+        exp.cluster_metadata
     with raises(NotImplementedError):
-        exp.features()
+        exp.features
     with raises(NotImplementedError):
-        exp.masks()
+        exp.masks
     with raises(NotImplementedError):
-        exp.waveforms()
+        exp.waveforms
     with raises(NotImplementedError):
         exp.probe
     with raises(NotImplementedError):

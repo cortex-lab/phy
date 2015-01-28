@@ -29,6 +29,9 @@ def test_session():
     exp = MockExperiment()
     n_clusters = exp.n_clusters
 
+    with raises(ValueError):
+        Session(None)
+
     session = Session(exp)
     session.register_view(MockView())
 

@@ -74,28 +74,36 @@ class MockExperiment(BaseExperiment):
                                                self.n_samples_waveforms,
                                                self.n_channels)
 
+    @property
     def metadata(self):
         return self._metadata
 
-    def traces(self, recording=0):
+    @property
+    def traces(self):
         return self._traces
 
-    def spike_times(self, channel_group=0):
+    @property
+    def spike_times(self):
         return self._spike_times
 
-    def spike_clusters(self, channel_group=0):
+    @property
+    def spike_clusters(self):
         return self._spike_clusters
 
-    def cluster_metadata(self, channel_group=0):
+    @property
+    def cluster_metadata(self):
         return self._cluster_metadata
 
-    def features(self, channel_group=0):
+    @property
+    def features(self):
         return self._features
 
-    def masks(self, channel_group=0):
+    @property
+    def masks(self):
         return self._masks
 
-    def waveforms(self, channel_group=0):
+    @property
+    def waveforms(self):
         return self._waveforms
 
     @property

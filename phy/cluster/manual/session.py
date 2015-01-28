@@ -12,6 +12,7 @@ from ._history import GlobalHistory
 from .clustering import Clustering
 from .cluster_metadata import ClusterMetadata
 from .selector import Selector
+from ...io.experiment import BaseExperiment
 
 
 #------------------------------------------------------------------------------
@@ -21,15 +22,22 @@ from .selector import Selector
 class Session(object):
     """Provide all user-exposed actions for a manual clustering session."""
 
-    def __init__(self, experiment, channel_group=0):
+    def __init__(self, experiment):
+        if not isinstance(experiment, BaseExperiment):
+            raise ValueError("'experiment' must be an instance of a "
+                             "class deriving from BaseExperiment.")
+        self._views = []
         self._global_history = GlobalHistory()
         self.experiment = experiment
+        self._update()
+
+    def _update(self):
         # TODO: n_spikes_max
-        spike_clusters = experiment.spike_clusters(channel_group=channel_group)
+        spike_clusters = self.experiment.spike_clusters
         self.selector = Selector(spike_clusters, n_spikes_max=None)
         self.clustering = Clustering(spike_clusters)
-        self.cluster_metadata = experiment.cluster_metadata()
-        self._views = []
+        self.cluster_metadata = self.experiment.cluster_metadata
+        # TODO: change channel group and change recording
 
     def register_view(self, view):
         """Register a view so that it gets updated after clustering actions."""
@@ -44,7 +52,7 @@ class Session(object):
             self._update_view(view)
 
     def _update_view(self, view):
-        # TODO
+        # TODO: update a view after a new selection
         pass
 
     def _clustering_updated(self, up):
