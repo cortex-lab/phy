@@ -21,6 +21,14 @@ def artificial_waveforms(n_spikes=None, n_samples=None, n_channels=None):
     return .25 * nr.normal(size=(n_spikes, n_samples, n_channels))
 
 
+def artificial_features(n_spikes=None, n_features=None):
+    return .25 * nr.normal(size=(n_spikes, n_features))
+
+
+def artificial_masks(n_spikes=None, n_channels=None):
+    return nr.uniform(size=(n_spikes, n_channels))
+
+
 def artificial_traces(n_samples, n_channels):
     # TODO: more realistic traces.
     return .25 * nr.normal(size=(n_samples, n_channels))
