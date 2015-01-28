@@ -15,12 +15,16 @@ import numpy.random as npr
 from pytest import raises
 
 from ...datasets.mock import artificial_traces
-from ..loader import WaveformLoader
+from ..loader import _slice, WaveformLoader
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
+
+def test_slice():
+    assert _slice(0, (20, 20)) == slice(0, 20, None)
+
 
 def test_loader():
     n_samples_trace, n_channels = 1000, 100
