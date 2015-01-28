@@ -53,6 +53,7 @@ def _diff_counts(count_1, count_2):
 
 def _count_clusters(spike_clusters):
     """Compute cluster counts."""
+    spike_clusters = np.asarray(spike_clusters)
     # Reinitializes the counter.
     _cluster_counts = _empty_cluster_counts()
     # Count the number of spikes in each cluster.

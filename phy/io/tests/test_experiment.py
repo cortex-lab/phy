@@ -36,6 +36,6 @@ def test_base_experiment():
     with raises(NotImplementedError):
         exp.waveforms()
     with raises(NotImplementedError):
-        exp.probe()
+        exp.probe
     with raises(NotImplementedError):
         exp.save()

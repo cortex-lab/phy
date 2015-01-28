@@ -8,12 +8,15 @@
 
 import numpy as np
 from numpy.testing import assert_array_equal
+from pytest import raises
 
+from ...electrode.mea import MEA
 from ..mock import (artificial_waveforms,
                     artificial_traces,
                     artificial_spike_clusters,
                     artificial_features,
-                    artificial_masks)
+                    artificial_masks,
+                    MockExperiment)
 
 
 #------------------------------------------------------------------------------
@@ -53,3 +56,20 @@ def test_artificial():
     # Masks.
     masks = artificial_masks(n_spikes, n_channels)
     assert masks.shape == (n_spikes, n_channels)
+
+
+def test_mock_experiment():
+    exp = MockExperiment()
+
+    assert exp.metadata()['description'] == 'A mock experiment.'
+    assert exp.traces().ndim == 2
+    assert exp.spike_times().ndim == 1
+    assert exp.spike_clusters().ndim == 1
+    assert exp.cluster_metadata()[3]['color'] == 1
+    assert exp.features().ndim == 2
+    assert exp.masks().ndim == 2
+    assert exp.waveforms().ndim == 3
+
+    assert isinstance(exp.probe, MEA)
+    with raises(NotImplementedError):
+        exp.save()

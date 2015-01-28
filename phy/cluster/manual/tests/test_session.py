@@ -12,7 +12,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ....datasets.mock import artificial_spike_clusters
+from ....datasets.mock import artificial_spike_clusters, MockExperiment
 from ..session import Session
 
 
@@ -22,15 +22,14 @@ from ..session import Session
 
 def test_session():
 
-    n_spikes = 1000
-    n_clusters = 10
-    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
-
     class MockView(object):
         def update(self, up):
             pass
 
-    session = Session(spike_clusters)
+    exp = MockExperiment()
+    n_clusters = exp.n_clusters
+
+    session = Session(exp)
     session.register_view(MockView())
 
     clusters_0 = np.array(np.arange(n_clusters))

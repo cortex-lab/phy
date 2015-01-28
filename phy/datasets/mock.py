@@ -53,9 +53,11 @@ def artificial_spike_times(n_spikes):
 
 class MockExperiment(BaseExperiment):
     n_channels = 32
+    n_features = 32 * 3
     n_spikes = 1000
     n_samples_traces = 20000
     n_samples_waveforms = 40
+    n_clusters = 10
 
     def __init__(self):
         self._metadata = {'description': 'A mock experiment.'}
@@ -68,7 +70,8 @@ class MockExperiment(BaseExperiment):
         self._spike_times = artificial_spike_times(self.n_spikes)
         self._features = artificial_features(self.n_spikes, self.n_features)
         self._masks = artificial_masks(self.n_spikes, self.n_channels)
-        self._waveforms = artificial_waveforms(self.n_spikes, self.n_samples,
+        self._waveforms = artificial_waveforms(self.n_spikes,
+                                               self.n_samples_waveforms,
                                                self.n_channels)
 
     def metadata(self):

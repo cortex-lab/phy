@@ -21,12 +21,14 @@ from .selector import Selector
 class Session(object):
     """Provide all user-exposed actions for a manual clustering session."""
 
-    def __init__(self, spike_clusters, cluster_metadata=None):
+    def __init__(self, experiment, channel_group=0):
         self._global_history = GlobalHistory()
+        self.experiment = experiment
         # TODO: n_spikes_max
+        spike_clusters = experiment.spike_clusters(channel_group=channel_group)
         self.selector = Selector(spike_clusters, n_spikes_max=None)
         self.clustering = Clustering(spike_clusters)
-        self.cluster_metadata = ClusterMetadata(data=cluster_metadata)
+        self.cluster_metadata = experiment.cluster_metadata()
         self._views = []
 
     def register_view(self, view):
