@@ -9,6 +9,7 @@
 import numpy as np
 
 from ...ext import six
+from ...utils.array import _as_array
 from ._utils import _unique, _spikes_in_clusters
 from ...utils.logging import debug, info, warn
 
@@ -72,7 +73,7 @@ class Selector(object):
     @selected_spikes.setter
     def selected_spikes(self, value):
         """Explicitely select a number of spikes."""
-        value = np.asarray(value)
+        value = _as_array(value)
         # Make sure there are less spikes than n_spikes_max.
         self._selected_spikes = self._subset(value)
 
@@ -87,7 +88,7 @@ class Selector(object):
         # TODO: smarter subselection: select n_spikes_max/n_clusters spikes
         # per cluster, so that the number of spikes per cluster is independent
         # from the sizes of the clusters.
-        value = np.asarray(value)
+        value = _as_array(value)
         # All spikes from the selected clusters.
         spikes = _spikes_in_clusters(self._spike_clusters, value)
         # Make sure there are less spikes than n_spikes_max.

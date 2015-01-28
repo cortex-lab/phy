@@ -12,6 +12,7 @@ from copy import deepcopy
 import numpy as np
 
 from ...ext.six import iterkeys, itervalues, iteritems
+from ...utils.array import _as_array
 from ._utils import _unique, _spikes_in_clusters
 from ._update_info import UpdateInfo
 from ._history import History
@@ -53,7 +54,7 @@ def _diff_counts(count_1, count_2):
 
 def _count_clusters(spike_clusters):
     """Compute cluster counts."""
-    spike_clusters = np.asarray(spike_clusters)
+    spike_clusters = _as_array(spike_clusters)
     # Reinitializes the counter.
     _cluster_counts = _empty_cluster_counts()
     # Count the number of spikes in each cluster.
@@ -72,7 +73,7 @@ class Clustering(object):
     def __init__(self, spike_clusters):
         self._undo_stack = History(base_item=(None, None))
         # Spike -> cluster mapping.
-        self._spike_clusters = np.asarray(spike_clusters)
+        self._spike_clusters = _as_array(spike_clusters)
         # Update the cluster counts.
         self.update_cluster_counts()
         # Keep a copy of the original spike clusters assignement.
