@@ -42,6 +42,7 @@ def _check_order(changed, compare_to):
 #------------------------------------------------------------------------------
 
 class Waveforms(Visual):
+    # TODO: move GLSL code to .glsl files.
     VERT_SHADER = """
     // TODO: add depth
     attribute vec2 a_data;  // -1..1
@@ -259,6 +260,8 @@ class Waveforms(Visual):
 
     def bake(self, changed=None):
         """Prepare and upload the data on the GPU."""
+        # TODO: _bake string private variable, set by @property setters
+        # for automatic baking.
         if self.n_spikes is None:
             return
         if changed is None:

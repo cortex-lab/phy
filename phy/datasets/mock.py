@@ -10,6 +10,7 @@ import numpy as np
 import numpy.random as nr
 
 from ..ext import six
+from ..io.experiment import BaseExperiment
 
 
 #------------------------------------------------------------------------------
@@ -36,3 +37,11 @@ def artificial_traces(n_samples, n_channels):
 
 def artificial_spike_clusters(n_spikes, n_clusters, low=0):
     return nr.randint(size=n_spikes, low=low, high=n_clusters)
+
+
+#------------------------------------------------------------------------------
+# Artificial Experiment
+#------------------------------------------------------------------------------
+
+class MockExperiment(BaseExperiment):
+    pass
