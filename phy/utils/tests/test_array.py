@@ -7,7 +7,7 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ..array import (_unique, _normalize, _index_of,
@@ -26,7 +26,7 @@ def test_unique():
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
-    assert_array_equal(_unique(spike_clusters), np.arange(n_clusters))
+    ae(_unique(spike_clusters), np.arange(n_clusters))
 
 
 def test_normalize():
@@ -44,7 +44,7 @@ def test_index_of():
     """Test _index_of."""
     arr = [36, 42, 42, 36, 36, 2, 42]
     lookup = _unique(arr)
-    _index_of(arr, lookup)
+    ae(_index_of(arr, lookup), [1, 2, 2, 1, 1, 0, 2])
 
 
 #------------------------------------------------------------------------------
