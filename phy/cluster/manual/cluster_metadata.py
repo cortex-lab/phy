@@ -80,7 +80,7 @@ class ClusterMetadata(object):
 
     """
 
-    def __init__(self, fields=None, data=None):
+    def __init__(self, data=None, fields=None):
         if fields is None:
             fields = DEFAULT_FIELDS
         # 'fields' is a list of tuples (field_name, default_value).
@@ -131,6 +131,11 @@ class ClusterMetadata(object):
         info = UpdateInfo(description=field, metadata_changed=clusters)
         self._undo_stack.add((clusters, field, values, info))
         return info
+
+    def update(self, up):
+        """Update cluster metadata after a clustering action."""
+        # TODO: what happens to color/group of new clusters after merge/split?
+        pass
 
     def undo(self):
         """Undo the last metadata change."""

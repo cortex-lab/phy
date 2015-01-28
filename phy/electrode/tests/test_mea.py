@@ -22,6 +22,11 @@ def test_mea():
     n_channels = 10
     positions = np.random.randn(n_channels, 2)
 
+    mea = MEA()
+    mea.positions = positions
+    assert np.array_equal(mea.positions, positions)
+    assert mea.adjacency is None
+
     mea = MEA(positions=positions)
     assert mea.n_channels == n_channels
 

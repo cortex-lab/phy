@@ -92,3 +92,8 @@ class Selector(object):
         spikes = _spikes_in_clusters(self._spike_clusters, value)
         # Make sure there are less spikes than n_spikes_max.
         self.selected_spikes = self._subset(spikes)
+
+    def update(self, up):
+        """Called when clustering has changed."""
+        # TODO
+        pass

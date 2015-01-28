@@ -33,7 +33,7 @@ def test_structure():
 
 
 def test_default_function():
-    meta = ClusterMetadata([('field', lambda: 9)])
+    meta = ClusterMetadata(fields=[('field', lambda: 9)])
     assert meta.data[3]['field'] == 9
 
 
