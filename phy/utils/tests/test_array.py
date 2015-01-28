@@ -7,11 +7,12 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ..array import _unique, _normalize, chunk_bounds, excerpts, data_chunk
-# from ...datasets.mock import artificial_spike_clusters
+from ..array import (_unique, _normalize, _index_of,
+                     chunk_bounds, excerpts, data_chunk)
+from ...datasets.mock import artificial_spike_clusters
 
 
 #------------------------------------------------------------------------------
@@ -22,11 +23,10 @@ def test_unique():
     """Test _unique() function"""
     _unique([])
 
-    # TODO: uncomment once artificial_spike_clusters is available.
-    # n_spikes = 1000
-    # n_clusters = 10
-    # spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
-    # assert_array_equal(_unique(spike_clusters), np.arange(n_clusters))
+    n_spikes = 1000
+    n_clusters = 10
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    ae(_unique(spike_clusters), np.arange(n_clusters))
 
 
 def test_normalize():
@@ -38,6 +38,13 @@ def test_normalize():
     positions_n = _normalize(positions)
     assert positions_n.min() >= -1
     assert positions_n.max() <= 1
+
+
+def test_index_of():
+    """Test _index_of."""
+    arr = [36, 42, 42, 36, 36, 2, 42]
+    lookup = _unique(arr)
+    ae(_index_of(arr, lookup), [1, 2, 2, 1, 1, 0, 2])
 
 
 #------------------------------------------------------------------------------
@@ -55,6 +62,11 @@ def test_chunk_bounds():
 def test_chunk():
     data = np.random.randn(200, 4)
     chunks = chunk_bounds(data.shape[0], 100, overlap=20)
+
+    with raises(ValueError):
+        data_chunk(data, (0, 0, 0))
+
+    assert data_chunk(data, (0, 0)).shape == (0, 4)
 
     # Chunk 1.
     ch = next(chunks)
