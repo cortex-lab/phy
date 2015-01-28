@@ -8,6 +8,8 @@
 
 import numpy as np
 
+from ..ext import six
+
 
 #------------------------------------------------------------------------------
 # Utility functions
@@ -49,6 +51,27 @@ def _index_of(arr, lookup):
     tmp = np.zeros(m, dtype=np.int)
     tmp[lookup] = np.arange(len(lookup))
     return tmp[arr]
+
+
+_ACCEPTED_ARRAY_DTYPES = (np.float, np.float32, np.float64,
+                          np.int, np.int8, np.int16, np.uint8, np.uint16,
+                          np.int32, np.int64,
+                          np.bool)
+
+
+def _as_array(arr):
+    """Convert an object to a numerical NumPy array.
+
+    Avoid a copy if possible.
+
+    """
+    if isinstance(arr, six.integer_types + (float,)):
+        arr = [arr]
+    out = np.asarray(arr)
+    if out.dtype not in _ACCEPTED_ARRAY_DTYPES:
+        raise ValueError("'arr' seems to have an invalid dtype: "
+                         "{0:s}".format(str(out.dtype)))
+    return out
 
 
 # -----------------------------------------------------------------------------
