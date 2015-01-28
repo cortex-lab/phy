@@ -33,6 +33,18 @@ class Session(object):
         """Register a view so that it gets updated after clustering actions."""
         self._views.append(view)
 
+    def select(self, clusters):
+        self.selector.selected_clusters = clusters
+        self._update_views()
+
+    def _update_views(self):
+        for view in self._views:
+            self._update_view(view)
+
+    def _update_view(self, view):
+        # TODO
+        pass
+
     def _clustering_updated(self, up):
         """Update the selectors and views with an UpdateInfo object."""
 
