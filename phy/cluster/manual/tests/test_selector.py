@@ -50,6 +50,10 @@ def test_selector_spikes():
     selector.selected_spikes = my_spikes
     assert_array_equal(selector.selected_spikes, [10, 30, 40])
 
+    # Check that this doesn't raise any error.
+    selector.selected_clusters = [100]
+    selector.selected_spikes = []
+
 
 def test_selector_clusters():
     """Test selecting clusters."""

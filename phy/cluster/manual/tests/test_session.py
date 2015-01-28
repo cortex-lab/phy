@@ -35,6 +35,8 @@ def test_session():
     session = Session(exp)
     session.register_view(MockView())
 
+    session.select([1, 2])
+
     clusters_0 = np.array(np.arange(n_clusters))
     ae(session.clustering.cluster_labels, clusters_0)
 
