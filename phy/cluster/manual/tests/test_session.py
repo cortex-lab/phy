@@ -104,12 +104,3 @@ def test_session():
         session.wizard_reset()
 
     session.close_view(view)
-
-
-def test_session_show():
-    exp = MockExperiment()
-    session = Session(exp)
-
-    # This requires the IPython notebook.
-    with raises(RuntimeError):
-        session.show_clusters()
