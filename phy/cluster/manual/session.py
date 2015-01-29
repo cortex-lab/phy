@@ -17,6 +17,30 @@ from ...plot.waveforms import WaveformView
 
 
 #------------------------------------------------------------------------------
+# View manager
+#------------------------------------------------------------------------------
+
+class ViewManager(object):
+    """Manage several views."""
+    def __init__(self):
+        self._views = []
+
+    def register(self, view):
+        """Register a view."""
+        self._views.append(view)
+
+    def unregister(self, view):
+        """Unregister a view."""
+        view.close()
+        if view in self._views:
+            self._views.remove(view)
+
+    @property
+    def views(self):
+        return self._views
+
+
+#------------------------------------------------------------------------------
 # Session class
 #------------------------------------------------------------------------------
 
@@ -27,132 +51,95 @@ class Session(object):
         if not isinstance(experiment, BaseExperiment):
             raise ValueError("'experiment' must be an instance of a "
                              "class deriving from BaseExperiment.")
-        self._views = []
         self._global_history = GlobalHistory()
+        self._view_manager = ViewManager()
+        # Set the experiment and initialize the session.
         self.experiment = experiment
-        self._update()
+        self._update_after_load()
 
-    def select(self, clusters):
-        """Select some clusters."""
-        self.selector.selected_clusters = clusters
-        self._update_views()
-
-    def _update(self):
-        """Initialize the Session after the channel group has changed."""
-        # TODO: n_spikes_max
+    def _update_after_load(self):
+        """Update the session after new data has been loaded."""
+        # Update the Selector and Clustering instances using the Experiment.
         spike_clusters = self.experiment.spike_clusters
         self.selector = Selector(spike_clusters, n_spikes_max=None)
         self.clustering = Clustering(spike_clusters)
         self.cluster_metadata = self.experiment.cluster_metadata
-        # TODO: change channel group and change recording
+        # Reinitialize all existing views.
+        for view in self._view_manager.views:
+            if isinstance(view, WaveformView):
+                self._update_waveforms_after_load(view)
+
+    def _update_after_select(self):
+        """Update the views after the selection has changed."""
+        for view in self._view_manager.views:
+            if isinstance(view, WaveformView):
+                self._update_waveforms_after_select(view)
+
+    def _update_after_cluster(self, up, add_to_stack=True):
+        """Update the session after the clustering has changed."""
+
+        # TODO: Update the similarity matrix.
+        # stats.update(up)
+
+        # TODO: this doesn't do anything yet.
+        # self.selector.update(up)
+
+        # TODO: this doesn't do anything yet.
+        # self.cluster_metadata.update(up)
+
+        if add_to_stack:
+            self._global_history.action(self.clustering)
+
+        # Refresh the views with the DataUpdate instance.
+        for view in self._view_manager.views:
+            if isinstance(view, WaveformView):
+                self._update_waveforms_after_cluster(view, up=up)
 
     # Views.
     # -------------------------------------------------------------------------
-    # TODO: refactor into a ViewManager?
 
-    def register_view(self, view):
-        """Register a view."""
-        self._views.append(view)
-        self._init_view(view)
-        self._update_view(view)
-
-    def unregister_view(self, view):
-        """Unregister a view."""
-        # TODO: remove a view when it is closed.
-        self._close_view(view)
-        if view in self._views:
-            self._views.remove(view)
-
-    def _update_views(self):
-        """Update all views after a selection change."""
-        for view in self._views:
-            self._update_view(view)
-
-    def _update_view(self, view):
-        """Update a view after a selection change."""
-        if isinstance(view, WaveformView):
-            self._update_waveform_view(view)
-        view.update()
-
-    def _init_view(self, view):
-        """Initialize a view."""
-        if isinstance(view, WaveformView):
-            self._init_waveform_view(view)
-        view.update()
-
-    def _show_view(self, view):
-        """Show a VisPy canvas view."""
-        try:
-            from vispy.app import Canvas
-        except ImportError:
-            raise ImportError("VisPy is required.")
-        assert isinstance(view, Canvas)
-        view.show()
-        return view
-
-    def _close_view(self, view):
-        """Close a view."""
-        view.close()
-
-    # Waveform view.
-    # -------------------------------------------------------------------------
-
-    def _init_waveform_view(self, view):
+    def _update_waveforms_after_load(self, view):
+        assert isinstance(view, WaveformView)
         view.visual.spike_clusters = self.clustering.spike_clusters
         view.visual.cluster_metadata = self.cluster_metadata
         view.visual.channel_positions = self.experiment.probe.positions
 
-    def _update_waveform_view(self, view):
-        """Update a WaveformView after a selection change."""
+    def _update_waveforms_after_select(self, view):
+        assert isinstance(view, WaveformView)
         spikes = self.selector.selected_spikes
         view.visual.waveforms = self.experiment.waveforms[spikes]
         view.visual.masks = self.experiment.masks[spikes]
         view.visual.spike_labels = spikes
 
-    def show_waveforms(self):
-        """Show a new WaveformView."""
-        view = WaveformView()
-        self.register_view(view)
-        return self._show_view(view)
+    def _update_waveforms_after_cluster(self, view, up=None):
+        # TODO
+        assert isinstance(view, WaveformView)
 
-    # Clustering actions.
+    def show_waveforms(self):
+        """Create and show a new Waveform view."""
+        view = WaveformView()
+        self._view_manager.register(view)
+        self._update_waveforms_after_load(view)
+        self._update_waveforms_after_select(view)
+        return view
+
+    # Public methods.
     # -------------------------------------------------------------------------
 
-    def _clustering_updated(self, up):
-        """Update the selectors and views with an UpdateInfo object."""
-
-        # TODO: Update the similarity matrix.
-        # stats.update(up)
-
-        # This doesn't do anything yet.
-        self.selector.update(up)
-
-        # Update the views.
-        [view.update(up) for view in self._views]
-
-    def _assigned(self, up):
-        """Called when cluster assignements has been changed."""
-
-        # Update the cluster metadata.
-        self.cluster_metadata.update(up)
-
-        # Save the action in the global stack.
-        # TODO: add self.cluster_metadata once clustering actions involve
-        # changes in cluster metadata.
-        self._global_history.action(self.clustering)
-
-        # Update all structures.
-        self._clustering_updated(up)
+    def select(self, clusters):
+        """Select some clusters."""
+        self.selector.selected_clusters = clusters
+        self._update_after_select()
 
     def merge(self, clusters):
         """Merge clusters."""
         up = self.clustering.merge(clusters)
-        self._assigned(up)
+        self._update_after_cluster(up)
 
     def split(self, spikes):
         """Create a new cluster from a selection of spikes."""
         up = self.clustering.split(spikes)
-        self._assigned(up)
+        self._update_after_cluster(up)
 
     def move(self, clusters, group):
         """Move clusters to a group."""
@@ -162,12 +149,12 @@ class Session(object):
     def undo(self):
         """Undo the last action."""
         up = self._global_history.undo()
-        self._clustering_updated(up)
+        self._update_after_cluster(up, add_to_stack=False)
 
     def redo(self):
         """Redo the last undone action."""
         up = self._global_history.redo()
-        self._clustering_updated(up)
+        self._update_after_cluster(up, add_to_stack=False)
 
     def wizard_start(self):
         raise NotImplementedError()

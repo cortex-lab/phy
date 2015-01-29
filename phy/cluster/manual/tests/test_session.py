@@ -99,4 +99,4 @@ def test_session():
     with raises(NotImplementedError):
         session.wizard_reset()
 
-    session.unregister_view(view)
+    view.close()

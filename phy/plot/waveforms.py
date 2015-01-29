@@ -333,6 +333,29 @@ class WaveformView(PanZoomCanvas):
         super(WaveformView, self).__init__(**kwargs)
         self.visual = Waveforms()
 
+    # def reset(self, spike_clusters=None,
+    #                 cluster_metadata=None,
+    #                 channel_positions=None):
+    #     self.visual.spike_clusters = spike_clusters
+    #     self.visual.cluster_metadata = cluster_metadata
+    #     self.visual.channel_positions = channel_positions
+
+    # def update_data(self, spike_labels=None, waveforms=None, masks=None,
+    #                 up=None):
+    #     """Update the view with new data.
+
+    #     If 'up' is None, the spike selection has changed.
+    #     Otherwise, the clustering has changed.
+    #     """
+    #     if up is None:
+    #         self.visual.waveforms = waveforms
+    #         self.visual.masks = self.experiment.masks
+    #         self.visual.spike_labels = spike_labels
+    #     else:
+    #         # TODO: clustering updated.
+    #         pass
+    #     self.update()
+
     def on_key_press(self, event):
         # TODO: more interactivity
         # TODO: keyboard shortcut manager
