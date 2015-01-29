@@ -8,12 +8,13 @@
 
 import numpy as np
 
-from .._color import _gpu_color
+from .._color import _random_color, _random_colors
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
 
-def test_gpu_color():
-    assert len(_gpu_color(1)) == 3
+def test_random_color():
+    assert len(_random_color()) == 3
+    assert _random_colors(4).shape == (4, 3)

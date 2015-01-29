@@ -13,7 +13,9 @@ import numpy as np
 # Colors
 #------------------------------------------------------------------------------
 
-def _gpu_color(color):
-    """Return a GPU-ready structure from a given color index."""
-    # TODO
-    return (1., 1., 0.)
+def _random_color():
+    return tuple(np.random.uniform(size=(3,), low=.5, high=.9))
+
+
+def _random_colors(n):
+    return np.random.uniform(size=(n, 3), low=.5, high=.9)
