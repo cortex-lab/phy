@@ -48,14 +48,12 @@ class Session(object):
 
     # Views.
     # -------------------------------------------------------------------------
+    # TODO: refactor into a ViewManager?
 
     def register_view(self, view):
         """Register a view."""
-        # Register the spike clusters.
-        view.visual.spike_clusters = self.clustering.spike_clusters
-        # Register the ClusterMetadata.
-        view.visual.cluster_metadata = self.cluster_metadata
         self._views.append(view)
+        self._init_view(view)
         self._update_view(view)
 
     def unregister_view(self, view):
@@ -76,13 +74,11 @@ class Session(object):
             self._update_waveform_view(view)
         view.update()
 
-    def _update_waveform_view(self, view):
-        """Update a WaveformView after a selection change."""
-        spikes = self.selector.selected_spikes
-        view.visual.waveforms = self.experiment.waveforms[spikes]
-        view.visual.masks = self.experiment.masks[spikes]
-        view.visual.spike_labels = spikes
-        view.visual.channel_positions = self.experiment.probe.positions
+    def _init_view(self, view):
+        """Initialize a view."""
+        if isinstance(view, WaveformView):
+            self._init_waveform_view(view)
+        view.update()
 
     def _show_view(self, view):
         """Show a VisPy canvas view."""
@@ -97,6 +93,21 @@ class Session(object):
     def _close_view(self, view):
         """Close a view."""
         view.close()
+
+    # Waveform view.
+    # -------------------------------------------------------------------------
+
+    def _init_waveform_view(self, view):
+        view.visual.spike_clusters = self.clustering.spike_clusters
+        view.visual.cluster_metadata = self.cluster_metadata
+        view.visual.channel_positions = self.experiment.probe.positions
+
+    def _update_waveform_view(self, view):
+        """Update a WaveformView after a selection change."""
+        spikes = self.selector.selected_spikes
+        view.visual.waveforms = self.experiment.waveforms[spikes]
+        view.visual.masks = self.experiment.masks[spikes]
+        view.visual.spike_labels = spikes
 
     def show_waveforms(self):
         """Show a new WaveformView."""

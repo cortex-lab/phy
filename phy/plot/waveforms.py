@@ -244,8 +244,7 @@ class Waveforms(Visual):
         # texture.
         positions = self.channel_positions.reshape((1, self.n_channels, 2))
         # Rescale a bit and recenter.
-        positions *= .8
-        positions += .1
+        positions = .1 + .8 * positions
         u_channel_pos = np.dstack((positions,
                                   np.zeros((1, self.n_channels, 1))))
         u_channel_pos = u_channel_pos.astype(np.float32)
