@@ -236,7 +236,8 @@ class Waveforms(Visual):
     def _bake_metadata(self):
         debug("bake metadata")
         u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
-        self.program['u_cluster_color'] = Texture2D(u_cluster_color)
+        self.program['u_cluster_color'] = Texture2D(u_cluster_color
+                                                    .astype(np.float32))
 
     def _bake_channel_positions(self):
         debug("bake channel pos")
@@ -244,9 +245,9 @@ class Waveforms(Visual):
         # texture.
         u_channel_pos = np.dstack((self.channel_positions.
                                   reshape((1, self.n_channels, 2)),
-                                  np.zeros((1, self.n_channels, 1),
-                                           dtype=np.float32)))
-        self.program['u_channel_pos'] = Texture2D(u_channel_pos,
+                                  np.zeros((1, self.n_channels, 1))))
+        self.program['u_channel_pos'] = Texture2D(u_channel_pos
+                                                  .astype(np.float32),
                                                   wrapping='clamp_to_edge')
 
     def _bake_spikes(self):
