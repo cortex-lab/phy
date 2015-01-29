@@ -145,11 +145,8 @@ class Session(object):
         """Create and show a new cluster view."""
         view = ClusterView(clusters=self.cluster_labels,
                            colors=self.cluster_colors)
-
-        def _select(_, __, clusters):
-            self.select(clusters)
-
-        view.on_trait_change(_select, 'value')
+        view.on_trait_change(lambda _, __, clusters: self.select(clusters),
+                             'value')
         load_css('static/widgets.css')
         display(view)
 

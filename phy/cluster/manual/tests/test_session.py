@@ -35,6 +35,8 @@ def test_session():
     view = session.show_waveforms()
 
     session._update_after_load()
+    ae(session.cluster_labels, np.arange(n_clusters))
+    assert len(session.cluster_colors) == n_clusters
 
     # Selection.
     session.select([1, 2])
@@ -102,3 +104,12 @@ def test_session():
         session.wizard_reset()
 
     session.close_view(view)
+
+
+def test_session_show():
+    exp = MockExperiment()
+    session = Session(exp)
+
+    # This requires the IPython notebook.
+    with raises(RuntimeError):
+        session.show_clusters()
