@@ -254,9 +254,9 @@ class Waveforms(Visual):
         # WARNING: swap channel/time axes in the waveforms array.
         waveforms = np.swapaxes(self._waveforms, 1, 2)
         masks = np.repeat(self._masks.ravel(), self.n_samples)
+        data = np.c_[waveforms.ravel(), masks.ravel()].astype(np.float32)
         # TODO: more efficient to update the data from an existing VBO
-        self.program['a_data'] = np.c_[waveforms.ravel(),
-                                       masks.ravel()]
+        self.program['a_data'] = data
 
         # TODO: SparseCSR, this should just be 'channel'
         self._channels_per_spike = np.tile(np.arange(self.n_channels).
@@ -270,9 +270,8 @@ class Waveforms(Visual):
         self._n_waveforms = np.sum(self._n_channels_per_spike)
 
         # TODO: precompute this with a maximum number of waveforms?
-        a_time = np.tile(np.linspace(-1., 1., self.n_samples).
-                         astype(np.float32),
-                         self._n_waveforms)
+        a_time = np.tile(np.linspace(-1., 1., self.n_samples),
+                         self._n_waveforms).astype(np.float32)
 
         self.program['a_time'] = a_time
         self.program['n_clusters'] = self.n_clusters
@@ -287,8 +286,8 @@ class Waveforms(Visual):
         a_cluster = np.repeat(self.spike_clusters[self.spike_labels],
                               self._n_channels_per_spike * self.n_samples)
         a_channel = np.repeat(self._channels_per_spike, self.n_samples)
-        a_box = np.c_[a_cluster, a_channel].astype(np.float32)
 
+        a_box = np.c_[a_cluster, a_channel].astype(np.float32)
         # TODO: more efficient to update the data from an existing VBO
         self.program['a_box'] = a_box
 
