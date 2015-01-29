@@ -9,6 +9,7 @@
 import numpy as np
 from vispy import app
 
+from ...cluster.manual.cluster_metadata import ClusterMetadata
 from ...utils.logging import set_level
 from ..waveforms import Waveforms, WaveformView
 from .._color import _random_colors
@@ -49,8 +50,9 @@ def _test_waveforms(n_spikes=None, n_clusters=None):
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
     cluster_colors = _random_colors(n_clusters).astype(np.float32)
-    cluster_metadata = {cluster: {'color': color}
-                        for cluster, color in enumerate(cluster_colors)}
+    metadata = {cluster: {'color': color}
+                for cluster, color in enumerate(cluster_colors)}
+    cluster_metadata = ClusterMetadata(metadata)
 
     c = WaveformView()
     c.visual.waveforms = waveforms
