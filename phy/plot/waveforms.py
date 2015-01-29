@@ -17,7 +17,7 @@ from vispy.visuals.glsl.color import HSV_TO_RGB, RGB_TO_HSV
 
 
 # TODO: use ST instead of PanZoom
-from ..utils.array import _unique
+from ..utils.array import _unique, _as_array
 from ._utils import PanZoomCanvas
 from ..utils.logging import debug
 
@@ -103,8 +103,31 @@ class Waveforms(Visual):
     }
     """
 
+    def __init__(self, **kwargs):
+        super(Waveforms, self).__init__(**kwargs)
+        self.n_spikes, self.n_channels, self.n_samples = None, None, None
+        self._spike_clusters = None
+        self._waveforms = None
+        self._spike_labels = None
+        self._is_baked = False
+
+        self.program = ModularProgram(self.VERT_SHADER, self.FRAG_SHADER)
+        self.program.vert['rgb_to_hsv'] = Function(RGB_TO_HSV)
+        self.program.vert['hsv_to_rgb'] = Function(HSV_TO_RGB)
+        self.program['u_data_scale'] = (.03, .02)
+
+        gloo.set_state(clear_color='black', blend=True,
+                       blend_func=('src_alpha', 'one_minus_src_alpha'))
+
     # Data properties
     # -------------------------------------------------------------------------
+
+    def _set_or_assert_n_spikes(self, arr):
+        """If n_spikes is None, set it using the array's shape. Otherwise,
+        check that the array has n_spikes rows."""
+        if self.n_spikes is None:
+            self.n_spikes = arr.shape[0]
+        assert arr.shape[0] == self.n_spikes
 
     @property
     def spike_clusters(self):
@@ -114,6 +137,8 @@ class Waveforms(Visual):
 
     @spike_clusters.setter
     def spike_clusters(self, value):
+        """Set all spike clusters."""
+        value = _as_array(value)
         self._spike_clusters = value
 
     @property
@@ -123,7 +148,9 @@ class Waveforms(Visual):
 
     @waveforms.setter
     def waveforms(self, value):
-        assert isinstance(value, np.ndarray)
+        # WARNING: when setting new data, waveforms need to be set first.
+        # n_spikes will be set as a function of waveforms.
+        value = _as_array(value)
         # TODO: support sparse structures
         assert value.ndim == 3
         self.n_spikes, self.n_samples, self.n_channels = value.shape
@@ -136,7 +163,8 @@ class Waveforms(Visual):
 
     @masks.setter
     def masks(self, value):
-        assert isinstance(value, np.ndarray)
+        value = _as_array(value)
+        self._set_or_assert_n_spikes(value)
         # TODO: support sparse structures
         assert value.ndim == 2
         assert value.shape == (self.n_spikes, self.n_channels)
@@ -152,7 +180,8 @@ class Waveforms(Visual):
 
     @spike_labels.setter
     def spike_labels(self, value):
-        assert len(value) == self.n_spikes
+        value = _as_array(value)
+        self._set_or_assert_n_spikes(value)
         self._spike_labels = value
 
     @property
@@ -172,6 +201,7 @@ class Waveforms(Visual):
 
     @channel_positions.setter
     def channel_positions(self, value):
+        value = _as_array(value)
         self._channel_positions = value
 
     @property
@@ -274,22 +304,6 @@ class Waveforms(Visual):
         if _check_order(changed, 'cluster_metadata'):
             self.bake_metadata()
         self._is_baked = True
-
-    def __init__(self, **kwargs):
-        super(Waveforms, self).__init__(**kwargs)
-        self.n_spikes, self.n_channels, self.n_samples = None, None, None
-        self._spike_clusters = None
-        self._waveforms = None
-        self._spike_labels = None
-        self._is_baked = False
-
-        self.program = ModularProgram(self.VERT_SHADER, self.FRAG_SHADER)
-        self.program.vert['rgb_to_hsv'] = Function(RGB_TO_HSV)
-        self.program.vert['hsv_to_rgb'] = Function(HSV_TO_RGB)
-        self.program['u_data_scale'] = (.03, .02)
-
-        gloo.set_state(clear_color='black', blend=True,
-                       blend_func=('src_alpha', 'one_minus_src_alpha'))
 
     def draw(self, event):
         if not self._is_baked:
