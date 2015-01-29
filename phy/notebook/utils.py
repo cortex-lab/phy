@@ -33,13 +33,14 @@ def enable_notebook(backend=None):
         from vispy import app
     except ImportError:
         raise ImportError("VisPy is required in the notebook.")
-    # Import IPython.
+    shell = None
     try:
+        # Import IPython.
         from IPython import get_ipython
+        # Get the IPython shell.
+        shell = get_ipython()
     except ImportError:
         raise ImportError("IPython is required.")
-    # Get the IPython shell.
-    shell = get_ipython()
     # Default backend.
     if backend is None:
         # TODO: user-level parameter
@@ -47,7 +48,8 @@ def enable_notebook(backend=None):
     # Enable the VisPy backend.
     app.use_app(backend)
     # Enable IPython event loop integration.
-    if backend == 'pyqt4':
-        _enable_gui(shell, 'qt')
-    elif backend == 'wx':
-        _enable_gui(shell, 'wx')
+    if shell is not None:
+        if backend == 'pyqt4':
+            _enable_gui(shell, 'qt')
+        elif backend == 'wx':
+            _enable_gui(shell, 'wx')
