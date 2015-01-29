@@ -57,6 +57,9 @@ class Session(object):
         self.experiment = experiment
         self._update_after_load()
 
+    # Controller.
+    # -------------------------------------------------------------------------
+
     def _update_after_load(self):
         """Update the session after new data has been loaded."""
         # Update the Selector and Clustering instances using the Experiment.
@@ -98,7 +101,7 @@ class Session(object):
                 self._update_waveforms_after_cluster(view, up=up)
             view.update()
 
-    # Views.
+    # Waveforms.
     # -------------------------------------------------------------------------
 
     def _update_waveforms_after_load(self, view):
@@ -118,6 +121,9 @@ class Session(object):
         # TODO
         assert isinstance(view, WaveformView)
 
+    # Public methods.
+    # -------------------------------------------------------------------------
+
     def show_waveforms(self):
         """Create and show a new Waveform view."""
         view = WaveformView()
@@ -129,9 +135,6 @@ class Session(object):
     def close_view(self, view):
         self._view_manager.unregister(view)
         view.close()
-
-    # Public methods.
-    # -------------------------------------------------------------------------
 
     def select(self, clusters):
         """Select some clusters."""
