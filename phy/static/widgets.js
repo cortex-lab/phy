@@ -5,6 +5,24 @@
 require(["widgets/js/widget", "widgets/js/manager"],
         function(widget, manager) {
 
+    // Utility functions
+    // ------------------------------------------------------------------------
+    function _float_to_uint8(x) {
+        // Convert a float in [0, 1] into a uint8 in [0, 255].
+        return Math.floor(x * 255);
+    }
+
+    function _parse_color(color) {
+        // Convert an array of float rgb values into a CSS string 'rgba(...)'.
+        if (Array.isArray(color)) {
+            var r = _float_to_uint8(color[0]).toString();
+            var g = _float_to_uint8(color[1]).toString();
+            var b = _float_to_uint8(color[2]).toString();
+            return 'rgba({0}, {1}, {2}, 1)'.format(r, g, b);
+        }
+        return color;
+    }
+
     // Cluster view
     // ------------------------------------------------------------------------
     var ClusterWidget = IPython.DOMWidgetView.extend({
@@ -47,7 +65,6 @@ require(["widgets/js/widget", "widgets/js/manager"],
             var colors = this.model.get('colors');
             for (var i = 0; i < colors.length; i++) {
                 var color = _parse_color(colors[i]);
-                console.log(color);
                 this._clusters[i].css('background-color', color);
             }
         }

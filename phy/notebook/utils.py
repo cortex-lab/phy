@@ -71,14 +71,13 @@ def load_static(js=True, css=False):
     for file in files:
         if css and op.splitext(file)[1] == '.css':
             _inject_css(op.join(static_dir, file))
-        elif js and op.splitext(file)[1] == '.js':
+        if js and op.splitext(file)[1] == '.js':
             _inject_js(op.join(static_dir, file))
 
 
 #------------------------------------------------------------------------------
 # Event loop integration
 #------------------------------------------------------------------------------
-
 
 VISPY_BACKENDS = ('pyqt4',
                   'wx',
