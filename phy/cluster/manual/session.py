@@ -7,13 +7,16 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from IPython.display import display
 
 from ._history import GlobalHistory
 from .clustering import Clustering
+from .cluster_view import ClusterView
 from .cluster_metadata import ClusterMetadata
 from .selector import Selector
 from ...io.experiment import BaseExperiment
 from ...plot.waveforms import WaveformView
+from ...notebook.utils import load_css
 
 
 #------------------------------------------------------------------------------
@@ -121,8 +124,34 @@ class Session(object):
         # TODO
         assert isinstance(view, WaveformView)
 
-    # Public methods.
+    # Public properties.
     # -------------------------------------------------------------------------
+
+    @property
+    def cluster_labels(self):
+        """Labels of all current clusters."""
+        return self.clustering.cluster_labels
+
+    @property
+    def cluster_colors(self):
+        """Colors of all current clusters."""
+        return [self.cluster_metadata[cluster]['color']
+                for cluster in self.clustering.cluster_labels]
+
+    # Public view methods.
+    # -------------------------------------------------------------------------
+
+    def show_clusters(self):
+        """Create and show a new cluster view."""
+        view = ClusterView(clusters=self.cluster_labels,
+                           colors=self.cluster_colors)
+
+        def _select(_, __, clusters):
+            self.select(clusters)
+
+        view.on_trait_change(_select, 'value')
+        load_css('static/widgets.css')
+        display(view)
 
     def show_waveforms(self):
         """Create and show a new Waveform view."""
@@ -135,6 +164,9 @@ class Session(object):
     def close_view(self, view):
         self._view_manager.unregister(view)
         view.close()
+
+    # Public clustering actions.
+    # -------------------------------------------------------------------------
 
     def select(self, clusters):
         """Select some clusters."""
