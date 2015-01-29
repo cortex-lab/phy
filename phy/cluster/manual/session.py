@@ -32,6 +32,7 @@ class Session(object):
         self._update()
 
     def _update(self):
+        """Initialize the Session after the channel group has changed."""
         # TODO: n_spikes_max
         spike_clusters = self.experiment.spike_clusters
         self.selector = Selector(spike_clusters, n_spikes_max=None)
