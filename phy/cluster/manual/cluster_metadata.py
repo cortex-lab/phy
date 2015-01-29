@@ -10,6 +10,7 @@ from collections import defaultdict, OrderedDict
 from functools import partial
 from copy import deepcopy
 
+from ...plot._color import _random_color
 from ...ext.six import iterkeys, itervalues, iteritems
 from ._utils import _unique, _spikes_in_clusters
 from ._update_info import UpdateInfo
@@ -30,7 +31,7 @@ DEFAULT_GROUPS = [
 
 DEFAULT_FIELDS = [
     ('group', 3),
-    ('color', 1),  # TODO: random_color function
+    ('color', _random_color),
 ]
 
 

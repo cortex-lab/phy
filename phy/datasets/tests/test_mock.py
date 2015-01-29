@@ -70,7 +70,7 @@ def test_mock_experiment():
     assert exp.traces.ndim == 2
     assert exp.spike_times.ndim == 1
     assert exp.spike_clusters.ndim == 1
-    assert exp.cluster_metadata[3]['color'] == 1
+    assert len(exp.cluster_metadata[3]['color']) == 3
     assert exp.features.ndim == 2
     assert exp.masks.ndim == 2
     assert exp.waveforms.ndim == 3

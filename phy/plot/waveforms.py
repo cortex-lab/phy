@@ -16,7 +16,6 @@ from vispy.visuals.shaders import ModularProgram, Function, Variable
 from vispy.visuals.glsl.color import HSV_TO_RGB, RGB_TO_HSV
 
 from ..utils.array import _unique, _as_array, _index_of
-from ._color import _gpu_color
 from ._utils import PanZoomCanvas
 from ..utils.logging import debug
 
@@ -216,7 +215,7 @@ class Waveforms(Visual):
     def cluster_colors(self):
         """Colors of the displayed clusters."""
         clusters = self.cluster_labels
-        return np.array([_gpu_color(self._cluster_metadata[cluster]['color'])
+        return np.array([self._cluster_metadata[cluster]['color']
                          for cluster in clusters], dtype=np.float32)
 
     @property
@@ -332,29 +331,6 @@ class WaveformView(PanZoomCanvas):
     def __init__(self, **kwargs):
         super(WaveformView, self).__init__(**kwargs)
         self.visual = Waveforms()
-
-    # def reset(self, spike_clusters=None,
-    #                 cluster_metadata=None,
-    #                 channel_positions=None):
-    #     self.visual.spike_clusters = spike_clusters
-    #     self.visual.cluster_metadata = cluster_metadata
-    #     self.visual.channel_positions = channel_positions
-
-    # def update_data(self, spike_labels=None, waveforms=None, masks=None,
-    #                 up=None):
-    #     """Update the view with new data.
-
-    #     If 'up' is None, the spike selection has changed.
-    #     Otherwise, the clustering has changed.
-    #     """
-    #     if up is None:
-    #         self.visual.waveforms = waveforms
-    #         self.visual.masks = self.experiment.masks
-    #         self.visual.spike_labels = spike_labels
-    #     else:
-    #         # TODO: clustering updated.
-    #         pass
-    #     self.update()
 
     def on_key_press(self, event):
         # TODO: more interactivity

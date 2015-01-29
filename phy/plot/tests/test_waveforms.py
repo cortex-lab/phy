@@ -11,6 +11,7 @@ from vispy import app
 
 from ...utils.logging import set_level
 from ..waveforms import Waveforms, WaveformView
+from .._color import _random_colors
 from ...datasets.mock import (artificial_waveforms, artificial_masks,
                               artificial_spike_clusters)
 from ...electrode.mea import staggered_positions
@@ -47,8 +48,7 @@ def _test_waveforms(n_spikes=None, n_clusters=None):
     masks = artificial_masks(n_spikes, n_channels).astype(np.float32)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
-    cluster_colors = np.random.uniform(size=(n_clusters, 3),
-                                       low=.5, high=.9).astype(np.float32)
+    cluster_colors = _random_colors(n_clusters).astype(np.float32)
     cluster_metadata = {cluster: {'color': color}
                         for cluster, color in enumerate(cluster_colors)}
 
