@@ -62,6 +62,9 @@ def _test_waveforms(n_spikes=None, n_clusters=None):
     show_test(c)
 
 
-def test_waveforms():
+def test_waveforms_empty():
     _test_waveforms(n_spikes=0, n_clusters=0)
+
+
+def test_waveforms():
     _test_waveforms(n_spikes=100, n_clusters=3)

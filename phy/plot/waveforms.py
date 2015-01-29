@@ -48,7 +48,10 @@ class Waveforms(Visual):
         vec2 box_pos = texture2D(u_channel_pos,
                                  vec2(box.y / (n_channels - 1.), .5)).xy;
         box_pos = 2. * box_pos - 1.;
-        box_pos.x += .1 * (box.x - .5 * (n_clusters - 1.));
+        // Spacing between cluster boxes.
+        float h = 2.5 * u_data_scale.x;
+        // TODO: add superposition
+        box_pos.x += h * (box.x - .5 * (n_clusters - 1.));
         return box_pos;
     }
 
@@ -99,7 +102,7 @@ class Waveforms(Visual):
         self.program = ModularProgram(self.VERT_SHADER, self.FRAG_SHADER)
         self.program.vert['rgb_to_hsv'] = Function(RGB_TO_HSV)
         self.program.vert['hsv_to_rgb'] = Function(HSV_TO_RGB)
-        self.program['u_data_scale'] = (.03, .02)
+        self.program['u_data_scale'] = (.05, .03)
 
         gloo.set_state(clear_color='black', blend=True,
                        blend_func=('src_alpha', 'one_minus_src_alpha'))
@@ -239,8 +242,11 @@ class Waveforms(Visual):
     def _bake_channel_positions(self):
         # WARNING: channel_positions must be in [0,1] because we have a
         # texture.
-        u_channel_pos = np.dstack((self.channel_positions.
-                                  reshape((1, self.n_channels, 2)),
+        positions = self.channel_positions.reshape((1, self.n_channels, 2))
+        # Rescale a bit and recenter.
+        positions *= .8
+        positions += .1
+        u_channel_pos = np.dstack((positions,
                                   np.zeros((1, self.n_channels, 1))))
         u_channel_pos = u_channel_pos.astype(np.float32)
         # TODO: more efficient to update the data from an existing texture
