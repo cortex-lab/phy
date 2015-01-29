@@ -134,7 +134,7 @@ class Waveforms(Visual):
         """Set all spike clusters."""
         value = _as_array(value)
         self._spike_clusters = value
-        self._set_to_bake('clusters')
+        self._set_to_bake('spikes_clusters')
 
     @property
     def waveforms(self):
@@ -279,8 +279,12 @@ class Waveforms(Visual):
         self.program['n_clusters'] = self.n_clusters
         self.program['n_channels'] = self.n_channels
 
-    def _bake_clusters(self):
-        debug("bake clusters")
+    def _bake_spikes_clusters(self):
+        # WARNING: needs to be called *after* _bake_spikes().
+        if not hasattr(self, '_n_channels_per_spike'):
+            raise RuntimeError("'_bake_spikes()' needs to be called before "
+                               "'bake_spikes_clusters().")
+        debug("bake spikes clusters")
         a_cluster = np.repeat(self.spike_clusters[self.spike_labels],
                               self._n_channels_per_spike * self.n_samples)
         a_channel = np.repeat(self._channels_per_spike, self.n_samples)
@@ -298,7 +302,9 @@ class Waveforms(Visual):
             return
         n_bake = len(self._to_bake)
         # Bake what needs to be baked.
-        for bake in self._to_bake:
+        # WARNING: the bake functions are called in alphabetical order.
+        # Tweak the names if there are dependencies between the functions.
+        for bake in sorted(self._to_bake):
             # Name of the private baking method.
             name = '_bake_{0:s}'.format(bake)
             if hasattr(self, name):
