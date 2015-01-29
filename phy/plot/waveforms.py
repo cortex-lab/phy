@@ -114,9 +114,10 @@ class Waveforms(Visual):
             self.n_spikes = arr.shape[0]
         assert arr.shape[0] == self.n_spikes
 
-    def _set_to_bake(self, bake):
-        if bake not in self._to_bake:
-            self._to_bake.append(bake)
+    def _set_to_bake(self, *bakes):
+        for bake in bakes:
+            if bake not in self._to_bake:
+                self._to_bake.append(bake)
 
     @property
     def spike_clusters(self):
@@ -129,7 +130,7 @@ class Waveforms(Visual):
         """Set all spike clusters."""
         value = _as_array(value)
         self._spike_clusters = value
-        self._set_to_bake('spikes_clusters')
+        self._set_to_bake('clusters')
 
     @property
     def waveforms(self):
@@ -145,7 +146,7 @@ class Waveforms(Visual):
         assert value.ndim == 3
         self.n_spikes, self.n_samples, self.n_channels = value.shape
         self._waveforms = value
-        self._set_to_bake('spikes')
+        self._set_to_bake('spikes', 'clusters')
 
     @property
     def masks(self):
@@ -229,14 +230,13 @@ class Waveforms(Visual):
     # -------------------------------------------------------------------------
 
     def _bake_metadata(self):
-        debug("bake metadata")
         u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
         u_cluster_color = u_cluster_color.astype(np.float32)
         # TODO: more efficient to update the data from an existing texture
         self.program['u_cluster_color'] = Texture2D(u_cluster_color)
+        debug("bake color", u_cluster_color.shape)
 
     def _bake_channel_positions(self):
-        debug("bake channel pos")
         # WARNING: channel_positions must be in [0,1] because we have a
         # texture.
         u_channel_pos = np.dstack((self.channel_positions.
@@ -246,9 +246,9 @@ class Waveforms(Visual):
         # TODO: more efficient to update the data from an existing texture
         self.program['u_channel_pos'] = Texture2D(u_channel_pos,
                                                   wrapping='clamp_to_edge')
+        debug("bake channel pos", u_channel_pos.shape)
 
     def _bake_spikes(self):
-        debug("bake spikes")
 
         # Bake masks.
         # WARNING: swap channel/time axes in the waveforms array.
@@ -257,6 +257,7 @@ class Waveforms(Visual):
         data = np.c_[waveforms.ravel(), masks.ravel()].astype(np.float32)
         # TODO: more efficient to update the data from an existing VBO
         self.program['a_data'] = data
+        debug("bake spikes", data.shape)
 
         # TODO: SparseCSR, this should just be 'channel'
         self._channels_per_spike = np.tile(np.arange(self.n_channels).
@@ -277,12 +278,11 @@ class Waveforms(Visual):
         self.program['n_clusters'] = self.n_clusters
         self.program['n_channels'] = self.n_channels
 
-    def _bake_spikes_clusters(self):
-        # WARNING: needs to be called *after* _bake_spikes().
-        if not hasattr(self, '_n_channels_per_spike'):
-            raise RuntimeError("'_bake_spikes()' needs to be called before "
-                               "'bake_spikes_clusters().")
-        debug("bake spikes clusters")
+    def _bake_clusters(self):
+        # # WARNING: needs to be called *after* _bake_spikes().
+        # if not hasattr(self, '_n_channels_per_spike'):
+        #     raise RuntimeError("'_bake_spikes()' needs to be called before "
+        #                        "'bake_spikes_clusters().")
         a_cluster = np.repeat(self.spike_clusters[self.spike_labels],
                               self._n_channels_per_spike * self.n_samples)
         a_channel = np.repeat(self._channels_per_spike, self.n_samples)
@@ -290,6 +290,7 @@ class Waveforms(Visual):
         a_box = np.c_[a_cluster, a_channel].astype(np.float32)
         # TODO: more efficient to update the data from an existing VBO
         self.program['a_box'] = a_box
+        debug("bake spikes clusters", a_box.shape)
 
     def _bake(self):
         """Prepare and upload the data on the GPU.
@@ -301,9 +302,7 @@ class Waveforms(Visual):
             return
         n_bake = len(self._to_bake)
         # Bake what needs to be baked.
-        # WARNING: the bake functions are called in alphabetical order.
-        # Tweak the names if there are dependencies between the functions.
-        for bake in sorted(self._to_bake):
+        for bake in self._to_bake:
             # Name of the private baking method.
             name = '_bake_{0:s}'.format(bake)
             if hasattr(self, name):

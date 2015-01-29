@@ -74,6 +74,7 @@ class Session(object):
         """Update a view after a selection change."""
         if isinstance(view, WaveformView):
             self._update_waveform_view(view)
+        view.update()
 
     def _update_waveform_view(self, view):
         """Update a WaveformView after a selection change."""
