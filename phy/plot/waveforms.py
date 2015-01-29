@@ -148,7 +148,7 @@ class Waveforms(Visual):
         assert value.ndim == 3
         self.n_spikes, self.n_samples, self.n_channels = value.shape
         self._waveforms = value
-        self._set_to_bake('spikes', 'spikes_clusters')
+        self._set_to_bake('spikes', 'spikes_clusters', 'metadata')
 
     @property
     def masks(self):
