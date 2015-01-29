@@ -11,6 +11,7 @@ import numpy.random as nr
 
 from ..ext import six
 from ..io.experiment import BaseExperiment
+from ..utils.array import _normalize
 from ..cluster.manual.cluster_metadata import ClusterMetadata
 from ..electrode.mea import MEA, staggered_positions
 
@@ -63,7 +64,9 @@ class MockExperiment(BaseExperiment):
         super(BaseExperiment, self).__init__()
         self._metadata = {'description': 'A mock experiment.'}
         self._cluster_metadata = ClusterMetadata()
-        self._probe = MEA(positions=staggered_positions(self.n_channels))
+        positions = staggered_positions(self.n_channels)
+        positions = _normalize(positions)
+        self._probe = MEA(positions=positions)
         self._traces = artificial_traces(self.n_samples_traces,
                                          self.n_channels)
         self._spike_clusters = artificial_spike_clusters(self.n_spikes,

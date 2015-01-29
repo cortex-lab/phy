@@ -15,16 +15,10 @@ from vispy.visuals import Visual
 from vispy.visuals.shaders import ModularProgram, Function, Variable
 from vispy.visuals.glsl.color import HSV_TO_RGB, RGB_TO_HSV
 
-
-# TODO: use ST instead of PanZoom
 from ..utils.array import _unique, _as_array
+from ._color import _gpu_color
 from ._utils import PanZoomCanvas
 from ..utils.logging import debug
-
-
-#------------------------------------------------------------------------------
-# Utility functions
-#------------------------------------------------------------------------------
 
 
 #------------------------------------------------------------------------------
@@ -32,6 +26,7 @@ from ..utils.logging import debug
 #------------------------------------------------------------------------------
 
 class Waveforms(Visual):
+    # TODO: use ST instead of PanZoom
     # TODO: move GLSL code to .glsl files.
     VERT_SHADER = """
     // TODO: add depth
@@ -217,7 +212,7 @@ class Waveforms(Visual):
     def cluster_colors(self):
         """Colors of the displayed clusters."""
         clusters = self.cluster_labels
-        return np.array([self._cluster_metadata[cluster]['color']
+        return np.array([_gpu_color(self._cluster_metadata[cluster]['color'])
                          for cluster in clusters], dtype=np.float32)
 
     @property
@@ -236,8 +231,9 @@ class Waveforms(Visual):
     def _bake_metadata(self):
         debug("bake metadata")
         u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
-        self.program['u_cluster_color'] = Texture2D(u_cluster_color
-                                                    .astype(np.float32))
+        u_cluster_color = u_cluster_color.astype(np.float32)
+        # TODO: more efficient to update the data from an existing texture
+        self.program['u_cluster_color'] = Texture2D(u_cluster_color)
 
     def _bake_channel_positions(self):
         debug("bake channel pos")
@@ -246,8 +242,9 @@ class Waveforms(Visual):
         u_channel_pos = np.dstack((self.channel_positions.
                                   reshape((1, self.n_channels, 2)),
                                   np.zeros((1, self.n_channels, 1))))
-        self.program['u_channel_pos'] = Texture2D(u_channel_pos
-                                                  .astype(np.float32),
+        u_channel_pos = u_channel_pos.astype(np.float32)
+        # TODO: more efficient to update the data from an existing texture
+        self.program['u_channel_pos'] = Texture2D(u_channel_pos,
                                                   wrapping='clamp_to_edge')
 
     def _bake_spikes(self):
@@ -257,6 +254,7 @@ class Waveforms(Visual):
         # WARNING: swap channel/time axes in the waveforms array.
         waveforms = np.swapaxes(self._waveforms, 1, 2)
         masks = np.repeat(self._masks.ravel(), self.n_samples)
+        # TODO: more efficient to update the data from an existing VBO
         self.program['a_data'] = np.c_[waveforms.ravel(),
                                        masks.ravel()]
 
@@ -291,6 +289,7 @@ class Waveforms(Visual):
         a_channel = np.repeat(self._channels_per_spike, self.n_samples)
         a_box = np.c_[a_cluster, a_channel].astype(np.float32)
 
+        # TODO: more efficient to update the data from an existing VBO
         self.program['a_box'] = a_box
 
     def _bake(self):
