@@ -15,7 +15,7 @@ from vispy.visuals import Visual
 from vispy.visuals.shaders import ModularProgram, Function, Variable
 from vispy.visuals.glsl.color import HSV_TO_RGB, RGB_TO_HSV
 
-from ..utils.array import _unique, _as_array
+from ..utils.array import _unique, _as_array, _index_of
 from ._color import _gpu_color
 from ._utils import PanZoomCanvas
 from ..utils.logging import debug
@@ -130,7 +130,7 @@ class Waveforms(Visual):
         """Set all spike clusters."""
         value = _as_array(value)
         self._spike_clusters = value
-        self._set_to_bake('clusters')
+        self._set_to_bake('spikes_clusters')
 
     @property
     def waveforms(self):
@@ -146,7 +146,7 @@ class Waveforms(Visual):
         assert value.ndim == 3
         self.n_spikes, self.n_samples, self.n_channels = value.shape
         self._waveforms = value
-        self._set_to_bake('spikes', 'clusters')
+        self._set_to_bake('spikes', 'spikes_clusters')
 
     @property
     def masks(self):
@@ -278,15 +278,18 @@ class Waveforms(Visual):
         self.program['n_clusters'] = self.n_clusters
         self.program['n_channels'] = self.n_channels
 
-    def _bake_clusters(self):
-        # # WARNING: needs to be called *after* _bake_spikes().
-        # if not hasattr(self, '_n_channels_per_spike'):
-        #     raise RuntimeError("'_bake_spikes()' needs to be called before "
-        #                        "'bake_spikes_clusters().")
-        a_cluster = np.repeat(self.spike_clusters[self.spike_labels],
+    def _bake_spikes_clusters(self):
+        # WARNING: needs to be called *after* _bake_spikes().
+        if not hasattr(self, '_n_channels_per_spike'):
+            raise RuntimeError("'_bake_spikes()' needs to be called before "
+                               "'bake_spikes_clusters().")
+        # Get the spike cluster indices (between 0 and n_clusters-1).
+        spike_clusters_idx = self.spike_clusters[self.spike_labels]
+        spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_labels)
+        # Generate the box attribute.
+        a_cluster = np.repeat(spike_clusters_idx,
                               self._n_channels_per_spike * self.n_samples)
         a_channel = np.repeat(self._channels_per_spike, self.n_samples)
-
         a_box = np.c_[a_cluster, a_channel].astype(np.float32)
         # TODO: more efficient to update the data from an existing VBO
         self.program['a_box'] = a_box
@@ -302,7 +305,9 @@ class Waveforms(Visual):
             return
         n_bake = len(self._to_bake)
         # Bake what needs to be baked.
-        for bake in self._to_bake:
+        # WARNING: the bake functions are called in alphabetical order.
+        # Tweak the names if there are dependencies between the functions.
+        for bake in sorted(self._to_bake):
             # Name of the private baking method.
             name = '_bake_{0:s}'.format(bake)
             if hasattr(self, name):
