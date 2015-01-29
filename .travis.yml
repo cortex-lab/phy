@@ -19,16 +19,18 @@ install:
   - hash -r
   - conda config --set always_yes yes --set changeps1 no
   - conda update -q conda
-  # Useful for debugging any issues with conda
   - conda info -a
-
-  # Replace dep1 dep2 ... with your dependencies
-  - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION numpy h5py pytest pip flake8 coverage pyqt
+  # Create the environment.
+  - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION numpy
   - source activate testenv
+  # Optional dependencies.
+  - conda install h5py pyqt ipython-notebook
+  # Testing dependencies.
+  - conda install pytest pip flake8 coverage
   - pip install coveralls
   - pip install python-coveralls
   - pip install pytest-cov
-  # Install VisPy master
+  # Install VisPy master.
   - pushd ~
   - git clone https://github.com/vispy/vispy.git
   - cd vispy
@@ -37,11 +39,9 @@ install:
   # Install phy.
   - python setup.py install
 before_script:
-    # We need to create a (fake) display on Travis, let's use a funny resolution
     - export DISPLAY=:99.0
     - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render
 script:
-  # Your test script goes here
   - make test
 after_success:
   - coveralls
