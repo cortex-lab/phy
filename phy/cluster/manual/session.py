@@ -61,7 +61,9 @@ class Session(object):
     def unregister_view(self, view):
         """Unregister a view."""
         # TODO: remove a view when it is closed.
-        self._views.remove(view)
+        self._close_view(view)
+        if view in self._views:
+            self._views.remove(view)
 
     def _update_views(self):
         """Update all views after a selection change."""
@@ -84,17 +86,22 @@ class Session(object):
     def _show_view(self, view):
         """Show a VisPy canvas view."""
         try:
-            from vispy import Canvas
+            from vispy.app import Canvas
         except ImportError:
             raise ImportError("VisPy is required.")
         assert isinstance(view, Canvas)
         view.show()
+        return view
+
+    def _close_view(self, view):
+        """Close a view."""
+        view.close()
 
     def show_waveforms(self):
         """Show a new WaveformView."""
         view = WaveformView()
         self.register_view(view)
-        self._show_view(view)
+        return self._show_view(view)
 
     # Clustering actions.
     # -------------------------------------------------------------------------
