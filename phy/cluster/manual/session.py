@@ -123,6 +123,10 @@ class Session(object):
         self._update_waveforms_after_select(view)
         return view
 
+    def close_view(self, view):
+        self._view_manager.unregister(view)
+        view.close()
+
     # Public methods.
     # -------------------------------------------------------------------------
 

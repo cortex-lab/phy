@@ -28,6 +28,7 @@ def test_selector_spikes():
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
     selector = Selector(spike_clusters)
+    selector.update()
     assert selector.n_spikes_max is None
     selector.n_spikes_max = None
     assert_array_equal(selector.selected_spikes, [])

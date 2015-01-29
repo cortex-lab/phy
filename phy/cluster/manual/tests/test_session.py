@@ -34,6 +34,8 @@ def test_session():
     # Views.
     view = session.show_waveforms()
 
+    session._update_after_load()
+
     # Selection.
     session.select([1, 2])
 
@@ -99,4 +101,4 @@ def test_session():
     with raises(NotImplementedError):
         session.wizard_reset()
 
-    view.close()
+    session.close_view(view)

@@ -39,6 +39,7 @@ def test_default_function():
 
 def test_cluster_metadata():
     meta = ClusterMetadata()
+    meta.update()
     assert meta.data is not None
 
     assert meta[0]['group'] is not None
