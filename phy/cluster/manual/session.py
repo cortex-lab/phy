@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from IPython.display import display
 
 from ._history import GlobalHistory
 from .clustering import Clustering
@@ -143,6 +142,7 @@ class Session(object):
 
     def show_clusters(self):
         """Create and show a new cluster view."""
+        from IPython.display import display
         view = ClusterView(clusters=self.cluster_labels,
                            colors=self.cluster_colors)
         view.on_trait_change(lambda _, __, clusters: self.select(clusters),
