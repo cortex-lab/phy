@@ -20,30 +20,7 @@ from ..session import Session
 # Tests
 #------------------------------------------------------------------------------
 
-
-# class MockVisual(object):
-#     def __getattr__(self, name):
-#         return None
-
-#     def __setattr__(self, name, value):
-#         return None
-
-
-# class MockView(object):
-#     visual = MockVisual()
-
-#     def update(self, up):
-#         pass
-
-#     def show(self):
-#         pass
-
-
 def test_session():
-
-    # # Mock objects.
-    # assert MockVisual().clusters is None
-    # MockVisual().spike_clusters = None
 
     # Mock experiment.
     exp = MockExperiment()
@@ -55,9 +32,6 @@ def test_session():
     session = Session(exp)
 
     # Views.
-    # mock_view = MockView()
-    # session.register_view(mock_view)
-    # session.unregister_view(mock_view)
     view = session.show_waveforms()
 
     # Selection.
