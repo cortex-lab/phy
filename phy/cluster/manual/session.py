@@ -68,12 +68,14 @@ class Session(object):
         for view in self._view_manager.views:
             if isinstance(view, WaveformView):
                 self._update_waveforms_after_load(view)
+            view.update()
 
     def _update_after_select(self):
         """Update the views after the selection has changed."""
         for view in self._view_manager.views:
             if isinstance(view, WaveformView):
                 self._update_waveforms_after_select(view)
+            view.update()
 
     def _update_after_cluster(self, up, add_to_stack=True):
         """Update the session after the clustering has changed."""
@@ -94,6 +96,7 @@ class Session(object):
         for view in self._view_manager.views:
             if isinstance(view, WaveformView):
                 self._update_waveforms_after_cluster(view, up=up)
+            view.update()
 
     # Views.
     # -------------------------------------------------------------------------
