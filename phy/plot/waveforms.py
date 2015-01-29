@@ -26,16 +26,6 @@ from ..utils.logging import debug
 # Utility functions
 #------------------------------------------------------------------------------
 
-UPDATE_ORDER = {
-    'spikes': 10,
-    'clusters': 20,
-    'cluster_metadata': 30,
-}
-
-
-def _check_order(changed, compare_to):
-    return UPDATE_ORDER[changed] <= UPDATE_ORDER[compare_to]
-
 
 #------------------------------------------------------------------------------
 # Waveforms visual
@@ -109,7 +99,7 @@ class Waveforms(Visual):
         self._spike_clusters = None
         self._waveforms = None
         self._spike_labels = None
-        self._is_baked = False
+        self._to_bake = []
 
         self.program = ModularProgram(self.VERT_SHADER, self.FRAG_SHADER)
         self.program.vert['rgb_to_hsv'] = Function(RGB_TO_HSV)
@@ -129,6 +119,10 @@ class Waveforms(Visual):
             self.n_spikes = arr.shape[0]
         assert arr.shape[0] == self.n_spikes
 
+    def _set_to_bake(self, bake):
+        if bake not in self._to_bake:
+            self._to_bake.append(bake)
+
     @property
     def spike_clusters(self):
         """The clusters assigned to *all* spikes, not just the displayed
@@ -140,6 +134,7 @@ class Waveforms(Visual):
         """Set all spike clusters."""
         value = _as_array(value)
         self._spike_clusters = value
+        self._set_to_bake('clusters')
 
     @property
     def waveforms(self):
@@ -155,6 +150,7 @@ class Waveforms(Visual):
         assert value.ndim == 3
         self.n_spikes, self.n_samples, self.n_channels = value.shape
         self._waveforms = value
+        self._set_to_bake('spikes')
 
     @property
     def masks(self):
@@ -169,6 +165,7 @@ class Waveforms(Visual):
         assert value.ndim == 2
         assert value.shape == (self.n_spikes, self.n_channels)
         self._masks = value
+        self._set_to_bake('spikes')
 
     @property
     def spike_labels(self):
@@ -183,6 +180,7 @@ class Waveforms(Visual):
         value = _as_array(value)
         self._set_or_assert_n_spikes(value)
         self._spike_labels = value
+        self._set_to_bake('spikes')
 
     @property
     def cluster_metadata(self):
@@ -193,6 +191,7 @@ class Waveforms(Visual):
     @cluster_metadata.setter
     def cluster_metadata(self, value):
         self._cluster_metadata = value
+        self._set_to_bake('metadata')
 
     @property
     def channel_positions(self):
@@ -203,6 +202,7 @@ class Waveforms(Visual):
     def channel_positions(self, value):
         value = _as_array(value)
         self._channel_positions = value
+        self._set_to_bake('channel_positions')
 
     @property
     def cluster_labels(self):
@@ -233,12 +233,12 @@ class Waveforms(Visual):
     # Data baking
     # -------------------------------------------------------------------------
 
-    def bake_metadata(self):
+    def _bake_metadata(self):
         debug("bake metadata")
         u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
         self.program['u_cluster_color'] = Texture2D(u_cluster_color)
 
-    def bake_channel_positions(self):
+    def _bake_channel_positions(self):
         debug("bake channel pos")
         # WARNING: channel_positions must be in [0,1] because we have a
         # texture.
@@ -249,7 +249,7 @@ class Waveforms(Visual):
         self.program['u_channel_pos'] = Texture2D(u_channel_pos,
                                                   wrapping='clamp_to_edge')
 
-    def bake_spikes(self):
+    def _bake_spikes(self):
         debug("bake spikes")
 
         # Bake masks.
@@ -279,7 +279,7 @@ class Waveforms(Visual):
         self.program['n_clusters'] = self.n_clusters
         self.program['n_channels'] = self.n_channels
 
-    def bake_clusters(self):
+    def _bake_clusters(self):
         debug("bake clusters")
         a_cluster = np.repeat(self.spike_clusters[self.spike_labels],
                               self._n_channels_per_spike * self.n_samples)
@@ -288,27 +288,29 @@ class Waveforms(Visual):
 
         self.program['a_box'] = a_box
 
-    def bake(self, changed=None):
-        """Prepare and upload the data on the GPU."""
-        # TODO: _bake string private variable, set by @property setters
-        # for automatic baking.
+    def _bake(self):
+        """Prepare and upload the data on the GPU.
+
+        Return whether something has been baked or not.
+
+        """
         if self.n_spikes is None or self.n_spikes == 0:
             return
-        if changed is None:
-            changed = 'spikes'
-        if _check_order(changed, 'spikes'):
-            self.bake_spikes()
-            self.bake_channel_positions()
-        if _check_order(changed, 'clusters'):
-            self.bake_clusters()
-        if _check_order(changed, 'cluster_metadata'):
-            self.bake_metadata()
-        self._is_baked = True
+        n_bake = len(self._to_bake)
+        # Bake what needs to be baked.
+        for bake in self._to_bake:
+            # Name of the private baking method.
+            name = '_bake_{0:s}'.format(bake)
+            if hasattr(self, name):
+                getattr(self, name)()
+        self._to_bake = []
+        return n_bake > 0
 
     def draw(self, event):
-        if not self._is_baked:
-            self.bake()
-        if self._is_baked:
+        """Draw the waveforms."""
+        # Bake what needs to be baked at this point.
+        self._bake()
+        if self.n_spikes > 0:
             self.program.draw('line_strip')
 
 
