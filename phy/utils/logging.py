@@ -150,19 +150,22 @@ def unregister(logger):
         del LOGGERS[name]
 
 
-def debug(msg):
+def _log(level, *msg):
+    msg = ' '.join(str(_) for _ in msg)
     for name, logger in iteritems(LOGGERS):
-        logger.debug(msg)
+        getattr(logger, level)(msg)
+
+
+def debug(*msg):
+    _log('debug', *msg)
 
 
 def info(msg):
-    for name, logger in iteritems(LOGGERS):
-        logger.info(msg)
+    _log('info', *msg)
 
 
 def warn(msg):
-    for name, logger in iteritems(LOGGERS):
-        logger.warn(msg)
+    _log('warn', *msg)
 
 
 def set_level(msg):
