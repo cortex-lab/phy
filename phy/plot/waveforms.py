@@ -262,7 +262,7 @@ class Waveforms(Visual):
         """Prepare and upload the data on the GPU."""
         # TODO: _bake string private variable, set by @property setters
         # for automatic baking.
-        if self.n_spikes is None:
+        if self.n_spikes is None or self.n_spikes == 0:
             return
         if changed is None:
             changed = 'spikes'

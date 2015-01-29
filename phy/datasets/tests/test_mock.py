@@ -23,12 +23,10 @@ from ..mock import (artificial_waveforms,
 # Tests
 #------------------------------------------------------------------------------
 
-def test_artificial():
-    n_spikes = 100
+def _test_artificial(n_spikes=None, n_clusters=None):
     n_samples_waveforms = 32
     n_samples_traces = 50
     n_channels = 64
-    n_clusters = 10
     n_features = n_channels * 3
 
     # Waveforms.
@@ -46,7 +44,9 @@ def test_artificial():
     spike_clusters = artificial_spike_clusters(n_spikes=n_spikes,
                                                n_clusters=n_clusters)
     assert spike_clusters.shape == (n_spikes,)
-    assert (spike_clusters.min(), spike_clusters.max()) == (0, n_clusters - 1)
+    if n_clusters >= 1:
+        assert (spike_clusters.min(), spike_clusters.max()) == \
+               (0, n_clusters - 1)
     assert_array_equal(np.unique(spike_clusters), np.arange(n_clusters))
 
     # Features.
@@ -56,6 +56,11 @@ def test_artificial():
     # Masks.
     masks = artificial_masks(n_spikes, n_channels)
     assert masks.shape == (n_spikes, n_channels)
+
+
+def test_artificial():
+    _test_artificial(n_spikes=100, n_clusters=10)
+    _test_artificial(n_spikes=0, n_clusters=0)
 
 
 def test_mock_experiment():

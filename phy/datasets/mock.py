@@ -38,7 +38,7 @@ def artificial_traces(n_samples, n_channels):
 
 
 def artificial_spike_clusters(n_spikes, n_clusters, low=0):
-    return nr.randint(size=n_spikes, low=low, high=n_clusters)
+    return nr.randint(size=n_spikes, low=low, high=max(1, n_clusters))
 
 
 def artificial_spike_times(n_spikes):
