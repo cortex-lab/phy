@@ -12,7 +12,9 @@
 #------------------------------------------------------------------------------
 
 
-VISPY_BACKENDS = ['pyqt4', 'wx', 'ipynb_webgl']
+VISPY_BACKENDS = ('pyqt4',
+                  'wx',
+                  'ipynb_webgl')
 
 
 def _enable_gui(shell, backend):

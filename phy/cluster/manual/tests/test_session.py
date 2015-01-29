@@ -20,12 +20,29 @@ from ..session import Session
 # Tests
 #------------------------------------------------------------------------------
 
+
+class MockVisual(object):
+    def __getattr__(self, name):
+        return None
+
+    def __setattr__(self, name, value):
+        return None
+
+
+class MockView(object):
+    visual = MockVisual()
+
+    def update(self, up):
+        pass
+
+
 def test_session():
 
-    class MockView(object):
-        def update(self, up):
-            pass
+    # Mock objects.
+    assert MockVisual().clusters is None
+    MockVisual().spike_clusters = None
 
+    # Mock experiment.
     exp = MockExperiment()
     n_clusters = exp.n_clusters
 

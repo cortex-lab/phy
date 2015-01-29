@@ -13,6 +13,7 @@ from .clustering import Clustering
 from .cluster_metadata import ClusterMetadata
 from .selector import Selector
 from ...io.experiment import BaseExperiment
+from ...plot.waveforms import WaveformView
 
 
 #------------------------------------------------------------------------------
@@ -31,6 +32,11 @@ class Session(object):
         self.experiment = experiment
         self._update()
 
+    def select(self, clusters):
+        """Select some clusters."""
+        self.selector.selected_clusters = clusters
+        self._update_views()
+
     def _update(self):
         """Initialize the Session after the channel group has changed."""
         # TODO: n_spikes_max
@@ -40,21 +46,58 @@ class Session(object):
         self.cluster_metadata = self.experiment.cluster_metadata
         # TODO: change channel group and change recording
 
-    def register_view(self, view):
-        """Register a view so that it gets updated after clustering actions."""
-        self._views.append(view)
+    # Views.
+    # -------------------------------------------------------------------------
 
-    def select(self, clusters):
-        self.selector.selected_clusters = clusters
-        self._update_views()
+    def register_view(self, view):
+        """Register a view."""
+        # Register the spike clusters.
+        view.visual.spike_clusters = self.clustering.spike_clusters
+        # Register the ClusterMetadata.
+        view.visual.cluster_metadata = self.cluster_metadata
+        self._views.append(view)
+        self._update_view(view)
+
+    def unregister_view(self, view):
+        """Unregister a view."""
+        # TODO: remove a view when it is closed.
+        self._views.remove(view)
 
     def _update_views(self):
+        """Update all views after a selection change."""
         for view in self._views:
             self._update_view(view)
 
     def _update_view(self, view):
-        # TODO: update a view after a new selection
-        pass
+        """Update a view after a selection change."""
+        if isinstance(view, WaveformView):
+            self._update_waveform_view(view)
+
+    def _update_waveform_view(self, view):
+        """Update a WaveformView after a selection change."""
+        spikes = self.selector.selected_spikes
+        view.visual.waveforms = self.experiment.waveforms[spikes]
+        view.visual.masks = self.experiment.masks[spikes]
+        view.visual.spike_labels = spikes
+        view.visual.channel_positions = self.experiment.probe.positions
+
+    def _show_view(self, view):
+        """Show a VisPy canvas view."""
+        try:
+            from vispy import Canvas
+        except ImportError:
+            raise ImportError("VisPy is required.")
+        assert isinstance(view, Canvas)
+        view.show()
+
+    def show_waveforms(self):
+        """Show a new WaveformView."""
+        view = WaveformView()
+        self.register_view(view)
+        self._show_view(view)
+
+    # Clustering actions.
+    # -------------------------------------------------------------------------
 
     def _clustering_updated(self, up):
         """Update the selectors and views with an UpdateInfo object."""
