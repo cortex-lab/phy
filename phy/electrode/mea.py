@@ -9,6 +9,8 @@
 
 import numpy as np
 
+from ..utils.array import _as_array
+
 
 #------------------------------------------------------------------------------
 # MEA facilities
@@ -24,7 +26,7 @@ class MEA(object):
 
     def _check_positions(self, positions):
         if positions is not None:
-            positions = np.asarray(positions)
+            positions = _as_array(positions)
             if self._n_channels is None:
                 self._n_channels = positions.shape[0]
             if positions.shape[0] != self._n_channels:

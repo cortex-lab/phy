@@ -15,26 +15,9 @@ from vispy.visuals import Visual
 from vispy.visuals.shaders import ModularProgram, Function, Variable
 from vispy.visuals.glsl.color import HSV_TO_RGB, RGB_TO_HSV
 
-
-# TODO: use ST instead of PanZoom
-from ..utils.array import _unique
+from ..utils.array import _unique, _as_array, _index_of
 from ._utils import PanZoomCanvas
 from ..utils.logging import debug
-
-
-#------------------------------------------------------------------------------
-# Utility functions
-#------------------------------------------------------------------------------
-
-UPDATE_ORDER = {
-    'spikes': 10,
-    'clusters': 20,
-    'cluster_metadata': 30,
-}
-
-
-def _check_order(changed, compare_to):
-    return UPDATE_ORDER[changed] <= UPDATE_ORDER[compare_to]
 
 
 #------------------------------------------------------------------------------
@@ -42,6 +25,8 @@ def _check_order(changed, compare_to):
 #------------------------------------------------------------------------------
 
 class Waveforms(Visual):
+    # TODO: use ST instead of PanZoom
+    # TODO: move GLSL code to .glsl files.
     VERT_SHADER = """
     // TODO: add depth
     attribute vec2 a_data;  // -1..1
@@ -62,7 +47,10 @@ class Waveforms(Visual):
         vec2 box_pos = texture2D(u_channel_pos,
                                  vec2(box.y / (n_channels - 1.), .5)).xy;
         box_pos = 2. * box_pos - 1.;
-        box_pos.x += .1 * (box.x - .5 * (n_clusters - 1.));
+        // Spacing between cluster boxes.
+        float h = 2.5 * u_data_scale.x;
+        // TODO: add superposition
+        box_pos.x += h * (box.x - .5 * (n_clusters - 1.));
         return box_pos;
     }
 
@@ -102,8 +90,36 @@ class Waveforms(Visual):
     }
     """
 
+    def __init__(self, **kwargs):
+        super(Waveforms, self).__init__(**kwargs)
+        self.n_spikes, self.n_channels, self.n_samples = None, None, None
+        self._spike_clusters = None
+        self._waveforms = None
+        self._spike_labels = None
+        self._to_bake = []
+
+        self.program = ModularProgram(self.VERT_SHADER, self.FRAG_SHADER)
+        self.program.vert['rgb_to_hsv'] = Function(RGB_TO_HSV)
+        self.program.vert['hsv_to_rgb'] = Function(HSV_TO_RGB)
+        self.program['u_data_scale'] = (.05, .03)
+
+        gloo.set_state(clear_color='black', blend=True,
+                       blend_func=('src_alpha', 'one_minus_src_alpha'))
+
     # Data properties
     # -------------------------------------------------------------------------
+
+    def _set_or_assert_n_spikes(self, arr):
+        """If n_spikes is None, set it using the array's shape. Otherwise,
+        check that the array has n_spikes rows."""
+        if self.n_spikes is None:
+            self.n_spikes = arr.shape[0]
+        assert arr.shape[0] == self.n_spikes
+
+    def _set_to_bake(self, *bakes):
+        for bake in bakes:
+            if bake not in self._to_bake:
+                self._to_bake.append(bake)
 
     @property
     def spike_clusters(self):
@@ -113,7 +129,10 @@ class Waveforms(Visual):
 
     @spike_clusters.setter
     def spike_clusters(self, value):
+        """Set all spike clusters."""
+        value = _as_array(value)
         self._spike_clusters = value
+        self._set_to_bake('spikes_clusters')
 
     @property
     def waveforms(self):
@@ -122,11 +141,14 @@ class Waveforms(Visual):
 
     @waveforms.setter
     def waveforms(self, value):
-        assert isinstance(value, np.ndarray)
+        # WARNING: when setting new data, waveforms need to be set first.
+        # n_spikes will be set as a function of waveforms.
+        value = _as_array(value)
         # TODO: support sparse structures
         assert value.ndim == 3
-        self.n_spikes, self.n_channels, self.n_samples = value.shape
+        self.n_spikes, self.n_samples, self.n_channels = value.shape
         self._waveforms = value
+        self._set_to_bake('spikes', 'spikes_clusters', 'metadata')
 
     @property
     def masks(self):
@@ -135,11 +157,13 @@ class Waveforms(Visual):
 
     @masks.setter
     def masks(self, value):
-        assert isinstance(value, np.ndarray)
+        value = _as_array(value)
+        self._set_or_assert_n_spikes(value)
         # TODO: support sparse structures
         assert value.ndim == 2
         assert value.shape == (self.n_spikes, self.n_channels)
         self._masks = value
+        self._set_to_bake('spikes')
 
     @property
     def spike_labels(self):
@@ -151,8 +175,10 @@ class Waveforms(Visual):
 
     @spike_labels.setter
     def spike_labels(self, value):
-        assert len(value) == self.n_spikes
+        value = _as_array(value)
+        self._set_or_assert_n_spikes(value)
         self._spike_labels = value
+        self._set_to_bake('spikes')
 
     @property
     def cluster_metadata(self):
@@ -163,6 +189,7 @@ class Waveforms(Visual):
     @cluster_metadata.setter
     def cluster_metadata(self, value):
         self._cluster_metadata = value
+        self._set_to_bake('metadata')
 
     @property
     def channel_positions(self):
@@ -171,7 +198,9 @@ class Waveforms(Visual):
 
     @channel_positions.setter
     def channel_positions(self, value):
+        value = _as_array(value)
         self._channel_positions = value
+        self._set_to_bake('channel_positions')
 
     @property
     def cluster_labels(self):
@@ -202,29 +231,37 @@ class Waveforms(Visual):
     # Data baking
     # -------------------------------------------------------------------------
 
-    def bake_metadata(self):
-        debug("bake metadata")
+    def _bake_metadata(self):
         u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
+        u_cluster_color = u_cluster_color.astype(np.float32)
+        # TODO: more efficient to update the data from an existing texture
         self.program['u_cluster_color'] = Texture2D(u_cluster_color)
+        debug("bake color", u_cluster_color.shape)
 
-    def bake_channel_positions(self):
-        debug("bake channel pos")
+    def _bake_channel_positions(self):
         # WARNING: channel_positions must be in [0,1] because we have a
         # texture.
-        u_channel_pos = np.dstack((self.channel_positions.
-                                  reshape((1, self.n_channels, 2)),
-                                  np.zeros((1, self.n_channels, 1),
-                                           dtype=np.float32)))
+        positions = self.channel_positions.reshape((1, self.n_channels, 2))
+        # Rescale a bit and recenter.
+        positions = .1 + .8 * positions
+        u_channel_pos = np.dstack((positions,
+                                  np.zeros((1, self.n_channels, 1))))
+        u_channel_pos = u_channel_pos.astype(np.float32)
+        # TODO: more efficient to update the data from an existing texture
         self.program['u_channel_pos'] = Texture2D(u_channel_pos,
                                                   wrapping='clamp_to_edge')
+        debug("bake channel pos", u_channel_pos.shape)
 
-    def bake_spikes(self):
-        debug("bake spikes")
+    def _bake_spikes(self):
 
         # Bake masks.
+        # WARNING: swap channel/time axes in the waveforms array.
+        waveforms = np.swapaxes(self._waveforms, 1, 2)
         masks = np.repeat(self._masks.ravel(), self.n_samples)
-        self.program['a_data'] = np.c_[self._waveforms.ravel(),
-                                       masks.ravel()]
+        data = np.c_[waveforms.ravel(), masks.ravel()].astype(np.float32)
+        # TODO: more efficient to update the data from an existing VBO
+        self.program['a_data'] = data
+        debug("bake spikes", data.shape)
 
         # TODO: SparseCSR, this should just be 'channel'
         self._channels_per_spike = np.tile(np.arange(self.n_channels).
@@ -238,63 +275,61 @@ class Waveforms(Visual):
         self._n_waveforms = np.sum(self._n_channels_per_spike)
 
         # TODO: precompute this with a maximum number of waveforms?
-        a_time = np.tile(np.linspace(-1., 1., self.n_samples).
-                         astype(np.float32),
-                         self._n_waveforms)
+        a_time = np.tile(np.linspace(-1., 1., self.n_samples),
+                         self._n_waveforms).astype(np.float32)
 
         self.program['a_time'] = a_time
         self.program['n_clusters'] = self.n_clusters
         self.program['n_channels'] = self.n_channels
 
-    def bake_clusters(self):
-        debug("bake clusters")
-        a_cluster = np.repeat(self.spike_clusters[self.spike_labels],
+    def _bake_spikes_clusters(self):
+        # WARNING: needs to be called *after* _bake_spikes().
+        if not hasattr(self, '_n_channels_per_spike'):
+            raise RuntimeError("'_bake_spikes()' needs to be called before "
+                               "'bake_spikes_clusters().")
+        # Get the spike cluster indices (between 0 and n_clusters-1).
+        spike_clusters_idx = self.spike_clusters[self.spike_labels]
+        spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_labels)
+        # Generate the box attribute.
+        a_cluster = np.repeat(spike_clusters_idx,
                               self._n_channels_per_spike * self.n_samples)
         a_channel = np.repeat(self._channels_per_spike, self.n_samples)
         a_box = np.c_[a_cluster, a_channel].astype(np.float32)
-
+        # TODO: more efficient to update the data from an existing VBO
         self.program['a_box'] = a_box
+        debug("bake spikes clusters", a_box.shape)
 
-    def bake(self, changed=None):
-        """Prepare and upload the data on the GPU."""
-        if self.n_spikes is None:
+    def _bake(self):
+        """Prepare and upload the data on the GPU.
+
+        Return whether something has been baked or not.
+
+        """
+        if self.n_spikes is None or self.n_spikes == 0:
             return
-        if changed is None:
-            changed = 'spikes'
-        if _check_order(changed, 'spikes'):
-            self.bake_spikes()
-            self.bake_channel_positions()
-        if _check_order(changed, 'clusters'):
-            self.bake_clusters()
-        if _check_order(changed, 'cluster_metadata'):
-            self.bake_metadata()
-        self._is_baked = True
-
-    def __init__(self, **kwargs):
-        super(Waveforms, self).__init__(**kwargs)
-        self.n_spikes, self.n_channels, self.n_samples = None, None, None
-        self._spike_clusters = None
-        self._waveforms = None
-        self._spike_labels = None
-        self._is_baked = False
-
-        self.program = ModularProgram(self.VERT_SHADER, self.FRAG_SHADER)
-        self.program.vert['rgb_to_hsv'] = Function(RGB_TO_HSV)
-        self.program.vert['hsv_to_rgb'] = Function(HSV_TO_RGB)
-        self.program['u_data_scale'] = (.03, .02)
-
-        gloo.set_state(clear_color='black', blend=True,
-                       blend_func=('src_alpha', 'one_minus_src_alpha'))
+        n_bake = len(self._to_bake)
+        # Bake what needs to be baked.
+        # WARNING: the bake functions are called in alphabetical order.
+        # Tweak the names if there are dependencies between the functions.
+        for bake in sorted(self._to_bake):
+            # Name of the private baking method.
+            name = '_bake_{0:s}'.format(bake)
+            if hasattr(self, name):
+                getattr(self, name)()
+        self._to_bake = []
+        return n_bake > 0
 
     def draw(self, event):
-        if not self._is_baked:
-            self.bake()
-        if self._is_baked:
+        """Draw the waveforms."""
+        # Bake what needs to be baked at this point.
+        self._bake()
+        if self.n_spikes > 0:
             self.program.draw('line_strip')
 
 
 class WaveformView(PanZoomCanvas):
     def __init__(self, **kwargs):
+        kwargs['always_on_top'] = True
         super(WaveformView, self).__init__(**kwargs)
         self.visual = Waveforms()
 

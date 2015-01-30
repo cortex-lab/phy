@@ -9,7 +9,7 @@
 import numpy as np
 
 from ..ext import six
-from ..utils.array import _index_of, _unique
+from ..utils.array import _index_of, _unique, _as_array
 
 
 #------------------------------------------------------------------------------
@@ -19,15 +19,15 @@ from ..utils.array import _index_of, _unique
 def _increment(arr, indices):
     """Increment some indices in a 1D vector of non-negative integers.
     Repeated indices are taken into account."""
-    arr = np.asarray(arr)
-    indices = np.asarray(indices)
+    arr = _as_array(arr)
+    indices = _as_array(indices)
     bbins = np.bincount(indices)
     arr[:len(bbins)] += bbins
     return arr
 
 
 def _diff_shifted(arr, steps=1):
-    arr = np.asarray(arr)
+    arr = _as_array(arr)
     return arr[steps:] - arr[:len(arr)-steps]
 
 
@@ -74,8 +74,8 @@ def correlograms(spike_times, spike_clusters,
 
     """
 
-    spike_clusters = np.asarray(spike_clusters)
-    spike_times = np.asarray(spike_times)
+    spike_clusters = _as_array(spike_clusters)
+    spike_times = _as_array(spike_times)
 
     assert spike_times.ndim == 1
     assert spike_times.shape == spike_clusters.shape

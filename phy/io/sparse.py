@@ -9,6 +9,7 @@
 import numpy as np
 
 from ..ext import six
+from ..utils.array import _as_array
 
 
 #------------------------------------------------------------------------------
@@ -61,9 +62,9 @@ class SparseCSR(object):
     """Sparse CSR matrix data structure."""
     def __init__(self, shape=None, data=None, channels=None, spikes_ptr=None):
         # Ensure the arguments are all arrays.
-        data = np.asarray(data)
-        channels = np.asarray(channels)
-        spikes_ptr = np.asarray(spikes_ptr)
+        data = _as_array(data)
+        channels = _as_array(channels)
+        spikes_ptr = _as_array(spikes_ptr)
         # Ensure the arguments are consistent.
         assert _check_sparse_components(shape=shape,
                                         data=data,
@@ -84,7 +85,7 @@ def csr_matrix(dense=None, shape=None,
     """Create a CSR matrix from a dense matrix, or from sparse data."""
     if dense is not None:
         # Ensure 'dense' is a ndarray.
-        dense = np.asarray(dense)
+        dense = _as_array(dense)
         return _csr_from_dense(dense)
     if data is None or channels is None or spikes_ptr is None:
         raise ValueError("data, channels, and spikes_ptr must be specified.")

@@ -27,9 +27,9 @@ def captured_output():
         sys.stdout, sys.stderr = old_out, old_err
 
 
-def show_test(canvas):
+def show_test(canvas, n_frames=5):
     with canvas as c:
-        for _ in range(5):
+        for _ in range(n_frames):
             c.update()
             c.app.process_events()
             time.sleep(1./60.)

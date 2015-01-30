@@ -12,7 +12,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ....datasets.mock import artificial_spike_clusters
+from ....datasets.mock import artificial_spike_clusters, MockExperiment
 from ..session import Session
 
 
@@ -22,16 +22,24 @@ from ..session import Session
 
 def test_session():
 
-    n_spikes = 1000
-    n_clusters = 10
-    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    # Mock experiment.
+    exp = MockExperiment()
+    n_clusters = exp.n_clusters
 
-    class MockView(object):
-        def update(self, up):
-            pass
+    with raises(ValueError):
+        Session(None)
 
-    session = Session(spike_clusters)
-    session.register_view(MockView())
+    session = Session(exp)
+
+    # Views.
+    view = session.show_waveforms()
+
+    session._update_after_load()
+    ae(session.cluster_labels, np.arange(n_clusters))
+    assert len(session.cluster_colors) == n_clusters
+
+    # Selection.
+    session.select([1, 2])
 
     clusters_0 = np.array(np.arange(n_clusters))
     ae(session.clustering.cluster_labels, clusters_0)
@@ -94,3 +102,5 @@ def test_session():
         session.wizard_previous()
     with raises(NotImplementedError):
         session.wizard_reset()
+
+    session.close_view(view)

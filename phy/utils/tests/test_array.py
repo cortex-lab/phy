@@ -10,7 +10,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ..array import (_unique, _normalize, _index_of,
+from ..array import (_unique, _normalize, _index_of, _as_array,
                      chunk_bounds, excerpts, data_chunk)
 from ...datasets.mock import artificial_spike_clusters
 
@@ -45,6 +45,16 @@ def test_index_of():
     arr = [36, 42, 42, 36, 36, 2, 42]
     lookup = _unique(arr)
     ae(_index_of(arr, lookup), [1, 2, 2, 1, 1, 0, 2])
+
+
+def test_as_array():
+    ae(_as_array(3), [3])
+    ae(_as_array([3]), [3])
+    ae(_as_array(3.), [3.])
+    ae(_as_array([3.]), [3.])
+
+    with raises(ValueError):
+        _as_array(map)
 
 
 #------------------------------------------------------------------------------

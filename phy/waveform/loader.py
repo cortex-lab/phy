@@ -42,7 +42,7 @@ def _slice(index, n_samples, margin=None):
     margin_before, margin_after = margin
     before += margin_before
     after += margin_after
-    return slice(index - before, index + after, None)
+    return slice(max(0, index - before), index + after, None)
 
 
 class WaveformLoader(object):
