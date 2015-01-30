@@ -53,8 +53,8 @@ def artificial_spike_times(n_spikes):
 #------------------------------------------------------------------------------
 
 class MockExperiment(BaseExperiment):
-    n_channels = 32
-    n_features = 32 * 3
+    n_channels = 28
+    n_features = 28 * 4
     n_spikes = 1000
     n_samples_traces = 20000
     n_samples_waveforms = 40

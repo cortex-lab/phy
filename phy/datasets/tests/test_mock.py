@@ -26,8 +26,8 @@ from ..mock import (artificial_waveforms,
 def _test_artificial(n_spikes=None, n_clusters=None):
     n_samples_waveforms = 32
     n_samples_traces = 50
-    n_channels = 64
-    n_features = n_channels * 3
+    n_channels = 35
+    n_features = n_channels * 2
 
     # Waveforms.
     waveforms = artificial_waveforms(n_spikes=n_spikes,
