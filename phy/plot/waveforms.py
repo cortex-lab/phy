@@ -329,7 +329,7 @@ class Waveforms(Visual):
 
 class WaveformView(PanZoomCanvas):
     def __init__(self, **kwargs):
-        # kwargs['always_on_top'] = True
+        kwargs['always_on_top'] = True
         super(WaveformView, self).__init__(**kwargs)
         self.visual = Waveforms()
 
