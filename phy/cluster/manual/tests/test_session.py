@@ -29,7 +29,7 @@ def test_session():
     with raises(ValueError):
         Session(None)
 
-    session = Session(exp)
+    session = Session(model)
 
     # Views.
     view = session.show_waveforms()
