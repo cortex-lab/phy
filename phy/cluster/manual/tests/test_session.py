@@ -23,8 +23,8 @@ from ..session import Session
 def test_session():
 
     # Mock model.
-    exp = MockModel()
-    n_clusters = exp.n_clusters
+    model = MockModel()
+    n_clusters = model.n_clusters
 
     with raises(ValueError):
         Session(None)

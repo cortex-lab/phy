@@ -16,7 +16,7 @@ from ..ext import six
 #------------------------------------------------------------------------------
 
 class BaseModel(object):
-    """This class holds data from an model.
+    """This class holds data from an experiment.
 
     This base class must be derived.
 
@@ -63,7 +63,7 @@ class BaseModel(object):
 
     @property
     def metadata(self):
-        """A dictionary holding metadata about the model.
+        """A dictionary holding metadata about the experiment.
 
         May be implemented by child classes.
 
