@@ -10,7 +10,7 @@ import numpy as np
 import numpy.random as nr
 
 from ..ext import six
-from ..io.experiment import BaseExperiment
+from ..io.base_model import BaseModel
 from ..utils.array import _normalize
 from ..cluster.manual.cluster_metadata import ClusterMetadata
 from ..electrode.mea import MEA, staggered_positions
@@ -49,10 +49,10 @@ def artificial_spike_times(n_spikes):
 
 
 #------------------------------------------------------------------------------
-# Artificial Experiment
+# Artificial Model
 #------------------------------------------------------------------------------
 
-class MockExperiment(BaseExperiment):
+class MockModel(BaseModel):
     n_channels = 28
     n_features = 28 * 4
     n_spikes = 1000
@@ -61,8 +61,8 @@ class MockExperiment(BaseExperiment):
     n_clusters = 10
 
     def __init__(self):
-        super(BaseExperiment, self).__init__()
-        self._metadata = {'description': 'A mock experiment.'}
+        super(BaseModel, self).__init__()
+        self._metadata = {'description': 'A mock model.'}
         self._cluster_metadata = ClusterMetadata()
         positions = staggered_positions(self.n_channels)
         positions = _normalize(positions)

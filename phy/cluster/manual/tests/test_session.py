@@ -12,7 +12,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ....datasets.mock import artificial_spike_clusters, MockExperiment
+from ....datasets.mock import artificial_spike_clusters, MockModel
 from ..session import Session
 
 
@@ -22,8 +22,8 @@ from ..session import Session
 
 def test_session():
 
-    # Mock experiment.
-    exp = MockExperiment()
+    # Mock model.
+    exp = MockModel()
     n_clusters = exp.n_clusters
 
     with raises(ValueError):

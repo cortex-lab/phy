@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Tests of the Experiment class."""
+"""Tests of the BaseModel class."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -9,15 +9,15 @@
 from pytest import raises
 import numpy as np
 
-from ..experiment import BaseExperiment
+from ..base_model import BaseModel
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
 
-def test_base_experiment():
-    exp = BaseExperiment()
+def test_base_model():
+    exp = BaseModel()
 
     assert exp.channel_group is None
     assert exp.recording is None

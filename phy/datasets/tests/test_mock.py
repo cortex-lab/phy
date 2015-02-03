@@ -16,7 +16,7 @@ from ..mock import (artificial_waveforms,
                     artificial_spike_clusters,
                     artificial_features,
                     artificial_masks,
-                    MockExperiment)
+                    MockModel)
 
 
 #------------------------------------------------------------------------------
@@ -63,10 +63,10 @@ def test_artificial():
     _test_artificial(n_spikes=0, n_clusters=0)
 
 
-def test_mock_experiment():
-    exp = MockExperiment()
+def test_mock_model():
+    exp = MockModel()
 
-    assert exp.metadata['description'] == 'A mock experiment.'
+    assert exp.metadata['description'] == 'A mock model.'
     assert exp.traces.ndim == 2
     assert exp.spike_times.ndim == 1
     assert exp.spike_clusters.ndim == 1
