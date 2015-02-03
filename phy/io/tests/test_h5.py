@@ -147,9 +147,15 @@ def test_h5_write():
 
             # This works, though, because we force overwriting the dataset.
             f.write('/ds1', temp_array, overwrite=True)
+            np.testing.assert_array_equal(f.read('/ds1'), temp_array)
 
             # Write a new array.
             f.write('/ds2', temp_array)
+            np.testing.assert_array_equal(f.read('/ds2'), temp_array)
+
+            # Write a new array in a nonexistent group.
+            f.write('/ds3/ds4/ds5', temp_array)
+            np.testing.assert_array_equal(f.read('/ds3/ds4/ds5'), temp_array)
 
             # Write an existing attribute.
             f.write_attr('/ds1', 'myattr', 456)
@@ -161,11 +167,15 @@ def test_h5_write():
 
             # Write a new attribute in a group.
             f.write_attr('/mygroup', 'mynewattr', 1)
+            assert f.read_attr('/mygroup', 'mynewattr') == 789
 
-            # Write a new attribute in a non existing group: should raise
-            # an error.
-            with raises(KeyError):
-                f.write_attr('/nonexistinggroup', 'mynewattr', 2)
+            # Write a new attribute in a nonexisting group.
+            f.write_attr('/nonexistinggroup', 'mynewattr', 2)
+            assert f.read_attr('/nonexistinggroup', 'mynewattr') == 2
+
+            # Write a new attribute two levels into a nonexisting group.
+            f.write_attr('/nonexistinggroup2/group3', 'mynewattr', 2)
+            assert f.read_attr('/nonexistinggroup2/group3', 'mynewattr') == 2
 
         os.chdir(cwd)
 

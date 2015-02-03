@@ -24,11 +24,11 @@ class KwikModel(BaseModel):
     def __init__(self, filename=None, channel_group=None, recording=None):
 
         if filename is not None:
-            self.kwik = open_h5(filename)
+            self._kwik = open_h5(filename)
         else:
             raise ValueError("No filename specified")
 
-        if self.kwik.is_open is False:
+        if self._kwik.is_open is False:
             raise ValueError("File {0} failed to open".format(filename))
 
         self._channel_group = channel_group
