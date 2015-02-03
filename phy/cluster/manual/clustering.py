@@ -75,11 +75,11 @@ class Clustering(object):
         # Spike -> cluster mapping.
         self._spike_clusters = _as_array(spike_clusters)
         # Update the cluster counts.
-        self.update_cluster_counts()
+        self.update()
         # Keep a copy of the original spike clusters assignement.
         self._spike_clusters_base = self._spike_clusters.copy()
 
-    def update_cluster_counts(self):
+    def update(self):
         """Update the cluster counts and labels."""
         self._cluster_counts = _count_clusters(self._spike_clusters)
 
@@ -156,7 +156,7 @@ class Clustering(object):
         # has already been updated. Otherwise, we need to update it here.
         if _update_info is None:
             counts_before = self._cluster_counts
-            self.update_cluster_counts()
+            self.update()
             counts_after = self._cluster_counts
             _update_info = _diff_counts(counts_before, counts_after)
             _update_info.description = 'assign'
