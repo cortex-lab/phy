@@ -29,5 +29,16 @@ def plot_ccg(ccg, baseline=None, bin=1., color=None, ax=None):
     width = bin * 1.05
     left = np.linspace(x_min, x_max, n)
     ax.bar(left, ccg, facecolor=color, width=width, linewidth=0)
-    ax.axis('off')
+    if baseline is not None:
+        ax.axhline(baseline, color='k', linewidth=2, linestyle='-')
+    ax.axvline(color='k', linewidth=2, linestyle='--')
+
+    ax.set_xlim(x_min, x_max + bin / 2)
+    ax.set_ylim(0)
+
+    ax.spines['right'].set_visible(False)
+    ax.spines['top'].set_visible(False)
+    ax.xaxis.set_ticks_position('bottom')
+    ax.yaxis.set_ticks_position('left')
+
     return ax

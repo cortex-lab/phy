@@ -19,5 +19,5 @@ from ..ccg import plot_ccg
 def test_plot_ccg():
     n_bins = 51
     ccg = np.random.randint(size=n_bins, low=10, high=50)
-    plot_ccg(ccg, color='k')
+    plot_ccg(ccg, baseline=20, color='g')
     # plt.show()
