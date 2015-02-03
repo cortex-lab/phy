@@ -11,6 +11,8 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 
+from ._mpl_utils import _bottom_left_frame
+
 
 #------------------------------------------------------------------------------
 # CCG plotting
@@ -36,9 +38,7 @@ def plot_ccg(ccg, baseline=None, bin=1., color=None, ax=None):
     ax.set_xlim(x_min, x_max + bin / 2)
     ax.set_ylim(0)
 
-    ax.spines['right'].set_visible(False)
-    ax.spines['top'].set_visible(False)
-    ax.xaxis.set_ticks_position('bottom')
-    ax.yaxis.set_ticks_position('left')
+    # Only keep the bottom and left ticks.
+    _bottom_left_frame(ax)
 
     return ax
