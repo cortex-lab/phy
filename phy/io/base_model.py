@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""The Experiment class holds the data from an experiment."""
+"""The BaseModel class holds the data from an experiment."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -12,10 +12,10 @@ from ..ext import six
 
 
 #------------------------------------------------------------------------------
-# Experiment class
+# BaseModel class
 #------------------------------------------------------------------------------
 
-class BaseExperiment(object):
+class BaseModel(object):
     """This class holds data from an experiment.
 
     This base class must be derived.

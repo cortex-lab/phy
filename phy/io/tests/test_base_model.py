@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Tests of the Experiment class."""
+"""Tests of the BaseModel class."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -9,42 +9,42 @@
 from pytest import raises
 import numpy as np
 
-from ..experiment import BaseExperiment
+from ..base_model import BaseModel
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
 
-def test_base_experiment():
-    exp = BaseExperiment()
+def test_base_model():
+    model = BaseModel()
 
-    assert exp.channel_group is None
-    assert exp.recording is None
+    assert model.channel_group is None
+    assert model.recording is None
 
-    exp.channel_group = 1
-    assert exp.channel_group == 1
+    model.channel_group = 1
+    assert model.channel_group == 1
 
-    exp.recording = 2
-    assert exp.recording == 2
+    model.recording = 2
+    assert model.recording == 2
 
     with raises(NotImplementedError):
-        exp.metadata
+        model.metadata
     with raises(NotImplementedError):
-        exp.traces
+        model.traces
     with raises(NotImplementedError):
-        exp.spike_times
+        model.spike_times
     with raises(NotImplementedError):
-        exp.spike_clusters
+        model.spike_clusters
     with raises(NotImplementedError):
-        exp.cluster_metadata
+        model.cluster_metadata
     with raises(NotImplementedError):
-        exp.features
+        model.features
     with raises(NotImplementedError):
-        exp.masks
+        model.masks
     with raises(NotImplementedError):
-        exp.waveforms
+        model.waveforms
     with raises(NotImplementedError):
-        exp.probe
+        model.probe
     with raises(NotImplementedError):
-        exp.save()
+        model.save()

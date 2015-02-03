@@ -13,7 +13,7 @@ from .clustering import Clustering
 from .cluster_view import ClusterView
 from .cluster_metadata import ClusterMetadata
 from .selector import Selector
-from ...io.experiment import BaseExperiment
+from ...io.base_model import BaseModel
 from ...plot.waveforms import WaveformView
 from ...notebook.utils import load_css
 
@@ -49,14 +49,14 @@ class ViewManager(object):
 class Session(object):
     """Provide all user-exposed actions for a manual clustering session."""
 
-    def __init__(self, experiment):
-        if not isinstance(experiment, BaseExperiment):
-            raise ValueError("'experiment' must be an instance of a "
-                             "class deriving from BaseExperiment.")
+    def __init__(self, model):
+        if not isinstance(model, BaseModel):
+            raise ValueError("'model' must be an instance of a "
+                             "class deriving from BaseModel.")
         self._global_history = GlobalHistory()
         self._view_manager = ViewManager()
-        # Set the experiment and initialize the session.
-        self.experiment = experiment
+        # Set the model and initialize the session.
+        self.model = model
         self._update_after_load()
 
     # Controller.
@@ -64,11 +64,11 @@ class Session(object):
 
     def _update_after_load(self):
         """Update the session after new data has been loaded."""
-        # Update the Selector and Clustering instances using the Experiment.
-        spike_clusters = self.experiment.spike_clusters
+        # Update the Selector and Clustering instances using the Model.
+        spike_clusters = self.model.spike_clusters
         self.selector = Selector(spike_clusters, n_spikes_max=None)
         self.clustering = Clustering(spike_clusters)
-        self.cluster_metadata = self.experiment.cluster_metadata
+        self.cluster_metadata = self.model.cluster_metadata
         # Reinitialize all existing views.
         for view in self._view_manager.views:
             if isinstance(view, WaveformView):
@@ -110,13 +110,13 @@ class Session(object):
         assert isinstance(view, WaveformView)
         view.visual.spike_clusters = self.clustering.spike_clusters
         view.visual.cluster_metadata = self.cluster_metadata
-        view.visual.channel_positions = self.experiment.probe.positions
+        view.visual.channel_positions = self.model.probe.positions
 
     def _update_waveforms_after_select(self, view):
         assert isinstance(view, WaveformView)
         spikes = self.selector.selected_spikes
-        view.visual.waveforms = self.experiment.waveforms[spikes]
-        view.visual.masks = self.experiment.masks[spikes]
+        view.visual.waveforms = self.model.waveforms[spikes]
+        view.visual.masks = self.model.masks[spikes]
         view.visual.spike_labels = spikes
 
     def _update_waveforms_after_cluster(self, view, up=None):

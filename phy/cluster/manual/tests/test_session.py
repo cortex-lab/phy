@@ -12,7 +12,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ....datasets.mock import artificial_spike_clusters, MockExperiment
+from ....datasets.mock import artificial_spike_clusters, MockModel
 from ..session import Session
 
 
@@ -22,14 +22,14 @@ from ..session import Session
 
 def test_session():
 
-    # Mock experiment.
-    exp = MockExperiment()
-    n_clusters = exp.n_clusters
+    # Mock model.
+    model = MockModel()
+    n_clusters = model.n_clusters
 
     with raises(ValueError):
         Session(None)
 
-    session = Session(exp)
+    session = Session(model)
 
     # Views.
     view = session.show_waveforms()
