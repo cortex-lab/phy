@@ -125,7 +125,6 @@ class File(object):
         # If the parent group doesn't already exist, create it.
         if path not in self._h5py_file:
             self._h5py_file.create_group(path)
-
         self._h5py_file[path].attrs[attr_name] = value
 
     # Open and close

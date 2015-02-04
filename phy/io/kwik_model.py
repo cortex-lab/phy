@@ -51,7 +51,8 @@ def _list_channels(kwik, channel_group=None):
     assert isinstance(channel_group, six.integer_types)
     path = '/channel_groups/{0:d}/channels'.format(channel_group)
     if path in kwik:
-        return _list_int_children(kwik[path])
+        channels = _list_int_children(kwik[path])
+        return channels
     else:
         return []
 
@@ -120,6 +121,7 @@ class KwikModel(BaseModel):
         self._spike_clusters = None
         self._metadata = None
         self._probe = None
+        self._channels = []
         self._features = None
         self._masks = None
         self._waveforms = None
@@ -195,10 +197,10 @@ class KwikModel(BaseModel):
 
     def _load_meta(self):
         """Load metadata from kwik file."""
-        # TODO: automatically load all metadata from spikedetekt group.
-        metadata_fields = ['nfeatures_per_channel']
         metadata = {}
+        # Automatically load all metadata from spikedetekt group.
         path = '/application_data/spikedetekt/'
+        metadata_fields = self._kwik.attrs(path)
         for field in metadata_fields:
             metadata[field] = self._kwik.read_attr(path, field)
         # TODO: load probe
@@ -216,6 +218,10 @@ class KwikModel(BaseModel):
         if value not in self.channel_groups:
             raise ValueError("The channel group {0} is invalid.".format(value))
         self._channel_group = value
+
+        # Load channels.
+        self._channels = _list_channels(self._kwik.h5py_file,
+                                        self._channel_group)
 
         # Load spike times.
         path = '{0:s}/time_samples'.format(self._spikes_path)
@@ -237,12 +243,12 @@ class KwikModel(BaseModel):
     @property
     def channels(self):
         """List of channels in the current channel group."""
-        return _list_channels(self._kwik.h5py_file, self._channel_group)
+        return self._channels
 
     @property
     def n_channels(self):
         """Number of channels in the current channel group."""
-        return len(self.channels)
+        return len(self._channels)
 
     @property
     def recordings(self):
