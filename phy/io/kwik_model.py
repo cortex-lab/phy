@@ -81,16 +81,19 @@ class KwikModel(BaseModel):
         self._cluster_metadata = None
         self._traces = None
 
-        if filename is not None:
-            self._kwik = open_h5(filename)
-        else:
+        if filename is None:
             raise ValueError("No filename specified.")
 
-        if self._kwik.is_open is False:
+        # Open the file.
+        self._kwik = open_h5(filename)
+
+        if not self._kwik.is_open():
             raise ValueError("File {0} failed to open.".format(filename))
 
+        # Load global information about the file.
         self._load_meta()
 
+        # List channel groups and recordings.
         self._channel_groups = _list_channel_groups(self._kwik.h5py_file)
         self._recordings = _list_recordings(self._kwik.h5py_file)
 
@@ -232,3 +235,6 @@ class KwikModel(BaseModel):
     def save(self):
         """Commits all in-memory changes to disk."""
         pass
+
+    def close(self):
+        self._kwik.close()

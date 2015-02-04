@@ -210,3 +210,11 @@ class BaseModel(object):
 
         """
         raise NotImplementedError()
+
+    def close(self):
+        """Close the model and the underlying files.
+
+        May be implemented by child classes.
+
+        """
+        pass
