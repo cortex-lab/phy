@@ -42,8 +42,13 @@ def _create_test_file(dir_path, n_clusters=None, n_spikes=None,
     # Create the kwik file.
     with open_h5(filename, 'w') as f:
         f.write_attr('/', 'kwik_version', 2)
-        f.write_attr('/application_data/spikedetekt',
-                     'nfeatures_per_channel', n_features_per_channel)
+
+        def _write_metadata(key, value):
+            f.write_attr('/application_data/spikedetekt', key, value)
+
+        _write_metadata('nfeatures_per_channel', n_features_per_channel)
+        _write_metadata('extract_s_before', 15)
+        _write_metadata('extract_s_after', 25)
 
         # Create spike times.
         spike_times = artificial_spike_times(n_spikes).astype(np.int64)

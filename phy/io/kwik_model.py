@@ -245,7 +245,14 @@ class KwikModel(BaseModel):
         self._masks = fm[:, 0:k * self.n_channels:k, 1]
         assert self._masks.shape == (self.n_spikes, self.n_channels)
 
-        # TODO: load probe
+        self._create_waveform_loader()
+
+    def _create_waveform_loader(self):
+        """Create a waveform loader."""
+        n_samples = (self._metadata['extract_s_before'],
+                     self._metadata['extract_s_after'])
+        self._waveform_loader = WaveformLoader(n_samples=n_samples,
+                                               channels=self._channels)
 
     @property
     def channels(self):
@@ -270,6 +277,10 @@ class KwikModel(BaseModel):
         if self._kwd is not None:
             path = '/recordings/{0:d}/data'.format(self._recording)
             self._traces = self._kwd.read(path)
+            # Create a new WaveformLoader if needed.
+            if self._waveform_loader is None:
+                self._create_waveform_loader()
+            self._waveform_loader.traces = self._traces
 
     @property
     def clusterings(self):
