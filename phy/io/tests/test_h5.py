@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import os
+import os.path as op
 
 import numpy as np
 import h5py
@@ -21,8 +22,9 @@ from ..h5 import open_h5, _split_hdf5_path
 # Utility test routines
 #------------------------------------------------------------------------------
 
-def _create_test_file():
-    with open_h5('_test.h5', 'w') as tempfile:
+def _create_test_file(dirpath):
+    filename = op.join(dirpath, '_test.h5')
+    with open_h5(filename, 'w') as tempfile:
         # Create a random dataset using h5py directly.
         h5file = tempfile.h5py_file
         h5file.create_dataset('ds1', (10,), dtype=np.float32)
@@ -69,12 +71,8 @@ def test_split_hdf5_path():
 
 def test_h5_read():
     with TemporaryDirectory() as tempdir:
-        # Save the currrent working directory.
-        cwd = os.getcwd()
-        # Change to the temporary directory.
-        os.chdir(tempdir)
         # Create the test HDF5 file in the temporary directory.
-        filename = _create_test_file()
+        filename = _create_test_file(tempdir)
 
         # Test close() method.
         f = open_h5(filename)
@@ -116,17 +114,11 @@ def test_h5_read():
 
         assert not f.is_open()
 
-        os.chdir(cwd)
-
 
 def test_h5_write():
     with TemporaryDirectory() as tempdir:
-        # Save the currrent working directory.
-        cwd = os.getcwd()
-        # Change to the temporary directory.
-        os.chdir(tempdir)
         # Create the test HDF5 file in the temporary directory.
-        filename = _create_test_file()
+        filename = _create_test_file(tempdir)
 
         # Create some array.
         temp_array = np.zeros(10, dtype=np.float32)
@@ -166,8 +158,8 @@ def test_h5_write():
             assert f.read_attr('/ds1', 'mynewattr') == 789
 
             # Write a new attribute in a group.
-            f.write_attr('/mygroup', 'mynewattr', 1)
-            assert f.read_attr('/mygroup', 'mynewattr') == 789
+            f.write_attr('/mygroup', 'mynewattr', 890)
+            assert f.read_attr('/mygroup', 'mynewattr') == 890
 
             # Write a new attribute in a nonexisting group.
             f.write_attr('/nonexistinggroup', 'mynewattr', 2)
@@ -177,17 +169,11 @@ def test_h5_write():
             f.write_attr('/nonexistinggroup2/group3', 'mynewattr', 2)
             assert f.read_attr('/nonexistinggroup2/group3', 'mynewattr') == 2
 
-        os.chdir(cwd)
-
 
 def test_h5_describe():
     with TemporaryDirectory() as tempdir:
-        # Save the currrent working directory.
-        cwd = os.getcwd()
-        # Change to the temporary directory.
-        os.chdir(tempdir)
         # Create the test HDF5 file in the temporary directory.
-        filename = _create_test_file()
+        filename = _create_test_file(tempdir)
 
         # Open the test HDF5 file.
         with open_h5(filename) as f:
@@ -196,5 +182,3 @@ def test_h5_describe():
         output = out.getvalue().strip()
         output_lines = output.split('\n')
         assert len(output_lines) == 3
-
-        os.chdir(cwd)

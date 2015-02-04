@@ -94,6 +94,7 @@ class File(object):
         # Get the group path and the dataset name.
         group_path, dset_name = _split_hdf5_path(path)
         group = self._h5py_file[group_path]
+
         # Check that the dataset does not already exist.
         if path in self._h5py_file:
             if overwrite:
@@ -103,6 +104,10 @@ class File(object):
                 # Otherwise, raise an error.
                 raise ValueError(("The dataset '{0:s}' already exists."
                                   ).format(path))
+
+        if group_path not in self._h5py_file:
+            raise OSError
+
         group.create_dataset(dset_name, data=array)
 
     def write_attr(self, path, attr_name, value):

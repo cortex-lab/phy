@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import os
+import os.path as op
 
 import numpy as np
 import h5py
@@ -21,8 +22,9 @@ from ..kwik_model import KwikModel
 # Utility test routines
 #------------------------------------------------------------------------------
 
-def _create_test_file():
-    with open_h5('_test.kwik', 'w') as tempfile:
+def _create_test_file(dirpath):
+    filename = op.join(dirpath, '_test.kwik')
+    with open_h5(filename, 'w') as tempfile:
         # Create a random dataset using h5py directly.
         h5file = tempfile.h5py_file
         h5file.create_group('/recording')
@@ -35,17 +37,11 @@ def _create_test_file():
 
 def test_kwik_open():
     with TemporaryDirectory() as tempdir:
-        # Save the currrent working directory.
-        cwd = os.getcwd()
-        # Change to the temporary directory.
-        os.chdir(tempdir)
         # Create the test HDF5 file in the temporary directory.
-        filename = _create_test_file()
+        filename = _create_test_file(tempdir)
 
         # Test implicit open() method.
         k = KwikModel(filename, channel_group=1, recording=0)
 
         assert k.recording == 0
         assert k.channel_group == 1
-
-        os.chdir(cwd)
