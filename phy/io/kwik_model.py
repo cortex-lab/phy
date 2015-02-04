@@ -127,6 +127,7 @@ class KwikModel(BaseModel):
         self._waveforms = None
         self._cluster_metadata = None
         self._traces = None
+        self._waveform_loader = None
 
         if filename is None:
             raise ValueError("No filename specified.")

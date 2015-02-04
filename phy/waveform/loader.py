@@ -48,12 +48,14 @@ def _slice(index, n_samples, margin=None):
 class WaveformLoader(object):
     """Load waveforms from filtered or unfiltered traces."""
 
-    def __init__(self, traces, offset=0, filter=None,
+    def __init__(self, traces=None, offset=0, filter=None,
                  n_samples=None, filter_margin=0,
                  channels=None):
         # A (possibly memmapped) array-like structure with traces.
-        self._traces = traces
-        self.n_samples_trace, self.n_channels_traces = traces.shape
+        if traces is not None:
+            self.traces = traces
+        else:
+            self._traces = None
         # Offset of the traces: time (in samples) of the first trace sample.
         self._offset = 0
         # List of channels to use when loading the waveforms.
@@ -76,6 +78,7 @@ class WaveformLoader(object):
 
     @traces.setter
     def traces(self, value):
+        self.n_samples_trace, self.n_channels_traces = value.shape
         self._traces = value
 
     @property
