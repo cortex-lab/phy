@@ -9,6 +9,7 @@
 import numpy as np
 
 from ..ext import six
+from ..utils.array import _as_array
 
 
 #------------------------------------------------------------------------------
@@ -122,8 +123,10 @@ class WaveformLoader(object):
         if isinstance(item, slice):
             raise NotImplementedError("Indexing with slices is not "
                                       "implemented yet.")
+        if not hasattr(item, '__len__'):
+            item = [item]
         # Ensure a list of time samples are being requested.
-        spikes = item
+        spikes = _as_array(item)
         n_spikes = len(spikes)
         # Initialize the array.
         # TODO: int16

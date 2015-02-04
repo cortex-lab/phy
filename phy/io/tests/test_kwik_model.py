@@ -161,3 +161,8 @@ def test_kwik_open():
         assert kwik.masks.shape == (n_spikes, n_channels)
 
         assert kwik.traces.shape == (n_samples_traces, n_channels)
+
+        # TODO: fix this
+        # print(kwik.waveforms[0].shape)
+        assert kwik.waveforms[10].shape == (1, 40, n_channels)
+        assert kwik.waveforms[[10, 20]].shape == (2, 40, n_channels)

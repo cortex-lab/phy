@@ -104,6 +104,18 @@ class PartialArray(object):
                 return self._arr[item, ..., self._col]
 
 
+class SpikeLoader(object):
+    """Translate selection with spike labels into selection with
+    absolute times."""
+    def __init__(self, waveforms, spike_times):
+        self._spike_times = spike_times
+        self._waveforms = waveforms
+
+    def __getitem__(self, item):
+        times = self._spike_times[item]
+        return self._waveforms[times]
+
+
 #------------------------------------------------------------------------------
 # KwikModel class
 #------------------------------------------------------------------------------
@@ -338,7 +350,7 @@ class KwikModel(BaseModel):
     @property
     def waveforms(self):
         """Waveforms from the current channel_group (may be memory-mapped)."""
-        raise NotImplementedError()
+        return SpikeLoader(self._waveform_loader, self.spike_times)
 
     @property
     def spike_clusters(self):
