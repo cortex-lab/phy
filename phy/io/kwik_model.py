@@ -21,25 +21,66 @@ from ..waveform.loader import WaveformLoader
 
 class KwikModel(BaseModel):
     """Holds data contained in a kwik file."""
-    def __init__(self, filename=None, channel_group=None, recording=None):
+    def __init__(self, filename=None,
+                 channel_group=None,
+                 recording=None,
+                 clustering=None):
+        super(KwikModel, self).__init__()
         if filename is not None:
             self._kwik = open_h5(filename)
         else:
-            raise ValueError("No filename specified")
+            raise ValueError("No filename specified.")
 
         if self._kwik.is_open is False:
-            raise ValueError("File {0} failed to open".format(filename))
+            raise ValueError("File {0} failed to open.".format(filename))
 
-        self._channel_group = channel_group
-        self._recording = recording
+        # TODO: get list of channel groups, recordings, clusterings
+        self._channel_groups = []
+        self._recordings = []
+        self._clusterings = []
+
+        if self.channel_groups:
+            self.channel_group = self.channel_groups[0]
+        if self.recordings:
+            self.recording = self.recordings[0]
+        if self.clusterings:
+            self.clustering = 'main'
+
+    # Channel group
+    # -------------------------------------------------------------------------
+
+    @property
+    def channel_groups(self):
+        return self._channel_groups
 
     def _channel_group_changed(self, value):
         """Called when the channel group changes."""
-        pass
+        if value not in self.channel_groups:
+            raise ValueError("The channel group {0} is invalid.".format(value))
+        # TODO
+
+    @property
+    def recordings(self):
+        return self._recordings
 
     def _recording_changed(self, value):
         """Called when the recording number changes."""
-        pass
+        if value not in self.recordings:
+            raise ValueError("The recording {0} is invalid.".format(value))
+        # TODO
+
+    @property
+    def clusterings(self):
+        return self._clusterings
+
+    def _clustering_changed(self, value):
+        """Called when the clustering changes."""
+        if value not in self.clusterings:
+            raise ValueError("The clustering {0} is invalid.".format(value))
+        # TODO
+
+    # Data
+    # -------------------------------------------------------------------------
 
     @property
     def metadata(self):
