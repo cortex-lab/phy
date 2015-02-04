@@ -8,6 +8,7 @@
 
 import os
 import os.path as op
+from random import randint
 
 import numpy as np
 import h5py
@@ -33,8 +34,11 @@ def _create_test_file(dir_path, n_clusters=None, n_spikes=None):
         f.write('/channel_groups/1/spikes/time_samples', spike_times)
         f.write('/channel_groups/1/spikes/clusters/main', spike_clusters)
         for cluster in range(n_clusters):
-            hdf5_path = '/channel_groups/1/clusters/main/{0:d}'.format(cluster)
-            f.write_attr(hdf5_path, 'cluster_group', 3)
+            group = '/channel_groups/1/clusters/main/{0:d}'.format(cluster)
+            color = ('/channel_groups/1/clusters/main/{0:d}'.format(cluster) +
+                     '/application_data/klustaviewa')
+            f.write_attr(group, 'cluster_group', 3)
+            f.write_attr(color, 'color', randint(2, 10))
         return f.filename
 
 
