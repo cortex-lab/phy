@@ -8,7 +8,8 @@
 
 import numpy as np
 
-from .._color import _random_color, _random_colors
+from .._color import _random_color
+from ..testing import show_colored_canvas
 
 
 #------------------------------------------------------------------------------
@@ -16,5 +17,5 @@ from .._color import _random_color, _random_colors
 #------------------------------------------------------------------------------
 
 def test_random_color():
-    assert len(_random_color()) == 3
-    assert _random_colors(4).shape == (4, 3)
+    color = _random_color()
+    show_colored_canvas(color)
