@@ -70,6 +70,17 @@ class KwikModel(BaseModel):
                  recording=None,
                  clustering=None):
         super(KwikModel, self).__init__()
+
+        # Initialize fields.
+        self._spike_times = None
+        self._spike_clusters = None
+        self._probe = None
+        self._features = None
+        self._masks = None
+        self._waveforms = None
+        self._cluster_metadata = None
+        self._traces = None
+
         if filename is not None:
             self._kwik = open_h5(filename)
         else:
@@ -77,6 +88,8 @@ class KwikModel(BaseModel):
 
         if self._kwik.is_open is False:
             raise ValueError("File {0} failed to open.".format(filename))
+
+        self._load_meta()
 
         self._channel_groups = _list_channel_groups(self._kwik.h5py_file)
         self._recordings = _list_recordings(self._kwik.h5py_file)
@@ -102,6 +115,29 @@ class KwikModel(BaseModel):
         # Load the specified clustering.
         self.clustering = clustering
 
+    # Internal properties and methods
+    # -------------------------------------------------------------------------
+
+    @property
+    def _channel_groups_path(self):
+        return '/channel_groups/{0:d}'.format(self._channel_group)
+
+    @property
+    def _spikes_path(self):
+        return '{0:s}/spikes'.format(self._channel_groups_path)
+
+    @property
+    def _clusters_path(self):
+        return '{0:s}/clusters'.format(self._channel_groups_path)
+
+    @property
+    def _clustering_path(self):
+        return '{0:s}/{1:s}'.format(self._clusters_path, self._clustering)
+
+    def _load_meta(self):
+        # TODO: load metadata, probe
+        pass
+
     # Channel group
     # -------------------------------------------------------------------------
 
@@ -113,7 +149,11 @@ class KwikModel(BaseModel):
         """Called when the channel group changes."""
         if value not in self.channel_groups:
             raise ValueError("The channel group {0} is invalid.".format(value))
-        # TODO
+        self._channel_group = value
+        # Load dataset references.
+        path = '{0:s}/time_samples'.format(self._spikes_path)
+        self._spike_times = self._kwik.read(path)
+        # TODO: probe, features, and masks
 
     @property
     def recordings(self):
@@ -123,7 +163,8 @@ class KwikModel(BaseModel):
         """Called when the recording number changes."""
         if value not in self.recordings:
             raise ValueError("The recording {0} is invalid.".format(value))
-        # TODO
+        self._recording = value
+        # TODO: traces
 
     @property
     def clusterings(self):
@@ -133,7 +174,12 @@ class KwikModel(BaseModel):
         """Called when the clustering changes."""
         if value not in self.clusterings:
             raise ValueError("The clustering {0} is invalid.".format(value))
-        # TODO
+        self._clustering = value
+        # NOTE: we are ensured here that self._channel_group is valid.
+        path = '{0:s}/clusters/{1:s}'.format(self._spikes_path,
+                                             self._clustering)
+        self._spike_clusters = self._kwik.read(path)
+        # TODO: cluster metadata
 
     # Data
     # -------------------------------------------------------------------------
@@ -144,6 +190,11 @@ class KwikModel(BaseModel):
         raise NotImplementedError()
 
     @property
+    def probe(self):
+        """A Probe instance."""
+        raise NotImplementedError()
+
+    @property
     def traces(self):
         """Traces from the current recording (may be memory-mapped)."""
         raise NotImplementedError()
@@ -151,16 +202,6 @@ class KwikModel(BaseModel):
     @property
     def spike_times(self):
         """Spike times from the current channel_group."""
-        raise NotImplementedError()
-
-    @property
-    def spike_clusters(self):
-        """Spike clusters from the current channel_group."""
-        raise NotImplementedError()
-
-    @property
-    def cluster_metadata(self):
-        """ClusterMetadata instance holding information about the clusters."""
         raise NotImplementedError()
 
     @property
@@ -179,8 +220,13 @@ class KwikModel(BaseModel):
         raise NotImplementedError()
 
     @property
-    def probe(self):
-        """A Probe instance."""
+    def spike_clusters(self):
+        """Spike clusters from the current channel_group."""
+        raise NotImplementedError()
+
+    @property
+    def cluster_metadata(self):
+        """ClusterMetadata instance holding information about the clusters."""
         raise NotImplementedError()
 
     def save(self):
