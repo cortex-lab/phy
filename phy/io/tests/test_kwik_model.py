@@ -30,6 +30,7 @@ def _create_test_file(dir_path, n_clusters=None, n_spikes=None):
     """Create a test kwik file."""
     filename = op.join(dir_path, '_test.kwik')
     with open_h5(filename, 'w') as f:
+        f.write_attr('/', 'kwik_version', 2)
         spike_times = artificial_spike_times(n_spikes)
         spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
         f.write('/channel_groups/1/spikes/time_samples', spike_times)

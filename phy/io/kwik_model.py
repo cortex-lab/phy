@@ -6,10 +6,11 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 import numpy as np
 
 from ..ext import six
-
 from .base_model import BaseModel
 from .h5 import open_h5
 from ..waveform.loader import WaveformLoader
@@ -59,6 +60,17 @@ def _list_clusterings(kwik, channel_group=None):
     return ['main'] + clusterings
 
 
+_KWIK_EXTENSIONS = ('kwik', 'kwx')
+
+
+def _kwik_filenames(filename):
+    """Return the filenames of the different Kwik files for a given
+    experiment."""
+    basename, ext = op.splitext(filename)
+    return {ext: '{basename}.{ext}'.format(basename=basename, ext=ext)
+            for ext in _KWIK_EXTENSIONS}
+
+
 #------------------------------------------------------------------------------
 # KwikModel class
 #------------------------------------------------------------------------------
@@ -86,9 +98,20 @@ class KwikModel(BaseModel):
 
         # Open the file.
         self._kwik = open_h5(filename)
-
         if not self._kwik.is_open():
             raise ValueError("File {0} failed to open.".format(filename))
+
+        # This class only works with kwik version 2 for now.
+        kwik_version = self._kwik.read_attr('/', 'kwik_version')
+        if kwik_version != 2:
+            raise IOError("The kwik version is {v} != 2.".format(kwik_version))
+
+        # Open the Kwx file if it exists.
+        filenames = _kwik_filenames(filename)
+        if op.exists(filenames['kwx']):
+            self._kwx = open_h5(filenames['kwx'])
+        else:
+            self._kwx = None
 
         # Load global information about the file.
         self._load_meta()
@@ -237,4 +260,7 @@ class KwikModel(BaseModel):
         pass
 
     def close(self):
+        """Close all opened files."""
+        if self._kwx is not None:
+            self._kwx.close()
         self._kwik.close()
