@@ -76,4 +76,7 @@ def test_kwik_open():
 
         # Test implicit open() method.
         kwik = KwikModel(filename)
-        assert kwik
+        assert kwik.spike_times[:].shape == (n_spikes,)
+        assert kwik.spike_clusters[:].shape == (n_spikes,)
+        assert kwik.spike_clusters[:].min() == 0
+        assert kwik.spike_clusters[:].max() == n_clusters - 1

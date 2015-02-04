@@ -202,7 +202,7 @@ class KwikModel(BaseModel):
     @property
     def spike_times(self):
         """Spike times from the current channel_group."""
-        raise NotImplementedError()
+        return self._spike_times
 
     @property
     def features(self):
@@ -222,7 +222,7 @@ class KwikModel(BaseModel):
     @property
     def spike_clusters(self):
         """Spike clusters from the current channel_group."""
-        raise NotImplementedError()
+        return self._spike_clusters
 
     @property
     def cluster_metadata(self):
