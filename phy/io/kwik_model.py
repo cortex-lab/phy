@@ -71,6 +71,28 @@ def _kwik_filenames(filename):
             for ext in _KWIK_EXTENSIONS}
 
 
+class PartialArray(object):
+    """Proxy to a view of an array, fixing the last dimension."""
+    def __init__(self, arr, col=None):
+        self._arr = arr
+        self._col = col
+        self.dtype = arr.dtype
+
+    @property
+    def shape(self):
+        return self._arr.shape[:-1]
+
+    def __getitem__(self, item):
+        if self._col is None:
+            return self._arr[item]
+        else:
+            if isinstance(item, tuple):
+                item += (self._col,)
+                return self._arr[item]
+            else:
+                return self._arr[item, ..., self._col]
+
+
 #------------------------------------------------------------------------------
 # KwikModel class
 #------------------------------------------------------------------------------
@@ -86,6 +108,7 @@ class KwikModel(BaseModel):
         # Initialize fields.
         self._spike_times = None
         self._spike_clusters = None
+        self._metadata = None
         self._probe = None
         self._features = None
         self._masks = None
@@ -161,8 +184,15 @@ class KwikModel(BaseModel):
         return '{0:s}/{1:s}'.format(self._clusters_path, self._clustering)
 
     def _load_meta(self):
-        # TODO: load metadata, probe
-        pass
+        """Load metadata from kwik file."""
+        # TODO: automatically load all metadata from spikedetekt group.
+        metadata_fields = ['nfeatures_per_channel']
+        metadata = {}
+        path = '/application_data/spikedetekt/'
+        for field in metadata_fields:
+            metadata[field] = self._kwik.read_attr(path, field)
+        # TODO: load probe
+        self._metadata = metadata
 
     # Channel group
     # -------------------------------------------------------------------------
@@ -179,7 +209,15 @@ class KwikModel(BaseModel):
         # Load dataset references.
         path = '{0:s}/time_samples'.format(self._spikes_path)
         self._spike_times = self._kwik.read(path)
-        # TODO: probe, features, and masks
+        path = '{0:s}/features_masks'.format(self._spikes_path)
+        fm = self._kwik.read(path)
+        self._features = PartialArray(fm, 0)
+        # WARNING: load *all* channel masks in memory for now
+        # TODO: sparse, memory mapped, memcache, etc.
+        k = self._metadata['nfeatures_per_channel']
+        self._masks = fm[:, 0:k * self.n_channels:k, 1]
+        assert self._masks.shape == (self.n_spikes, self.n_channels)
+        # TODO: load probe
 
     @property
     def recordings(self):
@@ -213,7 +251,7 @@ class KwikModel(BaseModel):
     @property
     def metadata(self):
         """A dictionary holding metadata about the experiment."""
-        raise NotImplementedError()
+        return self._metadata
 
     @property
     def probe(self):
@@ -233,12 +271,12 @@ class KwikModel(BaseModel):
     @property
     def features(self):
         """Features from the current channel_group (may be memory-mapped)."""
-        raise NotImplementedError()
+        return self._features
 
     @property
     def masks(self):
         """Masks from the current channel_group (may be memory-mapped)."""
-        raise NotImplementedError()
+        return self._masks
 
     @property
     def waveforms(self):
