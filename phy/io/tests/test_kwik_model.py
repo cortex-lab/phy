@@ -131,9 +131,12 @@ def test_kwik_open():
         assert kwik.n_spikes == n_spikes
 
         assert kwik.spike_times[:].shape == (n_spikes,)
+
         assert kwik.spike_clusters[:].shape == (n_spikes,)
         assert kwik.spike_clusters[:].min() == 0
         assert kwik.spike_clusters[:].max() == n_clusters - 1
+
         assert kwik.features.shape == (n_spikes,
                                        n_channels * n_fets)
+
         assert kwik.masks.shape == (n_spikes, n_channels)

@@ -71,7 +71,7 @@ def _list_clusterings(kwik, channel_group=None):
     return ['main'] + clusterings
 
 
-_KWIK_EXTENSIONS = ('kwik', 'kwx')
+_KWIK_EXTENSIONS = ('kwik', 'kwx', 'raw.kwd')
 
 
 def _kwik_filenames(filename):
