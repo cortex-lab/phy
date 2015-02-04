@@ -35,6 +35,7 @@ class BaseModel(object):
 
     @channel_group.setter
     def channel_group(self, value):
+        # The recording is specified by a integer.
         assert isinstance(value, six.integer_types)
         self._channel_group = value
         self._channel_group_changed(value)
@@ -65,6 +66,7 @@ class BaseModel(object):
 
     @recording.setter
     def recording(self, value):
+        # The recording is specified by a integer.
         assert isinstance(value, six.integer_types)
         self._recording = value
         self._recording_changed(value)
@@ -95,7 +97,8 @@ class BaseModel(object):
 
     @clustering.setter
     def clustering(self, value):
-        assert isinstance(value, six.integer_types)
+        # The clustering is specified by a string.
+        assert isinstance(value, six.string_types)
         self._clustering = value
         self._clustering_changed(value)
 

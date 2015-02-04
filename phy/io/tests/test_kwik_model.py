@@ -18,7 +18,8 @@ from ...datasets.mock import (artificial_spike_times,
                               artificial_spike_clusters)
 from ...utils.tempdir import TemporaryDirectory
 from ..h5 import open_h5
-from ..kwik_model import KwikModel
+from ..kwik_model import (KwikModel, _list_channel_groups, _list_recordings,
+                          _list_clusterings)
 
 
 #------------------------------------------------------------------------------
@@ -39,12 +40,29 @@ def _create_test_file(dir_path, n_clusters=None, n_spikes=None):
                      '/application_data/klustaviewa')
             f.write_attr(group, 'cluster_group', 3)
             f.write_attr(color, 'color', randint(2, 10))
+        f.write_attr('/recordings/0', 'name', 'recording_0')
         return f.filename
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
+
+def test_kwik_utility():
+
+    n_clusters = 10
+    n_spikes = 1000
+
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = _create_test_file(tempdir, n_clusters=n_clusters,
+                                     n_spikes=n_spikes)
+        model = KwikModel(filename)
+
+        assert _list_channel_groups(model._kwik.h5py_file) == [1]
+        assert _list_recordings(model._kwik.h5py_file) == [0]
+        assert _list_clusterings(model._kwik.h5py_file, 1) == ['main']
+
 
 def test_kwik_open():
 
@@ -57,8 +75,5 @@ def test_kwik_open():
                                      n_spikes=n_spikes)
 
         # Test implicit open() method.
-        k = KwikModel(filename, channel_group=1, recording=0)
-
-        # Todo.
-        assert k.recording is None
-        assert k.channel_group is None
+        kwik = KwikModel(filename)
+        assert kwik

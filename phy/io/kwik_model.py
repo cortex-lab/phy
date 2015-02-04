@@ -16,6 +16,50 @@ from ..waveform.loader import WaveformLoader
 
 
 #------------------------------------------------------------------------------
+# Kwik utility functions
+#------------------------------------------------------------------------------
+
+def _to_int_list(l):
+    """Convert int strings to ints."""
+    return [int(_) for _ in l]
+
+
+def _list_int_children(group):
+    """Return the list of int children of a HDF5 group."""
+    return sorted(_to_int_list(group.keys()))
+
+
+def _list_channel_groups(kwik):
+    """Return the list of channel groups in a kwik file."""
+    if 'channel_groups' in kwik:
+        return _list_int_children(kwik['/channel_groups'])
+    else:
+        return []
+
+
+def _list_recordings(kwik):
+    """Return the list of recordings in a kwik file."""
+    if '/recordings' in kwik:
+        return _list_int_children(kwik['/recordings'])
+    else:
+        return []
+
+
+def _list_clusterings(kwik, channel_group=None):
+    """Return the list of clusterings in a kwik file."""
+    if channel_group is None:
+        raise RuntimeError("channel_group must be specified when listing "
+                           "the clusterings.")
+    assert isinstance(channel_group, six.integer_types)
+    path = '/channel_groups/{0:d}/clusters'.format(channel_group)
+    clusterings = sorted(kwik[path].keys())
+    # Ensure 'main' exists and is the first.
+    assert 'main' in clusterings
+    clusterings.remove('main')
+    return ['main'] + clusterings
+
+
+#------------------------------------------------------------------------------
 # KwikModel class
 #------------------------------------------------------------------------------
 
@@ -34,17 +78,29 @@ class KwikModel(BaseModel):
         if self._kwik.is_open is False:
             raise ValueError("File {0} failed to open.".format(filename))
 
-        # TODO: get list of channel groups, recordings, clusterings
-        self._channel_groups = []
-        self._recordings = []
-        self._clusterings = []
+        self._channel_groups = _list_channel_groups(self._kwik.h5py_file)
+        self._recordings = _list_recordings(self._kwik.h5py_file)
 
-        if self.channel_groups:
-            self.channel_group = self.channel_groups[0]
-        if self.recordings:
-            self.recording = self.recordings[0]
-        if self.clusterings:
-            self.clustering = 'main'
+        # Choose the default channel group if not specified.
+        if channel_group is None and self.channel_groups:
+            channel_group = self.channel_groups[0]
+        # Load the channel group.
+        self.channel_group = channel_group
+
+        # Choose the default recording if not specified.
+        if recording is None and self.recordings:
+            recording = self.recordings[0]
+        # Load the recording.
+        self.recording = recording
+
+        # Once the channel group is loaded, list the clusterings.
+        self._clusterings = _list_clusterings(self._kwik.h5py_file,
+                                              self.channel_group)
+        # Choose the first clustering (should always be 'main').
+        if clustering is None and self.clusterings:
+            clustering = self.clusterings[0]
+        # Load the specified clustering.
+        self.clustering = clustering
 
     # Channel group
     # -------------------------------------------------------------------------
