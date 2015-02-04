@@ -17,7 +17,8 @@ from pytest import raises
 from ...datasets.mock import (artificial_spike_times,
                               artificial_spike_clusters,
                               artificial_features,
-                              artificial_masks)
+                              artificial_masks,
+                              artificial_traces)
 from ...utils.tempdir import TemporaryDirectory
 from ..h5 import open_h5
 from ..kwik_model import (KwikModel, _list_channel_groups, _list_channels,
@@ -30,11 +31,13 @@ from ..kwik_model import (KwikModel, _list_channel_groups, _list_channels,
 #------------------------------------------------------------------------------
 
 def _create_test_file(dir_path, n_clusters=None, n_spikes=None,
-                      n_channels=None, n_features_per_channel=None):
+                      n_channels=None, n_features_per_channel=None,
+                      n_samples_traces=None):
     """Create a test kwik file."""
     filename = op.join(dir_path, '_test.kwik')
     filenames = _kwik_filenames(filename)
     kwx_filename = filenames['kwx']
+    kwd_filename = filenames['raw.kwd']
 
     # Create the kwik file.
     with open_h5(filename, 'w') as f:
@@ -77,6 +80,12 @@ def _create_test_file(dir_path, n_clusters=None, n_spikes=None,
         fm = np.dstack((features, masks)).astype(np.float32)
         f.write('/channel_groups/1/features_masks', fm)
 
+    # Create the raw kwd file.
+    with open_h5(kwd_filename, 'w') as f:
+        f.write_attr('/', 'kwik_version', 2)
+        traces = artificial_traces(n_samples_traces, n_channels)
+        f.write('/recordings/0/data', traces)
+
     return filename
 
 
@@ -90,6 +99,7 @@ def test_kwik_utility():
     n_spikes = 1000
     n_channels = 28
     n_fets = 2
+    n_samples_traces = 2000
 
     channels = list(range(n_channels))
 
@@ -99,7 +109,8 @@ def test_kwik_utility():
                                      n_clusters=n_clusters,
                                      n_spikes=n_spikes,
                                      n_channels=n_channels,
-                                     n_features_per_channel=n_fets)
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
         model = KwikModel(filename)
 
         assert _list_channel_groups(model._kwik.h5py_file) == [1]
@@ -114,6 +125,7 @@ def test_kwik_open():
     n_spikes = 1000
     n_channels = 28
     n_fets = 2
+    n_samples_traces = 2000
 
     with TemporaryDirectory() as tempdir:
         # Create the test HDF5 file in the temporary directory.
@@ -121,7 +133,8 @@ def test_kwik_open():
                                      n_clusters=n_clusters,
                                      n_spikes=n_spikes,
                                      n_channels=n_channels,
-                                     n_features_per_channel=n_fets)
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
 
         # Test implicit open() method.
         kwik = KwikModel(filename)
@@ -140,3 +153,5 @@ def test_kwik_open():
                                        n_channels * n_fets)
 
         assert kwik.masks.shape == (n_spikes, n_channels)
+
+        assert kwik.traces.shape == (n_samples_traces, n_channels)

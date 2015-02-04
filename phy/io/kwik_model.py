@@ -148,6 +148,12 @@ class KwikModel(BaseModel):
         else:
             self._kwx = None
 
+        # Open the Kwd file if it exists.
+        if op.exists(filenames['raw.kwd']):
+            self._kwd = open_h5(filenames['raw.kwd'])
+        else:
+            self._kwd = None
+
         # Load global information about the file.
         self._load_meta()
 
@@ -259,7 +265,10 @@ class KwikModel(BaseModel):
         if value not in self.recordings:
             raise ValueError("The recording {0} is invalid.".format(value))
         self._recording = value
-        # TODO: traces
+        # Traces.
+        if self._kwd is not None:
+            path = '/recordings/{0:d}/data'.format(self._recording)
+            self._traces = self._kwd.read(path)
 
     @property
     def clusterings(self):
@@ -292,7 +301,7 @@ class KwikModel(BaseModel):
     @property
     def traces(self):
         """Traces from the current recording (may be memory-mapped)."""
-        raise NotImplementedError()
+        return self._traces
 
     @property
     def spike_times(self):
@@ -337,4 +346,6 @@ class KwikModel(BaseModel):
         """Close all opened files."""
         if self._kwx is not None:
             self._kwx.close()
+        if self._kwd is not None:
+            self._kwd.close()
         self._kwik.close()
