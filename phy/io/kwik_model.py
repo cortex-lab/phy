@@ -14,15 +14,14 @@ from .base_model import BaseModel
 from .h5 import open_h5
 from ..waveform.loader import WaveformLoader
 
+
 #------------------------------------------------------------------------------
 # KwikModel class
 #------------------------------------------------------------------------------
 
-
 class KwikModel(BaseModel):
-
+    """Holds data contained in a kwik file."""
     def __init__(self, filename=None, channel_group=None, recording=None):
-
         if filename is not None:
             self._kwik = open_h5(filename)
         else:
@@ -36,7 +35,6 @@ class KwikModel(BaseModel):
 
     def _channel_group_changed(self, value):
         """Called when the channel group changes."""
-
         pass
 
     def _recording_changed(self, value):
