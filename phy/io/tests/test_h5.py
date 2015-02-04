@@ -86,6 +86,11 @@ def test_h5_read():
         with open_h5(filename) as f:
             assert f.is_open()
 
+            assert f.children() == ['ds1', 'mygroup']
+            assert f.groups() == ['mygroup']
+            assert f.datasets() == ['ds1']
+            assert f.attrs('/mygroup') == ['myattr']
+
             # Check dataset ds1.
             ds1 = f.read('/ds1')[:]
             assert isinstance(ds1, np.ndarray)
