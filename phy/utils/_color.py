@@ -6,6 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from random import uniform
+from colorsys import rgb_to_hsv, hsv_to_rgb
+
 import numpy as np
 
 
@@ -14,8 +17,7 @@ import numpy as np
 #------------------------------------------------------------------------------
 
 def _random_color():
-    return tuple(np.random.uniform(size=(3,), low=.5, high=.9))
-
-
-def _random_colors(n):
-    return np.random.uniform(size=(n, 3), low=.5, high=.9)
+    """Generate a random RGB color."""
+    h, s, v = uniform(0., 1.), uniform(.5, 1.), uniform(.5, 1.)
+    r, g, b = hsv_to_rgb(h, s, v)
+    return r, g, b
