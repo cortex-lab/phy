@@ -12,7 +12,7 @@ import numpy as np
 
 from ..ext import six
 from .base_model import BaseModel
-from .h5 import open_h5
+from .h5 import open_h5, _check_hdf5_path
 from ..waveform.loader import WaveformLoader
 
 
@@ -42,6 +42,16 @@ def _list_recordings(kwik):
     """Return the list of recordings in a kwik file."""
     if '/recordings' in kwik:
         return _list_int_children(kwik['/recordings'])
+    else:
+        return []
+
+
+def _list_channels(kwik, channel_group=None):
+    """Return the list of channels in a kwik file."""
+    assert isinstance(channel_group, six.integer_types)
+    path = '/channel_groups/{0:d}/channels'.format(channel_group)
+    if path in kwik:
+        return _list_int_children(kwik[path])
     else:
         return []
 
@@ -206,18 +216,33 @@ class KwikModel(BaseModel):
         if value not in self.channel_groups:
             raise ValueError("The channel group {0} is invalid.".format(value))
         self._channel_group = value
-        # Load dataset references.
+
+        # Load spike times.
         path = '{0:s}/time_samples'.format(self._spikes_path)
         self._spike_times = self._kwik.read(path)
-        path = '{0:s}/features_masks'.format(self._spikes_path)
-        fm = self._kwik.read(path)
+
+        # Load features masks.
+        path = '{0:s}/features_masks'.format(self._channel_groups_path)
+        fm = self._kwx.read(path)
         self._features = PartialArray(fm, 0)
+
         # WARNING: load *all* channel masks in memory for now
         # TODO: sparse, memory mapped, memcache, etc.
         k = self._metadata['nfeatures_per_channel']
         self._masks = fm[:, 0:k * self.n_channels:k, 1]
         assert self._masks.shape == (self.n_spikes, self.n_channels)
+
         # TODO: load probe
+
+    @property
+    def channels(self):
+        """List of channels in the current channel group."""
+        return _list_channels(self._kwik.h5py_file, self._channel_group)
+
+    @property
+    def n_channels(self):
+        """Number of channels in the current channel group."""
+        return len(self.channels)
 
     @property
     def recordings(self):
@@ -267,6 +292,11 @@ class KwikModel(BaseModel):
     def spike_times(self):
         """Spike times from the current channel_group."""
         return self._spike_times
+
+    @property
+    def n_spikes(self):
+        """Return the number of spikes."""
+        return len(self._spike_times)
 
     @property
     def features(self):

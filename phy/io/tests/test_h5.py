@@ -112,9 +112,9 @@ def test_h5_read():
                 f.read('//path')
             with raises(Exception):
                 f.read('/path//')
-            with raises(KeyError):
+            with raises(ValueError):
                 f.read('/nonexistinggroup')
-            with raises(KeyError):
+            with raises(ValueError):
                 f.read('/nonexistinggroup/ds34')
 
         assert not f.is_open()

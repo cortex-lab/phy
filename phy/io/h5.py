@@ -51,6 +51,12 @@ def _split_hdf5_path(path):
     return '/' + group_path, name
 
 
+def _check_hdf5_path(h5_file, path):
+    """Check that an HDF5 path exists in a file."""
+    if path not in h5_file:
+        raise ValueError("{path} doesn't exist.".format(path=path))
+
+
 #------------------------------------------------------------------------------
 # File class
 #------------------------------------------------------------------------------
@@ -68,10 +74,12 @@ class File(object):
 
     def read(self, path):
         """Read an HDF5 dataset, given its HDF5 path in the file."""
+        _check_hdf5_path(self._h5py_file, path)
         return self._h5py_file[path]
 
     def read_attr(self, path, attr_name):
         """Read an attribute of an HDF5 group."""
+        _check_hdf5_path(self._h5py_file, path)
         return self._h5py_file[path].attrs[attr_name]
 
     # Writing functions
