@@ -49,12 +49,15 @@ class WaveformLoader(object):
     """Load waveforms from filtered or unfiltered traces."""
 
     def __init__(self, traces, offset=0, filter=None,
-                 n_samples=None, filter_margin=0):
+                 n_samples=None, filter_margin=0,
+                 channels=None):
         # A (possibly memmapped) array-like structure with traces.
         self._traces = traces
-        self.n_samples_trace, self.n_channels = traces.shape
+        self.n_samples_trace, self.n_channels_traces = traces.shape
         # Offset of the traces: time (in samples) of the first trace sample.
         self._offset = 0
+        # List of channels to use when loading the waveforms.
+        self._channels = channels
         # A filter function that takes a (n_samples, n_channels) array as
         # input.
         self._filter = filter
@@ -74,6 +77,21 @@ class WaveformLoader(object):
     @traces.setter
     def traces(self, value):
         self._traces = value
+
+    @property
+    def channels(self):
+        return self._channels
+
+    @channels.setter
+    def channels(self, value):
+        self._channels = value
+
+    @property
+    def n_channels_waveforms(self):
+        if self._channels is not None:
+            return len(self._channels)
+        else:
+            return self.n_channels_traces
 
     def load_at(self, time):
         """Load a waveform at a given time."""
@@ -106,9 +124,14 @@ class WaveformLoader(object):
         n_spikes = len(spikes)
         # Initialize the array.
         # TODO: int16
-        shape = (n_spikes, self.n_samples_waveforms, self.n_channels)
+        shape = (n_spikes, self.n_samples_waveforms,
+                 self.n_channels_waveforms)
         waveforms = np.empty(shape, dtype=np.float32)
         # Load all spikes.
         for i, time in enumerate(spikes):
             waveforms[i:i+1, ...] = self.load_at(time)
-        return waveforms
+        # Make a subselection with the specified channels.
+        if self._channels is not None:
+            return waveforms[..., self._channels]
+        else:
+            return waveforms
