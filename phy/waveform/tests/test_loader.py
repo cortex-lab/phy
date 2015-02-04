@@ -27,7 +27,7 @@ def test_slice():
 
 
 def test_loader():
-    n_samples_trace, n_channels = 1000, 100
+    n_samples_trace, n_channels = 10000, 100
     n_samples = 40
     n_spikes = n_samples_trace // (2 * n_samples)
 
@@ -49,9 +49,16 @@ def test_loader():
     assert waveform.shape == (n_samples, n_channels)
     assert_array_equal(waveform, traces[t - 20:t + 20, :])
 
+    waveforms = loader[spike_times[10:20]]
+    assert waveforms.shape == (10, n_samples, n_channels)
+    t = spike_times[15]
+    w1 = waveforms[5, ...]
+    w2 = traces[t - 20:t + 20, :]
+    assert np.allclose(w1, w2)
+
     # Invalid time.
     with raises(ValueError):
-        loader.load_at(2000)
+        loader.load_at(200000)
 
 
 def test_loader_filter():

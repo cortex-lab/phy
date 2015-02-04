@@ -84,7 +84,8 @@ def _create_test_file(dir_path, n_clusters=None, n_spikes=None,
     with open_h5(kwd_filename, 'w') as f:
         f.write_attr('/', 'kwik_version', 2)
         traces = artificial_traces(n_samples_traces, n_channels)
-        f.write('/recordings/0/data', traces)
+        # TODO: int16 traces
+        f.write('/recordings/0/data', traces.astype(np.float32))
 
     return filename
 

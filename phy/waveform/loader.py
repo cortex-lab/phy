@@ -62,7 +62,8 @@ class WaveformLoader(object):
         # tuple (before, after).
         if n_samples is None:
             raise ValueError("'n_samples' must be specified.")
-        self._n_samples = _before_after(n_samples)
+        self.n_samples_before_after = _before_after(n_samples)
+        self.n_samples_waveforms = sum(self.n_samples_before_after)
         # Number of additional samples to use for filtering.
         self._filter_margin = _before_after(filter_margin)
 
@@ -79,7 +80,9 @@ class WaveformLoader(object):
         time_o = time - self._offset
         if not (0 <= time_o < self.n_samples_trace):
             raise ValueError("Invalid time {0:d}.".format(time_o))
-        slice_extract = _slice(time_o, self._n_samples, self._filter_margin)
+        slice_extract = _slice(time_o,
+                               self.n_samples_before_after,
+                               self._filter_margin)
         extract = self._traces[slice_extract, :]
         # Filter the waveforms.
         if self._filter is not None:
@@ -91,4 +94,21 @@ class WaveformLoader(object):
         if margin_after > 0:
             assert margin_before >= 0
             waveforms = waveforms[margin_before:-margin_after, :]
+        return waveforms
+
+    def __getitem__(self, item):
+        """Load a number of waveforms."""
+        if isinstance(item, slice):
+            raise NotImplementedError("Indexing with slices is not "
+                                      "implemented yet.")
+        # Ensure a list of time samples are being requested.
+        spikes = item
+        n_spikes = len(spikes)
+        # Initialize the array.
+        # TODO: int16
+        shape = (n_spikes, self.n_samples_waveforms, self.n_channels)
+        waveforms = np.empty(shape, dtype=np.float32)
+        # Load all spikes.
+        for i, time in enumerate(spikes):
+            waveforms[i:i+1, ...] = self.load_at(time)
         return waveforms
