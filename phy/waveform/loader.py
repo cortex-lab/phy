@@ -49,6 +49,41 @@ def _slice(index, n_samples, margin=None):
     return slice(max(0, index - before), index + after, None)
 
 
+def _pad(arr, n, dir='left'):
+    """Pad an array with zeros along the first axis.
+
+    Arguments
+    ---------
+
+    n : int
+        Size of the returned array in the first axis.
+    dir : str
+        Direction of the padding. Must be one 'left' or 'right'.
+
+    """
+    assert dir in ('left', 'right')
+    n_arr = arr.shape[0]
+    shape = (n,) + arr.shape[1:]
+    if n_arr == n:
+        assert arr.shape == shape
+        return arr
+    elif n_arr < n:
+        out = np.zeros(shape, dtype=arr.dtype)
+        if dir == 'left':
+            out[-n_arr:, ...] = arr
+        elif dir == 'right':
+            out[:n_arr, ...] = arr
+        assert out.shape == shape
+        return out
+    else:
+        if dir == 'left':
+            out = arr[-n:, ...]
+        elif dir == 'right':
+            out = arr[:n, ...]
+        assert out.shape == shape
+        return out
+
+
 class WaveformLoader(object):
     """Load waveforms from filtered or unfiltered traces."""
 
@@ -109,21 +144,34 @@ class WaveformLoader(object):
                                self.n_samples_before_after,
                                self._filter_margin)
         extract = self._traces[slice_extract, :]
+
+        # Pad the extracted chunk if needed.
+        if slice_extract.start <= 0:
+            extract = _pad(extract, self.n_samples_waveforms, 'left')
+        elif slice_extract.stop >= self.n_samples_trace - 1:
+            extract = _pad(extract, self.n_samples_waveforms, 'right')
+
         # Filter the waveforms.
         if self._filter is not None:
             waveforms = self._filter(extract)
         else:
             waveforms = extract
+
         # Remove the margin.
         margin_before, margin_after = self._filter_margin
         if margin_after > 0:
             assert margin_before >= 0
             waveforms = waveforms[margin_before:-margin_after, :]
+
         # Make a subselection with the specified channels.
         if self._channels is not None:
-            return waveforms[..., self._channels]
+            out = waveforms[..., self._channels]
         else:
-            return waveforms
+            out = waveforms
+
+        assert out.shape == (self.n_samples_waveforms,
+                             self.n_channels_waveforms)
+        return out
 
     def __getitem__(self, item):
         """Load a number of waveforms."""
@@ -142,5 +190,5 @@ class WaveformLoader(object):
         waveforms = np.empty(shape, dtype=np.float32)
         # Load all spikes.
         for i, time in enumerate(spikes):
-            waveforms[i:i+1, ...] = self._load_at(time)
+            waveforms[i, ...] = self._load_at(time)
         return waveforms
