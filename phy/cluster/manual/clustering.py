@@ -67,21 +67,32 @@ def _count_clusters(spike_clusters):
     return _cluster_counts
 
 
+def _compute_cluster_masks(spike_clusters, masks, threshold=10):
+    """Compute the cluster masks."""
+    # cluster_masks = ((masks > 0).sum(axis=0) > threshold)
+    # return cluster_masks
+    # TODO
+    pass
+
+
 class Clustering(object):
     """Object representing a mapping from spike to cluster labels."""
 
-    def __init__(self, spike_clusters):
+    def __init__(self, spike_clusters, masks=None):
         self._undo_stack = History(base_item=(None, None))
         # Spike -> cluster mapping.
         self._spike_clusters = _as_array(spike_clusters)
+        self._masks = masks
         # Update the cluster counts.
-        self.update_cluster_counts()
+        self.update()
         # Keep a copy of the original spike clusters assignement.
         self._spike_clusters_base = self._spike_clusters.copy()
 
-    def update_cluster_counts(self):
+    def update(self):
         """Update the cluster counts and labels."""
         self._cluster_counts = _count_clusters(self._spike_clusters)
+        self._cluster_masks = _compute_cluster_masks(self._spike_clusters,
+                                                     self._masks)
 
     @property
     def spike_clusters(self):
@@ -103,6 +114,10 @@ class Clustering(object):
     def cluster_counts(self):
         """Number of spikes in each cluster."""
         return self._cluster_counts
+
+    @property
+    def cluster_masks(self):
+        return self._cluster_masks
 
     def new_cluster_label(self):
         """Return a new cluster label."""
@@ -156,7 +171,8 @@ class Clustering(object):
         # has already been updated. Otherwise, we need to update it here.
         if _update_info is None:
             counts_before = self._cluster_counts
-            self.update_cluster_counts()
+            # Update cluster counts and masks.
+            self.update()
             counts_after = self._cluster_counts
             _update_info = _diff_counts(counts_before, counts_after)
             _update_info.description = 'assign'

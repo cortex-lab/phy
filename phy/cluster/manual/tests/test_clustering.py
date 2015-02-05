@@ -89,7 +89,7 @@ def test_clustering():
     spike_clusters_new[:10] = 100
     clustering.spike_clusters[:] = spike_clusters_new[:]
     # Need to update explicitely.
-    clustering.update_cluster_counts()
+    clustering.update()
     assert_array_equal(clustering.cluster_labels,
                        np.r_[np.arange(n_clusters), 100])
 
@@ -97,7 +97,7 @@ def test_clustering():
     clustering.spike_clusters[:] = spike_clusters_base[:]
     clustering.spike_clusters[:10] = 100
     # Need to update manually.
-    clustering.update_cluster_counts()
+    clustering.update()
     assert_array_equal(clustering.cluster_labels,
                        np.r_[np.arange(n_clusters), 100])
 
@@ -119,7 +119,7 @@ def test_clustering():
 
     # Merge to a given cluster.
     clustering.spike_clusters[:] = spike_clusters_base[:]
-    clustering.update_cluster_counts()
+    clustering.update()
     my_spikes_0 = np.nonzero(np.in1d(clustering.spike_clusters, [4, 6]))[0]
     count = clustering.cluster_counts
     count4, count6 = count[4], count[6]
