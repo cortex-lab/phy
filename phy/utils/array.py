@@ -54,7 +54,7 @@ def _index_of(arr, lookup):
 
 _ACCEPTED_ARRAY_DTYPES = (np.float, np.float32, np.float64,
                           np.int, np.int8, np.int16, np.uint8, np.uint16,
-                          np.int32, np.int64,
+                          np.int32, np.int64, np.uint32, np.uint64,
                           np.bool)
 
 

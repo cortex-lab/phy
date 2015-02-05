@@ -43,6 +43,9 @@ def _slice(index, n_samples, margin=None):
     margin_before, margin_after = margin
     before += margin_before
     after += margin_after
+    index = int(index)
+    before = int(before)
+    after = int(after)
     return slice(max(0, index - before), index + after, None)
 
 

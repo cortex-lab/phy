@@ -12,8 +12,11 @@ import numpy as np
 
 from ..ext import six
 from .base_model import BaseModel
+from ..cluster.manual.cluster_metadata import ClusterMetadata
 from .h5 import open_h5, _check_hdf5_path
 from ..waveform.loader import WaveformLoader
+from ..electrode.mea import MEA
+from ..utils.logging import debug
 
 
 #------------------------------------------------------------------------------
@@ -221,8 +224,11 @@ class KwikModel(BaseModel):
         path = '/application_data/spikedetekt/'
         metadata_fields = self._kwik.attrs(path)
         for field in metadata_fields:
-            metadata[field] = self._kwik.read_attr(path, field)
-        # TODO: load probe
+            if field.islower():
+                try:
+                    metadata[field] = self._kwik.read_attr(path, field)
+                except TypeError:
+                    debug("Unable to load metadata field {0:s}".format(field))
         self._metadata = metadata
 
     # Channel group
@@ -244,7 +250,7 @@ class KwikModel(BaseModel):
 
         # Load spike times.
         path = '{0:s}/time_samples'.format(self._spikes_path)
-        self._spike_times = self._kwik.read(path)
+        self._spike_times = self._kwik.read(path)[:]
 
         # Load features masks.
         path = '{0:s}/features_masks'.format(self._channel_groups_path)
@@ -258,6 +264,15 @@ class KwikModel(BaseModel):
             k = self._metadata['nfeatures_per_channel']
             self._masks = fm[:, 0:k * self.n_channels:k, 1]
             assert self._masks.shape == (self.n_spikes, self.n_channels)
+
+        self._cluster_metadata = ClusterMetadata()
+
+        # Loading probe.
+        # TODO: load positions.
+        positions = None
+        # TODO: support multiple channel groups.
+        self._probe = MEA(positions=positions,
+                          n_channels=self.n_channels)
 
         self._create_waveform_loader()
 
@@ -308,7 +323,7 @@ class KwikModel(BaseModel):
         # NOTE: we are ensured here that self._channel_group is valid.
         path = '{0:s}/clusters/{1:s}'.format(self._spikes_path,
                                              self._clustering)
-        self._spike_clusters = self._kwik.read(path)
+        self._spike_clusters = self._kwik.read(path)[:]
         # TODO: cluster metadata
 
     # Data
@@ -322,7 +337,7 @@ class KwikModel(BaseModel):
     @property
     def probe(self):
         """A Probe instance."""
-        raise NotImplementedError()
+        return self._probe
 
     @property
     def traces(self):
@@ -362,7 +377,8 @@ class KwikModel(BaseModel):
     @property
     def cluster_metadata(self):
         """ClusterMetadata instance holding information about the clusters."""
-        raise NotImplementedError()
+        # TODO
+        return self._cluster_metadata
 
     def save(self):
         """Commits all in-memory changes to disk."""
