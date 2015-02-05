@@ -96,7 +96,7 @@ class WaveformLoader(object):
         else:
             self._traces = None
         # Offset of the traces: time (in samples) of the first trace sample.
-        self._offset = 0
+        self._offset = int(offset)
         # List of channels to use when loading the waveforms.
         self._channels = channels
         # A filter function that takes a (n_samples, n_channels) array as
@@ -137,6 +137,7 @@ class WaveformLoader(object):
 
     def _load_at(self, time):
         """Load a waveform at a given time."""
+        time = int(time)
         time_o = time - self._offset
         if not (0 <= time_o < self.n_samples_trace):
             raise ValueError("Invalid time {0:d}.".format(time_o))
