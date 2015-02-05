@@ -248,14 +248,16 @@ class KwikModel(BaseModel):
 
         # Load features masks.
         path = '{0:s}/features_masks'.format(self._channel_groups_path)
-        fm = self._kwx.read(path)
-        self._features = PartialArray(fm, 0)
 
-        # WARNING: load *all* channel masks in memory for now
-        # TODO: sparse, memory mapped, memcache, etc.
-        k = self._metadata['nfeatures_per_channel']
-        self._masks = fm[:, 0:k * self.n_channels:k, 1]
-        assert self._masks.shape == (self.n_spikes, self.n_channels)
+        if self._kwx is not None:
+            fm = self._kwx.read(path)
+            self._features = PartialArray(fm, 0)
+
+            # WARNING: load *all* channel masks in memory for now
+            # TODO: sparse, memory mapped, memcache, etc.
+            k = self._metadata['nfeatures_per_channel']
+            self._masks = fm[:, 0:k * self.n_channels:k, 1]
+            assert self._masks.shape == (self.n_spikes, self.n_channels)
 
         self._create_waveform_loader()
 
