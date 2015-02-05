@@ -51,6 +51,12 @@ def _split_hdf5_path(path):
     return '/' + group_path, name
 
 
+def _check_hdf5_path(h5_file, path):
+    """Check that an HDF5 path exists in a file."""
+    if path not in h5_file:
+        raise ValueError("{path} doesn't exist.".format(path=path))
+
+
 #------------------------------------------------------------------------------
 # File class
 #------------------------------------------------------------------------------
@@ -68,10 +74,12 @@ class File(object):
 
     def read(self, path):
         """Read an HDF5 dataset, given its HDF5 path in the file."""
+        _check_hdf5_path(self._h5py_file, path)
         return self._h5py_file[path]
 
     def read_attr(self, path, attr_name):
         """Read an attribute of an HDF5 group."""
+        _check_hdf5_path(self._h5py_file, path)
         return self._h5py_file[path].attrs[attr_name]
 
     # Writing functions
@@ -93,8 +101,14 @@ class File(object):
         """
         # Get the group path and the dataset name.
         group_path, dset_name = _split_hdf5_path(path)
+
+        # If the parent group doesn't already exist, create it.
+        if group_path not in self._h5py_file:
+            self._h5py_file.create_group(group_path)
+
         group = self._h5py_file[group_path]
-        # Check that the dataset does not already exists.
+
+        # Check that the dataset does not already exist.
         if path in self._h5py_file:
             if overwrite:
                 # Force rewriting the dataset if 'overwrite' is True.
@@ -103,10 +117,14 @@ class File(object):
                 # Otherwise, raise an error.
                 raise ValueError(("The dataset '{0:s}' already exists."
                                   ).format(path))
+
         group.create_dataset(dset_name, data=array)
 
     def write_attr(self, path, attr_name, value):
-        """Read an attribute of an HDF5 group."""
+        """Write an attribute of an HDF5 group."""
+        # If the parent group doesn't already exist, create it.
+        if path not in self._h5py_file:
+            self._h5py_file.create_group(path)
         self._h5py_file[path].attrs[attr_name] = value
 
     # Open and close
@@ -141,6 +159,24 @@ class File(object):
     def h5py_file(self):
         """Native h5py file handle."""
         return self._h5py_file
+
+    def attrs(self, path='/'):
+        """Return the list of attributes at the given path."""
+        return sorted(self._h5py_file[path].attrs)
+
+    def children(self, path='/'):
+        """Return the list of children of a given node."""
+        return sorted(self._h5py_file[path].keys())
+
+    def groups(self, path='/'):
+        """Return the list of groups under a given node."""
+        return [key for key in self.children(path)
+                if isinstance(self._h5py_file[key], h5py.Group)]
+
+    def datasets(self, path='/'):
+        """Return the list of datasets under a given node."""
+        return [key for key in self.children(path)
+                if isinstance(self._h5py_file[key], h5py.Dataset)]
 
     def _print_node_info(self, name, node):
         """Print node information."""

@@ -25,8 +25,15 @@ def test_base_model():
     model.channel_group = 1
     assert model.channel_group == 1
 
+    assert model.channel_groups == []
+    assert model.recordings == []
+    assert model.clusterings == []
+
     model.recording = 2
     assert model.recording == 2
+
+    model.clustering = 'original'
+    assert model.clustering == 'original'
 
     with raises(NotImplementedError):
         model.metadata
@@ -48,3 +55,5 @@ def test_base_model():
         model.probe
     with raises(NotImplementedError):
         model.save()
+
+    model.close()

@@ -24,6 +24,10 @@ class BaseModel(object):
     def __init__(self):
         self._channel_group = None
         self._recording = None
+        self._clustering = None
+
+    # Channel groups
+    # -------------------------------------------------------------------------
 
     @property
     def channel_group(self):
@@ -31,6 +35,7 @@ class BaseModel(object):
 
     @channel_group.setter
     def channel_group(self, value):
+        # The recording is specified by a integer.
         assert isinstance(value, six.integer_types)
         self._channel_group = value
         self._channel_group_changed(value)
@@ -44,11 +49,24 @@ class BaseModel(object):
         pass
 
     @property
+    def channel_groups(self):
+        """List of channel groups.
+
+        May be implemented by child classes.
+
+        """
+        return []
+
+    # Recordings
+    # -------------------------------------------------------------------------
+
+    @property
     def recording(self):
         return self._recording
 
     @recording.setter
     def recording(self, value):
+        # The recording is specified by a integer.
         assert isinstance(value, six.integer_types)
         self._recording = value
         self._recording_changed(value)
@@ -60,6 +78,49 @@ class BaseModel(object):
 
         """
         pass
+
+    @property
+    def recordings(self):
+        """List of recordings.
+
+        May be implemented by child classes.
+
+        """
+        return []
+
+    # Clusterings
+    # -------------------------------------------------------------------------
+
+    @property
+    def clustering(self):
+        return self._clustering
+
+    @clustering.setter
+    def clustering(self, value):
+        # The clustering is specified by a string.
+        assert isinstance(value, six.string_types)
+        self._clustering = value
+        self._clustering_changed(value)
+
+    def _clustering_changed(self, value):
+        """Called when the clustering changes.
+
+        May be implemented by child classes.
+
+        """
+        pass
+
+    @property
+    def clusterings(self):
+        """List of clusterings.
+
+        May be implemented by child classes.
+
+        """
+        return []
+
+    # Data
+    # -------------------------------------------------------------------------
 
     @property
     def metadata(self):
@@ -149,3 +210,11 @@ class BaseModel(object):
 
         """
         raise NotImplementedError()
+
+    def close(self):
+        """Close the model and the underlying files.
+
+        May be implemented by child classes.
+
+        """
+        pass
