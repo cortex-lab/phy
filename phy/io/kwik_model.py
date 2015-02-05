@@ -364,7 +364,7 @@ class KwikModel(BaseModel):
 
     def save(self):
         """Commits all in-memory changes to disk."""
-        pass
+        raise NotImplementedError()
 
     def close(self):
         """Close all opened files."""

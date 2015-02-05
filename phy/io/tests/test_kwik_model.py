@@ -145,6 +145,7 @@ def test_kwik_open():
         # Test implicit open() method.
         kwik = KwikModel(filename)
 
+        kwik.metadata
         assert kwik.channels == list(range(n_channels))
         assert kwik.n_channels == n_channels
         assert kwik.n_spikes == n_spikes
@@ -166,3 +167,20 @@ def test_kwik_open():
         # print(kwik.waveforms[0].shape)
         assert kwik.waveforms[10].shape == (1, 40, n_channels)
         assert kwik.waveforms[[10, 20]].shape == (2, 40, n_channels)
+
+        with raises(ValueError):
+            kwik.clustering = 'foo'
+        with raises(ValueError):
+            kwik.recording = 47
+        with raises(ValueError):
+            kwik.channel_group = 42
+
+        # Not implemented yet.
+        with raises(NotImplementedError):
+            kwik.cluster_metadata
+        with raises(NotImplementedError):
+            kwik.probe
+        with raises(NotImplementedError):
+            kwik.save()
+
+        kwik.close()
