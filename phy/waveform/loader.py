@@ -97,7 +97,7 @@ class WaveformLoader(object):
         else:
             return self.n_channels_traces
 
-    def load_at(self, time):
+    def _load_at(self, time):
         """Load a waveform at a given time."""
         time_o = time - self._offset
         if not (0 <= time_o < self.n_samples_trace):
@@ -116,7 +116,11 @@ class WaveformLoader(object):
         if margin_after > 0:
             assert margin_before >= 0
             waveforms = waveforms[margin_before:-margin_after, :]
-        return waveforms
+        # Make a subselection with the specified channels.
+        if self._channels is not None:
+            return waveforms[..., self._channels]
+        else:
+            return waveforms
 
     def __getitem__(self, item):
         """Load a number of waveforms."""
@@ -135,9 +139,5 @@ class WaveformLoader(object):
         waveforms = np.empty(shape, dtype=np.float32)
         # Load all spikes.
         for i, time in enumerate(spikes):
-            waveforms[i:i+1, ...] = self.load_at(time)
-        # Make a subselection with the specified channels.
-        if self._channels is not None:
-            return waveforms[..., self._channels]
-        else:
-            return waveforms
+            waveforms[i:i+1, ...] = self._load_at(time)
+        return waveforms

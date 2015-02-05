@@ -45,7 +45,7 @@ def test_loader():
 
     # Extract a waveform.
     t = spike_times[10]
-    waveform = loader.load_at(t)
+    waveform = loader._load_at(t)
     assert waveform.shape == (n_samples, n_channels)
     assert_array_equal(waveform, traces[t - 20:t + 20, :])
 
@@ -58,7 +58,26 @@ def test_loader():
 
     # Invalid time.
     with raises(ValueError):
-        loader.load_at(200000)
+        loader._load_at(200000)
+
+
+def test_loader_channels():
+    n_samples_trace, n_channels = 1000, 50
+    n_samples = 40
+
+    traces = artificial_traces(n_samples_trace, n_channels)
+
+    # Create a loader.
+    loader = WaveformLoader(traces, n_samples=n_samples)
+    loader.traces = traces
+    channels = [10, 20, 30]
+    loader.channels = channels
+    assert loader.channels == channels
+    assert loader[500].shape == (1, n_samples, 3)
+    assert loader[[500, 501, 600, 300]].shape == (4, n_samples, 3)
+
+    with raises(NotImplementedError):
+        loader[500:510]
 
 
 def test_loader_filter():
@@ -80,7 +99,7 @@ def test_loader_filter():
                             filter_margin=5)
 
     t = spike_times[5]
-    waveform_filtered = loader.load_at(t)
+    waveform_filtered = loader._load_at(t)
     traces_filtered = my_filter(traces)
     traces_filtered[t - 20:t + 20, :]
     assert np.allclose(waveform_filtered, traces_filtered[t - 20:t + 20, :])
