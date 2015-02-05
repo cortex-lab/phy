@@ -21,18 +21,6 @@ from ..utils.logging import debug
 
 
 #------------------------------------------------------------------------------
-# Utility functions
-#------------------------------------------------------------------------------
-
-def _default_channel_positions(n_channels):
-    """Default linear channel positions."""
-    if n_channels is None:
-        return np.array([[]])
-    return np.c_[np.zeros(n_channels),
-                 np.linspace(0., 1., n_channels)]
-
-
-#------------------------------------------------------------------------------
 # Waveforms visual
 #------------------------------------------------------------------------------
 
@@ -210,8 +198,6 @@ class Waveforms(Visual):
 
     @channel_positions.setter
     def channel_positions(self, value):
-        if value is None:
-            value = _default_channel_positions(self.n_channels)
         value = _as_array(value)
         self._channel_positions = value
         self._set_to_bake('channel_positions')

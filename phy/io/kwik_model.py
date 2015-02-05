@@ -15,7 +15,7 @@ from .base_model import BaseModel
 from ..cluster.manual.cluster_metadata import ClusterMetadata
 from .h5 import open_h5, _check_hdf5_path
 from ..waveform.loader import WaveformLoader
-from ..electrode.mea import MEA
+from ..electrode.mea import MEA, linear_positions
 from ..utils.logging import debug
 
 
@@ -269,7 +269,7 @@ class KwikModel(BaseModel):
 
         # Loading probe.
         # TODO: load positions.
-        positions = None
+        positions = linear_positions(self.n_channels)
         # TODO: support multiple channel groups.
         self._probe = MEA(positions=positions,
                           n_channels=self.n_channels)

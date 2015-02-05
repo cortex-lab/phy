@@ -62,6 +62,14 @@ class MEA(object):
 # Common probes
 #------------------------------------------------------------------------------
 
+def linear_positions(n_channels):
+    """Linear channel positions along the vertical axis."""
+    if n_channels in (0, None):
+        return np.array([[]])
+    return np.c_[np.zeros(n_channels),
+                 np.linspace(0., 1., n_channels)]
+
+
 def staggered_positions(n_channels):
     """Generate channel positions for a staggered probe."""
     i = np.arange(n_channels - 1)
