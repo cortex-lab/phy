@@ -182,11 +182,9 @@ def test_kwik_open():
         with raises(ValueError):
             kwik.channel_group = 42
 
+        kwik.cluster_metadata
+        kwik.probe
         # Not implemented yet.
-        with raises(NotImplementedError):
-            kwik.cluster_metadata
-        with raises(NotImplementedError):
-            kwik.probe
         with raises(NotImplementedError):
             kwik.save()
 
