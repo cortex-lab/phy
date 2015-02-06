@@ -16,7 +16,6 @@ from ...utils._color import _random_color
 from ...datasets.mock import (artificial_waveforms, artificial_masks,
                               artificial_spike_clusters)
 from ...electrode.mea import staggered_positions
-from ...utils.array import _normalize
 from ...utils.testing import show_test
 
 
@@ -42,7 +41,6 @@ def _test_waveforms(n_spikes=None, n_clusters=None):
     n_samples = 40
 
     channel_positions = staggered_positions(n_channels)
-    channel_positions = _normalize(channel_positions)
 
     waveforms = artificial_waveforms(n_spikes, n_samples,
                                      n_channels).astype(np.float32)

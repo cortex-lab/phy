@@ -15,7 +15,7 @@ from vispy.visuals import Visual
 from vispy.visuals.shaders import ModularProgram, Function, Variable
 from vispy.visuals.glsl.color import HSV_TO_RGB, RGB_TO_HSV
 
-from ..utils.array import _unique, _as_array, _index_of
+from ..utils.array import _unique, _as_array, _index_of, _normalize
 from ._vispy_utils import PanZoomCanvas
 from ..utils.logging import debug
 
@@ -241,7 +241,9 @@ class Waveforms(Visual):
     def _bake_channel_positions(self):
         # WARNING: channel_positions must be in [0,1] because we have a
         # texture.
-        positions = self.channel_positions.reshape((1, self.n_channels, 2))
+        positions = self.channel_positions.astype(np.float32)
+        positions = _normalize(positions)
+        positions = positions.reshape((1, self.n_channels, -1))
         # Rescale a bit and recenter.
         positions = .1 + .8 * positions
         u_channel_pos = np.dstack((positions,
