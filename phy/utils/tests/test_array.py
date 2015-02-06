@@ -179,6 +179,12 @@ def test_excerpts_2():
 #------------------------------------------------------------------------------
 
 def test_partial_shape():
+
+    _partial_shape(None, ())
+    _partial_shape((), None)
+    _partial_shape((), ())
+    _partial_shape(None, None)
+
     assert _partial_shape((5, 3), 1) == (5,)
     assert _partial_shape((5, 3), (1,)) == (5,)
     assert _partial_shape((5, 10, 2), 1) == (5, 10)

@@ -26,6 +26,7 @@ def bandpass_filter(rate=None, low=None, high=None, order=None):
 
 
 def apply_filter(x, filter=None):
+    x = _as_array(x)
     if x.shape[0] == 0:
         return x
     b, a = filter
