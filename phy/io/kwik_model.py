@@ -210,6 +210,10 @@ class KwikModel(BaseModel):
         return '{0:s}/spikes'.format(self._channel_groups_path)
 
     @property
+    def _channels_path(self):
+        return '{0:s}/channels'.format(self._channel_groups_path)
+
+    @property
     def _clusters_path(self):
         return '{0:s}/clusters'.format(self._channel_groups_path)
 
@@ -269,12 +273,21 @@ class KwikModel(BaseModel):
 
         # Loading probe.
         # TODO: load positions.
-        positions = linear_positions(self.n_channels)
+        positions = self._load_channel_positions()
         # TODO: support multiple channel groups.
         self._probe = MEA(positions=positions,
                           n_channels=self.n_channels)
 
         self._create_waveform_loader()
+
+    def _load_channel_positions(self):
+        """Load the channel positions from the kwik file."""
+        positions = []
+        for channel in self.channels:
+            path = '{0:s}/{1:d}'.format(self._channels_path, channel)
+            position = self._kwik.read_attr(path, 'position')
+            positions.append(position)
+        return np.array(positions)
 
     def _create_waveform_loader(self):
         """Create a waveform loader."""
