@@ -30,19 +30,22 @@ class ViewManager(object):
         self._session = session
         self._callbacks = defaultdict(list)
 
-    def create(self, action_name=None):
+    def _decorator(self, callback_type, **kwargs):
+        """Return a decorator adding a callback function."""
         def decorator(f):
-            self._callbacks['create'].append(f)
-        """Register a function creating a view."""
+            item = {'callback': f}
+            item.update(kwargs)
+            self._callbacks[callback_type].append(item)
         return decorator
 
-    def select(self, callback):
-        """Register a function updating a view after a cluster selection."""
-        pass
+    def create(self, action_name=None):
+        return self._decorator('create', action_name=action_name)
+
+    def select(self):
+        return self._decorator('select')
 
     def cluster(self, callback):
-        """Register a function updating a view after a clustering change."""
-        pass
+        return self._decorator('cluster')
 
 
 #------------------------------------------------------------------------------
@@ -62,9 +65,9 @@ class Session(object):
         self.model = model
         self._update_after_load()
 
-    @property
-    def views(self):
-        return self._view_manager
+    # @property
+    # def views(self):
+    #     return self._view_manager
 
     # Controller.
     # -------------------------------------------------------------------------
@@ -76,18 +79,19 @@ class Session(object):
         self.selector = Selector(spike_clusters, n_spikes_max=100)
         self.clustering = Clustering(spike_clusters)
         self.cluster_metadata = self.model.cluster_metadata
-        # Reinitialize all existing views.
-        for view in self._view_manager.views:
-            if isinstance(view, WaveformView):
-                self._update_waveforms_after_load(view)
-            view.update()
+        # # Reinitialize all existing views.
+        # for view in self._view_manager.views:
+        #     if isinstance(view, WaveformView):
+        #         self._update_waveforms_after_load(view)
+        #     view.update()
 
     def _update_after_select(self):
         """Update the views after the selection has changed."""
-        for view in self._view_manager.views:
-            if isinstance(view, WaveformView):
-                self._update_waveforms_after_select(view)
-            view.update()
+        pass
+    #     for view in self._view_manager.views:
+    #         if isinstance(view, WaveformView):
+    #             self._update_waveforms_after_select(view)
+    #         view.update()
 
     def _update_after_cluster(self, up, add_to_stack=True):
         """Update the session after the clustering has changed."""
@@ -104,31 +108,31 @@ class Session(object):
         if add_to_stack:
             self._global_history.action(self.clustering)
 
-        # Refresh the views with the DataUpdate instance.
-        for view in self._view_manager.views:
-            if isinstance(view, WaveformView):
-                self._update_waveforms_after_cluster(view, up=up)
-            view.update()
+        # # Refresh the views with the DataUpdate instance.
+        # for view in self._view_manager.views:
+        #     if isinstance(view, WaveformView):
+        #         self._update_waveforms_after_cluster(view, up=up)
+        #     view.update()
 
     # Waveforms.
     # -------------------------------------------------------------------------
 
-    def _update_waveforms_after_load(self, view):
-        assert isinstance(view, WaveformView)
-        view.visual.spike_clusters = self.clustering.spike_clusters
-        view.visual.cluster_metadata = self.cluster_metadata
-        view.visual.channel_positions = self.model.probe.positions
+    # def _update_waveforms_after_load(self, view):
+    #     assert isinstance(view, WaveformView)
+    #     view.visual.spike_clusters = self.clustering.spike_clusters
+    #     view.visual.cluster_metadata = self.cluster_metadata
+    #     view.visual.channel_positions = self.model.probe.positions
 
-    def _update_waveforms_after_select(self, view):
-        assert isinstance(view, WaveformView)
-        spikes = self.selector.selected_spikes
-        view.visual.waveforms = self.model.waveforms[spikes]
-        view.visual.masks = self.model.masks[spikes]
-        view.visual.spike_labels = spikes
+    # def _update_waveforms_after_select(self, view):
+    #     assert isinstance(view, WaveformView)
+    #     spikes = self.selector.selected_spikes
+    #     view.visual.waveforms = self.model.waveforms[spikes]
+    #     view.visual.masks = self.model.masks[spikes]
+    #     view.visual.spike_labels = spikes
 
-    def _update_waveforms_after_cluster(self, view, up=None):
-        # TODO
-        assert isinstance(view, WaveformView)
+    # def _update_waveforms_after_cluster(self, view, up=None):
+    #     # TODO
+    #     assert isinstance(view, WaveformView)
 
     # Public properties.
     # -------------------------------------------------------------------------
@@ -147,27 +151,27 @@ class Session(object):
     # Public view methods.
     # -------------------------------------------------------------------------
 
-    def show_clusters(self):
-        """Create and show a new cluster view."""
-        from IPython.display import display
-        view = ClusterView(clusters=self.cluster_labels,
-                           colors=self.cluster_colors)
-        view.on_trait_change(lambda _, __, clusters: self.select(clusters),
-                             'value')
-        load_css('static/widgets.css')
-        display(view)
+    # def show_clusters(self):
+    #     """Create and show a new cluster view."""
+    #     from IPython.display import display
+    #     view = ClusterView(clusters=self.cluster_labels,
+    #                        colors=self.cluster_colors)
+    #     view.on_trait_change(lambda _, __, clusters: self.select(clusters),
+    #                          'value')
+    #     load_css('static/widgets.css')
+    #     display(view)
 
-    def show_waveforms(self):
-        """Create and show a new Waveform view."""
-        view = WaveformView()
-        self._view_manager.register(view)
-        self._update_waveforms_after_load(view)
-        self._update_waveforms_after_select(view)
-        return view
+    # def show_waveforms(self):
+    #     """Create and show a new Waveform view."""
+    #     view = WaveformView()
+    #     self._view_manager.register(view)
+    #     self._update_waveforms_after_load(view)
+    #     self._update_waveforms_after_select(view)
+    #     return view
 
-    def close_view(self, view):
-        self._view_manager.unregister(view)
-        view.close()
+    # def close_view(self, view):
+    #     self._view_manager.unregister(view)
+    #     view.close()
 
     # Public clustering actions.
     # -------------------------------------------------------------------------
