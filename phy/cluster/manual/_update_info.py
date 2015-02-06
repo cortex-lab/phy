@@ -8,18 +8,12 @@
 
 import numpy as np
 
+from ...utils._bunch import Bunch
+
 
 #------------------------------------------------------------------------------
 # UpdateInfo class
 #------------------------------------------------------------------------------
-
-class AttrDict(dict):
-    """Like a dict, but also supports __getitem__ in addition to
-    __getattr__."""
-    def __init__(self, *args, **kwargs):
-        super(AttrDict, self).__init__(*args, **kwargs)
-        self.__dict__ = self
-
 
 def update_info(**kwargs):
     """Hold information about clustering changes."""
@@ -32,7 +26,7 @@ def update_info(**kwargs):
         metadata_changed=[]  # clusters with changed metadata
     )
     d.update(kwargs)
-    return AttrDict(d)
+    return Bunch(d)
 
 
 UpdateInfo = update_info
