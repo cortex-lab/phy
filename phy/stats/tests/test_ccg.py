@@ -7,7 +7,7 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from numpy import array_equal as ae
+from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ..ccg import _increment, _diff_shifted, correlograms

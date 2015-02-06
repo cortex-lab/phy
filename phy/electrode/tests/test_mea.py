@@ -8,6 +8,7 @@
 
 from pytest import raises
 import numpy as np
+from numpy.testing import assert_array_equal as ae
 
 from ..mea import MEA, linear_positions, staggered_positions
 
@@ -24,7 +25,7 @@ def test_mea():
 
     mea = MEA()
     mea.positions = positions
-    assert np.array_equal(mea.positions, positions)
+    ae(mea.positions, positions)
     assert mea.adjacency is None
 
     mea = MEA(positions=positions)
@@ -48,7 +49,7 @@ def test_mea():
 def test_probe():
     probe = staggered_positions(31)
     assert probe.shape == (31, 2)
-    assert np.array_equal(probe[-1], (0, 0))
+    ae(probe[-1], (0, 0))
 
     probe = linear_positions(29)
     assert probe.shape == (29, 2)

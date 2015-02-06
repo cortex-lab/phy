@@ -9,7 +9,7 @@
 import os
 
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from .._utils import _unique, _spikes_in_clusters
@@ -28,9 +28,9 @@ def test_utils():
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
-    assert_array_equal(_unique(spike_clusters), np.arange(n_clusters))
+    ae(_unique(spike_clusters), np.arange(n_clusters))
 
-    assert_array_equal(_spikes_in_clusters(spike_clusters, []), [])
+    ae(_spikes_in_clusters(spike_clusters, []), [])
 
     for i in range(10):
         assert np.all(spike_clusters[_spikes_in_clusters(spike_clusters,

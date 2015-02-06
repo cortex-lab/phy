@@ -6,7 +6,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from numpy.testing import assert_array_equal
 from pytest import raises
 
 from ....ext.six import itervalues, iterkeys

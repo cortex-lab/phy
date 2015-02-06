@@ -10,6 +10,7 @@ import os
 import os.path as op
 
 import numpy as np
+from numpy.testing import assert_array_equal as ae
 import h5py
 from pytest import raises
 
@@ -144,15 +145,15 @@ def test_h5_write():
 
             # This works, though, because we force overwriting the dataset.
             f.write('/ds1', temp_array, overwrite=True)
-            np.testing.assert_array_equal(f.read('/ds1'), temp_array)
+            ae(f.read('/ds1'), temp_array)
 
             # Write a new array.
             f.write('/ds2', temp_array)
-            np.testing.assert_array_equal(f.read('/ds2'), temp_array)
+            ae(f.read('/ds2'), temp_array)
 
             # Write a new array in a nonexistent group.
             f.write('/ds3/ds4/ds5', temp_array)
-            np.testing.assert_array_equal(f.read('/ds3/ds4/ds5'), temp_array)
+            ae(f.read('/ds3/ds4/ds5'), temp_array)
 
             # Write an existing attribute.
             f.write_attr('/ds1', 'myattr', 456)

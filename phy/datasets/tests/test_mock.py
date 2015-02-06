@@ -7,7 +7,7 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ...electrode.mea import MEA
@@ -47,7 +47,7 @@ def _test_artificial(n_spikes=None, n_clusters=None):
     if n_clusters >= 1:
         assert (spike_clusters.min(), spike_clusters.max()) == \
                (0, n_clusters - 1)
-    assert_array_equal(np.unique(spike_clusters), np.arange(n_clusters))
+    ae(np.unique(spike_clusters), np.arange(n_clusters))
 
     # Features.
     features = artificial_features(n_spikes, n_features)

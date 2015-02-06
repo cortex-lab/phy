@@ -9,7 +9,7 @@
 import os
 
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ....ext.six import itervalues
@@ -73,10 +73,10 @@ def test_clustering():
 
     # Instanciate a Clustering instance.
     clustering = Clustering(spike_clusters)
-    assert_array_equal(clustering.spike_clusters, spike_clusters)
+    ae(clustering.spike_clusters, spike_clusters)
 
     # Test cluster labels.
-    assert_array_equal(clustering.cluster_labels, np.arange(n_clusters))
+    ae(clustering.cluster_labels, np.arange(n_clusters))
 
     assert clustering.new_cluster_label() == n_clusters
     assert clustering.n_clusters == n_clusters
@@ -90,16 +90,14 @@ def test_clustering():
     clustering.spike_clusters[:] = spike_clusters_new[:]
     # Need to update explicitely.
     clustering.update_cluster_counts()
-    assert_array_equal(clustering.cluster_labels,
-                       np.r_[np.arange(n_clusters), 100])
+    ae(clustering.cluster_labels, np.r_[np.arange(n_clusters), 100])
 
     # Updating a cluster, method 2.
     clustering.spike_clusters[:] = spike_clusters_base[:]
     clustering.spike_clusters[:10] = 100
     # Need to update manually.
     clustering.update_cluster_counts()
-    assert_array_equal(clustering.cluster_labels,
-                       np.r_[np.arange(n_clusters), 100])
+    ae(clustering.cluster_labels, np.r_[np.arange(n_clusters), 100])
 
     # Assign.
     clustering.assign(slice(None, 10, None), 1000)
@@ -112,7 +110,7 @@ def test_clustering():
     my_spikes_0 = np.nonzero(np.in1d(clustering.spike_clusters, [2, 3]))[0]
     info = clustering.merge([2, 3])
     my_spikes = info.spikes
-    assert_array_equal(my_spikes, my_spikes_0)
+    ae(my_spikes, my_spikes_0)
     assert 1001 in clustering.cluster_labels
     assert clustering.cluster_counts[1001] == count[2] + count[3]
     assert np.all(clustering.spike_clusters[my_spikes] == 1001)
@@ -125,7 +123,7 @@ def test_clustering():
     count4, count6 = count[4], count[6]
     info = clustering.merge([4, 6], 11)
     my_spikes = info.spikes
-    assert_array_equal(my_spikes, my_spikes_0)
+    ae(my_spikes, my_spikes_0)
     assert 11 in clustering.cluster_labels
     assert clustering.cluster_counts[11] == count4 + count6
     assert np.all(clustering.spike_clusters[my_spikes] == 11)
@@ -158,11 +156,10 @@ def test_clustering_merge():
         checkpoints[index] = clustering.spike_clusters.copy()
 
     def _assert_is_checkpoint(index):
-        assert_array_equal(clustering.spike_clusters, checkpoints[index])
+        ae(clustering.spike_clusters, checkpoints[index])
 
     def _assert_spikes(clusters):
-        assert_array_equal(info.spikes,
-                           _spikes_in_clusters(spike_clusters, clusters))
+        ae(info.spikes, _spikes_in_clusters(spike_clusters, clusters))
 
     # Checkpoint 0.
     _checkpoint()
@@ -242,7 +239,7 @@ def test_clustering_merge():
     # Same as checkpoint with 4, but replace 14 with 15.
     res = checkpoints[4]
     res[res == 14] = 15
-    assert_array_equal(clustering.spike_clusters, res)
+    ae(clustering.spike_clusters, res)
 
     # Undo all.
     for i in range(3, -1, -1):
@@ -272,11 +269,10 @@ def test_clustering_assign():
         checkpoints[index] = clustering.spike_clusters.copy()
 
     def _assert_is_checkpoint(index):
-        assert_array_equal(clustering.spike_clusters, checkpoints[index])
+        ae(clustering.spike_clusters, checkpoints[index])
 
     def _assert_spikes(spikes):
-        assert_array_equal(info.spikes,
-                           spikes)
+        ae(info.spikes, spikes)
 
     # Checkpoint 0.
     _checkpoint()

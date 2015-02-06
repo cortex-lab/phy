@@ -171,16 +171,16 @@ def test_chunk():
     d = data_chunk(data, ch)
     d_o = data_chunk(data, ch, with_overlap=True)
 
-    assert np.array_equal(d_o, data[0:100])
-    assert np.array_equal(d, data[0:90])
+    ae(d_o, data[0:100])
+    ae(d, data[0:90])
 
     # Chunk 2.
     ch = next(chunks)
     d = data_chunk(data, ch)
     d_o = data_chunk(data, ch, with_overlap=True)
 
-    assert np.array_equal(d_o, data[80:180])
-    assert np.array_equal(d, data[90:170])
+    ae(d_o, data[80:180])
+    ae(d, data[90:170])
 
 
 def test_excerpts_1():
