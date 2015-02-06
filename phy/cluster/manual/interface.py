@@ -7,9 +7,10 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from IPython.display import display
 
 from ...notebook.utils import enable_notebook
-from ...utils.logging import set_level
+from ...utils.logging import set_level, warn
 from ._history import GlobalHistory
 from .clustering import Clustering
 from ...io.kwik_model import KwikModel
@@ -19,25 +20,32 @@ from .selector import Selector
 from .session import Session
 from ...io.base_model import BaseModel
 from ...plot.waveforms import WaveformView
-from ...notebook.utils import load_css
+from ...notebook.utils import load_css, ipython_shell
 
 
 #------------------------------------------------------------------------------
 # Default interface
 #------------------------------------------------------------------------------
 
-def start_manual_clustering(filename):
+def start_manual_clustering(filename=None, model=None):
     """Start a manual clustering session in the IPython notebook.
 
     Parameters
     ----------
     filename : str
-        Path to a .kwik file.
+        Path to a .kwik file, to be used if 'model' is not used.
+    model : instance of BaseModel
+        A Model instance, to be used if 'filename' is not used.
 
     """
+
+    # Enable the notebook interface.
     enable_notebook()
-    experiment = KwikModel(filename)
-    session = Session(experiment)
+
+    if model is None:
+        model = KwikModel(filename)
+
+    session = Session(model)
 
     @session.views.create("Show waveforms")
     def show_waveforms():
@@ -66,9 +74,12 @@ def start_manual_clustering(filename):
     @session.views.create("Show clusters")
     def show_clusters():
         """Create and show a new cluster view."""
-        from IPython.display import display
-        view = ClusterView(clusters=session.cluster_labels,
-                           colors=session.cluster_colors)
+        try:
+            view = ClusterView(clusters=session.cluster_labels,
+                               colors=session.cluster_colors)
+        except RuntimeError:
+            warn("The cluster view only works in IPython.")
+            return
         view.on_trait_change(lambda _, __, clusters: session.select(clusters),
                              'value')
         load_css('static/widgets.css')

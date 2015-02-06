@@ -89,6 +89,18 @@ def _enable_gui(shell, backend):
     shell.run_line_magic('gui', backend)
 
 
+def ipython_shell():
+    """Return True if we are in IPython."""
+    # Import IPython.
+    try:
+        from IPython import get_ipython
+    except ImportError:
+        raise ImportError("IPython is required.")
+    # Get the IPython shell.
+    shell = get_ipython()
+    return shell
+
+
 def enable_notebook(backend=None):
     """Enable notebook integration with the given backend for VisPy."""
     # TODO: unit tests
@@ -100,14 +112,6 @@ def enable_notebook(backend=None):
         from vispy import app
     except ImportError:
         raise ImportError("VisPy is required in the notebook.")
-    shell = None
-    try:
-        # Import IPython.
-        from IPython import get_ipython
-        # Get the IPython shell.
-        shell = get_ipython()
-    except ImportError:
-        raise ImportError("IPython is required.")
     # Default backend.
     if backend is None:
         # TODO: user-level parameter
@@ -115,6 +119,7 @@ def enable_notebook(backend=None):
     # Enable the VisPy backend.
     app.use_app(backend)
     # Enable IPython event loop integration.
+    shell = ipython_shell()
     if shell is not None:
         if backend == 'pyqt4':
             _enable_gui(shell, 'qt')
