@@ -20,45 +20,76 @@ from ..session import Session, CallbackManager
 # Tests
 #------------------------------------------------------------------------------
 
+class _BaseView(object):
+    is_loaded = False
+    is_selected = False
+    is_clustered = False
+
+    def show(self):
+        pass
+
+
+class _MyView(_BaseView):
+    pass
+
+
+class _MyViewBis(_BaseView):
+    pass
+
+
 def test_callback_manager():
     model = MockModel()
     session = Session(model)
 
     cm = session._callback_manager
 
-    # Check that 'show_me()' is called the correct number of times.
-    global _count
-    _count = 0
-
-    class _MyView(object):
-        pass
-
-    # Create view.
+    # Create views.
     @cm.create("Show me")
     def show_me():
-        global _count
-        _count += 1
-        return _MyView()
+        view = _MyView()
+        view.show()
+        return view
 
-    show_me()
-    assert _count == 1
+    @cm.create("Show me bis")
+    def show_me_bis():
+        view = _MyViewBis()
+        view.show()
+        return view
 
+    view = session.show_me()
     session.show_me()
-    assert _count == 2
 
     assert len(session._views) == 2
 
-    global _is_selected
-    _is_selected = False
-
-    @cm.select(_MyView)
-    def _selected(view):
-        global _is_selected
+    # Test loading.
+    @cm.load(_MyView)
+    def loaded(view):
         assert isinstance(view, _MyView)
-        _is_selected = True
+        view.is_loaded = True
 
+    assert not view.is_loaded
+    session._update_after_load()
+    assert view.is_loaded
+
+    # Test selection.
+    @cm.select(_MyView)
+    def selected(view):
+        assert isinstance(view, _MyView)
+        view.is_selected = True
+
+    assert not view.is_selected
     session.select([0])
-    assert _is_selected
+    assert view.is_selected
+
+    # Test cluster.
+    @cm.cluster(_MyView)
+    def clustered(view, up=None):
+        assert isinstance(view, _MyView)
+        view.is_clustered = True
+
+    assert not view.is_clustered
+    session.merge([0])
+    assert view.is_clustered
 
 
 def test_session():

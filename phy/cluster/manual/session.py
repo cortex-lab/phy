@@ -44,7 +44,8 @@ class CallbackManager(object):
     def _call_callback_on_view(self, callback_item, view, **kwargs):
         """Call a callback item on a view."""
         # Only call the callback if the view is of the correct type.
-        if not isinstance(view, callback_item['view']):
+        if (callback_item['view'] is None or
+           not isinstance(view, callback_item['view'])):
             return
         # Call the callback function on the view, with possibly an
         # 'up' instance as argument.
@@ -85,6 +86,8 @@ class CallbackManager(object):
                 for callback in self.callbacks('load', 'select'):
                     self._call_callback_on_view(callback, view)
 
+                return view
+
             # Assign the decorated view creator to the session.
             setattr(self._session, f.__name__, _register_view)
 
@@ -102,7 +105,7 @@ class CallbackManager(object):
         """Callback function when clusters are selected."""
         return self._decorator('select', view=view)
 
-    def cluster(self, callback, view=None):
+    def cluster(self, view=None):
         """Callback function when the clustering changes."""
         return self._decorator('cluster', view=view)
 
