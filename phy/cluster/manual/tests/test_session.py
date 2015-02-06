@@ -24,7 +24,7 @@ def test_callback_manager():
     model = MockModel()
     session = Session(model)
 
-    cm = CallbackManager(session)
+    cm = session._callback_manager
 
     # Check that 'show_me()' is called the correct number of times.
     global _count
@@ -48,9 +48,17 @@ def test_callback_manager():
 
     assert len(session.views) == 2
 
-    @cm.load(_MyView)
-    def _loaded(view):
+    global _is_selected
+    _is_selected = False
+
+    @cm.select(_MyView)
+    def _selected(view):
+        global _is_selected
         assert isinstance(view, _MyView)
+        _is_selected = True
+
+    session.select([0])
+    assert _is_selected
 
 
 def test_session():

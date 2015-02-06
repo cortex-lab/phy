@@ -55,11 +55,12 @@ class CallbackManager(object):
 
     def _decorator(self, callback_type, **kwargs):
         """Return a decorator adding a callback function."""
-        def decorator(f):
+        def create_decorator(f):
             item = {'callback': f}
             item.update(kwargs)
             self._callbacks[callback_type].append(item)
-        return decorator
+            return f
+        return create_decorator
 
     def create(self, action_name=None):
         """Callback function creating a new view."""
@@ -154,6 +155,7 @@ class Session(object):
 
     def _update_after_load(self):
         """Update the session after new data has been loaded."""
+        # TODO: call this after the channel groups has changed.
         # Update the Selector and Clustering instances using the Model.
         spike_clusters = self.model.spike_clusters
         self.selector = Selector(spike_clusters, n_spikes_max=100)
