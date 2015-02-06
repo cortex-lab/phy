@@ -25,7 +25,12 @@ def test_view_manager():
     session = Session(model)
 
     cm = CallbackManager(session)
-    assert cm
+
+    @cm.create("Show me")
+    def show_me():
+        pass
+
+    show_me()
 
 
 def test_session():

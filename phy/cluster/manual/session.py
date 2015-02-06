@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 from collections import defaultdict
+from functools import wraps
 
 import numpy as np
 
@@ -29,6 +30,7 @@ class CallbackManager(object):
     def __init__(self, session):
         self._session = session
         self._callbacks = defaultdict(list)
+        self._view_creators = []
 
     def callbacks(self, callback_type):
         """Return all callbacks registered for a given callback type."""
@@ -44,23 +46,29 @@ class CallbackManager(object):
 
     def create(self, action_name=None):
         """Callback function creating a new view."""
+        def create_decorator(f):
 
-        def decorator(f):
+            # Check that the decorated function name is valid.
             if hasattr(self._session, f.__name__):
-                raise ValueError("This function name already exists in the "
-                                 "Session: {0}.".format(f.__name__))
+                raise ValueError("This function name already exists in "
+                                 "the Session: {0}.".format(f.__name__))
 
-            # Assign the decorated function to the Session so that views
-            # can be easily created.
+            # Wrapped function.
+            @wraps(f)
             def _register_view():
                 # Create the view.
                 view = f()
                 # Register the view.
                 self._session._views.append(view)
 
+            # Assign the decorated view creator to the session.
             setattr(self._session, f.__name__, _register_view)
 
-        return decorator
+            # Register the view creators with their names.
+            self._view_creators.append((_register_view, action_name))
+
+            return _register_view
+        return create_decorator
 
     def load(self, view=None):
         """Callback function when a dataset is loaded."""
@@ -120,9 +128,9 @@ class Session(object):
             assert 'view' in item
             for view in self._iter_views(item['view']):
                 if 'up' in kwargs:
-                    item['callback'](self, view, up=kwargs['up'])
+                    item['callback'](view, up=kwargs['up'])
                 else:
-                    item['callback'](self, view)
+                    item['callback'](view)
 
     # Controller.
     # -------------------------------------------------------------------------
