@@ -9,7 +9,7 @@
 import numpy as np
 
 from ..ext import six
-from ..utils.array import _as_array
+from ..utils.array import _as_array, _pad
 
 
 #------------------------------------------------------------------------------
@@ -47,41 +47,6 @@ def _slice(index, n_samples, margin=None):
     before = int(before)
     after = int(after)
     return slice(max(0, index - before), index + after, None)
-
-
-def _pad(arr, n, dir='left'):
-    """Pad an array with zeros along the first axis.
-
-    Arguments
-    ---------
-
-    n : int
-        Size of the returned array in the first axis.
-    dir : str
-        Direction of the padding. Must be one 'left' or 'right'.
-
-    """
-    assert dir in ('left', 'right')
-    n_arr = arr.shape[0]
-    shape = (n,) + arr.shape[1:]
-    if n_arr == n:
-        assert arr.shape == shape
-        return arr
-    elif n_arr < n:
-        out = np.zeros(shape, dtype=arr.dtype)
-        if dir == 'left':
-            out[-n_arr:, ...] = arr
-        elif dir == 'right':
-            out[:n_arr, ...] = arr
-        assert out.shape == shape
-        return out
-    else:
-        if dir == 'left':
-            out = arr[-n:, ...]
-        elif dir == 'right':
-            out = arr[:n, ...]
-        assert out.shape == shape
-        return out
 
 
 class WaveformLoader(object):

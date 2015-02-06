@@ -104,6 +104,41 @@ def _as_array(arr):
     return out
 
 
+def _pad(arr, n, dir='left'):
+    """Pad an array with zeros along the first axis.
+
+    Arguments
+    ---------
+
+    n : int
+        Size of the returned array in the first axis.
+    dir : str
+        Direction of the padding. Must be one 'left' or 'right'.
+
+    """
+    assert dir in ('left', 'right')
+    n_arr = arr.shape[0]
+    shape = (n,) + arr.shape[1:]
+    if n_arr == n:
+        assert arr.shape == shape
+        return arr
+    elif n_arr < n:
+        out = np.zeros(shape, dtype=arr.dtype)
+        if dir == 'left':
+            out[-n_arr:, ...] = arr
+        elif dir == 'right':
+            out[:n_arr, ...] = arr
+        assert out.shape == shape
+        return out
+    else:
+        if dir == 'left':
+            out = arr[-n:, ...]
+        elif dir == 'right':
+            out = arr[:n, ...]
+        assert out.shape == shape
+        return out
+
+
 # -----------------------------------------------------------------------------
 # Chunking functions
 # -----------------------------------------------------------------------------
