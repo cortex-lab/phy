@@ -13,7 +13,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ....datasets.mock import artificial_spike_clusters, MockModel
-from ..session import Session, ViewManager
+from ..session import Session, CallbackManager
 
 
 #------------------------------------------------------------------------------
@@ -24,8 +24,8 @@ def test_view_manager():
     model = MockModel()
     session = Session(model)
 
-    vm = ViewManager(session)
-    assert vm
+    cm = CallbackManager(session)
+    assert cm
 
 
 def test_session():
@@ -38,9 +38,6 @@ def test_session():
         Session(None)
 
     session = Session(model)
-
-    # Views.
-    # view = session.show_waveforms()
 
     session._update_after_load()
     ae(session.cluster_labels, np.arange(n_clusters))
@@ -110,5 +107,3 @@ def test_session():
         session.wizard_previous()
     with raises(NotImplementedError):
         session.wizard_reset()
-
-    # session.close_view(view)

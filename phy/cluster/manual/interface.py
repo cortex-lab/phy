@@ -40,22 +40,40 @@ def start_manual_clustering(filename):
     session = Session(experiment)
 
     @session.views.create("Show waveforms")
-    def show_waveforms():
+    def show_waveforms(session):
         view = WaveformView()
         view.show()
+        return view
 
-    @session.views.select
-    def update_waveforms_after_select(view):
-        if isinstance(view, WaveformView):
-            spikes = session.selector.selected_spikes
-            view.visual.waveforms = session.model.waveforms[spikes]
-            view.visual.masks = session.model.masks[spikes]
-            view.visual.spike_labels = spikes
+    @session.views.load(WaveformView)
+    def update_waveforms_after_load(session, view):
+        view.visual.spike_clusters = session.clustering.spike_clusters
+        view.visual.cluster_metadata = session.cluster_metadata
+        view.visual.channel_positions = session.model.probe.positions
 
-    @session.views.cluster
-    def update_waveforms_after_cluster(view, up=None):
-        if isinstance(view, WaveformView):
-            pass
+    @session.views.select(WaveformView)
+    def update_waveforms_after_select(session, view):
+        spikes = session.selector.selected_spikes
+        view.visual.waveforms = session.model.waveforms[spikes]
+        view.visual.masks = session.model.masks[spikes]
+        view.visual.spike_labels = spikes
+
+    @session.views.cluster(WaveformView)
+    def update_waveforms_after_cluster(session, view, up=None):
+        # TODO
+        pass
+
+    @session.views.create("Show clusters")
+    def show_clusters(session):
+        """Create and show a new cluster view."""
+        from IPython.display import display
+        view = ClusterView(clusters=session.cluster_labels,
+                           colors=session.cluster_colors)
+        view.on_trait_change(lambda _, __, clusters: session.select(clusters),
+                             'value')
+        load_css('static/widgets.css')
+        display(view)
+        return view
 
     session.show_clusters()
     session.show_waveforms()
