@@ -93,9 +93,12 @@ def ipython_shell():
     """Return True if we are in IPython."""
     # Import IPython.
     try:
+        import IPython
         from IPython import get_ipython
     except ImportError:
         raise ImportError("IPython is required.")
+    if IPython.__version__ < (3,):
+        raise ImportError("IPython >= 3.0 is required.")
     # Get the IPython shell.
     shell = get_ipython()
     return shell

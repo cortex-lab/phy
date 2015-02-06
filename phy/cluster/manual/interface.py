@@ -87,6 +87,5 @@ def start_manual_clustering(filename=None, model=None):
         return view
 
     session.show_clusters()
-    # session.show_waveforms()
 
     return session
