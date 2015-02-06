@@ -151,7 +151,8 @@ def unregister(logger):
 
 
 def _log(level, *msg):
-    msg = ' '.join(str(_) for _ in msg)
+    if isinstance(msg, tuple):
+        msg = ' '.join(str(_) for _ in msg)
     for name, logger in iteritems(LOGGERS):
         getattr(logger, level)(msg)
 
@@ -160,11 +161,11 @@ def debug(*msg):
     _log('debug', *msg)
 
 
-def info(msg):
+def info(*msg):
     _log('info', *msg)
 
 
-def warn(msg):
+def warn(*msg):
     _log('warn', *msg)
 
 
