@@ -153,6 +153,7 @@ class WaveformLoader(object):
             extract = _pad(extract, self.n_samples_waveforms, 'right')
 
         # Filter the waveforms.
+        # TODO: do the filtering in a vectorized way for more performance.
         if self._filter is not None:
             waveforms = self._filter(extract)
         else:
