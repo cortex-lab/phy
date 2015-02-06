@@ -30,11 +30,28 @@ class CallbackManager(object):
     def __init__(self, session):
         self._session = session
         self._callbacks = defaultdict(list)
+        # List of (create_callback, action_name) pairs.
         self._view_creators = []
 
-    def callbacks(self, callback_type):
+    def callbacks(self, *callback_types):
         """Return all callbacks registered for a given callback type."""
-        return self._callbacks[callback_type]
+        # List of callback functions, for all specified callback types.
+        l = [self._callbacks[callback_type]
+             for callback_type in callback_types]
+        # Flatten the list of lists.
+        return [item for sublist in l for item in sublist]
+
+    def _call_callback_on_view(self, callback_item, view, **kwargs):
+        """Call a callback item on a view."""
+        # Only call the callback if the view is of the correct type.
+        if not isinstance(view, callback_item['view']):
+            return
+        # Call the callback function on the view, with possibly an
+        # 'up' instance as argument.
+        if 'up' in kwargs:
+            callback_item['callback'](view, up=kwargs['up'])
+        else:
+            callback_item['callback'](view)
 
     def _decorator(self, callback_type, **kwargs):
         """Return a decorator adding a callback function."""
@@ -60,6 +77,12 @@ class CallbackManager(object):
                 view = f()
                 # Register the view.
                 self._session._views.append(view)
+                # Call all 'load' and 'select' callbacks on that view.
+                # This is to make sure the view is automatically updated
+                # when it is created after the data has been loaded and
+                # some clusters have been selected.
+                for callback in self.callbacks('load', 'select'):
+                    self._call_callback_on_view(callback, view)
 
             # Assign the decorated view creator to the session.
             setattr(self._session, f.__name__, _register_view)
@@ -114,23 +137,17 @@ class Session(object):
                     continue
                 yield view
 
-    def _iter_callbacks(self, callback_type):
-        """Iterate over all callbacks of a certain type."""
-        for item in self._callback_manager.callbacks(callback_type):
-            yield item
-
     def _call_callbacks(self, callback_type, **kwargs):
         """Call all callbacks of a given type."""
         # kwargs are arguments to pass to the callbacks.
-        for item in self._iter_callbacks(callback_type):
+        for item in self._callback_manager.callbacks(callback_type):
             # 'item' is a dictionary containing information about the callback.
             # item['callback'] is the callback function itself.
             assert 'view' in item
             for view in self._iter_views(item['view']):
-                if 'up' in kwargs:
-                    item['callback'](view, up=kwargs['up'])
-                else:
-                    item['callback'](view)
+                self._callback_manager._call_callback_on_view(item,
+                                                              view,
+                                                              **kwargs)
 
     # Controller.
     # -------------------------------------------------------------------------

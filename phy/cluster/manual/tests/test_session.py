@@ -20,17 +20,37 @@ from ..session import Session, CallbackManager
 # Tests
 #------------------------------------------------------------------------------
 
-def test_view_manager():
+def test_callback_manager():
     model = MockModel()
     session = Session(model)
 
     cm = CallbackManager(session)
 
-    @cm.create("Show me")
-    def show_me():
+    # Check that 'show_me()' is called the correct number of times.
+    global _count
+    _count = 0
+
+    class _MyView(object):
         pass
 
+    # Create view.
+    @cm.create("Show me")
+    def show_me():
+        global _count
+        _count += 1
+        return _MyView()
+
     show_me()
+    assert _count == 1
+
+    session.show_me()
+    assert _count == 2
+
+    assert len(session.views) == 2
+
+    @cm.load(_MyView)
+    def _loaded(view):
+        assert isinstance(view, _MyView)
 
 
 def test_session():
