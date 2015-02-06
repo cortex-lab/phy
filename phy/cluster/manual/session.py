@@ -44,7 +44,7 @@ class CallbackManager(object):
     def _call_callback_on_view(self, callback_item, view, **kwargs):
         """Call a callback item on a view."""
         # Only call the callback if the view is of the correct type.
-        if (callback_item['view'] is None or
+        if (callback_item['view'] is not None and
            not isinstance(view, callback_item['view'])):
             return
         # Call the callback function on the view, with possibly an

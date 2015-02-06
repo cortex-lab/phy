@@ -61,6 +61,8 @@ def test_callback_manager():
 
     assert len(session._views) == 2
 
+    view_bis = session.show_me_bis()
+
     # Test loading.
     @cm.load(_MyView)
     def loaded(view):
@@ -72,9 +74,9 @@ def test_callback_manager():
     assert view.is_loaded
 
     # Test selection.
-    @cm.select(_MyView)
+    @cm.select()
     def selected(view):
-        assert isinstance(view, _MyView)
+        assert isinstance(view, (_MyView, _MyViewBis))
         view.is_selected = True
 
     assert not view.is_selected
@@ -82,14 +84,14 @@ def test_callback_manager():
     assert view.is_selected
 
     # Test cluster.
-    @cm.cluster(_MyView)
+    @cm.cluster(_MyViewBis)
     def clustered(view, up=None):
-        assert isinstance(view, _MyView)
+        assert isinstance(view, _MyViewBis)
         view.is_clustered = True
 
-    assert not view.is_clustered
+    assert not view_bis.is_clustered
     session.merge([0])
-    assert view.is_clustered
+    assert view_bis.is_clustered
 
 
 def test_session():
