@@ -11,6 +11,7 @@ import os.path as op
 from random import randint
 
 import numpy as np
+from numpy.testing import assert_array_equal as ae
 import h5py
 from pytest import raises
 
@@ -19,6 +20,7 @@ from ...datasets.mock import (artificial_spike_times,
                               artificial_features,
                               artificial_masks,
                               artificial_traces)
+from ...electrode.mea import MEA, staggered_positions
 from ...utils.tempdir import TemporaryDirectory
 from ..h5 import open_h5
 from ..kwik_model import (KwikModel, _list_channel_groups, _list_channels,
@@ -47,9 +49,17 @@ def _create_test_file(dir_path, n_clusters=None, n_spikes=None,
         def _write_metadata(key, value):
             f.write_attr('/application_data/spikedetekt', key, value)
 
-        _write_metadata('nfeatures_per_channel', n_features_per_channel)
+        _write_metadata('sample_rate', 20000.)
+
+        # Filter parameters.
+        _write_metadata('filter_low', 500.)
+        _write_metadata('filter_high', 0.95 * .5 * 20000.)
+        _write_metadata('filter_butter_order', 3)
+
         _write_metadata('extract_s_before', 15)
         _write_metadata('extract_s_after', 25)
+
+        _write_metadata('nfeatures_per_channel', n_features_per_channel)
 
         # Create spike times.
         spike_times = artificial_spike_times(n_spikes).astype(np.int64)
@@ -61,9 +71,11 @@ def _create_test_file(dir_path, n_clusters=None, n_spikes=None,
         f.write('/channel_groups/1/spikes/clusters/main', spike_clusters)
 
         # Create channels.
+        positions = staggered_positions(n_channels)
         for channel in range(n_channels):
             group = '/channel_groups/1/channels/{0:d}'.format(channel)
             f.write_attr(group, 'name', str(channel))
+            f.write_attr(group, 'position', positions[channel])
 
         # Create cluster metadata.
         for cluster in range(n_clusters):
@@ -182,11 +194,15 @@ def test_kwik_open():
         with raises(ValueError):
             kwik.channel_group = 42
 
+        # TODO: test cluster_metadata.
+        kwik.cluster_metadata
+
+        # Test probe.
+        assert isinstance(kwik.probe, MEA)
+        assert kwik.probe.positions.shape == (n_channels, 2)
+        ae(kwik.probe.positions, staggered_positions(n_channels))
+
         # Not implemented yet.
-        with raises(NotImplementedError):
-            kwik.cluster_metadata
-        with raises(NotImplementedError):
-            kwik.probe
         with raises(NotImplementedError):
             kwik.save()
 

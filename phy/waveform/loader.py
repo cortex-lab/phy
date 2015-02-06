@@ -43,7 +43,45 @@ def _slice(index, n_samples, margin=None):
     margin_before, margin_after = margin
     before += margin_before
     after += margin_after
+    index = int(index)
+    before = int(before)
+    after = int(after)
     return slice(max(0, index - before), index + after, None)
+
+
+def _pad(arr, n, dir='left'):
+    """Pad an array with zeros along the first axis.
+
+    Arguments
+    ---------
+
+    n : int
+        Size of the returned array in the first axis.
+    dir : str
+        Direction of the padding. Must be one 'left' or 'right'.
+
+    """
+    assert dir in ('left', 'right')
+    n_arr = arr.shape[0]
+    shape = (n,) + arr.shape[1:]
+    if n_arr == n:
+        assert arr.shape == shape
+        return arr
+    elif n_arr < n:
+        out = np.zeros(shape, dtype=arr.dtype)
+        if dir == 'left':
+            out[-n_arr:, ...] = arr
+        elif dir == 'right':
+            out[:n_arr, ...] = arr
+        assert out.shape == shape
+        return out
+    else:
+        if dir == 'left':
+            out = arr[-n:, ...]
+        elif dir == 'right':
+            out = arr[:n, ...]
+        assert out.shape == shape
+        return out
 
 
 class WaveformLoader(object):
@@ -51,14 +89,16 @@ class WaveformLoader(object):
 
     def __init__(self, traces=None, offset=0, filter=None,
                  n_samples=None, filter_margin=0,
-                 channels=None):
+                 channels=None, scale_factor=None):
         # A (possibly memmapped) array-like structure with traces.
         if traces is not None:
             self.traces = traces
         else:
             self._traces = None
+        # Scale factor for the loaded waveforms.
+        self._scale_factor = scale_factor
         # Offset of the traces: time (in samples) of the first trace sample.
-        self._offset = 0
+        self._offset = int(offset)
         # List of channels to use when loading the waveforms.
         self._channels = channels
         # A filter function that takes a (n_samples, n_channels) array as
@@ -99,6 +139,7 @@ class WaveformLoader(object):
 
     def _load_at(self, time):
         """Load a waveform at a given time."""
+        time = int(time)
         time_o = time - self._offset
         if not (0 <= time_o < self.n_samples_trace):
             raise ValueError("Invalid time {0:d}.".format(time_o))
@@ -106,21 +147,35 @@ class WaveformLoader(object):
                                self.n_samples_before_after,
                                self._filter_margin)
         extract = self._traces[slice_extract, :]
+
+        # Pad the extracted chunk if needed.
+        if slice_extract.start <= 0:
+            extract = _pad(extract, self.n_samples_waveforms, 'left')
+        elif slice_extract.stop >= self.n_samples_trace - 1:
+            extract = _pad(extract, self.n_samples_waveforms, 'right')
+
         # Filter the waveforms.
+        # TODO: do the filtering in a vectorized way for more performance.
         if self._filter is not None:
             waveforms = self._filter(extract)
         else:
             waveforms = extract
+
         # Remove the margin.
         margin_before, margin_after = self._filter_margin
         if margin_after > 0:
             assert margin_before >= 0
             waveforms = waveforms[margin_before:-margin_after, :]
+
         # Make a subselection with the specified channels.
         if self._channels is not None:
-            return waveforms[..., self._channels]
+            out = waveforms[..., self._channels]
         else:
-            return waveforms
+            out = waveforms
+
+        assert out.shape == (self.n_samples_waveforms,
+                             self.n_channels_waveforms)
+        return out
 
     def __getitem__(self, item):
         """Load a number of waveforms."""
@@ -139,5 +194,7 @@ class WaveformLoader(object):
         waveforms = np.empty(shape, dtype=np.float32)
         # Load all spikes.
         for i, time in enumerate(spikes):
-            waveforms[i:i+1, ...] = self._load_at(time)
+            waveforms[i, ...] = self._load_at(time)
+        if self._scale_factor is not None:
+            waveforms *= self._scale_factor
         return waveforms

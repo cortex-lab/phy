@@ -11,7 +11,6 @@ import numpy.random as nr
 
 from ..ext import six
 from ..io.base_model import BaseModel
-from ..utils.array import _normalize
 from ..cluster.manual.cluster_metadata import ClusterMetadata
 from ..electrode.mea import MEA, staggered_positions
 
@@ -65,7 +64,6 @@ class MockModel(BaseModel):
         self._metadata = {'description': 'A mock model.'}
         self._cluster_metadata = ClusterMetadata()
         positions = staggered_positions(self.n_channels)
-        positions = _normalize(positions)
         self._probe = MEA(positions=positions)
         self._traces = artificial_traces(self.n_samples_traces,
                                          self.n_channels)

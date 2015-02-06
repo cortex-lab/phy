@@ -54,7 +54,7 @@ def _index_of(arr, lookup):
 
 _ACCEPTED_ARRAY_DTYPES = (np.float, np.float32, np.float64,
                           np.int, np.int8, np.int16, np.uint8, np.uint16,
-                          np.int32, np.int64,
+                          np.int32, np.int64, np.uint32, np.uint64,
                           np.bool)
 
 
@@ -148,3 +148,52 @@ def data_chunk(data, chunk, with_overlap=False):
         raise ValueError("'chunk' should have 2 or 4 elements, "
                          "not {0:d}".format(len(chunk)))
     return data[i:j, ...]
+
+
+# -----------------------------------------------------------------------------
+# PartialArray
+# -----------------------------------------------------------------------------
+
+def _as_tuple(item):
+    """Ensure an item is a tuple."""
+    if item is None:
+        return None
+    elif not isinstance(item, tuple):
+        return (item,)
+    else:
+        return item
+
+
+def _partial_shape(shape, trailing_index):
+    """Return the shape of a partial array."""
+    trailing_index = _as_tuple(trailing_index)
+    # Length of the selection items for the partial array.
+    len_item = len(shape) - len(trailing_index)
+    # Array for the trailing dimensions.
+    _arr = np.empty(shape=shape[len_item:])
+    try:
+        trailing_arr = _arr[trailing_index]
+    except IndexError:
+        raise ValueError("The partial shape index is invalid.")
+    return shape[:len_item] + trailing_arr.shape
+
+
+class PartialArray(object):
+    """Proxy to a view of an array, allowing selection along the first
+    dimensions and fixing the trailing dimensions."""
+    def __init__(self, arr, trailing_index=None):
+        self._arr = arr
+        self._trailing_index = _as_tuple(trailing_index)
+        self.shape = _partial_shape(arr.shape, self._trailing_index)
+        self.dtype = arr.dtype
+
+    def __getitem__(self, item):
+        if self._trailing_index is None:
+            return self._arr[item]
+        else:
+            item = _as_tuple(item)
+            item += self._trailing_index
+            if len(item) != len(self._arr.shape):
+                raise ValueError("The array selection is invalid: "
+                                 "{0}".format(str(item)))
+            return self._arr[item]

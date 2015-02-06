@@ -80,7 +80,12 @@ class File(object):
     def read_attr(self, path, attr_name):
         """Read an attribute of an HDF5 group."""
         _check_hdf5_path(self._h5py_file, path)
-        return self._h5py_file[path].attrs[attr_name]
+        attrs = self._h5py_file[path].attrs
+        if attr_name in attrs:
+            return attrs[attr_name]
+        else:
+            return KeyError("The attribute '{0:s}'".format(attr_name) +
+                            " doesn't exist.")
 
     # Writing functions
     #--------------------------------------------------------------------------

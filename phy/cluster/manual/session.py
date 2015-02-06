@@ -66,7 +66,7 @@ class Session(object):
         """Update the session after new data has been loaded."""
         # Update the Selector and Clustering instances using the Model.
         spike_clusters = self.model.spike_clusters
-        self.selector = Selector(spike_clusters, n_spikes_max=None)
+        self.selector = Selector(spike_clusters, n_spikes_max=100)
         self.clustering = Clustering(spike_clusters)
         self.cluster_metadata = self.model.cluster_metadata
         # Reinitialize all existing views.

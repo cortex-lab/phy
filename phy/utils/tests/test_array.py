@@ -11,7 +11,8 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ..array import (_unique, _normalize, _index_of, _as_array,
-                     chunk_bounds, excerpts, data_chunk)
+                     chunk_bounds, excerpts, data_chunk,
+                     PartialArray, _partial_shape)
 from ...datasets.mock import artificial_spike_clusters
 
 
@@ -107,3 +108,61 @@ def test_excerpts_2():
                                                         n_excerpts=3,
                                                         excerpt_size=10)]
     assert bounds == [(0, 10)]
+
+
+#------------------------------------------------------------------------------
+# Test PartialArray
+#------------------------------------------------------------------------------
+
+def test_partial_shape():
+    assert _partial_shape((5, 3), 1) == (5,)
+    assert _partial_shape((5, 3), (1,)) == (5,)
+    assert _partial_shape((5, 10, 2), 1) == (5, 10)
+    with raises(ValueError):
+        _partial_shape((5, 10, 2), (1, 2))
+    assert _partial_shape((5, 10, 3), (1, 2)) == (5,)
+    assert _partial_shape((5, 10, 3), (slice(None, None, None), 2)) == (5, 10)
+    assert _partial_shape((5, 10, 3), (slice(1, None, None), 2)) == (5, 9)
+    assert _partial_shape((5, 10, 3), (slice(1, 5, None), 2)) == (5, 4)
+    assert _partial_shape((5, 10, 3), (slice(4, None, 3), 2)) == (5, 2)
+
+
+def test_partial_array():
+    # 2D array.
+    arr = np.random.rand(5, 2)
+
+    pa = PartialArray(arr, 1)
+    assert pa.shape == (5,)
+    ae(pa[0], arr[0, 1])
+    ae(pa[0:2], arr[0:2, 1])
+    ae(pa[[1, 2]], arr[[1, 2], 1])
+    with raises(ValueError):
+        pa[[1, 2], 0]
+
+    # 3D array.
+    arr = np.random.rand(5, 3, 2)
+
+    pa = PartialArray(arr, (2, 1))
+    assert pa.shape == (5,)
+    ae(pa[0], arr[0, 2, 1])
+    ae(pa[0:2], arr[0:2, 2, 1])
+    ae(pa[[1, 2]], arr[[1, 2], 2, 1])
+    with raises(ValueError):
+        pa[[1, 2], 0]
+
+    pa = PartialArray(arr, (1,))
+    assert pa.shape == (5, 3)
+    ae(pa[0, 2], arr[0, 2, 1])
+    ae(pa[0:2, 1], arr[0:2, 1, 1])
+    ae(pa[[1, 2], 0], arr[[1, 2], 0, 1])
+    with raises(ValueError):
+        pa[[1, 2]]
+
+    # Slice and 3D.
+    arr = np.random.rand(5, 10, 2)
+
+    pa = PartialArray(arr, (slice(1, None, 3), 1))
+    assert pa.shape == (5, 3)
+    ae(pa[0], arr[0, 1::3, 1])
+    ae(pa[0:2], arr[0:2, 1::3, 1])
+    ae(pa[[1, 2]], arr[[1, 2], 1::3, 1])

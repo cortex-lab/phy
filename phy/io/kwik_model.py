@@ -12,8 +12,13 @@ import numpy as np
 
 from ..ext import six
 from .base_model import BaseModel
+from ..cluster.manual.cluster_metadata import ClusterMetadata
 from .h5 import open_h5, _check_hdf5_path
 from ..waveform.loader import WaveformLoader
+from ..waveform.filter import bandpass_filter, apply_filter
+from ..electrode.mea import MEA, linear_positions
+from ..utils.logging import debug
+from ..utils.array import PartialArray
 
 
 #------------------------------------------------------------------------------
@@ -80,28 +85,6 @@ def _kwik_filenames(filename):
     basename, ext = op.splitext(filename)
     return {ext: '{basename}.{ext}'.format(basename=basename, ext=ext)
             for ext in _KWIK_EXTENSIONS}
-
-
-class PartialArray(object):
-    """Proxy to a view of an array, fixing the last dimension."""
-    def __init__(self, arr, col=None):
-        self._arr = arr
-        self._col = col
-        self.dtype = arr.dtype
-
-    @property
-    def shape(self):
-        return self._arr.shape[:-1]
-
-    def __getitem__(self, item):
-        if self._col is None:
-            return self._arr[item]
-        else:
-            if isinstance(item, tuple):
-                item += (self._col,)
-                return self._arr[item]
-            else:
-                return self._arr[item, ..., self._col]
 
 
 class SpikeLoader(object):
@@ -207,6 +190,10 @@ class KwikModel(BaseModel):
         return '{0:s}/spikes'.format(self._channel_groups_path)
 
     @property
+    def _channels_path(self):
+        return '{0:s}/channels'.format(self._channel_groups_path)
+
+    @property
     def _clusters_path(self):
         return '{0:s}/clusters'.format(self._channel_groups_path)
 
@@ -221,8 +208,11 @@ class KwikModel(BaseModel):
         path = '/application_data/spikedetekt/'
         metadata_fields = self._kwik.attrs(path)
         for field in metadata_fields:
-            metadata[field] = self._kwik.read_attr(path, field)
-        # TODO: load probe
+            if field.islower():
+                try:
+                    metadata[field] = self._kwik.read_attr(path, field)
+                except TypeError:
+                    debug("Unable to load metadata field {0:s}".format(field))
         self._metadata = metadata
 
     # Channel group
@@ -244,7 +234,7 @@ class KwikModel(BaseModel):
 
         # Load spike times.
         path = '{0:s}/time_samples'.format(self._spikes_path)
-        self._spike_times = self._kwik.read(path)
+        self._spike_times = self._kwik.read(path)[:]
 
         # Load features masks.
         path = '{0:s}/features_masks'.format(self._channel_groups_path)
@@ -253,20 +243,48 @@ class KwikModel(BaseModel):
             fm = self._kwx.read(path)
             self._features = PartialArray(fm, 0)
 
-            # WARNING: load *all* channel masks in memory for now
             # TODO: sparse, memory mapped, memcache, etc.
             k = self._metadata['nfeatures_per_channel']
-            self._masks = fm[:, 0:k * self.n_channels:k, 1]
+            # This partial array simulates a (n_spikes, n_channels) array.
+            self._masks = PartialArray(fm,
+                                       (slice(0, k * self.n_channels, k), 1))
             assert self._masks.shape == (self.n_spikes, self.n_channels)
 
+        self._cluster_metadata = ClusterMetadata()
+
+        # Load probe.
+        positions = self._load_channel_positions()
+
+        # TODO: support multiple channel groups.
+        self._probe = MEA(positions=positions,
+                          n_channels=self.n_channels)
+
         self._create_waveform_loader()
+
+    def _load_channel_positions(self):
+        """Load the channel positions from the kwik file."""
+        positions = []
+        for channel in self.channels:
+            path = '{0:s}/{1:d}'.format(self._channels_path, channel)
+            position = self._kwik.read_attr(path, 'position')
+            positions.append(position)
+        return np.array(positions)
 
     def _create_waveform_loader(self):
         """Create a waveform loader."""
         n_samples = (self._metadata['extract_s_before'],
                      self._metadata['extract_s_after'])
+        order = self._metadata['filter_butter_order']
+        b_filter = bandpass_filter(rate=self._metadata['sample_rate'],
+                                   low=self._metadata['filter_low'],
+                                   high=self._metadata['filter_high'],
+                                   order=order)
+        filter = lambda x: apply_filter(x, b_filter)
         self._waveform_loader = WaveformLoader(n_samples=n_samples,
-                                               channels=self._channels)
+                                               channels=self._channels,
+                                               filter=filter,
+                                               filter_margin=order * 3,
+                                               scale_factor=.01)
 
     @property
     def channels(self):
@@ -308,7 +326,7 @@ class KwikModel(BaseModel):
         # NOTE: we are ensured here that self._channel_group is valid.
         path = '{0:s}/clusters/{1:s}'.format(self._spikes_path,
                                              self._clustering)
-        self._spike_clusters = self._kwik.read(path)
+        self._spike_clusters = self._kwik.read(path)[:]
         # TODO: cluster metadata
 
     # Data
@@ -322,7 +340,7 @@ class KwikModel(BaseModel):
     @property
     def probe(self):
         """A Probe instance."""
-        raise NotImplementedError()
+        return self._probe
 
     @property
     def traces(self):
@@ -362,7 +380,8 @@ class KwikModel(BaseModel):
     @property
     def cluster_metadata(self):
         """ClusterMetadata instance holding information about the clusters."""
-        raise NotImplementedError()
+        # TODO
+        return self._cluster_metadata
 
     def save(self):
         """Commits all in-memory changes to disk."""

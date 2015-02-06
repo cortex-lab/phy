@@ -76,6 +76,10 @@ def test_loader_channels():
     assert loader[500].shape == (1, n_samples, 3)
     assert loader[[500, 501, 600, 300]].shape == (4, n_samples, 3)
 
+    # Test edge effects.
+    assert loader[3].shape == (1, n_samples, 3)
+    assert loader[995].shape == (1, n_samples, 3)
+
     with raises(NotImplementedError):
         loader[500:510]
 

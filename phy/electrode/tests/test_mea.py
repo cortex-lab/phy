@@ -9,7 +9,7 @@
 from pytest import raises
 import numpy as np
 
-from ..mea import MEA, staggered_positions
+from ..mea import MEA, linear_positions, staggered_positions
 
 
 #------------------------------------------------------------------------------
@@ -46,6 +46,9 @@ def test_mea():
 
 
 def test_probe():
-    probe = staggered_positions(32)
-    assert probe.shape == (32, 2)
+    probe = staggered_positions(31)
+    assert probe.shape == (31, 2)
     assert np.array_equal(probe[-1], (0, 0))
+
+    probe = linear_positions(29)
+    assert probe.shape == (29, 2)
