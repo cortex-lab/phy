@@ -107,8 +107,8 @@ def _as_array(arr):
 def _pad(arr, n, dir='right'):
     """Pad an array with zeros along the first axis.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
 
     n : int
         Size of the returned array in the first axis.

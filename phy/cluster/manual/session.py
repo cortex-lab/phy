@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from collections import defaultdict
+
 import numpy as np
 
 from ._history import GlobalHistory
@@ -24,22 +26,23 @@ from ...notebook.utils import load_css
 
 class ViewManager(object):
     """Manage several views."""
-    def __init__(self):
-        self._views = []
+    def __init__(self, session):
+        self._session = session
+        self._callbacks = defaultdict(list)
 
-    def register(self, view):
-        """Register a view."""
-        self._views.append(view)
+    def create(self, action_name=None):
+        def decorator(f):
+            self._callbacks['create'].append(f)
+        """Register a function creating a view."""
+        return decorator
 
-    def unregister(self, view):
-        """Unregister a view."""
-        view.close()
-        if view in self._views:
-            self._views.remove(view)
+    def select(self, callback):
+        """Register a function updating a view after a cluster selection."""
+        pass
 
-    @property
-    def views(self):
-        return self._views
+    def cluster(self, callback):
+        """Register a function updating a view after a clustering change."""
+        pass
 
 
 #------------------------------------------------------------------------------
@@ -54,10 +57,14 @@ class Session(object):
             raise ValueError("'model' must be an instance of a "
                              "class deriving from BaseModel.")
         self._global_history = GlobalHistory()
-        self._view_manager = ViewManager()
+        self._view_manager = ViewManager(self)
         # Set the model and initialize the session.
         self.model = model
         self._update_after_load()
+
+    @property
+    def views(self):
+        return self._view_manager
 
     # Controller.
     # -------------------------------------------------------------------------

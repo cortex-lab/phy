@@ -33,8 +33,8 @@ def _read_file(path):
 def _inject_js(path):
     """Inject a JS file in the notebook.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
 
     path : str
         Absolute path to a .js file.
@@ -46,8 +46,8 @@ def _inject_js(path):
 def _inject_css(path):
     """Inject a CSS file in the notebook.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
 
     path : str
         Absolute path to a .css file.
