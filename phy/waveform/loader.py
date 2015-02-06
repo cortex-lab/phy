@@ -89,12 +89,14 @@ class WaveformLoader(object):
 
     def __init__(self, traces=None, offset=0, filter=None,
                  n_samples=None, filter_margin=0,
-                 channels=None):
+                 channels=None, scale_factor=None):
         # A (possibly memmapped) array-like structure with traces.
         if traces is not None:
             self.traces = traces
         else:
             self._traces = None
+        # Scale factor for the loaded waveforms.
+        self._scale_factor = scale_factor
         # Offset of the traces: time (in samples) of the first trace sample.
         self._offset = int(offset)
         # List of channels to use when loading the waveforms.
@@ -193,4 +195,6 @@ class WaveformLoader(object):
         # Load all spikes.
         for i, time in enumerate(spikes):
             waveforms[i, ...] = self._load_at(time)
+        if self._scale_factor is not None:
+            waveforms *= self._scale_factor
         return waveforms

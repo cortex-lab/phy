@@ -303,7 +303,8 @@ class KwikModel(BaseModel):
         self._waveform_loader = WaveformLoader(n_samples=n_samples,
                                                channels=self._channels,
                                                filter=filter,
-                                               filter_margin=order * 3)
+                                               filter_margin=order * 3,
+                                               scale_factor=.01)
 
     @property
     def channels(self):
