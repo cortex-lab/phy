@@ -189,6 +189,8 @@ def _as_tuple(item):
     """Ensure an item is a tuple."""
     if item is None:
         return None
+    # elif hasattr(item, '__len__'):
+    #     return tuple(item)
     elif not isinstance(item, tuple):
         return (item,)
     else:
@@ -197,6 +199,10 @@ def _as_tuple(item):
 
 def _partial_shape(shape, trailing_index):
     """Return the shape of a partial array."""
+    if shape is None:
+        shape = ()
+    if trailing_index is None:
+        trailing_index = ()
     trailing_index = _as_tuple(trailing_index)
     # Length of the selection items for the partial array.
     len_item = len(shape) - len(trailing_index)

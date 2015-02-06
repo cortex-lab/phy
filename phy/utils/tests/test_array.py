@@ -10,7 +10,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ..array import (_unique, _normalize, _index_of, _as_array,
+from ..array import (_unique, _normalize, _index_of, _as_array, _as_tuple,
                      chunk_bounds, excerpts, data_chunk,
                      PartialArray, _partial_shape,
                      _range_from_slice)
@@ -102,6 +102,16 @@ def test_index_of():
     ae(_index_of(arr, lookup), [1, 2, 2, 1, 1, 0, 2])
 
 
+def test_as_tuple():
+    assert _as_tuple(3) == (3,)
+    assert _as_tuple((3,)) == (3,)
+    assert _as_tuple(None) is None
+    assert _as_tuple((None,)) == (None,)
+    assert _as_tuple((3, 4)) == (3, 4)
+    assert _as_tuple([3]) == ([3], )
+    assert _as_tuple([3, 4]) == ([3, 4], )
+
+
 def test_as_array():
     ae(_as_array(3), [3])
     ae(_as_array([3]), [3])
@@ -184,6 +194,8 @@ def test_partial_shape():
 def test_partial_array():
     # 2D array.
     arr = np.random.rand(5, 2)
+
+    ae(PartialArray(arr)[:], arr)
 
     pa = PartialArray(arr, 1)
     assert pa.shape == (5,)

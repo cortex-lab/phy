@@ -84,8 +84,8 @@ class File(object):
         if attr_name in attrs:
             return attrs[attr_name]
         else:
-            return KeyError("The attribute '{0:s}'".format(attr_name) +
-                            " doesn't exist.")
+            raise KeyError("The attribute '{0:s}'".format(attr_name) +
+                           " doesn't exist.")
 
     # Writing functions
     #--------------------------------------------------------------------------

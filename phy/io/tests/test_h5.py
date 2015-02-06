@@ -156,6 +156,10 @@ def test_h5_write():
 
             # Write an existing attribute.
             f.write_attr('/ds1', 'myattr', 456)
+
+            with raises(KeyError):
+                f.read_attr('/ds1', 'nonexistingattr')
+
             assert f.read_attr('/ds1', 'myattr') == 456
 
             # Write a new attribute in a dataset.
