@@ -148,3 +148,35 @@ def data_chunk(data, chunk, with_overlap=False):
         raise ValueError("'chunk' should have 2 or 4 elements, "
                          "not {0:d}".format(len(chunk)))
     return data[i:j, ...]
+
+
+# -----------------------------------------------------------------------------
+# PartialArray
+# -----------------------------------------------------------------------------
+
+class PartialArray(object):
+    """Proxy to a view of an array, allowing selection along the first
+    dimension and fixing the other dimensions."""
+    def __init__(self, arr, trailing_shape=None):
+        self._arr = arr
+        # We ensure trailing_shape is a tuple.
+        if trailing_shape is not None:
+            if not isinstance(trailing_shape, tuple):
+                trailing_shape = (trailing_shape,)
+            self.shape = arr.shape[:-len(trailing_shape)]
+        else:
+            self.shape = arr.shape
+        self._trailing_shape = trailing_shape
+        self.dtype = arr.dtype
+
+    def __getitem__(self, item):
+        if self._trailing_shape is None:
+            return self._arr[item]
+        else:
+            if not isinstance(item, tuple):
+                item = (item,)
+            item += self._trailing_shape
+            if len(item) != len(self._arr.shape):
+                raise ValueError("The array selection is invalid: "
+                                 "{0}".format(str(item)))
+            return self._arr[item]

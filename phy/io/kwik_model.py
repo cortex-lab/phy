@@ -18,6 +18,7 @@ from ..waveform.loader import WaveformLoader
 from ..waveform.filter import bandpass_filter, apply_filter
 from ..electrode.mea import MEA, linear_positions
 from ..utils.logging import debug
+from ..utils.array import PartialArray
 
 
 #------------------------------------------------------------------------------
@@ -84,28 +85,6 @@ def _kwik_filenames(filename):
     basename, ext = op.splitext(filename)
     return {ext: '{basename}.{ext}'.format(basename=basename, ext=ext)
             for ext in _KWIK_EXTENSIONS}
-
-
-class PartialArray(object):
-    """Proxy to a view of an array, fixing the last dimension."""
-    def __init__(self, arr, col=None):
-        self._arr = arr
-        self._col = col
-        self.dtype = arr.dtype
-
-    @property
-    def shape(self):
-        return self._arr.shape[:-1]
-
-    def __getitem__(self, item):
-        if self._col is None:
-            return self._arr[item]
-        else:
-            if isinstance(item, tuple):
-                item += (self._col,)
-                return self._arr[item]
-            else:
-                return self._arr[item, ..., self._col]
 
 
 class SpikeLoader(object):
