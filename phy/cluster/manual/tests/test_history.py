@@ -9,7 +9,6 @@
 import os
 
 import numpy as np
-from numpy.testing import assert_array_equal
 from pytest import raises
 
 from ....datasets.mock import artificial_spike_clusters

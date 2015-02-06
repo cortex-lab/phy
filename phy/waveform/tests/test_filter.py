@@ -8,6 +8,7 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from numpy.testing import assert_array_equal as ae
 
 from ..filter import bandpass_filter, apply_filter
 
@@ -34,3 +35,5 @@ def test_apply_filter():
     k = int(2. / low * rate)
     assert np.abs(x[k:-k]).max() >= .9
     assert np.abs(x_filtered[k:-k]).max() <= .1
+
+    ae(apply_filter([], filter=filter), [])

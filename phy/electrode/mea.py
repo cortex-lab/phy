@@ -64,8 +64,6 @@ class MEA(object):
 
 def linear_positions(n_channels):
     """Linear channel positions along the vertical axis."""
-    if n_channels in (0, None):
-        return np.array([[]])
     return np.c_[np.zeros(n_channels),
                  np.linspace(0., 1., n_channels)]
 

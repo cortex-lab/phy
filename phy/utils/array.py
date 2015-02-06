@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from math import floor
+
 import numpy as np
 
 from ..ext import six
@@ -14,6 +16,35 @@ from ..ext import six
 #------------------------------------------------------------------------------
 # Utility functions
 #------------------------------------------------------------------------------
+
+def _range_from_slice(myslice, start=None, stop=None, step=None, length=None):
+    """Convert a slice to an array of integers."""
+    assert isinstance(myslice, slice)
+    # Find 'step'.
+    step = step if step is not None else myslice.step
+    if step is None:
+        step = 1
+    # Find 'start'.
+    start = start if start is not None else myslice.start
+    if start is None:
+        start = 0
+    # Find 'stop' as a function of length if 'stop' is unspecified.
+    stop = stop if stop is not None else myslice.stop
+    if length is not None:
+        stop_inferred = floor(start + step * length)
+        if stop is not None and stop < stop_inferred:
+            raise ValueError("'stop' ({stop}) and ".format(stop=stop) +
+                             "'length' ({length}) ".format(length=length) +
+                             "are not compatible.")
+        stop = stop_inferred
+    if stop is None and length is None:
+        raise ValueError("'stop' and 'length' cannot be both unspecified.")
+    myrange = np.arange(start, stop, step)
+    # Check the length if it was specified.
+    if length is not None:
+        assert len(myrange) == length
+    return myrange
+
 
 def _unique(x):
     """Faster version of np.unique().
@@ -71,6 +102,45 @@ def _as_array(arr):
         raise ValueError("'arr' seems to have an invalid dtype: "
                          "{0:s}".format(str(out.dtype)))
     return out
+
+
+def _pad(arr, n, dir='right'):
+    """Pad an array with zeros along the first axis.
+
+    Arguments
+    ---------
+
+    n : int
+        Size of the returned array in the first axis.
+    dir : str
+        Direction of the padding. Must be one 'left' or 'right'.
+
+    """
+    assert dir in ('left', 'right')
+    if n < 0:
+        raise ValueError("'n' must be positive: {0}.".format(n))
+    elif n == 0:
+        return np.zeros((0,) + arr.shape[1:], dtype=arr.dtype)
+    n_arr = arr.shape[0]
+    shape = (n,) + arr.shape[1:]
+    if n_arr == n:
+        assert arr.shape == shape
+        return arr
+    elif n_arr < n:
+        out = np.zeros(shape, dtype=arr.dtype)
+        if dir == 'left':
+            out[-n_arr:, ...] = arr
+        elif dir == 'right':
+            out[:n_arr, ...] = arr
+        assert out.shape == shape
+        return out
+    else:
+        if dir == 'left':
+            out = arr[-n:, ...]
+        elif dir == 'right':
+            out = arr[:n, ...]
+        assert out.shape == shape
+        return out
 
 
 # -----------------------------------------------------------------------------
@@ -158,6 +228,8 @@ def _as_tuple(item):
     """Ensure an item is a tuple."""
     if item is None:
         return None
+    # elif hasattr(item, '__len__'):
+    #     return tuple(item)
     elif not isinstance(item, tuple):
         return (item,)
     else:
@@ -166,6 +238,10 @@ def _as_tuple(item):
 
 def _partial_shape(shape, trailing_index):
     """Return the shape of a partial array."""
+    if shape is None:
+        shape = ()
+    if trailing_index is None:
+        trailing_index = ()
     trailing_index = _as_tuple(trailing_index)
     # Length of the selection items for the partial array.
     len_item = len(shape) - len(trailing_index)

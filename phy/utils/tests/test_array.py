@@ -10,15 +10,92 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ..array import (_unique, _normalize, _index_of, _as_array,
+from ..array import (_unique, _normalize, _index_of, _as_array, _as_tuple,
                      chunk_bounds, excerpts, data_chunk,
-                     PartialArray, _partial_shape)
+                     PartialArray, _partial_shape,
+                     _range_from_slice, _pad)
 from ...datasets.mock import artificial_spike_clusters
 
 
 #------------------------------------------------------------------------------
 # Test utility functions
 #------------------------------------------------------------------------------
+
+def test_range_from_slice():
+    """Test '_range_from_slice'."""
+
+    class _SliceTest(object):
+        """Utility class to make it more convenient to test slice objects."""
+        def __init__(self, **kwargs):
+            self._kwargs = kwargs
+
+        def __getitem__(self, item):
+            if isinstance(item, slice):
+                return _range_from_slice(item, **self._kwargs)
+
+    with raises(ValueError):
+        _SliceTest()[:]
+    with raises(ValueError):
+        _SliceTest()[1:]
+    ae(_SliceTest()[:5], [0, 1, 2, 3, 4])
+    ae(_SliceTest()[1:5], [1, 2, 3, 4])
+
+    with raises(ValueError):
+        _SliceTest()[::2]
+    with raises(ValueError):
+        _SliceTest()[1::2]
+    ae(_SliceTest()[1:5:2], [1, 3])
+
+    with raises(ValueError):
+        _SliceTest(start=0)[:]
+    with raises(ValueError):
+        _SliceTest(start=1)[:]
+    with raises(ValueError):
+        _SliceTest(step=2)[:]
+
+    ae(_SliceTest(stop=5)[:], [0, 1, 2, 3, 4])
+    ae(_SliceTest(start=1, stop=5)[:], [1, 2, 3, 4])
+    ae(_SliceTest(stop=5)[1:], [1, 2, 3, 4])
+    ae(_SliceTest(start=1)[:5], [1, 2, 3, 4])
+    ae(_SliceTest(start=1, step=2)[:5], [1, 3])
+    ae(_SliceTest(start=1)[:5:2], [1, 3])
+
+    ae(_SliceTest(length=5)[:], [0, 1, 2, 3, 4])
+    with raises(ValueError):
+        _SliceTest(length=5)[:3]
+    ae(_SliceTest(length=5)[:10], [0, 1, 2, 3, 4])
+    ae(_SliceTest(length=5)[:5], [0, 1, 2, 3, 4])
+    ae(_SliceTest(start=1, length=5)[:], [1, 2, 3, 4, 5])
+    ae(_SliceTest(start=1, length=5)[:6], [1, 2, 3, 4, 5])
+    with raises(ValueError):
+        _SliceTest(start=1, length=5)[:4]
+    ae(_SliceTest(start=1, step=2, stop=5)[:], [1, 3])
+    ae(_SliceTest(start=1, stop=5)[::2], [1, 3])
+    ae(_SliceTest(stop=5)[1::2], [1, 3])
+
+
+def test_pad():
+    arr = np.random.rand(10, 3)
+
+    ae(_pad(arr, 0, 'right'), arr[:0, :])
+    ae(_pad(arr, 3, 'right'), arr[:3, :])
+    ae(_pad(arr, 9), arr[:9, :])
+    ae(_pad(arr, 10), arr)
+
+    ae(_pad(arr, 12, 'right')[:10, :], arr)
+    ae(_pad(arr, 12)[10:, :], np.zeros((2, 3)))
+
+    ae(_pad(arr, 0, 'left'), arr[:0, :])
+    ae(_pad(arr, 3, 'left'), arr[7:, :])
+    ae(_pad(arr, 9, 'left'), arr[1:, :])
+    ae(_pad(arr, 10, 'left'), arr)
+
+    ae(_pad(arr, 12, 'left')[2:, :], arr)
+    ae(_pad(arr, 12, 'left')[:2, :], np.zeros((2, 3)))
+
+    with raises(ValueError):
+        _pad(arr, -1)
+
 
 def test_unique():
     """Test _unique() function"""
@@ -46,6 +123,16 @@ def test_index_of():
     arr = [36, 42, 42, 36, 36, 2, 42]
     lookup = _unique(arr)
     ae(_index_of(arr, lookup), [1, 2, 2, 1, 1, 0, 2])
+
+
+def test_as_tuple():
+    assert _as_tuple(3) == (3,)
+    assert _as_tuple((3,)) == (3,)
+    assert _as_tuple(None) is None
+    assert _as_tuple((None,)) == (None,)
+    assert _as_tuple((3, 4)) == (3, 4)
+    assert _as_tuple([3]) == ([3], )
+    assert _as_tuple([3, 4]) == ([3, 4], )
 
 
 def test_as_array():
@@ -84,16 +171,16 @@ def test_chunk():
     d = data_chunk(data, ch)
     d_o = data_chunk(data, ch, with_overlap=True)
 
-    assert np.array_equal(d_o, data[0:100])
-    assert np.array_equal(d, data[0:90])
+    ae(d_o, data[0:100])
+    ae(d, data[0:90])
 
     # Chunk 2.
     ch = next(chunks)
     d = data_chunk(data, ch)
     d_o = data_chunk(data, ch, with_overlap=True)
 
-    assert np.array_equal(d_o, data[80:180])
-    assert np.array_equal(d, data[90:170])
+    ae(d_o, data[80:180])
+    ae(d, data[90:170])
 
 
 def test_excerpts_1():
@@ -115,6 +202,12 @@ def test_excerpts_2():
 #------------------------------------------------------------------------------
 
 def test_partial_shape():
+
+    _partial_shape(None, ())
+    _partial_shape((), None)
+    _partial_shape((), ())
+    _partial_shape(None, None)
+
     assert _partial_shape((5, 3), 1) == (5,)
     assert _partial_shape((5, 3), (1,)) == (5,)
     assert _partial_shape((5, 10, 2), 1) == (5, 10)
@@ -130,6 +223,8 @@ def test_partial_shape():
 def test_partial_array():
     # 2D array.
     arr = np.random.rand(5, 2)
+
+    ae(PartialArray(arr)[:], arr)
 
     pa = PartialArray(arr, 1)
     assert pa.shape == (5,)

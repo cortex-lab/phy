@@ -10,7 +10,7 @@
 import os
 
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal as ae
 import numpy.random as npr
 from pytest import raises
 
@@ -47,7 +47,7 @@ def test_loader():
     t = spike_times[10]
     waveform = loader._load_at(t)
     assert waveform.shape == (n_samples, n_channels)
-    assert_array_equal(waveform, traces[t - 20:t + 20, :])
+    ae(waveform, traces[t - 20:t + 20, :])
 
     waveforms = loader[spike_times[10:20]]
     assert waveforms.shape == (10, n_samples, n_channels)
