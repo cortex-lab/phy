@@ -294,14 +294,16 @@ class KwikModel(BaseModel):
         """Create a waveform loader."""
         n_samples = (self._metadata['extract_s_before'],
                      self._metadata['extract_s_after'])
+        order = self._metadata['filter_butter_order']
         b_filter = bandpass_filter(rate=self._metadata['sample_rate'],
                                    low=self._metadata['filter_low'],
                                    high=self._metadata['filter_high'],
-                                   order=self._metadata['filter_butter_order'])
+                                   order=order)
         filter = lambda x: apply_filter(x, b_filter)
         self._waveform_loader = WaveformLoader(n_samples=n_samples,
                                                channels=self._channels,
-                                               filter=filter)
+                                               filter=filter,
+                                               filter_margin=order * 3)
 
     @property
     def channels(self):
