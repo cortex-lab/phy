@@ -243,17 +243,18 @@ class KwikModel(BaseModel):
             fm = self._kwx.read(path)
             self._features = PartialArray(fm, 0)
 
-            # WARNING: load *all* channel masks in memory for now
             # TODO: sparse, memory mapped, memcache, etc.
             k = self._metadata['nfeatures_per_channel']
-            self._masks = fm[:, 0:k * self.n_channels:k, 1]
+            # This partial array simulates a (n_spikes, n_channels) array.
+            self._masks = PartialArray(fm,
+                                       (slice(0, k * self.n_channels, k), 1))
             assert self._masks.shape == (self.n_spikes, self.n_channels)
 
         self._cluster_metadata = ClusterMetadata()
 
-        # Loading probe.
-        # TODO: load positions.
+        # Load probe.
         positions = self._load_channel_positions()
+
         # TODO: support multiple channel groups.
         self._probe = MEA(positions=positions,
                           n_channels=self.n_channels)
