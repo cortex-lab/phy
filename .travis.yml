@@ -25,7 +25,7 @@ install:
   - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION numpy
   - source activate testenv
   # Optional dependencies.
-  - conda install matplotlib h5py pyqt ipython-notebook
+  - conda install matplotlib scipy h5py pyqt ipython-notebook
   # Testing dependencies.
   - conda install pytest pip flake8 coverage
   - pip install coveralls
