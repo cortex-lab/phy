@@ -41,16 +41,20 @@ def test_callback_manager():
     model = MockModel()
     session = Session(model)
 
-    cm = session._callback_manager
+    # This function name is invalid.
+    with raises(ValueError):
+        @session.views.create('')
+        def clustering():
+            pass
 
     # Create views.
-    @cm.create("Show me")
+    @session.views.create("Show me")
     def show_me():
         view = _MyView()
         view.show()
         return view
 
-    @cm.create("Show me bis")
+    @session.views.create("Show me bis")
     def show_me_bis():
         view = _MyViewBis()
         view.show()
@@ -64,7 +68,7 @@ def test_callback_manager():
     view_bis = session.show_me_bis()
 
     # Test loading.
-    @cm.load(_MyView)
+    @session.views.load(_MyView)
     def loaded(view):
         assert isinstance(view, _MyView)
         view.is_loaded = True
@@ -74,7 +78,7 @@ def test_callback_manager():
     assert view.is_loaded
 
     # Test selection.
-    @cm.select()
+    @session.views.select()
     def selected(view):
         assert isinstance(view, (_MyView, _MyViewBis))
         view.is_selected = True
@@ -84,7 +88,7 @@ def test_callback_manager():
     assert view.is_selected
 
     # Test cluster.
-    @cm.cluster(_MyViewBis)
+    @session.views.cluster(_MyViewBis)
     def clustered(view, up=None):
         assert isinstance(view, _MyViewBis)
         view.is_clustered = True
@@ -92,6 +96,12 @@ def test_callback_manager():
     assert not view_bis.is_clustered
     session.merge([0])
     assert view_bis.is_clustered
+
+    # Open a new window after the session has started.
+    new_view = session.show_me()
+    assert new_view.is_loaded
+    assert new_view.is_selected
+    assert not new_view.is_clustered
 
 
 def test_session():
