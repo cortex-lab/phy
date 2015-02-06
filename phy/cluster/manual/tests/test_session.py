@@ -46,7 +46,7 @@ def test_callback_manager():
     session.show_me()
     assert _count == 2
 
-    assert len(session.views) == 2
+    assert len(session._views) == 2
 
     global _is_selected
     _is_selected = False

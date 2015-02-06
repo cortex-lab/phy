@@ -127,7 +127,7 @@ class Session(object):
 
     @property
     def views(self):
-        return self._views
+        return self._callback_manager
 
     def _iter_views(self, view_class=None):
         """Iterate over all views of a certain type."""
