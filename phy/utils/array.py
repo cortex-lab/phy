@@ -104,7 +104,7 @@ def _as_array(arr):
     return out
 
 
-def _pad(arr, n, dir='left'):
+def _pad(arr, n, dir='right'):
     """Pad an array with zeros along the first axis.
 
     Arguments
@@ -117,6 +117,10 @@ def _pad(arr, n, dir='left'):
 
     """
     assert dir in ('left', 'right')
+    if n < 0:
+        raise ValueError("'n' must be positive: {0}.".format(n))
+    elif n == 0:
+        return np.zeros((0,) + arr.shape[1:], dtype=arr.dtype)
     n_arr = arr.shape[0]
     shape = (n,) + arr.shape[1:]
     if n_arr == n:

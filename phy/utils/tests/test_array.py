@@ -13,7 +13,7 @@ from pytest import raises
 from ..array import (_unique, _normalize, _index_of, _as_array, _as_tuple,
                      chunk_bounds, excerpts, data_chunk,
                      PartialArray, _partial_shape,
-                     _range_from_slice)
+                     _range_from_slice, _pad)
 from ...datasets.mock import artificial_spike_clusters
 
 
@@ -72,6 +72,29 @@ def test_range_from_slice():
     ae(_SliceTest(start=1, step=2, stop=5)[:], [1, 3])
     ae(_SliceTest(start=1, stop=5)[::2], [1, 3])
     ae(_SliceTest(stop=5)[1::2], [1, 3])
+
+
+def test_pad():
+    arr = np.random.rand(10, 3)
+
+    ae(_pad(arr, 0, 'right'), arr[:0, :])
+    ae(_pad(arr, 3, 'right'), arr[:3, :])
+    ae(_pad(arr, 9), arr[:9, :])
+    ae(_pad(arr, 10), arr)
+
+    ae(_pad(arr, 12, 'right')[:10, :], arr)
+    ae(_pad(arr, 12)[10:, :], np.zeros((2, 3)))
+
+    ae(_pad(arr, 0, 'left'), arr[:0, :])
+    ae(_pad(arr, 3, 'left'), arr[7:, :])
+    ae(_pad(arr, 9, 'left'), arr[1:, :])
+    ae(_pad(arr, 10, 'left'), arr)
+
+    ae(_pad(arr, 12, 'left')[2:, :], arr)
+    ae(_pad(arr, 12, 'left')[:2, :], np.zeros((2, 3)))
+
+    with raises(ValueError):
+        _pad(arr, -1)
 
 
 def test_unique():
