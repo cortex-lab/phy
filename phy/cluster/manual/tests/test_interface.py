@@ -22,4 +22,15 @@ from ....datasets.mock import MockModel
 
 def test_interface():
     session = start_manual_clustering(model=MockModel())
-    assert session
+    view = session.show_waveforms()
+    session.select([0])
+    view_bis = session.show_waveforms()
+    session.merge([3, 4])
+
+    view.close()
+    view_bis.close()
+
+    session = start_manual_clustering(model=MockModel())
+    session.select([1, 2])
+    view = session.show_waveforms()
+    view.close()
