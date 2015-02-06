@@ -37,16 +37,15 @@ def test_utils():
 
     ae(_diff_shifted(arr, 1), ds1)
     ae(_diff_shifted(arr, 2), ds2)
-    ae(_diff_shifted(_diff_shifted(arr)), ds2)
 
 
 def test_ccg_1():
     spike_times = [2, 3, 10, 12, 20, 24, 30, 40]
     spike_clusters = [0, 1, 0, 0, 2, 1, 0, 2]
     binsize = 1
-    winsize_bins = 3 * 2 + 1
+    winsize_bins = 2 * 3 + 1
 
-    c_expected = np.zeros((3, 3, 3))
+    c_expected = np.zeros((3, 3, 4))
     c_expected[0, 1, 1] = 1
     c_expected[0, 0, 2] = 1
 
