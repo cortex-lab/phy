@@ -13,7 +13,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ..interface import start_manual_clustering
-from ....datasets.mock import MockModel
+from ....io.mock.artificial import MockModel
 
 
 #------------------------------------------------------------------------------

@@ -9,10 +9,10 @@
 import numpy as np
 import numpy.random as nr
 
-from ..ext import six
-from ..io.base_model import BaseModel
-from ..cluster.manual.cluster_metadata import ClusterMetadata
-from ..electrode.mea import MEA, staggered_positions
+from ...ext import six
+from ..base_model import BaseModel
+from ...cluster.manual.cluster_metadata import ClusterMetadata
+from ...electrode.mea import MEA, staggered_positions
 
 
 #------------------------------------------------------------------------------

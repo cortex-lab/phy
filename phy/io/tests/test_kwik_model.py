@@ -15,11 +15,11 @@ from numpy.testing import assert_array_equal as ae
 import h5py
 from pytest import raises
 
-from ...datasets.mock import (artificial_spike_times,
-                              artificial_spike_clusters,
-                              artificial_features,
-                              artificial_masks,
-                              artificial_traces)
+from ...io.mock.artificial import (artificial_spike_times,
+                                   artificial_spike_clusters,
+                                   artificial_features,
+                                   artificial_masks,
+                                   artificial_traces)
 from ...electrode.mea import MEA, staggered_positions
 from ...utils.tempdir import TemporaryDirectory
 from ..h5 import open_h5

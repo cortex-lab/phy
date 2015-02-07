@@ -11,7 +11,7 @@ import os
 import numpy as np
 from pytest import raises
 
-from ....datasets.mock import artificial_spike_clusters
+from ....io.mock.artificial import artificial_spike_clusters
 from .._history import History, GlobalHistory
 
 

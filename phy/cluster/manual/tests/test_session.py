@@ -12,7 +12,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ....datasets.mock import artificial_spike_clusters, MockModel
+from ....io.mock.artificial import artificial_spike_clusters, MockModel
 from ..session import Session, CallbackManager
 
 

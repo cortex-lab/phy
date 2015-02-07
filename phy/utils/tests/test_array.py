@@ -14,7 +14,7 @@ from ..array import (_unique, _normalize, _index_of, _as_array, _as_tuple,
                      chunk_bounds, excerpts, data_chunk,
                      PartialArray, _partial_shape,
                      _range_from_slice, _pad)
-from ...datasets.mock import artificial_spike_clusters
+from ...io.mock.artificial import artificial_spike_clusters
 
 
 #------------------------------------------------------------------------------

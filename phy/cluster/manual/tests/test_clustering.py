@@ -13,7 +13,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ....ext.six import itervalues
-from ....datasets.mock import artificial_spike_clusters
+from ....io.mock.artificial import artificial_spike_clusters
 from ..clustering import (_count_clusters, _diff_counts,
                           Clustering)
 from .._update_info import UpdateInfo
