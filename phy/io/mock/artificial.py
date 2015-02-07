@@ -41,10 +41,10 @@ def artificial_spike_clusters(n_spikes, n_clusters, low=0):
     return nr.randint(size=n_spikes, low=low, high=max(1, n_clusters))
 
 
-def artificial_spike_times(n_spikes):
+def artificial_spike_times(n_spikes, max_isi=50):
     # TODO: switch from sample to seconds in the way spike times are
     # represented throughout the package.
-    return np.cumsum(nr.randint(low=0, high=100, size=n_spikes))
+    return np.cumsum(nr.randint(low=0, high=max_isi, size=n_spikes))
 
 
 #------------------------------------------------------------------------------

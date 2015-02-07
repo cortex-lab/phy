@@ -63,6 +63,10 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
 
         # Create spike times.
         spike_times = artificial_spike_times(n_spikes).astype(np.int64)
+
+        if spike_times.max() >= n_samples_traces:
+            raise ValueError("There are too many spikes: decrease 'n_spikes'.")
+
         f.write('/channel_groups/1/spikes/time_samples', spike_times)
 
         # Create spike clusters.
