@@ -22,95 +22,6 @@ from ...notebook.utils import load_css
 
 
 #------------------------------------------------------------------------------
-# View manager
-#------------------------------------------------------------------------------
-
-class CallbackManager(object):
-    """Manage the callbacks for the different views."""
-    def __init__(self, session):
-        self._session = session
-        self._callbacks = defaultdict(list)
-        # List of (create_callback, action_name) pairs.
-        self._view_creators = []
-
-    def callbacks(self, *callback_types):
-        """Return all callbacks registered for a given callback type."""
-        # List of callback functions, for all specified callback types.
-        l = [self._callbacks[callback_type]
-             for callback_type in callback_types]
-        # Flatten the list of lists.
-        return [item for sublist in l for item in sublist]
-
-    def _call_callback_on_view(self, callback_item, view, **kwargs):
-        """Call a callback item on a view."""
-        # Only call the callback if the view is of the correct type.
-        if (callback_item['view'] is not None and
-           not isinstance(view, callback_item['view'])):
-            return
-        # Call the callback function on the view, with possibly an
-        # 'up' instance as argument.
-        if 'up' in kwargs:
-            callback_item['callback'](view, up=kwargs['up'])
-        else:
-            callback_item['callback'](view)
-
-    def _decorator(self, callback_type, **kwargs):
-        """Return a decorator adding a callback function."""
-        def create_decorator(f):
-            item = {'callback': f}
-            item.update(kwargs)
-            self._callbacks[callback_type].append(item)
-            return f
-        return create_decorator
-
-    def create(self, action_name=None):
-        """Callback function creating a new view."""
-        def create_decorator(f):
-
-            # Check that the decorated function name is valid.
-            if hasattr(self._session, f.__name__):
-                raise ValueError("This function name already exists in "
-                                 "the Session: {0}.".format(f.__name__))
-
-            # Wrapped function.
-            @wraps(f)
-            def _register_view():
-                # Create the view.
-                view = f()
-                # Register the view.
-                self._session._views.append(view)
-                # Call all 'load' and 'select' callbacks on that view.
-                # This is to make sure the view is automatically updated
-                # when it is created after the data has been loaded and
-                # some clusters have been selected.
-                for callback in self.callbacks('load', 'select'):
-                    self._call_callback_on_view(callback, view)
-
-                return view
-
-            # Assign the decorated view creator to the session.
-            setattr(self._session, f.__name__, _register_view)
-
-            # Register the view creators with their names.
-            self._view_creators.append((_register_view, action_name))
-
-            return _register_view
-        return create_decorator
-
-    def load(self, view=None):
-        """Callback function when a dataset is loaded."""
-        return self._decorator('load', view=view)
-
-    def select(self, view=None):
-        """Callback function when clusters are selected."""
-        return self._decorator('select', view=view)
-
-    def cluster(self, view=None):
-        """Callback function when the clustering changes."""
-        return self._decorator('cluster', view=view)
-
-
-#------------------------------------------------------------------------------
 # Session class
 #------------------------------------------------------------------------------
 
@@ -121,16 +32,76 @@ class Session(object):
         if not isinstance(model, BaseModel):
             raise ValueError("'model' must be an instance of a "
                              "class deriving from BaseModel.")
-        self._global_history = GlobalHistory()
-        self._callback_manager = CallbackManager(self)
+        # List of registered views.
         self._views = []
+        # Dict (callback_type, view_class) => [list of callbacks]
+        self._callbacks = defaultdict(list)
+        # List of (create_callback, action_name) pairs.
+        self._view_creators = []
+
+        self._global_history = GlobalHistory()
         # Set the model and initialize the session.
         self.model = model
         self.update_after_load()
 
     @property
     def views(self):
-        return self._callback_manager
+        return self._views
+
+    def callback(self, view_class=None):
+        """Return a decorator adding a callback function."""
+        def create_decorator(f):
+            # on_mytype
+            callback_type = f.__name__[3:]
+            self._callbacks[callback_type, view_class].append(f)
+            return f
+        return create_decorator
+
+    def create(self, action_name=None):
+        """Callback function creating a new view."""
+        def create_decorator(f):
+
+            # Check that the decorated function name is valid.
+            if hasattr(self, f.__name__):
+                raise ValueError("This function name already exists in "
+                                 "the Session: {0}.".format(f.__name__))
+
+            # Wrapped function.
+            @wraps(f)
+            def _register_view():
+                # Create the view.
+                view = f()
+                # Register the view.
+                self._views.append(view)
+                # Call all 'load' and 'select' callbacks on that view.
+                # This is to make sure the view is automatically updated
+                # when it is created after the data has been loaded and
+                # some clusters have been selected.
+                # TODO: concatenate with itertools
+                for callback in self._iter_callbacks('load', view.__class__):
+                    self._call_callback_on_view(callback, view)
+                for callback in self._iter_callbacks('select', view.__class__):
+                    self._call_callback_on_view(callback, view)
+
+                return view
+
+            # Assign the decorated view creator to the session.
+            setattr(self, f.__name__, _register_view)
+
+            # Register the view creators with their names.
+            self._view_creators.append((_register_view, action_name))
+
+            return _register_view
+        return create_decorator
+
+    def _iter_callbacks(self, callback_type, view_class=None):
+        # Callbacks registered to a particular view class.
+        if view_class is not None:
+            for item in self._callbacks[callback_type, view_class]:
+                yield item
+        # Callbacks registered to any view class.
+        for item in self._callbacks[callback_type, None]:
+            yield item
 
     def _iter_views(self, view_class=None):
         """Iterate over all views of a certain type."""
@@ -141,17 +112,29 @@ class Session(object):
                     continue
                 yield view
 
+    def _call_callback_on_view(self, callback, view, **kwargs):
+        """Call a callback item on a view."""
+        # # Only call the callback if the view is of the correct type.
+        # if (callback_item['view'] is not None and
+        #    not isinstance(view, callback_item['view'])):
+        #     return
+        # Call the callback function on the view, with possibly an
+        # 'up' instance as argument.
+        if 'up' in kwargs:
+            callback(view, up=kwargs['up'])
+        else:
+            callback(view)
+
     def _call_callbacks(self, callback_type, **kwargs):
         """Call all callbacks of a given type."""
         # kwargs are arguments to pass to the callbacks.
-        for item in self._callback_manager.callbacks(callback_type):
-            # 'item' is a dictionary containing information about the callback.
-            # item['callback'] is the callback function itself.
-            assert 'view' in item
-            for view in self._iter_views(item['view']):
-                self._callback_manager._call_callback_on_view(item,
-                                                              view,
-                                                              **kwargs)
+        # Loop over all views.
+        for view in self._iter_views():
+            # Loop over all callbacks of that type registered to that
+            # view class.
+            for callback in self._iter_callbacks(callback_type,
+                                                 view_class=view.__class__):
+                self._call_callback_on_view(callback, view, **kwargs)
 
     # Controller.
     # -------------------------------------------------------------------------

@@ -47,31 +47,31 @@ def start_manual_clustering(filename=None, model=None):
 
     session = Session(model)
 
-    @session.views.create("Show waveforms")
+    @session.create("Show waveforms")
     def show_waveforms():
         view = WaveformView()
         view.show()
         return view
 
-    @session.views.load(WaveformView)
-    def _update_waveforms_after_load(view):
+    @session.callback(WaveformView)
+    def on_load(view):
         view.visual.spike_clusters = session.clustering.spike_clusters
         view.visual.cluster_metadata = session.cluster_metadata
         view.visual.channel_positions = session.model.probe.positions
 
-    @session.views.select(WaveformView)
-    def _update_waveforms_after_select(view):
+    @session.callback(WaveformView)
+    def on_select(view):
         spikes = session.selector.selected_spikes
         view.visual.waveforms = session.model.waveforms[spikes]
         view.visual.masks = session.model.masks[spikes]
         view.visual.spike_labels = spikes
 
-    @session.views.cluster(WaveformView)
-    def _update_waveforms_after_cluster(view, up=None):
+    @session.callback(WaveformView)
+    def on_cluster(view, up=None):
         # TODO
         pass
 
-    @session.views.create("Show clusters")
+    @session.create("Show clusters")
     def show_clusters():
         """Create and show a new cluster view."""
         try:

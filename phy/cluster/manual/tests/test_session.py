@@ -13,7 +13,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ....io.mock.artificial import artificial_spike_clusters, MockModel
-from ..session import Session, CallbackManager
+from ..session import Session
 
 
 #------------------------------------------------------------------------------
@@ -43,18 +43,18 @@ def test_callback_manager():
 
     # This function name is invalid.
     with raises(ValueError):
-        @session.views.create('')
+        @session.create('')
         def clustering():
             pass
 
     # Create views.
-    @session.views.create("Show me")
+    @session.create("Show me")
     def show_me():
         view = _MyView()
         view.show()
         return view
 
-    @session.views.create("Show me bis")
+    @session.create("Show me bis")
     def show_me_bis():
         view = _MyViewBis()
         view.show()
@@ -68,8 +68,8 @@ def test_callback_manager():
     view_bis = session.show_me_bis()
 
     # Test loading.
-    @session.views.load(_MyView)
-    def loaded(view):
+    @session.callback(_MyView)
+    def on_load(view):
         assert isinstance(view, _MyView)
         view.is_loaded = True
 
@@ -78,8 +78,8 @@ def test_callback_manager():
     assert view.is_loaded
 
     # Test selection.
-    @session.views.select()
-    def selected(view):
+    @session.callback()
+    def on_select(view):
         assert isinstance(view, (_MyView, _MyViewBis))
         view.is_selected = True
 
@@ -88,8 +88,8 @@ def test_callback_manager():
     assert view.is_selected
 
     # Test cluster.
-    @session.views.cluster(_MyViewBis)
-    def clustered(view, up=None):
+    @session.callback(_MyViewBis)
+    def on_cluster(view, up=None):
         assert isinstance(view, _MyViewBis)
         view.is_clustered = True
 
