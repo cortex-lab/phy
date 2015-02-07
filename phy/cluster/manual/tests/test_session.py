@@ -74,7 +74,7 @@ def test_callback_manager():
         view.is_loaded = True
 
     assert not view.is_loaded
-    session._update_after_load()
+    session.update_after_load()
     assert view.is_loaded
 
     # Test selection.
@@ -115,7 +115,7 @@ def test_session():
 
     session = Session(model)
 
-    session._update_after_load()
+    session.update_after_load()
     ae(session.cluster_labels, np.arange(n_clusters))
     assert len(session.cluster_colors) == n_clusters
 

@@ -126,7 +126,7 @@ class Session(object):
         self._views = []
         # Set the model and initialize the session.
         self.model = model
-        self._update_after_load()
+        self.update_after_load()
 
     @property
     def views(self):
@@ -156,7 +156,7 @@ class Session(object):
     # Controller.
     # -------------------------------------------------------------------------
 
-    def _update_after_load(self):
+    def update_after_load(self):
         """Update the session after new data has been loaded."""
         # TODO: call this after the channel groups has changed.
         # Update the Selector and Clustering instances using the Model.
@@ -167,12 +167,12 @@ class Session(object):
         # Update all views.
         self._call_callbacks('load')
 
-    def _update_after_select(self):
+    def update_after_select(self):
         """Update the views after the selection has changed."""
         # Update all views.
         self._call_callbacks('select')
 
-    def _update_after_cluster(self, up, add_to_stack=True):
+    def update_after_cluster(self, up, add_to_stack=True):
         """Update the session after the clustering has changed."""
 
         # TODO: Update the similarity matrix.
@@ -210,17 +210,17 @@ class Session(object):
     def select(self, clusters):
         """Select some clusters."""
         self.selector.selected_clusters = clusters
-        self._update_after_select()
+        self.update_after_select()
 
     def merge(self, clusters):
         """Merge clusters."""
         up = self.clustering.merge(clusters)
-        self._update_after_cluster(up)
+        self.update_after_cluster(up)
 
     def split(self, spikes):
         """Create a new cluster from a selection of spikes."""
         up = self.clustering.split(spikes)
-        self._update_after_cluster(up)
+        self.update_after_cluster(up)
 
     def move(self, clusters, group):
         """Move clusters to a group."""
@@ -230,12 +230,12 @@ class Session(object):
     def undo(self):
         """Undo the last action."""
         up = self._global_history.undo()
-        self._update_after_cluster(up, add_to_stack=False)
+        self.update_after_cluster(up, add_to_stack=False)
 
     def redo(self):
         """Redo the last undone action."""
         up = self._global_history.redo()
-        self._update_after_cluster(up, add_to_stack=False)
+        self.update_after_cluster(up, add_to_stack=False)
 
     def wizard_start(self):
         raise NotImplementedError()
