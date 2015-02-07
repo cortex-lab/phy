@@ -77,6 +77,9 @@ class WaveformLoader(object):
         self.n_samples_waveforms = sum(self.n_samples_before_after)
         # Number of additional samples to use for filtering.
         self._filter_margin = _before_after(filter_margin)
+        # Number of samples in the extracted raw data chunk.
+        self._n_samples_extract = (self.n_samples_waveforms +
+                                   sum(self._filter_margin))
 
     @property
     def traces(self):
@@ -106,8 +109,10 @@ class WaveformLoader(object):
         """Load a waveform at a given time."""
         time = int(time)
         time_o = time - self._offset
-        if not (0 <= time_o < self.n_samples_trace):
-            raise ValueError("Invalid time {0:d}.".format(time_o))
+        ns = self.n_samples_trace
+        if not (0 <= time_o < ns):
+            raise ValueError("Invalid time {0:d}/{1:d}.".format(time_o,
+                                                                ns))
         slice_extract = _slice(time_o,
                                self.n_samples_before_after,
                                self._filter_margin)
@@ -116,11 +121,13 @@ class WaveformLoader(object):
         # Pad the extracted chunk if needed.
         if slice_extract.start <= 0:
             extract = _pad(extract, self.n_samples_waveforms, 'left')
-        elif slice_extract.stop >= self.n_samples_trace - 1:
+        elif slice_extract.stop >= ns - 1:
             extract = _pad(extract, self.n_samples_waveforms, 'right')
 
+        assert extract.shape[0] == self._n_samples_extract
+
         # Filter the waveforms.
-        # TODO: do the filtering in a vectorized way for more performance.
+        # TODO: do the filtering in a vectorized way for higher performance.
         if self._filter is not None:
             waveforms = self._filter(extract)
         else:
