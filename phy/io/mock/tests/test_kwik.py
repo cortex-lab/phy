@@ -36,10 +36,10 @@ from ..kwik import create_mock_kwik
 def test_create_kwik():
 
     n_clusters = 10
-    n_spikes = 1000
+    n_spikes = 50
     n_channels = 28
     n_fets = 2
-    n_samples_traces = 2000
+    n_samples_traces = 3000
 
     with TemporaryDirectory() as tempdir:
         # Create the test HDF5 file in the temporary directory.
