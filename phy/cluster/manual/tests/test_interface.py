@@ -59,7 +59,9 @@ def test_interface_kwik():
         session = start_manual_clustering(filename)
         session.select([0])
         session.merge([3, 4])
-
         view = session.show_waveforms()
+
+        # This won't work but shouldn't raise an error.
+        session.select([1000])
 
         view.close()

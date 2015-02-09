@@ -325,7 +325,7 @@ class Waveforms(Visual):
         """Draw the waveforms."""
         # Bake what needs to be baked at this point.
         self._bake()
-        if self.n_spikes > 0:
+        if self.n_spikes is not None and self.n_spikes > 0:
             self.program.draw('line_strip')
 
 

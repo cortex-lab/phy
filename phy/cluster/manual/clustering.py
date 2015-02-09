@@ -113,6 +113,10 @@ class Clustering(object):
         """Number of different clusters."""
         return len(self.cluster_labels)
 
+    def spikes_in_clusters(self, clusters):
+        """Return the spikes belonging to a set of clusters."""
+        return _spikes_in_clusters(self.spike_clusters, clusters)
+
     # Actions
     #--------------------------------------------------------------------------
 

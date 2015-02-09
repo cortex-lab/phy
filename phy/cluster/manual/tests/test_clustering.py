@@ -75,6 +75,9 @@ def test_clustering():
     clustering = Clustering(spike_clusters)
     ae(clustering.spike_clusters, spike_clusters)
 
+    # Test clustering.spikes_in_clusters() function.:
+    assert np.all(spike_clusters[clustering.spikes_in_clusters([5])] == 5)
+
     # Test cluster labels.
     ae(clustering.cluster_labels, np.arange(n_clusters))
 
