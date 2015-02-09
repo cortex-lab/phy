@@ -21,6 +21,13 @@ from ._history import History
 # BaseClusterInfo class
 #------------------------------------------------------------------------------
 
+def _as_dict(x):
+    if isinstance(x, list):
+        return dict(x)
+    else:
+        return x
+
+
 def _default_value(field, default):
     """Return the default value of a field."""
     if hasattr(default, '__call__'):
@@ -31,8 +38,9 @@ def _default_value(field, default):
 
 def _default_info(fields):
     """Default structure holding info of a cluster."""
+    fields = _as_dict(fields)
     return dict([(field, _default_value(field, default))
-                 for field, default in fields])
+                 for field, default in iteritems(fields)])
 
 
 def _cluster_info(fields, data=None):
@@ -56,7 +64,7 @@ class BaseClusterInfo(object):
     def __init__(self, data=None, fields=None):
         # 'fields' is a list of tuples (field_name, default_value).
         # 'self._fields' is an OrderedDict {field_name ==> default_value}.
-        self._fields = OrderedDict(fields)
+        self._fields = _as_dict(fields)
         self._field_names = list(iterkeys(self._fields))
         # '_data' maps cluster labels to dict (field => value).
         self._data = _cluster_info(fields, data=data)
@@ -106,10 +114,10 @@ DEFAULT_GROUPS = [
 ]
 
 
-DEFAULT_FIELDS = [
-    ('group', 3),
-    ('color', _random_color),
-]
+DEFAULT_FIELDS = {
+    'group': 3,
+    'color': _random_color,
+}
 
 
 #------------------------------------------------------------------------------
