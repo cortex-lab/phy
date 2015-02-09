@@ -50,6 +50,11 @@ def start_manual_clustering(filename=None, model=None):
     @session.create("Show waveforms")
     def show_waveforms():
         view = WaveformView()
+
+        @view.connect
+        def on_close(event):
+            session.unregister_view(view)
+
         view.show()
         return view
 

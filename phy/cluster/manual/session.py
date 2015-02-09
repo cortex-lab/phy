@@ -48,6 +48,10 @@ class Session(object):
     def views(self):
         return self._views
 
+    def unregister_view(self, view):
+        """Unregister a view instance."""
+        self._views.remove(view)
+
     def callback(self, view_class=None):
         """Return a decorator adding a callback function."""
         def create_decorator(f):
