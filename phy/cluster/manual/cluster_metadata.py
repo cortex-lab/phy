@@ -21,7 +21,6 @@ from ._history import History
 # BaseClusterInfo class
 #------------------------------------------------------------------------------
 
-
 def _default_value(field, default):
     """Return the default value of a field."""
     if hasattr(default, '__call__'):
@@ -52,6 +51,7 @@ def _cluster_info(fields, data=None):
 
 
 class BaseClusterInfo(object):
+    # TODO: unit tests for BaseClusterInfo
     """Hold information about clusters."""
     def __init__(self, data=None, fields=None):
         # 'fields' is a list of tuples (field_name, default_value).
