@@ -18,26 +18,9 @@ from ._history import History
 
 
 #------------------------------------------------------------------------------
-# Global variables related to cluster metadata
+# BaseClusterInfo class
 #------------------------------------------------------------------------------
 
-DEFAULT_GROUPS = [
-    (0, 'Noise'),
-    (1, 'MUA'),
-    (2, 'Good'),
-    (3, 'Unsorted'),
-]
-
-
-DEFAULT_FIELDS = [
-    ('group', 3),
-    ('color', _random_color),
-]
-
-
-#------------------------------------------------------------------------------
-# ClusterMetadata class
-#------------------------------------------------------------------------------
 
 def _default_value(field, default):
     """Return the default value of a field."""
@@ -68,32 +51,15 @@ def _cluster_info(fields, data=None):
     return out
 
 
-class ClusterMetadata(object):
-    """Object holding cluster metadata.
-
-    Constructor
-    -----------
-
-    fields : list
-        List of tuples (field_name, default_value).
-    data : dict-like
-        Initial data.
-
-    """
-
+class BaseClusterInfo(object):
+    """Hold information about clusters."""
     def __init__(self, data=None, fields=None):
-        if fields is None:
-            fields = DEFAULT_FIELDS
         # 'fields' is a list of tuples (field_name, default_value).
         # 'self._fields' is an OrderedDict {field_name ==> default_value}.
         self._fields = OrderedDict(fields)
         self._field_names = list(iterkeys(self._fields))
         # '_data' maps cluster labels to dict (field => value).
         self._data = _cluster_info(fields, data=data)
-        self._spike_clusters = None
-        self._cluster_labels = None
-        # The stack contains (clusters, field, value, update_info) tuples.
-        self._undo_stack = History((None, None, None, None))
         # Keep a deep copy of the original structure for the undo stack.
         self._data_base = deepcopy(self._data)
 
@@ -129,6 +95,57 @@ class ClusterMetadata(object):
         if not hasattr(clusters, '__len__'):
             clusters = [clusters]
         self._set_multi(clusters, field, values)
+
+
+#------------------------------------------------------------------------------
+# Global variables related to cluster metadata
+#------------------------------------------------------------------------------
+
+DEFAULT_GROUPS = [
+    (0, 'Noise'),
+    (1, 'MUA'),
+    (2, 'Good'),
+    (3, 'Unsorted'),
+]
+
+
+DEFAULT_FIELDS = [
+    ('group', 3),
+    ('color', _random_color),
+]
+
+
+#------------------------------------------------------------------------------
+# ClusterMetadata class
+#------------------------------------------------------------------------------
+
+class ClusterMetadata(BaseClusterInfo):
+    """Object holding cluster metadata.
+
+    Constructor
+    -----------
+
+    fields : list
+        List of tuples (field_name, default_value).
+    data : dict-like
+        Initial data.
+
+    """
+
+    def __init__(self, data=None, fields=None):
+        if fields is None:
+            fields = DEFAULT_FIELDS
+        super(ClusterMetadata, self).__init__(data=data, fields=fields)
+        # The stack contains (clusters, field, value, update_info) tuples.
+        self._undo_stack = History((None, None, None, None))
+
+    def set(self, clusters, field, values):
+        """Set some information for a number of clusters and add the changes
+        to the undo stack."""
+        # Ensure 'clusters' is a list of clusters.
+        if not hasattr(clusters, '__len__'):
+            clusters = [clusters]
+        super(ClusterMetadata, self).set(clusters, field, values)
         info = UpdateInfo(description=field, metadata_changed=clusters)
         self._undo_stack.add((clusters, field, values, info))
         return info
