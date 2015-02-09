@@ -16,4 +16,5 @@ from .cluster_metadata import BaseClusterInfo
 #------------------------------------------------------------------------------
 
 class ClusterStats(BaseClusterInfo):
-    pass
+    def __init__(self, fields=None):
+        super(ClusterStats, self).__init__(fields=fields)

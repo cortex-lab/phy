@@ -166,7 +166,7 @@ class Session(object):
         # stats.update(up)
 
         # TODO: this doesn't do anything yet.
-        # self.selector.update(up)
+        self.selector.update(up)
 
         # TODO: this doesn't do anything yet.
         # self.cluster_metadata.update(up)

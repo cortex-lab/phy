@@ -60,8 +60,6 @@ class BaseClusterInfo(object):
         self._field_names = list(iterkeys(self._fields))
         # '_data' maps cluster labels to dict (field => value).
         self._data = _cluster_info(fields, data=data)
-        # Keep a deep copy of the original structure for the undo stack.
-        self._data_base = deepcopy(self._data)
 
     @property
     def data(self):
@@ -89,8 +87,7 @@ class BaseClusterInfo(object):
                 self._set_one(cluster, field, values)
 
     def set(self, clusters, field, values):
-        """Set some information for a number of clusters and add the changes
-        to the undo stack."""
+        """Set some information for a number of clusters."""
         # Ensure 'clusters' is a list of clusters.
         if not hasattr(clusters, '__len__'):
             clusters = [clusters]
@@ -136,6 +133,8 @@ class ClusterMetadata(BaseClusterInfo):
         if fields is None:
             fields = DEFAULT_FIELDS
         super(ClusterMetadata, self).__init__(data=data, fields=fields)
+        # Keep a deep copy of the original structure for the undo stack.
+        self._data_base = deepcopy(self._data)
         # The stack contains (clusters, field, value, update_info) tuples.
         self._undo_stack = History((None, None, None, None))
 
