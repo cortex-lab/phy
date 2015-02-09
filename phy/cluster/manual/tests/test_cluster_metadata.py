@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Tests of sparse matrix structures."""
+"""Tests of cluster metadata."""
 
 #------------------------------------------------------------------------------
 # Imports

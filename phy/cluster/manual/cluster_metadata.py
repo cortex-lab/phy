@@ -29,21 +29,6 @@ def _as_dict(x):
         return x
 
 
-def _default_value(field, default):
-    """Return the default value of a field."""
-    if hasattr(default, '__call__'):
-        return default()
-    else:
-        return default
-
-
-def _default_info(fields):
-    """Default structure holding info of a cluster."""
-    fields = _as_dict(fields)
-    return dict([(field, _default_value(field, default))
-                 for field, default in iteritems(fields)])
-
-
 def _fun_arg_count(f):
     """Return the number of arguments of a function.
 
@@ -54,6 +39,24 @@ def _fun_arg_count(f):
     if args and args[0] == 'self':
         args = args[1:]
     return len(args)
+
+
+def _default_value(field, default, cluster):
+    """Return the default value of a field."""
+    if hasattr(default, '__call__'):
+        if _fun_arg_count(default) == 0:
+            return default()
+        elif _fun_arg_count(default) == 1:
+            return default(cluster)
+    else:
+        return default
+
+
+def _default_info(fields, cluster):
+    """Default structure holding info of a cluster."""
+    fields = _as_dict(fields)
+    return dict([(field, _default_value(field, default, cluster))
+                 for field, default in iteritems(fields)])
 
 
 class ClusterDefaultDict(defaultdict):
@@ -135,10 +138,13 @@ class BaseClusterInfo(object):
             clusters = [clusters]
         self._set_multi(clusters, field, values)
 
-    def unset(self, cluster):
+    def unset(self, clusters):
         """Delete a cluster."""
-        if cluster in self._data:
-            del self._data[cluster]
+        if not hasattr(clusters, '__len__'):
+            clusters = [clusters]
+        for cluster in clusters:
+            if cluster in self._data:
+                del self._data[cluster]
 
 
 #------------------------------------------------------------------------------

@@ -17,4 +17,23 @@ from ..cluster_stats import ClusterStats
 #------------------------------------------------------------------------------
 
 def test_stats():
-    pass
+
+    stats = ClusterStats()
+
+    class O(object):
+        coeff = 2
+
+        def my_stat(self, x):
+            return self.coeff * x
+
+    o = O()
+
+    stats = ClusterStats(my_stat=o.my_stat)
+    assert stats.get(3, 'my_stat') == 6
+    assert stats.my_stat(3) == 6
+
+    o.coeff = 3
+    assert stats.my_stat(3) == 6
+
+    stats.invalidate(3)
+    assert stats.my_stat(3) == 9
