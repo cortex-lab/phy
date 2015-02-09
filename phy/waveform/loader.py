@@ -120,9 +120,9 @@ class WaveformLoader(object):
 
         # Pad the extracted chunk if needed.
         if slice_extract.start <= 0:
-            extract = _pad(extract, self.n_samples_waveforms, 'left')
+            extract = _pad(extract, self._n_samples_extract, 'left')
         elif slice_extract.stop >= ns - 1:
-            extract = _pad(extract, self.n_samples_waveforms, 'right')
+            extract = _pad(extract, self._n_samples_extract, 'right')
 
         assert extract.shape[0] == self._n_samples_extract
 
