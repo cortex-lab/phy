@@ -33,7 +33,9 @@ def test_stats():
     assert stats.my_stat(3) == 6
 
     o.coeff = 3
+    assert stats.get(3, 'my_stat') == 6
     assert stats.my_stat(3) == 6
 
     stats.invalidate(3)
+    assert stats.get(3, 'my_stat') == 9
     assert stats.my_stat(3) == 9

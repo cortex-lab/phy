@@ -62,20 +62,20 @@ def _default_info(fields, cluster):
 class ClusterDefaultDict(defaultdict):
     """Like a defaultdict, but the factory function can accept the key
     as argument."""
-    def __init__(self, factory):
+    def __init__(self, factory=None):
         self._factory = factory
-        self._n_args = _fun_arg_count(factory)
-        # The factory doesn't accept any argument: use the default factory.
-        if self._n_args == 0:
-            super(ClusterDefaultDict, self).__init__(factory)
-        # The factory accepts the cluster number as input.
-        elif self._n_args == 1:
-            super(ClusterDefaultDict, self).__init__()
+        if factory is not None:
+            self._n_args = _fun_arg_count(factory)
+        else:
+            self._n_args = None
+        super(ClusterDefaultDict, self).__init__(factory)
 
     def __missing__(self, key):
-        # Call the factory with the cluster number as argument.
         if self._n_args == 1:
-            return self._factory(key)
+            # Call the factory with the cluster number as argument
+            # and save the result in the defaultdict.
+            self[key] = value = self._factory(key)
+            return value
         else:
             return super(ClusterDefaultDict, self).__missing__(key)
 
@@ -111,11 +111,12 @@ class BaseClusterInfo(object):
         """Dictionary holding data for all clusters."""
         return self._data
 
-    def __getitem__(self, key):
-        return self._data[key]
+    def __getitem__(self, cluster):
+        return self._data[cluster]
 
-    def get(self, key, field):
-        return self._data[key][field]
+    def get(self, cluster, field):
+        value = self._data[cluster][field]
+        return value
 
     def _set_one(self, cluster, field, value):
         """Set information for a given cluster."""
