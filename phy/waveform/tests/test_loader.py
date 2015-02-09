@@ -56,9 +56,24 @@ def test_loader():
     w2 = traces[t - 20:t + 20, :]
     assert np.allclose(w1, w2)
 
+
+def test_edges():
+    n_samples_trace, n_channels = 1000, 10
+    n_samples = 40
+
+    traces = artificial_traces(n_samples_trace, n_channels)
+
+    # Create a loader.
+    loader = WaveformLoader(traces, n_samples=n_samples)
+
     # Invalid time.
     with raises(ValueError):
         loader._load_at(200000)
+
+    assert loader._load_at(0).shape == (n_samples, n_channels)
+    assert loader._load_at(5).shape == (n_samples, n_channels)
+    assert loader._load_at(n_samples_trace-5).shape == (n_samples, n_channels)
+    assert loader._load_at(n_samples_trace-1).shape == (n_samples, n_channels)
 
 
 def test_loader_channels():
