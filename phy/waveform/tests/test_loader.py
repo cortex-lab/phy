@@ -16,6 +16,7 @@ from pytest import raises
 
 from ...io.mock.artificial import artificial_traces
 from ..loader import _slice, WaveformLoader
+from ..filter import bandpass_filter, apply_filter
 
 
 #------------------------------------------------------------------------------
@@ -63,8 +64,19 @@ def test_edges():
 
     traces = artificial_traces(n_samples_trace, n_channels)
 
+    # Filter.
+    b_filter = bandpass_filter(rate=1000,
+                               low=50,
+                               high=200,
+                               order=3)
+    filter = lambda x: apply_filter(x, b_filter)
+    filter_margin = 10
+
     # Create a loader.
-    loader = WaveformLoader(traces, n_samples=n_samples)
+    loader = WaveformLoader(traces,
+                            n_samples=n_samples,
+                            filter=filter,
+                            filter_margin=filter_margin)
 
     # Invalid time.
     with raises(ValueError):
