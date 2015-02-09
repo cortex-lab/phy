@@ -41,8 +41,8 @@ def correlograms(spike_times, spike_clusters,
     """Compute all pairwise cross-correlograms among the clusters appearing
     in 'spike_clusters'.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
 
     spike_times : array-like
         Spike times in samples (integers).

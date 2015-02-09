@@ -33,8 +33,8 @@ def _read_file(path):
 def _inject_js(path):
     """Inject a JS file in the notebook.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
 
     path : str
         Absolute path to a .js file.
@@ -46,8 +46,8 @@ def _inject_js(path):
 def _inject_css(path):
     """Inject a CSS file in the notebook.
 
-    Arguments
-    ---------
+    Parameters
+    ----------
 
     path : str
         Absolute path to a .css file.
@@ -89,6 +89,21 @@ def _enable_gui(shell, backend):
     shell.run_line_magic('gui', backend)
 
 
+def ipython_shell():
+    """Return True if we are in IPython."""
+    # Import IPython.
+    try:
+        import IPython
+        from IPython import get_ipython
+    except ImportError:
+        raise ImportError("IPython is required.")
+    if IPython.__version__ < '3':
+        raise ImportError("IPython >= 3.0 is required.")
+    # Get the IPython shell.
+    shell = get_ipython()
+    return shell
+
+
 def enable_notebook(backend=None):
     """Enable notebook integration with the given backend for VisPy."""
     # TODO: unit tests
@@ -100,14 +115,6 @@ def enable_notebook(backend=None):
         from vispy import app
     except ImportError:
         raise ImportError("VisPy is required in the notebook.")
-    shell = None
-    try:
-        # Import IPython.
-        from IPython import get_ipython
-        # Get the IPython shell.
-        shell = get_ipython()
-    except ImportError:
-        raise ImportError("IPython is required.")
     # Default backend.
     if backend is None:
         # TODO: user-level parameter
@@ -115,6 +122,7 @@ def enable_notebook(backend=None):
     # Enable the VisPy backend.
     app.use_app(backend)
     # Enable IPython event loop integration.
+    shell = ipython_shell()
     if shell is not None:
         if backend == 'pyqt4':
             _enable_gui(shell, 'qt')

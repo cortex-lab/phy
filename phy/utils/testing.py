@@ -27,7 +27,7 @@ def captured_output():
         sys.stdout, sys.stderr = old_out, old_err
 
 
-def show_test(canvas, n_frames=5):
+def show_test(canvas, n_frames=2):
     """Show a VisPy canvas for a fraction of second."""
     with canvas as c:
         for _ in range(n_frames):

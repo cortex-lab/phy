@@ -6,6 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from collections import defaultdict
+from functools import wraps
+
 import numpy as np
 
 from ._history import GlobalHistory
@@ -19,30 +22,6 @@ from ...notebook.utils import load_css
 
 
 #------------------------------------------------------------------------------
-# View manager
-#------------------------------------------------------------------------------
-
-class ViewManager(object):
-    """Manage several views."""
-    def __init__(self):
-        self._views = []
-
-    def register(self, view):
-        """Register a view."""
-        self._views.append(view)
-
-    def unregister(self, view):
-        """Unregister a view."""
-        view.close()
-        if view in self._views:
-            self._views.remove(view)
-
-    @property
-    def views(self):
-        return self._views
-
-
-#------------------------------------------------------------------------------
 # Session class
 #------------------------------------------------------------------------------
 
@@ -53,36 +32,130 @@ class Session(object):
         if not isinstance(model, BaseModel):
             raise ValueError("'model' must be an instance of a "
                              "class deriving from BaseModel.")
+        # List of registered views.
+        self._views = []
+        # Dict (callback_type, view_class) => [list of callbacks]
+        self._callbacks = defaultdict(list)
+        # List of (create_callback, action_name) pairs.
+        self._view_creators = []
+
         self._global_history = GlobalHistory()
-        self._view_manager = ViewManager()
         # Set the model and initialize the session.
         self.model = model
-        self._update_after_load()
+        self.update_after_load()
+
+    @property
+    def views(self):
+        return self._views
+
+    def callback(self, view_class=None):
+        """Return a decorator adding a callback function."""
+        def create_decorator(f):
+            # on_mytype
+            callback_type = f.__name__[3:]
+            self._callbacks[callback_type, view_class].append(f)
+            return f
+        return create_decorator
+
+    def create(self, action_name=None):
+        """Callback function creating a new view."""
+        def create_decorator(f):
+
+            # Check that the decorated function name is valid.
+            if hasattr(self, f.__name__):
+                raise ValueError("This function name already exists in "
+                                 "the Session: {0}.".format(f.__name__))
+
+            # Wrapped function.
+            @wraps(f)
+            def _register_view():
+                # Create the view.
+                view = f()
+                # Register the view.
+                self._views.append(view)
+                # Call all 'load' and 'select' callbacks on that view.
+                # This is to make sure the view is automatically updated
+                # when it is created after the data has been loaded and
+                # some clusters have been selected.
+                # TODO: concatenate with itertools
+                for callback in self._iter_callbacks('load', view.__class__):
+                    self._call_callback_on_view(callback, view)
+                for callback in self._iter_callbacks('select', view.__class__):
+                    self._call_callback_on_view(callback, view)
+
+                return view
+
+            # Assign the decorated view creator to the session.
+            setattr(self, f.__name__, _register_view)
+
+            # Register the view creators with their names.
+            self._view_creators.append((_register_view, action_name))
+
+            return _register_view
+        return create_decorator
+
+    def _iter_callbacks(self, callback_type, view_class=None):
+        # Callbacks registered to a particular view class.
+        if view_class is not None:
+            for item in self._callbacks[callback_type, view_class]:
+                yield item
+        # Callbacks registered to any view class.
+        for item in self._callbacks[callback_type, None]:
+            yield item
+
+    def _iter_views(self, view_class=None):
+        """Iterate over all views of a certain type."""
+        for view in self._views:
+            for view in self._views:
+                if (view_class is not None and
+                   not isinstance(view, view_class)):
+                    continue
+                yield view
+
+    def _call_callback_on_view(self, callback, view, **kwargs):
+        """Call a callback item on a view."""
+        # # Only call the callback if the view is of the correct type.
+        # if (callback_item['view'] is not None and
+        #    not isinstance(view, callback_item['view'])):
+        #     return
+        # Call the callback function on the view, with possibly an
+        # 'up' instance as argument.
+        if 'up' in kwargs:
+            callback(view, up=kwargs['up'])
+        else:
+            callback(view)
+
+    def _call_callbacks(self, callback_type, **kwargs):
+        """Call all callbacks of a given type."""
+        # kwargs are arguments to pass to the callbacks.
+        # Loop over all views.
+        for view in self._iter_views():
+            # Loop over all callbacks of that type registered to that
+            # view class.
+            for callback in self._iter_callbacks(callback_type,
+                                                 view_class=view.__class__):
+                self._call_callback_on_view(callback, view, **kwargs)
 
     # Controller.
     # -------------------------------------------------------------------------
 
-    def _update_after_load(self):
+    def update_after_load(self):
         """Update the session after new data has been loaded."""
+        # TODO: call this after the channel groups has changed.
         # Update the Selector and Clustering instances using the Model.
         spike_clusters = self.model.spike_clusters
         self.selector = Selector(spike_clusters, n_spikes_max=100)
         self.clustering = Clustering(spike_clusters)
         self.cluster_metadata = self.model.cluster_metadata
-        # Reinitialize all existing views.
-        for view in self._view_manager.views:
-            if isinstance(view, WaveformView):
-                self._update_waveforms_after_load(view)
-            view.update()
+        # Update all views.
+        self._call_callbacks('load')
 
-    def _update_after_select(self):
+    def update_after_select(self):
         """Update the views after the selection has changed."""
-        for view in self._view_manager.views:
-            if isinstance(view, WaveformView):
-                self._update_waveforms_after_select(view)
-            view.update()
+        # Update all views.
+        self._call_callbacks('select')
 
-    def _update_after_cluster(self, up, add_to_stack=True):
+    def update_after_cluster(self, up, add_to_stack=True):
         """Update the session after the clustering has changed."""
 
         # TODO: Update the similarity matrix.
@@ -97,31 +170,8 @@ class Session(object):
         if add_to_stack:
             self._global_history.action(self.clustering)
 
-        # Refresh the views with the DataUpdate instance.
-        for view in self._view_manager.views:
-            if isinstance(view, WaveformView):
-                self._update_waveforms_after_cluster(view, up=up)
-            view.update()
-
-    # Waveforms.
-    # -------------------------------------------------------------------------
-
-    def _update_waveforms_after_load(self, view):
-        assert isinstance(view, WaveformView)
-        view.visual.spike_clusters = self.clustering.spike_clusters
-        view.visual.cluster_metadata = self.cluster_metadata
-        view.visual.channel_positions = self.model.probe.positions
-
-    def _update_waveforms_after_select(self, view):
-        assert isinstance(view, WaveformView)
-        spikes = self.selector.selected_spikes
-        view.visual.waveforms = self.model.waveforms[spikes]
-        view.visual.masks = self.model.masks[spikes]
-        view.visual.spike_labels = spikes
-
-    def _update_waveforms_after_cluster(self, view, up=None):
-        # TODO
-        assert isinstance(view, WaveformView)
+        # Update all views.
+        self._call_callbacks('cluster', up=up)
 
     # Public properties.
     # -------------------------------------------------------------------------
@@ -137,48 +187,23 @@ class Session(object):
         return [self.cluster_metadata[cluster]['color']
                 for cluster in self.clustering.cluster_labels]
 
-    # Public view methods.
-    # -------------------------------------------------------------------------
-
-    def show_clusters(self):
-        """Create and show a new cluster view."""
-        from IPython.display import display
-        view = ClusterView(clusters=self.cluster_labels,
-                           colors=self.cluster_colors)
-        view.on_trait_change(lambda _, __, clusters: self.select(clusters),
-                             'value')
-        load_css('static/widgets.css')
-        display(view)
-
-    def show_waveforms(self):
-        """Create and show a new Waveform view."""
-        view = WaveformView()
-        self._view_manager.register(view)
-        self._update_waveforms_after_load(view)
-        self._update_waveforms_after_select(view)
-        return view
-
-    def close_view(self, view):
-        self._view_manager.unregister(view)
-        view.close()
-
     # Public clustering actions.
     # -------------------------------------------------------------------------
 
     def select(self, clusters):
         """Select some clusters."""
         self.selector.selected_clusters = clusters
-        self._update_after_select()
+        self.update_after_select()
 
     def merge(self, clusters):
         """Merge clusters."""
         up = self.clustering.merge(clusters)
-        self._update_after_cluster(up)
+        self.update_after_cluster(up)
 
     def split(self, spikes):
         """Create a new cluster from a selection of spikes."""
         up = self.clustering.split(spikes)
-        self._update_after_cluster(up)
+        self.update_after_cluster(up)
 
     def move(self, clusters, group):
         """Move clusters to a group."""
@@ -188,12 +213,12 @@ class Session(object):
     def undo(self):
         """Undo the last action."""
         up = self._global_history.undo()
-        self._update_after_cluster(up, add_to_stack=False)
+        self.update_after_cluster(up, add_to_stack=False)
 
     def redo(self):
         """Redo the last undone action."""
         up = self._global_history.redo()
-        self._update_after_cluster(up, add_to_stack=False)
+        self.update_after_cluster(up, add_to_stack=False)
 
     def wizard_start(self):
         raise NotImplementedError()

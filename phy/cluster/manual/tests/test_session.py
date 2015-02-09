@@ -12,13 +12,97 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ....datasets.mock import artificial_spike_clusters, MockModel
+from ....io.mock.artificial import artificial_spike_clusters, MockModel
 from ..session import Session
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
+
+class _BaseView(object):
+    is_loaded = False
+    is_selected = False
+    is_clustered = False
+
+    def show(self):
+        pass
+
+
+class _MyView(_BaseView):
+    pass
+
+
+class _MyViewBis(_BaseView):
+    pass
+
+
+def test_callback_manager():
+    model = MockModel()
+    session = Session(model)
+
+    # This function name is invalid.
+    with raises(ValueError):
+        @session.create('')
+        def clustering():
+            pass
+
+    # Create views.
+    @session.create("Show me")
+    def show_me():
+        view = _MyView()
+        view.show()
+        return view
+
+    @session.create("Show me bis")
+    def show_me_bis():
+        view = _MyViewBis()
+        view.show()
+        return view
+
+    view = session.show_me()
+    session.show_me()
+
+    assert len(session._views) == 2
+
+    view_bis = session.show_me_bis()
+
+    # Test loading.
+    @session.callback(_MyView)
+    def on_load(view):
+        assert isinstance(view, _MyView)
+        view.is_loaded = True
+
+    assert not view.is_loaded
+    session.update_after_load()
+    assert view.is_loaded
+
+    # Test selection.
+    @session.callback()
+    def on_select(view):
+        assert isinstance(view, (_MyView, _MyViewBis))
+        view.is_selected = True
+
+    assert not view.is_selected
+    session.select([0])
+    assert view.is_selected
+
+    # Test cluster.
+    @session.callback(_MyViewBis)
+    def on_cluster(view, up=None):
+        assert isinstance(view, _MyViewBis)
+        view.is_clustered = True
+
+    assert not view_bis.is_clustered
+    session.merge([0])
+    assert view_bis.is_clustered
+
+    # Open a new window after the session has started.
+    new_view = session.show_me()
+    assert new_view.is_loaded
+    assert new_view.is_selected
+    assert not new_view.is_clustered
+
 
 def test_session():
 
@@ -31,10 +115,7 @@ def test_session():
 
     session = Session(model)
 
-    # Views.
-    view = session.show_waveforms()
-
-    session._update_after_load()
+    session.update_after_load()
     ae(session.cluster_labels, np.arange(n_clusters))
     assert len(session.cluster_colors) == n_clusters
 
@@ -102,5 +183,3 @@ def test_session():
         session.wizard_previous()
     with raises(NotImplementedError):
         session.wizard_reset()
-
-    session.close_view(view)

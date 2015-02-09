@@ -9,10 +9,10 @@
 import numpy as np
 import numpy.random as nr
 
-from ..ext import six
-from ..io.base_model import BaseModel
-from ..cluster.manual.cluster_metadata import ClusterMetadata
-from ..electrode.mea import MEA, staggered_positions
+from ...ext import six
+from ..base_model import BaseModel
+from ...cluster.manual.cluster_metadata import ClusterMetadata
+from ...electrode.mea import MEA, staggered_positions
 
 
 #------------------------------------------------------------------------------
@@ -41,10 +41,10 @@ def artificial_spike_clusters(n_spikes, n_clusters, low=0):
     return nr.randint(size=n_spikes, low=low, high=max(1, n_clusters))
 
 
-def artificial_spike_times(n_spikes):
+def artificial_spike_times(n_spikes, max_isi=50):
     # TODO: switch from sample to seconds in the way spike times are
     # represented throughout the package.
-    return np.cumsum(nr.randint(low=0, high=100, size=n_spikes))
+    return np.cumsum(nr.randint(low=0, high=max_isi, size=n_spikes))
 
 
 #------------------------------------------------------------------------------

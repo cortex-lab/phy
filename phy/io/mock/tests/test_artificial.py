@@ -10,13 +10,13 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ...electrode.mea import MEA
-from ..mock import (artificial_waveforms,
-                    artificial_traces,
-                    artificial_spike_clusters,
-                    artificial_features,
-                    artificial_masks,
-                    MockModel)
+from ....electrode.mea import MEA
+from ..artificial import (artificial_waveforms,
+                          artificial_traces,
+                          artificial_spike_clusters,
+                          artificial_features,
+                          artificial_masks,
+                          MockModel)
 
 
 #------------------------------------------------------------------------------
