@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from inspect import getargspec, isfunction
 from collections import defaultdict, OrderedDict
 from functools import partial
 from copy import deepcopy
@@ -43,11 +44,44 @@ def _default_info(fields):
                  for field, default in iteritems(fields)])
 
 
+def _fun_arg_count(f):
+    """Return the number of arguments of a function.
+
+    WARNING: with methods, only works if the first argument is named 'self'.
+
+    """
+    args = getargspec(f).args
+    if args and args[0] == 'self':
+        args = args[1:]
+    return len(args)
+
+
+class ClusterDefaultDict(defaultdict):
+    """Like a defaultdict, but the factory function can accept the key
+    as argument."""
+    def __init__(self, factory):
+        self._factory = factory
+        self._n_args = _fun_arg_count(factory)
+        # The factory doesn't accept any argument: use the default factory.
+        if self._n_args == 0:
+            super(ClusterDefaultDict, self).__init__(factory)
+        # The factory accepts the cluster number as input.
+        elif self._n_args == 1:
+            super(ClusterDefaultDict, self).__init__()
+
+    def __missing__(self, key):
+        # Call the factory with the cluster number as argument.
+        if self._n_args == 1:
+            return self._factory(key)
+        else:
+            return super(ClusterDefaultDict, self).__missing__(key)
+
+
 def _cluster_info(fields, data=None):
     """Initialize a structure holding cluster metadata."""
     if data is None:
         data = {}
-    out = defaultdict(partial(_default_info, fields))
+    out = ClusterDefaultDict(partial(_default_info, fields))
     for cluster, values in iteritems(data):
         # Create the default cluster info dict.
         info = out[cluster]
@@ -100,6 +134,11 @@ class BaseClusterInfo(object):
         if not hasattr(clusters, '__len__'):
             clusters = [clusters]
         self._set_multi(clusters, field, values)
+
+    def unset(self, cluster):
+        """Delete a cluster."""
+        if cluster in self._data:
+            del self._data[cluster]
 
 
 #------------------------------------------------------------------------------

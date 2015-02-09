@@ -9,15 +9,78 @@
 from pytest import raises
 
 from ....ext.six import itervalues, iterkeys
-from ..cluster_metadata import _cluster_info, ClusterMetadata
+from ..cluster_metadata import (_cluster_info, ClusterMetadata,
+                                ClusterDefaultDict, _fun_arg_count)
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
 
+def test_fun_arg_count():
+
+    def f():
+        pass
+
+    assert _fun_arg_count(f) == 0
+
+    def f(x):
+        pass
+
+    assert _fun_arg_count(f) == 1
+
+    def f(x, y=0):
+        pass
+
+    assert _fun_arg_count(f) == 2
+
+    class O(object):
+        def f(self):
+            pass
+
+    assert _fun_arg_count(O.f) == 0
+
+    class O(object):
+        def f(self, x):
+            pass
+
+    assert _fun_arg_count(O.f) == 1
+
+    class O(object):
+        def f(self, x, y=None):
+            pass
+
+    assert _fun_arg_count(O.f) == 2
+
+
+def test_cluster_default_dict():
+
+    class Factory(object):
+        _no_args_called = False
+        _one_arg_called = None
+
+        def no_args(self):
+            self._no_args_called = True
+            return 'default'
+
+        def one_arg(self, key):
+            self._one_arg_called = key
+            return 'default {0}'.format(key)
+
+    factory = Factory()
+
+    my_dict = ClusterDefaultDict(factory.no_args)
+    assert my_dict[3] == 'default'
+    assert factory._no_args_called
+
+    my_dict = ClusterDefaultDict(factory.one_arg)
+    assert my_dict[7] == 'default 7'
+    assert factory._one_arg_called
+
+
 def test_structure():
     """Test the structure holding all cluster metadata."""
+
     data = _cluster_info([('a', 1), ('b', 2)])
 
     assert isinstance(data[3], dict)
