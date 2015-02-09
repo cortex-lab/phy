@@ -32,7 +32,7 @@ class ClusterStats(BaseClusterInfo):
         # Set the method.
         for name, fun in functions.items():
             dec_fun = self._decorate(name, fun)
-            setattr(self, name, lambda cluster: self.get(cluster, name))
+            setattr(self, name, dec_fun)
         super(ClusterStats, self).__init__(fields=functions)
 
     def _decorate(self, name, fun):
