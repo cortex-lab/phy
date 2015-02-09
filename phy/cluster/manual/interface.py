@@ -58,6 +58,7 @@ def start_manual_clustering(filename=None, model=None):
         view.visual.spike_clusters = session.clustering.spike_clusters
         view.visual.cluster_metadata = session.cluster_metadata
         view.visual.channel_positions = session.model.probe.positions
+        view.update()
 
     @session.callback(WaveformView)
     def on_select(view):
@@ -67,6 +68,7 @@ def start_manual_clustering(filename=None, model=None):
         view.visual.waveforms = session.model.waveforms[spikes]
         view.visual.masks = session.model.masks[spikes]
         view.visual.spike_labels = spikes
+        view.update()
 
     @session.callback(WaveformView)
     def on_cluster(view, up=None):
