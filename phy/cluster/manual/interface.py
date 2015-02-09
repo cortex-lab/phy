@@ -62,6 +62,8 @@ def start_manual_clustering(filename=None, model=None):
     @session.callback(WaveformView)
     def on_select(view):
         spikes = session.selector.selected_spikes
+        if len(spikes) == 0:
+            return
         view.visual.waveforms = session.model.waveforms[spikes]
         view.visual.masks = session.model.masks[spikes]
         view.visual.spike_labels = spikes
