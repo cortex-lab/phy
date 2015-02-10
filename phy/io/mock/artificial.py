@@ -11,7 +11,7 @@ import numpy.random as nr
 
 from ...ext import six
 from ..base_model import BaseModel
-from ...cluster.manual.cluster_metadata import ClusterMetadata
+from ...cluster.manual.cluster_info import ClusterMetadata
 from ...electrode.mea import MEA, staggered_positions
 
 
