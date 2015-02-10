@@ -170,11 +170,13 @@ def create_clustering_session(filename=None, model=None):
     return session
 
 
-def start_manual_clustering(filename=None, model=None):
+def start_manual_clustering(filename=None, model=None, session=None):
     """Start a manual clustering session in the IPython notebook.
 
     Parameters
     ----------
+    session : Session
+        A Session instance
     filename : str
         Path to a .kwik file, to be used if 'model' is not used.
     model : instance of BaseModel
@@ -182,7 +184,8 @@ def start_manual_clustering(filename=None, model=None):
 
     """
 
-    session = create_clustering_session(filename=filename, model=model)
+    if session is None:
+        session = create_clustering_session(filename=filename, model=model)
 
     # Enable the notebook interface.
     enable_notebook()
