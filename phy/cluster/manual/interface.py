@@ -26,6 +26,11 @@ from ...notebook.utils import load_css, ipython_shell
 # Default interface
 #------------------------------------------------------------------------------
 
+def _mean_masks(masks, spikes):
+    """Return the mean mask vector for a set of spikes."""
+    return masks[spikes].mean(axis=0)
+
+
 def create_clustering_session(filename=None, model=None):
     """Create a manual clustering session in the IPython notebook.
 
@@ -97,7 +102,15 @@ def create_clustering_session(filename=None, model=None):
         # TODO: n_spikes_max in a user parameter
         session.selector = Selector(spike_clusters, n_spikes_max=100)
         # TODO: user-customizable list of statistics
-        session.stats = ClusterStats()
+
+        mask_selector = Selector(spike_clusters, n_spikes_max=100)
+
+        def cluster_masks(cluster):
+            mask_selector.selected_clusters = [cluster]
+            spikes = mask_selector.selected_spikes
+            return _mean_masks(session.model.masks, spikes)
+
+        session.stats = ClusterStats(cluster_masks=cluster_masks)
 
     @session.connect
     def on_cluster(up=None, add_to_stack=True):

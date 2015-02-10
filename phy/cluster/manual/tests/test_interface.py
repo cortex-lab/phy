@@ -70,3 +70,35 @@ def test_interface_kwik():
         session.redo()
 
         view.close()
+
+
+def test_interface_stats():
+
+    n_clusters = 10
+    n_spikes = 50
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 3000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=n_clusters,
+                                    n_spikes=n_spikes,
+                                    n_channels=n_channels,
+                                    n_features_per_channel=n_fets,
+                                    n_samples_traces=n_samples_traces)
+
+        session = start_manual_clustering(filename)
+
+        masks = session.stats.cluster_masks(3)
+        assert masks.shape == (n_channels,)
+
+        session.merge([3, 4])
+
+        masks = session.stats.cluster_masks(3)
+        assert masks.shape == (n_channels,)
+
+        masks = session.stats.cluster_masks(n_clusters)
+        assert masks.shape == (n_channels,)
