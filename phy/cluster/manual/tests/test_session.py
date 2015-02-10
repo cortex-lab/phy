@@ -48,6 +48,24 @@ def test_session_connect():
     session.emit('my_event', data='hello')
 
 
+def test_session_connect_multiple():
+    """Test @connect decorator and event system."""
+    session = Session()
+
+    _track = []
+
+    @session.connect
+    def on_my_event():
+        _track.append('my event')
+
+    @session.connect
+    def on_my_event():
+        _track.append('my event again')
+
+    session.emit('my_event')
+    assert _track == ['my event', 'my event again']
+
+
 def test_session_unconnect():
     """Test unconnect."""
     session = Session()
