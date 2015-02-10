@@ -94,30 +94,18 @@ class BaseClusterInfo(object):
     def __getitem__(self, cluster):
         return self._data[cluster]
 
-    def get(self, cluster, field):
-        value = self._data[cluster][field]
-        return value
-
-    def _set_one(self, cluster, field, value):
-        """Set information for a given cluster."""
-        self._data[cluster][field] = value
-
-    def _set_multi(self, clusters, field, values):
-        """Set some information for a number of clusters."""
-        if hasattr(values, '__len__'):
-            assert len(clusters) == len(values)
-            for cluster, value in zip(clusters, values):
-                self._set_one(cluster, field, value)
-        else:
-            for cluster in clusters:
-                self._set_one(cluster, field, values)
-
     def set(self, clusters, field, values):
         """Set some information for a number of clusters."""
         # Ensure 'clusters' is a list of clusters.
         if not hasattr(clusters, '__len__'):
             clusters = [clusters]
-        self._set_multi(clusters, field, values)
+        if hasattr(values, '__len__'):
+            assert len(clusters) == len(values)
+            for cluster, value in zip(clusters, values):
+                self._data[cluster][field] = value
+        else:
+            for cluster in clusters:
+                self._data[cluster][field] = values
 
     def unset(self, clusters):
         """Delete a cluster."""
@@ -172,7 +160,7 @@ class ClusterMetadata(BaseClusterInfo):
         # The stack contains (clusters, field, value, update_info) tuples.
         self._undo_stack = History((None, None, None, None))
 
-    def set(self, clusters, field, values):
+    def set(self, clusters, field, values, add_to_stack=True):
         """Set some information for a number of clusters and add the changes
         to the undo stack."""
         # Ensure 'clusters' is a list of clusters.
@@ -180,13 +168,9 @@ class ClusterMetadata(BaseClusterInfo):
             clusters = [clusters]
         super(ClusterMetadata, self).set(clusters, field, values)
         info = UpdateInfo(description=field, metadata_changed=clusters)
-        self._undo_stack.add((clusters, field, values, info))
+        if add_to_stack:
+            self._undo_stack.add((clusters, field, values, info))
         return info
-
-    def update(self, up=None):
-        """Update cluster metadata after a clustering action."""
-        # TODO: what happens to color/group of new clusters after merge/split?
-        pass
 
     def undo(self):
         """Undo the last metadata change."""
@@ -196,7 +180,7 @@ class ClusterMetadata(BaseClusterInfo):
         self._data = deepcopy(self._data_base)
         for clusters, field, values, _ in self._undo_stack:
             if clusters is not None:
-                self._set_multi(clusters, field, values)
+                self.set(clusters, field, values, add_to_stack=False)
         # Return the UpdateInfo instance of the undo action.
         info = args[-1]
         return info
@@ -207,7 +191,7 @@ class ClusterMetadata(BaseClusterInfo):
         if args is None:
             return
         clusters, field, values, info = args
-        self._set_multi(clusters, field, values)
+        self.set(clusters, field, values, add_to_stack=False)
         # Return the UpdateInfo instance of the redo action.
         return info
 
@@ -232,7 +216,7 @@ class ClusterStats(BaseClusterInfo):
     def __init__(self, **functions):
         # Set the methods.
         for name, fun in functions.items():
-            setattr(self, name, lambda cluster: self.get(cluster, name))
+            setattr(self, name, lambda cluster: self[cluster][name])
         super(ClusterStats, self).__init__(fields=functions)
 
     def invalidate(self, clusters):

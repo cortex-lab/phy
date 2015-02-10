@@ -102,7 +102,6 @@ def test_default_function():
 
 def test_cluster_metadata():
     meta = ClusterMetadata()
-    meta.update()
     assert meta.data is not None
 
     assert meta[0]['group'] is not None
@@ -143,15 +142,15 @@ def test_metadata_history():
     meta = ClusterMetadata(data=data)
 
     # Values set in 'data'.
-    assert meta.get(2, 'group') == 2
-    assert meta.get(2, 'color') == 7
+    assert meta[2]['group'] == 2
+    assert meta[2]['color'] == 7
 
     # Default values.
-    assert meta.get(3, 'group') == 3
-    assert meta.get(3, 'color') != 7
+    assert meta[3]['group'] == 3
+    assert meta[3]['color'] != 7
 
-    assert meta.get(4, 'group') == 5
-    assert meta.get(4, 'color') != 7
+    assert meta[4]['group'] == 5
+    assert meta[4]['color'] != 7
 
     ###########
 
@@ -160,19 +159,19 @@ def test_metadata_history():
 
     # Action 1.
     info = meta.set(2, 'group', 20)
-    assert meta.get(2, 'group') == 20
+    assert meta[2]['group'] == 20
     assert info.description == 'group'
     assert info.metadata_changed == [2]
 
     # Action 2.
     info = meta.set(3, 'color', 30)
-    assert meta.get(3, 'color') == 30
+    assert meta[3]['color'] == 30
     assert info.description == 'color'
     assert info.metadata_changed == [3]
 
     # Action 3.
     info = meta.set(2, 'color', 40)
-    assert meta.get(2, 'color') == 40
+    assert meta[2]['color'] == 40
     assert info.description == 'color'
     assert info.metadata_changed == [2]
 
@@ -180,20 +179,20 @@ def test_metadata_history():
 
     # Undo 3.
     info = meta.undo()
-    assert meta.get(2, 'color') == 7
+    assert meta[2]['color'] == 7
     assert info.description == 'color'
     assert info.metadata_changed == [2]
 
     # Undo 2.
     info = meta.undo()
-    assert meta.get(3, 'color') != 7
+    assert meta[3]['color'] != 7
     assert info.description == 'color'
     assert info.metadata_changed == [3]
 
     # Redo 2.
     info = meta.redo()
-    assert meta.get(3, 'color') == 30
-    assert meta.get(2, 'group') == 20
+    assert meta[3]['color'] == 30
+    assert meta[2]['group'] == 20
     assert info.description == 'color'
     assert info.metadata_changed == [3]
 
@@ -204,7 +203,7 @@ def test_metadata_history():
 
     # Undo 1.
     info = meta.undo()
-    assert meta.get(2, 'group') == 2
+    assert meta[2]['group'] == 2
     assert info.description == 'group'
     assert info.metadata_changed == [2]
 
@@ -228,13 +227,13 @@ def test_stats():
     o = O()
 
     stats = ClusterStats(my_stat=o.my_stat)
-    assert stats.get(3, 'my_stat') == 6
+    assert stats[3]['my_stat'] == 6
     assert stats.my_stat(3) == 6
 
     o.coeff = 3
-    assert stats.get(3, 'my_stat') == 6
+    assert stats[3]['my_stat'] == 6
     assert stats.my_stat(3) == 6
 
     stats.invalidate(3)
-    assert stats.get(3, 'my_stat') == 9
+    assert stats[3]['my_stat'] == 9
     assert stats.my_stat(3) == 9
