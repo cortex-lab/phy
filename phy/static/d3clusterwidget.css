@@ -1,0 +1,239 @@
+#cv
+{
+    background-color: #aaa;
+    font-family: Arial, Helvetica, sans-serif;
+    height: 100%;
+    max-width: 610px;
+}
+
+#cv .cluster
+
+{
+    user-select: none;
+    -ms-user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+
+    display: inline-block;
+    margin: 6px 6px 0 0;
+    padding: 0px;
+    text-align: center;
+    border-radius: 5px;
+
+    border: 3px solid black;
+
+    width: 130px;
+    background-color: white;
+}
+
+#cv .cluster svg
+{
+    text-align: center;
+    margin: 10px 0 5px 0;
+}
+
+#cv a
+{
+    color: white;
+    text-decoration: none;
+}
+
+#cv a:hover .cluster
+{
+    color: white;
+    text-decoration: none;
+    border-color: blue;
+}
+
+
+#cv .cluster .clusterinfo
+{
+    background-color:black;
+    padding: 3px;
+}
+
+#cv .cluster .clusterinfo
+{
+    font-size: 12px;
+}
+
+#cv .cluster .clusterinfo .clusternumber
+{
+    font-size: 16px;
+    font-weight: bold;
+    width: 100%;
+    text-align: center;
+}
+
+#cv .cluster .clusterinfo .lalign
+{
+    float:left;
+    text-align: left;
+}
+
+#cv .cluster .clusterinfo .ralign
+{
+    float:right;
+    text-align: right;
+}
+
+#cv .cluster .clusterinfo .spikecount
+{
+    font-weight: bold;
+}
+
+#cv .cluster .clusterinfo .good
+{
+    background-color: #88ff88;
+    color: black;
+}
+
+#cv .cluster .clusterinfo .medium
+{
+    background-color: #ffff44;
+    color: black;
+}
+
+#cv .cluster .clusterinfo .bad
+{
+    background-color: #ff0000;
+    color: white;
+}
+
+#cv .cluster .clusterinfo .groups
+{
+    display: block;
+    width: 100%;
+    float: left;
+    clear: both;
+    margin-top: 3px;
+}
+
+#cv .cluster .clusterinfo .groups .grp
+{
+    padding: none;
+    margin: -2px;
+    padding: 1px;
+}
+
+#cv .gu
+{
+    background-color: #ccc;
+    color: black;
+}
+
+#cv .gg
+{
+    background-color: #00aa00;
+    color: black;
+}
+
+#cv .gm
+{
+    background-color: #0000ff;
+    color: white;
+}
+
+#cv .gn
+{
+    background-color: #aa0000;
+    color: black;
+}
+
+#cv .g1
+{
+    background-color: #ffcc00;
+    color: black;
+}
+
+#cv .g2
+{
+    background-color: #ccff00;
+    color: black;
+}
+
+#cv .g3
+{
+    background-color: #00ccff;
+    color: black;
+}
+
+#cv .g4
+{
+    background-color: #ff6600;
+    color: black;
+}
+
+#cv .g5
+{
+    background-color: #ff0066;
+    color: white;
+}
+
+#cv .g6
+{
+    background-color: #006666;
+    color: white;
+}
+
+#cv .g7
+{
+    background-color: #0099cc;
+    color: white;
+}
+
+#cv .g8
+{
+    background-color: #666600;
+    color: white;
+}
+
+#cv .g9
+{
+    background-color: #cc00cc;
+    color: white;
+}
+
+#cv .g0
+{
+    background-color: #cc6666;
+    color: black;
+}
+
+#cv .h
+{
+    background-color: black;
+    color: black;
+}
+
+#cv .sort
+{
+    width: 100%;
+    font-size: 18px;
+    display: block;
+    margin-top: 10px;
+    margin-bottom: 10px;
+    background-color: black;
+    color: white;
+}
+
+#cv .sort div
+{
+    display: inline-block;
+    margin: 5px 0 5px 0;
+    padding: 5px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+#cv .sel
+{
+    border-color: red;
+}
+
+
+#cv .sort a:hover div
+{
+    background-color: #aaaaaa;
+}
