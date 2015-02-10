@@ -181,6 +181,7 @@ def create_clustering_session(filename=None, model=None, backend=None):
             return
         view.on_trait_change(lambda _, __, clusters: session.select(clusters),
                              'value')
+        load_css('static/d3clusterwidget.css')
         load_css('static/widgets.css')
         from IPython.display import display
         display(view)
