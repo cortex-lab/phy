@@ -2,8 +2,11 @@
 // Widgets
 // ----------------------------------------------------------------------------
 
-require(["widgets/js/widget", "widgets/js/manager"],
-        function(widget, manager) {
+define(function(require) {
+    widget = require('widgets/js/widget');
+    manager = require('widgets/js/manager');
+    clusterwidget = require('/nbextensions/phy/static/d3clusterwidget.js');
+    require('/nbextensions/phy/static/utils.js');
 
     // Utility functions
     // ------------------------------------------------------------------------
@@ -29,11 +32,18 @@ require(["widgets/js/widget", "widgets/js/manager"],
         render: function(){
             var that = this;
             this.$el.addClass('cluster-container');
+            this.mydiv = $("<div id='cv' style='width: 100%; background-color: #ede;'/>");
+            this.mydiv.appendTo(this.$el);
+
+            this.clusterd3 = new clusterwidget.D3ClusterWidget(this.mydiv[0]);
+
             this._clusters = [];
 
             this.model.on('change:clusters',
                           this.clusters_changed, this);
             this.clusters_changed();
+
+            this.clusterd3.redraw(this.model.get('clusters'));
 
             this.model.on('change:colors',
                           this.colors_changed, this);
@@ -41,36 +51,42 @@ require(["widgets/js/widget", "widgets/js/manager"],
         },
 
         add_cluster: function(i) {
+            //return;
             var that = this;
-            var cluster = $('<button>' + i.toString() + '</div>');
+            console.log("<button/>");
+            var cluster = $('<button>' + i.id.toString() + '</button>');
             cluster.addClass('phy-clusterview-cluster');
-            cluster.click(function () {
-                that.model.set('value', [parseInt(i)]);
-                that.touch();
-            });
+            //cluster.click(function () {
+            //    that.model.set('value', [parseInt(i)]);
+            //    that.touch();
+            //});
             this._clusters.push(cluster);
             this.$el.append(cluster);
+            this.clusterd3.redraw(this.model.get('clusters'));
         },
 
         clusters_changed: function() {
             var clusters = this.model.get('clusters');
-            this.$el.empty();
+            this.$el.find(".phy-clusterview-cluster").remove(); //empty();
             this._clusters = [];
             for (var i = 0; i < clusters.length; i++) {
                 this.add_cluster(clusters[i]);
             }
+            this.clusterd3.redraw(this.model.get('clusters'));
         },
 
         colors_changed: function() {
             var colors = this.model.get('colors');
             for (var i = 0; i < colors.length; i++) {
                 var color = _parse_color(colors[i]);
-                this._clusters[i].css('background-color', color);
-            }
+                //this._clusters[i].css('background-color', color);
+             }
         }
     });
 
+    console.log("### registering the view");
     manager.WidgetManager.register_widget_view('ClusterWidget',
                                                ClusterWidget);
 
+    return { 'ClusterWidget' : ClusterWidget };
 });
