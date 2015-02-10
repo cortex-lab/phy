@@ -1,6 +1,6 @@
 
-define(function(require) {
-    d3 = require('/nbextensions/phy/static/d3.js');
+// define(function(require) {
+//     d3 = require('/nbextensions/phy/static/d3.js');
 
     function D3ClusterWidget(clusterView) {
         this.view = clusterView;
@@ -14,7 +14,10 @@ define(function(require) {
             //var clusters = generate_all_clusters();
 
             var clusterView = d3.select(this.view);
-             .data(clusters, function(d) { return d.id; });
+
+            console.log(clusterView);
+
+            clusterView.data(clusters, function(d) { return d.id; });
 
             var clusterEnter = cluster.enter()
                                 .insert("div")
@@ -99,5 +102,5 @@ define(function(require) {
       d.selected = !d.selected;
     }
 }
-    return { 'D3ClusterWidget' : D3ClusterWidget };
-});
+//     return { 'D3ClusterWidget' : D3ClusterWidget };
+// });
