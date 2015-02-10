@@ -13,16 +13,6 @@ from functools import wraps, partial
 from ...utils._misc import _fun_arg_count
 from ...ext.six import string_types
 
-# Template for a decorator that accepts both @decorator and @decorator().
-# def my_decorator(func=None, arg=None):
-#     if func is None:
-#         return partial(my_decorator, arg=arg)
-#     @wraps(func)
-#     def wrapper(*args, **kwargs):
-#         # TODO
-#         return func(*args, **kwargs)
-#     return wrapper
-
 
 #------------------------------------------------------------------------------
 # Session class
