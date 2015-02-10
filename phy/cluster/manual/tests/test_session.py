@@ -95,14 +95,14 @@ def test_action_event():
     _track = []
 
     @session.connect
-    def on_hello(out):
-        _track.append(out)
+    def on_hello(out, kwarg=''):
+        _track.append(out + kwarg)
 
     # We forgot the 'title=', but this still works.
     @session.action('My action')
     def my_action_hello(data):
         _track.append(data)
-        session.emit('hello', data + ' world')
+        session.emit('hello', data + ' world', kwarg='!')
 
     # Need one argument.
     with raises(TypeError):
@@ -110,4 +110,4 @@ def test_action_event():
 
     # This triggers the 'hello' event which adds 'hello world' to _track.
     session.my_action_hello('hello')
-    assert _track == ['hello', 'hello world']
+    assert _track == ['hello', 'hello world!']
