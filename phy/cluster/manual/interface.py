@@ -96,6 +96,7 @@ def create_clustering_session(filename=None, model=None):
         # TODO: cluster stats
         # TODO: n_spikes_max in a user parameter
         session.selector = Selector(spike_clusters, n_spikes_max=100)
+        # TODO: user-customizable list of statistics
         session.stats = ClusterStats()
 
     @session.connect
