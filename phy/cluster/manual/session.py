@@ -14,7 +14,7 @@ import numpy as np
 from ._history import GlobalHistory
 from .clustering import Clustering
 from .cluster_view import ClusterView
-from .cluster_metadata import ClusterMetadata
+from .cluster_info import ClusterMetadata
 from .selector import Selector
 from ...io.base_model import BaseModel
 from ...plot.waveforms import WaveformView

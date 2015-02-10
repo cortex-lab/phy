@@ -15,7 +15,7 @@ from ._history import GlobalHistory
 from .clustering import Clustering
 from ...io.kwik_model import KwikModel
 from .cluster_view import ClusterView
-from .cluster_metadata import ClusterMetadata
+from .cluster_info import ClusterMetadata
 from .selector import Selector
 from .session import Session
 from ...io.base_model import BaseModel

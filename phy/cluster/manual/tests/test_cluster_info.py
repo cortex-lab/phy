@@ -9,9 +9,9 @@
 from pytest import raises
 
 from ....ext.six import itervalues, iterkeys
-from ..cluster_metadata import (_cluster_info, ClusterMetadata,
-                                ClusterDefaultDict, ClusterStats,
-                                _fun_arg_count)
+from ..cluster_info import (_cluster_info, ClusterMetadata,
+                            ClusterDefaultDict, ClusterStats,
+                            _fun_arg_count)
 
 
 #------------------------------------------------------------------------------

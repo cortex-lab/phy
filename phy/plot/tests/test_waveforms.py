@@ -9,7 +9,7 @@
 import numpy as np
 from vispy import app
 
-from ...cluster.manual.cluster_metadata import ClusterMetadata
+from ...cluster.manual.cluster_info import ClusterMetadata
 from ...utils.logging import set_level
 from ..waveforms import Waveforms, WaveformView
 from ...utils._color import _random_color
