@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<body>
+<script src="d3.js"></script>
+<script src="d3clusterwidget.js"></script>
+
+<link rel="stylesheet" href="d3clusterwidget.css"/>
+
+<div id="cv"></div>
+
+<script>
+// Test functions
+function random_number(min,max)
+{
+    return (Math.round((max-min) * Math.random() + min));
+}
+
+function generate_random_cluster_info(num)
+{
+
+    var bins = [];
+    var nbins = 11; // must be odd!
+
+    bins[0] = 0
+    bins[nbins] = 0
+
+    for (var element=1; element<nbins/2; element++) {
+        var binval = random_number(0,120);
+        bins[element] = binval;
+        bins[nbins-element] = binval;
+    }
+
+    var clusterInfo = {
+            id: num,
+            quality: Math.random(),
+            nchannels: random_number(10, 1000),
+            nspikes: random_number(500, 1000000),
+            ccg: bins,
+            selected: false
+    };
+
+    return clusterInfo;
+}
+
+function generate_all_clusters()
+{
+    var clusters = []
+    var nclusters = 5
+
+    for (var i = 3; i <= nclusters; i++)
+    {
+        clusters.push(generate_random_cluster_info(i));
+    }
+
+    return clusters;
+}
+
+</script>
+
+<script>
+// Start page load
+console.time("pageLoadTime");
+
+var width = 110,
+height = 110;
+
+var clusters = generate_all_clusters();
+
+cw = new D3ClusterWidget(d3.select("#cv")[0][0]);
+
+cw.redraw(clusters);
+
+menu.selectAll("option")
+    .data(clusters)
+    .enter().append("option") // TODO: return the labels inside one object...
+    .text(function (d) { return d.clusternumber; });
+
+console.timeEnd("pageLoadTime");
+</script>
+</body>
+</html>
