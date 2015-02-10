@@ -98,7 +98,8 @@ def test_action_event():
     def on_hello(out):
         _track.append(out)
 
-    @session.action(title='My action')
+    # We forgot the 'title=', but this still works.
+    @session.action('My action')
     def my_action_hello(data):
         _track.append(data)
         session.emit('hello', data + ' world')

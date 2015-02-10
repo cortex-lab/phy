@@ -11,6 +11,7 @@ from collections import defaultdict
 from functools import wraps, partial
 
 from ...utils._misc import _fun_arg_count
+from ...ext.six import string_types
 
 # Template for a decorator that accepts both @decorator and @decorator().
 # def my_decorator(func=None, arg=None):
@@ -73,6 +74,10 @@ class Session(object):
         """
         if func is None:
             return partial(self.action, title=title)
+
+        # HACK: handle the case where the first argument is the title.
+        if isinstance(func, string_types):
+            return partial(self.action, title=func)
 
         # Register the action.
         self._actions.append({'func': func, 'title': title})
