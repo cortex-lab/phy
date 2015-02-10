@@ -62,24 +62,24 @@ class Session(object):
 
         return func
 
-    def action(self, func=None, name=None, event=None):
+    def action(self, func=None, title=None, event=None):
         """Decorator for a callback function of an action.
 
         It automatically raises an event named 'event'. If None, the name of
         the event is the name of the function.
 
-        The 'name' argument is used as a title for the GUI button.
+        The 'title' argument is used as a title for the GUI button.
 
         """
         if func is None:
-            return partial(self.action, name=name, event=event)
+            return partial(self.action, title=title, event=event)
 
         # By default, the event name is the function name.
         if event is None:
             event = func.__name__
 
         # Register the action.
-        self._actions.append({'func': func, 'name': name, 'event': event})
+        self._actions.append({'func': func, 'title': title, 'event': event})
 
         @wraps(func)
         def wrapper(*args, **kwargs):

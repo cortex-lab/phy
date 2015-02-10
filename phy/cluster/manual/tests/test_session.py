@@ -63,7 +63,7 @@ def test_action():
     session = Session()
     _track = []
 
-    @session.action(name="My action")
+    @session.action(title="My action")
     def my_action():
         _track.append("action")
 
@@ -79,7 +79,7 @@ def test_action_event():
     def on_hello(out):
         _track.append(out)
 
-    @session.action(name="My action", event="hello")
+    @session.action(title="My action", event="hello")
     def my_action_hello(data):
         _track.append(data)
         return data + " world"
