@@ -53,14 +53,17 @@ class Session(object):
         # Get the event name from the function.
         event = _get_on_name(func)
 
-        # @wraps(func)
-        # def wrapper(*args, **kwargs):
-        #     return func(*args, **kwargs)
-
         # We register the callback function.
         self._callbacks[event].append(func)
 
         return func
+
+    def unconnect(self, *funcs):
+        """Unconnect callback functions."""
+        for func in funcs:
+            for callbacks in self._callbacks.values():
+                if func in callbacks:
+                    callbacks.remove(func)
 
     def action(self, func=None, title=None, event=None):
         """Decorator for a callback function of an action.

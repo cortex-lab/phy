@@ -43,6 +43,25 @@ def test_session_connect():
     assert _track == ["my event"]
 
 
+def test_session_unconnect():
+    """Test unconnect."""
+    session = Session()
+
+    _track = []
+
+    @session.connect
+    def on_my_event():
+        _track.append("my event")
+
+    session.emit("my_event")
+    assert _track == ["my event"]
+
+    # Unregister and test that the on_my_event() callback is no longer called.
+    session.unconnect(on_my_event)
+    session.emit("my_event")
+    assert _track == ["my event"]
+
+
 def test_session_connect_alternative():
     """Test the alternative @connect() syntax."""
     session = Session()
