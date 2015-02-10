@@ -38,47 +38,15 @@ def start_manual_clustering(filename=None, model=None):
 
     """
 
-    # Enable the notebook interface.
-    enable_notebook()
-
-    if model is None:
-        model = KwikModel(filename)
-
     session = Session()
-
-    # Event callbacks
-    # -------------------------------------------------------------------------
-
-    @session.connect
-    def on_open():
-        """Update the session after new data has been loaded."""
-        session._global_history = GlobalHistory()
-        # TODO: call this after the channel groups has changed.
-        # Update the Selector and Clustering instances using the Model.
-        spike_clusters = session.model.spike_clusters
-        session.clustering = Clustering(spike_clusters)
-        session.cluster_metadata = session.model.cluster_metadata
-        # TODO: cluster stats
-        # TODO: n_spikes_max in a user parameter
-        session.selector = Selector(spike_clusters, n_spikes_max=100)
-
-    @session.connect
-    def on_select(clusters=None):
-        if clusters is None:
-            clusters = session.selected_clusters
-
-    @session.connect
-    def on_cluster(up=None, add_to_stack=True):
-        if add_to_stack:
-            session._global_history.action(session.clustering)
-            # TODO: if metadata
-            # session._global_history.action(session.cluster_metadata)
 
     # Public actions
     # -------------------------------------------------------------------------
 
     @session.action(title='Open')
-    def open(model):
+    def open(filename=None, model=None):
+        if model is None:
+            model = KwikModel(filename)
         session.model = model
         session.emit('open')
 
@@ -111,6 +79,34 @@ def start_manual_clustering(filename=None, model=None):
     def redo():
         up = session._global_history.redo()
         session.emit('cluster', up=up, add_to_stack=False)
+
+    # Event callbacks
+    # -------------------------------------------------------------------------
+
+    @session.connect
+    def on_open():
+        """Update the session after new data has been loaded."""
+        session._global_history = GlobalHistory()
+        # TODO: call this after the channel groups has changed.
+        # Update the Selector and Clustering instances using the Model.
+        spike_clusters = session.model.spike_clusters
+        session.clustering = Clustering(spike_clusters)
+        session.cluster_metadata = session.model.cluster_metadata
+        # TODO: cluster stats
+        # TODO: n_spikes_max in a user parameter
+        session.selector = Selector(spike_clusters, n_spikes_max=100)
+
+    @session.connect
+    def on_select(clusters=None):
+        if clusters is None:
+            clusters = session.selected_clusters
+
+    @session.connect
+    def on_cluster(up=None, add_to_stack=True):
+        if add_to_stack:
+            session._global_history.action(session.clustering)
+            # TODO: if metadata
+            # session._global_history.action(session.cluster_metadata)
 
     # Views
     # -------------------------------------------------------------------------
@@ -170,7 +166,10 @@ def start_manual_clustering(filename=None, model=None):
         display(view)
         return view
 
-    session.open(model)
+    # Enable the notebook interface.
+    enable_notebook()
+
+    session.open(filename=filename, model=model)
     session.show_clusters()
 
     return session

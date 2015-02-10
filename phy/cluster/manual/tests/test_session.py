@@ -42,6 +42,11 @@ def test_session_connect():
     session.emit('my_event')
     assert _track == ['my event']
 
+    # Although the callback doesn't accept a 'data' keyword argument, this does
+    # not raise an error because the event system will only pass the argument
+    # if it is part of the callback arg spec.
+    session.emit('my_event', data='hello')
+
 
 def test_session_unconnect():
     """Test unconnect."""

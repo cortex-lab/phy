@@ -9,6 +9,7 @@
 import re
 from collections import defaultdict
 from functools import wraps, partial
+from inspect import getargspec
 
 from ...utils._misc import _fun_arg_count
 from ...ext.six import string_types
@@ -80,4 +81,7 @@ class Session(object):
     def emit(self, event, *args, **kwargs):
         """Call all callback functions registered for that event."""
         for callback in self._callbacks[event]:
+            # Only keep the kwargs that are part of the callback's arg spec.
+            kwargs = {n: v for n, v in kwargs.items()
+                      if n in getargspec(callback).args}
             callback(*args, **kwargs)
