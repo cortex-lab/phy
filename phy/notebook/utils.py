@@ -23,6 +23,10 @@ def _to_abs_path(path):
     root = op.join(current_directory, '../')
     return op.join(root, path)
 
+def _to_web(path):
+    current_directory = os.path.join(op.dirname(op.realpath(__file__)), "..", "..")
+    return op.relpath(_to_abs_path(path), current_directory)
+
 
 def _read_file(path):
     """Read a text file specified with an absolute path."""
@@ -30,7 +34,7 @@ def _read_file(path):
         return f.read()
 
 
-def _inject_js(path):
+def _inject_js(path, require=True):
     """Inject a JS file in the notebook.
 
     Parameters
@@ -40,7 +44,15 @@ def _inject_js(path):
         Absolute path to a .js file.
 
     """
-    display_javascript(_read_file(path), raw=True)
+    if require:
+        myjs = "$('head').append(\"<script> require(['/nbextensions/" + _to_web(path) + "']); </script>\")"
+    else:
+        myjs = "$('head').append(\"<script type='text/javascript' src='/nbextensions/" + _to_web(path) + "'/>\")"
+    print("injecting js:", myjs)
+    #inject in head so the JS does not disappear with the outputarea
+    display_javascript(myjs, raw=True)
+    #return;
+    #display_javascript(_read_file(path), raw=True)
 
 
 def _inject_css(path):
@@ -53,10 +65,18 @@ def _inject_css(path):
         Absolute path to a .css file.
 
     """
-    css = _read_file(path)
-    html = '<style type="text/css">\n{0:s}\n</style>'.format(css)
-    display_html(html, raw=True)
+    mycss = '$("head").append(\'<link rel="stylesheet" href="/nbextensions/' + _to_web(path) + '" type="text/css"/>\')'
+    print("injecting css:", mycss)
+    #css = _read_file(path)
+    #html = '<style type="text/css">\n{0:s}\n</style>'.format(css)
+    #display_html(html, raw=True)
+    display_javascript(mycss, raw=True)
 
+
+def load_js(path, require=True):
+    """Load a CSS file specified with a path relative to the root
+    of the phy module."""
+    _inject_js(_to_abs_path(path), require=require)
 
 def load_css(path):
     """Load a CSS file specified with a path relative to the root
@@ -66,6 +86,7 @@ def load_css(path):
 
 def load_static(js=True, css=False):
     """Load all JS and CSS files in the 'static/' folder."""
+    return;
     static_dir = _to_abs_path('static/')
     files = os.listdir(static_dir)
     for file in files:
@@ -129,4 +150,4 @@ def enable_notebook(backend=None):
         elif backend == 'wx':
             _enable_gui(shell, 'wx')
     # Load static JS and CSS files.
-    load_static()
+    #load_static()
