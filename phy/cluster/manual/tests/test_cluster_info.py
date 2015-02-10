@@ -19,7 +19,7 @@ from ..cluster_info import (_cluster_info, ClusterMetadata,
 #------------------------------------------------------------------------------
 
 def test_fun_arg_count():
-
+    # TODO: move this to test_misc.py
     def f():
         pass
 

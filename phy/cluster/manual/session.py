@@ -53,14 +53,14 @@ class Session(object):
         # Get the event name from the function.
         event = _get_on_name(func)
 
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            return func(*args, **kwargs)
+        # @wraps(func)
+        # def wrapper(*args, **kwargs):
+        #     return func(*args, **kwargs)
 
         # We register the callback function.
-        self._callbacks[event].append(wrapper)
+        self._callbacks[event].append(func)
 
-        return wrapper
+        return func
 
     def action(self, func=None, name=None, event=None):
         """Decorator for a callback function of an action.
@@ -86,7 +86,7 @@ class Session(object):
             # Execute the action.
             out = func(*args, **kwargs)
             # Raise an event with the output function as an argument.
-            self.emit(event, out)
+            self.emit(event, data=out)
             return out
 
         # Set the action function as a Session method.
