@@ -8,7 +8,6 @@
 
 from inspect import getargspec, isfunction
 from collections import defaultdict, OrderedDict
-from functools import partial
 from copy import deepcopy
 
 from ...utils._color import _random_color
@@ -84,7 +83,7 @@ def _cluster_info(fields, data=None):
     """Initialize a structure holding cluster metadata."""
     if data is None:
         data = {}
-    out = ClusterDefaultDict(partial(_default_info, fields))
+    out = ClusterDefaultDict(lambda cluster: _default_info(fields, cluster))
     for cluster, values in iteritems(data):
         # Create the default cluster info dict.
         info = out[cluster]
