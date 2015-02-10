@@ -64,4 +64,8 @@ def test_interface_kwik():
         # This won't work but shouldn't raise an error.
         session.select([1000])
 
+        # TODO: more tests
+        session.undo()
+        session.redo()
+
         view.close()
