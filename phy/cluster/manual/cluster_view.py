@@ -17,6 +17,7 @@ import random
 
 class ClusterView(DOMWidget):
     _view_name = Unicode('ClusterWidget', sync=True)
+    _view_module = Unicode('/nbextensions/phy/static/widgets.js', sync=True)
     description = Unicode(help="Description", sync=True)
     clusters = List(sync=True)
     colors = List(sync=True)
