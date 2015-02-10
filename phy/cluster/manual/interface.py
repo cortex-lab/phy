@@ -14,7 +14,7 @@ from ._history import GlobalHistory
 from .clustering import Clustering
 from ...io.kwik_model import KwikModel
 from .cluster_view import ClusterView
-from .cluster_info import ClusterMetadata
+from .cluster_info import ClusterMetadata, ClusterStats
 from .selector import Selector
 from .session import Session
 from ...io.base_model import BaseModel
@@ -26,8 +26,8 @@ from ...notebook.utils import load_css, ipython_shell
 # Default interface
 #------------------------------------------------------------------------------
 
-def start_manual_clustering(filename=None, model=None):
-    """Start a manual clustering session in the IPython notebook.
+def create_clustering_session(filename=None, model=None):
+    """Create a manual clustering session in the IPython notebook.
 
     Parameters
     ----------
@@ -95,6 +95,7 @@ def start_manual_clustering(filename=None, model=None):
         # TODO: cluster stats
         # TODO: n_spikes_max in a user parameter
         session.selector = Selector(spike_clusters, n_spikes_max=100)
+        session.stats = ClusterStats()
 
     @session.connect
     def on_select(clusters=None):
@@ -165,6 +166,23 @@ def start_manual_clustering(filename=None, model=None):
         from IPython.display import display
         display(view)
         return view
+
+    return session
+
+
+def start_manual_clustering(filename=None, model=None):
+    """Start a manual clustering session in the IPython notebook.
+
+    Parameters
+    ----------
+    filename : str
+        Path to a .kwik file, to be used if 'model' is not used.
+    model : instance of BaseModel
+        A Model instance, to be used if 'filename' is not used.
+
+    """
+
+    session = create_clustering_session(filename=filename, model=model)
 
     # Enable the notebook interface.
     enable_notebook()
