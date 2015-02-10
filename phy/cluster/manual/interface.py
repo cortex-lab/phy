@@ -39,6 +39,7 @@ def create_clustering_session(filename=None, model=None):
     """
 
     session = Session()
+    session.model = None
 
     # Public actions
     # -------------------------------------------------------------------------
@@ -53,7 +54,7 @@ def create_clustering_session(filename=None, model=None):
     @session.action(title='Select clusters')
     def select(clusters):
         session.selector.selected_clusters = clusters
-        session.emit('select', clusters=clusters)
+        session.emit('select')
 
     @session.action(title='Merge')
     def merge(clusters):
@@ -98,11 +99,6 @@ def create_clustering_session(filename=None, model=None):
         session.stats = ClusterStats()
 
     @session.connect
-    def on_select(clusters=None):
-        if clusters is None:
-            clusters = session.selected_clusters
-
-    @session.connect
     def on_cluster(up=None, add_to_stack=True):
         if add_to_stack:
             session._global_history.action(session.clustering)
@@ -118,19 +114,21 @@ def create_clustering_session(filename=None, model=None):
 
         @session.connect
         def on_open():
+            if session.model is None:
+                return
             view.visual.spike_clusters = session.clustering.spike_clusters
             view.visual.cluster_metadata = session.cluster_metadata
             view.visual.channel_positions = session.model.probe.positions
             view.update()
 
         @session.connect
-        def on_cluster(up=None, add_to_stack=None):
+        def on_cluster(up=None):
             pass
             # TODO: select the merged cluster
             # session.select(merged)
 
         @session.connect
-        def on_select(clusters):
+        def on_select():
             spikes = session.selector.selected_spikes
             if len(spikes) == 0:
                 return
@@ -145,6 +143,11 @@ def create_clustering_session(filename=None, model=None):
             session.unconnect(on_open, on_cluster, on_select)
 
         view.show()
+
+        # Update the view if the model was already opened.
+        on_open()
+        on_select()
+
         return view
 
     @session.action(title='Show clusters')

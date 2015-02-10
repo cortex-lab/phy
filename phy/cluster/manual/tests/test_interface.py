@@ -27,6 +27,7 @@ def test_interface_mock():
     view = session.show_waveforms()
     session.select([0])
     view_bis = session.show_waveforms()
+
     session.merge([3, 4])
 
     view.close()
