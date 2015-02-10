@@ -32,15 +32,15 @@ def test_session_connect():
 
     @session.connect
     def on_my_event():
-        _track.append("my event")
+        _track.append('my event')
 
     assert _track == []
 
-    session.emit("invalid")
+    session.emit('invalid')
     assert _track == []
 
-    session.emit("my_event")
-    assert _track == ["my event"]
+    session.emit('my_event')
+    assert _track == ['my event']
 
 
 def test_session_unconnect():
@@ -51,15 +51,15 @@ def test_session_unconnect():
 
     @session.connect
     def on_my_event():
-        _track.append("my event")
+        _track.append('my event')
 
-    session.emit("my_event")
-    assert _track == ["my event"]
+    session.emit('my_event')
+    assert _track == ['my event']
 
     # Unregister and test that the on_my_event() callback is no longer called.
     session.unconnect(on_my_event)
-    session.emit("my_event")
-    assert _track == ["my event"]
+    session.emit('my_event')
+    assert _track == ['my event']
 
 
 def test_session_connect_alternative():
@@ -72,22 +72,22 @@ def test_session_connect_alternative():
 
     @session.connect()
     def on_my_event():
-        _track.append("my event")
+        _track.append('my event')
 
-    session.emit("my_event")
-    assert _track == ["my event"]
+    session.emit('my_event')
+    assert _track == ['my event']
 
 
 def test_action():
     session = Session()
     _track = []
 
-    @session.action(title="My action")
+    @session.action(title='My action')
     def my_action():
-        _track.append("action")
+        _track.append('action')
 
     session.my_action()
-    assert _track == ["action"]
+    assert _track == ['action']
 
 
 def test_action_event():
@@ -98,15 +98,15 @@ def test_action_event():
     def on_hello(out):
         _track.append(out)
 
-    @session.action(title="My action", event="hello")
+    @session.action(title='My action')
     def my_action_hello(data):
         _track.append(data)
-        return data + " world"
+        session.emit('hello', data + ' world')
 
     # Need one argument.
     with raises(TypeError):
         session.my_action_hello()
 
     # This triggers the 'hello' event which adds 'hello world' to _track.
-    session.my_action_hello("hello")
-    assert _track == ["hello", "hello world"]
+    session.my_action_hello('hello')
+    assert _track == ['hello', 'hello world']

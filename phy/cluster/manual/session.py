@@ -65,43 +65,24 @@ class Session(object):
                 if func in callbacks:
                     callbacks.remove(func)
 
-    def action(self, func=None, title=None, event=None):
+    def action(self, func=None, title=None):
         """Decorator for a callback function of an action.
-
-        It automatically raises an event named 'event'. If None, the name of
-        the event is the name of the function.
 
         The 'title' argument is used as a title for the GUI button.
 
         """
         if func is None:
-            return partial(self.action, title=title, event=event)
-
-        # By default, the event name is the function name.
-        if event is None:
-            event = func.__name__
+            return partial(self.action, title=title)
 
         # Register the action.
-        self._actions.append({'func': func, 'title': title, 'event': event})
-
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            # Execute the action.
-            out = func(*args, **kwargs)
-            # Raise an event with the output function as an argument.
-            self.emit(event, data=out)
-            return out
+        self._actions.append({'func': func, 'title': title})
 
         # Set the action function as a Session method.
-        setattr(self, func.__name__, wrapper)
+        setattr(self, func.__name__, func)
 
-        return wrapper
+        return func
 
-    def emit(self, event, data=None):
+    def emit(self, event, *args, **kwargs):
         """Call all callback functions registered for that event."""
         for callback in self._callbacks[event]:
-            n_args = _fun_arg_count(callback)
-            if n_args == 0:
-                callback()
-            elif n_args == 1:
-                callback(data)
+            callback(*args, **kwargs)
