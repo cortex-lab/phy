@@ -183,6 +183,7 @@ def create_clustering_session(filename=None, model=None, backend=None):
                              'value')
         load_css('static/d3clusterwidget.css')
         load_css('static/widgets.css')
+        session.view = view
         from IPython.display import display
         display(view)
         return view
