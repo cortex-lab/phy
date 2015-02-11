@@ -32,7 +32,7 @@ def _is_bright(rgb):
 
 def _random_bright_color():
     """Generate a random bright color."""
-    rgb = _random_rgb_color()
+    rgb = _random_color()
     while not _is_bright(rgb):
-        rgb = _random_rgb_color()
+        rgb = _random_color()
     return rgb
