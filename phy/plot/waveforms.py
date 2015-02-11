@@ -339,9 +339,15 @@ class WaveformView(PanZoomCanvas):
         # TODO: more interactivity
         # TODO: keyboard shortcut manager
         super(WaveformView, self).on_key_press(event)
+        u, v = self.visual.box_scale
+        coeff = 1.1
         if event.key == '+':
-            u, v = self.visual.box_scale
-            self.visual.box_scale = (u, v*1.1)
+            if 'Control' in event.modifiers:
+                self.visual.box_scale = (u*coeff, v)
+            else:
+                self.visual.box_scale = (u, v*coeff)
         if event.key == '-':
-            u, v = self.visual.box_scale
-            self.visual.box_scale = (u, v/1.1)
+            if 'Control' in event.modifiers:
+                self.visual.box_scale = (u/coeff, v)
+            else:
+                self.visual.box_scale = (u, v/coeff)
