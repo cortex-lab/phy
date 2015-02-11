@@ -7,14 +7,25 @@ define(function(require) {
         this.view = clusterView;
         this.width = 100;
         this.height = 100;
+        this.onSelected = function(selection) {};
+
+        this.selected = function() {
+            var res = [];
+
+            d3.select(this.view).selectAll('.cluster').each(function(dl, i) {
+                if (dl.selected) {
+                    console.log("selected: ", dl.id)
+                    res.push(dl.id)
+                }
+            });
+            return res;
+        }
 
         this.redraw = function(clusters)
         {
             var barWidth = 1;
 
-            var clusterView = d3.select(this.view);
-
-            var cluster = clusterView.selectAll(".cluster").data(clusters, function(d) { return d.id; });
+            var cluster = d3.select(this.view).selectAll(".cluster").data(clusters, function(d) { return d.id; });
             var that = this;
             var clusterEnter = cluster.enter()
                                 .insert("div")
@@ -23,6 +34,7 @@ define(function(require) {
                                 .on('mousedown', function(d) {
                                     that.clusterClicked(d, this);
                                     that.redraw(clusters);
+                                    that.onSelected(that.selected());
                                 });
 
             var lineFunction = d3.svg.line()

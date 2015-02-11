@@ -21,7 +21,7 @@ class ClusterView(DOMWidget):
     description = Unicode(help="Description", sync=True)
     clusters = List(sync=True)
     colors = List(sync=True)
-    value = List(sync=True)
+    value = List(sync=True)   #list of ids
 
     def __init__(self, *args, **kwargs):
         super(ClusterView, self).__init__(*args, **kwargs)

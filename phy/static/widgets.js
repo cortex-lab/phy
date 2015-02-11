@@ -29,6 +29,12 @@ define(function(require) {
     // Cluster view
     // ------------------------------------------------------------------------
     var ClusterWidget = IPython.DOMWidgetView.extend({
+        update_selection: function(selection) {
+            console.log("update sel:", selection);
+            this.model.set('value', selection, {updated_view: this});
+            this.touch();
+        },
+
         render: function(){
             var that = this;
             this.$el.addClass('cluster-container');
@@ -36,7 +42,7 @@ define(function(require) {
             this.mydiv.appendTo(this.$el);
 
             this.clusterd3 = new clusterwidget.D3ClusterWidget(this.mydiv[0]);
-
+            this.clusterd3.onSelected = this.update_selection.bind(that); //we want this in update_selection to be ... that
             this._clusters = [];
 
             this.model.on('change:clusters',
