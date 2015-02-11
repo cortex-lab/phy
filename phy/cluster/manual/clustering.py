@@ -139,7 +139,8 @@ class Clustering(object):
         #                     for cluster in cluster_labels])
         # assert n_spikes_bis == n_spikes
         for cluster in cluster_labels:
-            del self._cluster_counts[cluster]
+            if cluster in self._cluster_counts:
+                del self._cluster_counts[cluster]
         self._cluster_counts[to] = n_spikes
         # Finally, assign the spike clusters and return directly the
         # UpdateInfo instance.

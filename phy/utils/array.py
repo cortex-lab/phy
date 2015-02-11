@@ -56,12 +56,28 @@ def _unique(x):
     return np.nonzero(np.bincount(x))[0]
 
 
-def _normalize(arr):
+def _normalize(arr, keep_ratio=False):
     """Normalize an array into [0, 1]."""
-    # TODO: add 'keep_ratio' option.
-    min, max = arr.min(axis=0), arr.max(axis=0)
-    positions_n = (arr - min) * 1. / (max - min)
-    return positions_n
+    (x_min, y_min), (x_max, y_max) = arr.min(axis=0), arr.max(axis=0)
+
+    if keep_ratio:
+        a = 1. / max(x_max - x_min, y_max - y_min)
+        ax = ay = a
+        bx = .5 - .5 * a * (x_max + x_min)
+        by = .5 - .5 * a * (y_max + y_min)
+    else:
+        ax = 1. / (x_max - x_min)
+        ay = 1. / (y_max - y_min)
+        bx = -x_min / (x_max - x_min)
+        by = -y_min / (y_max - y_min)
+
+    arr_n = arr.copy()
+    arr_n[:, 0] *= ax
+    arr_n[:, 0] += bx
+    arr_n[:, 1] *= ay
+    arr_n[:, 1] += by
+
+    return arr_n
 
 
 def _index_of(arr, lookup):
