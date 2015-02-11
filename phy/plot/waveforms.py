@@ -116,7 +116,7 @@ class Waveforms(Visual):
             self.n_spikes = arr.shape[0]
         assert arr.shape[0] == self.n_spikes
 
-    def _set_to_bake(self, *bakes):
+    def set_to_bake(self, *bakes):
         for bake in bakes:
             if bake not in self._to_bake:
                 self._to_bake.append(bake)
@@ -132,7 +132,7 @@ class Waveforms(Visual):
         """Set all spike clusters."""
         value = _as_array(value)
         self._spike_clusters = value
-        self._set_to_bake('spikes_clusters')
+        self.set_to_bake('spikes_clusters')
 
     @property
     def waveforms(self):
@@ -148,7 +148,7 @@ class Waveforms(Visual):
         assert value.ndim == 3
         self.n_spikes, self.n_samples, self.n_channels = value.shape
         self._waveforms = value
-        self._set_to_bake('spikes', 'spikes_clusters', 'metadata')
+        self.set_to_bake('spikes', 'spikes_clusters', 'metadata')
 
     @property
     def masks(self):
@@ -163,7 +163,7 @@ class Waveforms(Visual):
         assert value.ndim == 2
         assert value.shape == (self.n_spikes, self.n_channels)
         self._masks = value
-        self._set_to_bake('spikes')
+        self.set_to_bake('spikes')
 
     @property
     def spike_labels(self):
@@ -178,7 +178,7 @@ class Waveforms(Visual):
         value = _as_array(value)
         self._set_or_assert_n_spikes(value)
         self._spike_labels = value
-        self._set_to_bake('spikes')
+        self.set_to_bake('spikes')
 
     @property
     def cluster_metadata(self):
@@ -189,7 +189,7 @@ class Waveforms(Visual):
     @cluster_metadata.setter
     def cluster_metadata(self, value):
         self._cluster_metadata = value
-        self._set_to_bake('metadata')
+        self.set_to_bake('metadata')
 
     @property
     def channel_positions(self):
@@ -200,7 +200,7 @@ class Waveforms(Visual):
     def channel_positions(self, value):
         value = _as_array(value)
         self._channel_positions = value
-        self._set_to_bake('channel_positions')
+        self.set_to_bake('channel_positions')
 
     @property
     def cluster_labels(self):
