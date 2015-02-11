@@ -2,6 +2,21 @@
 <meta charset="utf-8">
 <body>
 <script src="d3.js"></script>
+<script>
+  //define(function(require) {
+
+  //d3 = require('/nbextensions/phy/static/d3.js');
+
+  var require = function(blabla) {
+     return d3;
+  }
+  var define = function(titi) {
+    ret = titi(require);
+    D3ClusterWidget = ret.D3ClusterWidget;
+  };
+
+</script>
+
 <script src="d3clusterwidget.js"></script>
 
 <link rel="stylesheet" href="d3clusterwidget.css"/>
