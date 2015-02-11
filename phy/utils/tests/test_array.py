@@ -113,9 +113,27 @@ def test_normalize():
     n_channels = 10
     positions = 1 + 2 * np.random.randn(n_channels, 2)
 
+    # Keep ration is False.
     positions_n = _normalize(positions)
-    assert positions_n.min() >= -1
-    assert positions_n.max() <= 1
+
+    x_min, y_min = positions_n.min(axis=0)
+    x_max, y_max = positions_n.max(axis=0)
+
+    np.allclose(x_min, 0.)
+    np.allclose(x_max, 1.)
+    np.allclose(y_min, 0.)
+    np.allclose(y_max, 1.)
+
+    # Keep ratio is True.
+    positions_n = _normalize(positions, keep_ratio=True)
+
+    x_min, y_min = positions_n.min(axis=0)
+    x_max, y_max = positions_n.max(axis=0)
+
+    np.allclose(min(x_min, y_min), 0.)
+    np.allclose(max(x_max, y_max), 1.)
+    np.allclose(x_min + x_max, 1)
+    np.allclose(y_min + y_max, 1)
 
 
 def test_index_of():

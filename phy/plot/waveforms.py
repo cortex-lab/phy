@@ -242,7 +242,7 @@ class Waveforms(Visual):
         # WARNING: channel_positions must be in [0,1] because we have a
         # texture.
         positions = self.channel_positions.astype(np.float32)
-        positions = _normalize(positions)
+        positions = _normalize(positions, keep_ratio=True)
         positions = positions.reshape((1, self.n_channels, -1))
         # Rescale a bit and recenter.
         positions = .1 + .8 * positions
