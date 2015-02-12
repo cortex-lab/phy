@@ -19,6 +19,7 @@ from ..waveform.filter import bandpass_filter, apply_filter
 from ..electrode.mea import MEA, linear_positions
 from ..utils.logging import debug
 from ..utils.array import PartialArray
+from ..utils._color import _random_color
 
 
 #------------------------------------------------------------------------------
@@ -252,6 +253,14 @@ class KwikModel(BaseModel):
 
         self._cluster_metadata = ClusterMetadata()
 
+        @self._cluster_metadata.field
+        def color(cluster):
+            return _random_color()
+
+        @self._cluster_metadata.field
+        def group(cluster):
+            return 3
+
         # Load probe.
         positions = self._load_channel_positions()
 
@@ -279,7 +288,10 @@ class KwikModel(BaseModel):
                                    low=self._metadata['filter_low'],
                                    high=self._metadata['filter_high'],
                                    order=order)
-        filter = lambda x: apply_filter(x, b_filter)
+
+        def filter(x):
+            return apply_filter(x, b_filter)
+
         self._waveform_loader = WaveformLoader(n_samples=n_samples,
                                                channels=self._channels,
                                                filter=filter,
