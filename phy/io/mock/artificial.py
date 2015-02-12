@@ -10,6 +10,7 @@ import numpy as np
 import numpy.random as nr
 
 from ...ext import six
+from ...utils._color import _random_color
 from ..base_model import BaseModel
 from ...cluster.manual.cluster_info import ClusterMetadata
 from ...electrode.mea import MEA, staggered_positions
@@ -63,6 +64,11 @@ class MockModel(BaseModel):
         super(BaseModel, self).__init__()
         self._metadata = {'description': 'A mock model.'}
         self._cluster_metadata = ClusterMetadata()
+
+        @self._cluster_metadata.field
+        def color(cluster):
+            return _random_color()
+
         positions = staggered_positions(self.n_channels)
         self._probe = MEA(positions=positions)
         self._traces = artificial_traces(self.n_samples_traces,

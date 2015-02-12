@@ -215,7 +215,7 @@ class Waveforms(Visual):
     def cluster_colors(self):
         """Colors of the displayed clusters."""
         clusters = self.cluster_labels
-        return np.array([self._cluster_metadata[cluster]['color']
+        return np.array([self._cluster_metadata.color(cluster)
                          for cluster in clusters], dtype=np.float32)
 
     @property

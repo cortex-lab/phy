@@ -70,7 +70,6 @@ def test_mock_model():
     assert model.traces.ndim == 2
     assert model.spike_times.ndim == 1
     assert model.spike_clusters.ndim == 1
-    assert len(model.cluster_metadata[3]['color']) == 3
     assert model.features.ndim == 2
     assert model.masks.ndim == 2
     assert model.waveforms.ndim == 3

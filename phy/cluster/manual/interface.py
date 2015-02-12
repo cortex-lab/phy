@@ -73,7 +73,7 @@ def create_clustering_session(filename=None, model=None):
 
     @session.action(title='Move clusters to a group')
     def move(clusters, group):
-        up = session.cluster_metadata.set(clusters, 'group', group)
+        up = session.cluster_metadata.set_group(clusters, group)
         session.emit('cluster', up=up)
 
     @session.action(title='Undo')
@@ -98,19 +98,18 @@ def create_clustering_session(filename=None, model=None):
         spike_clusters = session.model.spike_clusters
         session.clustering = Clustering(spike_clusters)
         session.cluster_metadata = session.model.cluster_metadata
-        # TODO: cluster stats
+        session.stats = ClusterStats()
         # TODO: n_spikes_max in a user parameter
         session.selector = Selector(spike_clusters, n_spikes_max=100)
         # TODO: user-customizable list of statistics
 
         mask_selector = Selector(spike_clusters, n_spikes_max=100)
 
+        @session.stats.stat
         def cluster_masks(cluster):
             mask_selector.selected_clusters = [cluster]
             spikes = mask_selector.selected_spikes
             return _mean_masks(session.model.masks, spikes)
-
-        session.stats = ClusterStats(cluster_masks=cluster_masks)
 
     @session.connect
     def on_cluster(up=None, add_to_stack=True):
@@ -168,7 +167,7 @@ def create_clustering_session(filename=None, model=None):
     def show_clusters():
         """Create and show a new cluster view."""
 
-        cluster_colors = [session.cluster_metadata[cluster]['color']
+        cluster_colors = [session.cluster_metadata.color(cluster)
                           for cluster in session.clustering.cluster_labels]
 
         try:
