@@ -12,6 +12,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ..wizard import Wizard
+from ..cluster_info import ClusterMetadata
 
 
 #------------------------------------------------------------------------------
@@ -20,25 +21,22 @@ from ..wizard import Wizard
 
 def test_wizard():
 
-    n_channels = 8
+    wizard = Wizard()
+    wizard.cluster_labels = [2, 3, 5]
 
-    def _masks(*ind_true):
-        m = np.zeros(n_channels, dtype=np.bool)
-        m[np.array(ind_true)] = True
-        return m
+    @wizard.quality
+    def quality(cluster):
+        return {2: .9,
+                3: .3,
+                5: .6,
+                }[cluster]
 
-    # 2-3: 1
-    # 2-5: 2
-    # 3-5: 3
-    cluster_stats = {2: {'quality': .9,
-                         'cluster_masks': _masks(1, 3)},
-                     3: {'quality': .3,
-                         'cluster_masks': _masks(2, 3, 4)},
-                     5: {'quality': .6,
-                         'cluster_masks': _masks(1, 2, 3, 4, 5)}}
-
-    wizard = Wizard(cluster_stats=cluster_stats,
-                    cluster_metadata={})
+    @wizard.similarity
+    def similarity(cluster, other):
+        cluster, other = min((cluster, other)), max((cluster, other))
+        return {(2, 3): 1,
+                (2, 5): 2,
+                (3, 5): 3}[cluster, other]
 
     assert wizard.best_clusters() == [2, 5, 3]
     assert wizard.best_cluster() == 2

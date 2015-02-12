@@ -16,37 +16,51 @@ import numpy as np
 # Wizard
 #------------------------------------------------------------------------------
 
-def _norm(x):
-    """Euclidean norm of a vector."""
-    return math.sqrt((x ** 2).sum())
-
-
-def _cluster_masks_similarity(masks_ref, masks):
-    """Compute the similarity between two cluster masks."""
-    return np.dot(masks_ref / _norm(masks_ref),
-                  masks / _norm(masks))
+def _argsort(seq, reverse=True, n_max=None):
+    """Return the list of clusters in decreasing order of value from
+    a list of tuples (cluster, value)."""
+    out = [cl for (cl, v) in sorted(seq, key=itemgetter(1),
+                                    reverse=reverse)]
+    if n_max is not None:
+        out = out[:n_max]
+    return out
 
 
 class Wizard(object):
-    def __init__(self, cluster_stats=None, cluster_metadata=None):
-        self._cluster_stats = cluster_stats
+    def __init__(self, cluster_metadata=None):
         self._cluster_metadata = cluster_metadata
+        self._similarity = None
+        self._quality = None
+        self._cluster_labels = None
 
     @property
-    def _clusters(self):
-        """Return the sorted list of valid clusters."""
-        clusters = self._cluster_stats.keys()
-        # Checking the keys in both dictionaries... probably not necessary.
-        # clusters_ = self._cluster_metadata.keys()
-        # assert clusters == clusters_
-        return clusters
+    def cluster_labels(self):
+        return self._cluster_labels
+
+    @cluster_labels.setter
+    def cluster_labels(self, value):
+        self._cluster_labels = value
+
+    def similarity(self, func):
+        """Register a function returing the similarity between two clusters."""
+        self._similarity = func
+        return func
+
+    def quality(self, func):
+        """Register a function returing the quality of a cluster."""
+        self._quality = func
+        return func
+
+    def _check_cluster_labels(self):
+        if self._cluster_labels is None:
+            raise RuntimeError("The list of clusters need to be set.")
 
     def best_clusters(self, n_max=None):
         """Return the list of best clusters sorted by decreasing quality."""
-        quality = [(cluster, self._cluster_stats[cluster]['quality'])
-                   for cluster in self._clusters]
-        quality_s = sorted(quality, key=itemgetter(1), reverse=True)
-        return [cluster for cluster, qual in quality_s[:n_max]]
+        self._check_cluster_labels()
+        quality = [(cluster, self._quality(cluster))
+                   for cluster in self._cluster_labels]
+        return _argsort(quality, n_max=n_max)
 
     def best_cluster(self):
         """Return the best cluster."""
@@ -56,16 +70,12 @@ class Wizard(object):
 
     def most_similar_clusters(self, cluster, n_max=None):
         """Return the `n_max` most similar clusters."""
-        masks_ref = self._cluster_stats[cluster]['cluster_masks']
-        # TODO: select the appropriate groups
-        masks = [(other, self._cluster_stats[other]['cluster_masks'])
-                 for other in self._clusters
-                 if other != cluster]
-        similarity = [(clu, _cluster_masks_similarity(masks_ref, m))
-                      for (clu, m) in masks]
-        # TODO: refactor this snippet with best_clusters()
-        similarity_s = sorted(similarity, key=itemgetter(1), reverse=True)
-        return [clu for clu, sim in similarity_s[:n_max]]
+        self._check_cluster_labels()
+        # TODO: filter according to the cluster group.
+        similarity = [(other, self._similarity(cluster, other))
+                      for other in self._cluster_labels
+                      if other != cluster]
+        return _argsort(similarity, n_max=n_max)
 
     def mark_dissimilar(self, cluster_0, cluster_1):
         """Mark two clusters as dissimilar after a human decision.

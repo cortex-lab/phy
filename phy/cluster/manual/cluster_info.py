@@ -143,11 +143,21 @@ class ClusterMetadata(object):
 class ClusterStats(object):
     def __init__(self):
         self._cache = defaultdict(dict)
+        self._cluster_labels = None
+
+    @property
+    def cluster_labels(self):
+        return self._cluster_labels
+
+    @cluster_labels.setter
+    def cluster_labels(self, value):
+        self._cluster_labels = value
 
     def stat(self, func):
         stat = func.__name__
 
         def wrapped(cluster):
+            # Memoize decorator.
             # Compute the statistics if it is not in the cache.
             if stat not in self._cache[cluster]:
                 out = func(cluster)
@@ -171,12 +181,3 @@ class ClusterStats(object):
             else:
                 if field in self._cache[cluster]:
                     del self._cache[cluster][field]
-
-    def keys(self):
-        return self._cache.keys()
-
-    def values(self):
-        return self._cache.values()
-
-    def items(self):
-        return self._cache.items()
