@@ -288,7 +288,10 @@ class KwikModel(BaseModel):
                                    low=self._metadata['filter_low'],
                                    high=self._metadata['filter_high'],
                                    order=order)
-        filter = lambda x: apply_filter(x, b_filter)
+
+        def filter(x):
+            return apply_filter(x, b_filter)
+
         self._waveform_loader = WaveformLoader(n_samples=n_samples,
                                                channels=self._channels,
                                                filter=filter,
