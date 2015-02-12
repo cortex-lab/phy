@@ -6,171 +6,102 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from collections import defaultdict, OrderedDict
+from collections import defaultdict, OrderedDict, MutableMapping
 from copy import deepcopy
 
 from ...utils._color import _random_color
 from ...utils._misc import _as_dict, _fun_arg_count
-from ...ext.six import iterkeys, itervalues, iteritems
+from ...ext.six import iterkeys, itervalues, iteritems, string_types
 from ._utils import _unique, _spikes_in_clusters
 from ._update_info import UpdateInfo
 from ._history import History
 
 
 #------------------------------------------------------------------------------
-# BaseClusterInfo class
+# Utility functions
 #------------------------------------------------------------------------------
 
-def _default_value(field, default, cluster):
-    """Return the default value of a field."""
-    if hasattr(default, '__call__'):
-        if _fun_arg_count(default) == 0:
-            return default()
-        elif _fun_arg_count(default) == 1:
-            return default(cluster)
+def _is_list(obj):
+    return isinstance(obj, list)
+
+
+def _as_list(obj):
+    """Ensure an object is a list."""
+    if isinstance(obj, string_types):
+        return [obj]
+    elif not hasattr(obj, '__len__'):
+        return [obj]
     else:
-        return default
-
-
-def _default_info(fields, cluster):
-    """Default structure holding info of a cluster."""
-    fields = _as_dict(fields)
-    return dict([(field, _default_value(field, default, cluster))
-                 for field, default in iteritems(fields)])
-
-
-class ClusterDefaultDict(defaultdict):
-    """Like a defaultdict, but the factory function can accept the key
-    as argument."""
-    def __init__(self, factory=None):
-        self._factory = factory
-        if factory is not None:
-            self._n_args = _fun_arg_count(factory)
-        else:
-            self._n_args = None
-        super(ClusterDefaultDict, self).__init__(factory)
-
-    def __missing__(self, key):
-        if self._n_args == 1:
-            # Call the factory with the cluster number as argument
-            # and save the result in the defaultdict.
-            self[key] = value = self._factory(key)
-            return value
-        else:
-            return super(ClusterDefaultDict, self).__missing__(key)
-
-
-def _cluster_info(fields, data=None):
-    """Initialize a structure holding cluster metadata."""
-    if data is None:
-        data = {}
-    out = ClusterDefaultDict(lambda cluster: _default_info(fields, cluster))
-    for cluster, values in iteritems(data):
-        # Create the default cluster info dict.
-        info = out[cluster]
-        # Update the specified values, so that the default values are used
-        # for the unspecified values.
-        for key, value in iteritems(values):
-            info[key] = value
-    return out
-
-
-class BaseClusterInfo(object):
-    # TODO: unit tests for BaseClusterInfo
-    """Hold information about clusters."""
-    def __init__(self, data=None, fields=None):
-        # 'fields' is a list of tuples (field_name, default_value).
-        # 'self._fields' is an OrderedDict {field_name ==> default_value}.
-        self._fields = _as_dict(fields)
-        self._field_names = list(iterkeys(self._fields))
-        # '_data' maps cluster labels to dict (field => value).
-        self._data = _cluster_info(fields, data=data)
-
-    @property
-    def data(self):
-        """Dictionary holding data for all clusters."""
-        return self._data
-
-    def __getitem__(self, cluster):
-        return self._data[cluster]
-
-    def set(self, clusters, field, values):
-        """Set some information for a number of clusters."""
-        # Ensure 'clusters' is a list of clusters.
-        if not hasattr(clusters, '__len__'):
-            clusters = [clusters]
-        if hasattr(values, '__len__'):
-            assert len(clusters) == len(values)
-            for cluster, value in zip(clusters, values):
-                self._data[cluster][field] = value
-        else:
-            for cluster in clusters:
-                self._data[cluster][field] = values
-
-    def unset(self, clusters):
-        """Delete a cluster."""
-        if not hasattr(clusters, '__len__'):
-            clusters = [clusters]
-        for cluster in clusters:
-            if cluster in self._data:
-                del self._data[cluster]
-
-
-#------------------------------------------------------------------------------
-# Global variables related to cluster metadata
-#------------------------------------------------------------------------------
-
-DEFAULT_GROUPS = [
-    (0, 'Noise'),
-    (1, 'MUA'),
-    (2, 'Good'),
-    (3, 'Unsorted'),
-]
-
-
-DEFAULT_FIELDS = {
-    'group': 3,
-    'color': _random_color,
-}
+        return obj
 
 
 #------------------------------------------------------------------------------
 # ClusterMetadata class
 #------------------------------------------------------------------------------
 
-class ClusterMetadata(BaseClusterInfo):
-    """Object holding cluster metadata.
-
-    Constructor
-    -----------
-
-    fields : list
-        List of tuples (field_name, default_value).
-    data : dict-like
-        Initial data.
-
-    """
-
-    def __init__(self, data=None, fields=None):
-        if fields is None:
-            fields = DEFAULT_FIELDS
-        super(ClusterMetadata, self).__init__(data=data, fields=fields)
+class ClusterMetadata(object):
+    def __init__(self, data=None):
+        self._fields = {}
+        self._data = defaultdict(dict)
+        # Fill the existing values.
+        if data is not None:
+            self._data.update(data)
         # Keep a deep copy of the original structure for the undo stack.
         self._data_base = deepcopy(self._data)
         # The stack contains (clusters, field, value, update_info) tuples.
         self._undo_stack = History((None, None, None, None))
 
-    def set(self, clusters, field, values, add_to_stack=True):
-        """Set some information for a number of clusters and add the changes
-        to the undo stack."""
-        # Ensure 'clusters' is a list of clusters.
-        if not hasattr(clusters, '__len__'):
-            clusters = [clusters]
-        super(ClusterMetadata, self).set(clusters, field, values)
-        info = UpdateInfo(description=field, metadata_changed=clusters)
+    def _get_one(self, cluster, field):
+        """Return the field value for a cluster, or the default value if it
+        doesn't exist."""
+        if cluster in self._data:
+            if field in self._data[cluster]:
+                return self._data[cluster][field]
+            elif field in self._fields:
+                # Call the default field function.
+                return self._fields[field](cluster)
+            else:
+                return None
+        else:
+            if field in self._fields:
+                return self._fields[field](cluster)
+            else:
+                return None
+
+    def _get(self, clusters, field):
+        if _is_list(clusters):
+            return [self._get_one(cluster, field)
+                    for cluster in _as_list(clusters)]
+        else:
+            return self._get_one(clusters, field)
+
+    def _set_one(self, cluster, field, value):
+        """Set a field value for a cluster."""
+        self._data[cluster][field] = value
+
+    def _set(self, clusters, field, value, add_to_stack=True):
+        clusters = _as_list(clusters)
+        for cluster in clusters:
+            self._set_one(cluster, field, value)
+        info = UpdateInfo(description='metadata_' + field,
+                          metadata_changed=clusters)
         if add_to_stack:
-            self._undo_stack.add((clusters, field, values, info))
+            self._undo_stack.add((clusters, field, value, info))
         return info
+
+    def field(self, func):
+        field = func.__name__
+        # Register the decorated function as the default field function.
+        self._fields[field] = func
+        # Create self.<field>(clusters).
+        setattr(self, field, lambda clusters: self._get(clusters, field))
+        # Create self.set_<field>(clusters, value).
+        setattr(self, 'set_{0:s}'.format(field),
+                lambda clusters, value: self._set(clusters, field, value))
+        # def wrapped(cluster):
+        #     default = func(cluster)
+        #     return default
+        return func
 
     def undo(self):
         """Undo the last metadata change."""
@@ -178,9 +109,9 @@ class ClusterMetadata(BaseClusterInfo):
         if args is None:
             return
         self._data = deepcopy(self._data_base)
-        for clusters, field, values, _ in self._undo_stack:
+        for clusters, field, value, _ in self._undo_stack:
             if clusters is not None:
-                self.set(clusters, field, values, add_to_stack=False)
+                self._set(clusters, field, value, add_to_stack=False)
         # Return the UpdateInfo instance of the undo action.
         info = args[-1]
         return info
@@ -190,35 +121,63 @@ class ClusterMetadata(BaseClusterInfo):
         args = self._undo_stack.forward()
         if args is None:
             return
-        clusters, field, values, info = args
-        self.set(clusters, field, values, add_to_stack=False)
+        clusters, field, value, info = args
+        self._set(clusters, field, value, add_to_stack=False)
         # Return the UpdateInfo instance of the redo action.
         return info
+
+    def keys(self):
+        return self._data.keys()
+
+    def values(self):
+        return self._data.values()
+
+    def items(self):
+        return self._data.items()
+
 
 
 #------------------------------------------------------------------------------
 # ClusterStats class
 #------------------------------------------------------------------------------
 
-class ClusterStats(BaseClusterInfo):
-    """Hold cluster statistics with cache.
+class ClusterStats(object):
+    def __init__(self):
+        self._cache = defaultdict(dict)
 
-    Initialized as:
+    def stat(self, func):
+        stat = func.__name__
 
-        ClustersStats(my_stat=my_function)
+        def wrapped(cluster):
+            # Compute the statistics if it is not in the cache.
+            if stat not in self._cache[cluster]:
+                out = func(cluster)
+                self._cache[cluster][stat] = out
+            # Otherwise, reuse the value in the cache.
+            else:
+                out = self._cache[cluster][stat]
+            return out
 
-    where `my_function(cluster)` returns a cluster statistics.
+        # Set the wrapped function as a method of ClusterStats.
+        setattr(self, stat, wrapped)
 
-    ClusterStats handles the caching logic. It provides an
-    `invalidate(clusters)` method.
+        return wrapped
 
-    """
-    def __init__(self, **functions):
-        # Set the methods.
-        for name, fun in functions.items():
-            setattr(self, name, lambda cluster: self[cluster][name])
-        super(ClusterStats, self).__init__(fields=functions)
+    def invalidate(self, cluster, field=None):
+        if cluster in self._cache:
+            # If field is None, invalidate all statistics.
+            if field is None:
+                del self._cache[cluster]
+            # Otherwise, invalidate the stat.
+            else:
+                if field in self._cache[cluster]:
+                    del self._cache[cluster][field]
 
-    def invalidate(self, clusters):
-        """Invalidate clusters from the cache."""
-        self.unset(clusters)
+    def keys(self):
+        return self._cache.keys()
+
+    def values(self):
+        return self._cache.values()
+
+    def items(self):
+        return self._cache.items()
