@@ -34,22 +34,23 @@ function generate_random_cluster_info(num)
 {
 
     var bins = [];
-    var nbins = 11; // must be odd!
+    var nbins = 31; // must be odd!
 
     bins[0] = 0
     bins[nbins] = 0
 
     for (var element=1; element<nbins/2; element++) {
-        var binval = random_number(0,120);
+        var binval = random_number(0,95);
         bins[element] = binval;
         bins[nbins-element] = binval;
     }
 
     var clusterInfo = {
             id: num,
-            quality: Math.random(),
+            quality: Math.random().toFixed(3),
             nchannels: random_number(10, 1000),
             nspikes: random_number(500, 1000000),
+            xpos: Math.random().toFixed(3),
             ccg: bins,
             selected: false
     };
@@ -60,9 +61,9 @@ function generate_random_cluster_info(num)
 function generate_all_clusters()
 {
     var clusters = []
-    var nclusters = 5
+    var nclusters = 20
 
-    for (var i = 3; i <= nclusters; i++)
+    for (var i = 1; i <= nclusters; i++)
     {
         clusters.push(generate_random_cluster_info(i));
     }
@@ -83,12 +84,13 @@ var clusters = generate_all_clusters();
 
 cw = new D3ClusterWidget(d3.select("#cv")[0][0]);
 
-cw.redraw(clusters);
+var displayAttr = ["id", "quality", "nspikes", "nchannels", "xpos"];
+cw.redraw(clusters, displayAttr);
 
-menu.selectAll("option")
-    .data(clusters)
-    .enter().append("option") // TODO: return the labels inside one object...
-    .text(function (d) { return d.clusternumber; });
+// menu.selectAll("option")
+//     .data(clusters)
+//     .enter().append("option") // TODO: return the labels inside one object...
+//     .text(function (d) { return d.clusternumber; });
 
 console.timeEnd("pageLoadTime");
 </script>

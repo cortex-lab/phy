@@ -5,8 +5,8 @@ define(function(require) {
 
     function D3ClusterWidget(clusterView) {
         this.view = clusterView;
-        this.width = 100;
-        this.height = 100;
+        this.width = 95;
+        this.height = 95;
         this.onSelected = function(selection) {};
 
         this.selected = function() {
@@ -14,14 +14,13 @@ define(function(require) {
 
             d3.select(this.view).selectAll('.cluster').each(function(dl, i) {
                 if (dl.selected) {
-                    console.log("selected: ", dl.id)
                     res.push(dl.id)
                 }
             });
             return res;
         }
 
-        this.redraw = function(clusters)
+        this.redraw = function(clusters, displayAttr)
         {
             var barWidth = 1;
 
@@ -33,7 +32,7 @@ define(function(require) {
                                 .style("fill-opacity", 0)
                                 .on('mousedown', function(d) {
                                     that.clusterClicked(d, this);
-                                    that.redraw(clusters);
+                                    that.redraw(clusters, displayAttr);
                                     that.onSelected(that.selected());
                                 });
 
@@ -49,16 +48,16 @@ define(function(require) {
 
             svgContainer.append("path")
                         .datum(function(d) { barWidth = that.width / d.ccg.length; return d.ccg;})
-                        .attr("d", function(d) {return lineFunction(d)})
+                        .attr("d", function(d) {return lineFunction(d);})
                         .attr("stroke", "black")
                         .attr("stroke-width", 0)
-                        .attr("fill", "black")
+                        // .attr("fill", "black")
 
-            clusterEnter.append("div")
-                .text(function(d) { return d.id; });
-
-            clusterEnter.append("div")
-                .text(function(d) { return d.nchannels + "ch"; });
+            for (var i = 0; i < displayAttr.length; i++) {
+                clusterEnter.append("div")
+                    .attr("class", "clusterinfo " + displayAttr[i])
+                    .text(function(d) {return d[displayAttr[i]];});
+            }
 
             //
             // Clusters to update
@@ -77,7 +76,6 @@ define(function(require) {
 
 
         this.clusterClicked = function(d, node) {
-            console.log("clusterCliii", d, node);
             cls = d3.select(this.view).selectAll('.cluster');
 
             // first, deal with selection ranges
