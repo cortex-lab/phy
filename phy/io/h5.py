@@ -176,12 +176,14 @@ class File(object):
     def groups(self, path='/'):
         """Return the list of groups under a given node."""
         return [key for key in self.children(path)
-                if isinstance(self._h5py_file[key], h5py.Group)]
+                if isinstance(self._h5py_file[path + '/' + key],
+                              h5py.Group)]
 
     def datasets(self, path='/'):
         """Return the list of datasets under a given node."""
         return [key for key in self.children(path)
-                if isinstance(self._h5py_file[key], h5py.Dataset)]
+                if isinstance(self._h5py_file[path + '/' + key],
+                              h5py.Dataset)]
 
     def _print_node_info(self, name, node):
         """Print node information."""
