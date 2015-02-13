@@ -13,7 +13,7 @@ from ...utils.logging import set_level, warn
 from ._history import GlobalHistory
 from .clustering import Clustering
 from ...io.kwik_model import KwikModel
-from .cluster_view import ClusterView
+from .cluster_view import ClusterView, cluster_info
 from .cluster_info import ClusterMetadata, ClusterStats
 from .selector import Selector
 from .session import Session
@@ -174,8 +174,8 @@ def create_clustering_session(filename=None, model=None, backend=None):
         cluster_colors = [session.cluster_metadata.color(cluster)
                           for cluster in session.clustering.cluster_labels]
         try:
-            view = ClusterView(clusters=session.clustering.cluster_labels,
-                               colors=cluster_colors)
+            clusters = [ cluster_info(c, quality=0, nchannels=1, nspikes=2, ccg=None) for c in session.clustering.cluster_labels]
+            view = ClusterView(clusters=clusters, colors=cluster_colors)
         except RuntimeError:
             warn("The cluster view only works in IPython.")
             return
