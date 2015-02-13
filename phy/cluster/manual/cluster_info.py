@@ -89,7 +89,7 @@ class ClusterMetadata(object):
             self._undo_stack.add((clusters, field, value, info))
         return info
 
-    def field(self, func):
+    def default(self, func):
         field = func.__name__
         # Register the decorated function as the default field function.
         self._fields[field] = func
@@ -98,9 +98,6 @@ class ClusterMetadata(object):
         # Create self.set_<field>(clusters, value).
         setattr(self, 'set_{0:s}'.format(field),
                 lambda clusters, value: self._set(clusters, field, value))
-        # def wrapped(cluster):
-        #     default = func(cluster)
-        #     return default
         return func
 
     def undo(self):
@@ -125,15 +122,6 @@ class ClusterMetadata(object):
         self._set(clusters, field, value, add_to_stack=False)
         # Return the UpdateInfo instance of the redo action.
         return info
-
-    def keys(self):
-        return self._data.keys()
-
-    def values(self):
-        return self._data.values()
-
-    def items(self):
-        return self._data.items()
 
 
 #------------------------------------------------------------------------------

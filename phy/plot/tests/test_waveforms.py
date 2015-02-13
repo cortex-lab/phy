@@ -47,9 +47,11 @@ def _test_waveforms(n_spikes=None, n_clusters=None):
     masks = artificial_masks(n_spikes, n_channels).astype(np.float32)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
-    metadata = {cluster: {'color': _random_color()}
-                for cluster in range(n_clusters)}
-    cluster_metadata = ClusterMetadata(metadata)
+    cluster_metadata = ClusterMetadata()
+
+    @cluster_metadata.default
+    def color(cluster):
+        return _random_color()
 
     c = WaveformView()
     c.visual.waveforms = waveforms
