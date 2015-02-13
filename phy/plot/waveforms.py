@@ -216,7 +216,7 @@ class Waveforms(Visual):
         """Colors of the displayed clusters."""
         clusters = self.cluster_labels
         return np.array([self._cluster_metadata.color(cluster)
-                         for cluster in clusters], dtype=np.float32)
+                         for cluster in clusters])
 
     @property
     def box_scale(self):
@@ -233,7 +233,7 @@ class Waveforms(Visual):
 
     def _bake_metadata(self):
         u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
-        u_cluster_color = u_cluster_color.astype(np.float32)
+        u_cluster_color = (u_cluster_color * 255).astype(np.uint8)
         # TODO: more efficient to update the data from an existing texture
         self.program['u_cluster_color'] = Texture2D(u_cluster_color)
         debug("bake color", u_cluster_color.shape)
@@ -248,7 +248,7 @@ class Waveforms(Visual):
         positions = .1 + .8 * positions
         u_channel_pos = np.dstack((positions,
                                   np.zeros((1, self.n_channels, 1))))
-        u_channel_pos = u_channel_pos.astype(np.float32)
+        u_channel_pos = (u_channel_pos * 255).astype(np.uint8)
         # TODO: more efficient to update the data from an existing texture
         self.program['u_channel_pos'] = Texture2D(u_channel_pos,
                                                   wrapping='clamp_to_edge')
