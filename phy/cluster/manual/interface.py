@@ -31,7 +31,7 @@ def _mean_masks(masks, spikes):
     return masks[spikes].mean(axis=0)
 
 
-def create_clustering_session(filename=None, model=None):
+def create_clustering_session(filename=None, model=None, backend=None):
     """Create a manual clustering session in the IPython notebook.
 
     Parameters
@@ -123,7 +123,11 @@ def create_clustering_session(filename=None, model=None):
 
     @session.action(title='Show waveforms')
     def show_waveforms():
-        view = WaveformView()
+        if backend in ('pyqt4', None):
+            kwargs = {'always_on_top': True}
+        else:
+            kwargs = {}
+        view = WaveformView(**kwargs)
 
         @session.connect
         def on_open():
@@ -185,7 +189,8 @@ def create_clustering_session(filename=None, model=None):
     return session
 
 
-def start_manual_clustering(filename=None, model=None, session=None):
+def start_manual_clustering(filename=None, model=None, session=None,
+                            backend=None):
     """Start a manual clustering session in the IPython notebook.
 
     Parameters
@@ -200,10 +205,11 @@ def start_manual_clustering(filename=None, model=None, session=None):
     """
 
     if session is None:
-        session = create_clustering_session(filename=filename, model=model)
+        session = create_clustering_session(filename=filename, model=model,
+                                            backend=backend)
 
     # Enable the notebook interface.
-    enable_notebook()
+    enable_notebook(backend=backend)
 
     session.open(filename=filename, model=model)
     session.show_clusters()
