@@ -89,7 +89,7 @@ class ClusterMetadata(object):
             self._undo_stack.add((clusters, field, value, info))
         return info
 
-    def field(self, func):
+    def default(self, func):
         field = func.__name__
         # Register the decorated function as the default field function.
         self._fields[field] = func

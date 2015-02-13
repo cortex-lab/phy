@@ -253,11 +253,11 @@ class KwikModel(BaseModel):
 
         self._cluster_metadata = ClusterMetadata()
 
-        @self._cluster_metadata.field
+        @self._cluster_metadata.default
         def color(cluster):
             return _random_color()
 
-        @self._cluster_metadata.field
+        @self._cluster_metadata.default
         def group(cluster):
             return 3
 

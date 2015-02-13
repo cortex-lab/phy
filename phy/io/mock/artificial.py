@@ -65,7 +65,7 @@ class MockModel(BaseModel):
         self._metadata = {'description': 'A mock model.'}
         self._cluster_metadata = ClusterMetadata()
 
-        @self._cluster_metadata.field
+        @self._cluster_metadata.default
         def color(cluster):
             return _random_color()
 

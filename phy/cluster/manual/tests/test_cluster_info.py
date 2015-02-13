@@ -20,11 +20,11 @@ from ..cluster_info import (ClusterMetadata,
 def test_cluster_metadata():
     meta = ClusterMetadata()
 
-    @meta.field
+    @meta.default
     def group(cluster):
         return 3
 
-    @meta.field
+    @meta.default
     def color(cluster):
         return 0
 
@@ -60,11 +60,11 @@ def test_metadata_history():
 
     meta = ClusterMetadata(data=data)
 
-    @meta.field
+    @meta.default
     def group(cluster):
         return 3
 
-    @meta.field
+    @meta.default
     def color(cluster):
         return 0
 
