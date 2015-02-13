@@ -77,6 +77,57 @@ def _list_clusterings(kwik, channel_group=None):
     return ['main'] + clusterings
 
 
+_COLOR_MAP = np.array([[1., 1., 1.],
+                       [1., 0., 0.],
+                       [0.5, 0.763, 1.],
+                       [0.105, 1., 0.],
+                       [1., 0.658, 0.5],
+                       [0.421, 0., 1.],
+                       [0.5, 1., 0.763],
+                       [1., 0.947, 0.],
+                       [1., 0.5, 0.974],
+                       [0., 0.526, 1.],
+                       [0.868, 1., 0.5],
+                       [1., 0.316, 0.],
+                       [0.553, 0.5, 1.],
+                       [0., 1., 0.526],
+                       [1., 0.816, 0.5],
+                       [1., 0., 0.947],
+                       [0.5, 1., 0.921],
+                       [0.737, 1., 0.],
+                       [1., 0.5, 0.5],
+                       [0.105, 0., 1.],
+                       [0.553, 1., 0.5],
+                       [1., 0.632, 0.],
+                       [0.711, 0.5, 1.],
+                       [0., 1., 0.842],
+                       [1., 0.974, 0.5],
+                       [0.9, 0., 0.],
+                       [0.45, 0.687, 0.9],
+                       [0.095, 0.9, 0.],
+                       [0.9, 0.592, 0.45],
+                       [0.379, 0., 0.9],
+                       [0.45, 0.9, 0.687],
+                       [0.9, 0.853, 0.],
+                       [0.9, 0.45, 0.876],
+                       [0., 0.474, 0.9],
+                       [0.782, 0.9, 0.45],
+                       [0.9, 0.284, 0.],
+                       [0.497, 0.45, 0.9],
+                       [0., 0.9, 0.474],
+                       [0.9, 0.734, 0.45],
+                       [0.9, 0., 0.853],
+                       [0.45, 0.9, 0.829],
+                       [0.663, 0.9, 0.],
+                       [0.9, 0.45, 0.45],
+                       [0.095, 0., 0.9],
+                       [0.497, 0.9, 0.45],
+                       [0.9, 0.568, 0.],
+                       [0.639, 0.45, 0.9],
+                       [0., 0.9, 0.758],
+                       [0.9, 0.876, 0.45]])
+
+
 _KWIK_EXTENSIONS = ('kwik', 'kwx', 'raw.kwd')
 
 
@@ -116,6 +167,7 @@ class KwikModel(BaseModel):
         self._spike_times = None
         self._spike_clusters = None
         self._metadata = None
+        self._clustering = 'main'
         self._probe = None
         self._channels = []
         self._features = None
@@ -251,7 +303,15 @@ class KwikModel(BaseModel):
                                        (slice(0, k * self.n_channels, k), 1))
             assert self._masks.shape == (self.n_spikes, self.n_channels)
 
-        self._cluster_metadata = ClusterMetadata()
+        def _get_color(cluster):
+            path = (self._clustering_path + '/' + str(cluster) +
+                    '/application_data/klustaviewa')
+            color_int = self._kwik.read_attr(path, 'color')
+            return _COLOR_MAP[color_int]
+
+        colors = {cluster: {'color': _get_color(cluster)}
+                  for cluster in self._clusters}
+        self._cluster_metadata = ClusterMetadata(colors)
 
         @self._cluster_metadata.default
         def color(cluster):
@@ -343,6 +403,14 @@ class KwikModel(BaseModel):
 
     # Data
     # -------------------------------------------------------------------------
+
+    @property
+    def _clusters(self):
+        """List of clusters in the Kwik file."""
+        print(self._clustering_path)
+        clusters = self._kwik.groups(self._clustering_path)
+        clusters = [int(cluster) for cluster in clusters]
+        return sorted(clusters)
 
     @property
     def metadata(self):
