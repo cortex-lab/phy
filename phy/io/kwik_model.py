@@ -407,7 +407,6 @@ class KwikModel(BaseModel):
     @property
     def _clusters(self):
         """List of clusters in the Kwik file."""
-        print(self._clustering_path)
         clusters = self._kwik.groups(self._clustering_path)
         clusters = [int(cluster) for cluster in clusters]
         return sorted(clusters)
