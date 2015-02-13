@@ -41,7 +41,7 @@ define(function(require) {
             this.mydiv = $("<div id='cv' style='width: 100%; background-color: #ede;'/>");
             this.mydiv.appendTo(this.$el);
 
-            this.clusterd3 = new clusterwidget.D3ClusterWidget(this.mydiv[0]);
+            this.clusterd3 = new clusterwidget.D3ClusterWidget(this.mydiv[0], ['id', 'quality', 'nspikes']);
             this.clusterd3.onSelected = this.update_selection.bind(that); //we want this in update_selection to be ... that
             this._clusters = [];
 

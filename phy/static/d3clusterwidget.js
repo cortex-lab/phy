@@ -3,11 +3,12 @@ define(function(require) {
 
     d3 = require('/nbextensions/phy/static/d3.js');
 
-    function D3ClusterWidget(clusterView) {
+    function D3ClusterWidget(clusterView, displayAttr) {
         this.view = clusterView;
         this.width = 95;
         this.height = 95;
         this.onSelected = function(selection) {};
+        this.displayAttr = displayAttr;
 
         this.selected = function() {
             var res = [];
@@ -20,8 +21,9 @@ define(function(require) {
             return res;
         }
 
-        this.redraw = function(clusters, displayAttr)
+        this.redraw = function(clusters)
         {
+            var displayAttr = this.displayAttr;
             var barWidth = 1;
 
             var cluster = d3.select(this.view).selectAll(".cluster").data(clusters, function(d) { return d.id; });
