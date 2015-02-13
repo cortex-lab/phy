@@ -307,7 +307,7 @@ class KwikModel(BaseModel):
             path = (self._clustering_path + '/' + str(cluster) +
                     '/application_data/klustaviewa')
             color_int = self._kwik.read_attr(path, 'color')
-            return _COLOR_MAP[color_int]
+            return tuple(_COLOR_MAP[color_int])
 
         colors = {cluster: {'color': _get_color(cluster)}
                   for cluster in self._clusters}

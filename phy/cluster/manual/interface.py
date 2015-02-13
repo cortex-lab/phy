@@ -169,7 +169,6 @@ def create_clustering_session(filename=None, model=None):
 
         cluster_colors = [session.cluster_metadata.color(cluster)
                           for cluster in session.clustering.cluster_labels]
-
         try:
             view = ClusterView(clusters=session.clustering.cluster_labels,
                                colors=cluster_colors)
