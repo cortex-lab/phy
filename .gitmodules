@@ -1,0 +1,3 @@
+[submodule "dock-spawn"]
+	path = phy/static/dock-spawn
+	url = https://github.com/kwikteam/dock-spawn
