@@ -1,0 +1,94 @@
+<html>
+
+  <head>
+    <meta charset="utf-8">
+
+    <title>proto_kwik</title>
+    <link rel="shortcut icon" type="image/x-icon" href="/static/base/images/favicon.ico?v=30780f272ab4aac64aa073a841546240">
+
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <link rel="stylesheet" href="/static/components/jquery-ui/themes/smoothness/jquery-ui.min.css?v=60f0405edd95e7135ec6a0bbc36d1385" type="text/css">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+
+
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS_HTML-full&amp;delayStartupUntil=configured" charset="utf-8"></script>
+
+    <link rel="stylesheet" href="/static/components/bootstrap-tour/build/css/bootstrap-tour.min.css?v=a4cb9f45d5e14ac3ab0da3b9cf779f5e" type="text/css">
+    <link rel="stylesheet" href="/static/components/codemirror/lib/codemirror.css?v=1c26f7d1f30cbcc58982178f588906d5">
+
+
+    <link rel="stylesheet" href="/static/style/style.min.css?v=d7d5dc5994b7c12225d2721339c65754" type="text/css">
+
+
+    <link rel="stylesheet" href="/static/notebook/css/override.css?v=e6f18013b8771987812e992b38ec3318" type="text/css">
+    <link rel="stylesheet" href="" id="kernel-css" type="text/css">
+
+
+    <link rel="stylesheet" href="/static/custom/custom.css?v=900035aa0c126bb85df55c5b3e51b6f1" type="text/css">
+    <script src="/static/components/es6-promise/promise.min.js?v=f004a16cb856e0ff11781d01ec5ca8fe" type="text/javascript" charset="utf-8"></script>
+    <script src="/static/components/requirejs/require.js?v=640929dac3c23a448d2eebc37bc32062" type="text/javascript" charset="utf-8"></script>
+    <script>
+      require.config({
+
+          baseUrl: '/static/',
+          paths: {
+            nbextensions : '/nbextensions',
+            kernelspecs : '/kernelspecs',
+            underscore : 'components/underscore/underscore-min',
+            backbone : 'components/backbone/backbone-min',
+            jquery: 'components/jquery/jquery.min',
+            bootstrap: 'components/bootstrap/js/bootstrap.min',
+            bootstraptour: 'components/bootstrap-tour/build/js/bootstrap-tour.min',
+            jqueryui: 'components/jquery-ui/ui/minified/jquery-ui.min',
+            moment: 'components/moment/moment',
+            codemirror: 'components/codemirror',
+            termjs: 'components/term.js/src/term',
+          },
+          shim: {
+            underscore: {
+              exports: '_'
+            },
+            backbone: {
+              deps: ["underscore", "jquery"],
+              exports: "Backbone"
+            },
+            bootstrap: {
+              deps: ["jquery"],
+              exports: "bootstrap"
+            },
+            bootstraptour: {
+              deps: ["bootstrap"],
+              exports: "Tour"
+            },
+            jqueryui: {
+              deps: ["jquery"],
+              exports: "$"
+            }
+          }
+      });
+
+      require.config({
+          map: {
+              '*':{
+                'contents': 'services/contents',
+              }
+          }
+      });
+    </script>
+
+</head>
+
+<body>
+
+  <div id='placeholder' style="width: 100%; height: 300px;" />
+  <script>
+    require(['/nbextensions/phy/static/hackme.js'], function(hm) {
+
+      var myhack = new hm.HackMe('proto_kwik.ipynb', 'proto/proto_kwik.ipynb');
+      myhack.start($('#placeholder'));
+    });
+  </script>
+
+</body>
+</html>

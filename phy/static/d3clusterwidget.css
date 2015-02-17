@@ -1,0 +1,73 @@
+#cv
+{
+    /*background-color: #aaa;*/
+    font-family: Arial, Helvetica, sans-serif;
+    height: 100%;
+    padding: 10px;
+}
+
+#cv .cluster
+
+{
+    user-select: none;
+    -ms-user-select: none;
+    -moz-user-select: none;
+    -webkit-user-select: none;
+
+    display: inline-block;
+    margin: 6px 6px 0 0;
+    padding: 0px;
+    text-align: center;
+    border-radius: 5px;
+
+    border: 3px solid black;
+
+    width: 100px;
+    background-color: ;
+}
+
+#cv .cluster svg
+{
+    text-align: center;
+    margin-top: 5px;
+}
+
+#cv .cluster .clusterinfo
+{
+    font-size: 12px;
+    font-weight: bold;
+}
+
+#cv .cluster .clusterinfo.id
+{
+    text-align: center;
+    font-size: 16px;
+}
+
+#cv .cluster .clusterinfo::after {
+    font-weight: normal;
+}
+
+#cv .cluster .clusterinfo.nchannels::after {
+    content: " chan";
+}
+
+#cv .cluster .clusterinfo.quality::after {
+    content: " qual";
+}
+
+#cv .cluster .clusterinfo.nspikes::after {
+    content: " spikes";
+}
+
+#cv .cluster .clusterinfo.xpos::after {
+    content: " xpos";
+}
+
+#cv .sel
+{
+    border-color: #b20000;
+    background-color: #ff4c4c;
+    color: white;
+    fill: white;
+}
