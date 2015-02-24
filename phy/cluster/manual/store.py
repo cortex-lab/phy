@@ -8,6 +8,8 @@
 
 from collections import defaultdict
 
+from ...ext.six import string_types
+
 
 #------------------------------------------------------------------------------
 # Data stores
@@ -20,6 +22,8 @@ class MemoryStore(object):
 
     def store(self, cluster, **data):
         """Store cluster-related data."""
+        if cluster not in self._ds:
+            self._ds[cluster] = {}
         self._ds[cluster].update(data)
 
     def load(self, cluster, keys=None):
@@ -27,10 +31,18 @@ class MemoryStore(object):
         if keys is None:
             return self._ds.get(cluster, {})
         else:
-            return {key: self._ds[cluster].get(key, None) for key in keys}
+            if isinstance(keys, string_types):
+                return self._ds.get(cluster, {}).get(keys, None)
+            assert isinstance(keys, list)
+            return {key: self._ds.get(cluster, {}).get(key, None)
+                    for key in keys}
+
+    def keys(self):
+        return sorted(self._ds.keys())
 
     def delete(self, clusters):
         """Delete some clusters from the store."""
+        assert isinstance(clusters, list)
         for cluster in clusters:
             if cluster in self._ds:
                 del self._ds[cluster]
