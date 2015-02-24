@@ -105,9 +105,9 @@ class SparseCSR(object):
         """Load a SparseCSR array from an HDF5 file."""
         f.read_attr(path, 'sparse_type') == 'csr'
         shape = f.read_attr(path, 'shape')
-        data = f.read(path + '/data')
-        channels = f.read(path + '/channels')
-        spikes_ptr = f.read(path + '/spikes_ptr')
+        data = f.read(path + '/data')[...]
+        channels = f.read(path + '/channels')[...]
+        spikes_ptr = f.read(path + '/spikes_ptr')[...]
         return SparseCSR(shape=shape,
                          data=data,
                          channels=channels,
@@ -128,12 +128,12 @@ def csr_matrix(dense=None, shape=None,
 
 
 
-def save_h5(f, path, arr):
+def save_h5(f, path, arr, overwrite=False):
     """Save a sparse array into an HDF5 file."""
     if isinstance(arr, SparseCSR):
         arr.save_h5(f, path)
     elif isinstance(arr, np.ndarray):
-        f.write(path, arr)
+        f.write(path, arr, overwrite=overwrite)
     else:
         raise ValueError("The array should be a SparseCSR or "
                          "dense NumPy array.")
