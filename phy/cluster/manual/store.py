@@ -171,7 +171,7 @@ def _concatenate(*dicts):
 class BaseClusterStore(EventEmitter):
     """Hold cluster-related information in memory and on disk."""
 
-    def __init__(self, disk_store_path=None):
+    def __init__(self, name, disk_store_path=None):
         super(BaseClusterStore, self).__init__()
 
         # When cluster information has to be imported from the model.
@@ -189,8 +189,12 @@ class BaseClusterStore(EventEmitter):
         # Create the disk store if it does not exist.
         if not op.exists(disk_store_path):
             os.mkdir(disk_store_path)
+        # Put the store in a subfolder, using the name.
+        path = op.join(disk_store_path, name)
+        if not op.exists(path):
+            os.mkdir(path)
         # Create the disk store.
-        self._disk_store = DiskStore(disk_store_path)
+        self._disk_store = DiskStore(path)
 
         # Where the info are stored: a {'field' => ('memory' or 'disk')} dict.
         self._dispatch = {}
