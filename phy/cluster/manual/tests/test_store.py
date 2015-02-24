@@ -103,6 +103,7 @@ def test_cluster_store():
             clusters = np.unique(model['spike_clusters'])
             # Load data for all clusters.
             cs.generate(clusters)
+            ae(cs.clusters, clusters)
 
         @cs.connect
         def on_generate(clusters):
