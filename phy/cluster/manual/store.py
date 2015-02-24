@@ -18,6 +18,7 @@ from ...utils._misc import (_phy_user_dir,
 from ...io.h5 import open_h5
 from ...io.sparse import load_h5, save_h5
 from ...ext.six import string_types
+from ...ext.slugify import slugify
 
 
 #------------------------------------------------------------------------------
@@ -157,7 +158,23 @@ class DiskStore(object):
 def _default_disk_store_path():
     """Path to the default disk store."""
     # ~/.phy/cluster_store.
-    return _phy_user_dir('cluster_store')
+    return
+
+
+def _ensure_disk_store_exists(dir_name, root_path=None):
+    # Disk store.
+    if root_path is None:
+        _ensure_phy_user_dir_exists()
+        root_path = _phy_user_dir('cluster_store')
+    # Create the disk store if it does not exist.
+    if not op.exists(root_path):
+        os.mkdir(root_path)
+    # Put the store in a subfolder, using the name.
+    dir_name = slugify(dir_name)
+    path = op.join(root_path, dir_name)
+    if not op.exists(path):
+        os.mkdir(path)
+    return path
 
 
 def _concatenate(*dicts):
@@ -171,7 +188,7 @@ def _concatenate(*dicts):
 class BaseClusterStore(EventEmitter):
     """Hold cluster-related information in memory and on disk."""
 
-    def __init__(self, name, disk_store_path=None):
+    def __init__(self, dir_name, root_path=None):
         super(BaseClusterStore, self).__init__()
 
         # When cluster information has to be imported from the model.
@@ -182,18 +199,8 @@ class BaseClusterStore(EventEmitter):
         # Create the memory store.
         self._memory_store = MemoryStore()
 
-        # Disk store.
-        if disk_store_path is None:
-            _ensure_phy_user_dir_exists()
-            disk_store_path = _default_disk_store_path()
-        # Create the disk store if it does not exist.
-        if not op.exists(disk_store_path):
-            os.mkdir(disk_store_path)
-        # Put the store in a subfolder, using the name.
-        path = op.join(disk_store_path, name)
-        if not op.exists(path):
-            os.mkdir(path)
         # Create the disk store.
+        path = _ensure_disk_store_exists(dir_name, root_path=root_path)
         self._disk_store = DiskStore(path)
 
         # Where the info are stored: a {'field' => ('memory' or 'disk')} dict.
