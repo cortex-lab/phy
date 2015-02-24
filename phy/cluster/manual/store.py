@@ -12,6 +12,9 @@ import shutil
 from collections import defaultdict
 
 from ...utils.logging import debug
+from ...utils.event import EventEmitter
+from ...utils._misc import (_phy_user_dir,
+                            _ensure_phy_user_dir_exists)
 from ...io.h5 import open_h5
 from ...io.sparse import load_h5, save_h5
 from ...ext.six import string_types
@@ -43,7 +46,8 @@ class MemoryStore(object):
             return {key: self._ds.get(cluster, {}).get(key, None)
                     for key in keys}
 
-    def keys(self):
+    @property
+    def clusters(self):
         """List of cluster ids in the store."""
         return sorted(self._ds.keys())
 
@@ -53,6 +57,10 @@ class MemoryStore(object):
         for cluster in clusters:
             if cluster in self._ds:
                 del self._ds[cluster]
+
+    def clear(self):
+        """Clear the store completely by deleting all clusters."""
+        self.delete(self.clusters)
 
 
 class DiskStore(object):
@@ -124,7 +132,8 @@ class DiskStore(object):
                 out[key] = self._get(f, key)
         return out
 
-    def keys(self):
+    @property
+    def clusters(self):
         """List of cluster ids in the store."""
         files = os.listdir(self._directory)
         clusters = [int(op.splitext(file)[0]) for file in files]
@@ -135,3 +144,128 @@ class DiskStore(object):
         for cluster in clusters:
             if self._cluster_file_exists(cluster):
                 os.remove(self._cluster_path(cluster))
+
+    def clear(self):
+        """Clear the store completely by deleting all clusters."""
+        self.delete(self.clusters)
+
+
+#------------------------------------------------------------------------------
+# Cluster store
+#------------------------------------------------------------------------------
+
+def _default_disk_store_path():
+    """Path to the default disk store."""
+    # ~/.phy/cluster_store.
+    return _phy_user_dir('cluster_store')
+
+
+def _concatenate(*dicts):
+    """Concatenate dictionaries."""
+    out = {}
+    for dic in dicts:
+        out.update(dic)
+    return out
+
+
+class ClusterStore(EventEmitter):
+    """Hold cluster-related information in memory and on disk."""
+
+    def __init__(self, disk_store_path=None):
+        super(ClusterStore, self).__init__()
+
+        # When cluster information has to be imported from the model.
+        self._create_emitter('generate')
+        # When clustering assignements change.
+        self._create_emitter('update')
+
+        # Create the memory store.
+        self._memory_store = MemoryStore()
+
+        # Disk store.
+        if disk_store_path is None:
+            _ensure_phy_user_dir_exists()
+            disk_store_path = _default_disk_store_path()
+        # Create the disk store if it does not exist.
+        if not op.exists(disk_store_path):
+            os.mkdir(disk_store_path)
+        # Create the disk store.
+        self._disk_store = DiskStore(disk_store_path)
+
+        # Where the info are stored: a {'field' => ('memory' or 'disk')} dict.
+        self._dispatch = {}
+
+    def register_field(self, name, location):
+        """Register a field to be stored either in 'memory' or on 'disk'."""
+        self._check_location(location)
+        self._dispatch[name] = location
+
+    def _check_location(self, location):
+        """Check that a location is valid."""
+        if location not in ('memory', 'disk'):
+            raise ValueError("'location 'should be 'memory' or 'disk'.")
+
+    def _filter(self, keys, location):
+        """Return all keys registered in the specified location."""
+        if keys is None:
+            return None
+        else:
+            return [key for key in keys
+                    if self._dispatch.get(key, None) == location]
+
+    # Public methods
+    # -------------------------------------------------------------------------
+
+    @property
+    def clusters(self):
+        """Return the list of clusters present in the store."""
+        clusters_memory = self._memory_store.clusters
+        clusters_disk = self._disk_store.clusters
+        # Both stores should have the same clusters at all times.
+        if clusters_memory != clusters_disk:
+            raise RuntimeError("Cluster store inconsistency.")
+        return clusters_memory
+
+    def store(self, cluster, location=None, **data):
+        """Store cluster-related information."""
+
+        # If the location is specified, register the fields there.
+        if location in ('memory', 'disk'):
+            for key in data.keys():
+                self.register_field(key, location)
+        elif location is not None:
+            self._check_location(location)
+
+        # Store data in memory.
+        data_memory = {k: data[k] for k in self._filter(data.keys(), 'memory')}
+        self._memory_store.store(cluster, **data_memory)
+
+        # Store data on disk.
+        data_disk = {k: data[k] for k in self._filter(data.keys(), 'disk')}
+        self._disk_store.store(cluster, **data_disk)
+
+    def load(self, cluster, keys=None):
+        """Load cluster-related information."""
+        if isinstance(keys, string_types):
+            if self._dispatch[keys] == 'memory':
+                return self._memory_store.load(cluster, keys)
+            elif self._dispatch[keys] == 'disk':
+                return self._disk_store.load(cluster, keys)
+        elif keys is None or isinstance(keys, list):
+            data_memory = self._memory_store.load(cluster,
+                                                  self._filter(keys, 'memory'))
+            data_disk = self._disk_store.load(cluster,
+                                              self._filter(keys, 'disk'))
+            return _concatenate(data_memory, data_disk)
+        else:
+            raise ValueError("'keys' should be a list or a string.")
+
+    def clear(self):
+        """Clear the cluster store."""
+        self._memory_store.clear()
+        self._disk_store.clear()
+
+    def delete(self, clusters):
+        """Delete all information about the specified clusters."""
+        self._memory_store.delete(clusters)
+        self._disk_store.delete(clusters)

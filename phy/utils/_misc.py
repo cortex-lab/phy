@@ -7,6 +7,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
 import os.path as op
 from inspect import getargspec
 
@@ -40,6 +41,7 @@ def _fun_arg_count(f):
 #------------------------------------------------------------------------------
 
 _PHY_USER_DIR_NAME = '.phy'
+
 
 def _phy_user_dir(sub_dir=None):
     """Return the absolute path to the phy user directory."""
