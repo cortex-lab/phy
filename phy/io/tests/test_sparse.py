@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import os
+import os.path as op
 
 import numpy as np
 from pytest import raises
@@ -108,7 +109,7 @@ def test_sparse_hdf5():
     path = '/my_sparse_array'
 
     with TemporaryDirectory() as tempdir:
-        with open_h5('test.h5', 'w') as f:
+        with open_h5(op.join(tempdir, 'test.h5'), 'w') as f:
             save_h5(f, path, mat)
 
             mat_bis = load_h5(f, path)

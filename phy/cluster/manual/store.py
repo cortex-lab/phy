@@ -13,6 +13,7 @@ from collections import defaultdict
 
 from ...utils.logging import debug
 from ...io.h5 import open_h5
+from ...io.sparse import load_h5, save_h5
 from ...ext.six import string_types
 
 
@@ -75,32 +76,20 @@ class DiskStore(object):
     def _cluster_file(self, cluster, mode):
         """Return a file handle of a cluster file."""
         path = self._cluster_path(cluster)
-        # if mode == 'r' and not self._cluster_file_exists(cluster):
-        #     raise IOError("The cluster file does not exist.")
         return open_h5(path, mode)
 
     # Data get/set methods
     # -------------------------------------------------------------------------
 
     def _get(self, f, key):
-        """Return the data for a given key.
-
-        Can be overriden for custom on-disk format.
-
-        """
-        try:
-            return f.read('/{0:s}'.format(key))[...]
-        except IOError:
-            return None
+        """Return the data for a given key."""
+        path = '/{0:s}'.format(key)
+        return load_h5(f, path)
 
     def _set(self, f, key, value):
-        """Set the data for a given key.
-
-        Can be overriden for custom on-disk format.
-
-        """
-        # debug("Writing", key, str(value))
-        f.write('/{0:s}'.format(key), value, overwrite=True)
+        """Set the data for a given key."""
+        path = '/{0:s}'.format(key)
+        save_h5(f, path, value, overwrite=True)
 
     # Public methods
     # -------------------------------------------------------------------------
