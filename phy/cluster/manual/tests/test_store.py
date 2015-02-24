@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from ..store import MemoryStore
+from ..store import MemoryStore, DiskStore
 
 
 #------------------------------------------------------------------------------
@@ -41,3 +41,7 @@ def test_memory_store():
     assert ms.load(3) == {}
     assert ms.load(3, ['key']) == {'key': None}
     assert ms.keys() == []
+
+
+def test_disk_store():
+    pass
