@@ -11,7 +11,7 @@ from numpy.testing import assert_array_equal as ae
 
 from ....utils.logging import set_level
 from ....utils.tempdir import TemporaryDirectory
-from ..store import MemoryStore, DiskStore, ClusterStore
+from ..store import MemoryStore, DiskStore, BaseClusterStore
 
 
 #------------------------------------------------------------------------------
@@ -92,7 +92,7 @@ def test_disk_store():
 
 def test_cluster_store():
     with TemporaryDirectory() as tempdir:
-        cs = ClusterStore(disk_store_path=tempdir)
+        cs = BaseClusterStore(disk_store_path=tempdir)
 
         model = {'spike_clusters': np.random.randint(size=100, low=0, high=10)}
 

@@ -168,11 +168,11 @@ def _concatenate(*dicts):
     return out
 
 
-class ClusterStore(EventEmitter):
+class BaseClusterStore(EventEmitter):
     """Hold cluster-related information in memory and on disk."""
 
     def __init__(self, disk_store_path=None):
-        super(ClusterStore, self).__init__()
+        super(BaseClusterStore, self).__init__()
 
         # When cluster information has to be imported from the model.
         self._create_emitter('generate')
