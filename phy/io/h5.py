@@ -69,33 +69,33 @@ class File(object):
         self.mode = mode
         self._h5py_file = None
 
-    # Reading functions
+    # Open and close
+    #--------------------------------------------------------------------------
+
+    @property
+    def h5py_file(self):
+        """Native h5py file handle."""
+        return self._h5py_file
+
+    def is_open(self):
+        return self._h5py_file is not None
+
+    def open(self):
+        if not self.is_open():
+            self._h5py_file = h5py.File(self.filename, self.mode)
+
+    def close(self):
+        if self.is_open():
+            self._h5py_file.close()
+            self._h5py_file = None
+
+    # Datasets
     #--------------------------------------------------------------------------
 
     def read(self, path):
         """Read an HDF5 dataset, given its HDF5 path in the file."""
         _check_hdf5_path(self._h5py_file, path)
         return self._h5py_file[path]
-
-    def has_attr(self, path, attr_name):
-        """Return whether an attribute exists at a given path."""
-        if path not in self._h5py_file:
-            return False
-        else:
-            return attr_name in self._h5py_file[path].attrs
-
-    def read_attr(self, path, attr_name):
-        """Read an attribute of an HDF5 group."""
-        _check_hdf5_path(self._h5py_file, path)
-        attrs = self._h5py_file[path].attrs
-        if attr_name in attrs:
-            return attrs[attr_name]
-        else:
-            raise KeyError("The attribute '{0:s}'".format(attr_name) +
-                           " doesn't exist.")
-
-    # Writing functions
-    #--------------------------------------------------------------------------
 
     def write(self, path, array, overwrite=False):
         """Write a NumPy array in the file.
@@ -132,6 +132,19 @@ class File(object):
 
         group.create_dataset(dset_name, data=array)
 
+    # Attributes
+    #--------------------------------------------------------------------------
+
+    def read_attr(self, path, attr_name):
+        """Read an attribute of an HDF5 group."""
+        _check_hdf5_path(self._h5py_file, path)
+        attrs = self._h5py_file[path].attrs
+        if attr_name in attrs:
+            return attrs[attr_name]
+        else:
+            raise KeyError("The attribute '{0:s}'".format(attr_name) +
+                           " doesn't exist.")
+
     def write_attr(self, path, attr_name, value):
         """Write an attribute of an HDF5 group."""
         # If the parent group doesn't already exist, create it.
@@ -139,42 +152,19 @@ class File(object):
             self._h5py_file.create_group(path)
         self._h5py_file[path].attrs[attr_name] = value
 
-    # Open and close
-    #--------------------------------------------------------------------------
-
-    def is_open(self):
-        return self._h5py_file is not None
-
-    def open(self):
-        if not self.is_open():
-            self._h5py_file = h5py.File(self.filename, self.mode)
-
-    def close(self):
-        if self.is_open():
-            self._h5py_file.close()
-            self._h5py_file = None
-
-    # Context manager
-    #--------------------------------------------------------------------------
-
-    def __enter__(self):
-        self.open()
-        return self
-
-    def __exit__(self, type, value, tb):
-        self.close()
-
-    # Miscellaneous properties
-    #--------------------------------------------------------------------------
-
-    @property
-    def h5py_file(self):
-        """Native h5py file handle."""
-        return self._h5py_file
-
     def attrs(self, path='/'):
         """Return the list of attributes at the given path."""
         return sorted(self._h5py_file[path].attrs)
+
+    def has_attr(self, path, attr_name):
+        """Return whether an attribute exists at a given path."""
+        if path not in self._h5py_file:
+            return False
+        else:
+            return attr_name in self._h5py_file[path].attrs
+
+    # Children
+    #--------------------------------------------------------------------------
 
     def children(self, path='/'):
         """Return the list of children of a given node."""
@@ -192,6 +182,9 @@ class File(object):
                 if isinstance(self._h5py_file[path + '/' + key],
                               h5py.Dataset)]
 
+    # Miscellaneous properties
+    #--------------------------------------------------------------------------
+
     def _print_node_info(self, name, node):
         """Print node information."""
         info = ('/' + name).ljust(50)
@@ -208,6 +201,16 @@ class File(object):
             raise IOError("Cannot display file information because the file"
                           " '{0:s}' is not open.".format(self.filename))
         self._h5py_file['/'].visititems(self._print_node_info)
+
+    # Context manager
+    #--------------------------------------------------------------------------
+
+    def __enter__(self):
+        self.open()
+        return self
+
+    def __exit__(self, type, value, tb):
+        self.close()
 
 
 def open_h5(filename, mode=None):
