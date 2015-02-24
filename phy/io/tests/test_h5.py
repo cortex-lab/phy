@@ -105,6 +105,8 @@ def test_h5_read():
             assert ds2.dtype == np.int8
 
             # Check HDF5 group attribute.
+            assert f.has_attr('/mygroup', 'myattr')
+            assert not f.has_attr('/mygroup', 'myattr_bis')
             value = f.read_attr('/mygroup', 'myattr')
             assert value == 123
 

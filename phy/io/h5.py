@@ -77,6 +77,13 @@ class File(object):
         _check_hdf5_path(self._h5py_file, path)
         return self._h5py_file[path]
 
+    def has_attr(self, path, attr_name):
+        """Return whether an attribute exists at a given path."""
+        if path not in self._h5py_file:
+            return False
+        else:
+            return attr_name in self._h5py_file[path].attrs
+
     def read_attr(self, path, attr_name):
         """Read an attribute of an HDF5 group."""
         _check_hdf5_path(self._h5py_file, path)
