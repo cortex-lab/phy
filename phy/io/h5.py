@@ -7,11 +7,7 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-try:
-    import h5py
-except ImportError as exception:
-    from ..utils import warn
-    warn("The h5py module is not installed.")
+import h5py
 
 from ..ext import six
 
