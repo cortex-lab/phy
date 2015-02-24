@@ -7,6 +7,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
 from inspect import getargspec
 
 
@@ -32,3 +33,25 @@ def _fun_arg_count(f):
     if args and args[0] == 'self':
         args = args[1:]
     return len(args)
+
+
+#------------------------------------------------------------------------------
+# Config
+#------------------------------------------------------------------------------
+
+_PHY_USER_DIR_NAME = '.phy'
+
+def _phy_user_dir(sub_dir=None):
+    """Return the absolute path to the phy user directory."""
+    home = op.expanduser("~")
+    path = op.realpath(op.join(home, _PHY_USER_DIR_NAME))
+    if sub_dir is not None:
+        path = op.join(path, sub_dir)
+    return path
+
+
+def _ensure_phy_user_dir_exists():
+    """Create the phy user directory if it does not exist."""
+    path = _phy_user_dir
+    if not os.exists(path):
+        os.mkdir(path)
