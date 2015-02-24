@@ -25,9 +25,9 @@ def _csr_from_dense(dense):
 def _check_sparse_components(shape=None, data=None,
                              channels=None, spikes_ptr=None):
     """Ensure the components of a sparse matrix are consistent."""
-    if not isinstance(shape, tuple):
-            raise ValueError("The shape is required and should be a tuple "
-                             "({shape} was provided).".format(shape=shape))
+    if not isinstance(shape, (list, tuple, np.ndarray)):
+            raise ValueError("The shape is required and should be an "
+                             "array-like list ({0} was given).".format(shape))
     if len(shape) != data.ndim + 1:
         raise ValueError("'shape' {shape} and {ndim}D-array 'data' are "
                          "not consistent.".format(shape=shape,
@@ -79,6 +79,40 @@ class SparseCSR(object):
         self._channels = channels
         self._spikes_ptr = spikes_ptr
 
+    @property
+    def shape(self):
+        """Shape of the array."""
+        return self._shape
+
+    def __eq__(self, other):
+        return np.all((self._data == other._data) &
+                      (self._channels == other._channels) &
+                      (self._spikes_ptr == other._spikes_ptr))
+
+    # I/O methods
+    # -------------------------------------------------------------------------
+
+    def save_h5(self, f, path):
+        """Save the array in an HDF5 file."""
+        f.write_attr(path, 'sparse_type', 'csr')
+        f.write_attr(path, 'shape', self._shape)
+        f.write(path + '/data', self._data)
+        f.write(path + '/channels', self._channels)
+        f.write(path + '/spikes_ptr', self._spikes_ptr)
+
+    @staticmethod
+    def load_h5(f, path):
+        """Load a SparseCSR array from an HDF5 file."""
+        f.read_attr(path, 'sparse_type') == 'csr'
+        shape = f.read_attr(path, 'shape')
+        data = f.read(path + '/data')
+        channels = f.read(path + '/channels')
+        spikes_ptr = f.read(path + '/spikes_ptr')
+        return SparseCSR(shape=shape,
+                         data=data,
+                         channels=channels,
+                         spikes_ptr=spikes_ptr)
+
 
 def csr_matrix(dense=None, shape=None,
                data=None, channels=None, spikes_ptr=None):
@@ -91,3 +125,29 @@ def csr_matrix(dense=None, shape=None,
         raise ValueError("data, channels, and spikes_ptr must be specified.")
     return SparseCSR(shape=shape,
                      data=data, channels=channels, spikes_ptr=spikes_ptr)
+
+
+
+def save_h5(f, path, arr):
+    """Save a sparse array into an HDF5 file."""
+    if isinstance(arr, SparseCSR):
+        arr.save_h5(f, path)
+    elif isinstance(arr, np.ndarray):
+        f.write(path, arr)
+    else:
+        raise ValueError("The array should be a SparseCSR or "
+                         "dense NumPy array.")
+
+
+def load_h5(f, path):
+    """Load a sparse array from an HDF5 file."""
+    # Sparse array.
+    if f.has_attr(path, 'sparse_type'):
+        if f.read_attr(path, 'sparse_type') == 'csr':
+            return SparseCSR.load_h5(f, path)
+        else:
+            raise NotImplementedError("Only SparseCSR arrays are implemented "
+                                      "currently.")
+    # Regular dense dataset.
+    else:
+        return f.read(path)

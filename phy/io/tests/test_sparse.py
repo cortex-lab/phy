@@ -11,7 +11,9 @@ import os
 import numpy as np
 from pytest import raises
 
-from ..sparse import csr_matrix, SparseCSR
+from ..sparse import csr_matrix, SparseCSR, load_h5, save_h5
+from ...utils.tempdir import TemporaryDirectory
+from ..h5 import open_h5
 
 
 #------------------------------------------------------------------------------
@@ -95,3 +97,19 @@ def test_sparse_csr_check():
     sparse = csr_matrix(shape=shape,
                         data=data, channels=channels, spikes_ptr=spikes_ptr)
     assert isinstance(sparse, SparseCSR)
+
+
+def test_sparse_hdf5():
+    """Test the checks performed when creating a sparse matrix."""
+    shape, data, channels, spikes_ptr = _sparse_matrix_example()
+    mat = csr_matrix(shape=shape, data=data, channels=channels,
+                     spikes_ptr=spikes_ptr)
+
+    path = '/my_sparse_array'
+
+    with TemporaryDirectory() as tempdir:
+        with open_h5('test.h5', 'w') as f:
+            save_h5(f, path, mat)
+
+            mat_bis = load_h5(f, path)
+            assert mat == mat_bis
