@@ -1,5 +1,7 @@
 experimental
 wiki
+.idea
+.ipynb_checkpoints
 
 *.py[cod]
 .coverage*
