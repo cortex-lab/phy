@@ -1,13 +1,27 @@
 # -*- coding: utf-8 -*-
 
-__all__ = ['slugify']
+"""Slugify module.
+
+Adapted from https://github.com/un33k/python-slugify.
+
+"""
+
+#------------------------------------------------------------------------------
+# Imports
+#------------------------------------------------------------------------------
 
 import re
 import unicodedata
 import types
 import sys
+
+from .six import u
 from .six.moves.html_entities import name2codepoint
-# from unidecode import unidecode
+
+
+#------------------------------------------------------------------------------
+# Slugify
+#------------------------------------------------------------------------------
 
 # character entity reference
 CHAR_ENTITY_REXP = re.compile('&(%s);' % '|'.join(name2codepoint))
@@ -73,6 +87,7 @@ def slugify(text, entities=True, decimal=True, hexadecimal=True, max_length=0, w
             pass
 
     # translate
+    text = u(text)
     text = unicodedata.normalize('NFKD', text)
     if sys.version_info < (3,):
         text = text.encode('ascii', 'ignore')
