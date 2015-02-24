@@ -32,6 +32,12 @@ class EventEmitter(object):
                              "`on_<eventname>`().")
         return event
 
+    def _create_emitter(self, event):
+        """Create a method that emits an event of the same name."""
+        if not hasattr(self, event):
+            setattr(self, event,
+                    lambda *args, **kwargs: self.emit(event, *args, **kwargs))
+
     def connect(self, func=None):
         """Decorator for a function reacting to an event being raised."""
         if func is None:
@@ -44,9 +50,7 @@ class EventEmitter(object):
         self._callbacks[event].append(func)
 
         # self.event() should emit the event.
-        if not hasattr(self, event):
-            setattr(self, event,
-                    lambda *args, **kwargs: self.emit(event, *args, **kwargs))
+        self._create_emitter(event)
 
         return func
 
