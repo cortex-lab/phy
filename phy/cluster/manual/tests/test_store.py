@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from ....utils.tempdir import TemporaryDirectory
 from ..store import MemoryStore, DiskStore
 
 
@@ -13,8 +14,7 @@ from ..store import MemoryStore, DiskStore
 # Test data stores
 #------------------------------------------------------------------------------
 
-def test_memory_store():
-    ms = MemoryStore()
+def _test_store(ms):
     assert ms.load(2) == {}
 
     assert ms.load(3).get('key', None) is None
@@ -43,5 +43,12 @@ def test_memory_store():
     assert ms.keys() == []
 
 
+def test_memory_store():
+    ms = MemoryStore()
+    _test_store(ms)
+
+
 def test_disk_store():
-    pass
+    with TemporaryDirectory() as tempdir:
+        ds = DiskStore(tempdir)
+        assert ds  # _test_store(ds)

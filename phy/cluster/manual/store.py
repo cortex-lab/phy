@@ -9,6 +9,7 @@
 import os.path as op
 from collections import defaultdict
 
+from ...io.h5 import open_h5
 from ...ext.six import string_types
 
 
@@ -55,9 +56,22 @@ class DiskStore(object):
     def __init__(self, directory):
         self._directory = op.realpath(directory)
 
-    def _path(self, rel_path):
-        """Return the absolute path of a relative path in the disk store."""
+    # Internal methods
+    # -------------------------------------------------------------------------
+
+    def _cluster_path(self, cluster):
+        """Return the absolute path of a cluster in the disk store."""
+        # TODO: subfolders
+        rel_path = '{0:05d}.h5'.format(cluster)
         return op.realpath(op.join(self._directory, rel_path))
+
+    def _cluster_file(self, cluster):
+        """Return a file handle of a cluster file."""
+        path = self._cluster_path(cluster)
+        return open_h5(path, 'w')
+
+    # Public methods
+    # -------------------------------------------------------------------------
 
     def store(self, cluster, **data):
         """Store cluster-related data."""
