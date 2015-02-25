@@ -31,8 +31,8 @@ def _mean_masks(masks, spikes):
     return masks[spikes].mean(axis=0)
 
 
-def create_clustering_session(filename=None, model=None, backend=None):
-    """Create a manual clustering session in the IPython notebook.
+class ClusteringSession(Session):
+    """Default manual clustering session in the IPython notebook.
 
     Parameters
     ----------
@@ -40,124 +40,134 @@ def create_clustering_session(filename=None, model=None, backend=None):
         Path to a .kwik file, to be used if 'model' is not used.
     model : instance of BaseModel
         A Model instance, to be used if 'filename' is not used.
+    backend : str
+        VisPy backend. For example 'pyqt4' or 'ipynb_webgl'.
 
     """
+    def __init__(self, backend=None):
+        super(ClusteringSession, self).__init__()
+        self.model = None
+        self.filename = None
+        self._backend = backend
 
-    session = Session()
-    session.model = None
+        # self.action and self.connect are decorators.
+        self.action(title='Open')(self.open)
+        self.action(title='Select clusters')(self.select)
+        self.action(title='Merge')(self.merge)
+        self.action(title='Split')(self.split)
+        self.action(title='Move clusters to a group')(self.move)
+        self.action(title='Undo')(self.undo)
+        self.action(title='Redo')(self.redo)
+
+        self.action(title='Show waveforms')(self.show_waveforms)
+        self.action(title='Show clusters')(self.show_clusters)
+
+        self.connect(self.on_open)
+        self.connect(self.on_cluster)
 
     # Public actions
     # -------------------------------------------------------------------------
 
-    @session.action(title='Open')
-    def open(filename=None, model=None):
+    def open(self, filename=None, model=None):
         if model is None:
             model = KwikModel(filename)
-        session.model = model
-        session.emit('open')
+        self.model = model
+        self.filename = filename
+        self.emit('open')
 
-    @session.action(title='Select clusters')
-    def select(clusters):
-        session.selector.selected_clusters = clusters
-        session.emit('select')
+    def select(self, clusters):
+        self.selector.selected_clusters = clusters
+        self.emit('select')
 
-    @session.action(title='Merge')
-    def merge(clusters):
-        up = session.clustering.merge(clusters)
-        session.emit('cluster', up=up)
+    def merge(self, clusters):
+        up = self.clustering.merge(clusters)
+        self.emit('cluster', up=up)
 
-    @session.action(title='Split')
-    def split(spikes):
-        up = session.clustering.split(spikes)
-        session.emit('cluster', up=up)
+    def split(self, spikes):
+        up = self.clustering.split(spikes)
+        self.emit('cluster', up=up)
 
-    @session.action(title='Move clusters to a group')
-    def move(clusters, group):
-        up = session.cluster_metadata.set_group(clusters, group)
-        session.emit('cluster', up=up)
+    def move(self, clusters, group):
+        up = self.cluster_metadata.set_group(clusters, group)
+        self.emit('cluster', up=up)
 
-    @session.action(title='Undo')
-    def undo():
-        up = session._global_history.undo()
-        session.emit('cluster', up=up, add_to_stack=False)
+    def undo(self):
+        up = self._global_history.undo()
+        self.emit('cluster', up=up, add_to_stack=False)
 
-    @session.action(title='Redo')
-    def redo():
-        up = session._global_history.redo()
-        session.emit('cluster', up=up, add_to_stack=False)
+    def redo(self):
+        up = self._global_history.redo()
+        self.emit('cluster', up=up, add_to_stack=False)
 
     # Event callbacks
     # -------------------------------------------------------------------------
 
-    @session.connect
-    def on_open():
+    def on_open(self):
         """Update the session after new data has been loaded."""
-        session._global_history = GlobalHistory()
+        self._global_history = GlobalHistory()
         # TODO: call this after the channel groups has changed.
         # Update the Selector and Clustering instances using the Model.
-        spike_clusters = session.model.spike_clusters
-        session.clustering = Clustering(spike_clusters)
-        session.cluster_metadata = session.model.cluster_metadata
-        session.stats = ClusterStats()
+        spike_clusters = self.model.spike_clusters
+        self.clustering = Clustering(spike_clusters)
+        self.cluster_metadata = self.model.cluster_metadata
+        self.stats = ClusterStats()
         # TODO: n_spikes_max in a user parameter
-        session.selector = Selector(spike_clusters, n_spikes_max=100)
+        self.selector = Selector(spike_clusters, n_spikes_max=100)
         # TODO: user-customizable list of statistics
 
         mask_selector = Selector(spike_clusters, n_spikes_max=100)
 
-        @session.stats.stat
+        @self.stats.stat
         def cluster_masks(cluster):
             mask_selector.selected_clusters = [cluster]
             spikes = mask_selector.selected_spikes
-            return _mean_masks(session.model.masks, spikes)
+            return _mean_masks(self.model.masks, spikes)
 
-    @session.connect
-    def on_cluster(up=None, add_to_stack=True):
+    def on_cluster(self, up=None, add_to_stack=True):
         if add_to_stack:
-            session._global_history.action(session.clustering)
+            self._global_history.action(self.clustering)
             # TODO: if metadata
-            # session._global_history.action(session.cluster_metadata)
+            # self._global_history.action(self.cluster_metadata)
 
     # Views
     # -------------------------------------------------------------------------
 
-    @session.action(title='Show waveforms')
-    def show_waveforms():
-        if backend in ('pyqt4', None):
+    def show_waveforms(self):
+        if self._backend in ('pyqt4', None):
             kwargs = {'always_on_top': True}
         else:
             kwargs = {}
         view = WaveformView(**kwargs)
 
-        @session.connect
+        @self.connect
         def on_open():
-            if session.model is None:
+            if self.model is None:
                 return
-            view.visual.spike_clusters = session.clustering.spike_clusters
-            view.visual.cluster_metadata = session.cluster_metadata
-            view.visual.channel_positions = session.model.probe.positions
+            view.visual.spike_clusters = self.clustering.spike_clusters
+            view.visual.cluster_metadata = self.cluster_metadata
+            view.visual.channel_positions = self.model.probe.positions
             view.update()
 
-        @session.connect
+        @self.connect
         def on_cluster(up=None):
             pass
             # TODO: select the merged cluster
-            # session.select(merged)
+            # self.select(merged)
 
-        @session.connect
+        @self.connect
         def on_select():
-            spikes = session.selector.selected_spikes
+            spikes = self.selector.selected_spikes
             if len(spikes) == 0:
                 return
-            view.visual.waveforms = session.model.waveforms[spikes]
-            view.visual.masks = session.model.masks[spikes]
+            view.visual.waveforms = self.model.waveforms[spikes]
+            view.visual.masks = self.model.masks[spikes]
             view.visual.spike_labels = spikes
             view.update()
 
         # Unregister the callbacks when the view is closed.
         @view.connect
         def on_close(event):
-            session.unconnect(on_open, on_cluster, on_select)
+            self.unconnect(on_open, on_cluster, on_select)
 
         view.show()
 
@@ -167,26 +177,23 @@ def create_clustering_session(filename=None, model=None, backend=None):
 
         return view
 
-    @session.action(title='Show clusters')
-    def show_clusters():
+    def show_clusters(self):
         """Create and show a new cluster view."""
 
-        cluster_colors = [session.cluster_metadata.color(cluster)
-                          for cluster in session.clustering.cluster_labels]
+        cluster_colors = [self.cluster_metadata.color(cluster)
+                          for cluster in self.clustering.cluster_labels]
         try:
-            view = ClusterView(clusters=session.clustering.cluster_labels,
+            view = ClusterView(clusters=self.clustering.cluster_labels,
                                colors=cluster_colors)
         except RuntimeError:
             warn("The cluster view only works in IPython.")
             return
-        view.on_trait_change(lambda _, __, clusters: session.select(clusters),
+        view.on_trait_change(lambda _, __, clusters: self.select(clusters),
                              'value')
         load_css('static/widgets.css')
         from IPython.display import display
         display(view)
         return view
-
-    return session
 
 
 def start_manual_clustering(filename=None, model=None, session=None,
@@ -205,8 +212,7 @@ def start_manual_clustering(filename=None, model=None, session=None,
     """
 
     if session is None:
-        session = create_clustering_session(filename=filename, model=model,
-                                            backend=backend)
+        session = ClusteringSession(backend=backend)
 
     # Enable the notebook interface.
     enable_notebook(backend=backend)
