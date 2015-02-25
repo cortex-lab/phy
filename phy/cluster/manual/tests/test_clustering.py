@@ -64,6 +64,15 @@ def test_extend_spikes():
     assert not np.any(np.in1d(spike_clusters[rest], clusters))
 
 
+def test_concatenate_spike_clusters():
+    spikes, clusters = _concatenate_spike_clusters(([1, 5, 4],
+                                                    [10, 50, 40]),
+                                                   ([2, 0, 3, 6],
+                                                    [20, 0, 30, 60]))
+    ae(spikes, np.arange(7))
+    ae(clusters, np.arange(0, 60 + 1, 10))
+
+
 def test_update_info():
 
     # Check default values in UpdateInfo.
