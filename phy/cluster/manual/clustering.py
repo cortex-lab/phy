@@ -141,9 +141,9 @@ class Clustering(object):
         # UpdateInfo instance.
         return self.assign(spikes, to, _update_info=_update_info)
 
-    def _assign(self, spike_ids, cluster_ids, _update_info=None):
-        """Assign clusters to a number of spikes, but do not add
-        the change to the undo stack."""
+    def assign(self, spike_ids, cluster_ids, _update_info=None,
+               _add_to_stack=True):
+        """Assign clusters to a number of spikes."""
         # Ensure 'cluster_ids' is an array-like.
         if not hasattr(cluster_ids, '__len__'):
             cluster_ids = [cluster_ids]
@@ -161,13 +161,10 @@ class Clustering(object):
             _update_info = _diff_counts(counts_before, counts_after)
             _update_info.description = 'assign'
             _update_info.spikes = spike_ids
+        if _add_to_stack:
+            self._undo_stack.add((spike_ids, cluster_ids))
+        assert _update_info is not None
         return _update_info
-
-    def assign(self, spike_ids, cluster_ids, _update_info=None):
-        """Assign clusters to a number of spikes."""
-        up = self._assign(spike_ids, cluster_ids, _update_info)
-        self._undo_stack.add((spike_ids, cluster_ids))
-        return up
 
     def split(self, spike_ids, to=None):
         """Split a number of spikes into a new cluster."""
@@ -186,8 +183,9 @@ class Clustering(object):
             if spike_ids is not None:
                 spike_clusters_new[spike_ids] = cluster_ids
         # Finally, we update all spike clusters.
-        # WARNING: do not add an item in the stack (_assign and not assign).
-        return self._assign(slice(None, None, None), spike_clusters_new)
+        # WARNING: do not add an item in the stack.
+        return self.assign(slice(None, None, None), spike_clusters_new,
+                           _add_to_stack=False)
 
     def redo(self):
         """Redo the last cluster assignement operation."""
@@ -199,5 +197,6 @@ class Clustering(object):
         spike_ids, cluster_ids = item
         assert spike_ids is not None
         # We apply the new assignement.
-        # WARNING: do not add an item in the stack (_assign and not assign).
-        return self._assign(spike_ids, cluster_ids)
+        # WARNING: do not add an item in the stack.
+        return self.assign(spike_ids, cluster_ids,
+                           _add_to_stack=False)
