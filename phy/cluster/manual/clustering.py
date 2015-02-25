@@ -117,31 +117,41 @@ class Clustering(object):
 
     def merge(self, cluster_ids, to=None):
         """Merge several clusters to a new cluster."""
+
         if to is None:
+            # Find the new cluster number.
             to = self.new_cluster_id()
+        if to < self.new_cluster_id():
+            raise ValueError("The new cluster numbers should be higher than "
+                             "{0}.".format(self.new_cluster_id()))
+
         # Find all spikes in the specified clusters.
-        spikes = _spikes_in_clusters(self.spike_clusters, cluster_ids)
+        spike_ids = _spikes_in_clusters(self.spike_clusters, cluster_ids)
+
         # Create the UpdateInfo instance here, it's faster.
         _update_info = UpdateInfo(description='merge',
                                   clusters=sorted(cluster_ids),
-                                  spikes=spikes,
+                                  spikes=spike_ids,
                                   added=[to],
                                   deleted=sorted(cluster_ids))
+
         # And update the cluster counts directly.
-        n_spikes = len(spikes)
-        # This is just for debugging.
-        # n_spikes_bis = sum([self._cluster_counts[cluster]
-        #                     for cluster in cluster_ids])
-        # assert n_spikes_bis == n_spikes
+        n_spikes = len(spike_ids)
         for cluster in cluster_ids:
             if cluster in self._cluster_counts:
                 del self._cluster_counts[cluster]
         self._cluster_counts[to] = n_spikes
-        # Finally, assign the spike clusters and return directly the
-        # UpdateInfo instance.
-        return self.assign(spikes, to, _update_info=_update_info)
 
-    def assign(self, spike_ids, cluster_ids, _update_info=None,
+        # Assign the clusters.
+        self.spike_clusters[spike_ids] = to
+
+        # Add to stack.
+        self._undo_stack.add((spike_ids, [to]))
+
+        return _update_info
+
+    def assign(self, spike_ids, cluster_ids,
+               _update_info=None,
                _add_to_stack=True):
         """Assign clusters to a number of spikes."""
         # Ensure 'cluster_ids' is an array-like.
@@ -166,11 +176,10 @@ class Clustering(object):
         assert _update_info is not None
         return _update_info
 
-    def split(self, spike_ids, to=None):
+    def split(self, spike_ids):
         """Split a number of spikes into a new cluster."""
-        if to is None:
-            to = self.new_cluster_id()
-        return self.assign(spike_ids, to)
+        # self.assign() accepts relative numbers as second argument.
+        return self.assign(spike_ids, self.new_cluster_id())
 
     def undo(self):
         """Undo the last cluster assignement operation."""
