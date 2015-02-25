@@ -131,15 +131,15 @@ class ClusterMetadata(object):
 class ClusterStats(object):
     def __init__(self):
         self._cache = defaultdict(dict)
-        self._cluster_labels = None
+        self._cluster_ids = None
 
     @property
-    def cluster_labels(self):
-        return self._cluster_labels
+    def cluster_ids(self):
+        return self._cluster_ids
 
-    @cluster_labels.setter
-    def cluster_labels(self, value):
-        self._cluster_labels = value
+    @cluster_ids.setter
+    def cluster_ids(self, value):
+        self._cluster_ids = value
 
     def stat(self, func):
         stat = func.__name__

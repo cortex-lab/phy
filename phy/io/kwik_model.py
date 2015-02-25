@@ -140,7 +140,7 @@ def _kwik_filenames(filename):
 
 
 class SpikeLoader(object):
-    """Translate selection with spike labels into selection with
+    """Translate selection with spike ids into selection with
     absolute times."""
     def __init__(self, waveforms, spike_times):
         self._spike_times = spike_times

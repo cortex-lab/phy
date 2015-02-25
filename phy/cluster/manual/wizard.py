@@ -31,15 +31,15 @@ class Wizard(object):
         self._cluster_metadata = cluster_metadata
         self._similarity = None
         self._quality = None
-        self._cluster_labels = None
+        self._cluster_ids = None
 
     @property
-    def cluster_labels(self):
-        return self._cluster_labels
+    def cluster_ids(self):
+        return self._cluster_ids
 
-    @cluster_labels.setter
-    def cluster_labels(self, value):
-        self._cluster_labels = value
+    @cluster_ids.setter
+    def cluster_ids(self, value):
+        self._cluster_ids = value
 
     def similarity(self, func):
         """Register a function returing the similarity between two clusters."""
@@ -51,15 +51,15 @@ class Wizard(object):
         self._quality = func
         return func
 
-    def _check_cluster_labels(self):
-        if self._cluster_labels is None:
+    def _check_cluster_ids(self):
+        if self._cluster_ids is None:
             raise RuntimeError("The list of clusters need to be set.")
 
     def best_clusters(self, n_max=None):
         """Return the list of best clusters sorted by decreasing quality."""
-        self._check_cluster_labels()
+        self._check_cluster_ids()
         quality = [(cluster, self._quality(cluster))
-                   for cluster in self._cluster_labels]
+                   for cluster in self._cluster_ids]
         return _argsort(quality, n_max=n_max)
 
     def best_cluster(self):
@@ -70,10 +70,10 @@ class Wizard(object):
 
     def most_similar_clusters(self, cluster, n_max=None):
         """Return the `n_max` most similar clusters."""
-        self._check_cluster_labels()
+        self._check_cluster_ids()
         # TODO: filter according to the cluster group.
         similarity = [(other, self._similarity(cluster, other))
-                      for other in self._cluster_labels
+                      for other in self._cluster_ids
                       if other != cluster]
         return _argsort(similarity, n_max=n_max)
 

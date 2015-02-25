@@ -161,7 +161,7 @@ class ClusteringSession(Session):
                 return
             view.visual.waveforms = self.model.waveforms[spikes]
             view.visual.masks = self.model.masks[spikes]
-            view.visual.spike_labels = spikes
+            view.visual.spike_ids = spikes
             view.update()
 
         # Unregister the callbacks when the view is closed.
@@ -181,9 +181,9 @@ class ClusteringSession(Session):
         """Create and show a new cluster view."""
 
         cluster_colors = [self.cluster_metadata.color(cluster)
-                          for cluster in self.clustering.cluster_labels]
+                          for cluster in self.clustering.cluster_ids]
         try:
-            view = ClusterView(clusters=self.clustering.cluster_labels,
+            view = ClusterView(clusters=self.clustering.cluster_ids,
                                colors=cluster_colors)
         except RuntimeError:
             warn("The cluster view only works in IPython.")

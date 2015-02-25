@@ -95,7 +95,7 @@ class Waveforms(Visual):
         self.n_spikes, self.n_channels, self.n_samples = None, None, None
         self._spike_clusters = None
         self._waveforms = None
-        self._spike_labels = None
+        self._spike_ids = None
         self._to_bake = []
 
         self.program = ModularProgram(self.VERT_SHADER, self.FRAG_SHADER)
@@ -166,18 +166,18 @@ class Waveforms(Visual):
         self.set_to_bake('spikes')
 
     @property
-    def spike_labels(self):
-        """The list of spike labels to display, should correspond to the
+    def spike_ids(self):
+        """The list of spike ids to display, should correspond to the
         waveforms."""
-        if self._spike_labels is None:
-            self._spike_labels = np.arange(self.n_spikes).astype(np.int64)
-        return self._spike_labels
+        if self._spike_ids is None:
+            self._spike_ids = np.arange(self.n_spikes).astype(np.int64)
+        return self._spike_ids
 
-    @spike_labels.setter
-    def spike_labels(self, value):
+    @spike_ids.setter
+    def spike_ids(self, value):
         value = _as_array(value)
         self._set_or_assert_n_spikes(value)
-        self._spike_labels = value
+        self._spike_ids = value
         self.set_to_bake('spikes')
 
     @property
@@ -203,18 +203,18 @@ class Waveforms(Visual):
         self.set_to_bake('channel_positions')
 
     @property
-    def cluster_labels(self):
+    def cluster_ids(self):
         """Clusters of the displayed spikes."""
-        return _unique(self.spike_clusters[self.spike_labels])
+        return _unique(self.spike_clusters[self.spike_ids])
 
     @property
     def n_clusters(self):
-        return len(self.cluster_labels)
+        return len(self.cluster_ids)
 
     @property
     def cluster_colors(self):
         """Colors of the displayed clusters."""
-        clusters = self.cluster_labels
+        clusters = self.cluster_ids
         return np.array([self._cluster_metadata.color(cluster)
                          for cluster in clusters])
 
@@ -290,8 +290,8 @@ class Waveforms(Visual):
             raise RuntimeError("'_bake_spikes()' needs to be called before "
                                "'bake_spikes_clusters().")
         # Get the spike cluster indices (between 0 and n_clusters-1).
-        spike_clusters_idx = self.spike_clusters[self.spike_labels]
-        spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_labels)
+        spike_clusters_idx = self.spike_clusters[self.spike_ids]
+        spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_ids)
         # Generate the box attribute.
         a_cluster = np.repeat(spike_clusters_idx,
                               self._n_channels_per_spike * self.n_samples)
