@@ -137,7 +137,7 @@ def test_clustering():
     assert np.all(clustering.spike_clusters[my_spikes] == 12)
 
     clusters = [20, 30, 40]
-    clustering.split(my_spikes, clusters)
+    clustering.assign(my_spikes, clusters)
     assert np.all(clustering.spike_clusters[my_spikes] == clusters)
 
 
@@ -301,7 +301,7 @@ def test_clustering_assign():
     _assert_is_checkpoint(2)
 
     # Checkpoint 3.
-    info = clustering.split(my_spikes_3, 20)  # Assign to 20.
+    info = clustering.assign(my_spikes_3, 20)  # Assign to 20.
     _checkpoint()
     _assert_spikes(my_spikes_3)
     assert info.added == [20]
