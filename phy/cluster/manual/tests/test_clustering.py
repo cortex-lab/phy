@@ -23,7 +23,7 @@ from .._utils import _unique, _spikes_in_clusters
 
 
 #------------------------------------------------------------------------------
-# Tests
+# Test assignements
 #------------------------------------------------------------------------------
 
 def test_extend_spikes_simple():
@@ -72,6 +72,30 @@ def test_concatenate_spike_clusters():
     ae(spikes, np.arange(7))
     ae(clusters, np.arange(0, 60 + 1, 10))
 
+
+def test_extend_assignement():
+
+    spike_clusters = np.array([3, 5, 2, 9, 5, 5, 2])
+    spike_ids = np.array([0, 2])
+
+    # These spikes belong to the following clusters.
+    clusters = np.unique(spike_clusters[spike_ids])
+    ae(clusters, [2, 3])
+
+    # First case: assigning our two spikes to a new cluster.
+    # This should not depend on the index chosen.
+    for to in (123, 0, 1, 2, 3):
+        clusters_rel = [123] * len(spike_ids)
+        new_spike_ids, new_cluster_ids = _extend_assignement(spike_clusters,
+                                                             spike_ids,
+                                                             clusters_rel)
+        ae(new_spike_ids, [0, 2, 6])
+        ae(new_cluster_ids, [10, 10, 11])
+
+
+#------------------------------------------------------------------------------
+# Test clustering
+#------------------------------------------------------------------------------
 
 def test_update_info():
 

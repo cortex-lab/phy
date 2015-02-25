@@ -61,7 +61,12 @@ def _extend_assignement(old_spike_clusters, spike_ids, spike_clusters_rel):
         # spike_clusters_rel -= spike_clusters_rel.min()
         # spike_clusters_rel = spike_clusters_rel[changed]
 
+    old_spike_clusters = _as_array(old_spike_clusters)
+    spike_ids = _as_array(spike_ids)
+
     assert isinstance(spike_clusters_rel, (list, np.ndarray))
+    spike_clusters_rel = _as_array(spike_clusters_rel)
+    assert spike_clusters_rel.min() >= 0
 
     # We renumber the new cluster indices.
     new_cluster_id = old_spike_clusters.max() + 1
