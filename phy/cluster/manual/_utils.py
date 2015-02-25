@@ -33,7 +33,7 @@ def _spikes_in_clusters(spike_clusters, clusters):
     return np.nonzero(np.in1d(spike_clusters, clusters))[0]
 
 
-def _all_spikes_in_clusters(spike_clusters):
+def _spikes_per_cluster(spike_clusters):
     """Return a dictionary {cluster: list_of_spikes}."""
     sorted_spikes = np.argsort(spike_clusters)
     spike_clusters = spike_clusters[sorted_spikes]

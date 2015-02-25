@@ -22,7 +22,7 @@ def update_info(**kwargs):
         spikes=[],  # all spikes affected by the update
         added=[],  # new clusters
         deleted=[],  # deleted clusters
-        count_changed=[],  # clusters with changed count
+        # count_changed=[],  # clusters with changed count
         metadata_changed=[]  # clusters with changed metadata
     )
     d.update(kwargs)

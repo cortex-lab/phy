@@ -12,7 +12,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from .._utils import _unique, _spikes_in_clusters, _all_spikes_in_clusters
+from .._utils import _unique, _spikes_in_clusters, _spikes_per_cluster
 from ....io.mock.artificial import artificial_spike_clusters
 
 
@@ -52,14 +52,14 @@ def test_spikes_in_clusters():
                           clusters))
 
 
-def test_all_spikes_in_clusters():
-    """Test _all_spikes_in_clusters()."""
+def test_spikes_per_cluster():
+    """Test _spikes_per_cluster()."""
 
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
-    spikes_in_clusters = _all_spikes_in_clusters(spike_clusters)
+    spikes_in_clusters = _spikes_per_cluster(spike_clusters)
     assert list(spikes_in_clusters.keys()) == list(range(n_clusters))
 
     for i in range(10):

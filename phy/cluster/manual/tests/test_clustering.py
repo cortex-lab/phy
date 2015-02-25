@@ -14,7 +14,9 @@ from pytest import raises
 
 from ....ext.six import itervalues
 from ....io.mock.artificial import artificial_spike_clusters
-from ..clustering import (_count_clusters, _diff_counts,
+from ..clustering import (_extend_spikes,
+                          _concatenate_spike_clusters,
+                          _extend_assignement,
                           Clustering)
 from .._update_info import UpdateInfo
 from .._utils import _unique, _spikes_in_clusters
@@ -24,13 +26,42 @@ from .._utils import _unique, _spikes_in_clusters
 # Tests
 #------------------------------------------------------------------------------
 
-def test_counts():
-    c1 = {1: 10, 2: 20, 3: 30, 5: 50}
-    c2 = {0: 5, 2: 20, 3: 31}
-    ui = _diff_counts(c1, c2)
-    assert ui.added == [0]
-    assert ui.deleted == [1, 5]
-    assert ui.count_changed == [3]
+def test_extend_spikes_simple():
+    spike_clusters = np.array([3, 5, 2, 9, 5, 5, 2])
+    spike_ids = np.array([2, 4, 0])
+
+    # These spikes belong to the following clusters.
+    clusters = np.unique(spike_clusters[spike_ids])
+    ae(clusters, [2, 3, 5])
+
+    # These are the spikes belonging to those clusters, but not in the
+    # originally-specified spikes.
+    extended = _extend_spikes(spike_clusters, spike_ids)
+    ae(extended, [1, 5, 6])
+
+
+def test_extend_spikes():
+    n_spikes = 1000
+    n_clusters = 10
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+
+    spike_ids = np.unique(np.random.randint(size=5, low=0, high=n_spikes))
+
+    # These spikes belong to the following clusters.
+    clusters = np.unique(spike_clusters[spike_ids])
+
+    # These are the spikes belonging to those clusters, but not in the
+    # originally-specified spikes.
+    extended = _extend_spikes(spike_clusters, spike_ids)
+    assert np.in1d(spike_clusters[extended], clusters)
+
+    # The function only returns spikes that weren't in the passed spikes.
+    assert len(np.setdiff1d(extended, spike_ids)) == 0
+
+    # Check that all spikes from our clusters have been selected.
+    rest = np.setdiff1d(np.arange(n_spikes), extended)
+    rest = np.setdiff1d(rest, spike_ids)
+    assert not np.any(np.in1d(spike_clusters[rest], clusters))
 
 
 def test_update_info():
