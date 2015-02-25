@@ -81,6 +81,16 @@ def _extend_assignement(old_spike_clusters, spike_ids, spike_clusters_rel):
                                         extended_spike_clusters))
 
 
+def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
+    old_clusters = np.unique(old_spike_clusters)
+    new_clusters = np.unique(new_spike_clusters)
+    update_info = UpdateInfo(description='assign',
+                             spikes=spike_ids,
+                             added=list(new_clusters),
+                             deleted=list(old_clusters))
+    return update_info
+
+
 class Clustering(object):
     """Object representing a mapping from spike to cluster ids."""
 
@@ -110,6 +120,9 @@ class Clustering(object):
         else:
             # Compute the spikes per cluster for part of the clusters only.
             assert spike_clusters is not None
+            # Ensure spike_clusters has the right shape.
+            if len(spike_clusters) == 1 and len(spike_ids) > 1:
+                spike_clusters = np.ones(len(spike_ids)) * spike_clusters[0]
             assert len(spike_ids) == len(spike_clusters)
             # Ensure we have arrays.
             spike_ids = _as_array(spike_ids)
@@ -214,7 +227,7 @@ class Clustering(object):
 
         return update_info
 
-    def assign(self, spike_ids, spike_clusters_rel, _add_to_stack=True):
+    def assign(self, spike_ids, spike_clusters_rel):
         """Assign clusters to a number of spikes.
 
         NOTE: spike_clusters_rel contains relative indices. They don't
@@ -230,6 +243,8 @@ class Clustering(object):
         if not hasattr(spike_clusters_rel, '__len__'):
             spike_clusters_rel = spike_clusters_rel * np.ones(len(spike_ids),
                                                               dtype=np.int64)
+
+        assert len(spike_ids) == len(spike_clusters_rel)
 
         if _is_array_like(spike_ids):
             assert len(spike_ids) == len(spike_clusters_rel)
@@ -249,42 +264,58 @@ class Clustering(object):
         # Make the assignements.
         self._spike_clusters[spike_ids] = cluster_ids
 
-        # We create the update info structure.
-        old_clusters = np.unique(self._spike_clusters[spike_ids])
-        new_clusters = np.unique(cluster_ids)
-        update_info = UpdateInfo(description='assign',
-                                 spikes=spike_ids,
-                                 added=new_clusters,
-                                 deleted=old_clusters)
+        # Add the assignement to the undo stack.
+        assert len(spike_ids) == len(cluster_ids)
+        self._undo_stack.add((spike_ids, cluster_ids))
 
-        # Add the assignement to the undo stack if necessary.
-        if _add_to_stack:
-            self._undo_stack.add((spike_ids, cluster_ids))
-
-        return update_info
+        # We return the update info structure.
+        return _assign_update_info(spike_ids,
+                                   self._spike_clusters,
+                                   cluster_ids)
 
     def split(self, spike_ids):
         """Split a number of spikes into a new cluster."""
         # self.assign() accepts relative numbers as second argument.
         return self.assign(spike_ids, self.new_cluster_id())
 
+    def _do_assign(self, spikes, old_spike_clusters,
+                   new_spike_clusters):
+        # We return the UpdateInfo structure.
+        up =  _assign_update_info(spikes,
+                                  old_spike_clusters,
+                                  new_spike_clusters)
+
+        # WARNING: we make the assignements *after* creating the UpdateInfo
+        # structure, because we used self._spike_clusters as the *old*
+        # spike_clusters array.
+        self._spike_clusters[spikes] = new_spike_clusters
+
+        return up
+
     def undo(self):
         """Undo the last cluster assignement operation."""
         self._undo_stack.back()
+
         # Retrieve the initial spike_cluster structure.
         spike_clusters_new = self._spike_clusters_base.copy()
+
         # Loop over the history (except the last item because we undo).
         for spike_ids, cluster_ids in self._undo_stack:
             # We update the spike clusters accordingly.
             if spike_ids is not None:
                 spike_clusters_new[spike_ids] = cluster_ids
-        # What are the spikes affected by all changes in the stack.
-        changed = np.nonzero(self._spike_clusters_base !=
+
+        # What are the spikes affected by the last changes?
+        changed = np.nonzero(self._spike_clusters !=
                              spike_clusters_new)[0]
-        # Finally, we make the assignements.
-        # WARNING: do not add an item in the stack.
-        return self.assign(changed, spike_clusters_new[changed],
-                           _add_to_stack=False)
+        clusters_changed = spike_clusters_new[changed]
+
+        # Do the update.
+        self._update_spikes_per_cluster(changed, clusters_changed)
+
+        return self._do_assign(changed,
+                               self._spike_clusters[changed],
+                               clusters_changed)
 
     def redo(self):
         """Redo the last cluster assignement operation."""
@@ -293,9 +324,14 @@ class Clustering(object):
         if item is None:
             # No redo has been performed: abort.
             return
+
         spike_ids, cluster_ids = item
         assert spike_ids is not None
+
+        # Do the update.
+        self._update_spikes_per_cluster(spike_ids, cluster_ids)
+
         # We apply the new assignement.
-        # WARNING: do not add an item in the stack.
-        return self.assign(spike_ids, cluster_ids,
-                           _add_to_stack=False)
+        return self._do_assign(spike_ids,
+                               self._spike_clusters[spike_ids],
+                               cluster_ids)
