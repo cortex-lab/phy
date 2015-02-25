@@ -227,7 +227,7 @@ class Clustering(object):
 
         return update_info
 
-    def assign(self, spike_ids, spike_clusters_rel):
+    def assign(self, spike_ids, spike_clusters_rel=0):
         """Assign clusters to a number of spikes.
 
         NOTE: spike_clusters_rel contains relative indices. They don't
@@ -276,7 +276,7 @@ class Clustering(object):
     def split(self, spike_ids):
         """Split a number of spikes into a new cluster."""
         # self.assign() accepts relative numbers as second argument.
-        return self.assign(spike_ids, self.new_cluster_id())
+        return self.assign(spike_ids, 0)
 
     def _do_assign(self, spikes, old_spike_clusters,
                    new_spike_clusters):

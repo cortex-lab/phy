@@ -318,44 +318,28 @@ def test_clustering_assign():
     my_spikes_4 = np.arange(n_spikes - 5)
 
     # Checkpoint 1.
-    info = clustering.split(my_spikes_1)  # Split to 10.
+    info = clustering.split(my_spikes_1)
     _checkpoint()
-    _assert_spikes(my_spikes_1)
-    assert info.added == [10]
-    assert info.deleted == []
-    assert len(info.count_changed) <= 5
+    assert 10 in info.added
     _assert_is_checkpoint(1)
 
     # Checkpoint 2.
-    info = clustering.split(my_spikes_2)  # Split to 11.
+    info = clustering.split(my_spikes_2)
     _checkpoint()
-    _assert_spikes(my_spikes_2)
-    assert info.added == [11]
-    assert info.deleted == []
-    assert len(info.count_changed) <= 10
     _assert_is_checkpoint(2)
 
     # Checkpoint 3.
-    info = clustering.assign(my_spikes_3, 20)  # Assign to 20.
+    info = clustering.assign(my_spikes_3)
     _checkpoint()
-    _assert_spikes(my_spikes_3)
-    assert info.added == [20]
-    assert len(info.count_changed) >= 5
     _assert_is_checkpoint(3)
 
     # Undo checkpoint 3.
     info = clustering.undo()
     _checkpoint()
-    # _assert_spikes(my_spikes_3)
-    assert info.deleted == [20]
-    assert len(info.count_changed) >= 5
     _assert_is_checkpoint(2)
 
     # Checkpoint 4.
-    info = clustering.assign(my_spikes_4, 30)  # Assign to 30.
+    info = clustering.assign(my_spikes_4)
     _checkpoint(4)
-    _assert_spikes(my_spikes_4)
-    assert info.added == [30]
     assert len(info.deleted) >= 2
-    assert len(info.count_changed) >= 2
     _assert_is_checkpoint(4)
