@@ -281,9 +281,9 @@ class Clustering(object):
     def _do_assign(self, spikes, old_spike_clusters,
                    new_spike_clusters):
         # We return the UpdateInfo structure.
-        up =  _assign_update_info(spikes,
-                                  old_spike_clusters,
-                                  new_spike_clusters)
+        up = _assign_update_info(spikes,
+                                 old_spike_clusters,
+                                 new_spike_clusters)
 
         # WARNING: we make the assignements *after* creating the UpdateInfo
         # structure, because we used self._spike_clusters as the *old*
