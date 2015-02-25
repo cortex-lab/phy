@@ -63,8 +63,69 @@ class EventEmitter(object):
 
     def emit(self, event, *args, **kwargs):
         """Call all callback functions registered for that event."""
-        for callback in self._callbacks[event]:
+        for callback in self._callbacks.get(event, []):
             # Only keep the kwargs that are part of the callback's arg spec.
             kwargs = {n: v for n, v in kwargs.items()
                       if n in getargspec(callback).args}
             callback(*args, **kwargs)
+
+
+#------------------------------------------------------------------------------
+# Progress reporter
+#------------------------------------------------------------------------------
+
+class ProgressReporter(EventEmitter):
+    """A class that reports total progress done with multiple jobs."""
+    def __init__(self):
+        super(ProgressReporter, self).__init__()
+        # A mapping {channel: [value, max_value]}.
+        self._channels = {}
+
+    def _value(self, channel):
+        return self._channels[channel][0]
+
+    def _max_value(self, channel):
+        return self._channels[channel][1]
+
+    def _set_value(self, channel, index, value):
+        if channel not in self._channels:
+            self._channels[channel] = [0, 0]
+        old_value = self._value(channel)
+        max_value = self._max_value(channel)
+        if ((index == 0 and value > max_value) or
+           (index == 1 and old_value > value)):
+            raise ValueError("The current value {0} ".format(value) +
+                             "needs to be less "
+                             "than the maximum value {0}.".format(max_value))
+        else:
+            self._channels[channel][index] = value
+
+    def increment(self, *channels):
+        """Increment the values of one or multiple channels."""
+        self.set(**{channel: (self._value(channel) + 1)
+                 for channel in channels})
+
+    def set(self, **values):
+        """Set the current values of one or several channels."""
+        for channel, value in values.items():
+            self._set_value(channel, 0, value)
+        current, total = self.current(), self.total()
+        self.emit('report', current, total)
+        if current == total:
+            self.emit('complete')
+
+    def set_max(self, **max_values):
+        """Set the maximum values of one or several channels."""
+        for channel, max_value in max_values.items():
+            self._set_value(channel, 1, max_value)
+
+    def is_complete(self):
+        return self.current() == self.total()
+
+    def current(self):
+        """Return the total current value."""
+        return sum(v[0] for k, v in self._channels.items())
+
+    def total(self):
+        """Return the total of the maximum values."""
+        return sum(v[1] for k, v in self._channels.items())
