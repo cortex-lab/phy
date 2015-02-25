@@ -129,11 +129,11 @@ class Clustering(object):
         spike_ids = _spikes_in_clusters(self.spike_clusters, cluster_ids)
 
         # Create the UpdateInfo instance here, it's faster.
-        _update_info = UpdateInfo(description='merge',
-                                  clusters=sorted(cluster_ids),
-                                  spikes=spike_ids,
-                                  added=[to],
-                                  deleted=sorted(cluster_ids))
+        update_info = UpdateInfo(description='merge',
+                                 clusters=sorted(cluster_ids),
+                                 spikes=spike_ids,
+                                 added=[to],
+                                 deleted=sorted(cluster_ids))
 
         # And update the cluster counts directly.
         n_spikes = len(spike_ids)
@@ -142,16 +142,20 @@ class Clustering(object):
                 del self._cluster_counts[cluster]
         self._cluster_counts[to] = n_spikes
 
+        # NOTE: we could have called self.assign() here, but we don't.
+        # We circumvent self.assign() for performance reasons.
+        # assign() is a relatively costly operation, whereas merging is a much
+        # cheaper operation.
+
         # Assign the clusters.
         self.spike_clusters[spike_ids] = to
 
         # Add to stack.
         self._undo_stack.add((spike_ids, [to]))
 
-        return _update_info
+        return update_info
 
     def assign(self, spike_ids, cluster_ids,
-               _update_info=None,
                _add_to_stack=True):
         """Assign clusters to a number of spikes."""
         # Ensure 'cluster_ids' is an array-like.
@@ -164,17 +168,16 @@ class Clustering(object):
         self.spike_clusters[spike_ids] = cluster_ids
         # If the UpdateInfo is passed, it means the _cluster_counts structure
         # has already been updated. Otherwise, we need to update it here.
-        if _update_info is None:
-            counts_before = self._cluster_counts
-            self.update_cluster_counts()
-            counts_after = self._cluster_counts
-            _update_info = _diff_counts(counts_before, counts_after)
-            _update_info.description = 'assign'
-            _update_info.spikes = spike_ids
+        counts_before = self._cluster_counts
+        self.update_cluster_counts()
+        counts_after = self._cluster_counts
+        update_info = _diff_counts(counts_before, counts_after)
+        update_info.description = 'assign'
+        update_info.spikes = spike_ids
         if _add_to_stack:
             self._undo_stack.add((spike_ids, cluster_ids))
-        assert _update_info is not None
-        return _update_info
+        assert update_info is not None
+        return update_info
 
     def split(self, spike_ids):
         """Split a number of spikes into a new cluster."""
