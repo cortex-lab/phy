@@ -99,6 +99,10 @@ def _index_of(arr, lookup):
     return tmp[arr]
 
 
+def _is_array_like(arr):
+    return isinstance(arr, (list, np.ndarray))
+
+
 _ACCEPTED_ARRAY_DTYPES = (np.float, np.float32, np.float64,
                           np.int, np.int8, np.int16, np.uint8, np.uint16,
                           np.int32, np.int64, np.uint32, np.uint64,

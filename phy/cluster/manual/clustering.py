@@ -12,7 +12,7 @@ from copy import deepcopy
 import numpy as np
 
 from ...ext.six import iterkeys, itervalues, iteritems
-from ...utils.array import _as_array
+from ...utils.array import _as_array, _is_array_like
 from ._utils import _unique, _spikes_in_clusters, _spikes_per_cluster
 from ._update_info import UpdateInfo
 from ._history import History
@@ -44,22 +44,12 @@ def _concatenate_spike_clusters(*pairs):
                        for x, y in pairs)
     reorder = np.argsort(concat[:, 0])
     concat = concat[reorder, :]
-    return concat[:, 0], concat[:, 1]
+    return concat[:, 0].astype(np.int64), concat[:, 1].astype(np.int64)
 
 
 def _extend_assignement(old_spike_clusters, spike_ids, spike_clusters_rel):
     # 1. Add spikes that belong to modified clusters.
     # 2. Find new cluster ids for all changed clusters.
-
-    # # First, we find the spikes that have actually changed.
-    # changed = (old_spike_clusters != spike_clusters_rel)
-    # # Restrict the selection in our arrays.
-    # spike_ids = spike_ids[changed]
-    # old_spike_clusters = self._spike_clusters[spike_ids]
-    # if _is_array_like(spike_clusters_rel):
-        # Ensure the relative indices start at 0.
-        # spike_clusters_rel -= spike_clusters_rel.min()
-        # spike_clusters_rel = spike_clusters_rel[changed]
 
     old_spike_clusters = _as_array(old_spike_clusters)
     spike_ids = _as_array(spike_ids)
@@ -75,6 +65,8 @@ def _extend_assignement(old_spike_clusters, spike_ids, spike_clusters_rel):
 
     # We find the spikes belonging to modified clusters.
     extended_spike_ids = _extend_spikes(old_spike_clusters, spike_ids)
+    if len(extended_spike_ids) == 0:
+        return spike_ids, new_spike_clusters
 
     # We take their clusters.
     extended_spike_clusters = old_spike_clusters[extended_spike_ids]
@@ -119,6 +111,10 @@ class Clustering(object):
             # Compute the spikes per cluster for part of the clusters only.
             assert spike_clusters is not None
             assert len(spike_ids) == len(spike_clusters)
+            # Ensure we have arrays.
+            spike_ids = _as_array(spike_ids)
+            spike_clusters = _as_array(spike_clusters)
+            # Find old and new spike clusters.
             new_spike_clusters = spike_clusters
             old_spike_clusters = self._spike_clusters[spike_ids]
             assert len(old_spike_clusters) == len(new_spike_clusters)
@@ -160,7 +156,7 @@ class Clustering(object):
     @property
     def cluster_counts(self):
         """Number of spikes in each cluster."""
-        return {cluster: len(self._spikes_per_cluster)
+        return {cluster: len(self._spikes_per_cluster[cluster])
                 for cluster in self.cluster_ids}
 
     def new_cluster_id(self):
@@ -218,26 +214,31 @@ class Clustering(object):
 
         return update_info
 
-
     def assign(self, spike_ids, spike_clusters_rel, _add_to_stack=True):
         """Assign clusters to a number of spikes.
 
-        NOTE: spike_clusters_rel contains relative indices. They don't correspond
-        to final cluster ids: self.assign() handles the final assignements
-        to ensure that no cluster ends up modified. A cluster can only be born,
-        stay unchanged, or die.
+        NOTE: spike_clusters_rel contains relative indices. They don't
+        correspond to final cluster ids: self.assign() handles the final
+        assignements to ensure that no cluster ends up modified. A cluster
+        can only be born, stay unchanged, or die.
 
         """
 
+        assert not isinstance(spike_ids, slice)
+
         # Ensure 'spike_clusters_rel' is an array-like.
         if not hasattr(spike_clusters_rel, '__len__'):
-            spike_clusters_rel = spike_clusters_rel * np.ones(len(spike_ids))
+            spike_clusters_rel = spike_clusters_rel * np.ones(len(spike_ids),
+                                                              dtype=np.int64)
 
-        assert len(spike_ids) == len(spike_clusters_rel)
+        if _is_array_like(spike_ids):
+            assert len(spike_ids) == len(spike_clusters_rel)
 
-        # This call does several things:
-        # 1. It adds spikes that belong to modified clusters.
-        # 2. It finds new cluster ids for all changed clusters.
+        # Normalize the spike-cluster assignement such that
+        # there are only new or dead clusters, not modified clusters.
+        # This implies that spikes not explicitely selected, but that
+        # belong to clusters affected by the operation, will be assigned
+        # to brand new clusters.
         spike_ids, cluster_ids = _extend_assignement(self._spike_clusters,
                                                      spike_ids,
                                                      spike_clusters_rel)
@@ -246,13 +247,15 @@ class Clustering(object):
         self._update_spikes_per_cluster(spike_ids, cluster_ids)
 
         # Make the assignements.
-        self.spike_clusters[spike_ids] = cluster_ids
+        self._spike_clusters[spike_ids] = cluster_ids
 
         # We create the update info structure.
-        # TODO: generate update_info
-        # update_info = _diff_counts(counts_before, counts_after)
-        # update_info.description = 'assign'
-        # update_info.spikes = spike_ids
+        old_clusters = np.unique(self._spike_clusters[spike_ids])
+        new_clusters = np.unique(cluster_ids)
+        update_info = UpdateInfo(description='assign',
+                                 spikes=spike_ids,
+                                 added=new_clusters,
+                                 deleted=old_clusters)
 
         # Add the assignement to the undo stack if necessary.
         if _add_to_stack:
@@ -275,9 +278,12 @@ class Clustering(object):
             # We update the spike clusters accordingly.
             if spike_ids is not None:
                 spike_clusters_new[spike_ids] = cluster_ids
-        # Finally, we update all spike clusters.
+        # What are the spikes affected by all changes in the stack.
+        changed = np.nonzero(self._spike_clusters_base !=
+                             spike_clusters_new)[0]
+        # Finally, we make the assignements.
         # WARNING: do not add an item in the stack.
-        return self.assign(slice(None, None, None), spike_clusters_new,
+        return self.assign(changed, spike_clusters_new[changed],
                            _add_to_stack=False)
 
     def redo(self):
