@@ -10,6 +10,7 @@ import os
 import os.path as op
 
 from ...utils.logging import debug
+from ...utils._misc import _concatenate_dicts
 from ...io.h5 import open_h5
 from ...io.sparse import load_h5, save_h5
 from ...ext.six import string_types
@@ -151,14 +152,6 @@ class DiskStore(object):
 # Cluster store
 #------------------------------------------------------------------------------
 
-def _concatenate(*dicts):
-    """Concatenate dictionaries."""
-    out = {}
-    for dic in dicts:
-        out.update(dic)
-    return out
-
-
 class ClusterStore(object):
     """Hold cluster-related information in memory and on disk."""
 
@@ -234,7 +227,7 @@ class ClusterStore(object):
                                                   self._filter(keys, 'memory'))
             data_disk = self._disk_store.load(cluster,
                                               self._filter(keys, 'disk'))
-            return _concatenate(data_memory, data_disk)
+            return _concatenate_dicts(data_memory, data_disk)
         else:
             raise ValueError("'keys' should be a list or a string.")
 

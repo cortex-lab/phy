@@ -26,6 +26,14 @@ def _as_dict(x):
         return x
 
 
+def _concatenate_dicts(*dicts):
+    """Concatenate dictionaries."""
+    out = {}
+    for dic in dicts:
+        out.update(dic)
+    return out
+
+
 def _is_list(obj):
     return isinstance(obj, list)
 
