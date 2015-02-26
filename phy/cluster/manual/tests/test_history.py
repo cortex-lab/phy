@@ -134,8 +134,11 @@ def test_global_history():
     assert gh.undo() == ('h2 second', 'h1 second')
     assert gh.undo() == ('h2 first',)
     assert gh.undo() == ('h1 first',)
-    assert gh.undo() == ()
-    assert gh.undo() == ()
-    assert gh.redo() == ('h1 first',)
-    assert gh.redo() == ('h2 first',)
-    assert gh.redo() == ('h1 second', 'h2 second')
+
+    gh.process_ups = lambda ups: ''.join(ups)
+
+    assert gh.undo() == ''
+    assert gh.undo() == ''
+    assert gh.redo() == 'h1 first'
+    assert gh.redo() == 'h2 first'
+    assert gh.redo() == 'h1 second' + 'h2 second'
