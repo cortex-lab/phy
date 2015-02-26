@@ -12,7 +12,8 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from .._utils import _unique, _spikes_in_clusters, _spikes_per_cluster
+from .._utils import (_unique, _spikes_in_clusters, _spikes_per_cluster,
+                      _spikes_per_cluster_to_spike_clusters)
 from ....io.mock.artificial import artificial_spike_clusters
 
 
@@ -59,9 +60,12 @@ def test_spikes_per_cluster():
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
-    spikes_in_clusters = _spikes_per_cluster(spike_clusters)
-    assert list(spikes_in_clusters.keys()) == list(range(n_clusters))
+    spikes_per_cluster = _spikes_per_cluster(spike_clusters)
+    assert list(spikes_per_cluster.keys()) == list(range(n_clusters))
 
     for i in range(10):
-        ae(spikes_in_clusters[i], np.sort(spikes_in_clusters[i]))
-        assert np.all(spike_clusters[spikes_in_clusters[i]] == i)
+        ae(spikes_per_cluster[i], np.sort(spikes_per_cluster[i]))
+        assert np.all(spike_clusters[spikes_per_cluster[i]] == i)
+
+    sc = _spikes_per_cluster_to_spike_clusters(spikes_per_cluster)
+    ae(spike_clusters, sc)
