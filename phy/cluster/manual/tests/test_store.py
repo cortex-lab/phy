@@ -96,17 +96,15 @@ def test_cluster_store():
 
         model = {'spike_clusters': np.random.randint(size=100, low=0, high=10)}
 
-        @cs.connect
-        def on_reset(model):
+        def reset(model):
             cs.clear()
             # Find unique clusters.
             clusters = np.unique(model['spike_clusters'])
             # Load data for all clusters.
-            cs.generate(clusters)
+            generate(clusters)
             ae(cs.clusters, clusters)
 
-        @cs.connect
-        def on_generate(clusters):
+        def generate(clusters):
             for cluster in clusters:
 
                 cs.store(cluster,
@@ -117,6 +115,6 @@ def test_cluster_store():
                          data_disk=np.array([3, 4]),
                          location='disk')
 
-        cs.reset(model)
+        reset(model)
         ae(cs.load(3, 'data_memory'), [1, 2])
         ae(cs.load(5, 'data_disk'), [3, 4])

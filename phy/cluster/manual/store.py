@@ -12,7 +12,6 @@ import shutil
 from collections import defaultdict
 
 from ...utils.logging import debug
-from ...utils.event import EventEmitter
 from ...utils._misc import (_phy_user_dir,
                             _ensure_phy_user_dir_exists)
 from ...io.h5 import open_h5
@@ -155,12 +154,6 @@ class DiskStore(object):
 # Cluster store
 #------------------------------------------------------------------------------
 
-def _default_disk_store_path():
-    """Path to the default disk store."""
-    # ~/.phy/cluster_store.
-    return
-
-
 def _ensure_disk_store_exists(dir_name, root_path=None):
     # Disk store.
     if root_path is None:
@@ -185,16 +178,10 @@ def _concatenate(*dicts):
     return out
 
 
-class BaseClusterStore(EventEmitter):
+class BaseClusterStore(object):
     """Hold cluster-related information in memory and on disk."""
 
     def __init__(self, dir_name, root_path=None):
-        super(BaseClusterStore, self).__init__()
-
-        # When cluster information has to be imported from the model.
-        self._create_emitter('generate')
-        # When clustering assignements change.
-        self._create_emitter('update')
 
         # Create the memory store.
         self._memory_store = MemoryStore()
