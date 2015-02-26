@@ -106,16 +106,17 @@ def test_extend_assignement():
 # Test clustering
 #------------------------------------------------------------------------------
 
+def _check_spikes_per_cluster(clustering):
+    ae(_flatten_spikes_per_cluster(clustering.spikes_per_cluster),
+       clustering.spike_clusters)
+
+
 def test_clustering_split():
     spike_clusters = np.array([2, 5, 3, 2, 7, 5, 2])
 
     # Instanciate a Clustering instance.
     clustering = Clustering(spike_clusters)
     ae(clustering.spike_clusters, spike_clusters)
-
-    def _check_spikes_per_cluster():
-        ae(_flatten_spikes_per_cluster(clustering.spikes_per_cluster),
-           clustering.spike_clusters)
 
     splits = [[0],
               [1],
@@ -138,16 +139,16 @@ def test_clustering_split():
     for to_split in splits:
         clustering.reset()
         clustering.split(to_split)
-        _check_spikes_per_cluster()
+        _check_spikes_per_cluster(clustering)
 
     # Test many splits, without reset this time.
     clustering.reset()
     for to_split in splits:
         clustering.split(to_split)
-        _check_spikes_per_cluster()
+        _check_spikes_per_cluster(clustering)
 
 
-def test_clustering_descendants():
+def test_clustering_descendants_merge():
     spike_clusters = np.array([2, 5, 3, 2, 7, 5, 2])
 
     # Instanciate a Clustering instance.
@@ -161,6 +162,7 @@ def test_clustering_descendants():
     new = up.added[0]
     assert new == 8
     assert up.descendants == [(2, 8), (3, 8)]
+    _check_spikes_per_cluster(clustering)
 
     with raises(ValueError):
         up = clustering.merge([2, 8])
@@ -169,6 +171,39 @@ def test_clustering_descendants():
     new = up.added[0]
     assert new == 9
     assert up.descendants == [(5, 9), (8, 9)]
+    _check_spikes_per_cluster(clustering)
+
+
+def test_clustering_descendants_split():
+    spike_clusters = np.array([2, 5, 3, 2, 7, 5, 2])
+
+    # Instanciate a Clustering instance.
+    clustering = Clustering(spike_clusters)
+
+    with raises(Exception):
+        clustering.split([-1])
+    with raises(Exception):
+        clustering.split([8])
+
+    up = clustering.split([0])
+    assert up.deleted == [2]
+    assert up.added == [8, 9]
+    assert up.descendants == [(2, 8), (2, 9)]
+    _check_spikes_per_cluster(clustering)
+
+    up = clustering.split([0])
+    assert up.deleted == [8]
+    assert up.added == [10]
+    assert up.descendants == [(8, 10)]
+    ae(clustering.spike_clusters, [10, 5, 3, 9, 7, 5, 9])
+    _check_spikes_per_cluster(clustering)
+
+    up = clustering.undo()
+    assert up.deleted == [10]
+    assert up.added == [8]
+    assert up.descendants == [(10, 8)]
+    ae(clustering.spike_clusters, [8, 5, 3, 9, 7, 5, 9])
+    _check_spikes_per_cluster(clustering)
 
 
 def test_clustering_merge():
@@ -332,7 +367,7 @@ def test_clustering_assign():
     _assert_is_checkpoint(4)
 
 
-def test_clustering():
+def test_clustering_long():
     n_spikes = 1000
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
@@ -341,10 +376,6 @@ def test_clustering():
     # Instanciate a Clustering instance.
     clustering = Clustering(spike_clusters)
     ae(clustering.spike_clusters, spike_clusters)
-
-    def _check_spikes_per_cluster():
-        ae(_flatten_spikes_per_cluster(clustering.spikes_per_cluster),
-           clustering.spike_clusters)
 
     # Test clustering.spikes_in_clusters() function.:
     assert np.all(spike_clusters[clustering.spikes_in_clusters([5])] == 5)
@@ -357,7 +388,7 @@ def test_clustering():
 
     assert len(clustering.cluster_counts) == n_clusters
     assert sum(itervalues(clustering.cluster_counts)) == n_spikes
-    _check_spikes_per_cluster()
+    _check_spikes_per_cluster(clustering)
 
     # Updating a cluster, method 1.
     spike_clusters_new = spike_clusters.copy()
@@ -380,7 +411,7 @@ def test_clustering():
     assert new_cluster in clustering.cluster_ids
     assert clustering.cluster_counts[new_cluster] == 10
     assert np.all(clustering.spike_clusters[:10] == new_cluster)
-    _check_spikes_per_cluster()
+    _check_spikes_per_cluster(clustering)
 
     # Merge.
     count = clustering.cluster_counts.copy()
@@ -391,7 +422,7 @@ def test_clustering():
     assert (new_cluster + 1) in clustering.cluster_ids
     assert clustering.cluster_counts[new_cluster + 1] == count[2] + count[3]
     assert np.all(clustering.spike_clusters[my_spikes] == (new_cluster + 1))
-    _check_spikes_per_cluster()
+    _check_spikes_per_cluster(clustering)
 
     # Merge to a given cluster.
     clustering.spike_clusters[:] = spike_clusters_base[:]
@@ -405,17 +436,17 @@ def test_clustering():
     assert 11 in clustering.cluster_ids
     assert clustering.cluster_counts[11] == count4 + count6
     assert np.all(clustering.spike_clusters[my_spikes] == 11)
-    _check_spikes_per_cluster()
+    _check_spikes_per_cluster(clustering)
 
     # Split.
     my_spikes = [1, 3, 5]
     clustering.split(my_spikes)
     assert np.all(clustering.spike_clusters[my_spikes] == 12)
-    _check_spikes_per_cluster()
+    _check_spikes_per_cluster(clustering)
 
     # Assign.
     clusters = [0, 1, 2]
     clustering.assign(my_spikes, clusters)
     clu = clustering.spike_clusters[my_spikes]
     ae(clu - clu[0], clusters)
-    _check_spikes_per_cluster()
+    _check_spikes_per_cluster(clustering)

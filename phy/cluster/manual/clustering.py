@@ -258,7 +258,10 @@ class Clustering(object):
             spike_clusters_rel = spike_clusters_rel * np.ones(len(spike_ids),
                                                               dtype=np.int64)
 
+        spike_ids = _as_array(spike_ids)
         assert len(spike_ids) == len(spike_clusters_rel)
+        assert spike_ids.min() >= 0
+        assert spike_ids.max() < self._n_spikes
 
         # Normalize the spike-cluster assignement such that
         # there are only new or dead clusters, not modified clusters.
@@ -300,7 +303,6 @@ class Clustering(object):
         clusters_changed = spike_clusters_new[changed]
 
         return self._do_assign(changed,
-                               # self._spike_clusters[changed],
                                clusters_changed)
 
     def redo(self):
@@ -316,5 +318,4 @@ class Clustering(object):
 
         # We apply the new assignement.
         return self._do_assign(spike_ids,
-                               # self._spike_clusters[spike_ids],
                                cluster_ids)
