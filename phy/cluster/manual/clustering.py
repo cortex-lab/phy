@@ -160,14 +160,20 @@ class Clustering(object):
     def merge(self, cluster_ids, to=None):
         """Merge several clusters to a new cluster."""
 
+        if not _is_array_like(cluster_ids):
+            raise ValueError("The first argument should be a list or "
+                             "an array.")
+
+        cluster_ids = sorted(cluster_ids)
+        if not set(cluster_ids) <= set(self.cluster_ids):
+            raise ValueError("Some clusters do not exist.")
+
         # Find the new cluster number.
         if to is None:
             to = self.new_cluster_id()
         if to < self.new_cluster_id():
             raise ValueError("The new cluster numbers should be higher than "
                              "{0}.".format(self.new_cluster_id()))
-
-        cluster_ids = sorted(cluster_ids)
 
         # NOTE: we could have called self.assign() here, but we don't.
         # We circumvent self.assign() for performance reasons.
