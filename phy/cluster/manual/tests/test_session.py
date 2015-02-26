@@ -9,13 +9,17 @@
 import os
 
 import numpy as np
+from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ..session import Session
+from ..session import Session, start_manual_clustering
+from ....utils.tempdir import TemporaryDirectory
+from ....io.mock.artificial import MockModel
+from ....io.mock.kwik import create_mock_kwik
 
 
 #------------------------------------------------------------------------------
-# Tests
+# Generic tests
 #------------------------------------------------------------------------------
 
 def test_session_connect():
@@ -134,3 +138,89 @@ def test_action_event():
     # This triggers the 'hello' event which adds 'hello world' to _track.
     session.my_action_hello('hello')
     assert _track == ['hello', 'hello world!']
+
+
+#------------------------------------------------------------------------------
+# Kwik tests
+#------------------------------------------------------------------------------
+
+def test_session_mock():
+    session = start_manual_clustering(model=MockModel())
+    view = session.show_waveforms()
+    session.select([0])
+    view_bis = session.show_waveforms()
+
+    session.merge([3, 4])
+
+    view.close()
+    view_bis.close()
+
+    session = start_manual_clustering(model=MockModel())
+    session.select([1, 2])
+    view = session.show_waveforms()
+    view.close()
+
+
+def test_session_kwik():
+
+    n_clusters = 10
+    n_spikes = 50
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 3000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=n_clusters,
+                                    n_spikes=n_spikes,
+                                    n_channels=n_channels,
+                                    n_features_per_channel=n_fets,
+                                    n_samples_traces=n_samples_traces)
+
+        session = start_manual_clustering(filename)
+        session.select([0])
+        session.merge([3, 4])
+        view = session.show_waveforms()
+
+        # This won't work but shouldn't raise an error.
+        session.select([1000])
+
+        # TODO: more tests
+        session.undo()
+        session.redo()
+
+        view.close()
+
+
+def test_session_stats():
+
+    n_clusters = 10
+    n_spikes = 50
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 3000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=n_clusters,
+                                    n_spikes=n_spikes,
+                                    n_channels=n_channels,
+                                    n_features_per_channel=n_fets,
+                                    n_samples_traces=n_samples_traces)
+
+        session = start_manual_clustering(filename)
+
+        masks = session.stats.cluster_masks(3)
+        assert masks.shape == (n_channels,)
+
+        session.merge([3, 4])
+
+        masks = session.stats.cluster_masks(3)
+        assert masks.shape == (n_channels,)
+
+        masks = session.stats.cluster_masks(n_clusters)
+        assert masks.shape == (n_channels,)
