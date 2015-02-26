@@ -19,7 +19,7 @@ from .clustering import Clustering
 from ...io.kwik_model import KwikModel
 from ...notebook.utils import load_css, ipython_shell
 from ...notebook.cluster_view import ClusterView
-from .cluster_info import ClusterMetadata, ClusterStats
+from .cluster_info import ClusterMetadata
 from .selector import Selector
 from ...io.base_model import BaseModel
 from ...plot.waveforms import WaveformView
@@ -140,18 +140,17 @@ class Session(BaseSession):
         spike_clusters = self.model.spike_clusters
         self.clustering = Clustering(spike_clusters)
         self.cluster_metadata = self.model.cluster_metadata
-        self.stats = ClusterStats()
         # TODO: n_spikes_max in a user parameter
         self.selector = Selector(spike_clusters, n_spikes_max=100)
         # TODO: user-customizable list of statistics
 
-        mask_selector = Selector(spike_clusters, n_spikes_max=100)
+        # mask_selector = Selector(spike_clusters, n_spikes_max=100)
 
-        @self.stats.stat
-        def cluster_masks(cluster):
-            mask_selector.selected_clusters = [cluster]
-            spikes = mask_selector.selected_spikes
-            return self.model.masks[spikes].mean(axis=0)
+        # @self.stats.stat
+        # def cluster_masks(cluster):
+        #     mask_selector.selected_clusters = [cluster]
+        #     spikes = mask_selector.selected_spikes
+        #     return self.model.masks[spikes].mean(axis=0)
 
     def on_cluster(self, up=None, add_to_stack=True):
         if add_to_stack:
@@ -227,6 +226,10 @@ class Session(BaseSession):
         display(view)
         return view
 
+
+#------------------------------------------------------------------------------
+# Helper functions
+#------------------------------------------------------------------------------
 
 def start_manual_clustering(filename=None, model=None, session=None,
                             backend=None):

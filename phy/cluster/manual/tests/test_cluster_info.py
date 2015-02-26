@@ -9,8 +9,7 @@
 from pytest import raises
 
 from ....ext.six import itervalues, iterkeys
-from ..cluster_info import (ClusterMetadata,
-                            ClusterStats)
+from ..cluster_info import ClusterMetadata
 
 
 #------------------------------------------------------------------------------
@@ -139,27 +138,3 @@ def test_metadata_history():
 
     info = meta.undo()
     assert info is None
-
-
-def test_stats():
-
-    stats = ClusterStats()
-
-    class O(object):
-        coeff = 2
-
-        def my_stat(self, x):
-            return self.coeff * x
-
-    o = O()
-
-    # Register the statistics.
-    stats.stat(o.my_stat)
-
-    assert stats.my_stat(3) == 6
-
-    o.coeff = 3
-    assert stats.my_stat(3) == 6
-
-    stats.invalidate(3)
-    assert stats.my_stat(3) == 9
