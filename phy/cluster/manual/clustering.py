@@ -86,11 +86,15 @@ def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
     new_clusters = np.unique(new_spike_clusters)
     descendants = list(set(zip(old_spike_clusters,
                                new_spike_clusters)))
+    # Put the old spikes per cluster dictionary in the update info structure.
+    spc = _spikes_per_cluster(spike_ids, old_spike_clusters)
     update_info = UpdateInfo(description='assign',
                              spikes=spike_ids,
-                             descendants=descendants,
                              added=list(new_clusters),
-                             deleted=list(old_clusters))
+                             deleted=list(old_clusters),
+                             descendants=descendants,
+                             old_spikes_per_cluster=spc,
+                             )
     return update_info
 
 
@@ -185,12 +189,14 @@ class Clustering(object):
 
         # Create the UpdateInfo instance here.
         descendants = [(cluster, to) for cluster in cluster_ids]
-        update_info = UpdateInfo(description='merge',
-                                 spikes=spike_ids,
-                                 added=[to],
-                                 deleted=cluster_ids,
-                                 descendants=descendants
-                                 )
+        spc = {k: self._spikes_per_cluster[k] for k in cluster_ids}
+        up = UpdateInfo(description='merge',
+                        spikes=spike_ids,
+                        added=[to],
+                        deleted=cluster_ids,
+                        descendants=descendants,
+                        old_spikes_per_cluster=spc,
+                        )
 
         # Update the spikes_per_cluster structure directly.
         self._spikes_per_cluster[to] = spike_ids
@@ -203,7 +209,7 @@ class Clustering(object):
         # Add to stack.
         self._undo_stack.add((spike_ids, [to]))
 
-        return update_info
+        return up
 
     def _update_all_spikes_per_cluster(self):
         self._spikes_per_cluster = _spikes_per_cluster(self._spike_ids,
