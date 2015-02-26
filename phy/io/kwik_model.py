@@ -181,6 +181,7 @@ class KwikModel(BaseModel):
             raise ValueError("No filename specified.")
 
         # Open the file.
+        self.name = op.splitext(op.basename(filename))[0]
         self._kwik = open_h5(filename)
         if not self._kwik.is_open():
             raise ValueError("File {0} failed to open.".format(filename))
