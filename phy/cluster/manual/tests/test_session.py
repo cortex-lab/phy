@@ -13,7 +13,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ..session import Session, start_manual_clustering
+from ..session import BaseSession, Session, start_manual_clustering
 from ....utils.tempdir import TemporaryDirectory
 from ....io.mock.artificial import MockModel
 from ....io.mock.kwik import create_mock_kwik
@@ -25,7 +25,7 @@ from ....io.mock.kwik import create_mock_kwik
 
 def test_session_connect():
     """Test @connect decorator and event system."""
-    session = Session()
+    session = BaseSession()
 
     # connect names should be on_something().
     with raises(ValueError):
@@ -55,7 +55,7 @@ def test_session_connect():
 
 def test_session_connect_multiple():
     """Test @connect decorator and event system."""
-    session = Session()
+    session = BaseSession()
 
     _track = []
 
@@ -73,7 +73,7 @@ def test_session_connect_multiple():
 
 def test_session_unconnect():
     """Test unconnect."""
-    session = Session()
+    session = BaseSession()
 
     _track = []
 
@@ -92,7 +92,7 @@ def test_session_unconnect():
 
 def test_session_connect_alternative():
     """Test the alternative @connect() syntax."""
-    session = Session()
+    session = BaseSession()
 
     _track = []
 
@@ -107,7 +107,7 @@ def test_session_connect_alternative():
 
 
 def test_action():
-    session = Session()
+    session = BaseSession()
     _track = []
 
     @session.action(title='My action')
@@ -119,7 +119,7 @@ def test_action():
 
 
 def test_action_event():
-    session = Session()
+    session = BaseSession()
     _track = []
 
     @session.connect
