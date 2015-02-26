@@ -37,7 +37,7 @@ def test_extend_spikes_simple():
 
     # These are the spikes belonging to those clusters, but not in the
     # originally-specified spikes.
-    extended = _extend_spikes(spike_clusters, spike_ids)
+    extended = _extend_spikes(spike_ids, spike_clusters)
     ae(extended, [1, 5, 6])
 
 
@@ -53,7 +53,7 @@ def test_extend_spikes():
 
     # These are the spikes belonging to those clusters, but not in the
     # originally-specified spikes.
-    extended = _extend_spikes(spike_clusters, spike_ids)
+    extended = _extend_spikes(spike_ids, spike_clusters)
     assert np.all(np.in1d(spike_clusters[extended], clusters))
 
     # The function only returns spikes that weren't in the passed spikes.
@@ -86,16 +86,16 @@ def test_extend_assignement():
     # This should not depend on the index chosen.
     for to in (123, 0, 1, 2, 3):
         clusters_rel = [123] * len(spike_ids)
-        new_spike_ids, new_cluster_ids = _extend_assignement(spike_clusters,
-                                                             spike_ids,
+        new_spike_ids, new_cluster_ids = _extend_assignement(spike_ids,
+                                                             spike_clusters,
                                                              clusters_rel)
         ae(new_spike_ids, [0, 2, 6])
         ae(new_cluster_ids, [10, 10, 11])
 
     # Second case: we assign the spikes to different clusters.
     clusters_rel = [0, 1]
-    new_spike_ids, new_cluster_ids = _extend_assignement(spike_clusters,
-                                                         spike_ids,
+    new_spike_ids, new_cluster_ids = _extend_assignement(spike_ids,
+                                                         spike_clusters,
                                                          clusters_rel)
     ae(new_spike_ids, [0, 2, 6])
     ae(new_cluster_ids, [10, 11, 12])

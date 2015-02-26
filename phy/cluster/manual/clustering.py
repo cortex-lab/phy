@@ -22,7 +22,7 @@ from ._history import History
 # Clustering class
 #------------------------------------------------------------------------------
 
-def _extend_spikes(spike_clusters, spike_ids):
+def _extend_spikes(spike_ids, spike_clusters):
     """Return all spikes belonging to the clusters containing the specified
     spikes."""
     # We find the spikes belonging to modified clusters.
@@ -47,7 +47,7 @@ def _concatenate_spike_clusters(*pairs):
     return concat[:, 0].astype(np.int64), concat[:, 1].astype(np.int64)
 
 
-def _extend_assignement(old_spike_clusters, spike_ids, spike_clusters_rel):
+def _extend_assignement(spike_ids, old_spike_clusters, spike_clusters_rel):
     # 1. Add spikes that belong to modified clusters.
     # 2. Find new cluster ids for all changed clusters.
 
@@ -64,7 +64,7 @@ def _extend_assignement(old_spike_clusters, spike_ids, spike_clusters_rel):
                           (new_cluster_id - spike_clusters_rel.min()))
 
     # We find the spikes belonging to modified clusters.
-    extended_spike_ids = _extend_spikes(old_spike_clusters, spike_ids)
+    extended_spike_ids = _extend_spikes(spike_ids, old_spike_clusters)
     if len(extended_spike_ids) == 0:
         return spike_ids, new_spike_clusters
 
@@ -94,8 +94,7 @@ def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
     return update_info
 
 
-def _update_spikes_per_cluster(spike_ids,
-                               old_spike_clusters,
+def _update_spikes_per_cluster(old_spike_clusters,
                                new_spike_clusters):
     """Update the spikes_per_cluster structure after an assign operation.
 
@@ -105,15 +104,7 @@ def _update_spikes_per_cluster(spike_ids,
                self._spike_clusters.
 
     """
-    # Compute the spikes per cluster for part of the clusters only.
-    assert new_spike_clusters is not None
-    # Ensure spike_clusters has the right shape.
-    if len(new_spike_clusters) == 1 and len(spike_ids) > 1:
-        new_spike_clusters = (np.ones(len(spike_ids)) *
-                              new_spike_clusters[0])
-    assert len(spike_ids) == len(new_spike_clusters)
-    # Ensure we have arrays.
-    spike_ids = _as_array(spike_ids)
+    old_spike_clusters = _as_array(old_spike_clusters)
     new_spike_clusters = _as_array(new_spike_clusters)
     assert len(old_spike_clusters) == len(new_spike_clusters)
 
@@ -227,21 +218,22 @@ class Clustering(object):
     def _update_all_spikes_per_cluster(self):
         self._spikes_per_cluster = _spikes_per_cluster(self._spike_clusters)
 
-    def _do_assign(self,
-                   spike_ids,
-                   # old_spike_clusters,
-                   new_spike_clusters):
+    def _do_assign(self, spike_ids, new_spike_clusters):
         """Make spike-cluster assignements after the spike selection has
         been extended to full clusters."""
 
+        # Ensure spike_clusters has the right shape.
+        spike_ids = _as_array(spike_ids)
+        if len(new_spike_clusters) == 1 and len(spike_ids) > 1:
+            new_spike_clusters = (np.ones(len(spike_ids)) *
+                                  new_spike_clusters[0])
         old_spike_clusters = self._spike_clusters[spike_ids]
 
         assert len(spike_ids) == len(old_spike_clusters)
-        assert len(new_spike_clusters) in (1, len(spike_ids))
+        assert len(new_spike_clusters) == len(spike_ids)
 
         # Update the spikes per cluster structure.
-        _up_sc = _update_spikes_per_cluster(spike_ids,
-                                            old_spike_clusters,
+        _up_sc = _update_spikes_per_cluster(old_spike_clusters,
                                             new_spike_clusters)
         for cluster in _up_sc.get('deleted', []):
             del self._spikes_per_cluster[cluster]
@@ -281,8 +273,8 @@ class Clustering(object):
         # This implies that spikes not explicitely selected, but that
         # belong to clusters affected by the operation, will be assigned
         # to brand new clusters.
-        spike_ids, cluster_ids = _extend_assignement(self._spike_clusters,
-                                                     spike_ids,
+        spike_ids, cluster_ids = _extend_assignement(spike_ids,
+                                                     self._spike_clusters,
                                                      spike_clusters_rel)
 
         up = self._do_assign(spike_ids, cluster_ids)
