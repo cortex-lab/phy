@@ -101,10 +101,16 @@ class Clustering(object):
         self._undo_stack = History(base_item=(None, None))
         # Spike -> cluster mapping.
         self._spike_clusters = _as_array(spike_clusters)
+        self._n_spikes = len(self._spike_clusters)
+        self._spike_ids = np.arange(self._n_spikes).astype(np.int64)
         # Create the spikes per cluster structure.
         self._update_all_spikes_per_cluster()
         # Keep a copy of the original spike clusters assignement.
         self._spike_clusters_base = self._spike_clusters.copy()
+
+    def reset(self):
+        self._spike_clusters = self._spike_clusters_base
+        self._update_all_spikes_per_cluster()
 
     @property
     def spike_clusters(self):
@@ -135,6 +141,14 @@ class Clustering(object):
     def n_clusters(self):
         """Number of different clusters."""
         return len(self.cluster_ids)
+
+    @property
+    def n_spikes(self):
+        return self._n_spikes
+
+    @property
+    def spike_ids(self):
+        return self._spike_ids
 
     def spikes_in_clusters(self, clusters):
         """Return the spikes belonging to a set of clusters."""
@@ -186,7 +200,8 @@ class Clustering(object):
         return update_info
 
     def _update_all_spikes_per_cluster(self):
-        self._spikes_per_cluster = _spikes_per_cluster(self._spike_clusters)
+        self._spikes_per_cluster = _spikes_per_cluster(self._spike_ids,
+                                                       self._spike_clusters)
 
     def _do_assign(self, spike_ids, new_spike_clusters):
         """Make spike-cluster assignements after the spike selection has
@@ -203,7 +218,8 @@ class Clustering(object):
         assert len(new_spike_clusters) == len(spike_ids)
 
         # Update the spikes per cluster structure.
-        new_spikes_per_cluster = _spikes_per_cluster(new_spike_clusters)
+        new_spikes_per_cluster = _spikes_per_cluster(spike_ids,
+                                                     new_spike_clusters)
         self._spikes_per_cluster.update(new_spikes_per_cluster)
         # All old clusters are deleted.
         for cluster in _unique(old_spike_clusters):
