@@ -84,8 +84,11 @@ def _extend_assignement(old_spike_clusters, spike_ids, spike_clusters_rel):
 def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
     old_clusters = np.unique(old_spike_clusters)
     new_clusters = np.unique(new_spike_clusters)
+    descendants = list(set(zip(old_spike_clusters,
+                               new_spike_clusters)))
     update_info = UpdateInfo(description='assign',
                              spikes=spike_ids,
+                             descendants=descendants,
                              added=list(new_clusters),
                              deleted=list(old_clusters))
     return update_info
@@ -209,10 +212,13 @@ class Clustering(object):
         spike_ids = _spikes_in_clusters(self.spike_clusters, cluster_ids)
 
         # Create the UpdateInfo instance here.
+        descendants = [(cluster, to) for cluster in cluster_ids]
         update_info = UpdateInfo(description='merge',
                                  spikes=spike_ids,
                                  added=[to],
-                                 deleted=cluster_ids)
+                                 deleted=cluster_ids,
+                                 descendants=descendants
+                                 )
 
         # Update the spikes_per_cluster structure directly.
         self._spikes_per_cluster[to] = spike_ids
