@@ -81,19 +81,20 @@ def _extend_assignement(spike_ids, old_spike_clusters, spike_clusters_rel):
                                         extended_spike_clusters))
 
 
-def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
+def _assign_update_info(spike_ids,
+                        old_spike_clusters, old_spikes_per_cluster,
+                        new_spike_clusters, new_spikes_per_cluster):
     old_clusters = np.unique(old_spike_clusters)
     new_clusters = np.unique(new_spike_clusters)
     descendants = list(set(zip(old_spike_clusters,
                                new_spike_clusters)))
-    # Put the old spikes per cluster dictionary in the update info structure.
-    spc = _spikes_per_cluster(spike_ids, old_spike_clusters)
     update_info = UpdateInfo(description='assign',
                              spikes=spike_ids,
                              added=list(new_clusters),
                              deleted=list(old_clusters),
                              descendants=descendants,
-                             old_spikes_per_cluster=spc,
+                             old_spikes_per_cluster=old_spikes_per_cluster,
+                             new_spikes_per_cluster=new_spikes_per_cluster,
                              )
     return update_info
 
@@ -189,13 +190,15 @@ class Clustering(object):
 
         # Create the UpdateInfo instance here.
         descendants = [(cluster, to) for cluster in cluster_ids]
-        spc = {k: self._spikes_per_cluster[k] for k in cluster_ids}
+        old_spc = {k: self._spikes_per_cluster[k] for k in cluster_ids}
+        new_spc = {to: spike_ids}
         up = UpdateInfo(description='merge',
                         spikes=spike_ids,
                         added=[to],
                         deleted=cluster_ids,
                         descendants=descendants,
-                        old_spikes_per_cluster=spc,
+                        old_spikes_per_cluster=old_spc,
+                        new_spikes_per_cluster=new_spc,
                         )
 
         # Update the spikes_per_cluster structure directly.
@@ -230,17 +233,20 @@ class Clustering(object):
         assert len(new_spike_clusters) == len(spike_ids)
 
         # Update the spikes per cluster structure.
+        clusters = _unique(old_spike_clusters)
+        old_spikes_per_cluster = {cluster: self._spikes_per_cluster[cluster]
+                                  for cluster in clusters}
         new_spikes_per_cluster = _spikes_per_cluster(spike_ids,
                                                      new_spike_clusters)
         self._spikes_per_cluster.update(new_spikes_per_cluster)
         # All old clusters are deleted.
-        for cluster in _unique(old_spike_clusters):
+        for cluster in clusters:
             del self._spikes_per_cluster[cluster]
 
         # We return the UpdateInfo structure.
         up = _assign_update_info(spike_ids,
-                                 old_spike_clusters,
-                                 new_spike_clusters)
+                                 old_spike_clusters, old_spikes_per_cluster,
+                                 new_spike_clusters, new_spikes_per_cluster)
 
         # We make the assignements.
         self._spike_clusters[spike_ids] = new_spike_clusters
