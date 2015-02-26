@@ -157,6 +157,44 @@ class Session(BaseSession):
     # Event callbacks
     # -------------------------------------------------------------------------
 
+    def _iter_clusters(self):
+        """Loop over all clusters and yield the cluster and the spike
+        indices."""
+        clusters = self.clustering.cluster_ids
+        for cluster in clusters:
+            spikes = self.clustering.spikes_per_cluster[cluster]
+            yield (cluster, spikes)
+
+    def _initialize_store(self):
+        self.cluster_store.clear()
+
+        self.cluster_store.register_field('masks', 'disk')
+        self.cluster_store.register_field('mean_masks', 'memory')
+
+        # TODO: more fields
+        # self.cluster_store.register_field('features', 'disk')
+
+        # Store the masks and mean masks.
+        for cluster, spikes in self._iter_clusters():
+            masks = self.model.masks[spikes]
+            self.cluster_store.store(cluster,
+                                     masks=masks,
+                                     mean_masks=masks.mean(axis=0))
+
+    def _update_store(self, up):
+        # TODO
+        pass
+
+    def _load_from_store(self, cluster, field, check_n_spikes=False):
+        out = self.cluster_store.load(cluster, field)
+        if check_n_spikes:
+            # NOTE: we make the assumption that every object stored in the
+            # ClusterStore has its len == the number of spikes in the cluster.
+            spikes = self.clustering.spikes_per_cluster[cluster]
+            if len(out) != len(spikes):
+                raise RuntimeError("Cache inconsistency! Please recreate it.")
+        return out
+
     def on_open(self):
         """Update the session after new data has been loaded."""
         self._global_history = GlobalHistory()
@@ -170,20 +208,14 @@ class Session(BaseSession):
 
         path = _ensure_disk_store_exists(self.model.name,
                                          root_path=self._store_path)
-        self.store = ClusterStore(path)
-        # TODO: fill the store
+        self.cluster_store = ClusterStore(path)
+        # TODO: do not reinitialize the store every time the dataset
+        # is loaded! Check if the store exists and check consistency.
+        self._initialize_store()
 
         @self.connect
-        def on_cluster(up=None, add_to_stack=True):
-            # TODO: Update the store
-            pass
-
-        # mask_selector = Selector(spike_clusters, n_spikes_max=100)
-        # @self.stats.stat
-        # def cluster_masks(cluster):
-        #     mask_selector.selected_clusters = [cluster]
-        #     spikes = mask_selector.selected_spikes
-        #     return self.model.masks[spikes].mean(axis=0)
+        def on_cluster(up=None, add_to_stack=None):
+            self._update_store(up)
 
     def on_cluster(self, up=None, add_to_stack=True):
         if add_to_stack:
