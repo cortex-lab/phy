@@ -52,13 +52,13 @@ def _spikes_per_cluster(spike_clusters):
     return spikes_in_clusters
 
 
-def _spikes_per_cluster_to_spike_clusters(spikes_per_cluster):
+def _flatten_spikes_per_cluster(spikes_per_cluster):
     """Convert a dictionary {cluster: list_of_spikes} to a
     spike_clusters array."""
     clusters = sorted(spikes_per_cluster)
     clusters_arr = np.concatenate([(cluster *
-                                    np.ones(len(spikes_per_cluster[cluster])))
-                                    for cluster in clusters]).astype(np.int64)
+                                   np.ones(len(spikes_per_cluster[cluster])))
+                                   for cluster in clusters]).astype(np.int64)
     spikes_arr = np.concatenate([spikes_per_cluster[cluster]
                                  for cluster in clusters])
     spike_clusters = np.vstack((spikes_arr, clusters_arr))
