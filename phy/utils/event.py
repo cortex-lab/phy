@@ -38,13 +38,14 @@ class EventEmitter(object):
             setattr(self, event,
                     lambda *args, **kwargs: self.emit(event, *args, **kwargs))
 
-    def connect(self, func=None):
+    def connect(self, func=None, event=None):
         """Decorator for a function reacting to an event being raised."""
         if func is None:
             return self.connect
 
         # Get the event name from the function.
-        event = self._get_on_name(func)
+        if event is None:
+            event = self._get_on_name(func)
 
         # We register the callback function.
         self._callbacks[event].append(func)
