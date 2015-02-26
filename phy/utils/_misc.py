@@ -70,6 +70,6 @@ def _phy_user_dir(sub_dir=None):
 
 def _ensure_phy_user_dir_exists():
     """Create the phy user directory if it does not exist."""
-    path = _phy_user_dir
-    if not os.exists(path):
+    path = _phy_user_dir()
+    if not op.exists(path):
         os.mkdir(path)

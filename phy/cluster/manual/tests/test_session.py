@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import os
+import os.path as op
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
@@ -145,20 +146,22 @@ def test_action_event():
 #------------------------------------------------------------------------------
 
 def test_session_mock():
-    session = start_manual_clustering(model=MockModel())
-    view = session.show_waveforms()
-    session.select([0])
-    view_bis = session.show_waveforms()
+    with TemporaryDirectory() as tempdir:
+        session = start_manual_clustering(model=MockModel(),
+                                          store_path=tempdir)
+        view = session.show_waveforms()
+        session.select([0])
+        view_bis = session.show_waveforms()
 
-    session.merge([3, 4])
+        session.merge([3, 4])
 
-    view.close()
-    view_bis.close()
+        view.close()
+        view_bis.close()
 
-    session = start_manual_clustering(model=MockModel())
-    session.select([1, 2])
-    view = session.show_waveforms()
-    view.close()
+        session = start_manual_clustering(model=MockModel())
+        session.select([1, 2])
+        view = session.show_waveforms()
+        view.close()
 
 
 def test_session_kwik():
@@ -179,7 +182,8 @@ def test_session_kwik():
                                     n_features_per_channel=n_fets,
                                     n_samples_traces=n_samples_traces)
 
-        session = start_manual_clustering(filename)
+        session = start_manual_clustering(filename,
+                                          store_path=tempdir)
         session.select([0])
         session.merge([3, 4])
         view = session.show_waveforms()

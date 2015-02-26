@@ -6,12 +6,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
 from ....utils.logging import set_level
 from ....utils.tempdir import TemporaryDirectory
-from ..store import MemoryStore, DiskStore, BaseClusterStore
+from ..store import MemoryStore, DiskStore, ClusterStore
 
 
 #------------------------------------------------------------------------------
@@ -92,7 +94,8 @@ def test_disk_store():
 
 def test_cluster_store():
     with TemporaryDirectory() as tempdir:
-        cs = BaseClusterStore('test', root_path=tempdir)
+        path = op.join(tempdir, 'test')
+        cs = ClusterStore(path)
 
         model = {'spike_clusters': np.random.randint(size=100, low=0, high=10)}
 

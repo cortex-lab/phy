@@ -8,16 +8,11 @@
 
 import os
 import os.path as op
-import shutil
-from collections import defaultdict
 
 from ...utils.logging import debug
-from ...utils._misc import (_phy_user_dir,
-                            _ensure_phy_user_dir_exists)
 from ...io.h5 import open_h5
 from ...io.sparse import load_h5, save_h5
 from ...ext.six import string_types
-from ...ext.slugify import slugify
 
 
 #------------------------------------------------------------------------------
@@ -67,6 +62,8 @@ class DiskStore(object):
     """Store cluster-related data in HDF5 files."""
     def __init__(self, directory):
         self._directory = op.realpath(directory)
+        if not op.exists(self._directory):
+            os.mkdir(self._directory)
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -135,6 +132,8 @@ class DiskStore(object):
     @property
     def clusters(self):
         """List of cluster ids in the store."""
+        if not op.exists(self._directory):
+            return []
         files = os.listdir(self._directory)
         clusters = [int(op.splitext(file)[0]) for file in files]
         return sorted(clusters)
@@ -154,22 +153,6 @@ class DiskStore(object):
 # Cluster store
 #------------------------------------------------------------------------------
 
-def _ensure_disk_store_exists(dir_name, root_path=None):
-    # Disk store.
-    if root_path is None:
-        _ensure_phy_user_dir_exists()
-        root_path = _phy_user_dir('cluster_store')
-    # Create the disk store if it does not exist.
-    if not op.exists(root_path):
-        os.mkdir(root_path)
-    # Put the store in a subfolder, using the name.
-    dir_name = slugify(dir_name)
-    path = op.join(root_path, dir_name)
-    if not op.exists(path):
-        os.mkdir(path)
-    return path
-
-
 def _concatenate(*dicts):
     """Concatenate dictionaries."""
     out = {}
@@ -178,17 +161,16 @@ def _concatenate(*dicts):
     return out
 
 
-class BaseClusterStore(object):
+class ClusterStore(object):
     """Hold cluster-related information in memory and on disk."""
 
-    def __init__(self, dir_name, root_path=None):
+    def __init__(self, store_path):
 
         # Create the memory store.
         self._memory_store = MemoryStore()
 
         # Create the disk store.
-        path = _ensure_disk_store_exists(dir_name, root_path=root_path)
-        self._disk_store = DiskStore(path)
+        self._disk_store = DiskStore(store_path)
 
         # Where the info are stored: a {'field' => ('memory' or 'disk')} dict.
         self._dispatch = {}

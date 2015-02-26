@@ -6,11 +6,17 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
+import os.path as op
 from functools import partial
+import shutil
 
 import numpy as np
 
 from ...ext.six import string_types
+from ...utils._misc import (_phy_user_dir,
+                            _ensure_phy_user_dir_exists)
+from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
 from ...notebook.utils import enable_notebook
 from ...utils.logging import set_level, warn
@@ -20,6 +26,7 @@ from ...io.kwik_model import KwikModel
 from ...notebook.utils import load_css, ipython_shell
 from ...notebook.cluster_view import ClusterView
 from .cluster_info import ClusterMetadata
+from .store import ClusterStore
 from .selector import Selector
 from ...io.base_model import BaseModel
 from ...plot.waveforms import WaveformView
@@ -62,6 +69,22 @@ class BaseSession(EventEmitter):
 # Session class
 #------------------------------------------------------------------------------
 
+def _ensure_disk_store_exists(dir_name, root_path=None):
+    # Disk store.
+    if root_path is None:
+        _ensure_phy_user_dir_exists()
+        root_path = _phy_user_dir('cluster_store')
+    # Create the disk store if it does not exist.
+    if not op.exists(root_path):
+        os.mkdir(root_path)
+    # Put the store in a subfolder, using the name.
+    dir_name = slugify(dir_name)
+    path = op.join(root_path, dir_name)
+    if not op.exists(path):
+        os.mkdir(path)
+    return path
+
+
 class Session(BaseSession):
     """Default manual clustering session in the IPython notebook.
 
@@ -75,11 +98,11 @@ class Session(BaseSession):
         VisPy backend. For example 'pyqt4' or 'ipynb_webgl'.
 
     """
-    def __init__(self, backend=None):
+    def __init__(self, store_path=None, backend=None):
         super(Session, self).__init__()
         self.model = None
-        self.filename = None
         self._backend = backend
+        self._store_path = store_path
 
         # self.action and self.connect are decorators.
         self.action(self.open, title='Open')
@@ -102,7 +125,6 @@ class Session(BaseSession):
         if model is None:
             model = KwikModel(filename)
         self.model = model
-        self.filename = filename
         self.emit('open')
 
     def select(self, clusters):
@@ -142,10 +164,18 @@ class Session(BaseSession):
         self.cluster_metadata = self.model.cluster_metadata
         # TODO: n_spikes_max in a user parameter
         self.selector = Selector(spike_clusters, n_spikes_max=100)
-        # TODO: user-customizable list of statistics
+
+        path = _ensure_disk_store_exists(self.model.name,
+                                         root_path=self._store_path)
+        self.store = ClusterStore(path)
+        # TODO: fill the store
+
+        @self.connect
+        def on_cluster(up=None, add_to_stack=True):
+            # TODO: Update the store
+            pass
 
         # mask_selector = Selector(spike_clusters, n_spikes_max=100)
-
         # @self.stats.stat
         # def cluster_masks(cluster):
         #     mask_selector.selected_clusters = [cluster]
@@ -232,7 +262,7 @@ class Session(BaseSession):
 #------------------------------------------------------------------------------
 
 def start_manual_clustering(filename=None, model=None, session=None,
-                            backend=None):
+                            store_path=None, backend=None):
     """Start a manual clustering session in the IPython notebook.
 
     Parameters
@@ -247,7 +277,7 @@ def start_manual_clustering(filename=None, model=None, session=None,
     """
 
     if session is None:
-        session = Session(backend=backend)
+        session = Session(store_path=None, backend=backend)
 
     # Enable the notebook interface.
     enable_notebook(backend=backend)
