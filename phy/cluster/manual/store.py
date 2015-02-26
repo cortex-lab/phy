@@ -10,10 +10,13 @@ import os
 import os.path as op
 
 from ...utils.logging import debug
-from ...utils._misc import _concatenate_dicts
+from ...utils._misc import (_concatenate_dicts,
+                            _phy_user_dir,
+                            _ensure_phy_user_dir_exists)
 from ...io.h5 import open_h5
 from ...io.sparse import load_h5, save_h5
 from ...ext.six import string_types
+from ._utils import _concatenate_per_cluster_arrays
 
 
 #------------------------------------------------------------------------------
@@ -62,6 +65,7 @@ class MemoryStore(object):
 class DiskStore(object):
     """Store cluster-related data in HDF5 files."""
     def __init__(self, directory):
+        assert directory is not None
         self._directory = op.realpath(directory)
 
     # Internal methods
@@ -149,13 +153,14 @@ class DiskStore(object):
 
 
 #------------------------------------------------------------------------------
-# Cluster store
+# Store
 #------------------------------------------------------------------------------
 
-class ClusterStore(object):
-    """Hold cluster-related information in memory and on disk."""
+class Store(object):
+    """Wrap a MemoryStore and a DiskStore."""
 
     def __init__(self, store_path):
+        assert store_path is not None
 
         # Create the memory store.
         self._memory_store = MemoryStore()
@@ -240,3 +245,80 @@ class ClusterStore(object):
         """Delete all information about the specified clusters."""
         self._memory_store.delete(clusters)
         self._disk_store.delete(clusters)
+
+
+#------------------------------------------------------------------------------
+# Cluster store
+#------------------------------------------------------------------------------
+
+class ClusterStore(object):
+    def __init__(self, model=None, path=None):
+        assert model is not None
+        assert path is not None
+
+        self._model = model
+        self._store = Store(path)
+        self._items = []
+
+    def register_item(self, item_cls):
+        """Register a StoreItem instance in the store."""
+        item = item_cls(model=self._model, store=self._store)
+        assert item.fields is not None
+        # Register the storage location for that item.
+        for name, location in item.fields:
+            self._store.register_field(name, location)
+        # Register the StoreItem instance.
+        self._items.append(item)
+        # Create the self.<name>(cluster) method for loading.
+        for name, _ in item.fields:
+            setattr(self, name,
+                    lambda cluster: self._store.load(cluster, name))
+
+    def update(self, up):
+        # Delete the deleted clusters from the store.
+        self._store.delete(up.deleted)
+        if up.description == 'merge':
+            self.merge(up)
+        elif up.description == 'assign':
+            self.assign(up)
+        else:
+            raise NotImplementedError()
+
+    def merge(self, up):
+        for item in self._items:
+            item.merge(up)
+
+    def assign(self, up):
+        for item in self._items:
+            item.assign(up)
+
+    def generate(self, spikes_per_cluster):
+        """Populate the cache for all registered fields and the specified
+        clusters."""
+        assert isinstance(spikes_per_cluster, dict)
+        clusters = sorted(spikes_per_cluster.keys())
+        self._store.delete(clusters)
+        for item in self._items:
+            for cluster in clusters:
+                item.store_from_model(cluster, spikes_per_cluster[cluster])
+
+
+class StoreItem(object):
+    fields = None  # list of (field_name, storage_location)
+
+    def __init__(self, model=None, store=None):
+        self.model = model
+        self.store = store
+
+    def merge(self, up):
+        """May be overridden."""
+        self.assign(up)
+
+    def assign(self, up):
+        """May be overridden."""
+        for cluster in up.added:
+            self.store_from_model(cluster, up.new_spikes_per_cluster[cluster])
+
+    def store_from_model(self, cluster, spikes):
+        """Must be overridden."""
+        raise NotImplementedError()
