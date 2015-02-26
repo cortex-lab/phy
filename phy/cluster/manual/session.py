@@ -277,7 +277,7 @@ def start_manual_clustering(filename=None, model=None, session=None,
     """
 
     if session is None:
-        session = Session(store_path=None, backend=backend)
+        session = Session(store_path=store_path, backend=backend)
 
     # Enable the notebook interface.
     enable_notebook(backend=backend)

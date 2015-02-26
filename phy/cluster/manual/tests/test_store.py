@@ -94,8 +94,7 @@ def test_disk_store():
 
 def test_cluster_store():
     with TemporaryDirectory() as tempdir:
-        path = op.join(tempdir, 'test')
-        cs = ClusterStore(path)
+        cs = ClusterStore(tempdir)
 
         model = {'spike_clusters': np.random.randint(size=100, low=0, high=10)}
 

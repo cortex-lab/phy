@@ -216,7 +216,8 @@ def test_session_stats():
                                     n_features_per_channel=n_fets,
                                     n_samples_traces=n_samples_traces)
 
-        session = start_manual_clustering(filename)
+        session = start_manual_clustering(filename,
+                                          store_path=tempdir)
         assert session
 
         # TODO

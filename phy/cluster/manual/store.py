@@ -62,8 +62,6 @@ class DiskStore(object):
     """Store cluster-related data in HDF5 files."""
     def __init__(self, directory):
         self._directory = op.realpath(directory)
-        if not op.exists(self._directory):
-            os.mkdir(self._directory)
 
     # Internal methods
     # -------------------------------------------------------------------------
