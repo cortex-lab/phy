@@ -57,10 +57,11 @@ def test_spikes_per_cluster():
     """Test _spikes_per_cluster()."""
 
     n_spikes = 1000
+    spike_ids = np.arange(n_spikes).astype(np.int64)
     n_clusters = 10
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
-    spikes_per_cluster = _spikes_per_cluster(spike_clusters)
+    spikes_per_cluster = _spikes_per_cluster(spike_ids, spike_clusters)
     assert list(spikes_per_cluster.keys()) == list(range(n_clusters))
 
     for i in range(10):
