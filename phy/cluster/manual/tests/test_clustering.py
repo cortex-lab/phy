@@ -185,12 +185,31 @@ def test_clustering_descendants_split():
     with raises(Exception):
         clustering.split([8])
 
+    # First split.
     up = clustering.split([0])
     assert up.deleted == [2]
     assert up.added == [8, 9]
     assert up.descendants == [(2, 8), (2, 9)]
+    ae(clustering.spike_clusters, [8, 5, 3, 9, 7, 5, 9])
     _check_spikes_per_cluster(clustering)
 
+    # Undo.
+    up = clustering.undo()
+    assert up.deleted == [8, 9]
+    assert up.added == [2]
+    assert set(up.descendants) == set([(8, 2), (9, 2)])
+    ae(clustering.spike_clusters, spike_clusters)
+    _check_spikes_per_cluster(clustering)
+
+    # Redo.
+    up = clustering.redo()
+    assert up.deleted == [2]
+    assert up.added == [8, 9]
+    assert up.descendants == [(2, 8), (2, 9)]
+    ae(clustering.spike_clusters, [8, 5, 3, 9, 7, 5, 9])
+    _check_spikes_per_cluster(clustering)
+
+    # Second split: just replace cluster 8 by 10 (1 spike in it).
     up = clustering.split([0])
     assert up.deleted == [8]
     assert up.added == [10]
@@ -198,6 +217,7 @@ def test_clustering_descendants_split():
     ae(clustering.spike_clusters, [10, 5, 3, 9, 7, 5, 9])
     _check_spikes_per_cluster(clustering)
 
+    # Undo again.
     up = clustering.undo()
     assert up.deleted == [10]
     assert up.added == [8]
