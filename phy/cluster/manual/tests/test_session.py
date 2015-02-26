@@ -163,7 +163,7 @@ def test_session_mock():
 
 def test_session_kwik():
 
-    n_clusters = 10
+    n_clusters = 5
     n_spikes = 50
     n_channels = 28
     n_fets = 2
@@ -196,7 +196,7 @@ def test_session_kwik():
 
 def test_session_stats():
 
-    n_clusters = 10
+    n_clusters = 5
     n_spikes = 50
     n_channels = 28
     n_fets = 2
