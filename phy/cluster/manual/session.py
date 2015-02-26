@@ -17,12 +17,12 @@ from ...utils.logging import set_level, warn
 from ._history import GlobalHistory
 from .clustering import Clustering
 from ...io.kwik_model import KwikModel
-from .cluster_view import ClusterView
+from ...notebook.utils import load_css, ipython_shell
+from ...notebook.cluster_view import ClusterView
 from .cluster_info import ClusterMetadata, ClusterStats
 from .selector import Selector
 from ...io.base_model import BaseModel
 from ...plot.waveforms import WaveformView
-from ...notebook.utils import load_css, ipython_shell
 
 
 #------------------------------------------------------------------------------

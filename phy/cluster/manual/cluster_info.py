@@ -11,7 +11,7 @@ from copy import deepcopy
 
 from ...utils._color import _random_color
 from ...utils._misc import _as_dict, _fun_arg_count, _as_list, _is_list
-from ...ext.six import iterkeys, itervalues, iteritems, string_types
+from ...ext.six import iterkeys, itervalues, iteritems
 from ._utils import _unique, _spikes_in_clusters
 from ._update_info import UpdateInfo
 from ._history import History
