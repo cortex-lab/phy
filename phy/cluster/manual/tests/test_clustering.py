@@ -137,14 +137,14 @@ def test_clustering_1():
     spike_clusters_new[:10] = 100
     clustering.spike_clusters[:] = spike_clusters_new[:]
     # Need to update explicitely.
-    clustering._update_spikes_per_cluster()
+    clustering._update_all_spikes_per_cluster()
     ae(clustering.cluster_ids, np.r_[np.arange(n_clusters), 100])
 
     # Updating a cluster, method 2.
     clustering.spike_clusters[:] = spike_clusters_base[:]
     clustering.spike_clusters[:10] = 100
     # Need to update manually.
-    clustering._update_spikes_per_cluster()
+    clustering._update_all_spikes_per_cluster()
     ae(clustering.cluster_ids, np.r_[np.arange(n_clusters), 100])
 
     # Assign.
@@ -168,7 +168,7 @@ def test_clustering_1():
 
     # Merge to a given cluster.
     clustering.spike_clusters[:] = spike_clusters_base[:]
-    clustering._update_spikes_per_cluster()
+    clustering._update_all_spikes_per_cluster()
     my_spikes_0 = np.nonzero(np.in1d(clustering.spike_clusters, [4, 6]))[0]
     count = clustering.cluster_counts
     count4, count6 = count[4], count[6]
