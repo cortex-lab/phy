@@ -82,16 +82,15 @@ class Session(BaseSession):
         self._backend = backend
 
         # self.action and self.connect are decorators.
-        self.action(title='Open')(self.open)
-        self.action(title='Select clusters')(self.select)
-        self.action(title='Merge')(self.merge)
-        self.action(title='Split')(self.split)
-        self.action(title='Move clusters to a group')(self.move)
-        self.action(title='Undo')(self.undo)
-        self.action(title='Redo')(self.redo)
-
-        self.action(title='Show waveforms')(self.show_waveforms)
-        self.action(title='Show clusters')(self.show_clusters)
+        self.action(self.open, title='Open')
+        self.action(self.select, title='Select clusters')
+        self.action(self.merge, title='Merge')
+        self.action(self.split, title='Split')
+        self.action(self.move, title='Move clusters to a group')
+        self.action(self.undo, title='Undo')
+        self.action(self.redo, title='Redo')
+        self.action(self.show_waveforms, title='Show waveforms')
+        self.action(self.show_clusters, title='Show clusters')
 
         self.connect(self.on_open)
         self.connect(self.on_cluster)
@@ -211,6 +210,8 @@ class Session(BaseSession):
     def show_clusters(self):
         """Create and show a new cluster view."""
 
+        # TODO: no more 1 cluster = 1 color, use a fixed set of colors
+        # for the selected clusters.
         cluster_colors = [self.cluster_metadata.color(cluster)
                           for cluster in self.clustering.cluster_ids]
         try:
