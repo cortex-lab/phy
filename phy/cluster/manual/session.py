@@ -30,6 +30,7 @@ from .store import ClusterStore
 from .selector import Selector
 from ...io.base_model import BaseModel
 from ...plot.waveforms import WaveformView
+from ._utils import _concatenate_per_cluster_arrays
 
 
 #------------------------------------------------------------------------------
@@ -86,6 +87,22 @@ def _ensure_disk_store_exists(dir_name, root_path=None):
     if not op.exists(path):
         os.mkdir(path)
     return path
+
+
+def _process_ups(ups):
+    """This function processes the UpdateInfo instances of the two
+    undo stacks (clustering and cluster metadata) and concatenates them
+    into a single UpdateInfo instance."""
+    if len(ups) == 0:
+        return
+    elif len(ups) == 1:
+        return ups[0]
+    elif len(ups) == 2:
+        up = ups[0]
+        up.update(ups[1])
+        return up
+    else:
+        raise NotImplementedError()
 
 
 class Session(BaseSession):
@@ -154,7 +171,8 @@ class Session(BaseSession):
         up = self._global_history.redo()
         self.emit('cluster', up=up, add_to_stack=False)
 
-    # Event callbacks
+    # Cluster store
+    # TODO: put this in another class?
     # -------------------------------------------------------------------------
 
     def _iter_clusters(self):
@@ -181,9 +199,26 @@ class Session(BaseSession):
                                      masks=masks,
                                      mean_masks=masks.mean(axis=0))
 
+    def _concatenate_arrays(self, clusters, field, old_spikes_per_cluster):
+        arrays = {cluster: self.cluster_store.load(cluster, field)
+                  for cluster in clusters}
+        return _concatenate_per_cluster_arrays(old_spikes_per_cluster, arrays)
+
     def _update_store(self, up):
-        # TODO
-        pass
+        if up.description == 'merge':
+            # Masks.
+            # Get the masks of the deleted clusters.
+            # WARNING: this may be RAM-intensive if there are many large
+            # clusters. It would be more efficient to buffer the copy.
+            masks = self._concatenate_arrays(up.deleted, 'masks',
+                                             up.old_spikes_per_cluster)
+            # Store the masks of the newly created cluster.
+            self.cluster_store.store(up.added[0], masks=masks)
+            # Delete the old masks.
+            self.cluster_store.delete(up.deleted)
+        elif up.description == 'assign':
+            pass
+            # TODO: more fields.
 
     def _load_from_store(self, cluster, field, check_n_spikes=False):
         out = self.cluster_store.load(cluster, field)
@@ -195,9 +230,12 @@ class Session(BaseSession):
                 raise RuntimeError("Cache inconsistency! Please recreate it.")
         return out
 
+    # Event callbacks
+    # -------------------------------------------------------------------------
+
     def on_open(self):
         """Update the session after new data has been loaded."""
-        self._global_history = GlobalHistory()
+        self._global_history = GlobalHistory(process_ups=_process_ups)
         # TODO: call this after the channel groups has changed.
         # Update the Selector and Clustering instances using the Model.
         spike_clusters = self.model.spike_clusters

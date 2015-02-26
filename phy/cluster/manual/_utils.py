@@ -75,8 +75,10 @@ def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
     assert set(arrays) <= set(spikes_per_cluster)
     clusters = sorted(arrays)
     # Check the sizes of the spikes per cluster and the arrays.
-    assert [len(spikes_per_cluster[cluster]) for cluster in clusters] == \
-           [len(arrays[cluster]) for cluster in clusters]
+    n_0 = [len(spikes_per_cluster[cluster]) for cluster in clusters]
+    n_1 = [len(arrays[cluster]) for cluster in clusters]
+    assert n_0 == n_1
+
     # Concatenate all spikes to find the right insertion order.
     spikes = np.concatenate([spikes_per_cluster[cluster]
                              for cluster in clusters])
