@@ -26,7 +26,7 @@ from ...io.kwik_model import KwikModel
 from ...notebook.utils import load_css, ipython_shell
 from ...notebook.cluster_view import ClusterView
 from .cluster_info import ClusterMetadata
-from .store import ClusterStore
+from .store import ClusterStore, StoreItem
 from .selector import Selector
 from ...io.base_model import BaseModel
 from ...plot.waveforms import WaveformView
@@ -64,6 +64,22 @@ class BaseSession(EventEmitter):
         setattr(self, func.__name__, func)
 
         return func
+
+
+#------------------------------------------------------------------------------
+# Store items
+#------------------------------------------------------------------------------
+
+class FeatureMasks(StoreItem):
+    fields = [('masks', 'disk'),
+              ('mean_masks', 'memory')]
+
+    def store_from_model(self, cluster, spikes):
+        # Load all features and masks for that cluster in memory.
+        masks = self.model.masks[spikes]
+        # Store the masks, features, and mean masks.
+        self.store.store(cluster, masks=masks,
+                         mean_masks=masks.mean(axis=0))
 
 
 #------------------------------------------------------------------------------
@@ -171,65 +187,6 @@ class Session(BaseSession):
         up = self._global_history.redo()
         self.emit('cluster', up=up, add_to_stack=False)
 
-    # Cluster store
-    # TODO: put this in another class?
-    # -------------------------------------------------------------------------
-
-    def _iter_clusters(self):
-        """Loop over all clusters and yield the cluster and the spike
-        indices."""
-        clusters = self.clustering.cluster_ids
-        for cluster in clusters:
-            spikes = self.clustering.spikes_per_cluster[cluster]
-            yield (cluster, spikes)
-
-    def _initialize_store(self):
-        self.cluster_store.clear()
-
-        self.cluster_store.register_field('masks', 'disk')
-        self.cluster_store.register_field('mean_masks', 'memory')
-
-        # TODO: more fields
-        # self.cluster_store.register_field('features', 'disk')
-
-        # Store the masks and mean masks.
-        for cluster, spikes in self._iter_clusters():
-            masks = self.model.masks[spikes]
-            self.cluster_store.store(cluster,
-                                     masks=masks,
-                                     mean_masks=masks.mean(axis=0))
-
-    def _concatenate_arrays(self, clusters, field, old_spikes_per_cluster):
-        arrays = {cluster: self.cluster_store.load(cluster, field)
-                  for cluster in clusters}
-        return _concatenate_per_cluster_arrays(old_spikes_per_cluster, arrays)
-
-    def _update_store(self, up):
-        if up.description == 'merge':
-            # Masks.
-            # Get the masks of the deleted clusters.
-            # WARNING: this may be RAM-intensive if there are many large
-            # clusters. It would be more efficient to buffer the copy.
-            masks = self._concatenate_arrays(up.deleted, 'masks',
-                                             up.old_spikes_per_cluster)
-            # Store the masks of the newly created cluster.
-            self.cluster_store.store(up.added[0], masks=masks)
-            # Delete the old masks.
-            self.cluster_store.delete(up.deleted)
-        elif up.description == 'assign':
-            pass
-            # TODO: more fields.
-
-    def _load_from_store(self, cluster, field, check_n_spikes=False):
-        out = self.cluster_store.load(cluster, field)
-        if check_n_spikes:
-            # NOTE: we make the assumption that every object stored in the
-            # ClusterStore has its len == the number of spikes in the cluster.
-            spikes = self.clustering.spikes_per_cluster[cluster]
-            if len(out) != len(spikes):
-                raise RuntimeError("Cache inconsistency! Please recreate it.")
-        return out
-
     # Event callbacks
     # -------------------------------------------------------------------------
 
@@ -244,16 +201,18 @@ class Session(BaseSession):
         # TODO: n_spikes_max in a user parameter
         self.selector = Selector(spike_clusters, n_spikes_max=100)
 
+        # Kwik store.
         path = _ensure_disk_store_exists(self.model.name,
                                          root_path=self._store_path)
-        self.cluster_store = ClusterStore(path)
+        self.store = ClusterStore(model=self.model, path=path)
+        self.store.register_item(FeatureMasks)
         # TODO: do not reinitialize the store every time the dataset
         # is loaded! Check if the store exists and check consistency.
-        self._initialize_store()
+        self.store.generate(self.clustering.spikes_per_cluster)
 
         @self.connect
         def on_cluster(up=None, add_to_stack=None):
-            self._update_store(up)
+            self.store.update(up)
 
     def on_cluster(self, up=None, add_to_stack=True):
         if add_to_stack:

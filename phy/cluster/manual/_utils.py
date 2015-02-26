@@ -24,7 +24,7 @@ def _unique(x):
 
     """
     if len(x) == 0:
-        return np.array([], dtype=np.int)
+        return np.array([], dtype=np.int64)
     return np.nonzero(np.bincount(x))[0]
 
 

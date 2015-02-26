@@ -16,7 +16,6 @@ from ...utils._misc import (_concatenate_dicts,
 from ...io.h5 import open_h5
 from ...io.sparse import load_h5, save_h5
 from ...ext.six import string_types
-from ._utils import _concatenate_per_cluster_arrays
 
 
 #------------------------------------------------------------------------------

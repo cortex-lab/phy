@@ -84,8 +84,8 @@ def _extend_assignement(spike_ids, old_spike_clusters, spike_clusters_rel):
 def _assign_update_info(spike_ids,
                         old_spike_clusters, old_spikes_per_cluster,
                         new_spike_clusters, new_spikes_per_cluster):
-    old_clusters = np.unique(old_spike_clusters)
-    new_clusters = np.unique(new_spike_clusters)
+    old_clusters = _unique(old_spike_clusters)
+    new_clusters = _unique(new_spike_clusters)
     descendants = list(set(zip(old_spike_clusters,
                                new_spike_clusters)))
     update_info = UpdateInfo(description='assign',
@@ -140,7 +140,7 @@ class Clustering(object):
 
     def new_cluster_id(self):
         """Return a new cluster id."""
-        return np.max(self.cluster_ids) + 1
+        return int(np.max(self.cluster_ids)) + 1
 
     @property
     def n_clusters(self):
@@ -225,7 +225,7 @@ class Clustering(object):
         # Ensure spike_clusters has the right shape.
         spike_ids = _as_array(spike_ids)
         if len(new_spike_clusters) == 1 and len(spike_ids) > 1:
-            new_spike_clusters = (np.ones(len(spike_ids)) *
+            new_spike_clusters = (np.ones(len(spike_ids), dtype=np.int64) *
                                   new_spike_clusters[0])
         old_spike_clusters = self._spike_clusters[spike_ids]
 
