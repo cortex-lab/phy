@@ -11,6 +11,8 @@ import os
 import os.path as op
 from inspect import getargspec
 
+from ..ext.six import string_types
+
 
 #------------------------------------------------------------------------------
 # Various Python utility functions
@@ -22,6 +24,20 @@ def _as_dict(x):
         return dict(x)
     else:
         return x
+
+
+def _is_list(obj):
+    return isinstance(obj, list)
+
+
+def _as_list(obj):
+    """Ensure an object is a list."""
+    if isinstance(obj, string_types):
+        return [obj]
+    elif not hasattr(obj, '__len__'):
+        return [obj]
+    else:
+        return obj
 
 
 def _fun_arg_count(f):

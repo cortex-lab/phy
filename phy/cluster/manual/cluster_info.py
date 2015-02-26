@@ -10,29 +10,11 @@ from collections import defaultdict, OrderedDict, MutableMapping
 from copy import deepcopy
 
 from ...utils._color import _random_color
-from ...utils._misc import _as_dict, _fun_arg_count
+from ...utils._misc import _as_dict, _fun_arg_count, _as_list, _is_list
 from ...ext.six import iterkeys, itervalues, iteritems, string_types
 from ._utils import _unique, _spikes_in_clusters
 from ._update_info import UpdateInfo
 from ._history import History
-
-
-#------------------------------------------------------------------------------
-# Utility functions
-#------------------------------------------------------------------------------
-
-def _is_list(obj):
-    return isinstance(obj, list)
-
-
-def _as_list(obj):
-    """Ensure an object is a list."""
-    if isinstance(obj, string_types):
-        return [obj]
-    elif not hasattr(obj, '__len__'):
-        return [obj]
-    else:
-        return obj
 
 
 #------------------------------------------------------------------------------
