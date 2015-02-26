@@ -94,36 +94,6 @@ def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
     return update_info
 
 
-def _update_spikes_per_cluster(old_spike_clusters,
-                               new_spike_clusters):
-    """Update the spikes_per_cluster structure after an assign operation.
-
-    WARNING: this is a potentially heavy operation.
-
-    WARNING 2: this needs to be called *before* updating
-               self._spike_clusters.
-
-    """
-    old_spike_clusters = _as_array(old_spike_clusters)
-    new_spike_clusters = _as_array(new_spike_clusters)
-    assert len(old_spike_clusters) == len(new_spike_clusters)
-
-    # Contain the list of spikes per cluster for all modified clusters.
-    new_dict = _spikes_per_cluster(new_spike_clusters)
-
-    # WARNING: all clusters appearing in spike_clusters should
-    # be new clusters, i.e. they should not appear in the current
-    # spikes_per_cluster. This is because we assume that
-    # a given cluster can never be modified: it can only die (and
-    # a new cluster is created).
-    new_clusters = set(new_dict)
-    old_clusters = set(_unique(old_spike_clusters))
-    assert not new_clusters.intersection(old_clusters)
-
-    return {'deleted': old_clusters,
-            'added': new_dict}
-
-
 class Clustering(object):
     """Object representing a mapping from spike to cluster ids."""
 
@@ -233,11 +203,11 @@ class Clustering(object):
         assert len(new_spike_clusters) == len(spike_ids)
 
         # Update the spikes per cluster structure.
-        _up_sc = _update_spikes_per_cluster(old_spike_clusters,
-                                            new_spike_clusters)
-        for cluster in _up_sc.get('deleted', []):
+        new_spikes_per_cluster = _spikes_per_cluster(new_spike_clusters)
+        self._spikes_per_cluster.update(new_spikes_per_cluster)
+        # All old clusters are deleted.
+        for cluster in _unique(old_spike_clusters):
             del self._spikes_per_cluster[cluster]
-        self._spikes_per_cluster.update(_up_sc.get('added', {}))
 
         # We return the UpdateInfo structure.
         up = _assign_update_info(spike_ids,
