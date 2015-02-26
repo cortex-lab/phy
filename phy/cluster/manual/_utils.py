@@ -8,6 +8,8 @@
 
 import numpy as np
 
+from ...utils.array import _as_array
+
 
 #------------------------------------------------------------------------------
 # Utility functions
@@ -65,3 +67,17 @@ def _flatten_spikes_per_cluster(spikes_per_cluster):
     spike_clusters = np.vstack((spikes_arr, clusters_arr))
     ind = np.argsort(spike_clusters[0, :])
     return spike_clusters[1, ind]
+
+
+def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
+    """Concatenate arrays from a {cluster: array} dictionary."""
+    out = []
+    for cluster, array in arrays.items():
+        array = _as_array(array)
+        assert cluster in spikes_per_cluster
+        spikes = spikes_per_cluster[cluster]
+        assert len(array) == len(spikes)
+        out.append(np.vstack((spikes, array)))
+    out = np.hstack(out)
+    idx = np.argsort(out[0, :])
+    return out[1, idx]

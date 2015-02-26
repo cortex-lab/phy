@@ -13,7 +13,8 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from .._utils import (_unique, _spikes_in_clusters, _spikes_per_cluster,
-                      _flatten_spikes_per_cluster)
+                      _flatten_spikes_per_cluster,
+                      _concatenate_per_cluster_arrays)
 from ....io.mock.artificial import artificial_spike_clusters
 
 
@@ -70,3 +71,14 @@ def test_spikes_per_cluster():
 
     sc = _flatten_spikes_per_cluster(spikes_per_cluster)
     ae(spike_clusters, sc)
+
+
+def test_concatenate_per_cluster_arrays():
+    """Test _spikes_per_cluster()."""
+
+    # 8, 11, 12, 13, 17, 18, 20
+    spikes_per_cluster = {2: [11, 13, 17], 3: [8, 12], 5: [18, 20]}
+    arrays = {2: [1, 3, 7], 3: [8, 2], 5: [8, 0]}
+
+    concat = _concatenate_per_cluster_arrays(spikes_per_cluster, arrays)
+    ae(concat, [8, 1, 2, 3, 7, 8, 0])
