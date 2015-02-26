@@ -74,9 +74,12 @@ def _ensure_disk_store_exists(dir_name, root_path=None):
     if root_path is None:
         _ensure_phy_user_dir_exists()
         root_path = _phy_user_dir('cluster_store')
-    # Create the disk store if it does not exist.
+        # Create the disk store if it does not exist.
+        if not op.exists(root_path):
+            os.mkdir(root_path)
     if not op.exists(root_path):
-        os.mkdir(root_path)
+        raise RuntimeError("Please create the store directory "
+                           "{0}".format(root_path))
     # Put the store in a subfolder, using the name.
     dir_name = slugify(dir_name)
     path = op.join(root_path, dir_name)

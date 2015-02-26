@@ -73,3 +73,4 @@ def _ensure_phy_user_dir_exists():
     path = _phy_user_dir()
     if not op.exists(path):
         os.mkdir(path)
+    return path

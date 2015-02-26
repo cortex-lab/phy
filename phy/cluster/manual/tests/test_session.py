@@ -158,7 +158,8 @@ def test_session_mock():
         view.close()
         view_bis.close()
 
-        session = start_manual_clustering(model=MockModel())
+        session = start_manual_clustering(model=MockModel(),
+                                          store_path=tempdir)
         session.select([1, 2])
         view = session.show_waveforms()
         view.close()
