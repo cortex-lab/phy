@@ -76,9 +76,23 @@ def test_spikes_per_cluster():
 def test_concatenate_per_cluster_arrays():
     """Test _spikes_per_cluster()."""
 
+    def _column(arr):
+        out = np.zeros((len(arr), 10))
+        out[:, 0] = arr
+        return out
+
     # 8, 11, 12, 13, 17, 18, 20
     spikes_per_cluster = {2: [11, 13, 17], 3: [8, 12], 5: [18, 20]}
-    arrays = {2: [1, 3, 7], 3: [8, 2], 5: [8, 0]}
 
-    concat = _concatenate_per_cluster_arrays(spikes_per_cluster, arrays)
+    arrays_1d = {2: [1, 3, 7], 3: [8, 2], 5: [8, 0]}
+
+    arrays_2d = {2: _column([1, 3, 7]),
+                 3: _column([8, 2]),
+                 5: _column([8, 0])}
+
+    concat = _concatenate_per_cluster_arrays(spikes_per_cluster, arrays_1d)
     ae(concat, [8, 1, 2, 3, 7, 8, 0])
+
+    concat = _concatenate_per_cluster_arrays(spikes_per_cluster, arrays_2d)
+    ae(concat[:, 0], [8, 1, 2, 3, 7, 8, 0])
+    ae(concat[:, 1:], np.zeros((7, 9)))

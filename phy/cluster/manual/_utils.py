@@ -71,13 +71,18 @@ def _flatten_spikes_per_cluster(spikes_per_cluster):
 
 def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
     """Concatenate arrays from a {cluster: array} dictionary."""
-    out = []
-    for cluster, array in arrays.items():
-        array = _as_array(array)
-        assert cluster in spikes_per_cluster
-        spikes = spikes_per_cluster[cluster]
-        assert len(array) == len(spikes)
-        out.append(np.vstack((spikes, array)))
-    out = np.hstack(out)
-    idx = np.argsort(out[0, :])
-    return out[1, idx]
+    # out = []
+    assert set(arrays) <= set(spikes_per_cluster)
+    clusters = sorted(arrays)
+    # Check the sizes of the spikes per cluster and the arrays.
+    assert [len(spikes_per_cluster[cluster]) for cluster in clusters] == \
+           [len(arrays[cluster]) for cluster in clusters]
+    # Concatenate all spikes to find the right insertion order.
+    spikes = np.concatenate([spikes_per_cluster[cluster]
+                             for cluster in clusters])
+    idx = np.argsort(spikes)
+    # NOTE: concatenate all arrays along the first axis, because we assume
+    # that the first axis represents the spikes.
+    arrays = np.concatenate([_as_array(arrays[cluster])
+                             for cluster in clusters])
+    return arrays[idx, ...]
