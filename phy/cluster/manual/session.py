@@ -18,18 +18,14 @@ from ...utils._misc import (_phy_user_dir,
                             _ensure_phy_user_dir_exists)
 from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
-from ...notebook.utils import enable_notebook
 from ...utils.logging import set_level, warn
 from ._history import GlobalHistory
 from .clustering import Clustering
 from ...io.kwik_model import KwikModel
-from ...notebook.utils import load_css, ipython_shell
-from ...notebook.cluster_view import ClusterView
 from .cluster_info import ClusterMetadata
 from .store import ClusterStore, StoreItem
 from .selector import Selector
 from ...io.base_model import BaseModel
-from ...plot.waveforms import WaveformView
 from ._utils import _concatenate_per_cluster_arrays
 
 
@@ -219,35 +215,3 @@ class Session(BaseSession):
             self._global_history.action(self.clustering)
             # TODO: if metadata
             # self._global_history.action(self.cluster_metadata)
-
-
-
-#------------------------------------------------------------------------------
-# Helper functions
-#------------------------------------------------------------------------------
-
-def start_manual_clustering(filename=None, model=None, session=None,
-                            store_path=None, backend=None):
-    """Start a manual clustering session in the IPython notebook.
-
-    Parameters
-    ----------
-    session : BaseSession
-        A BaseSession instance
-    filename : str
-        Path to a .kwik file, to be used if 'model' is not used.
-    model : instance of BaseModel
-        A Model instance, to be used if 'filename' is not used.
-
-    """
-
-    if session is None:
-        session = Session(store_path=store_path, backend=backend)
-
-    # Enable the notebook interface.
-    enable_notebook(backend=backend)
-
-    session.open(filename=filename, model=model)
-    session.show_clusters()
-
-    return session
