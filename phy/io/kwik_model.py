@@ -140,7 +140,7 @@ def _kwik_filenames(filename):
 
 
 class SpikeLoader(object):
-    """Translate selection with spike labels into selection with
+    """Translate selection with spike ids into selection with
     absolute times."""
     def __init__(self, waveforms, spike_times):
         self._spike_times = spike_times
@@ -181,6 +181,7 @@ class KwikModel(BaseModel):
             raise ValueError("No filename specified.")
 
         # Open the file.
+        self.name = op.splitext(op.basename(filename))[0]
         self._kwik = open_h5(filename)
         if not self._kwik.is_open():
             raise ValueError("File {0} failed to open.".format(filename))

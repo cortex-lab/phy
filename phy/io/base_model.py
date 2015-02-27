@@ -22,6 +22,7 @@ class BaseModel(object):
 
     """
     def __init__(self):
+        self.name = 'model'
         self._channel_group = None
         self._recording = None
         self._clustering = None

@@ -62,6 +62,7 @@ class MockModel(BaseModel):
 
     def __init__(self):
         super(BaseModel, self).__init__()
+        self.name = 'mock'
         self._metadata = {'description': 'A mock model.'}
         self._cluster_metadata = ClusterMetadata()
 

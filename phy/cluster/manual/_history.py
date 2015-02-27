@@ -127,8 +127,9 @@ class History(object):
 class GlobalHistory(History):
     """Merge several controllers with different undo stacks."""
 
-    def __init__(self):
+    def __init__(self, process_ups=None):
         super(GlobalHistory, self).__init__(())
+        self.process_ups = process_ups
 
     def action(self, *controllers):
         """Register one or several controllers for this action.
@@ -147,8 +148,14 @@ class GlobalHistory(History):
         """
         controllers = self.back()
         if controllers is None:
-            return ()
-        return tuple([controller.undo() for controller in controllers[::-1]])
+            ups = ()
+        else:
+            ups = tuple([controller.undo()
+                        for controller in controllers[::-1]])
+        if self.process_ups is not None:
+            return self.process_ups(ups)
+        else:
+            return ups
 
     def redo(self):
         """Redo the last action.
@@ -158,5 +165,11 @@ class GlobalHistory(History):
         """
         controllers = self.forward()
         if controllers is None:
-            return ()
-        return tuple([controller.redo() for controller in controllers])
+            ups = ()
+        else:
+            ups = tuple([controller.redo() for
+                         controller in controllers])
+        if self.process_ups is not None:
+            return self.process_ups(ups)
+        else:
+            return ups

@@ -10,29 +10,11 @@ from collections import defaultdict, OrderedDict, MutableMapping
 from copy import deepcopy
 
 from ...utils._color import _random_color
-from ...utils._misc import _as_dict, _fun_arg_count
-from ...ext.six import iterkeys, itervalues, iteritems, string_types
+from ...utils._misc import _as_dict, _fun_arg_count, _as_list, _is_list
+from ...ext.six import iterkeys, itervalues, iteritems
 from ._utils import _unique, _spikes_in_clusters
 from ._update_info import UpdateInfo
 from ._history import History
-
-
-#------------------------------------------------------------------------------
-# Utility functions
-#------------------------------------------------------------------------------
-
-def _is_list(obj):
-    return isinstance(obj, list)
-
-
-def _as_list(obj):
-    """Ensure an object is a list."""
-    if isinstance(obj, string_types):
-        return [obj]
-    elif not hasattr(obj, '__len__'):
-        return [obj]
-    else:
-        return obj
 
 
 #------------------------------------------------------------------------------
@@ -122,50 +104,3 @@ class ClusterMetadata(object):
         self._set(clusters, field, value, add_to_stack=False)
         # Return the UpdateInfo instance of the redo action.
         return info
-
-
-#------------------------------------------------------------------------------
-# ClusterStats class
-#------------------------------------------------------------------------------
-
-class ClusterStats(object):
-    def __init__(self):
-        self._cache = defaultdict(dict)
-        self._cluster_labels = None
-
-    @property
-    def cluster_labels(self):
-        return self._cluster_labels
-
-    @cluster_labels.setter
-    def cluster_labels(self, value):
-        self._cluster_labels = value
-
-    def stat(self, func):
-        stat = func.__name__
-
-        def wrapped(cluster):
-            # Memoize decorator.
-            # Compute the statistics if it is not in the cache.
-            if stat not in self._cache[cluster]:
-                out = func(cluster)
-                self._cache[cluster][stat] = out
-            # Otherwise, reuse the value in the cache.
-            else:
-                out = self._cache[cluster][stat]
-            return out
-
-        # Set the wrapped function as a method of ClusterStats.
-        setattr(self, stat, wrapped)
-
-        return wrapped
-
-    def invalidate(self, cluster, field=None):
-        if cluster in self._cache:
-            # If field is None, invalidate all statistics.
-            if field is None:
-                del self._cache[cluster]
-            # Otherwise, invalidate the stat.
-            else:
-                if field in self._cache[cluster]:
-                    del self._cache[cluster][field]

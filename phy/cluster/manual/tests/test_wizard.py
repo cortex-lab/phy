@@ -22,7 +22,7 @@ from ..cluster_info import ClusterMetadata
 def test_wizard():
 
     wizard = Wizard()
-    wizard.cluster_labels = [2, 3, 5]
+    wizard.cluster_ids = [2, 3, 5]
 
     @wizard.quality
     def quality(cluster):

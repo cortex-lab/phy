@@ -18,11 +18,12 @@ from ...utils._bunch import Bunch
 def update_info(**kwargs):
     """Hold information about clustering changes."""
     d = dict(
-        description=None,  # optional information about the update
+        description=None,  # information about the update: 'merge', 'assign',
+                           # or 'metadata_<name>'
         spikes=[],  # all spikes affected by the update
         added=[],  # new clusters
         deleted=[],  # deleted clusters
-        count_changed=[],  # clusters with changed count
+        descendants=[],  # pairs of (old_cluster, new_cluster)
         metadata_changed=[]  # clusters with changed metadata
     )
     d.update(kwargs)

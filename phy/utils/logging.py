@@ -169,9 +169,9 @@ def warn(*msg):
     _log('warn', *msg)
 
 
-def set_level(msg):
+def set_level(level):
     for name, logger in iteritems(LOGGERS):
-        logger.set_level(msg)
+        logger.set_level(level)
 
 
 def default_logger():
