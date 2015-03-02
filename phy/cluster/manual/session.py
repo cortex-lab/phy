@@ -18,18 +18,14 @@ from ...utils._misc import (_phy_user_dir,
                             _ensure_phy_user_dir_exists)
 from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
-from ...notebook.utils import enable_notebook
 from ...utils.logging import set_level, warn
 from ._history import GlobalHistory
 from .clustering import Clustering
 from ...io.kwik_model import KwikModel
-from ...notebook.utils import load_css, ipython_shell
-from ...notebook.cluster_view import ClusterView
 from .cluster_info import ClusterMetadata
 from .store import ClusterStore, StoreItem
 from .selector import Selector
 from ...io.base_model import BaseModel
-from ...plot.waveforms import WaveformView
 from ._utils import _concatenate_per_cluster_arrays
 
 
@@ -219,102 +215,3 @@ class Session(BaseSession):
             self._global_history.action(self.clustering)
             # TODO: if metadata
             # self._global_history.action(self.cluster_metadata)
-
-    # Views
-    # -------------------------------------------------------------------------
-
-    def show_waveforms(self):
-        if self._backend in ('pyqt4', None):
-            kwargs = {'always_on_top': True}
-        else:
-            kwargs = {}
-        view = WaveformView(**kwargs)
-
-        @self.connect
-        def on_open():
-            if self.model is None:
-                return
-            view.visual.spike_clusters = self.clustering.spike_clusters
-            view.visual.cluster_metadata = self.cluster_metadata
-            view.visual.channel_positions = self.model.probe.positions
-            view.update()
-
-        @self.connect
-        def on_cluster(up=None):
-            pass
-            # TODO: select the merged cluster
-            # self.select(merged)
-
-        @self.connect
-        def on_select():
-            spikes = self.selector.selected_spikes
-            if len(spikes) == 0:
-                return
-            view.visual.waveforms = self.model.waveforms[spikes]
-            view.visual.masks = self.model.masks[spikes]
-            view.visual.spike_ids = spikes
-            view.update()
-
-        # Unregister the callbacks when the view is closed.
-        @view.connect
-        def on_close(event):
-            self.unconnect(on_open, on_cluster, on_select)
-
-        view.show()
-
-        # Update the view if the model was already opened.
-        on_open()
-        on_select()
-
-        return view
-
-    def show_clusters(self):
-        """Create and show a new cluster view."""
-
-        # TODO: no more 1 cluster = 1 color, use a fixed set of colors
-        # for the selected clusters.
-        cluster_colors = [self.cluster_metadata.color(cluster)
-                          for cluster in self.clustering.cluster_ids]
-        try:
-            view = ClusterView(clusters=self.clustering.cluster_ids,
-                               colors=cluster_colors)
-        except RuntimeError:
-            warn("The cluster view only works in IPython.")
-            return
-        view.on_trait_change(lambda _, __, clusters: self.select(clusters),
-                             'value')
-        load_css('static/widgets.css')
-        from IPython.display import display
-        display(view)
-        return view
-
-
-#------------------------------------------------------------------------------
-# Helper functions
-#------------------------------------------------------------------------------
-
-def start_manual_clustering(filename=None, model=None, session=None,
-                            store_path=None, backend=None):
-    """Start a manual clustering session in the IPython notebook.
-
-    Parameters
-    ----------
-    session : BaseSession
-        A BaseSession instance
-    filename : str
-        Path to a .kwik file, to be used if 'model' is not used.
-    model : instance of BaseModel
-        A Model instance, to be used if 'filename' is not used.
-
-    """
-
-    if session is None:
-        session = Session(store_path=store_path, backend=backend)
-
-    # Enable the notebook interface.
-    enable_notebook(backend=backend)
-
-    session.open(filename=filename, model=model)
-    session.show_clusters()
-
-    return session
