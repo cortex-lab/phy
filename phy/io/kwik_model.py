@@ -19,7 +19,6 @@ from ..waveform.filter import bandpass_filter, apply_filter
 from ..electrode.mea import MEA, linear_positions
 from ..utils.logging import debug
 from ..utils.array import PartialArray
-from ..utils._color import _random_color
 
 
 #------------------------------------------------------------------------------
@@ -304,19 +303,7 @@ class KwikModel(BaseModel):
                                        (slice(0, k * self.n_channels, k), 1))
             assert self._masks.shape == (self.n_spikes, self.n_channels)
 
-        def _get_color(cluster):
-            path = (self._clustering_path + '/' + str(cluster) +
-                    '/application_data/klustaviewa')
-            color_int = self._kwik.read_attr(path, 'color')
-            return tuple(_COLOR_MAP[color_int])
-
-        colors = {cluster: {'color': _get_color(cluster)}
-                  for cluster in self._clusters}
-        self._cluster_metadata = ClusterMetadata(colors)
-
-        @self._cluster_metadata.default
-        def color(cluster):
-            return _random_color()
+        self._cluster_metadata = ClusterMetadata()
 
         @self._cluster_metadata.default
         def group(cluster):

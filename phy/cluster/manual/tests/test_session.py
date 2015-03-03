@@ -152,7 +152,11 @@ def _start_manual_clustering(filename=None, model=None, tempdir=None):
 
     @session.action
     def show_waveforms(title="Show waveforms"):
-        return add_waveform_view(session)
+        view = add_waveform_view(session)
+        # Initialize the waveform view with the currently-selected data.
+        # view.on_open()
+        # view.on_select(session.selector)
+        return view
 
     return session
 
