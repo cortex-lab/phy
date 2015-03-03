@@ -353,15 +353,6 @@ def add_waveform_view(session, backend=None):
 
     The caller needs to show the waveform view explicitly.
 
-    WARNING: make sure to call these functions after showing the view:
-
-        # Update the view if the model was already opened.
-        view.on_open()
-        view.on_select(session.selector)
-
-    This ensures that the waveform view is initialized with the current
-    selection as soon as the view is created.
-
     """
     if backend in ('pyqt4', None):
         kwargs = {'always_on_top': True}
