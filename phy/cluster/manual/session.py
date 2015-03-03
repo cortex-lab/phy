@@ -118,7 +118,7 @@ def _process_ups(ups):
 
 
 class Session(BaseSession):
-    """Default manual clustering session in the IPython notebook.
+    """Default manual clustering session.
 
     Parameters
     ----------
@@ -126,14 +126,11 @@ class Session(BaseSession):
         Path to a .kwik file, to be used if 'model' is not used.
     model : instance of BaseModel
         A Model instance, to be used if 'filename' is not used.
-    backend : str
-        VisPy backend. For example 'pyqt4' or 'ipynb_webgl'.
 
     """
-    def __init__(self, store_path=None, backend=None):
+    def __init__(self, store_path=None):
         super(Session, self).__init__()
         self.model = None
-        self._backend = backend
         self._store_path = store_path
 
         # self.action and self.connect are decorators.
