@@ -159,7 +159,7 @@ class Session(BaseSession):
 
     def select(self, clusters):
         self.selector.selected_clusters = clusters
-        self.emit('select')
+        self.emit('select', self.selector)
 
     def merge(self, clusters):
         up = self.clustering.merge(clusters)

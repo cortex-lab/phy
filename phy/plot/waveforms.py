@@ -345,7 +345,22 @@ class WaveformView(PanZoomCanvas):
 
 
 def add_waveform_view(session, backend=None):
+    """Add a waveform view in a session.
 
+    This function binds the session events to the created waveform view.
+
+    The caller needs to show the waveform view explicitly.
+
+    WARNING: make sure to call these functions after showing the view:
+
+        # Update the view if the model was already opened.
+        view.on_open()
+        view.on_select(session.selector)
+
+    This ensures that the waveform view is initialized with the current
+    selection as soon as the view is created.
+
+    """
     if backend in ('pyqt4', None):
         kwargs = {'always_on_top': True}
     else:
@@ -368,8 +383,8 @@ def add_waveform_view(session, backend=None):
         # session.select(merged)
 
     @session.connect
-    def on_select():
-        spikes = session.selector.selected_spikes
+    def on_select(selector):
+        spikes = selector.selected_spikes
         if len(spikes) == 0:
             return
         view.visual.waveforms = session.model.waveforms[spikes]
@@ -381,9 +396,5 @@ def add_waveform_view(session, backend=None):
     @view.connect
     def on_close(event):
         session.unconnect(on_open, on_cluster, on_select)
-
-    # Update the view if the model was already opened.
-    on_open()
-    on_select()
 
     return view
