@@ -18,19 +18,16 @@ from ...utils._misc import (_phy_user_dir,
                             _ensure_phy_user_dir_exists)
 from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
-from ...notebook.utils import enable_notebook
 from ...utils.logging import set_level, warn
-from ._history import GlobalHistory
-from .clustering import Clustering
 from ...io.kwik_model import KwikModel
-from ...notebook.utils import load_css, ipython_shell
-from ...notebook.cluster_view import ClusterView
-from .cluster_info import ClusterMetadata
-from .store import ClusterStore, StoreItem
-from .selector import Selector
 from ...io.base_model import BaseModel
 from ...plot.waveforms import WaveformView
+from ._history import GlobalHistory
 from ._utils import _concatenate_per_cluster_arrays
+from .cluster_info import ClusterMetadata
+from .clustering import Clustering
+from .selector import Selector
+from .store import ClusterStore, StoreItem
 
 
 #------------------------------------------------------------------------------
@@ -149,7 +146,6 @@ class Session(BaseSession):
         self.action(self.undo, title='Undo')
         self.action(self.redo, title='Redo')
         self.action(self.show_waveforms, title='Show waveforms')
-        self.action(self.show_clusters, title='Show clusters')
 
         self.connect(self.on_open)
         self.connect(self.on_cluster)
@@ -267,54 +263,3 @@ class Session(BaseSession):
         on_select()
 
         return view
-
-    def show_clusters(self):
-        """Create and show a new cluster view."""
-
-        # TODO: no more 1 cluster = 1 color, use a fixed set of colors
-        # for the selected clusters.
-        cluster_colors = [self.cluster_metadata.color(cluster)
-                          for cluster in self.clustering.cluster_ids]
-        try:
-            view = ClusterView(clusters=self.clustering.cluster_ids,
-                               colors=cluster_colors)
-        except RuntimeError:
-            warn("The cluster view only works in IPython.")
-            return
-        view.on_trait_change(lambda _, __, clusters: self.select(clusters),
-                             'value')
-        load_css('static/widgets.css')
-        from IPython.display import display
-        display(view)
-        return view
-
-
-#------------------------------------------------------------------------------
-# Helper functions
-#------------------------------------------------------------------------------
-
-def start_manual_clustering(filename=None, model=None, session=None,
-                            store_path=None, backend=None):
-    """Start a manual clustering session in the IPython notebook.
-
-    Parameters
-    ----------
-    session : BaseSession
-        A BaseSession instance
-    filename : str
-        Path to a .kwik file, to be used if 'model' is not used.
-    model : instance of BaseModel
-        A Model instance, to be used if 'filename' is not used.
-
-    """
-
-    if session is None:
-        session = Session(store_path=store_path, backend=backend)
-
-    # Enable the notebook interface.
-    enable_notebook(backend=backend)
-
-    session.open(filename=filename, model=model)
-    session.show_clusters()
-
-    return session
