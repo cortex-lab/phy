@@ -342,3 +342,48 @@ class WaveformView(PanZoomCanvas):
                 self.visual.box_scale = (u/coeff, v)
             else:
                 self.visual.box_scale = (u, v/coeff)
+
+
+def add_waveform_view(session, backend=None):
+
+    if backend in ('pyqt4', None):
+        kwargs = {'always_on_top': True}
+    else:
+        kwargs = {}
+    view = WaveformView(**kwargs)
+
+    @session.connect
+    def on_open():
+        if session.model is None:
+            return
+        view.visual.spike_clusters = session.clustering.spike_clusters
+        view.visual.cluster_metadata = session.cluster_metadata
+        view.visual.channel_positions = session.model.probe.positions
+        view.update()
+
+    @session.connect
+    def on_cluster(up=None):
+        pass
+        # TODO: select the merged cluster
+        # session.select(merged)
+
+    @session.connect
+    def on_select():
+        spikes = session.selector.selected_spikes
+        if len(spikes) == 0:
+            return
+        view.visual.waveforms = session.model.waveforms[spikes]
+        view.visual.masks = session.model.masks[spikes]
+        view.visual.spike_ids = spikes
+        view.update()
+
+    # Unregister the callbacks when the view is closed.
+    @view.connect
+    def on_close(event):
+        session.unconnect(on_open, on_cluster, on_select)
+
+    # Update the view if the model was already opened.
+    on_open()
+    on_select()
+
+    return view

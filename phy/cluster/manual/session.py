@@ -21,7 +21,6 @@ from ...utils.event import EventEmitter
 from ...utils.logging import set_level, warn
 from ...io.kwik_model import KwikModel
 from ...io.base_model import BaseModel
-from ...plot.waveforms import WaveformView
 from ._history import GlobalHistory
 from ._utils import _concatenate_per_cluster_arrays
 from .cluster_info import ClusterMetadata
@@ -145,7 +144,6 @@ class Session(BaseSession):
         self.action(self.move, title='Move clusters to a group')
         self.action(self.undo, title='Undo')
         self.action(self.redo, title='Redo')
-        self.action(self.show_waveforms, title='Show waveforms')
 
         self.connect(self.on_open)
         self.connect(self.on_cluster)
@@ -215,51 +213,3 @@ class Session(BaseSession):
             self._global_history.action(self.clustering)
             # TODO: if metadata
             # self._global_history.action(self.cluster_metadata)
-
-    # Views
-    # -------------------------------------------------------------------------
-
-    def show_waveforms(self):
-        if self._backend in ('pyqt4', None):
-            kwargs = {'always_on_top': True}
-        else:
-            kwargs = {}
-        view = WaveformView(**kwargs)
-
-        @self.connect
-        def on_open():
-            if self.model is None:
-                return
-            view.visual.spike_clusters = self.clustering.spike_clusters
-            view.visual.cluster_metadata = self.cluster_metadata
-            view.visual.channel_positions = self.model.probe.positions
-            view.update()
-
-        @self.connect
-        def on_cluster(up=None):
-            pass
-            # TODO: select the merged cluster
-            # self.select(merged)
-
-        @self.connect
-        def on_select():
-            spikes = self.selector.selected_spikes
-            if len(spikes) == 0:
-                return
-            view.visual.waveforms = self.model.waveforms[spikes]
-            view.visual.masks = self.model.masks[spikes]
-            view.visual.spike_ids = spikes
-            view.update()
-
-        # Unregister the callbacks when the view is closed.
-        @view.connect
-        def on_close(event):
-            self.unconnect(on_open, on_cluster, on_select)
-
-        view.show()
-
-        # Update the view if the model was already opened.
-        on_open()
-        on_select()
-
-        return view

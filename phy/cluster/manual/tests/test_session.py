@@ -17,6 +17,7 @@ from ..session import BaseSession, Session
 from ....utils.tempdir import TemporaryDirectory
 from ....io.mock.artificial import MockModel
 from ....io.mock.kwik import create_mock_kwik
+from ....plot.waveforms import add_waveform_view
 
 
 #------------------------------------------------------------------------------
@@ -148,6 +149,11 @@ def test_action_event():
 def _start_manual_clustering(filename=None, model=None, tempdir=None):
     session = Session(store_path=tempdir)
     session.open(filename=filename, model=model)
+
+    @session.action
+    def show_waveforms(title="Show waveforms"):
+        return add_waveform_view(session)
+
     return session
 
 
