@@ -61,6 +61,15 @@ class BaseSession(EventEmitter):
 
         return func
 
+    @property
+    def actions(self):
+        """List of registered actions."""
+        return self._actions
+
+    def execute_action(self, action, *args, **kwargs):
+        """Execute an action defined by an item in the 'actions' list."""
+        action['func'](*args, **kwargs)
+
 
 #------------------------------------------------------------------------------
 # Store items

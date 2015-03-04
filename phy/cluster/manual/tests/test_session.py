@@ -118,6 +118,10 @@ def test_action():
     session.my_action()
     assert _track == ['action']
 
+    assert session.actions == [{'func': my_action, 'title': 'My action'}]
+    session.execute_action(session.actions[0])
+    assert _track == ['action', 'action']
+
 
 def test_action_event():
     session = BaseSession()
