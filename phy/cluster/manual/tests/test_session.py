@@ -13,10 +13,11 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ..session import BaseSession, Session, start_manual_clustering
+from ..session import BaseSession, Session
 from ....utils.tempdir import TemporaryDirectory
 from ....io.mock.artificial import MockModel
 from ....io.mock.kwik import create_mock_kwik
+from ....plot.waveforms import add_waveform_view
 
 
 #------------------------------------------------------------------------------
@@ -117,6 +118,10 @@ def test_action():
     session.my_action()
     assert _track == ['action']
 
+    assert session.actions == [{'func': my_action, 'title': 'My action'}]
+    session.execute_action(session.actions[0])
+    assert _track == ['action', 'action']
+
 
 def test_action_event():
     session = BaseSession()
@@ -145,10 +150,22 @@ def test_action_event():
 # Kwik tests
 #------------------------------------------------------------------------------
 
+def _start_manual_clustering(filename=None, model=None, tempdir=None):
+    session = Session(store_path=tempdir)
+    session.open(filename=filename, model=model)
+
+    @session.action
+    def show_waveforms(title="Show waveforms"):
+        view = add_waveform_view(session)
+        return view
+
+    return session
+
+
 def test_session_mock():
     with TemporaryDirectory() as tempdir:
-        session = start_manual_clustering(model=MockModel(),
-                                          store_path=tempdir)
+        session = _start_manual_clustering(model=MockModel(),
+                                           tempdir=tempdir)
         view = session.show_waveforms()
         session.select([0])
         view_bis = session.show_waveforms()
@@ -158,8 +175,8 @@ def test_session_mock():
         view.close()
         view_bis.close()
 
-        session = start_manual_clustering(model=MockModel(),
-                                          store_path=tempdir)
+        session = _start_manual_clustering(model=MockModel(),
+                                           tempdir=tempdir)
         session.select([1, 2])
         view = session.show_waveforms()
         view.close()
@@ -183,8 +200,8 @@ def test_session_kwik():
                                     n_features_per_channel=n_fets,
                                     n_samples_traces=n_samples_traces)
 
-        session = start_manual_clustering(filename,
-                                          store_path=tempdir)
+        session = _start_manual_clustering(filename=filename,
+                                           tempdir=tempdir)
         session.select([0])
         session.merge([3, 4])
         view = session.show_waveforms()
@@ -217,8 +234,8 @@ def test_session_stats():
                                     n_features_per_channel=n_fets,
                                     n_samples_traces=n_samples_traces)
 
-        session = start_manual_clustering(filename,
-                                          store_path=tempdir)
+        session = _start_manual_clustering(filename,
+                                           tempdir=tempdir)
         assert session
 
         # TODO

@@ -15,9 +15,10 @@ from vispy.visuals import Visual
 from vispy.visuals.shaders import ModularProgram, Function, Variable
 from vispy.visuals.glsl.color import HSV_TO_RGB, RGB_TO_HSV
 
-from ..utils.array import _unique, _as_array, _index_of, _normalize
 from ._vispy_utils import PanZoomCanvas
+from ..utils.array import _unique, _as_array, _index_of, _normalize
 from ..utils.logging import debug
+from ..utils._color import _random_color
 
 
 #------------------------------------------------------------------------------
@@ -207,7 +208,8 @@ class Waveforms(Visual):
 
     @cluster_colors.setter
     def cluster_colors(self, value):
-        self._cluster_colors = value
+        self._cluster_colors = _as_array(value)
+        assert len(self._cluster_colors) == self.n_clusters
         self.set_to_bake('color')
 
     @property
@@ -342,3 +344,62 @@ class WaveformView(PanZoomCanvas):
                 self.visual.box_scale = (u/coeff, v)
             else:
                 self.visual.box_scale = (u, v/coeff)
+
+
+def add_waveform_view(session, backend=None):
+    """Add a waveform view in a session.
+
+    This function binds the session events to the created waveform view.
+
+    The caller needs to show the waveform view explicitly.
+
+    """
+    if backend in ('pyqt4', None):
+        kwargs = {'always_on_top': True}
+    else:
+        kwargs = {}
+    view = WaveformView(**kwargs)
+
+    @session.connect
+    def on_open():
+        if session.model is None:
+            return
+        view.visual.spike_clusters = session.clustering.spike_clusters
+        view.visual.channel_positions = session.model.probe.positions
+        view.update()
+
+    @session.connect
+    def on_cluster(up=None):
+        pass
+        # TODO: select the merged cluster
+        # session.select(merged)
+
+    @session.connect
+    def on_select(selector):
+        spikes = selector.selected_spikes
+        if len(spikes) == 0:
+            return
+        if view.visual.spike_clusters is None:
+            on_open()
+        view.visual.waveforms = session.model.waveforms[spikes]
+        view.visual.masks = session.model.masks[spikes]
+        view.visual.spike_ids = spikes
+        # TODO: how to choose cluster colors?
+        view.visual.cluster_colors = [_random_color()
+                                      for _ in selector.selected_clusters]
+        view.update()
+
+    # Unregister the callbacks when the view is closed.
+    @view.connect
+    def on_close(event):
+        session.unconnect(on_open, on_cluster, on_select)
+
+    # TODO: first_draw() event in VisPy view that is emitted when the view
+    # is first rendered (first paint event).
+    @view.connect
+    def on_draw(event):
+        if view.visual.spike_clusters is None:
+            on_open()
+            on_select(session.selector)
+
+    return view
