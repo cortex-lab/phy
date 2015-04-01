@@ -68,8 +68,10 @@ class Wizard(object):
         if clusters:
             return clusters[0]
 
-    def most_similar_clusters(self, cluster, n_max=None):
+    def most_similar_clusters(self, cluster=None, n_max=None):
         """Return the `n_max` most similar clusters."""
+        if cluster is None:
+            cluster = self.best_cluster()
         self._check_cluster_ids()
         # TODO: filter according to the cluster group.
         similarity = [(other, self._similarity(cluster, other))
