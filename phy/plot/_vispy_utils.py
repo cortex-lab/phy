@@ -20,6 +20,17 @@ from vispy.visuals.shaders import Variable
 
 
 #------------------------------------------------------------------------------
+# Misc
+#------------------------------------------------------------------------------
+
+def _load_shader(filename):
+    """Load a shader file."""
+    path = op.join(op.dirname(op.realpath(__file__)), 'glsl', filename)
+    with open(path, 'r') as f:
+        return f.read()
+
+
+#------------------------------------------------------------------------------
 # PanZoom facilities
 #------------------------------------------------------------------------------
 
