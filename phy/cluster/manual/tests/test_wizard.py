@@ -40,5 +40,6 @@ def test_wizard():
 
     assert wizard.best_clusters() == [2, 5, 3]
     assert wizard.best_cluster() == 2
+    assert wizard.most_similar_clusters() == [5, 3]
     assert wizard.most_similar_clusters(2) == [5, 3]
     wizard.mark_dissimilar(2, 3)
