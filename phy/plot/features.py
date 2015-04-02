@@ -38,6 +38,10 @@ class Features(BaseSpikeVisual):
         self._features = None
         self.n_channels, self.n_features = None, None
 
+        # TODO: use #include instead
+        self.program.vert['rgb_to_hsv'] = Function(RGB_TO_HSV)
+        self.program.vert['hsv_to_rgb'] = Function(HSV_TO_RGB)
+
     # Data properties
     # -------------------------------------------------------------------------
 
@@ -66,17 +70,17 @@ class Features(BaseSpikeVisual):
 
     def _bake_spikes(self):
 
-        # Bake masks.
-        features = self._features.astype(np.float32)
-        masks = self._masks.astype(np.float32)
+        # TODO: choose dimension
+        position = self._features[:, :2, 0].astype(np.float32).copy()
+        self.program['a_position'] = position
 
-        position = features[:, :2, 0].copy()
-        self.program['a_position'] = position  # TODO: choose dimension
-        self.program['a_mask'] = masks[:, 0]  # TODO: choose the mask
+        # TODO: choose the mask
+        self.program['a_mask'] = self._masks[:, 0].astype(np.float32).copy()
+
         debug("bake spikes", position.shape)
 
         self.program['n_clusters'] = self.n_clusters
-        self.program['u_size'] = 10.
+        self.program['u_size'] = 5.
 
     def _bake_spikes_clusters(self):
         # Get the spike cluster indices (between 0 and n_clusters-1).

@@ -41,9 +41,8 @@ def _test_waveforms(n_spikes=None, n_clusters=None):
 
     channel_positions = staggered_positions(n_channels)
 
-    waveforms = artificial_waveforms(n_spikes, n_samples,
-                                     n_channels).astype(np.float32)
-    masks = artificial_masks(n_spikes, n_channels).astype(np.float32)
+    waveforms = artificial_waveforms(n_spikes, n_samples, n_channels)
+    masks = artificial_masks(n_spikes, n_channels)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
     c = WaveformView()
@@ -61,5 +60,5 @@ def test_waveforms_empty():
     _test_waveforms(n_spikes=0, n_clusters=0)
 
 
-def test_waveforms():
+def test_waveforms_full():
     _test_waveforms(n_spikes=100, n_clusters=3)

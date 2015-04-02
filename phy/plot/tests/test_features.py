@@ -34,11 +34,10 @@ def teardown():
 
 def _test_features(n_spikes=None, n_clusters=None):
     n_channels = 32
-    n_features = 2
+    n_features = 3
 
-    features = artificial_features(n_spikes, n_channels,
-                                   n_features).astype(np.float32)
-    masks = artificial_masks(n_spikes, n_channels).astype(np.float32)
+    features = artificial_features(n_spikes, n_channels, n_features)
+    masks = artificial_masks(n_spikes, n_channels)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
     c = FeatureView()
@@ -55,5 +54,5 @@ def test_features_empty():
     _test_features(n_spikes=0, n_clusters=0)
 
 
-def test_features():
+def test_features_full():
     _test_features(n_spikes=100, n_clusters=3)
