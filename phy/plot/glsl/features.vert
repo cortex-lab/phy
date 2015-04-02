@@ -1,11 +1,21 @@
 
 attribute vec2 a_position;
-attribute vec4 a_color;
+attribute vec3 a_box;  // cluster_idx, row, col
 
 uniform float u_size;
 
 varying vec4 v_color;
+varying vec3 v_box;
 varying float v_size;
+
+uniform sampler2D u_cluster_color;
+
+uniform float n_clusters;
+
+vec3 get_color(float cluster) {
+    return texture2D(u_cluster_color,
+                     vec2(cluster / (n_clusters - 1.), .5)).xyz;
+}
 
 void main (void)
 {
