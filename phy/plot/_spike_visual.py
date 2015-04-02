@@ -7,9 +7,11 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 import numpy as np
 
-from vispy import gloo
+from vispy import gloo, config
 from vispy.gloo import Texture2D
 from vispy.visuals import Visual
 from vispy.visuals.shaders import ModularProgram
@@ -36,6 +38,9 @@ class BaseSpikeVisual(Visual):
 
         vertex = _load_shader(self._shader_name + '.vert')
         fragment = _load_shader(self._shader_name + '.frag')
+
+        curdir = op.dirname(op.realpath(__file__))
+        config['include_path'] = [op.join(curdir, 'glsl')]
 
         self.program = ModularProgram(vertex, fragment)
 

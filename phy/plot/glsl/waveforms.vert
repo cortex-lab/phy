@@ -1,4 +1,5 @@
 #include "colormaps/color-space.glsl"
+#include "color.glsl"
 
 // TODO: add depth
 attribute vec2 a_data;  // position (-1..1), mask
@@ -26,19 +27,6 @@ vec2 get_box_pos(vec2 box) {  // box = (cluster, channel)
     return box_pos;
 }
 
-vec3 get_color(float cluster) {
-    return texture2D(u_cluster_color,
-                     vec2(cluster / (n_clusters - 1.), .5)).xyz;
-}
-
-vec3 color_mask(vec3 color, float mask) {
-    vec3 hsv = rgb_to_hsv(color);
-    // Change the saturation and value as a function of the mask.
-    hsv.y = mask;
-    hsv.z = .5 * (1. + mask);
-    return hsv_to_rgb(hsv);
-}
-
 void main() {
     vec2 pos = u_data_scale * vec2(a_time, a_data.x);  // -1..1
     vec2 box_pos = get_box_pos(a_box);
@@ -47,6 +35,7 @@ void main() {
 
     // Compute the waveform color as a function of the cluster color
     // and the mask.
-    v_color.rgb = color_mask(get_color(a_box.x), a_data.y);
+    v_color.rgb = color_mask(get_color(a_box.x, u_cluster_color, n_clusters),
+                             a_data.y);
     v_color.a = .5;
 }
