@@ -1,5 +1,5 @@
 // TODO: add depth
-attribute vec2 a_data;  // -1..1
+attribute vec2 a_data;  // position (-1..1), mask
 attribute float a_time;  // -1..1
 attribute vec2 a_box;  // 0..(n_clusters-1, n_channels-1)
 

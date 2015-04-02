@@ -29,7 +29,7 @@ class BaseSpikeVisual(Visual):
 
     def __init__(self, **kwargs):
         super(BaseSpikeVisual, self).__init__(**kwargs)
-        self.n_spikes, self.n_channels, self.n_samples = None, None, None
+        self.n_spikes = None
         self._spike_clusters = None
         self._spike_ids = None
         self._to_bake = []
@@ -98,6 +98,8 @@ class BaseSpikeVisual(Visual):
         self._set_or_assert_n_spikes(value)
         self._spike_ids = value
         self.set_to_bake('spikes')
+
+    # TODO: channel_ids
 
     @property
     def cluster_ids(self):

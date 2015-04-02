@@ -25,8 +25,8 @@ def artificial_waveforms(n_spikes=None, n_samples=None, n_channels=None):
     return .25 * nr.normal(size=(n_spikes, n_samples, n_channels))
 
 
-def artificial_features(n_spikes=None, n_features=None):
-    return .25 * nr.normal(size=(n_spikes, n_features))
+def artificial_features(*args):
+    return .25 * nr.normal(size=args)
 
 
 def artificial_masks(n_spikes=None, n_channels=None):

@@ -36,11 +36,11 @@ class Waveforms(BaseSpikeVisual):
         super(Waveforms, self).__init__(**kwargs)
 
         self._waveforms = None
+        self.n_channels, self.n_samples = None, None
 
         self.program.vert['rgb_to_hsv'] = Function(RGB_TO_HSV)
         self.program.vert['hsv_to_rgb'] = Function(HSV_TO_RGB)
         self.program['u_data_scale'] = (.05, .03)
-
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -147,26 +147,6 @@ class Waveforms(BaseSpikeVisual):
         # TODO: more efficient to update the data from an existing VBO
         self.program['a_box'] = a_box
         debug("bake spikes clusters", a_box.shape)
-
-    def _bake(self):
-        """Prepare and upload the data on the GPU.
-
-        Return whether something has been baked or not.
-
-        """
-        if self.n_spikes is None or self.n_spikes == 0:
-            return
-        n_bake = len(self._to_bake)
-        # Bake what needs to be baked.
-        # WARNING: the bake functions are called in alphabetical order.
-        # Tweak the names if there are dependencies between the functions.
-        for bake in sorted(self._to_bake):
-            # Name of the private baking method.
-            name = '_bake_{0:s}'.format(bake)
-            if hasattr(self, name):
-                getattr(self, name)()
-        self._to_bake = []
-        return n_bake > 0
 
 
 class WaveformView(PanZoomCanvas):
