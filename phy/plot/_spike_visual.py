@@ -34,10 +34,11 @@ class BaseSpikeVisual(Visual):
         self._spike_ids = None
         self._to_bake = []
 
-        self.program = ModularProgram(_load_shader(self._shader_name +
-                                                   '.vert'),
-                                      _load_shader(self._shader_name +
-                                                   '.frag'))
+        vertex = _load_shader(self._shader_name + '.vert')
+        fragment = _load_shader(self._shader_name + '.frag')
+
+        self.program = ModularProgram(vertex, fragment)
+
         gloo.set_state(clear_color='black', blend=True,
                        blend_func=('src_alpha', 'one_minus_src_alpha'))
 

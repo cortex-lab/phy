@@ -13,7 +13,6 @@ from vispy import gloo
 from vispy.gloo import Texture2D
 from vispy.visuals import Visual
 from vispy.visuals.shaders import ModularProgram, Function, Variable
-from vispy.visuals.glsl.color import HSV_TO_RGB, RGB_TO_HSV
 
 from ._vispy_utils import PanZoomCanvas, _load_shader
 from ..utils.array import _unique, _as_array, _index_of, _normalize
@@ -37,10 +36,6 @@ class Features(BaseSpikeVisual):
 
         self._features = None
         self.n_channels, self.n_features = None, None
-
-        # TODO: use #include instead
-        self.program.vert['rgb_to_hsv'] = Function(RGB_TO_HSV)
-        self.program.vert['hsv_to_rgb'] = Function(HSV_TO_RGB)
 
     # Data properties
     # -------------------------------------------------------------------------

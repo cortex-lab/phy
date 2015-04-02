@@ -1,3 +1,4 @@
+#include "colormaps/color-space.glsl"
 
 attribute vec2 a_position;
 attribute float a_mask;
@@ -19,11 +20,11 @@ vec3 get_color(float cluster) {
 }
 
 vec3 color_mask(vec3 color, float mask) {
-    vec3 hsv = $rgb_to_hsv(color);
+    vec3 hsv = rgb_to_hsv(color);
     // Change the saturation and value as a function of the mask.
     hsv.y = mask;
     hsv.z = .5 * (1. + mask);
-    return $hsv_to_rgb(hsv);
+    return hsv_to_rgb(hsv);
 }
 
 void main (void)
