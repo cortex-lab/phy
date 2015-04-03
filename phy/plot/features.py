@@ -125,8 +125,9 @@ class FeatureVisual(BaseSpikeVisual):
 
                 dim_i = self._dimensions[i]
                 dim_j = self._dimensions[j]
-                positions.append(np.c_[self._get_feature_dim(dim_i),
-                                       self._get_feature_dim(dim_j)])
+                pos = np.c_[self._get_feature_dim(dim_i),
+                            self._get_feature_dim(dim_j)]
+                positions.append(pos)
 
                 # TODO: choose the mask
                 mask = self._get_mask_dim(dim_i)

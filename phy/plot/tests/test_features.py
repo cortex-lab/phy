@@ -41,18 +41,21 @@ def _test_features(n_spikes=None, n_clusters=None):
     features = artificial_features(n_spikes, n_channels, n_features)
     masks = artificial_masks(n_spikes, n_channels)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
-    spike_times = artificial_spike_times(n_spikes)
+    spike_times = artificial_spike_times(n_spikes).astype(np.float32)
+    # WARNING: need to normalize spike times
+    if len(spike_times) > 0:
+        spike_times = -1 + 2 * spike_times / spike_times.max()
 
     c = FeatureView()
     c.visual.features = features
     c.visual.masks = masks
-    c.visual.dimensions = [(0, 0), (1, 0), (2, 0)]
+    c.visual.dimensions = ['time', (0, 0), (1, 0), (2, 0)]
     c.visual.spike_clusters = spike_clusters
     c.visual.spike_times = spike_times
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])
 
-    show_test(c, 0)
+    show_test(c)
 
 
 def test_features_empty():
@@ -60,4 +63,4 @@ def test_features_empty():
 
 
 def test_features_full():
-    _test_features(n_spikes=200, n_clusters=3)
+    _test_features(n_spikes=100, n_clusters=3)
