@@ -9,7 +9,7 @@
 
 import numpy as np
 
-from vispy import gloo
+from vispy.gloo import Texture2D
 
 from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas
 from ..utils.array import _as_array, _index_of, _normalize
@@ -90,8 +90,8 @@ class WaveformVisual(BaseSpikeVisual):
                                   np.zeros((1, self.n_channels, 1))))
         u_channel_pos = (u_channel_pos * 255).astype(np.uint8)
         # TODO: more efficient to update the data from an existing texture
-        self.program['u_channel_pos'] = gloo.Texture2D(u_channel_pos,
-                                                       wrapping='clamp_to_edge')  # noqa
+        self.program['u_channel_pos'] = Texture2D(u_channel_pos,
+                                                  wrapping='clamp_to_edge')
         debug("bake channel pos", u_channel_pos.shape)
 
     def _bake_spikes(self):
