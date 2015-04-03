@@ -32,6 +32,29 @@ def _load_shader(filename):
         return f.read()
 
 
+def _tesselate_histogram(hist):
+    assert hist.ndim == 1
+    nsamples = len(hist)
+    dx = 2. / nsamples
+
+    x0 = -1 + dx * np.arange(nsamples)
+
+    x = np.zeros(5 * nsamples + 1)
+    y = np.zeros(5 * nsamples + 1)
+
+    x[0:-1:5] = x0
+    x[1::5] = x0
+    x[2::5] = x0 + dx
+    x[3::5] = x0
+    x[4::5] = x0 + dx
+    x[-1] = 1
+
+    y[1::5] = hist
+    y[2::5] = hist
+
+    return np.c_[x, y]
+
+
 #------------------------------------------------------------------------------
 # PanZoom class
 #------------------------------------------------------------------------------
@@ -276,6 +299,7 @@ class BaseSpikeVisual(Visual):
         self.n_spikes = None
         self._spike_clusters = None
         self._spike_ids = None
+        self._non_empty = False
         self._to_bake = []
 
         vertex = _load_shader(self._shader_name + '.vert')
@@ -385,7 +409,7 @@ class BaseSpikeVisual(Visual):
         Return whether something has been baked or not.
 
         """
-        if self.n_spikes is None or self.n_spikes == 0:
+        if not self._non_empty:
             return
         n_bake = len(self._to_bake)
         # Bake what needs to be baked.
@@ -403,7 +427,7 @@ class BaseSpikeVisual(Visual):
         """Draw the waveforms."""
         # Bake what needs to be baked at this point.
         self._bake()
-        if self.n_spikes is not None and self.n_spikes > 0:
+        if self._non_empty:
             self.program.draw(self._gl_draw_mode)
 
 
