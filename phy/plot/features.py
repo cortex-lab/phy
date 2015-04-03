@@ -58,36 +58,62 @@ class Features(BaseSpikeVisual):
 
     # TODO:
     # spike_times
-    # grid
 
     # Data baking
     # -------------------------------------------------------------------------
 
     def _bake_spikes(self):
+        # TODO
+        n_rows = 3
+        n_boxes = n_rows * n_rows
+        n_points = n_boxes * self.n_spikes
 
-        # TODO: choose dimension
-        position = self._features[:, :2, 0].astype(np.float32).copy()
-        self.program['a_position'] = position
+        # index increases from top to bottom, left to right
+        # same as matrix indices (i, j) starting at 0
+        positions = []
+        masks = []
+        boxes = []
 
-        # TODO: choose the mask
-        self.program['a_mask'] = self._masks[:, 0].astype(np.float32).copy()
+        for i in range(n_rows):
+            for j in range(n_rows):
+                index = n_rows * i + j
 
-        debug("bake spikes", position.shape)
+                # TODO: improve this
+                positions.append(self._features[:,
+                                 [i, j], 0].astype(np.float32))
+
+                # TODO: choose the mask
+                masks.append(self._masks[:, i].astype(np.float32))
+                boxes.append(index * np.ones(self.n_spikes, dtype=np.float32))
+
+        positions = np.vstack(positions)
+        masks = np.hstack(masks)
+        boxes = np.hstack(boxes)
+
+        assert positions.shape == (n_points, 2)
+        assert masks.shape == (n_points,)
+        assert boxes.shape == (n_points,)
+
+        self.program['a_position'] = positions.copy()
+        self.program['a_mask'] = masks
+        self.program['a_box'] = boxes
 
         self.program['n_clusters'] = self.n_clusters
+        self.program['n_rows'] = n_rows
         self.program['u_size'] = 5.
 
+        debug("bake spikes", positions.shape)
+
     def _bake_spikes_clusters(self):
+        n_boxes = 9  # TODO
+
         # Get the spike cluster indices (between 0 and n_clusters-1).
         spike_clusters_idx = self.spike_clusters[self.spike_ids]
         spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_ids)
 
-        a_box = np.zeros((self.n_spikes, 3), dtype=np.float32)
-        a_box[:, 0] = spike_clusters_idx
-        # TODO: row, col in a_box[1:]
-
-        self.program['a_box'] = a_box
-        debug("bake spikes clusters", a_box.shape)
+        a_cluster = np.tile(spike_clusters_idx, n_boxes).astype(np.float32)
+        self.program['a_cluster'] = a_cluster
+        debug("bake spikes clusters", spike_clusters_idx.shape)
 
 
 class FeatureView(PanZoomCanvas):

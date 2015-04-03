@@ -15,7 +15,6 @@ uniform sampler2D u_cluster_color;
 varying vec4 v_color;
 varying vec2 v_box;
 
-// TODO: use VisPy transforms
 vec2 get_box_pos(vec2 box) {  // box = (cluster, channel)
     vec2 box_pos = texture2D(u_channel_pos,
                              vec2(box.y / (n_channels - 1.), .5)).xy;
