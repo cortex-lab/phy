@@ -43,6 +43,7 @@ def _test_features(n_spikes=None, n_clusters=None):
     c = FeatureView()
     c.visual.features = features
     c.visual.masks = masks
+    c.visual.dimensions = [(0, 0), (1, 0), (2, 0)]
     c.visual.spike_clusters = spike_clusters
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])

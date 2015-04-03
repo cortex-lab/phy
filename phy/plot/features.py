@@ -15,6 +15,7 @@ from vispy.visuals import Visual
 from vispy.visuals.shaders import ModularProgram, Function, Variable
 
 from ._vispy_utils import PanZoomCanvas, _load_shader
+from ..ext.six import string_types
 from ..utils.array import _unique, _as_array, _index_of, _normalize
 from ..utils.logging import debug
 from ..utils._color import _random_color
@@ -35,13 +36,23 @@ class Features(BaseSpikeVisual):
         super(Features, self).__init__(**kwargs)
 
         self._features = None
+        self._spike_times = None
+        self._dimensions = []
         self.n_channels, self.n_features = None, None
-
-        self.n_rows = 3  # TODO
-        self.n_boxes = self.n_rows * self.n_rows
+        self.n_rows = None
 
     # Data properties
     # -------------------------------------------------------------------------
+
+    @property
+    def spike_times(self):
+        return self._spike_times
+
+    @spike_times.setter
+    def spike_times(self, value):
+        assert isinstance(value, np.ndarray)
+        assert value.shape == (self.n_spikes,)
+        self._spike_times = value
 
     @property
     def features(self):
@@ -59,8 +70,48 @@ class Features(BaseSpikeVisual):
         self._features = value
         self.set_to_bake('spikes', 'spikes_clusters', 'color')
 
-    # TODO:
-    # spike_times
+    def _check_dimension(self, dim):
+        if isinstance(dim, tuple):
+            assert len(dim) == 2
+            channel, feature = dim
+            assert 0 <= channel < self.n_channels
+            assert 0 <= feature < self.n_features
+        elif isinstance(dim, string_types):
+            assert dim == 'time'
+        else:
+            raise ValueError('{0} should be (channel, feature) '.format(dim) +
+                             'or "time".')
+
+    def _get_feature_dim(self, dim):
+        if isinstance(dim, (tuple, list)):
+            channel, feature = dim
+            return self._features[:, channel, feature]
+        elif dim == 'time':
+            return self._spike_times
+
+    def _get_mask_dim(self, dim):
+        if isinstance(dim, (tuple, list)):
+            channel, feature = dim
+            return self._masks[:, channel]
+        elif dim == 'time':
+            return np.ones(self.n_spikes)
+
+    @property
+    def dimensions(self):
+        """Dimensions."""
+        return self._dimensions
+
+    @dimensions.setter
+    def dimensions(self, value):
+        self.n_rows = len(value)
+        for dim in value:
+            self._check_dimension(dim)
+        self._dimensions = value
+        self.set_to_bake('spikes', 'spikes_clusters', 'color')
+
+    @property
+    def n_boxes(self):
+        return self.n_rows * self.n_rows
 
     # Data baking
     # -------------------------------------------------------------------------
@@ -78,15 +129,17 @@ class Features(BaseSpikeVisual):
             for j in range(self.n_rows):
                 index = self.n_rows * i + j
 
-                # TODO: improve this
-                positions.append(self._features[:,
-                                 [i, j], 0].astype(np.float32))
+                dim_i = self._dimensions[i]
+                dim_j = self._dimensions[j]
+                positions.append(np.c_[self._get_feature_dim(dim_i),
+                                       self._get_feature_dim(dim_j)])
 
                 # TODO: choose the mask
-                masks.append(self._masks[:, i].astype(np.float32))
+                mask = self._get_mask_dim(dim_i)
+                masks.append(mask.astype(np.float32))
                 boxes.append(index * np.ones(self.n_spikes, dtype=np.float32))
 
-        positions = np.vstack(positions)
+        positions = np.vstack(positions).astype(np.float32)
         masks = np.hstack(masks)
         boxes = np.hstack(boxes)
 
@@ -120,7 +173,7 @@ class FeatureView(PanZoomCanvas):
         super(FeatureView, self).__init__(**kwargs)
         self.visual = Features()
         self.zoom_center = 'origin'
-        self.pan_scale = self.visual.n_rows
+        self.pan_scale = 1  # TODO: link that to the visual's n_rows
 
 
 def add_feature_view(session, backend=None):
