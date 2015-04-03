@@ -226,7 +226,7 @@ class PanZoom(object):
         xpan = x - ratio * (x - self.pan[0])
         ypan = y - ratio * (y - self.pan[1])
         self.zoom = zoom
-        self.pan = xpan, ypan
+        # self.pan = xpan, ypan
         self._canvas.update()
 
     def add(self, programs):

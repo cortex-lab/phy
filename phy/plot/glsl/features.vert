@@ -1,6 +1,6 @@
 #include "colormaps/color-space.glsl"
 #include "color.glsl"
-#include "pan_zoom.glsl"
+//#include "pan_zoom.glsl"
 
 attribute vec2 a_position;
 attribute float a_mask;
@@ -11,10 +11,17 @@ uniform float u_size;
 uniform float n_rows;
 uniform float n_clusters;
 uniform sampler2D u_cluster_color;
+uniform vec2 u_zoom;
+uniform vec2 u_pan;
 
 varying vec4 v_color;
 varying vec2 v_position;
 varying float v_size;
+
+vec2 pan_zoom(vec2 position)
+{
+    return u_zoom * position + n_rows * u_pan;
+}
 
 vec2 to_box(vec2 position, float index) {
     float col = mod(index, n_rows) + 0.5;
