@@ -144,10 +144,10 @@ class FeatureVisual(BaseSpikeVisual):
         self.program['a_position'] = positions.copy()
         self.program['a_mask'] = masks
         self.program['a_box'] = boxes
+        self.program['u_size'] = 5.  # TODO: config
 
         self.program['n_clusters'] = self.n_clusters
         self.program['n_rows'] = self.n_rows
-        self.program['u_size'] = 5.
 
         debug("bake spikes", positions.shape)
 
@@ -161,9 +161,26 @@ class FeatureVisual(BaseSpikeVisual):
         self.program['a_cluster'] = a_cluster
         debug("bake spikes clusters", spike_clusters_idx.shape)
 
+    @property
+    def marker_size(self):
+        return self.program['u_size']
+
+    @marker_size.setter
+    def marker_size(self, value):
+        value = np.clip(value, 1, 100)
+        self.program['u_size'] = float(value)
+        self.update()
+
 
 class FeatureView(BaseSpikeCanvas):
     _visual_class = FeatureVisual
+
+    def on_key_press(self, event):
+        coeff = .25
+        if event.key == '+':
+            self.visual.marker_size += coeff
+        if event.key == '-':
+            self.visual.marker_size -= coeff
 
 
 def add_feature_view(session, backend=None):
