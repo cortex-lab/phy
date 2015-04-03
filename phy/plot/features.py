@@ -37,6 +37,9 @@ class Features(BaseSpikeVisual):
         self._features = None
         self.n_channels, self.n_features = None, None
 
+        self.n_rows = 3  # TODO
+        self.n_boxes = self.n_rows * self.n_rows
+
     # Data properties
     # -------------------------------------------------------------------------
 
@@ -63,10 +66,7 @@ class Features(BaseSpikeVisual):
     # -------------------------------------------------------------------------
 
     def _bake_spikes(self):
-        # TODO
-        n_rows = 3
-        n_boxes = n_rows * n_rows
-        n_points = n_boxes * self.n_spikes
+        n_points = self.n_boxes * self.n_spikes
 
         # index increases from top to bottom, left to right
         # same as matrix indices (i, j) starting at 0
@@ -74,9 +74,9 @@ class Features(BaseSpikeVisual):
         masks = []
         boxes = []
 
-        for i in range(n_rows):
-            for j in range(n_rows):
-                index = n_rows * i + j
+        for i in range(self.n_rows):
+            for j in range(self.n_rows):
+                index = self.n_rows * i + j
 
                 # TODO: improve this
                 positions.append(self._features[:,
@@ -99,19 +99,18 @@ class Features(BaseSpikeVisual):
         self.program['a_box'] = boxes
 
         self.program['n_clusters'] = self.n_clusters
-        self.program['n_rows'] = n_rows
+        self.program['n_rows'] = self.n_rows
         self.program['u_size'] = 5.
 
         debug("bake spikes", positions.shape)
 
     def _bake_spikes_clusters(self):
-        n_boxes = 9  # TODO
-
         # Get the spike cluster indices (between 0 and n_clusters-1).
         spike_clusters_idx = self.spike_clusters[self.spike_ids]
         spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_ids)
 
-        a_cluster = np.tile(spike_clusters_idx, n_boxes).astype(np.float32)
+        a_cluster = np.tile(spike_clusters_idx,
+                            self.n_boxes).astype(np.float32)
         self.program['a_cluster'] = a_cluster
         debug("bake spikes clusters", spike_clusters_idx.shape)
 
@@ -120,6 +119,8 @@ class FeatureView(PanZoomCanvas):
     def __init__(self, **kwargs):
         super(FeatureView, self).__init__(**kwargs)
         self.visual = Features()
+        self.zoom_center = 'origin'
+        self.pan_scale = self.visual.n_rows
 
 
 def add_feature_view(session, backend=None):

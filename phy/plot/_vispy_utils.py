@@ -112,6 +112,8 @@ class PanZoomCanvas(app.Canvas):
         self._pz.pan = Variable('uniform vec2 u_pan', (0, 0))
         self._pz.zoom = Variable('uniform vec2 u_zoom', (1, 1))
 
+        self._zoom_center = 'mouse'
+        self._pan_scale = 1.
         self._tr = TransformSystem(self)
 
     def on_initialize(self, event):
@@ -136,6 +138,22 @@ class PanZoomCanvas(app.Canvas):
         ymax = +1 / zoom_y - pan_y
         return (xmin, ymin, xmax, ymax)
 
+    @property
+    def zoom_center(self):
+        return self._zoom_center
+
+    @zoom_center.setter
+    def zoom_center(self, value):
+        self._zoom_center = value
+
+    @property
+    def pan_scale(self):
+        return self._pan_scale
+
+    @pan_scale.setter
+    def pan_scale(self, value):
+        self._pan_scale = value
+
     def on_mouse_move(self, event):
         if event.is_dragging and not event.modifiers:
             x0, y0 = self._normalize(event.press_event.pos)
@@ -148,14 +166,15 @@ class PanZoomCanvas(app.Canvas):
             zoom_x, zoom_y = self._pz.zoom
 
             if button == 1:
-                self._pz.pan = (pan_x + dx/zoom_x,
-                                pan_y + dy/zoom_y)
+                self._pz.pan = (pan_x + self._pan_scale * dx / zoom_x,
+                                pan_y + self._pan_scale * dy / zoom_y)
             elif button == 2:
                 zoom_x_new, zoom_y_new = (zoom_x * math.exp(2.5 * dx),
                                           zoom_y * math.exp(2.5 * dy))
                 self._pz.zoom = (zoom_x_new, zoom_y_new)
-                self._pz.pan = (pan_x - x0 * (1./zoom_x - 1./zoom_x_new),
-                                pan_y + y0 * (1./zoom_y - 1./zoom_y_new))
+                if self._zoom_center == 'mouse':
+                    self._pz.pan = (pan_x - x0 * (1./zoom_x - 1./zoom_x_new),
+                                    pan_y + y0 * (1./zoom_y - 1./zoom_y_new))
             self.update()
 
     def on_mouse_wheel(self, event):
@@ -167,8 +186,9 @@ class PanZoomCanvas(app.Canvas):
             zoom_x_new, zoom_y_new = (zoom_x * math.exp(2.5 * dx),
                                       zoom_y * math.exp(2.5 * dx))
             self._pz.zoom = (zoom_x_new, zoom_y_new)
-            self._pz.pan = (pan_x - x0 * (1./zoom_x - 1./zoom_x_new),
-                            pan_y + y0 * (1./zoom_y - 1./zoom_y_new))
+            if self._zoom_center == 'mouse':
+                self._pz.pan = (pan_x - x0 * (1./zoom_x - 1./zoom_x_new),
+                                pan_y + y0 * (1./zoom_y - 1./zoom_y_new))
             self.update()
 
     def on_key_press(self, event):
