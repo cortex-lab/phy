@@ -10,29 +10,25 @@
 import numpy as np
 
 from vispy import gloo
-from vispy.gloo import Texture2D
-from vispy.visuals import Visual
-from vispy.visuals.shaders import ModularProgram, Function, Variable
 
-from ._vispy_utils import PanZoomCanvas, _load_shader
-from ..utils.array import _unique, _as_array, _index_of, _normalize
+from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas
+from ..utils.array import _as_array, _index_of, _normalize
 from ..utils.logging import debug
 from ..utils._color import _random_color
-from ._spike_visual import BaseSpikeVisual
 
 
 #------------------------------------------------------------------------------
-# Waveforms visual
+# Waveform visual
 #------------------------------------------------------------------------------
 
-class Waveforms(BaseSpikeVisual):
+class WaveformVisual(BaseSpikeVisual):
 
     _shader_name = 'waveforms'
     _gl_draw_mode = 'line_strip'
 
-    """Waveforms visual."""
+    """Waveform visual."""
     def __init__(self, **kwargs):
-        super(Waveforms, self).__init__(**kwargs)
+        super(WaveformVisual, self).__init__(**kwargs)
 
         self._waveforms = None
         self.n_channels, self.n_samples = None, None
@@ -94,7 +90,7 @@ class Waveforms(BaseSpikeVisual):
                                   np.zeros((1, self.n_channels, 1))))
         u_channel_pos = (u_channel_pos * 255).astype(np.uint8)
         # TODO: more efficient to update the data from an existing texture
-        self.program['u_channel_pos'] = Texture2D(u_channel_pos,
+        self.program['u_channel_pos'] = gloo.Texture2D(u_channel_pos,
                                                   wrapping='clamp_to_edge')
         debug("bake channel pos", u_channel_pos.shape)
 
@@ -146,15 +142,13 @@ class Waveforms(BaseSpikeVisual):
         debug("bake spikes clusters", a_box.shape)
 
 
-class WaveformView(PanZoomCanvas):
-    def __init__(self, **kwargs):
-        super(WaveformView, self).__init__(**kwargs)
-        self.visual = Waveforms()
+class WaveformView(BaseSpikeCanvas):
+    _visual_class = WaveformVisual
 
     def on_key_press(self, event):
         # TODO: more interactivity
         # TODO: keyboard shortcut manager
-        super(WaveformView, self).on_key_press(event)
+        # super(WaveformView, self).on_key_press(event)
         u, v = self.visual.box_scale
         coeff = 1.1
         if event.key == '+':

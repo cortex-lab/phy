@@ -1,5 +1,6 @@
 #include "colormaps/color-space.glsl"
 #include "color.glsl"
+#include "pan_zoom.glsl"
 
 // TODO: add depth
 attribute vec2 a_data;  // position (-1..1), mask
@@ -30,7 +31,7 @@ void main() {
     vec2 pos = u_data_scale * vec2(a_time, a_data.x);  // -1..1
     vec2 box_pos = get_box_pos(a_box);
     v_box = a_box;
-    gl_Position = vec4($transform(pos + box_pos), 0., 1.);
+    gl_Position = vec4(pan_zoom(pos + box_pos), 0., 1.);
 
     // Compute the waveform color as a function of the cluster color
     // and the mask.

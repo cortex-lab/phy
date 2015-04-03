@@ -7,10 +7,9 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from vispy import app
 
 from ...utils.logging import set_level
-from ..waveforms import Waveforms, WaveformView
+from ..waveforms import WaveformView
 from ...utils._color import _random_color
 from ...io.mock.artificial import (artificial_waveforms, artificial_masks,
                                    artificial_spike_clusters)
@@ -53,7 +52,7 @@ def _test_waveforms(n_spikes=None, n_clusters=None):
                                         for _ in range(n_clusters)])
     c.visual.channel_positions = channel_positions
 
-    show_test(c)
+    show_test(c, 0)
 
 
 def test_waveforms_empty():
