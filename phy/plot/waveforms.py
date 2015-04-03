@@ -91,7 +91,7 @@ class WaveformVisual(BaseSpikeVisual):
         u_channel_pos = (u_channel_pos * 255).astype(np.uint8)
         # TODO: more efficient to update the data from an existing texture
         self.program['u_channel_pos'] = gloo.Texture2D(u_channel_pos,
-                                                  wrapping='clamp_to_edge')
+                                                       wrapping='clamp_to_edge')  # noqa
         debug("bake channel pos", u_channel_pos.shape)
 
     def _bake_spikes(self):
