@@ -222,9 +222,9 @@ class PanZoom(object):
         y = 1.0 - y / (self._height / 2.0)
 
         zoom = min(max(self._zoom * (1.0 + dy), self._zmin), self._zmax)
-        ratio = zoom / self.zoom
-        xpan = x - ratio * (x - self.pan[0])
-        ypan = y - ratio * (y - self.pan[1])
+        # ratio = zoom / self.zoom
+        # xpan = x - ratio * (x - self.pan[0])
+        # ypan = y - ratio * (y - self.pan[1])
         self.zoom = zoom
         # self.pan = xpan, ypan
         self._canvas.update()
