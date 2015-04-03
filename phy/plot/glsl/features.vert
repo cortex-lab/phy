@@ -1,5 +1,6 @@
 #include "colormaps/color-space.glsl"
 #include "color.glsl"
+#include "pan_zoom.glsl"
 
 attribute vec2 a_position;
 attribute float a_mask;
@@ -37,7 +38,7 @@ void main (void)
                              a_mask);
     v_color.a = .5;
 
-    vec2 position = $transform(a_position);
+    vec2 position = pan_zoom(a_position);
     vec2 box_position = to_box(position, a_box);
     gl_Position = vec4(box_position, 0., 1.);
     gl_PointSize = u_size + 2.0 * (1.0 + 1.5 * 1.0);

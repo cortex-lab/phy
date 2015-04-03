@@ -9,31 +9,25 @@
 
 import numpy as np
 
-from vispy import gloo
-from vispy.gloo import Texture2D
-from vispy.visuals import Visual
-from vispy.visuals.shaders import ModularProgram, Function, Variable
-
-from ._vispy_utils import PanZoomCanvas, _load_shader
+from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas
 from ..ext.six import string_types
-from ..utils.array import _unique, _as_array, _index_of, _normalize
+from ..utils.array import _as_array, _index_of
 from ..utils.logging import debug
 from ..utils._color import _random_color
-from ._spike_visual import BaseSpikeVisual
 
 
 #------------------------------------------------------------------------------
-# Features visual
+# Features sisual
 #------------------------------------------------------------------------------
 
-class Features(BaseSpikeVisual):
+class FeatureVisual(BaseSpikeVisual):
 
     _shader_name = 'features'
     _gl_draw_mode = 'points'
 
-    """Features visual."""
+    """FeatureVisual visual."""
     def __init__(self, **kwargs):
-        super(Features, self).__init__(**kwargs)
+        super(FeatureVisual, self).__init__(**kwargs)
 
         self._features = None
         self._spike_times = None
@@ -168,12 +162,8 @@ class Features(BaseSpikeVisual):
         debug("bake spikes clusters", spike_clusters_idx.shape)
 
 
-class FeatureView(PanZoomCanvas):
-    def __init__(self, **kwargs):
-        super(FeatureView, self).__init__(**kwargs)
-        self.visual = Features()
-        self.zoom_center = 'origin'
-        self.pan_scale = 1  # TODO: link that to the visual's n_rows
+class FeatureView(BaseSpikeCanvas):
+    _visual_class = FeatureVisual
 
 
 def add_feature_view(session, backend=None):

@@ -12,11 +12,13 @@ import os.path as op
 
 import numpy as np
 
-from vispy import gloo
-from vispy import app
+from vispy import app, gloo, config
 from vispy.visuals import Visual
 from vispy.visuals.transforms import TransformSystem, BaseTransform
-from vispy.visuals.shaders import Variable
+from vispy.visuals.shaders import Variable, ModularProgram
+
+from ..utils.array import _unique, _as_array
+from ..utils.logging import debug
 
 
 #------------------------------------------------------------------------------
@@ -31,187 +33,397 @@ def _load_shader(filename):
 
 
 #------------------------------------------------------------------------------
-# PanZoom facilities
+# PanZoom class
 #------------------------------------------------------------------------------
 
-class PanZoomTransform(BaseTransform):
-    glsl_map = """
-        vec2 pz_transform_map(vec2 pos) {
-            return $zoom * (pos + $pan);
-        }
+class PanZoom(object):
+
+    """
+    Pan & Zoom transform
+
+    The panzoom transform allow to translate and scale an object in the window
+    space coordinate (2D). This means that whatever point you grab on the
+    screen, it should remains under the mouse pointer. Zoom is realized using
+    the mouse scroll and is always centered on the mouse pointer.
+
+    The transform is connected to the following events:
+
+    * resize (update)
+    * mouse_scroll (zoom)
+    * mouse_grab (pan)
+
+    You can also control programatically the transform using:
+
+    * aspect: control the aspect ratio of the whole scene
+    * pan   : translate the scene to the given 2D coordinates
+    * zoom  : set the zoom level (centered at current pan coordinates)
+    * zmin  : minimum zoom level
+    * zmax  : maximum zoom level
     """
 
-    glsl_imap = """
-        vec2 pz_transform_imap(vec2 pos) {
-            return (pos / $zoom - $pan);
-        }
-    """
+    def __init__(self, aspect=1.0, pan=(0.0, 0.0), zoom=1.0,
+                 zmin=0.01, zmax=100.0):
+        """
+        Initialize the transform.
 
-    Linear = True
-    Orthogonal = True
-    NonScaling = False
-    Isometric = False
+        Parameters
+        ----------
 
-    def __init__(self):
-        super(PanZoomTransform, self).__init__()
-        self._pan = None
-        self._zoom = None
+        aspect : float (default is None)
+           Indicate what is the aspect ratio of the object displayed. This is
+           necessary to convert pixel drag move in oject space coordinates.
+
+        pan : float, float (default is 0,0)
+           Initial translation
+
+        zoom : float, float (default is 1)
+           Initial zoom level
+
+        zmin : float (default is 0.01)
+           Minimum zoom level
+
+        zmax : float (default is 1000)
+           Maximum zoom level
+        """
+
+        self._aspect = aspect
+        self._pan = np.array(pan)
+        self._zoom = zoom
+        self._zmin = zmin
+        self._zmax = zmax
+
+        # Canvas this transform is attached to
+        self._canvas = None
+        self._canvas_aspect = np.ones(2)
+        self._width = 1
+        self._height = 1
+
+        # Programs using this transform
+        self._u_pan = pan
+        self._u_zoom = np.array([zoom, zoom])
+        self._programs = []
+
+    @property
+    def is_attached(self):
+        """ Whether transform is attached to a canvas """
+
+        return self._canvas is not None
+
+    @property
+    def aspect(self):
+        """ Aspect (width/height) """
+
+        return self._aspect
+
+    @aspect.setter
+    def aspect(self, value):
+        """ Aspect (width/height) """
+
+        self._aspect = value
 
     @property
     def pan(self):
-        if isinstance(self._pan, Variable):
-            return np.array(self._pan.value, dtype=np.float32)
-        else:
-            raise NotImplementedError()
+        """ Pan translation """
+
+        return self._pan
 
     @pan.setter
     def pan(self, value):
-        if isinstance(value, Variable):
-            self._pan = value
-            self._shader_map['pan'] = self._pan
-        elif isinstance(self._pan, Variable):
-            self._pan.value = value
-        else:
-            raise NotImplementedError()
+        """ Pan translation """
+
+        self._pan = np.asarray(value)
+        self._u_pan = self._pan
+        for program in self._programs:
+            program["u_pan"] = self._u_pan
 
     @property
     def zoom(self):
-        if isinstance(self._zoom, Variable):
-            return np.array(self._zoom.value, dtype=np.float32)
-        else:
-            raise NotImplementedError()
+        """ Zoom level """
+
+        return self._zoom
 
     @zoom.setter
     def zoom(self, value):
-        if isinstance(value, Variable):
-            self._zoom = value
-            self._shader_map['zoom'] = self._zoom
-        elif isinstance(self._zoom, Variable):
-            self._zoom.value = value
+        """ Zoom level """
+
+        self._zoom = max(min(value, self._zmax), self._zmin)
+        if not self.is_attached:
+            return
+
+        aspect = 1.0
+        if self._aspect is not None:
+            aspect = self._canvas_aspect * self._aspect
+
+        self._u_zoom = self._zoom * aspect
+        for program in self._programs:
+            program["u_zoom"] = self._u_zoom
+
+    @property
+    def zmin(self):
+        """ Minimum zoom level """
+
+        return self._zmin
+
+    @zmin.setter
+    def zmin(self, value):
+        """ Minimum zoom level """
+
+        self._zmin = min(value, self._zmax)
+
+    @property
+    def zmax(self):
+        """ Maximal zoom level """
+
+        return self._zmax
+
+    @zmax.setter
+    def zmax(self, value):
+        """ Maximal zoom level """
+
+        self._zmax = max(value, self._zmin)
+
+    def on_resize(self, event):
+        """ Resize event """
+
+        self._width = float(event.size[0])
+        self._height = float(event.size[1])
+        aspect = self._width / self._height
+        if aspect > 1.0:
+            self._canvas_aspect = np.array([1.0 / aspect, 1.0])
         else:
-            raise NotImplementedError()
+            self._canvas_aspect = np.array([1.0, aspect / 1.0])
 
-    def map(self, coords):
-        if not isinstance(coords, np.ndarray):
-            coords = np.array(coords)
-        return self.zoom[None, :] * (coords + self.pan[None, :])
+        # Update zoom level
+        self.zoom = self._zoom
 
-    def imap(self, coords):
-        if not isinstance(coords, np.ndarray):
-            coords = np.array(coords)
-        return (coords / self.zoom[None, :]) - self.pan[None, :]
+    def on_mouse_move(self, event):
+        """ Drag """
+
+        if not event.is_dragging:
+            return
+
+        x, y = event.pos
+        dx = +2 * ((x - event.last_event.pos[0]) / self._width)
+        dy = -2 * ((y - event.last_event.pos[1]) / self._height)
+
+        self.pan += dx, dy
+        self._canvas.update()
+
+    def on_mouse_wheel(self, event):
+        """ Zoom """
+
+        x, y = event.pos
+        dx, dy = event.delta
+        dx /= 10.0
+        dy /= 10.0
+
+        # Normalize mouse coordinates and invert y axis
+        x = x / (self._width / 2.) - 1.0
+        y = 1.0 - y / (self._height / 2.0)
+
+        zoom = min(max(self._zoom * (1.0 + dy), self._zmin), self._zmax)
+        ratio = zoom / self.zoom
+        xpan = x - ratio * (x - self.pan[0])
+        ypan = y - ratio * (y - self.pan[1])
+        self.zoom = zoom
+        self.pan = xpan, ypan
+        self._canvas.update()
+
+    def add(self, programs):
+        """ Attach programs to this tranform """
+
+        if not isinstance(programs, (list, tuple)):
+            programs = [programs]
+
+        for program in programs:
+            self._programs.append(program)
+            program["u_zoom"] = self._u_zoom
+            program["u_pan"] = self._u_pan
+
+    def attach(self, canvas):
+        """ Attach this tranform to a canvas """
+
+        self._canvas = canvas
+        self._width = float(canvas.size[0])
+        self._height = float(canvas.size[1])
+
+        aspect = self._width / self._height
+        if aspect > 1.0:
+            self._canvas_aspect = np.array([1.0 / aspect, 1.0])
+        else:
+            self._canvas_aspect = np.array([1.0, aspect / 1.0])
+
+        aspect = 1.0
+        if self._aspect is not None:
+            aspect = self._canvas_aspect * self._aspect
+        self._u_zoom = self._zoom * aspect
+
+        canvas.connect(self.on_resize)
+        canvas.connect(self.on_mouse_wheel)
+        canvas.connect(self.on_mouse_move)
 
 
-class PanZoomCanvas(app.Canvas):
+#------------------------------------------------------------------------------
+# Base spike visual
+#------------------------------------------------------------------------------
+
+class BaseSpikeVisual(Visual):
+    _shader_name = ''
+    _gl_draw_mode = ''
+
     def __init__(self, **kwargs):
-        super(PanZoomCanvas, self).__init__(keys='interactive',
-                                            show=True, **kwargs)
-        self._visuals = []
+        super(BaseSpikeVisual, self).__init__(**kwargs)
+        self.n_spikes = None
+        self._spike_clusters = None
+        self._spike_ids = None
+        self._to_bake = []
 
-        self._pz = PanZoomTransform()
-        self._pz.pan = Variable('uniform vec2 u_pan', (0, 0))
-        self._pz.zoom = Variable('uniform vec2 u_zoom', (1, 1))
+        vertex = _load_shader(self._shader_name + '.vert')
+        fragment = _load_shader(self._shader_name + '.frag')
 
-        self._zoom_center = 'mouse'
-        self._pan_scale = 1.
-        self._tr = TransformSystem(self)
+        curdir = op.dirname(op.realpath(__file__))
+        config['include_path'] = [op.join(curdir, 'glsl')]
 
-    def on_initialize(self, event):
+        self.program = ModularProgram(vertex, fragment)
+
         gloo.set_state(clear_color='black', blend=True,
                        blend_func=('src_alpha', 'one_minus_src_alpha'))
 
-    def on_resize(self, event):
-        self.width, self.height = event.size
-        gloo.set_viewport(0, 0, self.width, self.height)
+    # Data properties
+    # -------------------------------------------------------------------------
 
-    def _normalize(self, x_y):
-        x, y = x_y
-        w, h = float(self.width), float(self.height)
-        return x/(w/2.)-1., y/(h/2.)-1.
+    def _set_or_assert_n_spikes(self, arr):
+        """If n_spikes is None, set it using the array's shape. Otherwise,
+        check that the array has n_spikes rows."""
+        if self.n_spikes is None:
+            self.n_spikes = arr.shape[0]
+        assert arr.shape[0] == self.n_spikes
 
-    def bounds(self):
-        pan_x, pan_y = self._pz.pan
-        zoom_x, zoom_y = self._pz.zoom
-        xmin = -1 / zoom_x - pan_x
-        xmax = +1 / zoom_x - pan_x
-        ymin = -1 / zoom_y - pan_y
-        ymax = +1 / zoom_y - pan_y
-        return (xmin, ymin, xmax, ymax)
+    def set_to_bake(self, *bakes):
+        for bake in bakes:
+            if bake not in self._to_bake:
+                self._to_bake.append(bake)
 
     @property
-    def zoom_center(self):
-        return self._zoom_center
+    def spike_clusters(self):
+        """The clusters assigned to *all* spikes, not just the displayed
+        spikes."""
+        return self._spike_clusters
 
-    @zoom_center.setter
-    def zoom_center(self, value):
-        self._zoom_center = value
-
-    @property
-    def pan_scale(self):
-        return self._pan_scale
-
-    @pan_scale.setter
-    def pan_scale(self, value):
-        self._pan_scale = value
-
-    def on_mouse_move(self, event):
-        if event.is_dragging and not event.modifiers:
-            x0, y0 = self._normalize(event.press_event.pos)
-            x1, y1 = self._normalize(event.last_event.pos)
-            x, y = self._normalize(event.pos)
-            dx, dy = x - x1, -(y - y1)
-            button = event.press_event.button
-
-            pan_x, pan_y = self._pz.pan
-            zoom_x, zoom_y = self._pz.zoom
-
-            if button == 1:
-                self._pz.pan = (pan_x + self._pan_scale * dx / zoom_x,
-                                pan_y + self._pan_scale * dy / zoom_y)
-            elif button == 2:
-                zoom_x_new, zoom_y_new = (zoom_x * math.exp(2.5 * dx),
-                                          zoom_y * math.exp(2.5 * dy))
-                self._pz.zoom = (zoom_x_new, zoom_y_new)
-                if self._zoom_center == 'mouse':
-                    self._pz.pan = (pan_x - x0 * (1./zoom_x - 1./zoom_x_new),
-                                    pan_y + y0 * (1./zoom_y - 1./zoom_y_new))
-            self.update()
-
-    def on_mouse_wheel(self, event):
-        if not event.modifiers:
-            dx = np.sign(event.delta[1])*.05
-            x0, y0 = self._normalize(event.pos)
-            pan_x, pan_y = self._pz.pan
-            zoom_x, zoom_y = self._pz.zoom
-            zoom_x_new, zoom_y_new = (zoom_x * math.exp(2.5 * dx),
-                                      zoom_y * math.exp(2.5 * dx))
-            self._pz.zoom = (zoom_x_new, zoom_y_new)
-            if self._zoom_center == 'mouse':
-                self._pz.pan = (pan_x - x0 * (1./zoom_x - 1./zoom_x_new),
-                                pan_y + y0 * (1./zoom_y - 1./zoom_y_new))
-            self.update()
-
-    def on_key_press(self, event):
-        if event.key == 'R':
-            self._pz.zoom = (1., 1.)
-            self._pz.pan = (0., 0.)
-            self.update()
-
-    def add_visual(self, name, value):
-        value.program.vert['transform'] = self._pz
-        value.events.update.connect(self.update)
-        self._visuals.append(value)
-
-    def __setattr__(self, name, value):
-        if isinstance(value, Visual):
-            self.add_visual(name, value)
-        super(PanZoomCanvas, self).__setattr__(name, value)
+    @spike_clusters.setter
+    def spike_clusters(self, value):
+        """Set all spike clusters."""
+        value = _as_array(value)
+        self._spike_clusters = value
+        self.set_to_bake('spikes_clusters')
 
     @property
-    def visuals(self):
-        return self._visuals
+    def masks(self):
+        """Masks of the displayed waveforms."""
+        return self._masks
+
+    @masks.setter
+    def masks(self, value):
+        value = _as_array(value)
+        self._set_or_assert_n_spikes(value)
+        # TODO: support sparse structures
+        assert value.ndim == 2
+        assert value.shape == (self.n_spikes, self.n_channels)
+        self._masks = value
+        self.set_to_bake('spikes')
+
+    @property
+    def spike_ids(self):
+        """The list of spike ids to display, should correspond to the
+        waveforms."""
+        if self._spike_ids is None:
+            self._spike_ids = np.arange(self.n_spikes).astype(np.int64)
+        return self._spike_ids
+
+    @spike_ids.setter
+    def spike_ids(self, value):
+        value = _as_array(value)
+        self._set_or_assert_n_spikes(value)
+        self._spike_ids = value
+        self.set_to_bake('spikes')
+
+    # TODO: channel_ids
+
+    @property
+    def cluster_ids(self):
+        """Clusters of the displayed spikes."""
+        return _unique(self.spike_clusters[self.spike_ids])
+
+    @property
+    def n_clusters(self):
+        return len(self.cluster_ids)
+
+    @property
+    def cluster_colors(self):
+        """Colors of the displayed clusters."""
+        return self._cluster_colors
+
+    @cluster_colors.setter
+    def cluster_colors(self, value):
+        self._cluster_colors = _as_array(value)
+        assert len(self._cluster_colors) == self.n_clusters
+        self.set_to_bake('color')
+
+    # Data baking
+    # -------------------------------------------------------------------------
+
+    def _bake_color(self):
+        u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
+        u_cluster_color = (u_cluster_color * 255).astype(np.uint8)
+        # TODO: more efficient to update the data from an existing texture
+        self.program['u_cluster_color'] = gloo.Texture2D(u_cluster_color)
+        debug("bake color", u_cluster_color.shape)
+
+    def _bake(self):
+        """Prepare and upload the data on the GPU.
+
+        Return whether something has been baked or not.
+
+        """
+        if self.n_spikes is None or self.n_spikes == 0:
+            return
+        n_bake = len(self._to_bake)
+        # Bake what needs to be baked.
+        # WARNING: the bake functions are called in alphabetical order.
+        # Tweak the names if there are dependencies between the functions.
+        for bake in sorted(self._to_bake):
+            # Name of the private baking method.
+            name = '_bake_{0:s}'.format(bake)
+            if hasattr(self, name):
+                getattr(self, name)()
+        self._to_bake = []
+        return n_bake > 0
+
+    def draw(self):
+        """Draw the waveforms."""
+        # Bake what needs to be baked at this point.
+        self._bake()
+        if self.n_spikes is not None and self.n_spikes > 0:
+            self.program.draw(self._gl_draw_mode)
+
+
+#------------------------------------------------------------------------------
+# Base spike canvas
+#------------------------------------------------------------------------------
+
+class BaseSpikeCanvas(app.Canvas):
+    _visual_class = None
+
+    def __init__(self, **kwargs):
+        super(BaseSpikeCanvas, self).__init__(keys='interactive', **kwargs)
+        self.visual = self._visual_class()
+        self._pz = PanZoom()
+        self._pz.add(self.visual.program)
+        self._pz.attach(self)
 
     def on_draw(self, event):
-        gloo.clear()
-        for visual in self.visuals:
-            visual.draw(self._tr)
+        gloo.clear('black')
+        self.visual.draw()
+
+    def on_resize(self, event):
+        gloo.set_viewport(0, 0, event.size[0], event.size[1])
