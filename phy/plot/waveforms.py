@@ -52,6 +52,7 @@ class WaveformVisual(BaseSpikeVisual):
         assert value.ndim == 3
         self.n_spikes, self.n_samples, self.n_channels = value.shape
         self._waveforms = value
+        self._non_empty = self.n_spikes > 0
         self.set_to_bake('spikes', 'spikes_clusters', 'color')
 
     @property
@@ -103,7 +104,6 @@ class WaveformVisual(BaseSpikeVisual):
         data = np.c_[waveforms.ravel(), masks.ravel()].astype(np.float32)
         # TODO: more efficient to update the data from an existing VBO
         self.program['a_data'] = data
-        debug("bake spikes", data.shape)
 
         # TODO: SparseCSR, this should just be 'channel'
         self._channels_per_spike = np.tile(np.arange(self.n_channels).
@@ -123,6 +123,8 @@ class WaveformVisual(BaseSpikeVisual):
         self.program['a_time'] = a_time
         self.program['n_clusters'] = self.n_clusters
         self.program['n_channels'] = self.n_channels
+
+        debug("bake spikes", data.shape)
 
     def _bake_spikes_clusters(self):
         # WARNING: needs to be called *after* _bake_spikes().
