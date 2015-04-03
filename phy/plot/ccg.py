@@ -8,10 +8,104 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-
 import matplotlib.pyplot as plt
 
 from ._mpl_utils import _bottom_left_frame
+from ._vispy_utils import (BaseSpikeVisual,
+                           BaseSpikeCanvas,
+                           _tesselate_histogram)
+from ..ext.six import string_types
+from ..utils.array import _as_array, _index_of
+from ..utils.logging import debug
+from ..utils._color import _random_color
+
+
+#------------------------------------------------------------------------------
+# CCG visual
+#------------------------------------------------------------------------------
+
+class CorrelogramVisual(BaseSpikeVisual):
+
+    _shader_name = 'correlograms'
+    _gl_draw_mode = 'triangle_strip'
+
+    """CorrelogramVisual visual."""
+    def __init__(self, **kwargs):
+        super(CorrelogramVisual, self).__init__(**kwargs)
+        self._correlograms = None
+        self._cluster_ids = None
+        self.n_samples = None
+
+    # Data properties
+    # -------------------------------------------------------------------------
+
+    @property
+    def correlograms(self):
+        """Displayed correlograms."""
+        return self._correlograms
+
+    @correlograms.setter
+    def correlograms(self, value):
+        value = _as_array(value)
+        # WARNING: need to set cluster_ids first
+        assert value.ndim == 3
+        if self._cluster_ids is None:
+            self._cluster_ids = np.arange(value.shape[0])
+        assert value.shape[:2] == (self.n_clusters, self.n_clusters)
+        self.n_samples = value.shape[2]
+        self._correlograms = value
+        self._non_empty = self.n_clusters > 0 and self.n_samples > 0
+        self.set_to_bake('correlograms', 'color')
+
+    @property
+    def cluster_ids(self):
+        return self._cluster_ids
+
+    @cluster_ids.setter
+    def cluster_ids(self, value):
+        self._cluster_ids = np.asarray(value, dtype=np.int32)
+
+    @property
+    def n_boxes(self):
+        return self.n_clusters * self.n_clusters
+
+    # Data baking
+    # -------------------------------------------------------------------------
+
+    def _bake_correlograms(self):
+        n_points = self.n_boxes * (5 * self.n_samples + 1)
+
+        # index increases from top to bottom, left to right
+        # same as matrix indices (i, j) starting at 0
+        positions = []
+        boxes = []
+
+        for i in range(self.n_clusters):
+            for j in range(self.n_clusters):
+                index = self.n_clusters * i + j
+
+                hist = self._correlograms[i, j, :]
+                pos = _tesselate_histogram(hist)
+                n_points_hist = pos.shape[0]
+
+                positions.append(pos)
+                boxes.append(index * np.ones(n_points_hist, dtype=np.float32))
+
+        positions = np.vstack(positions).astype(np.float32)
+        boxes = np.hstack(boxes)
+
+        assert positions.shape == (n_points, 2)
+        assert boxes.shape == (n_points,)
+
+        self.program['a_position'] = positions.copy()
+        self.program['a_box'] = boxes
+        self.program['n_rows'] = self.n_clusters
+
+        debug("bake correlograms", positions.shape)
+
+
+class CorrelogramView(BaseSpikeCanvas):
+    _visual_class = CorrelogramVisual
 
 
 #------------------------------------------------------------------------------

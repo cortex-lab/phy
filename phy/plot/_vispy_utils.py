@@ -40,7 +40,7 @@ def _tesselate_histogram(hist):
     x0 = -1 + dx * np.arange(nsamples)
 
     x = np.zeros(5 * nsamples + 1)
-    y = np.zeros(5 * nsamples + 1)
+    y = -1.0 * np.ones(5 * nsamples + 1)
 
     x[0:-1:5] = x0
     x[1::5] = x0
@@ -49,8 +49,7 @@ def _tesselate_histogram(hist):
     x[4::5] = x0 + dx
     x[-1] = 1
 
-    y[1::5] = hist
-    y[2::5] = hist
+    y[1::5] = y[2::5] = -1 + 2. * hist
 
     return np.c_[x, y]
 

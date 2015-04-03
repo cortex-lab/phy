@@ -5,12 +5,12 @@
 attribute vec2 a_position;
 attribute float a_box;  // (from 0 to n_rows**2-1)
 
-uniform float u_size;
 uniform sampler2D u_cluster_color;
 uniform vec2 u_zoom;
 uniform vec2 u_pan;
 
 varying vec4 v_color;
+varying float v_box;
 
 vec2 pan_zoom(vec2 position)
 {
@@ -20,12 +20,11 @@ vec2 pan_zoom(vec2 position)
 void main (void)
 {
     // ACG/CCG color.
-    vec2 rc = row_col(a_box);
-    if (rc.x == rc.y) {
-        v_color.rgb = color_mask(get_color(a_box,
-                                           u_cluster_color,
-                                           n_rows),
-                                 a_mask);
+    vec2 rc = row_col(a_box, n_rows);
+    if (abs(rc.x - rc.y) < .1) {
+        v_color.rgb = get_color(rc.x,
+                                u_cluster_color,
+                                n_rows);
     }
     else {
         v_color.rgb = vec3(1., 1., 1.);
@@ -38,4 +37,5 @@ void main (void)
 
     // Used for clipping.
     v_position = position;
+    v_box = a_box;
 }
