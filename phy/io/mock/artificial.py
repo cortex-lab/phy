@@ -54,7 +54,8 @@ def artificial_spike_times(n_spikes, max_isi=50):
 
 class MockModel(BaseModel):
     n_channels = 28
-    n_features = 28 * 4
+    nfeatures_per_channel = 2
+    n_features = 28 * nfeatures_per_channel
     n_spikes = 1000
     n_samples_traces = 20000
     n_samples_waveforms = 40
@@ -63,7 +64,8 @@ class MockModel(BaseModel):
     def __init__(self):
         super(BaseModel, self).__init__()
         self.name = 'mock'
-        self._metadata = {'description': 'A mock model.'}
+        self._metadata = {'description': 'A mock model.',
+                          'nfeatures_per_channel': self.nfeatures_per_channel}
         self._cluster_metadata = ClusterMetadata()
 
         @self._cluster_metadata.default
@@ -79,6 +81,10 @@ class MockModel(BaseModel):
         self._spike_times = artificial_spike_times(self.n_spikes)
         self._features = artificial_features(self.n_spikes, self.n_features)
         self._masks = artificial_masks(self.n_spikes, self.n_channels)
+        self._features_masks = np.dstack((self._features,
+                                          np.repeat(self._masks,
+                                                    self.nfeatures_per_channel,
+                                                    axis=1)))
         self._waveforms = artificial_waveforms(self.n_spikes,
                                                self.n_samples_waveforms,
                                                self.n_channels)
@@ -110,6 +116,10 @@ class MockModel(BaseModel):
     @property
     def masks(self):
         return self._masks
+
+    @property
+    def features_masks(self):
+        return self._features_masks
 
     @property
     def waveforms(self):

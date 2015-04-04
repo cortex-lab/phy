@@ -294,6 +294,7 @@ class KwikModel(BaseModel):
 
         if self._kwx is not None:
             fm = self._kwx.read(path)
+            self._features_masks = fm
             self._features = PartialArray(fm, 0)
 
             # TODO: sparse, memory mapped, memcache, etc.
@@ -433,6 +434,11 @@ class KwikModel(BaseModel):
     def masks(self):
         """Masks from the current channel_group (may be memory-mapped)."""
         return self._masks
+
+    @property
+    def features_masks(self):
+        """Features-masks from the current channel_group."""
+        return self._features_masks
 
     @property
     def waveforms(self):

@@ -76,7 +76,8 @@ class BaseSession(EventEmitter):
 #------------------------------------------------------------------------------
 
 class FeatureMasks(StoreItem):
-    fields = [('masks', 'disk'),
+    fields = [('features', 'disk'),
+              ('masks', 'disk'),
               ('mean_masks', 'memory')]
 
     def store_from_model(self, cluster, spikes):
@@ -84,12 +85,18 @@ class FeatureMasks(StoreItem):
         # stored.
         to_store = {}
 
+        # Check if masks and features are already stored.
         masks = self.store.load(cluster, 'masks')
-
-        if masks is None or masks.shape[0] != len(spikes):
-            # Load all features and masks for that cluster in memory.
-            masks = self.model.masks[spikes]
-            to_store.update(masks=masks)
+        features = self.store.load(cluster, 'features')
+        if (masks is None or masks.shape[0] != len(spikes) or
+                features is None or features.shape[0] != len(spikes)):
+            # Load features_masks from the KWX file.
+            n_features = self.model.metadata['nfeatures_per_channel']
+            n_channels = self.model.n_channels
+            fm = self.model.features_masks[spikes, ...]
+            features = fm[:, :, 0]
+            masks = fm[:, 0:n_features * n_channels:n_features, 1]
+            to_store.update(features=features, masks=masks)
 
         to_store.update(mean_masks=masks.mean(axis=0))
         self.store.store(cluster, **to_store)

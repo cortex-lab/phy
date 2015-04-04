@@ -204,13 +204,16 @@ def test_session_kwik():
                                            tempdir=tempdir)
         session.select([0])
 
-        spikes = session.clustering.spikes_per_cluster[0]
-        n_spikes = len(spikes)
-
         # Check the stored items.
-        assert session.store.masks(0).shape == (n_spikes, n_channels)
-        assert session.store.mean_masks(0).shape == (n_channels,)
-        assert session.store.waveforms(0).shape == (n_spikes, 40, n_channels)
+        for cluster in range(n_clusters):
+            n_spikes = len(session.clustering.spikes_per_cluster[cluster])
+            assert session.store.features(cluster).shape == (n_spikes,
+                                                             n_channels *
+                                                             n_fets)
+            assert session.store.masks(cluster).shape == (n_spikes, n_channels)
+            assert session.store.mean_masks(cluster).shape == (n_channels,)
+            assert session.store.waveforms(cluster).shape == (n_spikes, 40,
+                                                              n_channels)
 
         session.merge([3, 4])
         view = session.show_waveforms()
