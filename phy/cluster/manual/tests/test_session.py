@@ -214,6 +214,8 @@ def test_session_kwik():
             assert session.store.mean_masks(cluster).shape == (n_channels,)
             assert session.store.waveforms(cluster).shape == (n_spikes, 40,
                                                               n_channels)
+            assert session.store.n_unmasked_channels(cluster) <= n_channels
+            assert session.store.mean_probe_position(cluster).shape == (2,)
 
         session.merge([3, 4])
         view = session.show_waveforms()

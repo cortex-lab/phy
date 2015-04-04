@@ -17,6 +17,13 @@ from ..utils.array import _as_array
 #------------------------------------------------------------------------------
 
 class MEA(object):
+    """A Multi-Electrode Array."""
+
+    # TODO:
+    # * multi-shank
+    # * channel_ids
+    # * ignored channels
+
     def __init__(self, positions=None, adjacency=None, n_channels=None):
         if positions is not None and n_channels is None:
             n_channels = positions.shape[0]

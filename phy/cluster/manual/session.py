@@ -78,7 +78,10 @@ class BaseSession(EventEmitter):
 class FeatureMasks(StoreItem):
     fields = [('features', 'disk'),
               ('masks', 'disk'),
-              ('mean_masks', 'memory')]
+              ('mean_masks', 'memory'),
+              ('n_unmasked_channels', 'memory'),
+              ('mean_probe_position', 'memory'),
+              ]
 
     def store_from_model(self, cluster, spikes):
         # Only load the masks from the model if the masks aren't already
@@ -98,7 +101,16 @@ class FeatureMasks(StoreItem):
             masks = fm[:, 0:n_features * n_channels:n_features, 1]
             to_store.update(features=features, masks=masks)
 
-        to_store.update(mean_masks=masks.mean(axis=0))
+        # Extra fields.
+        mean_masks = masks.mean(axis=0)
+        n_unmasked_channels = (mean_masks > 1e-3).sum()
+        # Weighted mean of the channels, weighted by the mean masks.
+        mean_probe_position = (self.model.probe.positions *
+                               mean_masks[:, np.newaxis]).mean(axis=0)
+        to_store.update(mean_masks=mean_masks,
+                        n_unmasked_channels=n_unmasked_channels,
+                        mean_probe_position=mean_probe_position,
+                        )
         self.store.store(cluster, **to_store)
 
 
