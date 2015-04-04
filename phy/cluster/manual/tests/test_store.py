@@ -189,3 +189,28 @@ def test_cluster_store_custom():
     cs.register_item(MyItem)
 
     assert cs.square(3) == 9
+
+
+def test_cluster_store_multi():
+    """This tests the cluster store when a store item has several fields."""
+
+    cs = ClusterStore()
+
+    class MyItem(StoreItem):
+        fields = [('d', 'memory'),
+                  ('m', 'memory')]
+
+        def store_from_model(self, cluster, spikes):
+            self.store.store(cluster, d=len(spikes), m=len(spikes)**2)
+
+    cs.register_item(MyItem)
+
+    cs.generate({0: [0, 2], 1: [1, 3, 4]})
+
+    assert cs._store.load(0, ['d', 'm']) == {'d': 2, 'm': 4}
+    assert cs.d(0) == 2
+    assert cs.m(0) == 4
+
+    assert cs._store.load(1, ['d', 'm']) == {'d': 3, 'm': 9}
+    assert cs.d(1) == 3
+    assert cs.m(1) == 9

@@ -268,11 +268,6 @@ class ClusterStore(object):
         self._model = model
         self._store = Store(path)
         self._items = []
-        self._spikes_per_cluster = {}
-
-    @property
-    def spikes_per_cluster(self):
-        return self._spikes_per_cluster
 
     def register_item(self, item_cls):
         """Register a StoreItem instance in the store."""
@@ -287,8 +282,14 @@ class ClusterStore(object):
                 self._store.register_field(name, location)
 
                 # Create the load function for that item.
-                def load(cluster):
-                    return self._store.load(cluster, name)
+
+                # HACK: need to use a factory function because in Python
+                # functions are closed over names, not values. Here we
+                # want 'name' to refer to the 'name' local variable.
+                def _make_func(name):
+                    return lambda cluster: self._store.load(cluster, name)
+
+                load = _make_func(name)
 
             elif location == 'custom':
                 # In this case, the load() method of the item is the loading
@@ -329,7 +330,6 @@ class ClusterStore(object):
         """Populate the cache for all registered fields and the specified
         clusters."""
         assert isinstance(spikes_per_cluster, dict)
-        self._spikes_per_cluster = spikes_per_cluster
         clusters = sorted(spikes_per_cluster.keys())
         # self._store.delete(clusters)
         for item in self._items:
