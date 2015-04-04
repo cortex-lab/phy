@@ -15,6 +15,7 @@ from pytest import raises
 
 from ..session import BaseSession, Session
 from ....utils.tempdir import TemporaryDirectory
+from ....utils.logging import set_level
 from ....io.mock.artificial import MockModel
 from ....io.mock.kwik import create_mock_kwik
 from ....plot.waveforms import add_waveform_view
@@ -23,6 +24,10 @@ from ....plot.waveforms import add_waveform_view
 #------------------------------------------------------------------------------
 # Generic tests
 #------------------------------------------------------------------------------
+
+def setup():
+    set_level('debug')
+
 
 def test_session_connect():
     """Test @connect decorator and event system."""
@@ -203,6 +208,20 @@ def test_session_kwik():
         session = _start_manual_clustering(filename=filename,
                                            tempdir=tempdir)
         session.select([0])
+
+        # Check the stored items.
+        for cluster in range(n_clusters):
+            n_spikes = len(session.clustering.spikes_per_cluster[cluster])
+            assert session.store.features(cluster).shape == (n_spikes,
+                                                             n_channels *
+                                                             n_fets)
+            assert session.store.masks(cluster).shape == (n_spikes, n_channels)
+            assert session.store.mean_masks(cluster).shape == (n_channels,)
+            assert session.store.waveforms(cluster).shape == (n_spikes, 40,
+                                                              n_channels)
+            assert session.store.n_unmasked_channels(cluster) <= n_channels
+            assert session.store.mean_probe_position(cluster).shape == (2,)
+
         session.merge([3, 4])
         view = session.show_waveforms()
 

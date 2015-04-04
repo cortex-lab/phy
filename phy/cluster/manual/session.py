@@ -18,7 +18,7 @@ from ...utils._misc import (_phy_user_dir,
                             _ensure_phy_user_dir_exists)
 from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
-from ...utils.logging import set_level, warn
+from ...utils.logging import set_level, debug, warn
 from ...io.kwik_model import KwikModel
 from ...io.base_model import BaseModel
 from ._history import GlobalHistory
@@ -76,15 +76,59 @@ class BaseSession(EventEmitter):
 #------------------------------------------------------------------------------
 
 class FeatureMasks(StoreItem):
-    fields = [('masks', 'disk'),
-              ('mean_masks', 'memory')]
+    fields = [('features', 'disk'),
+              ('masks', 'disk'),
+              ('mean_masks', 'memory'),
+              ('n_unmasked_channels', 'memory'),
+              ('mean_probe_position', 'memory'),
+              ]
 
     def store_from_model(self, cluster, spikes):
-        # Load all features and masks for that cluster in memory.
-        masks = self.model.masks[spikes]
-        # Store the masks, features, and mean masks.
-        self.store.store(cluster, masks=masks,
-                         mean_masks=masks.mean(axis=0))
+        # Only load the masks from the model if the masks aren't already
+        # stored.
+        to_store = {}
+
+        # Check if masks and features are already stored.
+        masks = self.store.load(cluster, 'masks')
+        features = self.store.load(cluster, 'features')
+        if (masks is None or masks.shape[0] != len(spikes) or
+                features is None or features.shape[0] != len(spikes)):
+            debug("Loading features and masks for "
+                  "cluster {0:d}...".format(cluster))
+            # Load features_masks from the KWX file.
+            n_features = self.model.metadata['nfeatures_per_channel']
+            n_channels = self.model.n_channels
+            fm = self.model.features_masks[spikes, ...]
+            features = fm[:, :, 0]
+            masks = fm[:, 0:n_features * n_channels:n_features, 1]
+            to_store.update(features=features, masks=masks)
+
+        # Extra fields.
+        mean_masks = masks.mean(axis=0)
+        n_unmasked_channels = (mean_masks > 1e-3).sum()
+        # Weighted mean of the channels, weighted by the mean masks.
+        mean_probe_position = (self.model.probe.positions *
+                               mean_masks[:, np.newaxis]).mean(axis=0)
+        to_store.update(mean_masks=mean_masks,
+                        n_unmasked_channels=n_unmasked_channels,
+                        mean_probe_position=mean_probe_position,
+                        )
+        self.store.store(cluster, **to_store)
+
+
+class Waveforms(StoreItem):
+    fields = [('spikes', 'memory'),
+              ('waveforms', 'custom')]
+
+    def store_from_model(self, cluster, spikes):
+        # Save the spikes in the cluster.
+        self.store.store(cluster, spikes=spikes)
+
+    def load(self, cluster, spikes=None):
+        if spikes is None:
+            spikes = self.store.load(cluster, 'spikes')
+            assert spikes is not None
+        return self.model.waveforms[spikes]
 
 
 #------------------------------------------------------------------------------
@@ -206,6 +250,7 @@ class Session(BaseSession):
                                          root_path=self._store_path)
         self.store = ClusterStore(model=self.model, path=path)
         self.store.register_item(FeatureMasks)
+        self.store.register_item(Waveforms)
         # TODO: do not reinitialize the store every time the dataset
         # is loaded! Check if the store exists and check consistency.
         self.store.generate(self.clustering.spikes_per_cluster)
