@@ -15,6 +15,7 @@ from pytest import raises
 
 from ..session import BaseSession, Session
 from ....utils.tempdir import TemporaryDirectory
+from ....utils.logging import set_level
 from ....io.mock.artificial import MockModel
 from ....io.mock.kwik import create_mock_kwik
 from ....plot.waveforms import add_waveform_view
@@ -23,6 +24,10 @@ from ....plot.waveforms import add_waveform_view
 #------------------------------------------------------------------------------
 # Generic tests
 #------------------------------------------------------------------------------
+
+def setup():
+    set_level('debug')
+
 
 def test_session_connect():
     """Test @connect decorator and event system."""
