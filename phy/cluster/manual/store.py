@@ -261,18 +261,33 @@ class ClusterStore(object):
 
     def register_item(self, item_cls):
         """Register a StoreItem instance in the store."""
+
+        # Instanciate the item.
         item = item_cls(model=self._model, store=self._store)
         assert item.fields is not None
 
         for name, location in item.fields:
+            if location in ('memory', 'disk'):
+                # Register the storage location for that item.
+                self._store.register_field(name, location)
 
-            # Register the storage location for that item.
-            self._store.register_field(name, location)
+                # Create the load function for that item.
+                def load(cluster):
+                    return self._store.load(cluster, name)
 
-            # Create the self.<name>(cluster) method for loading.
+            elif location == 'custom':
+                # In this case, the load() method of the item is the loading
+                # function to use.
+                load = item.load
+
+            else:
+                raise ValueError("The 'location' should be 'memory', 'disk', "
+                                 "or 'custom'.")
+
+            # We create the self.<name>(cluster) method for loading.
+            # We need to ensure that the method name isn't already attributed.
             assert not hasattr(self, name)
-            setattr(self, name,
-                    lambda cluster: self._store.load(cluster, name))
+            setattr(self, name, load)
 
         # Register the StoreItem instance.
         self._items.append(item)
