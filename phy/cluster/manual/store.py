@@ -336,7 +336,8 @@ class StoreItem(object):
         A list of pairs (field_name, storage_location).
         storage_location is either 'memory', 'disk', or 'custom'.
         If it is 'custom', then this StoreItem class needs to implement
-        a 'load(cluster)' method.
+        a 'load(cluster, spikes=None)' method. If spikes is None, it
+        should default to the list of all spikes in that cluster.
     model : Model
         A Model instance for the current dataset.
     store : ClusterStore
@@ -364,10 +365,14 @@ class StoreItem(object):
         self.assign(up)
 
     def assign(self, up):
-        """May be overridden."""
+        """May be overridden. No need to delete old clusters here."""
         for cluster in up.added:
             self.store_from_model(cluster, up.new_spikes_per_cluster[cluster])
 
     def store_from_model(self, cluster, spikes):
-        """Must be overridden."""
-        raise NotImplementedError()
+        """May be overridden. No need to delete old clusters here."""
+        pass
+
+    def load(self, cluster, spikes=None):
+        """May be overriden if the field is 'custom'."""
+        pass

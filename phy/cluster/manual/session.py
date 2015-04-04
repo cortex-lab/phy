@@ -87,6 +87,19 @@ class FeatureMasks(StoreItem):
                          mean_masks=masks.mean(axis=0))
 
 
+class Waveforms(StoreItem):
+    fields = [('waveforms', 'custom')]
+
+    def store_from_model(self, cluster, spikes):
+        # Save the spikes in the cluster.
+        self.store.store(cluster, local='memory', spikes=spikes)
+
+    def load(self, cluster, spikes=None):
+        if spikes is None:
+            spikes = self.store.load(cluster, 'spikes')
+        return self.model.waveforms[spikes]
+
+
 #------------------------------------------------------------------------------
 # Session class
 #------------------------------------------------------------------------------
@@ -206,6 +219,7 @@ class Session(BaseSession):
                                          root_path=self._store_path)
         self.store = ClusterStore(model=self.model, path=path)
         self.store.register_item(FeatureMasks)
+        self.store.register_item(Waveforms)
         # TODO: do not reinitialize the store every time the dataset
         # is loaded! Check if the store exists and check consistency.
         self.store.generate(self.clustering.spikes_per_cluster)
