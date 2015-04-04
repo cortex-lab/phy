@@ -80,23 +80,26 @@ class FeatureMasks(StoreItem):
               ('mean_masks', 'memory')]
 
     def store_from_model(self, cluster, spikes):
-        # Load all features and masks for that cluster in memory.
-        masks = self.model.masks[spikes]
-        # Store the masks, features, and mean masks.
-        self.store.store(cluster, masks=masks,
-                         mean_masks=masks.mean(axis=0))
+        # Only load the masks from the model if the masks aren't already
+        # stored.
+        to_store = {}
+
+        masks = self.store.load(cluster, 'masks')
+        if masks is None or masks.shape[0] != len(spikes):
+            # Load all features and masks for that cluster in memory.
+            masks = self.model.masks[spikes]
+            to_store.update(masks=masks)
+
+        to_store.update(mean_masks=masks.mean(axis=0))
+        self.store.store(cluster, **to_store)
 
 
 class Waveforms(StoreItem):
     fields = [('waveforms', 'custom')]
 
-    def store_from_model(self, cluster, spikes):
-        # Save the spikes in the cluster.
-        self.store.store(cluster, local='memory', spikes=spikes)
-
     def load(self, cluster, spikes=None):
         if spikes is None:
-            spikes = self.store.load(cluster, 'spikes')
+            spikes = self.store.spikes_per_cluster[cluster]
         return self.model.waveforms[spikes]
 
 

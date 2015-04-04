@@ -113,8 +113,12 @@ class DiskStore(object):
         if not self._cluster_file_exists(cluster):
             if keys is None:
                 return {}
-            else:
+            elif isinstance(keys, string_types):
+                return None
+            elif isinstance(keys, list):
                 return {key: None for key in keys}
+            else:
+                raise ValueError(keys)
         # Create the output dictionary.
         out = {}
         # Open the cluster file in read mode.
@@ -264,6 +268,11 @@ class ClusterStore(object):
         self._model = model
         self._store = Store(path)
         self._items = []
+        self._spikes_per_cluster = {}
+
+    @property
+    def spikes_per_cluster(self):
+        return self._spikes_per_cluster
 
     def register_item(self, item_cls):
         """Register a StoreItem instance in the store."""
@@ -320,8 +329,9 @@ class ClusterStore(object):
         """Populate the cache for all registered fields and the specified
         clusters."""
         assert isinstance(spikes_per_cluster, dict)
+        self._spikes_per_cluster = spikes_per_cluster
         clusters = sorted(spikes_per_cluster.keys())
-        self._store.delete(clusters)
+        # self._store.delete(clusters)
         for item in self._items:
             for cluster in clusters:
                 item.store_from_model(cluster, spikes_per_cluster[cluster])
