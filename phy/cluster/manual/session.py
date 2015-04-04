@@ -85,6 +85,7 @@ class FeatureMasks(StoreItem):
         to_store = {}
 
         masks = self.store.load(cluster, 'masks')
+
         if masks is None or masks.shape[0] != len(spikes):
             # Load all features and masks for that cluster in memory.
             masks = self.model.masks[spikes]
@@ -95,11 +96,17 @@ class FeatureMasks(StoreItem):
 
 
 class Waveforms(StoreItem):
-    fields = [('waveforms', 'custom')]
+    fields = [('spikes', 'memory'),
+              ('waveforms', 'custom')]
+
+    def store_from_model(self, cluster, spikes):
+        # Save the spikes in the cluster.
+        self.store.store(cluster, spikes=spikes)
 
     def load(self, cluster, spikes=None):
         if spikes is None:
-            spikes = self.store.spikes_per_cluster[cluster]
+            spikes = self.store.load(cluster, 'spikes')
+            assert spikes is not None
         return self.model.waveforms[spikes]
 
 
