@@ -263,16 +263,19 @@ class ClusterStore(object):
         """Register a StoreItem instance in the store."""
         item = item_cls(model=self._model, store=self._store)
         assert item.fields is not None
-        # Register the storage location for that item.
+
         for name, location in item.fields:
+
+            # Register the storage location for that item.
             self._store.register_field(name, location)
-        # Register the StoreItem instance.
-        self._items.append(item)
-        # Create the self.<name>(cluster) method for loading.
-        for name, _ in item.fields:
+
+            # Create the self.<name>(cluster) method for loading.
             assert not hasattr(self, name)
             setattr(self, name,
                     lambda cluster: self._store.load(cluster, name))
+
+        # Register the StoreItem instance.
+        self._items.append(item)
 
     def update(self, up):
         # Delete the deleted clusters from the store.
@@ -310,6 +313,9 @@ class StoreItem(object):
     ----------
     fields : list
         A list of pairs (field_name, storage_location).
+        storage_location is either 'memory', 'disk', or 'custom'.
+        If it is 'custom', then this StoreItem class needs to implement
+        a 'load(cluster)' method.
     model : Model
         A Model instance for the current dataset.
     store : ClusterStore
