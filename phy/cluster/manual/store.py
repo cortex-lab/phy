@@ -270,6 +270,7 @@ class ClusterStore(object):
         self._items.append(item)
         # Create the self.<name>(cluster) method for loading.
         for name, _ in item.fields:
+            assert not hasattr(self, name)
             setattr(self, name,
                     lambda cluster: self._store.load(cluster, name))
 
@@ -303,6 +304,28 @@ class ClusterStore(object):
 
 
 class StoreItem(object):
+    """A class describing information stored in the cluster store.
+
+    Attributes
+    ----------
+    fields : list
+        A list of pairs (field_name, storage_location).
+    model : Model
+        A Model instance for the current dataset.
+    store : ClusterStore
+        The ClusterStore instance for the current dataset.
+
+    Methods
+    -------
+    store_from_model(cluster, spikes)
+        Extract some data from the model and store it in the cluster store.
+    assign(up)
+        Update the store when the clustering changes.
+    merge(up)
+        Update the store when a merge happens (by default, it is just
+        an assign, but this method may be overriden for performance reasons).
+
+    """
     fields = None  # list of (field_name, storage_location)
 
     def __init__(self, model=None, store=None):
