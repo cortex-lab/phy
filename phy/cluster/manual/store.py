@@ -158,14 +158,15 @@ class DiskStore(object):
 class Store(object):
     """Wrap a MemoryStore and a DiskStore."""
 
-    def __init__(self, store_path):
-        assert store_path is not None
-
+    def __init__(self, store_path=None):
         # Create the memory store.
         self._memory_store = MemoryStore()
 
         # Create the disk store.
-        self._disk_store = DiskStore(store_path)
+        if store_path is not None:
+            self._disk_store = DiskStore(store_path)
+        else:
+            self._disk_store = None
 
         # Where the info are stored: a {'field' => ('memory' or 'disk')} dict.
         self._dispatch = {}
@@ -195,6 +196,8 @@ class Store(object):
     def clusters(self):
         """Return the list of clusters present in the store."""
         clusters_memory = self._memory_store.clusters
+        if self._disk_store is None:
+            return clusters_memory
         clusters_disk = self._disk_store.clusters
         # Both stores should have the same clusters at all times.
         if clusters_memory != clusters_disk:
@@ -216,8 +219,9 @@ class Store(object):
         self._memory_store.store(cluster, **data_memory)
 
         # Store data on disk.
-        data_disk = {k: data[k] for k in self._filter(data.keys(), 'disk')}
-        self._disk_store.store(cluster, **data_disk)
+        if self._disk_store is not None:
+            data_disk = {k: data[k] for k in self._filter(data.keys(), 'disk')}
+            self._disk_store.store(cluster, **data_disk)
 
     def load(self, cluster, keys=None):
         """Load cluster-related information."""
@@ -229,8 +233,11 @@ class Store(object):
         elif keys is None or isinstance(keys, list):
             data_memory = self._memory_store.load(cluster,
                                                   self._filter(keys, 'memory'))
-            data_disk = self._disk_store.load(cluster,
-                                              self._filter(keys, 'disk'))
+            if self._disk_store is not None:
+                data_disk = self._disk_store.load(cluster,
+                                                  self._filter(keys, 'disk'))
+            else:
+                data_disk = {}
             return _concatenate_dicts(data_memory, data_disk)
         else:
             raise ValueError("'keys' should be a list or a string.")
@@ -238,12 +245,14 @@ class Store(object):
     def clear(self):
         """Clear the cluster store."""
         self._memory_store.clear()
-        self._disk_store.clear()
+        if self._disk_store is not None:
+            self._disk_store.clear()
 
     def delete(self, clusters):
         """Delete all information about the specified clusters."""
         self._memory_store.delete(clusters)
-        self._disk_store.delete(clusters)
+        if self._disk_store is not None:
+            self._disk_store.delete(clusters)
 
 
 #------------------------------------------------------------------------------
@@ -252,9 +261,6 @@ class Store(object):
 
 class ClusterStore(object):
     def __init__(self, model=None, path=None):
-        assert model is not None
-        assert path is not None
-
         self._model = model
         self._store = Store(path)
         self._items = []
