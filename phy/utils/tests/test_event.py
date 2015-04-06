@@ -20,7 +20,7 @@ def test_event_system():
 
     _list = []
 
-    @ev.connect
+    @ev.connect(set_method=True)
     def on_my_event(arg, kwarg=None):
         _list.append((arg, kwarg))
 
