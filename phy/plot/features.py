@@ -13,7 +13,6 @@ from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas
 from ..ext.six import string_types
 from ..utils.array import _as_array, _index_of
 from ..utils.logging import debug
-from ..utils._color import _random_color
 
 
 #------------------------------------------------------------------------------
@@ -183,3 +182,4 @@ class FeatureView(BaseSpikeCanvas):
             self.visual.marker_size += coeff
         if event.key == '-':
             self.visual.marker_size -= coeff
+        self.update()
