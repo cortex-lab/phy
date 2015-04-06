@@ -14,10 +14,8 @@ from ._mpl_utils import _bottom_left_frame
 from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
                            _tesselate_histogram)
-from ..ext.six import string_types
-from ..utils.array import _as_array, _index_of
+from ..utils.array import _as_array
 from ..utils.logging import debug
-from ..utils._color import _random_color
 
 
 #------------------------------------------------------------------------------
