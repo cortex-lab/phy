@@ -124,7 +124,7 @@ class WaveformVisual(BaseSpikeVisual):
         self.program['n_clusters'] = self.n_clusters
         self.program['n_channels'] = self.n_channels
 
-        debug("bake spikes", data.shape)
+        debug("bake spikes", waveforms.shape)
 
     def _bake_spikes_clusters(self):
         # WARNING: needs to be called *after* _bake_spikes().

@@ -305,7 +305,6 @@ class Session(BaseSession):
                 on_open()
                 on_select(self.selector)
 
-        print(show)
         if show:
             view.show()
 
