@@ -15,7 +15,7 @@ from ...stats.ccg import correlograms, _symmetrize_correlograms
 
 
 #------------------------------------------------------------------------------
-# ViewModel for plot views and Kwik model
+# BaseViewModel for plot views and Kwik model
 #------------------------------------------------------------------------------
 
 def _create_view(cls, backend=None):
@@ -30,9 +30,10 @@ class BaseViewModel(object):
     """Used to create views from a model."""
     _view_class = None
 
-    def __init__(self, model, backend=None):
+    def __init__(self, model, backend=None, scale_factor=1.):
         self._model = model
         self._backend = backend
+        self._scale_factor = scale_factor
         self._view = _create_view(self._view_class, backend=backend)
 
     @property
@@ -60,6 +61,10 @@ class BaseViewModel(object):
         self._view.show()
 
 
+#------------------------------------------------------------------------------
+# View models
+#------------------------------------------------------------------------------
+
 class WaveformViewModel(BaseViewModel):
     _view_class = WaveformView
 
@@ -68,7 +73,9 @@ class WaveformViewModel(BaseViewModel):
         self.view.visual.channel_positions = self.model.probe.positions
 
     def on_select(self, clusters, spikes):
-        self.view.visual.waveforms = self.model.waveforms[spikes]
+        waveforms = self.model.waveforms[spikes]
+        waveforms *= self._scale_factor
+        self.view.visual.waveforms = waveforms
         self.view.visual.masks = self.model.masks[spikes]
         self.view.visual.spike_ids = spikes
         # TODO: how to choose cluster colors?
@@ -88,6 +95,8 @@ class FeatureViewModel(BaseViewModel):
         n_channels = self.model.n_channels
         shape = (-1, n_channels, n_fet)
         features = features[:, :n_fet * n_channels].reshape(shape)
+        # Scaling factor.
+        features *= self._scale_factor
 
         self.view.visual.features = features
         self.view.visual.masks = self.model.masks[spikes]

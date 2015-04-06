@@ -208,6 +208,12 @@ def test_session_kwik():
 
         session = _start_manual_clustering(filename=filename,
                                            tempdir=tempdir)
+
+        def _show_waveforms():
+            view = session._show_view(WaveformViewModel, show=False)
+            show_test(view)
+            return view
+
         session.select([0])
 
         # Check the stored items.
@@ -224,7 +230,7 @@ def test_session_kwik():
             assert session.store.mean_probe_position(cluster).shape == (2,)
 
         session.merge([3, 4])
-        view = session.show_waveforms()
+        view = _show_waveforms()
 
         # This won't work but shouldn't raise an error.
         session.select([1000])

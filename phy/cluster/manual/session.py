@@ -269,7 +269,8 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def _show_view(self, view_model_class, backend=None, show=True):
-        view_model = view_model_class(self.model, backend=backend)
+        view_model = view_model_class(self.model, backend=backend,
+                                      scale_factor=.01)
         view = view_model.view
 
         @self.connect

@@ -26,7 +26,7 @@ def _test_view_model(view_model_class):
     clusters = [3, 4]
     spikes = clustering.spikes_in_clusters(clusters)
 
-    vm = view_model_class(model)
+    vm = view_model_class(model, scale_factor=1.)
     vm.on_open()
     vm.on_select(clusters, spikes)
 

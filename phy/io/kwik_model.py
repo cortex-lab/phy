@@ -13,10 +13,10 @@ import numpy as np
 from ..ext import six
 from .base_model import BaseModel
 from ..cluster.manual.cluster_info import ClusterMetadata
-from .h5 import open_h5, _check_hdf5_path
+from .h5 import open_h5
 from ..waveform.loader import WaveformLoader
 from ..waveform.filter import bandpass_filter, apply_filter
-from ..electrode.mea import MEA, linear_positions
+from ..electrode.mea import MEA
 from ..utils.logging import debug
 from ..utils.array import PartialArray
 
@@ -351,7 +351,7 @@ class KwikModel(BaseModel):
                                                channels=self._channels,
                                                filter=filter,
                                                filter_margin=order * 3,
-                                               scale_factor=.01)
+                                               )
 
     @property
     def channels(self):
