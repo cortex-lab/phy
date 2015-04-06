@@ -50,7 +50,7 @@ def correlograms(spike_times, spike_clusters,
         Spike-cluster mapping.
     binsize : int
         Number of time samples in one bin.
-    winsize_bins : int
+    winsize_bins : int (odd number)
         Number of bins in the window.
 
     Returns

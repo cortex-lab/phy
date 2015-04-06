@@ -25,7 +25,7 @@ from .selector import Selector
 from .store import ClusterStore, StoreItem
 from .views import (WaveformViewModel,
                     FeatureViewModel,
-                    CCGViewModel,
+                    CorrelogramViewModel,
                     )
 
 
@@ -288,7 +288,7 @@ class Session(BaseSession):
             spikes = selector.selected_spikes
             if len(spikes) == 0:
                 return
-            if not view._non_empty:
+            if not view.visual._non_empty:
                 on_open()
             view_model.on_select(selector.selected_clusters,
                                  selector.selected_spikes)
@@ -313,5 +313,5 @@ class Session(BaseSession):
     def show_features(self):
         return self._show_view(FeatureViewModel)
 
-    def show_ccgs(self):
-        return self._show_view(CCGViewModel)
+    def show_correlograms(self):
+        return self._show_view(CorrelogramViewModel)

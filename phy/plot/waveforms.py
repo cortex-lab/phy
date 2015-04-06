@@ -148,9 +148,6 @@ class WaveformView(BaseSpikeCanvas):
     _visual_class = WaveformVisual
 
     def on_key_press(self, event):
-        # TODO: more interactivity
-        # TODO: keyboard shortcut manager
-        # super(WaveformView, self).on_key_press(event)
         u, v = self.visual.box_scale
         coeff = 1.1
         if event.key == '+':
