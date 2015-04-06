@@ -60,6 +60,7 @@ class WaveformLoader(object):
             self.traces = traces
         else:
             self._traces = None
+        self.dtype = np.float32
         # Scale factor for the loaded waveforms.
         self._scale_factor = scale_factor
         # Offset of the traces: time (in samples) of the first trace sample.
@@ -163,7 +164,7 @@ class WaveformLoader(object):
         # TODO: int16
         shape = (n_spikes, self.n_samples_waveforms,
                  self.n_channels_waveforms)
-        waveforms = np.empty(shape, dtype=np.float32)
+        waveforms = np.empty(shape, dtype=self.dtype)
         # Load all spikes.
         for i, time in enumerate(spikes):
             waveforms[i, ...] = self._load_at(time)

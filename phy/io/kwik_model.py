@@ -143,7 +143,12 @@ class SpikeLoader(object):
     absolute times."""
     def __init__(self, waveforms, spike_times):
         self._spike_times = spike_times
+        # waveforms is a WaveformLoader instance
         self._waveforms = waveforms
+        self.dtype = waveforms.dtype
+        self.shape = (len(spike_times),
+                      waveforms.n_samples_waveforms,
+                      waveforms.n_channels_waveforms)
 
     def __getitem__(self, item):
         times = self._spike_times[item]
