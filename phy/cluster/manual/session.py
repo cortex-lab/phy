@@ -23,6 +23,10 @@ from ._history import GlobalHistory
 from .clustering import Clustering
 from .selector import Selector
 from .store import ClusterStore, StoreItem
+from .views import (WaveformViewModel,
+                    FeatureViewModel,
+                    CCGViewModel,
+                    )
 
 
 #------------------------------------------------------------------------------
@@ -260,3 +264,54 @@ class Session(BaseSession):
             self._global_history.action(self.clustering)
             # TODO: if metadata
             # self._global_history.action(self.cluster_metadata)
+
+    # Show views
+    # -------------------------------------------------------------------------
+
+    def _show_view(self, view_model_class, backend=None):
+        view_model = view_model_class(self.model, backend=backend)
+        view = view_model.view
+
+        @self.connect
+        def on_open():
+            if self.model is None:
+                return
+            view_model.on_open()
+            view.update()
+
+        @self.connect
+        def on_cluster(up=None):
+            view_model.on_cluster(up)
+
+        @self.connect
+        def on_select(selector):
+            spikes = selector.selected_spikes
+            if len(spikes) == 0:
+                return
+            if not view._non_empty:
+                on_open()
+            view_model.on_select(selector.selected_clusters,
+                                 selector.selected_spikes)
+            view.update()
+
+        # Unregister the callbacks when the view is closed.
+        @view.connect
+        def on_close(event):
+            self.unconnect(on_open, on_cluster, on_select)
+
+        @view.connect
+        def on_draw(event):
+            if not view._non_empty:
+                on_open()
+                on_select(self.selector)
+
+        return view
+
+    def show_waveforms(self):
+        return self._show_view(WaveformViewModel)
+
+    def show_features(self):
+        return self._show_view(FeatureViewModel)
+
+    def show_ccgs(self):
+        return self._show_view(CCGViewModel)
