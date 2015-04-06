@@ -17,7 +17,6 @@ from ...utils._misc import (_phy_user_dir,
                             _ensure_phy_user_dir_exists)
 from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
-from ...utils.logging import debug
 from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
 from .clustering import Clustering
@@ -76,6 +75,7 @@ class BaseSession(EventEmitter):
 #------------------------------------------------------------------------------
 
 class FeatureMasks(StoreItem):
+    name = 'features and masks'
     fields = [('features', 'disk'),
               ('masks', 'disk'),
               ('mean_masks', 'memory'),
@@ -93,8 +93,6 @@ class FeatureMasks(StoreItem):
         features = self.store.load(cluster, 'features')
         if (masks is None or masks.shape[0] != len(spikes) or
                 features is None or features.shape[0] != len(spikes)):
-            debug("Loading features and masks for "
-                  "cluster {0:d}...".format(cluster))
             # Load features_masks from the KWX file.
             n_features = self.model.metadata['nfeatures_per_channel']
             n_channels = self.model.n_channels
@@ -117,6 +115,7 @@ class FeatureMasks(StoreItem):
 
 
 class Waveforms(StoreItem):
+    name = 'waveforms'
     fields = [('spikes', 'memory'),
               ('waveforms', 'custom')]
 
@@ -249,8 +248,8 @@ class Session(BaseSession):
         path = _ensure_disk_store_exists(self.model.name,
                                          root_path=self._store_path)
         self.store = ClusterStore(model=self.model, path=path)
-        self.store.register_item(FeatureMasks)
         self.store.register_item(Waveforms)
+        self.store.register_item(FeatureMasks)
         # TODO: do not reinitialize the store every time the dataset
         # is loaded! Check if the store exists and check consistency.
         self.store.generate(self.clustering.spikes_per_cluster)

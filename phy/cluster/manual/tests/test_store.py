@@ -146,6 +146,7 @@ def test_cluster_store():
         # We create a n_spikes item to be stored in memory,
         # and we define how to generate it for a given cluster.
         class MyItem(StoreItem):
+            name = 'my item'
             fields = [('n_spikes', 'memory')]
 
             def store_from_model(self, cluster, spikes):
@@ -183,6 +184,7 @@ def test_cluster_store_custom():
     cs = ClusterStore()
 
     class MyItem(StoreItem):
+        name = 'my item'
         fields = [('square', 'custom')]
 
         def load(self, cluster):
@@ -199,6 +201,7 @@ def test_cluster_store_multi():
     cs = ClusterStore()
 
     class MyItem(StoreItem):
+        name = 'my item'
         fields = [('d', 'memory'),
                   ('m', 'memory')]
 

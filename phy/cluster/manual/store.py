@@ -9,10 +9,8 @@
 import os
 import os.path as op
 
-from ...utils.logging import debug
-from ...utils._misc import (_concatenate_dicts,
-                            _phy_user_dir,
-                            _ensure_phy_user_dir_exists)
+from ...utils._misc import _concatenate_dicts
+from ...utils.logging import info
 from ...io.h5 import open_h5
 from ...io.sparse import load_h5, save_h5
 from ...ext.six import string_types
@@ -335,9 +333,17 @@ class ClusterStore(object):
         assert isinstance(spikes_per_cluster, dict)
         clusters = sorted(spikes_per_cluster.keys())
         # self._store.delete(clusters)
+        if hasattr(self._model, 'name'):
+            name = self._model.name
+        else:
+            name = 'the current model'
+        info("Generating the cluster store for {0:s}...".format(name))
         for item in self._items:
             for cluster in clusters:
+                info("Loading {0:s}, cluster {1:d}...".format(item.name,
+                     cluster))
                 item.store_from_model(cluster, spikes_per_cluster[cluster])
+        info("Done!")
 
 
 class StoreItem(object):
@@ -368,6 +374,7 @@ class StoreItem(object):
 
     """
     fields = None  # list of (field_name, storage_location)
+    name = 'item'
 
     def __init__(self, model=None, store=None):
         self.model = model
