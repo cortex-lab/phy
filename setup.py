@@ -29,8 +29,7 @@ setup(
     packages=[
         'phy',
     ],
-    package_dir={'phy':
-                 'phy'},
+    package_dir={'phy': 'phy'},
     include_package_data=True,
     install_requires=requirements,
     license="BSD",

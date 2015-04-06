@@ -30,10 +30,20 @@ def captured_output():
 def show_test(canvas, n_frames=2):
     """Show a VisPy canvas for a fraction of second."""
     with canvas as c:
-        for _ in range(n_frames):
+
+        def _frame():
             c.update()
             c.app.process_events()
             time.sleep(1./60.)
+
+        if n_frames == 0:
+            while not c._closed:
+                _frame()
+        else:
+            for _ in range(n_frames):
+                _frame()
+                if c._closed:
+                    return
 
 
 def show_colored_canvas(color, n_frames=5):

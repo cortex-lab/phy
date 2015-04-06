@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test waveform plotting."""
+"""Test feature plotting."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -9,11 +9,12 @@
 import numpy as np
 
 from ...utils.logging import set_level
-from ..waveforms import WaveformView
+from ..features import FeatureView
 from ...utils._color import _random_color
-from ...io.mock.artificial import (artificial_waveforms, artificial_masks,
-                                   artificial_spike_clusters)
-from ...electrode.mea import staggered_positions
+from ...io.mock.artificial import (artificial_features,
+                                   artificial_masks,
+                                   artificial_spike_clusters,
+                                   artificial_spike_times)
 from ...utils.testing import show_test
 
 
@@ -33,31 +34,33 @@ def teardown():
 # Tests
 #------------------------------------------------------------------------------
 
-
-def _test_waveforms(n_spikes=None, n_clusters=None):
+def _test_features(n_spikes=None, n_clusters=None):
     n_channels = 32
-    n_samples = 40
+    n_features = 3
 
-    channel_positions = staggered_positions(n_channels)
-
-    waveforms = artificial_waveforms(n_spikes, n_samples, n_channels)
+    features = artificial_features(n_spikes, n_channels, n_features)
     masks = artificial_masks(n_spikes, n_channels)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    spike_times = artificial_spike_times(n_spikes).astype(np.float32)
+    # WARNING: need to normalize spike times
+    if len(spike_times) > 0:
+        spike_times = -1 + 2 * spike_times / spike_times.max()
 
-    c = WaveformView()
-    c.visual.waveforms = waveforms
+    c = FeatureView()
+    c.visual.features = features
     c.visual.masks = masks
+    c.visual.dimensions = ['time', (0, 0), (1, 0), (2, 0)]
     c.visual.spike_clusters = spike_clusters
+    c.visual.spike_times = spike_times
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])
-    c.visual.channel_positions = channel_positions
 
     show_test(c)
 
 
-def test_waveforms_empty():
-    _test_waveforms(n_spikes=0, n_clusters=0)
+def test_features_empty():
+    _test_features(n_spikes=0, n_clusters=0)
 
 
-def test_waveforms_full():
-    _test_waveforms(n_spikes=100, n_clusters=3)
+def test_features_full():
+    _test_features(n_spikes=100, n_clusters=3)

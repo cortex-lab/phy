@@ -341,6 +341,7 @@ class KwikModel(BaseModel):
         def filter(x):
             return apply_filter(x, b_filter)
 
+        # TODO: better normalization of the waveforms
         self._waveform_loader = WaveformLoader(n_samples=n_samples,
                                                channels=self._channels,
                                                filter=filter,
