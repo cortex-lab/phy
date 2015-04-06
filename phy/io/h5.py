@@ -181,6 +181,9 @@ class File(object):
     # Miscellaneous properties
     #--------------------------------------------------------------------------
 
+    def exists(self, path):
+        return path in self._h5py_file
+
     def _print_node_info(self, name, node):
         """Print node information."""
         info = ('/' + name).ljust(50)

@@ -91,7 +91,10 @@ class DiskStore(object):
     def _get(self, f, key):
         """Return the data for a given key."""
         path = '/{0:s}'.format(key)
-        return load_h5(f, path)
+        if f.exists(path):
+            return load_h5(f, path)
+        else:
+            return None
 
     def _set(self, f, key, value):
         """Set the data for a given key."""

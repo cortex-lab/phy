@@ -78,6 +78,8 @@ def test_disk_store():
         _assert_equal(ds.load(3), {'key': a})
         _assert_equal(ds.load(3, ['key']), {'key': a})
         ae(ds.load(3, 'key'), a)
+        # Loading a non-existing key returns None.
+        assert ds.load(3, 'key_bis') is None
         assert ds.clusters == [3]
 
         ds.store(3, key_bis=b)
