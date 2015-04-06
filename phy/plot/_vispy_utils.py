@@ -91,9 +91,9 @@ class PanZoom(object):
 
         aspect : float (default is None)
            Indicate what is the aspect ratio of the object displayed. This is
-           necessary to convert pixel drag move in oject space coordinates.
+           necessary to convert pixel drag move in object space coordinates.
 
-        pan : float, float (default is 0,0)
+        pan : float, float (default is 0, 0)
            Initial translation
 
         zoom : float, float (default is 1)
@@ -126,31 +126,26 @@ class PanZoom(object):
     @property
     def is_attached(self):
         """ Whether transform is attached to a canvas """
-
         return self._canvas is not None
 
     @property
     def aspect(self):
         """ Aspect (width/height) """
-
         return self._aspect
 
     @aspect.setter
     def aspect(self, value):
         """ Aspect (width/height) """
-
         self._aspect = value
 
     @property
     def pan(self):
         """ Pan translation """
-
         return self._pan
 
     @pan.setter
     def pan(self, value):
         """ Pan translation """
-
         self._pan = np.asarray(value)
         self._u_pan = self._pan
         for program in self._programs:
@@ -159,7 +154,6 @@ class PanZoom(object):
     @property
     def zoom(self):
         """ Zoom level """
-
         return self._zoom
 
     @zoom.setter
@@ -181,25 +175,21 @@ class PanZoom(object):
     @property
     def zmin(self):
         """ Minimum zoom level """
-
         return self._zmin
 
     @zmin.setter
     def zmin(self, value):
         """ Minimum zoom level """
-
         self._zmin = min(value, self._zmax)
 
     @property
     def zmax(self):
         """ Maximal zoom level """
-
         return self._zmax
 
     @zmax.setter
     def zmax(self, value):
         """ Maximal zoom level """
-
         self._zmax = max(value, self._zmin)
 
     def on_resize(self, event):

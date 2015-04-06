@@ -132,7 +132,6 @@ class CorrelogramViewModel(BaseViewModel):
                             binsize=20, winsize_bins=51)
         ccgs = _symmetrize_correlograms(ccgs)
 
-        # TODO: normalization
         ccgs = ccgs * (1. / float(ccgs.max()))
 
         self.view.visual.correlograms = ccgs
