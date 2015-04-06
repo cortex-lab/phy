@@ -9,7 +9,6 @@
 import os
 import os.path as op
 from functools import partial
-import shutil
 
 import numpy as np
 
@@ -18,12 +17,9 @@ from ...utils._misc import (_phy_user_dir,
                             _ensure_phy_user_dir_exists)
 from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
-from ...utils.logging import set_level, debug, warn
+from ...utils.logging import debug
 from ...io.kwik_model import KwikModel
-from ...io.base_model import BaseModel
 from ._history import GlobalHistory
-from ._utils import _concatenate_per_cluster_arrays
-from .cluster_info import ClusterMetadata
 from .clustering import Clustering
 from .selector import Selector
 from .store import ClusterStore, StoreItem
