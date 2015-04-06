@@ -11,7 +11,7 @@ from ...plot.ccg import CorrelogramView
 from ...plot.features import FeatureView
 from ...plot.waveforms import WaveformView
 from ...utils._color import _random_color
-from ...stats.ccg import correlograms
+from ...stats.ccg import correlograms, _symmetrize_correlograms
 
 
 #------------------------------------------------------------------------------
@@ -121,6 +121,7 @@ class CorrelogramViewModel(BaseViewModel):
         # Compute the correlograms.
         ccgs = correlograms(spike_times, spike_clusters,
                             binsize=20, winsize_bins=51)
+        ccgs = _symmetrize_correlograms(ccgs)
 
         # TODO: normalization
         ccgs = ccgs * (1. / float(ccgs.max()))
