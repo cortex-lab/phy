@@ -7,15 +7,13 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import math
 import os.path as op
 
 import numpy as np
 
 from vispy import app, gloo, config
 from vispy.visuals import Visual
-from vispy.visuals.transforms import TransformSystem, BaseTransform
-from vispy.visuals.shaders import Variable, ModularProgram
+from vispy.visuals.shaders import ModularProgram
 
 from ..utils.array import _unique, _as_array
 from ..utils.logging import debug
