@@ -54,6 +54,8 @@ class Logger(object):
                  print_caller=True, handler=None):
         if stream is None:
             stream = sys.stdout
+        if name is None:
+            name = self.__class__.__name__
         self.name = name
         self.print_caller = print_caller
         if handler is None:
