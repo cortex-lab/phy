@@ -9,6 +9,11 @@
 from pytest import raises
 
 from ..session import BaseSession, Session
+from ..views import (WaveformViewModel,
+                     FeatureViewModel,
+                     CorrelogramViewModel,
+                     )
+from ....utils.testing import show_test
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
 from ....io.mock.artificial import MockModel
@@ -160,9 +165,15 @@ def test_session_mock():
     with TemporaryDirectory() as tempdir:
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
-        view = session.show_waveforms()
+
+        def _show_waveforms():
+            view = session._show_view(WaveformViewModel, show=False)
+            show_test(view)
+            return view
+
+        view = _show_waveforms()
         session.select([0])
-        view_bis = session.show_waveforms()
+        view_bis = _show_waveforms()
 
         session.merge([3, 4])
 
@@ -172,7 +183,8 @@ def test_session_mock():
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
         session.select([1, 2])
-        view = session.show_waveforms()
+        view = _show_waveforms()
+
         view.close()
 
 

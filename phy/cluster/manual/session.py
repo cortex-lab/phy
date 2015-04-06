@@ -268,7 +268,7 @@ class Session(BaseSession):
     # Show views
     # -------------------------------------------------------------------------
 
-    def _show_view(self, view_model_class, backend=None):
+    def _show_view(self, view_model_class, backend=None, show=True):
         view_model = view_model_class(self.model, backend=backend)
         view = view_model.view
 
@@ -301,9 +301,13 @@ class Session(BaseSession):
 
         @view.connect
         def on_draw(event):
-            if not view._non_empty:
+            if not view.visual._non_empty:
                 on_open()
                 on_select(self.selector)
+
+        print(show)
+        if show:
+            view.show()
 
         return view
 
