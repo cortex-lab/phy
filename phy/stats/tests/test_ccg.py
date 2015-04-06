@@ -17,6 +17,27 @@ from ..ccg import _increment, _diff_shifted, correlograms
 # Tests
 #------------------------------------------------------------------------------
 
+def _random_data(max_cluster):
+    sr = 20000
+    nspikes = 10000
+    spike_times = np.cumsum(np.random.exponential(scale=.002, size=nspikes))
+    spike_times = (spike_times * sr).astype(np.int64)
+    spike_clusters = np.random.randint(0, max_cluster, nspikes)
+    return spike_times, spike_clusters
+
+
+def _ccg_params():
+    # window = 50 ms
+    winsize_samples = 2 * (25 * 20) + 1
+    # bin = 1 ms
+    binsize = 1 * 20
+    # 51 bins
+    winsize_bins = 2 * ((winsize_samples // 2) // binsize) + 1
+    assert winsize_bins % 2 == 1
+
+    return binsize, winsize_bins
+
+
 def test_utils():
     # First, test _increment().
 
@@ -56,22 +77,56 @@ def test_ccg_1():
 
 
 def test_ccg_2():
-    sr = 20000
-    nspikes = 10000
-    spike_times = np.cumsum(np.random.exponential(scale=.002, size=nspikes))
-    spike_times = (spike_times * sr).astype(np.int64)
     max_cluster = 10
-    spike_clusters = np.random.randint(0, max_cluster, nspikes)
-
-    # window = 50 ms
-    winsize_samples = 2 * (25 * 20) + 1
-    # bin = 1 ms
-    binsize = 1 * 20
-    # 51 bins
-    winsize_bins = 2 * ((winsize_samples // 2) // binsize) + 1
-    assert winsize_bins % 2 == 1
+    spike_times, spike_clusters = _random_data(max_cluster)
+    binsize, winsize_bins = _ccg_params()
 
     c = correlograms(spike_times, spike_clusters,
                      binsize=binsize, winsize_bins=winsize_bins)
 
     assert c.shape == (max_cluster, max_cluster, 26)
+
+
+def test_ccg_symmetry_time():
+    """Reverse time and check that the CCGs are just transposed."""
+
+    spike_times, spike_clusters = _random_data(2)
+    binsize, winsize_bins = _ccg_params()
+
+    c0 = correlograms(spike_times, spike_clusters,
+                      binsize=binsize, winsize_bins=winsize_bins)
+
+    spike_times_1 = np.cumsum(np.r_[np.arange(1), np.diff(spike_times)[::-1]])
+    spike_clusters_1 = spike_clusters[::-1]
+    c1 = correlograms(spike_times_1, spike_clusters_1,
+                      binsize=binsize, winsize_bins=winsize_bins)
+
+    # The ACGs are identical.
+    ae(c0[0, 0], c1[0, 0])
+    ae(c0[1, 1], c1[1, 1])
+
+    # The CCGs are just transposed.
+    ae(c0[0, 1], c1[1, 0])
+    ae(c0[1, 0], c1[0, 1])
+
+
+def test_ccg_symmetry_clusters():
+    """Exchange clusters and check that the CCGs are just transposed."""
+
+    spike_times, spike_clusters = _random_data(2)
+    binsize, winsize_bins = _ccg_params()
+
+    c0 = correlograms(spike_times, spike_clusters,
+                      binsize=binsize, winsize_bins=winsize_bins)
+
+    spike_clusters_1 = 1 - spike_clusters
+    c1 = correlograms(spike_times, spike_clusters_1,
+                      binsize=binsize, winsize_bins=winsize_bins)
+
+    # The ACGs are identical.
+    ae(c0[0, 0], c1[1, 1])
+    ae(c0[1, 1], c1[0, 0])
+
+    # The CCGs are just transposed.
+    ae(c0[0, 1], c1[1, 0])
+    ae(c0[1, 0], c1[0, 1])

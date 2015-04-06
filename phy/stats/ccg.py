@@ -8,7 +8,6 @@
 
 import numpy as np
 
-from ..ext import six
 from ..utils.array import _index_of, _unique, _as_array
 
 
