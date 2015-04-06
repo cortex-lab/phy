@@ -74,7 +74,6 @@ class WaveformVisual(BaseSpikeVisual):
     def box_scale(self, value):
         assert isinstance(value, tuple) and len(value) == 2
         self.program['u_data_scale'] = value
-        self.update()
 
     # Data baking
     # -------------------------------------------------------------------------
@@ -160,3 +159,4 @@ class WaveformView(BaseSpikeCanvas):
                 self.visual.box_scale = (u/coeff, v)
             else:
                 self.visual.box_scale = (u, v/coeff)
+        self.update()
