@@ -265,7 +265,7 @@ class KwikModel(BaseModel):
                 try:
                     metadata[field] = self._kwik.read_attr(path, field)
                 except TypeError:
-                    debug("Unable to load metadata field {0:s}".format(field))
+                    debug("Metadata field '{0:s}' not found.".format(field))
         self._metadata = metadata
 
     # Channel group
