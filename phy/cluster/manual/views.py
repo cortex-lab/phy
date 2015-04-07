@@ -49,6 +49,12 @@ class BaseViewModel(object):
     def view(self):
         return self._view
 
+    def _load_from_store_or_model(self, name, clusters, spikes):
+        if self._store is not None:
+            return self._store.load(name, clusters, spikes)
+        else:
+            return getattr(self._model, name)[spikes]
+
     def on_open(self):
         """To be overriden."""
         self.view.visual.spike_clusters = self.model.spike_clusters
@@ -78,10 +84,19 @@ class WaveformViewModel(BaseViewModel):
         self.view.visual.channel_positions = self.model.probe.positions
 
     def on_select(self, clusters, spikes):
-        waveforms = self.model.waveforms[spikes]
+        # Load waveforms.
+        waveforms = self._load_from_store_or_model('waveforms',
+                                                   clusters,
+                                                   spikes)
         waveforms *= self._scale_factor
         self.view.visual.waveforms = waveforms
-        self.view.visual.masks = self.model.masks[spikes]
+
+        # Load masks.
+        masks = self._load_from_store_or_model('masks',
+                                               clusters,
+                                               spikes)
+        self.view.visual.masks = masks
+
         self.view.visual.spike_ids = spikes
         # TODO: how to choose cluster colors?
         self.view.visual.cluster_colors = [_random_color() for _ in clusters]
@@ -91,7 +106,14 @@ class FeatureViewModel(BaseViewModel):
     _view_class = FeatureView
 
     def on_select(self, clusters, spikes):
-        features = self.model.features[spikes, :]
+        # Load features.
+        features = self._load_from_store_or_model('features',
+                                                  clusters,
+                                                  spikes)
+        # Load masks.
+        masks = self._load_from_store_or_model('masks',
+                                               clusters,
+                                               spikes)
 
         # WARNING: convert features to a 3D array
         # (n_spikes, n_channels, n_features)
@@ -100,11 +122,11 @@ class FeatureViewModel(BaseViewModel):
         n_channels = self.model.n_channels
         shape = (-1, n_channels, n_fet)
         features = features[:, :n_fet * n_channels].reshape(shape)
-        # Scaling factor.
+        # Scale factor.
         features *= self._scale_factor
 
         self.view.visual.features = features
-        self.view.visual.masks = self.model.masks[spikes]
+        self.view.visual.masks = masks
 
         # TODO: choose dimensions
         self.view.visual.dimensions = [(0, 0), (0, 1)]
