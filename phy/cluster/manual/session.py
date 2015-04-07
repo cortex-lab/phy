@@ -224,7 +224,7 @@ class FeatureMasks(StoreItem):
                 return fm[spike, 0:n_features * n_channels:n_features, 1]
 
         # Loop over all spikes.
-        for spike in spikes:
+        for iteration, spike in enumerate(spikes):
 
             # Current cluster.
             cluster = _cluster(spike)
@@ -243,8 +243,8 @@ class FeatureMasks(StoreItem):
                     cursors[name][cluster] += 1
 
             # Update the progress reporter.
-            if pr is not None:
-                pr.increment('features_masks')
+            if pr is not None and iteration % 100 == 0:
+                pr.increment('features_masks', increment=100)
 
         # Store all extra fields.
         for cluster in sorted(spikes_per_cluster):
@@ -393,7 +393,7 @@ class Session(BaseSession):
         @pr.connect
         def on_report(value, value_max):
             print("Generating the cluster store: "
-                  "{0:.2f}%".format(100 * value / float(value_max)),
+                  "{0:.2f}%.".format(100 * value / float(value_max)),
                   end='\r')
 
         # Kwik store.
