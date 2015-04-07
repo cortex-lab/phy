@@ -9,6 +9,7 @@
 import numpy as np
 
 from ...utils.array import get_excerpts
+from ...utils.logging import debug
 from ...plot.ccg import CorrelogramView
 from ...plot.features import FeatureView
 from ...plot.waveforms import WaveformView
@@ -87,7 +88,10 @@ class WaveformViewModel(BaseViewModel):
 
     def on_select(self, clusters, spikes):
         # Load waveforms.
+        debug("Loading {0:d} waveforms...".format(len(spikes)))
         waveforms = self.model.waveforms[spikes]
+        debug("Done!")
+
         waveforms *= self._scale_factor
         self.view.visual.waveforms = waveforms
 

@@ -363,13 +363,13 @@ class ClusterStore(object):
             name = self._model.name
         else:
             name = 'the current model'
-        info("Generating the cluster store for {0:s}...".format(name))
+        debug("Generating the cluster store for {0:s}...".format(name))
         for item in self._items:
             for cluster in clusters:
-                info("Loading {0:s}, cluster {1:d}...".format(item.name,
-                     cluster))
+                debug("Loading {0:s}, cluster {1:d}...".format(item.name,
+                      cluster))
                 item.store_from_model(cluster, spikes_per_cluster[cluster])
-        info("Done!")
+        debug("Done!")
 
 
 class StoreItem(object):
