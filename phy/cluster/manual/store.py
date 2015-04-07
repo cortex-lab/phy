@@ -172,9 +172,10 @@ class DiskStore(object):
 #------------------------------------------------------------------------------
 
 class ClusterStore(object):
-    def __init__(self, model=None, path=None):
+    def __init__(self, model=None, path=None, progress_reporter=None):
         self._model = model
         self._spikes_per_cluster = {}
+        self._progress_reporter = progress_reporter
         self._memory = MemoryStore()
         self._disk = DiskStore(path) if path is not None else None
         self._items = []
@@ -207,7 +208,8 @@ class ClusterStore(object):
         # Instanciate the item.
         item = item_cls(model=self._model,
                         memory_store=self._memory,
-                        disk_store=self._disk)
+                        disk_store=self._disk,
+                        progress_reporter=self._progress_reporter)
         assert item.fields is not None
 
         # HACK: need to use a factory function because in Python
@@ -280,7 +282,7 @@ class ClusterStore(object):
             name = self._model.name
         else:
             name = 'the current model'
-        debug("Generating the cluster store for {0:s}...".format(name))
+        debug("Initializing the cluster store for {0:s}...".format(name))
         for item in self._items:
             item.store_all_clusters(spikes_per_cluster)
         debug("Done!")
@@ -313,10 +315,15 @@ class StoreItem(object):
     fields = None  # list of (field_name, storage_location)
     name = 'item'
 
-    def __init__(self, model=None, memory_store=None, disk_store=None):
+    def __init__(self,
+                 model=None,
+                 memory_store=None,
+                 disk_store=None,
+                 progress_reporter=None):
         self.model = model
         self.memory_store = memory_store
         self.disk_store = disk_store
+        self.progress_reporter = progress_reporter
 
     def store_all_clusters(self, spikes_per_cluster):
         """Copy all data for that item from the model to the cluster store."""

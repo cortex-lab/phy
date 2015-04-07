@@ -11,8 +11,6 @@ from collections import defaultdict
 from functools import partial
 from inspect import getargspec
 
-# from ._misc import optional_arg_decorator
-
 
 #------------------------------------------------------------------------------
 # Event system

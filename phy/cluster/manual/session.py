@@ -12,12 +12,12 @@ from functools import partial
 from collections import defaultdict
 
 import numpy as np
-import h5py
 
 from ...ext.six import string_types
 from ...utils._misc import (_phy_user_dir,
                             _ensure_phy_user_dir_exists)
-from ...utils.logging import warn
+from ...utils.logging import info, warn
+from ...utils.event import ProgressReporter
 from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
 from ...io.kwik_model import KwikModel
@@ -166,7 +166,11 @@ class FeatureMasks(StoreItem):
                                 )
 
     def store_all_clusters(self, spikes_per_cluster):
+        """Initialize all cluster files, loop over all spikes, and
+        copy the data."""
+
         to_store = self._clusters_to_store(spikes_per_cluster)
+        n_clusters = len(spikes_per_cluster)
 
         # Find the list of clusters that need to be stored for either
         # masks or features.
@@ -176,6 +180,7 @@ class FeatureMasks(StoreItem):
 
         # Spikes in the clusters to be stored.
         spikes = _spikes_in_clusters(self.model.spike_clusters, clusters)
+        n_spikes = len(spikes)
 
         # These dictionaries will contain references to the HDF5 arrays
         # from the cluster store, for all clusters that need to be store.
@@ -183,6 +188,13 @@ class FeatureMasks(StoreItem):
         files = {name: {} for name in names}
         arrays = {name: {} for name in names}
         cursors = {name: defaultdict(int) for name in names}
+
+        # Initialize the progress reporter.
+        pr = self.progress_reporter
+        if pr is not None:
+            pr.set_max(features_masks=n_spikes,  # loop over all spikes.
+                       masks_extra=n_clusters,  # loop over all clusters
+                       )
 
         def _cluster(spike):
             return self.model.spike_clusters[spike]
@@ -226,13 +238,12 @@ class FeatureMasks(StoreItem):
                     arr = _arr(cluster, name)
                     # Append the data
                     i = cursors[name][cluster]
-                    # debug("Append data for {0:s} and ".format(name) +
-                    #       "spike {0:d}, ".format(spike) +
-                    #       "cluster {0:d}, ".format(cluster) +
-                    #       "row {0:d}.".format(i))
-                    # assert arr[i, ...].shape == data.shape
                     arr[i, ...] = data
                     cursors[name][cluster] += 1
+
+            # Update the progress reporter.
+            if pr is not None:
+                pr.increment('features_masks')
 
         # Store all extra fields.
         for cluster in sorted(spikes_per_cluster):
@@ -240,7 +251,11 @@ class FeatureMasks(StoreItem):
             masks = self.disk_store.load(cluster, 'masks')
             self._store_extra_fields(cluster, features, masks)
 
-        # Delete all opened HDF5 files.
+            # Update the progress reporter.
+            if pr is not None:
+                pr.increment('masks_extra')
+
+        # Close all opened HDF5 files.
         for name in names:
             for cluster, f in files[name].items():
                 f.close()
@@ -370,10 +385,24 @@ class Session(BaseSession):
         # TODO: n_spikes_max in a user parameter
         self.selector = Selector(spike_clusters, n_spikes_max=100)
 
+        # Progress reporter.
+        self.progress_reporter = ProgressReporter()
+        pr = self.progress_reporter
+
+        @pr.connect
+        def on_report(value, value_max):
+            info("{0}/{1}".format(value, value_max))
+
+        @pr.connect
+        def on_complete():
+            info("Completed!")
+
         # Kwik store.
         path = _ensure_disk_store_exists(self.model.name,
                                          root_path=self._store_path)
-        self.cluster_store = ClusterStore(model=self.model, path=path)
+        self.cluster_store = ClusterStore(model=self.model,
+                                          path=path,
+                                          progress_reporter=pr)
         self.cluster_store.register_item(FeatureMasks)
         # TODO: do not reinitialize the store every time the dataset
         # is loaded! Check if the store exists and check consistency.
