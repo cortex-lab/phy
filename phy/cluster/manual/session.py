@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 """Session structure."""
 
@@ -391,11 +392,9 @@ class Session(BaseSession):
 
         @pr.connect
         def on_report(value, value_max):
-            info("{0}/{1}".format(value, value_max))
-
-        @pr.connect
-        def on_complete():
-            info("Completed!")
+            print("Generating the cluster store: "
+                  "{0:.2f}%".format(100 * value / float(value_max)),
+                  end='\r')
 
         # Kwik store.
         path = _ensure_disk_store_exists(self.model.name,
