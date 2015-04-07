@@ -301,14 +301,9 @@ class ClusterStore(object):
 
                 load = _make_func(name)
 
-            elif location == 'custom':
-                # In this case, the load() method of the item is the loading
-                # function to use.
-                load = item.load
-
             else:
-                raise ValueError("The 'location' should be 'memory', 'disk', "
-                                 "or 'custom'.")
+                raise ValueError("The 'location' should be 'memory', 'disk'"
+                                 ".")
 
             # We create the self.<name>(cluster) method for loading.
             # We need to ensure that the method name isn't already attributed.
@@ -377,10 +372,7 @@ class StoreItem(object):
     ----------
     fields : list
         A list of pairs (field_name, storage_location).
-        storage_location is either 'memory', 'disk', or 'custom'.
-        If it is 'custom', then this StoreItem class needs to implement
-        a 'load(cluster, spikes=None)' method. If spikes is None, it
-        should default to the list of all spikes in that cluster.
+        storage_location is either 'memory', 'disk'.
     model : Model
         A Model instance for the current dataset.
     store : ClusterStore
@@ -415,8 +407,4 @@ class StoreItem(object):
 
     def store_from_model(self, cluster, spikes):
         """May be overridden. No need to delete old clusters here."""
-        pass
-
-    def load(self, cluster, spikes=None):
-        """May be overriden if the field is 'custom'."""
         pass

@@ -176,22 +176,6 @@ def test_cluster_store():
         assert cs.n_spikes(20) == len(spikes)
 
 
-def test_cluster_store_custom():
-
-    cs = ClusterStore()
-
-    class MyItem(StoreItem):
-        name = 'my item'
-        fields = [('square', 'custom')]
-
-        def load(self, cluster):
-            return cluster * cluster
-
-    cs.register_item(MyItem)
-
-    assert cs.square(3) == 9
-
-
 def test_cluster_store_multi():
     """This tests the cluster store when a store item has several fields."""
 
