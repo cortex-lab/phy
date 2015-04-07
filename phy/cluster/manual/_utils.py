@@ -9,6 +9,7 @@
 import numpy as np
 
 from ...utils.array import _as_array
+from ...utils._misc import Bunch
 
 
 #------------------------------------------------------------------------------
@@ -88,3 +89,25 @@ def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
     arrays = np.concatenate([_as_array(arrays[cluster])
                              for cluster in clusters])
     return arrays[idx, ...]
+
+
+#------------------------------------------------------------------------------
+# UpdateInfo class
+#------------------------------------------------------------------------------
+
+def update_info(**kwargs):
+    """Hold information about clustering changes."""
+    d = dict(
+        description=None,  # information about the update: 'merge', 'assign',
+                           # or 'metadata_<name>'
+        spikes=[],  # all spikes affected by the update
+        added=[],  # new clusters
+        deleted=[],  # deleted clusters
+        descendants=[],  # pairs of (old_cluster, new_cluster)
+        metadata_changed=[]  # clusters with changed metadata
+    )
+    d.update(kwargs)
+    return Bunch(d)
+
+
+UpdateInfo = update_info

@@ -19,9 +19,9 @@ from ..clustering import (_extend_spikes,
                           _concatenate_spike_clusters,
                           _extend_assignement,
                           Clustering)
-from .._update_info import UpdateInfo
-from .._utils import (_unique, _spikes_in_clusters,
-                      _flatten_spikes_per_cluster)
+from .._utils import (_spikes_in_clusters,
+                      _flatten_spikes_per_cluster,
+                      )
 
 
 #------------------------------------------------------------------------------

@@ -6,15 +6,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from collections import namedtuple, defaultdict, OrderedDict
-from copy import deepcopy
-
 import numpy as np
 
-from ...ext.six import iterkeys, itervalues, iteritems
 from ...utils.array import _as_array, _is_array_like
-from ._utils import _unique, _spikes_in_clusters, _spikes_per_cluster
-from ._update_info import UpdateInfo
+from ._utils import (_unique,
+                     _spikes_in_clusters,
+                     _spikes_per_cluster,
+                     UpdateInfo,
+                     )
 from ._history import History
 
 

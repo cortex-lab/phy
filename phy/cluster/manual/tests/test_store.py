@@ -14,8 +14,7 @@ from numpy.testing import assert_array_equal as ae
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
 from ..store import MemoryStore, DiskStore, Store, ClusterStore, StoreItem
-from .._utils import _spikes_per_cluster
-from .._update_info import UpdateInfo
+from .._utils import _spikes_per_cluster, UpdateInfo
 
 
 #------------------------------------------------------------------------------
