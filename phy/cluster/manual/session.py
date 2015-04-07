@@ -79,6 +79,7 @@ class FeatureMasks(StoreItem):
     fields = [('features', 'disk'),
               ('masks', 'disk'),
               ('mean_masks', 'memory'),
+              ('sum_masks', 'memory'),
               ('n_unmasked_channels', 'memory'),
               ('main_channels', 'memory'),
               ('mean_probe_position', 'memory'),
@@ -103,7 +104,8 @@ class FeatureMasks(StoreItem):
             to_store.update(features=features, masks=masks)
 
         # Extra fields.
-        mean_masks = masks.mean(axis=0)
+        sum_masks = masks.sum(axis=0)
+        mean_masks = sum_masks / float(masks.shape[0])
         unmasked_channels = np.nonzero(mean_masks > 1e-3)[0]
         n_unmasked_channels = len(unmasked_channels)
         # Weighted mean of the channels, weighted by the mean masks.
@@ -112,11 +114,16 @@ class FeatureMasks(StoreItem):
         main_channels = np.intersect1d(np.argsort(mean_masks)[::-1],
                                        unmasked_channels)
         to_store.update(mean_masks=mean_masks,
+                        sum_masks=sum_masks,
                         n_unmasked_channels=n_unmasked_channels,
                         mean_probe_position=mean_probe_position,
                         main_channels=main_channels,
                         )
         self.store.store(cluster, **to_store)
+
+    def on_cluster(self, up):
+        # TODO
+        pass
 
 
 #------------------------------------------------------------------------------

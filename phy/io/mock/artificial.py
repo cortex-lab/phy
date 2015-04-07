@@ -94,6 +94,10 @@ class MockModel(BaseModel):
                                                self.n_channels)
 
     @property
+    def channels(self):
+        return np.arange(self.n_channels)
+
+    @property
     def metadata(self):
         return self._metadata
 

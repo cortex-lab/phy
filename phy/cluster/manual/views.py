@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
+
 from ...utils.array import get_excerpts
 from ...plot.ccg import CorrelogramView
 from ...plot.features import FeatureView
@@ -126,8 +128,16 @@ class FeatureViewModel(BaseViewModel):
         self.view.visual.features = features
         self.view.visual.masks = masks
 
-        # TODO: choose dimensions
-        self.view.visual.dimensions = [(0, 0), (0, 1)]
+        # Choose best projection.
+        # TODO: refactor this, enable/disable
+        if self.store:
+            sum_masks = np.vstack([self.store.sum_masks(cluster)
+                                   for cluster in clusters]).sum(axis=0)
+            # Take the best 3 channels.
+            channels = np.argsort(sum_masks)[::-1][:3]
+        else:
+            channels = np.arange(len(self.model.channels[:3]))
+        self.view.visual.dimensions = [(ch, 0) for ch in channels]
 
         # *All* spike clusters.
         self.view.visual.spike_clusters = self.model.spike_clusters
