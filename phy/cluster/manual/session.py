@@ -17,7 +17,7 @@ import h5py
 from ...ext.six import string_types
 from ...utils._misc import (_phy_user_dir,
                             _ensure_phy_user_dir_exists)
-from ...utils.logging import debug, info, warn
+from ...utils.logging import warn
 from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
 from ...io.kwik_model import KwikModel

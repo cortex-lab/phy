@@ -12,8 +12,7 @@ import os.path as op
 import numpy as np
 
 from ...utils.array import _is_array_like, _index_of
-from ...utils._misc import _concatenate_dicts
-from ...utils.logging import debug, info
+from ...utils.logging import debug
 from ...io.h5 import open_h5
 from ...ext.six import string_types
 
