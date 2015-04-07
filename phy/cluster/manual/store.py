@@ -13,7 +13,7 @@ import numpy as np
 
 from ...utils.array import _is_array_like, _index_of
 from ...utils._misc import _concatenate_dicts
-from ...utils.logging import info
+from ...utils.logging import debug, info
 from ...io.h5 import open_h5
 from ...io.sparse import load_h5, save_h5
 from ...ext.six import string_types
@@ -107,6 +107,9 @@ class DiskStore(object):
 
     def store(self, cluster, **data):
         """Store cluster-related data."""
+        # Do not create the file if there's nothing to write.
+        if not data:
+            return
         with self._cluster_file(cluster, 'a') as f:
             for key, value in data.items():
                 self._set(f, key, value)
@@ -200,18 +203,23 @@ class Store(object):
     # Public methods
     # -------------------------------------------------------------------------
 
-    @property
-    def clusters(self):
+    def clusters(self, location):
         """Return the list of clusters present in the store."""
-        # TODO: rename to cluster_ids for consistency?
-        clusters_memory = self._memory_store.clusters
-        if self._disk_store is None:
-            return clusters_memory
-        clusters_disk = self._disk_store.clusters
-        # Both stores should have the same clusters at all times.
-        if clusters_memory != clusters_disk:
-            raise RuntimeError("Cluster store inconsistency.")
-        return clusters_memory
+        if location == 'memory':
+            return self._memory_store.clusters
+        elif location == 'disk':
+            if self._disk_store is None:
+                raise ValueError("The disk store doesn't exist.")
+            return self._disk_store.clusters
+        elif location == 'any':
+            return sorted(set(self._memory_store.clusters).union(
+                          set(self._disk_store.clusters)))
+        elif location in ('all', 'both'):
+            return sorted(set(self._memory_store.clusters).intersection(
+                          set(self._disk_store.clusters)))
+        else:
+            raise ValueError("'location' should be 'memory', 'disk', 'any', "
+                             "or 'all'.")
 
     def store(self, cluster, location=None, **data):
         """Store cluster-related information."""
@@ -315,7 +323,6 @@ class ClusterStore(object):
 
     def load(self, name, clusters, spikes):
         assert _is_array_like(clusters)
-        assert np.all(np.in1d(clusters, self._store.clusters))
         # Concatenation of arrays for all clusters.
         arrays = np.concatenate([self._store.load(cluster, name)
                                  for cluster in clusters])
