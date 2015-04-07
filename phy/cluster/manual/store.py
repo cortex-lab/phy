@@ -79,7 +79,7 @@ class DiskStore(object):
         """Return whether a cluster file exists."""
         return op.exists(self._cluster_path(cluster))
 
-    def _cluster_file(self, cluster, mode):
+    def cluster_file(self, cluster, mode):
         """Return a file handle of a cluster file."""
         path = self._cluster_path(cluster)
         return open_h5(path, mode)
@@ -108,7 +108,7 @@ class DiskStore(object):
         # Do not create the file if there's nothing to write.
         if not data:
             return
-        with self._cluster_file(cluster, 'a') as f:
+        with self.cluster_file(cluster, 'a') as f:
             for key, value in data.items():
                 self._set(f, key, value)
 
@@ -127,7 +127,7 @@ class DiskStore(object):
         # Create the output dictionary.
         out = {}
         # Open the cluster file in read mode.
-        with self._cluster_file(cluster, 'r') as f:
+        with self.cluster_file(cluster, 'r') as f:
             # If a single key is requested, return the value.
             if isinstance(keys, string_types):
                 return self._get(f, keys)
