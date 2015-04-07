@@ -171,7 +171,7 @@ def test_cluster_store_1():
             name = 'my item'
             fields = [('n_spikes', 'memory')]
 
-            def store_from_model(self, cluster, spikes):
+            def store_cluster(self, cluster, spikes):
                 self.store.store(cluster, n_spikes=len(spikes))
 
             def merge(self, up):
@@ -224,7 +224,7 @@ def test_cluster_store_multi():
         fields = [('d', 'memory'),
                   ('m', 'memory')]
 
-        def store_from_model(self, cluster, spikes):
+        def store_cluster(self, cluster, spikes):
             self.store.store(cluster, d=len(spikes), m=len(spikes)**2)
 
     cs.register_item(MyItem)
@@ -263,7 +263,7 @@ def test_cluster_store_load():
             name = 'my item'
             fields = [('spikes_square', 'disk')]
 
-            def store_from_model(self, cluster, spikes):
+            def store_cluster(self, cluster, spikes):
                 self.store.store(cluster, spikes_square=spikes ** 2)
 
         cs.register_item(MyItem)

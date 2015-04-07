@@ -85,7 +85,7 @@ class FeatureMasks(StoreItem):
               ('mean_probe_position', 'memory'),
               ]
 
-    def store_from_model(self, cluster, spikes):
+    def store_cluster(self, cluster, spikes):
         # Only load the masks from the model if the masks aren't already
         # stored.
         to_store = {}
@@ -121,7 +121,11 @@ class FeatureMasks(StoreItem):
                         )
         self.store.store(cluster, **to_store)
 
-    def on_cluster(self, up):
+    def merge(self, up):
+        # TODO
+        pass
+
+    def assign(self, up):
         # TODO
         pass
 

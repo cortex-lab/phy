@@ -356,7 +356,6 @@ class ClusterStore(object):
         """Populate the cache for all registered fields and the specified
         clusters."""
         assert isinstance(spikes_per_cluster, dict)
-        clusters = sorted(spikes_per_cluster.keys())
         self._spikes_per_cluster = spikes_per_cluster
         # self._store.delete(clusters)
         if hasattr(self._model, 'name'):
@@ -365,10 +364,7 @@ class ClusterStore(object):
             name = 'the current model'
         debug("Generating the cluster store for {0:s}...".format(name))
         for item in self._items:
-            for cluster in clusters:
-                debug("Loading {0:s}, cluster {1:d}...".format(item.name,
-                      cluster))
-                item.store_from_model(cluster, spikes_per_cluster[cluster])
+            item.store_all_clusters(spikes_per_cluster)
         debug("Done!")
 
 
@@ -387,7 +383,7 @@ class StoreItem(object):
 
     Methods
     -------
-    store_from_model(cluster, spikes)
+    store_cluster(cluster, spikes)
         Extract some data from the model and store it in the cluster store.
     assign(up)
         Update the store when the clustering changes.
@@ -403,6 +399,14 @@ class StoreItem(object):
         self.model = model
         self.store = store
 
+    def store_all_clusters(self, spikes_per_cluster):
+        """Copy all data for that item from the model to the cluster store."""
+        clusters = sorted(spikes_per_cluster.keys())
+        for cluster in clusters:
+            debug("Loading {0:s}, cluster {1:d}...".format(self.name,
+                  cluster))
+            self.store_cluster(cluster, spikes_per_cluster[cluster])
+
     def merge(self, up):
         """May be overridden."""
         self.assign(up)
@@ -410,8 +414,8 @@ class StoreItem(object):
     def assign(self, up):
         """May be overridden. No need to delete old clusters here."""
         for cluster in up.added:
-            self.store_from_model(cluster, up.new_spikes_per_cluster[cluster])
+            self.store_cluster(cluster, up.new_spikes_per_cluster[cluster])
 
-    def store_from_model(self, cluster, spikes):
+    def store_cluster(self, cluster, spikes):
         """May be overridden. No need to delete old clusters here."""
         pass
