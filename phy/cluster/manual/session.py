@@ -290,7 +290,7 @@ class Session(BaseSession):
             spikes = selector.selected_spikes
             if len(spikes) == 0:
                 return
-            if not view.visual._non_empty:
+            if view.visual._empty:
                 on_open()
             view_model.on_select(selector.selected_clusters,
                                  selector.selected_spikes)
@@ -303,7 +303,7 @@ class Session(BaseSession):
 
         @view.connect
         def on_draw(event):
-            if not view.visual._non_empty:
+            if view.visual._empty:
                 on_open()
                 on_select(self.selector)
 

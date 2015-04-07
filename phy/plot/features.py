@@ -61,7 +61,7 @@ class FeatureVisual(BaseSpikeVisual):
         assert value.ndim == 3
         self.n_spikes, self.n_channels, self.n_features = value.shape
         self._features = value
-        self._non_empty = self.n_spikes > 0
+        self._empty = self.n_spikes == 0
         self.set_to_bake('spikes', 'spikes_clusters', 'color')
 
     def _check_dimension(self, dim):

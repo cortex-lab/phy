@@ -52,7 +52,7 @@ class WaveformVisual(BaseSpikeVisual):
         assert value.ndim == 3
         self.n_spikes, self.n_samples, self.n_channels = value.shape
         self._waveforms = value
-        self._non_empty = self.n_spikes > 0
+        self._empty = self.n_spikes == 0
         self.set_to_bake('spikes', 'spikes_clusters', 'color')
 
     @property

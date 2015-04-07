@@ -286,7 +286,7 @@ class BaseSpikeVisual(Visual):
         self.n_spikes = None
         self._spike_clusters = None
         self._spike_ids = None
-        self._non_empty = False
+        self._empty = True
         self._to_bake = []
 
         vertex = _load_shader(self._shader_name + '.vert')
@@ -396,7 +396,7 @@ class BaseSpikeVisual(Visual):
         Return whether something has been baked or not.
 
         """
-        if not self._non_empty:
+        if self._empty:
             return
         n_bake = len(self._to_bake)
         # Bake what needs to be baked.
@@ -414,7 +414,7 @@ class BaseSpikeVisual(Visual):
         """Draw the waveforms."""
         # Bake what needs to be baked at this point.
         self._bake()
-        if self._non_empty:
+        if not self._empty:
             self.program.draw(self._gl_draw_mode)
 
 

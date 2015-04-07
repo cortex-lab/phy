@@ -52,7 +52,7 @@ class CorrelogramVisual(BaseSpikeVisual):
         assert value.shape[:2] == (self.n_clusters, self.n_clusters)
         self.n_samples = value.shape[2]
         self._correlograms = value
-        self._non_empty = self.n_clusters > 0 and self.n_samples > 0
+        self._empty = self.n_clusters == 0 or self.n_samples == 0
         self.set_to_bake('correlograms', 'color')
 
     @property
