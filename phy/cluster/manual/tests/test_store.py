@@ -6,14 +6,12 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import raises
-
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
-from ..store import MemoryStore, DiskStore, Store, ClusterStore, StoreItem
+from ..store import MemoryStore, DiskStore, ClusterStore, StoreItem
 from .._utils import _spikes_per_cluster, UpdateInfo
 
 
@@ -99,55 +97,6 @@ def test_disk_store():
         assert ds.clusters == []
 
 
-def test_store_0():
-    with TemporaryDirectory() as tempdir:
-        cs = Store(tempdir)
-
-        model = {'spike_clusters': np.random.randint(size=100, low=0, high=5)}
-
-        def reset(model):
-            cs.clear()
-            # Find unique clusters.
-            clusters = np.unique(model['spike_clusters'])
-            # Load data for all clusters.
-            generate(clusters)
-            ae(cs.clusters('all'), clusters)
-
-        def generate(clusters):
-            ae(clusters, np.arange(5))
-
-            for cluster in clusters:
-                cs.store(cluster,
-                         data_memory=np.array([1, 2]),
-                         location='memory')
-
-            # Test clusters() method.
-            ae(cs.clusters('memory'), clusters)
-            ae(cs.clusters('disk'), [])
-            ae(cs.clusters('any'), clusters)
-            ae(cs.clusters('all'), [])
-
-            with raises(ValueError):
-                cs.clusters('')
-            with raises(ValueError):
-                cs.clusters(None)
-
-            for cluster in clusters:
-                cs.store(cluster,
-                         data_disk=np.array([3, 4]),
-                         location='disk')
-
-            # Test clusters() method.
-            ae(cs.clusters('memory'), clusters)
-            ae(cs.clusters('disk'), clusters)
-            ae(cs.clusters('any'), clusters)
-            ae(cs.clusters('all'), clusters)
-
-        reset(model)
-        ae(cs.load(3, 'data_memory'), [1, 2])
-        ae(cs.load(4, 'data_disk'), [3, 4])
-
-
 def test_cluster_store_1():
     with TemporaryDirectory() as tempdir:
 
@@ -172,12 +121,12 @@ def test_cluster_store_1():
             fields = [('n_spikes', 'memory')]
 
             def store_cluster(self, cluster, spikes):
-                self.store.store(cluster, n_spikes=len(spikes))
+                self.memory_store.store(cluster, n_spikes=len(spikes))
 
             def merge(self, up):
                 n = sum(len(up.old_spikes_per_cluster[cl])
                         for cl in up.deleted)
-                self.store.store(up.added[0], n_spikes=n)
+                self.memory_store.store(up.added[0], n_spikes=n)
 
         cs.register_item(MyItem)
 
@@ -202,16 +151,16 @@ def test_cluster_store_1():
         cs.merge(up)
 
         # Check the list of clusters in the store.
-        ae(cs._store.clusters('memory'), list(range(n_clusters)) + [20])
-        ae(cs._store.clusters('disk'), [])
+        ae(cs.memory_store.clusters, list(range(n_clusters)) + [20])
+        ae(cs.disk_store.clusters, [])
         assert cs.n_spikes(20) == len(spikes)
 
         # Recreate the cluster store.
         cs = ClusterStore(model=model, path=tempdir)
         cs.register_item(MyItem)
         cs.generate(spikes_per_cluster)
-        ae(cs._store.clusters('memory'), list(range(n_clusters)))
-        ae(cs._store.clusters('disk'), [])
+        ae(cs.memory_store.clusters, list(range(n_clusters)))
+        ae(cs.disk_store.clusters, [])
 
 
 def test_cluster_store_multi():
@@ -225,17 +174,17 @@ def test_cluster_store_multi():
                   ('m', 'memory')]
 
         def store_cluster(self, cluster, spikes):
-            self.store.store(cluster, d=len(spikes), m=len(spikes)**2)
+            self.memory_store.store(cluster, d=len(spikes), m=len(spikes)**2)
 
     cs.register_item(MyItem)
 
     cs.generate({0: [0, 2], 1: [1, 3, 4]})
 
-    assert cs._store.load(0, ['d', 'm']) == {'d': 2, 'm': 4}
+    assert cs.memory_store.load(0, ['d', 'm']) == {'d': 2, 'm': 4}
     assert cs.d(0) == 2
     assert cs.m(0) == 4
 
-    assert cs._store.load(1, ['d', 'm']) == {'d': 3, 'm': 9}
+    assert cs.memory_store.load(1, ['d', 'm']) == {'d': 3, 'm': 9}
     assert cs.d(1) == 3
     assert cs.m(1) == 9
 
@@ -264,7 +213,7 @@ def test_cluster_store_load():
             fields = [('spikes_square', 'disk')]
 
             def store_cluster(self, cluster, spikes):
-                self.store.store(cluster, spikes_square=spikes ** 2)
+                self.disk_store.store(cluster, spikes_square=spikes ** 2)
 
         cs.register_item(MyItem)
 

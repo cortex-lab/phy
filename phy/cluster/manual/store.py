@@ -162,116 +162,6 @@ class DiskStore(object):
 
 
 #------------------------------------------------------------------------------
-# Store
-#------------------------------------------------------------------------------
-
-class Store(object):
-    """Wrap a MemoryStore and a DiskStore."""
-
-    def __init__(self, store_path=None):
-        # Create the memory store.
-        self._memory_store = MemoryStore()
-
-        # Create the disk store.
-        if store_path is not None:
-            self._disk_store = DiskStore(store_path)
-        else:
-            self._disk_store = None
-
-        # Where the info are stored: a {'field' => ('memory' or 'disk')} dict.
-        self._dispatch = {}
-
-    def register_field(self, name, location):
-        """Register a field to be stored either in 'memory' or on 'disk'."""
-        self._check_location(location)
-        self._dispatch[name] = location
-
-    def _check_location(self, location):
-        """Check that a location is valid."""
-        if location not in ('memory', 'disk'):
-            raise ValueError("'location 'should be 'memory' or 'disk'.")
-
-    def _filter(self, keys, location):
-        """Return all keys registered in the specified location."""
-        if keys is None:
-            return None
-        else:
-            return [key for key in keys
-                    if self._dispatch.get(key, None) == location]
-
-    # Public methods
-    # -------------------------------------------------------------------------
-
-    def clusters(self, location):
-        """Return the list of clusters present in the store."""
-        if location == 'memory':
-            return self._memory_store.clusters
-        elif location == 'disk':
-            if self._disk_store is None:
-                raise ValueError("The disk store doesn't exist.")
-            return self._disk_store.clusters
-        elif location == 'any':
-            return sorted(set(self._memory_store.clusters).union(
-                          set(self._disk_store.clusters)))
-        elif location in ('all', 'both'):
-            return sorted(set(self._memory_store.clusters).intersection(
-                          set(self._disk_store.clusters)))
-        else:
-            raise ValueError("'location' should be 'memory', 'disk', 'any', "
-                             "or 'all'.")
-
-    def store(self, cluster, location=None, **data):
-        """Store cluster-related information."""
-
-        # If the location is specified, register the fields there.
-        if location in ('memory', 'disk'):
-            for key in data.keys():
-                self.register_field(key, location)
-        elif location is not None:
-            self._check_location(location)
-
-        # Store data in memory.
-        data_memory = {k: data[k] for k in self._filter(data.keys(), 'memory')}
-        self._memory_store.store(cluster, **data_memory)
-
-        # Store data on disk.
-        if self._disk_store is not None:
-            data_disk = {k: data[k] for k in self._filter(data.keys(), 'disk')}
-            self._disk_store.store(cluster, **data_disk)
-
-    def load(self, cluster, keys=None):
-        """Load cluster-related information."""
-        if isinstance(keys, string_types):
-            if self._dispatch[keys] == 'memory':
-                return self._memory_store.load(cluster, keys)
-            elif self._dispatch[keys] == 'disk':
-                return self._disk_store.load(cluster, keys)
-        elif keys is None or isinstance(keys, list):
-            data_memory = self._memory_store.load(cluster,
-                                                  self._filter(keys, 'memory'))
-            if self._disk_store is not None:
-                data_disk = self._disk_store.load(cluster,
-                                                  self._filter(keys, 'disk'))
-            else:
-                data_disk = {}
-            return _concatenate_dicts(data_memory, data_disk)
-        else:
-            raise ValueError("'keys' should be a list or a string.")
-
-    def clear(self):
-        """Clear the cluster store."""
-        self._memory_store.clear()
-        if self._disk_store is not None:
-            self._disk_store.clear()
-
-    def delete(self, clusters):
-        """Delete all information about the specified clusters."""
-        self._memory_store.delete(clusters)
-        if self._disk_store is not None:
-            self._disk_store.delete(clusters)
-
-
-#------------------------------------------------------------------------------
 # Cluster store
 #------------------------------------------------------------------------------
 
@@ -279,8 +169,27 @@ class ClusterStore(object):
     def __init__(self, model=None, path=None):
         self._model = model
         self._spikes_per_cluster = {}
-        self._store = Store(path)
+        self._memory = MemoryStore()
+        self._disk = DiskStore(path) if path is not None else None
         self._items = []
+        self._locations = {}
+
+    def _store(self, location):
+        if location == 'memory':
+            return self._memory
+        elif location == 'disk':
+            return self._disk
+        else:
+            raise ValueError("The 'location' should be 'memory' "
+                             "or 'disk'.")
+
+    @property
+    def memory_store(self):
+        return self._memory
+
+    @property
+    def disk_store(self):
+        return self._disk
 
     @property
     def spikes_per_cluster(self):
@@ -290,27 +199,26 @@ class ClusterStore(object):
         """Register a StoreItem instance in the store."""
 
         # Instanciate the item.
-        item = item_cls(model=self._model, store=self._store)
+        item = item_cls(model=self._model,
+                        memory_store=self._memory,
+                        disk_store=self._disk)
         assert item.fields is not None
 
+        # HACK: need to use a factory function because in Python
+        # functions are closed over names, not values. Here we
+        # want 'name' to refer to the 'name' local variable.
+
+        def _make_func(name, location):
+            return lambda cluster: self._store(location).load(cluster, name)
+
         for name, location in item.fields:
-            if location in ('memory', 'disk'):
-                # Register the storage location for that item.
-                self._store.register_field(name, location)
 
-                # Create the load function for that item.
+            # Register the item location (memory or store).
+            assert name not in self._locations
+            self._locations[name] = location
 
-                # HACK: need to use a factory function because in Python
-                # functions are closed over names, not values. Here we
-                # want 'name' to refer to the 'name' local variable.
-                def _make_func(name):
-                    return lambda cluster: self._store.load(cluster, name)
-
-                load = _make_func(name)
-
-            else:
-                raise ValueError("The 'location' should be 'memory', 'disk'"
-                                 ".")
+            # Get the load function.
+            load = _make_func(name, location)
 
             # We create the self.<name>(cluster) method for loading.
             # We need to ensure that the method name isn't already attributed.
@@ -322,8 +230,11 @@ class ClusterStore(object):
 
     def load(self, name, clusters, spikes):
         assert _is_array_like(clusters)
+        location = self._locations[name]
+        store = self._store(location)
+
         # Concatenation of arrays for all clusters.
-        arrays = np.concatenate([self._store.load(cluster, name)
+        arrays = np.concatenate([store.load(cluster, name)
                                  for cluster in clusters])
         # Concatenation of spike indices for all clusters.
         spike_clusters = np.concatenate([self._spikes_per_cluster[cluster]
@@ -335,7 +246,9 @@ class ClusterStore(object):
     def update(self, up):
         # TODO: update self._spikes_per_cluster
         # Delete the deleted clusters from the store.
-        self._store.delete(up.deleted)
+        self._memory.delete(up.deleted)
+        self._disk.delete(up.deleted)
+
         if up.description == 'merge':
             self.merge(up)
         elif up.description == 'assign':
@@ -394,9 +307,10 @@ class StoreItem(object):
     fields = None  # list of (field_name, storage_location)
     name = 'item'
 
-    def __init__(self, model=None, store=None):
+    def __init__(self, model=None, memory_store=None, disk_store=None):
         self.model = model
-        self.store = store
+        self.memory_store = memory_store
+        self.disk_store = disk_store
 
     def store_all_clusters(self, spikes_per_cluster):
         """Copy all data for that item from the model to the cluster store."""
