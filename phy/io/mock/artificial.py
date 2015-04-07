@@ -48,6 +48,10 @@ def artificial_spike_times(n_spikes, max_isi=50):
     return np.cumsum(nr.randint(low=0, high=max_isi, size=n_spikes))
 
 
+def artificial_correlograms(n_clusters, n_samples):
+    return nr.uniform(size=(n_clusters, n_clusters, n_samples))
+
+
 #------------------------------------------------------------------------------
 # Artificial Model
 #------------------------------------------------------------------------------
