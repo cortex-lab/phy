@@ -22,10 +22,10 @@ from ._history import GlobalHistory
 from .clustering import Clustering
 from .selector import Selector
 from .store import ClusterStore, StoreItem
-from .views import (WaveformViewModel,
-                    FeatureViewModel,
-                    CorrelogramViewModel,
-                    )
+from .view_model import (WaveformViewModel,
+                         FeatureViewModel,
+                         CorrelogramViewModel,
+                         )
 
 
 #------------------------------------------------------------------------------

@@ -9,10 +9,9 @@
 from pytest import raises
 
 from ..session import BaseSession, Session
-from ..views import (WaveformViewModel,
-                     FeatureViewModel,
-                     CorrelogramViewModel,
-                     )
+from ..view_model import (WaveformViewModel,
+                          FeatureViewModel,
+                          )
 from ....utils.testing import show_test
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level

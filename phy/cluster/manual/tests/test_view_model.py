@@ -9,10 +9,10 @@
 from ....utils.testing import show_test
 from ....io.mock.artificial import MockModel
 from ..clustering import Clustering
-from ..views import (WaveformViewModel,
-                     FeatureViewModel,
-                     CorrelogramViewModel,
-                     )
+from ..view_model import (WaveformViewModel,
+                          FeatureViewModel,
+                          CorrelogramViewModel,
+                          )
 
 
 #------------------------------------------------------------------------------
