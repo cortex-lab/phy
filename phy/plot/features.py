@@ -125,8 +125,19 @@ class FeatureVisual(BaseSpikeVisual):
 
                 dim_i = self._dimensions[i]
                 dim_j = self._dimensions[j]
-                pos = np.c_[self._get_feature_dim(dim_i),
-                            self._get_feature_dim(dim_j)]
+                fet_i = self._get_feature_dim(dim_i)
+
+                # For non-time dimensions, the diagonal shows
+                # a different feature on y (same channel than x).
+                if i != j or dim_j == 'time' or self.n_features <= 1:
+                    fet_j = self._get_feature_dim(dim_j)
+                else:
+                    channel, feature = dim_j
+                    # Choose the other feature on y axis.
+                    feature = 1 - feature
+                    fet_j = self._features[:, channel, feature]
+
+                pos = np.c_[fet_i, fet_j]
                 positions.append(pos)
 
                 # TODO: choose the mask
