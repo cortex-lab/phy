@@ -85,9 +85,7 @@ class WaveformViewModel(BaseViewModel):
 
     def on_select(self, clusters, spikes):
         # Load waveforms.
-        waveforms = self._load_from_store_or_model('waveforms',
-                                                   clusters,
-                                                   spikes)
+        waveforms = self.model.waveforms[spikes]
         waveforms *= self._scale_factor
         self.view.visual.waveforms = waveforms
 
