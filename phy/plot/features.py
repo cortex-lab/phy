@@ -145,7 +145,7 @@ class FeatureVisual(BaseSpikeVisual):
         self.program['a_position'] = positions.copy()
         self.program['a_mask'] = masks
         self.program['a_box'] = boxes
-        self.program['u_size'] = 5.  # TODO: config
+        self.program['u_size'] = 2.  # TODO: config
 
         self.program['n_clusters'] = self.n_clusters
         self.program['n_rows'] = self.n_rows

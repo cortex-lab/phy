@@ -29,6 +29,24 @@ def _create_view(cls, backend=None):
     return cls(**kwargs)
 
 
+_COLORMAP = np.array([[102, 194, 165],
+                      [252, 141, 98],
+                      [141, 160, 203],
+                      [231, 138, 195],
+                      [166, 216, 84],
+                      [255, 217, 47],
+                      [229, 196, 148],
+                      ])
+
+
+def _selected_clusters_colors(n_clusters):
+    if n_clusters > _COLORMAP.shape[0]:
+        colors = np.tile(_COLORMAP, (1 + n_clusters // _COLORMAP.shape[0], 1))
+    else:
+        colors = _COLORMAP
+    return colors[:n_clusters, ...] / 255.
+
+
 class BaseViewModel(object):
     """Used to create views from a model."""
     _view_class = None
@@ -101,9 +119,12 @@ class WaveformViewModel(BaseViewModel):
                                                spikes)
         self.view.visual.masks = masks
 
+        # Spike ids.
         self.view.visual.spike_ids = spikes
-        # TODO: how to choose cluster colors?
-        self.view.visual.cluster_colors = [_random_color() for _ in clusters]
+
+        # Cluster colors.
+        n = len(clusters)
+        self.view.visual.cluster_colors = _selected_clusters_colors(n)
 
 
 class FeatureViewModel(BaseViewModel):
@@ -146,9 +167,13 @@ class FeatureViewModel(BaseViewModel):
         # *All* spike clusters.
         self.view.visual.spike_clusters = self.model.spike_clusters
 
+        # Spike times and ids.
         self.view.visual.spike_times = self.model.spike_times[spikes]
         self.view.visual.spike_ids = spikes
-        self.view.visual.cluster_colors = [_random_color() for _ in clusters]
+
+        # Cluster colors.
+        n = len(clusters)
+        self.view.visual.cluster_colors = _selected_clusters_colors(n)
 
 
 class CorrelogramViewModel(BaseViewModel):
@@ -171,7 +196,10 @@ class CorrelogramViewModel(BaseViewModel):
                             binsize=20, winsize_bins=51)
         ccgs = _symmetrize_correlograms(ccgs)
 
+        # Normalize the CCGs.
         ccgs = ccgs * (1. / float(ccgs.max()))
-
         self.view.visual.correlograms = ccgs
-        self.view.visual.cluster_colors = [_random_color() for _ in clusters]
+
+        # Cluster colors.
+        n = len(clusters)
+        self.view.visual.cluster_colors = _selected_clusters_colors(n)

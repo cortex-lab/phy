@@ -316,7 +316,8 @@ class Session(BaseSession):
         return self._show_view(WaveformViewModel)
 
     def show_features(self):
-        return self._show_view(FeatureViewModel)
+        return self._show_view(FeatureViewModel,
+                               scale_factor=.01)
 
     def show_correlograms(self):
         return self._show_view(CorrelogramViewModel)
