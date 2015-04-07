@@ -12,6 +12,7 @@ from functools import partial
 from collections import defaultdict
 
 import numpy as np
+import h5py
 
 from ...ext.six import string_types
 from ...utils._misc import (_phy_user_dir,
@@ -103,13 +104,13 @@ class FeatureMasks(StoreItem):
                 warn("The cluster store for {0:s} ".format(name) +
                      "and cluster {0:d} ".format(cluster) +
                      "is probably corrupted: you should regenerate it.")
-            return False
-        else:
-            # We need to recreate an empty file with the right size here.
-            # debug("Creating empty file for {0:s} ".format(name) +
-            #       "and cluster {0:d}.".format(cluster))
-            self.store.store(cluster, **{name: np.zeros(shape, dtype=dtype)})
-            return True
+            else:
+                return False
+        # We need to recreate an empty file with the right size here.
+        # debug("Creating empty file for {0:s} ".format(name) +
+        #       "and cluster {0:d}.".format(cluster))
+        self.store.store(cluster, **{name: np.zeros(shape, dtype=dtype)})
+        return True
 
     def _clusters_to_store(self, spikes_per_cluster):
         """Determine whether each cluster needs to be stored or not."""
@@ -232,7 +233,12 @@ class FeatureMasks(StoreItem):
             masks = self.store.load(cluster, 'masks')
             self._store_extra_fields(cluster, features, masks)
 
-        del arrays
+        # Delete all opened HDF5 files.
+        for name in names:
+            for arr in arrays[name]:
+                if isinstance(arr, h5py.Dataset):
+                    arr.file.close()
+
         del cursors
 
     def merge(self, up):

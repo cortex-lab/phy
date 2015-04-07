@@ -241,7 +241,7 @@ def test_session_kwik():
             n_unmasked_channels = session.store.n_unmasked_channels(cluster)
 
             assert session.store.features(cluster).shape == (n_spikes,
-                                                             n_channels *
+                                                             n_channels,
                                                              n_fets)
             assert session.store.masks(cluster).shape == (n_spikes, n_channels)
             assert session.store.mean_masks(cluster).shape == (n_channels,)
