@@ -126,6 +126,11 @@ class WaveformViewModel(BaseViewModel):
         n = len(clusters)
         self.view.visual.cluster_colors = _selected_clusters_colors(n)
 
+    def on_close(self):
+        self.view.visual.spike_clusters = []
+        self.view.visual.channel_positions = []
+        self.view.update()
+
 
 class FeatureViewModel(BaseViewModel):
     _view_class = FeatureView

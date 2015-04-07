@@ -277,6 +277,7 @@ def test_session_kwik():
         session.redo()
 
         view.close()
+        session.close()
 
 
 def test_session_stats():

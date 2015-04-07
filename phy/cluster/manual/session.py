@@ -329,6 +329,7 @@ class Session(BaseSession):
 
         # self.action and self.connect are decorators.
         self.action(self.open, title='Open')
+        self.action(self.close, title='Close')
         self.action(self.select, title='Select clusters')
         self.action(self.merge, title='Merge')
         self.action(self.split, title='Split')
@@ -347,6 +348,10 @@ class Session(BaseSession):
             model = KwikModel(filename)
         self.model = model
         self.emit('open')
+
+    def close(self):
+        self.emit('close')
+        self.model = None
 
     def select(self, clusters):
         self.selector.selected_clusters = clusters
