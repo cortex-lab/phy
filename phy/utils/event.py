@@ -92,19 +92,22 @@ class ProgressReporter(EventEmitter):
     def _set_value(self, channel, index, value):
         if channel not in self._channels:
             self._channels[channel] = [0, 0]
-        old_value = self._value(channel)
+        # old_value = self._value(channel)
         max_value = self._max_value(channel)
-        if ((index == 0 and value > max_value) or
-           (index == 1 and old_value > value)):
-            raise ValueError("The current value {0} ".format(value) +
-                             "needs to be less "
-                             "than the maximum value {0}.".format(max_value))
-        else:
-            self._channels[channel][index] = value
+        if index == 0:
+            value = min(value, max_value)
+        # if ((index == 0 and value > max_value) or
+        #    (index == 1 and old_value > value)):
+        #     raise ValueError("The current value {0} ".format(value) +
+        #                      "needs to be less "
+        #                      "than the maximum value {0}.".format(max_value))
+        # else:
+        self._channels[channel][index] = value
 
-    def increment(self, *channels):
+    def increment(self, *channels, **kwargs):
         """Increment the values of one or multiple channels."""
-        self.set(**{channel: (self._value(channel) + 1)
+        increment = kwargs.get('increment', 1)
+        self.set(**{channel: (self._value(channel) + increment)
                  for channel in channels})
 
     def set(self, **values):
