@@ -96,7 +96,7 @@ class FeatureMasks(StoreItem):
         Return True if the file needs to be written, False otherwise.
 
         """
-        arr = self.store.load(cluster, name)
+        arr = self.disk_store.load(cluster, name)
         # If the array exists and has the right shape, we assume it's correct.
         if arr is not None and arr.shape == shape:
             # If the first and last lines are empty, something might be wrong.
@@ -109,7 +109,7 @@ class FeatureMasks(StoreItem):
         # We need to recreate an empty file with the right size here.
         # debug("Creating empty file for {0:s} ".format(name) +
         #       "and cluster {0:d}.".format(cluster))
-        self.store.store(cluster, **{name: np.zeros(shape, dtype=dtype)})
+        self.disk_store.store(cluster, **{name: np.zeros(shape, dtype=dtype)})
         return True
 
     def _clusters_to_store(self, spikes_per_cluster):
@@ -157,13 +157,13 @@ class FeatureMasks(StoreItem):
                                mean_masks[:, np.newaxis]).mean(axis=0)
         main_channels = np.intersect1d(np.argsort(mean_masks)[::-1],
                                        unmasked_channels)
-        self.store.store(cluster,
-                         mean_masks=mean_masks,
-                         sum_masks=sum_masks,
-                         n_unmasked_channels=n_unmasked_channels,
-                         mean_probe_position=mean_probe_position,
-                         main_channels=main_channels,
-                         )
+        self.memory_store.store(cluster,
+                                mean_masks=mean_masks,
+                                sum_masks=sum_masks,
+                                n_unmasked_channels=n_unmasked_channels,
+                                mean_probe_position=mean_probe_position,
+                                main_channels=main_channels,
+                                )
 
     def store_all_clusters(self, spikes_per_cluster):
         to_store = self._clusters_to_store(spikes_per_cluster)
@@ -188,8 +188,7 @@ class FeatureMasks(StoreItem):
 
         def _arr(cluster, name):
             if cluster not in arrays[name]:
-                arrays[name][cluster] = self.store.load(cluster,
-                                                        name)
+                arrays[name][cluster] = self.disk_store.load(cluster, name)
             return arrays[name][cluster]
 
         fm = self.model.features_masks
@@ -229,8 +228,8 @@ class FeatureMasks(StoreItem):
 
         # Store all extra fields.
         for cluster in sorted(spikes_per_cluster):
-            features = self.store.load(cluster, 'features')
-            masks = self.store.load(cluster, 'masks')
+            features = self.disk_store.load(cluster, 'features')
+            masks = self.disk_store.load(cluster, 'masks')
             self._store_extra_fields(cluster, features, masks)
 
         # Delete all opened HDF5 files.
@@ -367,15 +366,15 @@ class Session(BaseSession):
         # Kwik store.
         path = _ensure_disk_store_exists(self.model.name,
                                          root_path=self._store_path)
-        self.store = ClusterStore(model=self.model, path=path)
-        self.store.register_item(FeatureMasks)
+        self.cluster_store = ClusterStore(model=self.model, path=path)
+        self.cluster_store.register_item(FeatureMasks)
         # TODO: do not reinitialize the store every time the dataset
         # is loaded! Check if the store exists and check consistency.
-        self.store.generate(self.clustering.spikes_per_cluster)
+        self.cluster_store.generate(self.clustering.spikes_per_cluster)
 
         @self.connect
         def on_cluster(up=None, add_to_stack=None):
-            self.store.update(up)
+            self.cluster_store.update(up)
 
     def on_cluster(self, up=None, add_to_stack=True):
         if add_to_stack:
@@ -393,7 +392,7 @@ class Session(BaseSession):
                    show=True,
                    ):
         view_model = view_model_class(self.model,
-                                      store=self.store,
+                                      store=self.cluster_store,
                                       backend=backend,
                                       scale_factor=scale_factor)
         view = view_model.view

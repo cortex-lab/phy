@@ -235,21 +235,19 @@ def test_session_kwik():
             return view
 
         session.select([0])
+        cs = session.cluster_store
 
         # Check the stored items.
         for cluster in range(n_clusters):
             n_spikes = len(session.clustering.spikes_per_cluster[cluster])
-            n_unmasked_channels = session.store.n_unmasked_channels(cluster)
+            n_unmasked_channels = cs.n_unmasked_channels(cluster)
 
-            assert session.store.features(cluster).shape == (n_spikes,
-                                                             n_channels,
-                                                             n_fets)
-            assert session.store.masks(cluster).shape == (n_spikes, n_channels)
-            assert session.store.mean_masks(cluster).shape == (n_channels,)
+            assert cs.features(cluster).shape == (n_spikes, n_channels, n_fets)
+            assert cs.masks(cluster).shape == (n_spikes, n_channels)
+            assert cs.mean_masks(cluster).shape == (n_channels,)
             assert n_unmasked_channels <= n_channels
-            assert session.store.mean_probe_position(cluster).shape == (2,)
-            assert session.store.main_channels(cluster).shape == \
-                (n_unmasked_channels,)
+            assert cs.mean_probe_position(cluster).shape == (2,)
+            assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
 
         session.merge([3, 4])
         view = _show_waveforms()
