@@ -84,14 +84,21 @@ class DiskStore(object):
         path = self._cluster_path(cluster)
         return open_h5(path, mode)
 
+    def cluster_array(self, f, key):
+        """Return an array from an already-open cluster file."""
+        return self._get(f, key, return_ndarray=False)
+
     # Data get/set methods
     # -------------------------------------------------------------------------
 
-    def _get(self, f, key):
+    def _get(self, f, key, return_ndarray=True):
         """Return the data for a given key."""
         path = '/{0:s}'.format(key)
         if f.exists(path):
-            return f.read(path)[...]
+            arr = f.read(path)
+            if return_ndarray:
+                arr = arr[...]
+            return arr
         else:
             return None
 
