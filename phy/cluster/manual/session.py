@@ -80,6 +80,7 @@ class FeatureMasks(StoreItem):
               ('masks', 'disk'),
               ('mean_masks', 'memory'),
               ('n_unmasked_channels', 'memory'),
+              ('main_channels', 'memory'),
               ('mean_probe_position', 'memory'),
               ]
 
@@ -107,9 +108,12 @@ class FeatureMasks(StoreItem):
         # Weighted mean of the channels, weighted by the mean masks.
         mean_probe_position = (self.model.probe.positions *
                                mean_masks[:, np.newaxis]).mean(axis=0)
+        main_channels = np.intersect1d(np.argsort(mean_masks)[::-1],
+                                       n_unmasked_channels)
         to_store.update(mean_masks=mean_masks,
                         n_unmasked_channels=n_unmasked_channels,
                         mean_probe_position=mean_probe_position,
+                        main_channels=main_channels,
                         )
         self.store.store(cluster, **to_store)
 

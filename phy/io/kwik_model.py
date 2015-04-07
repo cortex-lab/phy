@@ -356,6 +356,7 @@ class KwikModel(BaseModel):
     @property
     def channels(self):
         """List of channels in the current channel group."""
+        # TODO: rename to channel_ids?
         return self._channels
 
     @property
