@@ -65,8 +65,10 @@ class MockModel(BaseModel):
     n_samples_waveforms = 40
     n_clusters = 10
 
-    def __init__(self):
+    def __init__(self, n_spikes=None):
         super(BaseModel, self).__init__()
+        if n_spikes is not None:
+            self.n_spikes = n_spikes
         self.name = 'mock'
         self._metadata = {'description': 'A mock model.',
                           'nfeatures_per_channel': self.nfeatures_per_channel}
