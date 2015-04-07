@@ -262,11 +262,16 @@ class Session(BaseSession):
     # Show views
     # -------------------------------------------------------------------------
 
-    def _show_view(self, view_model_class, backend=None, show=True):
+    def _show_view(self,
+                   view_model_class,
+                   scale_factor=.01,
+                   backend=None,
+                   show=True,
+                   ):
         view_model = view_model_class(self.model,
                                       store=self.store,
                                       backend=backend,
-                                      scale_factor=.01)
+                                      scale_factor=scale_factor)
         view = view_model.view
 
         @self.connect

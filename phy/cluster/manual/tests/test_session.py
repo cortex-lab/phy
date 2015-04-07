@@ -167,7 +167,10 @@ def test_session_mock():
                                            tempdir=tempdir)
 
         def _show_waveforms():
-            view = session._show_view(WaveformViewModel, show=False)
+            view = session._show_view(WaveformViewModel,
+                                      scale_factor=1.,
+                                      show=False,
+                                      )
             show_test(view)
             return view
 
@@ -210,7 +213,18 @@ def test_session_kwik():
                                            tempdir=tempdir)
 
         def _show_waveforms():
-            view = session._show_view(WaveformViewModel, show=False)
+            view = session._show_view(WaveformViewModel,
+                                      scale_factor=1.,
+                                      show=False,
+                                      )
+            show_test(view)
+            return view
+
+        def _show_features():
+            view = session._show_view(FeatureViewModel,
+                                      scale_factor=1.,
+                                      show=False,
+                                      )
             show_test(view)
             return view
 
@@ -233,6 +247,7 @@ def test_session_kwik():
 
         session.merge([3, 4])
         view = _show_waveforms()
+        view = _show_features()
 
         # This won't work but shouldn't raise an error.
         session.select([1000])
