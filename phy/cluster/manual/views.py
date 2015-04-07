@@ -30,8 +30,9 @@ class BaseViewModel(object):
     """Used to create views from a model."""
     _view_class = None
 
-    def __init__(self, model, backend=None, scale_factor=1.):
+    def __init__(self, model, store=None, backend=None, scale_factor=1.):
         self._model = model
+        self._store = store
         self._backend = backend
         self._scale_factor = scale_factor
         self._view = _create_view(self._view_class, backend=backend)
@@ -39,6 +40,10 @@ class BaseViewModel(object):
     @property
     def model(self):
         return self._model
+
+    @property
+    def store(self):
+        return self._store
 
     @property
     def view(self):
