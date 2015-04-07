@@ -15,7 +15,6 @@ from ...utils.array import _is_array_like, _index_of
 from ...utils._misc import _concatenate_dicts
 from ...utils.logging import debug, info
 from ...io.h5 import open_h5
-from ...io.sparse import load_h5, save_h5
 from ...ext.six import string_types
 
 
@@ -93,14 +92,14 @@ class DiskStore(object):
         """Return the data for a given key."""
         path = '/{0:s}'.format(key)
         if f.exists(path):
-            return load_h5(f, path)
+            return f.read(path)[...]
         else:
             return None
 
     def _set(self, f, key, value):
         """Set the data for a given key."""
         path = '/{0:s}'.format(key)
-        save_h5(f, path, value, overwrite=True)
+        f.write(path, value, overwrite=True)
 
     # Public methods
     # -------------------------------------------------------------------------
