@@ -18,6 +18,13 @@ from ..ext.six import string_types
 # Various Python utility functions
 #------------------------------------------------------------------------------
 
+class Bunch(dict):
+    """A dict with additional dot syntax."""
+    def __init__(self, *args, **kwargs):
+        super(Bunch, self).__init__(*args, **kwargs)
+        self.__dict__ = self
+
+
 def _as_dict(x):
     """Convert a list of tuples to a dict."""
     if isinstance(x, list):
