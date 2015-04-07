@@ -180,6 +180,7 @@ class FeatureMasks(StoreItem):
         # These dictionaries will contain references to the HDF5 arrays
         # from the cluster store, for all clusters that need to be store.
         names = ('masks', 'features')
+        files = {name: {} for name in names}
         arrays = {name: {} for name in names}
         cursors = {name: defaultdict(int) for name in names}
 
@@ -187,8 +188,15 @@ class FeatureMasks(StoreItem):
             return self.model.spike_clusters[spike]
 
         def _arr(cluster, name):
+            # Open the cluster file in 'a' mode if necessary.
+            # We'll close it at the end.
+            if cluster not in files[name]:
+                files[name][cluster] = self.disk_store.cluster_file(cluster,
+                                                                    'a')
+            # Load the HDF5 array from the cluster file.
             if cluster not in arrays[name]:
-                arrays[name][cluster] = self.disk_store.load(cluster, name)
+                f = files[name][cluster]
+                arrays[name][cluster] = self.disk_store.cluster_array(f, name)
             return arrays[name][cluster]
 
         fm = self.model.features_masks
@@ -222,7 +230,7 @@ class FeatureMasks(StoreItem):
                     #       "spike {0:d}, ".format(spike) +
                     #       "cluster {0:d}, ".format(cluster) +
                     #       "row {0:d}.".format(i))
-                    assert arr[i, ...].shape == data.shape
+                    # assert arr[i, ...].shape == data.shape
                     arr[i, ...] = data
                     cursors[name][cluster] += 1
 
@@ -234,9 +242,8 @@ class FeatureMasks(StoreItem):
 
         # Delete all opened HDF5 files.
         for name in names:
-            for arr in arrays[name]:
-                if isinstance(arr, h5py.Dataset):
-                    arr.file.close()
+            for cluster, f in files[name].items():
+                f.close()
 
         del cursors
 

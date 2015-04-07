@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
+from numpy.testing import assert_allclose as ac
 from pytest import raises
 
 from ..session import BaseSession, Session
@@ -161,10 +163,24 @@ def _start_manual_clustering(filename=None, model=None, tempdir=None):
 
 
 def test_session_store():
+    """Check that the cluster store works for features and masks."""
+
     with TemporaryDirectory() as tempdir:
-        session = _start_manual_clustering(model=MockModel(n_spikes=10),
+        model = MockModel(n_spikes=10, n_clusters=3)
+        s0 = np.nonzero(model.spike_clusters == 0)[0]
+        s1 = np.nonzero(model.spike_clusters == 1)[0]
+
+        session = _start_manual_clustering(model=model,
                                            tempdir=tempdir)
-        assert session
+
+        f = session.cluster_store.features(0)
+        m = session.cluster_store.masks(1)
+
+        assert f.shape[1:] == (28, 2)
+        assert m.shape[1:] == (28,)
+
+        ac(f, model.features[s0].reshape((f.shape[0], -1, 2)), 1e-3)
+        ac(m, model.masks[s1], 1e-3)
 
 
 def test_session_mock():
