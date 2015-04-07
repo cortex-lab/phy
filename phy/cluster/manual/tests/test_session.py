@@ -164,6 +164,7 @@ def test_session_store():
     with TemporaryDirectory() as tempdir:
         session = _start_manual_clustering(model=MockModel(n_spikes=10),
                                            tempdir=tempdir)
+        assert session
 
 
 def test_session_mock():
