@@ -188,6 +188,12 @@ def add_waveform_view(session, backend=None):
         view.update()
 
     @session.connect
+    def on_close():
+        view.visual.spike_clusters = []
+        view.visual.channel_positions = []
+        view.update()
+
+    @session.connect
     def on_cluster(up=None):
         pass
         # TODO: select the merged cluster
