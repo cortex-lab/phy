@@ -9,6 +9,9 @@
 import os
 import os.path as op
 
+import numpy as np
+
+from ...utils.array import _is_array_like, _index_of
 from ...utils._misc import _concatenate_dicts
 from ...utils.logging import info
 from ...io.h5 import open_h5
@@ -200,6 +203,7 @@ class Store(object):
     @property
     def clusters(self):
         """Return the list of clusters present in the store."""
+        # TODO: rename to cluster_ids for consistency?
         clusters_memory = self._memory_store.clusters
         if self._disk_store is None:
             return clusters_memory
@@ -267,8 +271,13 @@ class Store(object):
 class ClusterStore(object):
     def __init__(self, model=None, path=None):
         self._model = model
+        self._spikes_per_cluster = {}
         self._store = Store(path)
         self._items = []
+
+    @property
+    def spikes_per_cluster(self):
+        return self._spikes_per_cluster
 
     def register_item(self, item_cls):
         """Register a StoreItem instance in the store."""
@@ -309,7 +318,21 @@ class ClusterStore(object):
         # Register the StoreItem instance.
         self._items.append(item)
 
+    def load(self, name, clusters, spikes):
+        assert _is_array_like(clusters)
+        assert np.all(np.in1d(clusters, self._store.clusters))
+        # Concatenation of arrays for all clusters.
+        arrays = np.concatenate([self._store.load(cluster, name)
+                                 for cluster in clusters])
+        # Concatenation of spike indices for all clusters.
+        spike_clusters = np.concatenate([self._spikes_per_cluster[cluster]
+                                         for cluster in clusters])
+        assert np.all(np.in1d(spikes, spike_clusters))
+        idx = _index_of(spikes, spike_clusters)
+        return arrays[idx, ...]
+
     def update(self, up):
+        # TODO: update self._spikes_per_cluster
         # Delete the deleted clusters from the store.
         self._store.delete(up.deleted)
         if up.description == 'merge':
@@ -332,6 +355,7 @@ class ClusterStore(object):
         clusters."""
         assert isinstance(spikes_per_cluster, dict)
         clusters = sorted(spikes_per_cluster.keys())
+        self._spikes_per_cluster = spikes_per_cluster
         # self._store.delete(clusters)
         if hasattr(self._model, 'name'):
             name = self._model.name

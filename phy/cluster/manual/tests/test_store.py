@@ -6,12 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
-
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
-from ....utils.logging import set_level
 from ....utils.tempdir import TemporaryDirectory
 from ..store import MemoryStore, DiskStore, Store, ClusterStore, StoreItem
 from .._utils import _spikes_per_cluster
@@ -219,3 +216,57 @@ def test_cluster_store_multi():
     assert cs._store.load(1, ['d', 'm']) == {'d': 3, 'm': 9}
     assert cs.d(1) == 3
     assert cs.m(1) == 9
+
+
+def test_cluster_store_load():
+    with TemporaryDirectory() as tempdir:
+
+        # We define some data and a model.
+        n_spikes = 100
+        n_clusters = 10
+
+        spike_ids = np.arange(n_spikes)
+        spike_clusters = np.random.randint(size=n_spikes,
+                                           low=0, high=n_clusters)
+        spikes_per_cluster = _spikes_per_cluster(spike_ids, spike_clusters)
+
+        model = {'spike_clusters': spike_clusters}
+
+        # We initialize the ClusterStore.
+        cs = ClusterStore(model=model, path=tempdir)
+
+        # We create a n_spikes item to be stored in memory,
+        # and we define how to generate it for a given cluster.
+        class MyItem(StoreItem):
+            name = 'my item'
+            fields = [('spikes_square', 'disk')]
+
+            def store_from_model(self, cluster, spikes):
+                self.store.store(cluster, spikes_square=spikes ** 2)
+
+        cs.register_item(MyItem)
+
+        # Now we generate the store.
+        cs.generate(spikes_per_cluster)
+
+        # All spikes in cluster 1.
+        cluster = 1
+        spikes = spikes_per_cluster[cluster]
+        ae(cs.load('spikes_square', [cluster], spikes), spikes ** 2)
+
+        # Some spikes in cluster 1.
+        spikes = spikes_per_cluster[cluster][1::2]
+        ae(cs.load('spikes_square', [cluster], spikes), spikes ** 2)
+
+        # All spikes in several clusters.
+        clusters = [2, 3, 5]
+        spikes = np.concatenate([spikes_per_cluster[cl]
+                                 for cl in clusters])
+        # Reverse the order of spikes.
+        spikes = np.r_[spikes, spikes[::-1]]
+        ae(cs.load('spikes_square', clusters, spikes), spikes ** 2)
+
+        # Some spikes in several clusters.
+        spikes = np.concatenate([spikes_per_cluster[cl][::3]
+                                 for cl in clusters])
+        ae(cs.load('spikes_square', clusters, spikes), spikes ** 2)
