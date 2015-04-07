@@ -104,34 +104,19 @@ class FeatureMasks(StoreItem):
 
         # Extra fields.
         mean_masks = masks.mean(axis=0)
-        n_unmasked_channels = (mean_masks > 1e-3).sum()
+        unmasked_channels = np.nonzero(mean_masks > 1e-3)[0]
+        n_unmasked_channels = len(unmasked_channels)
         # Weighted mean of the channels, weighted by the mean masks.
         mean_probe_position = (self.model.probe.positions *
                                mean_masks[:, np.newaxis]).mean(axis=0)
         main_channels = np.intersect1d(np.argsort(mean_masks)[::-1],
-                                       n_unmasked_channels)
+                                       unmasked_channels)
         to_store.update(mean_masks=mean_masks,
                         n_unmasked_channels=n_unmasked_channels,
                         mean_probe_position=mean_probe_position,
                         main_channels=main_channels,
                         )
         self.store.store(cluster, **to_store)
-
-
-class Waveforms(StoreItem):
-    name = 'waveforms'
-    fields = [('spikes', 'memory'),
-              ('waveforms', 'custom')]
-
-    def store_from_model(self, cluster, spikes):
-        # Save the spikes in the cluster.
-        self.store.store(cluster, spikes=spikes)
-
-    def load(self, cluster, spikes=None):
-        if spikes is None:
-            spikes = self.store.load(cluster, 'spikes')
-            assert spikes is not None
-        return self.model.waveforms[spikes]
 
 
 #------------------------------------------------------------------------------
@@ -252,7 +237,6 @@ class Session(BaseSession):
         path = _ensure_disk_store_exists(self.model.name,
                                          root_path=self._store_path)
         self.store = ClusterStore(model=self.model, path=path)
-        self.store.register_item(Waveforms)
         self.store.register_item(FeatureMasks)
         # TODO: do not reinitialize the store every time the dataset
         # is loaded! Check if the store exists and check consistency.
