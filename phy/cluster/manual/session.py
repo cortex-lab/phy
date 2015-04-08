@@ -89,7 +89,7 @@ class FeatureMasks(StoreItem):
               ('main_channels', 'memory'),
               ('mean_probe_position', 'memory'),
               ]
-    chunk_size = 1000000
+    chunk_size = 100000
 
     def __init__(self, *args, **kwargs):
         super(FeatureMasks, self).__init__(*args, **kwargs)
@@ -223,8 +223,8 @@ class FeatureMasks(StoreItem):
                                           append=True,
                                           )
 
-                    # Update the progress reporter.
-                    self.progress_reporter.increment('features_masks')
+                # Update the progress reporter.
+                self.progress_reporter.increment('features_masks')
 
         # Store extra fields from the masks.
         self._store_extra_fields(clusters)
