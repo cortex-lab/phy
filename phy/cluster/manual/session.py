@@ -17,13 +17,11 @@ from ...ext.six import string_types
 from ...utils._misc import (_phy_user_dir,
                             _ensure_phy_user_dir_exists)
 from ...utils.array import _index_of
-from ...utils.event import ProgressReporter
-from ...utils.logging import info, warn
 from ...utils.event import EventEmitter
 from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
 from .clustering import Clustering
-from ._utils import _spikes_in_clusters, _spikes_per_cluster
+from ._utils import _spikes_per_cluster
 from .selector import Selector
 from .store import ClusterStore, StoreItem
 from .view_model import (WaveformViewModel,
