@@ -361,27 +361,6 @@ class Session(BaseSession):
         settings.set(path=op.join(curdir, 'default_settings.py'),
                      file_namespace=file_namespace)
 
-    def _create_waveform_view_models(self):
-        self.waveform_view_model = WaveformViewModel(self.model,
-                                                     store=self.cluster_store,
-                                                     scale_factor=.01,
-                                                     )
-
-    def _create_feature_view_models(self):
-        self.feature_view_model = FeatureViewModel(self.model,
-                                                   store=self.cluster_store,
-                                                   scale_factor=.01,
-                                                   )
-
-    def _create_correlogram_view_models(self):
-        args = 'binsize', 'winsize_bins', 'n_excerpts', 'excerpt_size'
-        kwargs = {k: settings.get('manual_clustering.ccg_' + k)
-                  for k in args}
-        cvm = CorrelogramViewModel(self.model,
-                                   store=self.cluster_store,
-                                   **kwargs)
-        self.correlogram_view_model = cvm
-
     def on_open(self):
         """Update the session after new data has been loaded."""
         self._global_history = GlobalHistory(process_ups=_process_ups)
@@ -421,10 +400,6 @@ class Session(BaseSession):
         def on_cluster(up=None, add_to_stack=None):
             self.cluster_store.update(up)
 
-        self._create_waveform_view_models()
-        self._create_feature_view_models()
-        self._create_correlogram_view_models()
-
     def on_cluster(self, up=None, add_to_stack=True):
         if add_to_stack:
             self._global_history.action(self.clustering)
@@ -434,7 +409,7 @@ class Session(BaseSession):
     # Show views
     # -------------------------------------------------------------------------
 
-    def _show_view(self, view_model, show=True):
+    def _create_view(self, view_model, show=True):
         view = view_model.view
 
         @self.connect
@@ -475,11 +450,40 @@ class Session(BaseSession):
 
         return view
 
+    def _create_waveform_view_model(self):
+        return WaveformViewModel(self.model,
+                                 store=self.cluster_store,
+                                 scale_factor=.01,
+                                 )
+
+    def _create_feature_view_model(self):
+        return FeatureViewModel(self.model,
+                                store=self.cluster_store,
+                                scale_factor=.01,
+                                )
+
+    def _create_correlogram_view_model(self):
+        args = 'binsize', 'winsize_bins', 'n_excerpts', 'excerpt_size'
+        kwargs = {k: settings.get('manual_clustering.ccg_' + k)
+                  for k in args}
+        return CorrelogramViewModel(self.model,
+                                    store=self.cluster_store,
+                                    **kwargs)
+
     def show_waveforms(self):
-        return self._show_view(self.waveform_view_model)
+        """Show a WaveformView and return a ViewModel instance."""
+        vm = self._create_waveform_view_model()
+        self._create_view(vm)
+        return vm
 
     def show_features(self):
-        return self._show_view(self.feature_view_model)
+        """Show a FeatureView and return a ViewModel instance."""
+        vm = self._create_feature_view_model()
+        self._create_view(vm)
+        return vm
 
     def show_correlograms(self):
-        return self._show_view(self.correlogram_view_model)
+        """Show a CorrelogramView and return a ViewModel instance."""
+        vm = self._create_correlogram_view_model()
+        self._create_view(vm)
+        return vm

@@ -158,8 +158,20 @@ def test_action_event():
 def _start_manual_clustering(filename=None, model=None, tempdir=None):
     session = Session(store_path=tempdir)
     session.open(filename=filename, model=model)
-
     return session
+
+
+def _show_view(session, name):
+    if name == 'waveforms':
+        vm = session._create_waveform_view_model()
+    elif name == 'features':
+        vm = session._create_feature_view_model()
+    elif name == 'correlograms':
+        vm = session._create_correlogram_view_model()
+    vm.scale_factor = 1.
+    view = session._create_view(vm, show=False)
+    show_test(view)
+    return view
 
 
 def test_session_store():
@@ -195,26 +207,16 @@ def test_session_mock():
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
 
-        session.waveform_view_model.scale_factor = 1.
-        session.feature_view_model.scale_factor = 1.
-
-        def _show_waveforms():
-            view = session._show_view(session.waveform_view_model, show=False)
-            show_test(view, 0)
-            return view
-
-        view = _show_waveforms()
+        view = _show_view(session, 'waveforms')
         session.select([0])
-        view_bis = _show_waveforms()
-
-        session.merge([3, 4])
+        view_bis = _show_view(session, 'waveforms')
 
         view.close()
         view_bis.close()
 
         session = _start_manual_clustering(model=MockModel(), tempdir=tempdir)
         session.select([1, 2])
-        view = _show_waveforms()
+        view = _show_view(session, 'waveforms')
 
         view.close()
 
@@ -240,19 +242,6 @@ def test_session_kwik():
         session = _start_manual_clustering(filename=filename,
                                            tempdir=tempdir)
 
-        session.waveform_view_model.scale_factor = 1.
-        session.feature_view_model.scale_factor = 1.
-
-        def _show_waveforms():
-            view = session._show_view(session.waveform_view_model, show=False)
-            show_test(view)
-            return view
-
-        def _show_features():
-            view = session._show_view(session.feature_view_model, show=False)
-            show_test(view)
-            return view
-
         session.select([0])
         cs = session.cluster_store
 
@@ -268,11 +257,12 @@ def test_session_kwik():
             assert cs.mean_probe_position(cluster).shape == (2,)
             assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
 
-        view = _show_waveforms()
-        view = _show_features()
+        view_0 = _show_view(session, 'waveforms')
+        view_1 = _show_view(session, 'features')
 
         # This won't work but shouldn't raise an error.
         session.select([1000])
 
-        view.close()
+        view_0.close()
+        view_1.close()
         session.close()
