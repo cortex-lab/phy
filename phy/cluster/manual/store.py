@@ -14,6 +14,7 @@ import numpy as np
 from ...utils.array import _is_array_like, _index_of
 from ...utils.logging import debug
 from ...ext.six import string_types
+from ...utils.event import ProgressReporter
 
 
 #------------------------------------------------------------------------------
@@ -151,14 +152,14 @@ class DiskStore(object):
 #------------------------------------------------------------------------------
 
 class ClusterStore(object):
-    def __init__(self, model=None, path=None, progress_reporter=None):
+    def __init__(self, model=None, path=None):
         self._model = model
         self._spikes_per_cluster = {}
-        self._progress_reporter = progress_reporter
         self._memory = MemoryStore()
         self._disk = DiskStore(path) if path is not None else None
         self._items = []
         self._locations = {}
+        self._progress_reporter = ProgressReporter()
 
     def _store(self, location):
         if location == 'memory':
@@ -178,6 +179,10 @@ class ClusterStore(object):
         return self._disk
 
     @property
+    def progress_reporter(self):
+        return self._progress_reporter
+
+    @property
     def spikes_per_cluster(self):
         return self._spikes_per_cluster
 
@@ -188,7 +193,8 @@ class ClusterStore(object):
         item = item_cls(model=self._model,
                         memory_store=self._memory,
                         disk_store=self._disk,
-                        progress_reporter=self._progress_reporter)
+                        progress_reporter=self._progress_reporter,
+                        )
         assert item.fields is not None
 
         for field in item.fields:
@@ -302,7 +308,8 @@ class StoreItem(object):
                  model=None,
                  memory_store=None,
                  disk_store=None,
-                 progress_reporter=None):
+                 progress_reporter=None,
+                 ):
         self.model = model
         self.memory_store = memory_store
         self.disk_store = disk_store
