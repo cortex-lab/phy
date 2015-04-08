@@ -8,6 +8,7 @@
 
 import os
 import os.path as op
+import re
 
 from ..ext import six
 from ._misc import Bunch
@@ -16,11 +17,6 @@ from ._misc import Bunch
 #------------------------------------------------------------------------------
 # Utility functions
 #------------------------------------------------------------------------------
-
-def _read_settings_file(path):
-    """Return a dictionary {namespace: {key: value}} dictionary."""
-    pass
-
 
 def _split_namespace(name, namespace=None):
     if '.' in name:
@@ -38,23 +34,47 @@ class _Settings(object):
     def __init__(self):
         self._store = {'global': {}}
 
+    @property
+    def _namespaces(self):
+        return sorted(self._store['global'])
+
     def _get(self, name, namespace=None, scope='global'):
         namespace, name = _split_namespace(name, namespace=namespace)
         if scope not in self._store:
             scope = 'global'
         return self._store[scope].get(namespace, {}).get(name, None)
 
-    def _set(self, key_values, namespace=None, scope='global', path=None):
-        if path is not None and op.exists(path):
-            return _read_settings_file(path)
+    def _read_settings_file(self, path):
+        """Return a dictionary {namespace: {key: value}} dictionary."""
+        with open(path, 'r') as f:
+            contents = f.read()
+        # Executing the code directly updates the internal store.
+        # The current store is passed as a global namespace.
+        try:
+            exec(contents, Bunch(self._store['global']))
+        except NameError as e:
+            r = re.search("'([^']+)'", e.args[0])
+            if r:
+                name = r.group(1)
+            namespaces = ', '.join(self._namespaces)
+            raise NameError("Unknown namespace '{0:s}'. ".format(name) +
+                            "Known namespaces are: {0:s}.".format(namespaces))
+
+    def _set(self, key_values=None, namespace=None, scope='global', path=None):
+        if path is not None:
+            path = op.expanduser(path)
+            path = op.realpath(path)
+            assert op.exists(path)
+            return self._read_settings_file(path)
+        assert isinstance(key_values, dict)
         if scope not in self._store:
-            self._store[scope] = {}
+            self._store[scope] = Bunch({})
         for key, value in key_values.items():
             namespace, name = _split_namespace(key, namespace=namespace)
 
             # Create dictionaries if they do not exist.
             if namespace not in self._store[scope]:
-                self._store[scope][namespace] = {}
+                self._store[scope][namespace] = Bunch({})
 
             # Update the settings.
             self._store[scope][namespace][name] = value
