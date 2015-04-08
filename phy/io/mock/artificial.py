@@ -58,8 +58,8 @@ def artificial_correlograms(n_clusters, n_samples):
 
 class MockModel(BaseModel):
     n_channels = 28
-    nfeatures_per_channel = 2
-    n_features = 28 * nfeatures_per_channel
+    n_features_per_channel = 2
+    n_features = 28 * n_features_per_channel
     n_spikes = 1000
     n_samples_traces = 20000
     n_samples_waveforms = 40
@@ -72,8 +72,9 @@ class MockModel(BaseModel):
         if n_clusters is not None:
             self.n_clusters = n_clusters
         self.name = 'mock'
+        nfpc = self.n_features_per_channel
         self._metadata = {'description': 'A mock model.',
-                          'nfeatures_per_channel': self.nfeatures_per_channel}
+                          'n_features_per_channel': nfpc}
         self._cluster_metadata = ClusterMetadata()
 
         @self._cluster_metadata.default
@@ -91,7 +92,7 @@ class MockModel(BaseModel):
         self._masks = artificial_masks(self.n_spikes, self.n_channels)
         self._features_masks = np.dstack((self._features,
                                           np.repeat(self._masks,
-                                                    self.nfeatures_per_channel,
+                                                    nfpc,
                                                     axis=1)))
         self._waveforms = artificial_waveforms(self.n_spikes,
                                                self.n_samples_waveforms,

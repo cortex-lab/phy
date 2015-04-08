@@ -59,7 +59,7 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
         _write_metadata('extract_s_before', 15)
         _write_metadata('extract_s_after', 25)
 
-        _write_metadata('nfeatures_per_channel', n_features_per_channel)
+        _write_metadata('n_features_per_channel', n_features_per_channel)
 
         # Create spike times.
         spike_times = artificial_spike_times(n_spikes).astype(np.int64)

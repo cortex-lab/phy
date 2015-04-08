@@ -148,7 +148,7 @@ class FeatureViewModel(BaseViewModel):
         # WARNING: convert features to a 3D array
         # (n_spikes, n_channels, n_features)
         # because that's what the FeatureView expects currently.
-        n_fet = self.model.metadata['nfeatures_per_channel']
+        n_fet = self.model.metadata['n_features_per_channel']
         n_channels = self.model.n_channels
         shape = (-1, n_channels, n_fet)
         features = features[:, :n_fet * n_channels].reshape(shape)

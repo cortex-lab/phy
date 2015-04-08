@@ -303,7 +303,7 @@ class KwikModel(BaseModel):
             self._features = PartialArray(fm, 0)
 
             # TODO: sparse, memory mapped, memcache, etc.
-            k = self._metadata['nfeatures_per_channel']
+            k = self._metadata['n_features_per_channel']
             # This partial array simulates a (n_spikes, n_channels) array.
             self._masks = PartialArray(fm,
                                        (slice(0, k * self.n_channels, k), 1))
