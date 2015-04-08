@@ -8,6 +8,7 @@
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
+from numpy.testing import assert_allclose as ac
 
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
@@ -55,44 +56,62 @@ def test_memory_store():
 
 def test_disk_store():
 
-    a = np.random.rand(2, 4)
-    b = np.random.rand(3, 5)
+    dtype = np.float32
+    sha = (2, 4)
+    shb = (3, 5)
+    a = np.random.rand(*sha).astype(dtype)
+    b = np.random.rand(*shb).astype(dtype)
 
     def _assert_equal(d_0, d_1):
         """Test the equality of two dictionaries containing NumPy arrays."""
         assert sorted(d_0.keys()) == sorted(d_1.keys())
         for key in d_0.keys():
-            ae(d_0[key], d_1[key])
+            ac(d_0[key], d_1[key])
 
     with TemporaryDirectory() as tempdir:
         ds = DiskStore(tempdir)
 
-        assert ds.load(2) == {}
+        # assert ds.load(2) == {}
 
-        assert ds.load(3).get('key', None) is None
-        assert ds.load(3) == {}
-        assert ds.load(3, ['key']) == {'key': None}
-        assert ds.load(3) == {}
+        # assert ds.load(3).get('key', None) is None
+        # assert ds.load(3) == {}
+        # assert ds.load(3, ['key']) == {'key': None}
+        # assert ds.load(3) == {}
         assert ds.clusters == []
 
         ds.store(3, key=a)
-        _assert_equal(ds.load(3), {'key': a})
-        _assert_equal(ds.load(3, ['key']), {'key': a})
-        ae(ds.load(3, 'key'), a)
+        # _assert_equal(ds.load(3), {'key': a})
+        _assert_equal(ds.load(3,
+                              ['key'],
+                              dtype=dtype,
+                              shape=sha,
+                              ),
+                      {'key': a})
+        loaded = ds.load(3, 'key', dtype=dtype, shape=sha)
+        ac(loaded, a)
+
         # Loading a non-existing key returns None.
         assert ds.load(3, 'key_bis') is None
         assert ds.clusters == [3]
 
         ds.store(3, key_bis=b)
-        _assert_equal(ds.load(3), {'key': a, 'key_bis': b})
-        _assert_equal(ds.load(3, ['key']), {'key': a})
-        _assert_equal(ds.load(3, ['key_bis']), {'key_bis': b})
-        _assert_equal(ds.load(3, ['key', 'key_bis']), {'key': a, 'key_bis': b})
-        ae(ds.load(3, 'key_bis'), b)
+        # _assert_equal(ds.load(3), {'key': a, 'key_bis': b})
+        _assert_equal(ds.load(3, ['key'], dtype=dtype, shape=sha), {'key': a})
+        _assert_equal(ds.load(3, ['key_bis'],
+                              dtype=dtype,
+                              shape=shb,
+                              ),
+                      {'key_bis': b})
+        _assert_equal(ds.load(3,
+                              ['key', 'key_bis'],
+                              dtype=dtype,
+                              ),
+                      {'key': a.ravel(), 'key_bis': b.ravel()})
+        ac(ds.load(3, 'key_bis', dtype=dtype, shape=shb), b)
         assert ds.clusters == [3]
 
         ds.delete([2, 3])
-        assert ds.load(3) == {}
+        # assert ds.load(3) == {}
         assert ds.load(3, ['key']) == {'key': None}
         assert ds.clusters == []
 
@@ -210,10 +229,11 @@ def test_cluster_store_load():
         # and we define how to generate it for a given cluster.
         class MyItem(StoreItem):
             name = 'my item'
-            fields = [('spikes_square', 'disk')]
+            fields = [('spikes_square', 'disk', np.float32)]
 
             def store_cluster(self, cluster, spikes):
-                self.disk_store.store(cluster, spikes_square=spikes ** 2)
+                data = (spikes ** 2).astype(np.float32)
+                self.disk_store.store(cluster, spikes_square=data)
 
         cs.register_item(MyItem)
 

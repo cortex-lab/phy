@@ -13,7 +13,6 @@ import numpy as np
 
 from ...utils.array import _is_array_like, _index_of
 from ...utils.logging import debug
-from ...io.h5 import open_h5
 from ...ext.six import string_types
 
 
@@ -60,6 +59,16 @@ class MemoryStore(object):
         self.delete(self.clusters)
 
 
+def _load_ndarray(f, dtype=None, shape=None):
+    if dtype is None:
+        return f
+    else:
+        arr = np.fromfile(f, dtype=dtype)
+        if shape is not None:
+            arr = arr.reshape(shape)
+        return arr
+
+
 class DiskStore(object):
     """Store cluster-related data in HDF5 files."""
     def __init__(self, directory):
@@ -69,98 +78,68 @@ class DiskStore(object):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _cluster_path(self, cluster):
+    def _cluster_path(self, cluster, key):
         """Return the absolute path of a cluster in the disk store."""
         # TODO: subfolders
-        rel_path = '{0:05d}.h5'.format(cluster)
+        rel_path = '{0:d}.{1:s}'.format(cluster, key)
         return op.realpath(op.join(self._directory, rel_path))
 
-    def _cluster_file_exists(self, cluster):
+    def _cluster_file_exists(self, cluster, key):
         """Return whether a cluster file exists."""
-        return op.exists(self._cluster_path(cluster))
-
-    def cluster_file(self, cluster, mode):
-        """Return a file handle of a cluster file."""
-        path = self._cluster_path(cluster)
-        return open_h5(path, mode)
-
-    def cluster_array(self, f, key):
-        """Return an array from an already-open cluster file."""
-        return self._get(f, key, return_ndarray=False)
-
-    # Data get/set methods
-    # -------------------------------------------------------------------------
-
-    def _get(self, f, key, return_ndarray=True):
-        """Return the data for a given key."""
-        path = '/{0:s}'.format(key)
-        if f.exists(path):
-            arr = f.read(path)
-            if return_ndarray:
-                arr = arr[...]
-            return arr
-        else:
-            return None
-
-    def _set(self, f, key, value):
-        """Set the data for a given key."""
-        path = '/{0:s}'.format(key)
-        f.write(path, value, overwrite=True)
+        return op.exists(self._cluster_path(cluster, key))
 
     # Public methods
     # -------------------------------------------------------------------------
 
-    def store(self, cluster, **data):
-        """Store cluster-related data."""
+    def store(self, cluster, append=False, **data):
+        """Store a NumPy array to disk."""
         # Do not create the file if there's nothing to write.
         if not data:
             return
-        with self.cluster_file(cluster, 'a') as f:
-            for key, value in data.items():
-                self._set(f, key, value)
+        mode = 'wb' if not append else 'ab'
+        for key, value in data.items():
+            assert isinstance(value, np.ndarray)
+            with open(self._cluster_path(cluster, key), mode) as f:
+                value.tofile(f)
 
-    def load(self, cluster, keys=None):
-        """Load cluster-related data."""
+    def _get(self, cluster, key, dtype=None, shape=None):
         # The cluster doesn't exist: return None for all keys.
-        if not self._cluster_file_exists(cluster):
-            if keys is None:
-                return {}
-            elif isinstance(keys, string_types):
-                return None
-            elif isinstance(keys, list):
-                return {key: None for key in keys}
-            else:
-                raise ValueError(keys)
-        # Create the output dictionary.
+        if not self._cluster_file_exists(cluster, key):
+            return None
+        else:
+            with open(self._cluster_path(cluster, key), 'rb') as f:
+                return _load_ndarray(f, dtype=dtype, shape=shape)
+
+    def load(self, cluster, keys, dtype=None, shape=None):
+        """Load cluster-related data. Return a file handle, to be used
+        with np.fromfile() once the dtype and shape are known."""
+        assert keys is not None
+        if isinstance(keys, string_types):
+            return self._get(cluster, keys, dtype=dtype, shape=shape)
+        assert isinstance(keys, list)
         out = {}
-        # Open the cluster file in read mode.
-        with self.cluster_file(cluster, 'r') as f:
-            # If a single key is requested, return the value.
-            if isinstance(keys, string_types):
-                return self._get(f, keys)
-            # All keys are requested if None.
-            if keys is None:
-                keys = f.datasets()
-            assert isinstance(keys, (list, tuple))
-            # Fetch the values for all requested keys.
-            for key in keys:
-                out[key] = self._get(f, key)
+        for key in keys:
+            out[key] = self._get(cluster, key, dtype=dtype, shape=shape)
         return out
+
+    @property
+    def files(self):
+        """List of files present in the directory."""
+        if not op.exists(self._directory):
+            return []
+        return sorted(os.listdir(self._directory))
 
     @property
     def clusters(self):
         """List of cluster ids in the store."""
-        if not op.exists(self._directory):
-            return []
-        files = os.listdir(self._directory)
-        clusters = [int(op.splitext(file)[0]) for file in files]
+        files = self.files
+        clusters = set([int(op.splitext(file)[0]) for file in files])
         return sorted(clusters)
 
     def delete(self, clusters):
         """Delete some clusters from the store."""
-        for cluster in clusters:
-            if self._cluster_file_exists(cluster):
-                os.remove(self._cluster_path(cluster))
+        for file in self.files:
+            os.remove(op.join(self._directory, file))
 
     def clear(self):
         """Clear the store completely by deleting all clusters."""
@@ -212,14 +191,20 @@ class ClusterStore(object):
                         progress_reporter=self._progress_reporter)
         assert item.fields is not None
 
-        # HACK: need to use a factory function because in Python
-        # functions are closed over names, not values. Here we
-        # want 'name' to refer to the 'name' local variable.
+        for field in item.fields:
+            name, location = field[:2]
+            dtype = field[2] if len(field) >= 3 else None
+            shape = field[3] if len(field) == 4 else None
 
-        def _make_func(name, location):
-            return lambda cluster: self._store(location).load(cluster, name)
-
-        for name, location in item.fields:
+            # HACK: need to use a factory function because in Python
+            # functions are closed over names, not values. Here we
+            # want 'name' to refer to the 'name' local variable.
+            def _make_func(name, location):
+                kwargs = {} if location == 'memory' else {'dtype': dtype,
+                                                          'shape': shape}
+                return lambda cluster: self._store(location).load(cluster,
+                                                                  name,
+                                                                  **kwargs)
 
             # Register the item location (memory or store).
             assert name not in self._locations
@@ -238,12 +223,12 @@ class ClusterStore(object):
 
     def load(self, name, clusters, spikes):
         assert _is_array_like(clusters)
-        location = self._locations[name]
-        store = self._store(location)
+        # location = self._locations[name]
+        # store = self._store(location)
+        load = getattr(self, name)
 
         # Concatenation of arrays for all clusters.
-        arrays = np.concatenate([store.load(cluster, name)
-                                 for cluster in clusters])
+        arrays = np.concatenate([load(cluster) for cluster in clusters])
         # Concatenation of spike indices for all clusters.
         spike_clusters = np.concatenate([self._spikes_per_cluster[cluster]
                                          for cluster in clusters])
