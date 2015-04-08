@@ -170,6 +170,8 @@ class FeatureMasks(StoreItem):
         need_generate = self._need_generate(cluster_sizes)
         if need_generate:
 
+            self.progress_reporter.set(features_masks=0)
+
             fm = self.model.features_masks
             assert fm.shape[0] == self.n_spikes
 
