@@ -60,7 +60,12 @@ class _Settings(object):
             raise NameError("Unknown namespace '{0:s}'. ".format(name) +
                             "Known namespaces are: {0:s}.".format(namespaces))
 
-    def _set(self, key_values=None, namespace=None, scope='global', path=None):
+    def _set(self,
+             key_values=None,
+             namespace=None,
+             scope='global',
+             path=None,
+             ):
         if path is not None:
             path = op.expanduser(path)
             path = op.realpath(path)
@@ -101,7 +106,11 @@ def get(name, scope='global'):
     return _SETTINGS._get(name, scope)
 
 
-def set(namespace_or_path, key_values=None, scope='global'):
+def set(key_values=None,
+        namespace=None,
+        scope='global',
+        path=None,
+        ):
     """Set some settings
 
     Parameters
@@ -114,4 +123,8 @@ def set(namespace_or_path, key_values=None, scope='global'):
         The scope for that setting. Can be 'global' or a dataset name.
 
     """
-    return _SETTINGS._set(namespace_or_path, key_values, scope)
+    return _SETTINGS._set(key_values=key_values,
+                          namespace=namespace,
+                          scope=scope,
+                          path=path,
+                          )
