@@ -19,7 +19,6 @@ from ...utils._misc import (_phy_user_dir,
 from ...utils.array import _index_of
 from ...utils.event import ProgressReporter
 from ...utils.logging import info, warn
-from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
 from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
@@ -254,7 +253,6 @@ def _ensure_disk_store_exists(dir_name, root_path=None):
         raise RuntimeError("Please create the store directory "
                            "{0}".format(root_path))
     # Put the store in a subfolder, using the name.
-    dir_name = slugify(dir_name)
     path = op.join(root_path, dir_name)
     if not op.exists(path):
         os.mkdir(path)
