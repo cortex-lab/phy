@@ -223,8 +223,6 @@ class ClusterStore(object):
 
     def load(self, name, clusters, spikes):
         assert _is_array_like(clusters)
-        # location = self._locations[name]
-        # store = self._store(location)
         load = getattr(self, name)
 
         # Concatenation of arrays for all clusters.

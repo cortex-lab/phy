@@ -10,27 +10,28 @@ from __future__ import print_function
 import os
 import os.path as op
 from functools import partial
-from collections import defaultdict
 
 import numpy as np
 
 from ...ext.six import string_types
 from ...utils._misc import (_phy_user_dir,
                             _ensure_phy_user_dir_exists)
-from ...utils.logging import info, warn
+from ...utils.array import _index_of
 from ...utils.event import ProgressReporter
+from ...utils.logging import info, warn
 from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
 from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
 from .clustering import Clustering
-from ._utils import _spikes_in_clusters
+from ._utils import _spikes_in_clusters, _spikes_per_cluster
 from .selector import Selector
 from .store import ClusterStore, StoreItem
 from .view_model import (WaveformViewModel,
                          FeatureViewModel,
                          CorrelogramViewModel,
                          )
+
 
 
 #------------------------------------------------------------------------------
@@ -81,8 +82,8 @@ class BaseSession(EventEmitter):
 
 class FeatureMasks(StoreItem):
     name = 'features and masks'
-    fields = [('features', 'disk'),
-              ('masks', 'disk'),
+    fields = [('features', 'disk', np.float32,),
+              ('masks', 'disk', np.float32,),
               ('mean_masks', 'memory'),
               ('sum_masks', 'memory'),
               ('n_unmasked_channels', 'memory'),
@@ -90,62 +91,33 @@ class FeatureMasks(StoreItem):
               ('mean_probe_position', 'memory'),
               ]
 
-    def _prepare_file(self, name, cluster, shape=None, dtype=None):
-        """Ensure that a data file exists, is blank, and has the
-        right shape.
+    def __init__(self, *args, **kwargs):
+        super(FeatureMasks, self).__init__(*args, **kwargs)
 
-        Return True if the file needs to be written, False otherwise.
+        self.n_features = self.model.metadata['nfeatures_per_channel']
+        self.n_channels = self.model.n_channels
 
-        """
-        arr = self.disk_store.load(cluster, name)
-        # If the array exists and has the right shape, we assume it's correct.
-        if arr is not None and arr.shape == shape:
-            # If the first and last lines are empty, something might be wrong.
-            if np.all(arr[0] == 0) and np.all(arr[-1] == 0):
-                warn("The cluster store for {0:s} ".format(name) +
-                     "and cluster {0:d} ".format(cluster) +
-                     "is probably corrupted: you should regenerate it.")
-            else:
+        # Set the shape of the features and masks.
+        self.fields[0] = ('features', 'disk',
+                          np.float32, (-1, self.n_channels, self.n_features))
+        self.fields[1] = ('masks', 'disk',
+                          np.float32, (-1, self.n_channels))
+
+    def _check_store(self, cluster_sizes):
+        """Return whether the cluster needs to be re-generated or not."""
+        for cluster in sorted(cluster_sizes):
+            cluster_size = cluster_sizes[cluster]
+            expected_file_size = (cluster_size * self.n_channels *
+                                  self.n_features * 4)  # 4 for float32
+            path = self.disk_store._cluster_path(cluster, 'features')
+            # If a file is missing, need to re-generate.
+            if not op.exists(path):
                 return False
-        # We need to recreate an empty file with the right size here.
-        # debug("Creating empty file for {0:s} ".format(name) +
-        #       "and cluster {0:d}.".format(cluster))
-        self.disk_store.store(cluster, **{name: np.zeros(shape, dtype=dtype)})
+            actual_file_size = os.stat(path).st_size
+            # If a file size is incorrect, need to re-generate.
+            if expected_file_size != actual_file_size:
+                return False
         return True
-
-    def _clusters_to_store(self, spikes_per_cluster):
-        """Determine whether each cluster needs to be stored or not."""
-        # Get the number of spikes per cluster.
-        sizes = {cluster: len(spikes)
-                 for cluster, spikes in spikes_per_cluster.items()}
-
-        _dtype = {'masks': np.float32, 'features': np.float32}
-
-        n_features = self.model.metadata['nfeatures_per_channel']
-        n_channels = self.model.n_channels
-
-        # This dictionary tells whether data must be copied for a
-        # given cluster.
-        to_store = {}
-
-        # Loop over clusters, prepare the files, and determine which clusters
-        # need to be created in the store.
-        for cluster, n_spikes in sorted(sizes.items()):
-            # Figure out the shape of the cache array for the current cluster.
-            _shape = {'masks': (n_spikes, n_channels),
-                      'features': (n_spikes, n_channels, n_features)}
-
-            to_store[cluster] = {}
-            for name in ('masks', 'features'):
-                shape = _shape[name]
-                dtype = _dtype[name]
-                # Make sure the file exists and has the right shape.
-                to_store[cluster][name] = self._prepare_file(name,
-                                                             cluster,
-                                                             shape=shape,
-                                                             dtype=dtype)
-
-        return to_store
 
     def _store_extra_fields(self, cluster, features, masks):
         # Extra fields.
@@ -169,99 +141,88 @@ class FeatureMasks(StoreItem):
     def store_all_clusters(self, spikes_per_cluster):
         """Initialize all cluster files, loop over all spikes, and
         copy the data."""
+        cluster_sizes = {cluster: len(spikes)
+                         for cluster, spikes in spikes_per_cluster.items()}
+        # No need to regenerate the cluster store if it exists and is valid.
+        if self._check_store(cluster_sizes):
+            return
 
-        to_store = self._clusters_to_store(spikes_per_cluster)
+        fm = self.model.features_masks
+        spike_clusters = self.model.spike_clusters
+
+        n_spikes = self.model.n_spikes
+        assert fm.shape[0] == n_spikes
+
         n_clusters = len(spikes_per_cluster)
+        chunk_size = 1000000
+        n_iter = n_spikes // chunk_size + 1
 
-        # Find the list of clusters that need to be stored for either
-        # masks or features.
-        clusters = [cluster for cluster in sorted(to_store)
-                    if (to_store[cluster]['masks'] or
-                        to_store[cluster]['features'])]
-
-        # Spikes in the clusters to be stored.
-        spikes = _spikes_in_clusters(self.model.spike_clusters, clusters)
-        n_spikes = len(spikes)
-
-        # These dictionaries will contain references to the HDF5 arrays
-        # from the cluster store, for all clusters that need to be store.
-        names = ('masks', 'features')
-        files = {name: {} for name in names}
-        arrays = {name: {} for name in names}
-        cursors = {name: defaultdict(int) for name in names}
+        nc = self.n_channels
+        nf = self.n_features
 
         # Initialize the progress reporter.
         pr = self.progress_reporter
         if pr is not None:
-            pr.set_max(features_masks=n_spikes,  # loop over all spikes.
-                       masks_extra=n_clusters,  # loop over all clusters
+            pr.set_max(features_masks=n_iter,
+                       masks_extra=n_clusters,
                        )
 
-        def _cluster(spike):
-            return self.model.spike_clusters[spike]
+        for i in range(n_iter):
+            a, b = i * chunk_size, (i + 1) * chunk_size
 
-        def _arr(cluster, name):
-            # Open the cluster file in 'a' mode if necessary.
-            # We'll close it at the end.
-            if cluster not in files[name]:
-                files[name][cluster] = self.disk_store.cluster_file(cluster,
-                                                                    'a')
-            # Load the HDF5 array from the cluster file.
-            if cluster not in arrays[name]:
-                f = files[name][cluster]
-                arrays[name][cluster] = self.disk_store.cluster_array(f, name)
-            return arrays[name][cluster]
+            # Load a chunk from HDF5.
+            sub_fm = fm[a:b]
+            assert isinstance(sub_fm, np.ndarray)
+            sub_sc = spike_clusters[a:b]
+            sub_spikes = np.arange(a, b)
 
-        fm = self.model.features_masks
-        n_features = self.model.metadata['nfeatures_per_channel']
-        n_channels = self.model.n_channels
+            # Split the spikes.
+            sub_spc = _spikes_per_cluster(sub_spikes, sub_sc)
 
-        def _data(name, spike):
-            if name == 'features':
-                return fm[spike, 0:n_features * n_channels, 0]. \
-                    reshape((n_channels, n_features))
-            elif name == 'masks':
-                return fm[spike, 0:n_features * n_channels:n_features, 1]
-
-        # Loop over all spikes.
-        for iteration, spike in enumerate(spikes):
-
-            # Current cluster.
-            cluster = _cluster(spike)
-
-            # 'masks' and 'features'.
-            for name in names:
-                # Store the data if necessary.
-                if to_store[cluster][name]:
-                    # Get masks or features data.
-                    data = _data(name, spike)
-                    # Get pointer to the file from the cluster store.
-                    arr = _arr(cluster, name)
-                    # Append the data
-                    i = cursors[name][cluster]
-                    arr[i, ...] = data
-                    cursors[name][cluster] += 1
+            # Go through the clusters.
+            clusters = sorted(sub_spc.keys())
+            for cluster in clusters:
+                idx = _index_of(sub_spc[cluster], sub_spikes)
+                # Extract features and masks for that cluster, in the current
+                # chunk.
+                tmp = sub_fm[idx, :]
+                f = tmp[:, :nc * nf, 0]
+                m = tmp[:, :nc * nf, 1][:, ::nf]
+                assert f.shape == (cluster_sizes[cluster], nc * nf)
+                assert m.shape == (cluster_sizes[cluster], nc)
+                self.disk_store.store(cluster,
+                                      features=f.ravel().astype(np.float32),
+                                      masks=m.ravel().astype(np.float32),
+                                      append=True,
+                                      )
 
             # Update the progress reporter.
-            if pr is not None and iteration % 100 == 0:
-                pr.increment('features_masks', increment=100)
+            if pr is not None:
+                pr.increment('features_masks')
 
         # Store all extra fields.
         for cluster in sorted(spikes_per_cluster):
-            features = self.disk_store.load(cluster, 'features')
-            masks = self.disk_store.load(cluster, 'masks')
+
+            # Load the features.
+            features = self.disk_store.load(cluster, 'features',
+                                            dtype=np.float32,
+                                            shape=(-1,
+                                                   self.n_channels,
+                                                   self.n_features))
+            assert isinstance(features, np.ndarray)
+
+            # Load the masks.
+            masks = self.disk_store.load(cluster, 'masks',
+                                         dtype=np.float32,
+                                         shape=(-1, self.n_channels))
+            assert isinstance(masks, np.ndarray)
+
+            # Store the extra fields.
             self._store_extra_fields(cluster, features, masks)
 
             # Update the progress reporter.
             if pr is not None:
                 pr.increment('masks_extra')
-
-        # Close all opened HDF5 files.
-        for name in names:
-            for cluster, f in files[name].items():
-                f.close()
-
-        del cursors
 
     def merge(self, up):
         # TODO

@@ -176,8 +176,8 @@ def test_session_store():
         f = session.cluster_store.features(0)
         m = session.cluster_store.masks(1)
 
-        assert f.shape[1:] == (28, 2)
-        assert m.shape[1:] == (28,)
+        assert f.shape == (len(s0), 28, 2)
+        assert m.shape == (len(s1), 28,)
 
         ac(f, model.features[s0].reshape((f.shape[0], -1, 2)), 1e-3)
         ac(m, model.masks[s1], 1e-3)
