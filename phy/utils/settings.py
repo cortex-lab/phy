@@ -114,21 +114,27 @@ def set(key_values=None,
         namespace=None,
         scope='global',
         path=None,
+        file_namespace=None,
         ):
     """Set some settings
 
     Parameters
     ----------
-    namespace_or_path : str
-        Either a path to a Python settings file, or a namespace.
     key_values : dict
         A {str: object} dictionary with key-value pair settings.
+    namespace : str
+        The namespace if it is not specified in the keys.
     scope : str (default is 'global')
         The scope for that setting. Can be 'global' or a dataset name.
+    path : str
+        A path to a Python settings file.
+    file_namespace : dict
+        A namespace to pass to the Python settings file.
 
     """
     return _SETTINGS._set(key_values=key_values,
                           namespace=namespace,
                           scope=scope,
                           path=path,
+                          file_namespace=file_namespace,
                           )
