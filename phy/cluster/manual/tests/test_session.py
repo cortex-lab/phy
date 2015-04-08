@@ -10,7 +10,7 @@ import numpy as np
 from numpy.testing import assert_allclose as ac
 from pytest import raises
 
-from ..session import BaseSession, Session
+from ..session import BaseSession, Session, FeatureMasks
 from ..view_model import (WaveformViewModel,
                           FeatureViewModel,
                           )
@@ -165,6 +165,11 @@ def _start_manual_clustering(filename=None, model=None, tempdir=None):
 def test_session_store():
     """Check that the cluster store works for features and masks."""
 
+    # HACK: change the chunk size in this unit test to make sure that
+    # there are several chunks.
+    cs = FeatureMasks.chunk_size
+    FeatureMasks.chunk_size = 4
+
     with TemporaryDirectory() as tempdir:
         model = MockModel(n_spikes=10, n_clusters=3)
         s0 = np.nonzero(model.spike_clusters == 0)[0]
@@ -181,6 +186,8 @@ def test_session_store():
 
         ac(f, model.features[s0].reshape((f.shape[0], -1, 2)), 1e-3)
         ac(m, model.masks[s1], 1e-3)
+
+    FeatureMasks.chunk_size = cs
 
 
 def test_session_mock():

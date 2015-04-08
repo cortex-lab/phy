@@ -89,6 +89,7 @@ class FeatureMasks(StoreItem):
               ('main_channels', 'memory'),
               ('mean_probe_position', 'memory'),
               ]
+    chunk_size = 1000000
 
     def __init__(self, *args, **kwargs):
         super(FeatureMasks, self).__init__(*args, **kwargs)
@@ -96,15 +97,13 @@ class FeatureMasks(StoreItem):
         self.n_features = self.model.metadata['nfeatures_per_channel']
         self.n_channels = self.model.n_channels
         self.n_spikes = self.model.n_spikes
+        self.n_chunks = self.n_spikes // self.chunk_size + 1
 
         # Set the shape of the features and masks.
         self.fields[0] = ('features', 'disk',
                           np.float32, (-1, self.n_channels, self.n_features))
         self.fields[1] = ('masks', 'disk',
                           np.float32, (-1, self.n_channels))
-
-        self.chunk_size = 1000000
-        self.n_chunks = self.n_spikes // self.chunk_size + 1
 
         self.progress_reporter.set_max(features_masks=self.n_chunks)
 
@@ -184,6 +183,8 @@ class FeatureMasks(StoreItem):
                 # Load a chunk from HDF5.
                 sub_fm = fm[a:b]
                 assert isinstance(sub_fm, np.ndarray)
+                if sub_fm.shape[0] == 0:
+                    break
 
                 sub_sc = self.model.spike_clusters[a:b]
                 sub_spikes = np.arange(a, b)
@@ -193,6 +194,9 @@ class FeatureMasks(StoreItem):
 
                 # Go through the clusters appearing in the chunk.
                 for cluster in sorted(sub_spc.keys()):
+                    # Number of spikes in the cluster and in the current
+                    # chunk.
+                    ns = len(sub_spc[cluster])
 
                     # Find the indices of the spikes in that cluster
                     # relative to the chunk.
@@ -204,12 +208,12 @@ class FeatureMasks(StoreItem):
 
                     # Features.
                     f = tmp[:, :nc * nf, 0]
-                    assert f.shape == (cluster_sizes[cluster], nc * nf)
+                    assert f.shape == (ns, nc * nf)
                     f = f.ravel().astype(np.float32)
 
                     # Masks.
                     m = tmp[:, :nc * nf, 1][:, ::nf]
-                    assert m.shape == (cluster_sizes[cluster], nc)
+                    assert m.shape == (ns, nc)
                     m = m.ravel().astype(np.float32)
 
                     # Save the data to disk.
