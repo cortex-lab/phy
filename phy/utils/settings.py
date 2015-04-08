@@ -19,12 +19,19 @@ class Settings(dict):
         execfile(os.path.expanduser(filename), {}, settings)
 
         self.update(settings)
-        print "data:", self
-
-def init():
-    s = settings()
-    s.load("~/.phy/settings.py")
 
 SETTINGS = Settings()
 
+def init():
+    SETTINGS.load("~/.phy/settings.py")
+
 init()
+
+def list_kwik():
+    ret = []
+    for d in SETTINGS.KWIK_DIRS:
+        for root, dirs, files in os.walk(os.path.expanduser(d)):
+            for f in files:
+                if f.endswith(".kwik"):
+                    ret.append(os.path.join(root, f))
+    return ret
