@@ -28,6 +28,7 @@ from .view_model import (WaveformViewModel,
                          FeatureViewModel,
                          CorrelogramViewModel,
                          )
+from ...utils import settings
 
 
 #------------------------------------------------------------------------------
@@ -349,6 +350,17 @@ class Session(BaseSession):
     # Event callbacks
     # -------------------------------------------------------------------------
 
+    def _load_default_settings(self):
+        """Load default settings for manual clustering."""
+        curdir = op.dirname(op.realpath(__file__))
+        # This is a namespace available in the config file.
+        file_namespace = {
+            'n_spikes': self.model.n_spikes,
+            'n_channels': self.model.n_channels,
+        }
+        settings.set(path=op.join(curdir, 'default_settings.py'),
+                     file_namespace=file_namespace)
+
     def on_open(self):
         """Update the session after new data has been loaded."""
         self._global_history = GlobalHistory(process_ups=_process_ups)
@@ -357,8 +369,12 @@ class Session(BaseSession):
         spike_clusters = self.model.spike_clusters
         self.clustering = Clustering(spike_clusters)
         self.cluster_metadata = self.model.cluster_metadata
-        # TODO: n_spikes_max in a user parameter
-        self.selector = Selector(spike_clusters, n_spikes_max=100)
+
+        # Load the default settings for manual clustering.
+        self._load_default_settings()
+
+        n_spikes_max = settings.get('manual_clustering.n_spikes_max')
+        self.selector = Selector(spike_clusters, n_spikes_max=n_spikes_max)
 
         # Kwik store.
         path = _ensure_disk_store_exists(self.model.name,
@@ -398,11 +414,14 @@ class Session(BaseSession):
                    scale_factor=.01,
                    backend=None,
                    show=True,
+                   **kwargs
                    ):
         view_model = view_model_class(self.model,
                                       store=self.cluster_store,
                                       backend=backend,
-                                      scale_factor=scale_factor)
+                                      scale_factor=scale_factor,
+                                      **kwargs
+                                      )
         view = view_model.view
 
         @self.connect
@@ -451,4 +470,13 @@ class Session(BaseSession):
                                scale_factor=.01)
 
     def show_correlograms(self):
-        return self._show_view(CorrelogramViewModel)
+        kwargs = dict(binsize=settings.get('manual_clustering.'
+                                           'ccg_binsize'),
+                      winsize_bins=settings.get('manual_clustering.'
+                                                'ccg_winsize_bins'),
+                      n_excerpts=settings.get('manual_clustering.'
+                                              'ccg_n_excerpts'),
+                      excerpt_size=settings.get('manual_clustering.'
+                                                'ccg_excerpt_size'),
+                      )
+        return self._show_view(CorrelogramViewModel, **kwargs)

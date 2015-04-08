@@ -183,12 +183,21 @@ class FeatureViewModel(BaseViewModel):
 class CorrelogramViewModel(BaseViewModel):
     _view_class = CorrelogramView
 
+    def __init__(self, *args, **kwargs):
+        self.binsize = kwargs.pop('binsize', None)
+        self.winsize_bins = kwargs.pop('winsize_bins', None)
+        self.n_excerpts = kwargs.pop('n_excerpts', None)
+        self.excerpt_size = kwargs.pop('excerpt_size', None)
+        super(CorrelogramViewModel, self).__init__(*args, **kwargs)
+
     def on_select(self, clusters, spikes):
         self.view.visual.clusters_ids = clusters
 
         def _extract(arr):
-            # TODO: user-definable CCG parameters
-            return get_excerpts(arr, n_excerpts=100, excerpt_size=100)
+            return get_excerpts(arr,
+                                n_excerpts=self.n_excerpts,
+                                excerpt_size=self.excerpt_size,
+                                )
 
         # Extract a subset of the spikes belonging to the selected clusters.
         spikes_subset = _extract(spikes)
@@ -196,8 +205,11 @@ class CorrelogramViewModel(BaseViewModel):
         spike_times = self.model.spike_times[spikes_subset]
 
         # Compute the correlograms.
-        ccgs = correlograms(spike_times, spike_clusters,
-                            binsize=20, winsize_bins=51)
+        ccgs = correlograms(spike_times,
+                            spike_clusters,
+                            binsize=self.binsize,
+                            winsize_bins=self.winsize_bins,
+                            )
         ccgs = _symmetrize_correlograms(ccgs)
 
         # Normalize the CCGs.
