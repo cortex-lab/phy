@@ -302,7 +302,7 @@ class KwikModel(BaseModel):
             self._features_masks = fm
             self._features = PartialArray(fm, 0)
 
-            nfpc = self._metadata['n_features_per_channel']
+            nfpc = self._metadata['nfeatures_per_channel']
             nc = self.n_channels
             # This partial array simulates a (n_spikes, n_channels) array.
             self._masks = PartialArray(fm,
@@ -355,7 +355,7 @@ class KwikModel(BaseModel):
 
     @property
     def n_features_per_channel(self):
-        return self._metadata['n_features_per_channel']
+        return self._metadata['nfeatures_per_channel']
 
     @property
     def channels(self):

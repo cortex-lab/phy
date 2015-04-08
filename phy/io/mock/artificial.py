@@ -74,7 +74,7 @@ class MockModel(BaseModel):
         self.name = 'mock'
         nfpc = self.n_features_per_channel
         self._metadata = {'description': 'A mock model.',
-                          'n_features_per_channel': nfpc}
+                          'nfeatures_per_channel': nfpc}
         self._cluster_metadata = ClusterMetadata()
 
         @self._cluster_metadata.default
