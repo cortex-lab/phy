@@ -44,14 +44,16 @@ class _Settings(object):
             scope = 'global'
         return self._store[scope].get(namespace, {}).get(name, None)
 
-    def _read_settings_file(self, path):
+    def _read_settings_file(self, path, file_namespace=None):
         """Return a dictionary {namespace: {key: value}} dictionary."""
         with open(path, 'r') as f:
             contents = f.read()
+        if file_namespace is None:
+            file_namespace = {}
         # Executing the code directly updates the internal store.
         # The current store is passed as a global namespace.
         try:
-            exec(contents, Bunch(self._store['global']))
+            exec(contents, Bunch(self._store['global']), file_namespace)
         except NameError as e:
             r = re.search("'([^']+)'", e.args[0])
             if r:
@@ -65,12 +67,14 @@ class _Settings(object):
              namespace=None,
              scope='global',
              path=None,
+             file_namespace=None,
              ):
         if path is not None:
             path = op.expanduser(path)
             path = op.realpath(path)
             assert op.exists(path)
-            return self._read_settings_file(path)
+            return self._read_settings_file(path,
+                                            file_namespace=file_namespace)
         assert isinstance(key_values, dict)
         if scope not in self._store:
             self._store[scope] = Bunch({})
