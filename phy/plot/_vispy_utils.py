@@ -300,6 +300,11 @@ class BaseSpikeVisual(Visual):
         gloo.set_state(clear_color='black', blend=True,
                        blend_func=('src_alpha', 'one_minus_src_alpha'))
 
+    @property
+    def empty(self):
+        """Specify whether the visual is currently empty or not."""
+        return self._empty
+
     # Data properties
     # -------------------------------------------------------------------------
 
