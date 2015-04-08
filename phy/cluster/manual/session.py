@@ -241,22 +241,29 @@ class FeatureMasks(StoreItem):
 # Session class
 #------------------------------------------------------------------------------
 
+def _create_directory_if_needed(path):
+    if not op.exists(path):
+        os.mkdir(path)
+
+
 def _ensure_disk_store_exists(dir_name, root_path=None):
     # Disk store.
     if root_path is None:
         _ensure_phy_user_dir_exists()
-        root_path = _phy_user_dir('cluster_store')
-        # Create the disk store if it does not exist.
-        if not op.exists(root_path):
-            os.mkdir(root_path)
+        root_path = _phy_user_dir()
     if not op.exists(root_path):
         raise RuntimeError("Please create the store directory "
-                           "{0}".format(root_path))
-    # Put the store in a subfolder, using the name.
-    path = op.join(root_path, dir_name)
-    if not op.exists(path):
-        os.mkdir(path)
-    return path
+                           "{0}.".format(root_path))
+
+    # Create a directory for the current dataset.
+    data_dir = op.join(root_path, dir_name)
+    _create_directory_if_needed(data_dir)
+
+    # Create a subdirectory 'cluster_store'.
+    store_dir = op.join(data_dir, 'cluster_store')
+    _create_directory_if_needed(store_dir)
+
+    return store_dir
 
 
 def _process_ups(ups):
