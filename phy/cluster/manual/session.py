@@ -94,7 +94,7 @@ class FeatureMasks(StoreItem):
     def __init__(self, *args, **kwargs):
         super(FeatureMasks, self).__init__(*args, **kwargs)
 
-        self.n_features = self.model.metadata['n_features_per_channel']
+        self.n_features = self.model.n_features_per_channel
         self.n_channels = self.model.n_channels
         self.n_spikes = self.model.n_spikes
         self.n_chunks = self.n_spikes // self.chunk_size + 1
