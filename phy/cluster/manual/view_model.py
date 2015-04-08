@@ -50,11 +50,12 @@ class BaseViewModel(object):
     """Used to create views from a model."""
     _view_class = None
 
-    def __init__(self, model, store=None, backend=None, scale_factor=1.):
+    def __init__(self, model, store=None, backend=None, **kwargs):
         self._model = model
         self._store = store
         self._backend = backend
-        self._scale_factor = scale_factor
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         self._view = _create_view(self._view_class, backend=backend)
 
     @property
@@ -98,6 +99,7 @@ class BaseViewModel(object):
 
 class WaveformViewModel(BaseViewModel):
     _view_class = WaveformView
+    scale_factor = 1.
 
     def on_open(self):
         self.view.visual.spike_clusters = self.model.spike_clusters
@@ -109,7 +111,7 @@ class WaveformViewModel(BaseViewModel):
         waveforms = self.model.waveforms[spikes]
         debug("Done!")
 
-        waveforms *= self._scale_factor
+        waveforms *= self.scale_factor
         self.view.visual.waveforms = waveforms
 
         # Load masks.
@@ -133,6 +135,7 @@ class WaveformViewModel(BaseViewModel):
 
 class FeatureViewModel(BaseViewModel):
     _view_class = FeatureView
+    scale_factor = 1.
 
     def on_select(self, clusters, spikes):
         # Load features.
@@ -152,7 +155,7 @@ class FeatureViewModel(BaseViewModel):
         shape = (-1, n_channels, n_fet)
         features = features[:, :n_fet * n_channels].reshape(shape)
         # Scale factor.
-        features *= self._scale_factor
+        features *= self.scale_factor
 
         self.view.visual.features = features
         self.view.visual.masks = masks
@@ -182,13 +185,10 @@ class FeatureViewModel(BaseViewModel):
 
 class CorrelogramViewModel(BaseViewModel):
     _view_class = CorrelogramView
-
-    def __init__(self, *args, **kwargs):
-        self.binsize = kwargs.pop('binsize', None)
-        self.winsize_bins = kwargs.pop('winsize_bins', None)
-        self.n_excerpts = kwargs.pop('n_excerpts', None)
-        self.excerpt_size = kwargs.pop('excerpt_size', None)
-        super(CorrelogramViewModel, self).__init__(*args, **kwargs)
+    binsize = None
+    winsize_bins = None
+    n_excerpts = None
+    excerpt_size = None
 
     def on_select(self, clusters, spikes):
         self.view.visual.clusters_ids = clusters
