@@ -9,7 +9,11 @@
 
 import numpy as np
 
-from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas, BoxVisual
+from ._vispy_utils import (BaseSpikeVisual,
+                           BaseSpikeCanvas,
+                           BoxVisual,
+                           AxisVisual,
+                           )
 from ..ext.six import string_types
 from ..utils.array import _as_array, _index_of
 from ..utils.logging import debug
@@ -190,6 +194,8 @@ class FeatureView(BaseSpikeCanvas):
     def __init__(self, **kwargs):
         super(FeatureView, self).__init__(**kwargs)
         self.boxes = BoxVisual()
+        self.axes = AxisVisual()
+        self._pz.add(self.axes.program)
 
     @property
     def dimensions(self):
@@ -203,6 +209,8 @@ class FeatureView(BaseSpikeCanvas):
         # updated as well.
         self.visual.dimensions = value
         self.boxes.n_rows = self.visual.n_rows
+        self.axes.n_rows = self.visual.n_rows
+        self.axes.positions = (0, 0)
 
     @property
     def marker_size(self):
@@ -216,6 +224,7 @@ class FeatureView(BaseSpikeCanvas):
     def on_draw(self, event):
         super(FeatureView, self).on_draw(event)
         self.boxes.draw()
+        self.axes.draw()
 
     def on_key_press(self, event):
         coeff = .25

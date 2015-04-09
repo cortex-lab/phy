@@ -463,14 +463,55 @@ class BoxVisual(_BakeVisual):
                         [+1, +1],
                         [+1, -1],
                         [+1, -1],
-                        [-1, -1]])
+                        [-1, -1]]) * .975
         arr = np.tile(arr, (self.n_boxes, 1))
         position = np.empty((8 * self.n_boxes, 3), dtype=np.float32)
         position[:, :2] = arr
         position[:, 2] = np.repeat(np.arange(self.n_boxes), 8)
         self.program['a_position'] = position
         self.program['n_rows'] = self._n_rows
-        debug("bake color", position.shape)
+        debug("bake boxes", position.shape)
+
+
+class AxisVisual(BoxVisual):
+    _shader_name = 'ax'
+
+    def __init__(self, **kwargs):
+        super(AxisVisual, self).__init__(**kwargs)
+        self._positions = (0., 0.)
+
+    def _bake_n_rows(self):
+        self.program['n_rows'] = self._n_rows
+
+    @property
+    def positions(self):
+        """A pair of (x, y) values for the two axes."""
+        return self._positions
+
+    @positions.setter
+    def positions(self, value):
+        assert len(value) == 2
+        self._positions = value
+        self.set_to_bake('positions')
+
+    def _bake_positions(self):
+        if not self._n_rows:
+            return
+        position = np.empty((4 * self.n_boxes, 4), dtype=np.float32)
+        x, y = self._positions
+        c = 1.
+        arr = np.array([[x, -c],
+                        [x, +c],
+                        [-c, y],
+                        [+c, y]], dtype=np.float32)
+        # Positions.
+        position[:, :2] = np.tile(arr, (self.n_boxes, 1))
+        # Index.
+        position[:, 2] = np.repeat(np.arange(self.n_boxes), 4)
+        # Axes.
+        position[:, 3] = np.tile([0, 0, 1, 1], self.n_boxes)
+        self.program['a_position'] = position
+        debug("bake ax", position.shape)
 
 
 #------------------------------------------------------------------------------
