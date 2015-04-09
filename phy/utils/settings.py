@@ -12,7 +12,7 @@ import re
 import pickle
 
 from ..ext.six.moves.cPickle import load, dump
-from ._misc import Bunch
+from ._misc import Bunch, _phy_user_dir, _internal_path, _ensure_path_exists
 from .logging import debug, warn
 
 
@@ -55,7 +55,11 @@ class BaseSettings(object):
         namespace, name = _split_namespace(name, namespace=namespace)
         if scope not in self._store:
             scope = 'global'
-        return self._store[scope].get(namespace, {}).get(name, None)
+        out = self._store[scope].get(namespace, {}).get(name, None)
+        # Fallback to 'global' scope if the requested value is None.
+        if scope != 'global' and out is None:
+            out = self._store['global'].get(namespace, {}).get(name, None)
+        return out
 
     def set(self, key_values=None, namespace=None, scope='global'):
         """Set some settings
@@ -142,11 +146,11 @@ class UserSettings(BaseSettings):
 _USER_SETTINGS = UserSettings()
 
 
-def get_user(*args, **kwargs):
+def get(*args, **kwargs):
     return _USER_SETTINGS.get(*args, **kwargs)
 
 
-def set_user(*args, **kwargs):
+def set(*args, **kwargs):
     return _USER_SETTINGS.set(*args, **kwargs)
 
 
@@ -177,20 +181,85 @@ class InternalSettings(BaseSettings):
         debug("Saved internal settings to '{0}'.".format(path))
 
 
-_INTERNAL_SETTINGS = InternalSettings()
+#------------------------------------------------------------------------------
+# Settings files manager
+#------------------------------------------------------------------------------
+
+def _create_internal_settings(path):
+    # Initialize the global InternalSettings instance.
+    internal_settings = InternalSettings()
+    # Create the file if it doesn't exist.
+    if not op.exists(path):
+        internal_settings.save(path)
+    else:
+        internal_settings.load(path)
+    return internal_settings
 
 
-def get_internal(*args, **kwargs):
-    return _INTERNAL_SETTINGS.get(*args, **kwargs)
+class SettingsManager(object):
+    """Manage global and per-experiment user and internal settings."""
 
+    def __init__(self, phy_user_dir=None):
 
-def set_internal(*args, **kwargs):
-    return _INTERNAL_SETTINGS.set(*args, **kwargs)
+        # .phy user directory, ~/.phy by default.
+        if phy_user_dir is None:
+            phy_user_dir = _phy_user_dir()
+        self.phy_user_dir = phy_user_dir
+        _ensure_path_exists(self.phy_user_dir)
 
+        # Initialize the global InternalSettings instance.
+        path = self.internal_settings_path('global')
+        self.global_internal_settings = _create_internal_settings(path)
 
-def save_internal(*args, **kwargs):
-    return _INTERNAL_SETTINGS.save(*args, **kwargs)
+    def set_experiment_path(self, experiment_path):
+        self.experiment_path = experiment_path
+        self.experiment_name = op.splitext(op.basename(experiment_path))[0]
 
+        # Experiment directory.
+        self.experiment_dir = op.dirname(experiment_path)
+        _ensure_path_exists(self.experiment_dir)
 
-def load_internal(*args, **kwargs):
-    return _INTERNAL_SETTINGS.load(*args, **kwargs)
+        # _phy subdirectory in the experiment directory.
+        self.phy_experiment_dir = op.join(self.experiment_dir,
+                                          self.experiment_name + '.phy')
+        _ensure_path_exists(self.phy_experiment_dir)
+
+        # Initialize the experiment InternalSettings instance.
+        path = self.internal_settings_path('experiment')
+        self.experiment_internal_settings = _create_internal_settings(path)
+
+    def user_settings_path(self, scope):
+        assert scope in ('global', 'experiment')
+        if scope == 'global':
+            return op.join(self.phy_user_dir, 'user_settings.py')
+        elif scope == 'experiment':
+            return op.join(self.phy_experiment_dir, 'user_settings.py')
+
+    def internal_settings_path(self, scope):
+        assert scope in ('global', 'experiment')
+        if scope == 'global':
+            return op.join(self.phy_user_dir, 'internal_settings')
+        elif scope == 'experiment':
+            return op.join(self.phy_experiment_dir, 'internal_settings')
+
+    def get_internal_settings(self, key, scope='global'):
+        if scope == 'global':
+            return self.global_internal_settings.get(key)
+        elif scope == 'experiment':
+            return self.experiment_internal_settings.get(key)
+
+    def set_internal_settings(self, key, value, scope='global'):
+        if scope == 'global':
+            return self.global_internal_settings.set({key: value})
+        elif scope == 'experiment':
+            return self.experiment_internal_settings.set({key: value})
+
+    def get_user_settings(self, key, scope='global'):
+        if scope == 'experiment':
+            scope = self.experiment_name
+        return get(key, scope=scope)
+
+    def set_user_settings(self, key, value, scope='global'):
+        if scope == 'experiment':
+            scope = self.experiment_name
+        set({key: value}, scope=scope)
