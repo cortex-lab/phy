@@ -91,6 +91,9 @@ class BaseSettings(object):
 class UserSettings(BaseSettings):
     """Support Python settings files."""
 
+    def declare_namespace(self, namespace, scope='global'):
+        self._store[scope][namespace] = Bunch()
+
     def read_settings_file(self, path, file_namespace=None, scope='global'):
         """Return a dictionary {namespace: {key: value}} dictionary."""
         with open(path, 'r') as f:

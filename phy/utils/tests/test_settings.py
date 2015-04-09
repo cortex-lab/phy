@@ -74,7 +74,7 @@ def test_base_settings_3():
     assert s.get('test.b', scope='global') is None
 
 
-def test_user_settings():
+def test_user_settings_1():
     with TemporaryDirectory() as tmpdir:
         path = op.join(tmpdir, 'test')
 
@@ -98,6 +98,30 @@ def test_user_settings():
         assert s.get('test.a') == 4
         assert s.get('test.b') == 5
         assert s.get('test.c') == 6
+
+
+def test_user_settings_2():
+    with TemporaryDirectory() as tmpdir:
+        path = op.join(tmpdir, 'test')
+
+        # Create a simple settings file.
+        contents = '''test.a = 4\ntest.b = 5\n'''
+        with open(path, 'w') as f:
+            f.write(contents)
+
+        s = UserSettings()
+        # Need to set the namespace 'test' first.
+        with raises(NameError):
+            s.set(path=path)
+
+        # Set the 'test' namespace.
+        s.declare_namespace('test')
+        s.set(path=path)
+        assert s.get('test.a') == 4
+        assert s.get('test.b') == 5
+
+        s.set('test.a', 6)
+        assert s.get('test.a') == 6
 
 
 def test_internal_settings():
