@@ -14,8 +14,7 @@ from functools import partial
 import numpy as np
 
 from ...ext.six import string_types
-from ...utils._misc import (_phy_user_dir,
-                            _ensure_phy_user_dir_exists)
+from ...utils._misc import _phy_user_dir, _internal_path, _ensure_path_exists
 from ...utils.array import _index_of
 from ...utils.event import EventEmitter
 from ...io.kwik_model import KwikModel
@@ -240,31 +239,6 @@ class FeatureMasks(StoreItem):
 # Session class
 #------------------------------------------------------------------------------
 
-def _create_directory_if_needed(path):
-    if not op.exists(path):
-        os.mkdir(path)
-
-
-def _ensure_disk_store_exists(dir_name, root_path=None):
-    # Disk store.
-    if root_path is None:
-        _ensure_phy_user_dir_exists()
-        root_path = _phy_user_dir()
-    if not op.exists(root_path):
-        raise RuntimeError("Please create the store directory "
-                           "{0}.".format(root_path))
-
-    # Create a directory for the current dataset.
-    data_dir = op.join(root_path, dir_name)
-    _create_directory_if_needed(data_dir)
-
-    # Create a subdirectory 'cluster_store'.
-    store_dir = op.join(data_dir, 'cluster_store')
-    _create_directory_if_needed(store_dir)
-
-    return store_dir
-
-
 def _process_ups(ups):
     """This function processes the UpdateInfo instances of the two
     undo stacks (clustering and cluster metadata) and concatenates them
@@ -282,20 +256,15 @@ def _process_ups(ups):
 
 
 class Session(BaseSession):
-    """Default manual clustering session.
-
-    Parameters
-    ----------
-    filename : str
-        Path to a .kwik file, to be used if 'model' is not used.
-    model : instance of BaseModel
-        A Model instance, to be used if 'filename' is not used.
-
-    """
-    def __init__(self, store_path=None):
+    """A manual clustering session."""
+    def __init__(self, root_path=None):
         super(Session, self).__init__()
         self.model = None
-        self._store_path = store_path
+
+        # Root directory.
+        if root_path is None:
+            root_path = _phy_user_dir()
+        self._root_path = root_path
 
         # self.action and self.connect are decorators.
         self.action(self.open, title='Open')
@@ -317,6 +286,7 @@ class Session(BaseSession):
         if model is None:
             model = KwikModel(filename)
         self.model = model
+        self.model_name = model.name
         self.emit('open')
 
     def close(self):
@@ -361,11 +331,20 @@ class Session(BaseSession):
         settings.set_user(path=op.join(curdir, 'default_settings.py'),
                           file_namespace=file_namespace)
 
+    def _load_internal_settings(self):
+        path = self._internal_settings_path
+        if op.exists(path):
+            settings.load_internal(path)
+
+    def _save_internal_settings(self):
+        path = self._internal_settings_path
+        settings.save_internal(path)
+
     def _create_cluster_store(self):
-        path = _ensure_disk_store_exists(self.model.name,
-                                         root_path=self._store_path,
-                                         )
-        self.cluster_store = ClusterStore(model=self.model, path=path)
+        # Instanciate the store.
+        self.cluster_store = ClusterStore(model=self.model,
+                                          path=self._store_path,
+                                          )
         self.cluster_store.register_item(FeatureMasks)
 
         @self.cluster_store.progress_reporter.connect
@@ -393,6 +372,11 @@ class Session(BaseSession):
         # Load the default settings for manual clustering.
         self._load_default_settings()
 
+        # Load the internal settings.
+        self._internal_settings_path = _internal_path('internal_settings')
+        _ensure_path_exists(op.basename(self._internal_settings_path))
+        self._load_internal_settings()
+
         # Create the history.
         self._global_history = GlobalHistory(process_ups=_process_ups)
 
@@ -406,7 +390,14 @@ class Session(BaseSession):
         self.cluster_metadata = self.model.cluster_metadata
 
         # Kwik store.
+        # Default cluster store path: ~/.phy/<model_name>/cluster_store/.
+        rel_path = '{0}/cluster_store/'.format(self.model_name)
+        self._store_path = _internal_path(rel_path, root=self._root_path)
+        _ensure_path_exists(self._store_path)
         self._create_cluster_store()
+
+    def on_close(self):
+        settings._save_internal_settings()
 
     def on_cluster(self, up=None, add_to_stack=True):
         if add_to_stack:
@@ -447,6 +438,8 @@ class Session(BaseSession):
         def on_close(event):
             self.unconnect(on_open, on_cluster, on_select)
 
+        # Make sure the view is correctly initialized when it is created
+        # *after* that the data has been loaded.
         @view.connect
         def on_draw(event):
             if view.visual.empty:
@@ -458,16 +451,42 @@ class Session(BaseSession):
 
         return view
 
+    def _view_settings_name(self, view_model, name):
+        if isinstance(view_model, string_types):
+            prefix = view_model
+        elif isinstance(view_model, WaveformViewModel):
+            prefix = 'waveform'
+        elif isinstance(view_model, FeatureViewModel):
+            prefix = 'feature'
+        return prefix + '_' + name
+
+    def _save_scale_factor(self, view_model):
+        name = self._view_settings_name(view_model, 'scale_factor')
+        sf = view_model.view.zoom
+        settings.set_internal({name: sf},
+                              namespace='manual_clustering',
+                              scope=self.model_name,
+                              )
+
+    def _load_scale_factor(self, view_name):
+        name = self._view_settings_name(view_name, 'scale_factor')
+        return settings.get_internal(name,
+                                     namespace='manual_clustering',
+                                     scope=self.model_name,
+                                     ) or .01
+
     def _create_waveform_view_model(self):
+        sf = self._load_scale_factor('waveform')
         return WaveformViewModel(self.model,
                                  store=self.cluster_store,
-                                 scale_factor=.01,
+                                 scale_factor=sf,
                                  )
 
     def _create_feature_view_model(self):
+        sf = self._load_scale_factor('feature')
         return FeatureViewModel(self.model,
                                 store=self.cluster_store,
-                                scale_factor=.01,
+                                scale_factor=sf,
                                 )
 
     def _create_correlogram_view_model(self):

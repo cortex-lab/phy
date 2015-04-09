@@ -156,7 +156,7 @@ def test_action_event():
 #------------------------------------------------------------------------------
 
 def _start_manual_clustering(filename=None, model=None, tempdir=None):
-    session = Session(store_path=tempdir)
+    session = Session(root_path=tempdir)
     session.open(filename=filename, model=model)
     return session
 
