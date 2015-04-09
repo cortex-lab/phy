@@ -15,3 +15,7 @@ manual_clustering.ccg_excerpt_size = 100
 
 # Maximum number of spikes to display in the views.
 manual_clustering.n_spikes_max = 100
+
+# Number of spikes to load at once from the features_masks array
+# during the cluster store generation.
+manual_clustering.store_chunk_size = 100000

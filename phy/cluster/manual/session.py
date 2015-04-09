@@ -86,7 +86,7 @@ class FeatureMasks(StoreItem):
               ('main_channels', 'memory'),
               ('mean_probe_position', 'memory'),
               ]
-    chunk_size = 100000
+    chunk_size = None
 
     def __init__(self, *args, **kwargs):
         super(FeatureMasks, self).__init__(*args, **kwargs)
@@ -105,7 +105,8 @@ class FeatureMasks(StoreItem):
         self.progress_reporter.set_max(features_masks=self.n_chunks)
 
     def _need_generate(self, cluster_sizes):
-        """Return whether the cluster needs to be re-generated or not."""
+        """Return whether the whole cluster store needs to be
+        re-generated or not."""
         for cluster in sorted(cluster_sizes):
             cluster_size = cluster_sizes[cluster]
             expected_file_size = (cluster_size * self.n_channels * 4)
@@ -346,6 +347,11 @@ class Session(BaseSession):
         self.cluster_store = ClusterStore(model=self.model,
                                           path=self._store_path,
                                           )
+
+        # chunk_size is the number of spikes to load at once from
+        # the features_masks array.
+        cs = settings.get_user('manual_clustering.store_chunk_size') or 100000
+        FeatureMasks.chunk_size = cs
         self.cluster_store.register_item(FeatureMasks)
 
         @self.cluster_store.progress_reporter.connect
@@ -447,6 +453,7 @@ class Session(BaseSession):
             if view.visual.empty:
                 on_open()
                 on_select(self.selector)
+            self._save_scale_factor(view_model)
 
         if show:
             view.show()
@@ -464,7 +471,7 @@ class Session(BaseSession):
 
     def _save_scale_factor(self, view_model):
         name = self._view_settings_name(view_model, 'scale_factor')
-        sf = view_model.view.zoom
+        sf = view_model.view.zoom * .01
         settings.set_internal({name: sf},
                               namespace='manual_clustering',
                               scope=self.model_name,
