@@ -30,8 +30,8 @@ def _split_namespace(name, namespace=None):
 # Settings
 #------------------------------------------------------------------------------
 
-class Settings(object):
-    """Store key-value pairs. Support Python settings files."""
+class BaseSettings(object):
+    """Store key-value pairs."""
     def __init__(self):
         self._store = {'global': {}}
 
@@ -44,6 +44,28 @@ class Settings(object):
         if scope not in self._store:
             scope = 'global'
         return self._store[scope].get(namespace, {}).get(name, None)
+
+    def set(self,
+            key_values=None,
+            namespace=None,
+            scope='global',
+            ):
+        assert isinstance(key_values, dict)
+        if scope not in self._store:
+            self._store[scope] = Bunch({})
+        for key, value in key_values.items():
+            namespace, name = _split_namespace(key, namespace=namespace)
+
+            # Create dictionaries if they do not exist.
+            if namespace not in self._store[scope]:
+                self._store[scope][namespace] = Bunch({})
+
+            # Update the settings.
+            self._store[scope][namespace][name] = value
+
+
+class Settings(BaseSettings):
+    """Support Python settings files."""
 
     def read_settings_file(self, path, file_namespace=None):
         """Return a dictionary {namespace: {key: value}} dictionary."""
@@ -76,18 +98,18 @@ class Settings(object):
             assert op.exists(path)
             return self.read_settings_file(path,
                                            file_namespace=file_namespace)
-        assert isinstance(key_values, dict)
-        if scope not in self._store:
-            self._store[scope] = Bunch({})
-        for key, value in key_values.items():
-            namespace, name = _split_namespace(key, namespace=namespace)
+        super(Settings, self).set(key_values=key_values,
+                                  namespace=namespace,
+                                  scope=scope,
+                                  )
 
-            # Create dictionaries if they do not exist.
-            if namespace not in self._store[scope]:
-                self._store[scope][namespace] = Bunch({})
 
-            # Update the settings.
-            self._store[scope][namespace][name] = value
+#------------------------------------------------------------------------------
+# Internal Settings
+#------------------------------------------------------------------------------
+
+class InternalSettings(BaseSettings):
+    pass
 
 
 #------------------------------------------------------------------------------
