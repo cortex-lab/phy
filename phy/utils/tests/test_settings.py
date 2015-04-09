@@ -10,7 +10,7 @@ import os.path as op
 
 from pytest import raises
 
-from ..settings import UserSettings
+from ..settings import BaseSettings, UserSettings, InternalSettings
 from ..tempdir import TemporaryDirectory
 
 
@@ -18,8 +18,8 @@ from ..tempdir import TemporaryDirectory
 # Test settings
 #------------------------------------------------------------------------------
 
-def test_settings_1():
-    s = UserSettings()
+def test_base_settings_1():
+    s = BaseSettings()
 
     # Namespaces are mandatory.
     with raises(ValueError):
@@ -32,15 +32,15 @@ def test_settings_1():
     assert s.get('test.a') == 3
 
 
-def test_settings_2():
-    s = UserSettings()
+def test_base_settings_2():
+    s = BaseSettings()
 
     s.set({'test.a': 3}, scope='my_dataset')
     assert s.get('test.a') is None
     assert s.get('test.a', scope='my_dataset') == 3
 
 
-def test_settings_path():
+def test_user_settings_path():
     with TemporaryDirectory() as tmpdir:
         path = op.join(tmpdir, 'test')
 

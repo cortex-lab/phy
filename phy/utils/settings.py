@@ -9,9 +9,11 @@
 import os
 import os.path as op
 import re
+import pickle
 
-from ..ext import six
+from ..ext.six.moves.cPickle import load, dump
 from ._misc import Bunch
+from .logging import debug, warn
 
 
 #------------------------------------------------------------------------------
@@ -153,7 +155,26 @@ def set_user(*args, **kwargs):
 #------------------------------------------------------------------------------
 
 class InternalSettings(BaseSettings):
-    pass
+    """Settings to be modified by the program, not the user."""
+    def load(self, path):
+        path = op.realpath(op.expanduser(path))
+        if not op.exists(path):
+            raise ValueError("The file '{0}' doesn't exist.".format(path))
+        try:
+            with open(path, 'rb') as f:
+                store = load(f)
+        except Exception as e:
+            warn("Unable to read the internal settings. "
+                 "You may want to delete '{0}'.\n{1}".format(path, e.message))
+        assert isinstance(store, dict)
+        debug("Loaded internal settings from '{0}'.".format(path))
+        self._store = store
+
+    def save(self, path):
+        path = op.realpath(op.expanduser(path))
+        with open(path, 'wb') as f:
+            dump(self._store, f)
+        debug("Saved internal settings to '{0}'.".format(path))
 
 
 _INTERNAL_SETTINGS = InternalSettings()
