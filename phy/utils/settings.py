@@ -165,7 +165,7 @@ class InternalSettings(BaseSettings):
                 store = load(f)
         except Exception as e:
             warn("Unable to read the internal settings. "
-                 "You may want to delete '{0}'.\n{1}".format(path, e.message))
+                 "You may want to delete '{0}'.\n{1}".format(path, str(e)))
         assert isinstance(store, dict)
         debug("Loaded internal settings from '{0}'.".format(path))
         self._store = store
