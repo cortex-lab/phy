@@ -10,7 +10,7 @@ import os.path as op
 
 from pytest import raises
 
-from ..settings import _Settings
+from ..settings import Settings
 from ..tempdir import TemporaryDirectory
 
 
@@ -19,7 +19,7 @@ from ..tempdir import TemporaryDirectory
 #------------------------------------------------------------------------------
 
 def test_settings_1():
-    s = _Settings()
+    s = Settings()
 
     # Namespaces are mandatory.
     with raises(ValueError):
@@ -33,7 +33,7 @@ def test_settings_1():
 
 
 def test_settings_2():
-    s = _Settings()
+    s = Settings()
 
     s.set({'test.a': 3}, scope='my_dataset')
     assert s.get('test.a') is None
@@ -49,7 +49,7 @@ def test_settings_path():
         with open(path, 'w') as f:
             f.write(contents)
 
-        s = _Settings()
+        s = Settings()
         # Need to set the namespace 'test' first.
         with raises(NameError):
             s.set(path=path)

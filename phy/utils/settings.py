@@ -30,7 +30,7 @@ def _split_namespace(name, namespace=None):
 # Settings
 #------------------------------------------------------------------------------
 
-class _Settings(object):
+class Settings(object):
     """Store key-value pairs. Support Python settings files."""
     def __init__(self):
         self._store = {'global': {}}
@@ -94,7 +94,7 @@ class _Settings(object):
 # Global variables
 #------------------------------------------------------------------------------
 
-_SETTINGS = _Settings()
+_SETTINGS = Settings()
 
 
 def get(name, scope='global'):
