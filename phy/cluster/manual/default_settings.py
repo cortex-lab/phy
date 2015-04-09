@@ -1,5 +1,5 @@
 from phy.utils._misc import Bunch
-manual_clustering = Bunch({})
+manual_clustering = Bunch()
 
 # Number of time samples in a bin.
 manual_clustering.ccg_binsize = 20

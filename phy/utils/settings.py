@@ -72,13 +72,13 @@ class BaseSettings(object):
         """
         assert isinstance(key_values, dict)
         if scope not in self._store:
-            self._store[scope] = Bunch({})
+            self._store[scope] = Bunch()
         for key, value in key_values.items():
             namespace, name = _split_namespace(key, namespace=namespace)
 
             # Create dictionaries if they do not exist.
             if namespace not in self._store[scope]:
-                self._store[scope][namespace] = Bunch({})
+                self._store[scope][namespace] = Bunch()
 
             # Update the settings.
             self._store[scope][namespace][name] = value
