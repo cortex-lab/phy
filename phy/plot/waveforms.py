@@ -151,12 +151,12 @@ class WaveformView(BaseSpikeCanvas):
         coeff = 1.1
         if event.key == '+':
             if 'Control' in event.modifiers:
-                self.visual.box_scale = (u*coeff, v)
+                self.visual.box_scale = (u * coeff, v)
             else:
-                self.visual.box_scale = (u, v*coeff)
+                self.visual.box_scale = (u, v * coeff)
         if event.key == '-':
             if 'Control' in event.modifiers:
-                self.visual.box_scale = (u/coeff, v)
+                self.visual.box_scale = (u / coeff, v)
             else:
-                self.visual.box_scale = (u, v/coeff)
+                self.visual.box_scale = (u, v / coeff)
         self.update()
