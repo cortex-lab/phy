@@ -91,7 +91,7 @@ class BaseSettings(object):
 class UserSettings(BaseSettings):
     """Support Python settings files."""
 
-    def read_settings_file(self, path, file_namespace=None):
+    def read_settings_file(self, path, file_namespace=None, scope='global'):
         """Return a dictionary {namespace: {key: value}} dictionary."""
         with open(path, 'r') as f:
             contents = f.read()
@@ -100,7 +100,7 @@ class UserSettings(BaseSettings):
         # Executing the code directly updates the internal store.
         # The current store is passed as a global namespace.
         try:
-            exec(contents, Bunch(self._store['global']), file_namespace)
+            exec(contents, Bunch(self._store[scope]), file_namespace)
         except NameError as e:
             r = re.search("'([^']+)'", e.args[0])
             if r:
@@ -132,7 +132,8 @@ class UserSettings(BaseSettings):
             path = op.realpath(path)
             assert op.exists(path)
             return self.read_settings_file(path,
-                                           file_namespace=file_namespace)
+                                           file_namespace=file_namespace,
+                                           scope=scope)
         super(UserSettings, self).set(key, value,
                                       namespace=namespace,
                                       scope=scope,
@@ -227,7 +228,7 @@ class SettingsManager(object):
     def _load_user_settings(self, scope):
         path = self.user_settings_path(scope)
         if op.exists(path):
-            set(path=path)
+            _USER_SETTINGS.set(path=path)
 
     def set_experiment_path(self, experiment_path):
         self.experiment_path = experiment_path
@@ -277,8 +278,10 @@ class SettingsManager(object):
                           path=None, file_namespace=None):
         if scope == 'experiment':
             scope = self.experiment_name or 'global'
-        return set(key, value, scope=scope,
-                   path=path, file_namespace=file_namespace)
+        return _USER_SETTINGS.set(key, value,
+                                  scope=scope,
+                                  path=path,
+                                  file_namespace=file_namespace)
 
     def save(self):
         for scope, settings in self._internal_settings.items():
