@@ -13,7 +13,6 @@ import numpy as np
 
 from vispy import app, gloo, config
 from vispy.visuals import Visual
-from vispy.visuals.shaders import ModularProgram
 
 from ..utils.array import _unique, _as_array
 from ..utils.logging import debug
@@ -295,7 +294,7 @@ class BaseSpikeVisual(Visual):
         curdir = op.dirname(op.realpath(__file__))
         config['include_path'] = [op.join(curdir, 'glsl')]
 
-        self.program = ModularProgram(vertex, fragment)
+        self.program = gloo.Program(vertex, fragment)
 
         gloo.set_state(clear_color='black', blend=True,
                        blend_func=('src_alpha', 'one_minus_src_alpha'))
