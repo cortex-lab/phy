@@ -9,6 +9,8 @@
 
 import numpy as np
 
+from vispy import gloo
+
 from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
                            BoxVisual,
@@ -222,9 +224,10 @@ class FeatureView(BaseSpikeCanvas):
         self.visual.marker_size = value
 
     def on_draw(self, event):
-        super(FeatureView, self).on_draw(event)
-        self.boxes.draw()
+        gloo.clear()
         self.axes.draw()
+        self.visual.draw()
+        self.boxes.draw()
 
     def on_key_press(self, event):
         coeff = .25
