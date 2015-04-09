@@ -238,6 +238,26 @@ class PanZoom(object):
         # self.pan = xpan, ypan
         self._canvas.update()
 
+    def on_key_press(self, event):
+        if 'Control' in event.modifiers:
+            k = .05
+            if event.key == 'Down':
+                self.zoom *= (1. - k)
+            elif event.key == 'Up':
+                self.zoom *= (1. + k)
+            self._canvas.update()
+        else:
+            k = .05
+            if event.key == 'Left':
+                self.pan += (+k, +0)
+            elif event.key == 'Right':
+                self.pan += (-k, +0)
+            elif event.key == 'Down':
+                self.pan += (+0, +k)
+            elif event.key == 'Up':
+                self.pan += (+0, -k)
+            self._canvas.update()
+
     def add(self, programs):
         """ Attach programs to this tranform """
 
@@ -270,6 +290,7 @@ class PanZoom(object):
         canvas.connect(self.on_resize)
         canvas.connect(self.on_mouse_wheel)
         canvas.connect(self.on_mouse_move)
+        canvas.connect(self.on_key_press)
 
 
 #------------------------------------------------------------------------------
