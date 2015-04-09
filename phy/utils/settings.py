@@ -45,7 +45,7 @@ class _Settings(object):
             scope = 'global'
         return self._store[scope].get(namespace, {}).get(name, None)
 
-    def _read_settings_file(self, path, file_namespace=None):
+    def read_settings_file(self, path, file_namespace=None):
         """Return a dictionary {namespace: {key: value}} dictionary."""
         with open(path, 'r') as f:
             contents = f.read()
@@ -74,8 +74,8 @@ class _Settings(object):
             path = op.expanduser(path)
             path = op.realpath(path)
             assert op.exists(path)
-            return self._read_settings_file(path,
-                                            file_namespace=file_namespace)
+            return self.read_settings_file(path,
+                                           file_namespace=file_namespace)
         assert isinstance(key_values, dict)
         if scope not in self._store:
             self._store[scope] = Bunch({})
