@@ -278,6 +278,7 @@ class Session(BaseSession):
 
         self.connect(self.on_open)
         self.connect(self.on_cluster)
+        self.connect(self.on_close)
 
     # Public actions
     # -------------------------------------------------------------------------
@@ -372,8 +373,9 @@ class Session(BaseSession):
         # Load the default settings for manual clustering.
         self._load_default_settings()
 
-        # Load the internal settings.
-        self._internal_settings_path = _internal_path('internal_settings')
+        # Load the internal settings from ~/.phy/internal_settings.
+        self._internal_settings_path = _internal_path('internal_settings',
+                                                      root=self._root_path)
         _ensure_path_exists(op.basename(self._internal_settings_path))
         self._load_internal_settings()
 
@@ -389,15 +391,15 @@ class Session(BaseSession):
         self.selector = Selector(spike_clusters, n_spikes_max=n_spikes_max)
         self.cluster_metadata = self.model.cluster_metadata
 
-        # Kwik store.
-        # Default cluster store path: ~/.phy/<model_name>/cluster_store/.
+        # Kwik store in ~/.phy/<model_name>/cluster_store/ by default.
         rel_path = '{0}/cluster_store/'.format(self.model_name)
-        self._store_path = _internal_path(rel_path, root=self._root_path)
+        self._store_path = _internal_path(rel_path,
+                                          root=self._root_path)
         _ensure_path_exists(self._store_path)
         self._create_cluster_store()
 
     def on_close(self):
-        settings._save_internal_settings()
+        self._save_internal_settings()
 
     def on_cluster(self, up=None, add_to_stack=True):
         if add_to_stack:
