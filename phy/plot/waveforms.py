@@ -14,7 +14,6 @@ from vispy.gloo import Texture2D
 from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas
 from ..utils.array import _as_array, _index_of, _normalize
 from ..utils.logging import debug
-from ..utils._color import _random_color
 
 
 #------------------------------------------------------------------------------
@@ -146,17 +145,25 @@ class WaveformVisual(BaseSpikeVisual):
 class WaveformView(BaseSpikeCanvas):
     _visual_class = WaveformVisual
 
+    @property
+    def box_scale(self):
+        return self.visual.box_scale
+
+    @box_scale.setter
+    def box_scale(self, value):
+        self.visual.box_scale = value
+
     def on_key_press(self, event):
         u, v = self.visual.box_scale
         coeff = 1.1
         if event.key == '+':
             if 'Control' in event.modifiers:
-                self.visual.box_scale = (u * coeff, v)
+                self.box_scale = (u * coeff, v)
             else:
-                self.visual.box_scale = (u, v * coeff)
+                self.box_scale = (u, v * coeff)
         if event.key == '-':
             if 'Control' in event.modifiers:
-                self.visual.box_scale = (u / coeff, v)
+                self.box_scale = (u / coeff, v)
             else:
-                self.visual.box_scale = (u, v / coeff)
+                self.box_scale = (u, v / coeff)
         self.update()
