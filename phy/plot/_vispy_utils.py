@@ -276,33 +276,69 @@ class PanZoom(object):
 # Base spike visual
 #------------------------------------------------------------------------------
 
-class BaseSpikeVisual(Visual):
+class _BakeVisual(Visual):
     _shader_name = ''
     _gl_draw_mode = ''
 
     def __init__(self, **kwargs):
-        super(BaseSpikeVisual, self).__init__(**kwargs)
-        self.n_spikes = None
-        self._spike_clusters = None
-        self._spike_ids = None
-        self._empty = True
+        super(_BakeVisual, self).__init__(**kwargs)
         self._to_bake = []
-
-        vertex = _load_shader(self._shader_name + '.vert')
-        fragment = _load_shader(self._shader_name + '.frag')
+        self._empty = True
 
         curdir = op.dirname(op.realpath(__file__))
         config['include_path'] = [op.join(curdir, 'glsl')]
 
+        vertex = _load_shader(self._shader_name + '.vert')
+        fragment = _load_shader(self._shader_name + '.frag')
         self.program = gloo.Program(vertex, fragment)
-
-        gloo.set_state(clear_color='black', blend=True,
-                       blend_func=('src_alpha', 'one_minus_src_alpha'))
 
     @property
     def empty(self):
         """Specify whether the visual is currently empty or not."""
         return self._empty
+
+    def set_to_bake(self, *bakes):
+        for bake in bakes:
+            if bake not in self._to_bake:
+                self._to_bake.append(bake)
+
+    def _bake(self):
+        """Prepare and upload the data on the GPU.
+
+        Return whether something has been baked or not.
+
+        """
+        if self._empty:
+            return
+        n_bake = len(self._to_bake)
+        # Bake what needs to be baked.
+        # WARNING: the bake functions are called in alphabetical order.
+        # Tweak the names if there are dependencies between the functions.
+        for bake in sorted(self._to_bake):
+            # Name of the private baking method.
+            name = '_bake_{0:s}'.format(bake)
+            if hasattr(self, name):
+                getattr(self, name)()
+        self._to_bake = []
+        return n_bake > 0
+
+    def draw(self):
+        """Draw the waveforms."""
+        # Bake what needs to be baked at this point.
+        self._bake()
+        if not self._empty:
+            self.program.draw(self._gl_draw_mode)
+
+
+class BaseSpikeVisual(_BakeVisual):
+    def __init__(self, **kwargs):
+        super(BaseSpikeVisual, self).__init__(**kwargs)
+        self.n_spikes = None
+        self._spike_clusters = None
+        self._spike_ids = None
+
+        gloo.set_state(clear_color='black', blend=True,
+                       blend_func=('src_alpha', 'one_minus_src_alpha'))
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -313,11 +349,6 @@ class BaseSpikeVisual(Visual):
         if self.n_spikes is None:
             self.n_spikes = arr.shape[0]
         assert arr.shape[0] == self.n_spikes
-
-    def set_to_bake(self, *bakes):
-        for bake in bakes:
-            if bake not in self._to_bake:
-                self._to_bake.append(bake)
 
     @property
     def spike_clusters(self):
@@ -394,32 +425,52 @@ class BaseSpikeVisual(Visual):
         self.program['u_cluster_color'] = gloo.Texture2D(u_cluster_color)
         debug("bake color", u_cluster_color.shape)
 
-    def _bake(self):
-        """Prepare and upload the data on the GPU.
 
-        Return whether something has been baked or not.
+#------------------------------------------------------------------------------
+# Axes and boxes visual
+#------------------------------------------------------------------------------
 
-        """
-        if self._empty:
+class BoxVisual(_BakeVisual):
+    _shader_name = 'box'
+    _gl_draw_mode = 'lines'
+
+    def __init__(self, **kwargs):
+        super(BoxVisual, self).__init__(**kwargs)
+        self._n_rows = None
+
+    @property
+    def n_rows(self):
+        return self._n_rows
+
+    @n_rows.setter
+    def n_rows(self, value):
+        assert value >= 0
+        self._n_rows = value
+        self._empty = not(self._n_rows > 0)
+        self.set_to_bake('n_rows')
+
+    @property
+    def n_boxes(self):
+        return self._n_rows * self._n_rows
+
+    def _bake_n_rows(self):
+        if not self._n_rows:
             return
-        n_bake = len(self._to_bake)
-        # Bake what needs to be baked.
-        # WARNING: the bake functions are called in alphabetical order.
-        # Tweak the names if there are dependencies between the functions.
-        for bake in sorted(self._to_bake):
-            # Name of the private baking method.
-            name = '_bake_{0:s}'.format(bake)
-            if hasattr(self, name):
-                getattr(self, name)()
-        self._to_bake = []
-        return n_bake > 0
-
-    def draw(self):
-        """Draw the waveforms."""
-        # Bake what needs to be baked at this point.
-        self._bake()
-        if not self._empty:
-            self.program.draw(self._gl_draw_mode)
+        arr = np.array([[-1, -1],
+                        [-1, +1],
+                        [-1, +1],
+                        [+1, +1],
+                        [+1, +1],
+                        [+1, -1],
+                        [+1, -1],
+                        [-1, -1]])
+        arr = np.tile(arr, (self.n_boxes, 1))
+        position = np.empty((8 * self.n_boxes, 3), dtype=np.float32)
+        position[:, :2] = arr
+        position[:, 2] = np.repeat(np.arange(self.n_boxes), 8)
+        self.program['a_position'] = position
+        self.program['n_rows'] = self._n_rows
+        debug("bake color", position.shape)
 
 
 #------------------------------------------------------------------------------
@@ -437,7 +488,7 @@ class BaseSpikeCanvas(app.Canvas):
         self._pz.attach(self)
 
     def on_draw(self, event):
-        gloo.clear('black')
+        gloo.clear()
         self.visual.draw()
 
     def on_resize(self, event):

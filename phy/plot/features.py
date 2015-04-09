@@ -9,7 +9,7 @@
 
 import numpy as np
 
-from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas
+from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas, BoxVisual
 from ..ext.six import string_types
 from ..utils.array import _as_array, _index_of
 from ..utils.logging import debug
@@ -187,10 +187,40 @@ class FeatureVisual(BaseSpikeVisual):
 class FeatureView(BaseSpikeCanvas):
     _visual_class = FeatureVisual
 
+    def __init__(self, **kwargs):
+        super(FeatureView, self).__init__(**kwargs)
+        self.boxes = BoxVisual()
+
+    @property
+    def dimensions(self):
+        """Dimensions."""
+        return self.visual.dimensions
+
+    @dimensions.setter
+    def dimensions(self, value):
+        # WARNING: dimensions should be changed here, in the Canvas,
+        # and not in the visual. This is to make sure that the boxes are
+        # updated as well.
+        self.visual.dimensions = value
+        self.boxes.n_rows = self.visual.n_rows
+
+    @property
+    def marker_size(self):
+        """Marker size."""
+        return self.visual.marker_size
+
+    @marker_size.setter
+    def marker_size(self, value):
+        self.visual.marker_size = value
+
+    def on_draw(self, event):
+        super(FeatureView, self).on_draw(event)
+        self.boxes.draw()
+
     def on_key_press(self, event):
         coeff = .25
         if event.key == '+':
-            self.visual.marker_size += coeff
+            self.marker_size += coeff
         if event.key == '-':
-            self.visual.marker_size -= coeff
+            self.marker_size -= coeff
         self.update()
