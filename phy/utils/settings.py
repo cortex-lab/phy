@@ -207,6 +207,7 @@ class SettingsManager(object):
 
     def __init__(self, phy_user_dir=None):
         self.phy_experiment_dir = None
+        self.experiment_name = None
 
         # '.phy/' user directory, ~/.phy by default.
         if phy_user_dir is None:
@@ -269,13 +270,13 @@ class SettingsManager(object):
 
     def get_user_settings(self, key, scope='global'):
         if scope == 'experiment':
-            scope = self.experiment_name
+            scope = self.experiment_name or 'global'
         return get(key, scope=scope)
 
     def set_user_settings(self, key, value, scope='global',
                           path=None, file_namespace=None):
         if scope == 'experiment':
-            scope = self.experiment_name
+            scope = self.experiment_name or 'global'
         return set(key, value, scope=scope,
                    path=path, file_namespace=file_namespace)
 
