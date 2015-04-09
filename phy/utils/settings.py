@@ -120,7 +120,7 @@ class InternalSettings(BaseSettings):
 # Global variables
 #------------------------------------------------------------------------------
 
-_SETTINGS = UserSettings()
+_USER_SETTINGS = UserSettings()
 
 
 def get_user(name, scope='global'):
@@ -134,7 +134,7 @@ def get_user(name, scope='global'):
         The scope for that setting. Can be 'global' or a dataset name.
 
     """
-    return _SETTINGS.get(name, scope)
+    return _USER_SETTINGS.get(name, scope)
 
 
 def set_user(key_values=None,
@@ -159,9 +159,9 @@ def set_user(key_values=None,
         A namespace to pass to the Python settings file.
 
     """
-    return _SETTINGS.set(key_values=key_values,
-                         namespace=namespace,
-                         scope=scope,
-                         path=path,
-                         file_namespace=file_namespace,
-                         )
+    return _USER_SETTINGS.set(key_values=key_values,
+                              namespace=namespace,
+                              scope=scope,
+                              path=path,
+                              file_namespace=file_namespace,
+                              )
