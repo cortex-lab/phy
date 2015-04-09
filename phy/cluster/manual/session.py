@@ -471,7 +471,7 @@ class Session(BaseSession):
 
     def _save_scale_factor(self, view_model):
         name = self._view_settings_name(view_model, 'scale_factor')
-        sf = view_model.view.zoom * .01
+        sf = view_model.view.zoom * view_model.scale_factor
         settings.set_internal({name: sf},
                               namespace='manual_clustering',
                               scope=self.model_name,

@@ -81,7 +81,7 @@ class PanZoom(object):
     """
 
     def __init__(self, aspect=1.0, pan=(0.0, 0.0), zoom=1.0,
-                 zmin=0.01, zmax=100.0):
+                 zmin=1e-5, zmax=1e5):
         """
         Initialize the transform.
 
