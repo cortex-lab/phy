@@ -272,10 +272,12 @@ class SettingsManager(object):
             scope = self.experiment_name
         return get(key, scope=scope)
 
-    def set_user_settings(self, key, value, scope='global'):
+    def set_user_settings(self, key, value, scope='global',
+                          path=None, file_namespace=None):
         if scope == 'experiment':
             scope = self.experiment_name
-        return set(key, value, scope=scope)
+        return set(key, value, scope=scope,
+                   path=path, file_namespace=file_namespace)
 
     def save(self):
         for scope, settings in self._internal_settings.items():
