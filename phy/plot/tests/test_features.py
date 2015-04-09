@@ -42,9 +42,6 @@ def _test_features(n_spikes=None, n_clusters=None):
     masks = artificial_masks(n_spikes, n_channels)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     spike_times = artificial_spike_times(n_spikes).astype(np.float32)
-    # WARNING: need to normalize spike times
-    if len(spike_times) > 0:
-        spike_times = -1 + 2 * spike_times / spike_times.max()
 
     c = FeatureView()
     c.visual.features = features

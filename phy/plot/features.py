@@ -87,7 +87,12 @@ class FeatureVisual(BaseSpikeVisual):
             channel, feature = dim
             return self._features[:, channel, feature]
         elif dim == 'time':
-            return self._spike_times
+            t = self._spike_times
+            # Normalize time feature.
+            m = t.max()
+            if m > 0:
+                t = -1. + 2 * t / m
+            return t
 
     def _get_mask_dim(self, dim):
         if isinstance(dim, (tuple, list)):
