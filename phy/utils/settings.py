@@ -31,6 +31,7 @@ def _split_namespace(name, namespace=None):
 #------------------------------------------------------------------------------
 
 class _Settings(object):
+    """Store key-value pairs. Support Python settings files."""
     def __init__(self):
         self._store = {'global': {}}
 
