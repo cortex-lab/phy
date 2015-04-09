@@ -52,7 +52,7 @@ class WaveformVisual(BaseSpikeVisual):
         assert value.ndim == 3
         self.n_spikes, self.n_samples, self.n_channels = value.shape
         self._waveforms = value
-        self._non_empty = self.n_spikes > 0
+        self._empty = self.n_spikes == 0
         self.set_to_bake('spikes', 'spikes_clusters', 'color')
 
     @property
@@ -74,7 +74,6 @@ class WaveformVisual(BaseSpikeVisual):
     def box_scale(self, value):
         assert isinstance(value, tuple) and len(value) == 2
         self.program['u_data_scale'] = value
-        self.update()
 
     # Data baking
     # -------------------------------------------------------------------------
@@ -124,7 +123,7 @@ class WaveformVisual(BaseSpikeVisual):
         self.program['n_clusters'] = self.n_clusters
         self.program['n_channels'] = self.n_channels
 
-        debug("bake spikes", data.shape)
+        debug("bake spikes", waveforms.shape)
 
     def _bake_spikes_clusters(self):
         # WARNING: needs to be called *after* _bake_spikes().
@@ -148,9 +147,6 @@ class WaveformView(BaseSpikeCanvas):
     _visual_class = WaveformVisual
 
     def on_key_press(self, event):
-        # TODO: more interactivity
-        # TODO: keyboard shortcut manager
-        # super(WaveformView, self).on_key_press(event)
         u, v = self.visual.box_scale
         coeff = 1.1
         if event.key == '+':
@@ -163,62 +159,4 @@ class WaveformView(BaseSpikeCanvas):
                 self.visual.box_scale = (u/coeff, v)
             else:
                 self.visual.box_scale = (u, v/coeff)
-
-
-def add_waveform_view(session, backend=None):
-    """Add a waveform view in a session.
-
-    This function binds the session events to the created waveform view.
-
-    The caller needs to show the waveform view explicitly.
-
-    """
-    if backend in ('pyqt4', None):
-        kwargs = {'always_on_top': True}
-    else:
-        kwargs = {}
-    view = WaveformView(**kwargs)
-
-    @session.connect
-    def on_open():
-        if session.model is None:
-            return
-        view.visual.spike_clusters = session.clustering.spike_clusters
-        view.visual.channel_positions = session.model.probe.positions
-        view.update()
-
-    @session.connect
-    def on_cluster(up=None):
-        pass
-        # TODO: select the merged cluster
-        # session.select(merged)
-
-    @session.connect
-    def on_select(selector):
-        spikes = selector.selected_spikes
-        if len(spikes) == 0:
-            return
-        if view.visual.spike_clusters is None:
-            on_open()
-        view.visual.waveforms = session.model.waveforms[spikes]
-        view.visual.masks = session.model.masks[spikes]
-        view.visual.spike_ids = spikes
-        # TODO: how to choose cluster colors?
-        view.visual.cluster_colors = [_random_color()
-                                      for _ in selector.selected_clusters]
-        view.update()
-
-    # Unregister the callbacks when the view is closed.
-    @view.connect
-    def on_close(event):
-        session.unconnect(on_open, on_cluster, on_select)
-
-    # TODO: first_draw() event in VisPy view that is emitted when the view
-    # is first rendered (first paint event).
-    @view.connect
-    def on_draw(event):
-        if view.visual.spike_clusters is None:
-            on_open()
-            on_select(session.selector)
-
-    return view
+        self.update()

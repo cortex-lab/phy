@@ -26,7 +26,7 @@ lint:
 	${FLAKE8} phy --exclude=phy/ext/* --ignore=E226,E265,F401,F811
 
 test: lint
-	py.test --cov-report term-missing --cov phy
+	py.test --cov-report term-missing --cov phy --ignore experimental
 
 release: clean
 	python setup.py sdist upload

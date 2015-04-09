@@ -20,7 +20,7 @@ def get_log_format(debug=False):
 
 
 def get_caller():
-    tb = traceback.extract_stack()[-5]
+    tb = traceback.extract_stack()[-6]
     module = os.path.splitext(os.path.basename(tb[0]))[0]
     line = str(tb[1])
     caller = "{0:s}:{1:s}".format(module, line)
@@ -54,6 +54,8 @@ class Logger(object):
                  print_caller=True, handler=None):
         if stream is None:
             stream = sys.stdout
+        if name is None:
+            name = self.__class__.__name__
         self.name = name
         self.print_caller = print_caller
         if handler is None:

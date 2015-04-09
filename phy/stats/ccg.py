@@ -8,7 +8,6 @@
 
 import numpy as np
 
-from ..ext import six
 from ..utils.array import _index_of, _unique, _as_array
 
 
@@ -50,7 +49,7 @@ def correlograms(spike_times, spike_clusters,
         Spike-cluster mapping.
     binsize : int
         Number of time samples in one bin.
-    winsize_bins : int
+    winsize_bins : int (odd number)
         Number of bins in the window.
 
     Returns
@@ -130,4 +129,32 @@ def correlograms(spike_times, spike_clusters,
 
         shift += 1
 
+    # Remove ACG peaks.
+    correlograms[np.arange(n_clusters),
+                 np.arange(n_clusters),
+                 0] = 0
+
     return correlograms
+
+
+#------------------------------------------------------------------------------
+# Helper functions for CCG data structures
+#------------------------------------------------------------------------------
+
+def _symmetrize_correlograms(correlograms):
+    """Return the symmetrized version of the CCG arrays."""
+
+    n_clusters, _, n_bins = correlograms.shape
+    assert n_clusters == _
+    assert n_bins % 2 == 0
+
+    # We symmetrize c[i, j, 0].
+    # This is necessary because the algorithm in correlograms()
+    # is sensitive to the order of identical spikes.
+    correlograms[..., 0] = np.maximum(correlograms[..., 0],
+                                      correlograms[..., 0].T)
+
+    sym = correlograms[..., 1:][..., ::-1]
+    sym = np.transpose(sym, (1, 0, 2))
+
+    return np.dstack((sym, correlograms))

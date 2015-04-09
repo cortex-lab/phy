@@ -20,7 +20,7 @@ def test_event_system():
 
     _list = []
 
-    @ev.connect
+    @ev.connect(set_method=True)
     def on_my_event(arg, kwarg=None):
         _list.append((arg, kwarg))
 
@@ -68,12 +68,6 @@ def test_progress_reporter():
     assert _reported == [(7, 25)]
     assert pr.current() == 7
     assert pr.total() == 25
-
-    with raises(ValueError):
-        pr.set(channel_1=11)
-
-    with raises(ValueError):
-        pr.set_max(channel_1=6)
 
     pr.set(channel_2=13)
     assert _reported[-1] == (20, 25)

@@ -12,6 +12,7 @@ from pytest import raises
 
 from ..array import (_unique, _normalize, _index_of, _as_array, _as_tuple,
                      chunk_bounds, excerpts, data_chunk,
+                     get_excerpts,
                      PartialArray, _partial_shape,
                      _range_from_slice, _pad)
 from ...io.mock.artificial import artificial_spike_clusters
@@ -213,6 +214,18 @@ def test_excerpts_2():
                                                         n_excerpts=3,
                                                         excerpt_size=10)]
     assert bounds == [(0, 10)]
+
+
+def test_get_excerpts():
+    data = np.random.rand(100, 2)
+    subdata = get_excerpts(data, n_excerpts=10, excerpt_size=5)
+    assert subdata.shape == (50, 2)
+    ae(subdata[:5, :], data[:5, :])
+    ae(subdata[-5:, :], data[-10:-5, :])
+
+    data = np.random.rand(10, 2)
+    subdata = get_excerpts(data, n_excerpts=10, excerpt_size=5)
+    ae(subdata, data)
 
 
 #------------------------------------------------------------------------------

@@ -13,7 +13,6 @@ from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas
 from ..ext.six import string_types
 from ..utils.array import _as_array, _index_of
 from ..utils.logging import debug
-from ..utils._color import _random_color
 
 
 #------------------------------------------------------------------------------
@@ -62,7 +61,7 @@ class FeatureVisual(BaseSpikeVisual):
         assert value.ndim == 3
         self.n_spikes, self.n_channels, self.n_features = value.shape
         self._features = value
-        self._non_empty = self.n_spikes > 0
+        self._empty = self.n_spikes == 0
         self.set_to_bake('spikes', 'spikes_clusters', 'color')
 
     def _check_dimension(self, dim):
@@ -126,8 +125,19 @@ class FeatureVisual(BaseSpikeVisual):
 
                 dim_i = self._dimensions[i]
                 dim_j = self._dimensions[j]
-                pos = np.c_[self._get_feature_dim(dim_i),
-                            self._get_feature_dim(dim_j)]
+                fet_i = self._get_feature_dim(dim_i)
+
+                # For non-time dimensions, the diagonal shows
+                # a different feature on y (same channel than x).
+                if i != j or dim_j == 'time' or self.n_features <= 1:
+                    fet_j = self._get_feature_dim(dim_j)
+                else:
+                    channel, feature = dim_j
+                    # Choose the other feature on y axis.
+                    feature = 1 - feature
+                    fet_j = self._features[:, channel, feature]
+
+                pos = np.c_[fet_i, fet_j]
                 positions.append(pos)
 
                 # TODO: choose the mask
@@ -146,7 +156,7 @@ class FeatureVisual(BaseSpikeVisual):
         self.program['a_position'] = positions.copy()
         self.program['a_mask'] = masks
         self.program['a_box'] = boxes
-        self.program['u_size'] = 5.  # TODO: config
+        self.program['u_size'] = 2.  # TODO: config
 
         self.program['n_clusters'] = self.n_clusters
         self.program['n_rows'] = self.n_rows
@@ -183,61 +193,4 @@ class FeatureView(BaseSpikeCanvas):
             self.visual.marker_size += coeff
         if event.key == '-':
             self.visual.marker_size -= coeff
-
-
-def add_feature_view(session, backend=None):
-    """Add a feature view in a session.
-
-    This function binds the session events to the created feature view.
-
-    The caller needs to show the feature view explicitly.
-
-    """
-    if backend in ('pyqt4', None):
-        kwargs = {'always_on_top': True}
-    else:
-        kwargs = {}
-    view = FeatureView(**kwargs)
-
-    @session.connect
-    def on_open():
-        if session.model is None:
-            return
-        view.visual.spike_clusters = session.clustering.spike_clusters
-        view.update()
-
-    @session.connect
-    def on_cluster(up=None):
-        pass
-        # TODO: select the merged cluster
-        # session.select(merged)
-
-    @session.connect
-    def on_select(selector):
-        spikes = selector.selected_spikes
-        if len(spikes) == 0:
-            return
-        if view.visual.spike_clusters is None:
-            on_open()
-        view.visual.features = session.model.features[spikes]
-        view.visual.masks = session.model.masks[spikes]
-        view.visual.spike_ids = spikes
-        # TODO: how to choose cluster colors?
-        view.visual.cluster_colors = [_random_color()
-                                      for _ in selector.selected_clusters]
-        view.update()
-
-    # Unregister the callbacks when the view is closed.
-    @view.connect
-    def on_close(event):
-        session.unconnect(on_open, on_cluster, on_select)
-
-    # TODO: first_draw() event in VisPy view that is emitted when the view
-    # is first rendered (first paint event).
-    @view.connect
-    def on_draw(event):
-        if view.visual.spike_clusters is None:
-            on_open()
-            on_select(session.selector)
-
-    return view
+        self.update()

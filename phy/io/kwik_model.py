@@ -13,10 +13,10 @@ import numpy as np
 from ..ext import six
 from .base_model import BaseModel
 from ..cluster.manual.cluster_info import ClusterMetadata
-from .h5 import open_h5, _check_hdf5_path
+from .h5 import open_h5
 from ..waveform.loader import WaveformLoader
 from ..waveform.filter import bandpass_filter, apply_filter
-from ..electrode.mea import MEA, linear_positions
+from ..electrode.mea import MEA
 from ..utils.logging import debug
 from ..utils.array import PartialArray
 
@@ -143,7 +143,12 @@ class SpikeLoader(object):
     absolute times."""
     def __init__(self, waveforms, spike_times):
         self._spike_times = spike_times
+        # waveforms is a WaveformLoader instance
         self._waveforms = waveforms
+        self.dtype = waveforms.dtype
+        self.shape = (len(spike_times),
+                      waveforms.n_samples_waveforms,
+                      waveforms.n_channels_waveforms)
 
     def __getitem__(self, item):
         times = self._spike_times[item]
@@ -265,7 +270,7 @@ class KwikModel(BaseModel):
                 try:
                     metadata[field] = self._kwik.read_attr(path, field)
                 except TypeError:
-                    debug("Unable to load metadata field {0:s}".format(field))
+                    debug("Metadata field '{0:s}' not found.".format(field))
         self._metadata = metadata
 
     # Channel group
@@ -346,11 +351,12 @@ class KwikModel(BaseModel):
                                                channels=self._channels,
                                                filter=filter,
                                                filter_margin=order * 3,
-                                               scale_factor=.01)
+                                               )
 
     @property
     def channels(self):
         """List of channels in the current channel group."""
+        # TODO: rename to channel_ids?
         return self._channels
 
     @property

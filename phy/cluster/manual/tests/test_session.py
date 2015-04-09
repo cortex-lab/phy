@@ -6,19 +6,19 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os
-import os.path as op
-
 import numpy as np
-from numpy.testing import assert_array_equal as ae
+from numpy.testing import assert_allclose as ac
 from pytest import raises
 
-from ..session import BaseSession, Session
+from ..session import BaseSession, Session, FeatureMasks
+from ..view_model import (WaveformViewModel,
+                          FeatureViewModel,
+                          )
+from ....utils.testing import show_test
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
 from ....io.mock.artificial import MockModel
 from ....io.mock.kwik import create_mock_kwik
-from ....plot.waveforms import add_waveform_view
 
 
 #------------------------------------------------------------------------------
@@ -159,21 +159,53 @@ def _start_manual_clustering(filename=None, model=None, tempdir=None):
     session = Session(store_path=tempdir)
     session.open(filename=filename, model=model)
 
-    @session.action
-    def show_waveforms(title="Show waveforms"):
-        view = add_waveform_view(session)
-        return view
-
     return session
+
+
+def test_session_store():
+    """Check that the cluster store works for features and masks."""
+
+    # HACK: change the chunk size in this unit test to make sure that
+    # there are several chunks.
+    cs = FeatureMasks.chunk_size
+    FeatureMasks.chunk_size = 4
+
+    with TemporaryDirectory() as tempdir:
+        model = MockModel(n_spikes=10, n_clusters=3)
+        s0 = np.nonzero(model.spike_clusters == 0)[0]
+        s1 = np.nonzero(model.spike_clusters == 1)[0]
+
+        session = _start_manual_clustering(model=model,
+                                           tempdir=tempdir)
+
+        f = session.cluster_store.features(0)
+        m = session.cluster_store.masks(1)
+
+        assert f.shape == (len(s0), 28, 2)
+        assert m.shape == (len(s1), 28,)
+
+        ac(f, model.features[s0].reshape((f.shape[0], -1, 2)), 1e-3)
+        ac(m, model.masks[s1], 1e-3)
+
+    FeatureMasks.chunk_size = cs
 
 
 def test_session_mock():
     with TemporaryDirectory() as tempdir:
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
-        view = session.show_waveforms()
+
+        def _show_waveforms():
+            view = session._show_view(WaveformViewModel,
+                                      scale_factor=1.,
+                                      show=False,
+                                      )
+            show_test(view)
+            return view
+
+        view = _show_waveforms()
         session.select([0])
-        view_bis = session.show_waveforms()
+        view_bis = _show_waveforms()
 
         session.merge([3, 4])
 
@@ -183,7 +215,8 @@ def test_session_mock():
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
         session.select([1, 2])
-        view = session.show_waveforms()
+        view = _show_waveforms()
+
         view.close()
 
 
@@ -207,32 +240,52 @@ def test_session_kwik():
 
         session = _start_manual_clustering(filename=filename,
                                            tempdir=tempdir)
+
+        def _show_waveforms():
+            view = session._show_view(WaveformViewModel,
+                                      scale_factor=1.,
+                                      show=False,
+                                      )
+            show_test(view)
+            return view
+
+        def _show_features():
+            view = session._show_view(FeatureViewModel,
+                                      scale_factor=1.,
+                                      show=False,
+                                      )
+            show_test(view)
+            return view
+
         session.select([0])
+        cs = session.cluster_store
 
         # Check the stored items.
         for cluster in range(n_clusters):
             n_spikes = len(session.clustering.spikes_per_cluster[cluster])
-            assert session.store.features(cluster).shape == (n_spikes,
-                                                             n_channels *
-                                                             n_fets)
-            assert session.store.masks(cluster).shape == (n_spikes, n_channels)
-            assert session.store.mean_masks(cluster).shape == (n_channels,)
-            assert session.store.waveforms(cluster).shape == (n_spikes, 40,
-                                                              n_channels)
-            assert session.store.n_unmasked_channels(cluster) <= n_channels
-            assert session.store.mean_probe_position(cluster).shape == (2,)
+            n_unmasked_channels = cs.n_unmasked_channels(cluster)
 
-        session.merge([3, 4])
-        view = session.show_waveforms()
+            assert cs.features(cluster).shape == (n_spikes, n_channels, n_fets)
+            assert cs.masks(cluster).shape == (n_spikes, n_channels)
+            assert cs.mean_masks(cluster).shape == (n_channels,)
+            assert n_unmasked_channels <= n_channels
+            assert cs.mean_probe_position(cluster).shape == (2,)
+            assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
+
+        # Merging hasn't been implemented yet in the session store.
+        # session.merge([3, 4])
+        view = _show_waveforms()
+        view = _show_features()
 
         # This won't work but shouldn't raise an error.
         session.select([1000])
 
-        # TODO: more tests
-        session.undo()
-        session.redo()
+        # # TODO: more tests
+        # session.undo()
+        # session.redo()
 
         view.close()
+        session.close()
 
 
 def test_session_stats():

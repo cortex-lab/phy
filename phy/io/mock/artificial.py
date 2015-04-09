@@ -65,8 +65,12 @@ class MockModel(BaseModel):
     n_samples_waveforms = 40
     n_clusters = 10
 
-    def __init__(self):
+    def __init__(self, n_spikes=None, n_clusters=None):
         super(BaseModel, self).__init__()
+        if n_spikes is not None:
+            self.n_spikes = n_spikes
+        if n_clusters is not None:
+            self.n_clusters = n_clusters
         self.name = 'mock'
         self._metadata = {'description': 'A mock model.',
                           'nfeatures_per_channel': self.nfeatures_per_channel}
@@ -92,6 +96,10 @@ class MockModel(BaseModel):
         self._waveforms = artificial_waveforms(self.n_spikes,
                                                self.n_samples_waveforms,
                                                self.n_channels)
+
+    @property
+    def channels(self):
+        return np.arange(self.n_channels)
 
     @property
     def metadata(self):

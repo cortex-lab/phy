@@ -14,10 +14,8 @@ from ._mpl_utils import _bottom_left_frame
 from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
                            _tesselate_histogram)
-from ..ext.six import string_types
-from ..utils.array import _as_array, _index_of
+from ..utils.array import _as_array
 from ..utils.logging import debug
-from ..utils._color import _random_color
 
 
 #------------------------------------------------------------------------------
@@ -54,7 +52,7 @@ class CorrelogramVisual(BaseSpikeVisual):
         assert value.shape[:2] == (self.n_clusters, self.n_clusters)
         self.n_samples = value.shape[2]
         self._correlograms = value
-        self._non_empty = self.n_clusters > 0 and self.n_samples > 0
+        self._empty = self.n_clusters == 0 or self.n_samples == 0
         self.set_to_bake('correlograms', 'color')
 
     @property

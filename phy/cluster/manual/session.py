@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 """Session structure."""
 
@@ -9,24 +10,27 @@
 import os
 import os.path as op
 from functools import partial
-import shutil
 
 import numpy as np
 
 from ...ext.six import string_types
 from ...utils._misc import (_phy_user_dir,
                             _ensure_phy_user_dir_exists)
+from ...utils.array import _index_of
+from ...utils.event import ProgressReporter
+from ...utils.logging import info, warn
 from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
-from ...utils.logging import set_level, debug, warn
 from ...io.kwik_model import KwikModel
-from ...io.base_model import BaseModel
 from ._history import GlobalHistory
-from ._utils import _concatenate_per_cluster_arrays
-from .cluster_info import ClusterMetadata
 from .clustering import Clustering
+from ._utils import _spikes_in_clusters, _spikes_per_cluster
 from .selector import Selector
 from .store import ClusterStore, StoreItem
+from .view_model import (WaveformViewModel,
+                         FeatureViewModel,
+                         CorrelogramViewModel,
+                         )
 
 
 #------------------------------------------------------------------------------
@@ -76,59 +80,162 @@ class BaseSession(EventEmitter):
 #------------------------------------------------------------------------------
 
 class FeatureMasks(StoreItem):
-    fields = [('features', 'disk'),
-              ('masks', 'disk'),
+    name = 'features and masks'
+    fields = [('features', 'disk', np.float32,),
+              ('masks', 'disk', np.float32,),
               ('mean_masks', 'memory'),
+              ('sum_masks', 'memory'),
               ('n_unmasked_channels', 'memory'),
+              ('main_channels', 'memory'),
               ('mean_probe_position', 'memory'),
               ]
+    chunk_size = 100000
 
-    def store_from_model(self, cluster, spikes):
-        # Only load the masks from the model if the masks aren't already
-        # stored.
-        to_store = {}
+    def __init__(self, *args, **kwargs):
+        super(FeatureMasks, self).__init__(*args, **kwargs)
 
-        # Check if masks and features are already stored.
-        masks = self.store.load(cluster, 'masks')
-        features = self.store.load(cluster, 'features')
-        if (masks is None or masks.shape[0] != len(spikes) or
-                features is None or features.shape[0] != len(spikes)):
-            debug("Loading features and masks for "
-                  "cluster {0:d}...".format(cluster))
-            # Load features_masks from the KWX file.
-            n_features = self.model.metadata['nfeatures_per_channel']
-            n_channels = self.model.n_channels
-            fm = self.model.features_masks[spikes, ...]
-            features = fm[:, :, 0]
-            masks = fm[:, 0:n_features * n_channels:n_features, 1]
-            to_store.update(features=features, masks=masks)
+        self.n_features = self.model.metadata['nfeatures_per_channel']
+        self.n_channels = self.model.n_channels
+        self.n_spikes = self.model.n_spikes
+        self.n_chunks = self.n_spikes // self.chunk_size + 1
 
-        # Extra fields.
-        mean_masks = masks.mean(axis=0)
-        n_unmasked_channels = (mean_masks > 1e-3).sum()
-        # Weighted mean of the channels, weighted by the mean masks.
-        mean_probe_position = (self.model.probe.positions *
-                               mean_masks[:, np.newaxis]).mean(axis=0)
-        to_store.update(mean_masks=mean_masks,
-                        n_unmasked_channels=n_unmasked_channels,
-                        mean_probe_position=mean_probe_position,
-                        )
-        self.store.store(cluster, **to_store)
+        # Set the shape of the features and masks.
+        self.fields[0] = ('features', 'disk',
+                          np.float32, (-1, self.n_channels, self.n_features))
+        self.fields[1] = ('masks', 'disk',
+                          np.float32, (-1, self.n_channels))
 
+        self.progress_reporter.set_max(features_masks=self.n_chunks)
 
-class Waveforms(StoreItem):
-    fields = [('spikes', 'memory'),
-              ('waveforms', 'custom')]
+    def _need_generate(self, cluster_sizes):
+        """Return whether the cluster needs to be re-generated or not."""
+        for cluster in sorted(cluster_sizes):
+            cluster_size = cluster_sizes[cluster]
+            expected_file_size = (cluster_size * self.n_channels * 4)
+            path = self.disk_store._cluster_path(cluster, 'masks')
+            # If a file is missing, need to re-generate.
+            if not op.exists(path):
+                return True
+            actual_file_size = os.stat(path).st_size
+            # If a file size is incorrect, need to re-generate.
+            if expected_file_size != actual_file_size:
+                return True
+        return False
 
-    def store_from_model(self, cluster, spikes):
-        # Save the spikes in the cluster.
-        self.store.store(cluster, spikes=spikes)
+    def _store_extra_fields(self, clusters):
+        """Store all extra mask fields."""
 
-    def load(self, cluster, spikes=None):
-        if spikes is None:
-            spikes = self.store.load(cluster, 'spikes')
-            assert spikes is not None
-        return self.model.waveforms[spikes]
+        self.progress_reporter.set_max(masks_extra=len(clusters))
+
+        for cluster in clusters:
+
+            # Load the masks.
+            masks = self.disk_store.load(cluster, 'masks',
+                                         dtype=np.float32,
+                                         shape=(-1, self.n_channels))
+            assert isinstance(masks, np.ndarray)
+
+            # Extra fields.
+            sum_masks = masks.sum(axis=0)
+            mean_masks = sum_masks / float(masks.shape[0])
+            unmasked_channels = np.nonzero(mean_masks > 1e-3)[0]
+            n_unmasked_channels = len(unmasked_channels)
+            # Weighted mean of the channels, weighted by the mean masks.
+            mean_probe_position = (self.model.probe.positions *
+                                   mean_masks[:, np.newaxis]).mean(axis=0)
+            main_channels = np.intersect1d(np.argsort(mean_masks)[::-1],
+                                           unmasked_channels)
+            self.memory_store.store(cluster,
+                                    mean_masks=mean_masks,
+                                    sum_masks=sum_masks,
+                                    n_unmasked_channels=n_unmasked_channels,
+                                    mean_probe_position=mean_probe_position,
+                                    main_channels=main_channels,
+                                    )
+
+            # Update the progress reporter.
+            self.progress_reporter.increment('masks_extra')
+
+    def store_all_clusters(self, spikes_per_cluster):
+        """Initialize all cluster files, loop over all spikes, and
+        copy the data."""
+        cluster_sizes = {cluster: len(spikes)
+                         for cluster, spikes in spikes_per_cluster.items()}
+        clusters = sorted(spikes_per_cluster)
+
+        # TODO: refactor this big function when supporting clustering actions.
+
+        # No need to regenerate the cluster store if it exists and is valid.
+        need_generate = self._need_generate(cluster_sizes)
+        if need_generate:
+
+            self.progress_reporter.set(features_masks=0)
+
+            fm = self.model.features_masks
+            assert fm.shape[0] == self.n_spikes
+
+            nc = self.n_channels
+            nf = self.n_features
+
+            for i in range(self.n_chunks):
+                a, b = i * self.chunk_size, (i + 1) * self.chunk_size
+
+                # Load a chunk from HDF5.
+                sub_fm = fm[a:b]
+                assert isinstance(sub_fm, np.ndarray)
+                if sub_fm.shape[0] == 0:
+                    break
+
+                sub_sc = self.model.spike_clusters[a:b]
+                sub_spikes = np.arange(a, b)
+
+                # Split the spikes.
+                sub_spc = _spikes_per_cluster(sub_spikes, sub_sc)
+
+                # Go through the clusters appearing in the chunk.
+                for cluster in sorted(sub_spc.keys()):
+                    # Number of spikes in the cluster and in the current
+                    # chunk.
+                    ns = len(sub_spc[cluster])
+
+                    # Find the indices of the spikes in that cluster
+                    # relative to the chunk.
+                    idx = _index_of(sub_spc[cluster], sub_spikes)
+
+                    # Extract features and masks for that cluster, in the
+                    # current chunk.
+                    tmp = sub_fm[idx, :]
+
+                    # Features.
+                    f = tmp[:, :nc * nf, 0]
+                    assert f.shape == (ns, nc * nf)
+                    f = f.ravel().astype(np.float32)
+
+                    # Masks.
+                    m = tmp[:, :nc * nf, 1][:, ::nf]
+                    assert m.shape == (ns, nc)
+                    m = m.ravel().astype(np.float32)
+
+                    # Save the data to disk.
+                    self.disk_store.store(cluster,
+                                          features=f,
+                                          masks=m,
+                                          append=True,
+                                          )
+
+                # Update the progress reporter.
+                self.progress_reporter.increment('features_masks')
+
+        # Store extra fields from the masks.
+        self._store_extra_fields(clusters)
+
+    def merge(self, up):
+        # TODO
+        pass
+
+    def assign(self, up):
+        # TODO
+        pass
 
 
 #------------------------------------------------------------------------------
@@ -188,6 +295,7 @@ class Session(BaseSession):
 
         # self.action and self.connect are decorators.
         self.action(self.open, title='Open')
+        self.action(self.close, title='Close')
         self.action(self.select, title='Select clusters')
         self.action(self.merge, title='Merge')
         self.action(self.split, title='Split')
@@ -206,6 +314,10 @@ class Session(BaseSession):
             model = KwikModel(filename)
         self.model = model
         self.emit('open')
+
+    def close(self):
+        self.emit('close')
+        self.model = None
 
     def select(self, clusters):
         self.selector.selected_clusters = clusters
@@ -247,20 +359,93 @@ class Session(BaseSession):
 
         # Kwik store.
         path = _ensure_disk_store_exists(self.model.name,
-                                         root_path=self._store_path)
-        self.store = ClusterStore(model=self.model, path=path)
-        self.store.register_item(FeatureMasks)
-        self.store.register_item(Waveforms)
-        # TODO: do not reinitialize the store every time the dataset
-        # is loaded! Check if the store exists and check consistency.
-        self.store.generate(self.clustering.spikes_per_cluster)
+                                         root_path=self._store_path,
+                                         )
+        self.cluster_store = ClusterStore(model=self.model,
+                                          path=path,
+                                          )
+        self.cluster_store.register_item(FeatureMasks)
+
+        @self.cluster_store.progress_reporter.connect
+        def on_report(value, value_max):
+            print("Generating the cluster store: "
+                  "{0:.2f}%.".format(100 * value / float(value_max)),
+                  end='\r')
+
+        # Generate the cluster store if it doesn't exist or is invalid.
+        # If the cluster store already exists and is consistent
+        # with the data, it is not recreated.
+        self.cluster_store.generate(self.clustering.spikes_per_cluster)
 
         @self.connect
         def on_cluster(up=None, add_to_stack=None):
-            self.store.update(up)
+            self.cluster_store.update(up)
 
     def on_cluster(self, up=None, add_to_stack=True):
         if add_to_stack:
             self._global_history.action(self.clustering)
             # TODO: if metadata
             # self._global_history.action(self.cluster_metadata)
+
+    # Show views
+    # -------------------------------------------------------------------------
+
+    def _show_view(self,
+                   view_model_class,
+                   scale_factor=.01,
+                   backend=None,
+                   show=True,
+                   ):
+        view_model = view_model_class(self.model,
+                                      store=self.cluster_store,
+                                      backend=backend,
+                                      scale_factor=scale_factor)
+        view = view_model.view
+
+        @self.connect
+        def on_open():
+            if self.model is None:
+                return
+            view_model.on_open()
+            view.update()
+
+        @self.connect
+        def on_cluster(up=None):
+            view_model.on_cluster(up)
+
+        @self.connect
+        def on_select(selector):
+            spikes = selector.selected_spikes
+            if len(spikes) == 0:
+                return
+            if view.visual.empty:
+                on_open()
+            view_model.on_select(selector.selected_clusters,
+                                 selector.selected_spikes)
+            view.update()
+
+        # Unregister the callbacks when the view is closed.
+        @view.connect
+        def on_close(event):
+            self.unconnect(on_open, on_cluster, on_select)
+
+        @view.connect
+        def on_draw(event):
+            if view.visual.empty:
+                on_open()
+                on_select(self.selector)
+
+        if show:
+            view.show()
+
+        return view
+
+    def show_waveforms(self):
+        return self._show_view(WaveformViewModel)
+
+    def show_features(self):
+        return self._show_view(FeatureViewModel,
+                               scale_factor=.01)
+
+    def show_correlograms(self):
+        return self._show_view(CorrelogramViewModel)

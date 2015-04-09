@@ -7,15 +7,13 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import math
 import os.path as op
 
 import numpy as np
 
 from vispy import app, gloo, config
 from vispy.visuals import Visual
-from vispy.visuals.transforms import TransformSystem, BaseTransform
-from vispy.visuals.shaders import Variable, ModularProgram
+from vispy.visuals.shaders import ModularProgram
 
 from ..utils.array import _unique, _as_array
 from ..utils.logging import debug
@@ -93,9 +91,9 @@ class PanZoom(object):
 
         aspect : float (default is None)
            Indicate what is the aspect ratio of the object displayed. This is
-           necessary to convert pixel drag move in oject space coordinates.
+           necessary to convert pixel drag move in object space coordinates.
 
-        pan : float, float (default is 0,0)
+        pan : float, float (default is 0, 0)
            Initial translation
 
         zoom : float, float (default is 1)
@@ -128,31 +126,26 @@ class PanZoom(object):
     @property
     def is_attached(self):
         """ Whether transform is attached to a canvas """
-
         return self._canvas is not None
 
     @property
     def aspect(self):
         """ Aspect (width/height) """
-
         return self._aspect
 
     @aspect.setter
     def aspect(self, value):
         """ Aspect (width/height) """
-
         self._aspect = value
 
     @property
     def pan(self):
         """ Pan translation """
-
         return self._pan
 
     @pan.setter
     def pan(self, value):
         """ Pan translation """
-
         self._pan = np.asarray(value)
         self._u_pan = self._pan
         for program in self._programs:
@@ -161,7 +154,6 @@ class PanZoom(object):
     @property
     def zoom(self):
         """ Zoom level """
-
         return self._zoom
 
     @zoom.setter
@@ -183,25 +175,21 @@ class PanZoom(object):
     @property
     def zmin(self):
         """ Minimum zoom level """
-
         return self._zmin
 
     @zmin.setter
     def zmin(self, value):
         """ Minimum zoom level """
-
         self._zmin = min(value, self._zmax)
 
     @property
     def zmax(self):
         """ Maximal zoom level """
-
         return self._zmax
 
     @zmax.setter
     def zmax(self, value):
         """ Maximal zoom level """
-
         self._zmax = max(value, self._zmin)
 
     def on_resize(self, event):
@@ -298,7 +286,7 @@ class BaseSpikeVisual(Visual):
         self.n_spikes = None
         self._spike_clusters = None
         self._spike_ids = None
-        self._non_empty = False
+        self._empty = True
         self._to_bake = []
 
         vertex = _load_shader(self._shader_name + '.vert')
@@ -311,6 +299,11 @@ class BaseSpikeVisual(Visual):
 
         gloo.set_state(clear_color='black', blend=True,
                        blend_func=('src_alpha', 'one_minus_src_alpha'))
+
+    @property
+    def empty(self):
+        """Specify whether the visual is currently empty or not."""
+        return self._empty
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -408,7 +401,7 @@ class BaseSpikeVisual(Visual):
         Return whether something has been baked or not.
 
         """
-        if not self._non_empty:
+        if self._empty:
             return
         n_bake = len(self._to_bake)
         # Bake what needs to be baked.
@@ -426,7 +419,7 @@ class BaseSpikeVisual(Visual):
         """Draw the waveforms."""
         # Bake what needs to be baked at this point.
         self._bake()
-        if self._non_empty:
+        if not self._empty:
             self.program.draw(self._gl_draw_mode)
 
 

@@ -38,10 +38,10 @@ class EventEmitter(object):
             setattr(self, event,
                     lambda *args, **kwargs: self.emit(event, *args, **kwargs))
 
-    def connect(self, func=None, event=None):
+    def connect(self, func=None, event=None, set_method=False):
         """Decorator for a function reacting to an event being raised."""
         if func is None:
-            return self.connect
+            return partial(self.connect, set_method=set_method)
 
         # Get the event name from the function.
         if event is None:
@@ -50,8 +50,9 @@ class EventEmitter(object):
         # We register the callback function.
         self._callbacks[event].append(func)
 
-        # self.event() should emit the event.
-        self._create_emitter(event)
+        # A new method self.event() emitting the event is created.
+        if set_method:
+            self._create_emitter(event)
 
         return func
 
@@ -91,19 +92,22 @@ class ProgressReporter(EventEmitter):
     def _set_value(self, channel, index, value):
         if channel not in self._channels:
             self._channels[channel] = [0, 0]
-        old_value = self._value(channel)
+        # old_value = self._value(channel)
         max_value = self._max_value(channel)
-        if ((index == 0 and value > max_value) or
-           (index == 1 and old_value > value)):
-            raise ValueError("The current value {0} ".format(value) +
-                             "needs to be less "
-                             "than the maximum value {0}.".format(max_value))
-        else:
-            self._channels[channel][index] = value
+        if index == 0:
+            value = min(value, max_value)
+        # if ((index == 0 and value > max_value) or
+        #    (index == 1 and old_value > value)):
+        #     raise ValueError("The current value {0} ".format(value) +
+        #                      "needs to be less "
+        #                      "than the maximum value {0}.".format(max_value))
+        # else:
+        self._channels[channel][index] = value
 
-    def increment(self, *channels):
+    def increment(self, *channels, **kwargs):
         """Increment the values of one or multiple channels."""
-        self.set(**{channel: (self._value(channel) + 1)
+        increment = kwargs.get('increment', 1)
+        self.set(**{channel: (self._value(channel) + increment)
                  for channel in channels})
 
     def set(self, **values):
