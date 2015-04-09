@@ -10,6 +10,7 @@ import os.path as op
 
 from pytest import raises
 
+from ..logging import set_level
 from ..settings import (BaseSettings,
                         UserSettings,
                         InternalSettings,
@@ -22,6 +23,10 @@ from ..tempdir import TemporaryDirectory
 # Test settings
 #------------------------------------------------------------------------------
 
+def setup():
+    set_level('debug')
+
+
 def test_base_settings_1():
     s = BaseSettings()
 
@@ -32,14 +37,14 @@ def test_base_settings_1():
     # None is returned if a key doesn't exist.
     assert s.get('test.a') is None
 
-    s.set({'test.a': 3})
+    s.set('test.a', 3)
     assert s.get('test.a') == 3
 
 
 def test_base_settings_2():
     s = BaseSettings()
 
-    s.set({'test.a': 3}, scope='my_dataset')
+    s.set('test.a', 3, scope='my_dataset')
     assert s.get('test.a') is None
     assert s.get('test.a', scope='my_dataset') == 3
 
@@ -47,19 +52,19 @@ def test_base_settings_2():
 def test_base_settings_3():
     s = BaseSettings()
 
-    s.set({'test.a': 3})
+    s.set('test.a', 3)
     assert s.get('test.a') == 3
 
     # The scope doesn't exist: fallback to global.
     assert s.get('test.a', scope='ds1') == 3
 
     # Now it works normally.
-    s.set({'test.a': 6}, scope='ds1')
+    s.set('test.a', 6, scope='ds1')
     assert s.get('test.a', scope='ds1') == 6
     assert s.get('test.a', scope='global') == 3
 
     # We set a new dataset.
-    s.set({'test.b': 2}, scope='ds2')
+    s.set('test.b', 2, scope='ds2')
 
     # The dataset exists, but not the requested field. We should still
     # fallback to global.
@@ -84,7 +89,8 @@ def test_user_settings():
             s.set(path=path)
 
         # Set the 'test' namespace.
-        s.set({'test.a': 3, 'test.c': 6})
+        s.set('test.a', 3)
+        s.set('test.c', 6)
         assert s.get('test.a') == 3
 
         # Now, set the settings file.
@@ -101,7 +107,8 @@ def test_internal_settings():
         s = InternalSettings()
 
         # Set the 'test' namespace.
-        s.set({'test.a': 3, 'test.c': 6})
+        s.set('test.a', 3)
+        s.set('test.c', 6)
         assert s.get('test.a') == 3
         assert s.get('test.c') == 6
 
@@ -161,3 +168,12 @@ def test_settings_manager():
                                  scope='experiment')
         assert sm.get_internal_settings('internal.c',
                                         scope='experiment') == 50
+
+        # Check persistence.
+        sm.save()
+        sm = SettingsManager(tmpdir)
+        sm.set_experiment_path(path)
+        assert sm.get_internal_settings('internal.c',
+                                        scope='experiment') == 50
+        assert sm.get_user_settings('test.a',
+                                    scope='experiment') == 30
