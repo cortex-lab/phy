@@ -14,9 +14,10 @@ from functools import partial
 import numpy as np
 
 from ...ext.six import string_types
-from ...utils._misc import _phy_user_dir, _internal_path, _ensure_path_exists
+from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of
 from ...utils.event import EventEmitter
+from ...utils.settings import SettingsManager
 from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
 from .clustering import Clustering
@@ -27,7 +28,6 @@ from .view_model import (WaveformViewModel,
                          FeatureViewModel,
                          CorrelogramViewModel,
                          )
-from ...utils import settings
 
 
 #------------------------------------------------------------------------------
@@ -258,14 +258,14 @@ def _process_ups(ups):
 
 class Session(BaseSession):
     """A manual clustering session."""
-    def __init__(self, root_path=None):
+    def __init__(self, phy_user_dir=None):
         super(Session, self).__init__()
         self.model = None
+        self.phy_user_dir = phy_user_dir
 
-        # Root directory.
-        if root_path is None:
-            root_path = _phy_user_dir()
-        self._root_path = root_path
+        # Instantiate the SettingsManager which manages
+        # the settings files.
+        self.settings_manager = SettingsManager(phy_user_dir)
 
         # self.action and self.connect are decorators.
         self.action(self.open, title='Open')
@@ -281,6 +281,41 @@ class Session(BaseSession):
         self.connect(self.on_cluster)
         self.connect(self.on_close)
 
+    # Settings
+    # -------------------------------------------------------------------------
+
+    def get_user_settings(self, key):
+        return self.settings_manager.get_user_settings(key,
+                                                       scope='experiment')
+
+    def set_user_settings(self, key=None, value=None,
+                          path=None, file_namespace=None):
+        return self.settings_manager.set_user_settings(
+            key, value, scope='experiment', path=path,
+            file_namespace=file_namespace)
+
+    def get_internal_settings(self, key):
+        return self.settings_manager.get_internal_settings(key,
+                                                           scope='experiment',
+                                                           )
+
+    def set_internal_settings(self, key, value):
+        return self.settings_manager.set_internal_settings(key,
+                                                           value,
+                                                           scope='experiment',
+                                                           )
+
+    def _load_default_settings(self):
+        """Load default settings for manual clustering."""
+        curdir = op.dirname(op.realpath(__file__))
+        # This is a namespace available in the config file.
+        file_namespace = {
+            'n_spikes': self.model.n_spikes,
+            'n_channels': self.model.n_channels,
+        }
+        self.set_user_settings(path=op.join(curdir, 'default_settings.py'),
+                               file_namespace=file_namespace)
+
     # Public actions
     # -------------------------------------------------------------------------
 
@@ -288,12 +323,17 @@ class Session(BaseSession):
         if model is None:
             model = KwikModel(filename)
         self.model = model
-        self.model_name = model.name
+        self.experiment_path = (op.realpath(filename)
+                                if filename else self.phy_user_dir)
+        self.experiment_dir = op.dirname(self.experiment_path)
+        self.experiment_name = model.name
         self.emit('open')
 
     def close(self):
         self.emit('close')
         self.model = None
+        self.experiment_path = None
+        self.experiment_dir = None
 
     def select(self, clusters):
         self.selector.selected_clusters = clusters
@@ -322,35 +362,22 @@ class Session(BaseSession):
     # Event callbacks
     # -------------------------------------------------------------------------
 
-    def _load_default_settings(self):
-        """Load default settings for manual clustering."""
-        curdir = op.dirname(op.realpath(__file__))
-        # This is a namespace available in the config file.
-        file_namespace = {
-            'n_spikes': self.model.n_spikes,
-            'n_channels': self.model.n_channels,
-        }
-        settings.set_user(path=op.join(curdir, 'default_settings.py'),
-                          file_namespace=file_namespace)
-
-    def _load_internal_settings(self):
-        path = self._internal_settings_path
-        if op.exists(path):
-            settings.load_internal(path)
-
-    def _save_internal_settings(self):
-        path = self._internal_settings_path
-        settings.save_internal(path)
-
     def _create_cluster_store(self):
-        # Instanciate the store.
+
+        # Kwik store in experiment_dir/name.phy/cluster_store.
+        store_path = op.join(self.settings_manager.phy_experiment_dir,
+                             'cluster_store')
+        _ensure_path_exists(store_path)
+
+        # Instantiate the store.
         self.cluster_store = ClusterStore(model=self.model,
-                                          path=self._store_path,
+                                          path=store_path,
                                           )
 
         # chunk_size is the number of spikes to load at once from
         # the features_masks array.
-        cs = settings.get_user('manual_clustering.store_chunk_size') or 100000
+        cs = self.get_user_settings('manual_clustering.'
+                                    'store_chunk_size') or 100000
         FeatureMasks.chunk_size = cs
         self.cluster_store.register_item(FeatureMasks)
 
@@ -379,11 +406,8 @@ class Session(BaseSession):
         # Load the default settings for manual clustering.
         self._load_default_settings()
 
-        # Load the internal settings from ~/.phy/internal_settings.
-        self._internal_settings_path = _internal_path('internal_settings',
-                                                      root=self._root_path)
-        _ensure_path_exists(op.basename(self._internal_settings_path))
-        self._load_internal_settings()
+        # Load all experiment settings.
+        self.settings_manager.set_experiment_path(self.experiment_path)
 
         # Create the history.
         self._global_history = GlobalHistory(process_ups=_process_ups)
@@ -393,19 +417,16 @@ class Session(BaseSession):
         self.clustering = Clustering(spike_clusters)
 
         # Create the Selector instance.
-        n_spikes_max = settings.get_user('manual_clustering.n_spikes_max')
+        n_spikes_max = self.get_user_settings('manual_clustering.'
+                                              'n_spikes_max')
         self.selector = Selector(spike_clusters, n_spikes_max=n_spikes_max)
         self.cluster_metadata = self.model.cluster_metadata
 
-        # Kwik store in ~/.phy/<model_name>/cluster_store/ by default.
-        rel_path = '{0}/cluster_store/'.format(self.model_name)
-        self._store_path = _internal_path(rel_path,
-                                          root=self._root_path)
-        _ensure_path_exists(self._store_path)
+        # Create the cluster store.
         self._create_cluster_store()
 
     def on_close(self):
-        self._save_internal_settings()
+        self.settings_manager.save()
 
     def on_cluster(self, up=None, add_to_stack=True):
         if add_to_stack:
@@ -467,22 +488,16 @@ class Session(BaseSession):
             prefix = 'waveform'
         elif isinstance(view_model, FeatureViewModel):
             prefix = 'feature'
-        return prefix + '_' + name
+        return 'manual_clustering.' + prefix + '_' + name
 
     def _save_scale_factor(self, view_model):
         name = self._view_settings_name(view_model, 'scale_factor')
         sf = view_model.view.zoom * view_model.scale_factor
-        settings.set_internal({name: sf},
-                              namespace='manual_clustering',
-                              scope=self.model_name,
-                              )
+        self.set_internal_settings(name, sf)
 
     def _load_scale_factor(self, view_name):
         name = self._view_settings_name(view_name, 'scale_factor')
-        return settings.get_internal(name,
-                                     namespace='manual_clustering',
-                                     scope=self.model_name,
-                                     ) or .01
+        return self.get_internal_settings(name) or .01
 
     def _create_waveform_view_model(self):
         sf = self._load_scale_factor('waveform')
@@ -500,7 +515,7 @@ class Session(BaseSession):
 
     def _create_correlogram_view_model(self):
         args = 'binsize', 'winsize_bins', 'n_excerpts', 'excerpt_size'
-        kwargs = {k: settings.get_user('manual_clustering.ccg_' + k)
+        kwargs = {k: self.get_user_settings('manual_clustering.ccg_' + k)
                   for k in args}
         return CorrelogramViewModel(self.model,
                                     store=self.cluster_store,

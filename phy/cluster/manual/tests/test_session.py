@@ -11,9 +11,6 @@ from numpy.testing import assert_allclose as ac
 from pytest import raises
 
 from ..session import BaseSession, Session, FeatureMasks
-from ..view_model import (WaveformViewModel,
-                          FeatureViewModel,
-                          )
 from ....utils.testing import show_test
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
@@ -156,7 +153,7 @@ def test_action_event():
 #------------------------------------------------------------------------------
 
 def _start_manual_clustering(filename=None, model=None, tempdir=None):
-    session = Session(root_path=tempdir)
+    session = Session(phy_user_dir=tempdir)
     session.open(filename=filename, model=model)
     return session
 
