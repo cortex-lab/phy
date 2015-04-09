@@ -361,28 +361,11 @@ class Session(BaseSession):
         settings.set(path=op.join(curdir, 'default_settings.py'),
                      file_namespace=file_namespace)
 
-    def on_open(self):
-        """Update the session after new data has been loaded."""
-        self._global_history = GlobalHistory(process_ups=_process_ups)
-        # TODO: call this after the channel groups has changed.
-        # Update the Selector and Clustering instances using the Model.
-        spike_clusters = self.model.spike_clusters
-        self.clustering = Clustering(spike_clusters)
-        self.cluster_metadata = self.model.cluster_metadata
-
-        # Load the default settings for manual clustering.
-        self._load_default_settings()
-
-        n_spikes_max = settings.get('manual_clustering.n_spikes_max')
-        self.selector = Selector(spike_clusters, n_spikes_max=n_spikes_max)
-
-        # Kwik store.
+    def _create_cluster_store(self):
         path = _ensure_disk_store_exists(self.model.name,
                                          root_path=self._store_path,
                                          )
-        self.cluster_store = ClusterStore(model=self.model,
-                                          path=path,
-                                          )
+        self.cluster_store = ClusterStore(model=self.model, path=path)
         self.cluster_store.register_item(FeatureMasks)
 
         @self.cluster_store.progress_reporter.connect
@@ -399,6 +382,31 @@ class Session(BaseSession):
         @self.connect
         def on_cluster(up=None, add_to_stack=None):
             self.cluster_store.update(up)
+
+    def on_open(self):
+        """Update the session after new data has been loaded.
+
+        TODO: call this after the channel groups has changed.
+
+        """
+
+        # Load the default settings for manual clustering.
+        self._load_default_settings()
+
+        # Create the history.
+        self._global_history = GlobalHistory(process_ups=_process_ups)
+
+        # Create the Clustering instance.
+        spike_clusters = self.model.spike_clusters
+        self.clustering = Clustering(spike_clusters)
+
+        # Create the Selector instance.
+        n_spikes_max = settings.get('manual_clustering.n_spikes_max')
+        self.selector = Selector(spike_clusters, n_spikes_max=n_spikes_max)
+        self.cluster_metadata = self.model.cluster_metadata
+
+        # Kwik store.
+        self._create_cluster_store()
 
     def on_cluster(self, up=None, add_to_stack=True):
         if add_to_stack:
