@@ -234,7 +234,7 @@ class ClusterStore(object):
     def register_item(self, item_cls):
         """Register a StoreItem instance in the store."""
 
-        # Instanciate the item.
+        # Instantiate the item.
         item = item_cls(model=self._model,
                         memory_store=self._memory,
                         disk_store=self._disk,
