@@ -27,7 +27,7 @@ def _split_namespace(name, namespace=None):
 
 
 #------------------------------------------------------------------------------
-# Settings
+# Base Settings
 #------------------------------------------------------------------------------
 
 class BaseSettings(object):
@@ -64,7 +64,11 @@ class BaseSettings(object):
             self._store[scope][namespace][name] = value
 
 
-class Settings(BaseSettings):
+#------------------------------------------------------------------------------
+# User Settings
+#------------------------------------------------------------------------------
+
+class UserSettings(BaseSettings):
     """Support Python settings files."""
 
     def read_settings_file(self, path, file_namespace=None):
@@ -98,10 +102,10 @@ class Settings(BaseSettings):
             assert op.exists(path)
             return self.read_settings_file(path,
                                            file_namespace=file_namespace)
-        super(Settings, self).set(key_values=key_values,
-                                  namespace=namespace,
-                                  scope=scope,
-                                  )
+        super(UserSettings, self).set(key_values=key_values,
+                                      namespace=namespace,
+                                      scope=scope,
+                                      )
 
 
 #------------------------------------------------------------------------------
@@ -116,10 +120,10 @@ class InternalSettings(BaseSettings):
 # Global variables
 #------------------------------------------------------------------------------
 
-_SETTINGS = Settings()
+_SETTINGS = UserSettings()
 
 
-def get(name, scope='global'):
+def get_user(name, scope='global'):
     """Get a settings value.
 
     Parameters
@@ -133,12 +137,12 @@ def get(name, scope='global'):
     return _SETTINGS.get(name, scope)
 
 
-def set(key_values=None,
-        namespace=None,
-        scope='global',
-        path=None,
-        file_namespace=None,
-        ):
+def set_user(key_values=None,
+             namespace=None,
+             scope='global',
+             path=None,
+             file_namespace=None,
+             ):
     """Set some settings
 
     Parameters
@@ -156,8 +160,8 @@ def set(key_values=None,
 
     """
     return _SETTINGS.set(key_values=key_values,
-                          namespace=namespace,
-                          scope=scope,
-                          path=path,
-                          file_namespace=file_namespace,
-                          )
+                         namespace=namespace,
+                         scope=scope,
+                         path=path,
+                         file_namespace=file_namespace,
+                         )

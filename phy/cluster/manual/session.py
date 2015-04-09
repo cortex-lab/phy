@@ -358,8 +358,8 @@ class Session(BaseSession):
             'n_spikes': self.model.n_spikes,
             'n_channels': self.model.n_channels,
         }
-        settings.set(path=op.join(curdir, 'default_settings.py'),
-                     file_namespace=file_namespace)
+        settings.set_user(path=op.join(curdir, 'default_settings.py'),
+                          file_namespace=file_namespace)
 
     def _create_cluster_store(self):
         path = _ensure_disk_store_exists(self.model.name,
@@ -401,7 +401,7 @@ class Session(BaseSession):
         self.clustering = Clustering(spike_clusters)
 
         # Create the Selector instance.
-        n_spikes_max = settings.get('manual_clustering.n_spikes_max')
+        n_spikes_max = settings.get_user('manual_clustering.n_spikes_max')
         self.selector = Selector(spike_clusters, n_spikes_max=n_spikes_max)
         self.cluster_metadata = self.model.cluster_metadata
 
@@ -472,7 +472,7 @@ class Session(BaseSession):
 
     def _create_correlogram_view_model(self):
         args = 'binsize', 'winsize_bins', 'n_excerpts', 'excerpt_size'
-        kwargs = {k: settings.get('manual_clustering.ccg_' + k)
+        kwargs = {k: settings.get_user('manual_clustering.ccg_' + k)
                   for k in args}
         return CorrelogramViewModel(self.model,
                                     store=self.cluster_store,
