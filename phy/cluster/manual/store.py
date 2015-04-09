@@ -259,6 +259,8 @@ class ClusterStore(object):
 
             # Register the item location (memory or store).
             assert name not in self._locations
+            if self._disk:
+                self._disk.register_file_extensions(name)
             self._locations[name] = location
 
             # Get the load function.
