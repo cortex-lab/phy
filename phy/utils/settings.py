@@ -154,6 +154,10 @@ def set(*args, **kwargs):
     return _USER_SETTINGS.set(*args, **kwargs)
 
 
+def declare_namespace(*args, **kwargs):
+    return _USER_SETTINGS.declare_namespace(*args, **kwargs)
+
+
 #------------------------------------------------------------------------------
 # Internal Settings
 #------------------------------------------------------------------------------

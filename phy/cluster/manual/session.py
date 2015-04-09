@@ -17,7 +17,7 @@ from ...ext.six import string_types
 from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of
 from ...utils.event import EventEmitter
-from ...utils.settings import SettingsManager
+from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
 from .clustering import Clustering
@@ -313,6 +313,7 @@ class Session(BaseSession):
             'n_spikes': self.model.n_spikes,
             'n_channels': self.model.n_channels,
         }
+        declare_namespace('manual_clustering')
         self.set_user_settings(path=op.join(curdir, 'default_settings.py'),
                                file_namespace=file_namespace)
 
