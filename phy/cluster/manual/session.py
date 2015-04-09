@@ -489,15 +489,21 @@ class Session(BaseSession):
             prefix = 'waveform'
         elif isinstance(view_model, FeatureViewModel):
             prefix = 'feature'
+        else:
+            return None
         return 'manual_clustering.' + prefix + '_' + name
 
     def _save_scale_factor(self, view_model):
         name = self._view_settings_name(view_model, 'scale_factor')
+        if not name:
+            return
         sf = view_model.view.zoom * view_model.scale_factor
         self.set_internal_settings(name, sf)
 
     def _load_scale_factor(self, view_name):
         name = self._view_settings_name(view_name, 'scale_factor')
+        if not name:
+            return 1.
         return self.get_internal_settings(name) or .01
 
     def _create_waveform_view_model(self):
