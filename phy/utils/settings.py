@@ -186,3 +186,11 @@ def get_internal(*args, **kwargs):
 
 def set_internal(*args, **kwargs):
     return _INTERNAL_SETTINGS.set(*args, **kwargs)
+
+
+def save_internal(*args, **kwargs):
+    return _INTERNAL_SETTINGS.save(*args, **kwargs)
+
+
+def load_internal(*args, **kwargs):
+    return _INTERNAL_SETTINGS.load(*args, **kwargs)
