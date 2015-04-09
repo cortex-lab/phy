@@ -40,16 +40,34 @@ class BaseSettings(object):
         return sorted(self._store['global'])
 
     def get(self, name, namespace=None, scope='global'):
+        """Get a settings value.
+
+        Parameters
+        ----------
+        name : str
+            The settings name
+        scope : str (default is 'global')
+            The scope for that setting. Can be 'global' or a dataset name.
+
+        """
         namespace, name = _split_namespace(name, namespace=namespace)
         if scope not in self._store:
             scope = 'global'
         return self._store[scope].get(namespace, {}).get(name, None)
 
-    def set(self,
-            key_values=None,
-            namespace=None,
-            scope='global',
-            ):
+    def set(self, key_values=None, namespace=None, scope='global'):
+        """Set some settings
+
+        Parameters
+        ----------
+        key_values : dict
+            A {str: object} dictionary with key-value pair settings.
+        namespace : str
+            The namespace if it is not specified in the keys.
+        scope : str (default is 'global')
+            The scope for that setting. Can be 'global' or a dataset name.
+
+        """
         assert isinstance(key_values, dict)
         if scope not in self._store:
             self._store[scope] = Bunch({})
@@ -89,13 +107,24 @@ class UserSettings(BaseSettings):
             raise NameError("Unknown namespace '{0:s}'. ".format(name) +
                             "Known namespaces are: {0:s}.".format(namespaces))
 
-    def set(self,
-            key_values=None,
-            namespace=None,
-            scope='global',
-            path=None,
-            file_namespace=None,
-            ):
+    def set(self, key_values=None, namespace=None, scope='global',
+            path=None, file_namespace=None):
+        """Set some settings
+
+        Parameters
+        ----------
+        key_values : dict
+            A {str: object} dictionary with key-value pair settings.
+        namespace : str
+            The namespace if it is not specified in the keys.
+        scope : str (default is 'global')
+            The scope for that setting. Can be 'global' or a dataset name.
+        path : str
+            A path to a Python settings file.
+        file_namespace : dict
+            A namespace to pass to the Python settings file.
+
+        """
         if path is not None:
             path = op.expanduser(path)
             path = op.realpath(path)
@@ -108,6 +137,17 @@ class UserSettings(BaseSettings):
                                       )
 
 
+_USER_SETTINGS = UserSettings()
+
+
+def get_user(*args, **kwargs):
+    return _USER_SETTINGS.get(*args, **kwargs)
+
+
+def set_user(*args, **kwargs):
+    return _USER_SETTINGS.set(*args, **kwargs)
+
+
 #------------------------------------------------------------------------------
 # Internal Settings
 #------------------------------------------------------------------------------
@@ -116,52 +156,12 @@ class InternalSettings(BaseSettings):
     pass
 
 
-#------------------------------------------------------------------------------
-# Global variables
-#------------------------------------------------------------------------------
-
-_USER_SETTINGS = UserSettings()
+_INTERNAL_SETTINGS = InternalSettings()
 
 
-def get_user(name, scope='global'):
-    """Get a settings value.
-
-    Parameters
-    ----------
-    name : str
-        The settings name
-    scope : str (default is 'global')
-        The scope for that setting. Can be 'global' or a dataset name.
-
-    """
-    return _USER_SETTINGS.get(name, scope)
+def get_internal(*args, **kwargs):
+    return _INTERNAL_SETTINGS.get(*args, **kwargs)
 
 
-def set_user(key_values=None,
-             namespace=None,
-             scope='global',
-             path=None,
-             file_namespace=None,
-             ):
-    """Set some settings
-
-    Parameters
-    ----------
-    key_values : dict
-        A {str: object} dictionary with key-value pair settings.
-    namespace : str
-        The namespace if it is not specified in the keys.
-    scope : str (default is 'global')
-        The scope for that setting. Can be 'global' or a dataset name.
-    path : str
-        A path to a Python settings file.
-    file_namespace : dict
-        A namespace to pass to the Python settings file.
-
-    """
-    return _USER_SETTINGS.set(key_values=key_values,
-                              namespace=namespace,
-                              scope=scope,
-                              path=path,
-                              file_namespace=file_namespace,
-                              )
+def set_internal(*args, **kwargs):
+    return _INTERNAL_SETTINGS.set(*args, **kwargs)
