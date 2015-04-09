@@ -8,6 +8,7 @@
 
 import os
 import os.path as op
+import re
 
 import numpy as np
 
@@ -74,23 +75,53 @@ class DiskStore(object):
     """Store cluster-related data in HDF5 files."""
     def __init__(self, directory):
         assert directory is not None
-        self._directory = op.realpath(directory)
+        # White list of extensions, to be sure we don't erase
+        # the wrong files.
+        self._allowed_extensions = set()
+        self._directory = op.realpath(op.expanduser(directory))
 
     # Internal methods
     # -------------------------------------------------------------------------
 
+    def _check_extension(self, file):
+        """Check that a file extension belongs to the white list of
+        allowed extensions. This is for safety."""
+        _, extension = op.splitext(file)
+        extension = extension[1:]
+        if extension not in self._allowed_extensions:
+            raise RuntimeError("The extension '{0}' ".format(extension) +
+                               "hasn't been registered.")
+
     def _cluster_path(self, cluster, key):
         """Return the absolute path of a cluster in the disk store."""
         # TODO: subfolders
-        rel_path = '{0:d}.{1:s}'.format(cluster, key)
-        return op.realpath(op.join(self._directory, rel_path))
+        # Example of filename: '123.mykey'.
+        filename = '{0:d}.{1:s}'.format(cluster, key)
+        return op.realpath(op.join(self._directory, filename))
 
     def _cluster_file_exists(self, cluster, key):
         """Return whether a cluster file exists."""
         return op.exists(self._cluster_path(cluster, key))
 
+    def _is_cluster_file(self, path):
+        """Return whether a filename is of the form 'xxx.yyy' where xxx is a
+        numbe and yyy belongs to the set of allowed extensions."""
+        filename = op.basename(path)
+        extensions = '({0})'.format('|'.join(sorted(self._allowed_extensions)))
+        regex = r'^[0-9]+\.' + extensions + '$'
+        return re.match(regex, filename) is not None
+
     # Public methods
     # -------------------------------------------------------------------------
+
+    def register_file_extensions(self, extensions):
+        """Register file extensions explicitely. This is a security
+        to make sure that we don't accidentally delete the wrong files."""
+        if isinstance(extensions, string_types):
+            extensions = [extensions]
+        assert isinstance(extensions, list)
+        for extension in extensions:
+            self._allowed_extensions.add(extension)
 
     def store(self, cluster, append=False, **data):
         """Store a NumPy array to disk."""
@@ -100,7 +131,10 @@ class DiskStore(object):
         mode = 'wb' if not append else 'ab'
         for key, value in data.items():
             assert isinstance(value, np.ndarray)
-            with open(self._cluster_path(cluster, key), mode) as f:
+            path = self._cluster_path(cluster, key)
+            self._check_extension(path)
+            assert self._is_cluster_file(path)
+            with open(path, mode) as f:
                 value.tofile(f)
 
     def _get(self, cluster, key, dtype=None, shape=None):
@@ -128,19 +162,30 @@ class DiskStore(object):
         """List of files present in the directory."""
         if not op.exists(self._directory):
             return []
-        return sorted(os.listdir(self._directory))
+        return sorted(filter(self._is_cluster_file,
+                             os.listdir(self._directory)))
 
     @property
     def clusters(self):
         """List of cluster ids in the store."""
-        files = self.files
-        clusters = set([int(op.splitext(file)[0]) for file in files])
+        clusters = set([int(op.splitext(file)[0]) for file in self.files])
         return sorted(clusters)
 
     def delete(self, clusters):
         """Delete some clusters from the store."""
-        for file in self.files:
-            os.remove(op.join(self._directory, file))
+        for cluster in clusters:
+            for key in self._allowed_extensions:
+                path = self._cluster_path(cluster, key)
+                if not op.exists(path):
+                    continue
+                # Safety first: http://bit.ly/1ITJyF6
+                self._check_extension(path)
+                if self._is_cluster_file(path):
+                    os.remove(path)
+                else:
+                    raise RuntimeError("The file {0} was about ".format(path) +
+                                       "to be removed, but it doesn't appear "
+                                       "to be a valid cluster file.")
 
     def clear(self):
         """Clear the store completely by deleting all clusters."""

@@ -71,16 +71,10 @@ def test_disk_store():
     with TemporaryDirectory() as tempdir:
         ds = DiskStore(tempdir)
 
-        # assert ds.load(2) == {}
-
-        # assert ds.load(3).get('key', None) is None
-        # assert ds.load(3) == {}
-        # assert ds.load(3, ['key']) == {'key': None}
-        # assert ds.load(3) == {}
+        ds.register_file_extensions(['key', 'key_bis'])
         assert ds.clusters == []
 
         ds.store(3, key=a)
-        # _assert_equal(ds.load(3), {'key': a})
         _assert_equal(ds.load(3,
                               ['key'],
                               dtype=dtype,
@@ -95,7 +89,6 @@ def test_disk_store():
         assert ds.clusters == [3]
 
         ds.store(3, key_bis=b)
-        # _assert_equal(ds.load(3), {'key': a, 'key_bis': b})
         _assert_equal(ds.load(3, ['key'], dtype=dtype, shape=sha), {'key': a})
         _assert_equal(ds.load(3, ['key_bis'],
                               dtype=dtype,
@@ -111,7 +104,6 @@ def test_disk_store():
         assert ds.clusters == [3]
 
         ds.delete([2, 3])
-        # assert ds.load(3) == {}
         assert ds.load(3, ['key']) == {'key': None}
         assert ds.clusters == []
 
