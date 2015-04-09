@@ -23,21 +23,21 @@ def test_settings_1():
 
     # Namespaces are mandatory.
     with raises(ValueError):
-        s._get('a')
+        s.get('a')
 
     # None is returned if a key doesn't exist.
-    assert s._get('test.a') is None
+    assert s.get('test.a') is None
 
-    s._set({'test.a': 3})
-    assert s._get('test.a') == 3
+    s.set({'test.a': 3})
+    assert s.get('test.a') == 3
 
 
 def test_settings_2():
     s = _Settings()
 
-    s._set({'test.a': 3}, scope='my_dataset')
-    assert s._get('test.a') is None
-    assert s._get('test.a', scope='my_dataset') == 3
+    s.set({'test.a': 3}, scope='my_dataset')
+    assert s.get('test.a') is None
+    assert s.get('test.a', scope='my_dataset') == 3
 
 
 def test_settings_path():
@@ -52,14 +52,14 @@ def test_settings_path():
         s = _Settings()
         # Need to set the namespace 'test' first.
         with raises(NameError):
-            s._set(path=path)
+            s.set(path=path)
 
         # Set the 'test' namespace.
-        s._set({'test.a': 3, 'test.c': 6})
-        assert s._get('test.a') == 3
+        s.set({'test.a': 3, 'test.c': 6})
+        assert s.get('test.a') == 3
 
         # Now, set the settings file.
-        s._set(path=path)
-        assert s._get('test.a') == 4
-        assert s._get('test.b') == 5
-        assert s._get('test.c') == 6
+        s.set(path=path)
+        assert s.get('test.a') == 4
+        assert s.get('test.b') == 5
+        assert s.get('test.c') == 6

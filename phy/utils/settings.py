@@ -39,7 +39,7 @@ class _Settings(object):
     def _namespaces(self):
         return sorted(self._store['global'])
 
-    def _get(self, name, namespace=None, scope='global'):
+    def get(self, name, namespace=None, scope='global'):
         namespace, name = _split_namespace(name, namespace=namespace)
         if scope not in self._store:
             scope = 'global'
@@ -63,13 +63,13 @@ class _Settings(object):
             raise NameError("Unknown namespace '{0:s}'. ".format(name) +
                             "Known namespaces are: {0:s}.".format(namespaces))
 
-    def _set(self,
-             key_values=None,
-             namespace=None,
-             scope='global',
-             path=None,
-             file_namespace=None,
-             ):
+    def set(self,
+            key_values=None,
+            namespace=None,
+            scope='global',
+            path=None,
+            file_namespace=None,
+            ):
         if path is not None:
             path = op.expanduser(path)
             path = op.realpath(path)
@@ -108,7 +108,7 @@ def get(name, scope='global'):
         The scope for that setting. Can be 'global' or a dataset name.
 
     """
-    return _SETTINGS._get(name, scope)
+    return _SETTINGS.get(name, scope)
 
 
 def set(key_values=None,
@@ -133,7 +133,7 @@ def set(key_values=None,
         A namespace to pass to the Python settings file.
 
     """
-    return _SETTINGS._set(key_values=key_values,
+    return _SETTINGS.set(key_values=key_values,
                           namespace=namespace,
                           scope=scope,
                           path=path,
