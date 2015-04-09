@@ -10,6 +10,7 @@ import numpy as np
 
 from ..ext import six
 from ..utils.array import _as_array, _pad
+from ..utils.logging import warn
 
 
 #------------------------------------------------------------------------------
@@ -167,7 +168,10 @@ class WaveformLoader(object):
         waveforms = np.empty(shape, dtype=self.dtype)
         # Load all spikes.
         for i, time in enumerate(spikes):
-            waveforms[i, ...] = self._load_at(time)
+            try:
+                waveforms[i, ...] = self._load_at(time)
+            except ValueError as e:
+                warn("Error while loading waveform: {0}".format(str(e)))
         if self._scale_factor is not None:
             waveforms *= self._scale_factor
         return waveforms
