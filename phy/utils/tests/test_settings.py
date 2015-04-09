@@ -40,7 +40,7 @@ def test_base_settings_2():
     assert s.get('test.a', scope='my_dataset') == 3
 
 
-def test_user_settings_path():
+def test_user_settings():
     with TemporaryDirectory() as tmpdir:
         path = op.join(tmpdir, 'test')
 
@@ -62,4 +62,27 @@ def test_user_settings_path():
         s.set(path=path)
         assert s.get('test.a') == 4
         assert s.get('test.b') == 5
+        assert s.get('test.c') == 6
+
+
+def test_internal_settings():
+    with TemporaryDirectory() as tmpdir:
+        path = op.join(tmpdir, 'test')
+
+        s = InternalSettings()
+
+        # Set the 'test' namespace.
+        s.set({'test.a': 3, 'test.c': 6})
+        assert s.get('test.a') == 3
+        assert s.get('test.c') == 6
+
+        s.save(path)
+        assert s.get('test.a') == 3
+        assert s.get('test.c') == 6
+
+        s = InternalSettings()
+        assert s.get('test.a') is None
+
+        s.load(path)
+        assert s.get('test.a') == 3
         assert s.get('test.c') == 6
