@@ -169,7 +169,7 @@ class FeatureViewModel(BaseViewModel):
             channels = np.argsort(sum_masks)[::-1][:3]
         else:
             channels = np.arange(len(self.model.channels[:3]))
-        self.view.dimensions = [(ch, 0) for ch in channels]
+        self.view.dimensions = ['time'] + [(ch, 0) for ch in channels]
 
         # *All* spike clusters.
         self.view.visual.spike_clusters = self.model.spike_clusters
