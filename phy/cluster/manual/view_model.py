@@ -8,7 +8,6 @@
 
 import numpy as np
 
-from ...utils.array import get_excerpts
 from ...utils.logging import debug
 from ...plot.ccg import CorrelogramView
 from ...plot.features import FeatureView
