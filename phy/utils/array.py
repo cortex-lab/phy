@@ -243,6 +243,8 @@ def data_chunk(data, chunk, with_overlap=False):
 def get_excerpts(data, n_excerpts=None, excerpt_size=None):
     assert n_excerpts is not None
     assert excerpt_size is not None
+    if n_excerpts * excerpt_size > len(data):
+        return data
     return np.concatenate([data_chunk(data, chunk)
                            for chunk in excerpts(len(data),
                                                  n_excerpts=n_excerpts,
