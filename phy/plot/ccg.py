@@ -120,7 +120,6 @@ class CorrelogramView(BaseSpikeCanvas):
     def cluster_ids(self, value):
         self.visual.cluster_ids = value
         self.boxes.n_rows = self.visual.n_clusters
-        print(self.boxes.n_rows)
 
     def on_draw(self, event):
         gloo.clear()

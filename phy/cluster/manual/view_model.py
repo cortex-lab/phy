@@ -49,6 +49,7 @@ def _selected_clusters_colors(n_clusters):
 class BaseViewModel(object):
     """Used to create views from a model."""
     _view_class = None
+    _view_name = ''
 
     def __init__(self, model, store=None, backend=None, **kwargs):
         self._model = model
@@ -99,6 +100,7 @@ class BaseViewModel(object):
 
 class WaveformViewModel(BaseViewModel):
     _view_class = WaveformView
+    _view_name = 'waveforms'
     scale_factor = 1.
 
     def on_open(self):
@@ -135,6 +137,7 @@ class WaveformViewModel(BaseViewModel):
 
 class FeatureViewModel(BaseViewModel):
     _view_class = FeatureView
+    _view_name = 'features'
     scale_factor = 1.
 
     def on_select(self, clusters, spikes):
@@ -185,6 +188,8 @@ class FeatureViewModel(BaseViewModel):
 
 class CorrelogramViewModel(BaseViewModel):
     _view_class = CorrelogramView
+    _view_name = 'correlograms'
+
     binsize = None
     winsize_bins = None
     n_excerpts = None
