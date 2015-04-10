@@ -449,6 +449,7 @@ class Session(BaseSession):
 
     def _create_view(self, view_model, show=True):
         view = view_model.view
+        view_name = view_model.view_name
 
         @self.connect
         def on_open():
@@ -463,14 +464,14 @@ class Session(BaseSession):
 
         @self.connect
         def on_select(selector):
-            spikes = selector.selected_spikes
-            if len(spikes) == 0:
+            if len(selector.selected_clusters) == 0:
                 return
             if view.visual.empty:
                 on_open()
 
-            n_spikes_max = self.get_user_settings('manual_clustering.'
-                                                  'n_spikes_max')
+            n_spikes_max = self.get_user_settings('manual_clustering.' +
+                                                  view_name +
+                                                  '_n_spikes_max')
             spikes = selector.subset_spikes(n_spikes_max=n_spikes_max)
             view_model.on_select(selector.selected_clusters,
                                  spikes)
@@ -501,12 +502,12 @@ class Session(BaseSession):
 
     def _view_settings_name(self, view_model, name):
         if isinstance(view_model, BaseViewModel):
-            view_model = view_model._view_name
+            view_model = view_model.view_name
         return 'manual_clustering.' + view_model + '_' + name
 
     def _save_scale_factor(self, view_model):
         name = self._view_settings_name(view_model, 'scale_factor')
-        if not name:
+        if not name or not hasattr(view_model, 'scale_factor'):
             return
         sf = view_model.view.zoom * view_model.scale_factor
         self.set_internal_settings(name, sf)
@@ -534,7 +535,8 @@ class Session(BaseSession):
     def show_correlograms(self):
         """Show a CorrelogramView and return a ViewModel instance."""
         args = 'binsize', 'winsize_bins', 'n_excerpts', 'excerpt_size'
-        kwargs = {k: self.get_user_settings('manual_clustering.ccg_' + k)
+        kwargs = {k: self.get_user_settings('manual_clustering.'
+                                            'correlograms_' + k)
                   for k in args}
         vm = self._create_view_model('correlograms', **kwargs)
         self._create_view(vm)

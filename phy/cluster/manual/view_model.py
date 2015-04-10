@@ -64,6 +64,10 @@ class BaseViewModel(object):
         return self._model
 
     @property
+    def view_name(self):
+        return self._view_name
+
+    @property
     def store(self):
         return self._store
 
