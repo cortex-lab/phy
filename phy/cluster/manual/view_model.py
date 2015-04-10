@@ -202,14 +202,11 @@ class CorrelogramViewModel(BaseViewModel):
     def on_select(self, clusters, spikes):
         self.view.cluster_ids = clusters
 
-        def _extract(arr):
-            return get_excerpts(arr,
-                                n_excerpts=self.n_excerpts,
-                                excerpt_size=self.excerpt_size,
-                                )
-
         # Extract a subset of the spikes belonging to the selected clusters.
-        spikes_subset = _extract(spikes)
+        spikes_subset = get_excerpts(spikes,
+                                     n_excerpts=self.n_excerpts,
+                                     excerpt_size=self.excerpt_size,
+                                     )
         spike_clusters = self.model.spike_clusters[spikes_subset]
         spike_times = self.model.spike_times[spikes_subset]
 
