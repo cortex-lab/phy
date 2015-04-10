@@ -159,12 +159,7 @@ def _start_manual_clustering(filename=None, model=None, tempdir=None):
 
 
 def _show_view(session, name):
-    if name == 'waveforms':
-        vm = session._create_waveform_view_model()
-    elif name == 'features':
-        vm = session._create_feature_view_model()
-    elif name == 'correlograms':
-        vm = session._create_correlogram_view_model()
+    vm = session._create_view_model(name)
     vm.scale_factor = 1.
     view = session._create_view(vm, show=False)
     show_test(view)

@@ -24,7 +24,8 @@ from .clustering import Clustering
 from ._utils import _spikes_per_cluster
 from .selector import Selector
 from .store import ClusterStore, StoreItem
-from .view_model import (WaveformViewModel,
+from .view_model import (BaseViewModel,
+                         WaveformViewModel,
                          FeatureViewModel,
                          CorrelogramViewModel,
                          )
@@ -256,6 +257,13 @@ def _process_ups(ups):
         raise NotImplementedError()
 
 
+_VIEW_MODELS = {
+    'waveforms': WaveformViewModel,
+    'features': FeatureViewModel,
+    'correlograms': CorrelogramViewModel,
+}
+
+
 class Session(BaseSession):
     """A manual clustering session."""
     def __init__(self, phy_user_dir=None):
@@ -421,9 +429,7 @@ class Session(BaseSession):
         self.clustering = Clustering(spike_clusters)
 
         # Create the Selector instance.
-        n_spikes_max = self.get_user_settings('manual_clustering.'
-                                              'n_spikes_max')
-        self.selector = Selector(spike_clusters, n_spikes_max=n_spikes_max)
+        self.selector = Selector(spike_clusters)
         self.cluster_metadata = self.model.cluster_metadata
 
         # Create the cluster store.
@@ -462,8 +468,12 @@ class Session(BaseSession):
                 return
             if view.visual.empty:
                 on_open()
+
+            n_spikes_max = self.get_user_settings('manual_clustering.'
+                                                  'n_spikes_max')
+            spikes = selector.subset_spikes(n_spikes_max=n_spikes_max)
             view_model.on_select(selector.selected_clusters,
-                                 selector.selected_spikes)
+                                 spikes)
             view.update()
 
         # Unregister the callbacks when the view is closed.
@@ -485,16 +495,14 @@ class Session(BaseSession):
 
         return view
 
+    def _create_view_model(self, name, **kwargs):
+        vm_class = _VIEW_MODELS[name]
+        return vm_class(self.model, store=self.cluster_store, **kwargs)
+
     def _view_settings_name(self, view_model, name):
-        if isinstance(view_model, string_types):
-            prefix = view_model
-        elif isinstance(view_model, WaveformViewModel):
-            prefix = 'waveform'
-        elif isinstance(view_model, FeatureViewModel):
-            prefix = 'feature'
-        else:
-            return None
-        return 'manual_clustering.' + prefix + '_' + name
+        if isinstance(view_model, BaseViewModel):
+            view_model = view_model._view_name
+        return 'manual_clustering.' + view_model + '_' + name
 
     def _save_scale_factor(self, view_model):
         name = self._view_settings_name(view_model, 'scale_factor')
@@ -509,42 +517,25 @@ class Session(BaseSession):
             return 1.
         return self.get_internal_settings(name) or .01
 
-    def _create_waveform_view_model(self):
-        sf = self._load_scale_factor('waveform')
-        return WaveformViewModel(self.model,
-                                 store=self.cluster_store,
-                                 scale_factor=sf,
-                                 )
-
-    def _create_feature_view_model(self):
-        sf = self._load_scale_factor('feature')
-        return FeatureViewModel(self.model,
-                                store=self.cluster_store,
-                                scale_factor=sf,
-                                )
-
-    def _create_correlogram_view_model(self):
-        args = 'binsize', 'winsize_bins', 'n_excerpts', 'excerpt_size'
-        kwargs = {k: self.get_user_settings('manual_clustering.ccg_' + k)
-                  for k in args}
-        return CorrelogramViewModel(self.model,
-                                    store=self.cluster_store,
-                                    **kwargs)
-
     def show_waveforms(self):
         """Show a WaveformView and return a ViewModel instance."""
-        vm = self._create_waveform_view_model()
+        sf = self._load_scale_factor('waveforms')
+        vm = self._create_view_model('waveforms', scale_factor=sf)
         self._create_view(vm)
         return vm
 
     def show_features(self):
         """Show a FeatureView and return a ViewModel instance."""
-        vm = self._create_feature_view_model()
+        sf = self._load_scale_factor('features')
+        vm = self._create_view_model('features', scale_factor=sf)
         self._create_view(vm)
         return vm
 
     def show_correlograms(self):
         """Show a CorrelogramView and return a ViewModel instance."""
-        vm = self._create_correlogram_view_model()
+        args = 'binsize', 'winsize_bins', 'n_excerpts', 'excerpt_size'
+        kwargs = {k: self.get_user_settings('manual_clustering.ccg_' + k)
+                  for k in args}
+        vm = self._create_view_model('correlograms', **kwargs)
         self._create_view(vm)
         return vm
