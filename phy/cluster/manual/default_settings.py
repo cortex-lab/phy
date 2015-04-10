@@ -10,10 +10,10 @@ manual_clustering.correlograms_binsize = 20
 manual_clustering.correlograms_winsize_bins = 2 * 25 + 1
 
 # Maximum number of spikes for the correlograms.
-manual_clustering.correlograms_n_spikes_max = 20000000
+manual_clustering.correlograms_n_spikes_max = 1000000
 
 # Contiguous chunks of spikes for computing the CCGs.
-manual_clustering.correlograms_excerpt_size = 1000000
+manual_clustering.correlograms_excerpt_size = 100000
 
 
 # -----------------------------------------------------------------------------
