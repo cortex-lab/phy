@@ -302,12 +302,12 @@ class KwikModel(BaseModel):
             self._features_masks = fm
             self._features = PartialArray(fm, 0)
 
-            # TODO: sparse, memory mapped, memcache, etc.
-            k = self._metadata['nfeatures_per_channel']
+            nfpc = self._metadata['nfeatures_per_channel']
+            nc = self.n_channels
             # This partial array simulates a (n_spikes, n_channels) array.
             self._masks = PartialArray(fm,
-                                       (slice(0, k * self.n_channels, k), 1))
-            assert self._masks.shape == (self.n_spikes, self.n_channels)
+                                       (slice(0, nfpc * nc, nfpc), 1))
+            assert self._masks.shape == (self.n_spikes, nc)
 
         self._cluster_metadata = ClusterMetadata()
 
@@ -354,6 +354,10 @@ class KwikModel(BaseModel):
                                                )
 
     @property
+    def n_features_per_channel(self):
+        return self._metadata['nfeatures_per_channel']
+
+    @property
     def channels(self):
         """List of channels in the current channel group."""
         # TODO: rename to channel_ids?
@@ -396,6 +400,14 @@ class KwikModel(BaseModel):
                                              self._clustering)
         self._spike_clusters = self._kwik.read(path)[:]
         # TODO: cluster metadata
+
+    @property
+    def clustering(self):
+        return self._clustering
+
+    @clustering.setter
+    def clustering(self, value):
+        self._clustering_changed(value)
 
     # Data
     # -------------------------------------------------------------------------

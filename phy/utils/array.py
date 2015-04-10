@@ -243,10 +243,28 @@ def data_chunk(data, chunk, with_overlap=False):
 def get_excerpts(data, n_excerpts=None, excerpt_size=None):
     assert n_excerpts is not None
     assert excerpt_size is not None
+    if n_excerpts * excerpt_size > len(data):
+        return data
     return np.concatenate([data_chunk(data, chunk)
                            for chunk in excerpts(len(data),
                                                  n_excerpts=n_excerpts,
                                                  excerpt_size=excerpt_size)])
+
+
+def regular_subset(spikes=None, n_spikes_max=None):
+    """Prune the current selection to get at most n_spikes_max spikes."""
+    assert spikes is not None
+    # Nothing to do if the selection already satisfies n_spikes_max.
+    if n_spikes_max is None or len(spikes) <= n_spikes_max:
+        return spikes
+    step = int(np.clip(1. / n_spikes_max * len(spikes),
+                       1, len(spikes)))
+    # Random shift.
+    start = np.random.randint(low=0, high=step)
+    my_spikes = spikes[start::step][:n_spikes_max]
+    assert len(my_spikes) <= len(spikes)
+    assert len(my_spikes) <= n_spikes_max
+    return my_spikes
 
 
 # -----------------------------------------------------------------------------

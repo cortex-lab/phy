@@ -46,6 +46,8 @@ def _test_waveforms(n_spikes=None, n_clusters=None):
 
     c = WaveformView()
     c.visual.waveforms = waveforms
+    # Useful to test depth.
+    # masks[n_spikes//2:, ...] = 0
     c.visual.masks = masks
     c.visual.spike_clusters = spike_clusters
     c.visual.cluster_colors = np.array([_random_color()

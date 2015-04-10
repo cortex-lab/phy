@@ -42,14 +42,13 @@ def _test_features(n_spikes=None, n_clusters=None):
     masks = artificial_masks(n_spikes, n_channels)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     spike_times = artificial_spike_times(n_spikes).astype(np.float32)
-    # WARNING: need to normalize spike times
-    if len(spike_times) > 0:
-        spike_times = -1 + 2 * spike_times / spike_times.max()
 
     c = FeatureView()
     c.visual.features = features
+    # Useful to test depth.
+    # masks[n_spikes//2:, ...] = 0
     c.visual.masks = masks
-    c.visual.dimensions = ['time', (0, 0), (1, 0), (2, 0)]
+    c.dimensions = ['time', (0, 0), (1, 0), (2, 0)]
     c.visual.spike_clusters = spike_clusters
     c.visual.spike_times = spike_times
     c.visual.cluster_colors = np.array([_random_color()

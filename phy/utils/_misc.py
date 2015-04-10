@@ -74,18 +74,20 @@ def _fun_arg_count(f):
 _PHY_USER_DIR_NAME = '.phy'
 
 
-def _phy_user_dir(sub_dir=None):
+def _phy_user_dir():
     """Return the absolute path to the phy user directory."""
     home = op.expanduser("~")
     path = op.realpath(op.join(home, _PHY_USER_DIR_NAME))
-    if sub_dir is not None:
-        path = op.join(path, sub_dir)
     return path
 
 
-def _ensure_phy_user_dir_exists():
-    """Create the phy user directory if it does not exist."""
-    path = _phy_user_dir()
+def _ensure_path_exists(path):
     if not op.exists(path):
-        os.mkdir(path)
+        os.makedirs(path)
+
+
+def _internal_path(path, root=None):
+    if root is None:
+        root = _phy_user_dir()
+    path = op.realpath(op.join(root, path))
     return path

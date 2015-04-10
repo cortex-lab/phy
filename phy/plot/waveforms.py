@@ -9,12 +9,12 @@
 
 import numpy as np
 
+from vispy import gloo
 from vispy.gloo import Texture2D
 
-from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas
+from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas, _enable_depth_mask
 from ..utils.array import _as_array, _index_of, _normalize
 from ..utils.logging import debug
-from ..utils._color import _random_color
 
 
 #------------------------------------------------------------------------------
@@ -25,6 +25,7 @@ class WaveformVisual(BaseSpikeVisual):
 
     _shader_name = 'waveforms'
     _gl_draw_mode = 'line_strip'
+    default_box_scale = (.05, .03)
 
     """Waveform visual."""
     def __init__(self, **kwargs):
@@ -33,7 +34,8 @@ class WaveformVisual(BaseSpikeVisual):
         self._waveforms = None
         self.n_channels, self.n_samples = None, None
 
-        self.program['u_data_scale'] = (.05, .03)
+        self.program['u_data_scale'] = self.default_box_scale
+        _enable_depth_mask()
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -146,17 +148,30 @@ class WaveformVisual(BaseSpikeVisual):
 class WaveformView(BaseSpikeCanvas):
     _visual_class = WaveformVisual
 
+    @property
+    def box_scale(self):
+        return self.visual.box_scale
+
+    @box_scale.setter
+    def box_scale(self, value):
+        self.visual.box_scale = value
+        self.update()
+
     def on_key_press(self, event):
         u, v = self.visual.box_scale
         coeff = 1.1
         if event.key == '+':
             if 'Control' in event.modifiers:
-                self.visual.box_scale = (u*coeff, v)
+                self.box_scale = (u * coeff, v)
             else:
-                self.visual.box_scale = (u, v*coeff)
+                self.box_scale = (u, v * coeff)
         if event.key == '-':
             if 'Control' in event.modifiers:
-                self.visual.box_scale = (u/coeff, v)
+                self.box_scale = (u / coeff, v)
             else:
-                self.visual.box_scale = (u, v/coeff)
+                self.box_scale = (u, v / coeff)
         self.update()
+
+    def on_draw(self, event):
+        gloo.clear(color=True, depth=True)
+        self.visual.draw()

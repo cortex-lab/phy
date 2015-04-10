@@ -11,9 +11,6 @@ from numpy.testing import assert_allclose as ac
 from pytest import raises
 
 from ..session import BaseSession, Session, FeatureMasks
-from ..view_model import (WaveformViewModel,
-                          FeatureViewModel,
-                          )
 from ....utils.testing import show_test
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
@@ -156,10 +153,17 @@ def test_action_event():
 #------------------------------------------------------------------------------
 
 def _start_manual_clustering(filename=None, model=None, tempdir=None):
-    session = Session(store_path=tempdir)
+    session = Session(phy_user_dir=tempdir)
     session.open(filename=filename, model=model)
-
     return session
+
+
+def _show_view(session, name):
+    vm = session._create_view_model(name)
+    vm.scale_factor = 1.
+    view = session._create_view(vm, show=False)
+    show_test(view)
+    return view
 
 
 def test_session_store():
@@ -195,27 +199,16 @@ def test_session_mock():
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
 
-        def _show_waveforms():
-            view = session._show_view(WaveformViewModel,
-                                      scale_factor=1.,
-                                      show=False,
-                                      )
-            show_test(view)
-            return view
-
-        view = _show_waveforms()
+        view = _show_view(session, 'waveforms')
         session.select([0])
-        view_bis = _show_waveforms()
-
-        session.merge([3, 4])
+        view_bis = _show_view(session, 'waveforms')
 
         view.close()
         view_bis.close()
 
-        session = _start_manual_clustering(model=MockModel(),
-                                           tempdir=tempdir)
+        session = _start_manual_clustering(model=MockModel(), tempdir=tempdir)
         session.select([1, 2])
-        view = _show_waveforms()
+        view = _show_view(session, 'waveforms')
 
         view.close()
 
@@ -241,22 +234,6 @@ def test_session_kwik():
         session = _start_manual_clustering(filename=filename,
                                            tempdir=tempdir)
 
-        def _show_waveforms():
-            view = session._show_view(WaveformViewModel,
-                                      scale_factor=1.,
-                                      show=False,
-                                      )
-            show_test(view)
-            return view
-
-        def _show_features():
-            view = session._show_view(FeatureViewModel,
-                                      scale_factor=1.,
-                                      show=False,
-                                      )
-            show_test(view)
-            return view
-
         session.select([0])
         cs = session.cluster_store
 
@@ -272,53 +249,12 @@ def test_session_kwik():
             assert cs.mean_probe_position(cluster).shape == (2,)
             assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
 
-        # Merging hasn't been implemented yet in the session store.
-        # session.merge([3, 4])
-        view = _show_waveforms()
-        view = _show_features()
+        view_0 = _show_view(session, 'waveforms')
+        view_1 = _show_view(session, 'features')
 
         # This won't work but shouldn't raise an error.
         session.select([1000])
 
-        # # TODO: more tests
-        # session.undo()
-        # session.redo()
-
-        view.close()
+        view_0.close()
+        view_1.close()
         session.close()
-
-
-def test_session_stats():
-
-    n_clusters = 5
-    n_spikes = 50
-    n_channels = 28
-    n_fets = 2
-    n_samples_traces = 3000
-
-    with TemporaryDirectory() as tempdir:
-
-        # Create the test HDF5 file in the temporary directory.
-        filename = create_mock_kwik(tempdir,
-                                    n_clusters=n_clusters,
-                                    n_spikes=n_spikes,
-                                    n_channels=n_channels,
-                                    n_features_per_channel=n_fets,
-                                    n_samples_traces=n_samples_traces)
-
-        session = _start_manual_clustering(filename,
-                                           tempdir=tempdir)
-        assert session
-
-        # TODO
-
-        # masks = session.stats.cluster_masks(3)
-        # assert masks.shape == (n_channels,)
-
-        # session.merge([3, 4])
-
-        # masks = session.stats.cluster_masks(3)
-        # assert masks.shape == (n_channels,)
-
-        # masks = session.stats.cluster_masks(n_clusters)
-        # assert masks.shape == (n_channels,)

@@ -19,14 +19,14 @@ from ..view_model import (WaveformViewModel,
 # View model tests
 #------------------------------------------------------------------------------
 
-def _test_view_model(view_model_class):
+def _test_view_model(view_model_class, **kwargs):
     model = MockModel()
     clustering = Clustering(model.spike_clusters)
 
     clusters = [3, 4]
     spikes = clustering.spikes_in_clusters(clusters)
 
-    vm = view_model_class(model, scale_factor=1.)
+    vm = view_model_class(model, **kwargs)
     vm.on_open()
     vm.on_select(clusters, spikes)
 
@@ -42,4 +42,9 @@ def test_features():
 
 
 def test_ccg():
-    _test_view_model(CorrelogramViewModel)
+    _test_view_model(CorrelogramViewModel,
+                     binsize=20,
+                     winsize_bins=51,
+                     n_excerpts=100,
+                     excerpt_size=100,
+                     )

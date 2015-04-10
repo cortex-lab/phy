@@ -13,7 +13,6 @@ import numpy as np
 
 from vispy import app, gloo, config
 from vispy.visuals import Visual
-from vispy.visuals.shaders import ModularProgram
 
 from ..utils.array import _unique, _as_array
 from ..utils.logging import debug
@@ -52,6 +51,17 @@ def _tesselate_histogram(hist):
     return np.c_[x, y]
 
 
+def _enable_depth_mask():
+    gloo.set_state(clear_color='black',
+                   depth_test=True,
+                   depth_range=(0., 1.),
+                   # depth_mask='true',
+                   depth_func='lequal',
+                   blend=True,
+                   blend_func=('src_alpha', 'one_minus_src_alpha'))
+    gloo.set_clear_depth(1.0)
+
+
 #------------------------------------------------------------------------------
 # PanZoom class
 #------------------------------------------------------------------------------
@@ -82,7 +92,7 @@ class PanZoom(object):
     """
 
     def __init__(self, aspect=1.0, pan=(0.0, 0.0), zoom=1.0,
-                 zmin=0.01, zmax=100.0):
+                 zmin=1e-5, zmax=1e5):
         """
         Initialize the transform.
 
@@ -239,6 +249,33 @@ class PanZoom(object):
         # self.pan = xpan, ypan
         self._canvas.update()
 
+    def on_key_press(self, event):
+        # Zooming with the keyboard.
+        if 'Control' in event.modifiers:
+            k = .05
+            if event.key == 'Down':
+                self.zoom *= (1. - k)
+            elif event.key == 'Up':
+                self.zoom *= (1. + k)
+            self._canvas.update()
+        # Panning with the keyboard.
+        else:
+            k = .05
+            if event.key == 'Left':
+                self.pan += (+k, +0)
+            elif event.key == 'Right':
+                self.pan += (-k, +0)
+            elif event.key == 'Down':
+                self.pan += (+0, +k)
+            elif event.key == 'Up':
+                self.pan += (+0, -k)
+            self._canvas.update()
+        # Reset with 'R'.
+        if event.key == 'R' and not event.modifiers:
+            self.pan = (0., 0.)
+            self.zoom = 1.
+            self._canvas.update()
+
     def add(self, programs):
         """ Attach programs to this tranform """
 
@@ -271,39 +308,76 @@ class PanZoom(object):
         canvas.connect(self.on_resize)
         canvas.connect(self.on_mouse_wheel)
         canvas.connect(self.on_mouse_move)
+        canvas.connect(self.on_key_press)
 
 
 #------------------------------------------------------------------------------
 # Base spike visual
 #------------------------------------------------------------------------------
 
-class BaseSpikeVisual(Visual):
+class _BakeVisual(Visual):
     _shader_name = ''
     _gl_draw_mode = ''
 
     def __init__(self, **kwargs):
-        super(BaseSpikeVisual, self).__init__(**kwargs)
-        self.n_spikes = None
-        self._spike_clusters = None
-        self._spike_ids = None
-        self._empty = True
+        super(_BakeVisual, self).__init__(**kwargs)
         self._to_bake = []
-
-        vertex = _load_shader(self._shader_name + '.vert')
-        fragment = _load_shader(self._shader_name + '.frag')
+        self._empty = True
 
         curdir = op.dirname(op.realpath(__file__))
         config['include_path'] = [op.join(curdir, 'glsl')]
 
-        self.program = ModularProgram(vertex, fragment)
-
-        gloo.set_state(clear_color='black', blend=True,
-                       blend_func=('src_alpha', 'one_minus_src_alpha'))
+        vertex = _load_shader(self._shader_name + '.vert')
+        fragment = _load_shader(self._shader_name + '.frag')
+        self.program = gloo.Program(vertex, fragment)
 
     @property
     def empty(self):
         """Specify whether the visual is currently empty or not."""
         return self._empty
+
+    def set_to_bake(self, *bakes):
+        for bake in bakes:
+            if bake not in self._to_bake:
+                self._to_bake.append(bake)
+
+    def _bake(self):
+        """Prepare and upload the data on the GPU.
+
+        Return whether something has been baked or not.
+
+        """
+        if self._empty:
+            return
+        n_bake = len(self._to_bake)
+        # Bake what needs to be baked.
+        # WARNING: the bake functions are called in alphabetical order.
+        # Tweak the names if there are dependencies between the functions.
+        for bake in sorted(self._to_bake):
+            # Name of the private baking method.
+            name = '_bake_{0:s}'.format(bake)
+            if hasattr(self, name):
+                getattr(self, name)()
+        self._to_bake = []
+        return n_bake > 0
+
+    def draw(self):
+        """Draw the waveforms."""
+        # Bake what needs to be baked at this point.
+        self._bake()
+        if not self._empty:
+            self.program.draw(self._gl_draw_mode)
+
+
+class BaseSpikeVisual(_BakeVisual):
+    def __init__(self, **kwargs):
+        super(BaseSpikeVisual, self).__init__(**kwargs)
+        self.n_spikes = None
+        self._spike_clusters = None
+        self._spike_ids = None
+
+        gloo.set_state(clear_color='black', blend=True,
+                       blend_func=('src_alpha', 'one_minus_src_alpha'))
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -314,11 +388,6 @@ class BaseSpikeVisual(Visual):
         if self.n_spikes is None:
             self.n_spikes = arr.shape[0]
         assert arr.shape[0] == self.n_spikes
-
-    def set_to_bake(self, *bakes):
-        for bake in bakes:
-            if bake not in self._to_bake:
-                self._to_bake.append(bake)
 
     @property
     def spike_clusters(self):
@@ -395,32 +464,93 @@ class BaseSpikeVisual(Visual):
         self.program['u_cluster_color'] = gloo.Texture2D(u_cluster_color)
         debug("bake color", u_cluster_color.shape)
 
-    def _bake(self):
-        """Prepare and upload the data on the GPU.
 
-        Return whether something has been baked or not.
+#------------------------------------------------------------------------------
+# Axes and boxes visual
+#------------------------------------------------------------------------------
 
-        """
-        if self._empty:
+class BoxVisual(_BakeVisual):
+    _shader_name = 'box'
+    _gl_draw_mode = 'lines'
+
+    def __init__(self, **kwargs):
+        super(BoxVisual, self).__init__(**kwargs)
+        self._n_rows = None
+
+    @property
+    def n_rows(self):
+        return self._n_rows
+
+    @n_rows.setter
+    def n_rows(self, value):
+        assert value >= 0
+        self._n_rows = value
+        self._empty = not(self._n_rows > 0)
+        self.set_to_bake('n_rows')
+
+    @property
+    def n_boxes(self):
+        return self._n_rows * self._n_rows
+
+    def _bake_n_rows(self):
+        if not self._n_rows:
             return
-        n_bake = len(self._to_bake)
-        # Bake what needs to be baked.
-        # WARNING: the bake functions are called in alphabetical order.
-        # Tweak the names if there are dependencies between the functions.
-        for bake in sorted(self._to_bake):
-            # Name of the private baking method.
-            name = '_bake_{0:s}'.format(bake)
-            if hasattr(self, name):
-                getattr(self, name)()
-        self._to_bake = []
-        return n_bake > 0
+        arr = np.array([[-1, -1],
+                        [-1, +1],
+                        [-1, +1],
+                        [+1, +1],
+                        [+1, +1],
+                        [+1, -1],
+                        [+1, -1],
+                        [-1, -1]]) * .975
+        arr = np.tile(arr, (self.n_boxes, 1))
+        position = np.empty((8 * self.n_boxes, 3), dtype=np.float32)
+        position[:, :2] = arr
+        position[:, 2] = np.repeat(np.arange(self.n_boxes), 8)
+        self.program['a_position'] = position
+        self.program['n_rows'] = self._n_rows
+        debug("bake boxes", position.shape)
 
-    def draw(self):
-        """Draw the waveforms."""
-        # Bake what needs to be baked at this point.
-        self._bake()
-        if not self._empty:
-            self.program.draw(self._gl_draw_mode)
+
+class AxisVisual(BoxVisual):
+    _shader_name = 'ax'
+
+    def __init__(self, **kwargs):
+        super(AxisVisual, self).__init__(**kwargs)
+        self._positions = (0., 0.)
+
+    def _bake_n_rows(self):
+        self.program['n_rows'] = self._n_rows
+
+    @property
+    def positions(self):
+        """A pair of (x, y) values for the two axes."""
+        return self._positions
+
+    @positions.setter
+    def positions(self, value):
+        assert len(value) == 2
+        self._positions = value
+        self.set_to_bake('positions')
+
+    def _bake_positions(self):
+        if not self._n_rows:
+            return
+        position = np.empty((4 * self.n_boxes, 4), dtype=np.float32)
+        x, y = self._positions
+        c = 1.
+        arr = np.array([[x, -c],
+                        [x, +c],
+                        [-c, y],
+                        [+c, y]], dtype=np.float32)
+        # Positions.
+        position[:, :2] = np.tile(arr, (self.n_boxes, 1))
+        # Index.
+        position[:, 2] = np.repeat(np.arange(self.n_boxes), 4)
+        # Axes.
+        position[:, 3] = np.tile([0, 0, 1, 1], self.n_boxes)
+        self.program['a_position'] = position
+        debug("bake ax", position.shape)
 
 
 #------------------------------------------------------------------------------
@@ -437,8 +567,12 @@ class BaseSpikeCanvas(app.Canvas):
         self._pz.add(self.visual.program)
         self._pz.attach(self)
 
+    @property
+    def zoom(self):
+        return self._pz.zoom
+
     def on_draw(self, event):
-        gloo.clear('black')
+        gloo.clear()
         self.visual.draw()
 
     def on_resize(self, event):

@@ -14,20 +14,18 @@ from functools import partial
 import numpy as np
 
 from ...ext.six import string_types
-from ...utils._misc import (_phy_user_dir,
-                            _ensure_phy_user_dir_exists)
+from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of
-from ...utils.event import ProgressReporter
-from ...utils.logging import info, warn
-from ...ext.slugify import slugify
 from ...utils.event import EventEmitter
+from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
 from .clustering import Clustering
-from ._utils import _spikes_in_clusters, _spikes_per_cluster
+from ._utils import _spikes_per_cluster
 from .selector import Selector
 from .store import ClusterStore, StoreItem
-from .view_model import (WaveformViewModel,
+from .view_model import (BaseViewModel,
+                         WaveformViewModel,
                          FeatureViewModel,
                          CorrelogramViewModel,
                          )
@@ -89,12 +87,12 @@ class FeatureMasks(StoreItem):
               ('main_channels', 'memory'),
               ('mean_probe_position', 'memory'),
               ]
-    chunk_size = 100000
+    chunk_size = None
 
     def __init__(self, *args, **kwargs):
         super(FeatureMasks, self).__init__(*args, **kwargs)
 
-        self.n_features = self.model.metadata['nfeatures_per_channel']
+        self.n_features = self.model.n_features_per_channel
         self.n_channels = self.model.n_channels
         self.n_spikes = self.model.n_spikes
         self.n_chunks = self.n_spikes // self.chunk_size + 1
@@ -108,7 +106,8 @@ class FeatureMasks(StoreItem):
         self.progress_reporter.set_max(features_masks=self.n_chunks)
 
     def _need_generate(self, cluster_sizes):
-        """Return whether the cluster needs to be re-generated or not."""
+        """Return whether the whole cluster store needs to be
+        re-generated or not."""
         for cluster in sorted(cluster_sizes):
             cluster_size = cluster_sizes[cluster]
             expected_file_size = (cluster_size * self.n_channels * 4)
@@ -242,25 +241,6 @@ class FeatureMasks(StoreItem):
 # Session class
 #------------------------------------------------------------------------------
 
-def _ensure_disk_store_exists(dir_name, root_path=None):
-    # Disk store.
-    if root_path is None:
-        _ensure_phy_user_dir_exists()
-        root_path = _phy_user_dir('cluster_store')
-        # Create the disk store if it does not exist.
-        if not op.exists(root_path):
-            os.mkdir(root_path)
-    if not op.exists(root_path):
-        raise RuntimeError("Please create the store directory "
-                           "{0}".format(root_path))
-    # Put the store in a subfolder, using the name.
-    dir_name = slugify(dir_name)
-    path = op.join(root_path, dir_name)
-    if not op.exists(path):
-        os.mkdir(path)
-    return path
-
-
 def _process_ups(ups):
     """This function processes the UpdateInfo instances of the two
     undo stacks (clustering and cluster metadata) and concatenates them
@@ -277,21 +257,23 @@ def _process_ups(ups):
         raise NotImplementedError()
 
 
+_VIEW_MODELS = {
+    'waveforms': WaveformViewModel,
+    'features': FeatureViewModel,
+    'correlograms': CorrelogramViewModel,
+}
+
+
 class Session(BaseSession):
-    """Default manual clustering session.
-
-    Parameters
-    ----------
-    filename : str
-        Path to a .kwik file, to be used if 'model' is not used.
-    model : instance of BaseModel
-        A Model instance, to be used if 'filename' is not used.
-
-    """
-    def __init__(self, store_path=None):
+    """A manual clustering session."""
+    def __init__(self, phy_user_dir=None):
         super(Session, self).__init__()
         self.model = None
-        self._store_path = store_path
+        self.phy_user_dir = phy_user_dir
+
+        # Instantiate the SettingsManager which manages
+        # the settings files.
+        self.settings_manager = SettingsManager(phy_user_dir)
 
         # self.action and self.connect are decorators.
         self.action(self.open, title='Open')
@@ -305,6 +287,43 @@ class Session(BaseSession):
 
         self.connect(self.on_open)
         self.connect(self.on_cluster)
+        self.connect(self.on_close)
+
+    # Settings
+    # -------------------------------------------------------------------------
+
+    def get_user_settings(self, key):
+        return self.settings_manager.get_user_settings(key,
+                                                       scope='experiment')
+
+    def set_user_settings(self, key=None, value=None,
+                          path=None, file_namespace=None):
+        return self.settings_manager.set_user_settings(
+            key, value, scope='experiment', path=path,
+            file_namespace=file_namespace)
+
+    def get_internal_settings(self, key):
+        return self.settings_manager.get_internal_settings(key,
+                                                           scope='experiment',
+                                                           )
+
+    def set_internal_settings(self, key, value):
+        return self.settings_manager.set_internal_settings(key,
+                                                           value,
+                                                           scope='experiment',
+                                                           )
+
+    def _load_default_settings(self):
+        """Load default settings for manual clustering."""
+        curdir = op.dirname(op.realpath(__file__))
+        # This is a namespace available in the config file.
+        file_namespace = {
+            'n_spikes': self.model.n_spikes,
+            'n_channels': self.model.n_channels,
+        }
+        declare_namespace('manual_clustering')
+        self.set_user_settings(path=op.join(curdir, 'default_settings.py'),
+                               file_namespace=file_namespace)
 
     # Public actions
     # -------------------------------------------------------------------------
@@ -313,11 +332,17 @@ class Session(BaseSession):
         if model is None:
             model = KwikModel(filename)
         self.model = model
+        self.experiment_path = (op.realpath(filename)
+                                if filename else self.phy_user_dir)
+        self.experiment_dir = op.dirname(self.experiment_path)
+        self.experiment_name = model.name
         self.emit('open')
 
     def close(self):
         self.emit('close')
         self.model = None
+        self.experiment_path = None
+        self.experiment_dir = None
 
     def select(self, clusters):
         self.selector.selected_clusters = clusters
@@ -346,24 +371,26 @@ class Session(BaseSession):
     # Event callbacks
     # -------------------------------------------------------------------------
 
-    def on_open(self):
-        """Update the session after new data has been loaded."""
-        self._global_history = GlobalHistory(process_ups=_process_ups)
-        # TODO: call this after the channel groups has changed.
-        # Update the Selector and Clustering instances using the Model.
-        spike_clusters = self.model.spike_clusters
-        self.clustering = Clustering(spike_clusters)
-        self.cluster_metadata = self.model.cluster_metadata
-        # TODO: n_spikes_max in a user parameter
-        self.selector = Selector(spike_clusters, n_spikes_max=100)
+    def _create_cluster_store(self):
 
-        # Kwik store.
-        path = _ensure_disk_store_exists(self.model.name,
-                                         root_path=self._store_path,
-                                         )
+        # Kwik store in experiment_dir/name.phy/cluster_store.
+        store_path = op.join(self.settings_manager.phy_experiment_dir,
+                             'cluster_store',
+                             str(self.model.channel_group),
+                             self.model.clustering
+                             )
+        _ensure_path_exists(store_path)
+
+        # Instantiate the store.
         self.cluster_store = ClusterStore(model=self.model,
-                                          path=path,
+                                          path=store_path,
                                           )
+
+        # chunk_size is the number of spikes to load at once from
+        # the features_masks array.
+        cs = self.get_user_settings('manual_clustering.'
+                                    'store_chunk_size') or 100000
+        FeatureMasks.chunk_size = cs
         self.cluster_store.register_item(FeatureMasks)
 
         @self.cluster_store.progress_reporter.connect
@@ -381,6 +408,36 @@ class Session(BaseSession):
         def on_cluster(up=None, add_to_stack=None):
             self.cluster_store.update(up)
 
+    def on_open(self):
+        """Update the session after new data has been loaded.
+
+        TODO: call this after the channel groups has changed.
+
+        """
+
+        # Load the default settings for manual clustering.
+        self._load_default_settings()
+
+        # Load all experiment settings.
+        self.settings_manager.set_experiment_path(self.experiment_path)
+
+        # Create the history.
+        self._global_history = GlobalHistory(process_ups=_process_ups)
+
+        # Create the Clustering instance.
+        spike_clusters = self.model.spike_clusters
+        self.clustering = Clustering(spike_clusters)
+
+        # Create the Selector instance.
+        self.selector = Selector(spike_clusters)
+        self.cluster_metadata = self.model.cluster_metadata
+
+        # Create the cluster store.
+        self._create_cluster_store()
+
+    def on_close(self):
+        self.settings_manager.save()
+
     def on_cluster(self, up=None, add_to_stack=True):
         if add_to_stack:
             self._global_history.action(self.clustering)
@@ -390,17 +447,9 @@ class Session(BaseSession):
     # Show views
     # -------------------------------------------------------------------------
 
-    def _show_view(self,
-                   view_model_class,
-                   scale_factor=.01,
-                   backend=None,
-                   show=True,
-                   ):
-        view_model = view_model_class(self.model,
-                                      store=self.cluster_store,
-                                      backend=backend,
-                                      scale_factor=scale_factor)
+    def _create_view(self, view_model, show=True):
         view = view_model.view
+        view_name = view_model.view_name
 
         @self.connect
         def on_open():
@@ -415,13 +464,21 @@ class Session(BaseSession):
 
         @self.connect
         def on_select(selector):
-            spikes = selector.selected_spikes
-            if len(spikes) == 0:
+            if len(selector.selected_clusters) == 0:
                 return
             if view.visual.empty:
                 on_open()
+
+            n_spikes_max = self.get_user_settings('manual_clustering.' +
+                                                  view_name +
+                                                  '_n_spikes_max')
+            excerpt_size = self.get_user_settings('manual_clustering.' +
+                                                  view_name +
+                                                  '_excerpt_size')
+            spikes = selector.subset_spikes(n_spikes_max=n_spikes_max,
+                                            excerpt_size=excerpt_size)
             view_model.on_select(selector.selected_clusters,
-                                 selector.selected_spikes)
+                                 spikes)
             view.update()
 
         # Unregister the callbacks when the view is closed.
@@ -429,6 +486,8 @@ class Session(BaseSession):
         def on_close(event):
             self.unconnect(on_open, on_cluster, on_select)
 
+        # Make sure the view is correctly initialized when it is created
+        # *after* that the data has been loaded.
         @view.connect
         def on_draw(event):
             if view.visual.empty:
@@ -440,12 +499,69 @@ class Session(BaseSession):
 
         return view
 
+    def _create_view_model(self, name, **kwargs):
+        vm_class = _VIEW_MODELS[name]
+        return vm_class(self.model, store=self.cluster_store, **kwargs)
+
+    # def _view_settings_name(self, view_model, name):
+    #     if isinstance(view_model, BaseViewModel):
+    #         view_model = view_model.view_name
+    #     return 'manual_clustering.' + view_model + '_' + name
+
+    # def _save_scale_factor(self, view_model):
+    #     name = self._view_settings_name(view_model, 'scale_factor')
+    #     if not name or not hasattr(view_model, 'scale_factor'):
+    #         return
+    #     sf = view_model.view.zoom * view_model.scale_factor
+    #     self.set_internal_settings(name, sf)
+
+    # def _load_scale_factor(self, view_name):
+    #     name = self._view_settings_name(view_name, 'scale_factor')
+    #     if not name:
+    #         return 1.
+    #     return self.get_internal_settings(name) or .01
+
     def show_waveforms(self):
-        return self._show_view(WaveformViewModel)
+        """Show a WaveformView and return a ViewModel instance."""
+
+        # Persist scale factor.
+        sf_name = 'manual_clustering.waveforms_scale_factor'
+        sf = self.get_internal_settings(sf_name) or .01
+        vm = self._create_view_model('waveforms', scale_factor=sf)
+
+        self._create_view(vm)
+
+        @vm.view.connect
+        def on_draw(event):
+            sf = vm.view.box_scale[1] / vm.view.visual.default_box_scale[1]
+            sf = sf * vm.scale_factor
+            self.set_internal_settings(sf_name, sf)
+
+        return vm
 
     def show_features(self):
-        return self._show_view(FeatureViewModel,
-                               scale_factor=.01)
+        """Show a FeatureView and return a ViewModel instance."""
+
+        # Persist scale factor.
+        sf_name = 'manual_clustering.features_scale_factor'
+        sf = self.get_internal_settings(sf_name) or .01
+        vm = self._create_view_model('features', scale_factor=sf)
+
+        self._create_view(vm)
+
+        @vm.view.connect
+        def on_draw(event):
+            self.set_internal_settings(sf_name,
+                                       vm.view.zoom * vm.scale_factor)
+
+        return vm
 
     def show_correlograms(self):
-        return self._show_view(CorrelogramViewModel)
+        """Show a CorrelogramView and return a ViewModel instance."""
+        args = 'binsize', 'winsize_bins', 'n_excerpts', 'excerpt_size'
+        kwargs = {k: self.get_user_settings('manual_clustering.'
+                                            'correlograms_' + k)
+                  for k in args}
+        vm = self._create_view_model('correlograms', **kwargs)
+        self._create_view(vm)
+        return vm

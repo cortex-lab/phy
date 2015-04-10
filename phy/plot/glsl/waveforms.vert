@@ -1,8 +1,8 @@
 #include "colormaps/color-space.glsl"
 #include "color.glsl"
 #include "pan_zoom.glsl"
+#include "depth_mask.glsl"
 
-// TODO: add depth
 attribute vec2 a_data;  // position (-1..1), mask
 attribute float a_time;  // -1..1
 attribute vec2 a_box;  // 0..(n_clusters-1, n_channels-1)
@@ -31,7 +31,12 @@ void main() {
     vec2 pos = u_data_scale * vec2(a_time, a_data.x);  // -1..1
     vec2 box_pos = get_box_pos(a_box);
     v_box = a_box;
-    gl_Position = vec4(pan_zoom(pos + box_pos), 0., 1.);
+
+    // Depth as a function of the mask and cluster index.
+    float depth = depth_mask(a_box.x, a_data.y, n_clusters);
+
+    // The z coordinate is the depth: it depends on the mask.
+    gl_Position = vec4(pan_zoom(pos + box_pos), depth, 1.);
 
     // Compute the waveform color as a function of the cluster color
     // and the mask.

@@ -8,12 +8,10 @@
 
 import numpy as np
 
-from ...utils.array import get_excerpts
 from ...utils.logging import debug
 from ...plot.ccg import CorrelogramView
 from ...plot.features import FeatureView
 from ...plot.waveforms import WaveformView
-from ...utils._color import _random_color
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 
 
@@ -50,17 +48,23 @@ def _selected_clusters_colors(n_clusters):
 class BaseViewModel(object):
     """Used to create views from a model."""
     _view_class = None
+    _view_name = ''
 
-    def __init__(self, model, store=None, backend=None, scale_factor=1.):
+    def __init__(self, model, store=None, backend=None, **kwargs):
         self._model = model
         self._store = store
         self._backend = backend
-        self._scale_factor = scale_factor
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         self._view = _create_view(self._view_class, backend=backend)
 
     @property
     def model(self):
         return self._model
+
+    @property
+    def view_name(self):
+        return self._view_name
 
     @property
     def store(self):
@@ -99,6 +103,8 @@ class BaseViewModel(object):
 
 class WaveformViewModel(BaseViewModel):
     _view_class = WaveformView
+    _view_name = 'waveforms'
+    scale_factor = 1.
 
     def on_open(self):
         self.view.visual.spike_clusters = self.model.spike_clusters
@@ -110,7 +116,7 @@ class WaveformViewModel(BaseViewModel):
         waveforms = self.model.waveforms[spikes]
         debug("Done!")
 
-        waveforms *= self._scale_factor
+        waveforms *= self.scale_factor
         self.view.visual.waveforms = waveforms
 
         # Load masks.
@@ -134,6 +140,8 @@ class WaveformViewModel(BaseViewModel):
 
 class FeatureViewModel(BaseViewModel):
     _view_class = FeatureView
+    _view_name = 'features'
+    scale_factor = 1.
 
     def on_select(self, clusters, spikes):
         # Load features.
@@ -148,12 +156,12 @@ class FeatureViewModel(BaseViewModel):
         # WARNING: convert features to a 3D array
         # (n_spikes, n_channels, n_features)
         # because that's what the FeatureView expects currently.
-        n_fet = self.model.metadata['nfeatures_per_channel']
+        n_fet = self.model.n_features_per_channel
         n_channels = self.model.n_channels
         shape = (-1, n_channels, n_fet)
         features = features[:, :n_fet * n_channels].reshape(shape)
         # Scale factor.
-        features *= self._scale_factor
+        features *= self.scale_factor
 
         self.view.visual.features = features
         self.view.visual.masks = masks
@@ -167,7 +175,7 @@ class FeatureViewModel(BaseViewModel):
             channels = np.argsort(sum_masks)[::-1][:3]
         else:
             channels = np.arange(len(self.model.channels[:3]))
-        self.view.visual.dimensions = [(ch, 0) for ch in channels]
+        self.view.dimensions = ['time'] + [(ch, 0) for ch in channels]
 
         # *All* spike clusters.
         self.view.visual.spike_clusters = self.model.spike_clusters
@@ -183,22 +191,30 @@ class FeatureViewModel(BaseViewModel):
 
 class CorrelogramViewModel(BaseViewModel):
     _view_class = CorrelogramView
+    _view_name = 'correlograms'
+
+    binsize = None
+    winsize_bins = None
+    n_excerpts = None
+    excerpt_size = None
 
     def on_select(self, clusters, spikes):
-        self.view.visual.clusters_ids = clusters
+        self.view.cluster_ids = clusters
 
-        def _extract(arr):
-            # TODO: user-definable CCG parameters
-            return get_excerpts(arr, n_excerpts=100, excerpt_size=100)
-
-        # Extract a subset of the spikes belonging to the selected clusters.
-        spikes_subset = _extract(spikes)
-        spike_clusters = self.model.spike_clusters[spikes_subset]
-        spike_times = self.model.spike_times[spikes_subset]
+        # # Extract a subset of the spikes belonging to the selected clusters.
+        # spikes_subset = get_excerpts(spikes,
+        #                              n_excerpts=self.n_excerpts,
+        #                              excerpt_size=self.excerpt_size,
+        #                              )
+        spike_clusters = self.model.spike_clusters[spikes]
+        spike_times = self.model.spike_times[spikes]
 
         # Compute the correlograms.
-        ccgs = correlograms(spike_times, spike_clusters,
-                            binsize=20, winsize_bins=51)
+        ccgs = correlograms(spike_times,
+                            spike_clusters,
+                            binsize=self.binsize,
+                            winsize_bins=self.winsize_bins,
+                            )
         ccgs = _symmetrize_correlograms(ccgs)
 
         # Normalize the CCGs.

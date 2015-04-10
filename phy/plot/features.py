@@ -9,7 +9,14 @@
 
 import numpy as np
 
-from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas
+from vispy import gloo
+
+from ._vispy_utils import (BaseSpikeVisual,
+                           BaseSpikeCanvas,
+                           BoxVisual,
+                           AxisVisual,
+                           _enable_depth_mask,
+                           )
 from ..ext.six import string_types
 from ..utils.array import _as_array, _index_of
 from ..utils.logging import debug
@@ -81,7 +88,12 @@ class FeatureVisual(BaseSpikeVisual):
             channel, feature = dim
             return self._features[:, channel, feature]
         elif dim == 'time':
-            return self._spike_times
+            t = self._spike_times
+            # Normalize time feature.
+            m = t.max()
+            if m > 0:
+                t = -1. + 2 * t / m
+            return t
 
     def _get_mask_dim(self, dim):
         if isinstance(dim, (tuple, list)):
@@ -187,10 +199,49 @@ class FeatureVisual(BaseSpikeVisual):
 class FeatureView(BaseSpikeCanvas):
     _visual_class = FeatureVisual
 
+    def __init__(self, **kwargs):
+        super(FeatureView, self).__init__(**kwargs)
+        self.boxes = BoxVisual()
+        self.axes = AxisVisual()
+        self._pz.add(self.axes.program)
+        _enable_depth_mask()
+
+    @property
+    def dimensions(self):
+        """Dimensions."""
+        return self.visual.dimensions
+
+    @dimensions.setter
+    def dimensions(self, value):
+        # WARNING: dimensions should be changed here, in the Canvas,
+        # and not in the visual. This is to make sure that the boxes are
+        # updated as well.
+        self.visual.dimensions = value
+        self.boxes.n_rows = self.visual.n_rows
+        self.axes.n_rows = self.visual.n_rows
+        self.axes.positions = (0, 0)
+        self.update()
+
+    @property
+    def marker_size(self):
+        """Marker size."""
+        return self.visual.marker_size
+
+    @marker_size.setter
+    def marker_size(self, value):
+        self.visual.marker_size = value
+        self.update()
+
+    def on_draw(self, event):
+        gloo.clear(color=True, depth=True)
+        self.axes.draw()
+        self.visual.draw()
+        self.boxes.draw()
+
     def on_key_press(self, event):
         coeff = .25
         if event.key == '+':
-            self.visual.marker_size += coeff
+            self.marker_size += coeff
         if event.key == '-':
-            self.visual.marker_size -= coeff
+            self.marker_size -= coeff
         self.update()
