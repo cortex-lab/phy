@@ -66,12 +66,13 @@ class MockModel(BaseModel):
     n_clusters = 10
 
     def __init__(self, n_spikes=None, n_clusters=None):
-        super(BaseModel, self).__init__()
+        super(MockModel, self).__init__()
         if n_spikes is not None:
             self.n_spikes = n_spikes
         if n_clusters is not None:
             self.n_clusters = n_clusters
         self.name = 'mock'
+        self._clustering = 'main'
         nfpc = self.n_features_per_channel
         self._metadata = {'description': 'A mock model.',
                           'nfeatures_per_channel': nfpc}

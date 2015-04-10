@@ -367,7 +367,10 @@ class Session(BaseSession):
 
         # Kwik store in experiment_dir/name.phy/cluster_store.
         store_path = op.join(self.settings_manager.phy_experiment_dir,
-                             'cluster_store')
+                             'cluster_store',
+                             str(self.model.channel_group),
+                             self.model.clustering
+                             )
         _ensure_path_exists(store_path)
 
         # Instantiate the store.

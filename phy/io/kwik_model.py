@@ -401,6 +401,14 @@ class KwikModel(BaseModel):
         self._spike_clusters = self._kwik.read(path)[:]
         # TODO: cluster metadata
 
+    @property
+    def clustering(self):
+        return self._clustering
+
+    @clustering.setter
+    def clustering(self, value):
+        self._clustering_changed(value)
+
     # Data
     # -------------------------------------------------------------------------
 
