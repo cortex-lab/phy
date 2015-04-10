@@ -9,6 +9,7 @@
 
 import numpy as np
 
+from vispy import gloo
 from vispy.gloo import Texture2D
 
 from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas
@@ -33,6 +34,14 @@ class WaveformVisual(BaseSpikeVisual):
         self.n_channels, self.n_samples = None, None
 
         self.program['u_data_scale'] = (.05, .03)
+        gloo.set_state(clear_color='black',
+                       depth_test=True,
+                       depth_range=(0., 1.),
+                       # depth_mask='true',
+                       depth_func='lequal',
+                       blend=True,
+                       blend_func=('src_alpha', 'one_minus_src_alpha'))
+        gloo.set_clear_depth(1.0)
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -167,3 +176,7 @@ class WaveformView(BaseSpikeCanvas):
             else:
                 self.box_scale = (u, v / coeff)
         self.update()
+
+    def on_draw(self, event):
+        gloo.clear(color=True, depth=True)
+        self.visual.draw()
