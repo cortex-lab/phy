@@ -48,7 +48,8 @@ def test_selector_spikes():
     selector.selected_spikes = my_spikes[:3]
     ae(selector.selected_spikes, my_spikes[:3])
     selector.selected_spikes = my_spikes
-    ae(selector.selected_spikes, [10, 30, 40])
+    assert len(selector.selected_spikes) <= 3
+    assert np.all(np.in1d(selector.selected_spikes, my_spikes))
 
     # Check that this doesn't raise any error.
     selector.selected_clusters = [100]

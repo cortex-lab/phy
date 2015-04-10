@@ -22,22 +22,12 @@ def _subset(spikes=None, n_spikes_max=None):
     # Nothing to do if the selection already satisfies n_spikes_max.
     if n_spikes_max is None or len(spikes) <= n_spikes_max:
         return spikes
-    # TODO: improve this
-    # Fill 50% regularly sampled spikes for the selection.
-    step = int(np.clip(2. / n_spikes_max * len(spikes),
+    step = int(np.clip(1. / n_spikes_max * len(spikes),
                        1, len(spikes)))
-    my_spikes = spikes[::step]
+    # Random shift.
+    start = np.random.randint(low=0, high=step)
+    my_spikes = spikes[start::step][:n_spikes_max]
     assert len(my_spikes) <= len(spikes)
-    assert len(my_spikes) <= n_spikes_max
-    # Number of remaining spikes to find in the selection.
-    n_start = (n_spikes_max - len(my_spikes)) // 2
-    n_end = n_spikes_max - len(my_spikes) - n_start
-    assert (n_start >= 0) & (n_end >= 0)
-    # The other 50% come from the start and end of the selection.
-    my_spikes = np.r_[spikes[:n_start],
-                      my_spikes,
-                      spikes[-n_end:]]
-    my_spikes = _unique(my_spikes)
     assert len(my_spikes) <= n_spikes_max
     return my_spikes
 
