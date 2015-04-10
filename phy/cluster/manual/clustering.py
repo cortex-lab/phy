@@ -129,7 +129,7 @@ class Clustering(object):
     @property
     def cluster_ids(self):
         """Labels of all non-empty clusters, sorted by id."""
-        return sorted(self._spikes_per_cluster)
+        return np.array(sorted(self._spikes_per_cluster))
 
     @property
     def cluster_counts(self):
