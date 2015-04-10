@@ -51,6 +51,17 @@ def _tesselate_histogram(hist):
     return np.c_[x, y]
 
 
+def _enable_depth_mask():
+    gloo.set_state(clear_color='black',
+                   depth_test=True,
+                   depth_range=(0., 1.),
+                   # depth_mask='true',
+                   depth_func='lequal',
+                   blend=True,
+                   blend_func=('src_alpha', 'one_minus_src_alpha'))
+    gloo.set_clear_depth(1.0)
+
+
 #------------------------------------------------------------------------------
 # PanZoom class
 #------------------------------------------------------------------------------

@@ -45,6 +45,8 @@ def _test_features(n_spikes=None, n_clusters=None):
 
     c = FeatureView()
     c.visual.features = features
+    # Useful to test depth.
+    # masks[n_spikes//2:, ...] = 0
     c.visual.masks = masks
     c.dimensions = ['time', (0, 0), (1, 0), (2, 0)]
     c.visual.spike_clusters = spike_clusters

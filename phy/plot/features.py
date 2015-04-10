@@ -15,6 +15,7 @@ from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
                            BoxVisual,
                            AxisVisual,
+                           _enable_depth_mask,
                            )
 from ..ext.six import string_types
 from ..utils.array import _as_array, _index_of
@@ -203,6 +204,7 @@ class FeatureView(BaseSpikeCanvas):
         self.boxes = BoxVisual()
         self.axes = AxisVisual()
         self._pz.add(self.axes.program)
+        _enable_depth_mask()
 
     @property
     def dimensions(self):
@@ -229,7 +231,7 @@ class FeatureView(BaseSpikeCanvas):
         self.visual.marker_size = value
 
     def on_draw(self, event):
-        gloo.clear()
+        gloo.clear(color=True, depth=True)
         self.axes.draw()
         self.visual.draw()
         self.boxes.draw()

@@ -1,6 +1,7 @@
 #include "colormaps/color-space.glsl"
 #include "color.glsl"
 #include "grid.glsl"
+#include "depth_mask.glsl"
 
 attribute vec2 a_position;
 attribute float a_mask;
@@ -24,7 +25,11 @@ void main (void)
 
     vec2 position = pan_zoom_grid(a_position);
     vec2 box_position = to_box(position, a_box);
-    gl_Position = vec4(box_position, 0., 1.);
+
+    // Depth as a function of the mask and cluster index.
+    float depth = depth_mask(mod(a_box, n_rows), a_mask, n_clusters);
+
+    gl_Position = vec4(box_position, depth, 1.);
     gl_PointSize = u_size + 2.0 * (1.0 + 1.5 * 1.0);
 
     // Used for clipping.
