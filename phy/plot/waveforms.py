@@ -25,6 +25,7 @@ class WaveformVisual(BaseSpikeVisual):
 
     _shader_name = 'waveforms'
     _gl_draw_mode = 'line_strip'
+    default_box_scale = (.05, .03)
 
     """Waveform visual."""
     def __init__(self, **kwargs):
@@ -33,7 +34,7 @@ class WaveformVisual(BaseSpikeVisual):
         self._waveforms = None
         self.n_channels, self.n_samples = None, None
 
-        self.program['u_data_scale'] = (.05, .03)
+        self.program['u_data_scale'] = self.default_box_scale
         _enable_depth_mask()
 
     # Data properties

@@ -493,7 +493,6 @@ class Session(BaseSession):
             if view.visual.empty:
                 on_open()
                 on_select(self.selector)
-            self._save_scale_factor(view_model)
 
         if show:
             view.show()
@@ -504,36 +503,57 @@ class Session(BaseSession):
         vm_class = _VIEW_MODELS[name]
         return vm_class(self.model, store=self.cluster_store, **kwargs)
 
-    def _view_settings_name(self, view_model, name):
-        if isinstance(view_model, BaseViewModel):
-            view_model = view_model.view_name
-        return 'manual_clustering.' + view_model + '_' + name
+    # def _view_settings_name(self, view_model, name):
+    #     if isinstance(view_model, BaseViewModel):
+    #         view_model = view_model.view_name
+    #     return 'manual_clustering.' + view_model + '_' + name
 
-    def _save_scale_factor(self, view_model):
-        name = self._view_settings_name(view_model, 'scale_factor')
-        if not name or not hasattr(view_model, 'scale_factor'):
-            return
-        sf = view_model.view.zoom * view_model.scale_factor
-        self.set_internal_settings(name, sf)
+    # def _save_scale_factor(self, view_model):
+    #     name = self._view_settings_name(view_model, 'scale_factor')
+    #     if not name or not hasattr(view_model, 'scale_factor'):
+    #         return
+    #     sf = view_model.view.zoom * view_model.scale_factor
+    #     self.set_internal_settings(name, sf)
 
-    def _load_scale_factor(self, view_name):
-        name = self._view_settings_name(view_name, 'scale_factor')
-        if not name:
-            return 1.
-        return self.get_internal_settings(name) or .01
+    # def _load_scale_factor(self, view_name):
+    #     name = self._view_settings_name(view_name, 'scale_factor')
+    #     if not name:
+    #         return 1.
+    #     return self.get_internal_settings(name) or .01
 
     def show_waveforms(self):
         """Show a WaveformView and return a ViewModel instance."""
-        sf = self._load_scale_factor('waveforms')
+
+        # Persist scale factor.
+        sf_name = 'manual_clustering.waveforms_scale_factor'
+        sf = self.get_internal_settings(sf_name) or .01
         vm = self._create_view_model('waveforms', scale_factor=sf)
+
         self._create_view(vm)
+
+        @vm.view.connect
+        def on_draw(event):
+            sf = vm.view.box_scale[1] / vm.view.visual.default_box_scale[1]
+            sf = sf * vm.scale_factor
+            self.set_internal_settings(sf_name, sf)
+
         return vm
 
     def show_features(self):
         """Show a FeatureView and return a ViewModel instance."""
-        sf = self._load_scale_factor('features')
+
+        # Persist scale factor.
+        sf_name = 'manual_clustering.features_scale_factor'
+        sf = self.get_internal_settings(sf_name) or .01
         vm = self._create_view_model('features', scale_factor=sf)
+
         self._create_view(vm)
+
+        @vm.view.connect
+        def on_draw(event):
+            self.set_internal_settings(sf_name,
+                                       vm.view.zoom * vm.scale_factor)
+
         return vm
 
     def show_correlograms(self):
