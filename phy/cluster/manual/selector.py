@@ -8,10 +8,38 @@
 
 import numpy as np
 
-from ...ext import six
 from ...utils.array import _as_array
 from ._utils import _unique, _spikes_in_clusters
-from ...utils.logging import debug, info, warn
+
+
+#------------------------------------------------------------------------------
+# Utility functions
+#------------------------------------------------------------------------------
+
+def _subset(spikes=None, n_spikes_max=None):
+    """Prune the current selection to get at most n_spikes_max spikes."""
+    assert spikes is not None
+    # Nothing to do if the selection already satisfies n_spikes_max.
+    if n_spikes_max is None or len(spikes) <= n_spikes_max:
+        return spikes
+    # TODO: improve this
+    # Fill 50% regularly sampled spikes for the selection.
+    step = int(np.clip(2. / n_spikes_max * len(spikes),
+                       1, len(spikes)))
+    my_spikes = spikes[::step]
+    assert len(my_spikes) <= len(spikes)
+    assert len(my_spikes) <= n_spikes_max
+    # Number of remaining spikes to find in the selection.
+    n_start = (n_spikes_max - len(my_spikes)) // 2
+    n_end = n_spikes_max - len(my_spikes) - n_start
+    assert (n_start >= 0) & (n_end >= 0)
+    # The other 50% come from the start and end of the selection.
+    my_spikes = np.r_[spikes[:n_start],
+                      my_spikes,
+                      spikes[-n_end:]]
+    my_spikes = _unique(my_spikes)
+    assert len(my_spikes) <= n_spikes_max
+    return my_spikes
 
 
 #------------------------------------------------------------------------------
@@ -34,36 +62,17 @@ class Selector(object):
     def n_spikes_max(self, value):
         self._n_spikes_max = value
         # Update the selected spikes accordingly.
-        self.selected_spikes = self._subset()
+        self.selected_spikes = self.subset_spikes()
         if self._n_spikes_max is not None:
             assert len(self._selected_spikes) <= self._n_spikes_max
 
-    def _subset(self, spikes=None, n_spikes_max=None):
+    def subset_spikes(self, spikes=None, n_spikes_max=None):
         """Prune the current selection to get at most n_spikes_max spikes."""
-        if n_spikes_max is None:
-            n_spikes_max = self._n_spikes_max
         if spikes is None:
             spikes = self._selected_spikes
-        # Nothing to do if the selection already satisfies n_spikes_max.
-        if n_spikes_max is None or len(spikes) <= n_spikes_max:
-            return spikes
-        # Fill 50% regularly sampled spikes for the selection.
-        step = int(np.clip(2. / n_spikes_max * len(spikes),
-                           1, len(spikes)))
-        my_spikes = spikes[::step]
-        assert len(my_spikes) <= len(spikes)
-        assert len(my_spikes) <= n_spikes_max
-        # Number of remaining spikes to find in the selection.
-        n_start = (n_spikes_max - len(my_spikes)) // 2
-        n_end = n_spikes_max - len(my_spikes) - n_start
-        assert (n_start >= 0) & (n_end >= 0)
-        # The other 50% come from the start and end of the selection.
-        my_spikes = np.r_[spikes[:n_start],
-                          my_spikes,
-                          spikes[-n_end:]]
-        my_spikes = _unique(my_spikes)
-        assert len(my_spikes) <= n_spikes_max
-        return my_spikes
+        if n_spikes_max is None:
+            n_spikes_max = self._n_spikes_max
+        return _subset(spikes, n_spikes_max)
 
     @property
     def selected_spikes(self):
@@ -75,7 +84,7 @@ class Selector(object):
         """Explicitely select a number of spikes."""
         value = _as_array(value)
         # Make sure there are less spikes than n_spikes_max.
-        self._selected_spikes = self._subset(value)
+        self._selected_spikes = self.subset_spikes(value)
 
     @property
     def selected_clusters(self):
@@ -92,7 +101,7 @@ class Selector(object):
         # All spikes from the selected clusters.
         spikes = _spikes_in_clusters(self._spike_clusters, value)
         # Make sure there are less spikes than n_spikes_max.
-        self.selected_spikes = self._subset(spikes)
+        self.selected_spikes = self.subset_spikes(spikes)
 
     def update(self, up=None):
         """Called when clustering has changed."""
