@@ -220,6 +220,7 @@ class FeatureView(BaseSpikeCanvas):
         self.boxes.n_rows = self.visual.n_rows
         self.axes.n_rows = self.visual.n_rows
         self.axes.positions = (0, 0)
+        self.update()
 
     @property
     def marker_size(self):
@@ -229,6 +230,7 @@ class FeatureView(BaseSpikeCanvas):
     @marker_size.setter
     def marker_size(self, value):
         self.visual.marker_size = value
+        self.update()
 
     def on_draw(self, event):
         gloo.clear(color=True, depth=True)

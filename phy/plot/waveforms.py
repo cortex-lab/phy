@@ -155,6 +155,7 @@ class WaveformView(BaseSpikeCanvas):
     @box_scale.setter
     def box_scale(self, value):
         self.visual.box_scale = value
+        self.update()
 
     def on_key_press(self, event):
         u, v = self.visual.box_scale
