@@ -191,7 +191,7 @@ class CorrelogramViewModel(BaseViewModel):
     excerpt_size = None
 
     def on_select(self, clusters, spikes):
-        self.view.visual.clusters_ids = clusters
+        self.view.cluster_ids = clusters
 
         def _extract(arr):
             return get_excerpts(arr,

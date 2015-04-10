@@ -10,9 +10,12 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+from vispy import gloo
+
 from ._mpl_utils import _bottom_left_frame
 from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
+                           BoxVisual,
                            _tesselate_histogram)
 from ..utils.array import _as_array
 from ..utils.logging import debug
@@ -104,6 +107,25 @@ class CorrelogramVisual(BaseSpikeVisual):
 
 class CorrelogramView(BaseSpikeCanvas):
     _visual_class = CorrelogramVisual
+
+    def __init__(self, **kwargs):
+        super(CorrelogramView, self).__init__(**kwargs)
+        self.boxes = BoxVisual()
+
+    @property
+    def cluster_ids(self):
+        return self.visual.cluster_ids
+
+    @cluster_ids.setter
+    def cluster_ids(self, value):
+        self.visual.cluster_ids = value
+        self.boxes.n_rows = self.visual.n_clusters
+        print(self.boxes.n_rows)
+
+    def on_draw(self, event):
+        gloo.clear()
+        self.visual.draw()
+        self.boxes.draw()
 
 
 #------------------------------------------------------------------------------
