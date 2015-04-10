@@ -8,28 +8,8 @@
 
 import numpy as np
 
-from ...utils.array import _as_array
+from ...utils.array import _as_array, regular_subset
 from ._utils import _unique, _spikes_in_clusters
-
-
-#------------------------------------------------------------------------------
-# Utility functions
-#------------------------------------------------------------------------------
-
-def _subset(spikes=None, n_spikes_max=None):
-    """Prune the current selection to get at most n_spikes_max spikes."""
-    assert spikes is not None
-    # Nothing to do if the selection already satisfies n_spikes_max.
-    if n_spikes_max is None or len(spikes) <= n_spikes_max:
-        return spikes
-    step = int(np.clip(1. / n_spikes_max * len(spikes),
-                       1, len(spikes)))
-    # Random shift.
-    start = np.random.randint(low=0, high=step)
-    my_spikes = spikes[start::step][:n_spikes_max]
-    assert len(my_spikes) <= len(spikes)
-    assert len(my_spikes) <= n_spikes_max
-    return my_spikes
 
 
 #------------------------------------------------------------------------------
@@ -62,7 +42,7 @@ class Selector(object):
             spikes = self._selected_spikes
         if n_spikes_max is None:
             n_spikes_max = self._n_spikes_max
-        return _subset(spikes, n_spikes_max)
+        return regular_subset(spikes, n_spikes_max)
 
     @property
     def selected_spikes(self):

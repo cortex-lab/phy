@@ -6,11 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os
-
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import raises
 
 from ....io.mock.artificial import artificial_spike_clusters
 from .._utils import _spikes_in_clusters
