@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from ...utils.array import _as_array, regular_subset
+from ...utils.array import _as_array, regular_subset, get_excerpts
 from ._utils import _unique, _spikes_in_clusters
 
 
@@ -36,13 +36,29 @@ class Selector(object):
         if self._n_spikes_max is not None:
             assert len(self._selected_spikes) <= self._n_spikes_max
 
-    def subset_spikes(self, spikes=None, n_spikes_max=None):
-        """Prune the current selection to get at most n_spikes_max spikes."""
+    def subset_spikes(self,
+                      spikes=None,
+                      n_spikes_max=None,
+                      excerpt_size=None,
+                      ):
+        """Prune the current selection to get at most n_spikes_max spikes.
+
+        If excerpt_size is None, return a regular strided selection.
+        Otherwise, return a regular selection of contiguous chunks.
+
+        """
         if spikes is None:
             spikes = self._selected_spikes
         if n_spikes_max is None:
             n_spikes_max = self._n_spikes_max
-        return regular_subset(spikes, n_spikes_max)
+        if excerpt_size is None:
+            return regular_subset(spikes, n_spikes_max)
+        else:
+            n_excerpts = n_spikes_max // excerpt_size
+            return get_excerpts(spikes,
+                                n_excerpts=n_excerpts,
+                                excerpt_size=excerpt_size,
+                                )
 
     @property
     def selected_spikes(self):
