@@ -472,7 +472,11 @@ class Session(BaseSession):
             n_spikes_max = self.get_user_settings('manual_clustering.' +
                                                   view_name +
                                                   '_n_spikes_max')
-            spikes = selector.subset_spikes(n_spikes_max=n_spikes_max)
+            excerpt_size = self.get_user_settings('manual_clustering.' +
+                                                  view_name +
+                                                  '_excerpt_size')
+            spikes = selector.subset_spikes(n_spikes_max=n_spikes_max,
+                                            excerpt_size=excerpt_size)
             view_model.on_select(selector.selected_clusters,
                                  spikes)
             view.update()

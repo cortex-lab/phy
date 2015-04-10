@@ -4,10 +4,10 @@ manual_clustering.correlograms_binsize = 20
 # Number of bins (odd number).
 manual_clustering.correlograms_winsize_bins = 2 * 25 + 1
 
-# Number of time excerpts for the correlograms.
-manual_clustering.correlograms_n_excerpts = 20
+# Maximum number of spikes for the correlograms.
+manual_clustering.correlograms_n_spikes_max = 20000000
 
-# Number of spikes in each excerpt.
+# Contiguous chunks of spikes for computing the CCGs.
 manual_clustering.correlograms_excerpt_size = 1000000
 
 # Maximum number of spikes to display in the views.
