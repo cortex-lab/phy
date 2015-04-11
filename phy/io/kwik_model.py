@@ -234,20 +234,14 @@ class KwikModel(BaseModel):
         # Create the waveform loader.
         self._create_waveform_loader()
 
-        # List channel groups and recordings.
-        self._channel_groups = _list_channel_groups(self._kwik.h5py_file)
-        self._recordings = _list_recordings(self._kwik.h5py_file)
-        # This will be updated later if a KWD file is present.
-        self._recording_offsets = [0] * (len(self._recordings) + 1)
+        # Load the list of recordings and the requested recording.
+        self._load_recordings()
+
+        # Load the list of channel groups and the requested channel group.
+        self._load_channel_groups(channel_group)
 
         # Load the traces.
         self._load_traces()
-
-        # Load the channel group.
-        if channel_group is None and self.channel_groups:
-            # Choose the default channel group if not specified.
-            channel_group = self.channel_groups[0]
-        self.channel_group = channel_group
 
         # Once the channel group is loaded, list the clusterings.
         self._clusterings = _list_clusterings(self._kwik.h5py_file,
@@ -332,6 +326,20 @@ class KwikModel(BaseModel):
                 except TypeError:
                     debug("Metadata field '{0:s}' not found.".format(field))
         self._metadata = metadata
+
+    def _load_recordings(self):
+        # Load recordings.
+        self._recordings = _list_recordings(self._kwik.h5py_file)
+        # This will be updated later if a KWD file is present.
+        self._recording_offsets = [0] * (len(self._recordings) + 1)
+
+    def _load_channel_groups(self, channel_group=None):
+        self._channel_groups = _list_channel_groups(self._kwik.h5py_file)
+        if channel_group is None and self._channel_groups:
+            # Choose the default channel group if not specified.
+            channel_group = self._channel_groups[0]
+        # Load the channel group.
+        self.channel_group = channel_group
 
     def _load_channel_positions(self):
         """Load the channel positions from the kwik file."""
