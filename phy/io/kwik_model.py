@@ -440,8 +440,14 @@ class KwikModel(BaseModel):
 
     @property
     def spike_samples(self):
-        """Spike times from the current channel_group."""
+        """Spike samples from the current channel_group."""
         return self._spike_samples
+
+    @property
+    def spike_times(self):
+        """Spike times (in seconds) from the current channel_group."""
+        sr = float(self._metadata['sample_rate'])
+        return self._spike_samples.astype(np.float64) / sr
 
     @property
     def n_spikes(self):
