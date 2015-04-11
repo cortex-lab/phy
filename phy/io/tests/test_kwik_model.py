@@ -132,10 +132,6 @@ def test_kwik_open_full():
         assert kwik.probe.positions.shape == (_N_CHANNELS, 2)
         ae(kwik.probe.positions, staggered_positions(_N_CHANNELS))
 
-        # Not implemented yet.
-        with raises(NotImplementedError):
-            kwik.save()
-
         kwik.close()
 
 
@@ -171,3 +167,30 @@ def test_kwik_open_no_kwd():
         # Test implicit open() method.
         kwik = KwikModel(filename)
         kwik.close()
+
+
+def test_kwik_save():
+
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=_N_CLUSTERS,
+                                    n_spikes=_N_SPIKES,
+                                    n_channels=_N_CHANNELS,
+                                    n_features_per_channel=_N_FETS,
+                                    n_samples_traces=_N_SAMPLES_TRACES)
+
+        kwik = KwikModel(filename)
+
+        cluster_groups = {}
+        sc_0 = kwik.spike_clusters.copy()
+        sc_1 = sc_0.copy()
+        sc_1[_N_SPIKES // 2:] = 3
+        ae(kwik.spike_clusters, sc_0)
+        kwik.save(sc_1, cluster_groups)
+        ae(kwik.spike_clusters, sc_1)
+
+        kwik.close()
+
+        kwik = KwikModel(filename)
+        ae(kwik.spike_clusters, sc_1)

@@ -73,7 +73,9 @@ class File(object):
     def is_open(self):
         return self._h5py_file is not None
 
-    def open(self):
+    def open(self, mode=None):
+        if mode is not None:
+            self.mode = mode
         if not self.is_open():
             self._h5py_file = h5py.File(self.filename, self.mode)
 

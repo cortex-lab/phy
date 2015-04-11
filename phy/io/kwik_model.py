@@ -241,12 +241,21 @@ class KwikModel(BaseModel):
     def _clustering_path(self):
         return '{0:s}/{1:s}'.format(self._clusters_path, self._clustering)
 
-    # Loading
+    # Loading and saving
     # -------------------------------------------------------------------------
 
     def _open_h5_if_exists(self, file_type, mode=None):
         path = self._filenames[file_type]
         return open_h5(path, mode=mode) if op.exists(path) else None
+
+    def _open_kwik_if_needed(self, mode=None):
+        if not self._kwik.is_open():
+            self._kwik.open(mode=mode)
+            return True
+        else:
+            if mode is not None:
+                self._kwik.mode = mode
+            return False
 
     def _create_waveform_loader(self):
         """Create a waveform loader."""
@@ -358,7 +367,13 @@ class KwikModel(BaseModel):
         assert spike_clusters.shape == self._spike_clusters.shape
         assert spike_clusters.dtype == self._spike_clusters.dtype
         self._spike_clusters = spike_clusters
-        self._kwik.write(self._spike_clusters_path, spike_clusters)
+
+        # REFACTOR: with() to open/close the file if needed
+        to_close = self._open_kwik_if_needed(mode='a')
+        sc = self._kwik.read(self._spike_clusters_path)
+        sc[:] = spike_clusters
+        if to_close:
+            self._kwik.close()
 
     def _load_clusterings(self, clustering):
         # Once the channel group is loaded, list the clusterings.
@@ -379,6 +394,9 @@ class KwikModel(BaseModel):
             path = '{0:s}/{1:d}'.format(self._clustering_path, cluster)
             grp = self._kwik.read_attr(path, 'cluster_group')
             self._cluster_metadata.set_group([cluster], grp)
+
+    def _save_cluster_groups(self, cluster_groups):
+        assert isinstance(cluster_groups, dict)
 
     def _load_traces(self):
         if self._kwd is not None:
@@ -439,15 +457,14 @@ class KwikModel(BaseModel):
         # No need to keep the kwik file open.
         self._kwik.close()
 
+    def save(self, spike_clusters, cluster_groups):
+        """Commits all in-memory changes to disk."""
+        self._open_h5_if_exists
+        self._save_spike_clusters(spike_clusters)
+        self._save_cluster_groups(cluster_groups)
+
     # Changing channel group and clustering
     # -------------------------------------------------------------------------
-
-    def _open_kwik_if_needed(self):
-        if not self._kwik.is_open():
-            self._kwik.open()
-            return True
-        else:
-            return False
 
     def _channel_group_changed(self, value):
         """Called when the channel group changes."""
@@ -589,12 +606,8 @@ class KwikModel(BaseModel):
         """ClusterMetadata instance holding information about the clusters."""
         return self._cluster_metadata
 
-    # Save and close
+    # Close
     # -------------------------------------------------------------------------
-
-    def save(self):
-        """Commits all in-memory changes to disk."""
-        raise NotImplementedError()
 
     def close(self):
         """Close all opened files."""
