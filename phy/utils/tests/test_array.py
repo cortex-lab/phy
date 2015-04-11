@@ -176,7 +176,8 @@ def test_as_array():
 
 def test_concatenate_virtual_arrays():
     arr1 = np.random.rand(5, 2)
-    _concatenate_virtual_arrays([arr1])
+    concat = _concatenate_virtual_arrays([arr1])
+    ae(arr1, concat[:])
 
 
 #------------------------------------------------------------------------------

@@ -10,6 +10,7 @@ from math import floor
 
 import numpy as np
 
+from .logging import warn
 from ..ext import six
 
 
@@ -163,12 +164,87 @@ def _pad(arr, n, dir='right'):
         return out
 
 
+def _start_stop(item):
+    """Find the start and stop indices of a __getitem__ item.
+
+    This is used only by ConcatenatedArrays.
+
+    Only two cases are supported currently:
+
+    * Single integer.
+    * Contiguous slice in the first dimension only.
+
+    """
+    if isinstance(item, tuple):
+        raise NotImplementedError()
+    if isinstance(item, slice):
+        # Slice.
+        if item.step not in (None, 1):
+            return NotImplementedError()
+        return item.start, item.stop
+    elif isinstance(item, (list, np.ndarray)):
+        # List or array of indices.
+        # return item[0], item[-1]
+        raise NotImplementedError()
+    else:
+        # Integer.
+        return item, item + 1
+
+
+class ConcatenatedArrays(object):
+    """This object represents a concatenation of several memory-mapped
+    arrays."""
+    def __init__(self, arrs):
+        assert isinstance(arrs, list)
+        self.arrs = arrs
+        self.offsets = np.concatenate([[0], np.cumsum([arr.shape[0]
+                                                       for arr in arrs])],
+                                      axis=0)
+
+    def _get_recording(self, index):
+        """Return the recording that contains a given index."""
+        return np.nonzero((index - self.offsets) >= 0)[-1]
+
+    def __getitem__(self, item):
+        # Get the start and stop indices of the requested item.
+        start, stop = _start_stop(item)
+        # Return the concatenation of all arrays.
+        if start is None and stop is None:
+            return np.concatenate(self.arrs, axis=0)
+        if start is None:
+            start = 0
+        if stop is None:
+            stop = self.offsets[-1]
+        # Get the recording indices of the first and last item.
+        rec_start = self._get_recording(start)
+        rec_stop = self._get_recording(stop)
+        assert 0 <= rec_start <= rec_stop < len(self.arrs)
+        # Single array case.
+        if rec_start == rec_stop:
+            return self.arrs[rec_start][item]
+        # Multiple arrays: need to find the start and stop relative to the
+        # arrays.
+        start_rel = start - self.offsets[rec_start]
+        stop_rel = stop - self.offsets[rec_stop]
+        chunk_start = self.arrs[rec_start][start_rel:]
+        chunk_stop = self.arrs[rec_stop][:stop_rel]
+        # Concatenate all chunks.
+        l = [chunk_start]
+        if rec_stop - rec_start >= 2:
+            warn("Loading a full virtual array: this might be slow "
+                 "and something might be wrong.")
+            l += [self.arrs[r][...] for r in range(rec_start + 1,
+                                                   rec_stop)]
+        l += [chunk_stop]
+        return np.concatenate(l, axis=0)
+
+
 def _concatenate_virtual_arrays(arrs):
     """Return a virtual concatenate of several NumPy arrays."""
-    assert isinstance(arrs, list)
     n = len(arrs)
     if n == 1:
         return arrs[0]
+    return ConcatenatedArrays(arrs)
 
 
 # -----------------------------------------------------------------------------
