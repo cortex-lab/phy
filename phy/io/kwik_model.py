@@ -340,9 +340,10 @@ class KwikModel(BaseModel):
 
         # Concatenate the spike samples from consecutive recordings.
         _spikes = self._kwik.read(path)[:]
-        _recs = self._kwik.read('{0:s}/recording'.format(self._spikes_path))[:]
+        self._spike_recordings = self._kwik.read(
+            '{0:s}/recording'.format(self._spikes_path))[:]
         self._spike_samples = _concatenate_spikes(_spikes,
-                                                  _recs,
+                                                  self._spike_recordings,
                                                   self._recording_offsets)
 
         # Load features masks.
@@ -485,6 +486,10 @@ class KwikModel(BaseModel):
         The spike times of all recordings are concatenated."""
         sr = float(self._metadata['sample_rate'])
         return self._spike_samples.astype(np.float64) / sr
+
+    @property
+    def spike_recordings(self):
+        return self._spike_recordings
 
     @property
     def n_spikes(self):
