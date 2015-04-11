@@ -199,32 +199,34 @@ class KwikModel(BaseModel):
         self._recording_offsets = None
         self._waveform_loader = None
 
+        # Open the experiment.
+        self.filename = filename
+        self.open(filename,
+                  channel_group=channel_group,
+                  clustering=clustering)
+
+    def open(self, filename, channel_group=None, clustering=None):
+        """Open a Kwik experiment (.kwik, .kwx, .raw.kwd files)."""
+
         if filename is None:
             raise ValueError("No filename specified.")
 
         # Open the file.
+        self.filename = filename
         self.name = op.splitext(op.basename(filename))[0]
-        self._kwik = open_h5(filename)
+
+        # Open the files if they exist.
+        self._filenames = _kwik_filenames(filename)
+
+        # Open the KWIK file.
+        self._kwik = self._open_h5_if_exists('kwik')
         if not self._kwik.is_open():
             raise ValueError("File {0} failed to open.".format(filename))
+        self._check_kwik_version()
 
-        # This class only works with kwik version 2 for now.
-        kwik_version = self._kwik.read_attr('/', 'kwik_version')
-        if kwik_version != 2:
-            raise IOError("The kwik version is {v} != 2.".format(kwik_version))
-
-        # Open the Kwx file if it exists.
-        filenames = _kwik_filenames(filename)
-        if op.exists(filenames['kwx']):
-            self._kwx = open_h5(filenames['kwx'])
-        else:
-            self._kwx = None
-
-        # Open the Kwd file if it exists.
-        if op.exists(filenames['raw.kwd']):
-            self._kwd = open_h5(filenames['raw.kwd'])
-        else:
-            self._kwd = None
+        # Open the KWX and KWD files.
+        self._kwx = self._open_h5_if_exists('kwx')
+        self._kwd = self._open_h5_if_exists('raw.kwd')
 
         # Load global information about the file.
         self._load_meta()
@@ -259,6 +261,12 @@ class KwikModel(BaseModel):
     # Internal properties and methods
     # -------------------------------------------------------------------------
 
+    def _check_kwik_version(self):
+        # This class only works with kwik version 2 for now.
+        kwik_version = self._kwik.read_attr('/', 'kwik_version')
+        if kwik_version != 2:
+            raise IOError("The kwik version is {v} != 2.".format(kwik_version))
+
     @property
     def _channel_groups_path(self):
         return '/channel_groups/{0:d}'.format(self._channel_group)
@@ -288,6 +296,10 @@ class KwikModel(BaseModel):
 
     # Loading
     # -------------------------------------------------------------------------
+
+    def _open_h5_if_exists(self, file_type, mode=None):
+        path = self._filenames[file_type]
+        return open_h5(path, mode=mode) if op.exists(path) else None
 
     def _create_waveform_loader(self):
         """Create a waveform loader."""
