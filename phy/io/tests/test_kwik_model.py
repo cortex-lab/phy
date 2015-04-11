@@ -182,15 +182,22 @@ def test_kwik_save():
 
         kwik = KwikModel(filename)
 
-        cluster_groups = {}
+        cluster_groups = {cluster: kwik.cluster_metadata.group(cluster)
+                          for cluster in range(_N_CLUSTERS)}
         sc_0 = kwik.spike_clusters.copy()
         sc_1 = sc_0.copy()
-        sc_1[_N_SPIKES // 2:] = 3
+        new_cluster = _N_CLUSTERS + 10
+        sc_1[_N_SPIKES // 2:] = new_cluster
+        cluster_groups[new_cluster] = 7
         ae(kwik.spike_clusters, sc_0)
+
+        assert kwik.cluster_metadata.group(new_cluster) == 3
         kwik.save(sc_1, cluster_groups)
         ae(kwik.spike_clusters, sc_1)
+        assert kwik.cluster_metadata.group(new_cluster) == 7
 
         kwik.close()
 
         kwik = KwikModel(filename)
         ae(kwik.spike_clusters, sc_1)
+        assert kwik.cluster_metadata.group(new_cluster) == 7

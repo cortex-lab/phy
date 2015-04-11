@@ -8,6 +8,8 @@
 
 import h5py
 
+from ..ext.six import string_types
+
 
 #------------------------------------------------------------------------------
 # HDF5 utility functions
@@ -142,6 +144,8 @@ class File(object):
 
     def write_attr(self, path, attr_name, value):
         """Write an attribute of an HDF5 group."""
+        assert isinstance(path, string_types)
+        assert isinstance(attr_name, string_types)
         # If the parent group doesn't already exist, create it.
         if path not in self._h5py_file:
             self._h5py_file.create_group(path)
