@@ -109,9 +109,12 @@ def test_kwik_open_full():
         assert kwik.traces.shape == (_N_SAMPLES_TRACES, _N_CHANNELS)
 
         assert kwik.waveforms[0].shape == (1, 40, _N_CHANNELS)
+        assert kwik.waveforms[-1].shape == (1, 40, _N_CHANNELS)
+        assert kwik.waveforms[-10].shape == (1, 40, _N_CHANNELS)
         assert kwik.waveforms[10].shape == (1, 40, _N_CHANNELS)
         assert kwik.waveforms[[10, 20]].shape == (2, 40, _N_CHANNELS)
-        print(kwik.waveforms[-1].shape)
+        with raises(IndexError):
+            kwik.waveforms[_N_SPIKES + 10]
 
         with raises(ValueError):
             kwik.clustering = 'foo'
