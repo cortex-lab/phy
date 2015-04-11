@@ -88,7 +88,7 @@ def test_kwik_open_full():
 
         # Make sure the spike samples are increasing, even with multiple
         # recordings.
-        assert np.all(np.diff(kwik.spike_samples)) >= 0
+        assert np.all(np.diff(kwik.spike_samples) >= 0)
 
         assert kwik.spike_times.shape == (_N_SPIKES,)
         assert kwik.spike_times.dtype == np.float64
