@@ -9,7 +9,6 @@
 import numpy as np
 import numpy.random as nr
 
-from ...ext import six
 from ...utils._color import _random_color
 from ..base_model import BaseModel
 from ...cluster.manual.cluster_info import ClusterMetadata

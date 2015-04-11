@@ -22,7 +22,6 @@ class BaseModel(object):
     def __init__(self):
         self.name = 'model'
         self._channel_group = None
-        self._recording = None
         self._clustering = None
 
     # Channel groups
@@ -34,7 +33,6 @@ class BaseModel(object):
 
     @channel_group.setter
     def channel_group(self, value):
-        # The recording is specified by a integer.
         assert isinstance(value, six.integer_types)
         self._channel_group = value
         self._channel_group_changed(value)
@@ -50,37 +48,6 @@ class BaseModel(object):
     @property
     def channel_groups(self):
         """List of channel groups.
-
-        May be implemented by child classes.
-
-        """
-        return []
-
-    # Recordings
-    # -------------------------------------------------------------------------
-
-    @property
-    def recording(self):
-        return self._recording
-
-    @recording.setter
-    def recording(self, value):
-        # The recording is specified by a integer.
-        assert isinstance(value, six.integer_types)
-        self._recording = value
-        self._recording_changed(value)
-
-    def _recording_changed(self, value):
-        """Called when the recording number changes.
-
-        May be implemented by child classes.
-
-        """
-        pass
-
-    @property
-    def recordings(self):
-        """List of recordings.
 
         May be implemented by child classes.
 
@@ -132,7 +99,7 @@ class BaseModel(object):
 
     @property
     def traces(self):
-        """Traces from the current recording (may be memory-mapped).
+        """Traces (may be memory-mapped).
 
         May be implemented by child classes.
 
