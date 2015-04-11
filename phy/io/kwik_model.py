@@ -233,6 +233,11 @@ class KwikModel(BaseModel):
         return '{0:s}/clusters'.format(self._channel_groups_path)
 
     @property
+    def _spike_clusters_path(self):
+        return '{0:s}/clusters/{1:s}'.format(self._spikes_path,
+                                             self._clustering)
+
+    @property
     def _clustering_path(self):
         return '{0:s}/{1:s}'.format(self._clusters_path, self._clustering)
 
@@ -347,10 +352,13 @@ class KwikModel(BaseModel):
                                                   self._recording_offsets)
 
     def _load_spike_clusters(self):
-        # NOTE: we are ensured here that self._channel_group is valid.
-        path = '{0:s}/clusters/{1:s}'.format(self._spikes_path,
-                                             self._clustering)
-        self._spike_clusters = self._kwik.read(path)[:]
+        self._spike_clusters = self._kwik.read(self._spike_clusters_path)[:]
+
+    def _save_spike_clusters(self, spike_clusters):
+        assert spike_clusters.shape == self._spike_clusters.shape
+        assert spike_clusters.dtype == self._spike_clusters.dtype
+        self._spike_clusters = spike_clusters
+        self._kwik.write(self._spike_clusters_path, spike_clusters)
 
     def _load_clusterings(self, clustering):
         # Once the channel group is loaded, list the clusterings.
