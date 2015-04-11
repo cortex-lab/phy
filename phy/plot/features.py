@@ -36,7 +36,7 @@ class FeatureVisual(BaseSpikeVisual):
         super(FeatureVisual, self).__init__(**kwargs)
 
         self._features = None
-        self._spike_times = None
+        self._spike_samples = None
         self._dimensions = []
         self.n_channels, self.n_features = None, None
         self.n_rows = None
@@ -45,14 +45,14 @@ class FeatureVisual(BaseSpikeVisual):
     # -------------------------------------------------------------------------
 
     @property
-    def spike_times(self):
-        return self._spike_times
+    def spike_samples(self):
+        return self._spike_samples
 
-    @spike_times.setter
-    def spike_times(self, value):
+    @spike_samples.setter
+    def spike_samples(self, value):
         assert isinstance(value, np.ndarray)
         assert value.shape == (self.n_spikes,)
-        self._spike_times = value
+        self._spike_samples = value
 
     @property
     def features(self):
@@ -88,7 +88,7 @@ class FeatureVisual(BaseSpikeVisual):
             channel, feature = dim
             return self._features[:, channel, feature]
         elif dim == 'time':
-            t = self._spike_times
+            t = self._spike_samples
             # Normalize time feature.
             m = t.max()
             if m > 0:

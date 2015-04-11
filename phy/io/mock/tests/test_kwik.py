@@ -15,7 +15,7 @@ from numpy.testing import assert_array_equal as ae
 import h5py
 from pytest import raises
 
-from ..artificial import (artificial_spike_times,
+from ..artificial import (artificial_spike_samples,
                           artificial_spike_clusters,
                           artificial_features,
                           artificial_masks,

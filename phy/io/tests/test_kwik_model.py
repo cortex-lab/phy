@@ -15,7 +15,7 @@ from numpy.testing import assert_array_equal as ae
 import h5py
 from pytest import raises
 
-from ...io.mock.artificial import (artificial_spike_times,
+from ...io.mock.artificial import (artificial_spike_samples,
                                    artificial_spike_clusters,
                                    artificial_features,
                                    artificial_masks,
@@ -82,7 +82,7 @@ def test_kwik_open():
         assert kwik.n_channels == _N_CHANNELS
         assert kwik.n_spikes == _N_SPIKES
 
-        assert kwik.spike_times[:].shape == (_N_SPIKES,)
+        assert kwik.spike_samples[:].shape == (_N_SPIKES,)
 
         assert kwik.spike_clusters[:].shape == (_N_SPIKES,)
         assert kwik.spike_clusters[:].min() in (0, 1, 2)

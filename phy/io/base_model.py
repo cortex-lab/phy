@@ -142,7 +142,7 @@ class BaseModel(object):
         raise NotImplementedError()
 
     @property
-    def spike_times(self):
+    def spike_samples(self):
         """Spike times from the current channel_group.
 
         Must be implemented by child classes.

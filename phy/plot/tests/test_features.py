@@ -14,7 +14,7 @@ from ...utils._color import _random_color
 from ...io.mock.artificial import (artificial_features,
                                    artificial_masks,
                                    artificial_spike_clusters,
-                                   artificial_spike_times)
+                                   artificial_spike_samples)
 from ...utils.testing import show_test
 
 
@@ -41,7 +41,7 @@ def _test_features(n_spikes=None, n_clusters=None):
     features = artificial_features(n_spikes, n_channels, n_features)
     masks = artificial_masks(n_spikes, n_channels)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
-    spike_times = artificial_spike_times(n_spikes).astype(np.float32)
+    spike_samples = artificial_spike_samples(n_spikes).astype(np.float32)
 
     c = FeatureView()
     c.visual.features = features
@@ -50,7 +50,7 @@ def _test_features(n_spikes=None, n_clusters=None):
     c.visual.masks = masks
     c.dimensions = ['time', (0, 0), (1, 0), (2, 0)]
     c.visual.spike_clusters = spike_clusters
-    c.visual.spike_times = spike_times
+    c.visual.spike_samples = spike_samples
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])
 

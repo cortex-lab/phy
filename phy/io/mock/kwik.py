@@ -15,7 +15,7 @@ from numpy.testing import assert_array_equal as ae
 import h5py
 from pytest import raises
 
-from ...io.mock.artificial import (artificial_spike_times,
+from ...io.mock.artificial import (artificial_spike_samples,
                                    artificial_spike_clusters,
                                    artificial_features,
                                    artificial_masks,
@@ -62,12 +62,12 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
         _write_metadata('nfeatures_per_channel', n_features_per_channel)
 
         # Create spike times.
-        spike_times = artificial_spike_times(n_spikes).astype(np.int64)
+        spike_samples = artificial_spike_samples(n_spikes).astype(np.int64)
 
-        if spike_times.max() >= n_samples_traces:
+        if spike_samples.max() >= n_samples_traces:
             raise ValueError("There are too many spikes: decrease 'n_spikes'.")
 
-        f.write('/channel_groups/1/spikes/time_samples', spike_times)
+        f.write('/channel_groups/1/spikes/time_samples', spike_samples)
 
         # Create spike clusters.
         spike_clusters = artificial_spike_clusters(n_spikes,

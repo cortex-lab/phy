@@ -141,17 +141,17 @@ def _kwik_filenames(filename):
 class SpikeLoader(object):
     """Translate selection with spike ids into selection with
     absolute times."""
-    def __init__(self, waveforms, spike_times):
-        self._spike_times = spike_times
+    def __init__(self, waveforms, spike_samples):
+        self._spike_samples = spike_samples
         # waveforms is a WaveformLoader instance
         self._waveforms = waveforms
         self.dtype = waveforms.dtype
-        self.shape = (len(spike_times),
+        self.shape = (len(spike_samples),
                       waveforms.n_samples_waveforms,
                       waveforms.n_channels_waveforms)
 
     def __getitem__(self, item):
-        times = self._spike_times[item]
+        times = self._spike_samples[item]
         return self._waveforms[times]
 
 
@@ -168,7 +168,7 @@ class KwikModel(BaseModel):
         super(KwikModel, self).__init__()
 
         # Initialize fields.
-        self._spike_times = None
+        self._spike_samples = None
         self._spike_clusters = None
         self._metadata = None
         self._clustering = 'main'
@@ -292,7 +292,7 @@ class KwikModel(BaseModel):
 
         # Load spike times.
         path = '{0:s}/time_samples'.format(self._spikes_path)
-        self._spike_times = self._kwik.read(path)[:]
+        self._spike_samples = self._kwik.read(path)[:]
 
         # Load features masks.
         path = '{0:s}/features_masks'.format(self._channel_groups_path)
@@ -439,14 +439,14 @@ class KwikModel(BaseModel):
         return self._traces
 
     @property
-    def spike_times(self):
+    def spike_samples(self):
         """Spike times from the current channel_group."""
-        return self._spike_times
+        return self._spike_samples
 
     @property
     def n_spikes(self):
         """Return the number of spikes."""
-        return len(self._spike_times)
+        return len(self._spike_samples)
 
     @property
     def features(self):
@@ -466,7 +466,7 @@ class KwikModel(BaseModel):
     @property
     def waveforms(self):
         """Waveforms from the current channel_group (may be memory-mapped)."""
-        return SpikeLoader(self._waveform_loader, self.spike_times)
+        return SpikeLoader(self._waveform_loader, self.spike_samples)
 
     @property
     def spike_clusters(self):

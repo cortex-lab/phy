@@ -24,10 +24,10 @@ from ..ccg import (_increment,
 def _random_data(max_cluster):
     sr = 20000
     nspikes = 10000
-    spike_times = np.cumsum(np.random.exponential(scale=.025, size=nspikes))
-    spike_times = (spike_times * sr).astype(np.int64)
+    spike_samples = np.cumsum(np.random.exponential(scale=.025, size=nspikes))
+    spike_samples = (spike_samples * sr).astype(np.int64)
     spike_clusters = np.random.randint(0, max_cluster, nspikes)
-    return spike_times, spike_clusters
+    return spike_samples, spike_clusters
 
 
 def _ccg_params():
@@ -65,7 +65,7 @@ def test_utils():
 
 
 def test_ccg_0():
-    spike_times = [0, 10, 10, 20]
+    spike_samples = [0, 10, 10, 20]
     spike_clusters = [0, 1, 0, 1]
     binsize = 1
     winsize_bins = 2 * 3 + 1
@@ -78,14 +78,14 @@ def test_ccg_0():
     c_expected[1, 0, 0] = 1
     c_expected[0, 1, 0] = 0  # This is a peculiarity of the algorithm.
 
-    c = correlograms(spike_times, spike_clusters,
+    c = correlograms(spike_samples, spike_clusters,
                      binsize=binsize, winsize_bins=winsize_bins)
 
     ae(c, c_expected)
 
 
 def test_ccg_1():
-    spike_times = [2, 3, 10, 12, 20, 24, 30, 40]
+    spike_samples = [2, 3, 10, 12, 20, 24, 30, 40]
     spike_clusters = [0, 1, 0, 0, 2, 1, 0, 2]
     binsize = 1
     winsize_bins = 2 * 3 + 1
@@ -94,7 +94,7 @@ def test_ccg_1():
     c_expected[0, 1, 1] = 1
     c_expected[0, 0, 2] = 1
 
-    c = correlograms(spike_times, spike_clusters,
+    c = correlograms(spike_samples, spike_clusters,
                      binsize=binsize, winsize_bins=winsize_bins)
 
     ae(c, c_expected)
@@ -102,10 +102,10 @@ def test_ccg_1():
 
 def test_ccg_2():
     max_cluster = 10
-    spike_times, spike_clusters = _random_data(max_cluster)
+    spike_samples, spike_clusters = _random_data(max_cluster)
     binsize, winsize_bins = _ccg_params()
 
-    c = correlograms(spike_times, spike_clusters,
+    c = correlograms(spike_samples, spike_clusters,
                      binsize=binsize, winsize_bins=winsize_bins)
 
     assert c.shape == (max_cluster, max_cluster, 26)
@@ -114,15 +114,16 @@ def test_ccg_2():
 def test_ccg_symmetry_time():
     """Reverse time and check that the CCGs are just transposed."""
 
-    spike_times, spike_clusters = _random_data(2)
+    spike_samples, spike_clusters = _random_data(2)
     binsize, winsize_bins = _ccg_params()
 
-    c0 = correlograms(spike_times, spike_clusters,
+    c0 = correlograms(spike_samples, spike_clusters,
                       binsize=binsize, winsize_bins=winsize_bins)
 
-    spike_times_1 = np.cumsum(np.r_[np.arange(1), np.diff(spike_times)[::-1]])
+    spike_samples_1 = np.cumsum(np.r_[np.arange(1),
+                                      np.diff(spike_samples)[::-1]])
     spike_clusters_1 = spike_clusters[::-1]
-    c1 = correlograms(spike_times_1, spike_clusters_1,
+    c1 = correlograms(spike_samples_1, spike_clusters_1,
                       binsize=binsize, winsize_bins=winsize_bins)
 
     # The ACGs are identical.
@@ -137,14 +138,14 @@ def test_ccg_symmetry_time():
 def test_ccg_symmetry_clusters():
     """Exchange clusters and check that the CCGs are just transposed."""
 
-    spike_times, spike_clusters = _random_data(2)
+    spike_samples, spike_clusters = _random_data(2)
     binsize, winsize_bins = _ccg_params()
 
-    c0 = correlograms(spike_times, spike_clusters,
+    c0 = correlograms(spike_samples, spike_clusters,
                       binsize=binsize, winsize_bins=winsize_bins)
 
     spike_clusters_1 = 1 - spike_clusters
-    c1 = correlograms(spike_times, spike_clusters_1,
+    c1 = correlograms(spike_samples, spike_clusters_1,
                       binsize=binsize, winsize_bins=winsize_bins)
 
     # The ACGs are identical.
@@ -157,10 +158,10 @@ def test_ccg_symmetry_clusters():
 
 
 def test_symmetrize_correlograms():
-    spike_times, spike_clusters = _random_data(3)
+    spike_samples, spike_clusters = _random_data(3)
     binsize, winsize_bins = _ccg_params()
 
-    c = correlograms(spike_times, spike_clusters,
+    c = correlograms(spike_samples, spike_clusters,
                      binsize=binsize, winsize_bins=winsize_bins)
 
     sym = _symmetrize_correlograms(c)

@@ -42,7 +42,7 @@ def artificial_spike_clusters(n_spikes, n_clusters, low=0):
     return nr.randint(size=n_spikes, low=low, high=max(1, n_clusters))
 
 
-def artificial_spike_times(n_spikes, max_isi=50):
+def artificial_spike_samples(n_spikes, max_isi=50):
     # TODO: switch from sample to seconds in the way spike times are
     # represented throughout the package.
     return np.cumsum(nr.randint(low=0, high=max_isi, size=n_spikes))
@@ -88,7 +88,7 @@ class MockModel(BaseModel):
                                          self.n_channels)
         self._spike_clusters = artificial_spike_clusters(self.n_spikes,
                                                          self.n_clusters)
-        self._spike_times = artificial_spike_times(self.n_spikes)
+        self._spike_samples = artificial_spike_samples(self.n_spikes)
         self._features = artificial_features(self.n_spikes, self.n_features)
         self._masks = artificial_masks(self.n_spikes, self.n_channels)
         self._features_masks = np.dstack((self._features,
@@ -112,8 +112,8 @@ class MockModel(BaseModel):
         return self._traces
 
     @property
-    def spike_times(self):
-        return self._spike_times
+    def spike_samples(self):
+        return self._spike_samples
 
     @property
     def spike_clusters(self):

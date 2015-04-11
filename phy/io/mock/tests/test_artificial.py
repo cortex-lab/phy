@@ -68,7 +68,7 @@ def test_mock_model():
 
     assert model.metadata['description'] == 'A mock model.'
     assert model.traces.ndim == 2
-    assert model.spike_times.ndim == 1
+    assert model.spike_samples.ndim == 1
     assert model.spike_clusters.ndim == 1
     assert model.features.ndim == 2
     assert model.masks.ndim == 2

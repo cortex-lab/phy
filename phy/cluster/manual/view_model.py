@@ -181,7 +181,7 @@ class FeatureViewModel(BaseViewModel):
         self.view.visual.spike_clusters = self.model.spike_clusters
 
         # Spike times and ids.
-        self.view.visual.spike_times = self.model.spike_times[spikes]
+        self.view.visual.spike_samples = self.model.spike_samples[spikes]
         self.view.visual.spike_ids = spikes
 
         # Cluster colors.
@@ -207,10 +207,10 @@ class CorrelogramViewModel(BaseViewModel):
         #                              excerpt_size=self.excerpt_size,
         #                              )
         spike_clusters = self.model.spike_clusters[spikes]
-        spike_times = self.model.spike_times[spikes]
+        spike_samples = self.model.spike_samples[spikes]
 
         # Compute the correlograms.
-        ccgs = correlograms(spike_times,
+        ccgs = correlograms(spike_samples,
                             spike_clusters,
                             binsize=self.binsize,
                             winsize_bins=self.winsize_bins,
