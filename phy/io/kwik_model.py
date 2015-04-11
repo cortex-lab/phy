@@ -38,6 +38,8 @@ def _list_int_children(group):
     return sorted(_to_int_list(group.keys()))
 
 
+# TODO: refactor the functions below with h5.File.children().
+
 def _list_channel_groups(kwik):
     """Return the list of channel groups in a kwik file."""
     if 'channel_groups' in kwik:
@@ -234,13 +236,6 @@ class KwikModel(BaseModel):
     def _clustering_path(self):
         return '{0:s}/{1:s}'.format(self._clusters_path, self._clustering)
 
-    @property
-    def _clusters(self):
-        """List of clusters in the Kwik file."""
-        clusters = self._kwik.groups(self._clustering_path)
-        clusters = [int(cluster) for cluster in clusters]
-        return sorted(clusters)
-
     # Loading
     # -------------------------------------------------------------------------
 
@@ -368,7 +363,9 @@ class KwikModel(BaseModel):
 
     def _load_cluster_groups(self):
         # Load the cluster groups from the Kwik file.
-        for cluster in self._clusters:
+        clusters = self._kwik.groups(self._clustering_path)
+        clusters = [int(cluster) for cluster in clusters]
+        for cluster in clusters:
             path = '{0:s}/{1:d}'.format(self._clustering_path, cluster)
             grp = self._kwik.read_attr(path, 'cluster_group')
             self._cluster_metadata.set_group([cluster], grp)
