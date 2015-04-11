@@ -203,7 +203,15 @@ class ConcatenatedArrays(object):
 
     def _get_recording(self, index):
         """Return the recording that contains a given index."""
-        return np.nonzero((index - self.offsets) >= 0)[-1]
+        assert index >= 0
+        recs = np.nonzero((index - self.offsets[:-1]) >= 0)[0]
+        if len(recs) == 0:
+            # If the index is greater than the total size,
+            # return the last recording.
+            return len(self.arrs) - 1
+        # Return the last recording such that the index is greater than
+        # its offset.
+        return recs[-1]
 
     def __getitem__(self, item):
         # Get the start and stop indices of the requested item.

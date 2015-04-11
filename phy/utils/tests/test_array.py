@@ -176,8 +176,24 @@ def test_as_array():
 
 def test_concatenate_virtual_arrays():
     arr1 = np.random.rand(5, 2)
+    arr2 = np.random.rand(4, 2)
+
+    def _concat(*arrs):
+        return np.concatenate(arrs, axis=0)
+
+    # Single array.
     concat = _concatenate_virtual_arrays([arr1])
-    ae(arr1, concat[:])
+    ae(concat[:], arr1)
+    ae(concat[1:], arr1[1:])
+    ae(concat[:3], arr1[:3])
+    ae(concat[1:4], arr1[1:4])
+
+    # Two arrays.
+    concat = _concatenate_virtual_arrays([arr1, arr2])
+    ae(concat[:], _concat(arr1, arr2))
+    ae(concat[1:], _concat(arr1[1:], arr2))
+    ae(concat[:3], arr1[:3])
+    ae(concat[1:4], arr1[1:4])
 
 
 #------------------------------------------------------------------------------
