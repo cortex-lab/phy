@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 import numpy as np
 from numpy.testing import assert_allclose as ac
 from pytest import raises
@@ -233,6 +235,9 @@ def test_session_kwik():
 
         session = _start_manual_clustering(filename=filename,
                                            tempdir=tempdir)
+
+        # Check backup.
+        assert op.exists(op.join(tempdir, filename + '.bak'))
 
         session.select([0])
         cs = session.cluster_store

@@ -9,6 +9,7 @@ from __future__ import print_function
 
 import os
 import os.path as op
+import shutil
 from functools import partial
 
 import numpy as np
@@ -17,6 +18,7 @@ from ...ext.six import string_types
 from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of
 from ...utils.event import EventEmitter
+from ...utils.logging import info
 from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
@@ -24,8 +26,7 @@ from .clustering import Clustering
 from ._utils import _spikes_per_cluster
 from .selector import Selector
 from .store import ClusterStore, StoreItem
-from .view_model import (BaseViewModel,
-                         WaveformViewModel,
+from .view_model import (WaveformViewModel,
                          FeatureViewModel,
                          CorrelogramViewModel,
                          )
@@ -328,7 +329,17 @@ class Session(BaseSession):
     # Public actions
     # -------------------------------------------------------------------------
 
+    def _backup_kwik(self, filename):
+        """Save a copy of the Kwik file before opening it."""
+        backup_filename = filename + '.bak'
+        if not op.exists(backup_filename):
+            info("Saving a backup of the Kwik file "
+                 "in {0}.".format(backup_filename))
+            shutil.copyfile(filename, backup_filename)
+
     def open(self, filename=None, model=None):
+        if filename is not None:
+            self._backup_kwik(filename)
         if model is None:
             model = KwikModel(filename)
         self.model = model
@@ -502,24 +513,6 @@ class Session(BaseSession):
     def _create_view_model(self, name, **kwargs):
         vm_class = _VIEW_MODELS[name]
         return vm_class(self.model, store=self.cluster_store, **kwargs)
-
-    # def _view_settings_name(self, view_model, name):
-    #     if isinstance(view_model, BaseViewModel):
-    #         view_model = view_model.view_name
-    #     return 'manual_clustering.' + view_model + '_' + name
-
-    # def _save_scale_factor(self, view_model):
-    #     name = self._view_settings_name(view_model, 'scale_factor')
-    #     if not name or not hasattr(view_model, 'scale_factor'):
-    #         return
-    #     sf = view_model.view.zoom * view_model.scale_factor
-    #     self.set_internal_settings(name, sf)
-
-    # def _load_scale_factor(self, view_name):
-    #     name = self._view_settings_name(view_name, 'scale_factor')
-    #     if not name:
-    #         return 1.
-    #     return self.get_internal_settings(name) or .01
 
     def show_waveforms(self):
         """Show a WaveformView and return a ViewModel instance."""
