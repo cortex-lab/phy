@@ -256,6 +256,80 @@ class KwikModel(BaseModel):
         # Load the specified clustering.
         self.clustering = clustering
 
+    # Internal properties and methods
+    # -------------------------------------------------------------------------
+
+    @property
+    def _channel_groups_path(self):
+        return '/channel_groups/{0:d}'.format(self._channel_group)
+
+    @property
+    def _spikes_path(self):
+        return '{0:s}/spikes'.format(self._channel_groups_path)
+
+    @property
+    def _channels_path(self):
+        return '{0:s}/channels'.format(self._channel_groups_path)
+
+    @property
+    def _clusters_path(self):
+        return '{0:s}/clusters'.format(self._channel_groups_path)
+
+    @property
+    def _clustering_path(self):
+        return '{0:s}/{1:s}'.format(self._clusters_path, self._clustering)
+
+    @property
+    def _clusters(self):
+        """List of clusters in the Kwik file."""
+        clusters = self._kwik.groups(self._clustering_path)
+        clusters = [int(cluster) for cluster in clusters]
+        return sorted(clusters)
+
+    # Loading
+    # -------------------------------------------------------------------------
+
+    def _create_waveform_loader(self):
+        """Create a waveform loader."""
+        n_samples = (self._metadata['extract_s_before'],
+                     self._metadata['extract_s_after'])
+        order = self._metadata['filter_butter_order']
+        b_filter = bandpass_filter(rate=self._metadata['sample_rate'],
+                                   low=self._metadata['filter_low'],
+                                   high=self._metadata['filter_high'],
+                                   order=order)
+
+        def filter(x):
+            return apply_filter(x, b_filter)
+
+        self._waveform_loader = WaveformLoader(n_samples=n_samples,
+                                               filter=filter,
+                                               filter_margin=order * 3,
+                                               )
+
+    def _load_meta(self):
+        """Load metadata from kwik file."""
+        metadata = {}
+        # Automatically load all metadata from spikedetekt group.
+        path = '/application_data/spikedetekt/'
+        metadata_fields = self._kwik.attrs(path)
+        for field in metadata_fields:
+            if field.islower():
+                try:
+                    metadata[field] = self._kwik.read_attr(path, field)
+                except TypeError:
+                    debug("Metadata field '{0:s}' not found.".format(field))
+        self._metadata = metadata
+
+    def _load_channel_positions(self):
+        """Load the channel positions from the kwik file."""
+        positions = []
+        for channel in self.channels:
+            path = '{0:s}/{1:d}'.format(self._channels_path, channel)
+            position = self._kwik.read_attr(path, 'position')
+            positions.append(position)
+        return np.array(positions)
+
     def _load_traces(self):
         if self._kwd is not None:
             i = 0
@@ -280,50 +354,6 @@ class KwikModel(BaseModel):
         else:
             self._waveform_loader.traces = np.zeros((0, self.n_channels),
                                                     dtype=np.float32)
-
-    # Internal properties and methods
-    # -------------------------------------------------------------------------
-
-    @property
-    def _channel_groups_path(self):
-        return '/channel_groups/{0:d}'.format(self._channel_group)
-
-    @property
-    def _spikes_path(self):
-        return '{0:s}/spikes'.format(self._channel_groups_path)
-
-    @property
-    def _channels_path(self):
-        return '{0:s}/channels'.format(self._channel_groups_path)
-
-    @property
-    def _clusters_path(self):
-        return '{0:s}/clusters'.format(self._channel_groups_path)
-
-    @property
-    def _clustering_path(self):
-        return '{0:s}/{1:s}'.format(self._clusters_path, self._clustering)
-
-    def _load_meta(self):
-        """Load metadata from kwik file."""
-        metadata = {}
-        # Automatically load all metadata from spikedetekt group.
-        path = '/application_data/spikedetekt/'
-        metadata_fields = self._kwik.attrs(path)
-        for field in metadata_fields:
-            if field.islower():
-                try:
-                    metadata[field] = self._kwik.read_attr(path, field)
-                except TypeError:
-                    debug("Metadata field '{0:s}' not found.".format(field))
-        self._metadata = metadata
-
-    # Channel group
-    # -------------------------------------------------------------------------
-
-    @property
-    def channel_groups(self):
-        return self._channel_groups
 
     def _channel_group_changed(self, value):
         """Called when the channel group changes."""
@@ -371,32 +401,36 @@ class KwikModel(BaseModel):
         self._probe = MEA(positions=positions,
                           n_channels=self.n_channels)
 
-    def _load_channel_positions(self):
-        """Load the channel positions from the kwik file."""
-        positions = []
-        for channel in self.channels:
-            path = '{0:s}/{1:d}'.format(self._channels_path, channel)
-            position = self._kwik.read_attr(path, 'position')
-            positions.append(position)
-        return np.array(positions)
+    def _clustering_changed(self, value):
+        """Called when the clustering changes."""
+        if value not in self.clusterings:
+            raise ValueError("The clustering {0} is invalid.".format(value))
+        self._clustering = value
+        # NOTE: we are ensured here that self._channel_group is valid.
+        path = '{0:s}/clusters/{1:s}'.format(self._spikes_path,
+                                             self._clustering)
+        self._spike_clusters = self._kwik.read(path)[:]
 
-    def _create_waveform_loader(self):
-        """Create a waveform loader."""
-        n_samples = (self._metadata['extract_s_before'],
-                     self._metadata['extract_s_after'])
-        order = self._metadata['filter_butter_order']
-        b_filter = bandpass_filter(rate=self._metadata['sample_rate'],
-                                   low=self._metadata['filter_low'],
-                                   high=self._metadata['filter_high'],
-                                   order=order)
+        # Load cluster metadata (cluster groups).
+        self._cluster_metadata = ClusterMetadata()
 
-        def filter(x):
-            return apply_filter(x, b_filter)
+        @self._cluster_metadata.default
+        def group(cluster):
+            # Default group is unsorted.
+            return 3
 
-        self._waveform_loader = WaveformLoader(n_samples=n_samples,
-                                               filter=filter,
-                                               filter_margin=order * 3,
-                                               )
+        # Load the cluster groups from the Kwik file.
+        for cluster in self._clusters:
+            path = '{0:s}/{1:d}'.format(self._clustering_path, cluster)
+            grp = self._kwik.read_attr(path, 'cluster_group')
+            self._cluster_metadata.set_group([cluster], grp)
+
+    # Data
+    # -------------------------------------------------------------------------
+
+    @property
+    def channel_groups(self):
+        return self._channel_groups
 
     @property
     def n_features_per_channel(self):
@@ -425,29 +459,6 @@ class KwikModel(BaseModel):
     def clusterings(self):
         return self._clusterings
 
-    def _clustering_changed(self, value):
-        """Called when the clustering changes."""
-        if value not in self.clusterings:
-            raise ValueError("The clustering {0} is invalid.".format(value))
-        self._clustering = value
-        # NOTE: we are ensured here that self._channel_group is valid.
-        path = '{0:s}/clusters/{1:s}'.format(self._spikes_path,
-                                             self._clustering)
-        self._spike_clusters = self._kwik.read(path)[:]
-
-        # Load cluster metadata (cluster groups).
-        self._cluster_metadata = ClusterMetadata()
-
-        @self._cluster_metadata.default
-        def group(cluster):
-            return 3
-
-        # Load the cluster groups from the Kwik file.
-        for cluster in self._clusters:
-            path = '{0:s}/{1:d}'.format(self._clustering_path, cluster)
-            grp = self._kwik.read_attr(path, 'cluster_group')
-            self._cluster_metadata.set_group([cluster], grp)
-
     @property
     def clustering(self):
         return self._clustering
@@ -455,16 +466,6 @@ class KwikModel(BaseModel):
     @clustering.setter
     def clustering(self, value):
         self._clustering_changed(value)
-
-    # Data
-    # -------------------------------------------------------------------------
-
-    @property
-    def _clusters(self):
-        """List of clusters in the Kwik file."""
-        clusters = self._kwik.groups(self._clustering_path)
-        clusters = [int(cluster) for cluster in clusters]
-        return sorted(clusters)
 
     @property
     def metadata(self):
@@ -531,6 +532,9 @@ class KwikModel(BaseModel):
     def cluster_metadata(self):
         """ClusterMetadata instance holding information about the clusters."""
         return self._cluster_metadata
+
+    # Save and close
+    # -------------------------------------------------------------------------
 
     def save(self):
         """Commits all in-memory changes to disk."""
