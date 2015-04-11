@@ -117,7 +117,7 @@ class WaveformLoader(object):
         slice_extract = _slice(time_o,
                                self.n_samples_before_after,
                                self._filter_margin)
-        extract = self._traces[slice_extract, :]
+        extract = self._traces[slice_extract]
 
         # Pad the extracted chunk if needed.
         if slice_extract.start <= 0:
