@@ -16,7 +16,9 @@ from ..kwik_model import (KwikModel,
                           _list_channel_groups,
                           _list_channels,
                           _list_recordings,
-                          _list_clusterings,)
+                          _list_clusterings,
+                          _concatenate_spikes,
+                          )
 from ..mock.kwik import create_mock_kwik
 
 
@@ -46,9 +48,17 @@ def test_kwik_utility():
         model = KwikModel(filename)
 
         assert _list_channel_groups(model._kwik.h5py_file) == [1]
-        assert _list_recordings(model._kwik.h5py_file) == [0]
+        assert _list_recordings(model._kwik.h5py_file) == [0, 1]
         assert _list_clusterings(model._kwik.h5py_file, 1) == ['main']
         assert _list_channels(model._kwik.h5py_file, 1) == channels
+
+
+def test_concatenate_spikes():
+    spikes = [2, 3, 5, 0, 11, 1]
+    recs = [0, 0, 0, 1, 1, 2]
+    offsets = [0, 7, 100]
+    concat = _concatenate_spikes(spikes, recs, offsets)
+    ae(concat, [2, 3, 5, 7, 18, 101])
 
 
 def test_kwik_open():
