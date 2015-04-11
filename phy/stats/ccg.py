@@ -75,6 +75,8 @@ def correlograms(spike_samples, spike_clusters,
 
     spike_clusters = _as_array(spike_clusters)
     spike_samples = _as_array(spike_samples)
+    if spike_samples.dtype == np.int64:
+        spike_samples = spike_samples.astype(np.uint64)
 
     assert spike_samples.dtype == np.uint64
 

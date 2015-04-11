@@ -25,7 +25,7 @@ def _random_data(max_cluster):
     sr = 20000
     nspikes = 10000
     spike_samples = np.cumsum(np.random.exponential(scale=.025, size=nspikes))
-    spike_samples = (spike_samples * sr).astype(np.int64)
+    spike_samples = (spike_samples * sr).astype(np.uint64)
     spike_clusters = np.random.randint(0, max_cluster, nspikes)
     return spike_samples, spike_clusters
 
@@ -85,7 +85,7 @@ def test_ccg_0():
 
 
 def test_ccg_1():
-    spike_samples = [2, 3, 10, 12, 20, 24, 30, 40]
+    spike_samples = np.array([2, 3, 10, 12, 20, 24, 30, 40], dtype=np.uint64)
     spike_clusters = [0, 1, 0, 0, 2, 1, 0, 2]
     binsize = 1
     winsize_bins = 2 * 3 + 1
@@ -122,6 +122,7 @@ def test_ccg_symmetry_time():
 
     spike_samples_1 = np.cumsum(np.r_[np.arange(1),
                                       np.diff(spike_samples)[::-1]])
+    spike_samples_1 = spike_samples_1.astype(np.uint64)
     spike_clusters_1 = spike_clusters[::-1]
     c1 = correlograms(spike_samples_1, spike_clusters_1,
                       binsize=binsize, winsize_bins=winsize_bins)

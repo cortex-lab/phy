@@ -110,7 +110,7 @@ _ACCEPTED_ARRAY_DTYPES = (np.float, np.float32, np.float64,
                           np.bool)
 
 
-def _as_array(arr):
+def _as_array(arr, dtype=None):
     """Convert an object to a numerical NumPy array.
 
     Avoid a copy if possible.
@@ -119,6 +119,9 @@ def _as_array(arr):
     if isinstance(arr, six.integer_types + (float,)):
         arr = [arr]
     out = np.asarray(arr)
+    if dtype is not None:
+        if arr.dtype != dtype:
+            arr = arr.astype(dtype)
     if out.dtype not in _ACCEPTED_ARRAY_DTYPES:
         raise ValueError("'arr' seems to have an invalid dtype: "
                          "{0:s}".format(str(out.dtype)))
