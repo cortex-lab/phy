@@ -6,9 +6,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import raises
-
-from ....ext.six import itervalues, iterkeys
 from ..cluster_metadata import ClusterMetadata
 
 

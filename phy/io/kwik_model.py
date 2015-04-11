@@ -361,12 +361,6 @@ class KwikModel(BaseModel):
                                        (slice(0, nfpc * nc, nfpc), 1))
             assert self._masks.shape == (self.n_spikes, nc)
 
-        self._cluster_metadata = ClusterMetadata()
-
-        @self._cluster_metadata.default
-        def group(cluster):
-            return 3
-
         # Load probe.
         positions = self._load_channel_positions()
 
@@ -440,7 +434,19 @@ class KwikModel(BaseModel):
         path = '{0:s}/clusters/{1:s}'.format(self._spikes_path,
                                              self._clustering)
         self._spike_clusters = self._kwik.read(path)[:]
-        # TODO: cluster metadata
+
+        # Load cluster metadata (cluster groups).
+        self._cluster_metadata = ClusterMetadata()
+
+        @self._cluster_metadata.default
+        def group(cluster):
+            return 3
+
+        # Load the cluster groups from the Kwik file.
+        for cluster in self._clusters:
+            path = '{0:s}/{1:d}'.format(self._clustering_path, cluster)
+            grp = self._kwik.read_attr(path, 'cluster_group')
+            self._cluster_metadata.set_group([cluster], grp)
 
     @property
     def clustering(self):
@@ -524,7 +530,6 @@ class KwikModel(BaseModel):
     @property
     def cluster_metadata(self):
         """ClusterMetadata instance holding information about the clusters."""
-        # TODO
         return self._cluster_metadata
 
     def save(self):

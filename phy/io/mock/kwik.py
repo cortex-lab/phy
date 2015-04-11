@@ -91,7 +91,7 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
             group = '/channel_groups/1/clusters/main/{0:d}'.format(cluster)
             color = ('/channel_groups/1/clusters/main/{0:d}'.format(cluster) +
                      '/application_data/klustaviewa')
-            f.write_attr(group, 'cluster_group', 3)
+            f.write_attr(group, 'cluster_group', cluster % 4)
             f.write_attr(color, 'color', randint(2, 10))
 
         # Create recordings.

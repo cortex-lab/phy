@@ -122,8 +122,9 @@ def test_kwik_open_full():
             kwik.channel_group = 42
         assert kwik.n_recordings == 2
 
-        # TODO: test cluster_metadata.
-        kwik.cluster_metadata
+        # Test cluster groups.
+        for cluster in range(_N_CLUSTERS):
+            assert kwik.cluster_metadata.group(cluster) == cluster % 4
 
         # Test probe.
         assert isinstance(kwik.probe, MEA)
