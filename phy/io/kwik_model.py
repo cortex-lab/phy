@@ -18,7 +18,10 @@ from ..waveform.loader import WaveformLoader
 from ..waveform.filter import bandpass_filter, apply_filter
 from ..electrode.mea import MEA
 from ..utils.logging import debug
-from ..utils.array import PartialArray
+from ..utils.array import (PartialArray,
+                           _concatenate_virtual_arrays,
+                           _as_array,
+                           )
 
 
 #------------------------------------------------------------------------------
@@ -46,9 +49,15 @@ def _list_channel_groups(kwik):
 def _list_recordings(kwik):
     """Return the list of recordings in a kwik file."""
     if '/recordings' in kwik:
-        return _list_int_children(kwik['/recordings'])
+        recordings = _list_int_children(kwik['/recordings'])
     else:
-        return []
+        recordings = []
+    # TODO: return a dictionary of recordings instead of a list of recording
+    # ids.
+    # return {rec: Bunch({
+    #     'start': kwik['/recordings/{0}'.format(rec)].attrs['start_sample']
+    # }) for rec in recordings}
+    return recordings
 
 
 def _list_channels(kwik, channel_group=None):
@@ -74,6 +83,15 @@ def _list_clusterings(kwik, channel_group=None):
     assert 'main' in clusterings
     clusterings.remove('main')
     return ['main'] + clusterings
+
+
+def _concatenate_spikes(spikes, recs, offsets):
+    """Concatenate spike samples belonging to consecutive recordings."""
+    assert offsets is not None
+    spikes = _as_array(spikes)
+    offsets = _as_array(offsets)
+    recs = _as_array(recs)
+    return spikes + offsets[recs]
 
 
 _COLOR_MAP = np.array([[1., 1., 1.],
@@ -163,7 +181,6 @@ class KwikModel(BaseModel):
     """Holds data contained in a kwik file."""
     def __init__(self, filename=None,
                  channel_group=None,
-                 recording=None,
                  clustering=None):
         super(KwikModel, self).__init__()
 
@@ -179,6 +196,7 @@ class KwikModel(BaseModel):
         self._waveforms = None
         self._cluster_metadata = None
         self._traces = None
+        self._recording_offsets = None
         self._waveform_loader = None
 
         if filename is None:
@@ -211,21 +229,23 @@ class KwikModel(BaseModel):
         # Load global information about the file.
         self._load_meta()
 
+        # Create the waveform loader.
+        self._create_waveform_loader()
+
         # List channel groups and recordings.
         self._channel_groups = _list_channel_groups(self._kwik.h5py_file)
         self._recordings = _list_recordings(self._kwik.h5py_file)
+        # This will be updated later if a KWD file is present.
+        self._recording_offsets = [0] + [0] * len(self._recordings)
 
-        # Choose the default channel group if not specified.
-        if channel_group is None and self.channel_groups:
-            channel_group = self.channel_groups[0]
+        # Load the traces.
+        self._load_traces()
+
         # Load the channel group.
+        if channel_group is None and self.channel_groups:
+            # Choose the default channel group if not specified.
+            channel_group = self.channel_groups[0]
         self.channel_group = channel_group
-
-        # Choose the default recording if not specified.
-        if recording is None and self.recordings:
-            recording = self.recordings[0]
-        # Load the recording.
-        self.recording = recording
 
         # Once the channel group is loaded, list the clusterings.
         self._clusterings = _list_clusterings(self._kwik.h5py_file,
@@ -235,6 +255,31 @@ class KwikModel(BaseModel):
             clustering = self.clusterings[0]
         # Load the specified clustering.
         self.clustering = clustering
+
+    def _load_traces(self):
+        if self._kwd is not None:
+            i = 0
+            self._recording_offsets = [0]
+            traces = []
+            for rec in self._recordings:
+                path = '/recordings/{0:d}/data'.format(rec)
+                data = self._kwd.read(path)
+                traces.append(data)
+                # NOTE: there is no time gap between the recordings.
+                # If a gap were to be added, it should be also added in
+                # _concatenate_virtual_arrays() (which doesn't support it
+                # currently).
+                self._recording_offsets.append(i)
+                i += data.shape[0]
+            # # Create a new WaveformLoader if needed.
+            # if self._waveform_loader is None:
+            #     self._create_waveform_loader()
+            # Virtual concatenation of the arrays.
+            self._traces = _concatenate_virtual_arrays(traces)
+            self._waveform_loader.traces = self._traces
+        else:
+            self._waveform_loader.traces = np.zeros((0, self.n_channels),
+                                                    dtype=np.float32)
 
     # Internal properties and methods
     # -------------------------------------------------------------------------
@@ -290,9 +335,15 @@ class KwikModel(BaseModel):
         self._channels = _list_channels(self._kwik.h5py_file,
                                         self._channel_group)
 
-        # Load spike times.
+        # Load spike samples.
         path = '{0:s}/time_samples'.format(self._spikes_path)
-        self._spike_samples = self._kwik.read(path)[:]
+
+        # Concatenate the spike samples from consecutive recordings.
+        _spikes = self._kwik.read(path)[:]
+        _recs = self._kwik.read('{0:s}/recording'.format(self._spikes_path))[:]
+        self._spike_samples = _concatenate_spikes(_spikes,
+                                                  _recs,
+                                                  self._recording_offsets)
 
         # Load features masks.
         path = '{0:s}/features_masks'.format(self._channel_groups_path)
@@ -318,11 +369,12 @@ class KwikModel(BaseModel):
         # Load probe.
         positions = self._load_channel_positions()
 
+        # Update the list of channels for the waveform loader.
+        self._waveform_loader.channels = self._channels
+
         # TODO: support multiple channel groups.
         self._probe = MEA(positions=positions,
                           n_channels=self.n_channels)
-
-        self._create_waveform_loader()
 
     def _load_channel_positions(self):
         """Load the channel positions from the kwik file."""
@@ -346,9 +398,7 @@ class KwikModel(BaseModel):
         def filter(x):
             return apply_filter(x, b_filter)
 
-        # TODO: better normalization of the waveforms
         self._waveform_loader = WaveformLoader(n_samples=n_samples,
-                                               channels=self._channels,
                                                filter=filter,
                                                filter_margin=order * 3,
                                                )
@@ -375,20 +425,6 @@ class KwikModel(BaseModel):
     @property
     def n_recordings(self):
         return len(self._recordings)
-
-    def _recording_changed(self, value):
-        """Called when the recording number changes."""
-        if value not in self.recordings:
-            raise ValueError("The recording {0} is invalid.".format(value))
-        self._recording = value
-        # Traces.
-        if self._kwd is not None:
-            path = '/recordings/{0:d}/data'.format(self._recording)
-            self._traces = self._kwd.read(path)
-            # Create a new WaveformLoader if needed.
-            if self._waveform_loader is None:
-                self._create_waveform_loader()
-            self._waveform_loader.traces = self._traces
 
     @property
     def clusterings(self):
@@ -435,7 +471,7 @@ class KwikModel(BaseModel):
 
     @property
     def traces(self):
-        """Traces from the current recording (may be memory-mapped)."""
+        """Traces (memory-mapped)."""
         return self._traces
 
     @property
@@ -445,7 +481,8 @@ class KwikModel(BaseModel):
 
     @property
     def spike_times(self):
-        """Spike times (in seconds) from the current channel_group."""
+        """Spike times (in seconds) from the current channel_group.
+        The spike times of all recordings are concatenated."""
         sr = float(self._metadata['sample_rate'])
         return self._spike_samples.astype(np.float64) / sr
 

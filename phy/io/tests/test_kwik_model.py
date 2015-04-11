@@ -61,7 +61,7 @@ def test_concatenate_spikes():
     ae(concat, [2, 3, 5, 7, 18, 101])
 
 
-def test_kwik_open():
+def test_kwik_open_full():
 
     with TemporaryDirectory() as tempdir:
         # Create the test HDF5 file in the temporary directory.
@@ -109,10 +109,8 @@ def test_kwik_open():
         with raises(ValueError):
             kwik.clustering = 'foo'
         with raises(ValueError):
-            kwik.recording = 47
-        with raises(ValueError):
             kwik.channel_group = 42
-        assert kwik.n_recordings == 1
+        assert kwik.n_recordings == 2
 
         # TODO: test cluster_metadata.
         kwik.cluster_metadata
