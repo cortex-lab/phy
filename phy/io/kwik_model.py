@@ -330,6 +330,48 @@ class KwikModel(BaseModel):
             positions.append(position)
         return np.array(positions)
 
+    def _load_features_masks(self):
+
+        # Load features masks.
+        path = '{0:s}/features_masks'.format(self._channel_groups_path)
+
+        if self._kwx is not None:
+            fm = self._kwx.read(path)
+            self._features_masks = fm
+            self._features = PartialArray(fm, 0)
+
+            nfpc = self._metadata['nfeatures_per_channel']
+            nc = self.n_channels
+            # This partial array simulates a (n_spikes, n_channels) array.
+            self._masks = PartialArray(fm,
+                                       (slice(0, nfpc * nc, nfpc), 1))
+            assert self._masks.shape == (self.n_spikes, nc)
+
+    def _load_spikes(self):
+        # Load spike samples.
+        path = '{0:s}/time_samples'.format(self._spikes_path)
+
+        # Concatenate the spike samples from consecutive recordings.
+        _spikes = self._kwik.read(path)[:]
+        self._spike_recordings = self._kwik.read(
+            '{0:s}/recording'.format(self._spikes_path))[:]
+        self._spike_samples = _concatenate_spikes(_spikes,
+                                                  self._spike_recordings,
+                                                  self._recording_offsets)
+
+    def _load_spike_clusters(self):
+        # NOTE: we are ensured here that self._channel_group is valid.
+        path = '{0:s}/clusters/{1:s}'.format(self._spikes_path,
+                                             self._clustering)
+        self._spike_clusters = self._kwik.read(path)[:]
+
+    def _load_cluster_groups(self):
+        # Load the cluster groups from the Kwik file.
+        for cluster in self._clusters:
+            path = '{0:s}/{1:d}'.format(self._clustering_path, cluster)
+            grp = self._kwik.read_attr(path, 'cluster_group')
+            self._cluster_metadata.set_group([cluster], grp)
+
     def _load_traces(self):
         if self._kwd is not None:
             i = 0
@@ -365,51 +407,29 @@ class KwikModel(BaseModel):
         self._channels = _list_channels(self._kwik.h5py_file,
                                         self._channel_group)
 
-        # Load spike samples.
-        path = '{0:s}/time_samples'.format(self._spikes_path)
+        # Spikes.
+        self._load_spikes()
 
-        # Concatenate the spike samples from consecutive recordings.
-        _spikes = self._kwik.read(path)[:]
-        self._spike_recordings = self._kwik.read(
-            '{0:s}/recording'.format(self._spikes_path))[:]
-        self._spike_samples = _concatenate_spikes(_spikes,
-                                                  self._spike_recordings,
-                                                  self._recording_offsets)
+        # Features and masks.
+        self._load_features_masks()
 
-        # Load features masks.
-        path = '{0:s}/features_masks'.format(self._channel_groups_path)
-
-        if self._kwx is not None:
-            fm = self._kwx.read(path)
-            self._features_masks = fm
-            self._features = PartialArray(fm, 0)
-
-            nfpc = self._metadata['nfeatures_per_channel']
-            nc = self.n_channels
-            # This partial array simulates a (n_spikes, n_channels) array.
-            self._masks = PartialArray(fm,
-                                       (slice(0, nfpc * nc, nfpc), 1))
-            assert self._masks.shape == (self.n_spikes, nc)
-
-        # Load probe.
+        # Probe.
         positions = self._load_channel_positions()
-
-        # Update the list of channels for the waveform loader.
-        self._waveform_loader.channels = self._channels
-
         # TODO: support multiple channel groups.
         self._probe = MEA(positions=positions,
                           n_channels=self.n_channels)
+
+        # Update the list of channels for the waveform loader.
+        self._waveform_loader.channels = self._channels
 
     def _clustering_changed(self, value):
         """Called when the clustering changes."""
         if value not in self.clusterings:
             raise ValueError("The clustering {0} is invalid.".format(value))
         self._clustering = value
-        # NOTE: we are ensured here that self._channel_group is valid.
-        path = '{0:s}/clusters/{1:s}'.format(self._spikes_path,
-                                             self._clustering)
-        self._spike_clusters = self._kwik.read(path)[:]
+
+        # Spike clusters for the specified clustering.
+        self._load_spike_clusters()
 
         # Load cluster metadata (cluster groups).
         self._cluster_metadata = ClusterMetadata()
@@ -419,11 +439,7 @@ class KwikModel(BaseModel):
             # Default group is unsorted.
             return 3
 
-        # Load the cluster groups from the Kwik file.
-        for cluster in self._clusters:
-            path = '{0:s}/{1:d}'.format(self._clustering_path, cluster)
-            grp = self._kwik.read_attr(path, 'cluster_group')
-            self._cluster_metadata.set_group([cluster], grp)
+        self._load_cluster_groups()
 
     # Data
     # -------------------------------------------------------------------------
