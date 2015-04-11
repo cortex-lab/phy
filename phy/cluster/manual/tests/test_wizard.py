@@ -12,7 +12,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ..wizard import Wizard
-from ..cluster_info import ClusterMetadata
+from ..cluster_metadata import ClusterMetadata
 
 
 #------------------------------------------------------------------------------
