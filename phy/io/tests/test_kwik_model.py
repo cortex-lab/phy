@@ -47,6 +47,7 @@ def test_kwik_utility():
                                     n_samples_traces=_N_SAMPLES_TRACES)
         model = KwikModel(filename)
 
+        model._kwik.open()
         assert _list_channel_groups(model._kwik.h5py_file) == [1]
         assert _list_recordings(model._kwik.h5py_file) == [0, 1]
         assert _list_clusterings(model._kwik.h5py_file, 1) == ['main']

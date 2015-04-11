@@ -305,7 +305,8 @@ class KwikModel(BaseModel):
             # Choose the default channel group if not specified.
             channel_group = self._channel_groups[0]
         # Load the channel group.
-        self.channel_group = channel_group
+        self._channel_group = channel_group
+        self._channel_group_changed(channel_group)
 
     def _load_channel_positions(self):
         """Load the channel positions from the kwik file."""
@@ -359,7 +360,8 @@ class KwikModel(BaseModel):
         if clustering is None and self.clusterings:
             clustering = self.clusterings[0]
         # Load the specified clustering.
-        self.clustering = clustering
+        self._clustering = clustering
+        self._clustering_changed(clustering)
 
     def _load_cluster_groups(self):
         # Load the cluster groups from the Kwik file.
@@ -426,8 +428,18 @@ class KwikModel(BaseModel):
         self._load_clusterings(clustering)
         self._load_traces()
 
+        # No need to keep the kwik file open.
+        self._kwik.close()
+
     # Changing channel group and clustering
     # -------------------------------------------------------------------------
+
+    def _open_kwik_if_needed(self):
+        if not self._kwik.is_open():
+            self._kwik.open()
+            return True
+        else:
+            return False
 
     def _channel_group_changed(self, value):
         """Called when the channel group changes."""
@@ -436,10 +448,13 @@ class KwikModel(BaseModel):
         self._channel_group = value
 
         # Load data.
+        _to_close = self._open_kwik_if_needed()
         self._load_channels()
         self._load_spikes()
         self._load_features_masks()
         self._load_probe()
+        if _to_close:
+            self._kwik.close()
 
         # Update the list of channels for the waveform loader.
         self._waveform_loader.channels = self._channels
@@ -451,9 +466,12 @@ class KwikModel(BaseModel):
         self._clustering = value
 
         # Load data.
+        _to_close = self._open_kwik_if_needed()
         self._create_cluster_metadata()
         self._load_spike_clusters()
         self._load_cluster_groups()
+        if _to_close:
+            self._kwik.close()
 
     # Data
     # -------------------------------------------------------------------------
