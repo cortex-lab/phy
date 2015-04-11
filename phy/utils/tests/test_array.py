@@ -10,11 +10,21 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ..array import (_unique, _normalize, _index_of, _as_array, _as_tuple,
-                     chunk_bounds, excerpts, data_chunk,
+from ..array import (_unique,
+                     _normalize,
+                     _index_of,
+                     _as_array,
+                     _as_tuple,
+                     chunk_bounds,
+                     excerpts,
+                     data_chunk,
                      get_excerpts,
-                     PartialArray, _partial_shape,
-                     _range_from_slice, _pad)
+                     PartialArray,
+                     _partial_shape,
+                     _range_from_slice,
+                     _pad,
+                     _concatenate_virtual_arrays,
+                     )
 from ...io.mock.artificial import artificial_spike_clusters
 
 
@@ -162,6 +172,11 @@ def test_as_array():
 
     with raises(ValueError):
         _as_array(map)
+
+
+def test_concatenate_virtual_arrays():
+    arr1 = np.random.rand(5, 2)
+    _concatenate_virtual_arrays([arr1])
 
 
 #------------------------------------------------------------------------------

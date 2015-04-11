@@ -163,6 +163,14 @@ def _pad(arr, n, dir='right'):
         return out
 
 
+def _concatenate_virtual_arrays(arrs):
+    """Return a virtual concatenate of several NumPy arrays."""
+    assert isinstance(arrs, list)
+    n = len(arrs)
+    if n == 1:
+        return arrs[0]
+
+
 # -----------------------------------------------------------------------------
 # Chunking functions
 # -----------------------------------------------------------------------------
