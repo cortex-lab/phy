@@ -236,7 +236,7 @@ class KwikModel(BaseModel):
         self._channel_groups = _list_channel_groups(self._kwik.h5py_file)
         self._recordings = _list_recordings(self._kwik.h5py_file)
         # This will be updated later if a KWD file is present.
-        self._recording_offsets = [0] + [0] * len(self._recordings)
+        self._recording_offsets = [0] * (len(self._recordings) + 1)
 
         # Load the traces.
         self._load_traces()
@@ -259,7 +259,7 @@ class KwikModel(BaseModel):
     def _load_traces(self):
         if self._kwd is not None:
             i = 0
-            self._recording_offsets = [0]
+            self._recording_offsets = []
             traces = []
             for rec in self._recordings:
                 path = '/recordings/{0:d}/data'.format(rec)
