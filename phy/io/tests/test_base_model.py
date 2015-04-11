@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 from pytest import raises
-import numpy as np
 
 from ..base_model import BaseModel
 

@@ -6,26 +6,19 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os
 import os.path as op
 from random import randint
 
 import numpy as np
-from numpy.testing import assert_array_equal as ae
-import h5py
-from pytest import raises
 
 from ...io.mock.artificial import (artificial_spike_samples,
                                    artificial_spike_clusters,
                                    artificial_features,
                                    artificial_masks,
                                    artificial_traces)
-from ...electrode.mea import MEA, staggered_positions
-from ...utils.tempdir import TemporaryDirectory
+from ...electrode.mea import staggered_positions
 from ..h5 import open_h5
-from ..kwik_model import (KwikModel, _list_channel_groups, _list_channels,
-                          _list_recordings,
-                          _list_clusterings, _kwik_filenames)
+from ..kwik_model import _kwik_filenames
 
 
 #------------------------------------------------------------------------------
