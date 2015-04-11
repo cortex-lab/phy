@@ -91,7 +91,7 @@ def _concatenate_spikes(spikes, recs, offsets):
     spikes = _as_array(spikes)
     offsets = _as_array(offsets)
     recs = _as_array(recs)
-    return spikes + offsets[recs]
+    return (spikes + offsets[recs]).astype(np.uint64)
 
 
 _COLOR_MAP = np.array([[1., 1., 1.],
