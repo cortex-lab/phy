@@ -395,7 +395,7 @@ class Session(BaseSession):
 
         @self.cluster_store.progress_reporter.connect
         def on_report(value, value_max):
-            print("Generating the cluster store: "
+            print("Initializing the cluster store: "
                   "{0:.2f}%.".format(100 * value / float(value_max)),
                   end='\r')
 
