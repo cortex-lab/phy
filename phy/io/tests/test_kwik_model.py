@@ -107,6 +107,7 @@ def test_kwik_open():
             kwik.recording = 47
         with raises(ValueError):
             kwik.channel_group = 42
+        assert kwik.n_recordings == 1
 
         # TODO: test cluster_metadata.
         kwik.cluster_metadata

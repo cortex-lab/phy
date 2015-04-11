@@ -372,6 +372,10 @@ class KwikModel(BaseModel):
     def recordings(self):
         return self._recordings
 
+    @property
+    def n_recordings(self):
+        return len(self._recordings)
+
     def _recording_changed(self, value):
         """Called when the recording number changes."""
         if value not in self.recordings:
