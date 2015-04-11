@@ -200,6 +200,8 @@ class ConcatenatedArrays(object):
         self.offsets = np.concatenate([[0], np.cumsum([arr.shape[0]
                                                        for arr in arrs])],
                                       axis=0)
+        self.dtype = arrs[0].dtype if arrs else None
+        self.shape = (self.offsets[-1],) + arrs[0].shape[1:]
 
     def _get_recording(self, index):
         """Return the recording that contains a given index."""
