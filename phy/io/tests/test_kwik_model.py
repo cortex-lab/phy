@@ -84,7 +84,7 @@ def test_kwik_open_full():
         assert kwik.n_spikes == _N_SPIKES
 
         assert kwik.spike_samples.shape == (_N_SPIKES,)
-        assert kwik.spike_samples.dtype == np.int64
+        assert kwik.spike_samples.dtype == np.uint64
 
         # Make sure the spike samples are increasing, even with multiple
         # recordings.
