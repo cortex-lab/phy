@@ -56,11 +56,20 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
 
         # Create spike times.
         spike_samples = artificial_spike_samples(n_spikes).astype(np.int64)
+        spike_recordings = np.zeros(n_spikes, dtype=np.uint16)
+        # Size of the first recording.
+        recording_size = 2 * n_spikes // 3
+        # Find the recording offset.
+        recording_offset = spike_samples[recording_size]
+        recording_offset += spike_samples[recording_size + 1]
+        recording_offset //= 2
+        spike_recordings[recording_size:] = 1
 
         if spike_samples.max() >= n_samples_traces:
             raise ValueError("There are too many spikes: decrease 'n_spikes'.")
 
         f.write('/channel_groups/1/spikes/time_samples', spike_samples)
+        f.write('/channel_groups/1/spikes/recording', spike_recordings)
 
         # Create spike clusters.
         spike_clusters = artificial_spike_clusters(n_spikes,
@@ -84,6 +93,7 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
 
         # Create recordings.
         f.write_attr('/recordings/0', 'name', 'recording_0')
+        f.write_attr('/recordings/1', 'name', 'recording_1')
 
     # Create the kwx file.
     if with_kwx:
@@ -102,6 +112,9 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
             f.write_attr('/', 'kwik_version', 2)
             traces = artificial_traces(n_samples_traces, n_channels)
             # TODO: int16 traces
-            f.write('/recordings/0/data', traces.astype(np.float32))
+            f.write('/recordings/0/data',
+                    traces[:recording_offset, ...].astype(np.float32))
+            f.write('/recordings/1/data',
+                    traces[recording_offset:, ...].astype(np.float32))
 
     return filename
