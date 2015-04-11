@@ -195,6 +195,13 @@ def test_concatenate_virtual_arrays():
     ae(concat[:3], arr1[:3])
     ae(concat[1:4], arr1[1:4])
 
+    ae(concat[5:], arr2)
+    ae(concat[6:], arr2[1:])
+    ae(concat[5:8], arr2[:3])
+    ae(concat[7:9], arr2[2:])
+    ae(concat[7:12], arr2[2:])
+    ae(concat[5:-1], arr2[:-1])
+
 
 #------------------------------------------------------------------------------
 # Test chunking

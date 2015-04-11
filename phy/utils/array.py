@@ -223,17 +223,18 @@ class ConcatenatedArrays(object):
             start = 0
         if stop is None:
             stop = self.offsets[-1]
+        if stop < 0:
+            stop = self.offsets[-1] + stop
         # Get the recording indices of the first and last item.
         rec_start = self._get_recording(start)
         rec_stop = self._get_recording(stop)
         assert 0 <= rec_start <= rec_stop < len(self.arrs)
-        # Single array case.
-        if rec_start == rec_stop:
-            return self.arrs[rec_start][item]
-        # Multiple arrays: need to find the start and stop relative to the
-        # arrays.
+        # Find the start and stop relative to the arrays.
         start_rel = start - self.offsets[rec_start]
         stop_rel = stop - self.offsets[rec_stop]
+        # Single array case.
+        if rec_start == rec_stop:
+            return self.arrs[rec_start][start_rel:stop_rel]
         chunk_start = self.arrs[rec_start][start_rel:]
         chunk_stop = self.arrs[rec_stop][:stop_rel]
         # Concatenate all chunks.
