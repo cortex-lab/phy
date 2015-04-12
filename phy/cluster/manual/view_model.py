@@ -157,7 +157,7 @@ class FeatureViewModel(BaseViewModel):
         # (n_spikes, n_channels, n_features)
         # because that's what the FeatureView expects currently.
         n_fet = self.model.n_features_per_channel
-        n_channels = self.model.n_channels
+        n_channels = len(self.model.channel_order)
         shape = (-1, n_channels, n_fet)
         features = features[:, :n_fet * n_channels].reshape(shape)
         # Scale factor.
