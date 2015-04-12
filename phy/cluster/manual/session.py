@@ -125,8 +125,6 @@ class FeatureMasks(StoreItem):
     def _store_extra_fields(self, clusters):
         """Store all extra mask fields."""
 
-        self.progress_reporter.set_max(masks_extra=len(clusters))
-
         for cluster in clusters:
 
             # Load the masks.
@@ -162,6 +160,7 @@ class FeatureMasks(StoreItem):
         cluster_sizes = {cluster: len(spikes)
                          for cluster, spikes in spikes_per_cluster.items()}
         clusters = sorted(spikes_per_cluster)
+        self.progress_reporter.set_max(masks_extra=len(clusters))
 
         # TODO: refactor this big function when supporting clustering actions.
 
@@ -234,11 +233,9 @@ class FeatureMasks(StoreItem):
         # Store extra fields from the masks.
         self._store_extra_fields(clusters)
 
-    def merge(self, up):
-        # TODO
-        pass
+        self.progress_reporter.set_complete()
 
-    def assign(self, up):
+    def update(self, up):
         # TODO
         pass
 
