@@ -99,7 +99,7 @@ def test_kwik_open_full():
 
         assert kwik.spike_clusters.shape == (_N_SPIKES,)
         assert kwik.spike_clusters.min() in (0, 1, 2)
-        assert kwik.spike_clusters.max() == _N_CLUSTERS - 1
+        assert kwik.spike_clusters.max() in(_N_CLUSTERS - 2, _N_CLUSTERS - 1)
 
         assert kwik.features.shape == (_N_SPIKES,
                                        _N_CHANNELS * _N_FETS)

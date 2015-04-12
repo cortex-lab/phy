@@ -302,8 +302,13 @@ class KwikModel(BaseModel):
         self._metadata = metadata
 
     def _load_probe(self):
-        positions = self._load_channel_positions()
         # TODO: support multiple channel groups.
+        positions = []
+        for channel in self.channels:
+            path = '{0:s}/{1:d}'.format(self._channels_path, channel)
+            position = self._kwik.read_attr(path, 'position')
+            positions.append(position)
+        positions = np.array(positions)
         self._probe = MEA(positions=positions,
                           n_channels=self.n_channels)
 
@@ -316,6 +321,8 @@ class KwikModel(BaseModel):
     def _load_channels(self):
         self._channels = _list_channels(self._kwik.h5py_file,
                                         self._channel_group)
+        self._channel_order = self._kwik.read_attr(self._channel_groups_path,
+                                                   'channel_order')
 
     def _load_channel_groups(self, channel_group=None):
         self._channel_groups = _list_channel_groups(self._kwik.h5py_file)
@@ -325,15 +332,6 @@ class KwikModel(BaseModel):
         # Load the channel group.
         self._channel_group = channel_group
         self._channel_group_changed(channel_group)
-
-    def _load_channel_positions(self):
-        """Load the channel positions from the kwik file."""
-        positions = []
-        for channel in self.channels:
-            path = '{0:s}/{1:d}'.format(self._channels_path, channel)
-            position = self._kwik.read_attr(path, 'position')
-            positions.append(position)
-        return np.array(positions)
 
     def _load_features_masks(self):
 
