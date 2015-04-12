@@ -134,10 +134,13 @@ def test_cluster_store_1():
             def store_cluster(self, cluster, spikes):
                 self.memory_store.store(cluster, n_spikes=len(spikes))
 
-            def merge(self, up):
-                n = sum(len(up.old_spikes_per_cluster[cl])
-                        for cl in up.deleted)
-                self.memory_store.store(up.added[0], n_spikes=n)
+            def update(self, up):
+                if up.description == 'merge':
+                    n = sum(len(up.old_spikes_per_cluster[cl])
+                            for cl in up.deleted)
+                    self.memory_store.store(up.added[0], n_spikes=n)
+                else:
+                    super(MyItem, self).update(up)
 
         cs.register_item(MyItem)
 
@@ -154,15 +157,17 @@ def test_cluster_store_1():
         spc[20] = spikes
         del spc[0]
         del spc[1]
-        up = UpdateInfo(added=[20], deleted=[0, 1],
+        up = UpdateInfo(description='merge',
+                        added=[20],
+                        deleted=[0, 1],
                         spikes=spikes,
                         new_spikes_per_cluster=spc,
                         old_spikes_per_cluster=spikes_per_cluster,)
 
-        cs.merge(up)
+        cs.update(up)
 
         # Check the list of clusters in the store.
-        ae(cs.memory_store.clusters, list(range(n_clusters)) + [20])
+        ae(cs.memory_store.clusters, list(range(2, n_clusters)) + [20])
         ae(cs.disk_store.clusters, [])
         assert cs.n_spikes(20) == len(spikes)
 

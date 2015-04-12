@@ -302,20 +302,8 @@ class ClusterStore(object):
         self._memory.delete(up.deleted)
         self._disk.delete(up.deleted)
 
-        if up.description == 'merge':
-            self.merge(up)
-        elif up.description == 'assign':
-            self.assign(up)
-        else:
-            raise NotImplementedError()
-
-    def merge(self, up):
         for item in self._items:
-            item.merge(up)
-
-    def assign(self, up):
-        for item in self._items:
-            item.assign(up)
+            item.update(up)
 
     def generate(self, spikes_per_cluster):
         """Populate the cache for all registered fields and the specified
@@ -379,11 +367,7 @@ class StoreItem(object):
                   cluster))
             self.store_cluster(cluster, spikes_per_cluster[cluster])
 
-    def merge(self, up):
-        """May be overridden."""
-        self.assign(up)
-
-    def assign(self, up):
+    def update(self, up):
         """May be overridden. No need to delete old clusters here."""
         for cluster in up.added:
             self.store_cluster(cluster, up.new_spikes_per_cluster[cluster])
