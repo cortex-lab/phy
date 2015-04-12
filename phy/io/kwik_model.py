@@ -278,7 +278,6 @@ class KwikModel(BaseModel):
         self._waveform_loader = WaveformLoader(n_samples=n_samples,
                                                filter=filter,
                                                filter_margin=order * 3,
-                                               channels=self._channel_order,
                                                )
 
     def _update_waveform_loader(self):
@@ -287,6 +286,9 @@ class KwikModel(BaseModel):
         else:
             self._waveform_loader.traces = np.zeros((0, self.n_channels),
                                                     dtype=np.float32)
+
+        # Update the list of channels for the waveform loader.
+        self._waveform_loader.channels = self._channel_order
 
     def _create_cluster_metadata(self):
         self._cluster_metadata = ClusterMetadata()
@@ -452,6 +454,9 @@ class KwikModel(BaseModel):
         # Load the data.
         self._load_meta()
 
+        # This needs metadata.
+        self._create_waveform_loader()
+
         self._load_recordings()
 
         # This generates the recording offset.
@@ -459,20 +464,17 @@ class KwikModel(BaseModel):
 
         self._load_channel_groups(channel_group)
 
-        # This needs metadata, channels, channel order.
-        self._create_waveform_loader()
-
-        # This needs the recording offsets.
-        # This loads channels, spikes, probe.
-        self._channel_group_changed(self._channel_group)
-
         # This needs channel groups.
         self._load_clusterings(clustering)
+
+        # This needs the recording offsets.
+        # This loads channels, channel_order, spikes, probe.
+        self._channel_group_changed(self._channel_group)
 
         # This loads spike clusters and cluster groups.
         self._clustering_changed(self._clustering)
 
-        # This needs channels and waveform loader.
+        # This needs channels, channel_order, and waveform loader.
         self._update_waveform_loader()
 
         # No need to keep the kwik file open.
@@ -509,7 +511,7 @@ class KwikModel(BaseModel):
             self._kwik.close()
 
         # Update the list of channels for the waveform loader.
-        self._waveform_loader.channels = self._channels
+        self._waveform_loader.channels = self._channel_order
 
     def _clustering_changed(self, value):
         """Called when the clustering changes."""

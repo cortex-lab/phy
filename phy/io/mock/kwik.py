@@ -75,7 +75,7 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
         f.write('/channel_groups/1/spikes/recording', spike_recordings)
         f.write_attr('/channel_groups/1',
                      'channel_order',
-                     np.arange(n_channels),
+                     np.arange(1, n_channels - 1)[::-1],
                      )
 
         # Create spike clusters.
