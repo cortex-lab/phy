@@ -21,6 +21,7 @@ from ..utils.logging import debug
 from ..utils.array import (PartialArray,
                            _concatenate_virtual_arrays,
                            _as_array,
+                           _unique,
                            )
 
 
@@ -612,6 +613,12 @@ class KwikModel(BaseModel):
     def cluster_metadata(self):
         """ClusterMetadata instance holding information about the clusters."""
         return self._cluster_metadata
+
+    @property
+    def cluster_groups(self):
+        clusters = _unique(self._spike_clusters)
+        return {cluster: self._cluster_metadata.group(cluster)
+                for cluster in clusters}
 
     # Close
     # -------------------------------------------------------------------------

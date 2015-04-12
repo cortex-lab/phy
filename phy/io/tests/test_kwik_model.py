@@ -126,6 +126,8 @@ def test_kwik_open_full():
         # Test cluster groups.
         for cluster in range(_N_CLUSTERS):
             assert kwik.cluster_metadata.group(cluster) == cluster % 4
+        for cluster, group in kwik.cluster_groups.items():
+            assert group == cluster % 4
 
         # Test probe.
         assert isinstance(kwik.probe, MEA)
