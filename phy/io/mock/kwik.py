@@ -107,9 +107,11 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
         with open_h5(kwx_filename, 'w') as f:
             f.write_attr('/', 'kwik_version', 2)
             features = artificial_features(n_spikes,
-                                           n_channels * n_features_per_channel)
+                                           (n_channels - 2) *
+                                           n_features_per_channel)
             masks = artificial_masks(n_spikes,
-                                     n_channels * n_features_per_channel)
+                                     (n_channels - 2) *
+                                     n_features_per_channel)
             fm = np.dstack((features, masks)).astype(np.float32)
             f.write('/channel_groups/1/features_masks', fm)
 

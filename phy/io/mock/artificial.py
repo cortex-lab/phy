@@ -80,7 +80,7 @@ class MockModel(BaseModel):
             return _random_color()
 
         positions = staggered_positions(self.n_channels)
-        self._probe = MEA(positions=positions)
+        self._probe = MEA(channels=self.channels, positions=positions)
         self._traces = artificial_traces(self.n_samples_traces,
                                          self.n_channels)
         self._spike_clusters = artificial_spike_clusters(self.n_spikes,

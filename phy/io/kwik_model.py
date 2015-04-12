@@ -314,14 +314,14 @@ class KwikModel(BaseModel):
 
     def _load_probe(self):
         # TODO: support multiple channel groups.
+        # We take the channel order into account here.
         positions = []
-        for channel in self.channels:
+        for channel in self._channel_order:
             path = '{0:s}/{1:d}'.format(self._channels_path, channel)
             position = self._kwik.read_attr(path, 'position')
             positions.append(position)
         positions = np.array(positions)
-        self._probe = MEA(positions=positions,
-                          n_channels=self.n_channels)
+        self._probe = MEA(channels=self._channel_order, positions=positions)
 
     def _load_recordings(self):
         # Load recordings.
@@ -354,7 +354,7 @@ class KwikModel(BaseModel):
             self._features = PartialArray(fm, 0)
 
             nfpc = self._metadata['nfeatures_per_channel']
-            nc = self.n_channels
+            nc = len(self.channel_order)
             # This partial array simulates a (n_spikes, n_channels) array.
             self._masks = PartialArray(fm,
                                        (slice(0, nfpc * nc, nfpc), 1))
@@ -543,6 +543,12 @@ class KwikModel(BaseModel):
         """List of channels in the current channel group."""
         # TODO: rename to channel_ids?
         return self._channels
+
+    @property
+    def channel_order(self):
+        """List of channels in the current channel group, in the order
+        corresponding to the waveforms and features."""
+        return self._channel_order
 
     @property
     def n_channels(self):

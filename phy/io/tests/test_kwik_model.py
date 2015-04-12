@@ -76,6 +76,9 @@ def test_kwik_open_full():
         with raises(ValueError):
             KwikModel()
 
+        # NOTE: n_channels - 2 because we use a special channel order.
+        nc = _N_CHANNELS - 2
+
         # Test implicit open() method.
         kwik = KwikModel(filename)
 
@@ -83,6 +86,7 @@ def test_kwik_open_full():
         assert kwik.channels == list(range(_N_CHANNELS))
         assert kwik.n_channels == _N_CHANNELS
         assert kwik.n_spikes == _N_SPIKES
+        ae(kwik.channel_order, np.arange(1, _N_CHANNELS - 1)[::-1])
 
         assert kwik.spike_samples.shape == (_N_SPIKES,)
         assert kwik.spike_samples.dtype == np.uint64
@@ -104,16 +108,13 @@ def test_kwik_open_full():
         assert kwik.spike_clusters.min() in (0, 1, 2)
         assert kwik.spike_clusters.max() in(_N_CLUSTERS - 2, _N_CLUSTERS - 1)
 
-        assert kwik.features.shape == (_N_SPIKES,
-                                       _N_CHANNELS * _N_FETS)
+        assert kwik.features.shape == (_N_SPIKES, nc * _N_FETS)
         kwik.features[0, ...]
 
-        assert kwik.masks.shape == (_N_SPIKES, _N_CHANNELS)
+        assert kwik.masks.shape == (_N_SPIKES, nc)
 
         assert kwik.traces.shape == (_N_SAMPLES_TRACES, _N_CHANNELS)
 
-        # NOTE: n_channels - 2 because we use a special channel order.
-        nc = _N_CHANNELS - 2
         assert kwik.waveforms[0].shape == (1, 40, nc)
         assert kwik.waveforms[-1].shape == (1, 40, nc)
         assert kwik.waveforms[-10].shape == (1, 40, nc)
@@ -136,8 +137,8 @@ def test_kwik_open_full():
 
         # Test probe.
         assert isinstance(kwik.probe, MEA)
-        assert kwik.probe.positions.shape == (_N_CHANNELS, 2)
-        ae(kwik.probe.positions, staggered_positions(_N_CHANNELS))
+        assert kwik.probe.positions.shape == (nc, 2)
+        ae(kwik.probe.positions, staggered_positions(_N_CHANNELS)[1:-1][::-1])
 
         kwik.close()
 
