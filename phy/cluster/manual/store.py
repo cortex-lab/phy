@@ -298,9 +298,12 @@ class ClusterStore(object):
 
     def update(self, up):
         # TODO: update self._spikes_per_cluster
-        # Delete the deleted clusters from the store.
-        self._memory.delete(up.deleted)
-        self._disk.delete(up.deleted)
+
+        # No need to delete the old clusters from the store, we can keep
+        # them for possible undo, and regularly clean up the store.
+
+        # self._memory.delete(up.deleted)
+        # self._disk.delete(up.deleted)
 
         for item in self._items:
             item.update(up)

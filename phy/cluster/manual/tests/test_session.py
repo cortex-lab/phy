@@ -265,3 +265,39 @@ def test_session_kwik():
         view_0.close()
         view_1.close()
         session.close()
+
+
+def test_session_clustering():
+
+    n_clusters = 5
+    n_spikes = 50
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 3000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=n_clusters,
+                                    n_spikes=n_spikes,
+                                    n_channels=n_channels,
+                                    n_features_per_channel=n_fets,
+                                    n_samples_traces=n_samples_traces)
+
+        session = _start_manual_clustering(filename=filename,
+                                           tempdir=tempdir)
+        nc = n_channels - 2
+        cs = session.cluster_store
+
+        # Merge two clusters.
+        clusters = [0, 2]
+        n = np.sum(np.in1d(session.model.spike_clusters, clusters))
+        session.merge(clusters)
+
+        # Check that the features and masks of the merged cluster have
+        # the right shapes.
+        assert cs.features(5).shape == (n, nc, n_fets)
+        assert cs.masks(5).shape == (n, nc)
+
+        # TODO: more tests (several actions, undo, redo, etc.)

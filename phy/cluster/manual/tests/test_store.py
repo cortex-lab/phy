@@ -167,7 +167,7 @@ def test_cluster_store_1():
         cs.update(up)
 
         # Check the list of clusters in the store.
-        ae(cs.memory_store.clusters, list(range(2, n_clusters)) + [20])
+        ae(cs.memory_store.clusters, list(range(0, n_clusters)) + [20])
         ae(cs.disk_store.clusters, [])
         assert cs.n_spikes(20) == len(spikes)
 

@@ -23,7 +23,7 @@ from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
 from .clustering import Clustering
-from ._utils import _spikes_per_cluster
+from ._utils import _spikes_per_cluster, _concatenate_per_cluster_arrays
 from .selector import Selector
 from .store import ClusterStore, StoreItem
 from .view_model import (WaveformViewModel,
@@ -235,7 +235,6 @@ class FeatureMasks(StoreItem):
 
                 # Go through the clusters appearing in the chunk.
                 for cluster in sorted(chunk_spc.keys()):
-
                     self._store_cluster(cluster,
                                         chunk_spikes,
                                         chunk_spc,
@@ -251,8 +250,31 @@ class FeatureMasks(StoreItem):
         self.progress_reporter.set_complete()
 
     def update(self, up):
-        # TODO
-        pass
+        if up.description == 'merge':
+            clusters = up.deleted
+            spc = up.old_spikes_per_cluster
+            # We load all masks and features of the merged clusters.
+            for name, shape in [('features',
+                                 (-1, self.n_channels, self.n_features)),
+                                ('masks',
+                                 (-1, self.n_channels)),
+                                ]:
+                arrays = {cluster: self.disk_store.load(cluster,
+                                                        name,
+                                                        dtype=np.float32,
+                                                        shape=shape)
+                          for cluster in clusters}
+                # Then, we concatenate them using the right insertion order
+                # as defined by the spikes.
+
+                # OPTIM: this could be made a bit faster by passing
+                # both arrays at once.
+                concat = _concatenate_per_cluster_arrays(spc, arrays)
+
+                # Finally, we store the result into the new cluster.
+                self.disk_store.store(up.added[0], **{name: concat})
+        else:
+            raise NotImplementedError()
 
 
 #------------------------------------------------------------------------------
