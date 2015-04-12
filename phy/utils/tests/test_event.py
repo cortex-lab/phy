@@ -88,3 +88,9 @@ def test_progress_reporter():
     assert not pr.is_complete()
     pr.set(channel_1=10, channel_2=20)
     assert pr.is_complete()
+
+    pr.set(channel_1=9, channel_2=19)
+    assert not pr.is_complete()
+    pr.set_complete()
+    assert pr.is_complete()
+    assert _completed == [True] * 3
