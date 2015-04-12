@@ -94,7 +94,7 @@ class FeatureMasks(StoreItem):
         super(FeatureMasks, self).__init__(*args, **kwargs)
 
         self.n_features = self.model.n_features_per_channel
-        self.n_channels = self.model.n_channels
+        self.n_channels = len(self.model.channel_order)
         self.n_spikes = self.model.n_spikes
         self.n_chunks = self.n_spikes // self.chunk_size + 1
 
@@ -205,6 +205,11 @@ class FeatureMasks(StoreItem):
                     # Extract features and masks for that cluster, in the
                     # current chunk.
                     tmp = sub_fm[idx, :]
+
+                    # NOTE: channel order has already been taken into account
+                    # by SpikeDetekt2 when saving the features and wavforms.
+                    # All we need to know here is the number of channels
+                    # in channel_order, there is no need to reorder.
 
                     # Features.
                     f = tmp[:, :nc * nf, 0]
