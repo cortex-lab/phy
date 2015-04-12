@@ -154,6 +154,50 @@ class FeatureMasks(StoreItem):
             # Update the progress reporter.
             self.progress_reporter.increment('masks_extra')
 
+    def _store_cluster(self,
+                       cluster,
+                       chunk_spikes,
+                       chunk_spikes_per_cluster,
+                       chunk_features_masks,
+                       ):
+
+        nc = self.n_channels
+        nf = self.n_features
+
+        # Number of spikes in the cluster and in the current
+        # chunk.
+        ns = len(chunk_spikes_per_cluster[cluster])
+
+        # Find the indices of the spikes in that cluster
+        # relative to the chunk.
+        idx = _index_of(chunk_spikes_per_cluster[cluster], chunk_spikes)
+
+        # Extract features and masks for that cluster, in the
+        # current chunk.
+        tmp = chunk_features_masks[idx, :]
+
+        # NOTE: channel order has already been taken into account
+        # by SpikeDetekt2 when saving the features and wavforms.
+        # All we need to know here is the number of channels
+        # in channel_order, there is no need to reorder.
+
+        # Features.
+        f = tmp[:, :nc * nf, 0]
+        assert f.shape == (ns, nc * nf)
+        f = f.ravel().astype(np.float32)
+
+        # Masks.
+        m = tmp[:, :nc * nf, 1][:, ::nf]
+        assert m.shape == (ns, nc)
+        m = m.ravel().astype(np.float32)
+
+        # Save the data to disk.
+        self.disk_store.store(cluster,
+                              features=f,
+                              masks=m,
+                              append=True,
+                              )
+
     def store_all_clusters(self, spikes_per_cluster):
         """Initialize all cluster files, loop over all spikes, and
         copy the data."""
@@ -173,59 +217,30 @@ class FeatureMasks(StoreItem):
             fm = self.model.features_masks
             assert fm.shape[0] == self.n_spikes
 
-            nc = self.n_channels
-            nf = self.n_features
-
             for i in range(self.n_chunks):
                 a, b = i * self.chunk_size, (i + 1) * self.chunk_size
 
                 # Load a chunk from HDF5.
-                sub_fm = fm[a:b]
-                assert isinstance(sub_fm, np.ndarray)
-                if sub_fm.shape[0] == 0:
+                chunk_features_masks = fm[a:b]
+                assert isinstance(chunk_features_masks, np.ndarray)
+                if chunk_features_masks.shape[0] == 0:
                     break
 
-                sub_sc = self.model.spike_clusters[a:b]
-                sub_spikes = np.arange(a, b)
+                chunk_spike_clusters = self.model.spike_clusters[a:b]
+                chunk_spikes = np.arange(a, b)
 
                 # Split the spikes.
-                sub_spc = _spikes_per_cluster(sub_spikes, sub_sc)
+                chunk_spc = _spikes_per_cluster(chunk_spikes,
+                                                chunk_spike_clusters)
 
                 # Go through the clusters appearing in the chunk.
-                for cluster in sorted(sub_spc.keys()):
-                    # Number of spikes in the cluster and in the current
-                    # chunk.
-                    ns = len(sub_spc[cluster])
+                for cluster in sorted(chunk_spc.keys()):
 
-                    # Find the indices of the spikes in that cluster
-                    # relative to the chunk.
-                    idx = _index_of(sub_spc[cluster], sub_spikes)
-
-                    # Extract features and masks for that cluster, in the
-                    # current chunk.
-                    tmp = sub_fm[idx, :]
-
-                    # NOTE: channel order has already been taken into account
-                    # by SpikeDetekt2 when saving the features and wavforms.
-                    # All we need to know here is the number of channels
-                    # in channel_order, there is no need to reorder.
-
-                    # Features.
-                    f = tmp[:, :nc * nf, 0]
-                    assert f.shape == (ns, nc * nf)
-                    f = f.ravel().astype(np.float32)
-
-                    # Masks.
-                    m = tmp[:, :nc * nf, 1][:, ::nf]
-                    assert m.shape == (ns, nc)
-                    m = m.ravel().astype(np.float32)
-
-                    # Save the data to disk.
-                    self.disk_store.store(cluster,
-                                          features=f,
-                                          masks=m,
-                                          append=True,
-                                          )
+                    self._store_cluster(cluster,
+                                        chunk_spikes,
+                                        chunk_spc,
+                                        chunk_features_masks,
+                                        )
 
                 # Update the progress reporter.
                 self.progress_reporter.increment('features_masks')
