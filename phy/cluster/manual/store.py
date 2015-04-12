@@ -14,7 +14,7 @@ import numpy as np
 
 from ...utils.array import _is_array_like, _index_of
 from ...utils.logging import debug
-from ...ext.six import string_types
+from ...ext.six import string_types, integer_types
 from ...utils.event import ProgressReporter
 
 
@@ -71,6 +71,13 @@ def _load_ndarray(f, dtype=None, shape=None):
         return arr
 
 
+def _as_int(x):
+    if isinstance(x, integer_types):
+        return x
+    x = np.asscalar(x)
+    return x
+
+
 class DiskStore(object):
     """Store cluster-related data in HDF5 files."""
     def __init__(self, directory):
@@ -96,11 +103,13 @@ class DiskStore(object):
         """Return the absolute path of a cluster in the disk store."""
         # TODO: subfolders
         # Example of filename: '123.mykey'.
+        cluster = _as_int(cluster)
         filename = '{0:d}.{1:s}'.format(cluster, key)
         return op.realpath(op.join(self._directory, filename))
 
     def _cluster_file_exists(self, cluster, key):
         """Return whether a cluster file exists."""
+        cluster = _as_int(cluster)
         return op.exists(self._cluster_path(cluster, key))
 
     def _is_cluster_file(self, path):

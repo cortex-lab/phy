@@ -79,4 +79,5 @@ def staggered_positions(n_channels):
     """Generate channel positions for a staggered probe."""
     i = np.arange(n_channels - 1)
     x, y = (-1) ** i * (5 + i), 10 * (i + 1)
-    return np.flipud(np.r_[np.zeros((1, 2)), np.c_[x, y]])
+    pos = np.flipud(np.r_[np.zeros((1, 2)), np.c_[x, y]])
+    return pos
