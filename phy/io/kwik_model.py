@@ -194,6 +194,7 @@ class KwikModel(BaseModel):
         self._clustering = 'main'
         self._probe = None
         self._channels = []
+        self._channel_order = None
         self._features = None
         self._masks = None
         self._waveforms = None
@@ -277,7 +278,15 @@ class KwikModel(BaseModel):
         self._waveform_loader = WaveformLoader(n_samples=n_samples,
                                                filter=filter,
                                                filter_margin=order * 3,
+                                               channels=self._channel_order,
                                                )
+
+    def _update_waveform_loader(self):
+        if self._kwd is not None:
+            self._waveform_loader.traces = self._traces
+        else:
+            self._waveform_loader.traces = np.zeros((0, self.n_channels),
+                                                    dtype=np.float32)
 
     def _create_cluster_metadata(self):
         self._cluster_metadata = ClusterMetadata()
@@ -331,7 +340,6 @@ class KwikModel(BaseModel):
             channel_group = self._channel_groups[0]
         # Load the channel group.
         self._channel_group = channel_group
-        self._channel_group_changed(channel_group)
 
     def _load_features_masks(self):
 
@@ -381,7 +389,6 @@ class KwikModel(BaseModel):
             clustering = self.clusterings[0]
         # Load the specified clustering.
         self._clustering = clustering
-        self._clustering_changed(clustering)
 
     def _load_cluster_groups(self):
         clusters = self._kwik.groups(self._clustering_path)
@@ -418,10 +425,6 @@ class KwikModel(BaseModel):
             #     self._create_waveform_loader()
             # Virtual concatenation of the arrays.
             self._traces = _concatenate_virtual_arrays(traces)
-            self._waveform_loader.traces = self._traces
-        else:
-            self._waveform_loader.traces = np.zeros((0, self.n_channels),
-                                                    dtype=np.float32)
 
     def open(self, filename, channel_group=None, clustering=None):
         """Open a Kwik experiment (.kwik, .kwx, .raw.kwd files)."""
@@ -448,11 +451,29 @@ class KwikModel(BaseModel):
 
         # Load the data.
         self._load_meta()
-        self._create_waveform_loader()
+
         self._load_recordings()
-        self._load_channel_groups(channel_group)
-        self._load_clusterings(clustering)
+
+        # This generates the recording offset.
         self._load_traces()
+
+        self._load_channel_groups(channel_group)
+
+        # This needs metadata, channels, channel order.
+        self._create_waveform_loader()
+
+        # This needs the recording offsets.
+        # This loads channels, spikes, probe.
+        self._channel_group_changed(self._channel_group)
+
+        # This needs channel groups.
+        self._load_clusterings(clustering)
+
+        # This loads spike clusters and cluster groups.
+        self._clustering_changed(self._clustering)
+
+        # This needs channels and waveform loader.
+        self._update_waveform_loader()
 
         # No need to keep the kwik file open.
         self._kwik.close()

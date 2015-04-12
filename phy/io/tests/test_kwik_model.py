@@ -89,7 +89,10 @@ def test_kwik_open_full():
 
         # Make sure the spike samples are increasing, even with multiple
         # recordings.
-        assert np.all(np.diff(kwik.spike_samples) >= 0)
+        # WARNING: need to cast to int64, otherwise negative values will
+        # overflow and be positive, making the test pass while the
+        # spike samples are *not* increasing!
+        assert np.all(np.diff(kwik.spike_samples.astype(np.int64)) >= 0)
 
         assert kwik.spike_times.shape == (_N_SPIKES,)
         assert kwik.spike_times.dtype == np.float64
