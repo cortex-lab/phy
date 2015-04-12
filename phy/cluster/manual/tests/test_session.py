@@ -177,7 +177,7 @@ def test_session_store():
     FeatureMasks.chunk_size = 4
 
     with TemporaryDirectory() as tempdir:
-        model = MockModel(n_spikes=10, n_clusters=3)
+        model = MockModel(n_spikes=50, n_clusters=3)
         s0 = np.nonzero(model.spike_clusters == 0)[0]
         s1 = np.nonzero(model.spike_clusters == 1)[0]
 
