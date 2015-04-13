@@ -179,10 +179,10 @@ class FeatureVisual(BaseSpikeVisual):
         # Get the spike cluster indices (between 0 and n_clusters-1).
         spike_clusters_idx = self.spike_clusters[self.spike_ids]
         spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_ids)
-
         a_cluster = np.tile(spike_clusters_idx,
                             self.n_boxes).astype(np.float32)
         self.program['a_cluster'] = a_cluster
+        self.program['n_clusters'] = self.n_clusters
         debug("bake spikes clusters", spike_clusters_idx.shape)
 
     @property
