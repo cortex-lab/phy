@@ -316,10 +316,10 @@ class FeatureMasks(StoreItem):
                 # Save it in the cluster store.
                 self.disk_store.store(new, **{name: concat})
 
-    def on_cluster(self, up):
+    def on_cluster(self, up=None):
         # No need to change anything in the store if this is an undo or
         # a redo.
-        if up.history is not None:
+        if up is None or up.history is not None:
             return
         if up.description == 'merge':
             self._merge(up)
@@ -446,6 +446,7 @@ class Session(BaseSession):
                   for cluster in self.clustering.cluster_ids}
         self.model.save(self.clustering.spike_clusters,
                         groups)
+        info("Saved {0:s}.".format(self.model.filename))
 
     def close(self):
         self.emit('close')
