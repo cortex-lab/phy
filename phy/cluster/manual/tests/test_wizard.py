@@ -15,8 +15,7 @@ from ..wizard import Wizard
 
 def test_wizard():
 
-    wizard = Wizard()
-    wizard.cluster_ids = [2, 3, 5]
+    wizard = Wizard([2, 3, 5])
 
     @wizard.set_quality
     def quality(cluster):
@@ -46,6 +45,12 @@ def test_wizard():
     assert wizard.most_similar_clusters(n_max=None) == [5, 3]
     assert wizard.most_similar_clusters(n_max=1) == [5]
 
-    assert wizard.most_similar_clusters(2) == [5, 3]
+    # Test ignore cluster.
+    assert wizard.best_clusters() == [2, 5, 3]
+    wizard.ignore(2)
+    assert wizard.best_clusters() == [5, 3]
 
-    wizard.mark_dissimilar(2, 3)
+    # Test ignore pair of clusters.
+    assert wizard.most_similar_clusters(2) == [5, 3]
+    wizard.ignore((2, 5))
+    assert wizard.most_similar_clusters(2) == [3]
