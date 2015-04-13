@@ -556,7 +556,7 @@ class Session(BaseSession):
         self._create_cluster_store()
 
         # Create the wizard.
-        self.wizard = Wizard(cluster_metadata=self.cluster_metadata)
+        self.wizard = Wizard()
         self.wizard.cluster_ids = self.clustering.cluster_ids
 
         # Set the similarity and quality functions for the wizard.

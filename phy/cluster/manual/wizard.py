@@ -30,8 +30,7 @@ def _best_clusters(clusters, quality, n_max=None):
 
 
 class Wizard(object):
-    def __init__(self, cluster_metadata=None):
-        self._cluster_metadata = cluster_metadata
+    def __init__(self):
         self._similarity = None
         self._quality = None
         self._cluster_ids = None
