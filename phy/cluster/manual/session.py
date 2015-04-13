@@ -30,6 +30,7 @@ from .view_model import (WaveformViewModel,
                          FeatureViewModel,
                          CorrelogramViewModel,
                          )
+from .wizard import Wizard, _best_clusters
 
 
 #------------------------------------------------------------------------------
@@ -471,6 +472,11 @@ class Session(BaseSession):
         self.emit('cluster', up=up)
         return up
 
+    def best_clusters(self, quality, n_max=None):
+        """Return the best clusters by decreasing order of quality,
+        for a given 'cluster => quality' function."""
+        return _best_clusters(self.clusters, quality, n_max=n_max)
+
     def undo(self):
         up = self._global_history.undo()
         self.emit('cluster', up=up, add_to_stack=False)
@@ -551,6 +557,12 @@ class Session(BaseSession):
         # Create the Selector instance.
         self.selector = Selector(spike_clusters)
         self.cluster_metadata = self.model.cluster_metadata
+
+        # Create the wizard.
+        self.wizard = Wizard(cluster_metadata=self.cluster_metadata)
+        # TODO: set these functions
+        # self.wizard.similarity
+        # self.wizard.quality
 
         # Create the cluster store.
         self._create_cluster_store()

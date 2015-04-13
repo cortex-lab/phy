@@ -310,6 +310,11 @@ def test_session_clustering():
         _check_arrays(0)
         _check_arrays(2)
 
+        # Test session.best_clusters.
+        quality = session.cluster_store.n_unmasked_channels
+        clusters = session.best_clusters(quality)
+        ac(np.unique(clusters), session.clusters)
+
         # Merge two clusters.
         clusters = [0, 2]
         session.merge(clusters)  # Create cluster 5.
