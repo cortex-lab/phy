@@ -288,19 +288,19 @@ def test_session_clustering():
 
         session = _start_manual_clustering(filename=filename,
                                            tempdir=tempdir)
-        # nc = n_channels - 2
         cs = session.cluster_store
         spike_clusters = session.model.spike_clusters.copy()
 
         f = session.model.features
         m = session.model.masks
 
-        def _check_arrays(cluster, clusters_for_sc=None):
+        def _check_arrays(cluster, clusters_for_sc=None, spikes=None):
             """Check the features and masks in the cluster store
             of a given custer."""
-            if clusters_for_sc is None:
-                clusters_for_sc = [cluster]
-            spikes = _spikes_in_clusters(spike_clusters, clusters_for_sc)
+            if spikes is None:
+                if clusters_for_sc is None:
+                    clusters_for_sc = [cluster]
+                spikes = _spikes_in_clusters(spike_clusters, clusters_for_sc)
             shape = (len(spikes),
                      len(session.model.channel_order),
                      session.model.n_features_per_channel)
@@ -312,9 +312,11 @@ def test_session_clustering():
 
         # Merge two clusters.
         clusters = [0, 2]
-        session.merge(clusters)
-
-        # Check the features and masks of the merged cluster.
+        session.merge(clusters)  # Create cluster 5.
         _check_arrays(5, clusters)
 
-        # TODO: more tests (several actions, undo, redo, etc.)
+        # Split some spikes.
+        spikes = [2, 3, 5, 7, 11, 13]
+        # clusters = np.unique(spike_clusters[spikes])
+        session.split(spikes)  # Create cluster 6 and more.
+        _check_arrays(6, spikes=spikes)

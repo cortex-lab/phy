@@ -295,32 +295,37 @@ class FeatureMasks(StoreItem):
                                                             shape=shape)
                               for cluster in up.deleted}
                 # Create the new arrays.
-                for cluster in up.added:
+                for new in up.added:
+                    # print("*********")
+                    # print("new", new)
                     # Find the old clusters which are parents of the current
                     # new cluster.
-                    old_clusters = [(old, new)
-                                    for (old, new) in up.descendants
-                                    if new == cluster]
+                    old_clusters = [o
+                                    for (o, n) in up.descendants
+                                    if n == new]
                     # Spikes per old cluster, used to create
                     # the concatenated array.
                     spc = {}
+                    old_arrays_sub = {}
                     # Find the relative spike indices of every old cluster
                     # for the current new cluster.
-                    for cluster in old_clusters:
+                    for old in old_clusters:
                         # Find the spike indices in the old and new cluster.
                         old_spikes = up.old_spikes_per_cluster[old]
-                        new_spikes = up.new_spikes_per_cluster[cluster]
+                        new_spikes = up.new_spikes_per_cluster[new]
                         old_in_new = np.in1d(old_spikes, new_spikes)
-                        old_spikes = old_spikes[old_in_new]
-                        spc[cluster] = old_spikes
+                        old_spikes_subset = old_spikes[old_in_new]
+                        spc[old] = old_spikes_subset
                         # Extract the data from the old cluster to
                         # be moved to the new cluster.
-                        old_arrays[cluster] = old_arrays[cluster][old_spikes]
+                        old_spikes_rel = _index_of(old_spikes_subset,
+                                                   old_spikes)
+                        old_arrays_sub[old] = old_arrays[old][old_spikes_rel]
                     # Construct the array of the new cluster.
                     concat = _concatenate_per_cluster_arrays(spc,
-                                                             old_arrays)
+                                                             old_arrays_sub)
                     # Save it in the cluster store.
-                    self.disk_store.store(cluster, **{name: concat})
+                    self.disk_store.store(new, **{name: concat})
         else:
             raise NotImplementedError()
 
@@ -449,22 +454,27 @@ class Session(BaseSession):
     def merge(self, clusters):
         up = self.clustering.merge(clusters)
         self.emit('cluster', up=up)
+        return up
 
     def split(self, spikes):
         up = self.clustering.split(spikes)
         self.emit('cluster', up=up)
+        return up
 
     def move(self, clusters, group):
         up = self.cluster_metadata.set_group(clusters, group)
         self.emit('cluster', up=up)
+        return up
 
     def undo(self):
         up = self._global_history.undo()
         self.emit('cluster', up=up, add_to_stack=False)
+        return up
 
     def redo(self):
         up = self._global_history.redo()
         self.emit('cluster', up=up, add_to_stack=False)
+        return up
 
     # Event callbacks
     # -------------------------------------------------------------------------
