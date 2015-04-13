@@ -50,6 +50,7 @@ def show_test_start(canvas):
 
 
 def show_test_run(canvas, n_frames=2):
+    """Display frames of a canvas."""
     if n_frames == 0:
         while not canvas._closed:
             _frame(canvas)

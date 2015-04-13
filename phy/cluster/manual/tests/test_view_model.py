@@ -6,7 +6,11 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from ....utils.testing import show_test
+from ....utils.testing import (show_test,
+                               show_test_start,
+                               show_test_stop,
+                               show_test_run,
+                               )
 from ....io.mock.artificial import MockModel
 from ..clustering import Clustering
 from ..view_model import (WaveformViewModel,
@@ -30,11 +34,16 @@ def _test_view_model(view_model_class, **kwargs):
     vm.on_open()
     vm.on_select(clusters, spikes)
 
-    show_test(vm.view)
+    return vm
 
 
 def test_waveforms():
-    _test_view_model(WaveformViewModel)
+    vm = _test_view_model(WaveformViewModel)
+    c = vm.view
+    show_test_start(c)
+    show_test_run(c)
+    show_test_run(c)
+    show_test_stop(c)
 
 
 def test_features():
