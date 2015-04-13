@@ -93,7 +93,6 @@ class BaseViewModel(object):
         pass
 
     def show(self):
-        # self._view.update()
         self._view.show()
 
 

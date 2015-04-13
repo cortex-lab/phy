@@ -296,7 +296,7 @@ class ClusterStore(object):
         idx = _index_of(spikes, spike_clusters)
         return arrays[idx, ...]
 
-    def update(self, up):
+    def on_cluster(self, up):
         # No need to delete the old clusters from the store, we can keep
         # them for possible undo, and regularly clean up the store.
 
@@ -304,7 +304,7 @@ class ClusterStore(object):
         # self._disk.delete(up.deleted)
 
         for item in self._items:
-            item.update(up)
+            item.on_cluster(up)
 
     def generate(self, spikes_per_cluster):
         """Populate the cache for all registered fields and the specified
@@ -368,7 +368,7 @@ class StoreItem(object):
                   cluster))
             self.store_cluster(cluster, spikes_per_cluster[cluster])
 
-    def update(self, up):
+    def on_cluster(self, up):
         """May be overridden. No need to delete old clusters here."""
         for cluster in up.added:
             self.store_cluster(cluster, up.new_spikes_per_cluster[cluster])

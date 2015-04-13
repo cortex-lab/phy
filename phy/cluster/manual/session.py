@@ -314,7 +314,7 @@ class FeatureMasks(StoreItem):
                 # Save it in the cluster store.
                 self.disk_store.store(new, **{name: concat})
 
-    def update(self, up):
+    def on_cluster(self, up):
         # No need to change anything in the store if this is an undo or
         # a redo.
         if up.history is not None:
@@ -511,7 +511,7 @@ class Session(BaseSession):
 
         @self.connect
         def on_cluster(up=None, add_to_stack=None):
-            self.cluster_store.update(up)
+            self.cluster_store.on_cluster(up)
 
     def on_open(self):
         """Update the session after new data has been loaded.

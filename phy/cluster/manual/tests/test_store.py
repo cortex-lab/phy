@@ -134,13 +134,13 @@ def test_cluster_store_1():
             def store_cluster(self, cluster, spikes):
                 self.memory_store.store(cluster, n_spikes=len(spikes))
 
-            def update(self, up):
+            def on_cluster(self, up):
                 if up.description == 'merge':
                     n = sum(len(up.old_spikes_per_cluster[cl])
                             for cl in up.deleted)
                     self.memory_store.store(up.added[0], n_spikes=n)
                 else:
-                    super(MyItem, self).update(up)
+                    super(MyItem, self).on_cluster(up)
 
         cs.register_item(MyItem)
 
@@ -164,7 +164,7 @@ def test_cluster_store_1():
                         new_spikes_per_cluster=spc,
                         old_spikes_per_cluster=spikes_per_cluster,)
 
-        cs.update(up)
+        cs.on_cluster(up)
 
         # Check the list of clusters in the store.
         ae(cs.memory_store.clusters, list(range(0, n_clusters)) + [20])
