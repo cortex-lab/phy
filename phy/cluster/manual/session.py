@@ -138,7 +138,7 @@ class FeatureMasks(StoreItem):
             # Extra fields.
             sum_masks = masks.sum(axis=0)
             mean_masks = sum_masks / float(masks.shape[0])
-            unmasked_channels = np.nonzero(mean_masks > 1e-3)[0]
+            unmasked_channels = np.nonzero(mean_masks > .1)[0]
             n_unmasked_channels = len(unmasked_channels)
             # Weighted mean of the channels, weighted by the mean masks.
             mean_probe_position = (self.model.probe.positions *
