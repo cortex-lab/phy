@@ -6,11 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os
-
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import raises
 
 from .._utils import (_unique, _spikes_in_clusters, _spikes_per_cluster,
                       _flatten_spikes_per_cluster,
