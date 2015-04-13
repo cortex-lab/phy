@@ -544,10 +544,11 @@ class Session(BaseSession):
         self.settings_manager.save()
 
     def on_cluster(self, up=None, add_to_stack=True):
-        if add_to_stack:
-            self._global_history.action(self.clustering)
-            # TODO: if metadata
-            # self._global_history.action(self.cluster_metadata)
+        if add_to_stack and up is not None:
+            if up.description.startswith('metadata'):
+                self._global_history.action(self.cluster_metadata)
+            elif up.description in ('merge', 'assign'):
+                self._global_history.action(self.clustering)
 
     # Show views
     # -------------------------------------------------------------------------
