@@ -620,6 +620,8 @@ class Session(BaseSession):
 
         @vm.view.connect
         def on_draw(event):
+            # OPTIM: put this when the model or the view is closed instead
+            # No need to run this at every draw!
             sf = vm.view.box_scale[1] / vm.view.visual.default_box_scale[1]
             sf = sf * vm.scale_factor
             self.set_internal_settings(sf_name, sf)
