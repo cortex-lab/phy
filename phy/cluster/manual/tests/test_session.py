@@ -342,6 +342,7 @@ def test_session_clustering():
 
         # Move a cluster to a group.
         session.move(6, 2)
+        assert len(session.cluster_store.mean_probe_position(6)) == 2
 
         # Save.
         spike_clusters_new = session.model.spike_clusters.copy()

@@ -324,6 +324,8 @@ class FeatureMasks(StoreItem):
             self._merge(up)
         elif up.description == 'assign':
             self._assign(up)
+        # Compute the extra fields for the new clusters.
+        self._store_extra_fields(up.added)
 
 
 #------------------------------------------------------------------------------
