@@ -122,7 +122,6 @@ class WaveformVisual(BaseSpikeVisual):
                          self._n_waveforms).astype(np.float32)
 
         self.program['a_time'] = a_time
-        self.program['n_clusters'] = self.n_clusters
         self.program['n_channels'] = self.n_channels
 
         debug("bake spikes", waveforms.shape)
@@ -142,6 +141,7 @@ class WaveformVisual(BaseSpikeVisual):
         a_box = np.c_[a_cluster, a_channel].astype(np.float32)
         # TODO: more efficient to update the data from an existing VBO
         self.program['a_box'] = a_box
+        self.program['n_clusters'] = self.n_clusters
         debug("bake spikes clusters", a_box.shape)
 
 
