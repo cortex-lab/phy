@@ -12,6 +12,7 @@ import numpy as np
 from numpy.testing import assert_allclose as ac
 from pytest import raises
 
+from .._utils import _spikes_in_clusters
 from ..session import BaseSession, Session, FeatureMasks
 from ....utils.testing import show_test
 from ....utils.tempdir import TemporaryDirectory
@@ -287,17 +288,33 @@ def test_session_clustering():
 
         session = _start_manual_clustering(filename=filename,
                                            tempdir=tempdir)
-        nc = n_channels - 2
+        # nc = n_channels - 2
         cs = session.cluster_store
+        spike_clusters = session.model.spike_clusters.copy()
+
+        f = session.model.features
+        m = session.model.masks
+
+        def _check_arrays(cluster, clusters_for_sc=None):
+            """Check the features and masks in the cluster store
+            of a given custer."""
+            if clusters_for_sc is None:
+                clusters_for_sc = [cluster]
+            spikes = _spikes_in_clusters(spike_clusters, clusters_for_sc)
+            shape = (len(spikes),
+                     len(session.model.channel_order),
+                     session.model.n_features_per_channel)
+            ac(cs.features(cluster), f[spikes, :].reshape(shape))
+            ac(cs.masks(cluster), m[spikes])
+
+        _check_arrays(0)
+        _check_arrays(2)
 
         # Merge two clusters.
         clusters = [0, 2]
-        n = np.sum(np.in1d(session.model.spike_clusters, clusters))
         session.merge(clusters)
 
-        # Check that the features and masks of the merged cluster have
-        # the right shapes.
-        assert cs.features(5).shape == (n, nc, n_fets)
-        assert cs.masks(5).shape == (n, nc)
+        # Check the features and masks of the merged cluster.
+        _check_arrays(5, clusters)
 
         # TODO: more tests (several actions, undo, redo, etc.)
