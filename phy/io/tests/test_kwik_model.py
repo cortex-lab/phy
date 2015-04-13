@@ -83,7 +83,7 @@ def test_kwik_open_full():
         kwik = KwikModel(filename)
 
         kwik.metadata
-        assert kwik.channels == list(range(_N_CHANNELS))
+        ae(kwik.channels, np.arange(_N_CHANNELS))
         assert kwik.n_channels == _N_CHANNELS
         assert kwik.n_spikes == _N_SPIKES
         ae(kwik.channel_order, np.arange(1, _N_CHANNELS - 1)[::-1])

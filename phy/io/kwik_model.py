@@ -330,10 +330,11 @@ class KwikModel(BaseModel):
         self._recording_offsets = [0] * (len(self._recordings) + 1)
 
     def _load_channels(self):
-        self._channels = _list_channels(self._kwik.h5py_file,
-                                        self._channel_group)
-        self._channel_order = self._kwik.read_attr(self._channel_groups_path,
-                                                   'channel_order')
+        self._channels = np.array(_list_channels(self._kwik.h5py_file,
+                                                 self._channel_group))
+        channel_order = self._kwik.read_attr(self._channel_groups_path,
+                                             'channel_order')
+        self._channel_order = np.array(channel_order)
 
     def _load_channel_groups(self, channel_group=None):
         self._channel_groups = _list_channel_groups(self._kwik.h5py_file)
