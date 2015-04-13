@@ -417,7 +417,7 @@ class Session(BaseSession):
         self.set_user_settings(path=op.join(curdir, 'default_settings.py'),
                                file_namespace=file_namespace)
 
-    # Public actions
+    # File-related actions
     # -------------------------------------------------------------------------
 
     def _backup_kwik(self, filename):
@@ -454,6 +454,9 @@ class Session(BaseSession):
         self.experiment_path = None
         self.experiment_dir = None
 
+    # Clustering actions
+    # -------------------------------------------------------------------------
+
     def select(self, clusters):
         self.selector.selected_clusters = clusters
         self.emit('select', self.selector)
@@ -477,11 +480,6 @@ class Session(BaseSession):
     def redo(self):
         up = self._global_history.redo()
         self.emit('cluster', up=up, add_to_stack=False)
-
-    def best_clusters(self, quality, n_max=None):
-        """Return the best clusters by decreasing order of quality,
-        for a given 'cluster => quality' function."""
-        return _best_clusters(self.clusters, quality, n_max=n_max)
 
     # Properties
     # -------------------------------------------------------------------------
@@ -554,14 +552,25 @@ class Session(BaseSession):
         self.selector = Selector(spike_clusters)
         self.cluster_metadata = self.model.cluster_metadata
 
-        # Create the wizard.
-        self.wizard = Wizard(cluster_metadata=self.cluster_metadata)
-        # TODO: set these functions
-        # self.wizard.similarity
-        # self.wizard.quality
-
         # Create the cluster store.
         self._create_cluster_store()
+
+        # Create the wizard.
+        self.wizard = Wizard(cluster_metadata=self.cluster_metadata)
+
+        # Set the similarity and quality functions for the wizard.
+        @self.wizard.set_similarity
+        def similarity(target, candidate):
+            """Compute the dot product between the mean masks of
+            two clusters."""
+            return np.dot(self.cluster_store.mean_masks(target),
+                          self.cluster_store.mean_masks(candidate))
+
+        @self.wizard.set_quality
+        def quality(cluster):
+            """Return the maximum mean_masks across all channels
+            for a given cluster."""
+            return self.cluster_store.mean_masks(cluster).max()
 
     def on_close(self):
         self.settings_manager.save()
@@ -572,6 +581,14 @@ class Session(BaseSession):
                 self._global_history.action(self.cluster_metadata)
             elif up.description in ('merge', 'assign'):
                 self._global_history.action(self.clustering)
+
+    # Wizard
+    # -------------------------------------------------------------------------
+
+    def best_clusters(self, quality, n_max=None):
+        """Return the best clusters by decreasing order of quality,
+        for a given 'cluster => quality' function."""
+        return _best_clusters(self.clusters, quality, n_max=n_max)
 
     # Show views
     # -------------------------------------------------------------------------
