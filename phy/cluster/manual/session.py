@@ -206,8 +206,6 @@ class FeatureMasks(StoreItem):
         clusters = sorted(spikes_per_cluster)
         self.progress_reporter.set_max(masks_extra=len(clusters))
 
-        # TODO: refactor this big function when supporting clustering actions.
-
         # No need to regenerate the cluster store if it exists and is valid.
         need_generate = self._need_generate(cluster_sizes)
         if need_generate:
@@ -249,83 +247,82 @@ class FeatureMasks(StoreItem):
 
         self.progress_reporter.set_complete()
 
+    def _merge(self, up):
+        clusters = up.deleted
+        spc = up.old_spikes_per_cluster
+        # We load all masks and features of the merged clusters.
+        for name, shape in [('features',
+                             (-1, self.n_channels, self.n_features)),
+                            ('masks',
+                             (-1, self.n_channels)),
+                            ]:
+            arrays = {cluster: self.disk_store.load(cluster,
+                                                    name,
+                                                    dtype=np.float32,
+                                                    shape=shape)
+                      for cluster in clusters}
+            # Then, we concatenate them using the right insertion order
+            # as defined by the spikes.
+
+            # OPTIM: this could be made a bit faster by passing
+            # both arrays at once.
+            concat = _concatenate_per_cluster_arrays(spc, arrays)
+
+            # Finally, we store the result into the new cluster.
+            self.disk_store.store(up.added[0], **{name: concat})
+
+    def _assign(self, up):
+        for name, shape in [('features',
+                             (-1, self.n_channels, self.n_features)),
+                            ('masks',
+                             (-1, self.n_channels)),
+                            ]:
+            # Load all data from the old clusters.
+            old_arrays = {cluster: self.disk_store.load(cluster,
+                                                        name,
+                                                        dtype=np.float32,
+                                                        shape=shape)
+                          for cluster in up.deleted}
+            # Create the new arrays.
+            for new in up.added:
+                # Find the old clusters which are parents of the current
+                # new cluster.
+                old_clusters = [o
+                                for (o, n) in up.descendants
+                                if n == new]
+                # Spikes per old cluster, used to create
+                # the concatenated array.
+                spc = {}
+                old_arrays_sub = {}
+                # Find the relative spike indices of every old cluster
+                # for the current new cluster.
+                for old in old_clusters:
+                    # Find the spike indices in the old and new cluster.
+                    old_spikes = up.old_spikes_per_cluster[old]
+                    new_spikes = up.new_spikes_per_cluster[new]
+                    old_in_new = np.in1d(old_spikes, new_spikes)
+                    old_spikes_subset = old_spikes[old_in_new]
+                    spc[old] = old_spikes_subset
+                    # Extract the data from the old cluster to
+                    # be moved to the new cluster.
+                    old_spikes_rel = _index_of(old_spikes_subset,
+                                               old_spikes)
+                    old_arrays_sub[old] = old_arrays[old][old_spikes_rel]
+                # Construct the array of the new cluster.
+                concat = _concatenate_per_cluster_arrays(spc,
+                                                         old_arrays_sub)
+                # Save it in the cluster store.
+                self.disk_store.store(new, **{name: concat})
+
     def update(self, up):
         # No need to change anything in the store if this is an undo or
         # a redo.
         if up.history is not None:
             return
         if up.description == 'merge':
-            clusters = up.deleted
-            spc = up.old_spikes_per_cluster
-            # We load all masks and features of the merged clusters.
-            for name, shape in [('features',
-                                 (-1, self.n_channels, self.n_features)),
-                                ('masks',
-                                 (-1, self.n_channels)),
-                                ]:
-                arrays = {cluster: self.disk_store.load(cluster,
-                                                        name,
-                                                        dtype=np.float32,
-                                                        shape=shape)
-                          for cluster in clusters}
-                # Then, we concatenate them using the right insertion order
-                # as defined by the spikes.
-
-                # OPTIM: this could be made a bit faster by passing
-                # both arrays at once.
-                concat = _concatenate_per_cluster_arrays(spc, arrays)
-
-                # Finally, we store the result into the new cluster.
-                self.disk_store.store(up.added[0], **{name: concat})
+            self._merge(up)
         elif up.description == 'assign':
-            # Populate the features and masks of new clusters.
-
-            up.old_spikes_per_cluster
-            up.new_spikes_per_cluster
-
-            for name, shape in [('features',
-                                 (-1, self.n_channels, self.n_features)),
-                                ('masks',
-                                 (-1, self.n_channels)),
-                                ]:
-                # Load all data from the old clusters.
-                old_arrays = {cluster: self.disk_store.load(cluster,
-                                                            name,
-                                                            dtype=np.float32,
-                                                            shape=shape)
-                              for cluster in up.deleted}
-                # Create the new arrays.
-                for new in up.added:
-                    # print("*********")
-                    # print("new", new)
-                    # Find the old clusters which are parents of the current
-                    # new cluster.
-                    old_clusters = [o
-                                    for (o, n) in up.descendants
-                                    if n == new]
-                    # Spikes per old cluster, used to create
-                    # the concatenated array.
-                    spc = {}
-                    old_arrays_sub = {}
-                    # Find the relative spike indices of every old cluster
-                    # for the current new cluster.
-                    for old in old_clusters:
-                        # Find the spike indices in the old and new cluster.
-                        old_spikes = up.old_spikes_per_cluster[old]
-                        new_spikes = up.new_spikes_per_cluster[new]
-                        old_in_new = np.in1d(old_spikes, new_spikes)
-                        old_spikes_subset = old_spikes[old_in_new]
-                        spc[old] = old_spikes_subset
-                        # Extract the data from the old cluster to
-                        # be moved to the new cluster.
-                        old_spikes_rel = _index_of(old_spikes_subset,
-                                                   old_spikes)
-                        old_arrays_sub[old] = old_arrays[old][old_spikes_rel]
-                    # Construct the array of the new cluster.
-                    concat = _concatenate_per_cluster_arrays(spc,
-                                                             old_arrays_sub)
-                    # Save it in the cluster store.
-                    self.disk_store.store(new, **{name: concat})
+            self._assign(up)
         else:
             raise NotImplementedError()
 
