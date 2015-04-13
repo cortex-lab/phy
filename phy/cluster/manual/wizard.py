@@ -10,6 +10,8 @@ from operator import itemgetter
 
 import numpy as np
 
+from ...ext.six import integer_types
+
 
 #------------------------------------------------------------------------------
 # Utility functions
@@ -95,10 +97,18 @@ class Wizard(object):
                       for other in self._cluster_ids
                       if other != cluster]
         clusters = _argsort(similarity, n_max=n_max)
+        # Filter out ignored clusters.
+        clusters = self._filter(clusters)
         pairs = zip([cluster] * len(clusters), clusters)
+        # Filter out ignored pairs of clusters.
         pairs = self._filter(pairs)
         return [clu for (_, clu) in pairs]
 
     def ignore(self, cluster_or_pair):
         """Mark a cluster or a pair of clusters as ignored."""
+        if not isinstance(cluster_or_pair, (integer_types, tuple)):
+            raise ValueError("This function accepts a cluster id "
+                             "or a pair of ids as argument.")
+        if isinstance(cluster_or_pair, tuple):
+            assert len(cluster_or_pair) == 2
         self._ignored.add(cluster_or_pair)

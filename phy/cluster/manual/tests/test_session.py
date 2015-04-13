@@ -395,7 +395,19 @@ def test_session_wizard():
 
         assert session.wizard.best_cluster() == best_clusters[0]
         ae(np.unique(best_clusters), clusters)
-        assert len(session.most_similar_clusters()) == n_clusters - 1
+        assert len(session.wizard.most_similar_clusters()) == n_clusters - 1
 
-        assert len(session.best_clusters(n_max=3)) == 3
-        assert len(session.most_similar_clusters(0, n_max=3)) == 3
+        assert len(session.wizard.most_similar_clusters(0, n_max=3)) == 3
+
+        session.merge([0, 1, 2])
+        ae(np.unique(session.best_clusters()), np.arange(3, 6))
+        assert list(session.wizard.most_similar_clusters(5)) in ([3, 4],
+                                                                 [4, 3])
+
+        # Move a cluster to noise.
+        session.move([5], 0)
+        ae(np.unique(session.best_clusters()), np.arange(3, 5))
+        best = session.wizard.best_cluster()
+        assert best in (3, 4)
+        # The most similar cluster is 3 if best=4 and conversely.
+        assert list(session.wizard.most_similar_clusters(best)) == [7 - best]

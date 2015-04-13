@@ -578,7 +578,8 @@ class Session(BaseSession):
                                            set(up.deleted)).union(up.added)
             elif up.description == 'metadata_group':
                 if up.metadata_value in (0, 1):
-                    self.wizard.ignore_clusters(self.metadata_changed)
+                    for cluster in up.metadata_changed:
+                        self.wizard.ignore(cluster)
 
     def on_open(self):
         """Update the session after new data has been loaded.
@@ -619,11 +620,6 @@ class Session(BaseSession):
             return self.wizard.best_clusters(n_max=n_max)
         else:
             return _best_clusters(self.clusters, quality, n_max=n_max)
-
-    def most_similar_clusters(self, cluster=None, n_max=None):
-        """Return the most similar clusters to a given cluster (the current
-        best cluster by default), by decreasing order of similarity."""
-        return self.wizard.most_similar_clusters(cluster=cluster, n_max=n_max)
 
     # Show views
     # -------------------------------------------------------------------------
