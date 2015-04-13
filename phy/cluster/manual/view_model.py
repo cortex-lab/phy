@@ -132,7 +132,8 @@ class WaveformViewModel(BaseViewModel):
         self.view.visual.cluster_colors = _selected_clusters_colors(n)
 
     def on_cluster(self, up):
-        self.view.visual.spike_clusters = self.model.spike_clusters
+        if up.description in ('merge', 'assign'):
+            self.view.visual.spike_clusters = self.model.spike_clusters
 
     def on_close(self):
         self.view.visual.spike_clusters = []
