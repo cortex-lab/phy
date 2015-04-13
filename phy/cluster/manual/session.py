@@ -460,32 +460,27 @@ class Session(BaseSession):
     def merge(self, clusters):
         up = self.clustering.merge(clusters)
         self.emit('cluster', up=up)
-        return up
 
     def split(self, spikes):
         up = self.clustering.split(spikes)
         self.emit('cluster', up=up)
-        return up
 
     def move(self, clusters, group):
         up = self.cluster_metadata.set_group(clusters, group)
         self.emit('cluster', up=up)
-        return up
+
+    def undo(self):
+        up = self._global_history.undo()
+        self.emit('cluster', up=up, add_to_stack=False)
+
+    def redo(self):
+        up = self._global_history.redo()
+        self.emit('cluster', up=up, add_to_stack=False)
 
     def best_clusters(self, quality, n_max=None):
         """Return the best clusters by decreasing order of quality,
         for a given 'cluster => quality' function."""
         return _best_clusters(self.clusters, quality, n_max=n_max)
-
-    def undo(self):
-        up = self._global_history.undo()
-        self.emit('cluster', up=up, add_to_stack=False)
-        return up
-
-    def redo(self):
-        up = self._global_history.redo()
-        self.emit('cluster', up=up, add_to_stack=False)
-        return up
 
     # Properties
     # -------------------------------------------------------------------------
