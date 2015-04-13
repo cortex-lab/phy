@@ -320,3 +320,22 @@ def test_session_clustering():
         # clusters = np.unique(spike_clusters[spikes])
         session.split(spikes)  # Create cluster 6 and more.
         _check_arrays(6, spikes=spikes)
+
+        # Undo.
+        session.undo()
+        _check_arrays(5, clusters)
+
+        # Undo.
+        session.undo()
+        _check_arrays(0)
+        _check_arrays(2)
+
+        # Redo.
+        session.redo()
+        _check_arrays(5, clusters)
+
+        # Split some spikes.
+        spikes = [5, 7, 11, 13, 17, 19]
+        # clusters = np.unique(spike_clusters[spikes])
+        session.split(spikes)  # Create cluster 6 and more.
+        _check_arrays(6, spikes=spikes)
