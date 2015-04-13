@@ -10,6 +10,7 @@ import os.path as op
 
 import numpy as np
 from numpy.testing import assert_allclose as ac
+from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from .._utils import _spikes_in_clusters
@@ -366,3 +367,35 @@ def test_session_clustering():
         clusters = session.clustering.cluster_ids
         groups = session.model.cluster_groups
         assert groups[6] == 2
+
+
+def test_session_wizard():
+
+    n_clusters = 5
+    n_spikes = 50
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 3000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=n_clusters,
+                                    n_spikes=n_spikes,
+                                    n_channels=n_channels,
+                                    n_features_per_channel=n_fets,
+                                    n_samples_traces=n_samples_traces)
+
+        session = _start_manual_clustering(filename=filename,
+                                           tempdir=tempdir)
+
+        clusters = np.arange(n_clusters)
+        best_clusters = session.best_clusters()
+
+        assert session.wizard.best_cluster() == best_clusters[0]
+        ae(np.unique(best_clusters), clusters)
+        assert len(session.most_similar_clusters()) == n_clusters - 1
+
+        assert len(session.best_clusters(n_max=3)) == 3
+        assert len(session.most_similar_clusters(0, n_max=3)) == 3

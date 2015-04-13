@@ -557,6 +557,7 @@ class Session(BaseSession):
 
         # Create the wizard.
         self.wizard = Wizard(cluster_metadata=self.cluster_metadata)
+        self.wizard.cluster_ids = self.clustering.cluster_ids
 
         # Set the similarity and quality functions for the wizard.
         @self.wizard.set_similarity
@@ -576,6 +577,10 @@ class Session(BaseSession):
         self.settings_manager.save()
 
     def on_cluster(self, up=None, add_to_stack=True):
+        # Update the wizard.
+        self.wizard.cluster_ids = self.clustering.cluster_ids
+
+        # Update the global history.
         if add_to_stack and up is not None:
             if up.description.startswith('metadata'):
                 self._global_history.action(self.cluster_metadata)
