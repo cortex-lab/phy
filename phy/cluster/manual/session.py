@@ -585,10 +585,19 @@ class Session(BaseSession):
     # Wizard
     # -------------------------------------------------------------------------
 
-    def best_clusters(self, quality, n_max=None):
+    def best_clusters(self, quality=None, n_max=None):
         """Return the best clusters by decreasing order of quality,
-        for a given 'cluster => quality' function."""
-        return _best_clusters(self.clusters, quality, n_max=n_max)
+        for a given 'cluster => quality' function. By default,
+        this uses the quality function used in the wizard."""
+        if quality is None:
+            return self.wizard.best_clusters(n_max=n_max)
+        else:
+            return _best_clusters(self.clusters, quality, n_max=n_max)
+
+    def most_similar_clusters(self, cluster=None, n_max=None):
+        """Return the most similar clusters to a given cluster (the current
+        best cluster by default), by decreasing order of similarity."""
+        return self.wizard.most_similar_clusters(cluster=cluster, n_max=n_max)
 
     # Show views
     # -------------------------------------------------------------------------
