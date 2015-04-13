@@ -339,3 +339,24 @@ def test_session_clustering():
         # clusters = np.unique(spike_clusters[spikes])
         session.split(spikes)  # Create cluster 6 and more.
         _check_arrays(6, spikes=spikes)
+
+        # Move a cluster to a group.
+        session.move(6, 2)
+
+        # Save.
+        spike_clusters_new = session.model.spike_clusters.copy()
+        # Check that the spike clusters have changed.
+        assert not np.all(spike_clusters_new == spike_clusters)
+        ac(session.model.spike_clusters, session.clustering.spike_clusters)
+        session.save()
+
+        # Re-open the file and check that the spike clusters and
+        # cluster groups have correctly been saved.
+        session = _start_manual_clustering(filename=filename,
+                                           tempdir=tempdir)
+        ac(session.model.spike_clusters, session.clustering.spike_clusters)
+        ac(session.model.spike_clusters, spike_clusters_new)
+        #  Check the cluster groups.
+        clusters = session.clustering.cluster_ids
+        groups = session.model.cluster_groups
+        assert groups[6] == 2

@@ -324,8 +324,6 @@ class FeatureMasks(StoreItem):
             self._merge(up)
         elif up.description == 'assign':
             self._assign(up)
-        else:
-            raise NotImplementedError()
 
 
 #------------------------------------------------------------------------------
@@ -438,6 +436,13 @@ class Session(BaseSession):
         self.experiment_dir = op.dirname(self.experiment_path)
         self.experiment_name = model.name
         self.emit('open')
+
+    def save(self):
+        """Save the spike clusters and cluster groups to the Kwik file."""
+        groups = {cluster: self.cluster_metadata.group(cluster)
+                  for cluster in self.clustering.cluster_ids}
+        self.model.save(self.clustering.spike_clusters,
+                        groups)
 
     def close(self):
         self.emit('close')
