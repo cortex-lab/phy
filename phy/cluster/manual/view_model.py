@@ -84,7 +84,7 @@ class BaseViewModel(object):
         """To be overriden."""
         self.view.visual.spike_clusters = self.model.spike_clusters
 
-    def on_cluster(self, up):
+    def on_cluster(self, up=None):
         """To be overriden."""
         pass
 
@@ -131,9 +131,8 @@ class WaveformViewModel(BaseViewModel):
         n = len(clusters)
         self.view.visual.cluster_colors = _selected_clusters_colors(n)
 
-    def on_cluster(self, up):
-        if up.description in ('merge', 'assign'):
-            self.view.visual.spike_clusters = self.model.spike_clusters
+    def on_cluster(self, up=None):
+        self.view.visual.spike_clusters = self.model.spike_clusters
 
     def on_close(self):
         self.view.visual.spike_clusters = []

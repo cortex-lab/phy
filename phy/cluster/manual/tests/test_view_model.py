@@ -34,16 +34,22 @@ def _test_view_model(view_model_class, **kwargs):
     vm.on_open()
     vm.on_select(clusters, spikes)
 
+    # Show the view.
+    show_test_start(vm.view)
+    show_test_run(vm.view)
+
+    # Merge the clusters and update the view.
+    up = clustering.merge(clusters)
+    vm.on_cluster(up)
+
+    show_test_run(vm.view)
+    show_test_stop(vm.view)
+
     return vm
 
 
 def test_waveforms():
-    vm = _test_view_model(WaveformViewModel)
-    c = vm.view
-    show_test_start(c)
-    show_test_run(c)
-    show_test_run(c)
-    show_test_stop(c)
+    _test_view_model(WaveformViewModel)
 
 
 def test_features():
