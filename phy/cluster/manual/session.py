@@ -574,7 +574,7 @@ class Session(BaseSession):
                 return
             if up.description in ('merge', 'assign'):
                 self.wizard.cluster_ids = (set(self.wizard._cluster_ids) -
-                                           set(up.delete)).union(up.added)
+                                           set(up.deleted)).union(up.added)
             elif up.description == 'metadata_group':
                 if up.metadata_value in (0, 1):
                     self.wizard.ignore_clusters(self.metadata_changed)
@@ -591,10 +591,10 @@ class Session(BaseSession):
         self._load_experiment_settings()
 
         # Create objects.
-        self._create_clustering()
-        self._create_cluster_metadata()
-        self._create_selector()
         self._create_global_history()
+        self._create_cluster_metadata()
+        self._create_clustering()
+        self._create_selector()
         self._create_cluster_store()
         self._create_wizard()
 
