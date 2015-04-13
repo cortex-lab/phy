@@ -297,8 +297,6 @@ class ClusterStore(object):
         return arrays[idx, ...]
 
     def update(self, up):
-        # TODO: update self._spikes_per_cluster
-
         # No need to delete the old clusters from the store, we can keep
         # them for possible undo, and regularly clean up the store.
 
