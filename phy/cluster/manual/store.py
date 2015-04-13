@@ -332,18 +332,19 @@ class StoreItem(object):
         storage_location is either 'memory', 'disk'.
     model : Model
         A Model instance for the current dataset.
-    store : ClusterStore
-        The ClusterStore instance for the current dataset.
+    memory_store : MemoryStore
+        The MemoryStore instance for the current dataset.
+    disk_store : DiskStore
+        The DiskStore instance for the current dataset.
+    progress_reporter : ProgressReporter
+        The ProgressReporter instance for the current dataset.
 
     Methods
     -------
     store_cluster(cluster, spikes)
         Extract some data from the model and store it in the cluster store.
-    assign(up)
+    on_cluster(up)
         Update the store when the clustering changes.
-    merge(up)
-        Update the store when a merge happens (by default, it is just
-        an assign, but this method may be overriden for performance reasons).
 
     """
     fields = None  # list of (field_name, storage_location)
