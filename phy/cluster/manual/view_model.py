@@ -80,17 +80,25 @@ class BaseViewModel(object):
         else:
             return getattr(self._model, name)[spikes]
 
-    def on_open(self):
-        """To be overriden."""
+    def _update_spike_clusters(self):
         self.view.visual.spike_clusters = self.model.spike_clusters
 
-    def on_cluster(self, up=None):
+    def _update_cluster_colors(self):
+        n = self.view.visual.n_clusters
+        self.view.visual.cluster_colors = _selected_clusters_colors(n)
+
+    def on_open(self):
         """To be overriden."""
-        pass
+        self._update_spike_clusters()
+
+    def on_cluster(self, up=None):
+        """May be overriden."""
+        self._update_spike_clusters()
+        self._update_cluster_colors()
 
     def on_select(self, clusters, spikes):
         """To be overriden."""
-        pass
+        self._update_cluster_colors()
 
     def show(self):
         self._view.show()
@@ -106,7 +114,7 @@ class WaveformViewModel(BaseViewModel):
     scale_factor = 1.
 
     def on_open(self):
-        self.view.visual.spike_clusters = self.model.spike_clusters
+        self._update_spike_clusters()
         self.view.visual.channel_positions = self.model.probe.positions
 
     def on_select(self, clusters, spikes):
@@ -128,11 +136,7 @@ class WaveformViewModel(BaseViewModel):
         self.view.visual.spike_ids = spikes
 
         # Cluster colors.
-        n = len(clusters)
-        self.view.visual.cluster_colors = _selected_clusters_colors(n)
-
-    def on_cluster(self, up=None):
-        self.view.visual.spike_clusters = self.model.spike_clusters
+        self._update_cluster_colors()
 
     def on_close(self):
         self.view.visual.spike_clusters = []
@@ -187,8 +191,7 @@ class FeatureViewModel(BaseViewModel):
         self.view.visual.spike_ids = spikes
 
         # Cluster colors.
-        n = len(clusters)
-        self.view.visual.cluster_colors = _selected_clusters_colors(n)
+        self._update_cluster_colors()
 
 
 class CorrelogramViewModel(BaseViewModel):
@@ -224,5 +227,4 @@ class CorrelogramViewModel(BaseViewModel):
         self.view.visual.correlograms = ccgs
 
         # Cluster colors.
-        n = len(clusters)
-        self.view.visual.cluster_colors = _selected_clusters_colors(n)
+        self._update_cluster_colors()
