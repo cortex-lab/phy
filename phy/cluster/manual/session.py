@@ -378,7 +378,6 @@ class Session(BaseSession):
         self.action(self.redo, title='Redo')
 
         self.connect(self.on_open)
-        self.connect(self.on_cluster)
         self.connect(self.on_close)
 
     # Settings
@@ -416,6 +415,9 @@ class Session(BaseSession):
         declare_namespace('manual_clustering')
         self.set_user_settings(path=op.join(curdir, 'default_settings.py'),
                                file_namespace=file_namespace)
+
+    def _load_experiment_settings(self):
+        self.settings_manager.set_experiment_path(self.experiment_path)
 
     # File-related actions
     # -------------------------------------------------------------------------
@@ -491,6 +493,9 @@ class Session(BaseSession):
     # Event callbacks
     # -------------------------------------------------------------------------
 
+    def _create_cluster_metadata(self):
+        self.cluster_metadata = self.model.cluster_metadata
+
     def _create_cluster_store(self):
 
         # Kwik store in experiment_dir/name.phy/cluster_store.
@@ -528,36 +533,26 @@ class Session(BaseSession):
         def on_cluster(up=None, add_to_stack=None):
             self.cluster_store.on_cluster(up)
 
-    def on_open(self):
-        """Update the session after new data has been loaded.
+    def _create_clustering(self):
+        self.clustering = Clustering(self.model.spike_clusters)
 
-        TODO: call this after the channel groups has changed.
-
-        """
-
-        # Load the default settings for manual clustering.
-        self._load_default_settings()
-
-        # Load all experiment settings.
-        self.settings_manager.set_experiment_path(self.experiment_path)
-
-        # Create the history.
+    def _create_global_history(self):
         self._global_history = GlobalHistory(process_ups=_process_ups)
 
-        # Create the Clustering instance.
-        spike_clusters = self.model.spike_clusters
-        self.clustering = Clustering(spike_clusters)
+        @self.connect
+        def on_cluster(up=None, add_to_stack=None):
+            # Update the global history.
+            if add_to_stack and up is not None:
+                if up.description.startswith('metadata'):
+                    self._global_history.action(self.cluster_metadata)
+                elif up.description in ('merge', 'assign'):
+                    self._global_history.action(self.clustering)
 
-        # Create the Selector instance.
-        self.selector = Selector(spike_clusters)
-        self.cluster_metadata = self.model.cluster_metadata
+    def _create_selector(self):
+        self.selector = Selector(self.model.spike_clusters)
 
-        # Create the cluster store.
-        self._create_cluster_store()
-
-        # Create the wizard.
-        self.wizard = Wizard()
-        self.wizard.cluster_ids = self.clustering.cluster_ids
+    def _create_wizard(self):
+        self.wizard = Wizard(self.clustering.cluster_ids)
 
         # Set the similarity and quality functions for the wizard.
         @self.wizard.set_similarity
@@ -573,19 +568,38 @@ class Session(BaseSession):
             for a given cluster."""
             return self.cluster_store.mean_masks(cluster).max()
 
+        @self.connect
+        def on_cluster(up=None, add_to_stack=None):
+            if up is None:
+                return
+            if up.description in ('merge', 'assign'):
+                self.wizard.cluster_ids = (set(self.wizard._cluster_ids) -
+                                           set(up.delete)).union(up.added)
+            elif up.description == 'metadata_group':
+                if up.metadata_value in (0, 1):
+                    self.wizard.ignore_clusters(self.metadata_changed)
+
+    def on_open(self):
+        """Update the session after new data has been loaded.
+
+        TODO: call this after the channel groups has changed.
+
+        """
+
+        # Load settings.
+        self._load_default_settings()
+        self._load_experiment_settings()
+
+        # Create objects.
+        self._create_clustering()
+        self._create_cluster_metadata()
+        self._create_selector()
+        self._create_global_history()
+        self._create_cluster_store()
+        self._create_wizard()
+
     def on_close(self):
         self.settings_manager.save()
-
-    def on_cluster(self, up=None, add_to_stack=True):
-        # Update the wizard.
-        self.wizard.cluster_ids = self.clustering.cluster_ids
-
-        # Update the global history.
-        if add_to_stack and up is not None:
-            if up.description.startswith('metadata'):
-                self._global_history.action(self.cluster_metadata)
-            elif up.description in ('merge', 'assign'):
-                self._global_history.action(self.clustering)
 
     # Wizard
     # -------------------------------------------------------------------------
