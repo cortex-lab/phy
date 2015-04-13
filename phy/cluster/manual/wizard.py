@@ -43,12 +43,12 @@ class Wizard(object):
     def cluster_ids(self, value):
         self._cluster_ids = value
 
-    def similarity(self, func):
+    def set_similarity(self, func):
         """Register a function returing the similarity between two clusters."""
         self._similarity = func
         return func
 
-    def quality(self, func):
+    def set_quality(self, func):
         """Register a function returing the quality of a cluster."""
         self._quality = func
         return func

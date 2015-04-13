@@ -6,13 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import numpy as np
-import numpy.random as npr
-from numpy.testing import assert_array_equal as ae
-from pytest import raises
-
 from ..wizard import Wizard
-from ..cluster_metadata import ClusterMetadata
 
 
 #------------------------------------------------------------------------------
@@ -24,14 +18,14 @@ def test_wizard():
     wizard = Wizard()
     wizard.cluster_ids = [2, 3, 5]
 
-    @wizard.quality
+    @wizard.set_quality
     def quality(cluster):
         return {2: .9,
                 3: .3,
                 5: .6,
                 }[cluster]
 
-    @wizard.similarity
+    @wizard.set_similarity
     def similarity(cluster, other):
         cluster, other = min((cluster, other)), max((cluster, other))
         return {(2, 3): 1,
