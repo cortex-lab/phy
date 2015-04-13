@@ -481,6 +481,13 @@ class Session(BaseSession):
         self.emit('cluster', up=up, add_to_stack=False)
         return up
 
+    # Properties
+    # -------------------------------------------------------------------------
+
+    @property
+    def clusters(self):
+        return self.clustering.cluster_ids
+
     # Event callbacks
     # -------------------------------------------------------------------------
 
