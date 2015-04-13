@@ -63,7 +63,9 @@ class ClusterMetadata(object):
         for cluster in clusters:
             self._set_one(cluster, field, value)
         info = UpdateInfo(description='metadata_' + field,
-                          metadata_changed=clusters)
+                          metadata_changed=clusters,
+                          metadata_value=value,
+                          )
         if add_to_stack:
             self._undo_stack.add((clusters, field, value, info))
         return info
