@@ -33,7 +33,19 @@ def test_wizard():
                 (3, 5): 3}[cluster, other]
 
     assert wizard.best_clusters() == [2, 5, 3]
+    assert wizard.best_clusters(n_max=0) == [2, 5, 3]
+    assert wizard.best_clusters(n_max=None) == [2, 5, 3]
+    assert wizard.best_clusters(n_max=2) == [2, 5]
+
     assert wizard.best_cluster() == 2
+
     assert wizard.most_similar_clusters() == [5, 3]
     assert wizard.most_similar_clusters(2) == [5, 3]
+
+    assert wizard.most_similar_clusters(n_max=0) == [5, 3]
+    assert wizard.most_similar_clusters(n_max=None) == [5, 3]
+    assert wizard.most_similar_clusters(n_max=1) == [5]
+
+    assert wizard.most_similar_clusters(2) == [5, 3]
+
     wizard.mark_dissimilar(2, 3)

@@ -18,9 +18,10 @@ def _argsort(seq, reverse=True, n_max=None):
     a list of tuples (cluster, value)."""
     out = [cl for (cl, v) in sorted(seq, key=itemgetter(1),
                                     reverse=reverse)]
-    if n_max is not None:
-        out = out[:n_max]
-    return out
+    if n_max in (None, 0):
+        return out
+    else:
+        return out[:n_max]
 
 
 def _best_clusters(clusters, quality, n_max=None):
@@ -57,7 +58,7 @@ class Wizard(object):
         if self._cluster_ids is None:
             raise RuntimeError("The list of clusters need to be set.")
 
-    def best_clusters(self, n_max=None):
+    def best_clusters(self, n_max=10):
         """Return the list of best clusters sorted by decreasing quality."""
         self._check_cluster_ids()
         return _best_clusters(self._cluster_ids, self._quality, n_max=n_max)
@@ -68,7 +69,7 @@ class Wizard(object):
         if clusters:
             return clusters[0]
 
-    def most_similar_clusters(self, cluster=None, n_max=None):
+    def most_similar_clusters(self, cluster=None, n_max=10):
         """Return the `n_max` most similar clusters."""
         if cluster is None:
             cluster = self.best_cluster()
