@@ -6,10 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import math
 from operator import itemgetter
-
-import numpy as np
 
 
 #------------------------------------------------------------------------------
@@ -24,6 +21,11 @@ def _argsort(seq, reverse=True, n_max=None):
     if n_max is not None:
         out = out[:n_max]
     return out
+
+
+def _best_clusters(clusters, quality, n_max=None):
+    return _argsort([(cluster, quality(cluster))
+                     for cluster in clusters], n_max=n_max)
 
 
 class Wizard(object):
@@ -58,9 +60,7 @@ class Wizard(object):
     def best_clusters(self, n_max=None):
         """Return the list of best clusters sorted by decreasing quality."""
         self._check_cluster_ids()
-        quality = [(cluster, self._quality(cluster))
-                   for cluster in self._cluster_ids]
-        return _argsort(quality, n_max=n_max)
+        return _best_clusters(self._cluster_ids, self._quality, n_max=n_max)
 
     def best_cluster(self):
         """Return the best cluster."""
