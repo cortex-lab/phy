@@ -16,7 +16,7 @@ import numpy as np
 
 from ...ext.six import string_types
 from ...utils._misc import _ensure_path_exists
-from ...utils.array import _index_of
+from ...utils.array import _index_of, _is_array_like
 from ...utils.event import EventEmitter
 from ...utils.logging import info
 from ...utils.settings import SettingsManager, declare_namespace
@@ -460,6 +460,12 @@ class Session(BaseSession):
     # Clustering actions
     # -------------------------------------------------------------------------
 
+    def _check_list_argument(self, arg, name='clusters'):
+        if not _is_array_like(arg):
+            raise ValueError("The argument should be a list or an array.")
+        if len(name) == 0:
+            raise ValueError("No {0} were selected.".format(name))
+
     def select(self, clusters):
         self.selector.selected_clusters = clusters
         self.emit('select', self.selector)
@@ -469,10 +475,12 @@ class Session(BaseSession):
         self.emit('cluster', up=up)
 
     def split(self, spikes):
+        self._check_list_argument(spikes, 'spikes')
         up = self.clustering.split(spikes)
         self.emit('cluster', up=up)
 
     def move(self, clusters, group):
+        self._check_list_argument(clusters)
         up = self.cluster_metadata.set_group(clusters, group)
         self.emit('cluster', up=up)
 
@@ -720,6 +728,10 @@ class Session(BaseSession):
 
     def show_correlograms(self):
         """Show a CorrelogramView and return a ViewModel instance."""
-        vm = self._create_view_model('correlograms')
+        args = 'binsize', 'winsize_bins'
+        kwargs = {k: self.get_user_settings('manual_clustering.'
+                                            'correlograms_' + k)
+                  for k in args}
+        vm = self._create_view_model('correlograms', **kwargs)
         self._create_view(vm)
         return vm

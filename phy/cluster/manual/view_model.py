@@ -198,6 +198,12 @@ class CorrelogramViewModel(BaseViewModel):
     _view_class = CorrelogramView
     _view_name = 'correlograms'
 
+    binsize = None
+    winsize_bins = None
+    # n_excerpts = None
+    # excerpt_size = None
+
+    # _clusters = None
     _spikes = None
 
     def on_select(self, clusters, spikes):
@@ -225,7 +231,7 @@ class CorrelogramViewModel(BaseViewModel):
         self._update_cluster_colors()
 
     def on_cluster(self, up=None):
-        if up is None:
+        if up is None or up.description not in ('merge', 'assign'):
             return
 
         # OPTIM: add the CCGs of the merged clusters

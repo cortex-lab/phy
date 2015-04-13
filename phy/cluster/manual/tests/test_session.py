@@ -347,7 +347,7 @@ def test_session_clustering():
         _check_arrays(6, spikes=spikes)
 
         # Move a cluster to a group.
-        session.move(6, 2)
+        session.move([6], 2)
         assert len(session.cluster_store.mean_probe_position(6)) == 2
 
         # Save.
