@@ -198,19 +198,14 @@ class CorrelogramViewModel(BaseViewModel):
     _view_class = CorrelogramView
     _view_name = 'correlograms'
 
-    binsize = None
-    winsize_bins = None
-    n_excerpts = None
-    excerpt_size = None
+    _spikes = None
 
     def on_select(self, clusters, spikes):
+
+        self._spikes = spikes
+
         self.view.cluster_ids = clusters
 
-        # # Extract a subset of the spikes belonging to the selected clusters.
-        # spikes_subset = get_excerpts(spikes,
-        #                              n_excerpts=self.n_excerpts,
-        #                              excerpt_size=self.excerpt_size,
-        #                              )
         spike_clusters = self.model.spike_clusters[spikes]
         spike_samples = self.model.spike_samples[spikes]
 
@@ -228,3 +223,18 @@ class CorrelogramViewModel(BaseViewModel):
 
         # Cluster colors.
         self._update_cluster_colors()
+
+    def on_cluster(self, up=None):
+        if up is None:
+            return
+
+        # OPTIM: add the CCGs of the merged clusters
+        # if up.description == 'merge':
+        #     self.view.visual.cluster_ids = up.added
+        #     n = len(up.added)
+        #     self.view.visual.cluster_colors = _selected_clusters_colors(n)
+
+        # Recompute the CCGs with the already-selected spikes, and the
+        # newly-created clusters.
+        if self._spikes is not None:
+            self.on_select(up.added, self._spikes)

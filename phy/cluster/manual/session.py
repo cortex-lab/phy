@@ -720,10 +720,6 @@ class Session(BaseSession):
 
     def show_correlograms(self):
         """Show a CorrelogramView and return a ViewModel instance."""
-        args = 'binsize', 'winsize_bins', 'n_excerpts', 'excerpt_size'
-        kwargs = {k: self.get_user_settings('manual_clustering.'
-                                            'correlograms_' + k)
-                  for k in args}
-        vm = self._create_view_model('correlograms', **kwargs)
+        vm = self._create_view_model('correlograms')
         self._create_view(vm)
         return vm
