@@ -589,6 +589,7 @@ class Session(BaseSession):
         @self.connect
         def on_cluster(up=None):
             view_model.on_cluster(up)
+            view.update()
 
         @self.connect
         def on_select(selector):
