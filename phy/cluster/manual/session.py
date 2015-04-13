@@ -378,6 +378,7 @@ class Session(BaseSession):
         self.action(self.redo, title='Redo')
 
         self.connect(self.on_open)
+        self.connect(self.on_cluster)
         self.connect(self.on_close)
 
     # Settings
@@ -584,19 +585,25 @@ class Session(BaseSession):
 
         TODO: call this after the channel groups has changed.
 
-        """
+        # """
 
-        # Load settings.
         self._load_default_settings()
         self._load_experiment_settings()
 
-        # Create objects.
         self._create_global_history()
-        self._create_cluster_metadata()
         self._create_clustering()
         self._create_selector()
+        self._create_cluster_metadata()
         self._create_cluster_store()
         self._create_wizard()
+
+    def on_cluster(self, up=None, add_to_stack=True):
+        # Update the global history.
+        if add_to_stack and up is not None:
+            if up.description.startswith('metadata'):
+                self._global_history.action(self.cluster_metadata)
+            elif up.description in ('merge', 'assign'):
+                self._global_history.action(self.clustering)
 
     def on_close(self):
         self.settings_manager.save()
