@@ -35,7 +35,7 @@ def _create_correlograms_array(n_clusters, winsize_bins):
                     dtype=np.int32)
 
 
-def correlograms(spike_times, spike_clusters,
+def correlograms(spike_samples, spike_clusters,
                  binsize=None, winsize_bins=None):
     """Compute all pairwise cross-correlograms among the clusters appearing
     in 'spike_clusters'.
@@ -43,7 +43,7 @@ def correlograms(spike_times, spike_clusters,
     Parameters
     ----------
 
-    spike_times : array-like
+    spike_samples : array-like
         Spike times in samples (integers).
     spike_clusters : array-like
         Spike-cluster mapping.
@@ -74,10 +74,14 @@ def correlograms(spike_times, spike_clusters,
     """
 
     spike_clusters = _as_array(spike_clusters)
-    spike_times = _as_array(spike_times)
+    spike_samples = _as_array(spike_samples)
+    if spike_samples.dtype == np.int64:
+        spike_samples = spike_samples.astype(np.uint64)
 
-    assert spike_times.ndim == 1
-    assert spike_times.shape == spike_clusters.shape
+    assert spike_samples.dtype == np.uint64
+
+    assert spike_samples.ndim == 1
+    assert spike_samples.shape == spike_clusters.shape
 
     assert winsize_bins % 2 == 1
 
@@ -92,7 +96,7 @@ def correlograms(spike_times, spike_clusters,
 
     # At a given shift, the mask precises which spikes have matching spikes
     # within the correlogram time window.
-    mask = np.ones_like(spike_times, dtype=np.bool)
+    mask = np.ones_like(spike_samples, dtype=np.bool)
 
     correlograms = _create_correlograms_array(n_clusters, winsize_bins)
 
@@ -100,7 +104,7 @@ def correlograms(spike_times, spike_clusters,
     # a matching spike.
     while mask[:-shift].any():
         # Number of time samples between spike i and spike i+shift.
-        spike_diff = _diff_shifted(spike_times, shift)
+        spike_diff = _diff_shifted(spike_samples, shift)
 
         # Binarize the delays between spike i and spike i+shift.
         spike_diff_b = spike_diff // binsize

@@ -14,7 +14,7 @@ import numpy as np
 
 from ...utils.array import _is_array_like, _index_of
 from ...utils.logging import debug
-from ...ext.six import string_types
+from ...ext.six import string_types, integer_types
 from ...utils.event import ProgressReporter
 
 
@@ -71,6 +71,13 @@ def _load_ndarray(f, dtype=None, shape=None):
         return arr
 
 
+def _as_int(x):
+    if isinstance(x, integer_types):
+        return x
+    x = np.asscalar(x)
+    return x
+
+
 class DiskStore(object):
     """Store cluster-related data in HDF5 files."""
     def __init__(self, directory):
@@ -96,11 +103,13 @@ class DiskStore(object):
         """Return the absolute path of a cluster in the disk store."""
         # TODO: subfolders
         # Example of filename: '123.mykey'.
+        cluster = _as_int(cluster)
         filename = '{0:d}.{1:s}'.format(cluster, key)
         return op.realpath(op.join(self._directory, filename))
 
     def _cluster_file_exists(self, cluster, key):
         """Return whether a cluster file exists."""
+        cluster = _as_int(cluster)
         return op.exists(self._cluster_path(cluster, key))
 
     def _is_cluster_file(self, path):
@@ -287,26 +296,15 @@ class ClusterStore(object):
         idx = _index_of(spikes, spike_clusters)
         return arrays[idx, ...]
 
-    def update(self, up):
-        # TODO: update self._spikes_per_cluster
-        # Delete the deleted clusters from the store.
-        self._memory.delete(up.deleted)
-        self._disk.delete(up.deleted)
+    def on_cluster(self, up):
+        # No need to delete the old clusters from the store, we can keep
+        # them for possible undo, and regularly clean up the store.
 
-        if up.description == 'merge':
-            self.merge(up)
-        elif up.description == 'assign':
-            self.assign(up)
-        else:
-            raise NotImplementedError()
+        # self._memory.delete(up.deleted)
+        # self._disk.delete(up.deleted)
 
-    def merge(self, up):
         for item in self._items:
-            item.merge(up)
-
-    def assign(self, up):
-        for item in self._items:
-            item.assign(up)
+            item.on_cluster(up)
 
     def generate(self, spikes_per_cluster):
         """Populate the cache for all registered fields and the specified
@@ -334,18 +332,19 @@ class StoreItem(object):
         storage_location is either 'memory', 'disk'.
     model : Model
         A Model instance for the current dataset.
-    store : ClusterStore
-        The ClusterStore instance for the current dataset.
+    memory_store : MemoryStore
+        The MemoryStore instance for the current dataset.
+    disk_store : DiskStore
+        The DiskStore instance for the current dataset.
+    progress_reporter : ProgressReporter
+        The ProgressReporter instance for the current dataset.
 
     Methods
     -------
     store_cluster(cluster, spikes)
         Extract some data from the model and store it in the cluster store.
-    assign(up)
+    on_cluster(up)
         Update the store when the clustering changes.
-    merge(up)
-        Update the store when a merge happens (by default, it is just
-        an assign, but this method may be overriden for performance reasons).
 
     """
     fields = None  # list of (field_name, storage_location)
@@ -370,11 +369,7 @@ class StoreItem(object):
                   cluster))
             self.store_cluster(cluster, spikes_per_cluster[cluster])
 
-    def merge(self, up):
-        """May be overridden."""
-        self.assign(up)
-
-    def assign(self, up):
+    def on_cluster(self, up):
         """May be overridden. No need to delete old clusters here."""
         for cluster in up.added:
             self.store_cluster(cluster, up.new_spikes_per_cluster[cluster])

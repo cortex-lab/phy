@@ -9,10 +9,9 @@
 import numpy as np
 import numpy.random as nr
 
-from ...ext import six
 from ...utils._color import _random_color
 from ..base_model import BaseModel
-from ...cluster.manual.cluster_info import ClusterMetadata
+from ...cluster.manual.cluster_metadata import ClusterMetadata
 from ...electrode.mea import MEA, staggered_positions
 
 
@@ -42,9 +41,7 @@ def artificial_spike_clusters(n_spikes, n_clusters, low=0):
     return nr.randint(size=n_spikes, low=low, high=max(1, n_clusters))
 
 
-def artificial_spike_times(n_spikes, max_isi=50):
-    # TODO: switch from sample to seconds in the way spike times are
-    # represented throughout the package.
+def artificial_spike_samples(n_spikes, max_isi=50):
     return np.cumsum(nr.randint(low=0, high=max_isi, size=n_spikes))
 
 
@@ -83,12 +80,12 @@ class MockModel(BaseModel):
             return _random_color()
 
         positions = staggered_positions(self.n_channels)
-        self._probe = MEA(positions=positions)
+        self._probe = MEA(channels=self.channels, positions=positions)
         self._traces = artificial_traces(self.n_samples_traces,
                                          self.n_channels)
         self._spike_clusters = artificial_spike_clusters(self.n_spikes,
                                                          self.n_clusters)
-        self._spike_times = artificial_spike_times(self.n_spikes)
+        self._spike_samples = artificial_spike_samples(self.n_spikes)
         self._features = artificial_features(self.n_spikes, self.n_features)
         self._masks = artificial_masks(self.n_spikes, self.n_channels)
         self._features_masks = np.dstack((self._features,
@@ -104,6 +101,10 @@ class MockModel(BaseModel):
         return np.arange(self.n_channels)
 
     @property
+    def channel_order(self):
+        return self.channels
+
+    @property
     def metadata(self):
         return self._metadata
 
@@ -112,8 +113,8 @@ class MockModel(BaseModel):
         return self._traces
 
     @property
-    def spike_times(self):
-        return self._spike_times
+    def spike_samples(self):
+        return self._spike_samples
 
     @property
     def spike_clusters(self):

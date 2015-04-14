@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 from pytest import raises
-import numpy as np
 
 from ..base_model import BaseModel
 
@@ -20,17 +19,12 @@ def test_base_model():
     model = BaseModel()
 
     assert model.channel_group is None
-    assert model.recording is None
 
     model.channel_group = 1
     assert model.channel_group == 1
 
     assert model.channel_groups == []
-    assert model.recordings == []
     assert model.clusterings == []
-
-    model.recording = 2
-    assert model.recording == 2
 
     model.clustering = 'original'
     assert model.clustering == 'original'
@@ -40,7 +34,7 @@ def test_base_model():
     with raises(NotImplementedError):
         model.traces
     with raises(NotImplementedError):
-        model.spike_times
+        model.spike_samples
     with raises(NotImplementedError):
         model.spike_clusters
     with raises(NotImplementedError):

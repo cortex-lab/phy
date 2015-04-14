@@ -9,26 +9,28 @@ from __future__ import print_function
 
 import os
 import os.path as op
+import shutil
 from functools import partial
 
 import numpy as np
 
 from ...ext.six import string_types
 from ...utils._misc import _ensure_path_exists
-from ...utils.array import _index_of
+from ...utils.array import _index_of, _is_array_like
 from ...utils.event import EventEmitter
+from ...utils.logging import info
 from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
 from .clustering import Clustering
-from ._utils import _spikes_per_cluster
+from ._utils import _spikes_per_cluster, _concatenate_per_cluster_arrays
 from .selector import Selector
 from .store import ClusterStore, StoreItem
-from .view_model import (BaseViewModel,
-                         WaveformViewModel,
+from .view_model import (WaveformViewModel,
                          FeatureViewModel,
                          CorrelogramViewModel,
                          )
+from .wizard import Wizard, _best_clusters
 
 
 #------------------------------------------------------------------------------
@@ -93,7 +95,7 @@ class FeatureMasks(StoreItem):
         super(FeatureMasks, self).__init__(*args, **kwargs)
 
         self.n_features = self.model.n_features_per_channel
-        self.n_channels = self.model.n_channels
+        self.n_channels = len(self.model.channel_order)
         self.n_spikes = self.model.n_spikes
         self.n_chunks = self.n_spikes // self.chunk_size + 1
 
@@ -137,7 +139,7 @@ class FeatureMasks(StoreItem):
             # Extra fields.
             sum_masks = masks.sum(axis=0)
             mean_masks = sum_masks / float(masks.shape[0])
-            unmasked_channels = np.nonzero(mean_masks > 1e-3)[0]
+            unmasked_channels = np.nonzero(mean_masks > .1)[0]
             n_unmasked_channels = len(unmasked_channels)
             # Weighted mean of the channels, weighted by the mean masks.
             mean_probe_position = (self.model.probe.positions *
@@ -155,14 +157,56 @@ class FeatureMasks(StoreItem):
             # Update the progress reporter.
             self.progress_reporter.increment('masks_extra')
 
+    def _store_cluster(self,
+                       cluster,
+                       chunk_spikes,
+                       chunk_spikes_per_cluster,
+                       chunk_features_masks,
+                       ):
+
+        nc = self.n_channels
+        nf = self.n_features
+
+        # Number of spikes in the cluster and in the current
+        # chunk.
+        ns = len(chunk_spikes_per_cluster[cluster])
+
+        # Find the indices of the spikes in that cluster
+        # relative to the chunk.
+        idx = _index_of(chunk_spikes_per_cluster[cluster], chunk_spikes)
+
+        # Extract features and masks for that cluster, in the
+        # current chunk.
+        tmp = chunk_features_masks[idx, :]
+
+        # NOTE: channel order has already been taken into account
+        # by SpikeDetekt2 when saving the features and wavforms.
+        # All we need to know here is the number of channels
+        # in channel_order, there is no need to reorder.
+
+        # Features.
+        f = tmp[:, :nc * nf, 0]
+        assert f.shape == (ns, nc * nf)
+        f = f.ravel().astype(np.float32)
+
+        # Masks.
+        m = tmp[:, :nc * nf, 1][:, ::nf]
+        assert m.shape == (ns, nc)
+        m = m.ravel().astype(np.float32)
+
+        # Save the data to disk.
+        self.disk_store.store(cluster,
+                              features=f,
+                              masks=m,
+                              append=True,
+                              )
+
     def store_all_clusters(self, spikes_per_cluster):
         """Initialize all cluster files, loop over all spikes, and
         copy the data."""
         cluster_sizes = {cluster: len(spikes)
                          for cluster, spikes in spikes_per_cluster.items()}
         clusters = sorted(spikes_per_cluster)
-
-        # TODO: refactor this big function when supporting clustering actions.
 
         # No need to regenerate the cluster store if it exists and is valid.
         need_generate = self._need_generate(cluster_sizes)
@@ -173,54 +217,29 @@ class FeatureMasks(StoreItem):
             fm = self.model.features_masks
             assert fm.shape[0] == self.n_spikes
 
-            nc = self.n_channels
-            nf = self.n_features
-
             for i in range(self.n_chunks):
                 a, b = i * self.chunk_size, (i + 1) * self.chunk_size
 
                 # Load a chunk from HDF5.
-                sub_fm = fm[a:b]
-                assert isinstance(sub_fm, np.ndarray)
-                if sub_fm.shape[0] == 0:
+                chunk_features_masks = fm[a:b]
+                assert isinstance(chunk_features_masks, np.ndarray)
+                if chunk_features_masks.shape[0] == 0:
                     break
 
-                sub_sc = self.model.spike_clusters[a:b]
-                sub_spikes = np.arange(a, b)
+                chunk_spike_clusters = self.model.spike_clusters[a:b]
+                chunk_spikes = np.arange(a, b)
 
                 # Split the spikes.
-                sub_spc = _spikes_per_cluster(sub_spikes, sub_sc)
+                chunk_spc = _spikes_per_cluster(chunk_spikes,
+                                                chunk_spike_clusters)
 
                 # Go through the clusters appearing in the chunk.
-                for cluster in sorted(sub_spc.keys()):
-                    # Number of spikes in the cluster and in the current
-                    # chunk.
-                    ns = len(sub_spc[cluster])
-
-                    # Find the indices of the spikes in that cluster
-                    # relative to the chunk.
-                    idx = _index_of(sub_spc[cluster], sub_spikes)
-
-                    # Extract features and masks for that cluster, in the
-                    # current chunk.
-                    tmp = sub_fm[idx, :]
-
-                    # Features.
-                    f = tmp[:, :nc * nf, 0]
-                    assert f.shape == (ns, nc * nf)
-                    f = f.ravel().astype(np.float32)
-
-                    # Masks.
-                    m = tmp[:, :nc * nf, 1][:, ::nf]
-                    assert m.shape == (ns, nc)
-                    m = m.ravel().astype(np.float32)
-
-                    # Save the data to disk.
-                    self.disk_store.store(cluster,
-                                          features=f,
-                                          masks=m,
-                                          append=True,
-                                          )
+                for cluster in sorted(chunk_spc.keys()):
+                    self._store_cluster(cluster,
+                                        chunk_spikes,
+                                        chunk_spc,
+                                        chunk_features_masks,
+                                        )
 
                 # Update the progress reporter.
                 self.progress_reporter.increment('features_masks')
@@ -228,13 +247,86 @@ class FeatureMasks(StoreItem):
         # Store extra fields from the masks.
         self._store_extra_fields(clusters)
 
-    def merge(self, up):
-        # TODO
-        pass
+        self.progress_reporter.set_complete()
 
-    def assign(self, up):
-        # TODO
-        pass
+    def _merge(self, up):
+        clusters = up.deleted
+        spc = up.old_spikes_per_cluster
+        # We load all masks and features of the merged clusters.
+        for name, shape in [('features',
+                             (-1, self.n_channels, self.n_features)),
+                            ('masks',
+                             (-1, self.n_channels)),
+                            ]:
+            arrays = {cluster: self.disk_store.load(cluster,
+                                                    name,
+                                                    dtype=np.float32,
+                                                    shape=shape)
+                      for cluster in clusters}
+            # Then, we concatenate them using the right insertion order
+            # as defined by the spikes.
+
+            # OPTIM: this could be made a bit faster by passing
+            # both arrays at once.
+            concat = _concatenate_per_cluster_arrays(spc, arrays)
+
+            # Finally, we store the result into the new cluster.
+            self.disk_store.store(up.added[0], **{name: concat})
+
+    def _assign(self, up):
+        for name, shape in [('features',
+                             (-1, self.n_channels, self.n_features)),
+                            ('masks',
+                             (-1, self.n_channels)),
+                            ]:
+            # Load all data from the old clusters.
+            old_arrays = {cluster: self.disk_store.load(cluster,
+                                                        name,
+                                                        dtype=np.float32,
+                                                        shape=shape)
+                          for cluster in up.deleted}
+            # Create the new arrays.
+            for new in up.added:
+                # Find the old clusters which are parents of the current
+                # new cluster.
+                old_clusters = [o
+                                for (o, n) in up.descendants
+                                if n == new]
+                # Spikes per old cluster, used to create
+                # the concatenated array.
+                spc = {}
+                old_arrays_sub = {}
+                # Find the relative spike indices of every old cluster
+                # for the current new cluster.
+                for old in old_clusters:
+                    # Find the spike indices in the old and new cluster.
+                    old_spikes = up.old_spikes_per_cluster[old]
+                    new_spikes = up.new_spikes_per_cluster[new]
+                    old_in_new = np.in1d(old_spikes, new_spikes)
+                    old_spikes_subset = old_spikes[old_in_new]
+                    spc[old] = old_spikes_subset
+                    # Extract the data from the old cluster to
+                    # be moved to the new cluster.
+                    old_spikes_rel = _index_of(old_spikes_subset,
+                                               old_spikes)
+                    old_arrays_sub[old] = old_arrays[old][old_spikes_rel]
+                # Construct the array of the new cluster.
+                concat = _concatenate_per_cluster_arrays(spc,
+                                                         old_arrays_sub)
+                # Save it in the cluster store.
+                self.disk_store.store(new, **{name: concat})
+
+    def on_cluster(self, up=None):
+        # No need to change anything in the store if this is an undo or
+        # a redo.
+        if up is None or up.history is not None:
+            return
+        if up.description == 'merge':
+            self._merge(up)
+        elif up.description == 'assign':
+            self._assign(up)
+        # Compute the extra fields for the new clusters.
+        self._store_extra_fields(up.added)
 
 
 #------------------------------------------------------------------------------
@@ -325,10 +417,23 @@ class Session(BaseSession):
         self.set_user_settings(path=op.join(curdir, 'default_settings.py'),
                                file_namespace=file_namespace)
 
-    # Public actions
+    def _load_experiment_settings(self):
+        self.settings_manager.set_experiment_path(self.experiment_path)
+
+    # File-related actions
     # -------------------------------------------------------------------------
 
+    def _backup_kwik(self, filename):
+        """Save a copy of the Kwik file before opening it."""
+        backup_filename = filename + '.bak'
+        if not op.exists(backup_filename):
+            info("Saving a backup of the Kwik file "
+                 "in {0}.".format(backup_filename))
+            shutil.copyfile(filename, backup_filename)
+
     def open(self, filename=None, model=None):
+        if filename is not None:
+            self._backup_kwik(filename)
         if model is None:
             model = KwikModel(filename)
         self.model = model
@@ -338,11 +443,28 @@ class Session(BaseSession):
         self.experiment_name = model.name
         self.emit('open')
 
+    def save(self):
+        """Save the spike clusters and cluster groups to the Kwik file."""
+        groups = {cluster: self.cluster_metadata.group(cluster)
+                  for cluster in self.clustering.cluster_ids}
+        self.model.save(self.clustering.spike_clusters,
+                        groups)
+        info("Saved {0:s}.".format(self.model.filename))
+
     def close(self):
         self.emit('close')
         self.model = None
         self.experiment_path = None
         self.experiment_dir = None
+
+    # Clustering actions
+    # -------------------------------------------------------------------------
+
+    def _check_list_argument(self, arg, name='clusters'):
+        if not _is_array_like(arg):
+            raise ValueError("The argument should be a list or an array.")
+        if len(name) == 0:
+            raise ValueError("No {0} were selected.".format(name))
 
     def select(self, clusters):
         self.selector.selected_clusters = clusters
@@ -353,10 +475,12 @@ class Session(BaseSession):
         self.emit('cluster', up=up)
 
     def split(self, spikes):
+        self._check_list_argument(spikes, 'spikes')
         up = self.clustering.split(spikes)
         self.emit('cluster', up=up)
 
     def move(self, clusters, group):
+        self._check_list_argument(clusters)
         up = self.cluster_metadata.set_group(clusters, group)
         self.emit('cluster', up=up)
 
@@ -368,8 +492,18 @@ class Session(BaseSession):
         up = self._global_history.redo()
         self.emit('cluster', up=up, add_to_stack=False)
 
+    # Properties
+    # -------------------------------------------------------------------------
+
+    @property
+    def clusters(self):
+        return self.clustering.cluster_ids
+
     # Event callbacks
     # -------------------------------------------------------------------------
+
+    def _create_cluster_metadata(self):
+        self.cluster_metadata = self.model.cluster_metadata
 
     def _create_cluster_store(self):
 
@@ -395,7 +529,7 @@ class Session(BaseSession):
 
         @self.cluster_store.progress_reporter.connect
         def on_report(value, value_max):
-            print("Generating the cluster store: "
+            print("Initializing the cluster store: "
                   "{0:.2f}%.".format(100 * value / float(value_max)),
                   end='\r')
 
@@ -406,43 +540,94 @@ class Session(BaseSession):
 
         @self.connect
         def on_cluster(up=None, add_to_stack=None):
-            self.cluster_store.update(up)
+            self.cluster_store.on_cluster(up)
+
+    def _create_clustering(self):
+        self.clustering = Clustering(self.model.spike_clusters)
+
+    def _create_global_history(self):
+        self._global_history = GlobalHistory(process_ups=_process_ups)
+
+        @self.connect
+        def on_cluster(up=None, add_to_stack=None):
+            # Update the global history.
+            if add_to_stack and up is not None:
+                if up.description.startswith('metadata'):
+                    self._global_history.action(self.cluster_metadata)
+                elif up.description in ('merge', 'assign'):
+                    self._global_history.action(self.clustering)
+
+    def _create_selector(self):
+        self.selector = Selector(self.model.spike_clusters)
+
+    def _create_wizard(self):
+        self.wizard = Wizard(self.clustering.cluster_ids)
+
+        # Set the similarity and quality functions for the wizard.
+        @self.wizard.set_similarity
+        def similarity(target, candidate):
+            """Compute the dot product between the mean masks of
+            two clusters."""
+            return np.dot(self.cluster_store.mean_masks(target),
+                          self.cluster_store.mean_masks(candidate))
+
+        @self.wizard.set_quality
+        def quality(cluster):
+            """Return the maximum mean_masks across all channels
+            for a given cluster."""
+            return self.cluster_store.mean_masks(cluster).max()
+
+        @self.connect
+        def on_cluster(up=None, add_to_stack=None):
+            if up is None:
+                return
+            if up.description in ('merge', 'assign'):
+                self.wizard.cluster_ids = (set(self.wizard._cluster_ids) -
+                                           set(up.deleted)).union(up.added)
+            elif up.description == 'metadata_group':
+                if up.metadata_value in (0, 1):
+                    for cluster in up.metadata_changed:
+                        self.wizard.ignore(cluster)
 
     def on_open(self):
         """Update the session after new data has been loaded.
 
         TODO: call this after the channel groups has changed.
 
-        """
+        # """
 
-        # Load the default settings for manual clustering.
         self._load_default_settings()
+        self._load_experiment_settings()
 
-        # Load all experiment settings.
-        self.settings_manager.set_experiment_path(self.experiment_path)
-
-        # Create the history.
-        self._global_history = GlobalHistory(process_ups=_process_ups)
-
-        # Create the Clustering instance.
-        spike_clusters = self.model.spike_clusters
-        self.clustering = Clustering(spike_clusters)
-
-        # Create the Selector instance.
-        self.selector = Selector(spike_clusters)
-        self.cluster_metadata = self.model.cluster_metadata
-
-        # Create the cluster store.
+        self._create_global_history()
+        self._create_clustering()
+        self._create_selector()
+        self._create_cluster_metadata()
         self._create_cluster_store()
+        self._create_wizard()
+
+    def on_cluster(self, up=None, add_to_stack=True):
+        # Update the global history.
+        if add_to_stack and up is not None:
+            if up.description.startswith('metadata'):
+                self._global_history.action(self.cluster_metadata)
+            elif up.description in ('merge', 'assign'):
+                self._global_history.action(self.clustering)
 
     def on_close(self):
         self.settings_manager.save()
 
-    def on_cluster(self, up=None, add_to_stack=True):
-        if add_to_stack:
-            self._global_history.action(self.clustering)
-            # TODO: if metadata
-            # self._global_history.action(self.cluster_metadata)
+    # Wizard
+    # -------------------------------------------------------------------------
+
+    def best_clusters(self, quality=None, n_max=None):
+        """Return the best clusters by decreasing order of quality,
+        for a given 'cluster => quality' function. By default,
+        this uses the quality function used in the wizard."""
+        if quality is None:
+            return self.wizard.best_clusters(n_max=n_max)
+        else:
+            return _best_clusters(self.clusters, quality, n_max=n_max)
 
     # Show views
     # -------------------------------------------------------------------------
@@ -461,6 +646,7 @@ class Session(BaseSession):
         @self.connect
         def on_cluster(up=None):
             view_model.on_cluster(up)
+            view.update()
 
         @self.connect
         def on_select(selector):
@@ -503,24 +689,6 @@ class Session(BaseSession):
         vm_class = _VIEW_MODELS[name]
         return vm_class(self.model, store=self.cluster_store, **kwargs)
 
-    # def _view_settings_name(self, view_model, name):
-    #     if isinstance(view_model, BaseViewModel):
-    #         view_model = view_model.view_name
-    #     return 'manual_clustering.' + view_model + '_' + name
-
-    # def _save_scale_factor(self, view_model):
-    #     name = self._view_settings_name(view_model, 'scale_factor')
-    #     if not name or not hasattr(view_model, 'scale_factor'):
-    #         return
-    #     sf = view_model.view.zoom * view_model.scale_factor
-    #     self.set_internal_settings(name, sf)
-
-    # def _load_scale_factor(self, view_name):
-    #     name = self._view_settings_name(view_name, 'scale_factor')
-    #     if not name:
-    #         return 1.
-    #     return self.get_internal_settings(name) or .01
-
     def show_waveforms(self):
         """Show a WaveformView and return a ViewModel instance."""
 
@@ -533,6 +701,8 @@ class Session(BaseSession):
 
         @vm.view.connect
         def on_draw(event):
+            # OPTIM: put this when the model or the view is closed instead
+            # No need to run this at every draw!
             sf = vm.view.box_scale[1] / vm.view.visual.default_box_scale[1]
             sf = sf * vm.scale_factor
             self.set_internal_settings(sf_name, sf)
@@ -558,7 +728,7 @@ class Session(BaseSession):
 
     def show_correlograms(self):
         """Show a CorrelogramView and return a ViewModel instance."""
-        args = 'binsize', 'winsize_bins', 'n_excerpts', 'excerpt_size'
+        args = 'binsize', 'winsize_bins'
         kwargs = {k: self.get_user_settings('manual_clustering.'
                                             'correlograms_' + k)
                   for k in args}

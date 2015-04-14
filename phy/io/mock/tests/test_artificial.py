@@ -45,8 +45,8 @@ def _test_artificial(n_spikes=None, n_clusters=None):
                                                n_clusters=n_clusters)
     assert spike_clusters.shape == (n_spikes,)
     if n_clusters >= 1:
-        assert (spike_clusters.min(), spike_clusters.max()) == \
-               (0, n_clusters - 1)
+        assert spike_clusters.min() in (0, 1)
+        assert spike_clusters.max() in (n_clusters - 1, n_clusters - 2)
     ae(np.unique(spike_clusters), np.arange(n_clusters))
 
     # Features.
@@ -68,7 +68,7 @@ def test_mock_model():
 
     assert model.metadata['description'] == 'A mock model.'
     assert model.traces.ndim == 2
-    assert model.spike_times.ndim == 1
+    assert model.spike_samples.ndim == 1
     assert model.spike_clusters.ndim == 1
     assert model.features.ndim == 2
     assert model.masks.ndim == 2

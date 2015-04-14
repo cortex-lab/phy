@@ -21,27 +21,30 @@ class MEA(object):
 
     # TODO:
     # * multi-shank
-    # * channel_ids
-    # * ignored channels
 
-    def __init__(self, positions=None, adjacency=None, n_channels=None):
-        if positions is not None and n_channels is None:
-            n_channels = positions.shape[0]
-        self._n_channels = n_channels
-        self.positions = positions
-        self.adjacency = adjacency
+    def __init__(self, channels, positions=None, adjacency=None):
+        # channels is a list of unique channel identifiers, not necessarily
+        # in increasing order.
+        # positions must have the same number of rows than the number of
+        # channels.
+        self._channels = channels
+        if positions is not None:
+            assert self.n_channels == positions.shape[0]
+        self._positions = positions
+        self._adjacency = adjacency
 
     def _check_positions(self, positions):
-        if positions is not None:
-            positions = _as_array(positions)
-            if self._n_channels is None:
-                self._n_channels = positions.shape[0]
-            if positions.shape[0] != self._n_channels:
-                raise ValueError("'positions' "
-                                 "(shape {0:s})".format(str(positions.shape)) +
-                                 " and 'n_channels' "
-                                 "({0:d})".format(self.n_channels) +
-                                 " do not match.")
+        if positions is None:
+            return
+        positions = _as_array(positions)
+        if self.n_channels is None:
+            self.n_channels = positions.shape[0]
+        if positions.shape[0] != self.n_channels:
+            raise ValueError("'positions' "
+                             "(shape {0:s})".format(str(positions.shape)) +
+                             " and 'n_channels' "
+                             "({0:d})".format(self.n_channels) +
+                             " do not match.")
 
     @property
     def positions(self):
@@ -53,8 +56,12 @@ class MEA(object):
         self._positions = value
 
     @property
+    def channels(self):
+        return self._channels
+
+    @property
     def n_channels(self):
-        return self._n_channels
+        return len(self._channels)
 
     @property
     def adjacency(self):
@@ -79,4 +86,5 @@ def staggered_positions(n_channels):
     """Generate channel positions for a staggered probe."""
     i = np.arange(n_channels - 1)
     x, y = (-1) ** i * (5 + i), 10 * (i + 1)
-    return np.flipud(np.r_[np.zeros((1, 2)), np.c_[x, y]])
+    pos = np.flipud(np.r_[np.zeros((1, 2)), np.c_[x, y]])
+    return pos

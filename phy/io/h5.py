@@ -6,10 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import numpy as np
 import h5py
 
-from ..ext import six
+from ..ext.six import string_types
 
 
 #------------------------------------------------------------------------------
@@ -76,7 +75,9 @@ class File(object):
     def is_open(self):
         return self._h5py_file is not None
 
-    def open(self):
+    def open(self, mode=None):
+        if mode is not None:
+            self.mode = mode
         if not self.is_open():
             self._h5py_file = h5py.File(self.filename, self.mode)
 
@@ -143,6 +144,8 @@ class File(object):
 
     def write_attr(self, path, attr_name, value):
         """Write an attribute of an HDF5 group."""
+        assert isinstance(path, string_types)
+        assert isinstance(attr_name, string_types)
         # If the parent group doesn't already exist, create it.
         if path not in self._h5py_file:
             self._h5py_file.create_group(path)

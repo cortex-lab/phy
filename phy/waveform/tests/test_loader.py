@@ -33,8 +33,8 @@ def test_loader():
     n_spikes = n_samples_trace // (2 * n_samples)
 
     traces = artificial_traces(n_samples_trace, n_channels)
-    spike_times = np.cumsum(npr.randint(low=0, high=2 * n_samples,
-                                        size=n_spikes))
+    spike_samples = np.cumsum(npr.randint(low=0, high=2 * n_samples,
+                                          size=n_spikes))
 
     with raises(ValueError):
         WaveformLoader(traces)
@@ -45,14 +45,14 @@ def test_loader():
     loader.traces = traces
 
     # Extract a waveform.
-    t = spike_times[10]
+    t = spike_samples[10]
     waveform = loader._load_at(t)
     assert waveform.shape == (n_samples, n_channels)
     ae(waveform, traces[t - 20:t + 20, :])
 
-    waveforms = loader[spike_times[10:20]]
+    waveforms = loader[spike_samples[10:20]]
     assert waveforms.shape == (10, n_samples, n_channels)
-    t = spike_times[15]
+    t = spike_samples[15]
     w1 = waveforms[5, ...]
     w2 = traces[t - 20:t + 20, :]
     assert np.allclose(w1, w2)
@@ -116,8 +116,8 @@ def test_loader_filter():
     n_spikes = n_samples_trace // (2 * n_samples)
 
     traces = artificial_traces(n_samples_trace, n_channels)
-    spike_times = np.cumsum(npr.randint(low=0, high=2 * n_samples,
-                                        size=n_spikes))
+    spike_samples = np.cumsum(npr.randint(low=0, high=2 * n_samples,
+                                          size=n_spikes))
 
     # With filter.
     def my_filter(x):
@@ -128,7 +128,7 @@ def test_loader_filter():
                             filter=my_filter,
                             filter_margin=5)
 
-    t = spike_times[5]
+    t = spike_samples[5]
     waveform_filtered = loader._load_at(t)
     traces_filtered = my_filter(traces)
     traces_filtered[t - 20:t + 20, :]

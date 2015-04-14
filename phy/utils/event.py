@@ -127,6 +127,11 @@ class ProgressReporter(EventEmitter):
     def is_complete(self):
         return self.current() == self.total()
 
+    def set_complete(self):
+        for k, (v, m) in self._channels.items():
+            self._channels[k][0] = m
+        self.emit('complete')
+
     def current(self):
         """Return the total current value."""
         return sum(v[0] for k, v in self._channels.items())

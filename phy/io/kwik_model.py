@@ -12,13 +12,17 @@ import numpy as np
 
 from ..ext import six
 from .base_model import BaseModel
-from ..cluster.manual.cluster_info import ClusterMetadata
+from ..cluster.manual.cluster_metadata import ClusterMetadata
 from .h5 import open_h5
 from ..waveform.loader import WaveformLoader
 from ..waveform.filter import bandpass_filter, apply_filter
 from ..electrode.mea import MEA
 from ..utils.logging import debug
-from ..utils.array import PartialArray
+from ..utils.array import (PartialArray,
+                           _concatenate_virtual_arrays,
+                           _as_array,
+                           _unique,
+                           )
 
 
 #------------------------------------------------------------------------------
@@ -35,6 +39,8 @@ def _list_int_children(group):
     return sorted(_to_int_list(group.keys()))
 
 
+# TODO: refactor the functions below with h5.File.children().
+
 def _list_channel_groups(kwik):
     """Return the list of channel groups in a kwik file."""
     if 'channel_groups' in kwik:
@@ -46,9 +52,15 @@ def _list_channel_groups(kwik):
 def _list_recordings(kwik):
     """Return the list of recordings in a kwik file."""
     if '/recordings' in kwik:
-        return _list_int_children(kwik['/recordings'])
+        recordings = _list_int_children(kwik['/recordings'])
     else:
-        return []
+        recordings = []
+    # TODO: return a dictionary of recordings instead of a list of recording
+    # ids.
+    # return {rec: Bunch({
+    #     'start': kwik['/recordings/{0}'.format(rec)].attrs['start_sample']
+    # }) for rec in recordings}
+    return recordings
 
 
 def _list_channels(kwik, channel_group=None):
@@ -74,6 +86,15 @@ def _list_clusterings(kwik, channel_group=None):
     assert 'main' in clusterings
     clusterings.remove('main')
     return ['main'] + clusterings
+
+
+def _concatenate_spikes(spikes, recs, offsets):
+    """Concatenate spike samples belonging to consecutive recordings."""
+    assert offsets is not None
+    spikes = _as_array(spikes)
+    offsets = _as_array(offsets)
+    recs = _as_array(recs)
+    return (spikes + offsets[recs]).astype(np.uint64)
 
 
 _COLOR_MAP = np.array([[1., 1., 1.],
@@ -141,17 +162,17 @@ def _kwik_filenames(filename):
 class SpikeLoader(object):
     """Translate selection with spike ids into selection with
     absolute times."""
-    def __init__(self, waveforms, spike_times):
-        self._spike_times = spike_times
+    def __init__(self, waveforms, spike_samples):
+        self._spike_samples = spike_samples
         # waveforms is a WaveformLoader instance
         self._waveforms = waveforms
         self.dtype = waveforms.dtype
-        self.shape = (len(spike_times),
+        self.shape = (len(spike_samples),
                       waveforms.n_samples_waveforms,
                       waveforms.n_channels_waveforms)
 
     def __getitem__(self, item):
-        times = self._spike_times[item]
+        times = self._spike_samples[item]
         return self._waveforms[times]
 
 
@@ -163,81 +184,39 @@ class KwikModel(BaseModel):
     """Holds data contained in a kwik file."""
     def __init__(self, filename=None,
                  channel_group=None,
-                 recording=None,
                  clustering=None):
         super(KwikModel, self).__init__()
 
         # Initialize fields.
-        self._spike_times = None
+        self._spike_samples = None
         self._spike_clusters = None
         self._metadata = None
         self._clustering = 'main'
         self._probe = None
         self._channels = []
+        self._channel_order = None
         self._features = None
         self._masks = None
         self._waveforms = None
         self._cluster_metadata = None
         self._traces = None
+        self._recording_offsets = None
         self._waveform_loader = None
 
-        if filename is None:
-            raise ValueError("No filename specified.")
+        # Open the experiment.
+        self.filename = filename
+        self.open(filename,
+                  channel_group=channel_group,
+                  clustering=clustering)
 
-        # Open the file.
-        self.name = op.splitext(op.basename(filename))[0]
-        self._kwik = open_h5(filename)
-        if not self._kwik.is_open():
-            raise ValueError("File {0} failed to open.".format(filename))
+    # Internal properties and methods
+    # -------------------------------------------------------------------------
 
+    def _check_kwik_version(self):
         # This class only works with kwik version 2 for now.
         kwik_version = self._kwik.read_attr('/', 'kwik_version')
         if kwik_version != 2:
             raise IOError("The kwik version is {v} != 2.".format(kwik_version))
-
-        # Open the Kwx file if it exists.
-        filenames = _kwik_filenames(filename)
-        if op.exists(filenames['kwx']):
-            self._kwx = open_h5(filenames['kwx'])
-        else:
-            self._kwx = None
-
-        # Open the Kwd file if it exists.
-        if op.exists(filenames['raw.kwd']):
-            self._kwd = open_h5(filenames['raw.kwd'])
-        else:
-            self._kwd = None
-
-        # Load global information about the file.
-        self._load_meta()
-
-        # List channel groups and recordings.
-        self._channel_groups = _list_channel_groups(self._kwik.h5py_file)
-        self._recordings = _list_recordings(self._kwik.h5py_file)
-
-        # Choose the default channel group if not specified.
-        if channel_group is None and self.channel_groups:
-            channel_group = self.channel_groups[0]
-        # Load the channel group.
-        self.channel_group = channel_group
-
-        # Choose the default recording if not specified.
-        if recording is None and self.recordings:
-            recording = self.recordings[0]
-        # Load the recording.
-        self.recording = recording
-
-        # Once the channel group is loaded, list the clusterings.
-        self._clusterings = _list_clusterings(self._kwik.h5py_file,
-                                              self.channel_group)
-        # Choose the first clustering (should always be 'main').
-        if clustering is None and self.clusterings:
-            clustering = self.clusterings[0]
-        # Load the specified clustering.
-        self.clustering = clustering
-
-    # Internal properties and methods
-    # -------------------------------------------------------------------------
 
     @property
     def _channel_groups_path(self):
@@ -255,9 +234,69 @@ class KwikModel(BaseModel):
     def _clusters_path(self):
         return '{0:s}/clusters'.format(self._channel_groups_path)
 
+    def _cluster_path(self, cluster):
+        return '{0:s}/{1:d}'.format(self._clustering_path, cluster)
+
+    @property
+    def _spike_clusters_path(self):
+        return '{0:s}/clusters/{1:s}'.format(self._spikes_path,
+                                             self._clustering)
+
     @property
     def _clustering_path(self):
         return '{0:s}/{1:s}'.format(self._clusters_path, self._clustering)
+
+    # Loading and saving
+    # -------------------------------------------------------------------------
+
+    def _open_h5_if_exists(self, file_type, mode=None):
+        path = self._filenames[file_type]
+        return open_h5(path, mode=mode) if op.exists(path) else None
+
+    def _open_kwik_if_needed(self, mode=None):
+        if not self._kwik.is_open():
+            self._kwik.open(mode=mode)
+            return True
+        else:
+            if mode is not None:
+                self._kwik.mode = mode
+            return False
+
+    def _create_waveform_loader(self):
+        """Create a waveform loader."""
+        n_samples = (self._metadata['extract_s_before'],
+                     self._metadata['extract_s_after'])
+        order = self._metadata['filter_butter_order']
+        b_filter = bandpass_filter(rate=self._metadata['sample_rate'],
+                                   low=self._metadata['filter_low'],
+                                   high=self._metadata['filter_high'],
+                                   order=order)
+
+        def filter(x):
+            return apply_filter(x, b_filter)
+
+        self._waveform_loader = WaveformLoader(n_samples=n_samples,
+                                               filter=filter,
+                                               filter_margin=order * 3,
+                                               )
+
+    def _update_waveform_loader(self):
+        if self._kwd is not None:
+            self._waveform_loader.traces = self._traces
+        else:
+            self._waveform_loader.traces = np.zeros((0, self.n_channels),
+                                                    dtype=np.float32)
+
+        # Update the list of channels for the waveform loader.
+        self._waveform_loader.channels = self._channel_order
+
+    def _create_cluster_metadata(self):
+        self._cluster_metadata = ClusterMetadata()
+
+        @self._cluster_metadata.default
+        def group(cluster):
+            # Default group is unsorted.
+            return 3
 
     def _load_meta(self):
         """Load metadata from kwik file."""
@@ -273,26 +312,39 @@ class KwikModel(BaseModel):
                     debug("Metadata field '{0:s}' not found.".format(field))
         self._metadata = metadata
 
-    # Channel group
-    # -------------------------------------------------------------------------
+    def _load_probe(self):
+        # TODO: support multiple channel groups.
+        # We take the channel order into account here.
+        positions = []
+        for channel in self._channel_order:
+            path = '{0:s}/{1:d}'.format(self._channels_path, channel)
+            position = self._kwik.read_attr(path, 'position')
+            positions.append(position)
+        positions = np.array(positions)
+        self._probe = MEA(channels=self._channel_order, positions=positions)
 
-    @property
-    def channel_groups(self):
-        return self._channel_groups
+    def _load_recordings(self):
+        # Load recordings.
+        self._recordings = _list_recordings(self._kwik.h5py_file)
+        # This will be updated later if a KWD file is present.
+        self._recording_offsets = [0] * (len(self._recordings) + 1)
 
-    def _channel_group_changed(self, value):
-        """Called when the channel group changes."""
-        if value not in self.channel_groups:
-            raise ValueError("The channel group {0} is invalid.".format(value))
-        self._channel_group = value
+    def _load_channels(self):
+        self._channels = np.array(_list_channels(self._kwik.h5py_file,
+                                                 self._channel_group))
+        channel_order = self._kwik.read_attr(self._channel_groups_path,
+                                             'channel_order')
+        self._channel_order = np.array(channel_order)
 
-        # Load channels.
-        self._channels = _list_channels(self._kwik.h5py_file,
-                                        self._channel_group)
+    def _load_channel_groups(self, channel_group=None):
+        self._channel_groups = _list_channel_groups(self._kwik.h5py_file)
+        if channel_group is None and self._channel_groups:
+            # Choose the default channel group if not specified.
+            channel_group = self._channel_groups[0]
+        # Load the channel group.
+        self._channel_group = channel_group
 
-        # Load spike times.
-        path = '{0:s}/time_samples'.format(self._spikes_path)
-        self._spike_times = self._kwik.read(path)[:]
+    def _load_features_masks(self):
 
         # Load features masks.
         path = '{0:s}/features_masks'.format(self._channel_groups_path)
@@ -303,55 +355,185 @@ class KwikModel(BaseModel):
             self._features = PartialArray(fm, 0)
 
             nfpc = self._metadata['nfeatures_per_channel']
-            nc = self.n_channels
+            nc = len(self.channel_order)
             # This partial array simulates a (n_spikes, n_channels) array.
             self._masks = PartialArray(fm,
                                        (slice(0, nfpc * nc, nfpc), 1))
             assert self._masks.shape == (self.n_spikes, nc)
 
-        self._cluster_metadata = ClusterMetadata()
+    def _load_spikes(self):
+        # Load spike samples.
+        path = '{0:s}/time_samples'.format(self._spikes_path)
 
-        @self._cluster_metadata.default
-        def group(cluster):
-            return 3
+        # Concatenate the spike samples from consecutive recordings.
+        _spikes = self._kwik.read(path)[:]
+        self._spike_recordings = self._kwik.read(
+            '{0:s}/recording'.format(self._spikes_path))[:]
+        self._spike_samples = _concatenate_spikes(_spikes,
+                                                  self._spike_recordings,
+                                                  self._recording_offsets)
 
-        # Load probe.
-        positions = self._load_channel_positions()
+    def _load_spike_clusters(self):
+        self._spike_clusters = self._kwik.read(self._spike_clusters_path)[:]
 
-        # TODO: support multiple channel groups.
-        self._probe = MEA(positions=positions,
-                          n_channels=self.n_channels)
+    def _save_spike_clusters(self, spike_clusters):
+        assert spike_clusters.shape == self._spike_clusters.shape
+        assert spike_clusters.dtype == self._spike_clusters.dtype
+        self._spike_clusters = spike_clusters
+        sc = self._kwik.read(self._spike_clusters_path)
+        sc[:] = spike_clusters
 
+    def _load_clusterings(self, clustering):
+        # Once the channel group is loaded, list the clusterings.
+        self._clusterings = _list_clusterings(self._kwik.h5py_file,
+                                              self.channel_group)
+        # Choose the first clustering (should always be 'main').
+        if clustering is None and self.clusterings:
+            clustering = self.clusterings[0]
+        # Load the specified clustering.
+        self._clustering = clustering
+
+    def _load_cluster_groups(self):
+        clusters = self._kwik.groups(self._clustering_path)
+        clusters = [int(cluster) for cluster in clusters]
+        for cluster in clusters:
+            path = self._cluster_path(cluster)
+            group = self._kwik.read_attr(path, 'cluster_group')
+            self._cluster_metadata.set_group([cluster], group)
+
+    def _save_cluster_groups(self, cluster_groups):
+        assert isinstance(cluster_groups, dict)
+        for cluster, group in cluster_groups.items():
+            path = self._cluster_path(cluster)
+            self._kwik.write_attr(path, 'cluster_group', group)
+            self._cluster_metadata.set_group([cluster], group)
+
+    def _load_traces(self):
+        if self._kwd is not None:
+            i = 0
+            self._recording_offsets = []
+            traces = []
+            for rec in self._recordings:
+                path = '/recordings/{0:d}/data'.format(rec)
+                data = self._kwd.read(path)
+                traces.append(data)
+                # NOTE: there is no time gap between the recordings.
+                # If a gap were to be added, it should be also added in
+                # _concatenate_virtual_arrays() (which doesn't support it
+                # currently).
+                self._recording_offsets.append(i)
+                i += data.shape[0]
+            # # Create a new WaveformLoader if needed.
+            # if self._waveform_loader is None:
+            #     self._create_waveform_loader()
+            # Virtual concatenation of the arrays.
+            self._traces = _concatenate_virtual_arrays(traces)
+
+    def open(self, filename, channel_group=None, clustering=None):
+        """Open a Kwik experiment (.kwik, .kwx, .raw.kwd files)."""
+
+        if filename is None:
+            raise ValueError("No filename specified.")
+
+        # Open the file.
+        self.filename = filename
+        self.name = op.splitext(op.basename(filename))[0]
+
+        # Open the files if they exist.
+        self._filenames = _kwik_filenames(filename)
+
+        # Open the KWIK file.
+        self._kwik = self._open_h5_if_exists('kwik')
+        if not self._kwik.is_open():
+            raise ValueError("File {0} failed to open.".format(filename))
+        self._check_kwik_version()
+
+        # Open the KWX and KWD files.
+        self._kwx = self._open_h5_if_exists('kwx')
+        self._kwd = self._open_h5_if_exists('raw.kwd')
+
+        # Load the data.
+        self._load_meta()
+
+        # This needs metadata.
         self._create_waveform_loader()
 
-    def _load_channel_positions(self):
-        """Load the channel positions from the kwik file."""
-        positions = []
-        for channel in self.channels:
-            path = '{0:s}/{1:d}'.format(self._channels_path, channel)
-            position = self._kwik.read_attr(path, 'position')
-            positions.append(position)
-        return np.array(positions)
+        self._load_recordings()
 
-    def _create_waveform_loader(self):
-        """Create a waveform loader."""
-        n_samples = (self._metadata['extract_s_before'],
-                     self._metadata['extract_s_after'])
-        order = self._metadata['filter_butter_order']
-        b_filter = bandpass_filter(rate=self._metadata['sample_rate'],
-                                   low=self._metadata['filter_low'],
-                                   high=self._metadata['filter_high'],
-                                   order=order)
+        # This generates the recording offset.
+        self._load_traces()
 
-        def filter(x):
-            return apply_filter(x, b_filter)
+        self._load_channel_groups(channel_group)
 
-        # TODO: better normalization of the waveforms
-        self._waveform_loader = WaveformLoader(n_samples=n_samples,
-                                               channels=self._channels,
-                                               filter=filter,
-                                               filter_margin=order * 3,
-                                               )
+        # This needs channel groups.
+        self._load_clusterings(clustering)
+
+        # This needs the recording offsets.
+        # This loads channels, channel_order, spikes, probe.
+        self._channel_group_changed(self._channel_group)
+
+        # This loads spike clusters and cluster groups.
+        self._clustering_changed(self._clustering)
+
+        # This needs channels, channel_order, and waveform loader.
+        self._update_waveform_loader()
+
+        # No need to keep the kwik file open.
+        self._kwik.close()
+
+    def save(self, spike_clusters, cluster_groups):
+        """Commits all in-memory changes to disk."""
+
+        # REFACTOR: with() to open/close the file if needed
+        to_close = self._open_kwik_if_needed(mode='a')
+
+        self._save_spike_clusters(spike_clusters)
+        self._save_cluster_groups(cluster_groups)
+
+        if to_close:
+            self._kwik.close()
+
+    # Changing channel group and clustering
+    # -------------------------------------------------------------------------
+
+    def _channel_group_changed(self, value):
+        """Called when the channel group changes."""
+        if value not in self.channel_groups:
+            raise ValueError("The channel group {0} is invalid.".format(value))
+        self._channel_group = value
+
+        # Load data.
+        _to_close = self._open_kwik_if_needed()
+        self._load_channels()
+        self._load_spikes()
+        self._load_features_masks()
+        self._load_probe()
+        if _to_close:
+            self._kwik.close()
+
+        # Update the list of channels for the waveform loader.
+        self._waveform_loader.channels = self._channel_order
+
+    def _clustering_changed(self, value):
+        """Called when the clustering changes."""
+        if value not in self.clusterings:
+            raise ValueError("The clustering {0} is invalid.".format(value))
+        self._clustering = value
+
+        # Load data.
+        _to_close = self._open_kwik_if_needed()
+        self._create_cluster_metadata()
+        self._load_spike_clusters()
+        self._load_cluster_groups()
+        if _to_close:
+            self._kwik.close()
+
+    # Data
+    # -------------------------------------------------------------------------
+
+    @property
+    def channel_groups(self):
+        return self._channel_groups
 
     @property
     def n_features_per_channel(self):
@@ -364,6 +546,12 @@ class KwikModel(BaseModel):
         return self._channels
 
     @property
+    def channel_order(self):
+        """List of channels in the current channel group, in the order
+        corresponding to the waveforms and features."""
+        return self._channel_order
+
+    @property
     def n_channels(self):
         """Number of channels in the current channel group."""
         return len(self._channels)
@@ -372,34 +560,13 @@ class KwikModel(BaseModel):
     def recordings(self):
         return self._recordings
 
-    def _recording_changed(self, value):
-        """Called when the recording number changes."""
-        if value not in self.recordings:
-            raise ValueError("The recording {0} is invalid.".format(value))
-        self._recording = value
-        # Traces.
-        if self._kwd is not None:
-            path = '/recordings/{0:d}/data'.format(self._recording)
-            self._traces = self._kwd.read(path)
-            # Create a new WaveformLoader if needed.
-            if self._waveform_loader is None:
-                self._create_waveform_loader()
-            self._waveform_loader.traces = self._traces
+    @property
+    def n_recordings(self):
+        return len(self._recordings)
 
     @property
     def clusterings(self):
         return self._clusterings
-
-    def _clustering_changed(self, value):
-        """Called when the clustering changes."""
-        if value not in self.clusterings:
-            raise ValueError("The clustering {0} is invalid.".format(value))
-        self._clustering = value
-        # NOTE: we are ensured here that self._channel_group is valid.
-        path = '{0:s}/clusters/{1:s}'.format(self._spikes_path,
-                                             self._clustering)
-        self._spike_clusters = self._kwik.read(path)[:]
-        # TODO: cluster metadata
 
     @property
     def clustering(self):
@@ -408,16 +575,6 @@ class KwikModel(BaseModel):
     @clustering.setter
     def clustering(self, value):
         self._clustering_changed(value)
-
-    # Data
-    # -------------------------------------------------------------------------
-
-    @property
-    def _clusters(self):
-        """List of clusters in the Kwik file."""
-        clusters = self._kwik.groups(self._clustering_path)
-        clusters = [int(cluster) for cluster in clusters]
-        return sorted(clusters)
 
     @property
     def metadata(self):
@@ -431,18 +588,29 @@ class KwikModel(BaseModel):
 
     @property
     def traces(self):
-        """Traces from the current recording (may be memory-mapped)."""
+        """Traces (memory-mapped)."""
         return self._traces
 
     @property
+    def spike_samples(self):
+        """Spike samples from the current channel_group."""
+        return self._spike_samples
+
+    @property
     def spike_times(self):
-        """Spike times from the current channel_group."""
-        return self._spike_times
+        """Spike times (in seconds) from the current channel_group.
+        The spike times of all recordings are concatenated."""
+        sr = float(self._metadata['sample_rate'])
+        return self._spike_samples.astype(np.float64) / sr
+
+    @property
+    def spike_recordings(self):
+        return self._spike_recordings
 
     @property
     def n_spikes(self):
         """Return the number of spikes."""
-        return len(self._spike_times)
+        return len(self._spike_samples)
 
     @property
     def features(self):
@@ -462,7 +630,7 @@ class KwikModel(BaseModel):
     @property
     def waveforms(self):
         """Waveforms from the current channel_group (may be memory-mapped)."""
-        return SpikeLoader(self._waveform_loader, self.spike_times)
+        return SpikeLoader(self._waveform_loader, self.spike_samples)
 
     @property
     def spike_clusters(self):
@@ -472,12 +640,16 @@ class KwikModel(BaseModel):
     @property
     def cluster_metadata(self):
         """ClusterMetadata instance holding information about the clusters."""
-        # TODO
         return self._cluster_metadata
 
-    def save(self):
-        """Commits all in-memory changes to disk."""
-        raise NotImplementedError()
+    @property
+    def cluster_groups(self):
+        clusters = _unique(self._spike_clusters)
+        return {cluster: self._cluster_metadata.group(cluster)
+                for cluster in clusters}
+
+    # Close
+    # -------------------------------------------------------------------------
 
     def close(self):
         """Close all opened files."""

@@ -80,20 +80,27 @@ class BaseViewModel(object):
         else:
             return getattr(self._model, name)[spikes]
 
-    def on_open(self):
-        """To be overriden."""
+    def _update_spike_clusters(self):
         self.view.visual.spike_clusters = self.model.spike_clusters
 
-    def on_cluster(self, up):
+    def _update_cluster_colors(self):
+        n = self.view.visual.n_clusters
+        self.view.visual.cluster_colors = _selected_clusters_colors(n)
+
+    def on_open(self):
         """To be overriden."""
-        pass
+        self._update_spike_clusters()
+
+    def on_cluster(self, up=None):
+        """May be overriden."""
+        self._update_spike_clusters()
+        self._update_cluster_colors()
 
     def on_select(self, clusters, spikes):
         """To be overriden."""
-        pass
+        self._update_cluster_colors()
 
     def show(self):
-        # self._view.update()
         self._view.show()
 
 
@@ -107,7 +114,7 @@ class WaveformViewModel(BaseViewModel):
     scale_factor = 1.
 
     def on_open(self):
-        self.view.visual.spike_clusters = self.model.spike_clusters
+        self._update_spike_clusters()
         self.view.visual.channel_positions = self.model.probe.positions
 
     def on_select(self, clusters, spikes):
@@ -129,8 +136,7 @@ class WaveformViewModel(BaseViewModel):
         self.view.visual.spike_ids = spikes
 
         # Cluster colors.
-        n = len(clusters)
-        self.view.visual.cluster_colors = _selected_clusters_colors(n)
+        self._update_cluster_colors()
 
     def on_close(self):
         self.view.visual.spike_clusters = []
@@ -157,7 +163,7 @@ class FeatureViewModel(BaseViewModel):
         # (n_spikes, n_channels, n_features)
         # because that's what the FeatureView expects currently.
         n_fet = self.model.n_features_per_channel
-        n_channels = self.model.n_channels
+        n_channels = len(self.model.channel_order)
         shape = (-1, n_channels, n_fet)
         features = features[:, :n_fet * n_channels].reshape(shape)
         # Scale factor.
@@ -181,12 +187,11 @@ class FeatureViewModel(BaseViewModel):
         self.view.visual.spike_clusters = self.model.spike_clusters
 
         # Spike times and ids.
-        self.view.visual.spike_times = self.model.spike_times[spikes]
+        self.view.visual.spike_samples = self.model.spike_samples[spikes]
         self.view.visual.spike_ids = spikes
 
         # Cluster colors.
-        n = len(clusters)
-        self.view.visual.cluster_colors = _selected_clusters_colors(n)
+        self._update_cluster_colors()
 
 
 class CorrelogramViewModel(BaseViewModel):
@@ -195,22 +200,23 @@ class CorrelogramViewModel(BaseViewModel):
 
     binsize = None
     winsize_bins = None
-    n_excerpts = None
-    excerpt_size = None
+    # n_excerpts = None
+    # excerpt_size = None
+
+    # _clusters = None
+    _spikes = None
 
     def on_select(self, clusters, spikes):
+
+        self._spikes = spikes
+
         self.view.cluster_ids = clusters
 
-        # # Extract a subset of the spikes belonging to the selected clusters.
-        # spikes_subset = get_excerpts(spikes,
-        #                              n_excerpts=self.n_excerpts,
-        #                              excerpt_size=self.excerpt_size,
-        #                              )
         spike_clusters = self.model.spike_clusters[spikes]
-        spike_times = self.model.spike_times[spikes]
+        spike_samples = self.model.spike_samples[spikes]
 
         # Compute the correlograms.
-        ccgs = correlograms(spike_times,
+        ccgs = correlograms(spike_samples,
                             spike_clusters,
                             binsize=self.binsize,
                             winsize_bins=self.winsize_bins,
@@ -222,5 +228,19 @@ class CorrelogramViewModel(BaseViewModel):
         self.view.visual.correlograms = ccgs
 
         # Cluster colors.
-        n = len(clusters)
-        self.view.visual.cluster_colors = _selected_clusters_colors(n)
+        self._update_cluster_colors()
+
+    def on_cluster(self, up=None):
+        if up is None or up.description not in ('merge', 'assign'):
+            return
+
+        # OPTIM: add the CCGs of the merged clusters
+        # if up.description == 'merge':
+        #     self.view.visual.cluster_ids = up.added
+        #     n = len(up.added)
+        #     self.view.visual.cluster_colors = _selected_clusters_colors(n)
+
+        # Recompute the CCGs with the already-selected spikes, and the
+        # newly-created clusters.
+        if self._spikes is not None:
+            self.on_select(up.added, self._spikes)

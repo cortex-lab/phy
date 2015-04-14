@@ -6,14 +6,15 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import math
 from operator import itemgetter
 
 import numpy as np
 
+from ...ext.six import integer_types
+
 
 #------------------------------------------------------------------------------
-# Wizard
+# Utility functions
 #------------------------------------------------------------------------------
 
 def _argsort(seq, reverse=True, n_max=None):
@@ -21,32 +22,44 @@ def _argsort(seq, reverse=True, n_max=None):
     a list of tuples (cluster, value)."""
     out = [cl for (cl, v) in sorted(seq, key=itemgetter(1),
                                     reverse=reverse)]
-    if n_max is not None:
-        out = out[:n_max]
-    return out
+    if n_max in (None, 0):
+        return out
+    else:
+        return out[:n_max]
 
+
+def _best_clusters(clusters, quality, n_max=None):
+    return _argsort([(cluster, quality(cluster))
+                     for cluster in clusters], n_max=n_max)
+
+
+#------------------------------------------------------------------------------
+# Wizard
+#------------------------------------------------------------------------------
 
 class Wizard(object):
-    def __init__(self, cluster_metadata=None):
-        self._cluster_metadata = cluster_metadata
+    def __init__(self, cluster_ids=None):
         self._similarity = None
         self._quality = None
-        self._cluster_ids = None
+        self._ignored = set()
+        self.cluster_ids = cluster_ids
 
     @property
     def cluster_ids(self):
         return self._cluster_ids
 
     @cluster_ids.setter
-    def cluster_ids(self, value):
-        self._cluster_ids = value
+    def cluster_ids(self, cluster_ids):
+        if isinstance(cluster_ids, np.ndarray):
+            cluster_ids = cluster_ids.tolist()
+        self._cluster_ids = sorted(cluster_ids)
 
-    def similarity(self, func):
+    def set_similarity(self, func):
         """Register a function returing the similarity between two clusters."""
         self._similarity = func
         return func
 
-    def quality(self, func):
+    def set_quality(self, func):
         """Register a function returing the quality of a cluster."""
         self._quality = func
         return func
@@ -55,12 +68,19 @@ class Wizard(object):
         if self._cluster_ids is None:
             raise RuntimeError("The list of clusters need to be set.")
 
-    def best_clusters(self, n_max=None):
+    def _filter(self, items):
+        """Filter out ignored clusters or pairs of clusters."""
+        return [item for item in items
+                if item not in self._ignored]
+
+    # Public methods
+    #--------------------------------------------------------------------------
+
+    def best_clusters(self, n_max=10):
         """Return the list of best clusters sorted by decreasing quality."""
         self._check_cluster_ids()
-        quality = [(cluster, self._quality(cluster))
-                   for cluster in self._cluster_ids]
-        return _argsort(quality, n_max=n_max)
+        return self._filter(_best_clusters(self._cluster_ids, self._quality,
+                                           n_max=n_max))
 
     def best_cluster(self):
         """Return the best cluster."""
@@ -68,22 +88,27 @@ class Wizard(object):
         if clusters:
             return clusters[0]
 
-    def most_similar_clusters(self, cluster=None, n_max=None):
+    def most_similar_clusters(self, cluster=None, n_max=10):
         """Return the `n_max` most similar clusters."""
         if cluster is None:
             cluster = self.best_cluster()
         self._check_cluster_ids()
-        # TODO: filter according to the cluster group.
         similarity = [(other, self._similarity(cluster, other))
                       for other in self._cluster_ids
                       if other != cluster]
-        return _argsort(similarity, n_max=n_max)
+        clusters = _argsort(similarity, n_max=n_max)
+        # Filter out ignored clusters.
+        clusters = self._filter(clusters)
+        pairs = zip([cluster] * len(clusters), clusters)
+        # Filter out ignored pairs of clusters.
+        pairs = self._filter(pairs)
+        return [clu for (_, clu) in pairs]
 
-    def mark_dissimilar(self, cluster_0, cluster_1):
-        """Mark two clusters as dissimilar after a human decision.
-
-        This pair should not be reproposed again to the user.
-
-        """
-        # TODO
-        pass
+    def ignore(self, cluster_or_pair):
+        """Mark a cluster or a pair of clusters as ignored."""
+        if not isinstance(cluster_or_pair, (integer_types, tuple)):
+            raise ValueError("This function accepts a cluster id "
+                             "or a pair of ids as argument.")
+        if isinstance(cluster_or_pair, tuple):
+            assert len(cluster_or_pair) == 2
+        self._ignored.add(cluster_or_pair)

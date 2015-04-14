@@ -313,8 +313,10 @@ class Clustering(object):
                              spike_clusters_new)[0]
         clusters_changed = spike_clusters_new[changed]
 
-        return self._do_assign(changed,
-                               clusters_changed)
+        up = self._do_assign(changed,
+                             clusters_changed)
+        up.history = 'undo'
+        return up
 
     def redo(self):
         """Redo the last cluster assignement operation."""
@@ -328,5 +330,7 @@ class Clustering(object):
         assert spike_ids is not None
 
         # We apply the new assignement.
-        return self._do_assign(spike_ids,
-                               cluster_ids)
+        up = self._do_assign(spike_ids,
+                             cluster_ids)
+        up.history = 'redo'
+        return up

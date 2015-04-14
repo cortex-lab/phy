@@ -6,10 +6,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 import numpy as np
 from numpy.testing import assert_allclose as ac
+from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
+from .._utils import _spikes_in_clusters
 from ..session import BaseSession, Session, FeatureMasks
 from ....utils.testing import show_test
 from ....utils.tempdir import TemporaryDirectory
@@ -175,7 +179,7 @@ def test_session_store():
     FeatureMasks.chunk_size = 4
 
     with TemporaryDirectory() as tempdir:
-        model = MockModel(n_spikes=10, n_clusters=3)
+        model = MockModel(n_spikes=50, n_clusters=3)
         s0 = np.nonzero(model.spike_clusters == 0)[0]
         s1 = np.nonzero(model.spike_clusters == 1)[0]
 
@@ -234,18 +238,23 @@ def test_session_kwik():
         session = _start_manual_clustering(filename=filename,
                                            tempdir=tempdir)
 
+        # Check backup.
+        assert op.exists(op.join(tempdir, filename + '.bak'))
+
         session.select([0])
         cs = session.cluster_store
+
+        nc = n_channels - 2
 
         # Check the stored items.
         for cluster in range(n_clusters):
             n_spikes = len(session.clustering.spikes_per_cluster[cluster])
             n_unmasked_channels = cs.n_unmasked_channels(cluster)
 
-            assert cs.features(cluster).shape == (n_spikes, n_channels, n_fets)
-            assert cs.masks(cluster).shape == (n_spikes, n_channels)
-            assert cs.mean_masks(cluster).shape == (n_channels,)
-            assert n_unmasked_channels <= n_channels
+            assert cs.features(cluster).shape == (n_spikes, nc, n_fets)
+            assert cs.masks(cluster).shape == (n_spikes, nc)
+            assert cs.mean_masks(cluster).shape == (nc,)
+            assert n_unmasked_channels <= nc
             assert cs.mean_probe_position(cluster).shape == (2,)
             assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
 
@@ -258,3 +267,147 @@ def test_session_kwik():
         view_0.close()
         view_1.close()
         session.close()
+
+
+def test_session_clustering():
+
+    n_clusters = 5
+    n_spikes = 50
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 3000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=n_clusters,
+                                    n_spikes=n_spikes,
+                                    n_channels=n_channels,
+                                    n_features_per_channel=n_fets,
+                                    n_samples_traces=n_samples_traces)
+
+        session = _start_manual_clustering(filename=filename,
+                                           tempdir=tempdir)
+        cs = session.cluster_store
+        spike_clusters = session.model.spike_clusters.copy()
+
+        f = session.model.features
+        m = session.model.masks
+
+        def _check_arrays(cluster, clusters_for_sc=None, spikes=None):
+            """Check the features and masks in the cluster store
+            of a given custer."""
+            if spikes is None:
+                if clusters_for_sc is None:
+                    clusters_for_sc = [cluster]
+                spikes = _spikes_in_clusters(spike_clusters, clusters_for_sc)
+            shape = (len(spikes),
+                     len(session.model.channel_order),
+                     session.model.n_features_per_channel)
+            ac(cs.features(cluster), f[spikes, :].reshape(shape))
+            ac(cs.masks(cluster), m[spikes])
+
+        _check_arrays(0)
+        _check_arrays(2)
+
+        # Test session.best_clusters.
+        quality = session.cluster_store.n_unmasked_channels
+        clusters = session.best_clusters(quality)
+        ac(np.unique(clusters), session.clusters)
+
+        # Merge two clusters.
+        clusters = [0, 2]
+        session.merge(clusters)  # Create cluster 5.
+        _check_arrays(5, clusters)
+
+        # Split some spikes.
+        spikes = [2, 3, 5, 7, 11, 13]
+        # clusters = np.unique(spike_clusters[spikes])
+        session.split(spikes)  # Create cluster 6 and more.
+        _check_arrays(6, spikes=spikes)
+
+        # Undo.
+        session.undo()
+        _check_arrays(5, clusters)
+
+        # Undo.
+        session.undo()
+        _check_arrays(0)
+        _check_arrays(2)
+
+        # Redo.
+        session.redo()
+        _check_arrays(5, clusters)
+
+        # Split some spikes.
+        spikes = [5, 7, 11, 13, 17, 19]
+        # clusters = np.unique(spike_clusters[spikes])
+        session.split(spikes)  # Create cluster 6 and more.
+        _check_arrays(6, spikes=spikes)
+
+        # Move a cluster to a group.
+        session.move([6], 2)
+        assert len(session.cluster_store.mean_probe_position(6)) == 2
+
+        # Save.
+        spike_clusters_new = session.model.spike_clusters.copy()
+        # Check that the spike clusters have changed.
+        assert not np.all(spike_clusters_new == spike_clusters)
+        ac(session.model.spike_clusters, session.clustering.spike_clusters)
+        session.save()
+
+        # Re-open the file and check that the spike clusters and
+        # cluster groups have correctly been saved.
+        session = _start_manual_clustering(filename=filename,
+                                           tempdir=tempdir)
+        ac(session.model.spike_clusters, session.clustering.spike_clusters)
+        ac(session.model.spike_clusters, spike_clusters_new)
+        #  Check the cluster groups.
+        clusters = session.clustering.cluster_ids
+        groups = session.model.cluster_groups
+        assert groups[6] == 2
+
+
+def test_session_wizard():
+
+    n_clusters = 5
+    n_spikes = 50
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 3000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=n_clusters,
+                                    n_spikes=n_spikes,
+                                    n_channels=n_channels,
+                                    n_features_per_channel=n_fets,
+                                    n_samples_traces=n_samples_traces)
+
+        session = _start_manual_clustering(filename=filename,
+                                           tempdir=tempdir)
+
+        clusters = np.arange(n_clusters)
+        best_clusters = session.best_clusters()
+
+        assert session.wizard.best_cluster() == best_clusters[0]
+        ae(np.unique(best_clusters), clusters)
+        assert len(session.wizard.most_similar_clusters()) == n_clusters - 1
+
+        assert len(session.wizard.most_similar_clusters(0, n_max=3)) == 3
+
+        session.merge([0, 1, 2])
+        ae(np.unique(session.best_clusters()), np.arange(3, 6))
+        assert list(session.wizard.most_similar_clusters(5)) in ([3, 4],
+                                                                 [4, 3])
+
+        # Move a cluster to noise.
+        session.move([5], 0)
+        ae(np.unique(session.best_clusters()), np.arange(3, 5))
+        best = session.wizard.best_cluster()
+        assert best in (3, 4)
+        # The most similar cluster is 3 if best=4 and conversely.
+        assert list(session.wizard.most_similar_clusters(best)) == [7 - best]

@@ -8,7 +8,6 @@
 
 import numpy as np
 
-from ..ext import six
 from ..utils.array import _as_array, _pad
 from ..utils.logging import warn
 
@@ -118,7 +117,7 @@ class WaveformLoader(object):
         slice_extract = _slice(time_o,
                                self.n_samples_before_after,
                                self._filter_margin)
-        extract = self._traces[slice_extract, :]
+        extract = self._traces[slice_extract]
 
         # Pad the extracted chunk if needed.
         if slice_extract.start <= 0:

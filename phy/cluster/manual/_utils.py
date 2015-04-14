@@ -100,11 +100,14 @@ def update_info(**kwargs):
     d = dict(
         description=None,  # information about the update: 'merge', 'assign',
                            # or 'metadata_<name>'
+        history=None,  # None, 'undo', or 'redo'
         spikes=[],  # all spikes affected by the update
         added=[],  # new clusters
         deleted=[],  # deleted clusters
         descendants=[],  # pairs of (old_cluster, new_cluster)
-        metadata_changed=[]  # clusters with changed metadata
+        metadata_changed=[],  # clusters with changed metadata
+        old_spikes_per_cluster={},  # only for the affected clusters
+        new_spikes_per_cluster={},  # only for the affected clusters
     )
     d.update(kwargs)
     return Bunch(d)
