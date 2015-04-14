@@ -77,65 +77,37 @@ class EventEmitter(object):
 #------------------------------------------------------------------------------
 
 class ProgressReporter(EventEmitter):
-    """A class that reports total progress done with multiple jobs."""
+    """A class that reports progress done."""
     def __init__(self):
         super(ProgressReporter, self).__init__()
-        # A mapping {channel: [value, max_value]}.
-        self._channels = {}
+        self._value = 0
+        self._value_max = 0
 
-    def _value(self, channel):
-        return self._channels[channel][0]
+    @property
+    def value(self):
+        return self._value
 
-    def _max_value(self, channel):
-        return self._channels[channel][1]
-
-    def _set_value(self, channel, index, value):
-        if channel not in self._channels:
-            self._channels[channel] = [0, 0]
-        # old_value = self._value(channel)
-        max_value = self._max_value(channel)
-        if index == 0:
-            value = min(value, max_value)
-        # if ((index == 0 and value > max_value) or
-        #    (index == 1 and old_value > value)):
-        #     raise ValueError("The current value {0} ".format(value) +
-        #                      "needs to be less "
-        #                      "than the maximum value {0}.".format(max_value))
-        # else:
-        self._channels[channel][index] = value
-
-    def increment(self, *channels, **kwargs):
-        """Increment the values of one or multiple channels."""
-        increment = kwargs.get('increment', 1)
-        self.set(**{channel: (self._value(channel) + increment)
-                 for channel in channels})
-
-    def set(self, **values):
-        """Set the current values of one or several channels."""
-        for channel, value in values.items():
-            self._set_value(channel, 0, value)
-        current, total = self.current(), self.total()
-        self.emit('report', current, total)
-        if current == total:
+    @value.setter
+    def value(self, value):
+        self._value = value
+        self.emit('progress', self._value, self._value_max)
+        if self._value >= self._value_max:
             self.emit('complete')
 
-    def set_max(self, **max_values):
-        """Set the maximum values of one or several channels."""
-        for channel, max_value in max_values.items():
-            self._set_value(channel, 1, max_value)
+    @property
+    def value_max(self):
+        return self._value_max
+
+    @value_max.setter
+    def value_max(self, value):
+        self._value_max = value
 
     def is_complete(self):
-        return self.current() == self.total()
+        return self._value >= self._value_max
 
     def set_complete(self):
-        for k, (v, m) in self._channels.items():
-            self._channels[k][0] = m
-        self.emit('complete')
+        self.value = self.value_max
 
-    def current(self):
-        """Return the total current value."""
-        return sum(v[0] for k, v in self._channels.items())
-
-    def total(self):
-        """Return the total of the maximum values."""
-        return sum(v[1] for k, v in self._channels.items())
+    @property
+    def progress(self):
+        return self._value / float(self._value_max)
