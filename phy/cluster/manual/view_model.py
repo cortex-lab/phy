@@ -74,9 +74,9 @@ class BaseViewModel(object):
     def view(self):
         return self._view
 
-    def _load_from_store_or_model(self, name, clusters, spikes):
+    def _load_from_store_or_model(self, name, cluster_ids, spikes):
         if self._store is not None:
-            return self._store.load(name, clusters, spikes)
+            return self._store.load(name, cluster_ids, spikes)
         else:
             return getattr(self._model, name)[spikes]
 
@@ -96,7 +96,7 @@ class BaseViewModel(object):
         self._update_spike_clusters()
         self._update_cluster_colors()
 
-    def on_select(self, clusters, spikes):
+    def on_select(self, cluster_ids, spikes):
         """To be overriden."""
         self._update_cluster_colors()
 
@@ -117,7 +117,7 @@ class WaveformViewModel(BaseViewModel):
         self._update_spike_clusters()
         self.view.visual.channel_positions = self.model.probe.positions
 
-    def on_select(self, clusters, spikes):
+    def on_select(self, cluster_ids, spikes):
         # Load waveforms.
         debug("Loading {0:d} waveforms...".format(len(spikes)))
         waveforms = self.model.waveforms[spikes]
@@ -128,7 +128,7 @@ class WaveformViewModel(BaseViewModel):
 
         # Load masks.
         masks = self._load_from_store_or_model('masks',
-                                               clusters,
+                                               cluster_ids,
                                                spikes)
         self.view.visual.masks = masks
 
@@ -149,14 +149,14 @@ class FeatureViewModel(BaseViewModel):
     _view_name = 'features'
     scale_factor = 1.
 
-    def on_select(self, clusters, spikes):
+    def on_select(self, cluster_ids, spikes):
         # Load features.
         features = self._load_from_store_or_model('features',
-                                                  clusters,
+                                                  cluster_ids,
                                                   spikes)
         # Load masks.
         masks = self._load_from_store_or_model('masks',
-                                               clusters,
+                                               cluster_ids,
                                                spikes)
 
         # WARNING: convert features to a 3D array
@@ -176,7 +176,7 @@ class FeatureViewModel(BaseViewModel):
         # TODO: refactor this, enable/disable
         if self.store:
             sum_masks = np.vstack([self.store.sum_masks(cluster)
-                                   for cluster in clusters]).sum(axis=0)
+                                   for cluster in cluster_ids]).sum(axis=0)
             # Take the best 3 channels.
             channels = np.argsort(sum_masks)[::-1][:3]
         else:
@@ -206,12 +206,9 @@ class CorrelogramViewModel(BaseViewModel):
     # _clusters = None
     _spikes = None
 
-    def on_select(self, clusters, spikes):
-
+    def on_select(self, cluster_ids, spikes):
         self._spikes = spikes
-
-        self.view.cluster_ids = clusters
-
+        self.view.cluster_ids = cluster_ids
         spike_clusters = self.model.spike_clusters[spikes]
         spike_samples = self.model.spike_samples[spikes]
 
