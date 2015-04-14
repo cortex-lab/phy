@@ -643,10 +643,13 @@ class KwikModel(BaseModel):
         return self._cluster_metadata
 
     @property
+    def cluster_ids(self):
+        return _unique(self._spike_clusters)
+
+    @property
     def cluster_groups(self):
-        clusters = _unique(self._spike_clusters)
         return {cluster: self._cluster_metadata.group(cluster)
-                for cluster in clusters}
+                for cluster in self.cluster_ids}
 
     # Close
     # -------------------------------------------------------------------------
