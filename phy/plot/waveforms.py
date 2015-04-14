@@ -26,6 +26,7 @@ class WaveformVisual(BaseSpikeVisual):
     _shader_name = 'waveforms'
     _gl_draw_mode = 'line_strip'
     default_box_scale = (.05, .03)
+    default_probe_scale = (1., 1.)
 
     """Waveform visual."""
     def __init__(self, **kwargs):
@@ -35,6 +36,7 @@ class WaveformVisual(BaseSpikeVisual):
         self.n_channels, self.n_samples = None, None
 
         self.program['u_data_scale'] = self.default_box_scale
+        self.program['u_channel_scale'] = self.default_probe_scale
         _enable_depth_mask()
 
     # Data properties
@@ -76,6 +78,15 @@ class WaveformVisual(BaseSpikeVisual):
     def box_scale(self, value):
         assert isinstance(value, tuple) and len(value) == 2
         self.program['u_data_scale'] = value
+
+    @property
+    def probe_scale(self):
+        return tuple(self.program['u_channel_scale'])
+
+    @probe_scale.setter
+    def probe_scale(self, value):
+        assert isinstance(value, tuple) and len(value) == 2
+        self.program['u_channel_scale'] = value
 
     # Data baking
     # -------------------------------------------------------------------------
