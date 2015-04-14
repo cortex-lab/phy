@@ -32,6 +32,7 @@ from .view_model import (WaveformViewModel,
                          )
 from .wizard import Wizard, _best_clusters
 
+
 #------------------------------------------------------------------------------
 # BaseSession class
 #------------------------------------------------------------------------------
@@ -91,7 +92,8 @@ class FeatureMasks(StoreItem):
     chunk_size = None
 
     def __init__(self, *args, **kwargs):
-        progress_reporter = kwargs.pop('progress_reporter')
+        self._pr_disk = kwargs.pop('progress_reporter_disk')
+        self._pr_memory = kwargs.pop('progress_reporter_memory')
         super(FeatureMasks, self).__init__(*args, **kwargs)
 
         self.n_features = self.model.n_features_per_channel
@@ -105,13 +107,10 @@ class FeatureMasks(StoreItem):
         self.fields[1] = ('masks', 'disk',
                           np.float32, (-1, self.n_channels))
 
-        progress_reporter.set_max(features_masks=self.n_chunks)
-        self.progress_reporter = progress_reporter
-
     def _store_extra_fields(self, clusters):
         """Store all extra mask fields."""
 
-        self.progress_reporter.set_max(masks_extra=len(clusters))
+        self._pr_memory.value_max = len(clusters)
 
         for cluster in clusters:
 
@@ -140,7 +139,9 @@ class FeatureMasks(StoreItem):
                                     )
 
             # Update the progress reporter.
-            self.progress_reporter.increment('masks_extra')
+            self._pr_memory.value += 1
+
+        self._pr_memory.set_complete()
 
     def _store_cluster(self,
                        cluster,
@@ -215,7 +216,7 @@ class FeatureMasks(StoreItem):
 
         if need_generate:
 
-            self.progress_reporter.set(features_masks=0)
+            self._pr_disk.value_max = self.n_chunks
 
             fm = self.model.features_masks
             assert fm.shape[0] == self.n_spikes
@@ -248,12 +249,12 @@ class FeatureMasks(StoreItem):
                                         )
 
                 # Update the progress reporter.
-                self.progress_reporter.increment('features_masks')
+                self._pr_disk.value += 1
+
+        self._pr_disk.set_complete()
 
         # Store extra fields from the masks.
         self._store_extra_fields(self.cluster_ids)
-
-        self.progress_reporter.set_complete()
 
     def _merge(self, up):
         clusters = up.deleted
@@ -533,14 +534,26 @@ class Session(BaseSession):
         FeatureMasks.chunk_size = cs
 
         # Initialize the progress reporter.
-        pr = ProgressReporter()
+        pr_disk = ProgressReporter()
+        pr_memory = ProgressReporter()
         self.cluster_store.register_item(FeatureMasks,
-                                         progress_reporter=pr,
+                                         progress_reporter_disk=pr_disk,
+                                         progress_reporter_memory=pr_memory,
                                          )
 
-        @pr.connect
-        def on_report(value, value_max):
+        @pr_disk.connect
+        def on_progress(value, value_max):
+            if value_max == 0:
+                return
             print("Initializing the cluster store: "
+                  "{0:.2f}%.".format(100 * value / float(value_max)),
+                  end='\r')
+
+        @pr_memory.connect
+        def on_progress(value, value_max):
+            if value_max == 0:
+                return
+            print("Initializing cluster statistics: "
                   "{0:.2f}%.".format(100 * value / float(value_max)),
                   end='\r')
 
