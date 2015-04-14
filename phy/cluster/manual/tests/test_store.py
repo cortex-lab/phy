@@ -227,10 +227,10 @@ def test_cluster_store_load():
         # and we define how to generate it for a given cluster.
         class MyItem(StoreItem):
             name = 'my item'
-            fields = [('spikes_square', 'disk', np.float32)]
+            fields = [('spikes_square', 'disk', np.int32)]
 
             def store_cluster(self, cluster, spikes):
-                data = (spikes ** 2).astype(np.float32)
+                data = (spikes ** 2).astype(np.int32)
                 self.disk_store.store(cluster, spikes_square=data)
 
         cs.register_item(MyItem)
@@ -284,19 +284,30 @@ def test_cluster_store_management():
         # and we define how to generate it for a given cluster.
         class MyItem(StoreItem):
             name = 'my item'
-            fields = [('spikes_square', 'disk', np.float32)]
+            fields = [('spikes_square', 'disk', np.int32)]
 
             def store_cluster(self, cluster, spikes):
-                data = (spikes ** 2).astype(np.float32)
-                self.disk_store.store(cluster, spikes_square=data)
+                if not self.is_consistent(cluster):
+                    data = (spikes ** 2).astype(np.int32)
+                    self.disk_store.store(cluster, spikes_square=data)
+
+            def is_consistent(self, cluster):
+                spikes = self.spikes_per_cluster[cluster]
+                data = self.disk_store.load(cluster,
+                                            'spikes_square',
+                                            dtype=np.int32,
+                                            )
+                expected = (spikes ** 2).astype(np.int32)
+                return np.all(data == expected)
 
         cs.register_item(MyItem)
 
         # Now we generate the store.
         cs.generate(spikes_per_cluster)
 
-        # Display the status.
-        cs.display_status()
+        # Check the status.
+        assert 'True' in cs.status
 
         # We re-initialize the ClusterStore.
         cs = ClusterStore(model=model, path=tempdir)
+        cs.display_status()

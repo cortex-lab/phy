@@ -355,19 +355,22 @@ class ClusterStore(object):
         invalid = in_store - valid
 
         n_store = len(in_store)
-        n_invalid = len(invalid)
+        n_old = len(invalid)
         size = self.total_size / (1024. ** 2)
-        consistent = all(item.is_consistent() for item in self._items)
+        # All store items should be consistent on all valid clusters.
+        consistent = all(all(item.is_consistent(cluster)
+                             for cluster in valid)
+                         for item in self._items)
         consistent = str(consistent).rjust(5)
 
         status = ''
         header = "Cluster store status ({0})".format(self.path)
-        status += header
-        status += '-' * len(header)
-        status += "Number of clusters in the store   {0: 4d}".format(n_store)
-        status += "Number of old clusters            {0: 4d}".format(n_invalid)
-        status += "Total size (MB)                {0: 7.0f}".format(size)
-        status += "Consistent                       {0}".format(consistent)
+        status += header + '\n'
+        status += '-' * len(header) + '\n'
+        status += "Number of clusters in the store   {0: 4d}\n".format(n_store)
+        status += "Number of old clusters            {0: 4d}\n".format(n_old)
+        status += "Total size (MB)                {0: 7.0f}\n".format(size)
+        status += "Consistent                       {0}\n".format(consistent)
         return status
 
     def display_status(self):
@@ -389,14 +392,14 @@ class ClusterStore(object):
         """Generate the cluster store."""
         assert isinstance(spikes_per_cluster, dict)
         self._spikes_per_cluster = spikes_per_cluster
-        # self._store.erase(clusters)
         if hasattr(self._model, 'name'):
             name = self._model.name
         else:
             name = 'the current model'
         debug("Initializing the cluster store for {0:s}...".format(name))
         for item in self._items:
-            item.store_all_clusters(spikes_per_cluster)
+            item.spikes_per_cluster = spikes_per_cluster
+            item.store_all_clusters()
         debug("Done!")
 
 
@@ -434,22 +437,31 @@ class StoreItem(object):
                  disk_store=None,
                  progress_reporter=None,
                  ):
+        self._spikes_per_cluster = None
         self.model = model
         self.memory_store = memory_store
         self.disk_store = disk_store
         self.progress_reporter = progress_reporter
 
-    def store_all_clusters(self, spikes_per_cluster):
+    @property
+    def spikes_per_cluster(self):
+        return self._spikes_per_cluster
+
+    @spikes_per_cluster.setter
+    def spikes_per_cluster(self, value):
+        self._spikes_per_cluster = value
+
+    def store_all_clusters(self):
         """Copy all data for that item from the model to the cluster store."""
-        clusters = sorted(spikes_per_cluster.keys())
+        clusters = sorted(self._spikes_per_cluster.keys())
         for cluster in clusters:
             debug("Loading {0:s}, cluster {1:d}...".format(self.name,
                   cluster))
-            self.store_cluster(cluster, spikes_per_cluster[cluster])
+            self.store_cluster(cluster, self._spikes_per_cluster[cluster])
 
-    def is_consistent(self):
+    def is_consistent(self, cluster):
         """To be overriden."""
-        return True
+        return None
 
     def on_cluster(self, up):
         """May be overridden. No need to delete old clusters here."""
