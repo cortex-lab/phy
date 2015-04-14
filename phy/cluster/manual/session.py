@@ -107,22 +107,6 @@ class FeatureMasks(StoreItem):
 
         self.progress_reporter.set_max(features_masks=self.n_chunks)
 
-    def _need_generate(self, cluster_sizes):
-        """Return whether the whole cluster store needs to be
-        re-generated or not."""
-        for cluster in sorted(cluster_sizes):
-            cluster_size = cluster_sizes[cluster]
-            expected_file_size = (cluster_size * self.n_channels * 4)
-            path = self.disk_store._cluster_path(cluster, 'masks')
-            # If a file is missing, need to re-generate.
-            if not op.exists(path):
-                return True
-            actual_file_size = os.stat(path).st_size
-            # If a file size is incorrect, need to re-generate.
-            if expected_file_size != actual_file_size:
-                return True
-        return False
-
     def _store_extra_fields(self, clusters):
         """Store all extra mask fields."""
 
@@ -201,16 +185,33 @@ class FeatureMasks(StoreItem):
                               append=True,
                               )
 
-    def store_all_clusters(self):
+    def is_consistent(self, cluster, spikes):
+        """Return whether the data of a cluster is consistent."""
+        cluster_size = len(spikes)
+        expected_file_sizes = [('masks', (cluster_size *
+                                          self.n_channels *
+                                          4)),
+                               ('features', (cluster_size *
+                                             self.n_channels *
+                                             self.n_features *
+                                             4))]
+        for name, expected_file_size in expected_file_sizes:
+            path = self.disk_store._cluster_path(cluster, name)
+            if not op.exists(path):
+                return False
+            actual_file_size = os.stat(path).st_size
+            if expected_file_size != actual_file_size:
+                return False
+        return True
+
+    def store_all_clusters(self, mode=None):
         """Initialize all cluster files, loop over all spikes, and
         copy the data."""
-        spikes_per_cluster = self.spikes_per_cluster
-        cluster_sizes = {cluster: len(spikes)
-                         for cluster, spikes in spikes_per_cluster.items()}
-        clusters = sorted(spikes_per_cluster)
 
         # No need to regenerate the cluster store if it exists and is valid.
-        need_generate = self._need_generate(cluster_sizes)
+        clusters_to_generate = self.to_generate(mode=mode)
+        need_generate = len(clusters_to_generate) > 0
+
         if need_generate:
 
             self.progress_reporter.set(features_masks=0)
@@ -234,8 +235,11 @@ class FeatureMasks(StoreItem):
                 chunk_spc = _spikes_per_cluster(chunk_spikes,
                                                 chunk_spike_clusters)
 
-                # Go through the clusters appearing in the chunk.
-                for cluster in sorted(chunk_spc.keys()):
+                # Go through the clusters appearing in the chunk and that
+                # need to be re-generated.
+                clusters = (set(chunk_spc.keys()).
+                            intersection(set(clusters_to_generate)))
+                for cluster in sorted(clusters):
                     self._store_cluster(cluster,
                                         chunk_spikes,
                                         chunk_spc,
@@ -246,7 +250,7 @@ class FeatureMasks(StoreItem):
                 self.progress_reporter.increment('features_masks')
 
         # Store extra fields from the masks.
-        self._store_extra_fields(clusters)
+        self._store_extra_fields(self.cluster_ids)
 
         self.progress_reporter.set_complete()
 
