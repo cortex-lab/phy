@@ -721,22 +721,31 @@ class Session(BaseSession):
         sf_name = 'manual_clustering.waveforms_scale_factor'
         sf = self.get_internal_settings(sf_name) or .01
         vm = self._create_view_model('waveforms', scale_factor=sf)
-
-        ps_name = 'manual_clustering.waveforms_probe_scale'
-        ps = self.get_internal_settings(ps_name) or (1., 1.)
-
         self._create_view(vm)
+
+        # Load box scale.
+        bs_name = 'manual_clustering.waveforms_box_scale'
+        bs = (self.get_internal_settings(bs_name) or
+              vm.view.visual.default_box_scale)
+        vm.view.box_scale = bs
+
+        # Load probe scale.
+        ps_name = 'manual_clustering.waveforms_probe_scale'
+        ps = (self.get_internal_settings(ps_name) or
+              vm.view.visual.default_probe_scale)
         vm.view.probe_scale = ps
 
         @vm.view.connect
         def on_draw(event):
             # OPTIM: put this when the model or the view is closed instead
             # No need to run this at every draw!
-            sf = vm.view.box_scale[1] / vm.view.visual.default_box_scale[1]
-            sf = sf * vm.scale_factor
-            self.set_internal_settings(sf_name, sf)
-            self.set_internal_settings(ps_name,
-                                       vm.view.probe_scale)
+            # sf = vm.view.box_scale[1] / vm.view.visual.default_box_scale[1]
+            # sf = sf * vm.scale_factor
+            # self.set_internal_settings(sf_name, sf)
+
+            # Save probe and box scales.
+            self.set_internal_settings(ps_name, vm.view.probe_scale)
+            self.set_internal_settings(bs_name, vm.view.box_scale)
 
         return vm
 
