@@ -19,6 +19,20 @@ from ...utils.event import ProgressReporter
 
 
 #------------------------------------------------------------------------------
+# Utility functions
+#------------------------------------------------------------------------------
+
+def _directory_size(path):
+    """Return the total size in bytes of a directory."""
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    return total_size
+
+
+#------------------------------------------------------------------------------
 # Data stores
 #------------------------------------------------------------------------------
 
@@ -45,11 +59,11 @@ class MemoryStore(object):
                     for key in keys}
 
     @property
-    def clusters(self):
+    def cluster_ids(self):
         """List of cluster ids in the store."""
         return sorted(self._ds.keys())
 
-    def delete(self, clusters):
+    def erase(self, clusters):
         """Delete some clusters from the store."""
         assert isinstance(clusters, list)
         for cluster in clusters:
@@ -58,7 +72,7 @@ class MemoryStore(object):
 
     def clear(self):
         """Clear the store completely by deleting all clusters."""
-        self.delete(self.clusters)
+        self.erase(self.cluster_ids)
 
 
 def _load_ndarray(f, dtype=None, shape=None):
@@ -78,6 +92,10 @@ def _as_int(x):
     return x
 
 
+def _file_cluster_id(path):
+    return int(op.splitext(op.basename(path))[0])
+
+
 class DiskStore(object):
     """Store cluster-related data in HDF5 files."""
     def __init__(self, directory):
@@ -86,6 +104,10 @@ class DiskStore(object):
         # the wrong files.
         self._allowed_extensions = set()
         self._directory = op.realpath(op.expanduser(directory))
+
+    @property
+    def path(self):
+        return self._directory
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -175,12 +197,12 @@ class DiskStore(object):
                              os.listdir(self._directory)))
 
     @property
-    def clusters(self):
+    def cluster_ids(self):
         """List of cluster ids in the store."""
-        clusters = set([int(op.splitext(file)[0]) for file in self.files])
+        clusters = set([_file_cluster_id(file) for file in self.files])
         return sorted(clusters)
 
-    def delete(self, clusters):
+    def erase(self, clusters):
         """Delete some clusters from the store."""
         for cluster in clusters:
             for key in self._allowed_extensions:
@@ -198,7 +220,7 @@ class DiskStore(object):
 
     def clear(self):
         """Clear the store completely by deleting all clusters."""
-        self.delete(self.clusters)
+        self.erase(self.cluster_ids)
 
 
 #------------------------------------------------------------------------------
@@ -300,18 +322,69 @@ class ClusterStore(object):
         # No need to delete the old clusters from the store, we can keep
         # them for possible undo, and regularly clean up the store.
 
-        # self._memory.delete(up.deleted)
-        # self._disk.delete(up.deleted)
+        # self._memory.erase(up.deleted)
+        # self._disk.erase(up.deleted)
 
         for item in self._items:
             item.on_cluster(up)
 
+    # Store management
+    #--------------------------------------------------------------------------
+
+    @property
+    def path(self):
+        return self.disk_store.path
+
+    @property
+    def old_clusters(self):
+        return sorted(set(self.disk_store.cluster_ids) -
+                      set(self.model.cluster_ids))
+
+    @property
+    def files(self):
+        return [op.join(self.path, file) for file in self.disk_store.files]
+
+    @property
+    def total_size(self):
+        return _directory_size(self.path)
+
+    def display_status(self):
+        """Display the current status of the store."""
+        in_store = set(self.disk_store.cluster_ids)
+        valid = set(self._model.cluster_ids)
+        invalid = in_store - valid
+
+        n_in_store = len(in_store)
+        n_invalid = len(invalid)
+        size = self.total_size / (1024. ** 2)
+        # TODO
+        # consistent = self.is_consistent()
+        consistent = True
+
+        header = "Cluster store status ({0})".format(self.path)
+        print(header)
+        print('-' * len(header))
+        print("Number of clusters in the store   {0: 4d}".format(n_in_store))
+        print("Number of old clusters            {0: 4d}".format(n_invalid))
+        print("Total size (MB)                {0: 7.0f}".format(size))
+        print("Consistent                        {0}".format(consistent))
+
+    def clear(self):
+        """Erase all files in the store."""
+        self.memory_store.clear()
+        self.disk_store.clear()
+
+    def clean(self):
+        """Erase all old files in the store."""
+        to_delete = self.old_clusters
+        self.memory_store.erase(to_delete)
+        self.disk_store.erase(to_delete)
+
     def generate(self, spikes_per_cluster):
-        """Populate the cache for all registered fields and the specified
-        clusters."""
+        """Generate the cluster store."""
         assert isinstance(spikes_per_cluster, dict)
         self._spikes_per_cluster = spikes_per_cluster
-        # self._store.delete(clusters)
+        # self._store.erase(clusters)
         if hasattr(self._model, 'name'):
             name = self._model.name
         else:
