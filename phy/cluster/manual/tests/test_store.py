@@ -132,7 +132,7 @@ def test_cluster_store_1():
             name = 'my item'
             fields = [('n_spikes', 'memory')]
 
-            def store_cluster(self, cluster, spikes):
+            def store_cluster(self, cluster, spikes, mode=None):
                 self.memory_store.store(cluster, n_spikes=len(spikes))
 
             def on_cluster(self, up):
@@ -190,7 +190,7 @@ def test_cluster_store_multi():
         fields = [('d', 'memory'),
                   ('m', 'memory')]
 
-        def store_cluster(self, cluster, spikes):
+        def store_cluster(self, cluster, spikes, mode=None):
             self.memory_store.store(cluster, d=len(spikes), m=len(spikes)**2)
 
     cs.register_item(MyItem)
@@ -229,7 +229,7 @@ def test_cluster_store_load():
             name = 'my item'
             fields = [('spikes_square', 'disk', np.int32)]
 
-            def store_cluster(self, cluster, spikes):
+            def store_cluster(self, cluster, spikes, mode=None):
                 data = (spikes ** 2).astype(np.int32)
                 self.disk_store.store(cluster, spikes_square=data)
 
@@ -286,7 +286,7 @@ def test_cluster_store_management():
             name = 'my item'
             fields = [('spikes_square', 'disk', np.int32)]
 
-            def store_cluster(self, cluster, spikes):
+            def store_cluster(self, cluster, spikes, mode=None):
                 if not self.is_consistent(cluster):
                     data = (spikes ** 2).astype(np.int32)
                     self.disk_store.store(cluster, spikes_square=data)
@@ -310,4 +310,8 @@ def test_cluster_store_management():
 
         # We re-initialize the ClusterStore.
         cs = ClusterStore(model=model, path=tempdir)
+        cs.register_item(MyItem)
+        cs.generate(spikes_per_cluster)
         cs.display_status()
+
+        cs.files

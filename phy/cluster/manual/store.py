@@ -342,11 +342,20 @@ class ClusterStore(object):
 
     @property
     def files(self):
-        return [op.join(self.path, file) for file in self.disk_store.files]
+        return self.disk_store.files
 
     @property
     def total_size(self):
         return _directory_size(self.path)
+
+    def is_consistent(self):
+        """Return whether the cluster store is consistent."""
+        valid = set(self._model.cluster_ids)
+        # All store items should be consistent on all valid clusters.
+        consistent = all(all(item.is_consistent(cluster)
+                             for cluster in valid)
+                         for item in self._items)
+        return consistent
 
     @property
     def status(self):
@@ -357,11 +366,7 @@ class ClusterStore(object):
         n_store = len(in_store)
         n_old = len(invalid)
         size = self.total_size / (1024. ** 2)
-        # All store items should be consistent on all valid clusters.
-        consistent = all(all(item.is_consistent(cluster)
-                             for cluster in valid)
-                         for item in self._items)
-        consistent = str(consistent).rjust(5)
+        consistent = str(self.is_consistent()).rjust(5)
 
         status = ''
         header = "Cluster store status ({0})".format(self.path)
@@ -388,8 +393,22 @@ class ClusterStore(object):
         self.memory_store.erase(to_delete)
         self.disk_store.erase(to_delete)
 
-    def generate(self, spikes_per_cluster):
-        """Generate the cluster store."""
+    def generate(self, spikes_per_cluster, mode=None):
+        """Generate the cluster store.
+
+        Parameters
+        ----------
+        spikes_per_cluster : dict
+            A dictionary cluster_ids => array of spike_ids.
+        mode : str (default is None)
+            How the cluster store should be generated. Options are:
+
+            * None or 'default': only regenerate the missing or inconsistent
+              clusters
+            * 'force': fully regenerate the cluster
+            * 'read-only': just load the existing files, do not write anything
+
+        """
         assert isinstance(spikes_per_cluster, dict)
         self._spikes_per_cluster = spikes_per_cluster
         if hasattr(self._model, 'name'):
@@ -399,7 +418,7 @@ class ClusterStore(object):
         debug("Initializing the cluster store for {0:s}...".format(name))
         for item in self._items:
             item.spikes_per_cluster = spikes_per_cluster
-            item.store_all_clusters()
+            item.store_all_clusters(mode)
         debug("Done!")
 
 
@@ -451,13 +470,16 @@ class StoreItem(object):
     def spikes_per_cluster(self, value):
         self._spikes_per_cluster = value
 
-    def store_all_clusters(self):
+    def store_all_clusters(self, mode):
         """Copy all data for that item from the model to the cluster store."""
         clusters = sorted(self._spikes_per_cluster.keys())
         for cluster in clusters:
             debug("Loading {0:s}, cluster {1:d}...".format(self.name,
                   cluster))
-            self.store_cluster(cluster, self._spikes_per_cluster[cluster])
+            self.store_cluster(cluster,
+                               self._spikes_per_cluster[cluster],
+                               mode=mode,
+                               )
 
     def is_consistent(self, cluster):
         """To be overriden."""
@@ -468,6 +490,6 @@ class StoreItem(object):
         for cluster in up.added:
             self.store_cluster(cluster, up.new_spikes_per_cluster[cluster])
 
-    def store_cluster(self, cluster, spikes):
+    def store_cluster(self, cluster, spikes, mode=None):
         """May be overridden. No need to delete old clusters here."""
         pass
