@@ -287,11 +287,11 @@ def test_cluster_store_management():
             fields = [('spikes_square', 'disk', np.int32)]
 
             def store_cluster(self, cluster, spikes, mode=None):
-                if not self.is_consistent(cluster):
+                if not self.is_consistent(cluster, spikes):
                     data = (spikes ** 2).astype(np.int32)
                     self.disk_store.store(cluster, spikes_square=data)
 
-            def is_consistent(self, cluster):
+            def is_consistent(self, cluster, spikes):
                 spikes = self.spikes_per_cluster[cluster]
                 data = self.disk_store.load(cluster,
                                             'spikes_square',

@@ -352,8 +352,9 @@ class ClusterStore(object):
         """Return whether the cluster store is consistent."""
         valid = set(self._model.cluster_ids)
         # All store items should be consistent on all valid clusters.
-        consistent = all(all(item.is_consistent(cluster)
-                             for cluster in valid)
+        consistent = all(all(item.is_consistent(clu,
+                                                self.spikes_per_cluster[clu])
+                             for clu in valid)
                          for item in self._items)
         return consistent
 
@@ -470,7 +471,7 @@ class StoreItem(object):
     def spikes_per_cluster(self, value):
         self._spikes_per_cluster = value
 
-    def store_all_clusters(self, mode):
+    def store_all_clusters(self, mode=None):
         """Copy all data for that item from the model to the cluster store."""
         clusters = sorted(self._spikes_per_cluster.keys())
         for cluster in clusters:
@@ -481,7 +482,7 @@ class StoreItem(object):
                                mode=mode,
                                )
 
-    def is_consistent(self, cluster):
+    def is_consistent(self, cluster, spikes):
         """To be overriden."""
         return None
 
