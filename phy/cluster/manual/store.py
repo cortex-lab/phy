@@ -348,25 +348,31 @@ class ClusterStore(object):
     def total_size(self):
         return _directory_size(self.path)
 
-    def display_status(self):
-        """Display the current status of the store."""
+    @property
+    def status(self):
         in_store = set(self.disk_store.cluster_ids)
         valid = set(self._model.cluster_ids)
         invalid = in_store - valid
 
-        n_in_store = len(in_store)
+        n_store = len(in_store)
         n_invalid = len(invalid)
         size = self.total_size / (1024. ** 2)
         consistent = all(item.is_consistent() for item in self._items)
         consistent = str(consistent).rjust(5)
 
+        status = ''
         header = "Cluster store status ({0})".format(self.path)
-        print(header)
-        print('-' * len(header))
-        print("Number of clusters in the store   {0: 4d}".format(n_in_store))
-        print("Number of old clusters            {0: 4d}".format(n_invalid))
-        print("Total size (MB)                {0: 7.0f}".format(size))
-        print("Consistent                       {0}".format(consistent))
+        status += header
+        status += '-' * len(header)
+        status += "Number of clusters in the store   {0: 4d}".format(n_store)
+        status += "Number of old clusters            {0: 4d}".format(n_invalid)
+        status += "Total size (MB)                {0: 7.0f}".format(size)
+        status += "Consistent                       {0}".format(consistent)
+        return status
+
+    def display_status(self):
+        """Display the current status of the store."""
+        print(self.status)
 
     def clear(self):
         """Erase all files in the store."""
