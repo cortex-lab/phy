@@ -35,5 +35,5 @@ bool grid_clip(vec2 position) {
 
 vec2 pan_zoom_grid(vec2 position)
 {
-    return u_zoom * position + n_rows * u_pan;
+    return u_zoom * (position + n_rows * u_pan);
 }

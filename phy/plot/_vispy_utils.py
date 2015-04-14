@@ -8,6 +8,7 @@
 #------------------------------------------------------------------------------
 
 import os.path as op
+import math
 
 import numpy as np
 
@@ -135,27 +136,27 @@ class PanZoom(object):
 
     @property
     def is_attached(self):
-        """ Whether transform is attached to a canvas """
+        """Whether transform is attached to a canvas."""
         return self._canvas is not None
 
     @property
     def aspect(self):
-        """ Aspect (width/height) """
+        """Aspect (width/height)."""
         return self._aspect
 
     @aspect.setter
     def aspect(self, value):
-        """ Aspect (width/height) """
+        """Aspect (width/height)."""
         self._aspect = value
 
     @property
     def pan(self):
-        """ Pan translation """
+        """Pan translation."""
         return self._pan
 
     @pan.setter
     def pan(self, value):
-        """ Pan translation """
+        """Pan translation."""
         self._pan = np.asarray(value)
         self._u_pan = self._pan
         for program in self._programs:
@@ -163,12 +164,12 @@ class PanZoom(object):
 
     @property
     def zoom(self):
-        """ Zoom level """
+        """Zoom level."""
         return self._zoom
 
     @zoom.setter
     def zoom(self, value):
-        """ Zoom level """
+        """Zoom level."""
 
         self._zoom = max(min(value, self._zmax), self._zmin)
         if not self.is_attached:
@@ -184,26 +185,26 @@ class PanZoom(object):
 
     @property
     def zmin(self):
-        """ Minimum zoom level """
+        """Minimum zoom level."""
         return self._zmin
 
     @zmin.setter
     def zmin(self, value):
-        """ Minimum zoom level """
+        """Minimum zoom level."""
         self._zmin = min(value, self._zmax)
 
     @property
     def zmax(self):
-        """ Maximal zoom level """
+        """Maximal zoom level."""
         return self._zmax
 
     @zmax.setter
     def zmax(self, value):
-        """ Maximal zoom level """
+        """Maximal zoom level."""
         self._zmax = max(value, self._zmin)
 
     def on_resize(self, event):
-        """ Resize event """
+        """Resize event."""
 
         self._width = float(event.size[0])
         self._height = float(event.size[1])
@@ -216,37 +217,51 @@ class PanZoom(object):
         # Update zoom level
         self.zoom = self._zoom
 
+    def _normalize(self, x_y):
+        x_y = np.asarray(x_y, dtype=np.float32)
+        size = np.array([self._width, self._height], dtype=np.float32)
+        pos = x_y / (size / 2.) - 1
+        return pos
+
     def on_mouse_move(self, event):
-        """ Drag """
+        """Drag."""
 
-        if not event.is_dragging:
-            return
+        if event.is_dragging and not event.modifiers:
+            x0, y0 = self._normalize(event.press_event.pos)
+            x1, y1 = self._normalize(event.last_event.pos)
+            x, y = self._normalize(event.pos)
+            dx, dy = x - x1, -(y - y1)
 
-        x, y = event.pos
-        dx = +2 * ((x - event.last_event.pos[0]) / self._width)
-        dy = -2 * ((y - event.last_event.pos[1]) / self._height)
+            pan_x, pan_y = self.pan
+            zoom_x, zoom_y = self._u_zoom
 
-        self.pan += dx, dy
-        self._canvas.update()
+            self.pan = (pan_x + dx / zoom_x,
+                        pan_y + dy / zoom_y)
+
+            self._canvas.update()
 
     def on_mouse_wheel(self, event):
-        """ Zoom """
+        """Zoom."""
 
-        x, y = event.pos
-        dx, dy = event.delta
-        dx /= 10.0
-        dy /= 10.0
+        dx = np.sign(event.delta[1]) * .05
+        x0, y0 = self._normalize(event.pos)
+        pan_x, pan_y = self.pan
+        zoom_x = zoom_y = self.zoom
+        zoom_x_new, zoom_y_new = (zoom_x * math.exp(2.5 * dx),
+                                  zoom_y * math.exp(2.5 * dx))
+        self.zoom = zoom_x_new
 
-        # Normalize mouse coordinates and invert y axis
-        x = x / (self._width / 2.) - 1.0
-        y = 1.0 - y / (self._height / 2.0)
+        aspect = 1.0
+        if self._aspect is not None:
+            aspect = self._canvas_aspect * self._aspect
+        zoom_x *= aspect[0]
+        zoom_y *= aspect[1]
+        zoom_x_new *= aspect[0]
+        zoom_y_new *= aspect[1]
 
-        zoom = min(max(self._zoom * (1.0 + dy), self._zmin), self._zmax)
-        # ratio = zoom / self.zoom
-        # xpan = x - ratio * (x - self.pan[0])
-        # ypan = y - ratio * (y - self.pan[1])
-        self.zoom = zoom
-        # self.pan = xpan, ypan
+        self.pan = (pan_x - x0 * (1. / zoom_x - 1. / zoom_x_new),
+                    pan_y + y0 * (1. / zoom_y - 1. / zoom_y_new))
+
         self._canvas.update()
 
     def on_key_press(self, event):
@@ -260,7 +275,7 @@ class PanZoom(object):
             self._canvas.update()
         # Panning with the keyboard.
         else:
-            k = .05
+            k = .1 / self.zoom
             if event.key == 'Left':
                 self.pan += (+k, +0)
             elif event.key == 'Right':
