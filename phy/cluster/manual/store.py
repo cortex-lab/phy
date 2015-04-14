@@ -15,7 +15,6 @@ import numpy as np
 from ...utils.array import _is_array_like, _index_of
 from ...utils.logging import debug
 from ...ext.six import string_types, integer_types
-from ...utils.event import ProgressReporter
 
 
 #------------------------------------------------------------------------------
@@ -235,7 +234,6 @@ class ClusterStore(object):
         self._disk = DiskStore(path) if path is not None else None
         self._items = []
         self._locations = {}
-        self._progress_reporter = ProgressReporter()
 
     def _store(self, location):
         if location == 'memory':
@@ -255,10 +253,6 @@ class ClusterStore(object):
         return self._disk
 
     @property
-    def progress_reporter(self):
-        return self._progress_reporter
-
-    @property
     def spikes_per_cluster(self):
         return self._spikes_per_cluster
 
@@ -273,15 +267,14 @@ class ClusterStore(object):
     def store_items(self):
         return self._items
 
-    def register_item(self, item_cls):
+    def register_item(self, item_cls, **kwargs):
         """Register a StoreItem instance in the store."""
 
         # Instantiate the item.
         item = item_cls(model=self._model,
                         memory_store=self._memory,
                         disk_store=self._disk,
-                        progress_reporter=self._progress_reporter,
-                        )
+                        **kwargs)
         assert item.fields is not None
 
         for field in item.fields:
@@ -459,8 +452,6 @@ class StoreItem(object):
         The MemoryStore instance for the current dataset.
     disk_store : DiskStore
         The DiskStore instance for the current dataset.
-    progress_reporter : ProgressReporter
-        The ProgressReporter instance for the current dataset.
 
     Methods
     -------
@@ -477,13 +468,11 @@ class StoreItem(object):
                  model=None,
                  memory_store=None,
                  disk_store=None,
-                 progress_reporter=None,
                  ):
         self._spikes_per_cluster = None
         self.model = model
         self.memory_store = memory_store
         self.disk_store = disk_store
-        self.progress_reporter = progress_reporter
 
     @property
     def spikes_per_cluster(self):

@@ -17,7 +17,7 @@ import numpy as np
 from ...ext.six import string_types
 from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of, _is_array_like
-from ...utils.event import EventEmitter
+from ...utils.event import EventEmitter, ProgressReporter
 from ...utils.logging import info
 from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel
@@ -31,7 +31,6 @@ from .view_model import (WaveformViewModel,
                          CorrelogramViewModel,
                          )
 from .wizard import Wizard, _best_clusters
-
 
 #------------------------------------------------------------------------------
 # BaseSession class
@@ -92,6 +91,7 @@ class FeatureMasks(StoreItem):
     chunk_size = None
 
     def __init__(self, *args, **kwargs):
+        progress_reporter = kwargs.pop('progress_reporter')
         super(FeatureMasks, self).__init__(*args, **kwargs)
 
         self.n_features = self.model.n_features_per_channel
@@ -105,7 +105,8 @@ class FeatureMasks(StoreItem):
         self.fields[1] = ('masks', 'disk',
                           np.float32, (-1, self.n_channels))
 
-        self.progress_reporter.set_max(features_masks=self.n_chunks)
+        progress_reporter.set_max(features_masks=self.n_chunks)
+        self.progress_reporter = progress_reporter
 
     def _store_extra_fields(self, clusters):
         """Store all extra mask fields."""
@@ -530,9 +531,14 @@ class Session(BaseSession):
         cs = self.get_user_settings('manual_clustering.'
                                     'store_chunk_size') or 100000
         FeatureMasks.chunk_size = cs
-        self.cluster_store.register_item(FeatureMasks)
 
-        @self.cluster_store.progress_reporter.connect
+        # Initialize the progress reporter.
+        pr = ProgressReporter()
+        self.cluster_store.register_item(FeatureMasks,
+                                         progress_reporter=pr,
+                                         )
+
+        @pr.connect
         def on_report(value, value_max):
             print("Initializing the cluster store: "
                   "{0:.2f}%.".format(100 * value / float(value_max)),
