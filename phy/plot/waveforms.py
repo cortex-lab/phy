@@ -157,6 +157,20 @@ class WaveformVisual(BaseSpikeVisual):
 
 
 class WaveformView(BaseSpikeCanvas):
+    """Display waveforms.
+
+    Interactivity
+    -------------
+
+    Waveforms scaling:
+
+    * Keyboard : Control + arrows
+
+    Probe scaling:
+
+    * Keyboard : Shift + arrows
+
+    """
     _visual_class = WaveformVisual
 
     @property

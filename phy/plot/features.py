@@ -197,6 +197,16 @@ class FeatureVisual(BaseSpikeVisual):
 
 
 class FeatureView(BaseSpikeCanvas):
+    """Display features.
+
+    Interactivity
+    -------------
+
+    Marker size:
+
+    * Keyboard : Control and '+' or '-'
+
+    """
     _visual_class = FeatureVisual
 
     def __init__(self, **kwargs):

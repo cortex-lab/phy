@@ -68,28 +68,38 @@ def _enable_depth_mask():
 #------------------------------------------------------------------------------
 
 class PanZoom(object):
-
-    """
-    Pan & Zoom transform
+    """Pan & zoom transform.
 
     The panzoom transform allow to translate and scale an object in the window
     space coordinate (2D). This means that whatever point you grab on the
     screen, it should remains under the mouse pointer. Zoom is realized using
     the mouse scroll and is always centered on the mouse pointer.
 
-    The transform is connected to the following events:
-
-    * resize (update)
-    * mouse_scroll (zoom)
-    * mouse_grab (pan)
-
-    You can also control programatically the transform using:
+    You can also control programmatically the transform using:
 
     * aspect: control the aspect ratio of the whole scene
     * pan   : translate the scene to the given 2D coordinates
     * zoom  : set the zoom level (centered at current pan coordinates)
     * zmin  : minimum zoom level
     * zmax  : maximum zoom level
+
+    Interactivity
+    -------------
+
+    Pan:
+
+    * Mouse : click and move (drag movement)
+    * Keyboard : arrows
+
+    Zoom:
+
+    * Mouse : wheel
+    * Keyboard : + and -
+
+    Reset:
+
+    * Keyboard : R
+
     """
 
     def __init__(self, aspect=1.0, pan=(0.0, 0.0), zoom=1.0,
