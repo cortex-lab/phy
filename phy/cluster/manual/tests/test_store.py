@@ -297,6 +297,9 @@ def test_cluster_store_management():
                                             'spikes_square',
                                             dtype=np.int32,
                                             )
+                if data is None:
+                    return False
+                assert len(data) == len(spikes)
                 expected = (spikes ** 2).astype(np.int32)
                 return np.all(data == expected)
 

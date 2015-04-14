@@ -471,10 +471,13 @@ class StoreItem(object):
     def spikes_per_cluster(self, value):
         self._spikes_per_cluster = value
 
+    @property
+    def cluster_ids(self):
+        return sorted(self._spikes_per_cluster)
+
     def store_all_clusters(self, mode=None):
         """Copy all data for that item from the model to the cluster store."""
-        clusters = sorted(self._spikes_per_cluster.keys())
-        for cluster in clusters:
+        for cluster in self.to_generate(mode):
             debug("Loading {0:s}, cluster {1:d}...".format(self.name,
                   cluster))
             self.store_cluster(cluster,
@@ -482,9 +485,24 @@ class StoreItem(object):
                                mode=mode,
                                )
 
+    def to_generate(self, mode=None):
+        """Return the list of clusters that need to be regenerated."""
+        if mode in (None, 'default'):
+            return [cluster for cluster in self.cluster_ids
+                    if not self.is_consistent(cluster,
+                                              self.spikes_per_cluster[cluster],
+                                              )]
+        elif mode == 'force':
+            return self.cluster_ids
+        elif mode == 'read-only':
+            return []
+        else:
+            raise ValueError("'mode' should be None, 'default', 'force', "
+                             "or 'read-only'.")
+
     def is_consistent(self, cluster, spikes):
         """To be overriden."""
-        return None
+        return False
 
     def on_cluster(self, up):
         """May be overridden. No need to delete old clusters here."""
