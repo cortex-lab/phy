@@ -357,9 +357,8 @@ class ClusterStore(object):
         n_in_store = len(in_store)
         n_invalid = len(invalid)
         size = self.total_size / (1024. ** 2)
-        # TODO
-        # consistent = self.is_consistent()
-        consistent = True
+        consistent = all(item.is_consistent() for item in self._items)
+        consistent = str(consistent).rjust(5)
 
         header = "Cluster store status ({0})".format(self.path)
         print(header)
@@ -367,7 +366,7 @@ class ClusterStore(object):
         print("Number of clusters in the store   {0: 4d}".format(n_in_store))
         print("Number of old clusters            {0: 4d}".format(n_invalid))
         print("Total size (MB)                {0: 7.0f}".format(size))
-        print("Consistent                        {0}".format(consistent))
+        print("Consistent                       {0}".format(consistent))
 
     def clear(self):
         """Erase all files in the store."""
@@ -441,6 +440,10 @@ class StoreItem(object):
             debug("Loading {0:s}, cluster {1:d}...".format(self.name,
                   cluster))
             self.store_cluster(cluster, spikes_per_cluster[cluster])
+
+    def is_consistent(self):
+        """To be overriden."""
+        return True
 
     def on_cluster(self, up):
         """May be overridden. No need to delete old clusters here."""
