@@ -156,9 +156,9 @@ def test_action_event():
 # Kwik tests
 #------------------------------------------------------------------------------
 
-def _start_manual_clustering(filename=None, model=None, tempdir=None):
+def _start_manual_clustering(kwik_path=None, model=None, tempdir=None):
     session = Session(phy_user_dir=tempdir)
-    session.open(filename=filename, model=model)
+    session.open(kwik_path=kwik_path, model=model)
     return session
 
 
@@ -228,18 +228,18 @@ def test_session_kwik():
     with TemporaryDirectory() as tempdir:
 
         # Create the test HDF5 file in the temporary directory.
-        filename = create_mock_kwik(tempdir,
-                                    n_clusters=n_clusters,
-                                    n_spikes=n_spikes,
-                                    n_channels=n_channels,
-                                    n_features_per_channel=n_fets,
-                                    n_samples_traces=n_samples_traces)
+        kwik_path = create_mock_kwik(tempdir,
+                                     n_clusters=n_clusters,
+                                     n_spikes=n_spikes,
+                                     n_channels=n_channels,
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
 
-        session = _start_manual_clustering(filename=filename,
+        session = _start_manual_clustering(kwik_path=kwik_path,
                                            tempdir=tempdir)
 
         # Check backup.
-        assert op.exists(op.join(tempdir, filename + '.bak'))
+        assert op.exists(op.join(tempdir, kwik_path + '.bak'))
 
         session.select([0])
         cs = session.cluster_store
@@ -280,14 +280,14 @@ def test_session_clustering():
     with TemporaryDirectory() as tempdir:
 
         # Create the test HDF5 file in the temporary directory.
-        filename = create_mock_kwik(tempdir,
-                                    n_clusters=n_clusters,
-                                    n_spikes=n_spikes,
-                                    n_channels=n_channels,
-                                    n_features_per_channel=n_fets,
-                                    n_samples_traces=n_samples_traces)
+        kwik_path = create_mock_kwik(tempdir,
+                                     n_clusters=n_clusters,
+                                     n_spikes=n_spikes,
+                                     n_channels=n_channels,
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
 
-        session = _start_manual_clustering(filename=filename,
+        session = _start_manual_clustering(kwik_path=kwik_path,
                                            tempdir=tempdir)
         cs = session.cluster_store
         spike_clusters = session.model.spike_clusters.copy()
@@ -359,7 +359,7 @@ def test_session_clustering():
 
         # Re-open the file and check that the spike clusters and
         # cluster groups have correctly been saved.
-        session = _start_manual_clustering(filename=filename,
+        session = _start_manual_clustering(kwik_path=kwik_path,
                                            tempdir=tempdir)
         ac(session.model.spike_clusters, session.clustering.spike_clusters)
         ac(session.model.spike_clusters, spike_clusters_new)
@@ -380,14 +380,14 @@ def test_session_wizard():
     with TemporaryDirectory() as tempdir:
 
         # Create the test HDF5 file in the temporary directory.
-        filename = create_mock_kwik(tempdir,
-                                    n_clusters=n_clusters,
-                                    n_spikes=n_spikes,
-                                    n_channels=n_channels,
-                                    n_features_per_channel=n_fets,
-                                    n_samples_traces=n_samples_traces)
+        kwik_path = create_mock_kwik(tempdir,
+                                     n_clusters=n_clusters,
+                                     n_spikes=n_spikes,
+                                     n_channels=n_channels,
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
 
-        session = _start_manual_clustering(filename=filename,
+        session = _start_manual_clustering(kwik_path=kwik_path,
                                            tempdir=tempdir)
 
         clusters = np.arange(n_clusters)

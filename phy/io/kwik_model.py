@@ -151,10 +151,10 @@ _COLOR_MAP = np.array([[1., 1., 1.],
 _KWIK_EXTENSIONS = ('kwik', 'kwx', 'raw.kwd')
 
 
-def _kwik_filenames(filename):
+def _kwik_filenames(kwik_path):
     """Return the filenames of the different Kwik files for a given
     experiment."""
-    basename, ext = op.splitext(filename)
+    basename, ext = op.splitext(kwik_path)
     return {ext: '{basename}.{ext}'.format(basename=basename, ext=ext)
             for ext in _KWIK_EXTENSIONS}
 
@@ -182,7 +182,7 @@ class SpikeLoader(object):
 
 class KwikModel(BaseModel):
     """Holds data contained in a kwik file."""
-    def __init__(self, filename=None,
+    def __init__(self, kwik_path=None,
                  channel_group=None,
                  clustering=None):
         super(KwikModel, self).__init__()
@@ -204,8 +204,8 @@ class KwikModel(BaseModel):
         self._waveform_loader = None
 
         # Open the experiment.
-        self.filename = filename
-        self.open(filename,
+        self.kwik_path = kwik_path
+        self.open(kwik_path,
                   channel_group=channel_group,
                   clustering=clustering)
 
@@ -429,23 +429,23 @@ class KwikModel(BaseModel):
             # Virtual concatenation of the arrays.
             self._traces = _concatenate_virtual_arrays(traces)
 
-    def open(self, filename, channel_group=None, clustering=None):
+    def open(self, kwik_path, channel_group=None, clustering=None):
         """Open a Kwik experiment (.kwik, .kwx, .raw.kwd files)."""
 
-        if filename is None:
-            raise ValueError("No filename specified.")
+        if kwik_path is None:
+            raise ValueError("No kwik_path specified.")
 
         # Open the file.
-        self.filename = filename
-        self.name = op.splitext(op.basename(filename))[0]
+        self.kwik_path = kwik_path
+        self.name = op.splitext(op.basename(kwik_path))[0]
 
         # Open the files if they exist.
-        self._filenames = _kwik_filenames(filename)
+        self._filenames = _kwik_filenames(kwik_path)
 
         # Open the KWIK file.
         self._kwik = self._open_h5_if_exists('kwik')
         if not self._kwik.is_open():
-            raise ValueError("File {0} failed to open.".format(filename))
+            raise ValueError("File {0} failed to open.".format(kwik_path))
         self._check_kwik_version()
 
         # Open the KWX and KWD files.

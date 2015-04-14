@@ -430,22 +430,22 @@ class Session(BaseSession):
     # File-related actions
     # -------------------------------------------------------------------------
 
-    def _backup_kwik(self, filename):
+    def _backup_kwik(self, kwik_path):
         """Save a copy of the Kwik file before opening it."""
-        backup_filename = filename + '.bak'
-        if not op.exists(backup_filename):
+        backup_kwik_path = kwik_path + '.bak'
+        if not op.exists(backup_kwik_path):
             info("Saving a backup of the Kwik file "
-                 "in {0}.".format(backup_filename))
-            shutil.copyfile(filename, backup_filename)
+                 "in {0}.".format(backup_kwik_path))
+            shutil.copyfile(kwik_path, backup_kwik_path)
 
-    def open(self, filename=None, model=None):
-        if filename is not None:
-            self._backup_kwik(filename)
+    def open(self, kwik_path=None, model=None):
+        if kwik_path is not None:
+            self._backup_kwik(kwik_path)
         if model is None:
-            model = KwikModel(filename)
+            model = KwikModel(kwik_path)
         self.model = model
-        self.experiment_path = (op.realpath(filename)
-                                if filename else self.phy_user_dir)
+        self.experiment_path = (op.realpath(kwik_path)
+                                if kwik_path else self.phy_user_dir)
         self.experiment_dir = op.dirname(self.experiment_path)
         self.experiment_name = model.name
         self.emit('open')
@@ -456,7 +456,7 @@ class Session(BaseSession):
                   for cluster in self.clustering.cluster_ids}
         self.model.save(self.clustering.spike_clusters,
                         groups)
-        info("Saved {0:s}.".format(self.model.filename))
+        info("Saved {0:s}.".format(self.model.kwik_path))
 
     def close(self):
         self.emit('close')
