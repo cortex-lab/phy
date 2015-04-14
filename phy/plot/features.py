@@ -241,8 +241,9 @@ class FeatureView(BaseSpikeCanvas):
 
     def on_key_press(self, event):
         coeff = .25
-        if event.key == '+':
-            self.marker_size += coeff
-        if event.key == '-':
-            self.marker_size -= coeff
-        self.update()
+        if 'Control' in event.modifiers:
+            if event.key == '+':
+                self.marker_size += coeff
+            if event.key == '-':
+                self.marker_size -= coeff
+            self.update()
