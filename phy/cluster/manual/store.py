@@ -364,7 +364,7 @@ class ClusterStore(object):
         valid = set(self.cluster_ids)
         # All store items should be consistent on all valid clusters.
         consistent = all(all(item.is_consistent(clu,
-                                                self.spikes_per_cluster.get(clu, []))
+                             self.spikes_per_cluster.get(clu, []))
                              for clu in valid)
                          for item in self._items)
         return consistent
