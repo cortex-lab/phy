@@ -295,14 +295,14 @@ def test_cluster_store_management():
                     self.disk_store.store(cluster, spikes_square=data)
 
             def is_consistent(self, cluster, spikes):
-                spikes = self.spikes_per_cluster[cluster]
                 data = self.disk_store.load(cluster,
                                             'spikes_square',
                                             dtype=np.int32,
                                             )
                 if data is None:
                     return False
-                assert len(data) == len(spikes)
+                if len(data) != len(spikes):
+                    return False
                 expected = (spikes ** 2).astype(np.int32)
                 return np.all(data == expected)
 
@@ -348,3 +348,29 @@ def test_cluster_store_management():
 
         # Check the status.
         assert 'True' in cs.status
+
+        # Now, we make new assignements.
+        spike_clusters = np.random.randint(size=n_spikes,
+                                           low=n_clusters, high=n_clusters + 5)
+        spikes_per_cluster = _spikes_per_cluster(spike_ids, spike_clusters)
+        cs.spikes_per_cluster = spikes_per_cluster
+
+        # All files are now old and should be removed by clean().
+        assert not cs.is_consistent()
+        item = cs.store_items[0]
+        ae(item.to_generate(), np.arange(n_clusters, n_clusters + 5))
+
+        ae(cs.cluster_ids, np.arange(n_clusters, n_clusters + 5))
+        ae(cs.old_clusters, np.arange(n_clusters))
+        cs.clean()
+
+        ae(cs.cluster_ids, np.arange(n_clusters, n_clusters + 5))
+        ae(cs.old_clusters, [])
+        ae(item.to_generate(), np.arange(n_clusters, n_clusters + 5))
+        assert not cs.is_consistent()
+        cs.generate()
+
+        assert cs.is_consistent()
+        ae(cs.cluster_ids, np.arange(n_clusters, n_clusters + 5))
+        ae(cs.old_clusters, [])
+        ae(item.to_generate(), [])

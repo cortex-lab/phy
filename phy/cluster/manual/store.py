@@ -13,7 +13,7 @@ import re
 import numpy as np
 
 from ...utils.array import _is_array_like, _index_of
-from ...utils.logging import debug
+from ...utils.logging import debug, info
 from ...ext.six import string_types, integer_types
 
 
@@ -264,6 +264,10 @@ class ClusterStore(object):
             item.spikes_per_cluster = value
 
     @property
+    def cluster_ids(self):
+        return sorted(self._spikes_per_cluster)
+
+    @property
     def store_items(self):
         return self._items
 
@@ -342,7 +346,7 @@ class ClusterStore(object):
     @property
     def old_clusters(self):
         return sorted(set(self.disk_store.cluster_ids) -
-                      set(self.model.cluster_ids))
+                      set(self.cluster_ids))
 
     @property
     def files(self):
@@ -357,10 +361,10 @@ class ClusterStore(object):
 
     def is_consistent(self):
         """Return whether the cluster store is consistent."""
-        valid = set(self._model.cluster_ids)
+        valid = set(self.cluster_ids)
         # All store items should be consistent on all valid clusters.
         consistent = all(all(item.is_consistent(clu,
-                                                self.spikes_per_cluster[clu])
+                                                self.spikes_per_cluster.get(clu, []))
                              for clu in valid)
                          for item in self._items)
         return consistent
@@ -368,7 +372,7 @@ class ClusterStore(object):
     @property
     def status(self):
         in_store = set(self.disk_store.cluster_ids)
-        valid = set(self._model.cluster_ids)
+        valid = set(self.cluster_ids)
         invalid = in_store - valid
 
         n_store = len(in_store)
@@ -397,12 +401,15 @@ class ClusterStore(object):
         """Erase all files in the store."""
         self.memory_store.clear()
         self.disk_store.clear()
+        info("Cluster store cleared.")
 
     def clean(self):
         """Erase all old files in the store."""
         to_delete = self.old_clusters
         self.memory_store.erase(to_delete)
         self.disk_store.erase(to_delete)
+        n = len(to_delete)
+        info("{0} clusters deleted from the cluster store.".format(n))
 
     def generate(self, spikes_per_cluster=None, mode=None):
         """Generate the cluster store.
