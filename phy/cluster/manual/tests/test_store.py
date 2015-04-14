@@ -164,7 +164,7 @@ def test_cluster_store_1():
         up = UpdateInfo(description='merge',
                         added=[20],
                         deleted=[0, 1],
-                        spikes=spikes,
+                        spike_ids=spikes,
                         new_spikes_per_cluster=spc,
                         old_spikes_per_cluster=spikes_per_cluster,)
 

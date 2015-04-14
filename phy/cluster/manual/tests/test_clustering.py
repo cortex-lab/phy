@@ -240,7 +240,7 @@ def test_clustering_merge():
         ae(clustering.spike_clusters, checkpoints[index])
 
     def _assert_spikes(clusters):
-        ae(info.spikes, _spikes_in_clusters(spike_clusters, clusters))
+        ae(info.spike_ids, _spikes_in_clusters(spike_clusters, clusters))
 
     # Checkpoint 0.
     _checkpoint()
@@ -352,7 +352,7 @@ def test_clustering_assign():
         ae(clustering.spike_clusters, checkpoints[index])
 
     def _assert_spikes(spikes):
-        ae(info.spikes, spikes)
+        ae(info.spike_ids, spikes)
 
     # Checkpoint 0.
     _checkpoint()
@@ -446,7 +446,7 @@ def test_clustering_long():
     count = clustering.cluster_counts.copy()
     my_spikes_0 = np.nonzero(np.in1d(clustering.spike_clusters, [2, 3]))[0]
     info = clustering.merge([2, 3])
-    my_spikes = info.spikes
+    my_spikes = info.spike_ids
     ae(my_spikes, my_spikes_0)
     assert (new_cluster + 1) in clustering.cluster_ids
     assert clustering.cluster_counts[new_cluster + 1] == count[2] + count[3]
@@ -460,7 +460,7 @@ def test_clustering_long():
     count = clustering.cluster_counts
     count4, count6 = count[4], count[6]
     info = clustering.merge([4, 6], 11)
-    my_spikes = info.spikes
+    my_spikes = info.spike_ids
     ae(my_spikes, my_spikes_0)
     assert 11 in clustering.cluster_ids
     assert clustering.cluster_counts[11] == count4 + count6

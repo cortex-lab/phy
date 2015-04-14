@@ -88,7 +88,7 @@ def _assign_update_info(spike_ids,
     descendants = list(set(zip(old_spike_clusters,
                                new_spike_clusters)))
     update_info = UpdateInfo(description='assign',
-                             spikes=spike_ids,
+                             spike_ids=spike_ids,
                              added=list(new_clusters),
                              deleted=list(old_clusters),
                              descendants=descendants,
@@ -192,7 +192,7 @@ class Clustering(object):
         old_spc = {k: self._spikes_per_cluster[k] for k in cluster_ids}
         new_spc = {to: spike_ids}
         up = UpdateInfo(description='merge',
-                        spikes=spike_ids,
+                        spike_ids=spike_ids,
                         added=[to],
                         deleted=cluster_ids,
                         descendants=descendants,

@@ -372,7 +372,7 @@ def test_session_clustering():
 def test_session_wizard():
 
     n_clusters = 5
-    n_spikes = 50
+    n_spikes = 100
     n_channels = 28
     n_fets = 2
     n_samples_traces = 3000
@@ -408,6 +408,8 @@ def test_session_wizard():
         session.move([5], 0)
         ae(np.unique(session.best_clusters()), np.arange(3, 5))
         best = session.wizard.best_cluster()
-        assert best in (3, 4)
-        # The most similar cluster is 3 if best=4 and conversely.
-        assert list(session.wizard.most_similar_clusters(best)) == [7 - best]
+        if best is not None:
+            assert best in (3, 4)
+            # The most similar cluster is 3 if best=4 and conversely.
+            assert list(session.wizard.most_similar_clusters(best)) == [7 -
+                                                                        best]
