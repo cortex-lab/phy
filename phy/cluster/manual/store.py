@@ -275,6 +275,35 @@ class ClusterStore(object):
     def store_items(self):
         return self._items
 
+    def register_field(self, field):
+        name, location = field[:2]
+        dtype = field[2] if len(field) >= 3 else None
+        shape = field[3] if len(field) == 4 else None
+
+        # HACK: need to use a factory function because in Python
+        # functions are closed over names, not values. Here we
+        # want 'name' to refer to the 'name' local variable.
+        def _make_func(name, location):
+            kwargs = {} if location == 'memory' else {'dtype': dtype,
+                                                      'shape': shape}
+            return lambda cluster: self._store(location).load(cluster,
+                                                              name,
+                                                              **kwargs)
+
+        # Register the item location (memory or store).
+        assert name not in self._locations
+        if self._disk:
+            self._disk.register_file_extensions(name)
+        self._locations[name] = location
+
+        # Get the load function.
+        load = _make_func(name, location)
+
+        # We create the self.<name>(cluster) method for loading.
+        # We need to ensure that the method name isn't already attributed.
+        assert not hasattr(self, name)
+        setattr(self, name, load)
+
     def register_item(self, item_cls, **kwargs):
         """Register a StoreItem instance in the store."""
 
@@ -286,33 +315,7 @@ class ClusterStore(object):
         assert item.fields is not None
 
         for field in item.fields:
-            name, location = field[:2]
-            dtype = field[2] if len(field) >= 3 else None
-            shape = field[3] if len(field) == 4 else None
-
-            # HACK: need to use a factory function because in Python
-            # functions are closed over names, not values. Here we
-            # want 'name' to refer to the 'name' local variable.
-            def _make_func(name, location):
-                kwargs = {} if location == 'memory' else {'dtype': dtype,
-                                                          'shape': shape}
-                return lambda cluster: self._store(location).load(cluster,
-                                                                  name,
-                                                                  **kwargs)
-
-            # Register the item location (memory or store).
-            assert name not in self._locations
-            if self._disk:
-                self._disk.register_file_extensions(name)
-            self._locations[name] = location
-
-            # Get the load function.
-            load = _make_func(name, location)
-
-            # We create the self.<name>(cluster) method for loading.
-            # We need to ensure that the method name isn't already attributed.
-            assert not hasattr(self, name)
-            setattr(self, name, load)
+            self.register_field(field)
 
         # Register the StoreItem instance.
         self._items.append(item)
@@ -333,10 +336,6 @@ class ClusterStore(object):
     def on_cluster(self, up):
         # No need to delete the old clusters from the store, we can keep
         # them for possible undo, and regularly clean up the store.
-
-        # self._memory.erase(up.deleted)
-        # self._disk.erase(up.deleted)
-
         for item in self._items:
             item.on_cluster(up)
 
