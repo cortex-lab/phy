@@ -201,9 +201,10 @@ class FeatureMasks(StoreItem):
                               append=True,
                               )
 
-    def store_all_clusters(self, spikes_per_cluster):
+    def store_all_clusters(self):
         """Initialize all cluster files, loop over all spikes, and
         copy the data."""
+        spikes_per_cluster = self.spikes_per_cluster
         cluster_sizes = {cluster: len(spikes)
                          for cluster, spikes in spikes_per_cluster.items()}
         clusters = sorted(spikes_per_cluster)
