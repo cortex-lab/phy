@@ -6,6 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
+import os.path as op
+
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
@@ -304,11 +307,20 @@ def test_cluster_store_management():
                 return np.all(data == expected)
 
         cs.register_item(MyItem)
-
-        # Now we generate the store.
         cs.spikes_per_cluster = spikes_per_cluster
-        item = cs.store_items[0]
-        print(item.to_generate())
+
+        def _check_to_generate(cs, clusters):
+            item = cs.store_items[0]
+            ae(item.to_generate(), clusters)
+            ae(item.to_generate(None), clusters)
+            ae(item.to_generate('default'), clusters)
+            ae(item.to_generate('force'), np.arange(n_clusters))
+            ae(item.to_generate('read-only'), [])
+
+        # Check the list of clusters to generate.
+        _check_to_generate(cs, np.arange(n_clusters))
+
+        # Generate the store.
         cs.generate()
 
         # Check the status.
@@ -317,7 +329,22 @@ def test_cluster_store_management():
         # We re-initialize the ClusterStore.
         cs = ClusterStore(model=model, path=tempdir)
         cs.register_item(MyItem)
-        cs.generate(spikes_per_cluster)
+        cs.spikes_per_cluster = spikes_per_cluster
+
+        # Check the list of clusters to generate.
+        _check_to_generate(cs, [])
         cs.display_status()
 
-        cs.files
+        # We erase a file.
+        path = op.join(cs.path, '1.spikes_square')
+        os.remove(path)
+
+        # Check the list of clusters to generate.
+        _check_to_generate(cs, [1])
+        assert '9' in cs.status
+        assert 'False' in cs.status
+
+        cs.generate()
+
+        # Check the status.
+        assert 'True' in cs.status
