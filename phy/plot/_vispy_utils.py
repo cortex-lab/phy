@@ -306,29 +306,39 @@ class PanZoom(object):
 
         self._canvas.update()
 
+    _arrows = ('Left', 'Right', 'Up', 'Down')
+    _pm = ('+', '-')
+
     def on_key_press(self, event):
         # Zooming with the keyboard.
-        if 'Control' in event.modifiers:
-            k = .05
-            if event.key == 'Down':
-                self.zoom *= (1. - k)
-            elif event.key == 'Up':
-                self.zoom *= (1. + k)
-            self._canvas.update()
-        # Panning with the keyboard.
-        else:
+        key = event.key
+        if event.modifiers:
+            return
+
+        # Pan.
+        if key in self._arrows:
             k = .1 / self.zoom
-            if event.key == 'Left':
+            if key == 'Left':
                 self.pan += (+k, +0)
-            elif event.key == 'Right':
+            elif key == 'Right':
                 self.pan += (-k, +0)
-            elif event.key == 'Down':
+            elif key == 'Down':
                 self.pan += (+0, +k)
-            elif event.key == 'Up':
+            elif key == 'Up':
                 self.pan += (+0, -k)
             self._canvas.update()
+
+        # Zoom.
+        if key in self._pm:
+            k = .05
+            if key == '-':
+                self.zoom *= (1. - k)
+            elif key == '+':
+                self.zoom *= (1. + k)
+            self._canvas.update()
+
         # Reset with 'R'.
-        if event.key == 'R' and not event.modifiers:
+        if key == 'R':
             self.pan = (0., 0.)
             self.zoom = 1.
             self._canvas.update()

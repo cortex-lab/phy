@@ -20,8 +20,8 @@ varying vec2 v_box;
 vec2 get_box_pos(vec2 box) {  // box = (cluster, channel)
     vec2 box_pos = texture2D(u_channel_pos,
                              vec2(box.y / (n_channels - 1.), .5)).xy;
-    box_pos = box_pos * u_channel_scale;
     box_pos = 2. * box_pos - 1.;
+    box_pos = box_pos * u_channel_scale;
     // Spacing between cluster boxes.
     float h = 2.5 * u_data_scale.x;
     // TODO: add superposition
