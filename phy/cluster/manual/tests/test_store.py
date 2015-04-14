@@ -306,7 +306,9 @@ def test_cluster_store_management():
         cs.register_item(MyItem)
 
         # Now we generate the store.
-        cs.generate(spikes_per_cluster)
+        cs.spikes_per_cluster = spikes_per_cluster
+
+        cs.generate()
 
         # Check the status.
         assert 'True' in cs.status

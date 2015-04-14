@@ -262,6 +262,10 @@ class ClusterStore(object):
     def spikes_per_cluster(self):
         return self._spikes_per_cluster
 
+    @spikes_per_cluster.setter
+    def spikes_per_cluster(self, value):
+        self._spikes_per_cluster = value
+
     def register_item(self, item_cls):
         """Register a StoreItem instance in the store."""
 
@@ -328,7 +332,7 @@ class ClusterStore(object):
         for item in self._items:
             item.on_cluster(up)
 
-    # Store management
+    # Files
     #--------------------------------------------------------------------------
 
     @property
@@ -343,6 +347,9 @@ class ClusterStore(object):
     @property
     def files(self):
         return self.disk_store.files
+
+    # Status
+    #--------------------------------------------------------------------------
 
     @property
     def total_size(self):
@@ -383,6 +390,9 @@ class ClusterStore(object):
         """Display the current status of the store."""
         print(self.status)
 
+    # Store management
+    #--------------------------------------------------------------------------
+
     def clear(self):
         """Erase all files in the store."""
         self.memory_store.clear()
@@ -394,7 +404,7 @@ class ClusterStore(object):
         self.memory_store.erase(to_delete)
         self.disk_store.erase(to_delete)
 
-    def generate(self, spikes_per_cluster, mode=None):
+    def generate(self, spikes_per_cluster=None, mode=None):
         """Generate the cluster store.
 
         Parameters
@@ -410,8 +420,14 @@ class ClusterStore(object):
             * 'read-only': just load the existing files, do not write anything
 
         """
+        if spikes_per_cluster is None:
+            spikes_per_cluster = self._spikes_per_cluster
+        else:
+            self._spikes_per_cluster = spikes_per_cluster
+        if spikes_per_cluster is None:
+            raise RuntimeError("The 'spikes_per_cluster' structure "
+                               "needs to be assigned to the cluster store.")
         assert isinstance(spikes_per_cluster, dict)
-        self._spikes_per_cluster = spikes_per_cluster
         if hasattr(self._model, 'name'):
             name = self._model.name
         else:
