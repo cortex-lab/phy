@@ -111,6 +111,8 @@ class CorrelogramView(BaseSpikeCanvas):
     def __init__(self, **kwargs):
         super(CorrelogramView, self).__init__(**kwargs)
         self.boxes = BoxVisual()
+        self._pz.zmin = 1
+        self._pz.zoom_to_pointer = False
 
     @property
     def cluster_ids(self):

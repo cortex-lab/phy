@@ -219,6 +219,7 @@ class FeatureView(BaseSpikeCanvas):
         self.visual.dimensions = value
         self.boxes.n_rows = self.visual.n_rows
         self.axes.n_rows = self.visual.n_rows
+        self._pz.n_rows = self.visual.n_rows
         self.axes.positions = (0, 0)
         self.update()
 

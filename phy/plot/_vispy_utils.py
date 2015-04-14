@@ -123,6 +123,9 @@ class PanZoom(object):
         self._zmin = zmin
         self._zmax = zmax
 
+        self._zoom_to_pointer = True
+        self._n_rows = 1
+
         # Canvas this transform is attached to
         self._canvas = None
         self._canvas_aspect = np.ones(2)
@@ -133,6 +136,22 @@ class PanZoom(object):
         self._u_pan = pan
         self._u_zoom = np.array([zoom, zoom])
         self._programs = []
+
+    @property
+    def zoom_to_pointer(self):
+        return self._zoom_to_pointer
+
+    @zoom_to_pointer.setter
+    def zoom_to_pointer(self, value):
+        self._zoom_to_pointer = value
+
+    @property
+    def n_rows(self):
+        return self._n_rows
+
+    @n_rows.setter
+    def n_rows(self, value):
+        self._n_rows = value
 
     @property
     def is_attached(self):
@@ -223,6 +242,26 @@ class PanZoom(object):
         pos = x_y / (size / 2.) - 1
         return pos
 
+    def _normalize_grid(self, x_y):
+        x0, y0 = x_y
+
+        x0 /= self._width
+        y0 /= self._height
+
+        x0 *= self._n_rows
+        y0 *= self._n_rows
+
+        x0 = x0 % 1
+        y0 = y0 % 1
+
+        x0 = -(1 - 2 * x0)
+        y0 = -(1 - 2 * y0)
+
+        x0 /= self._n_rows
+        y0 /= self._n_rows
+
+        return x0, y0
+
     def on_mouse_move(self, event):
         """Drag."""
 
@@ -244,23 +283,26 @@ class PanZoom(object):
         """Zoom."""
 
         dx = np.sign(event.delta[1]) * .05
-        x0, y0 = self._normalize(event.pos)
+        # Zoom toward the mouse pointer in the grid view.
+        x0, y0 = self._normalize_grid(event.pos)
+
         pan_x, pan_y = self.pan
         zoom_x = zoom_y = self.zoom
         zoom_x_new, zoom_y_new = (zoom_x * math.exp(2.5 * dx),
                                   zoom_y * math.exp(2.5 * dx))
         self.zoom = zoom_x_new
 
-        aspect = 1.0
-        if self._aspect is not None:
-            aspect = self._canvas_aspect * self._aspect
-        zoom_x *= aspect[0]
-        zoom_y *= aspect[1]
-        zoom_x_new *= aspect[0]
-        zoom_y_new *= aspect[1]
+        if self._zoom_to_pointer:
+            aspect = 1.0
+            if self._aspect is not None:
+                aspect = self._canvas_aspect * self._aspect
+            zoom_x *= aspect[0]
+            zoom_y *= aspect[1]
+            zoom_x_new *= aspect[0]
+            zoom_y_new *= aspect[1]
 
-        self.pan = (pan_x - x0 * (1. / zoom_x - 1. / zoom_x_new),
-                    pan_y + y0 * (1. / zoom_y - 1. / zoom_y_new))
+            self.pan = (pan_x - x0 * (1. / zoom_x - 1. / zoom_x_new),
+                        pan_y + y0 * (1. / zoom_y - 1. / zoom_y_new))
 
         self._canvas.update()
 
