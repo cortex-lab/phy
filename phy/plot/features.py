@@ -40,6 +40,7 @@ class FeatureVisual(BaseSpikeVisual):
         self._dimensions = []
         self.n_channels, self.n_features = None, None
         self.n_rows = None
+        self.program['u_size'] = 2.
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -168,7 +169,6 @@ class FeatureVisual(BaseSpikeVisual):
         self.program['a_position'] = positions.copy()
         self.program['a_mask'] = masks
         self.program['a_box'] = boxes
-        self.program['u_size'] = 2.  # TODO: config
 
         self.program['n_clusters'] = self.n_clusters
         self.program['n_rows'] = self.n_rows
@@ -187,11 +187,11 @@ class FeatureVisual(BaseSpikeVisual):
 
     @property
     def marker_size(self):
-        return self.program['u_size']
+        return float(self.program['u_size'])
 
     @marker_size.setter
     def marker_size(self, value):
-        value = np.clip(value, 1, 100)
+        value = np.clip(value, .1, 100)
         self.program['u_size'] = float(value)
         self.update()
 

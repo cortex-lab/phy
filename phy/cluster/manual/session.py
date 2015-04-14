@@ -737,17 +737,28 @@ class Session(BaseSession):
     def show_features(self):
         """Show a FeatureView and return a ViewModel instance."""
 
-        # Persist scale factor.
         sf_name = 'manual_clustering.features_scale_factor'
         sf = self.get_internal_settings(sf_name) or .01
-        vm = self._create_view_model('features', scale_factor=sf)
+
+        ms_name = 'manual_clustering.features_marker_size'
+        ms = self.get_internal_settings(ms_name) or 2.
+
+        vm = self._create_view_model('features',
+                                     scale_factor=sf,
+                                     # marker_size=ms,
+                                     )
 
         self._create_view(vm)
+        vm.view.visual.marker_size = ms
 
         @vm.view.connect
         def on_draw(event):
+            if vm.view.visual.empty:
+                return
             self.set_internal_settings(sf_name,
                                        vm.view.zoom * vm.scale_factor)
+            self.set_internal_settings(ms_name,
+                                       vm.view.marker_size)
 
         return vm
 
