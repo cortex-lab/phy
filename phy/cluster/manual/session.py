@@ -722,7 +722,11 @@ class Session(BaseSession):
         sf = self.get_internal_settings(sf_name) or .01
         vm = self._create_view_model('waveforms', scale_factor=sf)
 
+        ps_name = 'manual_clustering.waveforms_probe_scale'
+        ps = self.get_internal_settings(ps_name) or (1., 1.)
+
         self._create_view(vm)
+        vm.view.probe_scale = ps
 
         @vm.view.connect
         def on_draw(event):
@@ -731,6 +735,8 @@ class Session(BaseSession):
             sf = vm.view.box_scale[1] / vm.view.visual.default_box_scale[1]
             sf = sf * vm.scale_factor
             self.set_internal_settings(sf_name, sf)
+            self.set_internal_settings(ps_name,
+                                       vm.view.probe_scale)
 
         return vm
 
@@ -745,11 +751,10 @@ class Session(BaseSession):
 
         vm = self._create_view_model('features',
                                      scale_factor=sf,
-                                     # marker_size=ms,
                                      )
 
         self._create_view(vm)
-        vm.view.visual.marker_size = ms
+        vm.view.marker_size = ms
 
         @vm.view.connect
         def on_draw(event):
