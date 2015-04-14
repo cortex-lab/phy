@@ -31,8 +31,29 @@ def _directory_size(path):
     return total_size
 
 
+def _load_ndarray(f, dtype=None, shape=None):
+    if dtype is None:
+        return f
+    else:
+        arr = np.fromfile(f, dtype=dtype)
+        if shape is not None:
+            arr = arr.reshape(shape)
+        return arr
+
+
+def _as_int(x):
+    if isinstance(x, integer_types):
+        return x
+    x = np.asscalar(x)
+    return x
+
+
+def _file_cluster_id(path):
+    return int(op.splitext(op.basename(path))[0])
+
+
 #------------------------------------------------------------------------------
-# Data stores
+# Memory store
 #------------------------------------------------------------------------------
 
 class MemoryStore(object):
@@ -74,26 +95,9 @@ class MemoryStore(object):
         self.erase(self.cluster_ids)
 
 
-def _load_ndarray(f, dtype=None, shape=None):
-    if dtype is None:
-        return f
-    else:
-        arr = np.fromfile(f, dtype=dtype)
-        if shape is not None:
-            arr = arr.reshape(shape)
-        return arr
-
-
-def _as_int(x):
-    if isinstance(x, integer_types):
-        return x
-    x = np.asscalar(x)
-    return x
-
-
-def _file_cluster_id(path):
-    return int(op.splitext(op.basename(path))[0])
-
+#------------------------------------------------------------------------------
+# Disk store
+#------------------------------------------------------------------------------
 
 class DiskStore(object):
     """Store cluster-related data in HDF5 files."""
