@@ -314,7 +314,7 @@ def test_session_clustering():
         # Test session.best_clusters.
         quality = session.cluster_store.n_unmasked_channels
         clusters = session.best_clusters(quality)
-        ac(np.unique(clusters), session.clusters)
+        ac(np.unique(clusters), session.cluster_ids)
 
         # Merge two clusters.
         clusters = [0, 2]

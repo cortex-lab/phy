@@ -504,7 +504,7 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     @property
-    def clusters(self):
+    def cluster_ids(self):
         return self.clustering.cluster_ids
 
     # Event callbacks
@@ -652,7 +652,7 @@ class Session(BaseSession):
         if quality is None:
             return self.wizard.best_clusters(n_max=n_max)
         else:
-            return _best_clusters(self.clusters, quality, n_max=n_max)
+            return _best_clusters(self.cluster_ids, quality, n_max=n_max)
 
     # Show views
     # -------------------------------------------------------------------------
