@@ -430,7 +430,25 @@ class KwikModel(BaseModel):
             self._traces = _concatenate_virtual_arrays(traces)
 
     def open(self, kwik_path, channel_group=None, clustering=None):
-        """Open a Kwik experiment (.kwik, .kwx, .raw.kwd files)."""
+        """Open a Kwik dataset.
+
+        The .kwik, .kwx, and .raw.kwd must be in the same folder with the
+        same basename.
+
+        Parameters
+        ----------
+        kwik_path : str
+            Path to a .kwik file.
+        channel_group : int or None (default is None)
+            The channel group (shank) index to use. This can be changed
+            later after the file has been opened. By default, the first
+            channel group is used.
+        clustering : str or None (default is None)
+            The clustering to use. This can be changed later after the file
+            has been opened. By default, the 'main' clustering is used. An
+            error is raised if the 'main' clustering doesn't exist.
+
+        """
 
         if kwik_path is None:
             raise ValueError("No kwik_path specified.")
@@ -482,7 +500,7 @@ class KwikModel(BaseModel):
         self._kwik.close()
 
     def save(self, spike_clusters, cluster_groups):
-        """Commits all in-memory changes to disk."""
+        """Save the spike clusters and cluster groups in the Kwik file."""
 
         # REFACTOR: with() to open/close the file if needed
         to_close = self._open_kwik_if_needed(mode='a')
@@ -533,62 +551,104 @@ class KwikModel(BaseModel):
 
     @property
     def channel_groups(self):
+        """List of channel groups found in the Kwik file."""
         return self._channel_groups
 
     @property
     def n_features_per_channel(self):
+        """Number of features per channel (generally 3)."""
         return self._metadata['nfeatures_per_channel']
 
     @property
     def channels(self):
-        """List of channels in the current channel group."""
+        """List of all channels in the current channel group.
+
+        This list comes from the /channel_groups HDF5 group in the Kwik file.
+
+        """
         # TODO: rename to channel_ids?
         return self._channels
 
     @property
     def channel_order(self):
-        """List of channels in the current channel group, in the order
-        corresponding to the waveforms and features."""
+        """List of kept channels in the current channel group.
+
+        If you want the channels used in the features, masks, and waveforms,
+        this is the property you want to use, and not `model.channels`.
+
+        The channel order is the same than the one from the PRB file.
+        This order was used when generating the features and masks
+        in SpikeDetekt2. The same order is used in phy when loading the
+        waveforms from the .raw.kwd file.
+
+        """
         return self._channel_order
 
     @property
     def n_channels(self):
-        """Number of channels in the current channel group."""
+        """Number of all channels in the current channel group."""
         return len(self._channels)
 
     @property
     def recordings(self):
+        """List of recording indices found in the Kwik file."""
         return self._recordings
 
     @property
     def n_recordings(self):
+        """Number of recordings found in the Kwik file."""
         return len(self._recordings)
 
     @property
     def clusterings(self):
+        """List of clusterings found in the Kwik file.
+
+        The first one is always 'main'.
+
+        """
         return self._clusterings
 
     @property
     def clustering(self):
+        """The currently-active clustering.
+
+        Default is 'main'.
+
+        """
         return self._clustering
 
     @clustering.setter
     def clustering(self, value):
+        """Change the currently-active clustering."""
         self._clustering_changed(value)
 
     @property
     def metadata(self):
-        """A dictionary holding metadata about the experiment."""
+        """A dictionary holding metadata about the experiment.
+
+        This information was used by SpikeDetekt2 and KlustaKwik
+        during automatic clustering.
+
+        """
         return self._metadata
 
     @property
     def probe(self):
-        """A Probe instance."""
+        """A 'Probe' instance representing the probe used for the recording.
+
+        This object contains information about the adjacency graph and
+        the channel positions.
+
+        """
         return self._probe
 
     @property
     def traces(self):
-        """Traces (memory-mapped)."""
+        """Raw traces as found in the .raw.kwd file.
+
+        This object is memory-mapped to the HDF5 file.
+
+        """
         return self._traces
 
     @property
