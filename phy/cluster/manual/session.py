@@ -374,6 +374,7 @@ class Session(BaseSession):
         # Instantiate the SettingsManager which manages
         # the settings files.
         self.settings_manager = SettingsManager(phy_user_dir)
+        self._load_default_settings()
 
         # self.action and self.connect are decorators.
         self.action(self.open, title='Open')
@@ -417,13 +418,14 @@ class Session(BaseSession):
         """Load default settings for manual clustering."""
         curdir = op.dirname(op.realpath(__file__))
         # This is a namespace available in the config file.
-        file_namespace = {
-            'n_spikes': self.model.n_spikes,
-            'n_channels': self.model.n_channels,
-        }
+        # file_namespace = {
+        #     'n_spikes': self.model.n_spikes,
+        #     'n_channels': self.model.n_channels,
+        # }
         declare_namespace('manual_clustering')
         self.set_user_settings(path=op.join(curdir, 'default_settings.py'),
-                               file_namespace=file_namespace)
+                               # file_namespace=file_namespace
+                               )
 
     def _load_experiment_settings(self):
         self.settings_manager.set_experiment_path(self.experiment_path)
@@ -515,7 +517,7 @@ class Session(BaseSession):
 
     def _create_cluster_store(self):
 
-        # Kwik store in experiment_dir/name.phy/cluster_store.
+        # Kwik store in experiment_dir/name.phy/1/main/cluster_store.
         store_path = op.join(self.settings_manager.phy_experiment_dir,
                              'cluster_store',
                              str(self.model.channel_group),
@@ -621,7 +623,6 @@ class Session(BaseSession):
 
         # """
 
-        self._load_default_settings()
         self._load_experiment_settings()
 
         self._create_global_history()
@@ -641,6 +642,16 @@ class Session(BaseSession):
 
     def on_close(self):
         self.settings_manager.save()
+
+    def change_channel_group(self, channel_group):
+        self.select([])
+        self.model.channel_group = channel_group
+        self.emit('open')
+
+    def change_clustering(self, clustering):
+        self.select([])
+        self.model.clustering = clustering
+        self.emit('open')
 
     # Wizard
     # -------------------------------------------------------------------------

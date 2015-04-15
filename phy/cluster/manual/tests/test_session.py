@@ -413,3 +413,63 @@ def test_session_wizard():
             # The most similar cluster is 3 if best=4 and conversely.
             assert list(session.wizard.most_similar_clusters(best)) == [7 -
                                                                         best]
+
+
+def test_session_multiple_clusterings():
+
+    n_clusters = 5
+    n_spikes = 100
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 10000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        kwik_path = create_mock_kwik(tempdir,
+                                     n_clusters=n_clusters,
+                                     n_spikes=n_spikes,
+                                     n_channels=n_channels,
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
+
+        session = _start_manual_clustering(kwik_path=kwik_path,
+                                           tempdir=tempdir)
+
+        assert session.model.n_spikes == n_spikes
+        assert session.model.n_clusters == n_clusters
+        assert len(session.model.cluster_ids) == n_clusters
+        assert session.clustering.n_clusters == n_clusters
+        assert session.cluster_metadata.group(1) == 1
+
+        session.select([0, 1])
+
+        # Change clustering.
+        with raises(ValueError):
+            session.change_clustering('automat')
+        session.change_clustering('automatic')
+
+        assert session.model.n_spikes == n_spikes
+        assert session.model.n_clusters == n_clusters * 2
+        assert len(session.model.cluster_ids) == n_clusters * 2
+        assert session.clustering.n_clusters == n_clusters * 2
+        assert session.cluster_metadata.group(2) == 2
+
+        # The current selection is cleared when changing clustering.
+        ae(session.selector.selected_spikes, [])
+
+        # Merge the clusters and save, for the current clustering.
+        session.clustering.merge(session.clustering.cluster_ids)
+        session.save()
+        session.close()
+
+        # Re-open the session.
+        session = _start_manual_clustering(kwik_path=kwik_path,
+                                           tempdir=tempdir)
+        # The default clustering is the main one: nothing should have
+        # changed here.
+        assert session.model.n_clusters == n_clusters
+        session.change_clustering('automatic')
+        assert session.model.n_spikes == n_spikes
+        assert session.model.n_clusters == 1
+        assert session.model.cluster_ids == n_clusters * 2
