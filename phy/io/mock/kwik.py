@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 import os.path as op
-from random import randint
 
 import numpy as np
 
@@ -18,7 +17,7 @@ from ...io.mock.artificial import (artificial_spike_samples,
                                    artificial_traces)
 from ...electrode.mea import staggered_positions
 from ..h5 import open_h5
-from ..kwik_model import _kwik_filenames
+from ..kwik_model import _kwik_filenames, _create_clustering
 
 
 #------------------------------------------------------------------------------
@@ -92,17 +91,7 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
         for clustering, n_clusters_rec in clusterings:
             spike_clusters = artificial_spike_clusters(n_spikes,
                                                        n_clusters_rec)
-            f.write('/channel_groups/1/spikes/clusters/' + clustering,
-                    spike_clusters.astype(np.int32))
-
-            # Create cluster metadata.
-            for cluster in range(n_clusters_rec):
-                group = '/channel_groups/1/clusters/{0:s}/{1:d}'.format(
-                    clustering, cluster)
-                color = ('/channel_groups/1/clusters/{0:s}/{1:d}'.format(
-                    clustering, cluster) + '/application_data/klustaviewa')
-                f.write_attr(group, 'cluster_group', cluster % 4)
-                f.write_attr(color, 'color', randint(2, 10))
+            _create_clustering(f, clustering, 1, spike_clusters)
 
         # Create recordings.
         f.write_attr('/recordings/0', 'name', 'recording_0')

@@ -439,7 +439,7 @@ def test_session_multiple_clusterings():
         assert session.model.n_clusters == n_clusters
         assert len(session.model.cluster_ids) == n_clusters
         assert session.clustering.n_clusters == n_clusters
-        assert session.cluster_metadata.group(1) == 1
+        assert session.cluster_metadata.group(1) == 3
 
         session.select([0, 1])
 
@@ -452,7 +452,7 @@ def test_session_multiple_clusterings():
         assert session.model.n_clusters == n_clusters * 2
         assert len(session.model.cluster_ids) == n_clusters * 2
         assert session.clustering.n_clusters == n_clusters * 2
-        assert session.cluster_metadata.group(2) == 2
+        assert session.cluster_metadata.group(2) == 3
 
         # The current selection is cleared when changing clustering.
         ae(session.selector.selected_spikes, [])

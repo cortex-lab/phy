@@ -133,9 +133,9 @@ def test_kwik_open_full():
 
         # Test cluster groups.
         for cluster in range(_N_CLUSTERS):
-            assert kwik.cluster_metadata.group(cluster) == cluster % 4
+            assert kwik.cluster_metadata.group(cluster) == 3
         for cluster, group in kwik.cluster_groups.items():
-            assert group == cluster % 4
+            assert group == 3
 
         # Test probe.
         assert isinstance(kwik.probe, MEA)
@@ -230,7 +230,7 @@ def test_kwik_clusterings():
         # The default clustering is 'main'.
         assert kwik.n_spikes == _N_SPIKES
         assert kwik.n_clusters == _N_CLUSTERS
-        assert kwik.cluster_groups[_N_CLUSTERS - 1] == (_N_CLUSTERS - 1) % 4
+        assert kwik.cluster_groups[_N_CLUSTERS - 1] == 3
         ae(kwik.cluster_ids, np.arange(_N_CLUSTERS))
 
         # Change clustering.
@@ -239,5 +239,20 @@ def test_kwik_clusterings():
         assert kwik.n_spikes == _N_SPIKES
         # Some clusters may be empty with a small number of spikes like here
         assert _N_CLUSTERS * 2 - 4 <= n_clu <= _N_CLUSTERS * 2
-        assert kwik.cluster_groups[n_clu - 1] == (n_clu - 1) % 4
+        assert kwik.cluster_groups[n_clu - 1] == 3
+        assert len(kwik.cluster_ids) == n_clu
+
+        # Test renaming.
+        with raises(ValueError):
+            kwik.rename_clustering('a', 'b')
+        with raises(ValueError):
+            kwik.rename_clustering('automatic', 'b')
+        with raises(ValueError):
+            kwik.rename_clustering('main', 'automatic')
+
+        kwik.clustering = 'main'
+        kwik.rename_clustering('automatic', 'original')
+        assert kwik.clusterings == ['main', 'original']
+        kwik.clustering = 'original'
+        assert kwik.cluster_groups[n_clu - 1] == 3
         assert len(kwik.cluster_ids) == n_clu

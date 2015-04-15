@@ -7,13 +7,14 @@
 #------------------------------------------------------------------------------
 
 import os.path as op
+from random import randint
 
 import numpy as np
 
 from ..ext import six
 from .base_model import BaseModel
 from ..cluster.manual.cluster_metadata import ClusterMetadata
-from .h5 import open_h5
+from .h5 import open_h5, File
 from ..waveform.loader import WaveformLoader
 from ..waveform.filter import bandpass_filter, apply_filter
 from ..electrode.mea import MEA
@@ -95,6 +96,46 @@ def _concatenate_spikes(spikes, recs, offsets):
     offsets = _as_array(offsets)
     recs = _as_array(recs)
     return (spikes + offsets[recs]).astype(np.uint64)
+
+
+def _create_clustering(f, name,
+                       channel_group=None,
+                       spike_clusters=None,
+                       ):
+    assert isinstance(f, File)
+    path = '/channel_groups/{0:d}/spikes/clusters/{1:s}'.format(channel_group,
+                                                                name)
+    assert not f.exists(path)
+
+    # Save spike_clusters.
+    f.write(path, spike_clusters.astype(np.uint32))
+
+    cluster_ids = _unique(spike_clusters)
+
+    # Create cluster metadata.
+    for cluster in cluster_ids:
+        cluster_path = '/channel_groups/{0:d}/clusters/{1:s}/{2:d}'.format(
+            channel_group, name, cluster)
+        kv_path = cluster_path + '/application_data/klustaviewa'
+
+        # Default group: unsorted.
+        f.write_attr(cluster_path, 'cluster_group', 3)
+        f.write_attr(kv_path, 'color', randint(2, 10))
+
+    # Create cluster group metadata.
+    for cluster, cg_name in [(0, 'Noise'),
+                             (1, 'MUA'),
+                             (2, 'Good'),
+                             (3, 'Unsorted'),
+                             ]:
+        cg_path = ('/channel_groups/{0:d}/'
+                   'cluster_groups/{1:s}/{2:d}').format(channel_group,
+                                                        name,
+                                                        cluster,
+                                                        )
+        kv_path = cg_path + '/application_data/klustaviewa'
+        f.write_attr(cg_path, 'name', cg_name)
+        f.write_attr(kv_path, 'color', randint(2, 10))
 
 
 _COLOR_MAP = np.array([[1., 1., 1.],
@@ -383,7 +424,7 @@ class KwikModel(BaseModel):
         sc = self._kwik.read(self._spike_clusters_path)
         sc[:] = spike_clusters
 
-    def _load_clusterings(self, clustering):
+    def _load_clusterings(self, clustering=None):
         # Once the channel group is loaded, list the clusterings.
         self._clusterings = _list_clusterings(self._kwik.h5py_file,
                                               self.channel_group)
@@ -560,6 +601,52 @@ class KwikModel(BaseModel):
         self._load_cluster_groups()
         if _to_close:
             self._kwik.close()
+
+    # Managing clusterings
+    # -------------------------------------------------------------------------
+
+    def rename_clustering(self, old_name, new_name):
+        """Rename a clustering in the .kwik file."""
+        if old_name == self._clustering:
+            raise ValueError("You cannot rename the current clustering.")
+        if new_name in self._clusterings:
+            raise ValueError("The clustering '{0}' ".format(new_name) +
+                             "already exists.")
+
+        _to_close = self._open_kwik_if_needed(mode='a')
+
+        # /channel_groups/x/spikes/clusters/<name>
+        p = self._spikes_path + '/clusters/'
+        self._kwik.move(p + old_name, p + new_name)
+
+        # /channel_groups/x/clusters/<name>
+        p = self._clusters_path + '/'
+        self._kwik.move(p + old_name, p + new_name)
+
+        # /channel_groups/x/cluster_groups/<name>
+        p = self._channel_groups_path + '/cluster_groups/'
+        self._kwik.move(p + old_name, p + new_name)
+
+        # Update the list of clusterings.
+        self._load_clusterings(self._clustering)
+
+        if _to_close:
+            self._kwik.close()
+
+    def copy_clustering(self, name, new_name):
+        # TODO
+        # Update the list of clusterings.
+        self._load_clusterings(self._clustering)
+
+    def delete_clustering(self, name):
+        # TODO
+        # Update the list of clusterings.
+        self._load_clusterings(self._clustering)
+
+    def save_clustering(self, name, spike_clusters):
+        # TODO
+        # Update the list of clusterings.
+        self._load_clusterings(self._clustering)
 
     # Data
     # -------------------------------------------------------------------------
