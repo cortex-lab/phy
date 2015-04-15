@@ -413,6 +413,11 @@ class _BakeVisual(Visual):
         """Specify whether the visual is currently empty or not."""
         return self._empty
 
+    @empty.setter
+    def empty(self, value):
+        """Specify whether the visual is currently empty or not."""
+        self._empty = value
+
     def set_to_bake(self, *bakes):
         for bake in bakes:
             if bake not in self._to_bake:

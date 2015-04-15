@@ -687,6 +687,9 @@ class Session(BaseSession):
         @self.connect
         def on_select(selector):
             if len(selector.selected_clusters) == 0:
+                # Clear the view.
+                view.visual.empty = True
+                view.update()
                 return
             if view.visual.empty:
                 on_open()
