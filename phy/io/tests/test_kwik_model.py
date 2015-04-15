@@ -242,7 +242,24 @@ def test_kwik_clusterings():
         assert kwik.cluster_groups[n_clu - 1] == 3
         assert len(kwik.cluster_ids) == n_clu
 
+
+def test_kwik_manage_clusterings():
+
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=_N_CLUSTERS,
+                                    n_spikes=_N_SPIKES,
+                                    n_channels=_N_CHANNELS,
+                                    n_features_per_channel=_N_FETS,
+                                    n_samples_traces=_N_SAMPLES_TRACES)
+
+        kwik = KwikModel(filename)
+        spike_clusters = kwik.spike_clusters
+        assert kwik.clusterings == ['main', 'automatic']
+
         # Test renaming.
+        kwik.clustering = 'automatic'
         with raises(ValueError):
             kwik.rename_clustering('a', 'b')
         with raises(ValueError):
@@ -256,6 +273,7 @@ def test_kwik_clusterings():
         with raises(ValueError):
             kwik.clustering = 'automatic'
         kwik.clustering = 'original'
+        n_clu = kwik.n_clusters
         assert kwik.cluster_groups[n_clu - 1] == 3
         assert len(kwik.cluster_ids) == n_clu
 
@@ -279,9 +297,22 @@ def test_kwik_clusterings():
         assert kwik.cluster_groups == cg
         ae(kwik.cluster_ids, ci)
 
+        # Test delete.
         with raises(ValueError):
             kwik.delete_clustering('a')
-            kwik.delete_clustering('origina')
+            kwik.delete_clustering('original')
         kwik.clustering = 'main'
         kwik.delete_clustering('original')
         assert kwik.clusterings == ['main', 'automatic']
+
+        # Test save.
+        sc = np.ones(_N_SPIKES, dtype=np.uint32)
+        sc[1] = sc[-2] = 3
+        kwik.save_clustering('new', sc)
+        ae(kwik.spike_clusters, spike_clusters)
+        kwik.clustering = 'new'
+        ae(kwik.spike_clusters, sc)
+        assert kwik.n_clusters == 2
+        ae(kwik.cluster_ids, [1, 3])
+        assert kwik.cluster_groups == {1: 3,
+                                       3: 3}

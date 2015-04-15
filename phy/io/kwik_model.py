@@ -675,9 +675,24 @@ class KwikModel(BaseModel):
             self._kwik.close()
 
     def save_clustering(self, name, spike_clusters):
-        # TODO
+        """Save a new clustering to the file."""
+        if name in self._clusterings:
+            raise ValueError("The clustering '{0}' ".format(name) +
+                             "already exists.")
+
+        _to_close = self._open_kwik_if_needed(mode='a')
+
+        _create_clustering(self._kwik,
+                           name,
+                           channel_group=self._channel_group,
+                           spike_clusters=spike_clusters,
+                           )
+
         # Update the list of clusterings.
         self._load_clusterings(self._clustering)
+
+        if _to_close:
+            self._kwik.close()
 
     # Data
     # -------------------------------------------------------------------------
