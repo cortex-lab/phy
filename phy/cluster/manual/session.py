@@ -455,12 +455,15 @@ class Session(BaseSession):
         return self.settings_manager.get_user_settings(key,
                                                        scope='experiment')
 
-    def set_user_settings(self, key=None, value=None,
-                          path=None, file_namespace=None):
+    def load_user_settings(self, path=None, file_namespace=None):
+        return self.settings_manager.load_user_settings(path,
+                                                        file_namespace,
+                                                        scope='experiment')
+
+    def set_user_settings(self, key=None, value=None):
         """Set a user settings."""
         return self.settings_manager.set_user_settings(
-            key, value, scope='experiment', path=path,
-            file_namespace=file_namespace)
+            key, value, scope='experiment')
 
     def get_internal_settings(self, key):
         """Get an internal settings."""
@@ -484,7 +487,7 @@ class Session(BaseSession):
         #     'n_channels': self.model.n_channels,
         # }
         declare_namespace('manual_clustering')
-        self.set_user_settings(path=op.join(curdir, 'default_settings.py'),
+        self.load_user_settings(path=op.join(curdir, 'default_settings.py'),
                                # file_namespace=file_namespace
                                )
 

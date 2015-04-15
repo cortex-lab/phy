@@ -86,7 +86,7 @@ def test_user_settings_1():
         s = UserSettings()
         # Need to set the namespace 'test' first.
         with raises(NameError):
-            s.set(path=path)
+            s.load(path=path)
 
         # Set the 'test' namespace.
         s.set('test.a', 3)
@@ -94,7 +94,7 @@ def test_user_settings_1():
         assert s.get('test.a') == 3
 
         # Now, set the settings file.
-        s.set(path=path)
+        s.load(path=path)
         assert s.get('test.a') == 4
         assert s.get('test.b') == 5
         assert s.get('test.c') == 6
@@ -112,11 +112,11 @@ def test_user_settings_2():
         s = UserSettings()
         # Need to set the namespace 'test' first.
         with raises(NameError):
-            s.set(path=path)
+            s.load(path=path)
 
         # Set the 'test' namespace.
         s.declare_namespace('test')
-        s.set(path=path)
+        s.load(path=path)
         assert s.get('test.a') == 4
         assert s.get('test.b') == 5
 

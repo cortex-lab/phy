@@ -9,7 +9,7 @@
 import os.path as op
 import re
 
-from ..ext.six.moves.cPickle import load, dump
+from ..ext.six.moves import cPickle
 from ._misc import Bunch, _phy_user_dir, _ensure_path_exists
 from .logging import debug, warn
 
@@ -94,8 +94,11 @@ class UserSettings(BaseSettings):
     def declare_namespace(self, namespace, scope='global'):
         self._store[scope][namespace] = Bunch()
 
-    def read_settings_file(self, path, file_namespace=None, scope='global'):
+    def load(self, path, file_namespace=None, scope='global'):
         """Return a dictionary {namespace: {key: value}} dictionary."""
+        path = op.expanduser(path)
+        path = op.realpath(path)
+        assert op.exists(path)
         with open(path, 'r') as f:
             contents = f.read()
         if file_namespace is None:
@@ -112,8 +115,7 @@ class UserSettings(BaseSettings):
             raise NameError("Unknown namespace '{0:s}'. ".format(name) +
                             "Known namespaces are: {0:s}.".format(namespaces))
 
-    def set(self, key=None, value=None, namespace=None, scope='global',
-            path=None, file_namespace=None):
+    def set(self, key=None, value=None, namespace=None, scope='global'):
         """Set some settings
 
         Parameters
@@ -130,13 +132,6 @@ class UserSettings(BaseSettings):
             A namespace to pass to the Python settings file.
 
         """
-        if path is not None:
-            path = op.expanduser(path)
-            path = op.realpath(path)
-            assert op.exists(path)
-            return self.read_settings_file(path,
-                                           file_namespace=file_namespace,
-                                           scope=scope)
         super(UserSettings, self).set(key, value,
                                       namespace=namespace,
                                       scope=scope,
@@ -148,6 +143,10 @@ _USER_SETTINGS = UserSettings()
 
 def get(*args, **kwargs):
     return _USER_SETTINGS.get(*args, **kwargs)
+
+
+def load(*args, **kwargs):
+    return _USER_SETTINGS.load(*args, **kwargs)
 
 
 def set(*args, **kwargs):
@@ -174,7 +173,7 @@ class InternalSettings(object):
             raise ValueError("The file '{0}' doesn't exist.".format(path))
         try:
             with open(path, 'rb') as f:
-                store = load(f)
+                store = cPickle.load(f)
         except Exception as e:
             warn("Unable to read the internal settings. "
                  "You may want to delete '{0}'.\n{1}".format(path, str(e)))
@@ -185,7 +184,7 @@ class InternalSettings(object):
     def save(self, path):
         path = op.realpath(op.expanduser(path))
         with open(path, 'wb') as f:
-            dump(self._store, f)
+            cPickle.dump(self._store, f)
         debug("Saved internal settings to '{0}'.".format(path))
 
     def get(self, name):
@@ -235,7 +234,7 @@ class SettingsManager(object):
     def _load_user_settings(self, scope):
         path = self.user_settings_path(scope)
         if op.exists(path):
-            _USER_SETTINGS.set(path=path)
+            _USER_SETTINGS.load(path=path)
 
     def set_experiment_path(self, experiment_path):
         self.experiment_path = experiment_path
@@ -281,14 +280,16 @@ class SettingsManager(object):
             scope = self.experiment_name or 'global'
         return get(key, scope=scope)
 
-    def set_user_settings(self, key, value, scope='global',
-                          path=None, file_namespace=None):
+    def load_user_settings(self, path, file_namespace=None, scope='global'):
+        if scope == 'experiment':
+            scope = self.experiment_name or 'global'
+        return _USER_SETTINGS.load(path, file_namespace, scope)
+
+    def set_user_settings(self, key, value, scope='global'):
         if scope == 'experiment':
             scope = self.experiment_name or 'global'
         return _USER_SETTINGS.set(key, value,
-                                  scope=scope,
-                                  path=path,
-                                  file_namespace=file_namespace)
+                                  scope=scope)
 
     def save(self):
         for scope, settings in self._internal_settings.items():
