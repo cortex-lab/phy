@@ -222,3 +222,32 @@ def test_h5_move():
             assert f.exists('g/mynewgroup/ds2')
             arr_new = f.read('g/mynewgroup/ds2')
             ae(arr, arr_new)
+
+
+def test_h5_copy():
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = _create_test_file(tempdir)
+
+        with open_h5(filename, 'a') as f:
+
+            # Test dataset copy.
+            assert f.exists('ds1')
+            arr = f.read('ds1')[:]
+            assert len(arr) == 10
+            f.copy('ds1', 'ds1_new')
+            assert f.exists('ds1')
+            assert f.exists('ds1_new')
+            arr_new = f.read('ds1_new')[:]
+            assert len(arr_new) == 10
+            ae(arr, arr_new)
+
+            # Test group copy.
+            assert f.exists('mygroup/ds2')
+            arr = f.read('mygroup/ds2')
+            f.copy('mygroup', 'g/mynewgroup')
+            assert f.exists('mygroup')
+            assert f.exists('g/mynewgroup')
+            assert f.exists('g/mynewgroup/ds2')
+            arr_new = f.read('g/mynewgroup/ds2')
+            ae(arr, arr_new)
