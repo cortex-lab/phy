@@ -409,7 +409,20 @@ _VIEW_MODELS = {
 
 
 class Session(BaseSession):
-    """A manual clustering session."""
+    """A manual clustering session.
+
+    This is the main object used for manual clustering. It implements
+    all common actions:
+
+    * Loading a dataset (.kwik file)
+    * Listing the clusters
+    * Changing the current channel group or current clustering
+    * Showing views (waveforms, features, correlograms, etc.)
+    * Clustering actions: merge, split, undo, redo
+    * Wizard: cluster quality, best clusters, most similar clusters
+    * Save back to .kwik
+
+    """
     def __init__(self, phy_user_dir=None):
         super(Session, self).__init__()
         self.model = None
@@ -438,21 +451,25 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def get_user_settings(self, key):
+        """Load a user settings."""
         return self.settings_manager.get_user_settings(key,
                                                        scope='experiment')
 
     def set_user_settings(self, key=None, value=None,
                           path=None, file_namespace=None):
+        """Set a user settings."""
         return self.settings_manager.set_user_settings(
             key, value, scope='experiment', path=path,
             file_namespace=file_namespace)
 
     def get_internal_settings(self, key):
+        """Get an internal settings."""
         return self.settings_manager.get_internal_settings(key,
                                                            scope='experiment',
                                                            )
 
     def set_internal_settings(self, key, value):
+        """Set an internal settings."""
         return self.settings_manager.set_internal_settings(key,
                                                            value,
                                                            scope='experiment',
@@ -486,6 +503,7 @@ class Session(BaseSession):
             shutil.copyfile(kwik_path, backup_kwik_path)
 
     def open(self, kwik_path=None, model=None):
+        """Open a .kwik file."""
         if kwik_path is not None:
             self._backup_kwik(kwik_path)
         if model is None:
@@ -506,6 +524,7 @@ class Session(BaseSession):
         info("Saved {0:s}.".format(self.model.kwik_path))
 
     def close(self):
+        """Close the currently-open dataset."""
         self.emit('close')
         self.model = None
         self.experiment_path = None
@@ -521,28 +540,52 @@ class Session(BaseSession):
             raise ValueError("No {0} were selected.".format(name))
 
     def select(self, clusters):
+        """Select some clusters."""
         self.selector.selected_clusters = clusters
         self.emit('select', self.selector)
 
     def merge(self, clusters):
+        """Merge some clusters."""
         up = self.clustering.merge(clusters)
         self.emit('cluster', up=up)
 
     def split(self, spikes):
+        """Make a new cluster out of some spikes.
+
+        Notes
+        -----
+
+        Spikes belonging to affected clusters, but not part of the `spikes`
+        array, will move to brand new cluster ids. This is because a new
+        cluster id must be used as soon as a cluster changes.
+
+        """
         self._check_list_argument(spikes, 'spikes')
         up = self.clustering.split(spikes)
         self.emit('cluster', up=up)
 
     def move(self, clusters, group):
+        """Move some clusters to a cluster group.
+
+        Here is the list of cluster groups:
+
+        * 0=Noise
+        * 1=MUA
+        * 2=Good
+        * 3=Unsorted
+
+        """
         self._check_list_argument(clusters)
         up = self.cluster_metadata.set_group(clusters, group)
         self.emit('cluster', up=up)
 
     def undo(self):
+        """Undo the last clustering action."""
         up = self._global_history.undo()
         self.emit('cluster', up=up, add_to_stack=False)
 
     def redo(self):
+        """Redo the last undone action."""
         up = self._global_history.redo()
         self.emit('cluster', up=up, add_to_stack=False)
 
@@ -551,6 +594,7 @@ class Session(BaseSession):
 
     @property
     def cluster_ids(self):
+        """Array of all cluster ids used in the current clustering."""
         return self.clustering.cluster_ids
 
     # Event callbacks
@@ -661,11 +705,7 @@ class Session(BaseSession):
                         self.wizard.ignore(cluster)
 
     def on_open(self):
-        """Update the session after new data has been loaded.
-
-        TODO: call this after the channel groups has changed.
-
-        # """
+        """Update the session after new data has been loaded."""
 
         self._load_experiment_settings()
 
@@ -677,6 +717,7 @@ class Session(BaseSession):
         self._create_wizard()
 
     def on_cluster(self, up=None, add_to_stack=True):
+        """Update the history when clustering changes occur."""
         # Update the global history.
         if add_to_stack and up is not None:
             if up.description.startswith('metadata'):
@@ -685,14 +726,17 @@ class Session(BaseSession):
                 self._global_history.action(self.clustering)
 
     def on_close(self):
+        """Save the settings when the data is closed."""
         self.settings_manager.save()
 
     def change_channel_group(self, channel_group):
+        """Change the current channel group."""
         self.select([])
         self.model.channel_group = channel_group
         self.emit('open')
 
     def change_clustering(self, clustering):
+        """Change the current clustering."""
         self.select([])
         self.model.clustering = clustering
         self.emit('open')
@@ -701,9 +745,18 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def best_clusters(self, quality=None, n_max=None):
-        """Return the best clusters by decreasing order of quality,
-        for a given 'cluster => quality' function. By default,
-        this uses the quality function used in the wizard."""
+        """Return the best clusters by decreasing order of quality.
+
+        Parameters
+        ----------
+
+        quality : function or None
+            A cluster quality function, returning a quality value for any
+            cluster id. By default, the wizard's quality function is used.
+        n_max : integer or None
+            The maximum number of clusters to return.
+
+        """
         if quality is None:
             return self.wizard.best_clusters(n_max=n_max)
         else:
@@ -839,12 +892,18 @@ class Session(BaseSession):
         return vm
 
     def create_view(self, name):
-        """Create a view without displaying it. Return a ViewModel instance.
+        """Create a view without displaying it.
 
         Parameters
         ----------
+
         name : str
             Can be 'waveforms', 'features', or 'correlograms'.
+
+        Returns
+        -------
+
+        view_model : ViewModel instance
 
         """
         if name == 'waveforms':
@@ -857,19 +916,40 @@ class Session(BaseSession):
             raise ValueError("The view '{0}' doesn't exist.".format(name))
 
     def show_waveforms(self):
-        """Create and display a new Waveforms view."""
+        """Create and display a new Waveforms view.
+
+        Returns
+        -------
+
+        view : VisPy canvas instance
+
+        """
         vm = self.create_view('waveforms')
         vm.view.show()
         return vm.view
 
     def show_features(self):
-        """Create and display a new Features view."""
+        """Create and display a new Features view.
+
+        Returns
+        -------
+
+        view : VisPy canvas instance
+
+        """
         vm = self.create_view('features')
         vm.view.show()
         return vm.view
 
     def show_correlograms(self):
-        """Create and display a new Correlograms view."""
+        """Create and display a new Correlograms view.
+
+        Returns
+        -------
+
+        view : VisPy canvas instance
+
+        """
         vm = self.create_view('correlograms')
         vm.view.show()
         return vm.view
