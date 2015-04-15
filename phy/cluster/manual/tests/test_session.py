@@ -163,11 +163,10 @@ def _start_manual_clustering(kwik_path=None, model=None, tempdir=None):
 
 
 def _show_view(session, name):
-    vm = session._create_view_model(name)
+    vm = session.create_view(name)
     vm.scale_factor = 1.
-    view = session._create_view(vm, show=False)
-    show_test(view)
-    return view
+    show_test(vm.view)
+    return vm.view
 
 
 def test_session_store():

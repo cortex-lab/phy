@@ -668,7 +668,7 @@ class Session(BaseSession):
     # Show views
     # -------------------------------------------------------------------------
 
-    def _create_view(self, view_model, show=True):
+    def _create_view(self, view_model):
         view = view_model.view
         view_name = view_model.view_name
 
@@ -719,17 +719,14 @@ class Session(BaseSession):
                 on_open()
                 on_select(self.selector)
 
-        if show:
-            view.show()
-
         return view
 
     def _create_view_model(self, name, **kwargs):
         vm_class = _VIEW_MODELS[name]
         return vm_class(self.model, store=self.cluster_store, **kwargs)
 
-    def show_waveforms(self):
-        """Show a WaveformView and return a ViewModel instance."""
+    def _create_waveforms_view(self):
+        """Create a WaveformView and return a ViewModel instance."""
 
         # Persist scale factor.
         sf_name = 'manual_clustering.waveforms_scale_factor'
@@ -753,9 +750,6 @@ class Session(BaseSession):
         def on_draw(event):
             # OPTIM: put this when the model or the view is closed instead
             # No need to run this at every draw!
-            # sf = vm.view.box_scale[1] / vm.view.visual.default_box_scale[1]
-            # sf = sf * vm.scale_factor
-            # self.set_internal_settings(sf_name, sf)
 
             # Save probe and box scales.
             self.set_internal_settings(ps_name, vm.view.probe_scale)
@@ -763,8 +757,8 @@ class Session(BaseSession):
 
         return vm
 
-    def show_features(self):
-        """Show a FeatureView and return a ViewModel instance."""
+    def _create_features_view(self):
+        """Create a FeatureView and return a ViewModel instance."""
 
         sf_name = 'manual_clustering.features_scale_factor'
         sf = self.get_internal_settings(sf_name) or .01
@@ -790,8 +784,8 @@ class Session(BaseSession):
 
         return vm
 
-    def show_correlograms(self):
-        """Show a CorrelogramView and return a ViewModel instance."""
+    def _create_correlograms_view(self):
+        """Create a CorrelogramView and return a ViewModel instance."""
         args = 'binsize', 'winsize_bins'
         kwargs = {k: self.get_user_settings('manual_clustering.'
                                             'correlograms_' + k)
@@ -799,3 +793,39 @@ class Session(BaseSession):
         vm = self._create_view_model('correlograms', **kwargs)
         self._create_view(vm)
         return vm
+
+    def create_view(self, name):
+        """Create a view without displaying it. Return a ViewModel instance.
+
+        Parameters
+        ----------
+        name : str
+            Can be 'waveforms', 'features', or 'correlograms'.
+
+        """
+        if name == 'waveforms':
+            return self._create_waveforms_view()
+        elif name == 'features':
+            return self._create_features_view()
+        elif name == 'correlograms':
+            return self._create_correlograms_view()
+        else:
+            raise ValueError("The view '{0}' doesn't exist.".format(name))
+
+    def show_waveforms(self):
+        """Create and display a new Waveforms view."""
+        vm = self.create_view('waveforms')
+        vm.view.show()
+        return vm.view
+
+    def show_features(self):
+        """Create and display a new Features view."""
+        vm = self.create_view('features')
+        vm.view.show()
+        return vm.view
+
+    def show_correlograms(self):
+        """Create and display a new Correlograms view."""
+        vm = self.create_view('correlograms')
+        vm.view.show()
+        return vm.view
