@@ -80,15 +80,22 @@ class BaseSession(EventEmitter):
 #------------------------------------------------------------------------------
 
 class FeatureMasks(StoreItem):
+    """A cluster store item that manages the features and masks of
+    all clusters."""
     name = 'features and masks'
     fields = [('features', 'disk', np.float32,),
               ('masks', 'disk', np.float32,),
+              # The following fields are some basic cluster statistics
+              # used in the library.
               ('mean_masks', 'memory'),
               ('sum_masks', 'memory'),
               ('n_unmasked_channels', 'memory'),
               ('main_channels', 'memory'),
               ('mean_probe_position', 'memory'),
               ]
+
+    # Size of the chunk used when reading features and masks from the HDF5
+    # .kwx file.
     chunk_size = None
 
     def __init__(self, *args, **kwargs):
@@ -189,7 +196,8 @@ class FeatureMasks(StoreItem):
                               )
 
     def is_consistent(self, cluster, spikes):
-        """Return whether the filesize of a cluster store file is correct."""
+        """Return whether the filesizes of the two cluster store files
+        (`.features` and `.masks`) are correct."""
         cluster_size = len(spikes)
         expected_file_sizes = [('masks', (cluster_size *
                                           self.n_channels *
@@ -208,8 +216,22 @@ class FeatureMasks(StoreItem):
         return True
 
     def store_all_clusters(self, mode=None):
-        """Initialize all cluster files, loop over all spikes, and
-        copy the data."""
+        """Store the features and masks of the clusters that need to be
+        regenerated.
+
+        Parameters
+        ----------
+
+        mode : str or None
+            How to choose whether cluster files need to be re-generated.
+            Can be one of the following options:
+
+            * None or 'default': only regenerate the missing or inconsistent
+              clusters
+            * 'force': fully regenerate all clusters
+            * 'read-only': just load the existing files, do not write anything
+
+        """
 
         # No need to regenerate the cluster store if it exists and is valid.
         clusters_to_generate = self.to_generate(mode=mode)
@@ -258,6 +280,13 @@ class FeatureMasks(StoreItem):
         self._store_extra_fields(self.cluster_ids)
 
     def _merge(self, up):
+        """Create the cluster store files of the merged cluster
+        from the files of the old clusters.
+
+        This is basically a concatenation of arrays, but the spike order
+        needs to be taken into account.
+
+        """
         clusters = up.deleted
         spc = up.old_spikes_per_cluster
         # We load all masks and features of the merged clusters.
@@ -282,6 +311,13 @@ class FeatureMasks(StoreItem):
             self.disk_store.store(up.added[0], **{name: concat})
 
     def _assign(self, up):
+        """Create the cluster store files of the new clusters
+        from the files of the old clusters.
+
+        The files of all old clusters are loaded, re-split and concatenated
+        to form the new cluster files.
+
+        """
         for name, shape in [('features',
                              (-1, self.n_channels, self.n_features)),
                             ('masks',
@@ -325,6 +361,14 @@ class FeatureMasks(StoreItem):
                 self.disk_store.store(new, **{name: concat})
 
     def on_cluster(self, up=None):
+        """Generate the `.features` and `.masks` files of the newly-created
+        clusters, and compute their cluster statistics.
+
+        Old data is kept on disk and in memory, which is useful for
+        undo and redo. The `cluster_store.clean()` method can be called to
+        delete the old files.
+
+        """
         # No need to change anything in the store if this is an undo or
         # a redo.
         if up is None or up.history is not None:
