@@ -231,6 +231,18 @@ class DiskStore(object):
 #------------------------------------------------------------------------------
 
 class ClusterStore(object):
+    """Hold per-cluster information on disk and in memory.
+
+    Note
+    ----
+
+    Currently, this is used to accelerate access to features, masks, and
+    cluster statistics. Features and masks of all clusters are stored in a
+    disk cache. Cluster statistics are computed when loading a dataset,
+    and are kept in memory afterwards. All data is dynamically updated
+    when clustering changes occur.
+
+    """
     def __init__(self, model=None, path=None):
         self._model = model
         self._spikes_per_cluster = {}
@@ -250,18 +262,23 @@ class ClusterStore(object):
 
     @property
     def memory_store(self):
+        """The memory store holds some cluster statistics."""
         return self._memory
 
     @property
     def disk_store(self):
+        """The disk store manages the cache of per-cluster data like
+        features and masks."""
         return self._disk
 
     @property
     def spikes_per_cluster(self):
+        """Dictionary {cluster_id: spike_ids}."""
         return self._spikes_per_cluster
 
     @spikes_per_cluster.setter
     def spikes_per_cluster(self, value):
+        """Update the `spikes_per_cluster` structure."""
         assert isinstance(value, dict)
         self._spikes_per_cluster = value
         for item in self._items:
@@ -269,17 +286,41 @@ class ClusterStore(object):
 
     @property
     def cluster_ids(self):
+        """Array of all cluster ids appearing in the `spikes_per_cluster`
+        dictionary."""
         return sorted(self._spikes_per_cluster)
 
     @property
     def store_items(self):
+        """List of registered store items."""
         return self._items
 
-    def register_field(self, field):
-        name, location = field[:2]
-        dtype = field[2] if len(field) >= 3 else None
-        shape = field[3] if len(field) == 4 else None
+    def register_field(self, name, location, dtype=None, shape=None):
+        """Register a new piece of data to store on memory or on disk.
 
+        Parameters
+        ----------
+
+        name : str
+            The name of the field.
+        location : str
+            'memory' or 'disk'.
+        dtype : NumPy dtype or None
+            The dtype of arrays stored for that field. This is only used when
+            the location is 'disk'.
+        shape : tuple or None
+            The shape of arrays. This is only used when the location is 'disk'.
+            This is used by `np.reshape()`, so the shape can contain a `-1`.
+
+        Notes
+        -----
+
+        When storing information to disk, only NumPy arrays are supported
+        currently. They are saved as flat binary files. This is why the
+        dtype and shape must be registered here, otherwise that information
+        is lost. This metadata is not saved in the files.
+
+        """
         # HACK: need to use a factory function because in Python
         # functions are closed over names, not values. Here we
         # want 'name' to refer to the 'name' local variable.
@@ -305,7 +346,12 @@ class ClusterStore(object):
         setattr(self, name, load)
 
     def register_item(self, item_cls, **kwargs):
-        """Register a StoreItem instance in the store."""
+        """Register a StoreItem class in the store.
+
+        A StoreItem class is responsible for storing some data to disk
+        and memory. It must register one or several pieces of data.
+
+        """
 
         # Instantiate the item.
         item = item_cls(model=self._model,
@@ -314,13 +360,22 @@ class ClusterStore(object):
                         **kwargs)
         assert item.fields is not None
 
+        # Register all fields declared by the store item.
         for field in item.fields:
-            self.register_field(field)
+
+            name, location = field[:2]
+            dtype = field[2] if len(field) >= 3 else None
+            shape = field[3] if len(field) == 4 else None
+
+            self.register_field(name, location, dtype=dtype, shape=shape)
 
         # Register the StoreItem instance.
         self._items.append(item)
 
     def load(self, name, clusters, spikes):
+        """Load some data for a number of clusters and spikes."""
+        # TODO: remove spikes as a parameter here, as it can be
+        # obtained from self.spikes_per_cluster.
         assert _is_array_like(clusters)
         load = getattr(self, name)
 
@@ -334,6 +389,11 @@ class ClusterStore(object):
         return arrays[idx, ...]
 
     def on_cluster(self, up):
+        """Update the cluster store when clustering changes occur.
+
+        This method calls `item.on_cluster(up)` for all registered store items.
+
+        """
         # No need to delete the old clusters from the store, we can keep
         # them for possible undo, and regularly clean up the store.
         for item in self._items:
@@ -344,15 +404,19 @@ class ClusterStore(object):
 
     @property
     def path(self):
+        """Path to the disk store cache."""
         return self.disk_store.path
 
     @property
     def old_clusters(self):
+        """List of clusters found in the cache that are no longer part
+        of the current clustering."""
         return sorted(set(self.disk_store.cluster_ids) -
                       set(self.cluster_ids))
 
     @property
     def files(self):
+        """List of files present in the disk store."""
         return self.disk_store.files
 
     # Status
@@ -360,10 +424,12 @@ class ClusterStore(object):
 
     @property
     def total_size(self):
+        """Total size of the disk store."""
         return _directory_size(self.path)
 
     def is_consistent(self):
-        """Return whether the cluster store is consistent."""
+        """Return whether all cluster stores files exist and have
+        the expected file size."""
         valid = set(self.cluster_ids)
         # All store items should be consistent on all valid clusters.
         consistent = all(all(item.is_consistent(clu,
@@ -374,6 +440,7 @@ class ClusterStore(object):
 
     @property
     def status(self):
+        """Return the current status of the cluster store."""
         in_store = set(self.disk_store.cluster_ids)
         valid = set(self.cluster_ids)
         invalid = in_store - valid
@@ -394,7 +461,7 @@ class ClusterStore(object):
         return status
 
     def display_status(self):
-        """Display the current status of the store."""
+        """Display the current status of the cluster store."""
         print(self.status)
 
     # Store management
@@ -419,6 +486,7 @@ class ClusterStore(object):
 
         Parameters
         ----------
+
         spikes_per_cluster : dict
             A dictionary cluster_ids => array of spike_ids.
         mode : str (default is None)
@@ -453,9 +521,10 @@ class StoreItem(object):
 
     Attributes
     ----------
+
     fields : list
         A list of pairs (field_name, storage_location).
-        storage_location is either 'memory', 'disk'.
+        storage_location is either 'memory' or 'disk'.
     model : Model
         A Model instance for the current dataset.
     memory_store : MemoryStore
@@ -465,10 +534,20 @@ class StoreItem(object):
 
     Methods
     -------
+
     store_cluster(cluster, spikes)
         Extract some data from the model and store it in the cluster store.
+        Must be overriden.
     on_cluster(up)
         Update the store when the clustering changes.
+        May be overriden.
+    is_consistent(cluster, spikes)
+        Return whether the cluster file of a given cluster exists and
+        has the expected file size.
+        May be overriden (default is to always return False).
+    store_all_clusters(mode=None)
+        Call store_cluster() on all clusters.
+        May be overriden.
 
     """
     fields = None  # list of (field_name, storage_location)
