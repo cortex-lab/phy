@@ -95,7 +95,7 @@ class UserSettings(BaseSettings):
         self._store[scope][namespace] = Bunch()
 
     def load(self, path, file_namespace=None, scope='global'):
-        """Return a dictionary {namespace: {key: value}} dictionary."""
+        """ load a setting file """
         path = op.expanduser(path)
         path = op.realpath(path)
         assert op.exists(path)
@@ -222,6 +222,7 @@ class SettingsManager(object):
         self.phy_user_dir = phy_user_dir
         _ensure_path_exists(self.phy_user_dir)
 
+        declare_namespace("phy")
         # Load global user settings.
         self._load_user_settings('global')
 
