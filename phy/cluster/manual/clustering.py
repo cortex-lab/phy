@@ -117,6 +117,40 @@ class Clustering(object):
     made successively. Undoing consists of reapplying all changes from the
     original spike_clusters array, except the last one.
 
+    UpdateInfo
+    ----------
+
+    Most methods of this class return an UpdateInfo instance. This object
+    contains information about the clustering changes done by the operation.
+    This object is used throughout the `phy.cluster.manual` package to let
+    different classes know about clustering changes.
+
+    `UpdateInfo` is a dictionary that also supports dot access ('Bunch' class).
+    The keys are the following:
+
+    description : str
+        Description of the clustering operation. It is one of  'merge',
+        'assign', or 'metadata_group'.
+    history : str or None
+        This is None except when it is 'undo' or 'redo'.
+    spikes : array
+        Array of all spike ids affected by the update.
+    added : list
+        New cluster ids created by this operation.
+    deleted : list
+        Cluster ids that are deleted following this operation.
+    descendants : list
+        List of `(old, new)` pairs of cluster ids to track provenance
+        information about the clusters.
+    metadata_changed : list
+        List of clusters with changed metadata (cluster group changes)
+    old_spikes_per_cluster : dict
+        Dictionary of {cluster: spikes} for the old clusters and
+        old clustering.
+    new_spikes_per_cluster : dict
+        Dictionary of {cluster: spikes} for the new clusters and
+        new clustering.
+
     """
 
     def __init__(self, spike_clusters):
