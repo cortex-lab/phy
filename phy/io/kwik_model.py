@@ -651,6 +651,10 @@ class KwikModel(BaseModel):
         return {cluster: self._cluster_metadata.group(cluster)
                 for cluster in self.cluster_ids}
 
+    @property
+    def n_clusters(self):
+        return len(self.cluster_ids)
+
     # Close
     # -------------------------------------------------------------------------
 

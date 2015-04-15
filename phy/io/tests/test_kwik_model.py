@@ -27,10 +27,10 @@ from ..mock.kwik import create_mock_kwik
 #------------------------------------------------------------------------------
 
 _N_CLUSTERS = 10
-_N_SPIKES = 50
+_N_SPIKES = 100
 _N_CHANNELS = 28
 _N_FETS = 2
-_N_SAMPLES_TRACES = 3000
+_N_SAMPLES_TRACES = 10000
 
 
 def test_kwik_utility():
@@ -50,7 +50,9 @@ def test_kwik_utility():
         model._kwik.open()
         assert _list_channel_groups(model._kwik.h5py_file) == [1]
         assert _list_recordings(model._kwik.h5py_file) == [0, 1]
-        assert _list_clusterings(model._kwik.h5py_file, 1) == ['main']
+        assert _list_clusterings(model._kwik.h5py_file, 1) == ['main',
+                                                               'automatic',
+                                                               ]
         assert _list_channels(model._kwik.h5py_file, 1) == channels
 
 
@@ -209,3 +211,33 @@ def test_kwik_save():
         kwik = KwikModel(filename)
         ae(kwik.spike_clusters, sc_1)
         assert kwik.cluster_metadata.group(new_cluster) == 7
+
+
+def test_kwik_clusterings():
+
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=_N_CLUSTERS,
+                                    n_spikes=_N_SPIKES,
+                                    n_channels=_N_CHANNELS,
+                                    n_features_per_channel=_N_FETS,
+                                    n_samples_traces=_N_SAMPLES_TRACES)
+
+        kwik = KwikModel(filename)
+        assert kwik.clusterings == ['main', 'automatic']
+
+        # The default clustering is 'main'.
+        assert kwik.n_spikes == _N_SPIKES
+        assert kwik.n_clusters == _N_CLUSTERS
+        assert kwik.cluster_groups[_N_CLUSTERS - 1] == (_N_CLUSTERS - 1) % 4
+        ae(kwik.cluster_ids, np.arange(_N_CLUSTERS))
+
+        # Change clustering.
+        kwik.clustering = 'automatic'
+        n_clu = kwik.n_clusters
+        assert kwik.n_spikes == _N_SPIKES
+        # Some clusters may be empty with a small number of spikes like here
+        assert _N_CLUSTERS * 2 - 4 <= n_clu <= _N_CLUSTERS * 2
+        assert kwik.cluster_groups[n_clu - 1] == (n_clu - 1) % 4
+        assert len(kwik.cluster_ids) == n_clu
