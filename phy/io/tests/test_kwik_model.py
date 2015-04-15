@@ -305,10 +305,10 @@ def test_kwik_manage_clusterings():
         kwik.delete_clustering('original')
         assert kwik.clusterings == ['main', 'automatic']
 
-        # Test save.
+        # Test add.
         sc = np.ones(_N_SPIKES, dtype=np.uint32)
         sc[1] = sc[-2] = 3
-        kwik.save_clustering('new', sc)
+        kwik.add_clustering('new', sc)
         ae(kwik.spike_clusters, spike_clusters)
         kwik.clustering = 'new'
         ae(kwik.spike_clusters, sc)
