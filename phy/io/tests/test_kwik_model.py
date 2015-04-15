@@ -278,3 +278,10 @@ def test_kwik_clusterings():
         kwik.clustering = 'original'
         assert kwik.cluster_groups == cg
         ae(kwik.cluster_ids, ci)
+
+        with raises(ValueError):
+            kwik.delete_clustering('a')
+            kwik.delete_clustering('origina')
+        kwik.clustering = 'main'
+        kwik.delete_clustering('original')
+        assert kwik.clusterings == ['main', 'automatic']

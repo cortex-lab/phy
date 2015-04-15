@@ -607,7 +607,7 @@ class KwikModel(BaseModel):
 
     def _move_clustering(self, old_name, new_name, copy=None):
         if old_name == self._clustering:
-            raise ValueError("You cannot rename the current clustering.")
+            raise ValueError("You cannot move the current clustering.")
         if new_name in self._clusterings:
             raise ValueError("The clustering '{0}' ".format(new_name) +
                              "already exists.")
@@ -646,9 +646,33 @@ class KwikModel(BaseModel):
         self._move_clustering(name, new_name, copy=True)
 
     def delete_clustering(self, name):
-        # TODO
+        """Delete a clustering."""
+        if name == self._clustering:
+            raise ValueError("You cannot delete the current clustering.")
+        if name not in self._clusterings:
+            raise ValueError(("The clustering {0} "
+                              "doesn't exist.").format(name))
+
+        _to_close = self._open_kwik_if_needed(mode='a')
+
+        # /channel_groups/x/spikes/clusters/<name>
+        parent = self._kwik.read(self._spikes_path + '/clusters/')
+        del parent[name]
+
+        # /channel_groups/x/clusters/<name>
+        parent = self._kwik.read(self._clusters_path)
+        del parent[name]
+
+        # /channel_groups/x/cluster_groups/<name>
+        parent = self._kwik.read(self._channel_groups_path +
+                                 '/cluster_groups/')
+        del parent[name]
+
         # Update the list of clusterings.
         self._load_clusterings(self._clustering)
+
+        if _to_close:
+            self._kwik.close()
 
     def save_clustering(self, name, spike_clusters):
         # TODO
