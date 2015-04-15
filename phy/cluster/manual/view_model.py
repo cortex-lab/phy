@@ -19,11 +19,9 @@ from ...stats.ccg import correlograms, _symmetrize_correlograms
 # BaseViewModel for plot views and Kwik model
 #------------------------------------------------------------------------------
 
-def _create_view(cls, backend=None):
+def _create_view(cls, backend=None, **kwargs):
     if backend in ('pyqt4', None):
-        kwargs = {'always_on_top': True}
-    else:
-        kwargs = {}
+        kwargs.update({'always_on_top': True})
     return cls(**kwargs)
 
 
@@ -50,13 +48,18 @@ class BaseViewModel(object):
     _view_class = None
     _view_name = ''
 
-    def __init__(self, model, store=None, backend=None, **kwargs):
+    def __init__(self, model, store=None, **kwargs):
         self._model = model
         self._store = store
-        self._backend = backend
         for key, value in kwargs.items():
             setattr(self, key, value)
-        self._view = _create_view(self._view_class, backend=backend)
+        vispy_kwargs_names = ('position', 'size',)
+        vispy_kwargs = {name: kwargs[name] for name in vispy_kwargs_names
+                        if name in kwargs}
+        backend = kwargs.pop('backend', None)
+        self._view = _create_view(self._view_class,
+                                  backend=backend,
+                                  **vispy_kwargs)
 
     @property
     def model(self):

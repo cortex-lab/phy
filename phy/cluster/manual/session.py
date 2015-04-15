@@ -765,6 +765,17 @@ class Session(BaseSession):
     # Show views
     # -------------------------------------------------------------------------
 
+    def _view_settings_name(self, view_name, name):
+        return 'manual_clustering.{0}_{1}'.format(view_name, name)
+
+    def _get_view_settings(self, view_name, name):
+        settings_name = self._view_settings_name(view_name, name)
+        return self.get_internal_settings(settings_name)
+
+    def _set_view_settings(self, view_name, name, value):
+        settings_name = self._view_settings_name(view_name, name)
+        self.set_internal_settings(settings_name, value)
+
     def _create_view(self, view_model):
         view = view_model.view
         view_name = view_model.view_name
@@ -808,6 +819,16 @@ class Session(BaseSession):
         def on_close(event):
             self.unconnect(on_open, on_cluster, on_select)
 
+            # Save the canvas position and size.
+            self._set_view_settings(view_name,
+                                    'canvas_position',
+                                    view.position,
+                                    )
+            self._set_view_settings(view_name,
+                                    'canvas_size',
+                                    view.size,
+                                    )
+
         # Make sure the view is correctly initialized when it is created
         # *after* that the data has been loaded.
         @view.connect
@@ -820,6 +841,13 @@ class Session(BaseSession):
 
     def _create_view_model(self, name, **kwargs):
         vm_class = _VIEW_MODELS[name]
+        # Load the canvas position and size for that view.
+        position = self._get_view_settings(name, 'canvas_position')
+        size = self._get_view_settings(name, 'canvas_size')
+        if position:
+            kwargs['position'] = position
+        if size:
+            kwargs['size'] = size
         return vm_class(self.model, store=self.cluster_store, **kwargs)
 
     def _create_waveforms_view(self):
@@ -828,7 +856,10 @@ class Session(BaseSession):
         # Persist scale factor.
         sf_name = 'manual_clustering.waveforms_scale_factor'
         sf = self.get_internal_settings(sf_name) or .01
-        vm = self._create_view_model('waveforms', scale_factor=sf)
+
+        vm = self._create_view_model('waveforms',
+                                     scale_factor=sf,
+                                     )
         self._create_view(vm)
 
         # Load box scale.
