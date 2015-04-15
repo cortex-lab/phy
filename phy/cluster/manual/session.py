@@ -189,7 +189,7 @@ class FeatureMasks(StoreItem):
                               )
 
     def is_consistent(self, cluster, spikes):
-        """Return whether the data of a cluster is consistent."""
+        """Return whether the filesize of a cluster store file is correct."""
         cluster_size = len(spikes)
         expected_file_sizes = [('masks', (cluster_size *
                                           self.n_channels *
