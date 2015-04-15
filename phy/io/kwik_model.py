@@ -605,8 +605,7 @@ class KwikModel(BaseModel):
     # Managing clusterings
     # -------------------------------------------------------------------------
 
-    def rename_clustering(self, old_name, new_name):
-        """Rename a clustering in the .kwik file."""
+    def _move_clustering(self, old_name, new_name, copy=None):
         if old_name == self._clustering:
             raise ValueError("You cannot rename the current clustering.")
         if new_name in self._clusterings:
@@ -615,17 +614,22 @@ class KwikModel(BaseModel):
 
         _to_close = self._open_kwik_if_needed(mode='a')
 
+        if copy:
+            func = self._kwik.copy
+        else:
+            func = self._kwik.move
+
         # /channel_groups/x/spikes/clusters/<name>
         p = self._spikes_path + '/clusters/'
-        self._kwik.move(p + old_name, p + new_name)
+        func(p + old_name, p + new_name)
 
         # /channel_groups/x/clusters/<name>
         p = self._clusters_path + '/'
-        self._kwik.move(p + old_name, p + new_name)
+        func(p + old_name, p + new_name)
 
         # /channel_groups/x/cluster_groups/<name>
         p = self._channel_groups_path + '/cluster_groups/'
-        self._kwik.move(p + old_name, p + new_name)
+        func(p + old_name, p + new_name)
 
         # Update the list of clusterings.
         self._load_clusterings(self._clustering)
@@ -633,10 +637,13 @@ class KwikModel(BaseModel):
         if _to_close:
             self._kwik.close()
 
+    def rename_clustering(self, old_name, new_name):
+        """Rename a clustering in the .kwik file."""
+        self._move_clustering(old_name, new_name, copy=False)
+
     def copy_clustering(self, name, new_name):
-        # TODO
-        # Update the list of clusterings.
-        self._load_clusterings(self._clustering)
+        """Copy a clustering in the .kwik file."""
+        self._move_clustering(name, new_name, copy=True)
 
     def delete_clustering(self, name):
         # TODO

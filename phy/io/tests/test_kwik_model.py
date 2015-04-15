@@ -253,6 +253,28 @@ def test_kwik_clusterings():
         kwik.clustering = 'main'
         kwik.rename_clustering('automatic', 'original')
         assert kwik.clusterings == ['main', 'original']
+        with raises(ValueError):
+            kwik.clustering = 'automatic'
         kwik.clustering = 'original'
         assert kwik.cluster_groups[n_clu - 1] == 3
         assert len(kwik.cluster_ids) == n_clu
+
+        # Test copy.
+        with raises(ValueError):
+            kwik.copy_clustering('a', 'b')
+        with raises(ValueError):
+            kwik.copy_clustering('original', 'b')
+        with raises(ValueError):
+            kwik.copy_clustering('main', 'original')
+
+        kwik.clustering = 'main'
+        kwik.copy_clustering('original', 'automatic')
+        assert kwik.clusterings == ['main', 'automatic', 'original']
+
+        kwik.clustering = 'automatic'
+        cg = kwik.cluster_groups
+        ci = kwik.cluster_ids
+
+        kwik.clustering = 'original'
+        assert kwik.cluster_groups == cg
+        ae(kwik.cluster_ids, ci)
