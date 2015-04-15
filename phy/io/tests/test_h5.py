@@ -251,3 +251,24 @@ def test_h5_copy():
             assert f.exists('g/mynewgroup/ds2')
             arr_new = f.read('g/mynewgroup/ds2')
             ae(arr, arr_new)
+
+
+def test_h5_delete():
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = _create_test_file(tempdir)
+
+        with open_h5(filename, 'a') as f:
+
+            # Test dataset delete.
+            assert f.exists('ds1')
+            with raises(ValueError):
+                f.delete('a')
+            f.delete('ds1')
+            assert not f.exists('ds1')
+
+            # Test group delete.
+            assert f.exists('mygroup/ds2')
+            f.delete('mygroup')
+            assert not f.exists('mygroup')
+            assert not f.exists('mygroup/ds2')

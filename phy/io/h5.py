@@ -30,11 +30,6 @@ def _split_hdf5_path(path):
     # Temporarily remove the leading '/', we'll add it later (otherwise split
     # and join will mess it up).
     path = path[1:]
-    # # Remove eventual trailing slash.
-    # if path.endswith('/'):
-    #     path = path[:-1]
-    # # Now, there should be no more trailing slash.
-    # assert path.endswith('/') is False
     # We split the path by slash and we get the head and tail.
     _split = path.split('/')
     group_path = '/'.join(_split[:-1])
@@ -147,6 +142,17 @@ class File(object):
         """Copy a group or dataset to another location."""
         self._check_move_copy(path, new_path)
         self._h5py_file.copy(path, new_path)
+
+    def delete(self, path):
+        """Delete a group or dataset."""
+        if not path.startswith('/'):
+            path = '/' + path
+        if not self.exists(path):
+            raise ValueError("'{0}' doesn't exist.".format(path))
+
+        path, name = _split_hdf5_path(path)
+        parent = self.read(path)
+        del parent[name]
 
     # Attributes
     #--------------------------------------------------------------------------
