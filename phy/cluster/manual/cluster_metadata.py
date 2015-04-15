@@ -19,6 +19,26 @@ from ._history import History
 #------------------------------------------------------------------------------
 
 class ClusterMetadata(object):
+    """Handle cluster metadata changes.
+
+    Features
+    --------
+
+    * New metadata fields can be easily registered
+    * Arbitrary functions can be used for default values
+    * Undo/redo stack
+
+    Notes
+    ----
+
+    If a metadata field `group` is registered, then two methods are
+    dynamically created:
+
+    * `group(cluster)` returns the group of a cluster, or the default value
+      if the cluster doesn't exist.
+    * `set_group(cluster, value)` sets a value for the `group` metadata field.
+
+    """
     def __init__(self, data=None):
         self._fields = {}
         self._data = defaultdict(dict)
@@ -71,6 +91,8 @@ class ClusterMetadata(object):
         return info
 
     def default(self, func):
+        """Register a new metadata field with a function
+        returning the default value of a cluster."""
         field = func.__name__
         # Register the decorated function as the default field function.
         self._fields[field] = func
@@ -82,7 +104,14 @@ class ClusterMetadata(object):
         return func
 
     def undo(self):
-        """Undo the last metadata change."""
+        """Undo the last metadata change.
+
+        Returns
+        -------
+
+        up : UpdateInfo instance
+
+        """
         args = self._undo_stack.back()
         if args is None:
             return
@@ -95,7 +124,13 @@ class ClusterMetadata(object):
         return info
 
     def redo(self):
-        """Redo the next metadata change."""
+        """Redo the next metadata change.
+
+        Returns
+        -------
+
+        up : UpdateInfo instance
+        """
         args = self._undo_stack.forward()
         if args is None:
             return
