@@ -435,8 +435,23 @@ class KwikModel(BaseModel):
         The .kwik, .kwx, and .raw.kwd must be in the same folder with the
         same basename.
 
+        Notes
+        -----
+
+        The .kwik file is opened in read-only mode, and is automatically
+        closed when this function returns. It is temporarily reopened when
+        the channel group or clustering changes.
+
+        The .kwik file is temporarily opened in append mode when saving.
+
+        The .kwx and .raw.kwd files stay open in read-only mode as long
+        as 'model.close()' is not called. This is because there might be
+        read accesses to features_masks (.kwx) and waveforms (.raw.kwd)
+        while the dataset is opened.
+
         Parameters
         ----------
+
         kwik_path : str
             Path to a .kwik file.
         channel_group : int or None (default is None)
@@ -626,8 +641,8 @@ class KwikModel(BaseModel):
     def metadata(self):
         """A dictionary holding metadata about the experiment.
 
-        This information was used by SpikeDetekt2 and KlustaKwik
-        during automatic clustering.
+        This information comes from the PRM file. It was used by
+        SpikeDetekt2 and KlustaKwik during automatic clustering.
 
         """
         return self._metadata
@@ -653,73 +668,153 @@ class KwikModel(BaseModel):
 
     @property
     def spike_samples(self):
-        """Spike samples from the current channel_group."""
+        """Spike samples from the current channel group.
+
+        This is a NumPy array containing uint64 values (number of samples
+        in unit of the sample rate).
+
+        The spike times of all recordings are concatenated. There is no gap
+        between consecutive recordings, currently.
+
+        """
         return self._spike_samples
 
     @property
     def spike_times(self):
-        """Spike times (in seconds) from the current channel_group.
-        The spike times of all recordings are concatenated."""
-        sr = float(self._metadata['sample_rate'])
+        """Spike times from the current channel_group.
+
+        This is a NumPy array containing float64 values (in seconds).
+
+        The spike times of all recordings are concatenated. There is no gap
+        between consecutive recordings, currently.
+
+        """
+        sr = self.sample_rate
         return self._spike_samples.astype(np.float64) / sr
 
     @property
+    def sample_rate(self):
+        """Sample rate of the recording.
+
+        This value is found in the metadata coming from the PRM file.
+
+        """
+        return float(self._metadata['sample_rate'])
+
+    @property
     def spike_recordings(self):
+        """The recording index for each spike.
+
+        This is a NumPy array of integers with n_spikes elements.
+
+        """
         return self._spike_recordings
 
     @property
     def n_spikes(self):
-        """Return the number of spikes."""
+        """Number of spikes in the current channel group."""
         return len(self._spike_samples)
 
     @property
     def features(self):
-        """Features from the current channel_group (may be memory-mapped)."""
+        """Features from the current channel group.
+
+        This is memory-mapped to the .kwx file.
+
+        Note: in general, it is better to use the cluster store to access
+        the features and masks of some clusters.
+
+        """
         return self._features
 
     @property
     def masks(self):
-        """Masks from the current channel_group (may be memory-mapped)."""
+        """Masks from the current channel group.
+
+        This is memory-mapped to the .kwx file.
+
+        Note: in general, it is better to use the cluster store to access
+        the features and masks of some clusters.
+
+        """
         return self._masks
 
     @property
     def features_masks(self):
-        """Features-masks from the current channel_group."""
+        """Features-masks from the current channel group.
+
+        This is memory-mapped to the .kwx file.
+
+        Note: in general, it is better to use the cluster store to access
+        the features and masks of some clusters.
+
+        """
         return self._features_masks
 
     @property
     def waveforms(self):
-        """Waveforms from the current channel_group (may be memory-mapped)."""
+        """High-passed filtered waveforms from the current channel group.
+
+        This is a virtual array mapped to the .raw.kwd file. Filtering is
+        done on the fly.
+
+        The shape is '(n_spikes, n_samples, n_channels)'.
+
+        """
         return SpikeLoader(self._waveform_loader, self.spike_samples)
 
     @property
     def spike_clusters(self):
-        """Spike clusters from the current channel_group."""
+        """Spike clusters from the current channel group and clustering.
+
+        Every element is the cluster identifier of a spike.
+
+        The shape is (n_spikes,).
+
+        """
         return self._spike_clusters
 
     @property
     def cluster_metadata(self):
-        """ClusterMetadata instance holding information about the clusters."""
+        """Metadata about the clusters in the current channel group and
+        clustering.
+
+        'cluster_metadata.group(cluster_id)' returns the group of a given
+        cluster. The default group is 3 (unsorted).
+
+        """
         return self._cluster_metadata
 
     @property
     def cluster_ids(self):
+        """List of cluster ids from the current channel group and clustering.
+
+        This is a sorted list of unique cluster ids as found in the current
+        'spike_clusters' array.
+
+        """
         return _unique(self._spike_clusters)
 
     @property
     def cluster_groups(self):
+        """Groups of all clusters in the current channel group and clustering.
+
+        This is a regular Python dictionary.
+
+        """
         return {cluster: self._cluster_metadata.group(cluster)
                 for cluster in self.cluster_ids}
 
     @property
     def n_clusters(self):
+        """Number of clusters in the current channel group and clustering."""
         return len(self.cluster_ids)
 
     # Close
     # -------------------------------------------------------------------------
 
     def close(self):
-        """Close all opened files."""
+        """Close the .kwik, .kwx, and .raw.kwd files if they are open."""
         if self._kwx is not None:
             self._kwx.close()
         if self._kwd is not None:
