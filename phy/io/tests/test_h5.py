@@ -6,12 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os
 import os.path as op
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-import h5py
 from pytest import raises
 
 from ...utils.tempdir import TemporaryDirectory
@@ -195,3 +193,32 @@ def test_h5_describe():
         output = out.getvalue().strip()
         output_lines = output.split('\n')
         assert len(output_lines) == 3
+
+
+def test_h5_move():
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = _create_test_file(tempdir)
+
+        with open_h5(filename, 'a') as f:
+
+            # Test dataset move.
+            assert f.exists('ds1')
+            arr = f.read('ds1')[:]
+            assert len(arr) == 10
+            f.move('ds1', 'ds1_new')
+            assert not f.exists('ds1')
+            assert f.exists('ds1_new')
+            arr_new = f.read('ds1_new')[:]
+            assert len(arr_new) == 10
+            ae(arr, arr_new)
+
+            # Test group move.
+            assert f.exists('mygroup/ds2')
+            arr = f.read('mygroup/ds2')
+            f.move('mygroup', 'g/mynewgroup')
+            assert not f.exists('mygroup')
+            assert f.exists('g/mynewgroup')
+            assert f.exists('g/mynewgroup/ds2')
+            arr_new = f.read('g/mynewgroup/ds2')
+            ae(arr, arr_new)

@@ -129,6 +129,32 @@ class File(object):
 
         group.create_dataset(dset_name, data=array)
 
+    # Copy and rename
+    #--------------------------------------------------------------------------
+
+    def move(self, path, new_path):
+        """Move a group or dataset to another location."""
+        if not self.exists(path):
+            raise ValueError("'{0}' doesn't exist.".format(path))
+        if self.exists(new_path):
+            raise ValueError("'{0}' already exist.".format(new_path))
+        self._h5py_file.move(path, new_path)
+        # obj = self._h5py_file[path]
+        # if isinstance(obj, h5py.Group):
+        # elif isinstance(obj, h5py.Dataset):
+        #     self._h5py_file.move(path, new_path)
+        # else:
+        #     raise RuntimeError("'{0}' should be a ".format(path) +
+        #                        "group or a dataset.")
+
+    def copy(self, path, new_path):
+        """Copy a group or dataset to another location."""
+        if not self.exists(path):
+            raise ValueError("'{0}' doesn't exist.".format(path))
+        if self.exists(new_path):
+            raise ValueError("'{0}' already exist.".format(new_path))
+        self._h5py_file.copy(path, new_path)
+
     # Attributes
     #--------------------------------------------------------------------------
 
