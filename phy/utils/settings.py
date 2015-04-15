@@ -95,7 +95,18 @@ class UserSettings(BaseSettings):
         self._store[scope][namespace] = Bunch()
 
     def load(self, path, file_namespace=None, scope='global'):
-        """ load a setting file """
+        """Load a settings file.
+
+        Parameters
+        ----------
+        path : str
+            A path to a Python settings file.
+        file_namespace : dict
+            A namespace to pass to the Python settings file.
+        scope : str (default is 'global')
+            The scope for that setting. Can be 'global' or a dataset name.
+
+        """
         path = op.expanduser(path)
         path = op.realpath(path)
         assert op.exists(path)
@@ -126,10 +137,6 @@ class UserSettings(BaseSettings):
             The namespace if it is not specified in the keys.
         scope : str (default is 'global')
             The scope for that setting. Can be 'global' or a dataset name.
-        path : str
-            A path to a Python settings file.
-        file_namespace : dict
-            A namespace to pass to the Python settings file.
 
         """
         super(UserSettings, self).set(key, value,
@@ -222,6 +229,7 @@ class SettingsManager(object):
         self.phy_user_dir = phy_user_dir
         _ensure_path_exists(self.phy_user_dir)
 
+        # provide a default namespace for user settings
         declare_namespace("phy")
         # Load global user settings.
         self._load_user_settings('global')

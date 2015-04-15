@@ -152,7 +152,7 @@ def _create_clustering(f, name,
 
 
 def list_kwik(folders):
-    """ return the list of kwik files found in a list of folders """
+    """Return the list of Kwik files found in a list of folders."""
     ret = []
     for d in folders:
         for root, dirs, files in os.walk(os.path.expanduser(d)):
