@@ -10,6 +10,7 @@ attribute vec2 a_box;  // 0..(n_clusters-1, n_channels-1)
 uniform float n_clusters;
 uniform float n_channels;
 uniform vec2 u_data_scale;
+uniform vec2 u_channel_scale;
 uniform sampler2D u_channel_pos;
 uniform sampler2D u_cluster_color;
 
@@ -20,6 +21,7 @@ vec2 get_box_pos(vec2 box) {  // box = (cluster, channel)
     vec2 box_pos = texture2D(u_channel_pos,
                              vec2(box.y / (n_channels - 1.), .5)).xy;
     box_pos = 2. * box_pos - 1.;
+    box_pos = box_pos * u_channel_scale;
     // Spacing between cluster boxes.
     float h = 2.5 * u_data_scale.x;
     // TODO: add superposition

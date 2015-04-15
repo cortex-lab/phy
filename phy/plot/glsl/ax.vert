@@ -8,9 +8,9 @@ attribute vec4 a_position;  // xy, index, ax
 vec2 pan_zoom(vec2 position, float ax)
 {
     if (ax < 0.5)
-        return vec2(u_zoom.x * position.x + n_rows * u_pan.x, position.y);
+        return vec2(u_zoom.x * (position.x + n_rows * u_pan.x), position.y);
     else
-        return vec2(position.x, u_zoom.y * position.y + n_rows * u_pan.y);
+        return vec2(position.x, u_zoom.y * (position.y + n_rows * u_pan.y));
 }
 
 void main() {

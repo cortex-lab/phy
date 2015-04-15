@@ -13,13 +13,47 @@ import re
 import numpy as np
 
 from ...utils.array import _is_array_like, _index_of
-from ...utils.logging import debug
+from ...utils.logging import debug, info
 from ...ext.six import string_types, integer_types
-from ...utils.event import ProgressReporter
 
 
 #------------------------------------------------------------------------------
-# Data stores
+# Utility functions
+#------------------------------------------------------------------------------
+
+def _directory_size(path):
+    """Return the total size in bytes of a directory."""
+    total_size = 0
+    for dirpath, dirnames, filenames in os.walk(path):
+        for f in filenames:
+            fp = os.path.join(dirpath, f)
+            total_size += os.path.getsize(fp)
+    return total_size
+
+
+def _load_ndarray(f, dtype=None, shape=None):
+    if dtype is None:
+        return f
+    else:
+        arr = np.fromfile(f, dtype=dtype)
+        if shape is not None:
+            arr = arr.reshape(shape)
+        return arr
+
+
+def _as_int(x):
+    if isinstance(x, integer_types):
+        return x
+    x = np.asscalar(x)
+    return x
+
+
+def _file_cluster_id(path):
+    return int(op.splitext(op.basename(path))[0])
+
+
+#------------------------------------------------------------------------------
+# Memory store
 #------------------------------------------------------------------------------
 
 class MemoryStore(object):
@@ -45,11 +79,11 @@ class MemoryStore(object):
                     for key in keys}
 
     @property
-    def clusters(self):
+    def cluster_ids(self):
         """List of cluster ids in the store."""
         return sorted(self._ds.keys())
 
-    def delete(self, clusters):
+    def erase(self, clusters):
         """Delete some clusters from the store."""
         assert isinstance(clusters, list)
         for cluster in clusters:
@@ -58,25 +92,12 @@ class MemoryStore(object):
 
     def clear(self):
         """Clear the store completely by deleting all clusters."""
-        self.delete(self.clusters)
+        self.erase(self.cluster_ids)
 
 
-def _load_ndarray(f, dtype=None, shape=None):
-    if dtype is None:
-        return f
-    else:
-        arr = np.fromfile(f, dtype=dtype)
-        if shape is not None:
-            arr = arr.reshape(shape)
-        return arr
-
-
-def _as_int(x):
-    if isinstance(x, integer_types):
-        return x
-    x = np.asscalar(x)
-    return x
-
+#------------------------------------------------------------------------------
+# Disk store
+#------------------------------------------------------------------------------
 
 class DiskStore(object):
     """Store cluster-related data in HDF5 files."""
@@ -86,6 +107,10 @@ class DiskStore(object):
         # the wrong files.
         self._allowed_extensions = set()
         self._directory = op.realpath(op.expanduser(directory))
+
+    @property
+    def path(self):
+        return self._directory
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -175,12 +200,12 @@ class DiskStore(object):
                              os.listdir(self._directory)))
 
     @property
-    def clusters(self):
+    def cluster_ids(self):
         """List of cluster ids in the store."""
-        clusters = set([int(op.splitext(file)[0]) for file in self.files])
+        clusters = set([_file_cluster_id(file) for file in self.files])
         return sorted(clusters)
 
-    def delete(self, clusters):
+    def erase(self, clusters):
         """Delete some clusters from the store."""
         for cluster in clusters:
             for key in self._allowed_extensions:
@@ -198,7 +223,7 @@ class DiskStore(object):
 
     def clear(self):
         """Clear the store completely by deleting all clusters."""
-        self.delete(self.clusters)
+        self.erase(self.cluster_ids)
 
 
 #------------------------------------------------------------------------------
@@ -206,6 +231,18 @@ class DiskStore(object):
 #------------------------------------------------------------------------------
 
 class ClusterStore(object):
+    """Hold per-cluster information on disk and in memory.
+
+    Note
+    ----
+
+    Currently, this is used to accelerate access to features, masks, and
+    cluster statistics. Features and masks of all clusters are stored in a
+    disk cache. Cluster statistics are computed when loading a dataset,
+    and are kept in memory afterwards. All data is dynamically updated
+    when clustering changes occur.
+
+    """
     def __init__(self, model=None, path=None):
         self._model = model
         self._spikes_per_cluster = {}
@@ -213,7 +250,6 @@ class ClusterStore(object):
         self._disk = DiskStore(path) if path is not None else None
         self._items = []
         self._locations = {}
-        self._progress_reporter = ProgressReporter()
 
     def _store(self, location):
         if location == 'memory':
@@ -226,64 +262,120 @@ class ClusterStore(object):
 
     @property
     def memory_store(self):
+        """The memory store holds some cluster statistics."""
         return self._memory
 
     @property
     def disk_store(self):
+        """The disk store manages the cache of per-cluster data like
+        features and masks."""
         return self._disk
 
     @property
-    def progress_reporter(self):
-        return self._progress_reporter
-
-    @property
     def spikes_per_cluster(self):
+        """Dictionary {cluster_id: spike_ids}."""
         return self._spikes_per_cluster
 
-    def register_item(self, item_cls):
-        """Register a StoreItem instance in the store."""
+    @spikes_per_cluster.setter
+    def spikes_per_cluster(self, value):
+        """Update the `spikes_per_cluster` structure."""
+        assert isinstance(value, dict)
+        self._spikes_per_cluster = value
+        for item in self._items:
+            item.spikes_per_cluster = value
+
+    @property
+    def cluster_ids(self):
+        """Array of all cluster ids appearing in the `spikes_per_cluster`
+        dictionary."""
+        return sorted(self._spikes_per_cluster)
+
+    @property
+    def store_items(self):
+        """List of registered store items."""
+        return self._items
+
+    def register_field(self, name, location, dtype=None, shape=None):
+        """Register a new piece of data to store on memory or on disk.
+
+        Parameters
+        ----------
+
+        name : str
+            The name of the field.
+        location : str
+            'memory' or 'disk'.
+        dtype : NumPy dtype or None
+            The dtype of arrays stored for that field. This is only used when
+            the location is 'disk'.
+        shape : tuple or None
+            The shape of arrays. This is only used when the location is 'disk'.
+            This is used by `np.reshape()`, so the shape can contain a `-1`.
+
+        Notes
+        -----
+
+        When storing information to disk, only NumPy arrays are supported
+        currently. They are saved as flat binary files. This is why the
+        dtype and shape must be registered here, otherwise that information
+        is lost. This metadata is not saved in the files.
+
+        """
+        # HACK: need to use a factory function because in Python
+        # functions are closed over names, not values. Here we
+        # want 'name' to refer to the 'name' local variable.
+        def _make_func(name, location):
+            kwargs = {} if location == 'memory' else {'dtype': dtype,
+                                                      'shape': shape}
+            return lambda cluster: self._store(location).load(cluster,
+                                                              name,
+                                                              **kwargs)
+
+        # Register the item location (memory or store).
+        assert name not in self._locations
+        if self._disk:
+            self._disk.register_file_extensions(name)
+        self._locations[name] = location
+
+        # Get the load function.
+        load = _make_func(name, location)
+
+        # We create the self.<name>(cluster) method for loading.
+        # We need to ensure that the method name isn't already attributed.
+        assert not hasattr(self, name)
+        setattr(self, name, load)
+
+    def register_item(self, item_cls, **kwargs):
+        """Register a StoreItem class in the store.
+
+        A StoreItem class is responsible for storing some data to disk
+        and memory. It must register one or several pieces of data.
+
+        """
 
         # Instantiate the item.
         item = item_cls(model=self._model,
                         memory_store=self._memory,
                         disk_store=self._disk,
-                        progress_reporter=self._progress_reporter,
-                        )
+                        **kwargs)
         assert item.fields is not None
 
+        # Register all fields declared by the store item.
         for field in item.fields:
+
             name, location = field[:2]
             dtype = field[2] if len(field) >= 3 else None
             shape = field[3] if len(field) == 4 else None
 
-            # HACK: need to use a factory function because in Python
-            # functions are closed over names, not values. Here we
-            # want 'name' to refer to the 'name' local variable.
-            def _make_func(name, location):
-                kwargs = {} if location == 'memory' else {'dtype': dtype,
-                                                          'shape': shape}
-                return lambda cluster: self._store(location).load(cluster,
-                                                                  name,
-                                                                  **kwargs)
-
-            # Register the item location (memory or store).
-            assert name not in self._locations
-            if self._disk:
-                self._disk.register_file_extensions(name)
-            self._locations[name] = location
-
-            # Get the load function.
-            load = _make_func(name, location)
-
-            # We create the self.<name>(cluster) method for loading.
-            # We need to ensure that the method name isn't already attributed.
-            assert not hasattr(self, name)
-            setattr(self, name, load)
+            self.register_field(name, location, dtype=dtype, shape=shape)
 
         # Register the StoreItem instance.
         self._items.append(item)
 
     def load(self, name, clusters, spikes):
+        """Load some data for a number of clusters and spikes."""
+        # TODO: remove spikes as a parameter here, as it can be
+        # obtained from self.spikes_per_cluster.
         assert _is_array_like(clusters)
         load = getattr(self, name)
 
@@ -297,28 +389,130 @@ class ClusterStore(object):
         return arrays[idx, ...]
 
     def on_cluster(self, up):
+        """Update the cluster store when clustering changes occur.
+
+        This method calls `item.on_cluster(up)` for all registered store items.
+
+        """
         # No need to delete the old clusters from the store, we can keep
         # them for possible undo, and regularly clean up the store.
-
-        # self._memory.delete(up.deleted)
-        # self._disk.delete(up.deleted)
-
         for item in self._items:
             item.on_cluster(up)
 
-    def generate(self, spikes_per_cluster):
-        """Populate the cache for all registered fields and the specified
-        clusters."""
+    # Files
+    #--------------------------------------------------------------------------
+
+    @property
+    def path(self):
+        """Path to the disk store cache."""
+        return self.disk_store.path
+
+    @property
+    def old_clusters(self):
+        """List of clusters found in the cache that are no longer part
+        of the current clustering."""
+        return sorted(set(self.disk_store.cluster_ids) -
+                      set(self.cluster_ids))
+
+    @property
+    def files(self):
+        """List of files present in the disk store."""
+        return self.disk_store.files
+
+    # Status
+    #--------------------------------------------------------------------------
+
+    @property
+    def total_size(self):
+        """Total size of the disk store."""
+        return _directory_size(self.path)
+
+    def is_consistent(self):
+        """Return whether all cluster stores files exist and have
+        the expected file size."""
+        valid = set(self.cluster_ids)
+        # All store items should be consistent on all valid clusters.
+        consistent = all(all(item.is_consistent(clu,
+                             self.spikes_per_cluster.get(clu, []))
+                             for clu in valid)
+                         for item in self._items)
+        return consistent
+
+    @property
+    def status(self):
+        """Return the current status of the cluster store."""
+        in_store = set(self.disk_store.cluster_ids)
+        valid = set(self.cluster_ids)
+        invalid = in_store - valid
+
+        n_store = len(in_store)
+        n_old = len(invalid)
+        size = self.total_size / (1024. ** 2)
+        consistent = str(self.is_consistent()).rjust(5)
+
+        status = ''
+        header = "Cluster store status ({0})".format(self.path)
+        status += header + '\n'
+        status += '-' * len(header) + '\n'
+        status += "Number of clusters in the store   {0: 4d}\n".format(n_store)
+        status += "Number of old clusters            {0: 4d}\n".format(n_old)
+        status += "Total size (MB)                {0: 7.0f}\n".format(size)
+        status += "Consistent                       {0}\n".format(consistent)
+        return status
+
+    def display_status(self):
+        """Display the current status of the cluster store."""
+        print(self.status)
+
+    # Store management
+    #--------------------------------------------------------------------------
+
+    def clear(self):
+        """Erase all files in the store."""
+        self.memory_store.clear()
+        self.disk_store.clear()
+        info("Cluster store cleared.")
+
+    def clean(self):
+        """Erase all old files in the store."""
+        to_delete = self.old_clusters
+        self.memory_store.erase(to_delete)
+        self.disk_store.erase(to_delete)
+        n = len(to_delete)
+        info("{0} clusters deleted from the cluster store.".format(n))
+
+    def generate(self, spikes_per_cluster=None, mode=None):
+        """Generate the cluster store.
+
+        Parameters
+        ----------
+
+        spikes_per_cluster : dict
+            A dictionary cluster_ids => array of spike_ids.
+        mode : str (default is None)
+            How the cluster store should be generated. Options are:
+
+            * None or 'default': only regenerate the missing or inconsistent
+              clusters
+            * 'force': fully regenerate the cluster
+            * 'read-only': just load the existing files, do not write anything
+
+        """
+        if spikes_per_cluster is None:
+            spikes_per_cluster = self._spikes_per_cluster
+        else:
+            self.spikes_per_cluster = spikes_per_cluster
+        if spikes_per_cluster is None:
+            raise RuntimeError("The 'spikes_per_cluster' structure "
+                               "needs to be assigned to the cluster store.")
         assert isinstance(spikes_per_cluster, dict)
-        self._spikes_per_cluster = spikes_per_cluster
-        # self._store.delete(clusters)
         if hasattr(self._model, 'name'):
             name = self._model.name
         else:
             name = 'the current model'
         debug("Initializing the cluster store for {0:s}...".format(name))
         for item in self._items:
-            item.store_all_clusters(spikes_per_cluster)
+            item.store_all_clusters(mode)
         debug("Done!")
 
 
@@ -327,24 +521,33 @@ class StoreItem(object):
 
     Attributes
     ----------
+
     fields : list
         A list of pairs (field_name, storage_location).
-        storage_location is either 'memory', 'disk'.
+        storage_location is either 'memory' or 'disk'.
     model : Model
         A Model instance for the current dataset.
     memory_store : MemoryStore
         The MemoryStore instance for the current dataset.
     disk_store : DiskStore
         The DiskStore instance for the current dataset.
-    progress_reporter : ProgressReporter
-        The ProgressReporter instance for the current dataset.
 
     Methods
     -------
+
     store_cluster(cluster, spikes)
         Extract some data from the model and store it in the cluster store.
+        Must be overriden.
     on_cluster(up)
         Update the store when the clustering changes.
+        May be overriden.
+    is_consistent(cluster, spikes)
+        Return whether the cluster file of a given cluster exists and
+        has the expected file size.
+        May be overriden (default is to always return False).
+    store_all_clusters(mode=None)
+        Call store_cluster() on all clusters.
+        May be overriden.
 
     """
     fields = None  # list of (field_name, storage_location)
@@ -354,26 +557,58 @@ class StoreItem(object):
                  model=None,
                  memory_store=None,
                  disk_store=None,
-                 progress_reporter=None,
                  ):
+        self._spikes_per_cluster = None
         self.model = model
         self.memory_store = memory_store
         self.disk_store = disk_store
-        self.progress_reporter = progress_reporter
 
-    def store_all_clusters(self, spikes_per_cluster):
+    @property
+    def spikes_per_cluster(self):
+        return self._spikes_per_cluster
+
+    @spikes_per_cluster.setter
+    def spikes_per_cluster(self, value):
+        self._spikes_per_cluster = value
+
+    @property
+    def cluster_ids(self):
+        return sorted(self._spikes_per_cluster)
+
+    def is_consistent(self, cluster, spikes):
+        """To be overriden."""
+        return False
+
+    def to_generate(self, mode=None):
+        """Return the list of clusters that need to be regenerated."""
+        if mode in (None, 'default'):
+            return [cluster for cluster in self.cluster_ids
+                    if not self.is_consistent(cluster,
+                                              self.spikes_per_cluster[cluster],
+                                              )]
+        elif mode == 'force':
+            return self.cluster_ids
+        elif mode == 'read-only':
+            return []
+        else:
+            raise ValueError("'mode' should be None, 'default', 'force', "
+                             "or 'read-only'.")
+
+    def store_cluster(self, cluster, spikes, mode=None):
+        """May be overridden. No need to delete old clusters here."""
+        pass
+
+    def store_all_clusters(self, mode=None):
         """Copy all data for that item from the model to the cluster store."""
-        clusters = sorted(spikes_per_cluster.keys())
-        for cluster in clusters:
+        for cluster in self.to_generate(mode):
             debug("Loading {0:s}, cluster {1:d}...".format(self.name,
                   cluster))
-            self.store_cluster(cluster, spikes_per_cluster[cluster])
+            self.store_cluster(cluster,
+                               self._spikes_per_cluster[cluster],
+                               mode=mode,
+                               )
 
     def on_cluster(self, up):
         """May be overridden. No need to delete old clusters here."""
         for cluster in up.added:
             self.store_cluster(cluster, up.new_spikes_per_cluster[cluster])
-
-    def store_cluster(self, cluster, spikes):
-        """May be overridden. No need to delete old clusters here."""
-        pass

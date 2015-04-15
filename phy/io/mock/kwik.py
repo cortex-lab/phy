@@ -78,11 +78,6 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
                      np.arange(1, n_channels - 1)[::-1],
                      )
 
-        # Create spike clusters.
-        spike_clusters = artificial_spike_clusters(n_spikes,
-                                                   n_clusters).astype(np.int32)
-        f.write('/channel_groups/1/spikes/clusters/main', spike_clusters)
-
         # Create channels.
         positions = staggered_positions(n_channels)
         for channel in range(n_channels):
@@ -90,13 +85,24 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
             f.write_attr(group, 'name', str(channel))
             f.write_attr(group, 'position', positions[channel])
 
-        # Create cluster metadata.
-        for cluster in range(n_clusters):
-            group = '/channel_groups/1/clusters/main/{0:d}'.format(cluster)
-            color = ('/channel_groups/1/clusters/main/{0:d}'.format(cluster) +
-                     '/application_data/klustaviewa')
-            f.write_attr(group, 'cluster_group', cluster % 4)
-            f.write_attr(color, 'color', randint(2, 10))
+        # Create spike clusters.
+        clusterings = [('main', n_clusters),
+                       ('automatic', n_clusters * 2),
+                       ]
+        for clustering, n_clusters_rec in clusterings:
+            spike_clusters = artificial_spike_clusters(n_spikes,
+                                                       n_clusters_rec)
+            f.write('/channel_groups/1/spikes/clusters/' + clustering,
+                    spike_clusters.astype(np.int32))
+
+            # Create cluster metadata.
+            for cluster in range(n_clusters_rec):
+                group = '/channel_groups/1/clusters/{0:s}/{1:d}'.format(
+                    clustering, cluster)
+                color = ('/channel_groups/1/clusters/{0:s}/{1:d}'.format(
+                    clustering, cluster) + '/application_data/klustaviewa')
+                f.write_attr(group, 'cluster_group', cluster % 4)
+                f.write_attr(color, 'color', randint(2, 10))
 
         # Create recordings.
         f.write_attr('/recordings/0', 'name', 'recording_0')

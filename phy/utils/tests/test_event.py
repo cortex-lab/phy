@@ -51,7 +51,7 @@ def test_progress_reporter():
     _completed = []
 
     @pr.connect
-    def on_report(value, value_max):
+    def on_progress(value, value_max):
         # value is the sum of the values, value_max the sum of the max values
         _reported.append((value, value_max))
 
@@ -59,38 +59,21 @@ def test_progress_reporter():
     def on_complete():
         _completed.append(True)
 
-    pr.set_max(channel_1=10, channel_2=15)
-    assert _reported == []
-    assert pr.current() == 0
-    assert pr.total() == 25
-
-    pr.set(channel_1=7)
-    assert _reported == [(7, 25)]
-    assert pr.current() == 7
-    assert pr.total() == 25
-
-    pr.set(channel_2=13)
-    assert _reported[-1] == (20, 25)
-    assert pr.current() == 20
-    assert pr.total() == 25
-
-    pr.increment('channel_1', 'channel_2')
-    assert _reported[-1] == (22, 25)
-    assert pr.current() == 22
-    assert pr.total() == 25
-
-    pr.set(channel_1=10, channel_2=15)
-    assert _reported[-1] == (25, 25)
-    assert _completed == [True]
-    assert pr.is_complete()
-
-    pr.set_max(channel_2=20)
+    pr.value_max = 10
+    pr.value = 0
+    pr.value = 5
+    assert pr.progress == .5
     assert not pr.is_complete()
-    pr.set(channel_1=10, channel_2=20)
+    pr.value = 10
     assert pr.is_complete()
+    assert pr.progress == 1.
 
-    pr.set(channel_1=9, channel_2=19)
+    pr.value_max = 11
     assert not pr.is_complete()
+    assert pr.progress < 1.
     pr.set_complete()
     assert pr.is_complete()
-    assert _completed == [True] * 3
+    assert pr.progress == 1.
+
+    assert _reported == [(0, 10), (5, 10), (10, 10), (11, 11)]
+    assert _completed == [True, True]

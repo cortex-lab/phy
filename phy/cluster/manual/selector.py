@@ -30,6 +30,7 @@ class Selector(object):
 
     @n_spikes_max.setter
     def n_spikes_max(self, value):
+        """Change the maximum number of spikes allowed."""
         self._n_spikes_max = value
         # Update the selected spikes accordingly.
         self.selected_spikes = self.subset_spikes()
@@ -41,10 +42,20 @@ class Selector(object):
                       n_spikes_max=None,
                       excerpt_size=None,
                       ):
-        """Prune the current selection to get at most n_spikes_max spikes.
+        """Prune the current selection to get at most `n_spikes_max` spikes.
 
-        If excerpt_size is None, return a regular strided selection.
-        Otherwise, return a regular selection of contiguous chunks.
+        Parameters
+        ----------
+
+        spikes : array-like
+            Array of spike ids to subset from. By default, this is
+            `selector.selected_spikes`.
+        n_spikes_max : int or None
+            Maximum number of spikes allowed in the selection.
+        excerpt_size : int or None
+            If None, the method returns a regular strided selection.
+            Otherwise, returns a regular selection of contiguous chunks
+            with the specified chunk size.
 
         """
         if spikes is None:
@@ -62,24 +73,34 @@ class Selector(object):
 
     @property
     def selected_spikes(self):
-        """Labels of the selected spikes."""
+        """Ids of the selected spikes."""
         return self._selected_spikes
 
     @selected_spikes.setter
     def selected_spikes(self, value):
-        """Explicitely select a number of spikes."""
+        """Explicitely select some spikes.
+
+        The selection is automatically pruned to ensure that less than
+        `n_spikes_max` spikes are selected.
+
+        """
         value = _as_array(value)
         # Make sure there are less spikes than n_spikes_max.
         self._selected_spikes = self.subset_spikes(value)
 
     @property
     def selected_clusters(self):
-        """Clusters containing at least one selected spike."""
+        """Cluster ids appearing in the current spike selection."""
         return _unique(self._spike_clusters[self._selected_spikes])
 
     @selected_clusters.setter
     def selected_clusters(self, value):
-        """Select spikes belonging to a number of clusters."""
+        """Select some clusters.
+
+        This will select less than `n_spikes_max` spikes belonging to
+        those clusters.
+
+        """
         # TODO: smarter subselection: select n_spikes_max/n_clusters spikes
         # per cluster, so that the number of spikes per cluster is independent
         # from the sizes of the clusters.
@@ -90,6 +111,11 @@ class Selector(object):
         self.selected_spikes = self.subset_spikes(spikes)
 
     def on_cluster(self, up=None):
-        """Called when clustering has changed."""
+        """Callback method called when the clustering has changed.
+
+        This currently does nothing, i.e. the spike selection remains
+        unchanged when merges and splits occur.
+
+        """
         # TODO
         pass

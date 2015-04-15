@@ -26,6 +26,7 @@ class WaveformVisual(BaseSpikeVisual):
     _shader_name = 'waveforms'
     _gl_draw_mode = 'line_strip'
     default_box_scale = (.05, .03)
+    default_probe_scale = (1., 1.)
 
     """Waveform visual."""
     def __init__(self, **kwargs):
@@ -35,6 +36,7 @@ class WaveformVisual(BaseSpikeVisual):
         self.n_channels, self.n_samples = None, None
 
         self.program['u_data_scale'] = self.default_box_scale
+        self.program['u_channel_scale'] = self.default_probe_scale
         _enable_depth_mask()
 
     # Data properties
@@ -76,6 +78,15 @@ class WaveformVisual(BaseSpikeVisual):
     def box_scale(self, value):
         assert isinstance(value, tuple) and len(value) == 2
         self.program['u_data_scale'] = value
+
+    @property
+    def probe_scale(self):
+        return tuple(self.program['u_channel_scale'])
+
+    @probe_scale.setter
+    def probe_scale(self, value):
+        assert isinstance(value, tuple) and len(value) == 2
+        self.program['u_channel_scale'] = value
 
     # Data baking
     # -------------------------------------------------------------------------
@@ -146,6 +157,20 @@ class WaveformVisual(BaseSpikeVisual):
 
 
 class WaveformView(BaseSpikeCanvas):
+    """Display waveforms.
+
+    Interactivity
+    -------------
+
+    Waveforms scaling:
+
+    * Keyboard : Control + arrows
+
+    Probe scaling:
+
+    * Keyboard : Shift + arrows
+
+    """
     _visual_class = WaveformVisual
 
     @property
@@ -157,20 +182,50 @@ class WaveformView(BaseSpikeCanvas):
         self.visual.box_scale = value
         self.update()
 
-    def on_key_press(self, event):
-        u, v = self.visual.box_scale
-        coeff = 1.1
-        if event.key == '+':
-            if 'Control' in event.modifiers:
-                self.box_scale = (u * coeff, v)
-            else:
-                self.box_scale = (u, v * coeff)
-        if event.key == '-':
-            if 'Control' in event.modifiers:
-                self.box_scale = (u / coeff, v)
-            else:
-                self.box_scale = (u, v / coeff)
+    @property
+    def probe_scale(self):
+        return self.visual.probe_scale
+
+    @probe_scale.setter
+    def probe_scale(self, value):
+        self.visual.probe_scale = value
         self.update()
+
+    _arrows = ('Left', 'Right', 'Up', 'Down')
+
+    def on_key_press(self, event):
+
+        key = event.key
+        ctrl = 'Control' in event.modifiers
+        shift = 'Shift' in event.modifiers
+
+        # Box scale.
+        if ctrl and key in self._arrows:
+            coeff = 1.1
+            u, v = self.box_scale
+            if key == 'Left':
+                self.box_scale = (u / coeff, v)
+            elif key == 'Right':
+                self.box_scale = (u * coeff, v)
+            elif key == 'Down':
+                self.box_scale = (u, v / coeff)
+            elif key == 'Up':
+                self.box_scale = (u, v * coeff)
+            self.update()
+
+        # Probe scale.
+        if shift and key in self._arrows:
+            coeff = 1.1
+            u, v = self.probe_scale
+            if key == 'Left':
+                self.probe_scale = (u / coeff, v)
+            elif key == 'Right':
+                self.probe_scale = (u * coeff, v)
+            elif key == 'Down':
+                self.probe_scale = (u, v / coeff)
+            elif key == 'Up':
+                self.probe_scale = (u, v * coeff)
+            self.update()
 
     def on_draw(self, event):
         gloo.clear(color=True, depth=True)
