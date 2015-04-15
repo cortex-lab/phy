@@ -17,14 +17,14 @@ def test_wizard():
 
     wizard = Wizard([2, 3, 5])
 
-    @wizard.set_quality
+    @wizard.set_quality_function
     def quality(cluster):
         return {2: .9,
                 3: .3,
                 5: .6,
                 }[cluster]
 
-    @wizard.set_similarity
+    @wizard.set_similarity_function
     def similarity(cluster, other):
         cluster, other = min((cluster, other)), max((cluster, other))
         return {(2, 3): 1,

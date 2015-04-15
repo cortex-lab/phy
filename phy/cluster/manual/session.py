@@ -591,14 +591,14 @@ class Session(BaseSession):
         self.wizard = Wizard(self.clustering.cluster_ids)
 
         # Set the similarity and quality functions for the wizard.
-        @self.wizard.set_similarity
+        @self.wizard.set_similarity_function
         def similarity(target, candidate):
             """Compute the dot product between the mean masks of
             two clusters."""
             return np.dot(self.cluster_store.mean_masks(target),
                           self.cluster_store.mean_masks(candidate))
 
-        @self.wizard.set_quality
+        @self.wizard.set_quality_function
         def quality(cluster):
             """Return the maximum mean_masks across all channels
             for a given cluster."""
