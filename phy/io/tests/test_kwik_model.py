@@ -316,3 +316,31 @@ def test_kwik_manage_clusterings():
         ae(kwik.cluster_ids, [1, 3])
         assert kwik.cluster_groups == {1: 3,
                                        3: 3}
+
+
+def test_kwik_manage_cluster_groups():
+
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=_N_CLUSTERS,
+                                    n_spikes=_N_SPIKES,
+                                    n_channels=_N_CHANNELS,
+                                    n_features_per_channel=_N_FETS,
+                                    n_samples_traces=_N_SAMPLES_TRACES)
+
+        kwik = KwikModel(filename)
+
+        with raises(ValueError):
+            kwik.delete_cluster_group(2)
+        with raises(ValueError):
+            kwik.add_cluster_group(1, 'new')
+        with raises(ValueError):
+            kwik.rename_cluster_group(1, 'renamed')
+
+        kwik.add_cluster_group(4, 'new')
+        kwik.rename_cluster_group(4, 'renamed')
+
+        kwik.delete_cluster_group(4)
+        with raises(ValueError):
+            kwik.delete_cluster_group(4)
