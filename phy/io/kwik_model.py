@@ -8,6 +8,7 @@
 
 import os.path as op
 from random import randint
+import os
 
 import numpy as np
 
@@ -148,6 +149,17 @@ def _create_clustering(f, name,
                               clustering=name,
                               channel_group=channel_group,
                               )
+
+
+def list_kwik(folders):
+    """Return the list of Kwik files found in a list of folders."""
+    ret = []
+    for d in folders:
+        for root, dirs, files in os.walk(os.path.expanduser(d)):
+            for f in files:
+                if f.endswith(".kwik"):
+                    ret.append(os.path.join(root, f))
+    return ret
 
 
 _COLOR_MAP = np.array([[1., 1., 1.],
