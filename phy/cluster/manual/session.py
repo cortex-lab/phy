@@ -488,8 +488,8 @@ class Session(BaseSession):
         # }
         declare_namespace('manual_clustering')
         self.load_user_settings(path=op.join(curdir, 'default_settings.py'),
-                               # file_namespace=file_namespace
-                               )
+                                # file_namespace=file_namespace
+                                )
 
     def _load_experiment_settings(self):
         self.settings_manager.set_experiment_path(self.experiment_path)
