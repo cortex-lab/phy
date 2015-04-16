@@ -133,9 +133,9 @@ def test_kwik_open_full():
 
         # Test cluster groups.
         for cluster in range(_N_CLUSTERS):
-            assert kwik.cluster_metadata.group(cluster) == cluster % 4
+            assert kwik.cluster_metadata.group(cluster) == 3
         for cluster, group in kwik.cluster_groups.items():
-            assert group == cluster % 4
+            assert group == 3
 
         # Test probe.
         assert isinstance(kwik.probe, MEA)
@@ -230,7 +230,7 @@ def test_kwik_clusterings():
         # The default clustering is 'main'.
         assert kwik.n_spikes == _N_SPIKES
         assert kwik.n_clusters == _N_CLUSTERS
-        assert kwik.cluster_groups[_N_CLUSTERS - 1] == (_N_CLUSTERS - 1) % 4
+        assert kwik.cluster_groups[_N_CLUSTERS - 1] == 3
         ae(kwik.cluster_ids, np.arange(_N_CLUSTERS))
 
         # Change clustering.
@@ -239,5 +239,108 @@ def test_kwik_clusterings():
         assert kwik.n_spikes == _N_SPIKES
         # Some clusters may be empty with a small number of spikes like here
         assert _N_CLUSTERS * 2 - 4 <= n_clu <= _N_CLUSTERS * 2
-        assert kwik.cluster_groups[n_clu - 1] == (n_clu - 1) % 4
+        assert kwik.cluster_groups[n_clu - 1] == 3
         assert len(kwik.cluster_ids) == n_clu
+
+
+def test_kwik_manage_clusterings():
+
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=_N_CLUSTERS,
+                                    n_spikes=_N_SPIKES,
+                                    n_channels=_N_CHANNELS,
+                                    n_features_per_channel=_N_FETS,
+                                    n_samples_traces=_N_SAMPLES_TRACES)
+
+        kwik = KwikModel(filename)
+        spike_clusters = kwik.spike_clusters
+        assert kwik.clusterings == ['main', 'automatic']
+
+        # Test renaming.
+        kwik.clustering = 'automatic'
+        with raises(ValueError):
+            kwik.rename_clustering('a', 'b')
+        with raises(ValueError):
+            kwik.rename_clustering('automatic', 'b')
+        with raises(ValueError):
+            kwik.rename_clustering('main', 'automatic')
+
+        kwik.clustering = 'main'
+        kwik.rename_clustering('automatic', 'original')
+        assert kwik.clusterings == ['main', 'original']
+        with raises(ValueError):
+            kwik.clustering = 'automatic'
+        kwik.clustering = 'original'
+        n_clu = kwik.n_clusters
+        assert kwik.cluster_groups[n_clu - 1] == 3
+        assert len(kwik.cluster_ids) == n_clu
+
+        # Test copy.
+        with raises(ValueError):
+            kwik.copy_clustering('a', 'b')
+        with raises(ValueError):
+            kwik.copy_clustering('original', 'b')
+        with raises(ValueError):
+            kwik.copy_clustering('main', 'original')
+
+        kwik.clustering = 'main'
+        kwik.copy_clustering('original', 'automatic')
+        assert kwik.clusterings == ['main', 'automatic', 'original']
+
+        kwik.clustering = 'automatic'
+        cg = kwik.cluster_groups
+        ci = kwik.cluster_ids
+
+        kwik.clustering = 'original'
+        assert kwik.cluster_groups == cg
+        ae(kwik.cluster_ids, ci)
+
+        # Test delete.
+        with raises(ValueError):
+            kwik.delete_clustering('a')
+            kwik.delete_clustering('original')
+        kwik.clustering = 'main'
+        kwik.delete_clustering('original')
+        assert kwik.clusterings == ['main', 'automatic']
+
+        # Test add.
+        sc = np.ones(_N_SPIKES, dtype=np.uint32)
+        sc[1] = sc[-2] = 3
+        kwik.add_clustering('new', sc)
+        ae(kwik.spike_clusters, spike_clusters)
+        kwik.clustering = 'new'
+        ae(kwik.spike_clusters, sc)
+        assert kwik.n_clusters == 2
+        ae(kwik.cluster_ids, [1, 3])
+        assert kwik.cluster_groups == {1: 3,
+                                       3: 3}
+
+
+def test_kwik_manage_cluster_groups():
+
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=_N_CLUSTERS,
+                                    n_spikes=_N_SPIKES,
+                                    n_channels=_N_CHANNELS,
+                                    n_features_per_channel=_N_FETS,
+                                    n_samples_traces=_N_SAMPLES_TRACES)
+
+        kwik = KwikModel(filename)
+
+        with raises(ValueError):
+            kwik.delete_cluster_group(2)
+        with raises(ValueError):
+            kwik.add_cluster_group(1, 'new')
+        with raises(ValueError):
+            kwik.rename_cluster_group(1, 'renamed')
+
+        kwik.add_cluster_group(4, 'new')
+        kwik.rename_cluster_group(4, 'renamed')
+
+        kwik.delete_cluster_group(4)
+        with raises(ValueError):
+            kwik.delete_cluster_group(4)

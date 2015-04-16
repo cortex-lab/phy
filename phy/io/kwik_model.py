@@ -7,13 +7,14 @@
 #------------------------------------------------------------------------------
 
 import os.path as op
+from random import randint
 
 import numpy as np
 
 from ..ext import six
 from .base_model import BaseModel
 from ..cluster.manual.cluster_metadata import ClusterMetadata
-from .h5 import open_h5
+from .h5 import open_h5, File
 from ..waveform.loader import WaveformLoader
 from ..waveform.filter import bandpass_filter, apply_filter
 from ..electrode.mea import MEA
@@ -95,6 +96,58 @@ def _concatenate_spikes(spikes, recs, offsets):
     offsets = _as_array(offsets)
     recs = _as_array(recs)
     return (spikes + offsets[recs]).astype(np.uint64)
+
+
+def _create_cluster_group(f, group_id, name,
+                          clustering=None,
+                          channel_group=None,
+                          write_color=True,
+                          ):
+    cg_path = ('/channel_groups/{0:d}/'
+               'cluster_groups/{1:s}/{2:d}').format(channel_group,
+                                                    clustering,
+                                                    group_id,
+                                                    )
+    kv_path = cg_path + '/application_data/klustaviewa'
+    f.write_attr(cg_path, 'name', name)
+    if write_color:
+        f.write_attr(kv_path, 'color', randint(2, 10))
+
+
+def _create_clustering(f, name,
+                       channel_group=None,
+                       spike_clusters=None,
+                       ):
+    assert isinstance(f, File)
+    path = '/channel_groups/{0:d}/spikes/clusters/{1:s}'.format(channel_group,
+                                                                name)
+    assert not f.exists(path)
+
+    # Save spike_clusters.
+    f.write(path, spike_clusters.astype(np.uint32))
+
+    cluster_ids = _unique(spike_clusters)
+
+    # Create cluster metadata.
+    for cluster in cluster_ids:
+        cluster_path = '/channel_groups/{0:d}/clusters/{1:s}/{2:d}'.format(
+            channel_group, name, cluster)
+        kv_path = cluster_path + '/application_data/klustaviewa'
+
+        # Default group: unsorted.
+        f.write_attr(cluster_path, 'cluster_group', 3)
+        f.write_attr(kv_path, 'color', randint(2, 10))
+
+    # Create cluster group metadata.
+    for group_id, cg_name in [(0, 'Noise'),
+                              (1, 'MUA'),
+                              (2, 'Good'),
+                              (3, 'Unsorted'),
+                              ]:
+        _create_cluster_group(f, group_id, cg_name,
+                              clustering=name,
+                              channel_group=channel_group,
+                              )
 
 
 _COLOR_MAP = np.array([[1., 1., 1.],
@@ -383,7 +436,7 @@ class KwikModel(BaseModel):
         sc = self._kwik.read(self._spike_clusters_path)
         sc[:] = spike_clusters
 
-    def _load_clusterings(self, clustering):
+    def _load_clusterings(self, clustering=None):
         # Once the channel group is loaded, list the clusterings.
         self._clusterings = _list_clusterings(self._kwik.h5py_file,
                                               self.channel_group)
@@ -558,6 +611,141 @@ class KwikModel(BaseModel):
         self._create_cluster_metadata()
         self._load_spike_clusters()
         self._load_cluster_groups()
+        if _to_close:
+            self._kwik.close()
+
+    # Managing cluster groups
+    # -------------------------------------------------------------------------
+
+    def _write_cluster_group(self, group_id, name, write_color=True):
+        if group_id <= 3:
+            raise ValueError("Default groups cannot be changed.")
+
+        _to_close = self._open_kwik_if_needed(mode='a')
+
+        _create_cluster_group(self._kwik, group_id, name,
+                              clustering=self._clustering,
+                              channel_group=self._channel_group,
+                              write_color=write_color,
+                              )
+
+        if _to_close:
+            self._kwik.close()
+
+    def add_cluster_group(self, group_id, name):
+        """Add a new cluster group."""
+        self._write_cluster_group(group_id, name, write_color=True)
+
+    def rename_cluster_group(self, group_id, name):
+        """Rename an existing cluster group."""
+        self._write_cluster_group(group_id, name, write_color=False)
+
+    def delete_cluster_group(self, group_id):
+        if group_id <= 3:
+            raise ValueError("Default groups cannot be deleted.")
+
+        path = ('/channel_groups/{0:d}/'
+                'cluster_groups/{1:s}/{2:d}').format(self._channel_group,
+                                                     self._clustering,
+                                                     group_id,
+                                                     )
+
+        _to_close = self._open_kwik_if_needed(mode='a')
+
+        self._kwik.delete(path)
+
+        if _to_close:
+            self._kwik.close()
+
+    # Managing clusterings
+    # -------------------------------------------------------------------------
+
+    def add_clustering(self, name, spike_clusters):
+        """Save a new clustering to the file."""
+        if name in self._clusterings:
+            raise ValueError("The clustering '{0}' ".format(name) +
+                             "already exists.")
+
+        _to_close = self._open_kwik_if_needed(mode='a')
+
+        _create_clustering(self._kwik,
+                           name,
+                           channel_group=self._channel_group,
+                           spike_clusters=spike_clusters,
+                           )
+
+        # Update the list of clusterings.
+        self._load_clusterings(self._clustering)
+
+        if _to_close:
+            self._kwik.close()
+
+    def _move_clustering(self, old_name, new_name, copy=None):
+        if old_name == self._clustering:
+            raise ValueError("You cannot move the current clustering.")
+        if new_name in self._clusterings:
+            raise ValueError("The clustering '{0}' ".format(new_name) +
+                             "already exists.")
+
+        _to_close = self._open_kwik_if_needed(mode='a')
+
+        if copy:
+            func = self._kwik.copy
+        else:
+            func = self._kwik.move
+
+        # /channel_groups/x/spikes/clusters/<name>
+        p = self._spikes_path + '/clusters/'
+        func(p + old_name, p + new_name)
+
+        # /channel_groups/x/clusters/<name>
+        p = self._clusters_path + '/'
+        func(p + old_name, p + new_name)
+
+        # /channel_groups/x/cluster_groups/<name>
+        p = self._channel_groups_path + '/cluster_groups/'
+        func(p + old_name, p + new_name)
+
+        # Update the list of clusterings.
+        self._load_clusterings(self._clustering)
+
+        if _to_close:
+            self._kwik.close()
+
+    def rename_clustering(self, old_name, new_name):
+        """Rename a clustering in the .kwik file."""
+        self._move_clustering(old_name, new_name, copy=False)
+
+    def copy_clustering(self, name, new_name):
+        """Copy a clustering in the .kwik file."""
+        self._move_clustering(name, new_name, copy=True)
+
+    def delete_clustering(self, name):
+        """Delete a clustering."""
+        if name == self._clustering:
+            raise ValueError("You cannot delete the current clustering.")
+        if name not in self._clusterings:
+            raise ValueError(("The clustering {0} "
+                              "doesn't exist.").format(name))
+
+        _to_close = self._open_kwik_if_needed(mode='a')
+
+        # /channel_groups/x/spikes/clusters/<name>
+        parent = self._kwik.read(self._spikes_path + '/clusters/')
+        del parent[name]
+
+        # /channel_groups/x/clusters/<name>
+        parent = self._kwik.read(self._clusters_path)
+        del parent[name]
+
+        # /channel_groups/x/cluster_groups/<name>
+        parent = self._kwik.read(self._channel_groups_path +
+                                 '/cluster_groups/')
+        del parent[name]
+
+        # Update the list of clusterings.
+        self._load_clusterings(self._clustering)
+
         if _to_close:
             self._kwik.close()
 
