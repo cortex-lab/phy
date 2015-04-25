@@ -51,6 +51,8 @@ class BaseViewModel(object):
     def __init__(self, model, store=None, **kwargs):
         self._model = model
         self._store = store
+        # Selected spikes.
+        self._spikes = None
         for key, value in kwargs.items():
             setattr(self, key, value)
         vispy_kwargs_names = ('position', 'size',)
@@ -87,15 +89,22 @@ class BaseViewModel(object):
         n = self.view.visual.n_clusters
         self.view.visual.cluster_colors = _selected_clusters_colors(n)
 
+    def _update_spike_clusters(self, spikes):
+        assert spikes is not None
+        self._view.visual.spike_clusters = self.model.spike_clusters[spikes]
+
     def on_open(self):
         """To be overriden."""
 
     def on_cluster(self, up=None):
         """May be overriden."""
+        self._update_spike_clusters(self._spikes)
         self._update_cluster_colors()
 
     def on_select(self, cluster_ids, spikes):
         """To be overriden."""
+        self._spikes = spikes
+        self._update_spike_clusters(spikes)
         self._update_cluster_colors()
 
     def show(self):
@@ -112,9 +121,12 @@ class WaveformViewModel(BaseViewModel):
     scale_factor = 1.
 
     def on_open(self):
+        super(WaveformViewModel, self).on_open()
         self.view.visual.channel_positions = self.model.probe.positions
 
     def on_select(self, cluster_ids, spikes):
+        super(WaveformViewModel, self).on_select(cluster_ids, spikes)
+
         # Load waveforms.
         debug("Loading {0:d} waveforms...".format(len(spikes)))
         waveforms = self.model.waveforms[spikes]
@@ -133,9 +145,6 @@ class WaveformViewModel(BaseViewModel):
                                                spikes)
         self.view.visual.masks = masks
 
-        # Cluster colors.
-        self._update_cluster_colors()
-
     def on_close(self):
         self.view.visual.spike_clusters = []
         self.view.visual.channel_positions = []
@@ -148,11 +157,11 @@ class FeatureViewModel(BaseViewModel):
     scale_factor = 1.
 
     def on_select(self, cluster_ids, spikes):
+        super(FeatureViewModel, self).on_select(cluster_ids, spikes)
 
         # Spikes.
         self.view.visual.spike_ids = spikes
         self.view.visual.spike_samples = self.model.spike_samples[spikes]
-        self.view.visual.spike_clusters = self.model.spike_clusters[spikes]
 
         # Load features.
         features = self._load_from_store_or_model('features',
@@ -187,9 +196,6 @@ class FeatureViewModel(BaseViewModel):
             channels = np.arange(len(self.model.channels[:3]))
         self.view.dimensions = ['time'] + [(ch, 0) for ch in channels]
 
-        # Cluster colors.
-        self._update_cluster_colors()
-
 
 class CorrelogramViewModel(BaseViewModel):
     _view_class = CorrelogramView
@@ -197,14 +203,9 @@ class CorrelogramViewModel(BaseViewModel):
 
     binsize = None
     winsize_bins = None
-    # n_excerpts = None
-    # excerpt_size = None
-
-    # _clusters = None
-    _spikes = None
 
     def on_select(self, cluster_ids, spikes):
-        self._spikes = spikes
+        super(CorrelogramViewModel, self).on_select(cluster_ids, spikes)
         self.view.cluster_ids = cluster_ids
         spike_clusters = self.model.spike_clusters[spikes]
         spike_samples = self.model.spike_samples[spikes]
@@ -225,6 +226,7 @@ class CorrelogramViewModel(BaseViewModel):
         self._update_cluster_colors()
 
     def on_cluster(self, up=None):
+        super(CorrelogramViewModel, self).on_cluster(up)
         if up is None or up.description not in ('merge', 'assign'):
             return
 
