@@ -26,7 +26,7 @@ from ..view_model import (WaveformViewModel,
 #------------------------------------------------------------------------------
 
 def _test_view_model(view_model_class, **kwargs):
-    n_frames = 20
+    n_frames = 2
 
     model = MockModel()
     clustering = Clustering(model.spike_clusters)
