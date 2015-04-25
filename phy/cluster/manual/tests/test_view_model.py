@@ -77,5 +77,5 @@ def test_ccg():
                      )
 
 
-# def test_traces():
-#     _test_view_model(TraceViewModel)
+def test_traces():
+    _test_view_model(TraceViewModel)

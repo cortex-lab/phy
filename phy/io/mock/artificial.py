@@ -85,7 +85,8 @@ class MockModel(BaseModel):
                                          self.n_channels)
         self._spike_clusters = artificial_spike_clusters(self.n_spikes,
                                                          self.n_clusters)
-        self._spike_samples = artificial_spike_samples(self.n_spikes)
+        self._spike_samples = artificial_spike_samples(self.n_spikes, 30)
+        assert self._spike_samples[-1] < self.n_samples_traces
         self._features = artificial_features(self.n_spikes, self.n_features)
         self._masks = artificial_masks(self.n_spikes, self.n_channels)
         self._features_masks = np.dstack((self._features,

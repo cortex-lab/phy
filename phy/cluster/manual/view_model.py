@@ -280,5 +280,4 @@ class TraceViewModel(BaseViewModel):
 
     def on_close(self):
         self.view.visual.spike_clusters = []
-        self.view.visual.channel_positions = []
         self.view.update()
