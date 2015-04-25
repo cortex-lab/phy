@@ -47,6 +47,8 @@ class TraceVisual(BaseSpikeVisual):
         self.n_samples, self.n_channels = value.shape
         self._traces = value
         self._empty = self.n_samples == 0
+        self._channel_colors = .5 * np.ones((self.n_channels, 3),
+                                            dtype=np.float32)
         self.set_to_bake('traces', 'color')
 
     @property
@@ -78,7 +80,9 @@ class TraceVisual(BaseSpikeVisual):
         debug("bake traces", self._traces.shape)
 
     def _bake_color(self):
-        u_channel_color = self.channel_colors.reshape((1, self.n_channels, -1))
+        u_channel_color = self._channel_colors.reshape((1,
+                                                        self.n_channels,
+                                                        -1))
         u_channel_color = (u_channel_color * 255).astype(np.uint8)
         self.program['u_channel_color'] = gloo.Texture2D(u_channel_color)
 
