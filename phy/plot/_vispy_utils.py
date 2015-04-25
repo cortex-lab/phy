@@ -191,8 +191,6 @@ class BaseSpikeVisual(_BakeVisual):
         self._spike_ids = value
         self.set_to_bake('spikes')
 
-    # TODO: channel_ids
-
     @property
     def cluster_ids(self):
         """Clusters of the displayed spikes."""

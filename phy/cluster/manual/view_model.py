@@ -230,7 +230,7 @@ class CorrelogramViewModel(BaseViewModel):
         if up is None or up.description not in ('merge', 'assign'):
             return
 
-        # OPTIM: add the CCGs of the merged clusters
+        # TODO OPTIM: add the CCGs of the merged clusters
         # if up.description == 'merge':
         #     self.view.visual.cluster_ids = up.added
         #     n = len(up.added)
