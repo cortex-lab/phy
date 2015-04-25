@@ -3,7 +3,7 @@
 #include "color.glsl"
 
 attribute float a_position;
-attribute vec2 a_index;  // (t, channel_idx)
+attribute vec2 a_index;  // (channel_idx, t)
 attribute vec2 a_spike;  // (cluster_idx, mask)
 
 uniform sampler2D u_channel_color;
@@ -31,12 +31,13 @@ float get_y(float y_index, float sample) {
 }
 
 void main() {
+    float channel = a_index.x;
+
     float x = get_x(a_index.y);
-    float y = get_y(a_index.x, a_position);
+    float y = get_y(channel, a_position);
     vec2 position = vec2(x, y);
 
     gl_Position = vec4(pan_zoom(position), 0.0, 1.0);
-    v_index = vec2(a_index.x, a_spike.x);
 
     // Spike color as a function of the cluster and mask.
     v_color_spike = color_mask(get_color(a_spike.x,  // cluster_id
@@ -46,8 +47,11 @@ void main() {
                                    );
 
     // Channel color.
-    v_color_channel = get_color(a_index.x,
+    v_color_channel = get_color(channel,
                                 u_channel_color,
                                 n_channels);
 
+    // The fragment shader needs to know the channel (to discard fragments
+    // between channels) and the cluster (for the color).
+    v_index = vec2(channel, a_spike.x);
 }

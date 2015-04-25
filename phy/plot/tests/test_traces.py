@@ -24,13 +24,13 @@ from ...utils.testing import show_test
 
 def _test_traces(n_samples=None):
     n_channels = 20
-    n_spikes = 20
-    n_clusters = 3
+    n_spikes = 50
+    n_clusters = 5
 
     traces = artificial_traces(n_samples, n_channels)
     masks = artificial_masks(n_spikes, n_channels)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
-    spike_samples = np.linspace(20, n_samples - 20, n_spikes).astype(np.uint64)
+    spike_samples = np.linspace(50, n_samples - 50, n_spikes).astype(np.uint64)
 
     c = TraceView()
     c.visual.traces = traces
@@ -52,4 +52,4 @@ def test_traces_empty():
 
 
 def test_traces_full():
-    _test_traces(n_samples=1000)
+    _test_traces(n_samples=2000)

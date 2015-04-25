@@ -117,8 +117,9 @@ class TraceVisual(BaseSpikeVisual):
         samples = self._spike_samples
         assert samples.shape == (self.n_spikes,)
 
-        clusters = -np.ones((self.n_samples, self.n_channels))
-        masks = np.zeros((self.n_samples, self.n_channels))
+        a_clusters = -np.ones((self.n_channels, self.n_samples))
+        a_masks = np.zeros((self.n_channels, self.n_samples))
+        masks = self._masks.T
 
         # Set the spike clusters and masks of all spikes, for every waveform
         # sample shift.
@@ -128,11 +129,11 @@ class TraceVisual(BaseSpikeVisual):
             ind = (samples + i).astype(np.uint64)
             assert ind.shape == (self.n_spikes,)
 
-            clusters[ind, :] = spike_clusters_idx.reshape((-1, 1))
-            masks[ind, :] = self._masks
+            a_clusters[:, ind] = spike_clusters_idx
+            a_masks[:, ind] = masks
 
-        a_spike = np.c_[clusters.ravel(),
-                        masks.ravel()].astype(np.float32)
+        a_spike = np.c_[a_clusters.ravel(),
+                        a_masks.ravel()].astype(np.float32)
         self.program['a_spike'] = a_spike
         self.program['n_clusters'] = self.n_clusters
 
