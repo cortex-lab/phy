@@ -14,7 +14,7 @@ from vispy import gloo
 from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
                            )
-from ..utils.array import _as_array
+from ..utils.array import _as_array, _index_of
 from ..utils.logging import debug
 
 
@@ -31,6 +31,7 @@ class TraceVisual(BaseSpikeVisual):
     def __init__(self, **kwargs):
         super(TraceVisual, self).__init__(**kwargs)
         self._traces = None
+        self._spike_samples = None
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -60,7 +61,18 @@ class TraceVisual(BaseSpikeVisual):
     def channel_colors(self, value):
         self._channel_colors = _as_array(value)
         assert len(self._channel_colors) == self.n_channels
-        self.set_to_bake('color')
+        self.set_to_bake('channel_color')
+
+    @property
+    def spike_samples(self):
+        return self._spike_samples
+
+    @spike_samples.setter
+    def spike_samples(self, value):
+        assert isinstance(value, np.ndarray)
+        assert value.shape == (self.n_spikes,)
+        self._spike_samples = value
+        self.set_to_bake('spikes')
 
     # Data baking
     # -------------------------------------------------------------------------
@@ -79,14 +91,25 @@ class TraceVisual(BaseSpikeVisual):
 
         debug("bake traces", self._traces.shape)
 
-    def _bake_color(self):
+    def _bake_channel_color(self):
         u_channel_color = self._channel_colors.reshape((1,
                                                         self.n_channels,
                                                         -1))
         u_channel_color = (u_channel_color * 255).astype(np.uint8)
         self.program['u_channel_color'] = gloo.Texture2D(u_channel_color)
 
-        debug("bake color", u_channel_color.shape)
+        debug("bake channel color", u_channel_color.shape)
+
+    def _bake_spikes(self):
+        spike_clusters_idx = self.spike_clusters[self.spike_ids]
+        spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_ids)
+        n_points = self.n_samples * self.n_channels
+        clusters = -1 * np.ones(n_points, dtype=np.float32)
+        masks = np.zeros(n_points, dtype=np.float32)
+        # TODO
+        a_spike = np.c_[clusters, masks]
+        self.program['n_clusters'] = self.n_clusters
+        self.program['a_spike'] = a_spike
 
 
 class TraceView(BaseSpikeCanvas):

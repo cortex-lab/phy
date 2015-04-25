@@ -543,6 +543,8 @@ class BaseSpikeVisual(_BakeVisual):
     # Data baking
     # -------------------------------------------------------------------------
 
+    # TODO: rename to _bake_cluster_color
+
     def _bake_color(self):
         u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
         u_cluster_color = (u_cluster_color * 255).astype(np.uint8)
