@@ -32,6 +32,7 @@ class TraceVisual(BaseSpikeVisual):
         super(TraceVisual, self).__init__(**kwargs)
         self._traces = None
         self._spike_samples = None
+        self._n_samples_per_spike = None
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -50,7 +51,7 @@ class TraceVisual(BaseSpikeVisual):
         self._empty = self.n_samples == 0
         self._channel_colors = .5 * np.ones((self.n_channels, 3),
                                             dtype=np.float32)
-        self.set_to_bake('traces', 'color')
+        self.set_to_bake('traces', 'channel_color')
 
     @property
     def channel_colors(self):
@@ -73,6 +74,14 @@ class TraceVisual(BaseSpikeVisual):
         assert value.shape == (self.n_spikes,)
         self._spike_samples = value
         self.set_to_bake('spikes')
+
+    @property
+    def n_samples_per_spike(self):
+        return self._n_samples_per_spike
+
+    @n_samples_per_spike.setter
+    def n_samples_per_spike(self, value):
+        self._n_samples_per_spike = int(value)
 
     # Data baking
     # -------------------------------------------------------------------------
@@ -103,13 +112,29 @@ class TraceVisual(BaseSpikeVisual):
     def _bake_spikes(self):
         spike_clusters_idx = self.spike_clusters[self.spike_ids]
         spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_ids)
-        n_points = self.n_samples * self.n_channels
-        clusters = -1 * np.ones(n_points, dtype=np.float32)
-        masks = np.zeros(n_points, dtype=np.float32)
-        # TODO
-        a_spike = np.c_[clusters, masks]
-        self.program['n_clusters'] = self.n_clusters
+        assert spike_clusters_idx.shape == (self.n_spikes,)
+
+        samples = self._spike_samples
+        assert samples.shape == (self.n_spikes,)
+
+        clusters = -np.ones((self.n_samples, self.n_channels))
+        masks = np.zeros((self.n_samples, self.n_channels))
+
+        # Set the spike clusters and masks of all spikes, for every waveform
+        # sample shift.
+        for i in range(-self._n_samples_per_spike // 2,
+                       +self._n_samples_per_spike // 2):
+
+            ind = (samples + i).astype(np.uint64)
+            assert ind.shape == (self.n_spikes,)
+
+            clusters[ind, :] = spike_clusters_idx.reshape((-1, 1))
+            masks[ind, :] = self._masks
+
+        a_spike = np.c_[clusters.ravel(),
+                        masks.ravel()].astype(np.float32)
         self.program['a_spike'] = a_spike
+        self.program['n_clusters'] = self.n_clusters
 
 
 class TraceView(BaseSpikeCanvas):

@@ -3,8 +3,8 @@
 #include "color.glsl"
 
 attribute float a_position;
+attribute vec2 a_index;  // (t, channel_idx)
 attribute vec2 a_spike;  // (cluster_idx, mask)
-attribute vec2 a_index;
 
 uniform sampler2D u_channel_color;
 uniform sampler2D u_cluster_color;
@@ -14,8 +14,9 @@ uniform float n_clusters;
 uniform float n_samples;
 uniform float u_scale;
 
-varying float v_index_x;
-varying vec3 v_color;
+varying vec2 v_index;
+varying vec3 v_color_channel;
+varying vec3 v_color_spike;
 
 float get_x(float x_index) {
     // 'x_index' is between 0 and nsamples.
@@ -35,20 +36,18 @@ void main() {
     vec2 position = vec2(x, y);
 
     gl_Position = vec4(pan_zoom(position), 0.0, 1.0);
-    v_index_x = a_index.x;
+    v_index = vec2(a_index.x, a_spike.x);
 
-    if (a_spike.x >= 0) {
-        // Spike color as a function of the cluster and mask.
-        v_color.rgb = color_mask(get_color(a_spike.x,  // cluster_id
-                                           u_cluster_color,
-                                           n_clusters),
-                                 a_spike.y  // mask
-                                 );
-    }
-    else {
-        // Channel color.
-        v_color.rgb = get_color(a_index.x,
+    // Spike color as a function of the cluster and mask.
+    v_color_spike = color_mask(get_color(a_spike.x,  // cluster_id
+                                         u_cluster_color,
+                                         n_clusters),
+                                   a_spike.y  // mask
+                                   );
+
+    // Channel color.
+    v_color_channel = get_color(a_index.x,
                                 u_channel_color,
                                 n_channels);
-    }
+
 }

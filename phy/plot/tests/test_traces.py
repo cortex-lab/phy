@@ -24,24 +24,27 @@ from ...utils.testing import show_test
 
 def _test_traces(n_samples=None):
     n_channels = 20
-    n_spikes = 10
+    n_spikes = 20
     n_clusters = 3
 
     traces = artificial_traces(n_samples, n_channels)
     masks = artificial_masks(n_spikes, n_channels)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    spike_samples = np.linspace(20, n_samples - 20, n_spikes).astype(np.uint64)
 
     c = TraceView()
     c.visual.traces = traces
-    c.visual.channel_colors = np.array([_random_color()
-                                        for _ in range(n_channels)])
+    # c.visual.channel_colors = np.array([_random_color()
+    #                                     for _ in range(n_channels)])
+    c.visual.n_samples_per_spike = 20
     c.visual.spike_ids = np.arange(n_spikes)
+    c.visual.spike_samples = spike_samples
     c.visual.spike_clusters = spike_clusters
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])
     c.visual.masks = masks
 
-    show_test(c, 0)
+    show_test(c)
 
 
 def test_traces_empty():
