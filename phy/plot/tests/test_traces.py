@@ -24,7 +24,7 @@ from ...utils.testing import show_test
 
 def _test_traces(n_samples=None):
     n_channels = 20
-    n_spikes = 50
+    n_spikes = 20
     n_clusters = 5
 
     traces = artificial_traces(n_samples, n_channels)
@@ -43,6 +43,8 @@ def _test_traces(n_samples=None):
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])
     c.visual.masks = masks
+    c.visual.sample_rate = 20000.
+    c.visual.offset = 0
 
     show_test(c)
 

@@ -33,6 +33,8 @@ class TraceVisual(BaseSpikeVisual):
         self._traces = None
         self._spike_samples = None
         self._n_samples_per_spike = None
+        self._sample_rate = None
+        self._offset = None
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -82,6 +84,22 @@ class TraceVisual(BaseSpikeVisual):
     @n_samples_per_spike.setter
     def n_samples_per_spike(self, value):
         self._n_samples_per_spike = int(value)
+
+    @property
+    def sample_rate(self):
+        return self._sample_rate
+
+    @sample_rate.setter
+    def sample_rate(self, value):
+        self._sample_rate = int(value)
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @offset.setter
+    def offset(self, value):
+        self._offset = int(value)
 
     # Data baking
     # -------------------------------------------------------------------------
