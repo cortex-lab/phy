@@ -46,7 +46,7 @@ def _test_traces(n_samples=None):
     c.visual.sample_rate = 20000.
     c.visual.offset = 0
 
-    show_test(c)
+    show_test(c, 0)
 
 
 def test_traces_empty():

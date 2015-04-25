@@ -83,20 +83,15 @@ class BaseViewModel(object):
         else:
             return getattr(self._model, name)[spikes]
 
-    def _update_spike_clusters(self):
-        self.view.visual.spike_clusters = self.model.spike_clusters
-
     def _update_cluster_colors(self):
         n = self.view.visual.n_clusters
         self.view.visual.cluster_colors = _selected_clusters_colors(n)
 
     def on_open(self):
         """To be overriden."""
-        self._update_spike_clusters()
 
     def on_cluster(self, up=None):
         """May be overriden."""
-        self._update_spike_clusters()
         self._update_cluster_colors()
 
     def on_select(self, cluster_ids, spikes):
@@ -117,7 +112,6 @@ class WaveformViewModel(BaseViewModel):
     scale_factor = 1.
 
     def on_open(self):
-        self._update_spike_clusters()
         self.view.visual.channel_positions = self.model.probe.positions
 
     def on_select(self, cluster_ids, spikes):
@@ -125,6 +119,10 @@ class WaveformViewModel(BaseViewModel):
         debug("Loading {0:d} waveforms...".format(len(spikes)))
         waveforms = self.model.waveforms[spikes]
         debug("Done!")
+
+        # Spikes.
+        self.view.visual.spike_ids = spikes
+        self.view.visual.spike_clusters = self.model.spike_clusters[spikes]
 
         waveforms *= self.scale_factor
         self.view.visual.waveforms = waveforms
@@ -134,9 +132,6 @@ class WaveformViewModel(BaseViewModel):
                                                cluster_ids,
                                                spikes)
         self.view.visual.masks = masks
-
-        # Spike ids.
-        self.view.visual.spike_ids = spikes
 
         # Cluster colors.
         self._update_cluster_colors()
@@ -153,6 +148,12 @@ class FeatureViewModel(BaseViewModel):
     scale_factor = 1.
 
     def on_select(self, cluster_ids, spikes):
+
+        # Spikes.
+        self.view.visual.spike_ids = spikes
+        self.view.visual.spike_samples = self.model.spike_samples[spikes]
+        self.view.visual.spike_clusters = self.model.spike_clusters[spikes]
+
         # Load features.
         features = self._load_from_store_or_model('features',
                                                   cluster_ids,
@@ -185,13 +186,6 @@ class FeatureViewModel(BaseViewModel):
         else:
             channels = np.arange(len(self.model.channels[:3]))
         self.view.dimensions = ['time'] + [(ch, 0) for ch in channels]
-
-        # *All* spike clusters.
-        self.view.visual.spike_clusters = self.model.spike_clusters
-
-        # Spike times and ids.
-        self.view.visual.spike_samples = self.model.spike_samples[spikes]
-        self.view.visual.spike_ids = spikes
 
         # Cluster colors.
         self._update_cluster_colors()
