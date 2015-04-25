@@ -300,6 +300,10 @@ class PanZoom(object):
         zoom_x = zoom_y = self.zoom
         zoom_x_new, zoom_y_new = (zoom_x * math.exp(2.5 * dx),
                                   zoom_y * math.exp(2.5 * dx))
+
+        zoom_x_new = max(min(zoom_x_new, self._zmax), self._zmin)
+        zoom_y_new = max(min(zoom_y_new, self._zmax), self._zmin)
+
         self.zoom = zoom_x_new
 
         if self._zoom_to_pointer:

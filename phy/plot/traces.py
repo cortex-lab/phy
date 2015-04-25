@@ -47,7 +47,18 @@ class TraceVisual(BaseSpikeVisual):
         self.n_samples, self.n_channels = value.shape
         self._traces = value
         self._empty = self.n_samples == 0
-        self.set_to_bake('traces')
+        self.set_to_bake('traces', 'color')
+
+    @property
+    def channel_colors(self):
+        """Colors of the displayed channels."""
+        return self._channel_colors
+
+    @channel_colors.setter
+    def channel_colors(self, value):
+        self._channel_colors = _as_array(value)
+        assert len(self._channel_colors) == self.n_channels
+        self.set_to_bake('color')
 
     # Data baking
     # -------------------------------------------------------------------------
@@ -66,6 +77,13 @@ class TraceVisual(BaseSpikeVisual):
 
         debug("bake traces", self._traces.shape)
 
+    def _bake_color(self):
+        u_channel_color = self.channel_colors.reshape((1, self.n_channels, -1))
+        u_channel_color = (u_channel_color * 255).astype(np.uint8)
+        self.program['u_channel_color'] = gloo.Texture2D(u_channel_color)
+
+        debug("bake color", u_channel_color.shape)
+
 
 class TraceView(BaseSpikeCanvas):
     _visual_class = TraceVisual
@@ -73,3 +91,4 @@ class TraceView(BaseSpikeCanvas):
     def __init__(self, *args, **kwargs):
         super(TraceView, self).__init__(*args, **kwargs)
         self._pz.aspect = None
+        self._pz.zmin = 1

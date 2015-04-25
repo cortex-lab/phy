@@ -26,6 +26,8 @@ def _test_traces(n_samples=None):
 
     c = TraceView()
     c.visual.traces = traces
+    c.visual.channel_colors = np.array([_random_color()
+                                        for _ in range(n_channels)])
 
     show_test(c)
 

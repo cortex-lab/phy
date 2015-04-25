@@ -1,13 +1,17 @@
 #include "pan_zoom.glsl"
+#include "colormaps/color-space.glsl"
+#include "color.glsl"
 
 attribute float a_position;
 attribute vec2 a_index;
 
-varying vec2 v_index;
-
+uniform sampler2D u_channel_color;
 uniform float n_channels;
 uniform float n_samples;
 uniform float u_scale;
+
+varying float v_index_x;
+varying vec3 v_color;
 
 float get_x(float x_index) {
     // 'x_index' is between 0 and nsamples.
@@ -22,8 +26,14 @@ float get_y(float y_index, float sample) {
 }
 
 void main() {
-    vec2 position = vec2(get_x(a_index.y),
-                         get_y(a_index.x, a_position));
+    float x = get_x(a_index.y);
+    float y = get_y(a_index.x, a_position);
+    vec2 position = vec2(x, y);
+
     gl_Position = vec4(pan_zoom(position), 0.0, 1.0);
-    v_index = a_index;
+    v_index_x = a_index.x;
+
+    v_color.rgb = get_color(a_index.x,
+                            u_channel_color,
+                            n_channels);
 }
