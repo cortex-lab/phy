@@ -210,19 +210,17 @@ class BaseSpikeVisual(_BakeVisual):
     def cluster_colors(self, value):
         self._cluster_colors = _as_array(value)
         assert len(self._cluster_colors) == self.n_clusters
-        self.set_to_bake('color')
+        self.set_to_bake('cluster_color')
 
     # Data baking
     # -------------------------------------------------------------------------
 
-    # TODO: rename to _bake_cluster_color
-
-    def _bake_color(self):
+    def _bake_cluster_color(self):
         u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
         u_cluster_color = (u_cluster_color * 255).astype(np.uint8)
         # TODO: more efficient to update the data from an existing texture
         self.program['u_cluster_color'] = gloo.Texture2D(u_cluster_color)
-        debug("bake color", u_cluster_color.shape)
+        debug("bake cluster color", u_cluster_color.shape)
 
 
 #------------------------------------------------------------------------------
