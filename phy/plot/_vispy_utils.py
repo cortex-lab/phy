@@ -204,7 +204,7 @@ class PanZoom(object):
         if not self.is_attached:
             return
 
-        aspect = 1.0
+        aspect = np.array([1.0, 1.0])
         if self._aspect is not None:
             aspect = self._canvas_aspect * self._aspect
 
@@ -303,7 +303,7 @@ class PanZoom(object):
         self.zoom = zoom_x_new
 
         if self._zoom_to_pointer:
-            aspect = 1.0
+            aspect = np.array([1.0, 1.0])
             if self._aspect is not None:
                 aspect = self._canvas_aspect * self._aspect
             zoom_x *= aspect[0]
@@ -377,7 +377,7 @@ class PanZoom(object):
         else:
             self._canvas_aspect = np.array([1.0, aspect / 1.0])
 
-        aspect = 1.0
+        aspect = np.array([1.0, 1.0])
         if self._aspect is not None:
             aspect = self._canvas_aspect * self._aspect
         self._u_zoom = self._zoom * aspect
