@@ -149,8 +149,7 @@ class BaseSpikeVisual(_BakeVisual):
 
     @property
     def spike_clusters(self):
-        """The clusters assigned to *all* spikes, not just the displayed
-        spikes."""
+        """The clusters assigned to the displayed spikes."""
         return self._spike_clusters
 
     @spike_clusters.setter
@@ -158,6 +157,7 @@ class BaseSpikeVisual(_BakeVisual):
         """Set all spike clusters."""
         value = _as_array(value)
         self._spike_clusters = value
+        self._cluster_ids = _unique(self._spike_clusters)
         self.set_to_bake('spikes_clusters')
 
     @property
@@ -195,11 +195,11 @@ class BaseSpikeVisual(_BakeVisual):
     @property
     def cluster_ids(self):
         """Clusters of the displayed spikes."""
-        return _unique(self.spike_clusters[self.spike_ids])
+        return self._cluster_ids
 
     @property
     def n_clusters(self):
-        return len(self.cluster_ids)
+        return len(self._cluster_ids)
 
     @property
     def cluster_colors(self):
@@ -218,7 +218,6 @@ class BaseSpikeVisual(_BakeVisual):
     def _bake_cluster_color(self):
         u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
         u_cluster_color = (u_cluster_color * 255).astype(np.uint8)
-        # TODO: more efficient to update the data from an existing texture
         self.program['u_cluster_color'] = gloo.Texture2D(u_cluster_color)
         debug("bake cluster color", u_cluster_color.shape)
 

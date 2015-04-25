@@ -24,8 +24,8 @@ from ...utils.testing import show_test
 
 def _test_traces(n_samples=None):
     n_channels = 20
-    n_spikes = 20
-    n_clusters = 5
+    n_spikes = 50
+    n_clusters = 3
 
     traces = artificial_traces(n_samples, n_channels)
     masks = artificial_masks(n_spikes, n_channels)
