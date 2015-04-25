@@ -54,6 +54,7 @@ class BaseViewModel(object):
         self._store = store
         # Selected spikes.
         self._spikes = None
+        self._cluster_ids = None
         for key, value in kwargs.items():
             setattr(self, key, value)
         vispy_kwargs_names = ('position', 'size',)
@@ -105,6 +106,7 @@ class BaseViewModel(object):
     def on_select(self, cluster_ids, spikes):
         """To be overriden."""
         self._spikes = spikes
+        self._cluster_ids = cluster_ids
         self._update_spike_clusters(spikes)
         self._update_cluster_colors()
 
@@ -246,18 +248,16 @@ class TraceViewModel(BaseViewModel):
     _view_class = TraceView
     _view_name = 'traces'
     scale_factor = 1.
+    _interval = None
 
-    def on_open(self):
-        super(TraceViewModel, self).on_open()
+    def _load_traces(self, interval):
+        start, end = interval
+        cluster_ids = self._cluster_ids
+        spikes = self._spikes
 
-    def on_select(self, cluster_ids, spikes):
-        super(TraceViewModel, self).on_select(cluster_ids, spikes)
-
-        # Load traces.
+        # TODO: paging
         debug("Loading traces...")
-        i = 0
-        j = self.model.traces.shape[0]
-        traces = self.model.traces[i:j, :]
+        traces = self.model.traces[start:end, :]
         debug("Done!")
 
         traces *= self.scale_factor
@@ -272,6 +272,26 @@ class TraceViewModel(BaseViewModel):
         # Spikes.
         self.view.visual.spike_ids = spikes
         self.view.visual.spike_samples = self.model.spike_samples[spikes]
+
+    @property
+    def interval(self):
+        return self._interval
+
+    @interval.setter
+    def interval(self, value):
+        if not isinstance(value, tuple) or len(value) != 2:
+            raise ValueError("The interval should be a (start, end) tuple.")
+        self._interval = value
+        self._load_traces(value)
+
+    def on_open(self):
+        super(TraceViewModel, self).on_open()
+
+    def on_select(self, cluster_ids, spikes):
+        super(TraceViewModel, self).on_select(cluster_ids, spikes)
+
+        # Load traces.
+        self._load_traces((0, self.model.traces.shape[0]))
 
         # TODO
         self.view.visual.n_samples_per_spike = 20
