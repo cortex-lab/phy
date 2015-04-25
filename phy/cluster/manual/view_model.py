@@ -253,7 +253,6 @@ class TraceViewModel(BaseViewModel):
     def _load_traces(self, interval):
         start, end = interval
         cluster_ids = self._cluster_ids
-        spikes = self._spikes
 
         # TODO: paging
         debug("Loading traces...")
@@ -263,6 +262,15 @@ class TraceViewModel(BaseViewModel):
         traces *= self.scale_factor
         self.view.visual.traces = traces
 
+        # Keep the spikes in the interval.
+        spike_samples = self.model.spike_samples[self._spikes]
+        a, b = spike_samples.searchsorted(interval)
+        spikes = self._spikes[a:b]
+        spike_samples = self.model.spike_samples[spikes]
+        self._update_spike_clusters(spikes)
+        if len(spikes) > 0:
+            spike_samples -= start
+
         # Load masks.
         masks = self._load_from_store_or_model('masks',
                                                cluster_ids,
@@ -271,7 +279,7 @@ class TraceViewModel(BaseViewModel):
 
         # Spikes.
         self.view.visual.spike_ids = spikes
-        self.view.visual.spike_samples = self.model.spike_samples[spikes]
+        self.view.visual.spike_samples = spike_samples
 
     @property
     def interval(self):
@@ -283,19 +291,21 @@ class TraceViewModel(BaseViewModel):
             raise ValueError("The interval should be a (start, end) tuple.")
         self._interval = value
         self._load_traces(value)
+        self.view.update()
 
     def on_open(self):
         super(TraceViewModel, self).on_open()
+        self.view.visual.n_samples_per_spike = 20
+        self.view.visual.sample_rate = 20000.
 
     def on_select(self, cluster_ids, spikes):
         super(TraceViewModel, self).on_select(cluster_ids, spikes)
 
         # Load traces.
-        self._load_traces((0, self.model.traces.shape[0]))
+        # TODO: select the default interval
+        self._load_traces((2000, 5000))
 
         # TODO
-        self.view.visual.n_samples_per_spike = 20
-        self.view.visual.sample_rate = 20000.
         self.view.visual.offset = 0
 
     def on_close(self):

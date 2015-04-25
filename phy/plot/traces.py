@@ -128,6 +128,9 @@ class TraceVisual(BaseSpikeVisual):
         debug("bake channel color", u_channel_color.shape)
 
     def _bake_spikes(self):
+        if self.n_spikes == 0:
+            return
+
         spike_clusters_idx = self.spike_clusters
         spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_ids)
         assert spike_clusters_idx.shape == (self.n_spikes,)
@@ -135,6 +138,7 @@ class TraceVisual(BaseSpikeVisual):
         samples = self._spike_samples
         assert samples.shape == (self.n_spikes,)
 
+        # -1 = there's no spike at this vertex
         a_clusters = -np.ones((self.n_channels, self.n_samples))
         a_masks = np.zeros((self.n_channels, self.n_samples))
         masks = self._masks.T
@@ -147,9 +151,15 @@ class TraceVisual(BaseSpikeVisual):
             ind = (samples + i).astype(np.uint64)
             assert ind.shape == (self.n_spikes,)
 
-            # ind = ind[(0 <= ind) & (ind < self.n_spikes)]
-            # if len(ind) == 0:
-            #     continue
+            # Skip vertices for spikes crossing the boundaries.
+            u = np.nonzero(ind >= self.n_samples)[0]
+            if len(u) > 0:
+                u = u[0]
+                if u == 0:
+                    continue
+                ind = ind[:u]
+                spike_clusters_idx = spike_clusters_idx[:u]
+                masks = masks[:, :u]
 
             a_clusters[:, ind] = spike_clusters_idx
             a_masks[:, ind] = masks
