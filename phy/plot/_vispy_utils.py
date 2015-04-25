@@ -181,7 +181,7 @@ class BaseSpikeVisual(_BakeVisual):
         """The list of spike ids to display, should correspond to the
         waveforms."""
         if self._spike_ids is None:
-            self._spike_ids = np.arange(self.n_spikes).astype(np.int64)
+            self._spike_ids = np.arange(self.n_spikes).astype(np.uint64)
         return self._spike_ids
 
     @spike_ids.setter

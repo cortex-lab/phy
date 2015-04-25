@@ -73,7 +73,7 @@ class TraceVisual(BaseSpikeVisual):
     @spike_samples.setter
     def spike_samples(self, value):
         assert isinstance(value, np.ndarray)
-        assert value.shape == (self.n_spikes,)
+        self._set_or_assert_n_spikes(value)
         self._spike_samples = value
         self.set_to_bake('spikes')
 
@@ -128,7 +128,7 @@ class TraceVisual(BaseSpikeVisual):
         debug("bake channel color", u_channel_color.shape)
 
     def _bake_spikes(self):
-        spike_clusters_idx = self.spike_clusters[self.spike_ids]
+        spike_clusters_idx = self.spike_clusters
         spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_ids)
         assert spike_clusters_idx.shape == (self.n_spikes,)
 
@@ -146,6 +146,10 @@ class TraceVisual(BaseSpikeVisual):
 
             ind = (samples + i).astype(np.uint64)
             assert ind.shape == (self.n_spikes,)
+
+            # ind = ind[(0 <= ind) & (ind < self.n_spikes)]
+            # if len(ind) == 0:
+            #     continue
 
             a_clusters[:, ind] = spike_clusters_idx
             a_masks[:, ind] = masks

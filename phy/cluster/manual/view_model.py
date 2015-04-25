@@ -12,6 +12,7 @@ from ...utils.logging import debug
 from ...plot.ccg import CorrelogramView
 from ...plot.features import FeatureView
 from ...plot.waveforms import WaveformView
+from ...plot.traces import TraceView
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 
 
@@ -134,7 +135,6 @@ class WaveformViewModel(BaseViewModel):
 
         # Spikes.
         self.view.visual.spike_ids = spikes
-        self.view.visual.spike_clusters = self.model.spike_clusters[spikes]
 
         waveforms *= self.scale_factor
         self.view.visual.waveforms = waveforms
@@ -240,3 +240,45 @@ class CorrelogramViewModel(BaseViewModel):
         # newly-created clusters.
         if self._spikes is not None:
             self.on_select(up.added, self._spikes)
+
+
+class TraceViewModel(BaseViewModel):
+    _view_class = TraceView
+    _view_name = 'traces'
+    scale_factor = 1.
+
+    def on_open(self):
+        super(TraceViewModel, self).on_open()
+
+    def on_select(self, cluster_ids, spikes):
+        super(TraceViewModel, self).on_select(cluster_ids, spikes)
+
+        # Load traces.
+        debug("Loading traces...")
+        i = 0
+        j = self.model.traces.shape[0]
+        traces = self.model.traces[i:j, :]
+        debug("Done!")
+
+        traces *= self.scale_factor
+        self.view.visual.traces = traces
+
+        # Load masks.
+        masks = self._load_from_store_or_model('masks',
+                                               cluster_ids,
+                                               spikes)
+        self.view.visual.masks = masks
+
+        # Spikes.
+        self.view.visual.spike_ids = spikes
+        self.view.visual.spike_samples = self.model.spike_samples[spikes]
+
+        # TODO
+        self.view.visual.n_samples_per_spike = 20
+        self.view.visual.sample_rate = 20000.
+        self.view.visual.offset = 0
+
+    def on_close(self):
+        self.view.visual.spike_clusters = []
+        self.view.visual.channel_positions = []
+        self.view.update()

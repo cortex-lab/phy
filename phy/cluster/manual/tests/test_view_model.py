@@ -17,6 +17,7 @@ from ..clustering import Clustering
 from ..view_model import (WaveformViewModel,
                           FeatureViewModel,
                           CorrelogramViewModel,
+                          TraceViewModel,
                           )
 
 
@@ -74,3 +75,7 @@ def test_ccg():
                      n_excerpts=100,
                      excerpt_size=100,
                      )
+
+
+# def test_traces():
+#     _test_view_model(TraceViewModel)

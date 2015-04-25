@@ -37,7 +37,6 @@ def _test_traces(n_samples=None):
     # c.visual.channel_colors = np.array([_random_color()
     #                                     for _ in range(n_channels)])
     c.visual.n_samples_per_spike = 20
-    c.visual.spike_ids = np.arange(n_spikes)
     c.visual.spike_samples = spike_samples
     c.visual.spike_clusters = spike_clusters
     c.visual.cluster_colors = np.array([_random_color()
