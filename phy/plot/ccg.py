@@ -133,9 +133,8 @@ class CorrelogramView(BaseSpikeCanvas):
 #------------------------------------------------------------------------------
 
 def plot_ccg(ccg, baseline=None, bin=1., color=None, ax=None):
-    # This can import Qt
-    import matplotlib.pyplot as plt
     """Plot a CCG with matplotlib and return an Axes instance."""
+    import matplotlib.pyplot as plt
     if ax is None:
         ax = plt.subplot(111)
     assert ccg.ndim == 1
