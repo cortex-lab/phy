@@ -455,7 +455,7 @@ def test_session_multiple_clusterings():
         assert session.cluster_metadata.group(2) == 3
 
         # The current selection is cleared when changing clustering.
-        ae(session.selector.selected_spikes, [])
+        ae(session._selected_clusters, [])
 
         # Merge the clusters and save, for the current clustering.
         session.clustering.merge(session.clustering.cluster_ids)

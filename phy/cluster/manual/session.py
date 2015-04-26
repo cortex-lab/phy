@@ -24,7 +24,6 @@ from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
 from .clustering import Clustering
 from ._utils import _spikes_per_cluster, _concatenate_per_cluster_arrays
-from .selector import Selector
 from .store import ClusterStore, StoreItem
 from .view_model import (WaveformViewModel,
                          FeatureViewModel,
@@ -427,6 +426,7 @@ class Session(BaseSession):
         super(Session, self).__init__()
         self.model = None
         self.phy_user_dir = phy_user_dir
+        self._selected_clusters = []
 
         # Instantiate the SettingsManager which manages
         # the settings files.
@@ -544,8 +544,8 @@ class Session(BaseSession):
 
     def select(self, clusters):
         """Select some clusters."""
-        self.selector.selected_clusters = clusters
-        self.emit('select', self.selector)
+        self._selected_clusters = clusters
+        self.emit('select', clusters)
 
     def merge(self, clusters):
         """Merge some clusters."""
@@ -675,9 +675,6 @@ class Session(BaseSession):
                 elif up.description in ('merge', 'assign'):
                     self._global_history.action(self.clustering)
 
-    def _create_selector(self):
-        self.selector = Selector(self.model.spike_clusters)
-
     def _create_wizard(self):
         self.wizard = Wizard(self.clustering.cluster_ids)
 
@@ -714,7 +711,6 @@ class Session(BaseSession):
 
         self._create_global_history()
         self._create_clustering()
-        self._create_selector()
         self._create_cluster_metadata()
         self._create_cluster_store()
         self._create_wizard()
@@ -796,25 +792,15 @@ class Session(BaseSession):
             view.update()
 
         @self.connect
-        def on_select(selector):
-            if len(selector.selected_clusters) == 0:
+        def on_select(cluster_ids):
+            if len(cluster_ids) == 0:
                 # Clear the view.
                 view.visual.empty = True
                 view.update()
                 return
             if view.visual.empty:
                 on_open()
-
-            n_spikes_max = self.get_user_settings('manual_clustering.' +
-                                                  view_name +
-                                                  '_n_spikes_max')
-            excerpt_size = self.get_user_settings('manual_clustering.' +
-                                                  view_name +
-                                                  '_excerpt_size')
-            spikes = selector.subset_spikes(n_spikes_max=n_spikes_max,
-                                            excerpt_size=excerpt_size)
-            view_model.on_select(selector.selected_clusters,
-                                 spikes)
+            view_model.on_select(cluster_ids)
             view.update()
 
         # Unregister the callbacks when the view is closed.
@@ -838,12 +824,13 @@ class Session(BaseSession):
         def on_draw(event):
             if view.visual.empty:
                 on_open()
-                on_select(self.selector)
+                on_select(self._selected_clusters)
 
         return view
 
     def _create_view_model(self, name, **kwargs):
         vm_class = _VIEW_MODELS[name]
+
         # Load the canvas position and size for that view.
         position = self._get_view_settings(name, 'canvas_position')
         size = self._get_view_settings(name, 'canvas_size')
@@ -851,7 +838,20 @@ class Session(BaseSession):
             kwargs['position'] = position
         if size:
             kwargs['size'] = size
-        return vm_class(self.model, store=self.cluster_store, **kwargs)
+
+        # Load the selector options for that view.
+        n_spikes_max = self.get_user_settings('manual_clustering.' +
+                                              name +
+                                              '_n_spikes_max')
+        excerpt_size = self.get_user_settings('manual_clustering.' +
+                                              name +
+                                              '_excerpt_size')
+
+        return vm_class(self.model,
+                        store=self.cluster_store,
+                        n_spikes_max=n_spikes_max,
+                        excerpt_size=excerpt_size,
+                        **kwargs)
 
     def _create_waveforms_view(self):
         """Create a WaveformView and return a ViewModel instance."""
