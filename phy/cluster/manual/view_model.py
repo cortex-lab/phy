@@ -9,11 +9,13 @@
 import numpy as np
 
 from ...utils.logging import debug
+from ...utils.array import _unique
 from ...plot.ccg import CorrelogramView
 from ...plot.features import FeatureView
 from ...plot.waveforms import WaveformView
 from ...plot.traces import TraceView
 from ...stats.ccg import correlograms, _symmetrize_correlograms
+from .selector import Selector
 
 
 #------------------------------------------------------------------------------
@@ -49,12 +51,18 @@ class BaseViewModel(object):
     _view_class = None
     _view_name = ''
 
-    def __init__(self, model, store=None, **kwargs):
+    def __init__(self, model, store=None,
+                 n_spikes_max=None, excerpt_size=None,
+                 **kwargs):
         self._model = model
         self._store = store
-        # Selected spikes.
-        self._spikes = None
-        self._cluster_ids = None
+
+        # Create the spike/cluster selector.
+        self._selector = Selector(model.spike_clusters,
+                                  n_spikes_max=n_spikes_max,
+                                  excerpt_size=excerpt_size,
+                                  )
+
         for key, value in kwargs.items():
             setattr(self, key, value)
         vispy_kwargs_names = ('position', 'size',)
@@ -78,8 +86,28 @@ class BaseViewModel(object):
         return self._store
 
     @property
+    def selector(self):
+        return self._selector
+
+    @property
     def view(self):
         return self._view
+
+    @property
+    def cluster_ids(self):
+        return self._selector.selected_clusters
+
+    @property
+    def spike_ids(self):
+        return self._selector.selected_spikes
+
+    @property
+    def n_clusters(self):
+        return self._selector.n_clusters
+
+    @property
+    def n_spikes(self):
+        return self._selector.n_spikes
 
     def _load_from_store_or_model(self, name, cluster_ids, spikes):
         if self._store is not None:
@@ -87,28 +115,34 @@ class BaseViewModel(object):
         else:
             return getattr(self._model, name)[spikes]
 
-    def _update_cluster_colors(self):
-        n = self.view.visual.n_clusters
-        self.view.visual.cluster_colors = _selected_clusters_colors(n)
-
-    def _update_spike_clusters(self, spikes):
-        assert spikes is not None
-        self._view.visual.spike_clusters = self.model.spike_clusters[spikes]
+    def _update_spike_clusters(self, spikes=None):
+        """Update the spike clusters and cluster colors."""
+        if spikes is None:
+            spikes = self.spike_ids
+            spike_clusters = self.model.spike_clusters[spikes]
+            n_clusters = self.n_clusters
+        else:
+            spike_clusters = self.model.spike_clusters[spikes]
+            n_clusters = len(_unique(spike_clusters))
+        visual = self._view.visual
+        visual.spike_clusters = spike_clusters
+        visual.cluster_colors = _selected_clusters_colors(n_clusters)
 
     def on_open(self):
-        """To be overriden."""
+        """May be overriden."""
 
     def on_cluster(self, up=None):
         """May be overriden."""
-        self._update_spike_clusters(self._spikes)
-        self._update_cluster_colors()
+        self._update_spike_clusters()
 
-    def on_select(self, cluster_ids, spikes):
-        """To be overriden."""
-        self._spikes = spikes
-        self._cluster_ids = cluster_ids
-        self._update_spike_clusters(spikes)
-        self._update_cluster_colors()
+    def on_select(self, cluster_ids):
+        """Must be overriden."""
+        self._selector.selected_clusters = cluster_ids
+        self._update_spike_clusters()
+
+    def on_close(self):
+        self._view.visual.spike_clusters = []
+        self._view.update()
 
     def show(self):
         self._view.show()
@@ -127,8 +161,9 @@ class WaveformViewModel(BaseViewModel):
         super(WaveformViewModel, self).on_open()
         self.view.visual.channel_positions = self.model.probe.positions
 
-    def on_select(self, cluster_ids, spikes):
-        super(WaveformViewModel, self).on_select(cluster_ids, spikes)
+    def on_select(self, cluster_ids):
+        super(WaveformViewModel, self).on_select(cluster_ids)
+        spikes = self.spike_ids
 
         # Load waveforms.
         debug("Loading {0:d} waveforms...".format(len(spikes)))
@@ -138,19 +173,17 @@ class WaveformViewModel(BaseViewModel):
         # Spikes.
         self.view.visual.spike_ids = spikes
 
+        # Waveforms.
         waveforms *= self.scale_factor
         self.view.visual.waveforms = waveforms
 
-        # Load masks.
-        masks = self._load_from_store_or_model('masks',
-                                               cluster_ids,
-                                               spikes)
+        # Masks.
+        masks = self._load_from_store_or_model('masks', cluster_ids, spikes)
         self.view.visual.masks = masks
 
     def on_close(self):
-        self.view.visual.spike_clusters = []
         self.view.visual.channel_positions = []
-        self.view.update()
+        super(WaveformViewModel, self).on_close()
 
 
 class FeatureViewModel(BaseViewModel):
@@ -158,8 +191,9 @@ class FeatureViewModel(BaseViewModel):
     _view_name = 'features'
     scale_factor = 1.
 
-    def on_select(self, cluster_ids, spikes):
-        super(FeatureViewModel, self).on_select(cluster_ids, spikes)
+    def on_select(self, cluster_ids):
+        super(FeatureViewModel, self).on_select(cluster_ids)
+        spikes = self.spike_ids
 
         # Spikes.
         self.view.visual.spike_ids = spikes
@@ -206,20 +240,19 @@ class CorrelogramViewModel(BaseViewModel):
     binsize = None
     winsize_bins = None
 
-    def on_select(self, cluster_ids, spikes):
-        super(CorrelogramViewModel, self).on_select(cluster_ids, spikes)
+    def on_select(self, cluster_ids):
+        super(CorrelogramViewModel, self).on_select(cluster_ids)
+        spikes = self.spike_ids
+
         self.view.cluster_ids = cluster_ids
-        spike_clusters = self.model.spike_clusters[spikes]
-        spike_samples = self.model.spike_samples[spikes]
 
         # Compute the correlograms.
-        ccgs = correlograms(spike_samples,
-                            spike_clusters,
+        ccgs = correlograms(self.model.spike_samples[spikes],
+                            self.view.visual.spike_clusters,
                             binsize=self.binsize,
                             winsize_bins=self.winsize_bins,
                             )
         ccgs = _symmetrize_correlograms(ccgs)
-
         # Normalize the CCGs.
         ccgs = ccgs * (1. / float(ccgs.max()))
         self.view.visual.correlograms = ccgs
@@ -237,8 +270,8 @@ class CorrelogramViewModel(BaseViewModel):
 
         # Recompute the CCGs with the already-selected spikes, and the
         # newly-created clusters.
-        if self._spikes is not None:
-            self.on_select(up.added, self._spikes)
+        if self.spike_ids is not None:
+            self.on_select(up.added)
 
 
 class TraceViewModel(BaseViewModel):
@@ -251,32 +284,36 @@ class TraceViewModel(BaseViewModel):
 
     def _load_traces(self, interval):
         start, end = interval
-        cluster_ids = self._cluster_ids
+        cluster_ids = self.cluster_ids
+        spikes = self.spike_ids
 
+        # Load the traces.
         debug("Loading traces...")
         traces = self.model.traces[start:end, :]
         debug("Done!")
 
+        # Normalize and set the traces.
         traces *= self.scale_factor
         self.view.visual.traces = traces
 
         # Keep the spikes in the interval.
-        spike_samples = self.model.spike_samples[self._spikes]
+        spike_samples = self.model.spike_samples[spikes]
         a, b = spike_samples.searchsorted(interval)
-        spikes = self._spikes[a:b]
-        self._spikes = spikes
+        spikes = spikes[a:b]
         self.view.visual.n_spikes = len(spikes)
         self.view.visual.spike_ids = spikes
+        # We update the spike clusters and cluster colors according to the
+        # subselection of spikes.
         self._update_spike_clusters(spikes)
 
         # Set the spike samples.
         spike_samples = self.model.spike_samples[spikes]
-        spike_samples -= start
         # This is in unit of samples relative to the start of the interval.
+        spike_samples = spike_samples - start
         self.view.visual.spike_samples = spike_samples
         self.view.visual.offset = start
 
-        # Load masks.
+        # Load the masks.
         masks = self._load_from_store_or_model('masks', cluster_ids, spikes)
         self.view.visual.masks = masks
 
@@ -321,11 +358,9 @@ class TraceViewModel(BaseViewModel):
         self.view.visual.n_samples_per_spike = self.n_samples_per_spike
         self.view.visual.sample_rate = self.model.sample_rate
 
-    def on_select(self, cluster_ids, spikes):
-        self._spikes = spikes
-        self._cluster_ids = cluster_ids
-
-        self._update_spike_clusters(spikes)
+    def on_select(self, cluster_ids):
+        super(TraceViewModel, self).on_select(cluster_ids)
+        spikes = self.spike_ids
 
         # Select the default interval.
         half_size = .1 * int(self.model.sample_rate // 2)
@@ -337,14 +372,6 @@ class TraceViewModel(BaseViewModel):
         # Load traces by setting the interval.
         self.interval = sample - half_size, sample + half_size
 
-        n = self.view.visual.n_clusters
-        self.view.visual.cluster_colors = _selected_clusters_colors(n)
-
     def on_cluster(self, up=None):
         """May be overriden."""
-        self._update_spike_clusters(self._spikes)
-        self._update_cluster_colors()
-
-    def on_close(self):
-        self.view.visual.spike_clusters = []
-        self.view.update()
+        self._update_spike_clusters(self.view.visual.spike_ids)

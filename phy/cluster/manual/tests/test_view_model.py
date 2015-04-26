@@ -8,6 +8,7 @@
 
 import numpy as np
 
+from ....utils.logging import set_level, debug
 from ....utils.testing import (show_test_start,
                                show_test_stop,
                                show_test_run,
@@ -28,6 +29,10 @@ from ..view_model import (WaveformViewModel,
 _N_FRAMES = 2
 
 
+def setup():
+    set_level('debug')
+
+
 def _test_view_model(view_model_class, stop=True, **kwargs):
 
     model = MockModel()
@@ -38,18 +43,20 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
 
     vm = view_model_class(model, **kwargs)
     vm.on_open()
-    vm.on_select(clusters, spikes)
+    vm.on_select(clusters)
 
     # Show the view.
     show_test_start(vm.view)
     show_test_run(vm.view, _N_FRAMES)
 
     # Merge the clusters and update the view.
+    debug("Merging.")
     up = clustering.merge(clusters)
     vm.on_cluster(up)
     show_test_run(vm.view, _N_FRAMES)
 
     # Split some spikes and update the view.
+    debug("Splitting.")
     spikes = spikes[::2]
     up = clustering.assign(spikes, np.random.randint(low=0, high=5,
                                                      size=len(spikes)))
