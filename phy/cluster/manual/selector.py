@@ -18,9 +18,13 @@ from ._utils import _unique, _spikes_in_clusters
 
 class Selector(object):
     """Object representing a selection of spikes or clusters."""
-    def __init__(self, spike_clusters, n_spikes_max=None):
+    def __init__(self, spike_clusters,
+                 n_spikes_max=None,
+                 excerpt_size=None,
+                 ):
         self._spike_clusters = spike_clusters
         self._n_spikes_max = n_spikes_max
+        self._excerpt_size = excerpt_size
         self._selected_spikes = np.array([], dtype=np.int64)
 
     @property
@@ -36,6 +40,18 @@ class Selector(object):
         self.selected_spikes = self.subset_spikes()
         if self._n_spikes_max is not None:
             assert len(self._selected_spikes) <= self._n_spikes_max
+
+    @property
+    def excerpt_size(self):
+        """Maximum number of spikes allowed in the selection."""
+        return self._excerpt_size
+
+    @excerpt_size.setter
+    def excerpt_size(self, value):
+        """Change the excerpt size."""
+        self._excerpt_size = value
+        # Update the selected spikes accordingly.
+        self.selected_spikes = self.subset_spikes()
 
     def subset_spikes(self,
                       spikes=None,
@@ -62,6 +78,9 @@ class Selector(object):
             spikes = self._selected_spikes
         if n_spikes_max is None:
             n_spikes_max = self._n_spikes_max
+        if excerpt_size is None:
+            excerpt_size = self._excerpt_size
+
         if excerpt_size is None:
             return regular_subset(spikes, n_spikes_max)
         else:
@@ -109,6 +128,14 @@ class Selector(object):
         spikes = _spikes_in_clusters(self._spike_clusters, value)
         # Make sure there are less spikes than n_spikes_max.
         self.selected_spikes = self.subset_spikes(spikes)
+
+    @property
+    def n_spikes(self):
+        return len(self._selected_spikes)
+
+    @property
+    def n_clusters(self):
+        return len(self.selected_clusters)
 
     def on_cluster(self, up=None):
         """Callback method called when the clustering has changed.
