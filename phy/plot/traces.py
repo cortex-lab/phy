@@ -169,6 +169,9 @@ class TraceVisual(BaseSpikeVisual):
         self.program['a_spike'] = a_spike
         self.program['n_clusters'] = self.n_clusters
 
+    def _bake_spikes_clusters(self):
+        self._bake_spikes()
+
 
 class TraceView(BaseSpikeCanvas):
     _visual_class = TraceVisual

@@ -61,6 +61,7 @@ class MockModel(BaseModel):
     n_samples_traces = 20000
     n_samples_waveforms = 40
     n_clusters = 10
+    sample_rate = 20000.
 
     def __init__(self, n_spikes=None, n_clusters=None):
         super(MockModel, self).__init__()

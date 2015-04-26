@@ -224,9 +224,6 @@ class CorrelogramViewModel(BaseViewModel):
         ccgs = ccgs * (1. / float(ccgs.max()))
         self.view.visual.correlograms = ccgs
 
-        # Cluster colors.
-        self._update_cluster_colors()
-
     def on_cluster(self, up=None):
         super(CorrelogramViewModel, self).on_cluster(up)
         if up is None or up.description not in ('merge', 'assign'):
@@ -247,8 +244,10 @@ class CorrelogramViewModel(BaseViewModel):
 class TraceViewModel(BaseViewModel):
     _view_class = TraceView
     _view_name = 'traces'
-    scale_factor = 1.
     _interval = None
+
+    scale_factor = 1.
+    n_samples_per_spike = 20
 
     def _load_traces(self, interval):
         start, end = interval
@@ -265,48 +264,62 @@ class TraceViewModel(BaseViewModel):
         spike_samples = self.model.spike_samples[self._spikes]
         a, b = spike_samples.searchsorted(interval)
         spikes = self._spikes[a:b]
-        spike_samples = self.model.spike_samples[spikes]
-        self._update_spike_clusters(spikes)
-        spike_samples -= start
+        self._spikes = spikes
         self.view.visual.n_spikes = len(spikes)
         self.view.visual.spike_ids = spikes
+        self._update_spike_clusters(spikes)
+
+        # Set the spike samples.
+        spike_samples = self.model.spike_samples[spikes]
+        spike_samples -= start
+        # This is in unit of samples relative to the start of the interval.
         self.view.visual.spike_samples = spike_samples
+        self.view.visual.offset = start
 
         # Load masks.
         masks = self._load_from_store_or_model('masks', cluster_ids, spikes)
         self.view.visual.masks = masks
 
-        # TODO
-        self.view.visual.offset = 0
-
     @property
     def interval(self):
+        """The interval of the view, in unit of sample."""
         return self._interval
 
     @interval.setter
     def interval(self, value):
         if not isinstance(value, tuple) or len(value) != 2:
             raise ValueError("The interval should be a (start, end) tuple.")
-        self._interval = value
-        self._load_traces(value)
-        self.view.update()
+        # Restrict the interval to the boundaries of the traces.
+        start, end = value
+        n = self.model.traces.shape[0]
+        if start < 0:
+            end += (-start)
+            start = 0
+        elif end >= n:
+            start -= (end - n)
+            end = n
+        self._interval = (start, end)
+        self._load_traces((start, end))
 
     def move(self, amount):
+        """Move the current interval by a given amount (in samples)."""
         start, end = self.interval
         self.interval = start + amount, end + amount
 
     def move_right(self):
+        """Move the current interval to the right."""
         start, end = self.interval
         self.move((end - start) // 2)
 
     def move_left(self):
+        """Move the current interval to the left."""
         start, end = self.interval
         self.move(-(end - start) // 2)
 
     def on_open(self):
         super(TraceViewModel, self).on_open()
-        self.view.visual.n_samples_per_spike = 20
-        self.view.visual.sample_rate = 20000.
+        self.view.visual.n_samples_per_spike = self.n_samples_per_spike
+        self.view.visual.sample_rate = self.model.sample_rate
 
     def on_select(self, cluster_ids, spikes):
         self._spikes = spikes
@@ -314,14 +327,23 @@ class TraceViewModel(BaseViewModel):
 
         self._update_spike_clusters(spikes)
 
-        # Load traces.
-        # TODO: select the default interval
-        # TODO: x-scale according to the interval, not to the number of shown
-        # samples
-        self.interval = (2000, 5000)
+        # Select the default interval.
+        half_size = .1 * int(self.model.sample_rate // 2)
+        if len(spikes) > 0:
+            # Center the default interval around the first spike.
+            sample = self._model.spike_samples[spikes[0]]
+        else:
+            sample = half_size
+        # Load traces by setting the interval.
+        self.interval = sample - half_size, sample + half_size
 
         n = self.view.visual.n_clusters
         self.view.visual.cluster_colors = _selected_clusters_colors(n)
+
+    def on_cluster(self, up=None):
+        """May be overriden."""
+        self._update_spike_clusters(self._spikes)
+        self._update_cluster_colors()
 
     def on_close(self):
         self.view.visual.spike_clusters = []
