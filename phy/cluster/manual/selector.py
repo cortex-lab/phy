@@ -76,8 +76,10 @@ class Selector(object):
         """
         if spikes is None:
             spikes = self._selected_spikes
+        if spikes is None or len(spikes) == 0:
+            return spikes
         if n_spikes_max is None:
-            n_spikes_max = self._n_spikes_max
+            n_spikes_max = self._n_spikes_max or len(spikes)
         if excerpt_size is None:
             excerpt_size = self._excerpt_size
 
