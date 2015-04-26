@@ -254,7 +254,6 @@ class TraceViewModel(BaseViewModel):
         start, end = interval
         cluster_ids = self._cluster_ids
 
-        # TODO: paging
         debug("Loading traces...")
         traces = self.model.traces[start:end, :]
         debug("Done!")
@@ -268,18 +267,17 @@ class TraceViewModel(BaseViewModel):
         spikes = self._spikes[a:b]
         spike_samples = self.model.spike_samples[spikes]
         self._update_spike_clusters(spikes)
-        if len(spikes) > 0:
-            spike_samples -= start
-
-        # Load masks.
-        masks = self._load_from_store_or_model('masks',
-                                               cluster_ids,
-                                               spikes)
-        self.view.visual.masks = masks
-
-        # Spikes.
+        spike_samples -= start
+        self.view.visual.n_spikes = len(spikes)
         self.view.visual.spike_ids = spikes
         self.view.visual.spike_samples = spike_samples
+
+        # Load masks.
+        masks = self._load_from_store_or_model('masks', cluster_ids, spikes)
+        self.view.visual.masks = masks
+
+        # TODO
+        self.view.visual.offset = 0
 
     @property
     def interval(self):
@@ -293,10 +291,17 @@ class TraceViewModel(BaseViewModel):
         self._load_traces(value)
         self.view.update()
 
+    def move(self, amount):
+        start, end = self.interval
+        self.interval = start + amount, end + amount
+
     def move_right(self):
         start, end = self.interval
-        n = end - start
-        self.interval = start + (n // 2), end + (n // 2)
+        self.move((end - start) // 2)
+
+    def move_left(self):
+        start, end = self.interval
+        self.move(-(end - start) // 2)
 
     def on_open(self):
         super(TraceViewModel, self).on_open()
@@ -313,13 +318,10 @@ class TraceViewModel(BaseViewModel):
         # TODO: select the default interval
         # TODO: x-scale according to the interval, not to the number of shown
         # samples
-        self._load_traces((2000, 5000))
+        self.interval = (2000, 5000)
 
         n = self.view.visual.n_clusters
         self.view.visual.cluster_colors = _selected_clusters_colors(n)
-
-        # TODO
-        self.view.visual.offset = 0
 
     def on_close(self):
         self.view.visual.spike_clusters = []

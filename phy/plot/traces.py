@@ -110,7 +110,7 @@ class TraceVisual(BaseSpikeVisual):
         a_index = np.c_[np.repeat(np.arange(nc), ns),
                         np.tile(np.arange(ns), nc)].astype(np.float32)
 
-        self.program['a_position'] = self._traces.ravel().astype(np.float32)
+        self.program['a_position'] = self._traces.T.ravel().astype(np.float32)
         self.program['a_index'] = a_index
         self.program['n_channels'] = nc
         self.program['n_samples'] = ns

@@ -144,6 +144,7 @@ class BaseSpikeVisual(_BakeVisual):
     def _set_or_assert_n_spikes(self, arr):
         """If n_spikes is None, set it using the array's shape. Otherwise,
         check that the array has n_spikes rows."""
+        # TODO: improve this
         if self.n_spikes is None:
             self.n_spikes = arr.shape[0]
         assert arr.shape[0] == self.n_spikes

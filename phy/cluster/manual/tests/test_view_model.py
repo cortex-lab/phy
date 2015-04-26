@@ -25,7 +25,7 @@ from ..view_model import (WaveformViewModel,
 # View model tests
 #------------------------------------------------------------------------------
 
-def _test_view_model(view_model_class, **kwargs):
+def _test_view_model(view_model_class, stop=True, **kwargs):
     n_frames = 2
 
     model = MockModel()
@@ -44,18 +44,20 @@ def _test_view_model(view_model_class, **kwargs):
 
     # Merge the clusters and update the view.
     up = clustering.merge(clusters)
+    model.spike_clusters[:] = clustering.spike_clusters
     vm.on_cluster(up)
     show_test_run(vm.view, n_frames)
 
     # Split some spikes and update the view.
     spikes = spikes[::2]
-    up = clustering.assign(spikes, np.random.randint(low=0,
-                                                     high=5,
+    up = clustering.assign(spikes, np.random.randint(low=0, high=5,
                                                      size=len(spikes)))
+    model.spike_clusters[:] = clustering.spike_clusters
     vm.on_cluster(up)
     show_test_run(vm.view, n_frames)
 
-    show_test_stop(vm.view)
+    if stop:
+        show_test_stop(vm.view)
 
     return vm
 
@@ -78,4 +80,12 @@ def test_ccg():
 
 
 def test_traces():
-    _test_view_model(TraceViewModel)
+    n_frames = 2
+
+    vm = _test_view_model(TraceViewModel, stop=False)
+    vm.move_right()
+    show_test_run(vm.view, n_frames)
+    vm.move_left()
+    show_test_run(vm.view, n_frames)
+
+    show_test_stop(vm.view)
