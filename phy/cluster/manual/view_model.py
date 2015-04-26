@@ -293,17 +293,30 @@ class TraceViewModel(BaseViewModel):
         self._load_traces(value)
         self.view.update()
 
+    def move_right(self):
+        start, end = self.interval
+        n = end - start
+        self.interval = start + (n // 2), end + (n // 2)
+
     def on_open(self):
         super(TraceViewModel, self).on_open()
         self.view.visual.n_samples_per_spike = 20
         self.view.visual.sample_rate = 20000.
 
     def on_select(self, cluster_ids, spikes):
-        super(TraceViewModel, self).on_select(cluster_ids, spikes)
+        self._spikes = spikes
+        self._cluster_ids = cluster_ids
+
+        self._update_spike_clusters(spikes)
 
         # Load traces.
         # TODO: select the default interval
+        # TODO: x-scale according to the interval, not to the number of shown
+        # samples
         self._load_traces((2000, 5000))
+
+        n = self.view.visual.n_clusters
+        self.view.visual.cluster_colors = _selected_clusters_colors(n)
 
         # TODO
         self.view.visual.offset = 0
