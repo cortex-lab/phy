@@ -72,6 +72,10 @@ class BaseViewModel(object):
         self._view = _create_view(self._view_class,
                                   backend=backend,
                                   **vispy_kwargs)
+        # Bind VisPy event methods.
+        for method in ('on_key_press', 'on_mouse_move'):
+            if hasattr(self, method):
+                self._view.connect(getattr(self, method))
 
     @property
     def model(self):
@@ -346,12 +350,22 @@ class TraceViewModel(BaseViewModel):
     def move_right(self):
         """Move the current interval to the right."""
         start, end = self.interval
-        self.move((end - start) // 2)
+        self.move(+(end - start) // 20)
 
     def move_left(self):
         """Move the current interval to the left."""
         start, end = self.interval
-        self.move(-(end - start) // 2)
+        self.move(-(end - start) // 20)
+
+    def on_key_press(self, event):
+        key = event.key
+        if 'Control' in event.modifiers:
+            if key == 'Left':
+                self.move_left()
+                self.view.update()
+            elif key == 'Right':
+                self.move_right()
+                self.view.update()
 
     def on_open(self):
         super(TraceViewModel, self).on_open()
