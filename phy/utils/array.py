@@ -304,6 +304,7 @@ def chunk_bounds(n_samples, chunk_size, overlap=0):
 def _excerpt_step(n_samples, n_excerpts=None, excerpt_size=None):
     """Compute the step of an excerpt set as a function of the number
     of excerpts or their sizes."""
+    assert n_excerpts >= 2
     step = max((n_samples - excerpt_size) // (n_excerpts - 1),
                excerpt_size)
     return step
@@ -311,6 +312,7 @@ def _excerpt_step(n_samples, n_excerpts=None, excerpt_size=None):
 
 def excerpts(n_samples, n_excerpts=None, excerpt_size=None):
     """Yield (start, end) where start is included and end is excluded."""
+    assert n_excerpts >= 2
     step = _excerpt_step(n_samples,
                          n_excerpts=n_excerpts,
                          excerpt_size=excerpt_size)
@@ -342,6 +344,8 @@ def get_excerpts(data, n_excerpts=None, excerpt_size=None):
     assert n_excerpts is not None
     assert excerpt_size is not None
     if n_excerpts * excerpt_size > len(data):
+        return data
+    if n_excerpts == 1:
         return data
     return np.concatenate([data_chunk(data, chunk)
                            for chunk in excerpts(len(data),

@@ -122,7 +122,7 @@ class Selector(object):
         if len(spikes) <= n_spikes_max:
             return spikes
         # Group the spikes per cluster.
-        spc = _spikes_per_cluster(spikes, clusters)
+        spc = _spikes_per_cluster(spikes, self._spike_clusters[spikes])
         n_clusters = len(clusters)
         n_spikes_max_c = n_spikes_max // n_clusters
         # Take a regular or chunked subset of the spikes.
