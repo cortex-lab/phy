@@ -31,6 +31,7 @@ from .store import ClusterStore, StoreItem
 from .view_model import (WaveformViewModel,
                          FeatureViewModel,
                          CorrelogramViewModel,
+                         TraceViewModel,
                          )
 from .wizard import Wizard, _best_clusters
 
@@ -407,6 +408,7 @@ _VIEW_MODELS = {
     'waveforms': WaveformViewModel,
     'features': FeatureViewModel,
     'correlograms': CorrelogramViewModel,
+    'traces': TraceViewModel,
 }
 
 
@@ -935,6 +937,13 @@ class Session(BaseSession):
         self._create_view(vm)
         return vm
 
+    def _create_traces_view(self):
+        """Create a TraceView and return a ViewModel instance."""
+        vm = self._create_view_model('traces')
+        vm.scale_factor = .001
+        self._create_view(vm)
+        return vm
+
     def create_view(self, name):
         """Create a view without displaying it.
 
@@ -956,6 +965,8 @@ class Session(BaseSession):
             return self._create_features_view()
         elif name == 'correlograms':
             return self._create_correlograms_view()
+        elif name == 'traces':
+            return self._create_traces_view()
         else:
             raise ValueError("The view '{0}' doesn't exist.".format(name))
 
@@ -995,5 +1006,18 @@ class Session(BaseSession):
 
         """
         vm = self.create_view('correlograms')
+        vm.view.show()
+        return vm.view
+
+    def show_traces(self):
+        """Create and display a new Trace view.
+
+        Returns
+        -------
+
+        view : VisPy canvas instance
+
+        """
+        vm = self.create_view('traces')
         vm.view.show()
         return vm.view

@@ -317,7 +317,7 @@ class TraceViewModel(BaseViewModel):
         debug("Done!")
 
         # Normalize and set the traces.
-        traces *= self.scale_factor
+        traces = traces * self.scale_factor
         self.view.visual.traces = traces
 
         # Keep the spikes in the interval.
@@ -352,6 +352,7 @@ class TraceViewModel(BaseViewModel):
             raise ValueError("The interval should be a (start, end) tuple.")
         # Restrict the interval to the boundaries of the traces.
         start, end = value
+        start, end = int(start), int(end)
         n = self.model.traces.shape[0]
         if start < 0:
             end += (-start)
@@ -397,7 +398,7 @@ class TraceViewModel(BaseViewModel):
         spikes = self.spike_ids
 
         # Select the default interval.
-        half_size = .1 * int(self.model.sample_rate // 2)
+        half_size = int(.1 * self.model.sample_rate // 2)
         if len(spikes) > 0:
             # Center the default interval around the first spike.
             sample = self._model.spike_samples[spikes[0]]
