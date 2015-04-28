@@ -179,7 +179,7 @@ def _start_stop(item):
 
     """
     if isinstance(item, tuple):
-        raise NotImplementedError()
+        item = item[0]
     if isinstance(item, slice):
         # Slice.
         if item.step not in (None, 1):
@@ -250,7 +250,12 @@ class ConcatenatedArrays(object):
             l += [self.arrs[r][...] for r in range(rec_start + 1,
                                                    rec_stop)]
         l += [chunk_stop]
-        return np.concatenate(l, axis=0)
+        out = np.concatenate(l, axis=0)
+        # Apply the rest of the index.
+        if isinstance(item, tuple):
+            item = (slice(None, None, None),) + item[1:]
+            out = out[item]
+        return out
 
 
 def _concatenate_virtual_arrays(arrs):
