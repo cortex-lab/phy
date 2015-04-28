@@ -14,7 +14,7 @@ uniform float n_clusters;
 uniform float n_samples;
 uniform float u_scale;
 
-varying vec2 v_index;
+varying vec3 v_index;  // (channel, cluster, mask)
 varying vec3 v_color_channel;
 varying vec3 v_color_spike;
 
@@ -51,7 +51,9 @@ void main() {
                                 u_channel_color,
                                 n_channels);
 
-    // The fragment shader needs to know the channel (to discard fragments
-    // between channels) and the cluster (for the color).
-    v_index = vec2(channel, a_spike.x);
+    // The fragment shader needs to know:
+    // * the channel (to discard fragments between channels)
+    // * the cluster (for the color)
+    // * the mask (for the alpha channel)
+    v_index = vec3(channel, a_spike.x, a_spike.y);
 }

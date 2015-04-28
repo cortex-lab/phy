@@ -1,5 +1,5 @@
 
-varying vec2 v_index;
+varying vec3 v_index;  // (channel, cluster, mask)
 varying vec3 v_color_channel;
 varying vec3 v_color_spike;
 
@@ -11,10 +11,10 @@ void main() {
         discard;
 
     // Avoid color interpolation at spike boundaries.
-    if ((v_index.y >= 0) && (fract(v_index.y) == 0.))
+    if ((v_index.y >= 0) && (fract(v_index.y) == 0.) && (v_index.z > 0.))
         color = v_color_spike;
     else
         color = v_color_channel;
 
-    gl_FragColor = vec4(color, 1.);
+    gl_FragColor = vec4(color, .85);
 }

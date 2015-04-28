@@ -303,8 +303,9 @@ class TraceViewModel(BaseViewModel):
     _view_name = 'traces'
     _interval = None
 
-    scale_factor = .001
+    scale_factor = 1.
     n_samples_per_spike = 20
+    interval_size = .5  # default interval size in milliseconds
 
     def _load_traces(self, interval):
         start, end = interval
@@ -398,7 +399,7 @@ class TraceViewModel(BaseViewModel):
         spikes = self.spike_ids
 
         # Select the default interval.
-        half_size = int(.1 * self.model.sample_rate // 2)
+        half_size = int(self.interval_size * self.model.sample_rate / 2.)
         if len(spikes) > 0:
             # Center the default interval around the first spike.
             sample = self._model.spike_samples[spikes[0]]
