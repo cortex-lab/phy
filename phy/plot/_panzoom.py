@@ -134,6 +134,36 @@ class PanZoom(object):
         """Aspect (width/height)."""
         self._aspect = value
 
+    def _constrain_pan(self):
+        """Constrain bounding box."""
+        if self._xmin is not None and self._xmax is not None:
+            p0 = self._xmin + 1. / self._u_zoom[0]
+            p1 = self._xmax - 1. / self._u_zoom[0]
+            p0, p1 = min(p0, p1), max(p0, p1)
+            self._pan[0] = np.clip(self._pan[0], p0, p1)
+
+        if self._ymin is not None and self._ymax is not None:
+            p0 = self._ymin + 1. / self._u_zoom[1]
+            p1 = self._ymax - 1. / self._u_zoom[1]
+            p0, p1 = min(p0, p1), max(p0, p1)
+            self._pan[1] = np.clip(self._pan[1], p0, p1)
+
+    def _constrain_zoom(self):
+        """Constrain bounding box."""
+        if self._xmin is not None:
+            self._u_zoom[0] = max(self._u_zoom[0],
+                                  1. / (self._pan[0] - self._xmin))
+        if self._xmax is not None:
+            self._u_zoom[0] = max(self._u_zoom[0],
+                                  1. / (self._xmax - self._pan[0]))
+
+        if self._ymin is not None:
+            self._u_zoom[1] = max(self._u_zoom[1],
+                                  1. / (self._pan[1] - self._ymin))
+        if self._ymax is not None:
+            self._u_zoom[1] = max(self._u_zoom[1],
+                                  1. / (self._ymax - self._pan[1]))
+
     @property
     def pan(self):
         """Pan translation."""
@@ -144,18 +174,7 @@ class PanZoom(object):
         """Pan translation."""
         self._pan = np.asarray(value)
 
-        # Constrain bounding box.
-        s = 1. / self._zoom
-        if self._xmin is not None:
-            self._pan[0] = max(self._pan[0], self._xmin + s)
-        if self._xmax is not None:
-            self._pan[0] = min(self._pan[0], self._xmax - s)
-
-        if self._ymin is not None:
-            self._pan[1] = max(self._pan[1], self._ymin + s)
-        if self._ymax is not None:
-            self._pan[1] = min(self._pan[1], self._ymax - s)
-
+        self._constrain_pan()
         self._u_pan = self._pan
         for program in self._programs:
             program["u_pan"] = self._u_pan
@@ -168,7 +187,6 @@ class PanZoom(object):
     @zoom.setter
     def zoom(self, value):
         """Zoom level."""
-
         self._zoom = max(min(value, self._zmax), self._zmin)
         if not self.is_attached:
             return
@@ -178,6 +196,13 @@ class PanZoom(object):
             aspect = self._canvas_aspect * self._aspect
 
         self._u_zoom = self._zoom * aspect
+
+        # Constrain bounding box.
+        self._constrain_pan()
+        self._constrain_zoom()
+
+        for program in self._programs:
+            program["u_pan"] = self._u_pan
         for program in self._programs:
             program["u_zoom"] = self._u_zoom
 
