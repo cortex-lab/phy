@@ -135,9 +135,6 @@ class BaseSpikeVisual(_BakeVisual):
         self._spike_ids = None
         self._cluster_ids = None
 
-        gloo.set_state(clear_color='black', blend=True,
-                       blend_func=('src_alpha', 'one_minus_src_alpha'))
-
     # Data properties
     # -------------------------------------------------------------------------
 
