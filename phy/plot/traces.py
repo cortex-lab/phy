@@ -190,6 +190,10 @@ class TraceView(BaseSpikeCanvas):
         super(TraceView, self).__init__(*args, **kwargs)
         self._pz.aspect = None
         self._pz.zmin = .5
+        self._pz.xmin = -1.
+        self._pz.xmax = +1.
+        self._pz.ymin = -2.
+        self._pz.ymax = +2.
 
     @property
     def channel_scale(self):

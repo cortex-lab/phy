@@ -52,7 +52,10 @@ class PanZoom(object):
     """
 
     def __init__(self, aspect=1.0, pan=(0.0, 0.0), zoom=1.0,
-                 zmin=1e-5, zmax=1e5):
+                 zmin=1e-5, zmax=1e5,
+                 xmin=None, xmax=None,
+                 ymin=None, ymax=None,
+                 ):
         """
         Initialize the transform.
 
@@ -81,6 +84,10 @@ class PanZoom(object):
         self._zoom = zoom
         self._zmin = zmin
         self._zmax = zmax
+        self._xmin = xmin
+        self._xmax = xmax
+        self._ymin = ymin
+        self._ymax = ymax
 
         self._zoom_to_pointer = True
         self._n_rows = 1
@@ -136,6 +143,19 @@ class PanZoom(object):
     def pan(self, value):
         """Pan translation."""
         self._pan = np.asarray(value)
+
+        # Constrain bounding box.
+        s = 1. / self._zoom
+        if self._xmin is not None:
+            self._pan[0] = max(self._pan[0], self._xmin + s)
+        if self._xmax is not None:
+            self._pan[0] = min(self._pan[0], self._xmax - s)
+
+        if self._ymin is not None:
+            self._pan[1] = max(self._pan[1], self._ymin + s)
+        if self._ymax is not None:
+            self._pan[1] = min(self._pan[1], self._ymax - s)
+
         self._u_pan = self._pan
         for program in self._programs:
             program["u_pan"] = self._u_pan
@@ -161,6 +181,59 @@ class PanZoom(object):
         for program in self._programs:
             program["u_zoom"] = self._u_zoom
 
+    # xmin/xmax
+    # -------------------------------------------------------------------------
+
+    @property
+    def xmin(self):
+        return self._xmin
+
+    @xmin.setter
+    def xmin(self, value):
+        if self._xmax is not None:
+            self._xmin = min(value, self._xmax)
+        else:
+            self._xmin = value
+
+    @property
+    def xmax(self):
+        return self._xmax
+
+    @xmax.setter
+    def xmax(self, value):
+        if self._xmin is not None:
+            self._xmax = max(value, self._xmin)
+        else:
+            self._xmax = value
+
+    # ymin/ymax
+    # -------------------------------------------------------------------------
+
+    @property
+    def ymin(self):
+        return self._ymin
+
+    @ymin.setter
+    def ymin(self, value):
+        if self._ymax is not None:
+            self._ymin = min(value, self._ymax)
+        else:
+            self._ymin = value
+
+    @property
+    def ymax(self):
+        return self._ymax
+
+    @ymax.setter
+    def ymax(self, value):
+        if self._ymin is not None:
+            self._ymax = max(value, self._ymin)
+        else:
+            self._ymax = value
+
+    # zmin/zmax
+    # -------------------------------------------------------------------------
+
     @property
     def zmin(self):
         """Minimum zoom level."""
@@ -180,6 +253,9 @@ class PanZoom(object):
     def zmax(self, value):
         """Maximal zoom level."""
         self._zmax = max(value, self._zmin)
+
+    # Event callbacks
+    # -------------------------------------------------------------------------
 
     def on_resize(self, event):
         """Resize event."""
