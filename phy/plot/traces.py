@@ -118,8 +118,9 @@ class TraceVisual(BaseSpikeVisual):
     def _bake_traces(self):
         ns, nc = self.n_samples, self.n_channels
 
-        a_index = np.c_[np.repeat(np.arange(nc), ns),
-                        np.tile(np.arange(ns), nc)].astype(np.float32)
+        a_index = np.empty((nc * ns, 2), dtype=np.float32)
+        a_index[:, 0] = np.repeat(np.arange(nc), ns)
+        a_index[:, 1] = np.tile(np.arange(ns), nc)
 
         self.program['a_position'] = self._traces.T.ravel().astype(np.float32)
         self.program['a_index'] = a_index
@@ -149,8 +150,11 @@ class TraceVisual(BaseSpikeVisual):
         assert samples.shape == (self.n_spikes,)
 
         # -1 = there's no spike at this vertex
-        a_clusters = -np.ones((self.n_channels, self.n_samples))
-        a_masks = np.zeros((self.n_channels, self.n_samples))
+        a_clusters = np.empty((self.n_channels, self.n_samples),
+                              dtype=np.float32)
+        a_clusters.fill(-1.)
+        a_masks = np.zeros((self.n_channels, self.n_samples),
+                           dtype=np.float32)
         masks = self._masks.T
 
         # Set the spike clusters and masks of all spikes, for every waveform
@@ -175,7 +179,8 @@ class TraceVisual(BaseSpikeVisual):
             a_masks[:, ind] = masks
 
         a_spike = np.c_[a_clusters.ravel(),
-                        a_masks.ravel()].astype(np.float32)
+                        a_masks.ravel()]
+        assert a_spike.dtype == np.float32
         self.program['a_spike'] = a_spike
         self.program['n_clusters'] = self.n_clusters
 

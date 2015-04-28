@@ -305,7 +305,7 @@ class TraceViewModel(BaseViewModel):
 
     scale_factor = 1.
     n_samples_per_spike = 20
-    interval_size = .5  # default interval size in milliseconds
+    interval_size = 1.  # default interval size in milliseconds
 
     def _load_traces(self, interval):
         start, end = interval
