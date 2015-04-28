@@ -206,6 +206,9 @@ class FeatureViewModel(BaseViewModel):
         self.view.visual.spike_ids = spikes
         self.view.visual.spike_samples = self.model.spike_samples[spikes]
 
+        # Cluster display order.
+        self.view.visual.cluster_order = cluster_ids
+
         # Load features.
         features = self._load_from_store_or_model('features',
                                                   cluster_ids,
@@ -254,8 +257,11 @@ class CorrelogramViewModel(BaseViewModel):
         self.view.cluster_ids = cluster_ids
 
         # Compute the correlograms.
-        ccgs = correlograms(self.model.spike_samples[spikes],
-                            self.view.visual.spike_clusters,
+        spike_samples = self.model.spike_samples[spikes]
+        spike_clusters = self.view.visual.spike_clusters
+        ccgs = correlograms(spike_samples,
+                            spike_clusters,
+                            cluster_order=cluster_ids,
                             binsize=self.binsize,
                             winsize_bins=self.winsize_bins,
                             )
@@ -263,6 +269,9 @@ class CorrelogramViewModel(BaseViewModel):
         # Normalize the CCGs.
         ccgs = ccgs * (1. / float(ccgs.max()))
         self.view.visual.correlograms = ccgs
+
+        # Take the cluster order into account.
+        self.view.visual.cluster_order = cluster_ids
 
     def on_cluster(self, up=None):
         super(CorrelogramViewModel, self).on_cluster(up)
