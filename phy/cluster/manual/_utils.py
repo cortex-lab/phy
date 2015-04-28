@@ -72,7 +72,6 @@ def _flatten_spikes_per_cluster(spikes_per_cluster):
 
 def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
     """Concatenate arrays from a {cluster: array} dictionary."""
-    # out = []
     assert set(arrays) <= set(spikes_per_cluster)
     clusters = sorted(arrays)
     # Check the sizes of the spikes per cluster and the arrays.
@@ -91,8 +90,26 @@ def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
     return arrays[idx, ...]
 
 
+def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub):
+    """Cut spikes_per_cluster and arrays along a list of spikes."""
+    spikes_sub = _as_array(spikes_sub)
+    spikes_per_cluster_subset = {}
+    arrays_subset = {}
+    for cluster in sorted(spikes_per_cluster):
+        spikes = _as_array(spikes_per_cluster[cluster])
+        array = _as_array(arrays[cluster])
+        idx = np.in1d(spikes, spikes_sub)
+        assert spikes.shape == idx.shape
+        spikes_per_cluster_subset[cluster] = spikes[idx]
+        idx = np.in1d(spikes_sub, spikes)
+        spikes_sub_rel = _index_of(spikes_sub[idx], spikes)
+        arrays_subset[cluster] = array[spikes_sub_rel, ...]
+    return spikes_per_cluster_subset, arrays_subset
+
+
 def _concatenate_per_cluster_arrays_spikes(spikes_per_cluster, arrays, spikes):
     """Concatenate arrays from a {cluster: array} dictionary."""
+    # TODO: get rid of this.
     clusters = sorted(spikes_per_cluster.keys())
     # Concatenation of arrays for all clusters.
     arrays = np.concatenate([arrays[cluster] for cluster in clusters])

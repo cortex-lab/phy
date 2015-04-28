@@ -9,9 +9,12 @@
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
-from .._utils import (_unique, _spikes_in_clusters, _spikes_per_cluster,
+from .._utils import (_unique, _spikes_in_clusters,
+                      _spikes_per_cluster,
                       _flatten_spikes_per_cluster,
-                      _concatenate_per_cluster_arrays)
+                      _concatenate_per_cluster_arrays,
+                      _subset_spikes_per_cluster,
+                      )
 from ....io.mock.artificial import artificial_spike_clusters
 
 
@@ -93,3 +96,23 @@ def test_concatenate_per_cluster_arrays():
     concat = _concatenate_per_cluster_arrays(spikes_per_cluster, arrays_2d)
     ae(concat[:, 0], [8, 1, 2, 3, 7, 8, 0])
     ae(concat[:, 1:], np.zeros((7, 9)))
+
+
+def test_subset_spikes_per_cluster():
+
+    # 8, 11, 12, 13, 17, 18, 20
+    spikes_per_cluster = {2: [11, 13, 17], 3: [8, 12], 5: [18, 20]}
+
+    arrays = {2: [1, 3, 7], 3: [8, 2], 5: [8, 0]}
+
+    spikes = [8, 11, 17]
+
+    spc, arrs = _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes)
+
+    ae(spc[2], [11, 17])
+    ae(spc[3], [8])
+    ae(spc[5], [])
+
+    ae(arrs[2], [1, 7])
+    ae(arrs[3], [8])
+    ae(arrs[5], [])
