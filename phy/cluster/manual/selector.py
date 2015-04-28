@@ -9,7 +9,15 @@
 import numpy as np
 
 from ...utils.array import _as_array, regular_subset, get_excerpts
-from ._utils import _unique, _spikes_in_clusters
+from ._utils import _unique, _spikes_in_clusters, _spikes_per_cluster
+
+
+#------------------------------------------------------------------------------
+# Utility functions
+#------------------------------------------------------------------------------
+
+def _concat(l):
+    return np.sort(np.hstack(l))
 
 
 #------------------------------------------------------------------------------
@@ -74,6 +82,7 @@ class Selector(object):
             with the specified chunk size.
 
         """
+        # Default arguments.
         if spikes is None:
             spikes = self._selected_spikes
         if spikes is None or len(spikes) == 0:
@@ -82,8 +91,10 @@ class Selector(object):
             n_spikes_max = self._n_spikes_max or len(spikes)
         if excerpt_size is None:
             excerpt_size = self._excerpt_size
+        # Nothing to do if there are less spikes than the maximum number.
         if len(spikes) <= n_spikes_max:
             return spikes
+        # Take a regular or chunked subset of the spikes.
         if excerpt_size is None:
             return regular_subset(spikes, n_spikes_max)
         else:
@@ -92,6 +103,39 @@ class Selector(object):
                                 n_excerpts=n_excerpts,
                                 excerpt_size=excerpt_size,
                                 )
+
+    def _subset_spikes_clusters(self, clusters):
+        """Take a subselection of spikes belonging to a set of clusters.
+
+        This method ensures that the same number of spikes is chosen
+        for every spike.
+
+        """
+        if len(clusters) == 0:
+            return []
+        # Take all spikes from the selected clusters.
+        spikes = _spikes_in_clusters(self._spike_clusters, clusters)
+        # Get the selection parameters.
+        n_spikes_max = self._n_spikes_max or len(spikes)
+        excerpt_size = self._excerpt_size
+        # Do nothing if there are less spikes than the maximum number.
+        if len(spikes) <= n_spikes_max:
+            return spikes
+        # Group the spikes per cluster.
+        spc = _spikes_per_cluster(spikes, clusters)
+        n_clusters = len(clusters)
+        n_spikes_max_c = n_spikes_max // n_clusters
+        # Take a regular or chunked subset of the spikes.
+        if excerpt_size is None:
+            return _concat([regular_subset(spc[cluster], n_spikes_max_c)
+                            for cluster in clusters])
+        else:
+            n_excerpts = n_spikes_max_c // excerpt_size
+            return _concat([get_excerpts(spc[cluster],
+                                         n_excerpts=n_excerpts,
+                                         excerpt_size=excerpt_size,
+                                         )
+                            for cluster in clusters])
 
     @property
     def selected_spikes(self):
@@ -123,14 +167,9 @@ class Selector(object):
         those clusters.
 
         """
-        # TODO: smarter subselection: select n_spikes_max/n_clusters spikes
-        # per cluster, so that the number of spikes per cluster is independent
-        # from the sizes of the clusters.
         value = _as_array(value)
-        # All spikes from the selected clusters.
-        spikes = _spikes_in_clusters(self._spike_clusters, value)
         # Make sure there are less spikes than n_spikes_max.
-        self.selected_spikes = self.subset_spikes(spikes)
+        self.selected_spikes = self._subset_spikes_clusters(value)
 
     @property
     def n_spikes(self):
