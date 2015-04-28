@@ -12,7 +12,8 @@ import re
 
 import numpy as np
 
-from ...utils.array import _is_array_like, _index_of
+from ._utils import _concatenate_per_cluster_arrays_spikes
+from ...utils.array import _is_array_like
 from ...utils.logging import debug, info
 from ...ext.six import string_types, integer_types
 
@@ -378,15 +379,13 @@ class ClusterStore(object):
         # obtained from self.spikes_per_cluster.
         assert _is_array_like(clusters)
         load = getattr(self, name)
-
-        # Concatenation of arrays for all clusters.
-        arrays = np.concatenate([load(cluster) for cluster in clusters])
-        # Concatenation of spike indices for all clusters.
-        spike_clusters = np.concatenate([self._spikes_per_cluster[cluster]
-                                         for cluster in clusters])
-        assert np.all(np.in1d(spikes, spike_clusters))
-        idx = _index_of(spikes, spike_clusters)
-        return arrays[idx, ...]
+        spc = {cluster: self._spikes_per_cluster[cluster]
+               for cluster in clusters}
+        arrays = {cluster: load(cluster) for cluster in clusters}
+        return _concatenate_per_cluster_arrays_spikes(spc,
+                                                      arrays,
+                                                      spikes,
+                                                      )
 
     def on_cluster(self, up):
         """Update the cluster store when clustering changes occur.

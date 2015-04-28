@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from ...utils.array import _as_array
+from ...utils.array import _as_array, _index_of
 from ...utils._misc import Bunch
 
 
@@ -88,6 +88,19 @@ def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
     # that the first axis represents the spikes.
     arrays = np.concatenate([_as_array(arrays[cluster])
                              for cluster in clusters])
+    return arrays[idx, ...]
+
+
+def _concatenate_per_cluster_arrays_spikes(spikes_per_cluster, arrays, spikes):
+    """Concatenate arrays from a {cluster: array} dictionary."""
+    clusters = sorted(spikes_per_cluster.keys())
+    # Concatenation of arrays for all clusters.
+    arrays = np.concatenate([arrays[cluster] for cluster in clusters])
+    # Concatenation of spike indices for all clusters.
+    spike_clusters = np.concatenate([spikes_per_cluster[cluster]
+                                     for cluster in clusters])
+    assert np.all(np.in1d(spikes, spike_clusters))
+    idx = _index_of(spikes, spike_clusters)
     return arrays[idx, ...]
 
 
