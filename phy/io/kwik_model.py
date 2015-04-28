@@ -19,7 +19,7 @@ from .h5 import open_h5, File
 from ..waveform.loader import WaveformLoader
 from ..waveform.filter import bandpass_filter, apply_filter
 from ..electrode.mea import MEA
-from ..utils.logging import debug
+from ..utils.logging import debug, warn
 from ..utils.array import (PartialArray,
                            _concatenate_virtual_arrays,
                            _as_array,
@@ -548,7 +548,13 @@ class KwikModel(BaseModel):
 
         # Open the KWX and KWD files.
         self._kwx = self._open_h5_if_exists('kwx')
+        if self._kwx is None:
+            warn("The .kwx file hasn't been found. "
+                 "Features won't be available.")
         self._kwd = self._open_h5_if_exists('raw.kwd')
+        if self._kwd is None:
+            warn("The .raw.kwd file hasn't been found. "
+                 "Traces and waveforms won't be available.")
 
         # Load the data.
         self._load_meta()
