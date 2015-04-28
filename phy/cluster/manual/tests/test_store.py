@@ -17,7 +17,9 @@ from ....utils._misc import Bunch
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
 from ..store import MemoryStore, DiskStore, ClusterStore, StoreItem
-from .._utils import _spikes_per_cluster, UpdateInfo
+from .._utils import (UpdateInfo,
+                      _spikes_per_cluster,
+                      )
 
 
 #------------------------------------------------------------------------------

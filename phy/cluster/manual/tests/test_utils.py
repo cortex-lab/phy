@@ -105,14 +105,14 @@ def test_subset_spikes_per_cluster():
 
     arrays = {2: [1, 3, 7], 3: [8, 2], 5: [8, 0]}
 
-    spikes = [8, 11, 17]
+    spikes = [8, 11, 17, 18, 25]
 
     spc, arrs = _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes)
 
     ae(spc[2], [11, 17])
     ae(spc[3], [8])
-    ae(spc[5], [])
+    ae(spc[5], [18])
 
     ae(arrs[2], [1, 7])
     ae(arrs[3], [8])
-    ae(arrs[5], [])
+    ae(arrs[5], [8])

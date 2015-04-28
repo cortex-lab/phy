@@ -99,11 +99,13 @@ def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub):
         spikes = _as_array(spikes_per_cluster[cluster])
         array = _as_array(arrays[cluster])
         idx = np.in1d(spikes, spikes_sub)
-        assert spikes.shape == idx.shape
+        # assert spikes.shape == idx.shape
         spikes_per_cluster_subset[cluster] = spikes[idx]
         idx = np.in1d(spikes_sub, spikes)
         spikes_sub_rel = _index_of(spikes_sub[idx], spikes)
         arrays_subset[cluster] = array[spikes_sub_rel, ...]
+        assert (len(spikes_per_cluster_subset[cluster]) ==
+                len(arrays_subset[cluster]))
     return spikes_per_cluster_subset, arrays_subset
 
 
