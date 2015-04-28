@@ -34,6 +34,7 @@ class WaveformVisual(BaseSpikeVisual):
 
         self._waveforms = None
         self.n_channels, self.n_samples = None, None
+        self._cluster_order = None
 
         self.program['u_data_scale'] = self.default_box_scale
         self.program['u_channel_scale'] = self.default_probe_scale
@@ -58,6 +59,20 @@ class WaveformVisual(BaseSpikeVisual):
         self._waveforms = value
         self._empty = self.n_spikes == 0
         self.set_to_bake('spikes', 'spikes_clusters', 'color')
+
+    @property
+    def cluster_order(self):
+        """List of selected clusters in display order."""
+        if self._cluster_order is None:
+            return self._cluster_ids
+        else:
+            return self._cluster_order
+
+    @cluster_order.setter
+    def cluster_order(self, value):
+        value = _as_array(value)
+        assert sorted(value.tolist()) == sorted(self._cluster_ids)
+        self._cluster_order = value
 
     @property
     def channel_positions(self):
@@ -144,7 +159,8 @@ class WaveformVisual(BaseSpikeVisual):
                                "'bake_spikes_clusters().")
         # Get the spike cluster indices (between 0 and n_clusters-1).
         spike_clusters_idx = self.spike_clusters
-        spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_ids)
+        # We take the cluster order into account here.
+        spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_order)
         # Generate the box attribute.
         a_cluster = np.repeat(spike_clusters_idx,
                               self._n_channels_per_spike * self.n_samples)

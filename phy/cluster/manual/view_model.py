@@ -177,6 +177,9 @@ class WaveformViewModel(BaseViewModel):
         # Spikes.
         self.view.visual.spike_ids = spikes
 
+        # Cluster display order.
+        self.view.visual.cluster_order = cluster_ids
+
         # Waveforms.
         waveforms *= self.scale_factor
         self.view.visual.waveforms = waveforms
