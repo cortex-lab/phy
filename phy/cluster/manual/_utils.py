@@ -99,7 +99,7 @@ def _concatenate_per_cluster_arrays_spikes(spikes_per_cluster, arrays, spikes):
     # Concatenation of spike indices for all clusters.
     spike_clusters = np.concatenate([spikes_per_cluster[cluster]
                                      for cluster in clusters])
-    assert np.all(np.in1d(spikes, spike_clusters))
+    # assert np.all(np.in1d(spikes, spike_clusters))
     idx = _index_of(spikes, spike_clusters)
     return arrays[idx, ...]
 

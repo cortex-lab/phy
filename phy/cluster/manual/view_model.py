@@ -16,7 +16,9 @@ from ...plot.waveforms import WaveformView
 from ...plot.traces import TraceView
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from .selector import Selector
-from ._utils import _update_cluster_selection
+from ._utils import (_update_cluster_selection,
+                     _concatenate_per_cluster_arrays_spikes,
+                     )
 
 
 #------------------------------------------------------------------------------
@@ -351,7 +353,17 @@ class TraceViewModel(BaseViewModel):
         self.view.visual.offset = start
 
         # Load the masks.
-        masks = self._load_from_store_or_model('masks', cluster_ids, spikes)
+        # masks = self._load_from_store_or_model('masks', cluster_ids, spikes)
+        if self._store is not None:
+            spc = {cluster: self._store.spikes_per_cluster[cluster]
+                   for cluster in cluster_ids}
+            # TODO OPTIM: make this faster
+            masks = _concatenate_per_cluster_arrays_spikes(spc,
+                                                           self._masks,
+                                                           spikes,
+                                                           )
+        else:
+            masks = self._model.masks[spikes]
         self.view.visual.masks = masks
 
     @property
@@ -409,6 +421,11 @@ class TraceViewModel(BaseViewModel):
     def on_select(self, cluster_ids):
         super(TraceViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
+
+        # Pre-load the masks for the selected clusters.
+        if self._store is not None:
+            self._masks = {cluster: self._store.masks(cluster)
+                           for cluster in cluster_ids}
 
         # Select the default interval.
         half_size = int(self.interval_size * self.model.sample_rate / 2.)
