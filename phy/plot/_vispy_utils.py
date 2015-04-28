@@ -147,6 +147,9 @@ class BaseSpikeVisual(_BakeVisual):
             self.n_spikes = arr.shape[0]
         assert arr.shape[0] == self.n_spikes
 
+    def _update_spike_clusters(self):
+        self._cluster_ids = _unique(self._spike_clusters)
+
     @property
     def spike_clusters(self):
         """The clusters assigned to the displayed spikes."""
@@ -157,7 +160,7 @@ class BaseSpikeVisual(_BakeVisual):
         """Set all spike clusters."""
         value = _as_array(value)
         self._spike_clusters = value
-        self._cluster_ids = _unique(self._spike_clusters)
+        self._update_spike_clusters()
         self.set_to_bake('spikes_clusters')
 
     @property
