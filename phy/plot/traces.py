@@ -26,6 +26,7 @@ class TraceVisual(BaseSpikeVisual):
 
     _shader_name = 'traces'
     _gl_draw_mode = 'line_strip'
+    default_channel_scale = 1.
 
     """TraceVisual visual."""
     def __init__(self, **kwargs):
@@ -35,6 +36,8 @@ class TraceVisual(BaseSpikeVisual):
         self._n_samples_per_spike = None
         self._sample_rate = None
         self._offset = None
+
+        self.program['u_scale'] = self.default_channel_scale
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -101,6 +104,14 @@ class TraceVisual(BaseSpikeVisual):
     def offset(self, value):
         self._offset = int(value)
 
+    @property
+    def channel_scale(self):
+        return self.program['u_scale']
+
+    @channel_scale.setter
+    def channel_scale(self, value):
+        self.program['u_scale'] = value
+
     # Data baking
     # -------------------------------------------------------------------------
 
@@ -114,7 +125,6 @@ class TraceVisual(BaseSpikeVisual):
         self.program['a_index'] = a_index
         self.program['n_channels'] = nc
         self.program['n_samples'] = ns
-        self.program['u_scale'] = 1.0
 
         debug("bake traces", self._traces.shape)
 
@@ -179,4 +189,30 @@ class TraceView(BaseSpikeCanvas):
     def __init__(self, *args, **kwargs):
         super(TraceView, self).__init__(*args, **kwargs)
         self._pz.aspect = None
-        self._pz.zmin = 1
+        self._pz.zmin = .5
+
+    @property
+    def channel_scale(self):
+        return self.visual.channel_scale
+
+    @channel_scale.setter
+    def channel_scale(self, value):
+        self.visual.channel_scale = value
+        self.update()
+
+    _arrows = ('Left', 'Right', 'Up', 'Down')
+
+    def on_key_press(self, event):
+
+        key = event.key
+        ctrl = 'Control' in event.modifiers
+
+        # Box scale.
+        if ctrl and key in self._arrows:
+            coeff = 1.1
+            u = self.channel_scale
+            if key == 'Down':
+                self.channel_scale = u / coeff
+            elif key == 'Up':
+                self.channel_scale = u * coeff
+            self.update()

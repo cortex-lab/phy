@@ -303,7 +303,7 @@ class TraceViewModel(BaseViewModel):
     _view_name = 'traces'
     _interval = None
 
-    scale_factor = 1.
+    scale_factor = .001
     n_samples_per_spike = 20
 
     def _load_traces(self, interval):

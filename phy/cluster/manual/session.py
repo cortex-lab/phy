@@ -939,9 +939,21 @@ class Session(BaseSession):
 
     def _create_traces_view(self):
         """Create a TraceView and return a ViewModel instance."""
-        vm = self._create_view_model('traces')
-        vm.scale_factor = .001
+
+        sf_name = 'manual_clustering.traces_scale_factor'
+        sf = self.get_internal_settings(sf_name) or .001
+
+        vm = self._create_view_model('traces',
+                                     scale_factor=sf)
         self._create_view(vm)
+
+        @vm.view.connect
+        def on_draw(event):
+            if vm.view.visual.empty:
+                return
+            self.set_internal_settings(sf_name,
+                                       vm.view.channel_scale * vm.scale_factor)
+
         return vm
 
     def create_view(self, name):

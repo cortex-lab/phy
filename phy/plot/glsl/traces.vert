@@ -27,7 +27,7 @@ float get_y(float y_index, float sample) {
     // 'y_index' is between 0 and n_channels.
     float a = float(u_scale) / float(n_channels);
     float b = -1. + 2. * (y_index + .5) / float(n_channels);
-    return a * sample + b;
+    return a * sample + .9 * b;
 }
 
 void main() {
