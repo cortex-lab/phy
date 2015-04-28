@@ -220,6 +220,11 @@ def test_concatenate_virtual_arrays():
                 [0, 1],
                 [1, 0],
                 ):
+        # First array.
+        ae(concat[1:4, idx], arr1[1:4, idx])
+        # Second array.
+        ae(concat[6:, idx], arr2[1:, idx])
+        # Both arrays.
         ae(concat[1:7, idx], _concat(arr1[1:, idx], arr2[:-2, idx]))
 
 

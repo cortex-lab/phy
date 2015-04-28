@@ -194,6 +194,14 @@ def _start_stop(item):
         return item, item + 1
 
 
+def _fill_index(arr, item):
+    if isinstance(item, tuple):
+        item = (slice(None, None, None),) + item[1:]
+        return arr[item]
+    else:
+        return arr
+
+
 class ConcatenatedArrays(object):
     """This object represents a concatenation of several memory-mapped
     arrays."""
@@ -239,7 +247,9 @@ class ConcatenatedArrays(object):
         stop_rel = stop - self.offsets[rec_stop]
         # Single array case.
         if rec_start == rec_stop:
-            return self.arrs[rec_start][start_rel:stop_rel]
+            # Apply the rest of the index.
+            return _fill_index(self.arrs[rec_start][start_rel:stop_rel],
+                               item)
         chunk_start = self.arrs[rec_start][start_rel:]
         chunk_stop = self.arrs[rec_stop][:stop_rel]
         # Concatenate all chunks.
@@ -250,12 +260,8 @@ class ConcatenatedArrays(object):
             l += [self.arrs[r][...] for r in range(rec_start + 1,
                                                    rec_stop)]
         l += [chunk_stop]
-        out = np.concatenate(l, axis=0)
         # Apply the rest of the index.
-        if isinstance(item, tuple):
-            item = (slice(None, None, None),) + item[1:]
-            out = out[item]
-        return out
+        return _fill_index(np.concatenate(l, axis=0), item)
 
 
 def _concatenate_virtual_arrays(arrs):
