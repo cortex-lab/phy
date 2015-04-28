@@ -34,7 +34,6 @@ class WaveformVisual(BaseSpikeVisual):
 
         self._waveforms = None
         self.n_channels, self.n_samples = None, None
-        self._cluster_order = None
 
         self.program['u_data_scale'] = self.default_box_scale
         self.program['u_channel_scale'] = self.default_probe_scale
@@ -59,20 +58,6 @@ class WaveformVisual(BaseSpikeVisual):
         self._waveforms = value
         self._empty = self.n_spikes == 0
         self.set_to_bake('spikes', 'spikes_clusters', 'color')
-
-    @property
-    def cluster_order(self):
-        """List of selected clusters in display order."""
-        if self._cluster_order is None:
-            return self._cluster_ids
-        else:
-            return self._cluster_order
-
-    @cluster_order.setter
-    def cluster_order(self, value):
-        value = _as_array(value)
-        assert sorted(value.tolist()) == sorted(self._cluster_ids)
-        self._cluster_order = value
 
     @property
     def channel_positions(self):

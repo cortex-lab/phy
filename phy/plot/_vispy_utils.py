@@ -134,6 +134,7 @@ class BaseSpikeVisual(_BakeVisual):
         self._spike_clusters = None
         self._spike_ids = None
         self._cluster_ids = None
+        self._cluster_order = None
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -158,6 +159,20 @@ class BaseSpikeVisual(_BakeVisual):
         self._spike_clusters = value
         self._cluster_ids = _unique(self._spike_clusters)
         self.set_to_bake('spikes_clusters')
+
+    @property
+    def cluster_order(self):
+        """List of selected clusters in display order."""
+        if self._cluster_order is None:
+            return self._cluster_ids
+        else:
+            return self._cluster_order
+
+    @cluster_order.setter
+    def cluster_order(self, value):
+        value = _as_array(value)
+        assert sorted(value.tolist()) == sorted(self._cluster_ids)
+        self._cluster_order = value
 
     @property
     def masks(self):
