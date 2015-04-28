@@ -64,15 +64,21 @@ class BaseViewModel(object):
                                   excerpt_size=excerpt_size,
                                   )
 
+        # Set all keyword arguments as attributes.
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+        # Extract VisPy keyword arguments.
         vispy_kwargs_names = ('position', 'size',)
         vispy_kwargs = {name: kwargs[name] for name in vispy_kwargs_names
                         if name in kwargs}
         backend = kwargs.pop('backend', None)
+
+        # Create the VisPy canvas.
         self._view = _create_view(self._view_class,
                                   backend=backend,
                                   **vispy_kwargs)
+
         # Bind VisPy event methods.
         for method in ('on_key_press', 'on_mouse_move'):
             if hasattr(self, method):
@@ -305,7 +311,7 @@ class TraceViewModel(BaseViewModel):
 
     scale_factor = 1.
     n_samples_per_spike = 20
-    interval_size = 1.  # default interval size in milliseconds
+    interval_size = .25  # default interval size in milliseconds
 
     def _load_traces(self, interval):
         start, end = interval
@@ -314,12 +320,18 @@ class TraceViewModel(BaseViewModel):
 
         # Load the traces.
         debug("Loading traces...")
-        traces = self.model.traces[start:end, :]
+        # Using channel_order ensures that we get rid of the dead channels.
+        # We also keep the channel order as specified by the PRM file.
+        traces = self.model.traces[start:end, self.model.channel_order]
         debug("Done!")
 
         # Normalize and set the traces.
-        traces = traces * self.scale_factor
-        self.view.visual.traces = traces
+        traces_f = np.empty_like(traces, dtype=np.float32)
+        traces_f[...] = traces * self.scale_factor
+        # Detrend the traces.
+        m = np.mean(traces_f[::10, :], axis=0)
+        traces_f -= m
+        self.view.visual.traces = traces_f
 
         # Keep the spikes in the interval.
         spike_samples = self.model.spike_samples[spikes]

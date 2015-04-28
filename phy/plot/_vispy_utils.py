@@ -8,7 +8,6 @@
 #------------------------------------------------------------------------------
 
 import os.path as op
-import math
 
 import numpy as np
 

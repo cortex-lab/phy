@@ -189,6 +189,20 @@ class TraceVisual(BaseSpikeVisual):
 
 
 class TraceView(BaseSpikeCanvas):
+    """Display traces.
+
+    Interactivity
+    -------------
+
+    Load more data:
+
+    * Keyboard : Control and Left/Right
+
+    Change channel scale:
+
+    * Keyboard : Control and Up/Down
+
+    """
     _visual_class = TraceVisual
 
     def __init__(self, *args, **kwargs):
