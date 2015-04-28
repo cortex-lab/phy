@@ -217,7 +217,6 @@ def test_session_mock():
 
 
 def test_session_kwik():
-
     n_clusters = 5
     n_spikes = 50
     n_channels = 28

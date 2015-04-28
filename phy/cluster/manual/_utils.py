@@ -91,6 +91,14 @@ def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
     return arrays[idx, ...]
 
 
+def _update_cluster_selection(clusters, up):
+    clusters = list(clusters)
+    # Remove deleted clusters.
+    clusters = [clu for clu in clusters if clu not in up.deleted]
+    # Add new clusters at the end of the selection.
+    return clusters + up.added
+
+
 #------------------------------------------------------------------------------
 # UpdateInfo class
 #------------------------------------------------------------------------------

@@ -16,6 +16,7 @@ from ...plot.waveforms import WaveformView
 from ...plot.traces import TraceView
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from .selector import Selector
+from ._utils import _update_cluster_selection
 
 
 #------------------------------------------------------------------------------
@@ -135,12 +136,8 @@ class BaseViewModel(object):
 
     def _update_cluster_order(self, up):
         """Update cluster order when a clustering action occurs."""
-        cluster_order = list(self._view.visual.cluster_order)
-        # Remove deleted clusters.
-        cluster_order = [clu for clu in cluster_order if clu not in up.deleted]
-        # Add new clusters at the end of the selection.
-        cluster_order = cluster_order + up.added
-        self._view.visual.cluster_order = cluster_order
+        self._view.visual.cluster_order = _update_cluster_selection(
+            self._view.visual.cluster_order, up)
 
     def on_open(self):
         """May be overriden."""

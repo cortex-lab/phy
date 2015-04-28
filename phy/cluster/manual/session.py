@@ -23,7 +23,10 @@ from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
 from .clustering import Clustering
-from ._utils import _spikes_per_cluster, _concatenate_per_cluster_arrays
+from ._utils import (_spikes_per_cluster,
+                     _concatenate_per_cluster_arrays,
+                     _update_cluster_selection,
+                     )
 from .store import ClusterStore, StoreItem
 from .view_model import (WaveformViewModel,
                          FeatureViewModel,
@@ -542,6 +545,10 @@ class Session(BaseSession):
         if len(name) == 0:
             raise ValueError("No {0} were selected.".format(name))
 
+    def _update_selected_clusters(self, up):
+        self._selected_clusters = _update_cluster_selection(
+            self._selected_clusters, up)
+
     def select(self, clusters):
         """Select some clusters."""
         self._selected_clusters = clusters
@@ -717,6 +724,7 @@ class Session(BaseSession):
 
     def on_cluster(self, up=None, add_to_stack=True):
         """Update the history when clustering changes occur."""
+        self._update_selected_clusters(up)
         # Update the global history.
         if add_to_stack and up is not None:
             if up.description.startswith('metadata'):
@@ -824,7 +832,9 @@ class Session(BaseSession):
         def on_draw(event):
             if view.visual.empty:
                 on_open()
-                on_select(self._selected_clusters)
+                if (set(self._selected_clusters) <=
+                        set(self.clustering.cluster_ids)):
+                    on_select(self._selected_clusters)
 
         return view
 
