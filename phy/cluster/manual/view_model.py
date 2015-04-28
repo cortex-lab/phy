@@ -129,8 +129,18 @@ class BaseViewModel(object):
             spike_clusters = self.model.spike_clusters[spikes]
             n_clusters = len(_unique(spike_clusters))
         visual = self._view.visual
+        # This updates the list of unique clusters in the view.
         visual.spike_clusters = spike_clusters
         visual.cluster_colors = _selected_clusters_colors(n_clusters)
+
+    def _update_cluster_order(self, up):
+        """Update cluster order when a clustering action occurs."""
+        cluster_order = list(self._view.visual.cluster_order)
+        # Remove deleted clusters.
+        cluster_order = [clu for clu in cluster_order if clu not in up.deleted]
+        # Add new clusters at the end of the selection.
+        cluster_order = cluster_order + up.added
+        self._view.visual.cluster_order = cluster_order
 
     def on_open(self):
         """May be overriden."""
@@ -138,6 +148,7 @@ class BaseViewModel(object):
     def on_cluster(self, up=None):
         """May be overriden."""
         self._update_spike_clusters()
+        self._update_cluster_order(up)
 
     def on_select(self, cluster_ids):
         """Must be overriden."""
