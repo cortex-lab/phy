@@ -327,6 +327,11 @@ class KwikModel(BaseModel):
                 self._kwik.mode = mode
             return False
 
+    @property
+    def n_samples_waveforms(self):
+        return (self._metadata['extract_s_before'] +
+                self._metadata['extract_s_after'])
+
     def _create_waveform_loader(self):
         """Create a waveform loader."""
         n_samples = (self._metadata['extract_s_before'],

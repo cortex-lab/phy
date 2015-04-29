@@ -405,7 +405,7 @@ class TraceViewModel(BaseViewModel):
 
     def on_open(self):
         super(TraceViewModel, self).on_open()
-        self.view.visual.n_samples_per_spike = self.n_samples_per_spike
+        self.view.visual.n_samples_per_spike = self.model.n_samples_waveforms
         self.view.visual.sample_rate = self.model.sample_rate
 
     def on_select(self, cluster_ids):
