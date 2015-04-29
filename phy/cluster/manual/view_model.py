@@ -341,9 +341,11 @@ class TraceViewModel(BaseViewModel):
         spikes = spikes[a:b]
         self.view.visual.n_spikes = len(spikes)
         self.view.visual.spike_ids = spikes
-        # We update the spike clusters and cluster colors according to the
-        # subselection of spikes.
-        self._update_spike_clusters(spikes)
+        # We update the spike clusters according to the subselection of spikes.
+        # We don't update the list of unique clusters, which only change
+        # when selecting or clustering, not when changing the interval.
+        # self._update_spike_clusters(spikes)
+        self.view.visual.spike_clusters = self.model.spike_clusters[spikes]
 
         # Set the spike samples.
         spike_samples = self.model.spike_samples[spikes]
@@ -411,6 +413,8 @@ class TraceViewModel(BaseViewModel):
     def on_select(self, cluster_ids):
         super(TraceViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
+        # Update the cluster ids of the trace view.
+        self._view.visual.cluster_ids = cluster_ids
         # Select the default interval.
         half_size = int(self.interval_size * self.model.sample_rate / 2.)
         if len(spikes) > 0:
@@ -419,8 +423,20 @@ class TraceViewModel(BaseViewModel):
         else:
             sample = half_size
         # Load traces by setting the interval.
+        self.view.visual._update_clusters_automatically = False
         self.interval = sample - half_size, sample + half_size
 
     def on_cluster(self, up=None):
         """May be overriden."""
-        self._update_spike_clusters(self.view.visual.spike_ids)
+        # Update the list of clusters.
+        clusters = _update_cluster_selection(self.cluster_ids, up)
+        n_clusters = len(clusters)
+        self._view.visual.cluster_ids = clusters
+        # Update the cluster order.
+        self._view.visual.cluster_order = _update_cluster_selection(
+            self._view.visual.cluster_order, up)
+        # Update the spike clusters.
+        self.view.visual.spike_clusters = \
+            self.model.spike_clusters[self.view.visual.spike_ids]
+        # Update the cluster colors.
+        self.view.visual.cluster_colors = _selected_clusters_colors(n_clusters)

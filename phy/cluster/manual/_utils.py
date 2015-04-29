@@ -115,7 +115,7 @@ def _update_cluster_selection(clusters, up):
     # Remove deleted clusters.
     clusters = [clu for clu in clusters if clu not in up.deleted]
     # Add new clusters at the end of the selection.
-    return clusters + up.added
+    return clusters + [clu for clu in up.added if clu not in clusters]
 
 
 #------------------------------------------------------------------------------

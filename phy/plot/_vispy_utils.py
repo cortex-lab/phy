@@ -134,6 +134,7 @@ class BaseSpikeVisual(_BakeVisual):
         self._spike_ids = None
         self._cluster_ids = None
         self._cluster_order = None
+        self._update_clusters_automatically = True
 
         gloo.set_state(clear_color='black', blend=True,
                        blend_func=('src_alpha', 'one_minus_src_alpha'))
@@ -149,7 +150,7 @@ class BaseSpikeVisual(_BakeVisual):
             self.n_spikes = arr.shape[0]
         assert arr.shape[0] == self.n_spikes
 
-    def _update_spike_clusters(self):
+    def _update_clusters(self):
         self._cluster_ids = _unique(self._spike_clusters)
 
     @property
@@ -162,7 +163,8 @@ class BaseSpikeVisual(_BakeVisual):
         """Set all spike clusters."""
         value = _as_array(value)
         self._spike_clusters = value
-        self._update_spike_clusters()
+        if self._update_clusters_automatically:
+            self._update_clusters()
         self.set_to_bake('spikes_clusters')
 
     @property
@@ -214,6 +216,11 @@ class BaseSpikeVisual(_BakeVisual):
         """Clusters of the displayed spikes."""
         return self._cluster_ids
 
+    @cluster_ids.setter
+    def cluster_ids(self, value):
+        """Clusters of the displayed spikes."""
+        self._cluster_ids = _as_array(value)
+
     @property
     def n_clusters(self):
         return len(self._cluster_ids)
@@ -226,7 +233,7 @@ class BaseSpikeVisual(_BakeVisual):
     @cluster_colors.setter
     def cluster_colors(self, value):
         self._cluster_colors = _as_array(value)
-        assert len(self._cluster_colors) == self.n_clusters
+        assert len(self._cluster_colors) >= self.n_clusters
         self.set_to_bake('cluster_color')
 
     # Data baking
