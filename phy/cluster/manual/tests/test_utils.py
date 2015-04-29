@@ -105,7 +105,7 @@ def test_subset_spikes_per_cluster():
 
     arrays = {2: [1, 3, 7], 3: [8, 2], 5: [8, 0]}
 
-    spikes = [8, 11, 17, 18, 25]
+    spikes = [8, 11, 17, 18]
 
     spc, arrs = _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes)
 

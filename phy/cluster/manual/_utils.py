@@ -92,20 +92,21 @@ def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
 
 def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub):
     """Cut spikes_per_cluster and arrays along a list of spikes."""
+    # WARNING: spikes_sub should be sorted and without duplicates.
     spikes_sub = _as_array(spikes_sub)
     spikes_per_cluster_subset = {}
     arrays_subset = {}
+    n = 0
     for cluster in sorted(spikes_per_cluster):
-        spikes = _as_array(spikes_per_cluster[cluster])
+        spikes_c = _as_array(spikes_per_cluster[cluster])
         array = _as_array(arrays[cluster])
-        idx = np.in1d(spikes, spikes_sub)
-        # assert spikes.shape == idx.shape
-        spikes_per_cluster_subset[cluster] = spikes[idx]
-        idx = np.in1d(spikes_sub, spikes)
-        spikes_sub_rel = _index_of(spikes_sub[idx], spikes)
-        arrays_subset[cluster] = array[spikes_sub_rel, ...]
-        assert (len(spikes_per_cluster_subset[cluster]) ==
-                len(arrays_subset[cluster]))
+        spikes_sc = np.intersect1d(spikes_sub, spikes_c)
+        spikes_per_cluster_subset[cluster] = spikes_sc
+        idx = _index_of(spikes_sc, spikes_c)
+        arrays_subset[cluster] = array[idx, ...]
+        assert len(spikes_sc) == len(arrays_subset[cluster])
+        n += len(spikes_sc)
+    assert n == len(spikes_sub)
     return spikes_per_cluster_subset, arrays_subset
 
 

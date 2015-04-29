@@ -256,13 +256,15 @@ def test_cluster_store_load():
         clusters = [2, 3, 5]
         spikes = np.concatenate([spikes_per_cluster[cl]
                                  for cl in clusters])
-        # Reverse the order of spikes.
-        spikes = np.r_[spikes, spikes[::-1]]
-        ae(cs.load('spikes_square', clusters, spikes), spikes ** 2)
+
+        # # Reverse the order of spikes.
+        # spikes = np.r_[spikes, spikes[::-1]]
+        # ae(cs.load('spikes_square', clusters, spikes), spikes ** 2)
 
         # Some spikes in several clusters.
         spikes = np.concatenate([spikes_per_cluster[cl][::3]
                                  for cl in clusters])
+        spikes = np.unique(spikes)
         ae(cs.load('spikes_square', clusters, spikes), spikes ** 2)
 
 
