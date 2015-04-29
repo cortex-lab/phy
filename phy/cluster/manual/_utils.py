@@ -110,20 +110,6 @@ def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub):
     return spikes_per_cluster_subset, arrays_subset
 
 
-def _concatenate_per_cluster_arrays_spikes(spikes_per_cluster, arrays, spikes):
-    """Concatenate arrays from a {cluster: array} dictionary."""
-    # TODO: get rid of this.
-    clusters = sorted(spikes_per_cluster.keys())
-    # Concatenation of arrays for all clusters.
-    arrays = np.concatenate([arrays[cluster] for cluster in clusters])
-    # Concatenation of spike indices for all clusters.
-    spike_clusters = np.concatenate([spikes_per_cluster[cluster]
-                                     for cluster in clusters])
-    # assert np.all(np.in1d(spikes, spike_clusters))
-    idx = _index_of(spikes, spike_clusters)
-    return arrays[idx, ...]
-
-
 def _update_cluster_selection(clusters, up):
     clusters = list(clusters)
     # Remove deleted clusters.

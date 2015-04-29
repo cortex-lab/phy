@@ -17,7 +17,8 @@ from ...plot.traces import TraceView
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from .selector import Selector
 from ._utils import (_update_cluster_selection,
-                     _concatenate_per_cluster_arrays_spikes,
+                     _subset_spikes_per_cluster,
+                     _concatenate_per_cluster_arrays,
                      )
 
 
@@ -317,7 +318,6 @@ class TraceViewModel(BaseViewModel):
 
     def _load_traces(self, interval):
         start, end = interval
-        cluster_ids = self.cluster_ids
         spikes = self.spike_ids
 
         # Load the traces.
@@ -355,13 +355,12 @@ class TraceViewModel(BaseViewModel):
         # Load the masks.
         # masks = self._load_from_store_or_model('masks', cluster_ids, spikes)
         if self._store is not None:
-            spc = {cluster: self._store.spikes_per_cluster[cluster]
-                   for cluster in cluster_ids}
-            # TODO OPTIM: make this faster
-            masks = _concatenate_per_cluster_arrays_spikes(spc,
-                                                           self._masks,
-                                                           spikes,
-                                                           )
+            # Cut the spikes_per_cluster and masks.
+            spc, masks = _subset_spikes_per_cluster(self._spikes_per_cluster,
+                                                    self._masks,
+                                                    spikes,
+                                                    )
+            masks = _concatenate_per_cluster_arrays(spc, masks)
         else:
             masks = self._model.masks[spikes]
         self.view.visual.masks = masks
@@ -424,6 +423,9 @@ class TraceViewModel(BaseViewModel):
 
         # Pre-load the masks for the selected clusters.
         if self._store is not None:
+            self._spikes_per_cluster = {cluster:
+                                        self._store.spikes_per_cluster[cluster]
+                                        for cluster in cluster_ids}
             self._masks = {cluster: self._store.masks(cluster)
                            for cluster in cluster_ids}
 

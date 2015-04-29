@@ -13,10 +13,8 @@ import re
 import numpy as np
 
 from ._utils import (_concatenate_per_cluster_arrays,
-                     _concatenate_per_cluster_arrays_spikes,
                      _subset_spikes_per_cluster,
                      )
-from ...utils.array import _is_array_like
 from ...utils.logging import debug, info
 from ...ext.six import string_types, integer_types
 
