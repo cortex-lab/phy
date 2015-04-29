@@ -348,8 +348,8 @@ class BaseSpikeCanvas(app.Canvas):
         return self._pz.zoom
 
     def on_draw(self, event):
-        gloo.clear()
+        self.context.clear()
         self.visual.draw()
 
     def on_resize(self, event):
-        gloo.set_viewport(0, 0, event.size[0], event.size[1])
+        self.context.set_viewport(0, 0, event.size[0], event.size[1])
