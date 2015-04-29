@@ -314,7 +314,7 @@ class TraceViewModel(BaseViewModel):
 
     scale_factor = 1.
     n_samples_per_spike = 20
-    interval_size = .25  # default interval size in milliseconds
+    interval_size = .5  # default interval size in milliseconds
 
     def _load_traces(self, interval):
         start, end = interval
@@ -353,16 +353,7 @@ class TraceViewModel(BaseViewModel):
         self.view.visual.offset = start
 
         # Load the masks.
-        # masks = self._load_from_store_or_model('masks', cluster_ids, spikes)
-        if self._store is not None:
-            # Cut the spikes_per_cluster and masks.
-            spc, masks = _subset_spikes_per_cluster(self._spikes_per_cluster,
-                                                    self._masks,
-                                                    spikes,
-                                                    )
-            masks = _concatenate_per_cluster_arrays(spc, masks)
-        else:
-            masks = self._model.masks[spikes]
+        masks = self._model.masks[spikes]
         self.view.visual.masks = masks
 
     @property
@@ -420,15 +411,6 @@ class TraceViewModel(BaseViewModel):
     def on_select(self, cluster_ids):
         super(TraceViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
-
-        # Pre-load the masks for the selected clusters.
-        if self._store is not None:
-            self._spikes_per_cluster = {cluster:
-                                        self._store.spikes_per_cluster[cluster]
-                                        for cluster in cluster_ids}
-            self._masks = {cluster: self._store.masks(cluster)
-                           for cluster in cluster_ids}
-
         # Select the default interval.
         half_size = int(self.interval_size * self.model.sample_rate / 2.)
         if len(spikes) > 0:
