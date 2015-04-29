@@ -341,6 +341,10 @@ class TraceViewModel(BaseViewModel):
         spikes = spikes[a:b]
         self.view.visual.n_spikes = len(spikes)
         self.view.visual.spike_ids = spikes
+
+        if len(spikes) == 0:
+            return
+
         # We update the spike clusters according to the subselection of spikes.
         # We don't update the list of unique clusters, which only change
         # when selecting or clustering, not when changing the interval.
@@ -355,7 +359,8 @@ class TraceViewModel(BaseViewModel):
         self.view.visual.offset = start
 
         # Load the masks.
-        masks = self._model.masks[spikes]
+        # TODO: ensure model.masks is always 2D, even with 1 spike
+        masks = np.atleast_2d(self._model.masks[spikes])
         self.view.visual.masks = masks
 
     @property

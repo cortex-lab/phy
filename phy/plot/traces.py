@@ -139,7 +139,12 @@ class TraceVisual(BaseSpikeVisual):
         debug("bake channel color", u_channel_color.shape)
 
     def _bake_spikes(self):
+        # Handle the case where there are no spikes.
         if self.n_spikes == 0:
+            a_spike = np.zeros((self.n_channels * self.n_samples, 2),
+                               dtype=np.float32)
+            a_spike[:, 0] = -1.
+            self.program['a_spike'] = a_spike
             return
 
         spike_clusters_idx = self.spike_clusters
@@ -156,7 +161,6 @@ class TraceVisual(BaseSpikeVisual):
         a_masks = np.zeros((self.n_channels, self.n_samples),
                            dtype=np.float32)
         masks = self._masks.T
-
         # Set the spike clusters and masks of all spikes, for every waveform
         # sample shift.
         for i in range(-self._n_samples_per_spike // 2,
@@ -178,8 +182,10 @@ class TraceVisual(BaseSpikeVisual):
             a_clusters[:, ind] = spike_clusters_idx
             a_masks[:, ind] = masks
 
-        a_spike = np.c_[a_clusters.ravel(),
-                        a_masks.ravel()]
+        a_spike = np.empty((self.n_channels * self.n_samples, 2),
+                           dtype=np.float32)
+        a_spike[:, 0] = a_clusters.ravel()
+        a_spike[:, 1] = a_masks.ravel()
         assert a_spike.dtype == np.float32
         self.program['a_spike'] = a_spike
         self.program['n_clusters'] = self.n_clusters
