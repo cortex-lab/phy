@@ -29,7 +29,9 @@ def artificial_features(*args):
 
 
 def artificial_masks(n_spikes=None, n_channels=None):
-    return nr.uniform(size=(n_spikes, n_channels))
+    masks = nr.uniform(size=(n_spikes, n_channels))
+    masks[masks < .25] = 0
+    return masks
 
 
 def artificial_traces(n_samples, n_channels):

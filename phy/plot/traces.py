@@ -160,27 +160,18 @@ class TraceVisual(BaseSpikeVisual):
         a_clusters.fill(-1.)
         a_masks = np.zeros((self.n_channels, self.n_samples),
                            dtype=np.float32)
-        masks = self._masks.T
-        # Set the spike clusters and masks of all spikes, for every waveform
-        # sample shift.
-        for i in range(-self._n_samples_per_spike // 2,
-                       +self._n_samples_per_spike // 2):
+        masks = self._masks  # (n_spikes, n_channels)
 
-            ind = (samples + i).astype(np.uint64)
-            assert ind.shape == (self.n_spikes,)
-
-            # Skip vertices for spikes crossing the boundaries.
-            u = np.nonzero(ind >= self.n_samples)[0]
-            if len(u) > 0:
-                u = u[0]
-                if u == 0:
-                    continue
-                ind = ind[:u]
-                spike_clusters_idx = spike_clusters_idx[:u]
-                masks = masks[:, :u]
-
-            a_clusters[:, ind] = spike_clusters_idx
-            a_masks[:, ind] = masks
+        # Add all spikes, one by one.
+        k = self._n_samples_per_spike // 2
+        for i, s in enumerate(samples):
+            m = masks[i, :]  # masks across all channels
+            channels = (m > 0.)
+            c = spike_clusters_idx[i]  # cluster idx
+            i = max(s - k, 0)
+            j = min(s + k, self.n_samples)
+            a_clusters[channels, i:j] = c
+            a_masks[channels, i:j] = m[channels, None]
 
         a_spike = np.empty((self.n_channels * self.n_samples, 2),
                            dtype=np.float32)
