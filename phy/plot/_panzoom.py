@@ -571,6 +571,8 @@ class PanZoomGrid(PanZoom):
         if isinstance(value, np.ndarray):
             i, j = self._index
             value = value[i, j]
+            if value == np.nan:
+                value = None
         return value
 
     @property
@@ -580,6 +582,28 @@ class PanZoomGrid(PanZoom):
     @property
     def xmax(self):
         return self._local(self._xmax)
+
+    @property
+    def ymin(self):
+        return self._local(self._ymin)
+
+    @property
+    def ymax(self):
+        return self._local(self._ymax)
+
+    def _constrain_pan(self):
+        """Constrain bounding box."""
+        if self.xmin is not None and self._xmax is not None:
+            p0 = (self.xmin + 1. / self._zoom[0]) / self._n_rows
+            p1 = (self.xmax - 1. / self._zoom[0]) / self._n_rows
+            p0, p1 = min(p0, p1), max(p0, p1)
+            self._pan[0] = np.clip(self._pan[0], p0, p1)
+
+        if self.ymin is not None and self._ymax is not None:
+            p0 = (self.ymin + 1. / self._zoom[1]) / self._n_rows
+            p1 = (self.ymax - 1. / self._zoom[1]) / self._n_rows
+            p0, p1 = min(p0, p1), max(p0, p1)
+            self._pan[1] = np.clip(self._pan[1], p0, p1)
 
     def _get_box(self, x_y):
         x0, y0 = x_y

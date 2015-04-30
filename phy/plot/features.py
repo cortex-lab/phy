@@ -225,6 +225,28 @@ class FeatureView(BaseSpikeCanvas):
             self._pz.aspect = None
             self._pz.attach(self)
 
+    def _set_pan_constraints(self):
+        n = len(self.visual.dimensions)
+        xmin = np.empty((n, n))
+        xmax = np.empty((n, n))
+        ymin = np.empty((n, n))
+        ymax = np.empty((n, n))
+        for arr in (xmin, xmax, ymin, ymax):
+            arr.fill(np.nan)
+        if self.visual.dimensions is not None:
+            for i, dim in enumerate(self.visual.dimensions):
+                if dim == 'time':
+                    xmin[i, :] = -1.
+                    xmin[:, i] = -1.
+                    xmax[i, :] = +1.
+                    xmax[:, i] = +1.
+                    ymin[i, i] = -1.
+                    ymax[i, i] = +1.
+        self._pz._xmin = xmin
+        self._pz._xmax = xmax
+        self._pz._ymin = ymin
+        self._pz._ymax = ymax
+
     @property
     def dimensions(self):
         """Dimensions."""
@@ -240,6 +262,7 @@ class FeatureView(BaseSpikeCanvas):
         self.axes.n_rows = self.visual.n_rows
         self._create_pan_zoom()
         self.axes.positions = (0, 0)
+        self._set_pan_constraints()
         self.update()
 
     @property
