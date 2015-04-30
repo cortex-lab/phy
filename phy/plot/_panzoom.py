@@ -586,14 +586,19 @@ class PanZoomGrid(PanZoom):
         for program in self._programs:
             program["u_pan_zoom"] = self._u_pan_zoom
 
-    def _reset(self):
-        pan = (0., 0.)
-        zoom = (1., 1.)
+    def _global_pan_zoom(self, pan, zoom):
+        # Reinitialize the pan zoom matrix.
         self._create_pan_and_zoom(pan, zoom)
-        value = pan + zoom
+        value = tuple(pan) + tuple(zoom)
         for program in self._programs:
+            # Update all boxes one by one.
+            # TODO OPTIM: update the uniform array at once.
+            # But it doesn't seem to work (VisPy bug?).
             for box in range(self._n_rows * self._n_rows):
                 program["u_pan_zoom[{0:d}]".format(box)] = value
+
+    def _reset(self):
+        self._global_pan_zoom((0., 0.), (1., 1.))
 
     # Event callbacks
     # -------------------------------------------------------------------------
@@ -608,6 +613,14 @@ class PanZoomGrid(PanZoom):
         # Set box index as a function of the press position.
         self._set_current_box(event.pos)
         super(PanZoomGrid, self).on_mouse_wheel(event)
+
+        modifiers = event.modifiers
+        alt = 'Alt' in modifiers
+
+        # Global zoom.
+        if alt:
+            self._global_pan_zoom((0., 0.), self._zoom)
+            self._canvas.update()
 
     def on_key_press(self, event):
         super(PanZoomGrid, self).on_key_press(event)
