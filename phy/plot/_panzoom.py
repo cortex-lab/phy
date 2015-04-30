@@ -41,12 +41,12 @@ class PanZoom(object):
 
     Pan:
 
-    * Mouse : click and move (drag movement)
+    * Mouse : left-click and move (drag movement)
     * Keyboard : arrows
 
     Zoom:
 
-    * Mouse : wheel
+    * Mouse : wheel or right-click and move (drag movement)
     * Keyboard : + and -
 
     Reset:
@@ -450,6 +450,39 @@ class PanZoom(object):
 
 
 class PanZoomGrid(PanZoom):
+    """Pan & zoom transform for a grid view.
+
+    This is used in a grid view with independent per-subplot pan & zoom.
+
+    The currently-active subplot depends on where the cursor was when
+    the mouse was clicked.
+
+    Interactivity
+    -------------
+
+    Pan:
+
+    * Mouse : left-click and move (drag movement)
+    * Keyboard : arrows
+
+    Subplot zoom:
+
+    * Mouse : wheel or right-click and move (drag movement)
+    * Keyboard : + and -
+
+    Global zoom:
+
+    * Mouse : Alt + wheel
+
+    Subplot reset:
+
+    * Keyboard : R
+
+    Global reset:
+
+    * Keyboard : Alt + R
+
+    """
     _index = (0, 0)  # current index of the box being pan/zoom-ed
 
     def __init__(self, *args, **kwargs):
