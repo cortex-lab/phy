@@ -223,7 +223,10 @@ class BaseSpikeVisual(_BakeVisual):
 
     @property
     def n_clusters(self):
-        return len(self._cluster_ids)
+        if self._cluster_ids is None:
+            return None
+        else:
+            return len(self._cluster_ids)
 
     @property
     def cluster_colors(self):

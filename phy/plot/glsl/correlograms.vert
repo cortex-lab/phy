@@ -24,7 +24,7 @@ void main (void)
     }
     v_color.a = 1.;
 
-    vec2 position = pan_zoom_grid(a_position);
+    vec2 position = pan_zoom_grid(a_position, a_box);
     vec2 box_position = to_box(position, a_box);
     gl_Position = vec4(box_position, 0., 1.);
 
