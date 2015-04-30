@@ -233,8 +233,11 @@ class FeatureView(BaseSpikeCanvas):
         xmax = np.empty((n, n))
         ymin = np.empty((n, n))
         ymax = np.empty((n, n))
+        gpza = np.empty((n, n), dtype=np.str)
+        gpza.fill('b')
         for arr in (xmin, xmax, ymin, ymax):
             arr.fill(np.nan)
+        _index_set = False
         if self.visual.dimensions is not None:
             for i, dim in enumerate(self.visual.dimensions):
                 if dim == 'time':
@@ -244,10 +247,20 @@ class FeatureView(BaseSpikeCanvas):
                     xmax[:, i] = +1.
                     xmin[i, i] = -1.
                     xmax[i, i] = +1.
+                    # Only update one axis for time dimensions during
+                    # global zoom.
+                    gpza[i, :] = 'x'
+                    gpza[:, i] = 'y'
+                else:
+                    # Set the current index to the first non-time axis.
+                    if not _index_set:
+                        self._pz._index = (i, i)
+                    _index_set = True
         self._pz._xmin = xmin
         self._pz._xmax = xmax
         self._pz._ymin = ymin
         self._pz._ymax = ymax
+        self._pz.global_pan_zoom_axis = gpza
 
     @property
     def dimensions(self):

@@ -492,11 +492,12 @@ class PanZoomGrid(PanZoom):
     * Keyboard : Shift + R
 
     """
-    _index = (0, 0)  # current index of the box being pan/zoom-ed
 
     def __init__(self, *args, **kwargs):
         n_rows = kwargs.pop('n_rows')
         self._n_rows = n_rows
+        self._index = (0, 0)  # current index of the box being pan/zoom-ed
+        self._global_pan_zoom_axis = None
         super(PanZoomGrid, self).__init__(*args, **kwargs)
 
     # Grid properties
@@ -690,17 +691,43 @@ class PanZoomGrid(PanZoom):
         for program in self._programs:
             program["u_pan_zoom"] = self._u_pan_zoom
 
+    @property
+    def global_pan_zoom_axis(self):
+        return self._global_pan_zoom_axis
+
+    @global_pan_zoom_axis.setter
+    def global_pan_zoom_axis(self, value):
+        self._global_pan_zoom_axis = value
+
     def _global_pan_zoom(self, pan=None, zoom=None):
+
         # Keep the current box index.
         index = self._index
+
         # Update pan and zoom of all subplots.
         for i in range(self._n_rows):
             for j in range(self._n_rows):
                 self._index = (i, j)
+
+                # Find out which axes to update.
                 if pan is not None:
-                    self.pan = pan
+                    p = list(pan)
+                    if self._global_pan_zoom_axis is not None:
+                        if self._global_pan_zoom_axis[i, j] == 'x':
+                            p[1] = self.pan[1]
+                        elif self._global_pan_zoom_axis[i, j] == 'y':
+                            p[0] = self.pan[0]
+                    self.pan = p
+
                 if zoom is not None:
-                    self.zoom = zoom
+                    z = list(zoom)
+                    if self._global_pan_zoom_axis is not None:
+                        if self._global_pan_zoom_axis[i, j] == 'x':
+                            z[1] = self.zoom[1]
+                        elif self._global_pan_zoom_axis[i, j] == 'y':
+                            z[0] = self.zoom[0]
+                    self.zoom = z
+
         # Set back the box index.
         self._index = index
 
