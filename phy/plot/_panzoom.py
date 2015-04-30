@@ -573,6 +573,56 @@ class PanZoomGrid(PanZoom):
         for program in self._programs:
             program["u_pan_zoom[{0:d}]".format(box)] = value
 
+    # xmin/xmax
+    # -------------------------------------------------------------------------
+
+    @property
+    def xmin(self):
+        return self._local(self._xmin)
+
+    @xmin.setter
+    def xmin(self, value):
+        if self._xmax is not None:
+            self._xmin = np.minimum(value, self._xmax)
+        else:
+            self._xmin = value
+
+    @property
+    def xmax(self):
+        return self._local(self._xmax)
+
+    @xmax.setter
+    def xmax(self, value):
+        if self._xmin is not None:
+            self._xmax = np.maximum(value, self._xmin)
+        else:
+            self._xmax = value
+
+    # ymin/ymax
+    # -------------------------------------------------------------------------
+
+    @property
+    def ymin(self):
+        return self._local(self._ymin)
+
+    @ymin.setter
+    def ymin(self, value):
+        if self._ymax is not None:
+            self._ymin = min(value, self._ymax)
+        else:
+            self._ymin = value
+
+    @property
+    def ymax(self):
+        return self._local(self._ymax)
+
+    @ymax.setter
+    def ymax(self, value):
+        if self._ymin is not None:
+            self._ymax = max(value, self._ymin)
+        else:
+            self._ymax = value
+
     # Internal methods
     # -------------------------------------------------------------------------
 
@@ -583,22 +633,6 @@ class PanZoomGrid(PanZoom):
             if value == np.nan:
                 value = None
         return value
-
-    @property
-    def xmin(self):
-        return self._local(self._xmin)
-
-    @property
-    def xmax(self):
-        return self._local(self._xmax)
-
-    @property
-    def ymin(self):
-        return self._local(self._ymin)
-
-    @property
-    def ymax(self):
-        return self._local(self._ymax)
 
     def _constrain_pan(self):
         """Constrain bounding box."""
