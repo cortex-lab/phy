@@ -551,6 +551,10 @@ class PanZoomGrid(PanZoom):
         i, j = self._index
         self._zoom_matrix[i, j, :] = value
 
+    @property
+    def zoom_matrix(self):
+        return self._zoom_matrix
+
     def _apply_pan_zoom(self):
         pan = self._pan
         zoom = self._zoom_aspect(self._zoom)

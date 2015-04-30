@@ -470,11 +470,14 @@ class Session(BaseSession):
         return self.settings_manager.set_user_settings(
             key, value, scope='experiment')
 
-    def get_internal_settings(self, key):
+    def get_internal_settings(self, key, default=None):
         """Get an internal settings."""
-        return self.settings_manager.get_internal_settings(key,
-                                                           scope='experiment',
-                                                           )
+        value = self.settings_manager.get_internal_settings(key,
+                                                            scope='experiment',
+                                                            )
+        if value is None:
+            value = default
+        return value
 
     def set_internal_settings(self, key, value):
         """Set an internal settings."""
@@ -870,7 +873,7 @@ class Session(BaseSession):
 
         # Persist scale factor.
         sf_name = 'manual_clustering.waveforms_scale_factor'
-        sf = self.get_internal_settings(sf_name) or .01
+        sf = self.get_internal_settings(sf_name, .01)
 
         vm = self._create_view_model('waveforms',
                                      scale_factor=sf,
@@ -879,14 +882,14 @@ class Session(BaseSession):
 
         # Load box scale.
         bs_name = 'manual_clustering.waveforms_box_scale'
-        bs = (self.get_internal_settings(bs_name) or
-              vm.view.visual.default_box_scale)
+        bs = self.get_internal_settings(bs_name,
+                                        vm.view.visual.default_box_scale)
         vm.view.box_scale = bs
 
         # Load probe scale.
         ps_name = 'manual_clustering.waveforms_probe_scale'
-        ps = (self.get_internal_settings(ps_name) or
-              vm.view.visual.default_probe_scale)
+        ps = self.get_internal_settings(ps_name,
+                                        vm.view.visual.default_probe_scale)
         vm.view.probe_scale = ps
 
         @vm.view.connect
@@ -904,10 +907,10 @@ class Session(BaseSession):
         """Create a FeatureView and return a ViewModel instance."""
 
         sf_name = 'manual_clustering.features_scale_factor'
-        sf = self.get_internal_settings(sf_name) or .01
+        sf = self.get_internal_settings(sf_name, .01)
 
         ms_name = 'manual_clustering.features_marker_size'
-        ms = self.get_internal_settings(ms_name) or 2.
+        ms = self.get_internal_settings(ms_name, 2.)
 
         vm = self._create_view_model('features',
                                      scale_factor=sf,
@@ -920,10 +923,10 @@ class Session(BaseSession):
         def on_draw(event):
             if vm.view.visual.empty:
                 return
-            self.set_internal_settings(sf_name,
-                                       vm.view.zoom * vm.scale_factor)
-            self.set_internal_settings(ms_name,
-                                       vm.view.marker_size)
+            # Remember the minimum zoom_y for the scale factor.
+            zoom = vm.view._pz.zoom_matrix[:, :, 1].min()
+            self.set_internal_settings(sf_name, zoom * vm.scale_factor)
+            self.set_internal_settings(ms_name, vm.view.marker_size)
 
         return vm
 
@@ -941,7 +944,7 @@ class Session(BaseSession):
         """Create a TraceView and return a ViewModel instance."""
 
         sf_name = 'manual_clustering.traces_scale_factor'
-        sf = self.get_internal_settings(sf_name) or .001
+        sf = self.get_internal_settings(sf_name, .001)
 
         vm = self._create_view_model('traces',
                                      scale_factor=sf)

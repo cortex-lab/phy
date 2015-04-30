@@ -356,10 +356,6 @@ class BaseSpikeCanvas(app.Canvas):
         self._pz.add(self.visual.program)
         self._pz.attach(self)
 
-    @property
-    def zoom(self):
-        return self._pz.zoom
-
     def on_draw(self, event):
         self.context.clear()
         self.visual.draw()
