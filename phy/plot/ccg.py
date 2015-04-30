@@ -117,7 +117,12 @@ class CorrelogramView(BaseSpikeCanvas):
             self._pz = PanZoomGrid(n_rows=self.visual.n_clusters)
             self._pz.add(self.visual.program)
             self._pz.attach(self)
-            self._pz.zmin = 1
+            self._pz.aspect = None
+            self._pz.zmin = 1.
+            self._pz.xmin = -1.
+            self._pz.xmax = +1.
+            self._pz.ymin = -1.
+            self._pz.ymax = +1.
             self._pz.zoom_to_pointer = False
 
     @property

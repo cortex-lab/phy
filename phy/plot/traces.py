@@ -204,6 +204,9 @@ class TraceView(BaseSpikeCanvas):
 
     def __init__(self, *args, **kwargs):
         super(TraceView, self).__init__(*args, **kwargs)
+
+    def _create_pan_zoom(self):
+        super(TraceView, self)._create_pan_zoom()
         self._pz.aspect = None
         self._pz.zmin = .5
         self._pz.xmin = -1.

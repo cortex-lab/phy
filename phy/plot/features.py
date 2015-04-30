@@ -222,6 +222,7 @@ class FeatureView(BaseSpikeCanvas):
             self._pz = PanZoomGrid(n_rows=self.visual.n_rows)
             self._pz.add(self.visual.program)
             self._pz.add(self.axes.program)
+            self._pz.aspect = None
             self._pz.attach(self)
 
     @property
@@ -253,9 +254,9 @@ class FeatureView(BaseSpikeCanvas):
 
     def on_draw(self, event):
         gloo.clear(color=True, depth=True)
-        # self.axes.draw()
+        self.axes.draw()
         self.visual.draw()
-        # self.boxes.draw()
+        self.boxes.draw()
 
     def on_key_press(self, event):
         coeff = .25

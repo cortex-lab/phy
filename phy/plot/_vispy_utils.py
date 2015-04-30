@@ -16,7 +16,7 @@ from vispy.visuals import Visual
 
 from ..utils.array import _unique, _as_array
 from ..utils.logging import debug
-from ._panzoom import PanZoom, PanZoomGrid
+from ._panzoom import PanZoom
 
 
 #------------------------------------------------------------------------------

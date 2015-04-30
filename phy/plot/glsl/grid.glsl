@@ -12,8 +12,8 @@ vec2 row_col(float index, float n_rows) {
 
 vec4 fetch_pan_zoom(float index) {
     vec4 pz = u_pan_zoom[int(index)];
-    vec2 pan = pz.xy;// * 10. - 1.;
-    vec2 zoom = pz.zw;// * 10.;
+    vec2 pan = pz.xy;
+    vec2 zoom = pz.zw;
     return vec4(pan, zoom);
 }
 

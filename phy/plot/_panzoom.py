@@ -55,6 +55,9 @@ class PanZoom(object):
 
     """
 
+    _default_zoom_coeff = 2.2
+    _default_wheel_coeff = .05
+
     def __init__(self, aspect=1.0, pan=(0.0, 0.0), zoom=(1.0, 1.0),
                  zmin=1e-5, zmax=1e5,
                  xmin=None, xmax=None,
@@ -106,6 +109,8 @@ class PanZoom(object):
     def _create_pan_and_zoom(self, pan, zoom):
         self._pan = np.array(pan)
         self._zoom = np.array(zoom)
+        self._zoom_coeff = self._default_zoom_coeff
+        self._wheel_coeff = self._default_wheel_coeff
 
     # Various properties
     # -------------------------------------------------------------------------
@@ -301,56 +306,26 @@ class PanZoom(object):
     # Event callbacks
     # -------------------------------------------------------------------------
 
-    def on_resize(self, event):
-        """Resize event."""
+    def _do_pan(self, d):
 
-        self._width = float(event.size[0])
-        self._height = float(event.size[1])
-        aspect = self._width / self._height
-        if aspect > 1.0:
-            self._canvas_aspect = np.array([1.0 / aspect, 1.0])
-        else:
-            self._canvas_aspect = np.array([1.0, aspect / 1.0])
+        dx, dy = d
 
-        # Update zoom level
-        self.zoom = self._zoom
+        pan_x, pan_y = self.pan
+        zoom_x, zoom_y = self._zoom_aspect(self._zoom)
 
-    def on_mouse_move(self, event):
-        """Drag."""
-        if event.is_dragging and not event.modifiers:
-            if event.button == 1:
-                x0, y0 = self._normalize(event.press_event.pos)
-                x1, y1 = self._normalize(event.last_event.pos, False)
-                x, y = self._normalize(event.pos, False)
-                dx, dy = x - x1, -(y - y1)
+        self.pan = (pan_x + dx / zoom_x,
+                    pan_y + dy / zoom_y)
 
-                pan_x, pan_y = self.pan
-                zoom_x, zoom_y = self._zoom_aspect(self._zoom)
+        self._canvas.update()
 
-                self.pan = (pan_x + dx / zoom_x,
-                            pan_y + dy / zoom_y)
+    def _do_zoom(self, d, p):
+        dx, dy = d
+        x0, y0 = p
 
-                self._canvas.update()
-            elif event.button == 2:
-                x0, y0 = self._normalize(event.press_event.pos)
-                x1, y1 = self._normalize(event.last_event.pos, False)
-                x, y = self._normalize(event.pos, False)
-                dx, dy = x - x1, -(y - y1)
-                z_old = self.zoom
-                self.zoom = z_old * np.exp(2. * np.array([dx, dy]))
-                z_new = self.zoom
-                self.pan += -np.array([x0, -y0]) * (1. / z_old - 1. / z_new)
-                self._canvas.update()
-
-    def on_mouse_wheel(self, event):
-        """Zoom."""
-        dx = np.sign(event.delta[1]) * .05
-        # Zoom toward the mouse pointer.
-        x0, y0 = self._normalize(event.pos)
         pan_x, pan_y = self._pan
         zoom_x, zoom_y = self._zoom
-        zoom_x_new, zoom_y_new = (zoom_x * math.exp(2.5 * dx),
-                                  zoom_y * math.exp(2.5 * dx))
+        zoom_x_new, zoom_y_new = (zoom_x * math.exp(self._zoom_coeff * dx),
+                                  zoom_y * math.exp(self._zoom_coeff * dy))
 
         zoom_x_new = max(min(zoom_x_new, self._zmax), self._zmin)
         zoom_y_new = max(min(zoom_y_new, self._zmax), self._zmin)
@@ -368,6 +343,40 @@ class PanZoom(object):
 
         self._canvas.update()
 
+    def on_resize(self, event):
+        """Resize event."""
+
+        self._width = float(event.size[0])
+        self._height = float(event.size[1])
+        aspect = self._width / self._height
+        if aspect > 1.0:
+            self._canvas_aspect = np.array([1.0 / aspect, 1.0])
+        else:
+            self._canvas_aspect = np.array([1.0, aspect / 1.0])
+
+        # Update zoom level
+        self.zoom = self._zoom
+
+    def on_mouse_move(self, event):
+        """Pan and zoom with the mouse."""
+
+        if event.is_dragging and not event.modifiers:
+            x0, y0 = self._normalize(event.press_event.pos)
+            x1, y1 = self._normalize(event.last_event.pos, False)
+            x, y = self._normalize(event.pos, False)
+            dx, dy = x - x1, -(y - y1)
+            if event.button == 1:
+                self._do_pan((dx, dy))
+            elif event.button == 2:
+                self._do_zoom((dx, dy), (x0, y0))
+
+    def on_mouse_wheel(self, event):
+        """Zoom."""
+        dx = np.sign(event.delta[1]) * self._wheel_coeff
+        # Zoom toward the mouse pointer.
+        x0, y0 = self._normalize(event.pos)
+        self._do_zoom((dx, dx), (x0, y0))
+
     _arrows = ('Left', 'Right', 'Up', 'Down')
     _pm = ('+', '-')
 
@@ -381,13 +390,13 @@ class PanZoom(object):
         if key in self._arrows:
             k = .1 / self.zoom
             if key == 'Left':
-                self.pan += (+k, +0)
+                self.pan += (+k[0], +0)
             elif key == 'Right':
-                self.pan += (-k, +0)
+                self.pan += (-k[0], +0)
             elif key == 'Down':
-                self.pan += (+0, +k)
+                self.pan += (+0, +k[1])
             elif key == 'Up':
-                self.pan += (+0, -k)
+                self.pan += (+0, -k[1])
             self._canvas.update()
 
         # Zoom.
@@ -472,6 +481,9 @@ class PanZoomGrid(PanZoom):
         self._zoom_matrix = np.empty((self._n_rows, self._n_rows, 2))
         self._zoom_matrix[..., :] = zoom[None, None, :]
 
+        self._zoom_coeff = self._default_zoom_coeff * .25 * self._n_rows
+        self._wheel_coeff = self._default_wheel_coeff * 5. / self._n_rows
+
     def add(self, programs):
         """ Attach programs to this tranform """
 
@@ -484,11 +496,11 @@ class PanZoomGrid(PanZoom):
         # Initialize and set the uniform array.
         # NOTE: 256 is the maximum size used for this uniform array.
         # This corresponds to a hard-limit of 16x16 subplots.
-        pan_zoom = np.zeros((256, 4),
-                            dtype=np.float32)
-        pan_zoom[:, 2:] = 1.
+        self._u_pan_zoom = np.zeros((256, 4),
+                                    dtype=np.float32)
+        self._u_pan_zoom[:, 2:] = 1.
         for program in self._programs:
-            program["u_pan_zoom"] = pan_zoom
+            program["u_pan_zoom"] = self._u_pan_zoom
 
         self._apply_pan_zoom()
 
@@ -505,8 +517,8 @@ class PanZoomGrid(PanZoom):
         self._index = self._get_box(pos)
 
     def on_mouse_move(self, event):
+        # Set box index as a function of the press position.
         if event.is_dragging:
-            # Set box index as a function of the press position.
             self._set_current_box(event.press_event.pos)
         super(PanZoomGrid, self).on_mouse_move(event)
 
@@ -531,6 +543,20 @@ class PanZoomGrid(PanZoom):
                                "But you can try to increase the number 256 in "
                                "'plot/glsl/grid.glsl'.")
         self._create_pan_and_zoom((0., 0.), (1., 1.))
+
+    def _constrain_pan(self):
+        """Constrain bounding box."""
+        if self._xmin is not None and self._xmax is not None:
+            p0 = (self._xmin + 1. / self._zoom[0]) / self._n_rows
+            p1 = (self._xmax - 1. / self._zoom[0]) / self._n_rows
+            p0, p1 = min(p0, p1), max(p0, p1)
+            self._pan[0] = np.clip(self._pan[0], p0, p1)
+
+        if self._ymin is not None and self._ymax is not None:
+            p0 = (self._ymin + 1. / self._zoom[1]) / self._n_rows
+            p1 = (self._ymax - 1. / self._zoom[1]) / self._n_rows
+            p0, p1 = min(p0, p1), max(p0, p1)
+            self._pan[1] = np.clip(self._pan[1], p0, p1)
 
     def _get_box(self, x_y):
         x0, y0 = x_y
