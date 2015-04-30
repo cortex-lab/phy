@@ -139,22 +139,24 @@ class FeatureVisual(BaseSpikeVisual):
 
                 dim_i = self._dimensions[i]
                 dim_j = self._dimensions[j]
-                fet_i = self._get_feature_dim(dim_i)
 
+                fet_j = self._get_feature_dim(dim_j)
                 # For non-time dimensions, the diagonal shows
                 # a different feature on y (same channel than x).
-                if i != j or dim_j == 'time' or self.n_features <= 1:
-                    fet_j = self._get_feature_dim(dim_j)
-                else:
-                    channel, feature = dim_j
+                if i == j and dim_i != 'time' and self.n_features >= 1:
+                    channel, feature = dim_i
                     # Choose the other feature on y axis.
                     feature = 1 - feature
-                    fet_j = self._features[:, channel, feature]
+                    fet_i = self._features[:, channel, feature]
+                else:
+                    fet_i = self._get_feature_dim(dim_i)
 
-                pos = np.c_[fet_i, fet_j]
+                # NOTE: we switch here because we want to plot
+                # dim_i (y) over dim_j (x) on box (i, j).
+                pos = np.c_[fet_j, fet_i]
                 positions.append(pos)
 
-                # TODO: choose the mask
+                # TODO: how to choose the mask?
                 mask = self._get_mask_dim(dim_i)
                 masks.append(mask.astype(np.float32))
                 boxes.append(index * np.ones(self.n_spikes, dtype=np.float32))
@@ -236,12 +238,12 @@ class FeatureView(BaseSpikeCanvas):
         if self.visual.dimensions is not None:
             for i, dim in enumerate(self.visual.dimensions):
                 if dim == 'time':
-                    xmin[i, :] = -1.
-                    ymin[:, i] = -1.
-                    xmax[i, :] = +1.
-                    ymax[:, i] = +1.
-                    ymin[i, i] = -1.
-                    ymax[i, i] = +1.
+                    ymin[i, :] = -1.
+                    xmin[:, i] = -1.
+                    ymax[i, :] = +1.
+                    xmax[:, i] = +1.
+                    xmin[i, i] = -1.
+                    xmax[i, i] = +1.
         self._pz._xmin = xmin
         self._pz._xmax = xmax
         self._pz._ymin = ymin

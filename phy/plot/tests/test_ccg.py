@@ -7,10 +7,8 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-import matplotlib.pyplot as plt
 
 from ..ccg import plot_ccg
-from ...utils.logging import set_level
 from ..ccg import CorrelogramView
 from ...utils._color import _random_color
 from ...io.mock.artificial import artificial_correlograms
@@ -25,7 +23,6 @@ def test_plot_ccg():
     n_bins = 51
     ccg = np.random.randint(size=n_bins, low=10, high=50)
     plot_ccg(ccg, baseline=20, color='g')
-    # plt.show()
 
 
 #------------------------------------------------------------------------------
