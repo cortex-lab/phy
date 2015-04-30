@@ -295,11 +295,6 @@ class PanZoom(object):
         if not self.is_attached:
             return
 
-        # aspect = np.ones(2)
-        # if self._aspect is not None:
-        #     aspect = self._canvas_aspect * self._aspect
-        # self._zoom = self._zoom * aspect
-
         # Constrain bounding box.
         self._constrain_pan()
         self._constrain_zoom()
@@ -326,20 +321,30 @@ class PanZoom(object):
 
     def on_mouse_move(self, event):
         """Drag."""
-
         if event.is_dragging and not event.modifiers:
-            x0, y0 = self._normalize(event.press_event.pos)
-            x1, y1 = self._normalize(event.last_event.pos, False)
-            x, y = self._normalize(event.pos, False)
-            dx, dy = x - x1, -(y - y1)
+            if event.button == 1:
+                x0, y0 = self._normalize(event.press_event.pos)
+                x1, y1 = self._normalize(event.last_event.pos, False)
+                x, y = self._normalize(event.pos, False)
+                dx, dy = x - x1, -(y - y1)
 
-            pan_x, pan_y = self.pan
-            zoom_x, zoom_y = self._zoom_aspect(self._zoom)
+                pan_x, pan_y = self.pan
+                zoom_x, zoom_y = self._zoom_aspect(self._zoom)
 
-            self.pan = (pan_x + dx / zoom_x,
-                        pan_y + dy / zoom_y)
+                self.pan = (pan_x + dx / zoom_x,
+                            pan_y + dy / zoom_y)
 
-            self._canvas.update()
+                self._canvas.update()
+            elif event.button == 2:
+                x0, y0 = self._normalize(event.press_event.pos)
+                x1, y1 = self._normalize(event.last_event.pos, False)
+                x, y = self._normalize(event.pos, False)
+                dx, dy = x - x1, -(y - y1)
+                z_old = self.zoom
+                self.zoom = z_old * np.exp(2. * np.array([dx, dy]))
+                z_new = self.zoom
+                self.pan += -np.array([x0, -y0]) * (1. / z_old - 1. / z_new)
+                self._canvas.update()
 
     def on_mouse_wheel(self, event):
         """Zoom."""
