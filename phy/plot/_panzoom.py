@@ -149,7 +149,7 @@ class PanZoom(object):
     @xmin.setter
     def xmin(self, value):
         if self._xmax is not None:
-            self._xmin = min(value, self._xmax)
+            self._xmin = np.minimum(value, self._xmax)
         else:
             self._xmin = value
 
@@ -160,7 +160,7 @@ class PanZoom(object):
     @xmax.setter
     def xmax(self, value):
         if self._xmin is not None:
-            self._xmax = max(value, self._xmin)
+            self._xmax = np.maximum(value, self._xmin)
         else:
             self._xmax = value
 
@@ -239,33 +239,33 @@ class PanZoom(object):
 
     def _constrain_pan(self):
         """Constrain bounding box."""
-        if self._xmin is not None and self._xmax is not None:
-            p0 = self._xmin + 1. / self._zoom[0]
-            p1 = self._xmax - 1. / self._zoom[0]
+        if self.xmin is not None and self._xmax is not None:
+            p0 = self.xmin + 1. / self._zoom[0]
+            p1 = self.xmax - 1. / self._zoom[0]
             p0, p1 = min(p0, p1), max(p0, p1)
             self._pan[0] = np.clip(self._pan[0], p0, p1)
 
-        if self._ymin is not None and self._ymax is not None:
-            p0 = self._ymin + 1. / self._zoom[1]
-            p1 = self._ymax - 1. / self._zoom[1]
+        if self.ymin is not None and self._ymax is not None:
+            p0 = self.ymin + 1. / self._zoom[1]
+            p1 = self.ymax - 1. / self._zoom[1]
             p0, p1 = min(p0, p1), max(p0, p1)
             self._pan[1] = np.clip(self._pan[1], p0, p1)
 
     def _constrain_zoom(self):
         """Constrain bounding box."""
-        if self._xmin is not None:
+        if self.xmin is not None:
             self._zoom[0] = max(self._zoom[0],
-                                1. / (self._pan[0] - self._xmin))
-        if self._xmax is not None:
+                                1. / (self._pan[0] - self.xmin))
+        if self.xmax is not None:
             self._zoom[0] = max(self._zoom[0],
-                                1. / (self._xmax - self._pan[0]))
+                                1. / (self.xmax - self._pan[0]))
 
-        if self._ymin is not None:
+        if self.ymin is not None:
             self._zoom[1] = max(self._zoom[1],
-                                1. / (self._pan[1] - self._ymin))
-        if self._ymax is not None:
+                                1. / (self._pan[1] - self.ymin))
+        if self.ymax is not None:
             self._zoom[1] = max(self._zoom[1],
-                                1. / (self._ymax - self._pan[1]))
+                                1. / (self.ymax - self._pan[1]))
 
     # Pan and zoom
     # -------------------------------------------------------------------------
@@ -567,19 +567,19 @@ class PanZoomGrid(PanZoom):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _constrain_pan(self):
-        """Constrain bounding box."""
-        if self._xmin is not None and self._xmax is not None:
-            p0 = (self._xmin + 1. / self._zoom[0]) / self._n_rows
-            p1 = (self._xmax - 1. / self._zoom[0]) / self._n_rows
-            p0, p1 = min(p0, p1), max(p0, p1)
-            self._pan[0] = np.clip(self._pan[0], p0, p1)
+    def _local(self, value):
+        if isinstance(value, np.ndarray):
+            i, j = self._index
+            value = value[i, j]
+        return value
 
-        if self._ymin is not None and self._ymax is not None:
-            p0 = (self._ymin + 1. / self._zoom[1]) / self._n_rows
-            p1 = (self._ymax - 1. / self._zoom[1]) / self._n_rows
-            p0, p1 = min(p0, p1), max(p0, p1)
-            self._pan[1] = np.clip(self._pan[1], p0, p1)
+    @property
+    def xmin(self):
+        return self._local(self._xmin)
+
+    @property
+    def xmax(self):
+        return self._local(self._xmax)
 
     def _get_box(self, x_y):
         x0, y0 = x_y
