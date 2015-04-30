@@ -657,37 +657,18 @@ class PanZoomGrid(PanZoom):
             program["u_pan_zoom"] = self._u_pan_zoom
 
     def _global_pan_zoom(self, pan=None, zoom=None):
-        # Reinitialize the pan zoom matrix.
-        # self._create_pan_and_zoom(pan, zoom)
-        n = self._n_rows * self._n_rows
-        # This will be uploaded to the uniform array containing the
-        # pan zoom values.
-        value = np.empty((n, 4), dtype=np.float32)
-
-        # We update the CPU pan matrix if pan is specified.
-        if pan is not None:
-            pan = _as_array(pan)
-            self._pan_matrix[...] = pan[None, None, :]
-            value[:, :2] = pan[None, :]
-        # Otherwise we use the existing pan values for the GPU.
-        else:
-            value[:, :2] = self._pan_matrix.reshape((-1, 2))
-
-        # We update the CPU zoom matrix if zoom is specified.
-        if zoom is not None:
-            zoom = _as_array(zoom)
-            self._zoom_matrix[...] = zoom[None, None, :]
-            value[:, 2:] = zoom[None, :]
-        # Otherwise we use the existing zoom values for the GPU.
-        else:
-            value[:, :2] = self._zoom_matrix.reshape((-1, 2))
-
-        for program in self._programs:
-            # Update all boxes one by one.
-            # TODO OPTIM: we could update the uniform array at once,
-            # but that doesn't seem to work (VisPy bug?).
-            for i in range(n):
-                program["u_pan_zoom[{0:d}]".format(i)] = value[i, :]
+        # Keep the current box index.
+        index = self._index
+        # Update pan and zoom of all subplots.
+        for i in range(self._n_rows):
+            for j in range(self._n_rows):
+                self._index = (i, j)
+                if pan is not None:
+                    self.pan = pan
+                if zoom is not None:
+                    self.zoom = zoom
+        # Set back the box index.
+        self._index = index
 
     def _reset(self):
         self._global_pan_zoom(pan=(0., 0.), zoom=(1., 1.))
