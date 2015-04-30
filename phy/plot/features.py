@@ -41,7 +41,7 @@ class FeatureVisual(BaseSpikeVisual):
         self._dimensions = []
         self.n_channels, self.n_features = None, None
         self.n_rows = None
-        self.program['u_size'] = 2.
+        self.program['u_size'] = 3.
 
     # Data properties
     # -------------------------------------------------------------------------
