@@ -222,7 +222,7 @@ class PanZoom(object):
         if self._aspect is not None:
             aspect = self._canvas_aspect * self._aspect
         else:
-            aspect = np.ones(2)
+            aspect = 1.
         return zoom * aspect
 
     def _normalize(self, x_y, restrict_to_box=True):
@@ -358,14 +358,6 @@ class PanZoom(object):
         self.zoom = zoom_x_new, zoom_y_new
 
         if self._zoom_to_pointer:
-            # if self._aspect is not None:
-            #     aspect = self._canvas_aspect * self._aspect
-            # else:
-            #     aspect = np.ones(2)
-            # zoom_x *= aspect[0]
-            # zoom_y *= aspect[1]
-            # zoom_x_new *= aspect[0]
-            # zoom_y_new *= aspect[1]
             zoom_x, zoom_y = self._zoom_aspect((zoom_x,
                                                 zoom_y))
             zoom_x_new, zoom_y_new = self._zoom_aspect((zoom_x_new,
@@ -470,13 +462,16 @@ class PanZoomGrid(PanZoom):
         self._zoom_matrix[i, j, :] = value
 
     def _create_pan_and_zoom(self, pan, zoom):
+        pan = _as_array(pan)
+        zoom = _as_array(zoom)
         self._pan_matrix = np.empty((self._n_rows, self._n_rows, 2))
         self._pan_matrix[..., :] = pan[None, None, :]
 
         self._zoom_matrix = np.empty((self._n_rows, self._n_rows, 2))
         self._zoom_matrix[..., :] = zoom[None, None, :]
 
-        self._create_pan_zoom_texture()
+        shape = (self._n_rows, self._n_rows, 4)
+        self._tex = np.zeros(shape, dtype=np.uint8)
 
     def add(self, programs):
         """ Attach programs to this tranform """
@@ -499,15 +494,13 @@ class PanZoomGrid(PanZoom):
     def _normalize_zoom(self, zoom):
         return _as_array(zoom) / 10. * 255
 
-    def _create_pan_zoom_texture(self):
-        shape = (self._n_rows, self._n_rows, 4)
-        self._tex = np.zeros(shape, dtype=np.uint8)
-
     def _apply_pan_zoom(self):
-        zoom = self._zoom_aspect()
-        i, j = self._index
-        self._tex[i, j, :2] = self._normalize_pan(self._pan)
-        self._tex[i, j, 2:] = self._normalize_zoom(zoom)
+        zoom = self._zoom_aspect(self._zoom_matrix)
+        # i, j = self._index
+        assert (self._pan_matrix.shape[:2] == self._tex.shape[:2])# ==
+                # (self._n_rows, self._n_rows))
+        self._tex[..., :2] = self._normalize_pan(self._pan_matrix)
+        self._tex[..., 2:] = self._normalize_zoom(zoom)
         for program in self._programs:
             program["u_pan_zoom"].set_data(self._tex)
 
@@ -534,7 +527,7 @@ class PanZoomGrid(PanZoom):
     def n_rows(self, value):
         self._n_rows = int(value)
         assert self._n_rows >= 1
-        self._create_pan_zoom_texture()
+        self._create_pan_and_zoom((0., 0.), (1., 1.))
 
     def _get_box(self, x_y):
         x0, y0 = x_y
