@@ -55,8 +55,8 @@ class PanZoom(object):
 
     """
 
-    _default_zoom_coeff = 2.2
-    _default_wheel_coeff = .05
+    _default_zoom_coeff = 1.5
+    _default_wheel_coeff = .1
 
     def __init__(self, aspect=1.0, pan=(0.0, 0.0), zoom=(1.0, 1.0),
                  zmin=1e-5, zmax=1e5,
@@ -87,7 +87,6 @@ class PanZoom(object):
         """
 
         self._aspect = aspect
-        self._create_pan_and_zoom(_as_array(pan), _as_array(zoom))
         self._zmin = zmin
         self._zmax = zmax
         self._xmin = xmin
@@ -102,6 +101,8 @@ class PanZoom(object):
         self._canvas_aspect = np.ones(2)
         self._width = 1
         self._height = 1
+
+        self._create_pan_and_zoom(_as_array(pan), _as_array(zoom))
 
         # Programs using this transform
         self._programs = []
@@ -315,14 +316,14 @@ class PanZoom(object):
 
         self._canvas.update()
 
-    def _do_zoom(self, d, p):
+    def _do_zoom(self, d, p, c=1.):
         dx, dy = d
         x0, y0 = p
 
         pan_x, pan_y = self._pan
         zoom_x, zoom_y = self._zoom
-        zoom_x_new, zoom_y_new = (zoom_x * math.exp(self._zoom_coeff * dx),
-                                  zoom_y * math.exp(self._zoom_coeff * dy))
+        zoom_x_new, zoom_y_new = (zoom_x * math.exp(c * self._zoom_coeff * dx),
+                                  zoom_y * math.exp(c * self._zoom_coeff * dy))
 
         zoom_x_new = max(min(zoom_x_new, self._zmax), self._zmin)
         zoom_y_new = max(min(zoom_y_new, self._zmax), self._zmin)
@@ -368,7 +369,8 @@ class PanZoom(object):
             if event.button == 1:
                 self._do_pan((dx, dy))
             elif event.button == 2:
-                self._do_zoom((dx, dy), (x0, y0))
+                c = np.sqrt(self._width) * .03
+                self._do_zoom((dx, dy), (x0, y0), c=c)
 
     def on_mouse_wheel(self, event):
         """Zoom."""
@@ -487,8 +489,11 @@ class PanZoomGrid(PanZoom):
         self._zoom_matrix = np.empty((self._n_rows, self._n_rows, 2))
         self._zoom_matrix[..., :] = zoom[None, None, :]
 
-        self._zoom_coeff = self._default_zoom_coeff * .25 * self._n_rows
-        self._wheel_coeff = self._default_wheel_coeff * 5. / self._n_rows
+        # The zoom coefficient for mouse zoom should be proportional
+        # to the subplot size.
+        c = 3. / np.sqrt(self._n_rows)
+        self._zoom_coeff = self._default_zoom_coeff * c
+        self._wheel_coeff = self._default_wheel_coeff
 
     def _set_current_box(self, pos):
         self._index = self._get_box(pos)
@@ -571,6 +576,25 @@ class PanZoomGrid(PanZoom):
 
         return x0, y0
 
+    def _initialize_pan_zoom(self):
+        # Initialize and set the uniform array.
+        # NOTE: 256 is the maximum size used for this uniform array.
+        # This corresponds to a hard-limit of 16x16 subplots.
+        self._u_pan_zoom = np.zeros((256, 4),
+                                    dtype=np.float32)
+        self._u_pan_zoom[:, 2:] = 1.
+        for program in self._programs:
+            program["u_pan_zoom"] = self._u_pan_zoom
+
+    def _reset(self):
+        pan = (0., 0.)
+        zoom = (1., 1.)
+        self._create_pan_and_zoom(pan, zoom)
+        value = pan + zoom
+        for program in self._programs:
+            for box in range(self._n_rows * self._n_rows):
+                program["u_pan_zoom[{0:d}]".format(box)] = value
+
     # Event callbacks
     # -------------------------------------------------------------------------
 
@@ -588,25 +612,23 @@ class PanZoomGrid(PanZoom):
     def on_key_press(self, event):
         super(PanZoomGrid, self).on_key_press(event)
 
+        key = event.key
+        modifiers = event.modifiers
+        alt = 'Alt' in modifiers
+
+        # Reset with 'R'.
+        if key == 'R' and alt:
+            self._reset()
+            self._canvas.update()
+
     # Canvas methods
     # -------------------------------------------------------------------------
 
     def add(self, programs):
         """ Attach programs to this tranform """
-
         if not isinstance(programs, (list, tuple)):
             programs = [programs]
-
         for program in programs:
             self._programs.append(program)
-
-        # Initialize and set the uniform array.
-        # NOTE: 256 is the maximum size used for this uniform array.
-        # This corresponds to a hard-limit of 16x16 subplots.
-        self._u_pan_zoom = np.zeros((256, 4),
-                                    dtype=np.float32)
-        self._u_pan_zoom[:, 2:] = 1.
-        for program in self._programs:
-            program["u_pan_zoom"] = self._u_pan_zoom
-
+        self._initialize_pan_zoom()
         self._apply_pan_zoom()
