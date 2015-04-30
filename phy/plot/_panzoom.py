@@ -90,7 +90,6 @@ class PanZoom(object):
         self._ymax = ymax
 
         self._zoom_to_pointer = True
-        self._n_rows = 1
 
         # Canvas this transform is attached to
         self._canvas = None
@@ -103,6 +102,9 @@ class PanZoom(object):
         self._u_zoom = np.array([zoom, zoom])
         self._programs = []
 
+    # Various properties
+    # -------------------------------------------------------------------------
+
     @property
     def zoom_to_pointer(self):
         return self._zoom_to_pointer
@@ -110,14 +112,6 @@ class PanZoom(object):
     @zoom_to_pointer.setter
     def zoom_to_pointer(self, value):
         self._zoom_to_pointer = value
-
-    @property
-    def n_rows(self):
-        return self._n_rows
-
-    @n_rows.setter
-    def n_rows(self, value):
-        self._n_rows = value
 
     @property
     def is_attached(self):
@@ -133,78 +127,6 @@ class PanZoom(object):
     def aspect(self, value):
         """Aspect (width/height)."""
         self._aspect = value
-
-    def _constrain_pan(self):
-        """Constrain bounding box."""
-        if self._xmin is not None and self._xmax is not None:
-            p0 = self._xmin + 1. / self._u_zoom[0]
-            p1 = self._xmax - 1. / self._u_zoom[0]
-            p0, p1 = min(p0, p1), max(p0, p1)
-            self._pan[0] = np.clip(self._pan[0], p0, p1)
-
-        if self._ymin is not None and self._ymax is not None:
-            p0 = self._ymin + 1. / self._u_zoom[1]
-            p1 = self._ymax - 1. / self._u_zoom[1]
-            p0, p1 = min(p0, p1), max(p0, p1)
-            self._pan[1] = np.clip(self._pan[1], p0, p1)
-
-    def _constrain_zoom(self):
-        """Constrain bounding box."""
-        if self._xmin is not None:
-            self._u_zoom[0] = max(self._u_zoom[0],
-                                  1. / (self._pan[0] - self._xmin))
-        if self._xmax is not None:
-            self._u_zoom[0] = max(self._u_zoom[0],
-                                  1. / (self._xmax - self._pan[0]))
-
-        if self._ymin is not None:
-            self._u_zoom[1] = max(self._u_zoom[1],
-                                  1. / (self._pan[1] - self._ymin))
-        if self._ymax is not None:
-            self._u_zoom[1] = max(self._u_zoom[1],
-                                  1. / (self._ymax - self._pan[1]))
-
-    @property
-    def pan(self):
-        """Pan translation."""
-        return self._pan
-
-    @pan.setter
-    def pan(self, value):
-        """Pan translation."""
-        self._pan = np.asarray(value)
-
-        self._constrain_pan()
-        self._u_pan = self._pan
-        for program in self._programs:
-            program["u_pan"] = self._u_pan
-
-    @property
-    def zoom(self):
-        """Zoom level."""
-        return self._zoom
-
-    @zoom.setter
-    def zoom(self, value):
-        """Zoom level."""
-        self._zoom = max(min(value, self._zmax), self._zmin)
-        if not self.is_attached:
-            return
-
-        aspect = np.array([1.0, 1.0])
-        if self._aspect is not None:
-            aspect = self._canvas_aspect * self._aspect
-
-        self._u_zoom = self._zoom * aspect
-
-        # Constrain bounding box.
-        self._constrain_pan()
-        self._constrain_zoom()
-
-        for program in self._programs:
-            program["u_pan"] = self._u_pan
-        for program in self._programs:
-            program["u_zoom"] = self._u_zoom
 
     # xmin/xmax
     # -------------------------------------------------------------------------
@@ -279,22 +201,8 @@ class PanZoom(object):
         """Maximal zoom level."""
         self._zmax = max(value, self._zmin)
 
-    # Event callbacks
+    # Internal methods
     # -------------------------------------------------------------------------
-
-    def on_resize(self, event):
-        """Resize event."""
-
-        self._width = float(event.size[0])
-        self._height = float(event.size[1])
-        aspect = self._width / self._height
-        if aspect > 1.0:
-            self._canvas_aspect = np.array([1.0 / aspect, 1.0])
-        else:
-            self._canvas_aspect = np.array([1.0, aspect / 1.0])
-
-        # Update zoom level
-        self.zoom = self._zoom
 
     def _normalize(self, x_y):
         x_y = np.asarray(x_y, dtype=np.float32)
@@ -302,50 +210,8 @@ class PanZoom(object):
         pos = x_y / (size / 2.) - 1
         return pos
 
-    def _normalize_grid(self, x_y):
-        x0, y0 = x_y
-
-        x0 /= self._width
-        y0 /= self._height
-
-        x0 *= self._n_rows
-        y0 *= self._n_rows
-
-        x0 = x0 % 1
-        y0 = y0 % 1
-
-        x0 = -(1 - 2 * x0)
-        y0 = -(1 - 2 * y0)
-
-        x0 /= self._n_rows
-        y0 /= self._n_rows
-
-        return x0, y0
-
-    def on_mouse_move(self, event):
-        """Drag."""
-
-        if event.is_dragging and not event.modifiers:
-            x0, y0 = self._normalize(event.press_event.pos)
-            x1, y1 = self._normalize(event.last_event.pos)
-            x, y = self._normalize(event.pos)
-            dx, dy = x - x1, -(y - y1)
-
-            pan_x, pan_y = self.pan
-            zoom_x, zoom_y = self._u_zoom
-
-            self.pan = (pan_x + dx / zoom_x,
-                        pan_y + dy / zoom_y)
-
-            self._canvas.update()
-
-    def on_mouse_wheel(self, event):
-        """Zoom."""
-
-        dx = np.sign(event.delta[1]) * .05
-        # Zoom toward the mouse pointer in the grid view.
-        x0, y0 = self._normalize_grid(event.pos)
-
+    def _zoom(self, dx, center):
+        x0, y0 = center
         pan_x, pan_y = self.pan
         zoom_x = zoom_y = self.zoom
         zoom_x_new, zoom_y_new = (zoom_x * math.exp(2.5 * dx),
@@ -369,6 +235,122 @@ class PanZoom(object):
                         pan_y + y0 * (1. / zoom_y - 1. / zoom_y_new))
 
         self._canvas.update()
+
+    def _constrain_pan(self):
+        """Constrain bounding box."""
+        if self._xmin is not None and self._xmax is not None:
+            p0 = self._xmin + 1. / self._u_zoom[0]
+            p1 = self._xmax - 1. / self._u_zoom[0]
+            p0, p1 = min(p0, p1), max(p0, p1)
+            self._pan[0] = np.clip(self._pan[0], p0, p1)
+
+        if self._ymin is not None and self._ymax is not None:
+            p0 = self._ymin + 1. / self._u_zoom[1]
+            p1 = self._ymax - 1. / self._u_zoom[1]
+            p0, p1 = min(p0, p1), max(p0, p1)
+            self._pan[1] = np.clip(self._pan[1], p0, p1)
+
+    def _constrain_zoom(self):
+        """Constrain bounding box."""
+        if self._xmin is not None:
+            self._u_zoom[0] = max(self._u_zoom[0],
+                                  1. / (self._pan[0] - self._xmin))
+        if self._xmax is not None:
+            self._u_zoom[0] = max(self._u_zoom[0],
+                                  1. / (self._xmax - self._pan[0]))
+
+        if self._ymin is not None:
+            self._u_zoom[1] = max(self._u_zoom[1],
+                                  1. / (self._pan[1] - self._ymin))
+        if self._ymax is not None:
+            self._u_zoom[1] = max(self._u_zoom[1],
+                                  1. / (self._ymax - self._pan[1]))
+
+    # Pan and zoom
+    # -------------------------------------------------------------------------
+
+    @property
+    def pan(self):
+        """Pan translation."""
+        return self._pan
+
+    @pan.setter
+    def pan(self, value):
+        """Pan translation."""
+        self._pan = np.asarray(value)
+
+        self._constrain_pan()
+        self._u_pan = self._pan
+        for program in self._programs:
+            program["u_pan"] = self._u_pan
+
+    @property
+    def zoom(self):
+        """Zoom level."""
+        return self._zoom
+
+    @zoom.setter
+    def zoom(self, value):
+        """Zoom level."""
+        self._zoom = max(min(value, self._zmax), self._zmin)
+        if not self.is_attached:
+            return
+
+        aspect = np.array([1.0, 1.0])
+        if self._aspect is not None:
+            aspect = self._canvas_aspect * self._aspect
+
+        self._u_zoom = self._zoom * aspect
+
+        # Constrain bounding box.
+        self._constrain_pan()
+        self._constrain_zoom()
+
+        for program in self._programs:
+            program["u_pan"] = self._u_pan
+        for program in self._programs:
+            program["u_zoom"] = self._u_zoom
+
+    # Event callbacks
+    # -------------------------------------------------------------------------
+
+    def on_resize(self, event):
+        """Resize event."""
+
+        self._width = float(event.size[0])
+        self._height = float(event.size[1])
+        aspect = self._width / self._height
+        if aspect > 1.0:
+            self._canvas_aspect = np.array([1.0 / aspect, 1.0])
+        else:
+            self._canvas_aspect = np.array([1.0, aspect / 1.0])
+
+        # Update zoom level
+        self.zoom = self._zoom
+
+    def on_mouse_move(self, event):
+        """Drag."""
+
+        if event.is_dragging and not event.modifiers:
+            x0, y0 = self._normalize(event.press_event.pos)
+            x1, y1 = self._normalize(event.last_event.pos)
+            x, y = self._normalize(event.pos)
+            dx, dy = x - x1, -(y - y1)
+
+            pan_x, pan_y = self.pan
+            zoom_x, zoom_y = self._u_zoom
+
+            self.pan = (pan_x + dx / zoom_x,
+                        pan_y + dy / zoom_y)
+
+            self._canvas.update()
+
+    def on_mouse_wheel(self, event):
+        """Zoom."""
+        dx = np.sign(event.delta[1]) * .05
+        # Zoom toward the mouse pointer.
+        center = self._normalize(event.pos)
+        self._zoom(dx, center)
 
     _arrows = ('Left', 'Right', 'Up', 'Down')
     _pm = ('+', '-')
@@ -440,3 +422,42 @@ class PanZoom(object):
         canvas.connect(self.on_mouse_wheel)
         canvas.connect(self.on_mouse_move)
         canvas.connect(self.on_key_press)
+
+
+class PanZoomGrid(PanZoom):
+    _n_rows = 1
+
+    @property
+    def n_rows(self):
+        return self._n_rows
+
+    @n_rows.setter
+    def n_rows(self, value):
+        self._n_rows = value
+
+    def _normalize(self, x_y):
+        x0, y0 = x_y
+
+        x0 /= self._width
+        y0 /= self._height
+
+        x0 *= self._n_rows
+        y0 *= self._n_rows
+
+        x0 = x0 % 1
+        y0 = y0 % 1
+
+        x0 = -(1 - 2 * x0)
+        y0 = -(1 - 2 * y0)
+
+        x0 /= self._n_rows
+        y0 /= self._n_rows
+
+        return x0, y0
+
+    # def on_mouse_wheel(self, event):
+    #     """Zoom."""
+    #     dx = np.sign(event.delta[1]) * .05
+    #     # Zoom toward the mouse pointer.
+    #     center = self._normalize_grid(event.pos)
+    #     self._zoom(dx, center)

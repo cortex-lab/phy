@@ -16,7 +16,7 @@ from vispy.visuals import Visual
 
 from ..utils.array import _unique, _as_array
 from ..utils.logging import debug
-from ._panzoom import PanZoom
+from ._panzoom import PanZoom, PanZoomGrid
 
 
 #------------------------------------------------------------------------------
@@ -342,11 +342,18 @@ class AxisVisual(BoxVisual):
 
 class BaseSpikeCanvas(app.Canvas):
     _visual_class = None
+    _has_grid = False
 
     def __init__(self, **kwargs):
         super(BaseSpikeCanvas, self).__init__(keys='interactive', **kwargs)
         self.visual = self._visual_class()
-        self._pz = PanZoom()
+        self._create_pan_zoom()
+
+    def _create_pan_zoom(self):
+        if not self._has_grid:
+            self._pz = PanZoom()
+        else:
+            self._pz = PanZoomGrid()
         self._pz.add(self.visual.program)
         self._pz.attach(self)
 

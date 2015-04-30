@@ -106,6 +106,7 @@ class CorrelogramVisual(BaseSpikeVisual):
 
 class CorrelogramView(BaseSpikeCanvas):
     _visual_class = CorrelogramVisual
+    _has_grid = True
 
     def __init__(self, **kwargs):
         super(CorrelogramView, self).__init__(**kwargs)

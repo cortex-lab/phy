@@ -209,6 +209,7 @@ class FeatureView(BaseSpikeCanvas):
 
     """
     _visual_class = FeatureVisual
+    _has_grid = True
 
     def __init__(self, **kwargs):
         super(FeatureView, self).__init__(**kwargs)
