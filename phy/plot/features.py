@@ -237,9 +237,9 @@ class FeatureView(BaseSpikeCanvas):
             for i, dim in enumerate(self.visual.dimensions):
                 if dim == 'time':
                     xmin[i, :] = -1.
-                    xmin[:, i] = -1.
+                    ymin[:, i] = -1.
                     xmax[i, :] = +1.
-                    xmax[:, i] = +1.
+                    ymax[:, i] = +1.
                     ymin[i, i] = -1.
                     ymax[i, i] = +1.
         self._pz._xmin = xmin

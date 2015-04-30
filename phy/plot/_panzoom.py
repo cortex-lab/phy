@@ -382,6 +382,31 @@ class PanZoom(object):
     _arrows = ('Left', 'Right', 'Up', 'Down')
     _pm = ('+', '-')
 
+    def _zoom_keyboard(self, key):
+        k = .05
+        if key == '-':
+            self.zoom *= (1. - k)
+        elif key == '+':
+            self.zoom *= (1. + k)
+        self._canvas.update()
+
+    def _pan_keyboard(self, key):
+        k = .1 / self.zoom
+        if key == 'Left':
+            self.pan += (+k[0], +0)
+        elif key == 'Right':
+            self.pan += (-k[0], +0)
+        elif key == 'Down':
+            self.pan += (+0, +k[1])
+        elif key == 'Up':
+            self.pan += (+0, -k[1])
+        self._canvas.update()
+
+    def _reset_keyboard(self):
+        self.pan = (0., 0.)
+        self.zoom = 1.
+        self._canvas.update()
+
     def on_key_press(self, event):
         # Zooming with the keyboard.
         key = event.key
@@ -390,31 +415,15 @@ class PanZoom(object):
 
         # Pan.
         if key in self._arrows:
-            k = .1 / self.zoom
-            if key == 'Left':
-                self.pan += (+k[0], +0)
-            elif key == 'Right':
-                self.pan += (-k[0], +0)
-            elif key == 'Down':
-                self.pan += (+0, +k[1])
-            elif key == 'Up':
-                self.pan += (+0, -k[1])
-            self._canvas.update()
+            self._pan_keyboard(key)
 
         # Zoom.
         if key in self._pm:
-            k = .05
-            if key == '-':
-                self.zoom *= (1. - k)
-            elif key == '+':
-                self.zoom *= (1. + k)
-            self._canvas.update()
+            self._zoom_keyboard(key)
 
         # Reset with 'R'.
         if key == 'R':
-            self.pan = (0., 0.)
-            self.zoom = 1.
-            self._canvas.update()
+            self._reset_keyboard()
 
     # Canvas methods
     # -------------------------------------------------------------------------
@@ -472,7 +481,7 @@ class PanZoomGrid(PanZoom):
 
     Global zoom:
 
-    * Mouse : Alt + wheel
+    * Mouse : Shift + wheel
 
     Subplot reset:
 
@@ -480,7 +489,7 @@ class PanZoomGrid(PanZoom):
 
     Global reset:
 
-    * Keyboard : Alt + R
+    * Keyboard : Shift + R
 
     """
     _index = (0, 0)  # current index of the box being pan/zoom-ed
@@ -508,7 +517,7 @@ class PanZoomGrid(PanZoom):
                                "uniform array size used by panzoom. "
                                "But you can try to increase the number 256 in "
                                "'plot/glsl/grid.glsl'.")
-        self._create_pan_and_zoom((0., 0.), (1., 1.))
+        self._create_pan_and_zoom(pan=(0., 0.), zoom=(1., 1.))
 
     # Pan and zoom
     # -------------------------------------------------------------------------
@@ -517,10 +526,10 @@ class PanZoomGrid(PanZoom):
         pan = _as_array(pan)
         zoom = _as_array(zoom)
         self._pan_matrix = np.empty((self._n_rows, self._n_rows, 2))
-        self._pan_matrix[..., :] = pan[None, None, :]
+        self._pan_matrix[...] = pan[None, None, :]
 
         self._zoom_matrix = np.empty((self._n_rows, self._n_rows, 2))
-        self._zoom_matrix[..., :] = zoom[None, None, :]
+        self._zoom_matrix[...] = zoom[None, None, :]
 
         # The zoom coefficient for mouse zoom should be proportional
         # to the subplot size.
@@ -647,19 +656,41 @@ class PanZoomGrid(PanZoom):
         for program in self._programs:
             program["u_pan_zoom"] = self._u_pan_zoom
 
-    def _global_pan_zoom(self, pan, zoom):
+    def _global_pan_zoom(self, pan=None, zoom=None):
         # Reinitialize the pan zoom matrix.
-        self._create_pan_and_zoom(pan, zoom)
-        value = tuple(pan) + tuple(zoom)
+        # self._create_pan_and_zoom(pan, zoom)
+        n = self._n_rows * self._n_rows
+        # This will be uploaded to the uniform array containing the
+        # pan zoom values.
+        value = np.empty((n, 4), dtype=np.float32)
+
+        # We update the CPU pan matrix if pan is specified.
+        if pan is not None:
+            pan = _as_array(pan)
+            self._pan_matrix[...] = pan[None, None, :]
+            value[:, :2] = pan[None, :]
+        # Otherwise we use the existing pan values for the GPU.
+        else:
+            value[:, :2] = self._pan_matrix.reshape((-1, 2))
+
+        # We update the CPU zoom matrix if zoom is specified.
+        if zoom is not None:
+            zoom = _as_array(zoom)
+            self._zoom_matrix[...] = zoom[None, None, :]
+            value[:, 2:] = zoom[None, :]
+        # Otherwise we use the existing zoom values for the GPU.
+        else:
+            value[:, :2] = self._zoom_matrix.reshape((-1, 2))
+
         for program in self._programs:
             # Update all boxes one by one.
-            # TODO OPTIM: update the uniform array at once.
-            # But it doesn't seem to work (VisPy bug?).
-            for box in range(self._n_rows * self._n_rows):
-                program["u_pan_zoom[{0:d}]".format(box)] = value
+            # TODO OPTIM: we could update the uniform array at once,
+            # but that doesn't seem to work (VisPy bug?).
+            for i in range(n):
+                program["u_pan_zoom[{0:d}]".format(i)] = value[i, :]
 
     def _reset(self):
-        self._global_pan_zoom((0., 0.), (1., 1.))
+        self._global_pan_zoom(pan=(0., 0.), zoom=(1., 1.))
 
     # Event callbacks
     # -------------------------------------------------------------------------
@@ -676,11 +707,11 @@ class PanZoomGrid(PanZoom):
         super(PanZoomGrid, self).on_mouse_wheel(event)
 
         modifiers = event.modifiers
-        alt = 'Alt' in modifiers
+        shift = 'Shift' in modifiers
 
         # Global zoom.
-        if alt:
-            self._global_pan_zoom((0., 0.), self._zoom)
+        if shift:
+            self._global_pan_zoom(zoom=self._zoom)
             self._canvas.update()
 
     def on_key_press(self, event):
@@ -688,11 +719,17 @@ class PanZoomGrid(PanZoom):
 
         key = event.key
         modifiers = event.modifiers
-        alt = 'Alt' in modifiers
+        shift = 'Shift' in modifiers
 
         # Reset with 'R'.
-        if key == 'R' and alt:
+        if key == 'R' and shift:
             self._reset()
+            self._canvas.update()
+
+        # Global zoom.
+        if shift and key in self._pm:
+            self._zoom_keyboard(key)
+            self._global_pan_zoom(zoom=self._zoom)
             self._canvas.update()
 
     # Canvas methods
