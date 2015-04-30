@@ -1,7 +1,6 @@
 
 uniform float n_rows;
-uniform vec2 u_zoom;
-uniform vec2 u_pan;
+uniform sampler2D u_pan_zoom;  // index (i, j) contains pan_xy, zoom_xy.
 
 varying vec2 v_position;
 
@@ -9,6 +8,15 @@ vec2 row_col(float index, float n_rows) {
     float row = floor(index / n_rows);
     float col = mod(index, n_rows);
     return vec2(row, col);
+}
+
+vec4 fetch_pan_zoom(float index) {
+    vec2 uv = row_col(index, n_rows);
+    // switch because (x, y) = (j, i)
+    vec4 pz = texture2D(u_pan_zoom, (uv.yx + .5) / n_rows);
+    vec2 pan = pz.xy * 10. - 1.;
+    vec2 zoom = pz.zw * 10.;
+    return vec4(pan, zoom);
 }
 
 vec2 to_box(vec2 position, float index) {
@@ -33,7 +41,8 @@ bool grid_clip(vec2 position) {
     return grid_clip(position, .95);
 }
 
-vec2 pan_zoom_grid(vec2 position)
+vec2 pan_zoom_grid(vec2 position, float index)
 {
-    return u_zoom * (position + n_rows * u_pan);
+    vec4 pz = fetch_pan_zoom(index);  // (pan_x, pan_y, zoom_x, zoom_y)
+    return pz.zw * (position + n_rows * pz.xy);
 }

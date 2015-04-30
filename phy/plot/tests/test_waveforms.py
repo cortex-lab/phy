@@ -57,7 +57,7 @@ def _test_waveforms(n_spikes=None, n_clusters=None):
                                         for _ in range(n_clusters)])
     c.visual.channel_positions = channel_positions
 
-    show_test(c)
+    show_test(c, 0)
 
 
 def test_waveforms_empty():

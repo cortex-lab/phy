@@ -247,9 +247,9 @@ class FeatureView(BaseSpikeCanvas):
 
     def on_draw(self, event):
         gloo.clear(color=True, depth=True)
-        self.axes.draw()
+        # self.axes.draw()
         self.visual.draw()
-        self.boxes.draw()
+        # self.boxes.draw()
 
     def on_key_press(self, event):
         coeff = .25
