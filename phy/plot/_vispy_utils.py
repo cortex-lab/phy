@@ -342,7 +342,6 @@ class AxisVisual(BoxVisual):
 
 class BaseSpikeCanvas(app.Canvas):
     _visual_class = None
-    _has_grid = False
 
     def __init__(self, **kwargs):
         super(BaseSpikeCanvas, self).__init__(keys='interactive', **kwargs)
@@ -350,10 +349,7 @@ class BaseSpikeCanvas(app.Canvas):
         self._create_pan_zoom()
 
     def _create_pan_zoom(self):
-        if not self._has_grid:
-            self._pz = PanZoom()
-        else:
-            self._pz = PanZoomGrid()
+        self._pz = PanZoom()
         self._pz.add(self.visual.program)
         self._pz.attach(self)
 

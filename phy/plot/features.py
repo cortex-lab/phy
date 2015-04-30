@@ -17,6 +17,7 @@ from ._vispy_utils import (BaseSpikeVisual,
                            AxisVisual,
                            _enable_depth_mask,
                            )
+from ._panzoom import PanZoomGrid
 from ..ext.six import string_types
 from ..utils.array import _as_array, _index_of
 from ..utils.logging import debug
@@ -209,14 +210,19 @@ class FeatureView(BaseSpikeCanvas):
 
     """
     _visual_class = FeatureVisual
-    _has_grid = True
 
     def __init__(self, **kwargs):
         super(FeatureView, self).__init__(**kwargs)
         self.boxes = BoxVisual()
         self.axes = AxisVisual()
-        self._pz.add(self.axes.program)
         _enable_depth_mask()
+
+    def _create_pan_zoom(self):
+        if self.visual.n_rows:
+            self._pz = PanZoomGrid(n_rows=self.visual.n_rows)
+            self._pz.add(self.visual.program)
+            self._pz.add(self.axes.program)
+            self._pz.attach(self)
 
     @property
     def dimensions(self):
@@ -231,7 +237,7 @@ class FeatureView(BaseSpikeCanvas):
         self.visual.dimensions = value
         self.boxes.n_rows = self.visual.n_rows
         self.axes.n_rows = self.visual.n_rows
-        self._pz.n_rows = self.visual.n_rows
+        self._create_pan_zoom()
         self.axes.positions = (0, 0)
         self.update()
 

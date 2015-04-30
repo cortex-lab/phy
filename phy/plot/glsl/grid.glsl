@@ -1,6 +1,6 @@
 
 uniform float n_rows;
-uniform sampler2D u_pan_zoom;  // index (i, j) contains pan_xy, zoom_xy.
+uniform vec4 u_pan_zoom[256];  // maximum grid size: 16 x 16
 
 varying vec2 v_position;
 
@@ -11,11 +11,9 @@ vec2 row_col(float index, float n_rows) {
 }
 
 vec4 fetch_pan_zoom(float index) {
-    vec2 uv = row_col(index, n_rows);
-    // switch because (x, y) = (j, i)
-    vec4 pz = texture2D(u_pan_zoom, (uv.yx + .5) / n_rows);
-    vec2 pan = pz.xy * 10. - 1.;
-    vec2 zoom = pz.zw * 10.;
+    vec4 pz = u_pan_zoom[int(index)];
+    vec2 pan = pz.xy;// * 10. - 1.;
+    vec2 zoom = pz.zw;// * 10.;
     return vec4(pan, zoom);
 }
 

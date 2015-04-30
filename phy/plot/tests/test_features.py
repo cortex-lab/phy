@@ -54,7 +54,7 @@ def _test_features(n_spikes=None, n_clusters=None):
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])
 
-    show_test(c, 0)
+    show_test(c)
 
 
 def test_features_empty():

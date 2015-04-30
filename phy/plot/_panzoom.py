@@ -11,7 +11,7 @@ import math
 
 import numpy as np
 
-from vispy import gloo
+# from vispy import gloo
 
 from ..utils.array import _as_array
 
@@ -436,10 +436,12 @@ class PanZoom(object):
 
 
 class PanZoomGrid(PanZoom):
-    _n_rows = 1
     _index = (0, 0)  # current index of the box being pan/zoom-ed
-    _texture_created = False
-    _tex = None
+
+    def __init__(self, *args, **kwargs):
+        n_rows = kwargs.pop('n_rows')
+        self._n_rows = n_rows
+        super(PanZoomGrid, self).__init__(*args, **kwargs)
 
     @property
     def _pan(self):
@@ -470,9 +472,6 @@ class PanZoomGrid(PanZoom):
         self._zoom_matrix = np.empty((self._n_rows, self._n_rows, 2))
         self._zoom_matrix[..., :] = zoom[None, None, :]
 
-        shape = (self._n_rows, self._n_rows, 4)
-        self._tex = np.zeros(shape, dtype=np.uint8)
-
     def add(self, programs):
         """ Attach programs to this tranform """
 
@@ -482,27 +481,25 @@ class PanZoomGrid(PanZoom):
         for program in programs:
             self._programs.append(program)
 
-        # Initialize and set the texture.
+        # Initialize and set the uniform array.
+        # NOTE: 256 is the maximum size used for this uniform array.
+        # This corresponds to a hard-limit of 16x16 subplots.
+        pan_zoom = np.zeros((256, 4),
+                            dtype=np.float32)
+        pan_zoom[:, 2:] = 1.
         for program in self._programs:
-            program["u_pan_zoom"] = gloo.Texture2D(self._tex)
+            program["u_pan_zoom"] = pan_zoom
 
         self._apply_pan_zoom()
 
-    def _normalize_pan(self, pan):
-        return (_as_array(pan) + 1.) / 10. * 255
-
-    def _normalize_zoom(self, zoom):
-        return _as_array(zoom) / 10. * 255
-
     def _apply_pan_zoom(self):
-        zoom = self._zoom_aspect(self._zoom_matrix)
-        # i, j = self._index
-        assert (self._pan_matrix.shape[:2] == self._tex.shape[:2])# ==
-                # (self._n_rows, self._n_rows))
-        self._tex[..., :2] = self._normalize_pan(self._pan_matrix)
-        self._tex[..., 2:] = self._normalize_zoom(zoom)
+        pan = self._pan
+        zoom = self._zoom_aspect(self._zoom)
+        i, j = self._index
+        box = int(i * self._n_rows + j)
+        value = (pan[0], pan[1], zoom[0], zoom[1])
         for program in self._programs:
-            program["u_pan_zoom"].set_data(self._tex)
+            program["u_pan_zoom[{0:d}]".format(box)] = value
 
     def _set_current_box(self, pos):
         self._index = self._get_box(pos)
@@ -527,6 +524,12 @@ class PanZoomGrid(PanZoom):
     def n_rows(self, value):
         self._n_rows = int(value)
         assert self._n_rows >= 1
+        if self._n_rows > 16:
+            raise RuntimeError("There cannot be more than 16x16 subplots. "
+                               "The limitation comes from the maximum "
+                               "uniform array size used by panzoom. "
+                               "But you can try to increase the number 256 in "
+                               "'plot/glsl/grid.glsl'.")
         self._create_pan_and_zoom((0., 0.), (1., 1.))
 
     def _get_box(self, x_y):
