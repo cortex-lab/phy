@@ -17,8 +17,6 @@ from ...plot.traces import TraceView
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from .selector import Selector
 from ._utils import (_update_cluster_selection,
-                     _subset_spikes_per_cluster,
-                     _concatenate_per_cluster_arrays,
                      )
 
 
