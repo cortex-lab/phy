@@ -385,18 +385,19 @@ class TraceViewModel(BaseViewModel):
 
     def move(self, amount):
         """Move the current interval by a given amount (in samples)."""
+        amount = int(amount)
         start, end = self.interval
         self.interval = start + amount, end + amount
 
-    def move_right(self):
+    def move_right(self, fraction=.05):
         """Move the current interval to the right."""
         start, end = self.interval
-        self.move(+(end - start) // 20)
+        self.move(int(+(end - start) * fraction))
 
-    def move_left(self):
+    def move_left(self, fraction=.05):
         """Move the current interval to the left."""
         start, end = self.interval
-        self.move(-(end - start) // 20)
+        self.move(int(-(end - start) * fraction))
 
     def on_key_press(self, event):
         key = event.key
@@ -406,6 +407,13 @@ class TraceViewModel(BaseViewModel):
                 self.view.update()
             elif key == 'Right':
                 self.move_right()
+                self.view.update()
+        if 'Shift' in event.modifiers:
+            if key == 'Left':
+                self.move_left(1)
+                self.view.update()
+            elif key == 'Right':
+                self.move_right(1)
                 self.view.update()
 
     def on_open(self):
