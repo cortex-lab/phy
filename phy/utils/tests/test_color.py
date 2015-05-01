@@ -6,8 +6,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import numpy as np
-
 from .._color import _random_color, _is_bright, _random_bright_color
 from ..testing import show_colored_canvas
 
