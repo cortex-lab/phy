@@ -44,6 +44,7 @@ class Wizard(object):
         self._quality = None
         self._ignored = set()
         self.cluster_ids = cluster_ids
+        self._reset_list()
 
     # Internal methods
     #--------------------------------------------------------------------------
@@ -136,41 +137,96 @@ class Wizard(object):
     # List methods
     #--------------------------------------------------------------------------
 
-    def next(self):
-        if not self.is_running:
-            self.start()
-        # TODO
+    def _reset_list(self):
+        self._list = []
+        self._index = None
+        self._is_running = False
+        self._pinned = None
 
-    def previous(self):
-        pass
+    @property
+    def count(self):
+        return len(self._list)
 
-    def first(self):
-        pass
-
-    def last(self):
-        pass
-
-    # Playback methods
-    #--------------------------------------------------------------------------
+    @property
+    def index(self):
+        return self._index
 
     def start(self):
-        pass
+        self._index = 0
+        self._is_running = True
+        self._list = self.best_clusters()
 
     def pause(self):
-        pass
+        self._is_running = False
 
     def stop(self):
-        pass
+        self._reset_list()
 
     @property
     def is_running(self):
-        pass
+        return self._is_running
+
+    def next(self):
+        if not self._is_running:
+            self.start()
+        else:
+            assert self._index is not None and self._index >= 0
+            self._index += 1
+        return self._current
+
+    def previous(self):
+        if self._is_running and self._index >= 1:
+            self._index -= 1
+        return self._current
+
+    def first(self):
+        self._index = 0
+        return self._current
+
+    def last(self):
+        self._index = self.count - 1
+        return self._current
+
+    @property
+    def _current(self):
+        if self._index is not None and 0 <= self._index < self.count:
+            return self._list[self._index]
 
     # Pin methods
     #--------------------------------------------------------------------------
 
     def pin(self):
-        pass
+        self._pinned = self._current
+        if self._pinned:
+            self._list = self.most_similar_clusters(self._pinned)
+            self._index = 0
+        return self._pinned
+
+    @property
+    def pinned(self):
+        return self._pinned
+
+    def current_best_unsorted(self):
+        return self._pinned
 
     def unpin(self):
-        pass
+        self._pinned = None
+        self._list = self.best_clusters()
+        self._index = 0
+
+    def current_selection(self):
+        if not self._is_running:
+            return ()
+        current = self._current
+        assert current is not None
+        # Best unsorted.
+        if self._pinned is None:
+            return current
+        # Best unsorted and closest match.
+        else:
+            return (self.pinned, current)
+
+    def current_closest_match(self):
+        if not self._is_running or self._pinned is None:
+            return None
+        return self._current

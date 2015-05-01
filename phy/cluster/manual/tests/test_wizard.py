@@ -13,7 +13,7 @@ from ..wizard import Wizard
 # Test wizard
 #------------------------------------------------------------------------------
 
-def test_wizard():
+def test_core_wizard():
 
     wizard = Wizard([2, 3, 5])
 
@@ -54,3 +54,7 @@ def test_wizard():
     assert wizard.most_similar_clusters(2) == [5, 3]
     wizard.ignore((2, 5))
     assert wizard.most_similar_clusters(2) == [3]
+
+
+def test_wizard():
+    pass
