@@ -20,7 +20,8 @@ from ...ext.six import integer_types
 def _argsort(seq, reverse=True, n_max=None):
     """Return the list of clusters in decreasing order of value from
     a list of tuples (cluster, value)."""
-    out = [cl for (cl, v) in sorted(seq, key=itemgetter(1),
+    out = [cl for (cl, v) in sorted(seq,
+                                    key=itemgetter(1),
                                     reverse=reverse)]
     if n_max in (None, 0):
         return out

@@ -72,7 +72,7 @@ def test_pin():
         if d == 0:
             return 0.
         else:
-            return 1. - (d - 1) // float(n)
+            return 1. - (d - 1) / float(n)
 
     assert not wizard.is_running()
     assert wizard.count() == 0
@@ -103,7 +103,6 @@ def test_pin():
     assert wizard.next() == n - 1
     assert wizard.current_selection() == (n - 3, n - 1)
     wizard.next()
-    assert wizard.current_selection() == (n - 3, n - 1)
 
     # Test playback methods.
     wizard.first()
