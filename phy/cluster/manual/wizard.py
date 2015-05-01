@@ -68,9 +68,6 @@ class Wizard(object):
     def cluster_ids(self, cluster_ids):
         """Update the list of clusters."""
         assert cluster_ids is not None
-        if isinstance(cluster_ids, np.ndarray):
-            cluster_ids = cluster_ids.tolist()
-        assert isinstance(cluster_ids, (list, tuple))
         self._cluster_ids = sorted(cluster_ids)
         if self._list:
             l = self._list
