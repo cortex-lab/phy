@@ -11,6 +11,7 @@ from operator import itemgetter
 import numpy as np
 
 from ...ext.six import integer_types
+from ...utils.logging import debug
 
 
 #------------------------------------------------------------------------------
@@ -72,8 +73,14 @@ class Wizard(object):
         assert isinstance(cluster_ids, (list, tuple))
         self._cluster_ids = sorted(cluster_ids)
         if self._list:
+            l = self._list
             self._list = [clu for clu in self._list
                           if clu in self._cluster_ids]
+            changed = len(l) != len(self._list)
+        else:
+            changed = False
+        if changed and self._index is not None and self._index > 0:
+            debug("Reset the wizard because the list of clusters has changed.")
 
     def set_similarity_function(self, func):
         """Register a function returing the similarity between two clusters."""
@@ -220,6 +227,7 @@ class Wizard(object):
 
     def ignore_current_selection(self):
         self.ignore(self.current_selection())
+        self.next()
 
     def set_best_clusters(self):
         self._index = 0

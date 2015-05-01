@@ -93,16 +93,24 @@ def test_pin():
     wizard.first()
 
     # Test pin.
-    wizard.next()
-    wizard.next()
-    assert wizard.current_selection() == (n - 3,)
+    for _ in range(4):
+        wizard.next()
+
+    best = n - 5
+    assert wizard.current_selection() == (best,)
     wizard.pin()
 
     # Go through the closest matches.
-    assert wizard.current_selection() == (n - 3, n - 2)
-    assert wizard.next() == n - 1
-    assert wizard.current_selection() == (n - 3, n - 1)
-    wizard.next()
+    assert wizard.current_selection() == (best, best + 1)
+    assert wizard.next() == best + 2
+    assert wizard.current_selection() == (best, best + 2)
+    assert wizard.previous() == best + 1
+    assert wizard.current_selection() == (best, best + 1)
+
+    # This ignores the current selection and skips to the next one.
+    wizard.ignore_current_selection()
+    assert wizard.current_selection() == (best, best + 2)
+    assert wizard.previous() == best + 1
 
     # Test playback methods.
     wizard.first()
