@@ -16,6 +16,7 @@ from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
                            BoxVisual,
                            _tesselate_histogram)
+from ._panzoom import PanZoomGrid
 from ..utils.array import _as_array
 from ..utils.logging import debug
 
@@ -110,8 +111,19 @@ class CorrelogramView(BaseSpikeCanvas):
     def __init__(self, **kwargs):
         super(CorrelogramView, self).__init__(**kwargs)
         self.boxes = BoxVisual()
-        self._pz.zmin = 1
-        self._pz.zoom_to_pointer = False
+
+    def _create_pan_zoom(self):
+        if self.visual.n_clusters:
+            self._pz = PanZoomGrid(n_rows=self.visual.n_clusters)
+            self._pz.add(self.visual.program)
+            self._pz.attach(self)
+            self._pz.aspect = None
+            self._pz.zmin = 1.
+            self._pz.xmin = -1.
+            self._pz.xmax = +1.
+            self._pz.ymin = -1.
+            self._pz.ymax = +1.
+            self._pz.zoom_to_pointer = False
 
     @property
     def cluster_ids(self):
@@ -121,6 +133,7 @@ class CorrelogramView(BaseSpikeCanvas):
     def cluster_ids(self, value):
         self.visual.cluster_ids = value
         self.boxes.n_rows = self.visual.n_clusters
+        self._create_pan_zoom()
 
     def on_draw(self, event):
         gloo.clear()
@@ -133,9 +146,8 @@ class CorrelogramView(BaseSpikeCanvas):
 #------------------------------------------------------------------------------
 
 def plot_ccg(ccg, baseline=None, bin=1., color=None, ax=None):
-    # This can import Qt
-    import matplotlib.pyplot as plt
     """Plot a CCG with matplotlib and return an Axes instance."""
+    import matplotlib.pyplot as plt
     if ax is None:
         ax = plt.subplot(111)
     assert ccg.ndim == 1

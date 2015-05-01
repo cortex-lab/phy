@@ -179,7 +179,7 @@ def _start_stop(item):
 
     """
     if isinstance(item, tuple):
-        raise NotImplementedError()
+        item = item[0]
     if isinstance(item, slice):
         # Slice.
         if item.step not in (None, 1):
@@ -192,6 +192,14 @@ def _start_stop(item):
     else:
         # Integer.
         return item, item + 1
+
+
+def _fill_index(arr, item):
+    if isinstance(item, tuple):
+        item = (slice(None, None, None),) + item[1:]
+        return arr[item]
+    else:
+        return arr
 
 
 class ConcatenatedArrays(object):
@@ -239,7 +247,9 @@ class ConcatenatedArrays(object):
         stop_rel = stop - self.offsets[rec_stop]
         # Single array case.
         if rec_start == rec_stop:
-            return self.arrs[rec_start][start_rel:stop_rel]
+            # Apply the rest of the index.
+            return _fill_index(self.arrs[rec_start][start_rel:stop_rel],
+                               item)
         chunk_start = self.arrs[rec_start][start_rel:]
         chunk_stop = self.arrs[rec_stop][:stop_rel]
         # Concatenate all chunks.
@@ -250,7 +260,8 @@ class ConcatenatedArrays(object):
             l += [self.arrs[r][...] for r in range(rec_start + 1,
                                                    rec_stop)]
         l += [chunk_stop]
-        return np.concatenate(l, axis=0)
+        # Apply the rest of the index.
+        return _fill_index(np.concatenate(l, axis=0), item)
 
 
 def _concatenate_virtual_arrays(arrs):
@@ -304,6 +315,7 @@ def chunk_bounds(n_samples, chunk_size, overlap=0):
 def _excerpt_step(n_samples, n_excerpts=None, excerpt_size=None):
     """Compute the step of an excerpt set as a function of the number
     of excerpts or their sizes."""
+    assert n_excerpts >= 2
     step = max((n_samples - excerpt_size) // (n_excerpts - 1),
                excerpt_size)
     return step
@@ -311,6 +323,7 @@ def _excerpt_step(n_samples, n_excerpts=None, excerpt_size=None):
 
 def excerpts(n_samples, n_excerpts=None, excerpt_size=None):
     """Yield (start, end) where start is included and end is excluded."""
+    assert n_excerpts >= 2
     step = _excerpt_step(n_samples,
                          n_excerpts=n_excerpts,
                          excerpt_size=excerpt_size)
@@ -342,6 +355,8 @@ def get_excerpts(data, n_excerpts=None, excerpt_size=None):
     assert n_excerpts is not None
     assert excerpt_size is not None
     if n_excerpts * excerpt_size > len(data):
+        return data
+    if n_excerpts == 1:
         return data
     return np.concatenate([data_chunk(data, chunk)
                            for chunk in excerpts(len(data),

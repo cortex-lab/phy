@@ -17,6 +17,7 @@ from ._vispy_utils import (BaseSpikeVisual,
                            AxisVisual,
                            _enable_depth_mask,
                            )
+from ._panzoom import PanZoomGrid
 from ..ext.six import string_types
 from ..utils.array import _as_array, _index_of
 from ..utils.logging import debug
@@ -40,7 +41,7 @@ class FeatureVisual(BaseSpikeVisual):
         self._dimensions = []
         self.n_channels, self.n_features = None, None
         self.n_rows = None
-        self.program['u_size'] = 2.
+        self.program['u_size'] = 3.
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -138,22 +139,24 @@ class FeatureVisual(BaseSpikeVisual):
 
                 dim_i = self._dimensions[i]
                 dim_j = self._dimensions[j]
-                fet_i = self._get_feature_dim(dim_i)
 
+                fet_i = self._get_feature_dim(dim_i)
                 # For non-time dimensions, the diagonal shows
                 # a different feature on y (same channel than x).
-                if i != j or dim_j == 'time' or self.n_features <= 1:
-                    fet_j = self._get_feature_dim(dim_j)
-                else:
+                if i == j and dim_j != 'time' and self.n_features >= 1:
                     channel, feature = dim_j
                     # Choose the other feature on y axis.
                     feature = 1 - feature
                     fet_j = self._features[:, channel, feature]
+                else:
+                    fet_j = self._get_feature_dim(dim_j)
 
-                pos = np.c_[fet_i, fet_j]
+                # NOTE: we switch here because we want to plot
+                # dim_i (y) over dim_j (x) on box (i, j).
+                pos = np.c_[fet_j, fet_i]
                 positions.append(pos)
 
-                # TODO: choose the mask
+                # TODO: how to choose the mask?
                 mask = self._get_mask_dim(dim_i)
                 masks.append(mask.astype(np.float32))
                 boxes.append(index * np.ones(self.n_spikes, dtype=np.float32))
@@ -177,8 +180,9 @@ class FeatureVisual(BaseSpikeVisual):
 
     def _bake_spikes_clusters(self):
         # Get the spike cluster indices (between 0 and n_clusters-1).
-        spike_clusters_idx = self.spike_clusters[self.spike_ids]
-        spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_ids)
+        spike_clusters_idx = self.spike_clusters
+        # We take the cluster order into account here.
+        spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_order)
         a_cluster = np.tile(spike_clusters_idx,
                             self.n_boxes).astype(np.float32)
         self.program['a_cluster'] = a_cluster
@@ -213,8 +217,51 @@ class FeatureView(BaseSpikeCanvas):
         super(FeatureView, self).__init__(**kwargs)
         self.boxes = BoxVisual()
         self.axes = AxisVisual()
-        self._pz.add(self.axes.program)
         _enable_depth_mask()
+
+    def _create_pan_zoom(self):
+        if self.visual.n_rows:
+            self._pz = PanZoomGrid(n_rows=self.visual.n_rows)
+            self._pz.add(self.visual.program)
+            self._pz.add(self.axes.program)
+            self._pz.aspect = None
+            self._pz.attach(self)
+
+    def _set_pan_constraints(self):
+        n = len(self.visual.dimensions)
+        xmin = np.empty((n, n))
+        xmax = np.empty((n, n))
+        ymin = np.empty((n, n))
+        ymax = np.empty((n, n))
+        gpza = np.empty((n, n), dtype=np.str)
+        gpza.fill('b')
+        for arr in (xmin, xmax, ymin, ymax):
+            arr.fill(np.nan)
+        _index_set = False
+        if self.visual.dimensions is not None:
+            for i, dim in enumerate(self.visual.dimensions):
+                if dim == 'time':
+                    ymin[i, :] = -1.
+                    xmin[:, i] = -1.
+                    ymax[i, :] = +1.
+                    xmax[:, i] = +1.
+                    xmin[i, i] = -1.
+                    xmax[i, i] = +1.
+                    # Only update one axis for time dimensions during
+                    # global zoom.
+                    gpza[i, :] = 'x'
+                    gpza[:, i] = 'y'
+                    gpza[i, i] = 'n'
+                else:
+                    # Set the current index to the first non-time axis.
+                    if not _index_set:
+                        self._pz._index = (i, i)
+                    _index_set = True
+        self._pz._xmin = xmin
+        self._pz._xmax = xmax
+        self._pz._ymin = ymin
+        self._pz._ymax = ymax
+        self._pz.global_pan_zoom_axis = gpza
 
     @property
     def dimensions(self):
@@ -229,8 +276,9 @@ class FeatureView(BaseSpikeCanvas):
         self.visual.dimensions = value
         self.boxes.n_rows = self.visual.n_rows
         self.axes.n_rows = self.visual.n_rows
-        self._pz.n_rows = self.visual.n_rows
+        self._create_pan_zoom()
         self.axes.positions = (0, 0)
+        self._set_pan_constraints()
         self.update()
 
     @property

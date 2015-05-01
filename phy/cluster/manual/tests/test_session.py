@@ -217,7 +217,6 @@ def test_session_mock():
 
 
 def test_session_kwik():
-
     n_clusters = 5
     n_spikes = 50
     n_channels = 28
@@ -455,7 +454,7 @@ def test_session_multiple_clusterings():
         assert session.cluster_metadata.group(2) == 3
 
         # The current selection is cleared when changing clustering.
-        ae(session.selector.selected_spikes, [])
+        ae(session._selected_clusters, [])
 
         # Merge the clusters and save, for the current clustering.
         session.clustering.merge(session.clustering.cluster_ids)

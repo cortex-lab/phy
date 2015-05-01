@@ -12,7 +12,9 @@ import re
 
 import numpy as np
 
-from ...utils.array import _is_array_like, _index_of
+from ._utils import (_concatenate_per_cluster_arrays,
+                     _subset_spikes_per_cluster,
+                     )
 from ...utils.logging import debug, info
 from ...ext.six import string_types, integer_types
 
@@ -374,19 +376,17 @@ class ClusterStore(object):
 
     def load(self, name, clusters, spikes):
         """Load some data for a number of clusters and spikes."""
-        # TODO: remove spikes as a parameter here, as it can be
-        # obtained from self.spikes_per_cluster.
-        assert _is_array_like(clusters)
+        # Ensure clusters and spikes are sorted and do not have duplicates.
+        clusters = np.unique(clusters)
+        spikes = np.unique(spikes)
         load = getattr(self, name)
-
-        # Concatenation of arrays for all clusters.
-        arrays = np.concatenate([load(cluster) for cluster in clusters])
-        # Concatenation of spike indices for all clusters.
-        spike_clusters = np.concatenate([self._spikes_per_cluster[cluster]
-                                         for cluster in clusters])
-        assert np.all(np.in1d(spikes, spike_clusters))
-        idx = _index_of(spikes, spike_clusters)
-        return arrays[idx, ...]
+        # Get spikes_per_cluster and data arrays for the specified spikes.
+        spc = {cluster: self._spikes_per_cluster[cluster]
+               for cluster in clusters}
+        arrays = {cluster: load(cluster) for cluster in clusters}
+        spc_s, arrays_s = _subset_spikes_per_cluster(spc, arrays, spikes)
+        # Return the concatenated array.
+        return _concatenate_per_cluster_arrays(spc_s, arrays_s)
 
     def on_cluster(self, up):
         """Update the cluster store when clustering changes occur.

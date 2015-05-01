@@ -36,6 +36,7 @@ def _create_correlograms_array(n_clusters, winsize_bins):
 
 
 def correlograms(spike_samples, spike_clusters,
+                 cluster_order=None,
                  binsize=None, winsize_bins=None):
     """Compute all pairwise cross-correlograms among the clusters appearing
     in 'spike_clusters'.
@@ -47,6 +48,9 @@ def correlograms(spike_samples, spike_clusters,
         Spike times in samples (integers).
     spike_clusters : array-like
         Spike-cluster mapping.
+    cluster_order : array-like
+        The list of unique clusters, in any order. That order will be used
+        in the output array.
     binsize : int
         Number of time samples in one bin.
     winsize_bins : int (odd number)
@@ -85,7 +89,11 @@ def correlograms(spike_samples, spike_clusters,
 
     assert winsize_bins % 2 == 1
 
-    clusters = _unique(spike_clusters)
+    # Take the cluster oder into account.
+    if cluster_order is None:
+        clusters = _unique(spike_clusters)
+    else:
+        clusters = _as_array(cluster_order)
     n_clusters = len(clusters)
 
     # Like spike_clusters, but with 0..n_clusters-1 indices.
@@ -110,7 +118,7 @@ def correlograms(spike_samples, spike_clusters,
         spike_diff_b = spike_diff // binsize
 
         # Spikes with no matching spikes are masked.
-        mask[:-shift][spike_diff_b > (winsize_bins//2)] = False
+        mask[:-shift][spike_diff_b > (winsize_bins // 2)] = False
 
         # Cache the masked spike delays.
         m = mask[:-shift].copy()
@@ -125,7 +133,8 @@ def correlograms(spike_samples, spike_clusters,
         # Find the indices in the raveled correlograms array that need
         # to be incremented, taking into account the spike clusters.
         indices = np.ravel_multi_index((spike_clusters_i[:-shift][m],
-                                        spike_clusters_i[shift:][m], d),
+                                        spike_clusters_i[+shift:][m],
+                                        d),
                                        correlograms.shape)
 
         # Increment the matching spikes in the correlograms array.

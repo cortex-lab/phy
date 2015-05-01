@@ -8,7 +8,6 @@
 #------------------------------------------------------------------------------
 
 import os.path as op
-import math
 
 import numpy as np
 
@@ -17,6 +16,7 @@ from vispy.visuals import Visual
 
 from ..utils.array import _unique, _as_array
 from ..utils.logging import debug
+from ._panzoom import PanZoom
 
 
 #------------------------------------------------------------------------------
@@ -61,331 +61,6 @@ def _enable_depth_mask():
                    blend=True,
                    blend_func=('src_alpha', 'one_minus_src_alpha'))
     gloo.set_clear_depth(1.0)
-
-
-#------------------------------------------------------------------------------
-# PanZoom class
-#------------------------------------------------------------------------------
-
-class PanZoom(object):
-    """Pan & zoom transform.
-
-    The panzoom transform allow to translate and scale an object in the window
-    space coordinate (2D). This means that whatever point you grab on the
-    screen, it should remains under the mouse pointer. Zoom is realized using
-    the mouse scroll and is always centered on the mouse pointer.
-
-    You can also control programmatically the transform using:
-
-    * aspect: control the aspect ratio of the whole scene
-    * pan   : translate the scene to the given 2D coordinates
-    * zoom  : set the zoom level (centered at current pan coordinates)
-    * zmin  : minimum zoom level
-    * zmax  : maximum zoom level
-
-    Interactivity
-    -------------
-
-    Pan:
-
-    * Mouse : click and move (drag movement)
-    * Keyboard : arrows
-
-    Zoom:
-
-    * Mouse : wheel
-    * Keyboard : + and -
-
-    Reset:
-
-    * Keyboard : R
-
-    """
-
-    def __init__(self, aspect=1.0, pan=(0.0, 0.0), zoom=1.0,
-                 zmin=1e-5, zmax=1e5):
-        """
-        Initialize the transform.
-
-        Parameters
-        ----------
-
-        aspect : float (default is None)
-           Indicate what is the aspect ratio of the object displayed. This is
-           necessary to convert pixel drag move in object space coordinates.
-
-        pan : float, float (default is 0, 0)
-           Initial translation
-
-        zoom : float, float (default is 1)
-           Initial zoom level
-
-        zmin : float (default is 0.01)
-           Minimum zoom level
-
-        zmax : float (default is 1000)
-           Maximum zoom level
-        """
-
-        self._aspect = aspect
-        self._pan = np.array(pan)
-        self._zoom = zoom
-        self._zmin = zmin
-        self._zmax = zmax
-
-        self._zoom_to_pointer = True
-        self._n_rows = 1
-
-        # Canvas this transform is attached to
-        self._canvas = None
-        self._canvas_aspect = np.ones(2)
-        self._width = 1
-        self._height = 1
-
-        # Programs using this transform
-        self._u_pan = pan
-        self._u_zoom = np.array([zoom, zoom])
-        self._programs = []
-
-    @property
-    def zoom_to_pointer(self):
-        return self._zoom_to_pointer
-
-    @zoom_to_pointer.setter
-    def zoom_to_pointer(self, value):
-        self._zoom_to_pointer = value
-
-    @property
-    def n_rows(self):
-        return self._n_rows
-
-    @n_rows.setter
-    def n_rows(self, value):
-        self._n_rows = value
-
-    @property
-    def is_attached(self):
-        """Whether transform is attached to a canvas."""
-        return self._canvas is not None
-
-    @property
-    def aspect(self):
-        """Aspect (width/height)."""
-        return self._aspect
-
-    @aspect.setter
-    def aspect(self, value):
-        """Aspect (width/height)."""
-        self._aspect = value
-
-    @property
-    def pan(self):
-        """Pan translation."""
-        return self._pan
-
-    @pan.setter
-    def pan(self, value):
-        """Pan translation."""
-        self._pan = np.asarray(value)
-        self._u_pan = self._pan
-        for program in self._programs:
-            program["u_pan"] = self._u_pan
-
-    @property
-    def zoom(self):
-        """Zoom level."""
-        return self._zoom
-
-    @zoom.setter
-    def zoom(self, value):
-        """Zoom level."""
-
-        self._zoom = max(min(value, self._zmax), self._zmin)
-        if not self.is_attached:
-            return
-
-        aspect = 1.0
-        if self._aspect is not None:
-            aspect = self._canvas_aspect * self._aspect
-
-        self._u_zoom = self._zoom * aspect
-        for program in self._programs:
-            program["u_zoom"] = self._u_zoom
-
-    @property
-    def zmin(self):
-        """Minimum zoom level."""
-        return self._zmin
-
-    @zmin.setter
-    def zmin(self, value):
-        """Minimum zoom level."""
-        self._zmin = min(value, self._zmax)
-
-    @property
-    def zmax(self):
-        """Maximal zoom level."""
-        return self._zmax
-
-    @zmax.setter
-    def zmax(self, value):
-        """Maximal zoom level."""
-        self._zmax = max(value, self._zmin)
-
-    def on_resize(self, event):
-        """Resize event."""
-
-        self._width = float(event.size[0])
-        self._height = float(event.size[1])
-        aspect = self._width / self._height
-        if aspect > 1.0:
-            self._canvas_aspect = np.array([1.0 / aspect, 1.0])
-        else:
-            self._canvas_aspect = np.array([1.0, aspect / 1.0])
-
-        # Update zoom level
-        self.zoom = self._zoom
-
-    def _normalize(self, x_y):
-        x_y = np.asarray(x_y, dtype=np.float32)
-        size = np.array([self._width, self._height], dtype=np.float32)
-        pos = x_y / (size / 2.) - 1
-        return pos
-
-    def _normalize_grid(self, x_y):
-        x0, y0 = x_y
-
-        x0 /= self._width
-        y0 /= self._height
-
-        x0 *= self._n_rows
-        y0 *= self._n_rows
-
-        x0 = x0 % 1
-        y0 = y0 % 1
-
-        x0 = -(1 - 2 * x0)
-        y0 = -(1 - 2 * y0)
-
-        x0 /= self._n_rows
-        y0 /= self._n_rows
-
-        return x0, y0
-
-    def on_mouse_move(self, event):
-        """Drag."""
-
-        if event.is_dragging and not event.modifiers:
-            x0, y0 = self._normalize(event.press_event.pos)
-            x1, y1 = self._normalize(event.last_event.pos)
-            x, y = self._normalize(event.pos)
-            dx, dy = x - x1, -(y - y1)
-
-            pan_x, pan_y = self.pan
-            zoom_x, zoom_y = self._u_zoom
-
-            self.pan = (pan_x + dx / zoom_x,
-                        pan_y + dy / zoom_y)
-
-            self._canvas.update()
-
-    def on_mouse_wheel(self, event):
-        """Zoom."""
-
-        dx = np.sign(event.delta[1]) * .05
-        # Zoom toward the mouse pointer in the grid view.
-        x0, y0 = self._normalize_grid(event.pos)
-
-        pan_x, pan_y = self.pan
-        zoom_x = zoom_y = self.zoom
-        zoom_x_new, zoom_y_new = (zoom_x * math.exp(2.5 * dx),
-                                  zoom_y * math.exp(2.5 * dx))
-        self.zoom = zoom_x_new
-
-        if self._zoom_to_pointer:
-            aspect = 1.0
-            if self._aspect is not None:
-                aspect = self._canvas_aspect * self._aspect
-            zoom_x *= aspect[0]
-            zoom_y *= aspect[1]
-            zoom_x_new *= aspect[0]
-            zoom_y_new *= aspect[1]
-
-            self.pan = (pan_x - x0 * (1. / zoom_x - 1. / zoom_x_new),
-                        pan_y + y0 * (1. / zoom_y - 1. / zoom_y_new))
-
-        self._canvas.update()
-
-    _arrows = ('Left', 'Right', 'Up', 'Down')
-    _pm = ('+', '-')
-
-    def on_key_press(self, event):
-        # Zooming with the keyboard.
-        key = event.key
-        if event.modifiers:
-            return
-
-        # Pan.
-        if key in self._arrows:
-            k = .1 / self.zoom
-            if key == 'Left':
-                self.pan += (+k, +0)
-            elif key == 'Right':
-                self.pan += (-k, +0)
-            elif key == 'Down':
-                self.pan += (+0, +k)
-            elif key == 'Up':
-                self.pan += (+0, -k)
-            self._canvas.update()
-
-        # Zoom.
-        if key in self._pm:
-            k = .05
-            if key == '-':
-                self.zoom *= (1. - k)
-            elif key == '+':
-                self.zoom *= (1. + k)
-            self._canvas.update()
-
-        # Reset with 'R'.
-        if key == 'R':
-            self.pan = (0., 0.)
-            self.zoom = 1.
-            self._canvas.update()
-
-    def add(self, programs):
-        """ Attach programs to this tranform """
-
-        if not isinstance(programs, (list, tuple)):
-            programs = [programs]
-
-        for program in programs:
-            self._programs.append(program)
-            program["u_zoom"] = self._u_zoom
-            program["u_pan"] = self._u_pan
-
-    def attach(self, canvas):
-        """ Attach this tranform to a canvas """
-
-        self._canvas = canvas
-        self._width = float(canvas.size[0])
-        self._height = float(canvas.size[1])
-
-        aspect = self._width / self._height
-        if aspect > 1.0:
-            self._canvas_aspect = np.array([1.0 / aspect, 1.0])
-        else:
-            self._canvas_aspect = np.array([1.0, aspect / 1.0])
-
-        aspect = 1.0
-        if self._aspect is not None:
-            aspect = self._canvas_aspect * self._aspect
-        self._u_zoom = self._zoom * aspect
-
-        canvas.connect(self.on_resize)
-        canvas.connect(self.on_mouse_wheel)
-        canvas.connect(self.on_mouse_move)
-        canvas.connect(self.on_key_press)
 
 
 #------------------------------------------------------------------------------
@@ -457,6 +132,9 @@ class BaseSpikeVisual(_BakeVisual):
         self.n_spikes = None
         self._spike_clusters = None
         self._spike_ids = None
+        self._cluster_ids = None
+        self._cluster_order = None
+        self._update_clusters_automatically = True
 
         gloo.set_state(clear_color='black', blend=True,
                        blend_func=('src_alpha', 'one_minus_src_alpha'))
@@ -467,14 +145,17 @@ class BaseSpikeVisual(_BakeVisual):
     def _set_or_assert_n_spikes(self, arr):
         """If n_spikes is None, set it using the array's shape. Otherwise,
         check that the array has n_spikes rows."""
+        # TODO: improve this
         if self.n_spikes is None:
             self.n_spikes = arr.shape[0]
         assert arr.shape[0] == self.n_spikes
 
+    def _update_clusters(self):
+        self._cluster_ids = _unique(self._spike_clusters)
+
     @property
     def spike_clusters(self):
-        """The clusters assigned to *all* spikes, not just the displayed
-        spikes."""
+        """The clusters assigned to the displayed spikes."""
         return self._spike_clusters
 
     @spike_clusters.setter
@@ -482,7 +163,23 @@ class BaseSpikeVisual(_BakeVisual):
         """Set all spike clusters."""
         value = _as_array(value)
         self._spike_clusters = value
+        if self._update_clusters_automatically:
+            self._update_clusters()
         self.set_to_bake('spikes_clusters')
+
+    @property
+    def cluster_order(self):
+        """List of selected clusters in display order."""
+        if self._cluster_order is None:
+            return self._cluster_ids
+        else:
+            return self._cluster_order
+
+    @cluster_order.setter
+    def cluster_order(self, value):
+        value = _as_array(value)
+        assert sorted(value.tolist()) == sorted(self._cluster_ids)
+        self._cluster_order = value
 
     @property
     def masks(self):
@@ -504,7 +201,7 @@ class BaseSpikeVisual(_BakeVisual):
         """The list of spike ids to display, should correspond to the
         waveforms."""
         if self._spike_ids is None:
-            self._spike_ids = np.arange(self.n_spikes).astype(np.int64)
+            self._spike_ids = np.arange(self.n_spikes).astype(np.uint64)
         return self._spike_ids
 
     @spike_ids.setter
@@ -514,16 +211,22 @@ class BaseSpikeVisual(_BakeVisual):
         self._spike_ids = value
         self.set_to_bake('spikes')
 
-    # TODO: channel_ids
-
     @property
     def cluster_ids(self):
         """Clusters of the displayed spikes."""
-        return _unique(self.spike_clusters[self.spike_ids])
+        return self._cluster_ids
+
+    @cluster_ids.setter
+    def cluster_ids(self, value):
+        """Clusters of the displayed spikes."""
+        self._cluster_ids = _as_array(value)
 
     @property
     def n_clusters(self):
-        return len(self.cluster_ids)
+        if self._cluster_ids is None:
+            return None
+        else:
+            return len(self._cluster_ids)
 
     @property
     def cluster_colors(self):
@@ -533,18 +236,19 @@ class BaseSpikeVisual(_BakeVisual):
     @cluster_colors.setter
     def cluster_colors(self, value):
         self._cluster_colors = _as_array(value)
-        assert len(self._cluster_colors) == self.n_clusters
-        self.set_to_bake('color')
+        assert len(self._cluster_colors) >= self.n_clusters
+        self.set_to_bake('cluster_color')
 
     # Data baking
     # -------------------------------------------------------------------------
 
-    def _bake_color(self):
+    def _bake_cluster_color(self):
+        if self.n_clusters == 0:
+            return
         u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
         u_cluster_color = (u_cluster_color * 255).astype(np.uint8)
-        # TODO: more efficient to update the data from an existing texture
         self.program['u_cluster_color'] = gloo.Texture2D(u_cluster_color)
-        debug("bake color", u_cluster_color.shape)
+        debug("bake cluster color", u_cluster_color.shape)
 
 
 #------------------------------------------------------------------------------
@@ -645,17 +349,16 @@ class BaseSpikeCanvas(app.Canvas):
     def __init__(self, **kwargs):
         super(BaseSpikeCanvas, self).__init__(keys='interactive', **kwargs)
         self.visual = self._visual_class()
+        self._create_pan_zoom()
+
+    def _create_pan_zoom(self):
         self._pz = PanZoom()
         self._pz.add(self.visual.program)
         self._pz.attach(self)
 
-    @property
-    def zoom(self):
-        return self._pz.zoom
-
     def on_draw(self, event):
-        gloo.clear()
+        self.context.clear()
         self.visual.draw()
 
     def on_resize(self, event):
-        gloo.set_viewport(0, 0, event.size[0], event.size[1])
+        self.context.set_viewport(0, 0, event.size[0], event.size[1])

@@ -181,23 +181,30 @@ class InternalSettings(object):
         try:
             with open(path, 'rb') as f:
                 store = cPickle.load(f)
+                assert isinstance(store, dict)
         except Exception as e:
             warn("Unable to read the internal settings. "
                  "You may want to delete '{0}'.\n{1}".format(path, str(e)))
-        assert isinstance(store, dict)
+            store = None
         debug("Loaded internal settings from '{0}'.".format(path))
         self._store = store
 
     def save(self, path):
+        if self._store is None:
+            return
         path = op.realpath(op.expanduser(path))
         with open(path, 'wb') as f:
             cPickle.dump(self._store, f)
         debug("Saved internal settings to '{0}'.".format(path))
 
     def get(self, name):
+        if self._store is None:
+            return
         return self._store.get(name, None)
 
     def set(self, name, value):
+        if self._store is None:
+            return
         self._store[name] = value
 
 

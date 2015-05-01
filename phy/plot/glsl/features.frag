@@ -1,5 +1,5 @@
 #include "markers/disc.glsl"
-#include "antialias/filled.glsl"
+#include "filled_antialias.glsl"
 #include "grid.glsl"
 
 varying float v_size;

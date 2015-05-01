@@ -23,7 +23,7 @@ void main (void)
                              a_mask);
     v_color.a = .5;
 
-    vec2 position = pan_zoom_grid(a_position);
+    vec2 position = pan_zoom_grid(a_position, a_box);
     vec2 box_position = to_box(position, a_box);
 
     // Depth as a function of the mask and cluster index.

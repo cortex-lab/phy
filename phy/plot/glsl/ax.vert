@@ -5,18 +5,22 @@ attribute vec4 a_position;  // xy, index, ax
 
 #include "grid.glsl"
 
-vec2 pan_zoom(vec2 position, float ax)
+vec2 pan_zoom(vec2 position, float index, float ax)
 {
+    vec4 pz = fetch_pan_zoom(index);
+    vec2 pan = pz.xy;
+    vec2 zoom = pz.zw;
+
     if (ax < 0.5)
-        return vec2(u_zoom.x * (position.x + n_rows * u_pan.x), position.y);
+        return vec2(zoom.x * (position.x + n_rows * pan.x), position.y);
     else
-        return vec2(position.x, u_zoom.y * (position.y + n_rows * u_pan.y));
+        return vec2(position.x, zoom.y * (position.y + n_rows * pan.y));
 }
 
 void main() {
 
     vec2 pos = a_position.xy;
-    vec2 position = pan_zoom(pos, a_position.w);
+    vec2 position = pan_zoom(pos, a_position.z, a_position.w);
 
     gl_Position = vec4(to_box(position, a_position.z),
                        0.0, 1.0);

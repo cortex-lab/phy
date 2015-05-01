@@ -23,12 +23,15 @@ from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel
 from ._history import GlobalHistory
 from .clustering import Clustering
-from ._utils import _spikes_per_cluster, _concatenate_per_cluster_arrays
-from .selector import Selector
+from ._utils import (_spikes_per_cluster,
+                     _concatenate_per_cluster_arrays,
+                     _update_cluster_selection,
+                     )
 from .store import ClusterStore, StoreItem
 from .view_model import (WaveformViewModel,
                          FeatureViewModel,
                          CorrelogramViewModel,
+                         TraceViewModel,
                          )
 from .wizard import Wizard, _best_clusters
 
@@ -405,6 +408,7 @@ _VIEW_MODELS = {
     'waveforms': WaveformViewModel,
     'features': FeatureViewModel,
     'correlograms': CorrelogramViewModel,
+    'traces': TraceViewModel,
 }
 
 
@@ -427,6 +431,7 @@ class Session(BaseSession):
         super(Session, self).__init__()
         self.model = None
         self.phy_user_dir = phy_user_dir
+        self._selected_clusters = []
 
         # Instantiate the SettingsManager which manages
         # the settings files.
@@ -465,11 +470,14 @@ class Session(BaseSession):
         return self.settings_manager.set_user_settings(
             key, value, scope='experiment')
 
-    def get_internal_settings(self, key):
+    def get_internal_settings(self, key, default=None):
         """Get an internal settings."""
-        return self.settings_manager.get_internal_settings(key,
-                                                           scope='experiment',
-                                                           )
+        value = self.settings_manager.get_internal_settings(key,
+                                                            scope='experiment',
+                                                            )
+        if value is None:
+            value = default
+        return value
 
     def set_internal_settings(self, key, value):
         """Set an internal settings."""
@@ -542,13 +550,19 @@ class Session(BaseSession):
         if len(name) == 0:
             raise ValueError("No {0} were selected.".format(name))
 
+    def _update_selected_clusters(self, up):
+        self._selected_clusters = _update_cluster_selection(
+            self._selected_clusters, up)
+
     def select(self, clusters):
         """Select some clusters."""
-        self.selector.selected_clusters = clusters
-        self.emit('select', self.selector)
+        self._selected_clusters = clusters
+        self.emit('select', clusters)
 
-    def merge(self, clusters):
+    def merge(self, clusters=None):
         """Merge some clusters."""
+        if clusters is None:
+            clusters = self._selected_clusters
         up = self.clustering.merge(clusters)
         self.emit('cluster', up=up)
 
@@ -567,7 +581,7 @@ class Session(BaseSession):
         up = self.clustering.split(spikes)
         self.emit('cluster', up=up)
 
-    def move(self, clusters, group):
+    def move(self, clusters=None, group=None):
         """Move some clusters to a cluster group.
 
         Here is the list of cluster groups:
@@ -578,6 +592,10 @@ class Session(BaseSession):
         * 3=Unsorted
 
         """
+        if clusters is None:
+            clusters = self._selected_clusters
+        if group is None:
+            raise ValueError("The group must be specified.")
         self._check_list_argument(clusters)
         up = self.cluster_metadata.set_group(clusters, group)
         self.emit('cluster', up=up)
@@ -675,9 +693,6 @@ class Session(BaseSession):
                 elif up.description in ('merge', 'assign'):
                     self._global_history.action(self.clustering)
 
-    def _create_selector(self):
-        self.selector = Selector(self.model.spike_clusters)
-
     def _create_wizard(self):
         self.wizard = Wizard(self.clustering.cluster_ids)
 
@@ -714,13 +729,13 @@ class Session(BaseSession):
 
         self._create_global_history()
         self._create_clustering()
-        self._create_selector()
         self._create_cluster_metadata()
         self._create_cluster_store()
         self._create_wizard()
 
     def on_cluster(self, up=None, add_to_stack=True):
         """Update the history when clustering changes occur."""
+        self._update_selected_clusters(up)
         # Update the global history.
         if add_to_stack and up is not None:
             if up.description.startswith('metadata'):
@@ -796,25 +811,15 @@ class Session(BaseSession):
             view.update()
 
         @self.connect
-        def on_select(selector):
-            if len(selector.selected_clusters) == 0:
+        def on_select(cluster_ids):
+            if len(cluster_ids) == 0:
                 # Clear the view.
                 view.visual.empty = True
                 view.update()
                 return
             if view.visual.empty:
                 on_open()
-
-            n_spikes_max = self.get_user_settings('manual_clustering.' +
-                                                  view_name +
-                                                  '_n_spikes_max')
-            excerpt_size = self.get_user_settings('manual_clustering.' +
-                                                  view_name +
-                                                  '_excerpt_size')
-            spikes = selector.subset_spikes(n_spikes_max=n_spikes_max,
-                                            excerpt_size=excerpt_size)
-            view_model.on_select(selector.selected_clusters,
-                                 spikes)
+            view_model.on_select(cluster_ids)
             view.update()
 
         # Unregister the callbacks when the view is closed.
@@ -838,12 +843,15 @@ class Session(BaseSession):
         def on_draw(event):
             if view.visual.empty:
                 on_open()
-                on_select(self.selector)
+                if (set(self._selected_clusters) <=
+                        set(self.clustering.cluster_ids)):
+                    on_select(self._selected_clusters)
 
         return view
 
     def _create_view_model(self, name, **kwargs):
         vm_class = _VIEW_MODELS[name]
+
         # Load the canvas position and size for that view.
         position = self._get_view_settings(name, 'canvas_position')
         size = self._get_view_settings(name, 'canvas_size')
@@ -851,14 +859,27 @@ class Session(BaseSession):
             kwargs['position'] = position
         if size:
             kwargs['size'] = size
-        return vm_class(self.model, store=self.cluster_store, **kwargs)
+
+        # Load the selector options for that view.
+        n_spikes_max = self.get_user_settings('manual_clustering.' +
+                                              name +
+                                              '_n_spikes_max')
+        excerpt_size = self.get_user_settings('manual_clustering.' +
+                                              name +
+                                              '_excerpt_size')
+
+        return vm_class(self.model,
+                        store=self.cluster_store,
+                        n_spikes_max=n_spikes_max,
+                        excerpt_size=excerpt_size,
+                        **kwargs)
 
     def _create_waveforms_view(self):
         """Create a WaveformView and return a ViewModel instance."""
 
         # Persist scale factor.
         sf_name = 'manual_clustering.waveforms_scale_factor'
-        sf = self.get_internal_settings(sf_name) or .01
+        sf = self.get_internal_settings(sf_name, .01)
 
         vm = self._create_view_model('waveforms',
                                      scale_factor=sf,
@@ -867,14 +888,14 @@ class Session(BaseSession):
 
         # Load box scale.
         bs_name = 'manual_clustering.waveforms_box_scale'
-        bs = (self.get_internal_settings(bs_name) or
-              vm.view.visual.default_box_scale)
+        bs = self.get_internal_settings(bs_name,
+                                        vm.view.visual.default_box_scale)
         vm.view.box_scale = bs
 
         # Load probe scale.
         ps_name = 'manual_clustering.waveforms_probe_scale'
-        ps = (self.get_internal_settings(ps_name) or
-              vm.view.visual.default_probe_scale)
+        ps = self.get_internal_settings(ps_name,
+                                        vm.view.visual.default_probe_scale)
         vm.view.probe_scale = ps
 
         @vm.view.connect
@@ -892,10 +913,10 @@ class Session(BaseSession):
         """Create a FeatureView and return a ViewModel instance."""
 
         sf_name = 'manual_clustering.features_scale_factor'
-        sf = self.get_internal_settings(sf_name) or .01
+        sf = self.get_internal_settings(sf_name, .01)
 
         ms_name = 'manual_clustering.features_marker_size'
-        ms = self.get_internal_settings(ms_name) or 2.
+        ms = self.get_internal_settings(ms_name, 2.)
 
         vm = self._create_view_model('features',
                                      scale_factor=sf,
@@ -908,10 +929,10 @@ class Session(BaseSession):
         def on_draw(event):
             if vm.view.visual.empty:
                 return
-            self.set_internal_settings(sf_name,
-                                       vm.view.zoom * vm.scale_factor)
-            self.set_internal_settings(ms_name,
-                                       vm.view.marker_size)
+            # Remember the minimum zoom_y for the scale factor.
+            zoom = vm.view._pz.zoom_matrix[1:, 1:, 1].min()
+            self.set_internal_settings(sf_name, zoom * vm.scale_factor)
+            self.set_internal_settings(ms_name, vm.view.marker_size)
 
         return vm
 
@@ -923,6 +944,25 @@ class Session(BaseSession):
                   for k in args}
         vm = self._create_view_model('correlograms', **kwargs)
         self._create_view(vm)
+        return vm
+
+    def _create_traces_view(self):
+        """Create a TraceView and return a ViewModel instance."""
+
+        sf_name = 'manual_clustering.traces_scale_factor'
+        sf = self.get_internal_settings(sf_name, .001)
+
+        vm = self._create_view_model('traces',
+                                     scale_factor=sf)
+        self._create_view(vm)
+
+        @vm.view.connect
+        def on_draw(event):
+            if vm.view.visual.empty:
+                return
+            self.set_internal_settings(sf_name,
+                                       vm.view.channel_scale * vm.scale_factor)
+
         return vm
 
     def create_view(self, name):
@@ -946,6 +986,8 @@ class Session(BaseSession):
             return self._create_features_view()
         elif name == 'correlograms':
             return self._create_correlograms_view()
+        elif name == 'traces':
+            return self._create_traces_view()
         else:
             raise ValueError("The view '{0}' doesn't exist.".format(name))
 
@@ -985,5 +1027,18 @@ class Session(BaseSession):
 
         """
         vm = self.create_view('correlograms')
+        vm.view.show()
+        return vm.view
+
+    def show_traces(self):
+        """Create and display a new Trace view.
+
+        Returns
+        -------
+
+        view : VisPy canvas instance
+
+        """
+        vm = self.create_view('traces')
         vm.view.show()
         return vm.view

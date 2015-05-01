@@ -29,7 +29,9 @@ def artificial_features(*args):
 
 
 def artificial_masks(n_spikes=None, n_channels=None):
-    return nr.uniform(size=(n_spikes, n_channels))
+    masks = nr.uniform(size=(n_spikes, n_channels))
+    masks[masks < .25] = 0
+    return masks
 
 
 def artificial_traces(n_samples, n_channels):
@@ -61,6 +63,7 @@ class MockModel(BaseModel):
     n_samples_traces = 20000
     n_samples_waveforms = 40
     n_clusters = 10
+    sample_rate = 20000.
 
     def __init__(self, n_spikes=None, n_clusters=None):
         super(MockModel, self).__init__()
@@ -85,7 +88,8 @@ class MockModel(BaseModel):
                                          self.n_channels)
         self._spike_clusters = artificial_spike_clusters(self.n_spikes,
                                                          self.n_clusters)
-        self._spike_samples = artificial_spike_samples(self.n_spikes)
+        self._spike_samples = artificial_spike_samples(self.n_spikes, 30)
+        assert self._spike_samples[-1] < self.n_samples_traces
         self._features = artificial_features(self.n_spikes, self.n_features)
         self._masks = artificial_masks(self.n_spikes, self.n_channels)
         self._features_masks = np.dstack((self._features,

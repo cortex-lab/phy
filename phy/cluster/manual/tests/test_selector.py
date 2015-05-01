@@ -46,6 +46,7 @@ def test_selector_spikes():
     ae(selector.selected_spikes, my_spikes[:3])
     selector.selected_spikes = my_spikes
     assert len(selector.selected_spikes) <= 3
+    assert selector.n_spikes == len(selector.selected_spikes)
     assert np.all(np.in1d(selector.selected_spikes, my_spikes))
 
     # Check that this doesn't raise any error.
@@ -72,6 +73,7 @@ def test_selector_clusters():
     selector.selected_clusters = [1, 3]
     ae(selector.selected_spikes, _spikes_in_clusters(spike_clusters, [1, 3]))
     assert np.all(np.in1d(spike_clusters[selector.selected_spikes], (1, 3)))
+    assert selector.n_clusters == 2
 
     # Specify a maximum number of spikes.
     selector.n_spikes_max = 10
@@ -84,3 +86,13 @@ def test_selector_clusters():
     selector.n_spikes_max = 5
     assert len(selector.selected_spikes) <= 5
     assert np.all(np.in1d(spike_clusters[selector.selected_spikes], (2, 4)))
+
+
+def test_selector_subset():
+    n_spikes = 1000
+    n_clusters = 10
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+
+    selector = Selector(spike_clusters)
+    selector.subset_spikes(excerpt_size=10)
+    selector.subset_spikes(np.arange(n_spikes), excerpt_size=10)
