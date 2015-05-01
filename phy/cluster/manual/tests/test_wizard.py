@@ -97,7 +97,13 @@ def test_pin():
     wizard.next()
     assert wizard.current_selection() == (n - 3,)
     wizard.pin()
+
+    # Go through the closest matches.
     assert wizard.current_selection() == (n - 3, n - 2)
+    assert wizard.next() == n - 1
+    assert wizard.current_selection() == (n - 3, n - 1)
+    wizard.next()
+    assert wizard.current_selection() == (n - 3, n - 1)
 
     # Test playback methods.
     wizard.first()
