@@ -559,8 +559,10 @@ class Session(BaseSession):
         self._selected_clusters = clusters
         self.emit('select', clusters)
 
-    def merge(self, clusters):
+    def merge(self, clusters=None):
         """Merge some clusters."""
+        if clusters is None:
+            clusters = self._selected_clusters
         up = self.clustering.merge(clusters)
         self.emit('cluster', up=up)
 
@@ -579,7 +581,7 @@ class Session(BaseSession):
         up = self.clustering.split(spikes)
         self.emit('cluster', up=up)
 
-    def move(self, clusters, group):
+    def move(self, clusters=None, group=None):
         """Move some clusters to a cluster group.
 
         Here is the list of cluster groups:
@@ -590,6 +592,10 @@ class Session(BaseSession):
         * 3=Unsorted
 
         """
+        if clusters is None:
+            clusters = self._selected_clusters
+        if group is None:
+            raise ValueError("The group must be specified.")
         self._check_list_argument(clusters)
         up = self.cluster_metadata.set_group(clusters, group)
         self.emit('cluster', up=up)
