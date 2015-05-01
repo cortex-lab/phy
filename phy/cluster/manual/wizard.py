@@ -39,19 +39,15 @@ def _best_clusters(clusters, quality, n_max=None):
 
 class Wizard(object):
     """Propose a selection of high-quality clusters and merge candidates."""
-    def __init__(self, cluster_ids=None):
+    def __init__(self, cluster_ids):
         self._similarity = None
         self._quality = None
         self._ignored = set()
-        self.cluster_ids = cluster_ids
         self._reset_list()
+        self.cluster_ids = cluster_ids
 
     # Internal methods
     #--------------------------------------------------------------------------
-
-    def _check_cluster_ids(self):
-        if self._cluster_ids is None:
-            raise RuntimeError("The list of clusters need to be set.")
 
     def _filter(self, items):
         """Filter out ignored clusters or pairs of clusters."""
@@ -68,10 +64,15 @@ class Wizard(object):
 
     @cluster_ids.setter
     def cluster_ids(self, cluster_ids):
-        """Update the array of cluster ids."""
+        """Update the list of clusters."""
+        assert cluster_ids is not None
         if isinstance(cluster_ids, np.ndarray):
             cluster_ids = cluster_ids.tolist()
+        assert isinstance(cluster_ids, (list, tuple))
         self._cluster_ids = sorted(cluster_ids)
+        if self._list:
+            self._list = [clu for clu in self._list
+                          if clu in self._cluster_ids]
 
     def set_similarity_function(self, func):
         """Register a function returing the similarity between two clusters."""
@@ -92,7 +93,6 @@ class Wizard(object):
         The registered quality function is used for the cluster quality.
 
         """
-        self._check_cluster_ids()
         return self._filter(_best_clusters(self._cluster_ids, self._quality,
                                            n_max=n_max))
 
@@ -108,7 +108,6 @@ class Wizard(object):
         (the current best cluster by default)."""
         if cluster is None:
             cluster = self.best_cluster()
-        self._check_cluster_ids()
         similarity = [(other, self._similarity(cluster, other))
                       for other in self._cluster_ids
                       if other != cluster]
@@ -143,18 +142,16 @@ class Wizard(object):
         self._is_running = False
         self._pinned = None
 
-    @property
     def count(self):
         return len(self._list)
 
-    @property
     def index(self):
         return self._index
 
     def start(self):
-        self._index = 0
         self._is_running = True
-        self._list = self.best_clusters()
+        if self._index is None:
+            self.set_best_clusters()
 
     def pause(self):
         self._is_running = False
@@ -162,15 +159,13 @@ class Wizard(object):
     def stop(self):
         self._reset_list()
 
-    @property
     def is_running(self):
         return self._is_running
 
     def next(self):
         if not self._is_running:
             self.start()
-        else:
-            assert self._index is not None and self._index >= 0
+        if self._index <= self.count() - 2:
             self._index += 1
         return self._current
 
@@ -184,12 +179,12 @@ class Wizard(object):
         return self._current
 
     def last(self):
-        self._index = self.count - 1
+        self._index = self.count() - 1
         return self._current
 
     @property
     def _current(self):
-        if self._index is not None and 0 <= self._index < self.count:
+        if self._index is not None and 0 <= self._index < self.count():
             return self._list[self._index]
 
     # Pin methods
@@ -202,17 +197,13 @@ class Wizard(object):
             self._index = 0
         return self._pinned
 
-    @property
-    def pinned(self):
-        return self._pinned
-
-    def current_best_unsorted(self):
-        return self._pinned
-
     def unpin(self):
         self._pinned = None
         self._list = self.best_clusters()
         self._index = 0
+
+    def pinned(self):
+        return self._pinned
 
     def current_selection(self):
         if not self._is_running:
@@ -221,12 +212,14 @@ class Wizard(object):
         assert current is not None
         # Best unsorted.
         if self._pinned is None:
-            return current
+            return (current,)
         # Best unsorted and closest match.
         else:
-            return (self.pinned, current)
+            return (self._pinned, current)
 
-    def current_closest_match(self):
-        if not self._is_running or self._pinned is None:
-            return None
-        return self._current
+    def ignore_current_selection(self):
+        self.ignore(self.current_selection())
+
+    def set_best_clusters(self):
+        self._index = 0
+        self._list = self.best_clusters()

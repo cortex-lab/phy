@@ -56,5 +56,63 @@ def test_core_wizard():
     assert wizard.most_similar_clusters(2) == [3]
 
 
-def test_wizard():
-    pass
+def test_pin():
+
+    n = 20
+    clusters = list(range(n))
+    wizard = Wizard(clusters)
+
+    @wizard.set_quality_function
+    def quality(cluster):
+        return cluster / float(n)
+
+    @wizard.set_similarity_function
+    def similarity(cluster, other):
+        d = max(0, other - cluster)
+        if d == 0:
+            return 0.
+        else:
+            return 1. - (d - 1) // float(n)
+
+    assert not wizard.is_running()
+    assert wizard.count() == 0
+
+    wizard.start()
+    assert wizard.is_running()
+
+    # Test moves.
+    assert wizard.count() == n
+    assert wizard.index() == 0
+
+    wizard.next()
+    assert wizard.index() == 1
+
+    wizard.last()
+    assert wizard.index() == n - 1
+
+    wizard.first()
+
+    # Test pin.
+    wizard.next()
+    wizard.next()
+    assert wizard.current_selection() == (n - 3,)
+    wizard.pin()
+    assert wizard.current_selection() == (n - 3, n - 2)
+
+    # Test playback methods.
+    wizard.first()
+    wizard.next()
+    wizard.previous()
+    assert wizard.index() == 0
+
+    wizard.previous()
+    assert wizard.index() == 0
+
+    wizard.pause()
+    assert not wizard.is_running()
+
+    wizard.start()
+    assert wizard.is_running()
+
+    wizard.stop()
+    assert not wizard.is_running()
