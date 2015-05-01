@@ -45,6 +45,21 @@ class Wizard(object):
         self._ignored = set()
         self.cluster_ids = cluster_ids
 
+    # Internal methods
+    #--------------------------------------------------------------------------
+
+    def _check_cluster_ids(self):
+        if self._cluster_ids is None:
+            raise RuntimeError("The list of clusters need to be set.")
+
+    def _filter(self, items):
+        """Filter out ignored clusters or pairs of clusters."""
+        return [item for item in items
+                if item not in self._ignored]
+
+    # Setting methods
+    #--------------------------------------------------------------------------
+
     @property
     def cluster_ids(self):
         """Array of cluster ids in the current clustering."""
@@ -67,19 +82,10 @@ class Wizard(object):
         self._quality = func
         return func
 
-    def _check_cluster_ids(self):
-        if self._cluster_ids is None:
-            raise RuntimeError("The list of clusters need to be set.")
-
-    def _filter(self, items):
-        """Filter out ignored clusters or pairs of clusters."""
-        return [item for item in items
-                if item not in self._ignored]
-
-    # Public methods
+    # Core methods
     #--------------------------------------------------------------------------
 
-    def best_clusters(self, n_max=10):
+    def best_clusters(self, n_max=None):
         """Return the list of best clusters sorted by decreasing quality.
 
         The registered quality function is used for the cluster quality.
@@ -96,7 +102,7 @@ class Wizard(object):
         if clusters:
             return clusters[0]
 
-    def most_similar_clusters(self, cluster=None, n_max=10):
+    def most_similar_clusters(self, cluster=None, n_max=None):
         """Return the `n_max` most similar clusters to a given cluster
         (the current best cluster by default)."""
         if cluster is None:
@@ -126,3 +132,45 @@ class Wizard(object):
         if isinstance(cluster_or_pair, tuple):
             assert len(cluster_or_pair) == 2
         self._ignored.add(cluster_or_pair)
+
+    # List methods
+    #--------------------------------------------------------------------------
+
+    def next(self):
+        if not self.is_running:
+            self.start()
+        # TODO
+
+    def previous(self):
+        pass
+
+    def first(self):
+        pass
+
+    def last(self):
+        pass
+
+    # Playback methods
+    #--------------------------------------------------------------------------
+
+    def start(self):
+        pass
+
+    def pause(self):
+        pass
+
+    def stop(self):
+        pass
+
+    @property
+    def is_running(self):
+        pass
+
+    # Pin methods
+    #--------------------------------------------------------------------------
+
+    def pin(self):
+        pass
+
+    def unpin(self):
+        pass
