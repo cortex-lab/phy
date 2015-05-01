@@ -713,10 +713,15 @@ class PanZoomGrid(PanZoom):
                 if pan is not None:
                     p = list(pan)
                     if self._global_pan_zoom_axis is not None:
+                        # Update just x, so keep the existing y.
                         if self._global_pan_zoom_axis[i, j] == 'x':
                             p[1] = self.pan[1]
+                        # Update just y, so keep the existing x.
                         elif self._global_pan_zoom_axis[i, j] == 'y':
                             p[0] = self.pan[0]
+                        # Do not update.
+                        elif self._global_pan_zoom_axis[i, j] == 'n':
+                            p = self.pan
                     self.pan = p
 
                 if zoom is not None:
@@ -726,6 +731,8 @@ class PanZoomGrid(PanZoom):
                             z[1] = self.zoom[1]
                         elif self._global_pan_zoom_axis[i, j] == 'y':
                             z[0] = self.zoom[0]
+                        elif self._global_pan_zoom_axis[i, j] == 'n':
+                            z = self.zoom
                     self.zoom = z
 
         # Set back the box index.

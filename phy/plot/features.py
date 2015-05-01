@@ -140,16 +140,16 @@ class FeatureVisual(BaseSpikeVisual):
                 dim_i = self._dimensions[i]
                 dim_j = self._dimensions[j]
 
-                fet_j = self._get_feature_dim(dim_j)
+                fet_i = self._get_feature_dim(dim_i)
                 # For non-time dimensions, the diagonal shows
                 # a different feature on y (same channel than x).
-                if i == j and dim_i != 'time' and self.n_features >= 1:
-                    channel, feature = dim_i
+                if i == j and dim_j != 'time' and self.n_features >= 1:
+                    channel, feature = dim_j
                     # Choose the other feature on y axis.
                     feature = 1 - feature
-                    fet_i = self._features[:, channel, feature]
+                    fet_j = self._features[:, channel, feature]
                 else:
-                    fet_i = self._get_feature_dim(dim_i)
+                    fet_j = self._get_feature_dim(dim_j)
 
                 # NOTE: we switch here because we want to plot
                 # dim_i (y) over dim_j (x) on box (i, j).
@@ -251,6 +251,7 @@ class FeatureView(BaseSpikeCanvas):
                     # global zoom.
                     gpza[i, :] = 'x'
                     gpza[:, i] = 'y'
+                    gpza[i, i] = 'n'
                 else:
                     # Set the current index to the first non-time axis.
                     if not _index_set:

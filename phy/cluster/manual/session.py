@@ -924,7 +924,7 @@ class Session(BaseSession):
             if vm.view.visual.empty:
                 return
             # Remember the minimum zoom_y for the scale factor.
-            zoom = vm.view._pz.zoom_matrix[:, :, 1].min()
+            zoom = vm.view._pz.zoom_matrix[1:, 1:, 1].min()
             self.set_internal_settings(sf_name, zoom * vm.scale_factor)
             self.set_internal_settings(ms_name, vm.view.marker_size)
 
