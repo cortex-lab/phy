@@ -781,8 +781,6 @@ class Session(BaseSession):
         else:
             return _best_clusters(self.cluster_ids, quality, n_max=n_max)
 
-    # TODO: wizard actions
-
     # GUI
     # -------------------------------------------------------------------------
 
@@ -837,12 +835,27 @@ class Session(BaseSession):
 
     def _create_gui_actions(self, gui):
 
-        def _wizard_select():
-            self.select(self.wizard.current_selection())
+        # General actions
+        # ---------------------------------------------------------------------
+
+        @gui.shortcut('reset_gui', 'alt+r')
+        def reset_gui():
+            # TODO
+            pass
 
         @gui.shortcut('exit', 'ctrl+q')
         def exit():
             gui.close()
+
+        # TODO: save
+
+        # Wizard
+        # ---------------------------------------------------------------------
+
+        # TODO: fix self._selected_clusters
+
+        def _wizard_select():
+            self.select(self.wizard.current_selection())
 
         @gui.shortcut('next', 'space')
         def next():
@@ -868,6 +881,15 @@ class Session(BaseSession):
             else:
                 self.wizard.stop()
                 self.select([])
+
+        @gui.shortcut('merge', 'g')
+        def merge():
+            # Merge the current selection.
+            self.merge(self.wizard.current_selection())
+            # TODO: fix this
+            self.select(self._selected_clusters)
+
+        # TODO: merge, move, undo, redo
 
     def _create_gui(self):
         """Create a manual clustering GUI.
