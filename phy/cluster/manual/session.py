@@ -851,6 +851,11 @@ class Session(BaseSession):
             cluster = self.wizard.previous()
             self.select([cluster])
 
+        @gui.shortcut('pin', 'return')
+        def pin():
+            self.wizard.pin()
+            self.select(self.wizard.current_selection())
+
     def _create_gui(self):
         """Create a manual clustering GUI.
 
