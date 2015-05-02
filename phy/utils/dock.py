@@ -104,6 +104,7 @@ class DockWindow(QtGui.QMainWindow):
                 if child.windowTitle().startswith(title)]
 
     def shortcut(self, text, key):
+        """Decorator to add a global keyboard shortcut."""
         def wrap(func):
             self.add_action(text, shortcut=key, callback=func)
         return wrap

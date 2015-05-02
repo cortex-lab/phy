@@ -39,14 +39,14 @@ def test_dock():
     gui = DockWindow()
     gui.show()
 
-    @gui.shortcut("press me", 'ctrl+g')
-    def press(e):
-        return
+    @gui.shortcut('press', 'ctrl+g')
+    def press():
+        pass
 
     gui.add_view(_create_canvas(), 'view1')
     gui.add_view(_create_canvas(), 'view2')
     assert len(gui.list_views('view')) == 2
 
-    _close_qt_after(gui, .1)
+    _close_qt_after(gui, 0.1)
 
     run_qt_app()
