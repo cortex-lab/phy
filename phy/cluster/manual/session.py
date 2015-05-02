@@ -805,10 +805,49 @@ class Session(BaseSession):
 
         """
         gui = DockWindow(title="Manual clustering with phy")
-        self._add_gui_view(gui, 'features', position='left')
-        self._add_gui_view(gui, 'correlograms', position='left')
-        self._add_gui_view(gui, 'waveforms', position='right')
-        self._add_gui_view(gui, 'traces', position='right')
+
+        gs_name = 'manual_clustering.gui_state'
+
+        # Save the geometry state
+        @gui.on_close
+        def on_close():
+            gs = gui.save_geometry_state()
+            self.set_internal_settings(gs_name, gs)
+
+        # Load geometry state
+        gs = self.get_internal_settings(gs_name)
+
+        # Default parameters.
+        default_counts = {
+            'features': 1,
+            'correlograms': 1,
+            'waveforms': 1,
+            'traces': 1,
+        }
+        if gs and gs.get('view_counts', None):
+            counts = gs['view_counts']
+        else:
+            counts = default_counts
+
+        default_positions = {
+            'features': 'left',
+            'correlograms': 'left',
+            'waveforms': 'right',
+            'traces': 'right',
+        }
+
+        # Create the appropriate number of views.
+        for name, count in counts.items():
+            name = name.lower()
+            # Add <count> views of that type.
+            for i in range(count):
+                self._add_gui_view(gui,
+                                   name,
+                                   position=default_positions[name])
+
+        # Restore the geometry state.
+        if gs:
+            gui.restore_geometry_state(gs)
 
         # @gui.shortcut('press', 'ctrl+g')
         # def press():
