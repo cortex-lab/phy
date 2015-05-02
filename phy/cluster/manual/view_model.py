@@ -189,9 +189,6 @@ class WaveformViewModel(BaseViewModel):
         waveforms = self.model.waveforms[spikes]
         debug("Done!")
 
-        # Spikes.
-        self.view.visual.spike_ids = spikes
-
         # Cluster display order.
         self.view.visual.cluster_order = cluster_ids
 
@@ -202,6 +199,9 @@ class WaveformViewModel(BaseViewModel):
         # Masks.
         masks = self._load_from_store_or_model('masks', cluster_ids, spikes)
         self.view.visual.masks = masks
+
+        # Spikes.
+        self.view.visual.spike_ids = spikes
 
     def on_close(self):
         self.view.visual.channel_positions = []
@@ -216,13 +216,6 @@ class FeatureViewModel(BaseViewModel):
     def on_select(self, cluster_ids):
         super(FeatureViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
-
-        # Spikes.
-        self.view.visual.spike_ids = spikes
-        self.view.visual.spike_samples = self.model.spike_samples[spikes]
-
-        # Cluster display order.
-        self.view.visual.cluster_order = cluster_ids
 
         # Load features.
         features = self._load_from_store_or_model('features',
@@ -245,6 +238,13 @@ class FeatureViewModel(BaseViewModel):
 
         self.view.visual.features = features
         self.view.visual.masks = masks
+
+        # Spikes.
+        self.view.visual.spike_ids = spikes
+        self.view.visual.spike_samples = self.model.spike_samples[spikes]
+
+        # Cluster display order.
+        self.view.visual.cluster_order = cluster_ids
 
         # Choose best projection.
         # TODO: refactor this, enable/disable
