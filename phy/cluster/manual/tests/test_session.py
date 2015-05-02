@@ -16,6 +16,7 @@ from pytest import raises
 from .._utils import _spikes_in_clusters
 from ..session import BaseSession, Session, FeatureMasks
 from ....utils.testing import show_test
+from ....utils.dock import qt_app, _close_qt_after
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
 from ....io.mock.artificial import MockModel
@@ -211,9 +212,19 @@ def test_session_mock():
 
         session = _start_manual_clustering(model=MockModel(), tempdir=tempdir)
         session.select([1, 2])
-        view = _show_view(session, 'waveforms')
-
         view.close()
+
+
+def test_session_gui():
+    with TemporaryDirectory() as tempdir:
+        session = _start_manual_clustering(model=MockModel(),
+                                           tempdir=tempdir)
+        session.select([1, 2])
+
+        with qt_app():
+            gui = session._create_gui()
+            _close_qt_after(gui, 0.2)
+            gui.show()
 
 
 def test_session_kwik():

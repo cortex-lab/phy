@@ -17,6 +17,7 @@ import numpy as np
 from ...ext.six import string_types
 from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of, _is_array_like
+from ...utils.dock import DockWindow, qt_app
 from ...utils.event import EventEmitter, ProgressReporter
 from ...utils.logging import info
 from ...utils.settings import SettingsManager, declare_namespace
@@ -780,6 +781,54 @@ class Session(BaseSession):
         else:
             return _best_clusters(self.cluster_ids, quality, n_max=n_max)
 
+    # TODO: wizard actions
+
+    # GUI
+    # -------------------------------------------------------------------------
+
+    def _add_gui_view(self, gui, name, **kwargs):
+        vm = self.create_view(name, save_size_pos=False)
+        dock = gui.add_view(vm.view, name, **kwargs)
+
+        # Make sure the dock widget is closed when the view it contains
+        # is closed with the Escape key.
+        @vm.view.connect
+        def on_close(self):
+            dock.close()
+
+        return vm
+
+    def _create_gui(self):
+        """Create a manual clustering GUI.
+
+        A Qt application needs to be running.
+
+        """
+        # TODO: alt+R = reset all views, positions, and sizes
+        # TODO: uppercase title
+        # TODO: persist views positions and sizes
+        # TODO: shortcuts
+        # TODO: find out scale factor bug with GUI
+        gui = DockWindow(title="Manual clustering")
+        self._add_gui_view(gui, 'waveforms', position='right')
+        self._add_gui_view(gui, 'traces', position='right')
+        self._add_gui_view(gui, 'features', position='left')
+        self._add_gui_view(gui, 'correlograms', position='left')
+
+        # @gui.shortcut('press', 'ctrl+g')
+        # def press():
+        #     pass
+
+        return gui
+
+    def show_gui(self):
+        """Show a new manual clustering GUI."""
+        # Ensure that a Qt application is running.
+        with qt_app():
+            gui = self._create_gui()
+            gui.show()
+            return gui
+
     # Show views
     # -------------------------------------------------------------------------
 
@@ -794,7 +843,7 @@ class Session(BaseSession):
         settings_name = self._view_settings_name(view_name, name)
         self.set_internal_settings(settings_name, value)
 
-    def _create_view(self, view_model):
+    def _create_view(self, view_model, save_size_pos=True):
         view = view_model.view
         view_name = view_model.view_name
 
@@ -827,15 +876,16 @@ class Session(BaseSession):
         def on_close(event):
             self.unconnect(on_open, on_cluster, on_select)
 
-            # Save the canvas position and size.
-            self._set_view_settings(view_name,
-                                    'canvas_position',
-                                    view.position,
-                                    )
-            self._set_view_settings(view_name,
-                                    'canvas_size',
-                                    view.size,
-                                    )
+            if save_size_pos:
+                # Save the canvas position and size.
+                self._set_view_settings(view_name,
+                                        'canvas_position',
+                                        view.position,
+                                        )
+                self._set_view_settings(view_name,
+                                        'canvas_size',
+                                        view.size,
+                                        )
 
         # Make sure the view is correctly initialized when it is created
         # *after* that the data has been loaded.
@@ -851,14 +901,16 @@ class Session(BaseSession):
 
     def _create_view_model(self, name, **kwargs):
         vm_class = _VIEW_MODELS[name]
+        save_size_pos = kwargs.pop('save_size_pos', True)
 
         # Load the canvas position and size for that view.
-        position = self._get_view_settings(name, 'canvas_position')
-        size = self._get_view_settings(name, 'canvas_size')
-        if position:
-            kwargs['position'] = position
-        if size:
-            kwargs['size'] = size
+        if save_size_pos:
+            position = self._get_view_settings(name, 'canvas_position')
+            size = self._get_view_settings(name, 'canvas_size')
+            if position:
+                kwargs['position'] = position
+            if size:
+                kwargs['size'] = size
 
         # Load the selector options for that view.
         n_spikes_max = self.get_user_settings('manual_clustering.' +
@@ -874,7 +926,7 @@ class Session(BaseSession):
                         excerpt_size=excerpt_size,
                         **kwargs)
 
-    def _create_waveforms_view(self):
+    def _create_waveforms_view(self, save_size_pos=True):
         """Create a WaveformView and return a ViewModel instance."""
 
         # Persist scale factor.
@@ -883,8 +935,9 @@ class Session(BaseSession):
 
         vm = self._create_view_model('waveforms',
                                      scale_factor=sf,
+                                     save_size_pos=save_size_pos,
                                      )
-        self._create_view(vm)
+        self._create_view(vm, save_size_pos=save_size_pos)
 
         # Load box scale.
         bs_name = 'manual_clustering.waveforms_box_scale'
@@ -909,7 +962,7 @@ class Session(BaseSession):
 
         return vm
 
-    def _create_features_view(self):
+    def _create_features_view(self, save_size_pos=True):
         """Create a FeatureView and return a ViewModel instance."""
 
         sf_name = 'manual_clustering.features_scale_factor'
@@ -920,9 +973,10 @@ class Session(BaseSession):
 
         vm = self._create_view_model('features',
                                      scale_factor=sf,
+                                     save_size_pos=save_size_pos,
                                      )
 
-        self._create_view(vm)
+        self._create_view(vm, save_size_pos=save_size_pos)
         vm.view.marker_size = ms
 
         @vm.view.connect
@@ -936,25 +990,28 @@ class Session(BaseSession):
 
         return vm
 
-    def _create_correlograms_view(self):
+    def _create_correlograms_view(self, save_size_pos=True):
         """Create a CorrelogramView and return a ViewModel instance."""
         args = 'binsize', 'winsize_bins'
         kwargs = {k: self.get_user_settings('manual_clustering.'
                                             'correlograms_' + k)
                   for k in args}
-        vm = self._create_view_model('correlograms', **kwargs)
-        self._create_view(vm)
+        vm = self._create_view_model('correlograms',
+                                     save_size_pos=save_size_pos, **kwargs)
+        self._create_view(vm, save_size_pos=save_size_pos)
         return vm
 
-    def _create_traces_view(self):
+    def _create_traces_view(self, save_size_pos=True):
         """Create a TraceView and return a ViewModel instance."""
 
         sf_name = 'manual_clustering.traces_scale_factor'
         sf = self.get_internal_settings(sf_name, .001)
 
         vm = self._create_view_model('traces',
-                                     scale_factor=sf)
-        self._create_view(vm)
+                                     scale_factor=sf,
+                                     save_size_pos=save_size_pos,
+                                     )
+        self._create_view(vm, save_size_pos=save_size_pos)
 
         @vm.view.connect
         def on_draw(event):
@@ -965,7 +1022,7 @@ class Session(BaseSession):
 
         return vm
 
-    def create_view(self, name):
+    def create_view(self, name, **kwargs):
         """Create a view without displaying it.
 
         Parameters
@@ -981,13 +1038,13 @@ class Session(BaseSession):
 
         """
         if name == 'waveforms':
-            return self._create_waveforms_view()
+            return self._create_waveforms_view(**kwargs)
         elif name == 'features':
-            return self._create_features_view()
+            return self._create_features_view(**kwargs)
         elif name == 'correlograms':
-            return self._create_correlograms_view()
+            return self._create_correlograms_view(**kwargs)
         elif name == 'traces':
-            return self._create_traces_view()
+            return self._create_traces_view(**kwargs)
         else:
             raise ValueError("The view '{0}' doesn't exist.".format(name))
 
