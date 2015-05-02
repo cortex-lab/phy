@@ -798,24 +798,10 @@ class Session(BaseSession):
 
         return vm
 
-    def _create_gui(self):
-        """Create a manual clustering GUI.
-
-        A Qt application needs to be running.
-
-        """
-        gui = DockWindow(title="Manual clustering with phy")
-
-        gs_name = 'manual_clustering.gui_state'
-
-        # Save the geometry state
-        @gui.on_close
-        def on_close():
-            gs = gui.save_geometry_state()
-            self.set_internal_settings(gs_name, gs)
+    def _restore_gui(self, gui):
 
         # Load geometry state
-        gs = self.get_internal_settings(gs_name)
+        gs = self.get_internal_settings('manual_clustering.gui_state')
 
         # Default parameters.
         default_counts = {
@@ -849,9 +835,31 @@ class Session(BaseSession):
         if gs:
             gui.restore_geometry_state(gs)
 
-        # @gui.shortcut('press', 'ctrl+g')
-        # def press():
-        #     pass
+    def _create_gui_actions(self, gui):
+
+        @gui.shortcut('next', 'space')
+        def next():
+            cluster = self.wizard.next()
+            self.select([cluster])
+
+    def _create_gui(self):
+        """Create a manual clustering GUI.
+
+        A Qt application needs to be running.
+
+        """
+        gui = DockWindow(title="Manual clustering with phy")
+
+        # Save the geometry state
+        @gui.on_close
+        def on_close():
+            gs = gui.save_geometry_state()
+            self.set_internal_settings('manual_clustering.gui_state', gs)
+
+        # Recreate the views and restore the state and position of the
+        # dock widgets.
+        self._restore_gui(gui)
+        self._create_gui_actions(gui)
 
         return gui
 
