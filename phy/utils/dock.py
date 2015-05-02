@@ -80,6 +80,9 @@ class DockWindow(QMainWindow):
         self._on_show = None
         self._on_close = None
 
+    # Events
+    # -------------------------------------------------------------------------
+
     def on_close(self, func):
         self._on_close = func
 
@@ -96,6 +99,9 @@ class DockWindow(QMainWindow):
             self._on_show()
         super(DockWindow, self).show()
 
+    # Actions
+    # -------------------------------------------------------------------------
+
     def add_action(self,
                    text,
                    callback=None,
@@ -111,6 +117,15 @@ class DockWindow(QMainWindow):
         action.setChecked(checked)
         self.addAction(action)
         return action
+
+    def shortcut(self, text, key):
+        """Decorator to add a global keyboard shortcut."""
+        def wrap(func):
+            self.add_action(text, shortcut=key, callback=func)
+        return wrap
+
+    # Views
+    # -------------------------------------------------------------------------
 
     def add_view(self,
                  view,
@@ -174,11 +189,8 @@ class DockWindow(QMainWindow):
             counts[_title(view)] += 1
         return dict(counts)
 
-    def shortcut(self, text, key):
-        """Decorator to add a global keyboard shortcut."""
-        def wrap(func):
-            self.add_action(text, shortcut=key, callback=func)
-        return wrap
+    # State
+    # -------------------------------------------------------------------------
 
     def save_geometry_state(self):
         """Save the geometry and state of the main window and the docks.
