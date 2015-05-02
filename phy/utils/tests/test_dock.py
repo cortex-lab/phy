@@ -9,10 +9,8 @@
 from vispy import app
 
 from ..dock import (DockWindow,
-                    start_qt_app,
-                    run_qt_app,
+                    qt_app,
                     _close_qt_after,
-                    _check_qt,
                     )
 from .._color import _random_color
 
@@ -39,22 +37,17 @@ def _create_canvas():
 
 
 def test_dock():
-    if not _check_qt():
-        return
+    with qt_app():
 
-    start_qt_app()
+        gui = DockWindow()
 
-    gui = DockWindow()
-    gui.show()
+        @gui.shortcut('press', 'ctrl+g')
+        def press():
+            pass
 
-    @gui.shortcut('press', 'ctrl+g')
-    def press():
-        pass
+        gui.add_view(_create_canvas(), 'view1')
+        gui.add_view(_create_canvas(), 'view2')
+        assert len(gui.list_views('view')) == 2
+        _close_qt_after(gui, 0.1)
 
-    gui.add_view(_create_canvas(), 'view1')
-    gui.add_view(_create_canvas(), 'view2')
-    assert len(gui.list_views('view')) == 2
-
-    _close_qt_after(gui, 0.1)
-
-    run_qt_app()
+        gui.show()

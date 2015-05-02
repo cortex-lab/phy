@@ -7,6 +7,7 @@
 # -----------------------------------------------------------------------------
 
 import sys
+import contextlib
 
 from vispy import app
 
@@ -189,6 +190,7 @@ def start_qt_app():
     # IPython event loop integration.
     if not _check_qt():
         return
+    app.use_app("pyqt4")
     global _APP
     if _try_enable_ipython_qt():
         return
@@ -197,7 +199,6 @@ def start_qt_app():
         return
     if _APP:
         return
-    app.use_app("pyqt4")
     _APP = QtGui.QApplication(sys.argv)
     return _APP
 
@@ -208,3 +209,12 @@ def run_qt_app():
         return
     if _APP is not None:
         _APP.exec_()
+
+
+@contextlib.contextmanager
+def qt_app():
+    if not _check_qt():
+        return
+    start_qt_app()
+    yield
+    run_qt_app()
