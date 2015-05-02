@@ -8,7 +8,12 @@
 
 from vispy import app
 
-from ..dock import DockWindow, start_qt_app, run_qt_app, _close_qt_after
+from ..dock import (DockWindow,
+                    start_qt_app,
+                    run_qt_app,
+                    _close_qt_after,
+                    _check_qt,
+                    )
 from .._color import _random_color
 
 
@@ -34,6 +39,9 @@ def _create_canvas():
 
 
 def test_dock():
+    if not _check_qt():
+        return
+
     start_qt_app()
 
     gui = DockWindow()

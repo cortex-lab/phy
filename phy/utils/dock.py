@@ -8,11 +8,35 @@
 
 import sys
 
-from PyQt4 import QtCore, QtGui
-from PyQt4.QtGui import QMainWindow
 from vispy import app
 
 from ._misc import _is_interactive
+from .logging import warn
+
+# Try to import PyQt.
+_PYQT = False
+try:
+    from PyQt4 import QtCore, QtGui
+    from PyQt4.QtGui import QMainWindow
+    _PYQT = True
+except ImportError:
+    try:
+        from PyQt5 import QtCore, QtGui
+        from PyQt5.QtGui import QMainWindow
+        _PYQT = True
+    except ImportError:
+        pass
+
+
+def _check_qt():
+    if not _PYQT:
+        warn("PyQt is not available.")
+        return False
+    return True
+
+
+if not _check_qt():
+    QMainWindow = object  # noqa
 
 
 # -----------------------------------------------------------------------------
@@ -163,6 +187,8 @@ def start_qt_app():
     """
     # Only start a Qt application if there is no
     # IPython event loop integration.
+    if not _check_qt():
+        return
     global _APP
     if _try_enable_ipython_qt():
         return
@@ -178,5 +204,7 @@ def start_qt_app():
 
 def run_qt_app():
     """Start the Qt application's event loop."""
+    if not _check_qt():
+        return
     if _APP is not None:
         _APP.exec_()
