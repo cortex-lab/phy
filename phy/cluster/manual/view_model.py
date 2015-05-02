@@ -131,11 +131,11 @@ class BaseViewModel(object):
         """Update the spike clusters and cluster colors."""
         if spikes is None:
             spikes = self.spike_ids
-            spike_clusters = self.model.spike_clusters[spikes]
-            n_clusters = self.n_clusters
-        else:
-            spike_clusters = self.model.spike_clusters[spikes]
-            n_clusters = len(_unique(spike_clusters))
+        #     spike_clusters = self.model.spike_clusters[spikes]
+        #     n_clusters = self.n_clusters
+        # else:
+        spike_clusters = self.model.spike_clusters[spikes]
+        n_clusters = len(_unique(spike_clusters))
         visual = self._view.visual
         # This updates the list of unique clusters in the view.
         visual.spike_clusters = spike_clusters
@@ -422,10 +422,19 @@ class TraceViewModel(BaseViewModel):
         self.view.visual.sample_rate = self.model.sample_rate
 
     def on_select(self, cluster_ids):
-        super(TraceViewModel, self).on_select(cluster_ids)
+        # super(TraceViewModel, self).on_select(cluster_ids)
+        self._selector.selected_clusters = cluster_ids
+        # Get the spikes in the selected clusters.
         spikes = self.spike_ids
-        # Update the cluster ids of the trace view.
-        self._view.visual.cluster_ids = cluster_ids
+        n_clusters = len(cluster_ids)
+        spike_clusters = self.model.spike_clusters[spikes]
+
+        # Update the clusters of the trace view.
+        visual = self._view.visual
+        visual.spike_clusters = spike_clusters
+        visual.cluster_ids = cluster_ids
+        visual.cluster_colors = _selected_clusters_colors(n_clusters)
+
         # Select the default interval.
         half_size = int(self.interval_size * self.model.sample_rate / 2.)
         if len(spikes) > 0:
@@ -434,7 +443,7 @@ class TraceViewModel(BaseViewModel):
         else:
             sample = half_size
         # Load traces by setting the interval.
-        self.view.visual._update_clusters_automatically = False
+        visual._update_clusters_automatically = False
         self.interval = sample - half_size, sample + half_size
 
     def on_cluster(self, up=None):
