@@ -788,7 +788,7 @@ class Session(BaseSession):
 
     def _add_gui_view(self, gui, name, **kwargs):
         vm = self.create_view(name, save_size_pos=False)
-        dock = gui.add_view(vm.view, name, **kwargs)
+        dock = gui.add_view(vm.view, name.title(), **kwargs)
 
         # Make sure the dock widget is closed when the view it contains
         # is closed with the Escape key.
@@ -804,16 +804,16 @@ class Session(BaseSession):
         A Qt application needs to be running.
 
         """
-        # TODO: alt+R = reset all views, positions, and sizes
-        # TODO: uppercase title
         # TODO: persist views positions and sizes
         # TODO: shortcuts
+        # TODO: alt+R = reset all views, positions, and sizes
         # TODO: find out scale factor bug with GUI
-        gui = DockWindow(title="Manual clustering")
-        self._add_gui_view(gui, 'waveforms', position='right')
-        self._add_gui_view(gui, 'traces', position='right')
+        # TODO: styling
+        gui = DockWindow(title="Manual clustering with phy")
         self._add_gui_view(gui, 'features', position='left')
         self._add_gui_view(gui, 'correlograms', position='left')
+        self._add_gui_view(gui, 'waveforms', position='right')
+        self._add_gui_view(gui, 'traces', position='right')
 
         # @gui.shortcut('press', 'ctrl+g')
         # def press():
@@ -932,7 +932,6 @@ class Session(BaseSession):
         # Persist scale factor.
         sf_name = 'manual_clustering.waveforms_scale_factor'
         sf = self.get_internal_settings(sf_name, .01)
-
         vm = self._create_view_model('waveforms',
                                      scale_factor=sf,
                                      save_size_pos=save_size_pos,
