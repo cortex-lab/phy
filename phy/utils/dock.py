@@ -9,7 +9,7 @@
 import sys
 
 from PyQt4 import QtCore, QtGui
-from QtGui import QMainWindow
+from PyQt4.QtGui import QMainWindow
 from vispy import app
 
 from ._misc import _is_interactive
