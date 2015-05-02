@@ -8,8 +8,6 @@
 
 from operator import itemgetter
 
-import numpy as np
-
 from ...ext.six import integer_types
 from ...utils.logging import debug
 
