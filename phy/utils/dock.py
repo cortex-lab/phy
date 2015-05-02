@@ -162,14 +162,17 @@ class DockWindow(QMainWindow):
         children = self.findChildren(QtGui.QWidget)
         return [child for child in children
                 if isinstance(child, QtGui.QDockWidget) and
-                _title(child).startswith(title)]
+                _title(child).startswith(title) and
+                child.isVisible() and
+                child.width() >= 10 and
+                child.height() >= 10]
 
     def view_counts(self):
         views = self.list_views()
         counts = defaultdict(lambda: 0)
         for view in views:
             counts[_title(view)] += 1
-        return counts
+        return dict(counts)
 
     def shortcut(self, text, key):
         """Decorator to add a global keyboard shortcut."""
@@ -178,7 +181,7 @@ class DockWindow(QMainWindow):
         return wrap
 
     def save_geometry_state(self):
-        """Save the position of the main window and the docks.
+        """Save the geometry and state of the main window and the docks.
 
         This function can be called in on_close().
 
@@ -186,6 +189,7 @@ class DockWindow(QMainWindow):
         return {
             'geometry': self.saveGeometry(),
             'state': self.saveState(),
+            'view_counts': self.view_counts(),
         }
 
     def restore_geometry_state(self, gs):
