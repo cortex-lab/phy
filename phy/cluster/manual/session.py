@@ -837,24 +837,27 @@ class Session(BaseSession):
 
     def _create_gui_actions(self, gui):
 
+        def _wizard_select():
+            self.select(self.wizard.current_selection())
+
         @gui.shortcut('exit', 'ctrl+q')
         def exit():
             gui.close()
 
         @gui.shortcut('next', 'space')
         def next():
-            cluster = self.wizard.next()
-            self.select([cluster])
+            self.wizard.next()
+            _wizard_select()
 
         @gui.shortcut('previous', 'shift+space')
         def previous():
-            cluster = self.wizard.previous()
-            self.select([cluster])
+            self.wizard.previous()
+            _wizard_select()
 
         @gui.shortcut('pin', 'return')
         def pin():
             self.wizard.pin()
-            self.select(self.wizard.current_selection())
+            _wizard_select()
 
     def _create_gui(self):
         """Create a manual clustering GUI.
