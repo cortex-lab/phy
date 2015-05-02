@@ -44,8 +44,8 @@ def test_dock():
         pass
 
     gui.add_view(_create_canvas(), 'view1')
-    gui.add_view(_create_canvas(), 'view2')
-    assert len(gui.list_views('view')) == 2
+    # gui.add_view(_create_canvas(), 'view2')
+    assert len(gui.list_views('view')) == 1
 
     _close_qt_after(gui, 0.1)
 

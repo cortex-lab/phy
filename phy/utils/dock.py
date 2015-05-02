@@ -154,12 +154,20 @@ def _try_enable_ipython_qt():
 
 
 def start_qt_app():
-    """Start a Qt application if necessary."""
+    """Start a Qt application if necessary.
+
+    If a new Qt application is created, this function returns it.
+    If no new application is created, the function returns None.
+
+    """
     # Only start a Qt application if there is no
     # IPython event loop integration.
+    global _APP
     if _try_enable_ipython_qt():
         return
-    global _APP
+    if QtGui.QApplication.instance():
+        _APP = QtGui.QApplication.instance()
+        return
     if _APP:
         return
     app.use_app("pyqt4")
