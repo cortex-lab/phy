@@ -8,6 +8,7 @@
 
 import sys
 import contextlib
+from collections import defaultdict
 
 from vispy import app
 
@@ -43,6 +44,10 @@ if not _check_qt():
 # -----------------------------------------------------------------------------
 # Dock main window
 # -----------------------------------------------------------------------------
+
+def _title(widget):
+    return str(widget.windowTitle())
+
 
 class DockWindow(QMainWindow):
     def __init__(self,
@@ -127,13 +132,44 @@ class DockWindow(QMainWindow):
         """List all views which title start with a given string."""
         children = self.findChildren(QtGui.QWidget)
         return [child for child in children
-                if str(child.windowTitle()).startswith(title)]
+                if isinstance(child, QtGui.QDockWidget) and
+                _title(child).startswith(title)]
+
+    def view_counts(self):
+        views = self.list_views()
+        counts = defaultdict(lambda: 0)
+        for view in views:
+            counts[_title(view)] += 1
+        return counts
 
     def shortcut(self, text, key):
         """Decorator to add a global keyboard shortcut."""
         def wrap(func):
             self.add_action(text, shortcut=key, callback=func)
         return wrap
+
+    def save_state(self):
+        pass
+
+    def restore_state(self, state):
+        pass
+
+    # def save_geometry(self):
+    #     """Save the arrangement of the whole window."""
+    #     SETTINGS['main_window.views'] = {name: len(self.get_views(name))
+    #         for name in self.views.keys()}
+    #     SETTINGS['main_window.geometry'] = encode_bytearray(
+    #         self.saveGeometry())
+    #     SETTINGS['main_window.state'] = encode_bytearray(self.saveState())
+
+    # def restore_geometry(self):
+    #     """Restore the arrangement of the whole window."""
+    #     g = SETTINGS['main_window.geometry']
+    #     s = SETTINGS['main_window.state']
+    #     if s:
+    #         self.restoreState(decode_bytearray(s))
+    #     if g:
+    #         self.restoreGeometry(decode_bytearray(g))
 
 
 # -----------------------------------------------------------------------------

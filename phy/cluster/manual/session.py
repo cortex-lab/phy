@@ -807,7 +807,6 @@ class Session(BaseSession):
         # TODO: persist views positions and sizes
         # TODO: shortcuts
         # TODO: alt+R = reset all views, positions, and sizes
-        # TODO: find out scale factor bug with GUI
         # TODO: styling
         gui = DockWindow(title="Manual clustering with phy")
         self._add_gui_view(gui, 'features', position='left')
