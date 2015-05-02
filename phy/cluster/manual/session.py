@@ -804,10 +804,6 @@ class Session(BaseSession):
         A Qt application needs to be running.
 
         """
-        # TODO: persist views positions and sizes
-        # TODO: shortcuts
-        # TODO: alt+R = reset all views, positions, and sizes
-        # TODO: styling
         gui = DockWindow(title="Manual clustering with phy")
         self._add_gui_view(gui, 'features', position='left')
         self._add_gui_view(gui, 'correlograms', position='left')

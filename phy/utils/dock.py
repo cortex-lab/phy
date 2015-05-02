@@ -15,7 +15,11 @@ from vispy import app
 from ._misc import _is_interactive
 from .logging import warn
 
-# Try to import PyQt.
+
+# -----------------------------------------------------------------------------
+# PyQt import
+# -----------------------------------------------------------------------------
+
 _PYQT = False
 try:
     from PyQt4 import QtCore, QtGui
@@ -42,31 +46,55 @@ if not _check_qt():
 
 
 # -----------------------------------------------------------------------------
-# Dock main window
+# Utility functions
 # -----------------------------------------------------------------------------
 
 def _title(widget):
     return str(widget.windowTitle())
 
 
+# -----------------------------------------------------------------------------
+# Dock main window
+# -----------------------------------------------------------------------------
+
 class DockWindow(QMainWindow):
     def __init__(self,
-                 position=(1100, 200),
-                 size=(800, 600),
+                 position=None,
+                 size=None,
                  title=None,
                  ):
         super(DockWindow, self).__init__()
         if title is None:
             title = 'phy'
         self.setWindowTitle(title)
-        self.move(position[0], position[1])
-        self.resize(QtCore.QSize(size[0], size[1]))
-        self.setObjectName("MainWindow")
+        if position is not None:
+            self.move(position[0], position[1])
+        if size is not None:
+            self.resize(QtCore.QSize(size[0], size[1]))
+        self.setObjectName(title)
         QtCore.QMetaObject.connectSlotsByName(self)
         self.setDockOptions(QtGui.QMainWindow.AllowTabbedDocks |
                             QtGui.QMainWindow.AllowNestedDocks |
                             QtGui.QMainWindow.AnimatedDocks
                             )
+        self._on_show = None
+        self._on_close = None
+
+    def on_close(self, func):
+        self._on_close = func
+
+    def on_show(self, func):
+        self._on_show = func
+
+    def closeEvent(self, e):
+        if self._on_close:
+            self._on_close()
+        super(DockWindow, self).closeEvent(e)
+
+    def show(self):
+        if self._on_show:
+            self._on_show()
+        super(DockWindow, self).show()
 
     def add_action(self,
                    text,
@@ -99,6 +127,7 @@ class DockWindow(QMainWindow):
 
         # Create the dock widget.
         dockwidget = QtGui.QDockWidget(self)
+        dockwidget.setObjectName(title)
         dockwidget.setWindowTitle(title)
         dockwidget.setWidget(view)
 
@@ -148,28 +177,27 @@ class DockWindow(QMainWindow):
             self.add_action(text, shortcut=key, callback=func)
         return wrap
 
-    def save_state(self):
-        pass
+    def save_geometry_state(self):
+        """Save the position of the main window and the docks.
 
-    def restore_state(self, state):
-        pass
+        This function can be called in on_close().
 
-    # def save_geometry(self):
-    #     """Save the arrangement of the whole window."""
-    #     SETTINGS['main_window.views'] = {name: len(self.get_views(name))
-    #         for name in self.views.keys()}
-    #     SETTINGS['main_window.geometry'] = encode_bytearray(
-    #         self.saveGeometry())
-    #     SETTINGS['main_window.state'] = encode_bytearray(self.saveState())
+        """
+        return {
+            'geometry': self.saveGeometry(),
+            'state': self.saveState(),
+        }
 
-    # def restore_geometry(self):
-    #     """Restore the arrangement of the whole window."""
-    #     g = SETTINGS['main_window.geometry']
-    #     s = SETTINGS['main_window.state']
-    #     if s:
-    #         self.restoreState(decode_bytearray(s))
-    #     if g:
-    #         self.restoreGeometry(decode_bytearray(g))
+    def restore_geometry_state(self, gs):
+        """Restore the position of the main window and the docks.
+
+        The dock widgets need to be recreated first.
+
+        This function can be called in on_show().
+
+        """
+        self.restoreGeometry((gs['geometry']))
+        self.restoreState((gs['state']))
 
 
 # -----------------------------------------------------------------------------

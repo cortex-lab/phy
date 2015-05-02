@@ -36,6 +36,12 @@ def _create_canvas():
     return c
 
 
+def _show(gui):
+    _close_qt_after(gui, .1)
+    gui.show()
+    return gui
+
+
 def test_dock():
     with qt_app():
 
@@ -48,9 +54,7 @@ def test_dock():
         gui.add_view(_create_canvas(), 'view1')
         gui.add_view(_create_canvas(), 'view2')
         assert len(gui.list_views('view')) == 2
-        _close_qt_after(gui, 0.1)
-
-        gui.show()
+        _show(gui)
 
 
 def test_dock_state():
@@ -72,6 +76,24 @@ def test_dock_state():
             'view2': 2,
         }
 
-        _close_qt_after(gui, .1)
+        @gui.on_close
+        def on_close():
+            gui.gs = gui.save_geometry_state()
 
-        gui.show()
+        _show(gui)
+
+    gs = gui.gs
+
+    # Recreate the GUI with the saved state.
+    with qt_app():
+        gui = DockWindow()
+
+        gui.add_view(_create_canvas(), 'view1')
+        gui.add_view(_create_canvas(), 'view2')
+        gui.add_view(_create_canvas(), 'view2')
+
+        @gui.on_show
+        def on_show():
+            gui.restore_geometry_state(gs)
+
+        _show(gui)
