@@ -9,6 +9,7 @@
 import sys
 
 from PyQt4 import QtCore, QtGui
+from QtGui import QMainWindow
 from vispy import app
 
 from ._misc import _is_interactive
@@ -18,7 +19,7 @@ from ._misc import _is_interactive
 # Dock main window
 # -----------------------------------------------------------------------------
 
-class DockWindow(QtGui.QMainWindow):
+class DockWindow(QMainWindow):
     def __init__(self,
                  position=(1100, 200),
                  size=(800, 600),
@@ -101,7 +102,7 @@ class DockWindow(QtGui.QMainWindow):
         """List all views which title start with a given string."""
         children = self.findChildren(QtGui.QWidget)
         return [child for child in children
-                if child.windowTitle().startswith(title)]
+                if str(child.windowTitle()).startswith(title)]
 
     def shortcut(self, text, key):
         """Decorator to add a global keyboard shortcut."""
