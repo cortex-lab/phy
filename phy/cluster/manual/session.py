@@ -837,9 +837,18 @@ class Session(BaseSession):
 
     def _create_gui_actions(self, gui):
 
+        @gui.shortcut('exit', 'ctrl+q')
+        def exit():
+            gui.close()
+
         @gui.shortcut('next', 'space')
         def next():
             cluster = self.wizard.next()
+            self.select([cluster])
+
+        @gui.shortcut('previous', 'shift+space')
+        def previous():
+            cluster = self.wizard.previous()
             self.select([cluster])
 
     def _create_gui(self):
@@ -860,7 +869,7 @@ class Session(BaseSession):
         # dock widgets.
         self._restore_gui(gui)
         self._create_gui_actions(gui)
-
+        gui.next()
         return gui
 
     def show_gui(self):

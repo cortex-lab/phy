@@ -103,14 +103,14 @@ class DockWindow(QMainWindow):
     # -------------------------------------------------------------------------
 
     def add_action(self,
-                   text,
+                   name,
                    callback=None,
                    shortcut=None,
                    checkable=False,
                    checked=False,
                    ):
         """Add an action with a keyboard shortcut."""
-        action = QtGui.QAction(text, self)
+        action = QtGui.QAction(name, self)
         action.triggered.connect(callback)
         action.setShortcut(shortcut)
         action.setCheckable(checkable)
@@ -118,10 +118,11 @@ class DockWindow(QMainWindow):
         self.addAction(action)
         return action
 
-    def shortcut(self, text, key):
+    def shortcut(self, name, key):
         """Decorator to add a global keyboard shortcut."""
         def wrap(func):
-            self.add_action(text, shortcut=key, callback=func)
+            self.add_action(name, shortcut=key, callback=func)
+            setattr(self, name, func)
         return wrap
 
     # Views
