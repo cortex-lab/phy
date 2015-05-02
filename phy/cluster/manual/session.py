@@ -856,8 +856,18 @@ class Session(BaseSession):
 
         @gui.shortcut('pin', 'return')
         def pin():
-            self.wizard.pin()
-            _wizard_select()
+            if self.wizard.pinned() is None:
+                self.wizard.pin()
+                _wizard_select()
+
+        @gui.shortcut('unpin', 'backspace')
+        def unpin():
+            if self.wizard.pinned() is not None:
+                self.wizard.unpin()
+                _wizard_select()
+            else:
+                self.wizard.stop()
+                self.select([])
 
     def _create_gui(self):
         """Create a manual clustering GUI.

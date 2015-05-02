@@ -140,8 +140,15 @@ class Wizard(object):
     #--------------------------------------------------------------------------
 
     def _reset_list(self):
+
+        # Current list.
         self._list = []
         self._index = None
+
+        # Previous list (backup when pinning).
+        self._prev_list = []
+        self._prev_index = None
+
         self._is_running = False
         self._pinned = None
 
@@ -194,6 +201,10 @@ class Wizard(object):
     #--------------------------------------------------------------------------
 
     def pin(self):
+        # Save the current list.
+        self._prev_index = self._index
+        self._prev_list = self._list
+        # Pin the current cluster.
         self._pinned = self._current
         if self._pinned:
             self._list = self.most_similar_clusters(self._pinned)
@@ -202,8 +213,8 @@ class Wizard(object):
 
     def unpin(self):
         self._pinned = None
-        self._list = self.best_clusters()
-        self._index = 0
+        self._index = self._prev_index
+        self._list = self._prev_list
 
     def pinned(self):
         return self._pinned
