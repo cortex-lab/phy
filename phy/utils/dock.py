@@ -53,6 +53,14 @@ def _title(widget):
     return str(widget.windowTitle())
 
 
+def _create_web_view(html=None):
+    from PyQt4.QtWebKit import QWebView
+    view = QWebView()
+    if html:
+        view.setHtml(html)
+    return view
+
+
 # -----------------------------------------------------------------------------
 # Dock main window
 # -----------------------------------------------------------------------------

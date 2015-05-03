@@ -10,6 +10,7 @@ from vispy import app
 
 from ..dock import (DockWindow,
                     qt_app,
+                    _create_web_view,
                     _close_qt_after,
                     )
 from .._color import _random_color
@@ -43,6 +44,14 @@ def _show(gui):
     _close_qt_after(gui, _DURATION)
     gui.show()
     return gui
+
+
+def test_web_view():
+    with qt_app():
+        html = '<strong>Hello world!</strong>'
+        view = _create_web_view(html)
+        view.resize(200, 100)
+        _show(view)
 
 
 def test_dock_1():
