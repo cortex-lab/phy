@@ -842,11 +842,13 @@ class Session(BaseSession):
                 view.close()
             self._restore_gui(gui)
 
+        @gui.shortcut('save', 'ctrl+s')
+        def save():
+            self.save()
+
         @gui.shortcut('exit', 'ctrl+q')
         def exit():
             gui.close()
-
-        # TODO: save
 
         # Wizard
         # ---------------------------------------------------------------------

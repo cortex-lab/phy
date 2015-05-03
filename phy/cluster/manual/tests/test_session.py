@@ -216,10 +216,24 @@ def test_session_mock():
 
 
 def test_session_gui():
+    n_clusters = 5
+    n_spikes = 50
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 3000
+
     with TemporaryDirectory() as tempdir:
-        session = _start_manual_clustering(model=MockModel(),
+
+        # Create the test HDF5 file in the temporary directory.
+        kwik_path = create_mock_kwik(tempdir,
+                                     n_clusters=n_clusters,
+                                     n_spikes=n_spikes,
+                                     n_channels=n_channels,
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
+
+        session = _start_manual_clustering(kwik_path=kwik_path,
                                            tempdir=tempdir)
-        session.select([1, 2])
 
         with qt_app():
             gui = session._create_gui()
