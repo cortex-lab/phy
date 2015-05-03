@@ -552,6 +552,8 @@ class Session(BaseSession):
 
     def merge(self, clusters):
         """Merge some clusters."""
+        clusters = list(clusters)
+        info("Merge clusters {}.".format(str(clusters)))
         up = self.clustering.merge(clusters)
         self.emit('cluster', up=up)
 
@@ -567,6 +569,7 @@ class Session(BaseSession):
 
         """
         self._check_list_argument(spikes, 'spikes')
+        info("Split {0:d} spikes.".format(len(spikes)))
         up = self.clustering.split(spikes)
         self.emit('cluster', up=up)
 
@@ -582,16 +585,19 @@ class Session(BaseSession):
 
         """
         self._check_list_argument(clusters)
+        info("Move clusters {0} to {1}.".format(str(clusters), group))
         up = self.cluster_metadata.set_group(clusters, group)
         self.emit('cluster', up=up)
 
     def undo(self):
         """Undo the last clustering action."""
+        info("Undo.")
         up = self._global_history.undo()
         self.emit('cluster', up=up, add_to_stack=False)
 
     def redo(self):
         """Redo the last undone action."""
+        info("Redo.")
         up = self._global_history.redo()
         self.emit('cluster', up=up, add_to_stack=False)
 
@@ -850,6 +856,7 @@ class Session(BaseSession):
         # ---------------------------------------------------------------------
 
         def _select(cluster_ids):
+            assert set(cluster_ids) <= set(self.clustering.cluster_ids)
             self.emit('select', cluster_ids)
 
         @gui.shortcut('select')
@@ -860,7 +867,8 @@ class Session(BaseSession):
         # ---------------------------------------------------------------------
 
         def _wizard_select():
-            _select(self.wizard.current_selection())
+            cluster_ids = self.wizard.current_selection()
+            _select(cluster_ids)
 
         @gui.shortcut('next', 'space')
         def next():
@@ -894,8 +902,12 @@ class Session(BaseSession):
 
         @self.connect
         def on_cluster(up):
-            cluster_ids = _update_cluster_selection(up)
-            _select(cluster_ids)
+            if up.description == 'merge':
+                old = up.deleted
+                new = up.added[0]
+                self.wizard.pin(new)
+                cluster_ids = _update_cluster_selection(old, up)
+                _select(cluster_ids)
 
         # TODO: move, undo, redo
 

@@ -62,20 +62,27 @@ class Wizard(object):
         """Array of cluster ids in the current clustering."""
         return self._cluster_ids
 
+    def _remove_old_clusters(self, l):
+        if not l:
+            return l
+        return [clu for clu in l if clu in self._cluster_ids]
+
+    def _update_cluster_lists(self):
+        self._list = self._remove_old_clusters(self._list)
+        self._prev_list = self._remove_old_clusters(self._prev_list)
+        if self._index is not None and self._index not in self._list:
+            self._index = 0
+        if self._prev_index is not None and self._prev_index not in self._list:
+            self._prev_index = 0
+        if self._pinned is not None and self._pinned not in self._list:
+            self._pinned = None
+
     @cluster_ids.setter
     def cluster_ids(self, cluster_ids):
         """Update the list of clusters."""
         assert cluster_ids is not None
         self._cluster_ids = sorted(cluster_ids)
-        if self._list:
-            l = self._list
-            self._list = [clu for clu in self._list
-                          if clu in self._cluster_ids]
-            changed = len(l) != len(self._list)
-        else:
-            changed = False
-        if changed and self._index is not None and self._index > 0:
-            debug("Reset the wizard because the list of clusters has changed.")
+        self._update_cluster_lists()
 
     def set_similarity_function(self, func):
         """Register a function returing the similarity between two clusters."""
@@ -200,12 +207,16 @@ class Wizard(object):
     # Pin methods
     #--------------------------------------------------------------------------
 
-    def pin(self):
+    def pin(self, cluster=None):
         # Save the current list.
         self._prev_index = self._index
         self._prev_list = self._list
-        # Pin the current cluster.
-        self._pinned = self._current
+        if cluster is None:
+            cluster = self._current
+        if cluster is None:
+            return
+        assert cluster in self._cluster_ids
+        self._pinned = cluster
         if self._pinned:
             self._list = self.most_similar_clusters(self._pinned)
             self._index = 0
