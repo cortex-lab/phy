@@ -30,7 +30,7 @@ _N_FRAMES = 2
 
 
 def setup():
-    set_level('debug')
+    set_level('info')
 
 
 def _test_view_model(view_model_class, stop=True, **kwargs):

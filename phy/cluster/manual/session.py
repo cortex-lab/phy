@@ -10,11 +10,9 @@ from __future__ import print_function
 import os
 import os.path as op
 import shutil
-from functools import partial
 
 import numpy as np
 
-from ...ext.six import string_types
 from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of
 from ...utils.dock import DockWindow, qt_app, _create_web_view
@@ -35,49 +33,6 @@ from .view_model import (WaveformViewModel,
                          TraceViewModel,
                          )
 from .wizard import Wizard, WizardPanel, _best_clusters
-
-
-#------------------------------------------------------------------------------
-# BaseSession class
-#------------------------------------------------------------------------------
-
-# TODO: can get rid of BaseSession: we don't use actions, we use a GUI
-# instead...
-
-class BaseSession(EventEmitter):
-    def __init__(self):
-        super(BaseSession, self).__init__()
-        self._actions = []
-
-    def action(self, func=None, title=None):
-        """Decorator for a callback function of an action.
-
-        The 'title' argument is used as a title for the GUI button.
-
-        """
-        if func is None:
-            return partial(self.action, title=title)
-
-        # HACK: handle the case where the first argument is the title.
-        if isinstance(func, string_types):
-            return partial(self.action, title=func)
-
-        # Register the action.
-        self._actions.append({'func': func, 'title': title})
-
-        # Set the action function as a Session method.
-        setattr(self, func.__name__, func)
-
-        return func
-
-    @property
-    def actions(self):
-        """List of registered actions."""
-        return self._actions
-
-    def execute_action(self, action, *args, **kwargs):
-        """Execute an action defined by an item in the 'actions' list."""
-        action['func'](*args, **kwargs)
 
 
 #------------------------------------------------------------------------------
@@ -414,7 +369,7 @@ _VIEW_MODELS = {
 }
 
 
-class Session(BaseSession):
+class Session(EventEmitter):
     """A manual clustering session.
 
     This is the main object used for manual clustering. It implements
@@ -438,15 +393,6 @@ class Session(BaseSession):
         # the settings files.
         self.settings_manager = SettingsManager(phy_user_dir)
         self._load_default_settings()
-
-        # self.action and self.connect are decorators.
-        self.action(self.open, title='Open')
-        self.action(self.close, title='Close')
-        self.action(self.merge, title='Merge')
-        self.action(self.split, title='Split')
-        self.action(self.move, title='Move clusters to a group')
-        self.action(self.undo, title='Undo')
-        self.action(self.redo, title='Redo')
 
         self.connect(self.on_open)
         self.connect(self.on_cluster)

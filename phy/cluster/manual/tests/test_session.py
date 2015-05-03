@@ -14,7 +14,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from .._utils import _spikes_in_clusters
-from ..session import BaseSession, Session, FeatureMasks
+from ..session import Session, FeatureMasks
 from ....utils.testing import show_test
 from ....utils.dock import qt_app, _close_qt_after
 from ....utils.tempdir import TemporaryDirectory
@@ -24,138 +24,12 @@ from ....io.mock.kwik import create_mock_kwik
 
 
 #------------------------------------------------------------------------------
-# Generic tests
+# Kwik tests
 #------------------------------------------------------------------------------
 
 def setup():
     set_level('info')
 
-
-def test_session_connect():
-    """Test @connect decorator and event system."""
-    session = BaseSession()
-
-    # connect names should be on_something().
-    with raises(ValueError):
-        @session.connect
-        def invalid():
-            pass
-
-    _track = []
-
-    @session.connect
-    def on_my_event():
-        _track.append('my event')
-
-    assert _track == []
-
-    session.emit('invalid')
-    assert _track == []
-
-    session.emit('my_event')
-    assert _track == ['my event']
-
-    # Although the callback doesn't accept a 'data' keyword argument, this does
-    # not raise an error because the event system will only pass the argument
-    # if it is part of the callback arg spec.
-    session.emit('my_event', data='hello')
-
-
-def test_session_connect_multiple():
-    """Test @connect decorator and event system."""
-    session = BaseSession()
-
-    _track = []
-
-    @session.connect
-    def on_my_event():
-        _track.append('my event')
-
-    @session.connect
-    def on_my_event():
-        _track.append('my event again')
-
-    session.emit('my_event')
-    assert _track == ['my event', 'my event again']
-
-
-def test_session_unconnect():
-    """Test unconnect."""
-    session = BaseSession()
-
-    _track = []
-
-    @session.connect
-    def on_my_event():
-        _track.append('my event')
-
-    session.emit('my_event')
-    assert _track == ['my event']
-
-    # Unregister and test that the on_my_event() callback is no longer called.
-    session.unconnect(on_my_event)
-    session.emit('my_event')
-    assert _track == ['my event']
-
-
-def test_session_connect_alternative():
-    """Test the alternative @connect() syntax."""
-    session = BaseSession()
-
-    _track = []
-
-    assert _track == []
-
-    @session.connect()
-    def on_my_event():
-        _track.append('my event')
-
-    session.emit('my_event')
-    assert _track == ['my event']
-
-
-def test_action():
-    session = BaseSession()
-    _track = []
-
-    @session.action(title='My action')
-    def my_action():
-        _track.append('action')
-
-    session.my_action()
-    assert _track == ['action']
-
-    assert session.actions == [{'func': my_action, 'title': 'My action'}]
-    session.execute_action(session.actions[0])
-    assert _track == ['action', 'action']
-
-
-def test_action_event():
-    session = BaseSession()
-    _track = []
-
-    @session.connect
-    def on_hello(out, kwarg=''):
-        _track.append(out + kwarg)
-
-    # We forgot the 'title=', but this still works.
-    @session.action('My action')
-    def my_action_hello(data):
-        _track.append(data)
-        session.emit('hello', data + ' world', kwarg='!')
-
-    # Need one argument.
-    with raises(TypeError):
-        session.my_action_hello()
-
-    # This triggers the 'hello' event which adds 'hello world' to _track.
-    session.my_action_hello('hello')
-    assert _track == ['hello', 'hello world!']
-
-
-#------------------------------------------------------------------------------
-# Kwik tests
-#------------------------------------------------------------------------------
 
 def _start_manual_clustering(kwik_path=None, model=None, tempdir=None):
     session = Session(phy_user_dir=tempdir)
