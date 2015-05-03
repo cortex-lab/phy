@@ -712,7 +712,7 @@ class Session(BaseSession):
                 self.wizard.cluster_ids = (set(self.wizard._cluster_ids) -
                                            set(up.deleted)).union(up.added)
             elif up.description == 'metadata_group':
-                if up.metadata_value in (0, 1):
+                if up.metadata_value in ('noise', 'mua', 0, 1):
                     for cluster in up.metadata_changed:
                         self.wizard.ignore(cluster)
 
@@ -850,6 +850,14 @@ class Session(BaseSession):
         def save():
             self.save()
 
+        @gui.shortcut('undo', 'ctrl+z')
+        def undo():
+            self.undo()
+
+        @gui.shortcut('redo', ['ctrl+shift+z', 'ctrl+y'])
+        def redo():
+            self.redo()
+
         @gui.shortcut('exit', 'ctrl+q')
         def exit():
             gui.close()
@@ -858,6 +866,7 @@ class Session(BaseSession):
         # ---------------------------------------------------------------------
 
         def _select(cluster_ids):
+            cluster_ids = list(cluster_ids)
             assert set(cluster_ids) <= set(self.clustering.cluster_ids)
             info("Select clusters {0:s}.".format(str(cluster_ids)))
             self.emit('select', cluster_ids)
@@ -906,7 +915,8 @@ class Session(BaseSession):
         @gui.shortcut('merge', 'g')
         def merge():
             cluster_ids = self.wizard.current_selection()
-            self.merge(cluster_ids)
+            if len(cluster_ids) >= 2:
+                self.merge(cluster_ids)
 
         @self.connect
         def on_cluster(up):
@@ -921,18 +931,12 @@ class Session(BaseSession):
                 if 'wizard' not in up:
                     return
                 # Now we assume the action was triggered from the wizard.
-                cluster_ids = up.metadata_changed
-                group = up.metadata_value
-                # Ignore clusters moved to noise or MUA.
-                if group in ('noise', 'mua'):
-                    for cluster in cluster_ids:
-                        self.wizard.ignore(cluster)
                 # Move to the next best cluster.
                 if up.wizard in ('best', 'both'):
                     self.wizard.unpin()
                     self.wizard.next()
                     self.wizard.pin()
-                # Or move to the next selection.
+                # Or move to the next match.
                 else:
                     self.wizard.next()
                 _wizard_select()

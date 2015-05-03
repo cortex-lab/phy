@@ -141,8 +141,6 @@ class Wizard(object):
         else:
             cluster_or_pair = int(cluster_or_pair)
         self._ignored.add(cluster_or_pair)
-        self._list = self._filter(self._list)
-        self._prev_list = self._filter(self._prev_list)
 
     # List methods
     #--------------------------------------------------------------------------
@@ -187,13 +185,22 @@ class Wizard(object):
     def next(self):
         if not self._is_running:
             self.start()
-        if self._index <= self.count() - 2:
-            self._index += 1
+        # Move to the next non-ignored.
+        current = self._current
+        while self._current in self._ignored.union([current]):
+            if self._index <= self.count() - 2:
+                self._index += 1
+            else:
+                break
         return self._current
 
     def previous(self):
-        if self._is_running and self._index >= 1:
-            self._index -= 1
+        current = self._current
+        while self._current in self._ignored.union([current]):
+            if self._is_running and 1 <= self._index:
+                self._index -= 1
+            else:
+                break
         return self._current
 
     def first(self):
@@ -229,8 +236,8 @@ class Wizard(object):
 
     def unpin(self):
         self._pinned = None
-        self._index = self._prev_index
         self._list = self._prev_list
+        self._index = self._prev_index
 
     def pinned(self):
         return self._pinned
@@ -253,5 +260,5 @@ class Wizard(object):
     def set_best_clusters(self, clusters=None):
         if clusters is None:
             clusters = self.best_clusters()
-        self._index = 0
         self._list = clusters
+        self._index = 0
