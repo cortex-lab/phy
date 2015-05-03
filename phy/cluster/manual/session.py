@@ -909,7 +909,19 @@ class Session(BaseSession):
                 cluster_ids = _update_cluster_selection(old, up)
                 _select(cluster_ids)
 
-        # TODO: move, undo, redo
+        @gui.shortcut('move_best_to_noise', 'ctrl+n')
+        def move_best_to_noise():
+            best = self.wizard.pinned()
+            if best is not None:
+                self.move([best], 'noise')
+                # Ignore that cluster in the wizard.
+                self.wizard.ignore(best)
+                # Move to the next selection.
+                self.wizard.unpin()
+                self.wizard.next()
+                self.wizard.pin()
+                self.wizard.next()
+                _wizard_select()
 
     def _create_gui(self):
         """Create a manual clustering GUI.

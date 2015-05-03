@@ -136,11 +136,10 @@ class Wizard(object):
         best clusters or most similar clusters.
 
         """
-        if not isinstance(cluster_or_pair, (integer_types, tuple)):
-            raise ValueError("This function accepts a cluster id "
-                             "or a pair of ids as argument.")
         if isinstance(cluster_or_pair, tuple):
             assert len(cluster_or_pair) == 2
+        else:
+            cluster_or_pair = int(cluster_or_pair)
         self._ignored.add(cluster_or_pair)
 
     # List methods
