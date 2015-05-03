@@ -805,35 +805,15 @@ class Session(EventEmitter):
         if gs:
             gui.restore_geometry_state(gs)
 
-    # TODO: move this to user settings
-    keyboard_shortcuts = {
-        'reset_gui': 'alt+r',
-        'save': 'ctrl+s',
-        'undo': 'ctrl+z',
-        'redo': ('ctrl+shift+z', 'ctrl+y'),
-        'exit': 'ctrl+q',
-        'reset_wizard': 'ctrl+w',
-        'next': 'space',
-        'previous': 'shift+space',
-        'first': 'home',
-        'last': 'end',
-        'pin': 'return',
-        'unpin': 'backspace',
-        'merge': 'g',
-        'move_best_to_noise': 'alt+n',
-        'move_best_to_mua': 'alt+m',
-        'move_best_to_good': 'alt+g',
-        'move_match_to_noise': 'ctrl+n',
-        'move_match_to_mua': 'ctrl+m',
-        'move_match_to_good': 'ctrl+g',
-    }
-
     def _create_gui_actions(self, gui):
+
+        name = 'manual_clustering.keyboard_shortcuts'
+        shortcuts = self.get_user_settings(name)
 
         def _add_gui_shortcut(func):
             """Helper function to add a GUI action with a keyboard shortcut."""
             name = func.__name__
-            shortcut = self.keyboard_shortcuts.get(name, None)
+            shortcut = shortcuts.get(name, None)
             gui.shortcut(name, shortcut)(func)
 
         # General actions
