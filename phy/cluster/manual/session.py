@@ -17,7 +17,7 @@ import numpy as np
 from ...ext.six import string_types
 from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of
-from ...utils.dock import DockWindow, qt_app
+from ...utils.dock import DockWindow, qt_app, _create_web_view
 from ...utils.event import EventEmitter, ProgressReporter
 from ...utils.logging import info
 from ...utils.settings import SettingsManager, declare_namespace
@@ -408,6 +408,10 @@ _PANEL_HTML = """
 
 
 _PANEL_CSS = """
+html, body, div {
+    background-color: black;
+}
+
 .control-panel {
     background-color: black;
     color: white;
@@ -433,11 +437,15 @@ _PANEL_CSS = """
 
 .control-panel > div .id {
     margin: 10px 0 20px 0;
+    height: 40px;
+    text-align: center;
+    vertical-align: middle;
 }
 
 .control-panel progress[value] {
     width: 200px;
 }
+
 """
 
 
@@ -513,9 +521,9 @@ class WizardPanel(object):
         self._match_count = value
 
     def _progress(self, value, maximum):
-        if maximum == 0:
-            return 0
-        return int(100 * value / float(maximum))
+        if maximum <= 1:
+            return 1
+        return int(100 * value / float(maximum - 1))
 
     @property
     def html(self):
@@ -863,15 +871,33 @@ class Session(BaseSession):
                     for cluster in up.metadata_changed:
                         self.wizard.ignore(cluster)
 
-    def _create_wizard_view(self):
+    def _create_wizard_view(self, cluster_ids=None):
         panel = WizardPanel()
+        view = _create_web_view(panel.html)
+
+        def _update(cluster_ids):
+            if len(cluster_ids) == 1:
+                panel.best = cluster_ids[0]
+                panel.best_index = self.wizard.index()
+                panel.best_count = self.wizard.count()
+                panel.match = None
+                panel.match_index = 0
+                panel.match_count = 0
+            elif len(cluster_ids) == 2:
+                panel.best = cluster_ids[0]
+                panel.best_index = self.wizard.index()
+                panel.best_count = self.wizard.count()
+                panel.match = cluster_ids[1]
+                panel.match_index = self.wizard.index()
+                panel.match_count = self.wizard.count()
+            view.setHtml(panel.html)
 
         @self.connect
         def on_select(cluster_ids):
-            panel.best = cluster_ids[0]
-            panel.match = cluster_ids[1]
+            _update(cluster_ids)
 
-        _create_veb_view(panel.html)
+        _update(cluster_ids)
+        return view
 
     def on_open(self):
         """Update the session after new data has been loaded."""
@@ -932,6 +958,14 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def _add_gui_view(self, gui, name, cluster_ids=None, **kwargs):
+
+        if name == 'wizard':
+            # Add the wizard panel widget.
+            panel_view = self._create_wizard_view(cluster_ids)
+            gui.add_view(panel_view, 'Wizard')
+            return
+
+        # The other views are VisPy canvases.
         vm = self.create_view(name, save_size_pos=False)
         dock = gui.add_view(vm.view, name.title(), **kwargs)
 
@@ -964,6 +998,7 @@ class Session(BaseSession):
             'correlograms': 1,
             'waveforms': 1,
             'traces': 1,
+            'wizard': 1,
         }
         if gs and gs.get('view_counts', None):
             counts = gs['view_counts']
@@ -971,15 +1006,12 @@ class Session(BaseSession):
             counts = default_counts
 
         default_positions = {
+            'wizard': 'right',
             'features': 'left',
             'correlograms': 'left',
             'waveforms': 'right',
             'traces': 'right',
         }
-
-        # Add the wizard panel widget.
-        panel_view = self._create_wizard_view()
-        gui.add_view(panel_view, 'Wizard')
 
         # Create the appropriate number of views.
         for name, count in counts.items():
@@ -1053,10 +1085,16 @@ class Session(BaseSession):
         # Selection
         # ---------------------------------------------------------------------
 
+        self._selected_clusters = []
+
         def _select(cluster_ids):
             cluster_ids = list(cluster_ids)
+            # Do not re-select an already-selected list of clusters.
+            if cluster_ids == self._selected_clusters:
+                return
             assert set(cluster_ids) <= set(self.clustering.cluster_ids)
             info("Select clusters {0:s}.".format(str(cluster_ids)))
+            self._selected_clusters = cluster_ids
             self.emit('select', cluster_ids)
 
         @_add_gui_shortcut
