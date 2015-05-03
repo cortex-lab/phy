@@ -16,7 +16,7 @@ import numpy as np
 
 from ...ext.six import string_types
 from ...utils._misc import _ensure_path_exists
-from ...utils.array import _index_of, _is_array_like
+from ...utils.array import _index_of
 from ...utils.dock import DockWindow, qt_app
 from ...utils.event import EventEmitter, ProgressReporter
 from ...utils.logging import info
@@ -387,6 +387,153 @@ class FeatureMasks(StoreItem):
 
 
 #------------------------------------------------------------------------------
+# Wizard panel
+#------------------------------------------------------------------------------
+
+_PANEL_HTML = """
+<div class="control-panel">
+<div class="best">
+    <div class="id">{best}</div>
+    <div class="progress">
+        <progress value="{best_progress:d}" max="100"></progress>
+    </div>
+</div>
+<div class="match">
+    <div class="id">{match}</div>
+    <div class="progress">
+        <progress value="{match_progress:d}" max="100"></progress>
+    </div>
+</div>
+</div>"""
+
+
+_PANEL_CSS = """
+.control-panel {
+    background-color: black;
+    color: white;
+    font-weight: bold;
+    font-size: 24pt;
+    padding: 10px;
+    text-align: center
+}
+
+.control-panel > div {
+    display: inline-block;
+    margin: 0 auto;
+}
+
+.control-panel .best {
+    margin-right: 20px;
+    color: rgb(102, 194, 165);
+}
+
+.control-panel .match {
+    color: rgb(252, 141, 98);
+}
+
+.control-panel > div .id {
+    margin: 10px 0 20px 0;
+}
+
+.control-panel progress[value] {
+    width: 200px;
+}
+"""
+
+
+def _wizard_panel_html(best=None,
+                       best_progress=None,
+                       match=None,
+                       match_progress=None,
+                       ):
+    out = '<style>' + _PANEL_CSS + '</style>\n'
+    out += _PANEL_HTML.format(best=best,
+                              best_progress=best_progress,
+                              match=match,
+                              match_progress=match_progress,
+                              )
+    return out
+
+
+class WizardPanel(object):
+    def __init__(self):
+        self._best = None
+        self._match = None
+        self._best_index = 0
+        self._match_index = 0
+        self._best_count = 0
+        self._match_count = 0
+
+    @property
+    def best(self):
+        return self._best
+
+    @best.setter
+    def best(self, value):
+        self._best = value
+
+    @property
+    def match(self):
+        return self._match
+
+    @match.setter
+    def match(self, value):
+        self._match = value
+
+    @property
+    def best_index(self):
+        return self._best_index
+
+    @best_index.setter
+    def best_index(self, value):
+        self._best_index = value
+
+    @property
+    def best_count(self):
+        return self._best_count
+
+    @best_count.setter
+    def best_count(self, value):
+        self._best_count = value
+
+    @property
+    def match_index(self):
+        return self._match_index
+
+    @match_index.setter
+    def match_index(self, value):
+        self._match_index = value
+
+    @property
+    def match_count(self):
+        return self._match_count
+
+    @match_count.setter
+    def match_count(self, value):
+        self._match_count = value
+
+    def _progress(self, value, maximum):
+        if maximum == 0:
+            return 0
+        return int(100 * value / float(maximum))
+
+    @property
+    def html(self):
+        bp = self._progress(self.best_index, self.best_count)
+        mp = self._progress(self.match_index, self.match_count)
+        return _wizard_panel_html(best=self.best
+                                  if self.best is not None else '',
+                                  match=self.match
+                                  if self.match is not None else '',
+                                  best_progress=bp,
+                                  match_progress=mp,
+                                  )
+
+    def _repr_html_(self):
+        return self.html
+
+
+#------------------------------------------------------------------------------
 # Session class
 #------------------------------------------------------------------------------
 
@@ -716,6 +863,16 @@ class Session(BaseSession):
                     for cluster in up.metadata_changed:
                         self.wizard.ignore(cluster)
 
+    def _create_wizard_view(self):
+        panel = WizardPanel()
+
+        @self.connect
+        def on_select(cluster_ids):
+            panel.best = cluster_ids[0]
+            panel.match = cluster_ids[1]
+
+        _create_veb_view(panel.html)
+
     def on_open(self):
         """Update the session after new data has been loaded."""
 
@@ -819,6 +976,10 @@ class Session(BaseSession):
             'waveforms': 'right',
             'traces': 'right',
         }
+
+        # Add the wizard panel widget.
+        panel_view = self._create_wizard_view()
+        gui.add_view(panel_view, 'Wizard')
 
         # Create the appropriate number of views.
         for name, count in counts.items():

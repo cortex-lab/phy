@@ -14,7 +14,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from .._utils import _spikes_in_clusters
-from ..session import BaseSession, Session, FeatureMasks
+from ..session import BaseSession, Session, FeatureMasks, WizardPanel
 from ....utils.testing import show_test
 from ....utils.dock import qt_app, _close_qt_after
 from ....utils.tempdir import TemporaryDirectory
@@ -204,6 +204,17 @@ def test_session_mock():
                                            tempdir=tempdir)
         _show_view(session, 'waveforms')
         _show_view(session, 'waveforms', [0])
+
+
+def test_panel():
+    panel = WizardPanel()
+    assert panel.html
+
+    panel.best = 3
+    assert panel.html
+
+    panel.match = 10
+    assert panel.html
 
 
 def test_session_gui():
