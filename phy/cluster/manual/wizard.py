@@ -141,6 +141,8 @@ class Wizard(object):
         else:
             cluster_or_pair = int(cluster_or_pair)
         self._ignored.add(cluster_or_pair)
+        self._list = self._filter(self._list)
+        self._prev_list = self._filter(self._prev_list)
 
     # List methods
     #--------------------------------------------------------------------------
@@ -244,6 +246,8 @@ class Wizard(object):
     def ignore_current_selection(self):
         self.ignore(self.current_selection())
 
-    def set_best_clusters(self):
+    def set_best_clusters(self, clusters=None):
+        if clusters is None:
+            clusters = self.best_clusters()
         self._index = 0
-        self._list = self.best_clusters()
+        self._list = clusters
