@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from ..wizard import Wizard
+from ..wizard import Wizard, WizardPanel
 
 
 #------------------------------------------------------------------------------
@@ -130,3 +130,14 @@ def test_pin():
 
     wizard.stop()
     assert not wizard.is_running()
+
+
+def test_panel():
+    panel = WizardPanel()
+    assert panel.html
+
+    panel.best = 3
+    assert panel.html
+
+    panel.match = 10
+    assert panel.html
