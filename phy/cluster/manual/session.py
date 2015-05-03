@@ -834,31 +834,58 @@ class Session(BaseSession):
         if gs:
             gui.restore_geometry_state(gs)
 
+    # TODO: move this to user settings
+    keyboard_shortcuts = {
+        'reset_gui': 'alt+r',
+        'save': 'ctrl+s',
+        'undo': 'ctrl+z',
+        'redo': ('ctrl+shift+z', 'ctrl+y'),
+        'exit': 'ctrl+q',
+        'reset_wizard': 'ctrl+w',
+        'next': 'space',
+        'previous': 'shift+space',
+        'pin': 'return',
+        'unpin': 'backspace',
+        'merge': 'g',
+        'move_best_to_noise': 'alt+n',
+        'move_best_to_mua': 'alt+m',
+        'move_best_to_good': 'alt+g',
+        'move_match_to_noise': 'ctrl+n',
+        'move_match_to_mua': 'ctrl+m',
+        'move_match_to_good': 'ctrl+g',
+    }
+
     def _create_gui_actions(self, gui):
+
+        def _add_gui_shortcut(func):
+            """Helper function to add a GUI action with a keyboard shortcut."""
+            name = func.__name__
+            shortcut = self.keyboard_shortcuts.get(name, None)
+            gui.shortcut(name, shortcut)(func)
 
         # General actions
         # ---------------------------------------------------------------------
 
-        @gui.shortcut('reset_gui', 'alt+r')
+        @_add_gui_shortcut
         def reset_gui():
             # Close all views and restore the default GUI.
             for view in gui.list_views():
                 view.close()
             self._restore_gui(gui)
 
-        @gui.shortcut('save', 'ctrl+s')
+        @_add_gui_shortcut
         def save():
             self.save()
 
-        @gui.shortcut('undo', 'ctrl+z')
+        @_add_gui_shortcut
         def undo():
             self.undo()
 
-        @gui.shortcut('redo', ['ctrl+shift+z', 'ctrl+y'])
+        @_add_gui_shortcut
         def redo():
             self.redo()
 
-        @gui.shortcut('exit', 'ctrl+q')
+        @_add_gui_shortcut
         def exit():
             gui.close()
 
@@ -871,7 +898,7 @@ class Session(BaseSession):
             info("Select clusters {0:s}.".format(str(cluster_ids)))
             self.emit('select', cluster_ids)
 
-        @gui.shortcut('select')
+        @_add_gui_shortcut
         def select(cluster_ids):
             _select(cluster_ids)
 
@@ -882,28 +909,28 @@ class Session(BaseSession):
             cluster_ids = self.wizard.current_selection()
             _select(cluster_ids)
 
-        @gui.shortcut('reset', 'ctrl+w')
-        def reset():
+        @_add_gui_shortcut
+        def reset_wizard():
             self.wizard.restart()
             _wizard_select()
 
-        @gui.shortcut('next', 'space')
+        @_add_gui_shortcut
         def next():
             self.wizard.next()
             _wizard_select()
 
-        @gui.shortcut('previous', 'shift+space')
+        @_add_gui_shortcut
         def previous():
             self.wizard.previous()
             _wizard_select()
 
-        @gui.shortcut('pin', 'return')
+        @_add_gui_shortcut
         def pin():
             if self.wizard.pinned() is None:
                 self.wizard.pin()
                 _wizard_select()
 
-        @gui.shortcut('unpin', 'backspace')
+        @_add_gui_shortcut
         def unpin():
             if self.wizard.pinned() is not None:
                 self.wizard.unpin()
@@ -912,7 +939,7 @@ class Session(BaseSession):
         # Cluster actions
         # ---------------------------------------------------------------------
 
-        @gui.shortcut('merge', 'g')
+        @_add_gui_shortcut
         def merge():
             cluster_ids = self.wizard.current_selection()
             if len(cluster_ids) >= 2:
@@ -953,15 +980,15 @@ class Session(BaseSession):
                 assert len(clusters) == 1
             self.move(clusters, group, wizard='best')
 
-        @gui.shortcut('move_best_to_noise', 'alt+n')
+        @_add_gui_shortcut
         def move_best_to_noise():
             _move_best('noise')
 
-        @gui.shortcut('move_best_to_mua', 'alt+m')
+        @_add_gui_shortcut
         def move_best_to_mua():
             _move_best('mua')
 
-        @gui.shortcut('move_best_to_good', 'alt+g')
+        @_add_gui_shortcut
         def move_best_to_good():
             _move_best('good')
 
@@ -976,15 +1003,15 @@ class Session(BaseSession):
             _, match = self.wizard.current_selection()
             self.move([match], group, wizard='match')
 
-        @gui.shortcut('move_match_to_noise', 'ctrl+n')
+        @_add_gui_shortcut
         def move_match_to_noise():
             _move_match('noise')
 
-        @gui.shortcut('move_match_to_mua', 'ctrl+m')
+        @_add_gui_shortcut
         def move_match_to_mua():
             _move_match('mua')
 
-        @gui.shortcut('move_match_to_good', 'ctrl+g')
+        @_add_gui_shortcut
         def move_match_to_good():
             _move_match('good')
 

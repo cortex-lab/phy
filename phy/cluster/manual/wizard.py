@@ -8,9 +8,6 @@
 
 from operator import itemgetter
 
-from ...ext.six import integer_types
-from ...utils.logging import debug
-
 
 #------------------------------------------------------------------------------
 # Utility functions
