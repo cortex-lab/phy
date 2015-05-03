@@ -786,7 +786,6 @@ class Session(BaseSession):
 
         @self.connect
         def on_select(cluster_ids):
-            # print(cluster_ids)
             if cluster_ids is not None and len(cluster_ids) > 0:
                 vm.on_select(cluster_ids)
                 vm.view.update()
@@ -882,9 +881,6 @@ class Session(BaseSession):
             if self.wizard.pinned() is not None:
                 self.wizard.unpin()
                 _wizard_select()
-            else:
-                self.wizard.stop()
-                self.select([])
 
         @gui.shortcut('merge', 'g')
         def merge():
@@ -1130,6 +1126,8 @@ class Session(BaseSession):
 
         name : str
             Can be 'waveforms', 'features', 'correlograms', or 'traces'.
+        cluster_ids : array-like
+            List of clusters to show.
 
         Returns
         -------
@@ -1146,7 +1144,9 @@ class Session(BaseSession):
         ----------
 
         name : str
-            'waveforms', 'features', 'correlograms', or 'traces'
+            Can be 'waveforms', 'features', 'correlograms', or 'traces'.
+        cluster_ids : array-like
+            List of clusters to show.
 
         Returns
         -------
