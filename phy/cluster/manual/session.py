@@ -545,7 +545,7 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def _check_list_argument(self, arg, name='clusters'):
-        if not _is_array_like(arg):
+        if not isinstance(arg, (list, tuple, np.ndarray)):
             raise ValueError("The argument should be a list or an array.")
         if len(name) == 0:
             raise ValueError("No {0} were selected.".format(name))

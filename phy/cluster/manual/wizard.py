@@ -187,6 +187,8 @@ class Wizard(object):
             self.start()
         # Move to the next non-ignored.
         current = self._current
+        if self._index is None:
+            self._index = 0
         while self._current in self._ignored.union([current]):
             if self._index <= self.count() - 2:
                 self._index += 1
