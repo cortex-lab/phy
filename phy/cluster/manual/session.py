@@ -573,7 +573,7 @@ class Session(BaseSession):
         up = self.clustering.split(spikes)
         self.emit('cluster', up=up)
 
-    def move(self, clusters, group):
+    def move(self, clusters, group, **kwargs):
         """Move some clusters to a cluster group.
 
         Here is the list of cluster groups:
@@ -587,6 +587,8 @@ class Session(BaseSession):
         self._check_list_argument(clusters)
         info("Move clusters {0} to {1}.".format(str(clusters), group))
         up = self.cluster_metadata.set_group(clusters, group)
+        # Extra UpdateInfo fields.
+        up.update(kwargs)
         self.emit('cluster', up=up)
 
     def undo(self):
@@ -857,6 +859,7 @@ class Session(BaseSession):
 
         def _select(cluster_ids):
             assert set(cluster_ids) <= set(self.clustering.cluster_ids)
+            info("Select clusters {0:s}.".format(cluster_ids))
             self.emit('select', cluster_ids)
 
         @gui.shortcut('select')
@@ -892,7 +895,7 @@ class Session(BaseSession):
                 self.wizard.unpin()
                 _wizard_select()
 
-        # Wizard actions
+        # Cluster actions
         # ---------------------------------------------------------------------
 
         @gui.shortcut('merge', 'g')
@@ -908,20 +911,68 @@ class Session(BaseSession):
                 self.wizard.pin(new)
                 cluster_ids = _update_cluster_selection(old, up)
                 _select(cluster_ids)
-
-        @gui.shortcut('move_best_to_noise', 'ctrl+n')
-        def move_best_to_noise():
-            best = self.wizard.pinned()
-            if best is not None:
-                self.move([best], 'noise')
-                # Ignore that cluster in the wizard.
-                self.wizard.ignore(best)
+            elif up.description == 'metadata_group':
+                if 'wizard' not in up:
+                    return
+                # Now we assume the action was triggered from the wizard.
+                cluster_ids = up.metadata_changed
+                group = up.new_metadata
+                # Ignore clusters moved to noise or MUA.
+                if group in ('noise', 'mua'):
+                    self.wizard.ignore(cluster_ids)
+                if up.wizard == 'best':
+                    self.wizard.unpin()
+                    self.wizard.next()
+                    self.wizard.pin()
                 # Move to the next selection.
-                self.wizard.unpin()
-                self.wizard.next()
-                self.wizard.pin()
                 self.wizard.next()
                 _wizard_select()
+
+        # Move best
+        # ---------------------------------------------------------------------
+
+        def _move_best(group):
+            best = self.wizard.pinned()
+            if best is not None:
+                self.move([best], group)
+            else:
+                clusters = self.wizard.current_selection()
+                self.move(clusters, group)
+
+        @gui.shortcut('move_best_to_noise', 'alt+n')
+        def move_best_to_noise():
+            _move_best('noise')
+
+        @gui.shortcut('move_best_to_mua', 'alt+m')
+        def move_best_to_mua():
+            _move_best('mua')
+
+        @gui.shortcut('move_best_to_good', 'alt+g')
+        def move_best_to_good():
+            _move_best('good')
+
+        # Move match
+        # ---------------------------------------------------------------------
+
+        def _move_match(group):
+            if not self.wizard.pinned():
+                return
+            if len(self.wizard.current_selection()) <= 1:
+                return
+            _, match = self.wizard.current_selection()
+            self.move([match], group)
+
+        @gui.shortcut('move_match_to_noise', 'ctrl+n')
+        def move_match_to_noise():
+            _move_match('noise')
+
+        @gui.shortcut('move_match_to_mua', 'ctrl+m')
+        def move_match_to_mua():
+            _move_match('mua')
+
+        @gui.shortcut('move_match_to_good', 'ctrl+g')
+        def move_match_to_good():
+            _move_match('good')
 
     def _create_gui(self):
         """Create a manual clustering GUI.
@@ -990,7 +1041,7 @@ class Session(BaseSession):
 
         # Unregister the callbacks when the view is closed.
         @view.connect
-        def on_close(event):
+        def on_close():
             self.unconnect(on_open, on_cluster)
 
             if save_size_pos:
