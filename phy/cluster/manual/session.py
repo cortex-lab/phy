@@ -1055,7 +1055,7 @@ class Session(BaseSession):
 
         # Unregister the callbacks when the view is closed.
         @view.connect
-        def on_close():
+        def on_close(e):
             self.unconnect(on_open, on_cluster)
 
             if save_size_pos:
