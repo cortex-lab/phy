@@ -1037,6 +1037,8 @@ class Session(BaseSession):
         'reset_wizard': 'ctrl+w',
         'next': 'space',
         'previous': 'shift+space',
+        'first': 'home',
+        'last': 'end',
         'pin': 'return',
         'unpin': 'backspace',
         'merge': 'g',
@@ -1111,6 +1113,16 @@ class Session(BaseSession):
         @_add_gui_shortcut
         def reset_wizard():
             self.wizard.restart()
+            _wizard_select()
+
+        @_add_gui_shortcut
+        def first():
+            self.wizard.first()
+            _wizard_select()
+
+        @_add_gui_shortcut
+        def last():
+            self.wizard.last()
             _wizard_select()
 
         @_add_gui_shortcut
