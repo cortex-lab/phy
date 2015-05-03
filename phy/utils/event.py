@@ -82,6 +82,7 @@ class ProgressReporter(EventEmitter):
         super(ProgressReporter, self).__init__()
         self._value = 0
         self._value_max = 0
+        self._has_completed = False
 
     @property
     def value(self):
@@ -89,18 +90,23 @@ class ProgressReporter(EventEmitter):
 
     @value.setter
     def value(self, value):
+        if value < self._value_max:
+            self._has_completed = False
         self._value = value
         self.emit('progress', self._value, self._value_max)
-        if self._value >= self._value_max:
+        if not self._has_completed and self._value >= self._value_max:
             self.emit('complete')
+            self._has_completed = True
 
     @property
     def value_max(self):
         return self._value_max
 
     @value_max.setter
-    def value_max(self, value):
-        self._value_max = value
+    def value_max(self, value_max):
+        if value_max > self._value_max:
+            self._has_completed = False
+        self._value_max = value_max
 
     def is_complete(self):
         return self._value >= self._value_max
