@@ -177,6 +177,10 @@ class Wizard(object):
     def stop(self):
         self._reset_list()
 
+    def restart(self):
+        self.stop()
+        self.start()
+
     def is_running(self):
         return self._is_running
 

@@ -859,7 +859,7 @@ class Session(BaseSession):
 
         def _select(cluster_ids):
             assert set(cluster_ids) <= set(self.clustering.cluster_ids)
-            info("Select clusters {0:s}.".format(cluster_ids))
+            info("Select clusters {0:s}.".format(str(cluster_ids)))
             self.emit('select', cluster_ids)
 
         @gui.shortcut('select')
@@ -872,6 +872,11 @@ class Session(BaseSession):
         def _wizard_select():
             cluster_ids = self.wizard.current_selection()
             _select(cluster_ids)
+
+        @gui.shortcut('reset', 'ctrl+w')
+        def reset():
+            self.wizard.restart()
+            _wizard_select()
 
         @gui.shortcut('next', 'space')
         def next():
@@ -912,14 +917,16 @@ class Session(BaseSession):
                 cluster_ids = _update_cluster_selection(old, up)
                 _select(cluster_ids)
             elif up.description == 'metadata_group':
+                # This special field is added through self.move(..., **kwargs).
                 if 'wizard' not in up:
                     return
                 # Now we assume the action was triggered from the wizard.
                 cluster_ids = up.metadata_changed
-                group = up.new_metadata
+                group = up.metadata_value
                 # Ignore clusters moved to noise or MUA.
                 if group in ('noise', 'mua'):
-                    self.wizard.ignore(cluster_ids)
+                    for cluster in cluster_ids:
+                        self.wizard.ignore(cluster)
                 if up.wizard == 'best':
                     self.wizard.unpin()
                     self.wizard.next()
@@ -937,7 +944,8 @@ class Session(BaseSession):
                 self.move([best], group)
             else:
                 clusters = self.wizard.current_selection()
-                self.move(clusters, group)
+                assert len(clusters) == 1
+                self.move(clusters[0], group, wizard='best')
 
         @gui.shortcut('move_best_to_noise', 'alt+n')
         def move_best_to_noise():
@@ -960,7 +968,7 @@ class Session(BaseSession):
             if len(self.wizard.current_selection()) <= 1:
                 return
             _, match = self.wizard.current_selection()
-            self.move([match], group)
+            self.move([match], group, wizard='match')
 
         @gui.shortcut('move_match_to_noise', 'ctrl+n')
         def move_match_to_noise():
