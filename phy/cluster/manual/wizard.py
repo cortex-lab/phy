@@ -233,7 +233,6 @@ class Wizard(object):
 
     def ignore_current_selection(self):
         self.ignore(self.current_selection())
-        self.next()
 
     def set_best_clusters(self):
         self._index = 0

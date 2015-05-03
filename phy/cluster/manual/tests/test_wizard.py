@@ -107,8 +107,9 @@ def test_pin():
     assert wizard.previous() == best + 1
     assert wizard.current_selection() == (best, best + 1)
 
-    # This ignores the current selection and skips to the next one.
+    # This ignores the current selection.
     wizard.ignore_current_selection()
+    wizard.next()
     assert wizard.current_selection() == (best, best + 2)
     assert wizard.previous() == best + 1
 
