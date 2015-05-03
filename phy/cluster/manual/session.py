@@ -871,7 +871,7 @@ class Session(BaseSession):
                     for cluster in up.metadata_changed:
                         self.wizard.ignore(cluster)
 
-    def _create_wizard_view(self, cluster_ids=None):
+    def _create_wizard_panel(self, cluster_ids=None):
         panel = WizardPanel()
         view = _create_web_view(panel.html)
 
@@ -884,9 +884,6 @@ class Session(BaseSession):
                 panel.match_index = 0
                 panel.match_count = 0
             elif len(cluster_ids) == 2:
-                panel.best = cluster_ids[0]
-                panel.best_index = self.wizard.index()
-                panel.best_count = self.wizard.count()
                 panel.match = cluster_ids[1]
                 panel.match_index = self.wizard.index()
                 panel.match_count = self.wizard.count()
@@ -961,7 +958,7 @@ class Session(BaseSession):
 
         if name == 'wizard':
             # Add the wizard panel widget.
-            panel_view = self._create_wizard_view(cluster_ids)
+            panel_view = self._create_wizard_panel(cluster_ids)
             gui.add_view(panel_view, 'Wizard')
             return
 
