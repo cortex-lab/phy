@@ -699,6 +699,7 @@ class Session(BaseSession):
         def on_cluster(up=None, add_to_stack=None):
             if up is None:
                 return
+            # Update the clusters in the wizard.
             if up.description in ('merge', 'assign'):
                 self.wizard.cluster_ids = (set(self.wizard._cluster_ids) -
                                            set(up.deleted)).union(up.added)
@@ -764,8 +765,6 @@ class Session(BaseSession):
 
     # GUI
     # -------------------------------------------------------------------------
-
-    _selected_clusters = None
 
     def _add_gui_view(self, gui, name, cluster_ids=None, **kwargs):
         vm = self.create_view(name, save_size_pos=False)
@@ -847,18 +846,21 @@ class Session(BaseSession):
         def exit():
             gui.close()
 
-        # Wizard
+        # Selection
         # ---------------------------------------------------------------------
 
-        @gui.shortcut('select', None)
-        def select(cluster_ids):
-            self._selected_clusters = cluster_ids
+        def _select(cluster_ids):
             self.emit('select', cluster_ids)
 
+        @gui.shortcut('select')
+        def select(cluster_ids):
+            _select(cluster_ids)
+
+        # Wizard list
+        # ---------------------------------------------------------------------
+
         def _wizard_select():
-            cluster_ids = self.wizard.current_selection()
-            self._selected_clusters = cluster_ids
-            self.emit('select', cluster_ids)
+            _select(self.wizard.current_selection())
 
         @gui.shortcut('next', 'space')
         def next():
@@ -882,15 +884,20 @@ class Session(BaseSession):
                 self.wizard.unpin()
                 _wizard_select()
 
+        # Wizard actions
+        # ---------------------------------------------------------------------
+
         @gui.shortcut('merge', 'g')
         def merge():
-            # TODO
-            pass
-            # Merge the current selection.
-            # self.merge(self.wizard.current_selection())
-            # self.select(self._selected_clusters)
+            cluster_ids = self.wizard.current_selection()
+            self.merge(cluster_ids)
 
-        # TODO: merge, move, undo, redo
+        @self.connect
+        def on_cluster(up):
+            cluster_ids = _update_cluster_selection(up)
+            _select(cluster_ids)
+
+        # TODO: move, undo, redo
 
     def _create_gui(self):
         """Create a manual clustering GUI.
