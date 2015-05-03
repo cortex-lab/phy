@@ -115,7 +115,10 @@ class DockWindow(QMainWindow):
         action.setCheckable(checkable)
         action.setChecked(checked)
         if shortcut:
-            action.setShortcut(shortcut)
+            if not isinstance(shortcut, (tuple, list)):
+                shortcut = [shortcut]
+            for key in shortcut:
+                action.setShortcut(key)
         self.addAction(action)
         return action
 
