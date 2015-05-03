@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 """Simple event system."""
 
@@ -78,11 +79,27 @@ class EventEmitter(object):
 
 class ProgressReporter(EventEmitter):
     """A class that reports progress done."""
-    def __init__(self):
+    def __init__(self, progress_message=None, complete_message=None):
         super(ProgressReporter, self).__init__()
         self._value = 0
         self._value_max = 0
         self._has_completed = False
+
+        if progress_message is not None:
+            @self.connect
+            def on_progress(value, value_max):
+                if value_max == 0:
+                    return
+                if value < value_max:
+                    progress = 100 * value / float(value_max)
+                    print(progress_message.format(progress=progress), end='\r')
+
+        if complete_message is not None:
+            @self.connect
+            def on_complete():
+                # Override the initializing message and clear the terminal
+                # line.
+                print(complete_message + '\033[K', end='\n')
 
     @property
     def value(self):

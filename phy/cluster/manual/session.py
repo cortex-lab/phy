@@ -585,28 +585,18 @@ class Session(EventEmitter):
         FeatureMasks.chunk_size = cs
 
         # Initialize the progress reporter.
-        pr_disk = ProgressReporter()
-        pr_memory = ProgressReporter()
+        pr_disk = ProgressReporter(
+            progress_message='Initializing the cluster store: {progress}.',
+            complete_message='Cluster store initialized.')
+
+        pr_memory = ProgressReporter(
+            progress_message='Computing cluster statistics: {progress}.',
+            complete_message='Cluster statistics computed.')
+
         self.cluster_store.register_item(FeatureMasks,
                                          progress_reporter_disk=pr_disk,
                                          progress_reporter_memory=pr_memory,
                                          )
-
-        @pr_disk.connect
-        def on_progress(value, value_max):
-            if value_max == 0:
-                return
-            print("Initializing the cluster store: "
-                  "{0:.2f}%.".format(100 * value / float(value_max)),
-                  end='\r')
-
-        @pr_memory.connect
-        def on_progress(value, value_max):
-            if value_max == 0:
-                return
-            print("Initializing cluster statistics: "
-                  "{0:.2f}%.".format(100 * value / float(value_max)),
-                  end='\r')
 
         # Generate the cluster store if it doesn't exist or is invalid.
         # If the cluster store already exists and is consistent
