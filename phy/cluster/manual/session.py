@@ -927,12 +927,14 @@ class Session(BaseSession):
                 if group in ('noise', 'mua'):
                     for cluster in cluster_ids:
                         self.wizard.ignore(cluster)
-                if up.wizard == 'best':
+                # Move to the next best cluster.
+                if up.wizard in ('best', 'both'):
                     self.wizard.unpin()
                     self.wizard.next()
                     self.wizard.pin()
-                # Move to the next selection.
-                self.wizard.next()
+                # Or move to the next selection.
+                else:
+                    self.wizard.next()
                 _wizard_select()
 
         # Move best
@@ -941,11 +943,11 @@ class Session(BaseSession):
         def _move_best(group):
             best = self.wizard.pinned()
             if best is not None:
-                self.move([best], group)
+                clusters = [best]
             else:
                 clusters = self.wizard.current_selection()
                 assert len(clusters) == 1
-                self.move(clusters[0], group, wizard='best')
+            self.move(clusters, group, wizard='best')
 
         @gui.shortcut('move_best_to_noise', 'alt+n')
         def move_best_to_noise():
