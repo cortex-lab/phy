@@ -163,8 +163,8 @@ def _start_manual_clustering(kwik_path=None, model=None, tempdir=None):
     return session
 
 
-def _show_view(session, name):
-    vm = session.create_view(name)
+def _show_view(session, name, cluster_ids=None):
+    vm = session.create_view(name, cluster_ids=cluster_ids)
     vm.scale_factor = 1.
     show_test(vm.view)
     return vm.view
@@ -202,25 +202,16 @@ def test_session_mock():
     with TemporaryDirectory() as tempdir:
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
-
-        view = _show_view(session, 'waveforms')
-        session.select([0])
-        view_bis = _show_view(session, 'waveforms')
-
-        view.close()
-        view_bis.close()
-
-        session = _start_manual_clustering(model=MockModel(), tempdir=tempdir)
-        session.select([1, 2])
-        view.close()
+        _show_view(session, 'waveforms')
+        _show_view(session, 'waveforms', [0])
 
 
 def test_session_gui():
     n_clusters = 5
-    n_spikes = 50
-    n_channels = 28
-    n_fets = 2
-    n_samples_traces = 3000
+    n_spikes = 100
+    n_channels = 30
+    n_fets = 3
+    n_samples_traces = 20000
 
     with TemporaryDirectory() as tempdir:
 
@@ -264,7 +255,6 @@ def test_session_kwik():
         # Check backup.
         assert op.exists(op.join(tempdir, kwik_path + '.bak'))
 
-        session.select([0])
         cs = session.cluster_store
 
         nc = n_channels - 2
@@ -281,14 +271,9 @@ def test_session_kwik():
             assert cs.mean_probe_position(cluster).shape == (2,)
             assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
 
-        view_0 = _show_view(session, 'waveforms')
-        view_1 = _show_view(session, 'features')
+        _show_view(session, 'waveforms', [0])
+        _show_view(session, 'features', [0])
 
-        # This won't work but shouldn't raise an error.
-        session.select([1000])
-
-        view_0.close()
-        view_1.close()
         session.close()
 
 
@@ -465,8 +450,6 @@ def test_session_multiple_clusterings():
         assert session.clustering.n_clusters == n_clusters
         assert session.cluster_metadata.group(1) == 3
 
-        session.select([0, 1])
-
         # Change clustering.
         with raises(ValueError):
             session.change_clustering('automat')
@@ -477,9 +460,6 @@ def test_session_multiple_clusterings():
         assert len(session.model.cluster_ids) == n_clusters * 2
         assert session.clustering.n_clusters == n_clusters * 2
         assert session.cluster_metadata.group(2) == 3
-
-        # The current selection is cleared when changing clustering.
-        ae(session._selected_clusters, [])
 
         # Merge the clusters and save, for the current clustering.
         session.clustering.merge(session.clustering.cluster_ids)
