@@ -796,10 +796,7 @@ class Session(BaseSession):
 
         return vm
 
-    def _restore_gui(self, gui):
-
-        # Load geometry state
-        gs = self.get_internal_settings('manual_clustering.gui_state')
+    def _restore_gui(self, gui, gs=None):
 
         # Default parameters.
         default_counts = {
@@ -840,8 +837,10 @@ class Session(BaseSession):
 
         @gui.shortcut('reset_gui', 'alt+r')
         def reset_gui():
-            # TODO
-            pass
+            # Close all views and restore the default GUI.
+            for view in gui.list_views():
+                view.close()
+            self._restore_gui(gui)
 
         @gui.shortcut('exit', 'ctrl+q')
         def exit():
@@ -905,10 +904,14 @@ class Session(BaseSession):
             gs = gui.save_geometry_state()
             self.set_internal_settings('manual_clustering.gui_state', gs)
 
+        # Load geometry state
+        gs = self.get_internal_settings('manual_clustering.gui_state')
         # Recreate the views and restore the state and position of the
         # dock widgets.
-        self._restore_gui(gui)
+        self._restore_gui(gui, gs)
+        # Create the GUI actions.
         self._create_gui_actions(gui)
+        # Initialize the wizard and show the best cluster.
         gui.next()
         return gui
 
