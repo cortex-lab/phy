@@ -8,8 +8,7 @@
 
 from pytest import raises
 
-from ..wizard import (_find_first,
-                      _previous,
+from ..wizard import (_previous,
                       _next,
                       Wizard,
                       WizardPanel,
@@ -79,82 +78,6 @@ def test_core_wizard():
     assert wizard.most_similar_clusters(n_max=0) == [5, 3]
     assert wizard.most_similar_clusters(n_max=None) == [5, 3]
     assert wizard.most_similar_clusters(n_max=1) == [5]
-
-
-def test_pin():
-
-    n = 20
-    clusters = list(range(n))
-    wizard = Wizard(clusters)
-
-    @wizard.set_quality_function
-    def quality(cluster):
-        return cluster / float(n)
-
-    @wizard.set_similarity_function
-    def similarity(cluster, other):
-        d = max(0, other - cluster)
-        if d == 0:
-            return 0.
-        else:
-            return 1. - (d - 1) / float(n)
-
-    assert not wizard.is_running()
-    assert wizard.count() == 0
-
-    wizard.start()
-    assert wizard.is_running()
-
-    # Test moves.
-    assert wizard.count() == n
-    assert wizard.index() == 0
-
-    wizard.next()
-    assert wizard.index() == 1
-
-    wizard.last()
-    assert wizard.index() == n - 1
-
-    wizard.first()
-
-    # Test pin.
-    for _ in range(4):
-        wizard.next()
-
-    best = n - 5
-    assert wizard.current_selection() == (best,)
-    wizard.pin()
-
-    # Go through the closest matches.
-    assert wizard.current_selection() == (best, best + 1)
-    assert wizard.next() == best + 2
-    assert wizard.current_selection() == (best, best + 2)
-    assert wizard.previous() == best + 1
-    assert wizard.current_selection() == (best, best + 1)
-
-    # This ignores the current selection.
-    wizard.ignore_current_selection()
-    wizard.next()
-    assert wizard.current_selection() == (best, best + 2)
-    assert wizard.previous() == best + 1
-
-    # Test playback methods.
-    wizard.first()
-    wizard.next()
-    wizard.previous()
-    assert wizard.index() == 0
-
-    wizard.previous()
-    assert wizard.index() == 0
-
-    wizard.pause()
-    assert not wizard.is_running()
-
-    wizard.start()
-    assert wizard.is_running()
-
-    wizard.stop()
-    assert not wizard.is_running()
 
 
 def test_panel():
