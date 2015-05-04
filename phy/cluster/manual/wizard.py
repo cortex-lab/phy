@@ -382,6 +382,8 @@ class Wizard(object):
                                   match=self.match,
                                   best_progress=self._best_progress,
                                   match_progress=self._match_progress,
+                                  best_group=self._group(self.best),
+                                  match_group=self._group(self.match),
                                   )
 
 
@@ -391,18 +393,18 @@ class Wizard(object):
 
 _PANEL_HTML = """
 <div class="control-panel">
-<div class="best">
-    <div class="id">{best}</div>
-    <div class="progress">
-        <progress value="{best_progress:d}" max="100"></progress>
+    <div class="best">
+        <div class="id {best_group}">{best}</div>
+        <div class="progress">
+            <progress value="{best_progress:d}" max="100"></progress>
+        </div>
     </div>
-</div>
-<div class="match">
-    <div class="id">{match}</div>
-    <div class="progress">
-        <progress value="{match_progress:d}" max="100"></progress>
+    <div class="match">
+        <div class="id {match_group}">{match}</div>
+        <div class="progress">
+            <progress value="{match_progress:d}" max="100"></progress>
+        </div>
     </div>
-</div>
 </div>"""
 
 
@@ -439,10 +441,25 @@ html, body, div {
     height: 40px;
     text-align: center;
     vertical-align: middle;
+    padding: 5px 0 10px 0;
 }
 
+/* Progress bar */
 .control-panel progress[value] {
     width: 200px;
+}
+
+/* Cluster group */
+.control-panel .unsorted {
+    /*background-color: #333;*/
+}
+
+.control-panel .good {
+    background-color: #243318;
+}
+
+.control-panel .ignored {
+    background-color: #331d12;
 }
 
 """
@@ -452,12 +469,16 @@ def _wizard_panel_html(best=None,
                        match=None,
                        best_progress=None,
                        match_progress=None,
+                       best_group=None,
+                       match_group=None,
                        ):
     out = '<style>' + _PANEL_CSS + '</style>\n'
     out += _PANEL_HTML.format(best=best if best is not None else '',
-                              best_progress=best_progress,
                               match=match if match is not None else '',
+                              best_progress=best_progress,
                               match_progress=match_progress,
+                              best_group=best_group or 'unsorted',
+                              match_group=match_group or 'unsorted',
                               )
     return out
 

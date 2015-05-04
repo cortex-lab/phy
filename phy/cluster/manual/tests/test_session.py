@@ -321,7 +321,7 @@ def test_session_multiple_clusterings():
         assert session.model.n_clusters == n_clusters
         assert len(session.model.cluster_ids) == n_clusters
         assert session.clustering.n_clusters == n_clusters
-        assert session.cluster_metadata.group(1) == 3
+        assert session.cluster_metadata.group(1) == 1
 
         # Change clustering.
         with raises(ValueError):
@@ -332,7 +332,7 @@ def test_session_multiple_clusterings():
         assert session.model.n_clusters == n_clusters * 2
         assert len(session.model.cluster_ids) == n_clusters * 2
         assert session.clustering.n_clusters == n_clusters * 2
-        assert session.cluster_metadata.group(2) == 3
+        assert session.cluster_metadata.group(2) == 2
 
         # Merge the clusters and save, for the current clustering.
         session.clustering.merge(session.clustering.cluster_ids)
