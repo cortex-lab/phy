@@ -318,6 +318,30 @@ class Wizard(object):
             self.match = None
             self._match_list = []
 
+    # Panel
+    #--------------------------------------------------------------------------
+
+    @property
+    def _best_progress(self):
+        """Progress in the best clusters."""
+        value = self.best_list.index(self.best)
+        maximum = len(self.best_list)
+        return _progress(value, maximum)
+
+    @property
+    def _match_progress(self):
+        """Progress in the processed clusters."""
+        value = self.n_processed
+        maximum = self.n_clusters
+        return _progress(value, maximum)
+
+    def _repr_html_(self):
+        return _wizard_panel_html(best=self.best,
+                                  match=self.match,
+                                  best_progress=self._best_progress,
+                                  match_progress=self._match_progress,
+                                  )
+
 
 #------------------------------------------------------------------------------
 # Wizard panel
@@ -383,8 +407,8 @@ html, body, div {
 
 
 def _wizard_panel_html(best=None,
-                       best_progress=None,
                        match=None,
+                       best_progress=None,
                        match_progress=None,
                        ):
     out = '<style>' + _PANEL_CSS + '</style>\n'
@@ -396,79 +420,7 @@ def _wizard_panel_html(best=None,
     return out
 
 
-class WizardPanel(object):
-    def __init__(self):
-        self._best = None
-        self._match = None
-        self._best_index = 0
-        self._match_index = 0
-        self._best_count = 0
-        self._match_count = 0
-
-    @property
-    def best(self):
-        return self._best
-
-    @best.setter
-    def best(self, value):
-        self._best = value
-
-    @property
-    def match(self):
-        return self._match
-
-    @match.setter
-    def match(self, value):
-        self._match = value
-
-    @property
-    def best_index(self):
-        return self._best_index
-
-    @best_index.setter
-    def best_index(self, value):
-        self._best_index = value
-
-    @property
-    def best_count(self):
-        return self._best_count
-
-    @best_count.setter
-    def best_count(self, value):
-        self._best_count = value
-
-    @property
-    def match_index(self):
-        return self._match_index
-
-    @match_index.setter
-    def match_index(self, value):
-        self._match_index = value
-
-    @property
-    def match_count(self):
-        return self._match_count
-
-    @match_count.setter
-    def match_count(self, value):
-        self._match_count = value
-
-    def _progress(self, value, maximum):
-        if maximum <= 1:
-            return 1
-        return int(100 * value / float(maximum - 1))
-
-    @property
-    def html(self):
-        bp = self._progress(self.best_index, self.best_count)
-        mp = self._progress(self.match_index, self.match_count)
-        return _wizard_panel_html(best=self.best
-                                  if self.best is not None else '',
-                                  match=self.match
-                                  if self.match is not None else '',
-                                  best_progress=bp,
-                                  match_progress=mp,
-                                  )
-
-    def _repr_html_(self):
-        return self.html
+def _progress(value, maximum):
+    if maximum <= 1:
+        return 1
+    return int(100 * value / float(maximum - 1))

@@ -11,7 +11,6 @@ from pytest import raises
 from ..wizard import (_previous,
                       _next,
                       Wizard,
-                      WizardPanel,
                       )
 
 
@@ -45,17 +44,6 @@ def test_utils():
     assert _next(l, 5, func) == 5
     assert _next(l, 7, func) == 7
     assert _next(l, 11, func) == 11
-
-
-def test_panel():
-    panel = WizardPanel()
-    assert panel.html
-
-    panel.best = 3
-    assert panel.html
-
-    panel.match = 10
-    assert panel.html
 
 
 def test_wizard_core():
@@ -160,6 +148,11 @@ def test_wizard_nav():
     wizard.previous()
     assert wizard.best == 3
     assert wizard.match == 2
+
+    # Test HTML representation.
+    html = wizard._repr_html_()
+    assert '>3<' in html
+    assert '>2<' in html
 
     wizard.unpin()
     assert wizard.best == 3
