@@ -9,6 +9,7 @@
 from operator import itemgetter
 
 from ...utils.array import _is_array_like
+from ...utils.logging import info
 
 
 #------------------------------------------------------------------------------
@@ -53,6 +54,8 @@ def _previous(items, current, filter=None):
 
 
 def _next(items, current, filter=None):
+    if not items:
+        return current
     if current not in items:
         raise RuntimeError("{0} is not in {1}.".format(current, items))
     i = items.index(current)
@@ -115,9 +118,9 @@ class Wizard(object):
         clusters = set(self.cluster_ids)
         assert set(self._best_list) <= clusters
         assert set(self._match_list) <= clusters
-        if self._best is not None:
+        if self._best is not None and len(self._best_list) >= 1:
             assert self._best in self._best_list
-        if self._match is not None:
+        if self._match is not None and len(self._match_list) >= 1:
             assert self._match in self._match_list
 
     def _sort(self, items, mix_good_unsorted=False):
@@ -142,58 +145,6 @@ class Wizard(object):
     @property
     def cluster_groups(self):
         return self._cluster_groups
-
-    # Actions
-    #--------------------------------------------------------------------------
-
-    def _delete(self, clusters):
-        for clu in clusters:
-            if clu in self._cluster_groups:
-                del self._cluster_groups[clu]
-            if clu in self._best_list:
-                self._best_list.remove(clu)
-            if clu in self._match_list:
-                self._match_list.remove(clu)
-
-    def _add(self, clusters, group):
-        for clu in clusters:
-            self._cluster_groups[clu] = group
-            if self.best is not None:
-                index = self._best_list.index(self.best)
-                self._best_list.insert(index, clu)
-
-    def move(self, cluster, group):
-        self._cluster_groups[cluster] = group
-        self._check()
-        if cluster == self.best:
-            self.next_best()
-        elif cluster == self.match:
-            self.next_match()
-        if self.match is not None:
-            self._set_match_list()
-
-    def merge(self, old, new, group):
-        if isinstance(new, (tuple, list)):
-            assert len(new) == 1
-            new = new[0]
-        # Add new cluster.
-        self._add([new], group)
-        # Delete old clusters.
-        self._delete(old)
-        # Pin the newly-created cluster.
-        if self.best in old and self.match is not None and self.match in old:
-            self.pin(new)
-        # TODO: the match list is not updated currently; it could be if
-        # necessary.
-        self._check()
-
-    def update_clusters(self, deleted, added, group):
-        self._delete(deleted)
-        self._add(added, group)
-        # Update the best cluster if it was deleted.
-        if self.best in deleted and self.match is not None:
-            self.pin(added[0])
-        self._check()
 
     # Core methods
     #--------------------------------------------------------------------------
@@ -280,10 +231,14 @@ class Wizard(object):
     #--------------------------------------------------------------------------
 
     def next_best(self):
-        self.best = _next(self._best_list,
-                          self._best,
-                          # self._is_not_ignored,
-                          )
+        # Handle the case where we arrive at the end of the best list.
+        if self.best is not None and len(self._best_list) <= 1:
+            info("The wizard has finished.")
+        else:
+            self.best = _next(self._best_list,
+                              self._best,
+                              # self._is_not_ignored,
+                              )
 
     def previous_best(self):
         self.best = _previous(self._best_list,
@@ -292,10 +247,14 @@ class Wizard(object):
                               )
 
     def next_match(self):
-        self.match = _next(self._match_list,
-                           self._match,
-                           # self._is_not_ignored,
-                           )
+        # Handle the case where we arrive at the end of the match list.
+        if self.match is not None and len(self._match_list) <= 1:
+            self.next_best()
+        else:
+            self.match = _next(self._match_list,
+                               self._match,
+                               # self._is_not_ignored,
+                               )
 
     def previous_match(self):
         self.match = _previous(self._match_list,
@@ -345,6 +304,59 @@ class Wizard(object):
         if self.match is not None:
             self.match = None
             self._match_list = []
+
+    # Actions
+    #--------------------------------------------------------------------------
+
+    def _delete(self, clusters):
+        for clu in clusters:
+            if clu in self._cluster_groups:
+                del self._cluster_groups[clu]
+            if clu in self._best_list:
+                self._best_list.remove(clu)
+            if clu in self._match_list:
+                self._match_list.remove(clu)
+
+    def _add(self, clusters, group):
+        for clu in clusters:
+            self._cluster_groups[clu] = group
+            if self.best is not None:
+                index = self._best_list.index(self.best)
+                self._best_list.insert(index, clu)
+
+    def move(self, cluster, group):
+        self._cluster_groups[cluster] = group
+        if cluster == self.best:
+            self.next_best()
+            self._set_match_list(cluster)
+        elif cluster == self.match:
+            self.next_match()
+        if self.match is not None:
+            self._set_match_list()
+        self._check()
+
+    def merge(self, old, new, group):
+        if isinstance(new, (tuple, list)):
+            assert len(new) == 1
+            new = new[0]
+        # Add new cluster.
+        self._add([new], group)
+        # Delete old clusters.
+        self._delete(old)
+        # Pin the newly-created cluster.
+        if self.best in old and self.match is not None and self.match in old:
+            self.pin(new)
+        # TODO: the match list is not updated currently; it could be if
+        # necessary.
+        self._check()
+
+    def update_clusters(self, deleted, added, group):
+        self._delete(deleted)
+        self._add(added, group)
+        # Update the best cluster if it was deleted.
+        if self.best in deleted and self.match is not None:
+            self.pin(added[0])
+        self._check()
 
     # Panel
     #--------------------------------------------------------------------------

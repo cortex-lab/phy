@@ -16,8 +16,6 @@ from ...plot.waveforms import WaveformView
 from ...plot.traces import TraceView
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from .selector import Selector
-from ._utils import (_update_cluster_selection,
-                     )
 
 
 #------------------------------------------------------------------------------

@@ -58,6 +58,9 @@ manual_clustering.keyboard_shortcuts = {
     'move_match_to_noise': 'ctrl+n',
     'move_match_to_mua': 'ctrl+m',
     'move_match_to_good': 'ctrl+g',
+    'move_both_to_noise': 'ctrl+alt+n',
+    'move_both_to_mua': 'ctrl+alt+m',
+    'move_both_to_good': 'ctrl+alt+g',
 }
 
 

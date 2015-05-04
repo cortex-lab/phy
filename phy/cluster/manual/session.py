@@ -928,35 +928,32 @@ class Session(EventEmitter):
         def on_cluster(up):
             _wizard_select()
 
-        # Move best
+        # Move best/match/both to noise/mua/good
         # ---------------------------------------------------------------------
 
-        @_add_gui_shortcut
-        def move_best_to_noise():
-            self.move([self.wizard.best], 'noise')
+        def _get_clusters(which):
+            return {
+                'best': [self.wizard.best],
+                'match': [self.wizard.match],
+                'both': [self.wizard.best, self.wizard.match],
+            }[which]
 
-        @_add_gui_shortcut
-        def move_best_to_mua():
-            self.move([self.wizard.best], 'mua')
+        def _make_func(which, group):
+            """Return a function that moves best/match/both clusters to
+            a group."""
 
-        @_add_gui_shortcut
-        def move_best_to_good():
-            self.move([self.wizard.best], 'good')
+            def func():
+                clusters = _get_clusters(which)
+                if None in clusters:
+                    return
+                self.move(clusters, group)
 
-        # Move match
-        # ---------------------------------------------------------------------
+            func.__name__ = 'move_{}_to_{}'.format(which, group)
+            return func
 
-        @_add_gui_shortcut
-        def move_match_to_noise():
-            self.move([self.wizard.match], 'noise')
-
-        @_add_gui_shortcut
-        def move_match_to_mua():
-            self.move([self.wizard.match], 'mua')
-
-        @_add_gui_shortcut
-        def move_match_to_good():
-            self.move([self.wizard.match], 'good')
+        for which in ('best', 'match', 'both'):
+            for group in ('noise', 'mua', 'good'):
+                _add_gui_shortcut(_make_func(which, group))
 
     def _create_gui(self):
         """Create a manual clustering GUI.
