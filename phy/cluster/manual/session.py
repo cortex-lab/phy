@@ -761,7 +761,7 @@ class Session(EventEmitter):
         # Make sure the dock widget is closed when the view it contains
         # is closed with the Escape key.
         @vm.view.connect
-        def on_close():
+        def on_close(e):
             dock.close()
 
         @vm.view.connect
@@ -779,9 +779,7 @@ class Session(EventEmitter):
 
         return vm
 
-    def _restore_gui(self, gui, gs=None, cluster_ids=None):
-
-        # Default parameters.
+    def _add_gui_views(self, gui, cluster_ids, counts=None):
         default_counts = {
             'features': 1,
             'correlograms': 1,
@@ -789,10 +787,7 @@ class Session(EventEmitter):
             'traces': 1,
             'wizard': 1,
         }
-        if gs and gs.get('view_counts', None):
-            counts = gs['view_counts']
-        else:
-            counts = default_counts
+        counts = counts if counts is not None else default_counts
 
         default_positions = {
             'wizard': 'right',
@@ -811,10 +806,6 @@ class Session(EventEmitter):
                                    name,
                                    cluster_ids=cluster_ids,
                                    position=default_positions[name])
-
-        # Restore the geometry state.
-        if gs:
-            gui.restore_geometry_state(gs)
 
     def _create_gui_actions(self, gui):
 
@@ -835,7 +826,8 @@ class Session(EventEmitter):
             # Close all views and restore the default GUI.
             for view in gui.list_views():
                 view.close()
-            self._restore_gui(gui)
+            # Add the default views.
+            self._add_gui_views(gui, self._selected_clusters)
 
         @_add_gui_shortcut
         def save():
@@ -981,6 +973,7 @@ class Session(EventEmitter):
 
         # Load geometry state
         gs = self.get_internal_settings('manual_clustering.gui_state',
+                                        default={},
                                         scope='global',
                                         )
         # Find the first cluster to select.
@@ -989,7 +982,12 @@ class Session(EventEmitter):
         self._create_gui_actions(gui)
         # Recreate the views and restore the state and position of the
         # dock widgets.
-        self._restore_gui(gui, gs, cluster_ids=[self.wizard.best])
+        self._selected_clusters = [self.wizard.best]
+        self._add_gui_views(gui, self._selected_clusters,
+                            counts=gs.get('view_counts', None))
+        # Restore the geometry state.
+        if gs:
+            gui.restore_geometry_state(gs)
         return gui
 
     def show_gui(self):
@@ -1027,7 +1025,7 @@ class Session(EventEmitter):
 
         # Unregister the callbacks when the view is closed.
         @view.connect
-        def on_close(e):
+        def on_close(event):
             self.unconnect(on_open)
 
             if save_size_pos:
