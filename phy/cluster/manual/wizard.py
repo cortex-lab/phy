@@ -8,6 +8,8 @@
 
 from operator import itemgetter
 
+from ...utils.array import _is_array_like
+
 
 #------------------------------------------------------------------------------
 # Utility functions
@@ -30,56 +32,55 @@ def _best_clusters(clusters, quality, n_max=None):
                      for cluster in clusters], n_max=n_max)
 
 
+def _find_first(items, filter):
+    return next(item for item in items if filter(item))
+
+
+def _previous(items, current, filter):
+    if current not in items:
+        raise RuntimeError("{0} is not in {1}.".format(current, items))
+    i = items.index(current)
+    if i == 0:
+        return current
+    try:
+        return _find_first(items[:i][::-1], filter)
+    except StopIteration:
+        return current
+
+
+def _next(items, current, filter):
+    if current not in items:
+        raise RuntimeError("{0} is not in {1}.".format(current, items))
+    i = items.index(current)
+    if i == len(items) - 1:
+        return current
+    try:
+        return _find_first(items[i + 1:], filter)
+    except StopIteration:
+        return current
+
+
 #------------------------------------------------------------------------------
 # Wizard
 #------------------------------------------------------------------------------
 
 class Wizard(object):
     """Propose a selection of high-quality clusters and merge candidates."""
-    def __init__(self, cluster_ids):
+    def __init__(self, cluster_groups):
         self._similarity = None
         self._quality = None
-        self._ignored = set()
-        self._reset_list()
-        self.cluster_ids = cluster_ids
+        # cluster_groups is a dictionary or is converted to one.
+        if _is_array_like(cluster_groups):
+            # A group can be None (unsorted), 'good', or 'ignored'.
+            cluster_groups = {clu: None for clu in cluster_groups}
+        self._cluster_groups = cluster_groups
+        self._best_list = []  # This list is fixed (modulo clustering actions).
+        self._match_list = []  # This list may often change.
+        self._best = None
+        self._match = None
 
-    # Internal methods
+    # Quality functions
     #--------------------------------------------------------------------------
-
-    def _filter(self, items):
-        """Filter out ignored clusters or pairs of clusters."""
-        return [item for item in items
-                if item not in self._ignored]
-
-    # Setting methods
-    #--------------------------------------------------------------------------
-
-    @property
-    def cluster_ids(self):
-        """Array of cluster ids in the current clustering."""
-        return self._cluster_ids
-
-    def _remove_old_clusters(self, l):
-        if not l:
-            return l
-        return [clu for clu in l if clu in self._cluster_ids]
-
-    def _update_cluster_lists(self):
-        self._list = self._remove_old_clusters(self._list)
-        self._prev_list = self._remove_old_clusters(self._prev_list)
-        if self._index is not None and self._index not in self._list:
-            self._index = 0
-        if self._prev_index is not None and self._prev_index not in self._list:
-            self._prev_index = 0
-        if self._pinned is not None and self._pinned not in self._list:
-            self._pinned = None
-
-    @cluster_ids.setter
-    def cluster_ids(self, cluster_ids):
-        """Update the list of clusters."""
-        assert cluster_ids is not None
-        self._cluster_ids = sorted(cluster_ids)
-        self._update_cluster_lists()
 
     def set_similarity_function(self, func):
         """Register a function returing the similarity between two clusters."""
@@ -91,6 +92,68 @@ class Wizard(object):
         self._quality = func
         return func
 
+    # Internal methods
+    #--------------------------------------------------------------------------
+
+    def _group(self, cluster):
+        return self._cluster_groups.get(cluster, None)
+
+    def _in_groups(self, items, groups):
+        """Filter out ignored clusters or pairs of clusters."""
+        if not isinstance(groups, (list, tuple)):
+            groups = [groups]
+        return [item for item in items if self._group(item) in groups]
+
+    def _check(self):
+        clusters = set(self.cluster_ids)
+        assert set(self._best_list) <= clusters
+        assert set(self._match_list) <= clusters
+        if self._best is not None:
+            assert self._best in self._best_list
+        if self._match is not None:
+            assert self._match in self._match_list
+
+    # Properties
+    #--------------------------------------------------------------------------
+
+    @property
+    def cluster_ids(self):
+        """Array of cluster ids in the current clustering."""
+        return sorted(self._cluster_groups)
+
+    @property
+    def cluster_groups(self):
+        return self._cluster_groups
+
+    # Actions
+    #--------------------------------------------------------------------------
+
+    def move(self, cluster, group):
+        self._groups[cluster] = group
+        self._check()
+        if cluster == self.best:
+            self.next_best()
+        elif cluster == self.match:
+            self.next_match()
+
+    def merge(self, old, new, group):
+        b, m = self.best, self.match
+        # Add new cluster.
+        self._groups[new] = group
+        self._best_list.insert(self._best_index, new)
+        # Delete old clusters.
+        for clu in old:
+            del self._groups[clu]
+            if clu in self._best_list:
+                self._best_list.remove(clu)
+            if clu in self._match_list:
+                self._match_list.remove(clu)
+        self._check()
+        # Update current selection.
+        if sorted(old) == sorted([b, m]):
+            self.best = new
+            self.set_match_list()
+
     # Core methods
     #--------------------------------------------------------------------------
 
@@ -100,8 +163,8 @@ class Wizard(object):
         The registered quality function is used for the cluster quality.
 
         """
-        return self._filter(_best_clusters(self._cluster_ids, self._quality,
-                                           n_max=n_max))
+        best = _best_clusters(self.cluster_ids, self._quality, n_max=n_max)
+        return self._in_groups(best, (None, 'good'))
 
     def best_cluster(self):
         """Return the best cluster according to the registered cluster
@@ -116,151 +179,75 @@ class Wizard(object):
         if cluster is None:
             cluster = self.best_cluster()
         similarity = [(other, self._similarity(cluster, other))
-                      for other in self._cluster_ids
+                      for other in self.cluster_ids
                       if other != cluster]
         clusters = _argsort(similarity, n_max=n_max)
         # Filter out ignored clusters.
-        clusters = self._filter(clusters)
-        pairs = zip([cluster] * len(clusters), clusters)
+        clusters = self._in_groups(clusters, (None, 'good'))
+        # pairs = zip([cluster] * len(clusters), clusters)
         # Filter out ignored pairs of clusters.
-        pairs = self._filter(pairs)
-        return [clu for (_, clu) in pairs]
-
-    def ignore(self, cluster_or_pair):
-        """Mark a cluster or a pair of clusters as ignored.
-
-        This cluster or pair of clusters will not reappear in the list of
-        best clusters or most similar clusters.
-
-        """
-        if isinstance(cluster_or_pair, tuple):
-            assert len(cluster_or_pair) == 2
-        else:
-            cluster_or_pair = int(cluster_or_pair)
-        self._ignored.add(cluster_or_pair)
+        # pairs = self._filter(pairs)
+        # return [clu for (_, clu) in pairs]
+        return clusters
 
     # List methods
     #--------------------------------------------------------------------------
 
-    def _reset_list(self):
+    @property
+    def best(self):
+        return self._best
 
-        # Current list.
-        self._list = []
-        self._index = None
-
-        # Previous list (backup when pinning).
-        self._prev_list = []
-        self._prev_index = None
-
-        self._is_running = False
-        self._pinned = None
-
-    def count(self):
-        return len(self._list)
-
-    def index(self):
-        return self._index
-
-    def start(self):
-        self._is_running = True
-        if self._index is None:
-            self.set_best_clusters()
-
-    def pause(self):
-        self._is_running = False
-
-    def stop(self):
-        self._reset_list()
-
-    def restart(self):
-        self.stop()
-        self.start()
-
-    def is_running(self):
-        return self._is_running
-
-    def next(self):
-        if not self._is_running:
-            self.start()
-        # Move to the next non-ignored.
-        current = self._current
-        if self._index is None:
-            self._index = 0
-        while self._current in self._ignored.union([current]):
-            if self._index <= self.count() - 2:
-                self._index += 1
-            else:
-                break
-        return self._current
-
-    def previous(self):
-        current = self._current
-        while self._current in self._ignored.union([current]):
-            if self._is_running and 1 <= self._index:
-                self._index -= 1
-            else:
-                break
-        return self._current
-
-    def first(self):
-        self._index = 0
-        return self._current
-
-    def last(self):
-        self._index = self.count() - 1
-        return self._current
+    @best.setter
+    def best(self, value):
+        assert value in self._best_list
+        self._best = value
 
     @property
-    def _current(self):
-        if self._index is not None and 0 <= self._index < self.count():
-            return self._list[self._index]
+    def match(self):
+        return self._match
 
-    # Pin methods
-    #--------------------------------------------------------------------------
+    @match.setter
+    def match(self, value):
+        if value is None:
+            return ValueError("The match needs to be a valid cluster id.")
+        assert value in self._match_list
+        self._match = value
 
-    def pin(self, cluster=None):
-        # Save the current list.
-        self._prev_index = self._index
-        self._prev_list = self._list
-        if cluster is None:
-            cluster = self._current
-        if cluster is None:
-            return
-        assert cluster in self._cluster_ids
-        self._pinned = cluster
-        if self._pinned:
-            self._list = self.most_similar_clusters(self._pinned)
-            self._index = 0
-        return self._pinned
+    def next_best(self):
+        self.best = _next(self._best_list, self._best)
 
-    def unpin(self):
-        self._pinned = None
-        self._list = self._prev_list
-        self._index = self._prev_index
+    def previous_best(self):
+        self.best = _previous(self._best_list, self._best)
 
-    def pinned(self):
-        return self._pinned
+    def next_match(self):
+        self.match = _next(self._match_list, self._match)
 
-    def current_selection(self):
-        if not self._is_running:
-            return ()
-        current = self._current
-        assert current is not None
-        # Best unsorted.
-        if self._pinned is None:
-            return (current,)
-        # Best unsorted and closest match.
+    def previous_match(self):
+        self.match = _previous(self._match_list, self._match)
+
+    def next(self):
+        if self.match is None:
+            return self.next_best()
         else:
-            return (self._pinned, current)
+            return self.next_match()
 
-    def ignore_current_selection(self):
-        self.ignore(self.current_selection())
+    def previous(self):
+        if self.match is None:
+            return self.previous_best()
+        else:
+            return self.previous_match()
 
-    def set_best_clusters(self, clusters=None):
+    def first(self):
+        self.best = self._best_list[0]
+
+    def last(self):
+        self.best = self._best_list[-1]
+
+    def set_best_list(self, clusters=None):
         if clusters is None:
             clusters = self.best_clusters()
-        self._list = clusters
-        self._index = 0
+        self._best_list = clusters
+        self._best_index = 0
 
 
 #------------------------------------------------------------------------------
