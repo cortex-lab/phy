@@ -231,10 +231,12 @@ class Wizard(object):
 
     @match.setter
     def match(self, value):
-        if value is None:
-            return ValueError("The match needs to be a valid cluster id.")
-        assert value in self._match_list
+        if value is not None:
+            assert value in self._match_list
         self._match = value
+
+    # Navigation
+    #--------------------------------------------------------------------------
 
     def next_best(self):
         self.best = _next(self._best_list,

@@ -108,6 +108,7 @@ def test_wizard_nav():
     def similarity(cluster, other):
         return 1. + quality(cluster) - quality(other)
 
+    # Loop over the best clusters.
     wizard.start()
     assert wizard.best == 3
     assert wizard.match is None
@@ -115,8 +116,72 @@ def test_wizard_nav():
     wizard.next()
     assert wizard.best == 2
 
+    wizard.previous()
+    assert wizard.best == 3
+
+    wizard.previous_best()
+    assert wizard.best == 3
+
+    wizard.next()
+    assert wizard.best == 2
+
     wizard.next()
     assert wizard.best == 7
 
+    wizard.next_best()
+    assert wizard.best == 5
+
     wizard.next()
     assert wizard.best == 5
+
+    # Now we start again.
+    wizard.start()
+    assert wizard.best == 3
+    assert wizard.match is None
+
+    # The match are sorted by group first (unsorted, good, and ignored),
+    # and similarity second.
+    wizard.pin()
+    assert wizard.best == 3
+    assert wizard.match == 2
+
+    wizard.next()
+    assert wizard.best == 3
+    assert wizard.match == 7
+
+    wizard.next_match()
+    assert wizard.best == 3
+    assert wizard.match == 5
+
+    wizard.previous_match()
+    assert wizard.best == 3
+    assert wizard.match == 7
+
+    wizard.previous()
+    assert wizard.best == 3
+    assert wizard.match == 2
+
+    wizard.unpin()
+    assert wizard.best == 3
+    assert wizard.match is None
+
+
+def test_wizard_actions():
+
+    groups = {2: None, 3: None, 5: 'ignored', 7: 'good'}
+    wizard = Wizard(groups)
+
+    @wizard.set_quality_function
+    def quality(cluster):
+        return {2: .2,
+                3: .3,
+                5: .5,
+                7: .7,
+                }[cluster]
+
+    @wizard.set_similarity_function
+    def similarity(cluster, other):
+        return 1. + quality(cluster) - quality(other)
+
+    # Loop over the best clusters.
+    wizard.start()
