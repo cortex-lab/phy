@@ -330,6 +330,8 @@ class Wizard(object):
     def pin(self, cluster=None):
         if cluster is None:
             cluster = self.best
+        if self.match is not None and self.best == cluster:
+            return
         self.best = cluster
         self._set_match_list(cluster)
 

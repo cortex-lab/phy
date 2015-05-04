@@ -102,7 +102,7 @@ def test_session_gui():
 
         with qt_app():
             gui = session._create_gui()
-            _close_qt_after(gui, 0.2)
+            # _close_qt_after(gui, 0.2)
             gui.show()
 
 

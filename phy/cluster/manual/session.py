@@ -904,24 +904,25 @@ class Session(EventEmitter):
 
         @_add_gui_shortcut
         def pin():
-            if self.wizard.pinned() is None:
-                self.wizard.pin()
-                _wizard_select()
+            self.wizard.pin()
+            _wizard_select()
 
         @_add_gui_shortcut
         def unpin():
-            if self.wizard.pinned() is not None:
-                self.wizard.unpin()
-                _wizard_select()
+            self.wizard.unpin()
+            _wizard_select()
 
         # Cluster actions
         # ---------------------------------------------------------------------
 
         @_add_gui_shortcut
         def merge():
-            cluster_ids = self.wizard.current_selection()
-            if len(cluster_ids) >= 2:
-                self.merge(cluster_ids)
+            if self.wizard.best is None:
+                return
+            if self.wizard.match is None:
+                return
+            cluster_ids = (self.wizard.best, self.wizard.match)
+            self.merge(cluster_ids)
 
         @self.connect
         def on_cluster(up):
