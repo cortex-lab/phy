@@ -143,32 +143,29 @@ class Wizard(object):
     #--------------------------------------------------------------------------
 
     def move(self, cluster, group):
-        self._groups[cluster] = group
+        self._cluster_groups[cluster] = group
         self._check()
         if cluster == self.best:
             self.next_best()
         elif cluster == self.match:
             self.next_match()
 
-    def merge(self, old, new, group):
-        b, m = self.best, self.match
-        assert b is not None and m is not None
+    def merge(self, old, new, group=None):
         # Add new cluster.
-        self._groups[new] = group
-        index = self._best_list.index(b)
+        self._cluster_groups[new] = group
+        index = self._best_list.index(self.best)
         self._best_list.insert(index, new)
         # Delete old clusters.
         for clu in old:
-            del self._groups[clu]
+            del self._cluster_groups[clu]
             if clu in self._best_list:
                 self._best_list.remove(clu)
             if clu in self._match_list:
                 self._match_list.remove(clu)
+        # Pin the newly-created cluster.
+        if self.best in old:
+            self.pin(new)
         self._check()
-        # Update current selection.
-        # if sorted(old) == sorted([b, m]):
-        self.best = new
-        self.set_match_list()
 
     # Core methods
     #--------------------------------------------------------------------------
@@ -235,6 +232,22 @@ class Wizard(object):
             assert value in self._match_list
         self._match = value
 
+    @property
+    def best_list(self):
+        return self._best_list
+
+    @property
+    def match_list(self):
+        return self._match_list
+
+    @property
+    def n_processed(self):
+        return len(self._in_groups(self._best_list, ('good', 'ignored')))
+
+    @property
+    def n_clusters(self):
+        return len(self.cluster_ids)
+
     # Navigation
     #--------------------------------------------------------------------------
 
@@ -289,6 +302,7 @@ class Wizard(object):
     def pin(self, cluster=None):
         if cluster is None:
             cluster = self.best
+        self.best = cluster
         self._set_match_list(cluster)
 
     def unpin(self):
