@@ -296,8 +296,7 @@ def test_session_wizard():
         if best is not None:
             assert best in (3, 4)
             # The most similar cluster is 3 if best=4 and conversely.
-            assert list(session.wizard.most_similar_clusters(best)) == [7 -
-                                                                        best]
+            assert session.wizard.most_similar_clusters(best)[0] == 7 - best
 
 
 def test_session_multiple_clusterings():

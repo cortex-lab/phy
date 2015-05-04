@@ -621,18 +621,23 @@ class Session(EventEmitter):
                 elif up.description in ('merge', 'assign'):
                     self._global_history.action(self.clustering)
 
+    def _to_wizard_group(self, group_id):
+        """Return the group name required by the wizard, as a function
+        of the Kwik cluster group."""
+        return {
+            0: 'ignored',
+            1: 'ignored',
+            2: 'good',
+            3: None,
+            None: 'ignored',
+        }[group_id]
+
     def _create_wizard(self):
 
         # Initialize the groups for the wizard.
         def _group(cluster):
             group_id = self.cluster_metadata.group(cluster)
-            return {
-                0: 'ignored',
-                1: 'ignored',
-                2: 'good',
-                3: None,
-                None: 'ignored',
-            }[group_id]
+            return self._to_wizard_group(group_id)
 
         groups = {cluster: _group(cluster)
                   for cluster in self.clustering.cluster_ids}
@@ -666,7 +671,8 @@ class Session(EventEmitter):
             elif up.description == 'metadata_group':
                 assert isinstance(up.metadata_value, integer_types)
                 for cluster in up.metadata_changed:
-                    self.wizard.move(cluster, up.metadata_value)
+                    group = self._to_wizard_group(up.metadata_value)
+                    self.wizard.move(cluster, group)
 
     def _create_wizard_panel(self, cluster_ids=None):
         view = _create_web_view(self.wizard._repr_html_())
