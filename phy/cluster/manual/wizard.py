@@ -316,10 +316,16 @@ class Wizard(object):
             return self.previous_match()
 
     def first(self):
-        self.best = self._best_list[0]
+        if self.match is None:
+            self.best = self._best_list[0]
+        else:
+            self.match = self._match_list[0]
 
     def last(self):
-        self.best = self._best_list[-1]
+        if self.match is None:
+            self.best = self._best_list[-1]
+        else:
+            self.match = self._match_list[-1]
 
     # Control
     #--------------------------------------------------------------------------
