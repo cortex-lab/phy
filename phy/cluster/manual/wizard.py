@@ -146,6 +146,21 @@ class Wizard(object):
     # Actions
     #--------------------------------------------------------------------------
 
+    def _delete(self, clusters):
+        for clu in clusters:
+            if clu in self._cluster_groups:
+                del self._cluster_groups[clu]
+            if clu in self._best_list:
+                self._best_list.remove(clu)
+            if clu in self._match_list:
+                self._match_list.remove(clu)
+
+    def _add(self, clusters, group):
+        for clu in clusters:
+            self._cluster_groups[clu] = group
+            index = self._best_list.index(self.best)
+            self._best_list.insert(index, clu)
+
     def move(self, cluster, group):
         self._cluster_groups[cluster] = group
         self._check()
@@ -156,23 +171,24 @@ class Wizard(object):
         if self.match is not None:
             self._set_match_list()
 
-    def merge(self, old, new, group=None):
+    def merge(self, old, new, group):
         # Add new cluster.
-        self._cluster_groups[new] = group
-        index = self._best_list.index(self.best)
-        self._best_list.insert(index, new)
+        self._add([new], group)
         # Delete old clusters.
-        for clu in old:
-            del self._cluster_groups[clu]
-            if clu in self._best_list:
-                self._best_list.remove(clu)
-            if clu in self._match_list:
-                self._match_list.remove(clu)
+        self._delete(old)
         # Pin the newly-created cluster.
         if self.best in old and self.match is not None and self.match in old:
             self.pin(new)
         # TODO: the match list is not updated currently; it could be if
         # necessary.
+        self._check()
+
+    def update_clusters(self, deleted, added):
+        self._delete(deleted)
+        self._add(added)
+        # Update the best cluster if it was deleted.
+        if self.best in deleted and self.match is not None:
+            self.pin(added[0])
         self._check()
 
     # Core methods
