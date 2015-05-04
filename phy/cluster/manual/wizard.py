@@ -32,11 +32,15 @@ def _best_clusters(clusters, quality, n_max=None):
                      for cluster in clusters], n_max=n_max)
 
 
-def _find_first(items, filter):
+def _find_first(items, filter=None):
+    if not items:
+        return None
+    if filter is None:
+        return items[0]
     return next(item for item in items if filter(item))
 
 
-def _previous(items, current, filter):
+def _previous(items, current, filter=None):
     if current not in items:
         raise RuntimeError("{0} is not in {1}.".format(current, items))
     i = items.index(current)
@@ -48,7 +52,7 @@ def _previous(items, current, filter):
         return current
 
 
-def _next(items, current, filter):
+def _next(items, current, filter=None):
     if current not in items:
         raise RuntimeError("{0} is not in {1}.".format(current, items))
     i = items.index(current)
@@ -103,6 +107,9 @@ class Wizard(object):
         if not isinstance(groups, (list, tuple)):
             groups = [groups]
         return [item for item in items if self._group(item) in groups]
+
+    def _is_not_ignored(self, cluster):
+        return self._in_groups([cluster], (None, 'good'))
 
     def _check(self):
         clusters = set(self.cluster_ids)
@@ -175,13 +182,6 @@ class Wizard(object):
         best = _best_clusters(self.cluster_ids, self._quality, n_max=n_max)
         return self._sort(best)
 
-    # def best_cluster(self):
-    #     """Return the best cluster according to the registered cluster
-    #     quality function."""
-    #     clusters = self.best_clusters(n_max=1)
-    #     if clusters:
-    #         return clusters[0]
-
     def most_similar_clusters(self, cluster=None, n_max=None):
         """Return the `n_max` most similar clusters to a given cluster
         (the current best cluster by default)."""
@@ -237,16 +237,28 @@ class Wizard(object):
         self._match = value
 
     def next_best(self):
-        self.best = _next(self._best_list, self._best)
+        self.best = _next(self._best_list,
+                          self._best,
+                          # self._is_not_ignored,
+                          )
 
     def previous_best(self):
-        self.best = _previous(self._best_list, self._best)
+        self.best = _previous(self._best_list,
+                              self._best,
+                              # self._is_not_ignored,
+                              )
 
     def next_match(self):
-        self.match = _next(self._match_list, self._match)
+        self.match = _next(self._match_list,
+                           self._match,
+                           # self._is_not_ignored,
+                           )
 
     def previous_match(self):
-        self.match = _previous(self._match_list, self._match)
+        self.match = _previous(self._match_list,
+                               self._match,
+                               # self._is_not_ignored,
+                               )
 
     def next(self):
         if self.match is None:

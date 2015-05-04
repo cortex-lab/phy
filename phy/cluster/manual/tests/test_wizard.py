@@ -108,4 +108,15 @@ def test_wizard_nav():
     def similarity(cluster, other):
         return 1. + quality(cluster) - quality(other)
 
-    # wizard.set_best_list
+    wizard.start()
+    assert wizard.best == 3
+    assert wizard.match is None
+
+    wizard.next()
+    assert wizard.best == 2
+
+    wizard.next()
+    assert wizard.best == 7
+
+    wizard.next()
+    assert wizard.best == 5
