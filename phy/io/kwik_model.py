@@ -118,7 +118,10 @@ def _create_cluster_group(f, group_id, name,
 def _create_clustering(f, name,
                        channel_group=None,
                        spike_clusters=None,
+                       cluster_groups=None,
                        ):
+    if cluster_groups is None:
+        cluster_groups = {}
     assert isinstance(f, File)
     path = '/channel_groups/{0:d}/spikes/clusters/{1:s}'.format(channel_group,
                                                                 name)
@@ -136,7 +139,8 @@ def _create_clustering(f, name,
         kv_path = cluster_path + '/application_data/klustaviewa'
 
         # Default group: unsorted.
-        f.write_attr(cluster_path, 'cluster_group', 3)
+        cluster_group = cluster_groups.get(cluster, 3)
+        f.write_attr(cluster_path, 'cluster_group', cluster_group)
         f.write_attr(kv_path, 'color', randint(2, 10))
 
     # Create cluster group metadata.

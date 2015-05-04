@@ -80,6 +80,8 @@ class MockModel(BaseModel):
 
         @self._cluster_metadata.default
         def group(cluster):
+            if cluster <= 2:
+                return cluster
             # Default group is unsorted.
             return 3
 

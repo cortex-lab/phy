@@ -133,9 +133,10 @@ def test_kwik_open_full():
 
         # Test cluster groups.
         for cluster in range(_N_CLUSTERS):
-            assert kwik.cluster_metadata.group(cluster) == 3
+            print(cluster)
+            assert kwik.cluster_metadata.group(cluster) == min(cluster, 3)
         for cluster, group in kwik.cluster_groups.items():
-            assert group == 3
+            assert group == min(cluster, 3)
 
         # Test probe.
         assert isinstance(kwik.probe, MEA)
