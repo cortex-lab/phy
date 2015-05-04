@@ -12,7 +12,9 @@ import sys
 import os.path as op
 from inspect import getargspec
 
-from ..ext.six import string_types
+import numpy as np
+
+from ..ext.six import string_types, integer_types
 from ..ext.six.moves import builtins
 
 
@@ -45,6 +47,10 @@ def _concatenate_dicts(*dicts):
 
 def _is_list(obj):
     return isinstance(obj, list)
+
+
+def _is_integer(x):
+    return isinstance(x, integer_types + (np.generic,))
 
 
 def _as_list(obj):

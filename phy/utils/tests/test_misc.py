@@ -6,7 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from .._misc import Bunch
+import numpy as np
+
+from .._misc import Bunch, _is_integer
 
 
 #------------------------------------------------------------------------------
@@ -19,3 +21,9 @@ def test_bunch():
     assert obj.a == 1
     obj.b = 2
     assert obj['b'] == 2
+
+
+def test_integer():
+    assert _is_integer(3)
+    assert _is_integer(np.arange(1)[0])
+    assert not _is_integer(3.)
