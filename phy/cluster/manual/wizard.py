@@ -241,12 +241,16 @@ class Wizard(object):
                               self._best,
                               # self._is_not_ignored,
                               )
+        if self.match is not None:
+            self._set_match_list()
 
     def previous_best(self):
         self.best = _previous(self._best_list,
                               self._best,
                               # self._is_not_ignored,
                               )
+        if self.match is not None:
+            self._set_match_list()
 
     def next_match(self):
         # Handle the case where we arrive at the end of the match list.
@@ -330,11 +334,11 @@ class Wizard(object):
         self._cluster_groups[cluster] = group
         if cluster == self.best:
             self.next_best()
-            self._set_match_list(cluster)
+            # self._set_match_list(cluster)
         elif cluster == self.match:
             self.next_match()
-        if self.match is not None:
-            self._set_match_list()
+        # if self.match is not None:
+        #     self._set_match_list()
         self._check()
 
     def merge(self, old, new, group):

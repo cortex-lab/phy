@@ -852,6 +852,7 @@ class Session(EventEmitter):
 
         def _select(cluster_ids):
             cluster_ids = list(cluster_ids)
+            assert len(cluster_ids) == len(set(cluster_ids))
             # Do not re-select an already-selected list of clusters.
             if cluster_ids == self._selected_clusters:
                 return

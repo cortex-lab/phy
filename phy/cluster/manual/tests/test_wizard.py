@@ -173,23 +173,37 @@ def test_wizard_actions():
     def similarity(cluster, other):
         return 1. + quality(cluster) - quality(other)
 
+    def _assert_wizard(best, match):
+        assert (wizard.best, wizard.match) == (best, match)
+
     # Loop over the best clusters.
     wizard.start()
     wizard.next()
     wizard.pin()
-    assert wizard.best == 2
-    assert wizard.match == 3
+    _assert_wizard(2, 3)
 
     wizard.merge([2, 3], 20, None)
     assert wizard.best_list == [20, 7, 5]
-    assert wizard.best == 20
-    assert wizard.match == 7
+    _assert_wizard(20, 7)
     assert wizard.match_list == [7, 5]
 
     wizard.next()
-    assert wizard.best == 20
-    assert wizard.match == 5
+    _assert_wizard(20, 5)
 
     wizard.move(20, 'good')
-    assert wizard.best == 7
-    assert wizard.match == 20
+    _assert_wizard(7, 20)
+
+    wizard.last()
+    _assert_wizard(7, 5)
+
+    wizard.move(5, 'noise')
+    _assert_wizard(7, 5)
+
+    wizard.next()
+    _assert_wizard(7, 5)
+
+    wizard.previous()
+    _assert_wizard(7, 20)
+
+    wizard.previous()
+    _assert_wizard(7, 20)
