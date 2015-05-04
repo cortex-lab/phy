@@ -122,6 +122,8 @@ class Wizard(object):
             assert self._best in self._best_list
         if self._match is not None and len(self._match_list) >= 1:
             assert self._match in self._match_list
+        if None not in (self.best, self.match):
+            assert self.best != self.match
 
     def _sort(self, items, mix_good_unsorted=False):
         """Sort clusters according to their groups:

@@ -416,20 +416,18 @@ class Session(EventEmitter):
         return self.settings_manager.set_user_settings(
             key, value, scope='experiment')
 
-    def get_internal_settings(self, key, default=None):
+    def get_internal_settings(self, key, default=None, scope='experiment'):
         """Get an internal settings."""
-        value = self.settings_manager.get_internal_settings(key,
-                                                            scope='experiment',
-                                                            )
+        value = self.settings_manager.get_internal_settings(key, scope=scope)
         if value is None:
             value = default
         return value
 
-    def set_internal_settings(self, key, value):
+    def set_internal_settings(self, key, value, scope='experiment'):
         """Set an internal settings."""
         return self.settings_manager.set_internal_settings(key,
                                                            value,
-                                                           scope='experiment',
+                                                           scope=scope,
                                                            )
 
     def _load_default_settings(self):
@@ -967,10 +965,15 @@ class Session(EventEmitter):
         @gui.on_close
         def on_close():
             gs = gui.save_geometry_state()
-            self.set_internal_settings('manual_clustering.gui_state', gs)
+            self.set_internal_settings('manual_clustering.gui_state',
+                                       gs,
+                                       scope='global',
+                                       )
 
         # Load geometry state
-        gs = self.get_internal_settings('manual_clustering.gui_state')
+        gs = self.get_internal_settings('manual_clustering.gui_state',
+                                        scope='global',
+                                        )
         # Find the first cluster to select.
         self.wizard.start()
         # Create the GUI actions.
@@ -1112,7 +1115,7 @@ class Session(EventEmitter):
         sf = self.get_internal_settings(sf_name, .01)
 
         ms_name = 'manual_clustering.features_marker_size'
-        ms = self.get_internal_settings(ms_name, 2.)
+        ms = self.get_internal_settings(ms_name, 2., scope='global')
 
         vm = self._create_view_model('features',
                                      scale_factor=sf,
@@ -1132,7 +1135,9 @@ class Session(EventEmitter):
             # Remember the minimum zoom_y for the scale factor.
             zoom = vm.view._pz.zoom_matrix[1:, 1:, 1].min()
             self.set_internal_settings(sf_name, zoom * vm.scale_factor)
-            self.set_internal_settings(ms_name, vm.view.marker_size)
+            self.set_internal_settings(ms_name,
+                                       vm.view.marker_size,
+                                       scope='global')
 
         return vm
 
