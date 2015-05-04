@@ -50,7 +50,7 @@ if not _check_qt():
 # -----------------------------------------------------------------------------
 
 def _title(widget):
-    return str(widget.windowTitle())
+    return str(widget.windowTitle()).lower()
 
 
 def _create_web_view(html=None):

@@ -746,6 +746,23 @@ class Session(EventEmitter):
     # GUI
     # -------------------------------------------------------------------------
 
+    # TODO: put this in default settings
+    _default_counts = {
+        'features': 1,
+        'correlograms': 1,
+        'waveforms': 1,
+        'traces': 1,
+        'wizard': 1,
+    }
+
+    _default_positions = {
+        'wizard': 'right',
+        'features': 'left',
+        'correlograms': 'left',
+        'waveforms': 'right',
+        'traces': 'right',
+    }
+
     def _add_gui_view(self, gui, name, cluster_ids=None, **kwargs):
 
         if name == 'wizard':
@@ -780,23 +797,7 @@ class Session(EventEmitter):
         return vm
 
     def _add_gui_views(self, gui, cluster_ids, counts=None):
-        default_counts = {
-            'features': 1,
-            'correlograms': 1,
-            'waveforms': 1,
-            'traces': 1,
-            'wizard': 1,
-        }
-        counts = counts if counts is not None else default_counts
-
-        default_positions = {
-            'wizard': 'right',
-            'features': 'left',
-            'correlograms': 'left',
-            'waveforms': 'right',
-            'traces': 'right',
-        }
-
+        counts = counts if counts is not None else self._default_counts
         # Create the appropriate number of views.
         for name, count in counts.items():
             name = name.lower()
@@ -805,7 +806,7 @@ class Session(EventEmitter):
                 self._add_gui_view(gui,
                                    name,
                                    cluster_ids=cluster_ids,
-                                   position=default_positions[name])
+                                   position=self._default_positions[name])
 
     def _create_gui_actions(self, gui):
 
@@ -823,11 +824,13 @@ class Session(EventEmitter):
 
         @_add_gui_shortcut
         def reset_gui():
-            # Close all views and restore the default GUI.
-            for view in gui.list_views():
-                view.close()
+            # Add missing views.
+            present = set(gui.view_counts())
+            default = set(self._default_counts)
+            to_add = default - present
+            counts = {name: 1 for name in to_add}
             # Add the default views.
-            self._add_gui_views(gui, self._selected_clusters)
+            self._add_gui_views(gui, self._selected_clusters, counts=counts)
 
         @_add_gui_shortcut
         def save():
