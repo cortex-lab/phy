@@ -25,6 +25,7 @@ from ..utils.array import (PartialArray,
                            _as_array,
                            _unique,
                            )
+from ..utils._misc import _is_integer
 
 
 #------------------------------------------------------------------------------
@@ -229,7 +230,7 @@ def cluster_group_id(name_or_id):
         d = {group.lower(): id for id, group in _DEFAULT_GROUPS}
         return d[name_or_id.lower()]
     else:
-        assert isinstance(name_or_id, six.integer_types)
+        assert _is_integer(name_or_id)
         return name_or_id
 
 
