@@ -120,12 +120,16 @@ class Wizard(object):
         if self._match is not None:
             assert self._match in self._match_list
 
-    def _sort(self, items):
+    def _sort(self, items, mix_good_unsorted=False):
         """Sort clusters according to their groups:
         unsorted, good, and ignored."""
-        return (self._in_groups(items, None) +
-                self._in_groups(items, 'good') +
-                self._in_groups(items, 'ignored'))
+        if mix_good_unsorted:
+            return (self._in_groups(items, (None, 'good')) +
+                    self._in_groups(items, 'ignored'))
+        else:
+            return (self._in_groups(items, None) +
+                    self._in_groups(items, 'good') +
+                    self._in_groups(items, 'ignored'))
 
     # Properties
     #--------------------------------------------------------------------------
@@ -149,6 +153,8 @@ class Wizard(object):
             self.next_best()
         elif cluster == self.match:
             self.next_match()
+        if self.match is not None:
+            self._set_match_list()
 
     def merge(self, old, new, group=None):
         # Add new cluster.
@@ -163,8 +169,10 @@ class Wizard(object):
             if clu in self._match_list:
                 self._match_list.remove(clu)
         # Pin the newly-created cluster.
-        if self.best in old:
+        if self.best in old and self.match is not None and self.match in old:
             self.pin(new)
+        # TODO: the match list is not updated currently; it could be if
+        # necessary.
         self._check()
 
     # Core methods
@@ -190,7 +198,7 @@ class Wizard(object):
                       for other in self.cluster_ids
                       if other != cluster]
         clusters = _argsort(similarity, n_max=n_max)
-        return self._sort(clusters)
+        return self._sort(clusters, mix_good_unsorted=True)
 
     # List methods
     #--------------------------------------------------------------------------

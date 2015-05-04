@@ -173,7 +173,7 @@ def test_wizard_actions():
 
     @wizard.set_quality_function
     def quality(cluster):
-        return cluster / 10.
+        return cluster / 50.
 
     @wizard.set_similarity_function
     def similarity(cluster, other):
@@ -187,3 +187,15 @@ def test_wizard_actions():
     assert wizard.match == 3
 
     wizard.merge([2, 3], 20, None)
+    assert wizard.best_list == [20, 7, 5]
+    assert wizard.best == 20
+    assert wizard.match == 7
+    assert wizard.match_list == [7, 5]
+
+    wizard.next()
+    assert wizard.best == 20
+    assert wizard.match == 5
+
+    wizard.move(20, 'good')
+    assert wizard.best == 7
+    assert wizard.match == 20
