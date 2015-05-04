@@ -8,7 +8,6 @@
 
 import numpy as np
 
-from ...utils.logging import set_level
 from ..traces import TraceView
 from ...utils._color import _random_color
 from ...io.mock.artificial import (artificial_traces,

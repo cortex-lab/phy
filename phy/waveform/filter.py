@@ -6,10 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import numpy as np
 from scipy import signal
 
-from ..ext import six
 from ..utils.array import _as_array
 
 
