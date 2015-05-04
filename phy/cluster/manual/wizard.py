@@ -113,6 +113,13 @@ class Wizard(object):
         if self._match is not None:
             assert self._match in self._match_list
 
+    def _sort(self, items):
+        """Sort clusters according to their groups:
+        unsorted, good, and ignored."""
+        return (self._in_groups(items, None) +
+                self._in_groups(items, 'good') +
+                self._in_groups(items, 'ignored'))
+
     # Properties
     #--------------------------------------------------------------------------
 
@@ -138,9 +145,11 @@ class Wizard(object):
 
     def merge(self, old, new, group):
         b, m = self.best, self.match
+        assert b is not None and m is not None
         # Add new cluster.
         self._groups[new] = group
-        self._best_list.insert(self._best_index, new)
+        index = self._best_list.index(b)
+        self._best_list.insert(index, new)
         # Delete old clusters.
         for clu in old:
             del self._groups[clu]
@@ -150,9 +159,9 @@ class Wizard(object):
                 self._match_list.remove(clu)
         self._check()
         # Update current selection.
-        if sorted(old) == sorted([b, m]):
-            self.best = new
-            self.set_match_list()
+        # if sorted(old) == sorted([b, m]):
+        self.best = new
+        self.set_match_list()
 
     # Core methods
     #--------------------------------------------------------------------------
@@ -164,34 +173,48 @@ class Wizard(object):
 
         """
         best = _best_clusters(self.cluster_ids, self._quality, n_max=n_max)
-        return self._in_groups(best, (None, 'good'))
+        return self._sort(best)
 
-    def best_cluster(self):
-        """Return the best cluster according to the registered cluster
-        quality function."""
-        clusters = self.best_clusters(n_max=1)
-        if clusters:
-            return clusters[0]
+    # def best_cluster(self):
+    #     """Return the best cluster according to the registered cluster
+    #     quality function."""
+    #     clusters = self.best_clusters(n_max=1)
+    #     if clusters:
+    #         return clusters[0]
 
     def most_similar_clusters(self, cluster=None, n_max=None):
         """Return the `n_max` most similar clusters to a given cluster
         (the current best cluster by default)."""
         if cluster is None:
-            cluster = self.best_cluster()
+            cluster = self.best
+            if cluster is None:
+                cluster = self.best_clusters(1)[0]
         similarity = [(other, self._similarity(cluster, other))
                       for other in self.cluster_ids
                       if other != cluster]
         clusters = _argsort(similarity, n_max=n_max)
-        # Filter out ignored clusters.
-        clusters = self._in_groups(clusters, (None, 'good'))
-        # pairs = zip([cluster] * len(clusters), clusters)
-        # Filter out ignored pairs of clusters.
-        # pairs = self._filter(pairs)
-        # return [clu for (_, clu) in pairs]
-        return clusters
+        return self._sort(clusters)
 
     # List methods
     #--------------------------------------------------------------------------
+
+    def _set_best_list(self, cluster=None, clusters=None):
+        if cluster is None:
+            cluster = self.best
+        if clusters is None:
+            clusters = self.best_clusters()
+        self._best_list = clusters
+        if clusters:
+            self.best = clusters[0]
+
+    def _set_match_list(self, cluster=None, clusters=None):
+        if cluster is None:
+            cluster = self.best
+        if clusters is None:
+            clusters = self.most_similar_clusters(cluster)
+        self._match_list = clusters
+        if clusters:
+            self.match = clusters[0]
 
     @property
     def best(self):
@@ -243,11 +266,21 @@ class Wizard(object):
     def last(self):
         self.best = self._best_list[-1]
 
-    def set_best_list(self, clusters=None):
-        if clusters is None:
-            clusters = self.best_clusters()
-        self._best_list = clusters
-        self._best_index = 0
+    # Control
+    #--------------------------------------------------------------------------
+
+    def start(self):
+        self._set_best_list()
+
+    def pin(self, cluster=None):
+        if cluster is None:
+            cluster = self.best
+        self._set_match_list(cluster)
+
+    def unpin(self):
+        if self.match is not None:
+            self.match = None
+            self._match_list = []
 
 
 #------------------------------------------------------------------------------

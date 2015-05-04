@@ -47,7 +47,18 @@ def test_utils():
     assert _next(l, 11, func) == 11
 
 
-def test_core_wizard():
+def test_panel():
+    panel = WizardPanel()
+    assert panel.html
+
+    panel.best = 3
+    assert panel.html
+
+    panel.match = 10
+    assert panel.html
+
+
+def test_wizard_core():
 
     wizard = Wizard([2, 3, 5])
 
@@ -70,7 +81,7 @@ def test_core_wizard():
     assert wizard.best_clusters(n_max=None) == [2, 5, 3]
     assert wizard.best_clusters(n_max=2) == [2, 5]
 
-    assert wizard.best_cluster() == 2
+    assert wizard.best_clusters(n_max=1) == [2]
 
     assert wizard.most_similar_clusters() == [5, 3]
     assert wizard.most_similar_clusters(2) == [5, 3]
@@ -80,12 +91,21 @@ def test_core_wizard():
     assert wizard.most_similar_clusters(n_max=1) == [5]
 
 
-def test_panel():
-    panel = WizardPanel()
-    assert panel.html
+def test_wizard_nav():
 
-    panel.best = 3
-    assert panel.html
+    groups = {2: None, 3: None, 5: 'ignored', 7: 'good'}
+    wizard = Wizard(groups)
 
-    panel.match = 10
-    assert panel.html
+    @wizard.set_quality_function
+    def quality(cluster):
+        return {2: .2,
+                3: .3,
+                5: .5,
+                7: .7,
+                }[cluster]
+
+    @wizard.set_similarity_function
+    def similarity(cluster, other):
+        return 1. + quality(cluster) - quality(other)
+
+    # wizard.set_best_list
