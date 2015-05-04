@@ -140,11 +140,7 @@ def _create_clustering(f, name,
         f.write_attr(kv_path, 'color', randint(2, 10))
 
     # Create cluster group metadata.
-    for group_id, cg_name in [(0, 'Noise'),
-                              (1, 'MUA'),
-                              (2, 'Good'),
-                              (3, 'Unsorted'),
-                              ]:
+    for group_id, cg_name in _DEFAULT_GROUPS:
         _create_cluster_group(f, group_id, cg_name,
                               clustering=name,
                               channel_group=channel_group,
@@ -214,6 +210,19 @@ _COLOR_MAP = np.array([[1., 1., 1.],
 
 
 _KWIK_EXTENSIONS = ('kwik', 'kwx', 'raw.kwd')
+
+
+_DEFAULT_GROUPS = [(0, 'Noise'),
+                   (1, 'MUA'),
+                   (2, 'Good'),
+                   (3, 'Unsorted'),
+                   ]
+
+
+def cluster_group_id(name):
+    """Return the id of a cluster group from its name."""
+    d = {group.lower(): id for id, group in _DEFAULT_GROUPS}
+    return d[name.lower()]
 
 
 def _kwik_filenames(kwik_path):
