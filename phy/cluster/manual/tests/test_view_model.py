@@ -52,7 +52,7 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
     # Merge the clusters and update the view.
     debug("Merging.")
     up = clustering.merge(clusters)
-    vm.on_cluster(up)
+    vm.on_select(up.added)
     show_test_run(vm.view, _N_FRAMES)
 
     # Split some spikes and update the view.
@@ -60,7 +60,7 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
     spikes = spikes[::2]
     up = clustering.assign(spikes, np.random.randint(low=0, high=5,
                                                      size=len(spikes)))
-    vm.on_cluster(up)
+    vm.on_select(up.added)
     show_test_run(vm.view, _N_FRAMES)
 
     if stop:

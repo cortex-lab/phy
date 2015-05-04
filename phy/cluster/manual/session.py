@@ -976,11 +976,11 @@ class Session(EventEmitter):
         gs = self.get_internal_settings('manual_clustering.gui_state')
         # Find the first cluster to select.
         self.wizard.start()
+        # Create the GUI actions.
+        self._create_gui_actions(gui)
         # Recreate the views and restore the state and position of the
         # dock widgets.
         self._restore_gui(gui, gs, cluster_ids=[self.wizard.best])
-        # Create the GUI actions.
-        self._create_gui_actions(gui)
         return gui
 
     def show_gui(self):
@@ -1016,15 +1016,10 @@ class Session(EventEmitter):
             view_model.on_open()
             view.update()
 
-        @self.connect
-        def on_cluster(up=None):
-            view_model.on_cluster(up)
-            view.update()
-
         # Unregister the callbacks when the view is closed.
         @view.connect
         def on_close(e):
-            self.unconnect(on_open, on_cluster)
+            self.unconnect(on_open)
 
             if save_size_pos:
                 # Save the canvas position and size.

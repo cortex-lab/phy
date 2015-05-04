@@ -131,9 +131,6 @@ class BaseViewModel(object):
         """Update the spike clusters and cluster colors."""
         if spikes is None:
             spikes = self.spike_ids
-        #     spike_clusters = self.model.spike_clusters[spikes]
-        #     n_clusters = self.n_clusters
-        # else:
         spike_clusters = self.model.spike_clusters[spikes]
         n_clusters = len(_unique(spike_clusters))
         visual = self._view.visual
@@ -141,18 +138,8 @@ class BaseViewModel(object):
         visual.spike_clusters = spike_clusters
         visual.cluster_colors = _selected_clusters_colors(n_clusters)
 
-    def _update_cluster_order(self, up):
-        """Update cluster order when a clustering action occurs."""
-        self._view.visual.cluster_order = _update_cluster_selection(
-            self._view.visual.cluster_order, up)
-
     def on_open(self):
         """May be overriden."""
-
-    def on_cluster(self, up=None):
-        """May be overriden."""
-        self._update_spike_clusters()
-        self._update_cluster_order(up)
 
     def on_select(self, cluster_ids):
         """Must be overriden."""
@@ -288,22 +275,6 @@ class CorrelogramViewModel(BaseViewModel):
         # Take the cluster order into account.
         self.view.visual.cluster_order = cluster_ids
 
-    def on_cluster(self, up=None):
-        super(CorrelogramViewModel, self).on_cluster(up)
-        if up is None or up.description not in ('merge', 'assign'):
-            return
-
-        # TODO OPTIM: add the CCGs of the merged clusters
-        # if up.description == 'merge':
-        #     self.view.visual.cluster_ids = up.added
-        #     n = len(up.added)
-        #     self.view.visual.cluster_colors = _selected_clusters_colors(n)
-
-        # Recompute the CCGs with the already-selected spikes, and the
-        # newly-created clusters.
-        if self.spike_ids is not None:
-            self.on_select(up.added)
-
 
 class TraceViewModel(BaseViewModel):
     _view_class = TraceView
@@ -433,6 +404,7 @@ class TraceViewModel(BaseViewModel):
         visual = self._view.visual
         visual.spike_clusters = spike_clusters
         visual.cluster_ids = cluster_ids
+        visual.cluster_order = cluster_ids
         visual.cluster_colors = _selected_clusters_colors(n_clusters)
 
         # Select the default interval.
@@ -445,18 +417,3 @@ class TraceViewModel(BaseViewModel):
         # Load traces by setting the interval.
         visual._update_clusters_automatically = False
         self.interval = sample - half_size, sample + half_size
-
-    def on_cluster(self, up=None):
-        """May be overriden."""
-        # Update the list of clusters.
-        clusters = _update_cluster_selection(self.cluster_ids, up)
-        n_clusters = len(clusters)
-        self._view.visual.cluster_ids = clusters
-        # Update the cluster order.
-        self._view.visual.cluster_order = _update_cluster_selection(
-            self._view.visual.cluster_order, up)
-        # Update the spike clusters.
-        self.view.visual.spike_clusters = \
-            self.model.spike_clusters[self.view.visual.spike_ids]
-        # Update the cluster colors.
-        self.view.visual.cluster_colors = _selected_clusters_colors(n_clusters)
