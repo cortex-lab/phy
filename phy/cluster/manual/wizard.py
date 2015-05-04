@@ -158,8 +158,9 @@ class Wizard(object):
     def _add(self, clusters, group):
         for clu in clusters:
             self._cluster_groups[clu] = group
-            index = self._best_list.index(self.best)
-            self._best_list.insert(index, clu)
+            if self.best is not None:
+                index = self._best_list.index(self.best)
+                self._best_list.insert(index, clu)
 
     def move(self, cluster, group):
         self._cluster_groups[cluster] = group
@@ -172,6 +173,9 @@ class Wizard(object):
             self._set_match_list()
 
     def merge(self, old, new, group):
+        if isinstance(new, (tuple, list)):
+            assert len(new) == 1
+            new = new[0]
         # Add new cluster.
         self._add([new], group)
         # Delete old clusters.
@@ -183,9 +187,9 @@ class Wizard(object):
         # necessary.
         self._check()
 
-    def update_clusters(self, deleted, added):
+    def update_clusters(self, deleted, added, group):
         self._delete(deleted)
-        self._add(added)
+        self._add(added, group)
         # Update the best cluster if it was deleted.
         if self.best in deleted and self.match is not None:
             self.pin(added[0])
@@ -428,9 +432,9 @@ def _wizard_panel_html(best=None,
                        match_progress=None,
                        ):
     out = '<style>' + _PANEL_CSS + '</style>\n'
-    out += _PANEL_HTML.format(best=best,
+    out += _PANEL_HTML.format(best=best if best is not None else '',
                               best_progress=best_progress,
-                              match=match,
+                              match=match if match is not None else '',
                               match_progress=match_progress,
                               )
     return out

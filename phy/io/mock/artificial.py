@@ -79,6 +79,11 @@ class MockModel(BaseModel):
         self._cluster_metadata = ClusterMetadata()
 
         @self._cluster_metadata.default
+        def group(cluster):
+            # Default group is unsorted.
+            return 3
+
+        @self._cluster_metadata.default
         def color(cluster):
             return _random_color()
 

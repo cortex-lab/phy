@@ -21,7 +21,8 @@ from ..wizard import (_previous,
 def test_utils():
     l = [2, 3, 5, 7, 11]
 
-    func = lambda x: x in (2, 5)
+    def func(x):
+        return x in (2, 5)
 
     with raises(RuntimeError):
         _previous(l, 1, func)

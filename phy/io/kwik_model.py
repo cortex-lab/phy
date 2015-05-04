@@ -219,10 +219,14 @@ _DEFAULT_GROUPS = [(0, 'Noise'),
                    ]
 
 
-def cluster_group_id(name):
+def cluster_group_id(name_or_id):
     """Return the id of a cluster group from its name."""
-    d = {group.lower(): id for id, group in _DEFAULT_GROUPS}
-    return d[name.lower()]
+    if isinstance(name_or_id, six.string_types):
+        d = {group.lower(): id for id, group in _DEFAULT_GROUPS}
+        return d[name_or_id.lower()]
+    else:
+        assert isinstance(name_or_id, six.integer_types)
+        return name_or_id
 
 
 def _kwik_filenames(kwik_path):

@@ -13,18 +13,18 @@ import shutil
 
 import numpy as np
 
+from ...ext.six import integer_types
 from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of
 from ...utils.dock import DockWindow, qt_app, _create_web_view
 from ...utils.event import EventEmitter, ProgressReporter
 from ...utils.logging import info
 from ...utils.settings import SettingsManager, declare_namespace
-from ...io.kwik_model import KwikModel
+from ...io.kwik_model import KwikModel, cluster_group_id
 from ._history import GlobalHistory
 from .clustering import Clustering
 from ._utils import (_spikes_per_cluster,
                      _concatenate_per_cluster_arrays,
-                     _update_cluster_selection,
                      )
 from .store import ClusterStore, StoreItem
 from .view_model import (WaveformViewModel,
@@ -32,7 +32,7 @@ from .view_model import (WaveformViewModel,
                          CorrelogramViewModel,
                          TraceViewModel,
                          )
-from .wizard import Wizard, WizardPanel, _best_clusters
+from .wizard import Wizard, _best_clusters
 
 
 #------------------------------------------------------------------------------
@@ -532,7 +532,8 @@ class Session(EventEmitter):
         """
         self._check_list_argument(clusters)
         info("Move clusters {0} to {1}.".format(str(clusters), group))
-        up = self.cluster_metadata.set_group(clusters, group)
+        group_id = cluster_group_id(group)
+        up = self.cluster_metadata.set_group(clusters, group_id)
         # Extra UpdateInfo fields.
         up.update(kwargs)
         self.emit('cluster', up=up)
@@ -623,7 +624,21 @@ class Session(EventEmitter):
                     self._global_history.action(self.clustering)
 
     def _create_wizard(self):
-        self.wizard = Wizard(self.clustering.cluster_ids)
+
+        # Initialize the groups for the wizard.
+        def _group(cluster):
+            group_id = self.cluster_metadata.group(cluster)
+            return {
+                0: 'ignored',
+                1: 'ignored',
+                2: 'good',
+                3: None,
+                None: 'ignored',
+            }[group_id]
+
+        groups = {cluster: _group(cluster)
+                  for cluster in self.clustering.cluster_ids}
+        self.wizard = Wizard(groups)
 
         # Set the similarity and quality functions for the wizard.
         @self.wizard.set_similarity_function
@@ -644,37 +659,28 @@ class Session(EventEmitter):
             if up is None:
                 return
             # Update the clusters in the wizard.
-            if up.description in ('merge', 'assign'):
-                self.wizard.cluster_ids = (set(self.wizard._cluster_ids) -
-                                           set(up.deleted)).union(up.added)
+            if up.description == 'merge':
+                group = self.cluster_metadata.group(up.deleted[0])
+                self.wizard.merge(up.deleted, up.added, group)
+            elif up.description == 'assign':
+                group = self.cluster_metadata.group(up.deleted[0])
+                self.wizard.update_clusters(up.deleted, up.added, group)
             elif up.description == 'metadata_group':
-                if up.metadata_value in ('noise', 'mua', 0, 1):
-                    for cluster in up.metadata_changed:
-                        self.wizard.ignore(cluster)
+                assert isinstance(up.metadata_value, integer_types)
+                for cluster in up.metadata_changed:
+                    self.wizard.move(cluster, up.metadata_value)
 
     def _create_wizard_panel(self, cluster_ids=None):
-        panel = WizardPanel()
-        view = _create_web_view(panel.html)
-
-        def _update(cluster_ids):
-            if len(cluster_ids) == 1:
-                panel.best = cluster_ids[0]
-                panel.best_index = self.wizard.index()
-                panel.best_count = self.wizard.count()
-                panel.match = None
-                panel.match_index = 0
-                panel.match_count = 0
-            elif len(cluster_ids) == 2:
-                panel.match = cluster_ids[1]
-                panel.match_index = self.wizard.index()
-                panel.match_count = self.wizard.count()
-            view.setHtml(panel.html)
+        view = _create_web_view(self.wizard._repr_html_())
 
         @self.connect
         def on_select(cluster_ids):
-            _update(cluster_ids)
+            view.setHtml(self.wizard._repr_html_())
 
-        _update(cluster_ids)
+        @self.connect
+        def on_cluster(up):
+            view.setHtml(self.wizard._repr_html_())
+
         return view
 
     def on_open(self):
@@ -728,9 +734,8 @@ class Session(EventEmitter):
 
         """
         if quality is None:
-            return self.wizard.best_clusters(n_max=n_max)
-        else:
-            return _best_clusters(self.cluster_ids, quality, n_max=n_max)
+            quality = self.wizard._quality
+        return _best_clusters(self.cluster_ids, quality, n_max=n_max)
 
     # GUI
     # -------------------------------------------------------------------------
@@ -865,12 +870,16 @@ class Session(EventEmitter):
         # ---------------------------------------------------------------------
 
         def _wizard_select():
-            cluster_ids = self.wizard.current_selection()
+            b, m = self.wizard.best, self.wizard.match
+            if m is None:
+                cluster_ids = [b]
+            else:
+                cluster_ids = [b, m]
             _select(cluster_ids)
 
         @_add_gui_shortcut
         def reset_wizard():
-            self.wizard.restart()
+            self.wizard.start()
             _wizard_select()
 
         @_add_gui_shortcut
@@ -916,73 +925,37 @@ class Session(EventEmitter):
 
         @self.connect
         def on_cluster(up):
-            if up.description == 'merge':
-                old = up.deleted
-                new = up.added[0]
-                self.wizard.pin(new)
-                cluster_ids = _update_cluster_selection(old, up)
-                _select(cluster_ids)
-            elif up.description == 'metadata_group':
-                # This special field is added through self.move(..., **kwargs).
-                if 'wizard' not in up:
-                    return
-                # Now we assume the action was triggered from the wizard.
-                # Move to the next best cluster.
-                if up.wizard in ('best', 'both'):
-                    self.wizard.unpin()
-                    self.wizard.next()
-                    self.wizard.pin()
-                # Or move to the next match.
-                else:
-                    self.wizard.next()
-                _wizard_select()
+            _wizard_select()
 
         # Move best
         # ---------------------------------------------------------------------
 
-        def _move_best(group):
-            best = self.wizard.pinned()
-            if best is not None:
-                clusters = [best]
-            else:
-                clusters = self.wizard.current_selection()
-                assert len(clusters) == 1
-            self.move(clusters, group, wizard='best')
-
         @_add_gui_shortcut
         def move_best_to_noise():
-            _move_best('noise')
+            self.move([self.wizard.best], 'noise')
 
         @_add_gui_shortcut
         def move_best_to_mua():
-            _move_best('mua')
+            self.move([self.wizard.best], 'mua')
 
         @_add_gui_shortcut
         def move_best_to_good():
-            _move_best('good')
+            self.move([self.wizard.best], 'good')
 
         # Move match
         # ---------------------------------------------------------------------
 
-        def _move_match(group):
-            if not self.wizard.pinned():
-                return
-            if len(self.wizard.current_selection()) <= 1:
-                return
-            _, match = self.wizard.current_selection()
-            self.move([match], group, wizard='match')
-
         @_add_gui_shortcut
         def move_match_to_noise():
-            _move_match('noise')
+            self.move([self.wizard.match], 'noise')
 
         @_add_gui_shortcut
         def move_match_to_mua():
-            _move_match('mua')
+            self.move([self.wizard.match], 'mua')
 
         @_add_gui_shortcut
         def move_match_to_good():
-            _move_match('good')
+            self.move([self.wizard.match], 'good')
 
     def _create_gui(self):
         """Create a manual clustering GUI.
@@ -1001,12 +974,10 @@ class Session(EventEmitter):
         # Load geometry state
         gs = self.get_internal_settings('manual_clustering.gui_state')
         # Find the first cluster to select.
-        if not self.wizard.is_running():
-            self.wizard.start()
-            cluster_ids = self.wizard.current_selection()
+        self.wizard.start()
         # Recreate the views and restore the state and position of the
         # dock widgets.
-        self._restore_gui(gui, gs, cluster_ids=cluster_ids)
+        self._restore_gui(gui, gs, cluster_ids=[self.wizard.best])
         # Create the GUI actions.
         self._create_gui_actions(gui)
         return gui
