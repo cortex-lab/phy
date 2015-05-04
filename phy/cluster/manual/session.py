@@ -398,6 +398,8 @@ class Session(EventEmitter):
         self.connect(self.on_cluster)
         self.connect(self.on_close)
 
+        self._create_view_functions()
+
     # Settings
     # -------------------------------------------------------------------------
 
@@ -1185,6 +1187,16 @@ class Session(EventEmitter):
                                        vm.view.channel_scale * vm.scale_factor)
 
         return vm
+
+    def _create_view_functions(self):
+        """Create the show_<name>() public methods."""
+        def _make_func(name):
+            def func(cluster_ids, **kwargs):
+                kwargs['cluster_ids'] = cluster_ids
+                return self.show_view(name, **kwargs)
+            return func
+        for name in sorted(_VIEW_MODELS):
+            setattr(self, 'show_{}'.format(name), _make_func(name))
 
     def create_view(self, name, **kwargs):
         """Create a view without displaying it.
