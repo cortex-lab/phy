@@ -28,6 +28,9 @@ lint:
 test: lint
 	py.test --cov-report term-missing --cov phy --ignore experimental
 
+test-quick: lint
+	py.test phy --ignore experimental --ignore phy/plot -m "not long"
+
 release: clean
 	python setup.py sdist upload
 	python setup.py bdist_wheel upload

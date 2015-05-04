@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from pytest import mark
 
 from ....utils.logging import set_level, debug
 from ....utils.testing import (show_test_start,
@@ -20,6 +21,10 @@ from ..view_model import (WaveformViewModel,
                           CorrelogramViewModel,
                           TraceViewModel,
                           )
+
+
+# Skip these tests in "make test-quick".
+pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------

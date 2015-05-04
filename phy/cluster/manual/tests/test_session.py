@@ -11,7 +11,7 @@ import os.path as op
 import numpy as np
 from numpy.testing import assert_allclose as ac
 from numpy.testing import assert_array_equal as ae
-from pytest import raises
+from pytest import raises, mark
 
 from .._utils import _spikes_in_clusters
 from ..session import Session, FeatureMasks
@@ -21,6 +21,10 @@ from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
 from ....io.mock.artificial import MockModel
 from ....io.mock.kwik import create_mock_kwik
+
+
+# Skip these tests in "make test-quick".
+pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------

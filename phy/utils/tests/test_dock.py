@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from pytest import mark
+
 from vispy import app
 
 from ..dock import (DockWindow,
@@ -14,6 +16,10 @@ from ..dock import (DockWindow,
                     _close_qt_after,
                     )
 from .._color import _random_color
+
+
+# Skip these tests in "make test-quick".
+pytestmark = mark.long
 
 
 #------------------------------------------------------------------------------
