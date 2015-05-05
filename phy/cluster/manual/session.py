@@ -845,6 +845,13 @@ class Session(EventEmitter):
             self.redo()
 
         @_add_gui_shortcut
+        def show_shortcuts():
+            name = 'manual_clustering.keyboard_shortcuts'
+            shortcuts = self.get_user_settings(name)
+            for name in sorted(shortcuts):
+                print("{0:<24}: {1:s}".format(name, str(shortcuts[name])))
+
+        @_add_gui_shortcut
         def exit():
             gui.close()
 

@@ -44,6 +44,7 @@ manual_clustering.keyboard_shortcuts = {
     'undo': 'ctrl+z',
     'redo': ('ctrl+shift+z', 'ctrl+y'),
     'exit': 'ctrl+q',
+    'show_shortcuts': 'h',
     'reset_wizard': 'ctrl+w',
     'next': 'space',
     'previous': 'shift+space',
