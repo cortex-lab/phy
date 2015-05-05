@@ -109,21 +109,20 @@ class CorrelogramView(BaseSpikeCanvas):
     _visual_class = CorrelogramVisual
 
     def __init__(self, **kwargs):
-        super(CorrelogramView, self).__init__(**kwargs)
         self.boxes = BoxVisual()
+        super(CorrelogramView, self).__init__(**kwargs)
 
     def _create_pan_zoom(self):
-        if self.visual.n_clusters:
-            self._pz = PanZoomGrid(n_rows=self.visual.n_clusters)
-            self._pz.add(self.visual.program)
-            self._pz.attach(self)
-            self._pz.aspect = None
-            self._pz.zmin = 1.
-            self._pz.xmin = -1.
-            self._pz.xmax = +1.
-            self._pz.ymin = -1.
-            self._pz.ymax = +1.
-            self._pz.zoom_to_pointer = False
+        self._pz = PanZoomGrid()
+        self._pz.add(self.visual.program)
+        self._pz.attach(self)
+        self._pz.aspect = None
+        self._pz.zmin = 1.
+        self._pz.xmin = -1.
+        self._pz.xmax = +1.
+        self._pz.ymin = -1.
+        self._pz.ymax = +1.
+        self._pz.zoom_to_pointer = False
 
     @property
     def cluster_ids(self):
@@ -133,7 +132,8 @@ class CorrelogramView(BaseSpikeCanvas):
     def cluster_ids(self, value):
         self.visual.cluster_ids = value
         self.boxes.n_rows = self.visual.n_clusters
-        self._create_pan_zoom()
+        if self.visual.n_clusters >= 1:
+            self._pz.n_rows = self.visual.n_clusters
 
     def on_draw(self, event):
         gloo.clear()
