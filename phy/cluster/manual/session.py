@@ -32,7 +32,7 @@ from .view_model import (WaveformViewModel,
                          CorrelogramViewModel,
                          TraceViewModel,
                          )
-from .wizard import Wizard, _best_clusters
+from .wizard import Wizard
 
 
 #------------------------------------------------------------------------------
@@ -722,26 +722,6 @@ class Session(EventEmitter):
         """Change the current clustering."""
         self.model.clustering = clustering
         self.emit('open')
-
-    # Wizard
-    # -------------------------------------------------------------------------
-
-    def best_clusters(self, quality=None, n_max=None):
-        """Return the best clusters by decreasing order of quality.
-
-        Parameters
-        ----------
-
-        quality : function or None
-            A cluster quality function, returning a quality value for any
-            cluster id. By default, the wizard's quality function is used.
-        n_max : integer or None
-            The maximum number of clusters to return.
-
-        """
-        if quality is None:
-            quality = self.wizard._quality
-        return _best_clusters(self.cluster_ids, quality, n_max=n_max)
 
     # GUI
     # -------------------------------------------------------------------------

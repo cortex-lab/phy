@@ -197,11 +197,6 @@ def test_session_clustering():
         _check_arrays(0)
         _check_arrays(2)
 
-        # Test session.best_clusters.
-        quality = session.cluster_store.n_unmasked_channels
-        clusters = session.best_clusters(quality)
-        ac(np.unique(clusters), session.cluster_ids)
-
         # Merge two clusters.
         clusters = [0, 2]
         session.merge(clusters)  # Create cluster 5.
@@ -277,16 +272,16 @@ def test_session_wizard():
                                            tempdir=tempdir)
 
         clusters = np.arange(n_clusters)
-        best_clusters = session.best_clusters()
+        best_clusters = session.wizard.best_clusters()
 
-        assert session.wizard.best_clusters(1)[0] == best_clusters[0]
+        # assert session.wizard.best_clusters(1)[0] == best_clusters[0]
         ae(np.unique(best_clusters), clusters)
         assert len(session.wizard.most_similar_clusters()) == n_clusters - 1
 
         assert len(session.wizard.most_similar_clusters(0, n_max=3)) == 3
 
         session.merge([0, 1, 2])
-        ae(np.unique(session.best_clusters()), np.arange(3, 6))
+        assert np.all(np.in1d(session.wizard.best_clusters(), np.arange(3, 6)))
         assert list(session.wizard.most_similar_clusters(5)) in ([3, 4],
                                                                  [4, 3])
 

@@ -80,7 +80,7 @@ def _is_in_ipython():
 
 
 def _is_interactive():
-    """.Determine if the user requested interactive mode."""
+    """Determine whether the user has requested interactive mode."""
     # The Python interpreter sets sys.flags correctly, so use them!
     if sys.flags.interactive:
         return True
