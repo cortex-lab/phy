@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 """Minimal API documentation generation."""
 
@@ -7,6 +8,7 @@
 #------------------------------------------------------------------------------
 
 import inspect
+import os.path as op
 import re
 import sys
 
@@ -241,11 +243,17 @@ def _generate_paragraphs(package, subpackages):
                 yield _doc_property(klass, prop)
 
 
-def generate_api_doc(package, subpackages):
+def generate_api_doc(package, subpackages, path=None):
+    out = ''
     for paragraph in _generate_paragraphs(package, subpackages):
-        print(paragraph)
+        out += paragraph + '\n'
         if not paragraph.startswith('* '):
-            print()
+            out += '\n'
+    if path is None:
+        return out
+    else:
+        with open(path, 'w') as f:
+            f.write(out)
 
 
 if __name__ == '__main__':
@@ -259,4 +267,6 @@ if __name__ == '__main__':
                    'utils',
                    ]
 
-    generate_api_doc(package, subpackages)
+    curdir = op.dirname(op.realpath(__file__))
+    path = op.join(curdir, '../doc/api.md')
+    generate_api_doc(package, subpackages, path=path)
