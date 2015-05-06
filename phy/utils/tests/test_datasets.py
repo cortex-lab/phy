@@ -13,7 +13,7 @@ from numpy.testing import assert_array_equal as ae
 import responses
 from pytest import raises
 
-from ..datasets import _download, download_file
+from ..datasets import _download, download_file, download_test_data, _BASE_URL
 from ..tempdir import TemporaryDirectory
 
 
@@ -69,7 +69,7 @@ def _test_download_file(checksum=None):
         download_file(_URL, path, checksum=checksum)
         with open(path, 'rb') as f:
             data = f.read()
-    ae(np.fromstring(data, np.float32), _DATA)
+        ae(np.fromstring(data, np.float32), _DATA)
 
 
 @responses.activate
@@ -86,3 +86,18 @@ def test_download_valid_checksum():
 def test_download_invalid_checksum():
     with raises(RuntimeError):
         _test_download_file(checksum=_CHECKSUM[:-1])
+
+
+@responses.activate
+def test_download_test_data():
+    name = 'test'
+    url = _BASE_URL + name
+    _add_mock_response(url, _DATA.tostring())
+    _add_mock_response(url + '.md5', _CHECKSUM)
+
+    with TemporaryDirectory() as tmpdir:
+        output = op.join(tmpdir, name)
+        download_test_data(name, output)
+        with open(output, 'rb') as f:
+            data = f.read()
+        ae(np.fromstring(data, np.float32), _DATA)
