@@ -35,6 +35,37 @@ manual_clustering.features_n_spikes_max = 10000
 
 
 # -----------------------------------------------------------------------------
+# Clustering GUI
+# -----------------------------------------------------------------------------
+
+manual_clustering.keyboard_shortcuts = {
+    'reset_gui': 'alt+r',
+    'save': 'ctrl+s',
+    'undo': 'ctrl+z',
+    'redo': ('ctrl+shift+z', 'ctrl+y'),
+    'exit': 'ctrl+q',
+    'show_shortcuts': 'h',
+    'reset_wizard': 'ctrl+w',
+    'next': 'space',
+    'previous': 'shift+space',
+    'first': 'home',
+    'last': 'end',
+    'pin': 'return',
+    'unpin': 'backspace',
+    'merge': 'g',
+    'move_best_to_noise': 'alt+n',
+    'move_best_to_mua': 'alt+m',
+    'move_best_to_good': 'alt+g',
+    'move_match_to_noise': 'ctrl+n',
+    'move_match_to_mua': 'ctrl+m',
+    'move_match_to_good': 'ctrl+g',
+    'move_both_to_noise': 'ctrl+alt+n',
+    'move_both_to_mua': 'ctrl+alt+m',
+    'move_both_to_good': 'ctrl+alt+g',
+}
+
+
+# -----------------------------------------------------------------------------
 # Internal settings
 # -----------------------------------------------------------------------------
 

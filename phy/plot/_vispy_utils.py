@@ -345,6 +345,7 @@ class AxisVisual(BoxVisual):
 
 class BaseSpikeCanvas(app.Canvas):
     _visual_class = None
+    _pz = None
 
     def __init__(self, **kwargs):
         super(BaseSpikeCanvas, self).__init__(keys='interactive', **kwargs)

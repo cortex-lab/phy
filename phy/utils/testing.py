@@ -78,7 +78,7 @@ def show_colored_canvas(color, n_frames=5):
     c = app.Canvas()
 
     @c.connect
-    def on_paint(e):
+    def on_draw(e):
         gloo.clear(color)
 
     show_test(c, n_frames=n_frames)

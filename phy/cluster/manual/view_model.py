@@ -16,8 +16,6 @@ from ...plot.waveforms import WaveformView
 from ...plot.traces import TraceView
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from .selector import Selector
-from ._utils import (_update_cluster_selection,
-                     )
 
 
 #------------------------------------------------------------------------------
@@ -131,28 +129,15 @@ class BaseViewModel(object):
         """Update the spike clusters and cluster colors."""
         if spikes is None:
             spikes = self.spike_ids
-            spike_clusters = self.model.spike_clusters[spikes]
-            n_clusters = self.n_clusters
-        else:
-            spike_clusters = self.model.spike_clusters[spikes]
-            n_clusters = len(_unique(spike_clusters))
+        spike_clusters = self.model.spike_clusters[spikes]
+        n_clusters = len(_unique(spike_clusters))
         visual = self._view.visual
         # This updates the list of unique clusters in the view.
         visual.spike_clusters = spike_clusters
         visual.cluster_colors = _selected_clusters_colors(n_clusters)
 
-    def _update_cluster_order(self, up):
-        """Update cluster order when a clustering action occurs."""
-        self._view.visual.cluster_order = _update_cluster_selection(
-            self._view.visual.cluster_order, up)
-
     def on_open(self):
         """May be overriden."""
-
-    def on_cluster(self, up=None):
-        """May be overriden."""
-        self._update_spike_clusters()
-        self._update_cluster_order(up)
 
     def on_select(self, cluster_ids):
         """Must be overriden."""
@@ -189,9 +174,6 @@ class WaveformViewModel(BaseViewModel):
         waveforms = self.model.waveforms[spikes]
         debug("Done!")
 
-        # Spikes.
-        self.view.visual.spike_ids = spikes
-
         # Cluster display order.
         self.view.visual.cluster_order = cluster_ids
 
@@ -202,6 +184,9 @@ class WaveformViewModel(BaseViewModel):
         # Masks.
         masks = self._load_from_store_or_model('masks', cluster_ids, spikes)
         self.view.visual.masks = masks
+
+        # Spikes.
+        self.view.visual.spike_ids = spikes
 
     def on_close(self):
         self.view.visual.channel_positions = []
@@ -216,13 +201,6 @@ class FeatureViewModel(BaseViewModel):
     def on_select(self, cluster_ids):
         super(FeatureViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
-
-        # Spikes.
-        self.view.visual.spike_ids = spikes
-        self.view.visual.spike_samples = self.model.spike_samples[spikes]
-
-        # Cluster display order.
-        self.view.visual.cluster_order = cluster_ids
 
         # Load features.
         features = self._load_from_store_or_model('features',
@@ -245,6 +223,13 @@ class FeatureViewModel(BaseViewModel):
 
         self.view.visual.features = features
         self.view.visual.masks = masks
+
+        # Spikes.
+        self.view.visual.spike_ids = spikes
+        self.view.visual.spike_samples = self.model.spike_samples[spikes]
+
+        # Cluster display order.
+        self.view.visual.cluster_order = cluster_ids
 
         # Choose best projection.
         # TODO: refactor this, enable/disable
@@ -287,22 +272,6 @@ class CorrelogramViewModel(BaseViewModel):
 
         # Take the cluster order into account.
         self.view.visual.cluster_order = cluster_ids
-
-    def on_cluster(self, up=None):
-        super(CorrelogramViewModel, self).on_cluster(up)
-        if up is None or up.description not in ('merge', 'assign'):
-            return
-
-        # TODO OPTIM: add the CCGs of the merged clusters
-        # if up.description == 'merge':
-        #     self.view.visual.cluster_ids = up.added
-        #     n = len(up.added)
-        #     self.view.visual.cluster_colors = _selected_clusters_colors(n)
-
-        # Recompute the CCGs with the already-selected spikes, and the
-        # newly-created clusters.
-        if self.spike_ids is not None:
-            self.on_select(up.added)
 
 
 class TraceViewModel(BaseViewModel):
@@ -422,10 +391,20 @@ class TraceViewModel(BaseViewModel):
         self.view.visual.sample_rate = self.model.sample_rate
 
     def on_select(self, cluster_ids):
-        super(TraceViewModel, self).on_select(cluster_ids)
+        # super(TraceViewModel, self).on_select(cluster_ids)
+        self._selector.selected_clusters = cluster_ids
+        # Get the spikes in the selected clusters.
         spikes = self.spike_ids
-        # Update the cluster ids of the trace view.
-        self._view.visual.cluster_ids = cluster_ids
+        n_clusters = len(cluster_ids)
+        spike_clusters = self.model.spike_clusters[spikes]
+
+        # Update the clusters of the trace view.
+        visual = self._view.visual
+        visual.spike_clusters = spike_clusters
+        visual.cluster_ids = cluster_ids
+        visual.cluster_order = cluster_ids
+        visual.cluster_colors = _selected_clusters_colors(n_clusters)
+
         # Select the default interval.
         half_size = int(self.interval_size * self.model.sample_rate / 2.)
         if len(spikes) > 0:
@@ -434,20 +413,5 @@ class TraceViewModel(BaseViewModel):
         else:
             sample = half_size
         # Load traces by setting the interval.
-        self.view.visual._update_clusters_automatically = False
+        visual._update_clusters_automatically = False
         self.interval = sample - half_size, sample + half_size
-
-    def on_cluster(self, up=None):
-        """May be overriden."""
-        # Update the list of clusters.
-        clusters = _update_cluster_selection(self.cluster_ids, up)
-        n_clusters = len(clusters)
-        self._view.visual.cluster_ids = clusters
-        # Update the cluster order.
-        self._view.visual.cluster_order = _update_cluster_selection(
-            self._view.visual.cluster_order, up)
-        # Update the spike clusters.
-        self.view.visual.spike_clusters = \
-            self.model.spike_clusters[self.view.visual.spike_ids]
-        # Update the cluster colors.
-        self.view.visual.cluster_colors = _selected_clusters_colors(n_clusters)

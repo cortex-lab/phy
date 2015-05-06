@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from pytest import mark
 
 from ....utils.logging import set_level, debug
 from ....utils.testing import (show_test_start,
@@ -22,6 +23,10 @@ from ..view_model import (WaveformViewModel,
                           )
 
 
+# Skip these tests in "make test-quick".
+pytestmark = mark.long()
+
+
 #------------------------------------------------------------------------------
 # View model tests
 #------------------------------------------------------------------------------
@@ -30,7 +35,7 @@ _N_FRAMES = 2
 
 
 def setup():
-    set_level('debug')
+    set_level('info')
 
 
 def _test_view_model(view_model_class, stop=True, **kwargs):
@@ -52,7 +57,7 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
     # Merge the clusters and update the view.
     debug("Merging.")
     up = clustering.merge(clusters)
-    vm.on_cluster(up)
+    vm.on_select(up.added)
     show_test_run(vm.view, _N_FRAMES)
 
     # Split some spikes and update the view.
@@ -60,7 +65,7 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
     spikes = spikes[::2]
     up = clustering.assign(spikes, np.random.randint(low=0, high=5,
                                                      size=len(spikes)))
-    vm.on_cluster(up)
+    vm.on_select(up.added)
     show_test_run(vm.view, _N_FRAMES)
 
     if stop:

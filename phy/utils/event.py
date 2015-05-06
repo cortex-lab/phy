@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 """Simple event system."""
 
@@ -78,10 +79,27 @@ class EventEmitter(object):
 
 class ProgressReporter(EventEmitter):
     """A class that reports progress done."""
-    def __init__(self):
+    def __init__(self, progress_message=None, complete_message=None):
         super(ProgressReporter, self).__init__()
         self._value = 0
         self._value_max = 0
+        self._has_completed = False
+
+        if progress_message is not None:
+            @self.connect
+            def on_progress(value, value_max):
+                if value_max == 0:
+                    return
+                if value < value_max:
+                    progress = 100 * value / float(value_max)
+                    print(progress_message.format(progress=progress), end='\r')
+
+        if complete_message is not None:
+            @self.connect
+            def on_complete():
+                # Override the initializing message and clear the terminal
+                # line.
+                print(complete_message + '\033[K', end='\n')
 
     @property
     def value(self):
@@ -89,18 +107,23 @@ class ProgressReporter(EventEmitter):
 
     @value.setter
     def value(self, value):
+        if value < self._value_max:
+            self._has_completed = False
         self._value = value
         self.emit('progress', self._value, self._value_max)
-        if self._value >= self._value_max:
+        if not self._has_completed and self._value >= self._value_max:
             self.emit('complete')
+            self._has_completed = True
 
     @property
     def value_max(self):
         return self._value_max
 
     @value_max.setter
-    def value_max(self, value):
-        self._value_max = value
+    def value_max(self, value_max):
+        if value_max > self._value_max:
+            self._has_completed = False
+        self._value_max = value_max
 
     def is_complete(self):
         return self._value >= self._value_max

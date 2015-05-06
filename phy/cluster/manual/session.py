@@ -10,22 +10,21 @@ from __future__ import print_function
 import os
 import os.path as op
 import shutil
-from functools import partial
 
 import numpy as np
 
-from ...ext.six import string_types
+from ...ext.six import integer_types
 from ...utils._misc import _ensure_path_exists
-from ...utils.array import _index_of, _is_array_like
+from ...utils.array import _index_of
+from ...utils.dock import DockWindow, qt_app, _create_web_view
 from ...utils.event import EventEmitter, ProgressReporter
 from ...utils.logging import info
 from ...utils.settings import SettingsManager, declare_namespace
-from ...io.kwik_model import KwikModel
+from ...io.kwik_model import KwikModel, cluster_group_id
 from ._history import GlobalHistory
 from .clustering import Clustering
 from ._utils import (_spikes_per_cluster,
                      _concatenate_per_cluster_arrays,
-                     _update_cluster_selection,
                      )
 from .store import ClusterStore, StoreItem
 from .view_model import (WaveformViewModel,
@@ -33,49 +32,7 @@ from .view_model import (WaveformViewModel,
                          CorrelogramViewModel,
                          TraceViewModel,
                          )
-from .wizard import Wizard, _best_clusters
-
-
-#------------------------------------------------------------------------------
-# BaseSession class
-#------------------------------------------------------------------------------
-
-class BaseSession(EventEmitter):
-    """Provide actions, views, and an event system for creating an interactive
-    session."""
-    def __init__(self):
-        super(BaseSession, self).__init__()
-        self._actions = []
-
-    def action(self, func=None, title=None):
-        """Decorator for a callback function of an action.
-
-        The 'title' argument is used as a title for the GUI button.
-
-        """
-        if func is None:
-            return partial(self.action, title=title)
-
-        # HACK: handle the case where the first argument is the title.
-        if isinstance(func, string_types):
-            return partial(self.action, title=func)
-
-        # Register the action.
-        self._actions.append({'func': func, 'title': title})
-
-        # Set the action function as a Session method.
-        setattr(self, func.__name__, func)
-
-        return func
-
-    @property
-    def actions(self):
-        """List of registered actions."""
-        return self._actions
-
-    def execute_action(self, action, *args, **kwargs):
-        """Execute an action defined by an item in the 'actions' list."""
-        action['func'](*args, **kwargs)
+from .wizard import Wizard
 
 
 #------------------------------------------------------------------------------
@@ -412,7 +369,7 @@ _VIEW_MODELS = {
 }
 
 
-class Session(BaseSession):
+class Session(EventEmitter):
     """A manual clustering session.
 
     This is the main object used for manual clustering. It implements
@@ -431,26 +388,17 @@ class Session(BaseSession):
         super(Session, self).__init__()
         self.model = None
         self.phy_user_dir = phy_user_dir
-        self._selected_clusters = []
 
         # Instantiate the SettingsManager which manages
         # the settings files.
         self.settings_manager = SettingsManager(phy_user_dir)
         self._load_default_settings()
 
-        # self.action and self.connect are decorators.
-        self.action(self.open, title='Open')
-        self.action(self.close, title='Close')
-        self.action(self.select, title='Select clusters')
-        self.action(self.merge, title='Merge')
-        self.action(self.split, title='Split')
-        self.action(self.move, title='Move clusters to a group')
-        self.action(self.undo, title='Undo')
-        self.action(self.redo, title='Redo')
-
         self.connect(self.on_open)
         self.connect(self.on_cluster)
         self.connect(self.on_close)
+
+        self._create_view_functions()
 
     # Settings
     # -------------------------------------------------------------------------
@@ -470,20 +418,18 @@ class Session(BaseSession):
         return self.settings_manager.set_user_settings(
             key, value, scope='experiment')
 
-    def get_internal_settings(self, key, default=None):
+    def get_internal_settings(self, key, default=None, scope='experiment'):
         """Get an internal settings."""
-        value = self.settings_manager.get_internal_settings(key,
-                                                            scope='experiment',
-                                                            )
+        value = self.settings_manager.get_internal_settings(key, scope=scope)
         if value is None:
             value = default
         return value
 
-    def set_internal_settings(self, key, value):
+    def set_internal_settings(self, key, value, scope='experiment'):
         """Set an internal settings."""
         return self.settings_manager.set_internal_settings(key,
                                                            value,
-                                                           scope='experiment',
+                                                           scope=scope,
                                                            )
 
     def _load_default_settings(self):
@@ -545,24 +491,15 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def _check_list_argument(self, arg, name='clusters'):
-        if not _is_array_like(arg):
+        if not isinstance(arg, (list, tuple, np.ndarray)):
             raise ValueError("The argument should be a list or an array.")
         if len(name) == 0:
             raise ValueError("No {0} were selected.".format(name))
 
-    def _update_selected_clusters(self, up):
-        self._selected_clusters = _update_cluster_selection(
-            self._selected_clusters, up)
-
-    def select(self, clusters):
-        """Select some clusters."""
-        self._selected_clusters = clusters
-        self.emit('select', clusters)
-
-    def merge(self, clusters=None):
+    def merge(self, clusters):
         """Merge some clusters."""
-        if clusters is None:
-            clusters = self._selected_clusters
+        clusters = list(clusters)
+        info("Merge clusters {}.".format(str(clusters)))
         up = self.clustering.merge(clusters)
         self.emit('cluster', up=up)
 
@@ -578,10 +515,11 @@ class Session(BaseSession):
 
         """
         self._check_list_argument(spikes, 'spikes')
+        info("Split {0:d} spikes.".format(len(spikes)))
         up = self.clustering.split(spikes)
         self.emit('cluster', up=up)
 
-    def move(self, clusters=None, group=None):
+    def move(self, clusters, group, **kwargs):
         """Move some clusters to a cluster group.
 
         Here is the list of cluster groups:
@@ -592,21 +530,23 @@ class Session(BaseSession):
         * 3=Unsorted
 
         """
-        if clusters is None:
-            clusters = self._selected_clusters
-        if group is None:
-            raise ValueError("The group must be specified.")
         self._check_list_argument(clusters)
-        up = self.cluster_metadata.set_group(clusters, group)
+        info("Move clusters {0} to {1}.".format(str(clusters), group))
+        group_id = cluster_group_id(group)
+        up = self.cluster_metadata.set_group(clusters, group_id)
+        # Extra UpdateInfo fields.
+        up.update(kwargs)
         self.emit('cluster', up=up)
 
     def undo(self):
         """Undo the last clustering action."""
+        info("Undo.")
         up = self._global_history.undo()
         self.emit('cluster', up=up, add_to_stack=False)
 
     def redo(self):
         """Redo the last undone action."""
+        info("Redo.")
         up = self._global_history.redo()
         self.emit('cluster', up=up, add_to_stack=False)
 
@@ -646,28 +586,18 @@ class Session(BaseSession):
         FeatureMasks.chunk_size = cs
 
         # Initialize the progress reporter.
-        pr_disk = ProgressReporter()
-        pr_memory = ProgressReporter()
+        pr_disk = ProgressReporter(
+            progress_message='Initializing the cluster store: {progress}.',
+            complete_message='Cluster store initialized.')
+
+        pr_memory = ProgressReporter(
+            progress_message='Computing cluster statistics: {progress}.',
+            complete_message='Cluster statistics computed.')
+
         self.cluster_store.register_item(FeatureMasks,
                                          progress_reporter_disk=pr_disk,
                                          progress_reporter_memory=pr_memory,
                                          )
-
-        @pr_disk.connect
-        def on_progress(value, value_max):
-            if value_max == 0:
-                return
-            print("Initializing the cluster store: "
-                  "{0:.2f}%.".format(100 * value / float(value_max)),
-                  end='\r')
-
-        @pr_memory.connect
-        def on_progress(value, value_max):
-            if value_max == 0:
-                return
-            print("Initializing cluster statistics: "
-                  "{0:.2f}%.".format(100 * value / float(value_max)),
-                  end='\r')
 
         # Generate the cluster store if it doesn't exist or is invalid.
         # If the cluster store already exists and is consistent
@@ -693,8 +623,27 @@ class Session(BaseSession):
                 elif up.description in ('merge', 'assign'):
                     self._global_history.action(self.clustering)
 
+    def _to_wizard_group(self, group_id):
+        """Return the group name required by the wizard, as a function
+        of the Kwik cluster group."""
+        return {
+            0: 'ignored',
+            1: 'ignored',
+            2: 'good',
+            3: None,
+            None: 'ignored',
+        }[group_id]
+
     def _create_wizard(self):
-        self.wizard = Wizard(self.clustering.cluster_ids)
+
+        # Initialize the groups for the wizard.
+        def _group(cluster):
+            group_id = self.cluster_metadata.group(cluster)
+            return self._to_wizard_group(group_id)
+
+        groups = {cluster: _group(cluster)
+                  for cluster in self.clustering.cluster_ids}
+        self.wizard = Wizard(groups)
 
         # Set the similarity and quality functions for the wizard.
         @self.wizard.set_similarity_function
@@ -714,13 +663,31 @@ class Session(BaseSession):
         def on_cluster(up=None, add_to_stack=None):
             if up is None:
                 return
-            if up.description in ('merge', 'assign'):
-                self.wizard.cluster_ids = (set(self.wizard._cluster_ids) -
-                                           set(up.deleted)).union(up.added)
+            # Update the clusters in the wizard.
+            if up.description == 'merge':
+                group = self.cluster_metadata.group(up.deleted[0])
+                self.wizard.merge(up.deleted, up.added, group)
+            elif up.description == 'assign':
+                group = self.cluster_metadata.group(up.deleted[0])
+                self.wizard.update_clusters(up.deleted, up.added, group)
             elif up.description == 'metadata_group':
-                if up.metadata_value in (0, 1):
-                    for cluster in up.metadata_changed:
-                        self.wizard.ignore(cluster)
+                assert isinstance(up.metadata_value, integer_types)
+                for cluster in up.metadata_changed:
+                    group = self._to_wizard_group(up.metadata_value)
+                    self.wizard.move(cluster, group)
+
+    def _create_wizard_panel(self, cluster_ids=None):
+        view = _create_web_view(self.wizard._repr_html_())
+
+        @self.connect
+        def on_select(cluster_ids):
+            view.setHtml(self.wizard._repr_html_())
+
+        @self.connect
+        def on_cluster(up):
+            view.setHtml(self.wizard._repr_html_())
+
+        return view
 
     def on_open(self):
         """Update the session after new data has been loaded."""
@@ -735,7 +702,6 @@ class Session(BaseSession):
 
     def on_cluster(self, up=None, add_to_stack=True):
         """Update the history when clustering changes occur."""
-        self._update_selected_clusters(up)
         # Update the global history.
         if add_to_stack and up is not None:
             if up.description.startswith('metadata'):
@@ -749,36 +715,278 @@ class Session(BaseSession):
 
     def change_channel_group(self, channel_group):
         """Change the current channel group."""
-        self.select([])
         self.model.channel_group = channel_group
         self.emit('open')
 
     def change_clustering(self, clustering):
         """Change the current clustering."""
-        self.select([])
         self.model.clustering = clustering
         self.emit('open')
 
-    # Wizard
+    # GUI
     # -------------------------------------------------------------------------
 
-    def best_clusters(self, quality=None, n_max=None):
-        """Return the best clusters by decreasing order of quality.
+    # TODO: put this in default settings
+    _default_counts = {
+        'features': 1,
+        'correlograms': 1,
+        'waveforms': 1,
+        'traces': 1,
+        'wizard': 1,
+    }
 
-        Parameters
-        ----------
+    _default_positions = {
+        'wizard': 'right',
+        'features': 'left',
+        'correlograms': 'left',
+        'waveforms': 'right',
+        'traces': 'right',
+    }
 
-        quality : function or None
-            A cluster quality function, returning a quality value for any
-            cluster id. By default, the wizard's quality function is used.
-        n_max : integer or None
-            The maximum number of clusters to return.
+    def _add_gui_view(self, gui, name, cluster_ids=None, **kwargs):
+
+        if name == 'wizard':
+            # Add the wizard panel widget.
+            panel_view = self._create_wizard_panel(cluster_ids)
+            gui.add_view(panel_view, 'Wizard')
+            return
+
+        # The other views are VisPy canvases.
+        vm = self.create_view(name, save_size_pos=False)
+        dock = gui.add_view(vm.view, name.title(), **kwargs)
+
+        # Make sure the dock widget is closed when the view it contains
+        # is closed with the Escape key.
+        @vm.view.connect
+        def on_close(e):
+            dock.close()
+
+        @vm.view.connect
+        def on_draw(event):
+            if vm.view.visual.empty:
+                vm.on_open()
+                if cluster_ids:
+                    vm.on_select(cluster_ids)
+
+        @self.connect
+        def on_select(cluster_ids):
+            if cluster_ids is not None and len(cluster_ids) > 0:
+                vm.on_select(cluster_ids)
+                vm.view.update()
+
+        return vm
+
+    def _add_gui_views(self, gui, cluster_ids, counts=None):
+        counts = counts if counts is not None else self._default_counts
+        # Create the appropriate number of views.
+        for name, count in counts.items():
+            name = name.lower()
+            # Add <count> views of that type.
+            for i in range(count):
+                self._add_gui_view(gui,
+                                   name,
+                                   cluster_ids=cluster_ids,
+                                   position=self._default_positions[name])
+
+    def _create_gui_actions(self, gui):
+
+        name = 'manual_clustering.keyboard_shortcuts'
+        shortcuts = self.get_user_settings(name)
+
+        def _add_gui_shortcut(func):
+            """Helper function to add a GUI action with a keyboard shortcut."""
+            name = func.__name__
+            shortcut = shortcuts.get(name, None)
+            gui.shortcut(name, shortcut)(func)
+
+        # General actions
+        # ---------------------------------------------------------------------
+
+        @_add_gui_shortcut
+        def reset_gui():
+            # Add missing views.
+            present = set(gui.view_counts())
+            default = set(self._default_counts)
+            to_add = default - present
+            counts = {name: 1 for name in to_add}
+            # Add the default views.
+            self._add_gui_views(gui, self._selected_clusters, counts=counts)
+
+        @_add_gui_shortcut
+        def save():
+            self.save()
+
+        @_add_gui_shortcut
+        def undo():
+            self.undo()
+
+        @_add_gui_shortcut
+        def redo():
+            self.redo()
+
+        @_add_gui_shortcut
+        def show_shortcuts():
+            name = 'manual_clustering.keyboard_shortcuts'
+            shortcuts = self.get_user_settings(name)
+            for name in sorted(shortcuts):
+                print("{0:<24}: {1:s}".format(name, str(shortcuts[name])))
+
+        @_add_gui_shortcut
+        def exit():
+            gui.close()
+
+        # Selection
+        # ---------------------------------------------------------------------
+
+        self._selected_clusters = []
+
+        def _select(cluster_ids):
+            cluster_ids = list(cluster_ids)
+            assert len(cluster_ids) == len(set(cluster_ids))
+            # Do not re-select an already-selected list of clusters.
+            if cluster_ids == self._selected_clusters:
+                return
+            assert set(cluster_ids) <= set(self.clustering.cluster_ids)
+            info("Select clusters {0:s}.".format(str(cluster_ids)))
+            self._selected_clusters = cluster_ids
+            self.emit('select', cluster_ids)
+
+        @_add_gui_shortcut
+        def select(cluster_ids):
+            _select(cluster_ids)
+
+        # Wizard list
+        # ---------------------------------------------------------------------
+
+        def _wizard_select():
+            b, m = self.wizard.best, self.wizard.match
+            if m is None:
+                cluster_ids = [b]
+            else:
+                cluster_ids = [b, m]
+            _select(cluster_ids)
+
+        @_add_gui_shortcut
+        def reset_wizard():
+            self.wizard.start()
+            _wizard_select()
+
+        @_add_gui_shortcut
+        def first():
+            self.wizard.first()
+            _wizard_select()
+
+        @_add_gui_shortcut
+        def last():
+            self.wizard.last()
+            _wizard_select()
+
+        @_add_gui_shortcut
+        def next():
+            self.wizard.next()
+            _wizard_select()
+
+        @_add_gui_shortcut
+        def previous():
+            self.wizard.previous()
+            _wizard_select()
+
+        @_add_gui_shortcut
+        def pin():
+            self.wizard.pin()
+            _wizard_select()
+
+        @_add_gui_shortcut
+        def unpin():
+            self.wizard.unpin()
+            _wizard_select()
+
+        # Cluster actions
+        # ---------------------------------------------------------------------
+
+        @_add_gui_shortcut
+        def merge():
+            if self.wizard.best is None:
+                return
+            if self.wizard.match is None:
+                return
+            cluster_ids = (self.wizard.best, self.wizard.match)
+            self.merge(cluster_ids)
+
+        @self.connect
+        def on_cluster(up):
+            _wizard_select()
+
+        # Move best/match/both to noise/mua/good
+        # ---------------------------------------------------------------------
+
+        def _get_clusters(which):
+            return {
+                'best': [self.wizard.best],
+                'match': [self.wizard.match],
+                'both': [self.wizard.best, self.wizard.match],
+            }[which]
+
+        def _make_func(which, group):
+            """Return a function that moves best/match/both clusters to
+            a group."""
+
+            def func():
+                clusters = _get_clusters(which)
+                if None in clusters:
+                    return
+                self.move(clusters, group)
+
+            func.__name__ = 'move_{}_to_{}'.format(which, group)
+            return func
+
+        for which in ('best', 'match', 'both'):
+            for group in ('noise', 'mua', 'good'):
+                _add_gui_shortcut(_make_func(which, group))
+
+    def _create_gui(self):
+        """Create a manual clustering GUI.
+
+        A Qt application needs to be running.
 
         """
-        if quality is None:
-            return self.wizard.best_clusters(n_max=n_max)
-        else:
-            return _best_clusters(self.cluster_ids, quality, n_max=n_max)
+        gui = DockWindow(title="Manual clustering with phy")
+
+        # Save the geometry state
+        @gui.on_close
+        def on_close():
+            gs = gui.save_geometry_state()
+            self.set_internal_settings('manual_clustering.gui_state',
+                                       gs,
+                                       scope='global',
+                                       )
+
+        # Load geometry state
+        gs = self.get_internal_settings('manual_clustering.gui_state',
+                                        default={},
+                                        scope='global',
+                                        )
+        # Find the first cluster to select.
+        self.wizard.start()
+        # Create the GUI actions.
+        self._create_gui_actions(gui)
+        # Recreate the views and restore the state and position of the
+        # dock widgets.
+        self._selected_clusters = [self.wizard.best]
+        self._add_gui_views(gui, self._selected_clusters,
+                            counts=gs.get('view_counts', None))
+        # Restore the geometry state.
+        if gs:
+            gui.restore_geometry_state(gs)
+        return gui
+
+    def show_gui(self):
+        """Show a new manual clustering GUI."""
+        # Ensure that a Qt application is running.
+        with qt_app():
+            gui = self._create_gui()
+            gui.show()
+            return gui
 
     # Show views
     # -------------------------------------------------------------------------
@@ -794,7 +1002,7 @@ class Session(BaseSession):
         settings_name = self._view_settings_name(view_name, name)
         self.set_internal_settings(settings_name, value)
 
-    def _create_view(self, view_model):
+    def _create_view(self, view_model, cluster_ids=None, save_size_pos=True):
         view = view_model.view
         view_name = view_model.view_name
 
@@ -805,37 +1013,21 @@ class Session(BaseSession):
             view_model.on_open()
             view.update()
 
-        @self.connect
-        def on_cluster(up=None):
-            view_model.on_cluster(up)
-            view.update()
-
-        @self.connect
-        def on_select(cluster_ids):
-            if len(cluster_ids) == 0:
-                # Clear the view.
-                view.visual.empty = True
-                view.update()
-                return
-            if view.visual.empty:
-                on_open()
-            view_model.on_select(cluster_ids)
-            view.update()
-
         # Unregister the callbacks when the view is closed.
         @view.connect
         def on_close(event):
-            self.unconnect(on_open, on_cluster, on_select)
+            self.unconnect(on_open)
 
-            # Save the canvas position and size.
-            self._set_view_settings(view_name,
-                                    'canvas_position',
-                                    view.position,
-                                    )
-            self._set_view_settings(view_name,
-                                    'canvas_size',
-                                    view.size,
-                                    )
+            if save_size_pos:
+                # Save the canvas position and size.
+                self._set_view_settings(view_name,
+                                        'canvas_position',
+                                        view.position,
+                                        )
+                self._set_view_settings(view_name,
+                                        'canvas_size',
+                                        view.size,
+                                        )
 
         # Make sure the view is correctly initialized when it is created
         # *after* that the data has been loaded.
@@ -843,22 +1035,23 @@ class Session(BaseSession):
         def on_draw(event):
             if view.visual.empty:
                 on_open()
-                if (set(self._selected_clusters) <=
-                        set(self.clustering.cluster_ids)):
-                    on_select(self._selected_clusters)
+                if cluster_ids:
+                    view_model.on_select(cluster_ids)
 
         return view
 
     def _create_view_model(self, name, **kwargs):
         vm_class = _VIEW_MODELS[name]
+        save_size_pos = kwargs.pop('save_size_pos', True)
 
         # Load the canvas position and size for that view.
-        position = self._get_view_settings(name, 'canvas_position')
-        size = self._get_view_settings(name, 'canvas_size')
-        if position:
-            kwargs['position'] = position
-        if size:
-            kwargs['size'] = size
+        if save_size_pos:
+            position = self._get_view_settings(name, 'canvas_position')
+            size = self._get_view_settings(name, 'canvas_size')
+            if position:
+                kwargs['position'] = position
+            if size:
+                kwargs['size'] = size
 
         # Load the selector options for that view.
         n_spikes_max = self.get_user_settings('manual_clustering.' +
@@ -874,17 +1067,20 @@ class Session(BaseSession):
                         excerpt_size=excerpt_size,
                         **kwargs)
 
-    def _create_waveforms_view(self):
+    def _create_waveforms_view(self, cluster_ids=None, save_size_pos=True):
         """Create a WaveformView and return a ViewModel instance."""
 
         # Persist scale factor.
         sf_name = 'manual_clustering.waveforms_scale_factor'
         sf = self.get_internal_settings(sf_name, .01)
-
         vm = self._create_view_model('waveforms',
                                      scale_factor=sf,
+                                     save_size_pos=save_size_pos,
                                      )
-        self._create_view(vm)
+        self._create_view(vm,
+                          cluster_ids=cluster_ids,
+                          save_size_pos=save_size_pos,
+                          )
 
         # Load box scale.
         bs_name = 'manual_clustering.waveforms_box_scale'
@@ -909,20 +1105,24 @@ class Session(BaseSession):
 
         return vm
 
-    def _create_features_view(self):
+    def _create_features_view(self, cluster_ids=None, save_size_pos=True):
         """Create a FeatureView and return a ViewModel instance."""
 
         sf_name = 'manual_clustering.features_scale_factor'
         sf = self.get_internal_settings(sf_name, .01)
 
         ms_name = 'manual_clustering.features_marker_size'
-        ms = self.get_internal_settings(ms_name, 2.)
+        ms = self.get_internal_settings(ms_name, 2., scope='global')
 
         vm = self._create_view_model('features',
                                      scale_factor=sf,
+                                     save_size_pos=save_size_pos,
                                      )
 
-        self._create_view(vm)
+        self._create_view(vm,
+                          cluster_ids=cluster_ids,
+                          save_size_pos=save_size_pos,
+                          )
         vm.view.marker_size = ms
 
         @vm.view.connect
@@ -932,29 +1132,40 @@ class Session(BaseSession):
             # Remember the minimum zoom_y for the scale factor.
             zoom = vm.view._pz.zoom_matrix[1:, 1:, 1].min()
             self.set_internal_settings(sf_name, zoom * vm.scale_factor)
-            self.set_internal_settings(ms_name, vm.view.marker_size)
+            self.set_internal_settings(ms_name,
+                                       vm.view.marker_size,
+                                       scope='global')
 
         return vm
 
-    def _create_correlograms_view(self):
+    def _create_correlograms_view(self, cluster_ids=None, save_size_pos=True):
         """Create a CorrelogramView and return a ViewModel instance."""
         args = 'binsize', 'winsize_bins'
         kwargs = {k: self.get_user_settings('manual_clustering.'
                                             'correlograms_' + k)
                   for k in args}
-        vm = self._create_view_model('correlograms', **kwargs)
-        self._create_view(vm)
+        vm = self._create_view_model('correlograms',
+                                     save_size_pos=save_size_pos, **kwargs)
+        self._create_view(vm,
+                          cluster_ids=cluster_ids,
+                          save_size_pos=save_size_pos,
+                          )
         return vm
 
-    def _create_traces_view(self):
+    def _create_traces_view(self, cluster_ids=None, save_size_pos=True):
         """Create a TraceView and return a ViewModel instance."""
 
         sf_name = 'manual_clustering.traces_scale_factor'
         sf = self.get_internal_settings(sf_name, .001)
 
         vm = self._create_view_model('traces',
-                                     scale_factor=sf)
-        self._create_view(vm)
+                                     scale_factor=sf,
+                                     save_size_pos=save_size_pos,
+                                     )
+        self._create_view(vm,
+                          cluster_ids=cluster_ids,
+                          save_size_pos=save_size_pos,
+                          )
 
         @vm.view.connect
         def on_draw(event):
@@ -965,14 +1176,26 @@ class Session(BaseSession):
 
         return vm
 
-    def create_view(self, name):
+    def _create_view_functions(self):
+        """Create the show_<name>() public methods."""
+        def _make_func(name):
+            def func(cluster_ids, **kwargs):
+                kwargs['cluster_ids'] = cluster_ids
+                return self.show_view(name, **kwargs)
+            return func
+        for name in sorted(_VIEW_MODELS):
+            setattr(self, 'show_{}'.format(name), _make_func(name))
+
+    def create_view(self, name, **kwargs):
         """Create a view without displaying it.
 
         Parameters
         ----------
 
         name : str
-            Can be 'waveforms', 'features', or 'correlograms'.
+            Can be 'waveforms', 'features', 'correlograms', or 'traces'.
+        cluster_ids : array-like
+            List of clusters to show.
 
         Returns
         -------
@@ -980,32 +1203,18 @@ class Session(BaseSession):
         view_model : ViewModel instance
 
         """
-        if name == 'waveforms':
-            return self._create_waveforms_view()
-        elif name == 'features':
-            return self._create_features_view()
-        elif name == 'correlograms':
-            return self._create_correlograms_view()
-        elif name == 'traces':
-            return self._create_traces_view()
-        else:
-            raise ValueError("The view '{0}' doesn't exist.".format(name))
+        return getattr(self, '_create_{}_view'.format(name))(**kwargs)
 
-    def show_waveforms(self):
-        """Create and display a new Waveforms view.
+    def show_view(self, name, **kwargs):
+        """Create and display a new view.
 
-        Returns
-        -------
+        Parameters
+        ----------
 
-        view : VisPy canvas instance
-
-        """
-        vm = self.create_view('waveforms')
-        vm.view.show()
-        return vm.view
-
-    def show_features(self):
-        """Create and display a new Features view.
+        name : str
+            Can be 'waveforms', 'features', 'correlograms', or 'traces'.
+        cluster_ids : array-like
+            List of clusters to show.
 
         Returns
         -------
@@ -1013,32 +1222,6 @@ class Session(BaseSession):
         view : VisPy canvas instance
 
         """
-        vm = self.create_view('features')
-        vm.view.show()
-        return vm.view
-
-    def show_correlograms(self):
-        """Create and display a new Correlograms view.
-
-        Returns
-        -------
-
-        view : VisPy canvas instance
-
-        """
-        vm = self.create_view('correlograms')
-        vm.view.show()
-        return vm.view
-
-    def show_traces(self):
-        """Create and display a new Trace view.
-
-        Returns
-        -------
-
-        view : VisPy canvas instance
-
-        """
-        vm = self.create_view('traces')
+        vm = self.create_view(name, **kwargs)
         vm.view.show()
         return vm.view

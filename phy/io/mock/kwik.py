@@ -91,7 +91,8 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
         for clustering, n_clusters_rec in clusterings:
             spike_clusters = artificial_spike_clusters(n_spikes,
                                                        n_clusters_rec)
-            _create_clustering(f, clustering, 1, spike_clusters)
+            groups = {0: 0, 1: 1, 2: 2}
+            _create_clustering(f, clustering, 1, spike_clusters, groups)
 
         # Create recordings.
         f.write_attr('/recordings/0', 'name', 'recording_0')

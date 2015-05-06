@@ -3,12 +3,12 @@
 # -----------------------------------------------------------------------------
 # Imports
 # -----------------------------------------------------------------------------
-import sys
+
 import os
 import logging
 
 from ..logging import (StringLogger, ConsoleLogger, debug, info, warn,
-                       StringStream, FileLogger, register, unregister,
+                       FileLogger, register, unregister,
                        set_level)
 
 

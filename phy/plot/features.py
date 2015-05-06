@@ -214,18 +214,17 @@ class FeatureView(BaseSpikeCanvas):
     _visual_class = FeatureVisual
 
     def __init__(self, **kwargs):
-        super(FeatureView, self).__init__(**kwargs)
         self.boxes = BoxVisual()
         self.axes = AxisVisual()
+        super(FeatureView, self).__init__(**kwargs)
         _enable_depth_mask()
 
     def _create_pan_zoom(self):
-        if self.visual.n_rows:
-            self._pz = PanZoomGrid(n_rows=self.visual.n_rows)
-            self._pz.add(self.visual.program)
-            self._pz.add(self.axes.program)
-            self._pz.aspect = None
-            self._pz.attach(self)
+        self._pz = PanZoomGrid()
+        self._pz.add(self.visual.program)
+        self._pz.add(self.axes.program)
+        self._pz.aspect = None
+        self._pz.attach(self)
 
     def _set_pan_constraints(self):
         n = len(self.visual.dimensions)
@@ -276,8 +275,8 @@ class FeatureView(BaseSpikeCanvas):
         self.visual.dimensions = value
         self.boxes.n_rows = self.visual.n_rows
         self.axes.n_rows = self.visual.n_rows
-        self._create_pan_zoom()
         self.axes.positions = (0, 0)
+        self._pz.n_rows = self.visual.n_rows
         self._set_pan_constraints()
         self.update()
 

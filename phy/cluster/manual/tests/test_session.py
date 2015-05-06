@@ -11,150 +11,29 @@ import os.path as op
 import numpy as np
 from numpy.testing import assert_allclose as ac
 from numpy.testing import assert_array_equal as ae
-from pytest import raises
+from pytest import raises, mark
 
 from .._utils import _spikes_in_clusters
-from ..session import BaseSession, Session, FeatureMasks
+from ..session import Session, FeatureMasks
 from ....utils.testing import show_test
+from ....utils.dock import qt_app, _close_qt_after
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
 from ....io.mock.artificial import MockModel
 from ....io.mock.kwik import create_mock_kwik
 
 
-#------------------------------------------------------------------------------
-# Generic tests
-#------------------------------------------------------------------------------
-
-def setup():
-    set_level('debug')
-
-
-def test_session_connect():
-    """Test @connect decorator and event system."""
-    session = BaseSession()
-
-    # connect names should be on_something().
-    with raises(ValueError):
-        @session.connect
-        def invalid():
-            pass
-
-    _track = []
-
-    @session.connect
-    def on_my_event():
-        _track.append('my event')
-
-    assert _track == []
-
-    session.emit('invalid')
-    assert _track == []
-
-    session.emit('my_event')
-    assert _track == ['my event']
-
-    # Although the callback doesn't accept a 'data' keyword argument, this does
-    # not raise an error because the event system will only pass the argument
-    # if it is part of the callback arg spec.
-    session.emit('my_event', data='hello')
-
-
-def test_session_connect_multiple():
-    """Test @connect decorator and event system."""
-    session = BaseSession()
-
-    _track = []
-
-    @session.connect
-    def on_my_event():
-        _track.append('my event')
-
-    @session.connect
-    def on_my_event():
-        _track.append('my event again')
-
-    session.emit('my_event')
-    assert _track == ['my event', 'my event again']
-
-
-def test_session_unconnect():
-    """Test unconnect."""
-    session = BaseSession()
-
-    _track = []
-
-    @session.connect
-    def on_my_event():
-        _track.append('my event')
-
-    session.emit('my_event')
-    assert _track == ['my event']
-
-    # Unregister and test that the on_my_event() callback is no longer called.
-    session.unconnect(on_my_event)
-    session.emit('my_event')
-    assert _track == ['my event']
-
-
-def test_session_connect_alternative():
-    """Test the alternative @connect() syntax."""
-    session = BaseSession()
-
-    _track = []
-
-    assert _track == []
-
-    @session.connect()
-    def on_my_event():
-        _track.append('my event')
-
-    session.emit('my_event')
-    assert _track == ['my event']
-
-
-def test_action():
-    session = BaseSession()
-    _track = []
-
-    @session.action(title='My action')
-    def my_action():
-        _track.append('action')
-
-    session.my_action()
-    assert _track == ['action']
-
-    assert session.actions == [{'func': my_action, 'title': 'My action'}]
-    session.execute_action(session.actions[0])
-    assert _track == ['action', 'action']
-
-
-def test_action_event():
-    session = BaseSession()
-    _track = []
-
-    @session.connect
-    def on_hello(out, kwarg=''):
-        _track.append(out + kwarg)
-
-    # We forgot the 'title=', but this still works.
-    @session.action('My action')
-    def my_action_hello(data):
-        _track.append(data)
-        session.emit('hello', data + ' world', kwarg='!')
-
-    # Need one argument.
-    with raises(TypeError):
-        session.my_action_hello()
-
-    # This triggers the 'hello' event which adds 'hello world' to _track.
-    session.my_action_hello('hello')
-    assert _track == ['hello', 'hello world!']
+# Skip these tests in "make test-quick".
+pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------
 # Kwik tests
 #------------------------------------------------------------------------------
+
+def setup():
+    set_level('info')
+
 
 def _start_manual_clustering(kwik_path=None, model=None, tempdir=None):
     session = Session(phy_user_dir=tempdir)
@@ -162,8 +41,8 @@ def _start_manual_clustering(kwik_path=None, model=None, tempdir=None):
     return session
 
 
-def _show_view(session, name):
-    vm = session.create_view(name)
+def _show_view(session, name, cluster_ids=None):
+    vm = session.create_view(name, cluster_ids=cluster_ids)
     vm.scale_factor = 1.
     show_test(vm.view)
     return vm.view
@@ -201,19 +80,34 @@ def test_session_mock():
     with TemporaryDirectory() as tempdir:
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
+        _show_view(session, 'waveforms')
+        _show_view(session, 'waveforms', [0])
 
-        view = _show_view(session, 'waveforms')
-        session.select([0])
-        view_bis = _show_view(session, 'waveforms')
 
-        view.close()
-        view_bis.close()
+def test_session_gui():
+    n_clusters = 5
+    n_spikes = 100
+    n_channels = 30
+    n_fets = 3
+    n_samples_traces = 20000
 
-        session = _start_manual_clustering(model=MockModel(), tempdir=tempdir)
-        session.select([1, 2])
-        view = _show_view(session, 'waveforms')
+    with TemporaryDirectory() as tempdir:
 
-        view.close()
+        # Create the test HDF5 file in the temporary directory.
+        kwik_path = create_mock_kwik(tempdir,
+                                     n_clusters=n_clusters,
+                                     n_spikes=n_spikes,
+                                     n_channels=n_channels,
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
+
+        session = _start_manual_clustering(kwik_path=kwik_path,
+                                           tempdir=tempdir)
+
+        with qt_app():
+            gui = session._create_gui()
+            _close_qt_after(gui, 0.2)
+            gui.show()
 
 
 def test_session_kwik():
@@ -239,7 +133,6 @@ def test_session_kwik():
         # Check backup.
         assert op.exists(op.join(tempdir, kwik_path + '.bak'))
 
-        session.select([0])
         cs = session.cluster_store
 
         nc = n_channels - 2
@@ -256,14 +149,9 @@ def test_session_kwik():
             assert cs.mean_probe_position(cluster).shape == (2,)
             assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
 
-        view_0 = _show_view(session, 'waveforms')
-        view_1 = _show_view(session, 'features')
+        _show_view(session, 'waveforms', [0])
+        _show_view(session, 'features', [0])
 
-        # This won't work but shouldn't raise an error.
-        session.select([1000])
-
-        view_0.close()
-        view_1.close()
         session.close()
 
 
@@ -308,11 +196,6 @@ def test_session_clustering():
 
         _check_arrays(0)
         _check_arrays(2)
-
-        # Test session.best_clusters.
-        quality = session.cluster_store.n_unmasked_channels
-        clusters = session.best_clusters(quality)
-        ac(np.unique(clusters), session.cluster_ids)
 
         # Merge two clusters.
         clusters = [0, 2]
@@ -389,28 +272,26 @@ def test_session_wizard():
                                            tempdir=tempdir)
 
         clusters = np.arange(n_clusters)
-        best_clusters = session.best_clusters()
+        best_clusters = session.wizard.best_clusters()
 
-        assert session.wizard.best_cluster() == best_clusters[0]
+        # assert session.wizard.best_clusters(1)[0] == best_clusters[0]
         ae(np.unique(best_clusters), clusters)
         assert len(session.wizard.most_similar_clusters()) == n_clusters - 1
 
         assert len(session.wizard.most_similar_clusters(0, n_max=3)) == 3
 
         session.merge([0, 1, 2])
-        ae(np.unique(session.best_clusters()), np.arange(3, 6))
+        assert np.all(np.in1d(session.wizard.best_clusters(), np.arange(3, 6)))
         assert list(session.wizard.most_similar_clusters(5)) in ([3, 4],
                                                                  [4, 3])
 
         # Move a cluster to noise.
         session.move([5], 0)
-        ae(np.unique(session.best_clusters()), np.arange(3, 5))
-        best = session.wizard.best_cluster()
+        best = session.wizard.best_clusters(1)[0]
         if best is not None:
             assert best in (3, 4)
             # The most similar cluster is 3 if best=4 and conversely.
-            assert list(session.wizard.most_similar_clusters(best)) == [7 -
-                                                                        best]
+            assert session.wizard.most_similar_clusters(best)[0] == 7 - best
 
 
 def test_session_multiple_clusterings():
@@ -438,9 +319,7 @@ def test_session_multiple_clusterings():
         assert session.model.n_clusters == n_clusters
         assert len(session.model.cluster_ids) == n_clusters
         assert session.clustering.n_clusters == n_clusters
-        assert session.cluster_metadata.group(1) == 3
-
-        session.select([0, 1])
+        assert session.cluster_metadata.group(1) == 1
 
         # Change clustering.
         with raises(ValueError):
@@ -451,10 +330,7 @@ def test_session_multiple_clusterings():
         assert session.model.n_clusters == n_clusters * 2
         assert len(session.model.cluster_ids) == n_clusters * 2
         assert session.clustering.n_clusters == n_clusters * 2
-        assert session.cluster_metadata.group(2) == 3
-
-        # The current selection is cleared when changing clustering.
-        ae(session._selected_clusters, [])
+        assert session.cluster_metadata.group(2) == 2
 
         # Merge the clusters and save, for the current clustering.
         session.clustering.merge(session.clustering.cluster_ids)

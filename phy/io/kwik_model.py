@@ -25,6 +25,7 @@ from ..utils.array import (PartialArray,
                            _as_array,
                            _unique,
                            )
+from ..utils._misc import _is_integer
 
 
 #------------------------------------------------------------------------------
@@ -118,7 +119,10 @@ def _create_cluster_group(f, group_id, name,
 def _create_clustering(f, name,
                        channel_group=None,
                        spike_clusters=None,
+                       cluster_groups=None,
                        ):
+    if cluster_groups is None:
+        cluster_groups = {}
     assert isinstance(f, File)
     path = '/channel_groups/{0:d}/spikes/clusters/{1:s}'.format(channel_group,
                                                                 name)
@@ -136,15 +140,12 @@ def _create_clustering(f, name,
         kv_path = cluster_path + '/application_data/klustaviewa'
 
         # Default group: unsorted.
-        f.write_attr(cluster_path, 'cluster_group', 3)
+        cluster_group = cluster_groups.get(cluster, 3)
+        f.write_attr(cluster_path, 'cluster_group', cluster_group)
         f.write_attr(kv_path, 'color', randint(2, 10))
 
     # Create cluster group metadata.
-    for group_id, cg_name in [(0, 'Noise'),
-                              (1, 'MUA'),
-                              (2, 'Good'),
-                              (3, 'Unsorted'),
-                              ]:
+    for group_id, cg_name in _DEFAULT_GROUPS:
         _create_cluster_group(f, group_id, cg_name,
                               clustering=name,
                               channel_group=channel_group,
@@ -214,6 +215,23 @@ _COLOR_MAP = np.array([[1., 1., 1.],
 
 
 _KWIK_EXTENSIONS = ('kwik', 'kwx', 'raw.kwd')
+
+
+_DEFAULT_GROUPS = [(0, 'Noise'),
+                   (1, 'MUA'),
+                   (2, 'Good'),
+                   (3, 'Unsorted'),
+                   ]
+
+
+def cluster_group_id(name_or_id):
+    """Return the id of a cluster group from its name."""
+    if isinstance(name_or_id, six.string_types):
+        d = {group.lower(): id for id, group in _DEFAULT_GROUPS}
+        return d[name_or_id.lower()]
+    else:
+        assert _is_integer(name_or_id)
+        return name_or_id
 
 
 def _kwik_filenames(kwik_path):

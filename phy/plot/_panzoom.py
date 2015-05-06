@@ -349,7 +349,7 @@ class PanZoom(object):
 
         self._width = float(event.size[0])
         self._height = float(event.size[1])
-        aspect = self._width / self._height
+        aspect = max(1., self._width / max(self._height, 1.))
         if aspect > 1.0:
             self._canvas_aspect = np.array([1.0 / aspect, 1.0])
         else:
@@ -429,7 +429,7 @@ class PanZoom(object):
     # -------------------------------------------------------------------------
 
     def add(self, programs):
-        """ Attach programs to this tranform """
+        """Attach programs to this tranform."""
 
         if not isinstance(programs, (list, tuple)):
             programs = [programs]
@@ -440,8 +440,7 @@ class PanZoom(object):
         self._apply_pan_zoom()
 
     def attach(self, canvas):
-        """ Attach this tranform to a canvas """
-
+        """Attach this tranform to a canvas."""
         self._canvas = canvas
         self._width = float(canvas.size[0])
         self._height = float(canvas.size[1])
@@ -494,10 +493,11 @@ class PanZoomGrid(PanZoom):
     """
 
     def __init__(self, *args, **kwargs):
-        n_rows = kwargs.pop('n_rows')
-        self._n_rows = n_rows
         self._index = (0, 0)  # current index of the box being pan/zoom-ed
         self._global_pan_zoom_axis = None
+        self._n_rows = 1
+        self._create_pan_and_zoom(pan=(0., 0.), zoom=(1., 1.))
+        self._set_pan_zoom_coeffs()
         super(PanZoomGrid, self).__init__(*args, **kwargs)
 
     # Grid properties
@@ -518,7 +518,7 @@ class PanZoomGrid(PanZoom):
                                "uniform array size used by panzoom. "
                                "But you can try to increase the number 256 in "
                                "'plot/glsl/grid.glsl'.")
-        self._create_pan_and_zoom(pan=(0., 0.), zoom=(1., 1.))
+        self._set_pan_zoom_coeffs()
 
     # Pan and zoom
     # -------------------------------------------------------------------------
@@ -526,12 +526,14 @@ class PanZoomGrid(PanZoom):
     def _create_pan_and_zoom(self, pan, zoom):
         pan = _as_array(pan)
         zoom = _as_array(zoom)
-        self._pan_matrix = np.empty((self._n_rows, self._n_rows, 2))
+        n = 16  # maximum number of rows
+        self._pan_matrix = np.empty((n, n, 2))
         self._pan_matrix[...] = pan[None, None, :]
 
-        self._zoom_matrix = np.empty((self._n_rows, self._n_rows, 2))
+        self._zoom_matrix = np.empty((n, n, 2))
         self._zoom_matrix[...] = zoom[None, None, :]
 
+    def _set_pan_zoom_coeffs(self):
         # The zoom coefficient for mouse zoom should be proportional
         # to the subplot size.
         c = 3. / np.sqrt(self._n_rows)

@@ -7,9 +7,7 @@
 #------------------------------------------------------------------------------
 
 from random import uniform
-from colorsys import rgb_to_hsv, hsv_to_rgb
-
-import numpy as np
+from colorsys import hsv_to_rgb
 
 
 #------------------------------------------------------------------------------

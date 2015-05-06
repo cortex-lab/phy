@@ -67,6 +67,7 @@ def test_progress_reporter():
     pr.value = 10
     assert pr.is_complete()
     assert pr.progress == 1.
+    assert _completed == [True]
 
     pr.value_max = 11
     assert not pr.is_complete()
@@ -77,3 +78,9 @@ def test_progress_reporter():
 
     assert _reported == [(0, 10), (5, 10), (10, 10), (11, 11)]
     assert _completed == [True, True]
+
+    pr.value = 10
+    # Only trigger a complete event once.
+    pr.value = pr.value_max
+    pr.value = pr.value_max
+    assert _completed == [True, True, True]
