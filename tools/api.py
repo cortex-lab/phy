@@ -40,20 +40,14 @@ _docstring_header_pattern = re.compile(r'^([^\n]+)\n[\-\=]{3,}$',
 _docstring_parameters_pattern = re.compile(r'^([^ \n]+) \: ([^\n]+)$',
                                            flags=re.MULTILINE,
                                            )
-# _docstring_parameters_pattern_bis = re.compile(r'([ ]{8,}\n)',
-#                                                # flags=re.MULTILINE,
-#                                                )
 
 
 def _replace_docstring_header(paragraph):
     """Process NumPy-like function docstrings."""
 
-    # # Process list of parameters.
-    # if (re.search(_docstring_header_pattern, paragraph)):
-
     # Replace Markdown headers in docstrings with light headers in bold.
     paragraph = re.sub(_docstring_header_pattern,
-                       r'**\1**',
+                       r'*\1*',
                        paragraph,
                        )
 
@@ -61,19 +55,6 @@ def _replace_docstring_header(paragraph):
                        r'\n* `\1` (\2)\n',
                        paragraph,
                        )
-
-    # paragraph = re.sub(_docstring_parameters_pattern_bis,
-    #                    r'\n\1',
-    #                    paragraph,
-    #                    )
-
-    # else:
-
-    #     # Replace Markdown headers in docstrings with light headers in bold.
-    #     paragraph = re.sub(_docstring_header_pattern,
-    #                        r'\n**\1**\n',
-    #                        paragraph,
-    #                        )
 
     return paragraph
 
@@ -228,7 +209,11 @@ def _doc_method(klass, func):
 
 def _doc_property(klass, prop):
     """Generate the docstring of a property."""
-    return _doc_method(klass, prop)
+    header = "`{klass}.{name}`".format(klass=klass.__name__,
+                                       name=_name(prop),
+                                       )
+    docstring = _doc(prop)
+    return _concat(header, docstring)
 
 
 def _generate_paragraphs(package, subpackages):
@@ -261,7 +246,7 @@ def _generate_paragraphs(package, subpackages):
 
         # List of top-level functions in the subpackage.
         for func in _iter_functions(subpackage):
-            yield '### ' + _doc_function(func)
+            yield '##### ' + _doc_function(func)
 
         # All public classes.
         for klass in _iter_classes(subpackage):
