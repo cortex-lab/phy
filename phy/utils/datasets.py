@@ -6,6 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+import hashlib
+
 import requests
 
 
@@ -13,7 +16,7 @@ import requests
 # Utility functions
 #------------------------------------------------------------------------------
 
-def download_file(url, output=None):
+def download_file(url, output=None, checksum=None):
     """Download a binary file from an URL."""
     if output is None:
         output = url.split('/')[-1]
@@ -23,3 +26,19 @@ def download_file(url, output=None):
             if chunk:
                 f.write(chunk)
                 f.flush()
+    if checksum is not None:
+        if md5(output) != checksum:
+            raise RuntimeError("The checksum of the downloaded file doesn't "
+                               "match the provided checksum.")
+
+
+def md5(path, blocksize=2 ** 20):
+    """Compute the checksum of a file."""
+    m = hashlib.md5()
+    with open(path, 'rb') as f:
+        while True:
+            buf = f.read(blocksize)
+            if not buf:
+                break
+            m.update(buf)
+    return m.hexdigest()
