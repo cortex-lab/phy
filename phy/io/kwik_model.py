@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""The KwikModel class manages in-memory structures and KWIK file open/save."""
+"""The KwikModel class manages in-memory structures and Kwik file open/save."""
 
 #------------------------------------------------------------------------------
 # Imports
