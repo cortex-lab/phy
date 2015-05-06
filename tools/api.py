@@ -6,9 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import inspect
 import re
 import sys
-import inspect
 
 
 #------------------------------------------------------------------------------
@@ -32,8 +32,22 @@ def _anchor(name):
     return anchor
 
 
+_docstring_header_pattern = re.compile(r'\n([^\n]+)\n[\-\=]{3,}\n')
+
+
+def _replace_docstring_header(paragraph):
+    """Replace Markdown headers in docstrings with light headers in bold."""
+    pattern = _docstring_header_pattern
+    repl = r'\n**\1**\n'
+    return re.sub(pattern, repl, paragraph)
+
+
 def _doc(obj):
-    return inspect.getdoc(obj) or ''
+    doc = inspect.getdoc(obj) or ''
+    if doc and '---' in doc:
+        return _replace_docstring_header(doc)
+    else:
+        return doc
 
 
 def _import_module(module_name):
@@ -73,6 +87,10 @@ def _import_module(module_name):
         return sys.modules[module_name]
 
 
+#------------------------------------------------------------------------------
+# Introspection methods
+#------------------------------------------------------------------------------
+
 def _is_public(obj):
     name = _name(obj)
     if name:
@@ -97,10 +115,6 @@ def _iter_doc_members(obj, package=None):
             if package is None or _is_defined_in_package(member, package):
                 yield member
 
-
-#------------------------------------------------------------------------------
-# Iteration functions
-#------------------------------------------------------------------------------
 
 def _iter_subpackages(package, subpackages):
     """Iterate through a list of subpackages."""
@@ -137,6 +151,10 @@ def _iter_properties(klass, package=None):
         if isinstance(member, property):
             yield member.fget
 
+
+#------------------------------------------------------------------------------
+# API doc generation
+#------------------------------------------------------------------------------
 
 def _generate_paragraphs(package, subpackages):
     yield "# API documentation of {}".format(package)
@@ -191,6 +209,7 @@ def _generate_paragraphs(package, subpackages):
 
                 # Property documentation.
                 yield _doc(method)
+
 
 
 def generate_api_doc(package, subpackages):
