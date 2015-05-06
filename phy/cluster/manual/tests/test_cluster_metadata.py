@@ -13,42 +13,6 @@ from ..cluster_metadata import ClusterMetadata
 # Tests
 #------------------------------------------------------------------------------
 
-def test_cluster_metadata():
-    meta = ClusterMetadata()
-
-    @meta.default
-    def group(cluster):
-        return 3
-
-    @meta.default
-    def color(cluster):
-        return 0
-
-    assert meta.group(0) is not None
-    assert meta.group(2) == 3
-    assert meta.group(10) == 3
-
-    meta.set_color(10, 5)
-    assert meta.color(10) == 5
-
-    # Alternative __setitem__ syntax.
-    info = meta.set_color([10, 11], 5)
-    assert meta.color(10) == 5
-    assert meta.color(11) == 5
-    assert info.description == 'metadata_color'
-    assert info.metadata_changed == [10, 11]
-
-    info = meta.set_color([10, 11], 6)
-    assert meta.color(10) == 6
-    assert meta.color(11) == 6
-    assert meta.color([10, 11]) == [6, 6]
-    assert info.description == 'metadata_color'
-    assert info.metadata_changed == [10, 11]
-
-    meta.set_color(10, 20)
-    assert meta.color(10) == 20
-
-
 def test_metadata_history():
     """Test ClusterMetadata history."""
 
