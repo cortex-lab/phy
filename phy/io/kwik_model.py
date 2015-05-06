@@ -260,10 +260,10 @@ class SpikeLoader(object):
 
 
 #------------------------------------------------------------------------------
-# BaseClusterMetadata class
+# ClusterMetadata class
 #------------------------------------------------------------------------------
 
-class BaseClusterMetadata(object):
+class ClusterMetadata(object):
     """Hold cluster metadata.
 
     Features
@@ -461,7 +461,7 @@ class KwikModel(BaseModel):
         self._waveform_loader.channels = self._channel_order
 
     def _create_cluster_metadata(self):
-        self._cluster_metadata = BaseClusterMetadata()
+        self._cluster_metadata = ClusterMetadata()
 
         @self._cluster_metadata.default
         def group(cluster):

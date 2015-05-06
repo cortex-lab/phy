@@ -11,7 +11,7 @@ import numpy.random as nr
 
 from ...utils._color import _random_color
 from ..base_model import BaseModel
-from ...io.kwik_model import BaseClusterMetadata
+from ...io.kwik_model import ClusterMetadata
 from ...electrode.mea import MEA, staggered_positions
 
 
@@ -76,7 +76,7 @@ class MockModel(BaseModel):
         nfpc = self.n_features_per_channel
         self._metadata = {'description': 'A mock model.',
                           'nfeatures_per_channel': nfpc}
-        self._cluster_metadata = BaseClusterMetadata()
+        self._cluster_metadata = ClusterMetadata()
 
         @self._cluster_metadata.default
         def group(cluster):

@@ -126,7 +126,7 @@ class BaseModel(object):
 
     @property
     def cluster_metadata(self):
-        """BaseClusterMetadata instance holding information about the clusters.
+        """ClusterMetadata instance holding information about the clusters.
 
         Must be implemented by child classes.
 

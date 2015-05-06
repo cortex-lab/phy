@@ -23,7 +23,7 @@ from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel, cluster_group_id
 from ._history import GlobalHistory
 from .clustering import Clustering
-from ._utils import (ClusterMetadata,
+from ._utils import (ClusterMetadataUpdater,
                      _spikes_per_cluster,
                      _concatenate_per_cluster_arrays,
                      )
@@ -475,7 +475,7 @@ class Session(EventEmitter):
 
     def save(self):
         """Save the spike clusters and cluster groups to the Kwik file."""
-        groups = {cluster: self.cluster_metadata.group(cluster)
+        groups = {cluster: self._cluster_metadata_updater.group(cluster)
                   for cluster in self.clustering.cluster_ids}
         self.model.save(self.clustering.spike_clusters,
                         groups)
@@ -534,7 +534,7 @@ class Session(EventEmitter):
         self._check_list_argument(clusters)
         info("Move clusters {0} to {1}.".format(str(clusters), group))
         group_id = cluster_group_id(group)
-        up = self.cluster_metadata.set_group(clusters, group_id)
+        up = self._cluster_metadata_updater.set_group(clusters, group_id)
         # Extra UpdateInfo fields.
         up.update(kwargs)
         self.emit('cluster', up=up)
@@ -563,10 +563,8 @@ class Session(EventEmitter):
     # -------------------------------------------------------------------------
 
     def _create_cluster_metadata(self):
-        # We create a ClusterMetadata instance which supports undo/redo.
-        # The two objects, instances of BaseClusterMetadata and
-        # ClusterMetadata, share the same underlying dictionary.
-        self.cluster_metadata = ClusterMetadata(self.model.cluster_metadata)
+        self._cluster_metadata_updater = ClusterMetadataUpdater(
+            self.model.cluster_metadata)
 
     def _create_cluster_store(self):
 
@@ -623,7 +621,7 @@ class Session(EventEmitter):
             # Update the global history.
             if add_to_stack and up is not None:
                 if up.description.startswith('metadata'):
-                    self._global_history.action(self.cluster_metadata)
+                    self._global_history.action(self._cluster_metadata_updater)
                 elif up.description in ('merge', 'assign'):
                     self._global_history.action(self.clustering)
 
@@ -642,7 +640,7 @@ class Session(EventEmitter):
 
         # Initialize the groups for the wizard.
         def _group(cluster):
-            group_id = self.cluster_metadata.group(cluster)
+            group_id = self._cluster_metadata_updater.group(cluster)
             return self._to_wizard_group(group_id)
 
         groups = {cluster: _group(cluster)
@@ -669,10 +667,10 @@ class Session(EventEmitter):
                 return
             # Update the clusters in the wizard.
             if up.description == 'merge':
-                group = self.cluster_metadata.group(up.deleted[0])
+                group = self._cluster_metadata_updater.group(up.deleted[0])
                 self.wizard.merge(up.deleted, up.added, group)
             elif up.description == 'assign':
-                group = self.cluster_metadata.group(up.deleted[0])
+                group = self._cluster_metadata_updater.group(up.deleted[0])
                 self.wizard.update_clusters(up.deleted, up.added, group)
             elif up.description == 'metadata_group':
                 assert isinstance(up.metadata_value, integer_types)
@@ -709,7 +707,7 @@ class Session(EventEmitter):
         # Update the global history.
         if add_to_stack and up is not None:
             if up.description.startswith('metadata'):
-                self._global_history.action(self.cluster_metadata)
+                self._global_history.action(self._cluster_metadata_updater)
             elif up.description in ('merge', 'assign'):
                 self._global_history.action(self.clustering)
 

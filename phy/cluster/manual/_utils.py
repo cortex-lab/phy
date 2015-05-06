@@ -148,10 +148,10 @@ UpdateInfo = update_info
 
 
 #------------------------------------------------------------------------------
-# ClusterMetadata class
+# ClusterMetadataUpdater class
 #------------------------------------------------------------------------------
 
-class ClusterMetadata(object):
+class ClusterMetadataUpdater(object):
     """Handle cluster metadata changes."""
     def __init__(self, cluster_metadata):
         self._cluster_metadata = cluster_metadata

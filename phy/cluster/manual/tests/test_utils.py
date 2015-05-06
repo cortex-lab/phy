@@ -9,7 +9,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
-from .._utils import (ClusterMetadata,
+from .._utils import (ClusterMetadataUpdater,
                       _unique,
                       _spikes_in_clusters,
                       _spikes_per_cluster,
@@ -18,7 +18,7 @@ from .._utils import (ClusterMetadata,
                       _subset_spikes_per_cluster,
                       )
 from ....io.mock.artificial import artificial_spike_clusters
-from ....io.kwik_model import BaseClusterMetadata
+from ....io.kwik_model import ClusterMetadata
 
 
 #------------------------------------------------------------------------------
@@ -122,11 +122,11 @@ def test_subset_spikes_per_cluster():
 
 
 def test_metadata_history():
-    """Test ClusterMetadata history."""
+    """Test ClusterMetadataUpdater history."""
 
     data = {2: {'group': 2, 'color': 7}, 4: {'group': 5}}
 
-    base_meta = BaseClusterMetadata(data=data)
+    base_meta = ClusterMetadata(data=data)
 
     @base_meta.default
     def group(cluster):
@@ -136,7 +136,7 @@ def test_metadata_history():
     def color(cluster):
         return 0
 
-    meta = ClusterMetadata(base_meta)
+    meta = ClusterMetadataUpdater(base_meta)
 
     # Values set in 'data'.
     assert meta.group(2) == 2

@@ -13,7 +13,7 @@ from pytest import raises
 from ...electrode.mea import MEA, staggered_positions
 from ...utils.tempdir import TemporaryDirectory
 from ..kwik_model import (KwikModel,
-                          BaseClusterMetadata,
+                          ClusterMetadata,
                           _list_channel_groups,
                           _list_channels,
                           _list_recordings,
@@ -35,7 +35,7 @@ _N_SAMPLES_TRACES = 10000
 
 
 def test_base_cluster_metadata():
-    meta = BaseClusterMetadata()
+    meta = ClusterMetadata()
 
     @meta.default
     def group(cluster):
