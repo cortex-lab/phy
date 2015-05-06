@@ -34,14 +34,48 @@ def _anchor(name):
     return anchor
 
 
-_docstring_header_pattern = re.compile(r'\n([^\n]+)\n[\-\=]{3,}\n')
+_docstring_header_pattern = re.compile(r'^([^\n]+)\n[\-\=]{3,}$',
+                                       flags=re.MULTILINE,
+                                       )
+_docstring_parameters_pattern = re.compile(r'^([^ \n]+) \: ([^\n]+)$',
+                                           flags=re.MULTILINE,
+                                           )
+# _docstring_parameters_pattern_bis = re.compile(r'([ ]{8,}\n)',
+#                                                # flags=re.MULTILINE,
+#                                                )
 
 
 def _replace_docstring_header(paragraph):
-    """Replace Markdown headers in docstrings with light headers in bold."""
-    pattern = _docstring_header_pattern
-    repl = r'\n**\1**\n'
-    return re.sub(pattern, repl, paragraph)
+    """Process NumPy-like function docstrings."""
+
+    # # Process list of parameters.
+    # if (re.search(_docstring_header_pattern, paragraph)):
+
+    # Replace Markdown headers in docstrings with light headers in bold.
+    paragraph = re.sub(_docstring_header_pattern,
+                       r'**\1**',
+                       paragraph,
+                       )
+
+    paragraph = re.sub(_docstring_parameters_pattern,
+                       r'\n* `\1` (\2)\n',
+                       paragraph,
+                       )
+
+    # paragraph = re.sub(_docstring_parameters_pattern_bis,
+    #                    r'\n\1',
+    #                    paragraph,
+    #                    )
+
+    # else:
+
+    #     # Replace Markdown headers in docstrings with light headers in bold.
+    #     paragraph = re.sub(_docstring_header_pattern,
+    #                        r'\n**\1**\n',
+    #                        paragraph,
+    #                        )
+
+    return paragraph
 
 
 def _doc(obj):
@@ -159,7 +193,6 @@ def _iter_properties(klass, package=None):
 #------------------------------------------------------------------------------
 
 def _concat(header, docstring):
-    # docstring = '\n'.join([('> ' + line) for line in docstring.splitlines()])
     return '{header}\n\n{docstring}'.format(header=header,
                                             docstring=docstring,
                                             )
