@@ -158,8 +158,11 @@ def _iter_properties(klass, package=None):
 # API doc generation
 #------------------------------------------------------------------------------
 
-def _concat(*paragraphs):
-    return '\n\n'.join(paragraphs)
+def _concat(header, docstring):
+    # docstring = '\n'.join([('> ' + line) for line in docstring.splitlines()])
+    return '{header}\n\n{docstring}'.format(header=header,
+                                            docstring=docstring,
+                                            )
 
 
 def _fullname(o):
@@ -225,7 +228,7 @@ def _generate_paragraphs(package, subpackages):
 
         # List of top-level functions in the subpackage.
         for func in _iter_functions(subpackage):
-            yield _doc_function(func)
+            yield '### ' + _doc_function(func)
 
         # All public classes.
         for klass in _iter_classes(subpackage):
@@ -236,11 +239,11 @@ def _generate_paragraphs(package, subpackages):
 
             yield "#### Methods"
             for method in _iter_methods(klass, package):
-                yield _doc_method(klass, method)
+                yield '##### ' + _doc_method(klass, method)
 
             yield "#### Properties"
             for prop in _iter_properties(klass, package):
-                yield _doc_property(klass, prop)
+                yield '##### ' + _doc_property(klass, prop)
 
 
 def generate_api_doc(package, subpackages, path=None):
