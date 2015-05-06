@@ -140,12 +140,14 @@ LOGGERS = {}
 
 
 def register(logger):
+    """Register a logger."""
     name = logger.name
     if name not in LOGGERS:
         LOGGERS[name] = logger
 
 
 def unregister(logger):
+    """Unregister a logger."""
     name = logger.name
     if name in LOGGERS:
         LOGGERS[name].close()
@@ -160,22 +162,35 @@ def _log(level, *msg):
 
 
 def debug(*msg):
+    """Generate a DEBUG message."""
     _log('debug', *msg)
 
 
 def info(*msg):
+    """Generate an INFO message."""
     _log('info', *msg)
 
 
 def warn(*msg):
+    """Generate a WARN message."""
     _log('warn', *msg)
 
 
 def set_level(level):
+    """Set the level of all registered loggers.
+
+    Parameters
+    ----------
+
+    level : str
+        Can be 'warn', 'info', or 'debug'.
+
+    """
     for name, logger in iteritems(LOGGERS):
         logger.set_level(level)
 
 
-def default_logger():
+def _default_logger(level='info'):
+    """Create a default logger in 'info' mode by default."""
     register(ConsoleLogger())
-    set_level('info')
+    set_level(level)

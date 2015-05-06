@@ -9,7 +9,7 @@ containing tens, hundreds, or thousands of channels.
 
 """
 
-from .utils.logging import default_logger, set_level
+from .utils.logging import _default_logger, set_level
 
 __author__ = 'Kwik Team'
 __email__ = 'cyrille.rossant at gmail.com'
@@ -19,7 +19,7 @@ __all__ = ['debug', 'set_level']
 
 
 # Set up the default logger.
-default_logger()
+_default_logger()
 
 
 def debug(enable=True):
