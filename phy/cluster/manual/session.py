@@ -566,8 +566,7 @@ class Session(EventEmitter):
         # We create a ClusterMetadata instance which supports undo/redo.
         # The two objects, instances of BaseClusterMetadata and
         # ClusterMetadata, share the same underlying dictionary.
-        self.cluster_metadata = ClusterMetadata(
-            base=self.model.cluster_metadata)
+        self.cluster_metadata = ClusterMetadata(self.model.cluster_metadata)
 
     def _create_cluster_store(self):
 
