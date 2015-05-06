@@ -23,7 +23,8 @@ from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel, cluster_group_id
 from ._history import GlobalHistory
 from .clustering import Clustering
-from ._utils import (_spikes_per_cluster,
+from ._utils import (ClusterMetadata,
+                     _spikes_per_cluster,
                      _concatenate_per_cluster_arrays,
                      )
 from .store import ClusterStore, StoreItem
@@ -562,7 +563,11 @@ class Session(EventEmitter):
     # -------------------------------------------------------------------------
 
     def _create_cluster_metadata(self):
-        self.cluster_metadata = self.model.cluster_metadata
+        # We create a ClusterMetadata instance which supports undo/redo.
+        # The two objects, instances of BaseClusterMetadata and
+        # ClusterMetadata, share the same underlying dictionary.
+        self.cluster_metadata = ClusterMetadata(
+            base=self.model.cluster_metadata)
 
     def _create_cluster_store(self):
 

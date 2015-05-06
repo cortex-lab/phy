@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Tests of sparse matrix structures."""
+"""Tests of manual clustering utility functions."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -18,6 +18,7 @@ from .._utils import (ClusterMetadata,
                       _subset_spikes_per_cluster,
                       )
 from ....io.mock.artificial import artificial_spike_clusters
+from ....io.kwik_model import BaseClusterMetadata
 
 
 #------------------------------------------------------------------------------
@@ -125,15 +126,17 @@ def test_metadata_history():
 
     data = {2: {'group': 2, 'color': 7}, 4: {'group': 5}}
 
-    meta = ClusterMetadata(data=data)
+    base_meta = BaseClusterMetadata(data=data)
 
-    @meta.default
+    @base_meta.default
     def group(cluster):
         return 3
 
-    @meta.default
+    @base_meta.default
     def color(cluster):
         return 0
+
+    meta = ClusterMetadata(base_meta)
 
     # Values set in 'data'.
     assert meta.group(2) == 2

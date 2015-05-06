@@ -13,7 +13,6 @@ import numpy as np
 from ._history import History
 from ...utils.array import _as_array, _index_of
 from ...utils._misc import Bunch, _as_list
-from ...io.kwik_model import BaseClusterMetadata
 
 
 #------------------------------------------------------------------------------
@@ -152,22 +151,33 @@ UpdateInfo = update_info
 # ClusterMetadata class
 #------------------------------------------------------------------------------
 
-class ClusterMetadata(BaseClusterMetadata):
-    """Handle cluster metadata changes.
-
-    Compared to BaseClusterMetadata, this class brings additional
-    support for an undo stack.
-
-    """
-    def __init__(self, data=None):
-        super(ClusterMetadata, self).__init__(data=data)
+class ClusterMetadata(object):
+    """Handle cluster metadata changes."""
+    def __init__(self, cluster_metadata):
+        self._cluster_metadata = cluster_metadata
         # Keep a deep copy of the original structure for the undo stack.
-        self._data_base = deepcopy(self._data)
+        self._data_base = deepcopy(cluster_metadata.data)
         # The stack contains (clusters, field, value, update_info) tuples.
         self._undo_stack = History((None, None, None, None))
 
+        for field, func in self._cluster_metadata._fields.items():
+
+            # Create self.<field>(clusters).
+            def _make_get(field):
+                def f(clusters):
+                    return self._cluster_metadata._get(clusters, field)
+                return f
+            setattr(self, field, _make_get(field))
+
+            # Create self.set_<field>(clusters, value).
+            def _make_set(field):
+                def f(clusters, value):
+                    return self._set(clusters, field, value)
+                return f
+            setattr(self, 'set_{0:s}'.format(field), _make_set(field))
+
     def _set(self, clusters, field, value, add_to_stack=True):
-        super(ClusterMetadata, self)._set(clusters, field, value)
+        self._cluster_metadata._set(clusters, field, value)
         clusters = _as_list(clusters)
         info = UpdateInfo(description='metadata_' + field,
                           metadata_changed=clusters,
@@ -189,7 +199,7 @@ class ClusterMetadata(BaseClusterMetadata):
         args = self._undo_stack.back()
         if args is None:
             return
-        self._data = deepcopy(self._data_base)
+        self._cluster_metadata._data = deepcopy(self._data_base)
         for clusters, field, value, _ in self._undo_stack:
             if clusters is not None:
                 self._set(clusters, field, value, add_to_stack=False)

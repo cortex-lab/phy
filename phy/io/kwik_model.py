@@ -264,7 +264,7 @@ class SpikeLoader(object):
 #------------------------------------------------------------------------------
 
 class BaseClusterMetadata(object):
-    """Handle cluster metadata changes.
+    """Hold cluster metadata.
 
     Features
     --------
@@ -289,6 +289,10 @@ class BaseClusterMetadata(object):
         # Fill the existing values.
         if data is not None:
             self._data.update(data)
+
+    @property
+    def data(self):
+        return self._data
 
     def _get_one(self, cluster, field):
         """Return the field value for a cluster, or the default value if it
