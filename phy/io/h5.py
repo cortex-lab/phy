@@ -241,7 +241,7 @@ class File(object):
 
 
 def open_h5(filename, mode=None):
-    """Open an HDF5 file."""
+    """Open an HDF5 file and return a File instance."""
     file = File(filename, mode=mode)
     file.open()
     return file
