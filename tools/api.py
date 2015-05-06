@@ -156,7 +156,46 @@ def _iter_properties(klass, package=None):
 # API doc generation
 #------------------------------------------------------------------------------
 
+def _concat(*paragraphs):
+    return '\n\n'.join(paragraphs)
+
+
+def _fullname(o):
+    return o.__module__ + "." + o.__name__
+
+
+def _doc_function(func):
+    """Generate the docstring of a function."""
+    args = inspect.formatargspec(*inspect.getfullargspec(func))
+    header = "`{name}{args}`".format(name=_fullname(func),
+                                     args=args,
+                                     )
+    docstring = _doc(func)
+    return _concat(header, docstring)
+
+
+def _doc_method(klass, func):
+    """Generate the docstring of a method."""
+    argspec = inspect.getfullargspec(func)
+    # Remove first 'self' argument.
+    del argspec.args[0]
+    args = inspect.formatargspec(*argspec)
+    header = "`{klass}.{name}{args}`".format(klass=klass.__name__,
+                                             name=_name(func),
+                                             args=args,
+                                             )
+    docstring = _doc(func)
+    return _concat(header, docstring)
+
+
+def _doc_property(klass, prop):
+    """Generate the docstring of a property."""
+    return _doc_method(klass, prop)
+
+
 def _generate_paragraphs(package, subpackages):
+    """Generate the paragraphs of the API documentation."""
+
     yield "# API documentation of {}".format(package)
 
     yield _doc(_import_module(package))
@@ -184,32 +223,22 @@ def _generate_paragraphs(package, subpackages):
 
         # List of top-level functions in the subpackage.
         for func in _iter_functions(subpackage):
-            yield "`{}`".format(_full_name(subpackage, func))
-            # TODO: func doc
+            yield _doc_function(func)
 
         # All public classes.
         for klass in _iter_classes(subpackage):
-            yield "### {}".format(_full_name(subpackage, klass))
 
             # Class documentation.
+            yield "### {}".format(_full_name(subpackage, klass))
             yield _doc(klass)
 
             yield "#### Methods"
-
             for method in _iter_methods(klass, package):
-                yield "`{}`".format(_full_name(subpackage, method))
-
-                # Method documentation.
-                yield _doc(method)
+                yield _doc_method(klass, method)
 
             yield "#### Properties"
-
-            for property in _iter_properties(klass, package):
-                yield "`{}`".format(_full_name(subpackage, property))
-
-                # Property documentation.
-                yield _doc(method)
-
+            for prop in _iter_properties(klass, package):
+                yield _doc_property(klass, prop)
 
 
 def generate_api_doc(package, subpackages):
