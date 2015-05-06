@@ -6,7 +6,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
 import hashlib
 
 import requests
@@ -15,6 +14,21 @@ import requests
 #------------------------------------------------------------------------------
 # Utility functions
 #------------------------------------------------------------------------------
+
+_BASE_URL = 'http://phy.cortexlab.net/data/'
+
+
+def md5(path, blocksize=2 ** 20):
+    """Compute the checksum of a file."""
+    m = hashlib.md5()
+    with open(path, 'rb') as f:
+        while True:
+            buf = f.read(blocksize)
+            if not buf:
+                break
+            m.update(buf)
+    return m.hexdigest()
+
 
 def download_file(url, output=None, checksum=None):
     """Download a binary file from an URL."""
@@ -32,13 +46,12 @@ def download_file(url, output=None, checksum=None):
                                "match the provided checksum.")
 
 
-def md5(path, blocksize=2 ** 20):
-    """Compute the checksum of a file."""
-    m = hashlib.md5()
-    with open(path, 'rb') as f:
-        while True:
-            buf = f.read(blocksize)
-            if not buf:
-                break
-            m.update(buf)
-    return m.hexdigest()
+def _download(url):
+    return requests.get(url).text
+
+
+def download_test_data(name, output=None):
+    url = _BASE_URL + name
+    url_checksum = _BASE_URL + name + '.md5'
+    checksum = _download(url_checksum)
+    download_file(url, output=output, checksum=checksum)

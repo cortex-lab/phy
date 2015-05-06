@@ -13,7 +13,7 @@ from numpy.testing import assert_array_equal as ae
 import responses
 from pytest import raises
 
-from ..datasets import download_file, md5
+from ..datasets import _download, download_file
 from ..tempdir import TemporaryDirectory
 
 
@@ -27,13 +27,19 @@ _DATA = np.linspace(0., 1., 100000).astype(np.float32)
 _CHECKSUM = '7d257d0ae7e3af8ca3574ccc3a4bf072'
 
 
-def setup():
-    responses.add(responses.GET,
-                  _URL,
-                  body=_DATA.tostring(),
+def _add_mock_response(url, body, file_type='binary'):
+    content_type = ('application/octet-stream'
+                    if file_type == 'binary' else 'text/plain')
+    responses.add(responses.GET, url,
+                  body=body,
                   status=200,
-                  content_type='application/octet-stream',
+                  content_type=content_type,
                   )
+
+
+def setup():
+    _add_mock_response(_URL, _DATA.tostring())
+    _add_mock_response(_URL + '.md5', _CHECKSUM)
 
 
 def teardown():
@@ -43,6 +49,19 @@ def teardown():
 #------------------------------------------------------------------------------
 # Test utility functions
 #------------------------------------------------------------------------------
+
+@responses.activate
+def test_download_error():
+    with TemporaryDirectory() as tmpdir:
+        path = op.join(tmpdir, 'test')
+        with raises(Exception):
+            download_file(_URL + '_notfound', path)
+
+
+@responses.activate
+def test_download_checksum():
+    assert _download(_URL + '.md5') == _CHECKSUM
+
 
 def _test_download_file(checksum=None):
     with TemporaryDirectory() as tmpdir:
