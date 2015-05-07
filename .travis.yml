@@ -28,7 +28,7 @@ install:
   - conda install pip numpy matplotlib scipy h5py pyqt pyzmq ipython
   # Testing dependencies.
   - conda install pytest pip flake8 coverage
-  - pip install coveralls
+  - pip install coveralls responses
   - pip install python-coveralls
   - pip install pytest-cov
   # Install VisPy master.
