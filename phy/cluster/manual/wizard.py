@@ -417,7 +417,12 @@ class Wizard(object):
         Specify the lists of deleted and added clusters.
 
         """
-        self._add(added, group)
+        if pinned is not None:
+            # Pin the cluster at the position of the currently-pinned cluster.
+            position = self._best_list.index(self._best)
+        else:
+            position = None
+        self._add(added, group, position)
         # Update the best cluster if it was deleted.
         self._delete(deleted)
         if pinned is not None:
