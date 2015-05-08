@@ -363,13 +363,24 @@ class Wizard(object):
                 self._best_list.remove(clu)
             if clu in self._match_list:
                 self._match_list.remove(clu)
+            if clu == self._best:
+                self.unpin()
+            if clu == self._match:
+                self._match = None
 
-    def _add(self, clusters, group):
+    def _add(self, clusters, group, position=None):
         for clu in clusters:
+            assert clu not in self._cluster_groups
+            assert clu not in self._best_list
+            assert clu not in self._match_list
             self._cluster_groups[clu] = group
             if self.best is not None:
-                index = self._best_list.index(self.best)
-                self._best_list.insert(index, clu)
+                if position is not None:
+                    self._best_list.insert(position, clu)
+                else:
+                    self._best_list.append(clu)
+            if self.match is not None:
+                self._match_list.append(clu)
 
     def move(self, cluster, group):
         """Move a cluster to a group."""
@@ -380,33 +391,37 @@ class Wizard(object):
             self.next_match()
         self._check()
 
-    def merge(self, old, new, group):
+    def merge(self, old, new, group, pinned=None):
         """Merge a list of clusters to a new cluster."""
         if isinstance(new, (tuple, list)):
             assert len(new) == 1
             new = new[0]
         # Add new cluster.
-        self._add([new], group)
+        if pinned is not None:
+            # Pin the cluster at the position of the currently-pinned cluster.
+            position = self._best_list.index(self._best)
+        else:
+            position = None
+        self._add([new], group, position)
         # Delete old clusters.
         self._delete(old)
         # Pin the newly-created cluster.
-        if self.best in old and self.match is not None and self.match in old:
-            self.pin(new)
-        # TODO: the match list is not updated currently; it could be if
-        # necessary.
+        if pinned is not None:
+            assert pinned in self._best_list
+            self.pin(pinned)
         self._check()
 
-    def update_clusters(self, deleted, added, group):
+    def assign(self, deleted, added, group, pinned=None):
         """Update the list of clusters.
 
         Specify the lists of deleted and added clusters.
 
         """
-        self._delete(deleted)
         self._add(added, group)
         # Update the best cluster if it was deleted.
-        if self.best in deleted and self.match is not None:
-            self.pin(added[0])
+        self._delete(deleted)
+        if pinned is not None:
+            self.pin(pinned)
         self._check()
 
     # Panel

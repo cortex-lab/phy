@@ -182,7 +182,7 @@ def test_wizard_actions():
     wizard.pin()
     _assert_wizard(2, 3)
 
-    wizard.merge([2, 3], 20, None)
+    wizard.merge([2, 3], 20, None, pinned=20)
     assert wizard.best_list == [20, 7, 5]
     _assert_wizard(20, 7)
     assert wizard.match_list == [7, 5]

@@ -674,7 +674,7 @@ class Session(EventEmitter):
                 self.wizard.merge(up.deleted, up.added, group)
             elif up.description == 'assign':
                 group = self._cluster_metadata_updater.group(up.deleted[0])
-                self.wizard.update_clusters(up.deleted, up.added, group)
+                self.wizard.assign(up.deleted, up.added, group)
             elif up.description == 'metadata_group':
                 assert isinstance(up.metadata_value, integer_types)
                 for cluster in up.metadata_changed:
