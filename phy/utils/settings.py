@@ -46,8 +46,8 @@ class BaseSettings(object):
         ----------
         name : str
             The settings name
-        scope : str (default is 'global')
-            The scope for that setting. Can be 'global' or a dataset name.
+        scope : str (default is `global`)
+            The scope for that setting. Can be `global` or a dataset name.
 
         """
         namespace, name = _split_namespace(name, namespace=namespace)
@@ -68,8 +68,8 @@ class BaseSettings(object):
         value : object
         namespace : str
             The namespace if it is not specified in the keys.
-        scope : str (default is 'global')
-            The scope for that setting. Can be 'global' or a dataset name.
+        scope : str (default is `global`)
+            The scope for that setting. Can be `global` or a dataset name.
 
         """
         if scope not in self._store:
@@ -103,8 +103,8 @@ class UserSettings(BaseSettings):
             A path to a Python settings file.
         file_namespace : dict
             A namespace to pass to the Python settings file.
-        scope : str (default is 'global')
-            The scope for that setting. Can be 'global' or a dataset name.
+        scope : str (default is `global`)
+            The scope for that setting. Can be `global` or a dataset name.
 
         """
         path = op.expanduser(path)
@@ -135,8 +135,8 @@ class UserSettings(BaseSettings):
         value : str
         namespace : str
             The namespace if it is not specified in the keys.
-        scope : str (default is 'global')
-            The scope for that setting. Can be 'global' or a dataset name.
+        scope : str (default is `global`)
+            The scope for that setting. Can be `global` or a dataset name.
 
         """
         super(UserSettings, self).set(key, value,
@@ -230,7 +230,7 @@ class SettingsManager(object):
         self.phy_experiment_dir = None
         self.experiment_name = None
 
-        # '.phy/' user directory, ~/.phy by default.
+        # `.phy/` user directory, ~/.phy by default.
         if phy_user_dir is None:
             phy_user_dir = _phy_user_dir()
         self.phy_user_dir = phy_user_dir

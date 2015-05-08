@@ -29,7 +29,7 @@ class EventEmitter(object):
         self._callbacks = defaultdict(list)
 
     def _get_on_name(self, func):
-        """Return 'eventname' when the function name is `on_<eventname>()`."""
+        """Return `eventname` when the function name is `on_<eventname>()`."""
         r = re.match("^on_(.+)$", func.__name__)
         if r:
             event = r.group(1)
@@ -47,8 +47,8 @@ class EventEmitter(object):
     def connect(self, func=None, event=None, set_method=False):
         """Register a callback function to a given event.
 
-        To register a callback function to the 'spam' event, where 'obj' is
-        an instance of a class deriving from 'EventEmitter':
+        To register a callback function to the `spam` event, where `obj` is
+        an instance of a class deriving from `EventEmitter`:
 
         ```python
         @obj.connect
@@ -110,8 +110,8 @@ class ProgressReporter(EventEmitter):
     Emits
     -----
 
-    * 'progress(value, value_max)'
-    * 'complete()'
+    * `progress(value, value_max)`
+    * `complete()`
 
     """
     def __init__(self, progress_message=None, complete_message=None):

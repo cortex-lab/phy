@@ -66,6 +66,7 @@ def _create_web_view(html=None):
 # -----------------------------------------------------------------------------
 
 class DockWindow(QMainWindow):
+    """A Qt main window holding docking Qt or VisPy widgets."""
     def __init__(self,
                  position=None,
                  size=None,
@@ -92,17 +93,21 @@ class DockWindow(QMainWindow):
     # -------------------------------------------------------------------------
 
     def on_close(self, func):
+        """Register a callback function when the window is closed."""
         self._on_close = func
 
     def on_show(self, func):
+        """Register a callback function when the window is shown."""
         self._on_show = func
 
     def closeEvent(self, e):
+        """Qt slot when the window is closed."""
         if self._on_close:
             self._on_close()
         super(DockWindow, self).closeEvent(e)
 
     def show(self):
+        """Show the window."""
         if self._on_show:
             self._on_show()
         super(DockWindow, self).show()
@@ -196,6 +201,7 @@ class DockWindow(QMainWindow):
                 child.height() >= 10]
 
     def view_counts(self):
+        """Return the number of opened views."""
         views = self.list_views()
         counts = defaultdict(lambda: 0)
         for view in views:
@@ -206,9 +212,9 @@ class DockWindow(QMainWindow):
     # -------------------------------------------------------------------------
 
     def save_geometry_state(self):
-        """Save the geometry and state of the main window and the docks.
+        """Return picklable geometry and state of the window and docks.
 
-        This function can be called in on_close().
+        This function can be called in `on_close()`.
 
         """
         return {
@@ -222,7 +228,7 @@ class DockWindow(QMainWindow):
 
         The dock widgets need to be recreated first.
 
-        This function can be called in on_show().
+        This function can be called in `on_show()`.
 
         """
         self.restoreGeometry((gs['geometry']))
@@ -306,6 +312,7 @@ def run_qt_app():
 
 @contextlib.contextmanager
 def qt_app():
+    """Context manager to ensure that a Qt app is running."""
     if not _check_qt():
         return
     start_qt_app()
