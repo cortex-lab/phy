@@ -28,11 +28,11 @@ from ..utils.logging import debug
 #------------------------------------------------------------------------------
 
 class FeatureVisual(BaseSpikeVisual):
+    """Display a grid of multidimensional features."""
 
     _shader_name = 'features'
     _gl_draw_mode = 'points'
 
-    """FeatureVisual visual."""
     def __init__(self, **kwargs):
         super(FeatureVisual, self).__init__(**kwargs)
 
@@ -48,6 +48,7 @@ class FeatureVisual(BaseSpikeVisual):
 
     @property
     def spike_samples(self):
+        """Time samples of the displayed spikes."""
         return self._spike_samples
 
     @spike_samples.setter
@@ -58,7 +59,11 @@ class FeatureVisual(BaseSpikeVisual):
 
     @property
     def features(self):
-        """Displayed features."""
+        """Displayed features.
+
+        This is a `(n_spikes, n_features)` array.
+
+        """
         return self._features
 
     @features.setter
@@ -106,7 +111,14 @@ class FeatureVisual(BaseSpikeVisual):
 
     @property
     def dimensions(self):
-        """Dimensions."""
+        """Displayed dimensions.
+
+        This is a list of items which can be:
+
+        * tuple `(channel_id, feature_idx)`
+        * `'time'`
+
+        """
         return self._dimensions
 
     @dimensions.setter
@@ -119,6 +131,7 @@ class FeatureVisual(BaseSpikeVisual):
 
     @property
     def n_boxes(self):
+        """Number of boxes in the grid."""
         return self.n_rows * self.n_rows
 
     # Data baking
@@ -191,6 +204,7 @@ class FeatureVisual(BaseSpikeVisual):
 
     @property
     def marker_size(self):
+        """Marker size in pixels."""
         return float(self.program['u_size'])
 
     @marker_size.setter
@@ -201,14 +215,12 @@ class FeatureVisual(BaseSpikeVisual):
 
 
 class FeatureView(BaseSpikeCanvas):
-    """Display features.
+    """A VisPy canvas displaying features.
 
     Interactivity
     -------------
 
-    Marker size:
-
-    * Keyboard : Control and `+` or `-`
+    * set marker size: `ctrl++`, `ctrl+-`
 
     """
     _visual_class = FeatureVisual
@@ -291,12 +303,14 @@ class FeatureView(BaseSpikeCanvas):
         self.update()
 
     def on_draw(self, event):
+        """Draw the features in a grid view."""
         gloo.clear(color=True, depth=True)
         self.axes.draw()
         self.visual.draw()
         self.boxes.draw()
 
     def on_key_press(self, event):
+        """Handle key press events."""
         coeff = .25
         if 'Control' in event.modifiers:
             if event.key == '+':
