@@ -760,12 +760,6 @@ class Session(EventEmitter):
         vm = self.create_view(name, save_size_pos=False)
         dock = gui.add_view(vm.view, name.title(), **kwargs)
 
-        # Make sure the dock widget is closed when the view it contains
-        # is closed with the Escape key.
-        @vm.view.connect
-        def on_close(e):
-            dock.close()
-
         @vm.view.connect
         def on_draw(event):
             if vm.view.visual.empty:
@@ -778,6 +772,13 @@ class Session(EventEmitter):
             if cluster_ids is not None and len(cluster_ids) > 0:
                 vm.on_select(cluster_ids)
                 vm.view.update()
+
+        # Make sure the dock widget is closed when the view it contains
+        # is closed with the Escape key.
+        @vm.view.connect
+        def on_close(e):
+            self.unconnect(on_select)
+            dock.close()
 
         return vm
 
