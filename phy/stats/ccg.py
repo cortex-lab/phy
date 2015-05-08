@@ -60,7 +60,7 @@ def correlograms(spike_samples, spike_clusters,
     -------
 
     correlograms : array
-        A (n_clusters, n_clusters, winsize_samples) array with all pairwise
+        A `(n_clusters, n_clusters, winsize_samples)` array with all pairwise
         CCGs.
 
     Notes
