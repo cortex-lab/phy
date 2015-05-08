@@ -602,28 +602,28 @@ class KwikModel(BaseModel):
     def open(self, kwik_path, channel_group=None, clustering=None):
         """Open a Kwik dataset.
 
-        The .kwik, .kwx, and .raw.kwd must be in the same folder with the
+        The `.kwik`, `.kwx`, and `.raw.kwd` must be in the same folder with the
         same basename.
 
         Notes
         -----
 
-        The .kwik file is opened in read-only mode, and is automatically
+        The `.kwik` file is opened in read-only mode, and is automatically
         closed when this function returns. It is temporarily reopened when
         the channel group or clustering changes.
 
-        The .kwik file is temporarily opened in append mode when saving.
+        The `.kwik` file is temporarily opened in append mode when saving.
 
-        The .kwx and .raw.kwd files stay open in read-only mode as long
+        The `.kwx` and `.raw.kwd` files stay open in read-only mode as long
         as `model.close()` is not called. This is because there might be
-        read accesses to features_masks (.kwx) and waveforms (.raw.kwd)
+        read accesses to `features_masks` (`.kwx`) and waveforms (`.raw.kwd`)
         while the dataset is opened.
 
         Parameters
         ----------
 
         kwik_path : str
-            Path to a .kwik file.
+            Path to a `.kwik` file.
         channel_group : int or None (default is None)
             The channel group (shank) index to use. This can be changed
             later after the file has been opened. By default, the first
@@ -654,7 +654,7 @@ class KwikModel(BaseModel):
         # Open the KWX and KWD files.
         self._kwx = self._open_h5_if_exists('kwx')
         if self._kwx is None:
-            warn("The .kwx file hasn't been found. "
+            warn("The `.kwx` file hasn't been found. "
                  "Features won't be available.")
         self._kwd = self._open_h5_if_exists('raw.kwd')
         if self._kwd is None:
@@ -836,11 +836,11 @@ class KwikModel(BaseModel):
             self._kwik.close()
 
     def rename_clustering(self, old_name, new_name):
-        """Rename a clustering in the .kwik file."""
+        """Rename a clustering in the `.kwik` file."""
         self._move_clustering(old_name, new_name, copy=False)
 
     def copy_clustering(self, name, new_name):
-        """Copy a clustering in the .kwik file."""
+        """Copy a clustering in the `.kwik` file."""
         self._move_clustering(name, new_name, copy=True)
 
     def delete_clustering(self, name):
@@ -1030,7 +1030,7 @@ class KwikModel(BaseModel):
     def features(self):
         """Features from the current channel group.
 
-        This is memory-mapped to the .kwx file.
+        This is memory-mapped to the `.kwx` file.
 
         Note: in general, it is better to use the cluster store to access
         the features and masks of some clusters.
@@ -1042,7 +1042,7 @@ class KwikModel(BaseModel):
     def masks(self):
         """Masks from the current channel group.
 
-        This is memory-mapped to the .kwx file.
+        This is memory-mapped to the `.kwx` file.
 
         Note: in general, it is better to use the cluster store to access
         the features and masks of some clusters.
@@ -1054,7 +1054,7 @@ class KwikModel(BaseModel):
     def features_masks(self):
         """Features-masks from the current channel group.
 
-        This is memory-mapped to the .kwx file.
+        This is memory-mapped to the `.kwx` file.
 
         Note: in general, it is better to use the cluster store to access
         the features and masks of some clusters.
@@ -1125,7 +1125,7 @@ class KwikModel(BaseModel):
     # -------------------------------------------------------------------------
 
     def close(self):
-        """Close the .kwik, .kwx, and .raw.kwd files if they are open."""
+        """Close the `.kwik`, `.kwx`, and `.raw.kwd` files if they are open."""
         if self._kwx is not None:
             self._kwx.close()
         if self._kwd is not None:

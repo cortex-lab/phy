@@ -520,7 +520,7 @@ class ClusterStore(object):
 class StoreItem(object):
     """A class describing information stored in the cluster store.
 
-    Attributes
+    Parameters
     ----------
 
     fields : list
@@ -533,25 +533,8 @@ class StoreItem(object):
     disk_store : DiskStore
         The DiskStore instance for the current dataset.
 
-    Methods
-    -------
-
-    store_cluster(cluster, spikes)
-        Extract some data from the model and store it in the cluster store.
-        Must be overriden.
-    on_cluster(up)
-        Update the store when the clustering changes.
-        May be overriden.
-    is_consistent(cluster, spikes)
-        Return whether the cluster file of a given cluster exists and
-        has the expected file size.
-        May be overriden (default is to always return `False`).
-    store_all_clusters(mode=None)
-        Call `store_cluster()` on all clusters.
-        May be overriden.
-
     """
-    fields = None  # list of (field_name, storage_location)
+    fields = None  # list of `(field_name, storage_location)`
     name = 'item'
 
     def __init__(self,
