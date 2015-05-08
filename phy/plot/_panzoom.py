@@ -11,8 +11,6 @@ import math
 
 import numpy as np
 
-# from vispy import gloo
-
 from ..utils.array import _as_array
 
 
