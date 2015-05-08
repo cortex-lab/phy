@@ -615,7 +615,7 @@ class KwikModel(BaseModel):
         The .kwik file is temporarily opened in append mode when saving.
 
         The .kwx and .raw.kwd files stay open in read-only mode as long
-        as 'model.close()' is not called. This is because there might be
+        as `model.close()` is not called. This is because there might be
         read accesses to features_masks (.kwx) and waveforms (.raw.kwd)
         while the dataset is opened.
 
@@ -630,8 +630,8 @@ class KwikModel(BaseModel):
             channel group is used.
         clustering : str or None (default is None)
             The clustering to use. This can be changed later after the file
-            has been opened. By default, the 'main' clustering is used. An
-            error is raised if the 'main' clustering doesn't exist.
+            has been opened. By default, the `main` clustering is used. An
+            error is raised if the `main` clustering doesn't exist.
 
         """
 
@@ -929,7 +929,7 @@ class KwikModel(BaseModel):
     def clusterings(self):
         """List of clusterings found in the Kwik file.
 
-        The first one is always 'main'.
+        The first one is always `main`.
 
         """
         return self._clusterings
@@ -938,7 +938,7 @@ class KwikModel(BaseModel):
     def clustering(self):
         """The currently-active clustering.
 
-        Default is 'main'.
+        Default is `main`.
 
         """
         return self._clustering
@@ -960,7 +960,7 @@ class KwikModel(BaseModel):
 
     @property
     def probe(self):
-        """A 'Probe' instance representing the probe used for the recording.
+        """A `Probe` instance representing the probe used for the recording.
 
         This object contains information about the adjacency graph and
         the channel positions.
@@ -1069,7 +1069,7 @@ class KwikModel(BaseModel):
         This is a virtual array mapped to the .raw.kwd file. Filtering is
         done on the fly.
 
-        The shape is '(n_spikes, n_samples, n_channels)'.
+        The shape is `(n_spikes, n_samples, n_channels)`.
 
         """
         return SpikeLoader(self._waveform_loader, self.spike_samples)
@@ -1090,7 +1090,7 @@ class KwikModel(BaseModel):
         """Metadata about the clusters in the current channel group and
         clustering.
 
-        'cluster_metadata.group(cluster_id)' returns the group of a given
+        `cluster_metadata.group(cluster_id)` returns the group of a given
         cluster. The default group is 3 (unsorted).
 
         """
@@ -1101,7 +1101,7 @@ class KwikModel(BaseModel):
         """List of cluster ids from the current channel group and clustering.
 
         This is a sorted list of unique cluster ids as found in the current
-        'spike_clusters' array.
+        `spike_clusters` array.
 
         """
         return _unique(self._spike_clusters)

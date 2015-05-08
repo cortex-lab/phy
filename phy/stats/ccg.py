@@ -39,7 +39,7 @@ def correlograms(spike_samples, spike_clusters,
                  cluster_order=None,
                  binsize=None, winsize_bins=None):
     """Compute all pairwise cross-correlograms among the clusters appearing
-    in 'spike_clusters'.
+    in `spike_clusters`.
 
     Parameters
     ----------

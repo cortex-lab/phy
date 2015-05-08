@@ -208,7 +208,7 @@ class FeatureView(BaseSpikeCanvas):
 
     Marker size:
 
-    * Keyboard : Control and '+' or '-'
+    * Keyboard : Control and `+` or `-`
 
     """
     _visual_class = FeatureVisual
