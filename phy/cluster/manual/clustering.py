@@ -406,7 +406,7 @@ class Clustering(object):
     def split(self, spike_ids):
         """Split a number of spikes into a new cluster.
 
-        This is equivalent to an assign() to a single new cluster.
+        This is equivalent to an `assign()` to a single new cluster.
 
         Parameters
         ----------

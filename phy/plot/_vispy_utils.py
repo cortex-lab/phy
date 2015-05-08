@@ -94,6 +94,7 @@ class _BakeVisual(Visual):
         self._empty = value
 
     def set_to_bake(self, *bakes):
+        """Mark data items to be prepared for GPU."""
         for bake in bakes:
             if bake not in self._to_bake:
                 self._to_bake.append(bake)
