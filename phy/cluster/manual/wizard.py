@@ -90,12 +90,20 @@ class Wizard(object):
     #--------------------------------------------------------------------------
 
     def set_similarity_function(self, func):
-        """Register a function returing the similarity between two clusters."""
+        """Register a function returing the similarity between two clusters.
+
+        Can be used as a decorator.
+
+        """
         self._similarity = func
         return func
 
     def set_quality_function(self, func):
-        """Register a function returing the quality of a cluster."""
+        """Register a function returing the quality of a cluster.
+
+        Can be used as a decorator.
+
+        """
         self._quality = func
         return func
 
@@ -151,26 +159,30 @@ class Wizard(object):
     # Core methods
     #--------------------------------------------------------------------------
 
-    def best_clusters(self, n_max=None):
+    def best_clusters(self, n_max=None, quality=None):
         """Return the list of best clusters sorted by decreasing quality.
 
         The registered quality function is used for the cluster quality.
 
         """
-        best = _best_clusters(self.cluster_ids, self._quality, n_max=n_max)
+        if quality is None:
+            quality = self._quality
+        best = _best_clusters(self.cluster_ids, quality, n_max=n_max)
         return self._sort(best)
 
-    def most_similar_clusters(self, cluster=None, n_max=None):
+    def most_similar_clusters(self, cluster=None, n_max=None, similarity=None):
         """Return the `n_max` most similar clusters to a given cluster
         (the current best cluster by default)."""
         if cluster is None:
             cluster = self.best
             if cluster is None:
                 cluster = self.best_clusters(1)[0]
-        similarity = [(other, self._similarity(cluster, other))
-                      for other in self.cluster_ids
-                      if other != cluster]
-        clusters = _argsort(similarity, n_max=n_max)
+        if similarity is None:
+            similarity = self._similarity
+        s = [(other, similarity(cluster, other))
+             for other in self.cluster_ids
+             if other != cluster]
+        clusters = _argsort(s, n_max=n_max)
         return self._sort(clusters, mix_good_unsorted=True)
 
     # List methods
