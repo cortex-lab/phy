@@ -187,10 +187,10 @@ class FeatureMasks(StoreItem):
             How to choose whether cluster files need to be re-generated.
             Can be one of the following options:
 
-            * None or 'default': only regenerate the missing or inconsistent
+            * `None` or `default`: only regenerate the missing or inconsistent
               clusters
-            * 'force': fully regenerate all clusters
-            * 'read-only': just load the existing files, do not write anything
+            * `force`: fully regenerate all clusters
+            * `read-only`: just load the existing files, do not write anything
 
         """
 
@@ -1195,7 +1195,7 @@ class Session(EventEmitter):
         ----------
 
         name : str
-            Can be 'waveforms', 'features', 'correlograms', or 'traces'.
+            Can be `waveforms`, `features`, `correlograms`, or `traces`.
         cluster_ids : array-like
             List of clusters to show.
 
@@ -1214,7 +1214,7 @@ class Session(EventEmitter):
         ----------
 
         name : str
-            Can be 'waveforms', 'features', 'correlograms', or 'traces'.
+            Can be `waveforms`, `features`, `correlograms`, or `traces`.
         cluster_ids : array-like
             List of clusters to show.
 
