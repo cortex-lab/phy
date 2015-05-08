@@ -78,7 +78,7 @@ class Wizard(object):
         self._quality = None
         # cluster_groups is a dictionary or is converted to one.
         if _is_array_like(cluster_groups):
-            # A group can be None (unsorted), 'good', or 'ignored'.
+            # A group can be None (unsorted), `good`, or `ignored`.
             cluster_groups = {clu: None for clu in cluster_groups}
         self._cluster_groups = cluster_groups
         self._best_list = []  # This list is fixed (modulo clustering actions).
@@ -156,7 +156,7 @@ class Wizard(object):
     def cluster_groups(self):
         """Dictionary with the groups of each cluster.
 
-        The groups are: 'None' (corresponds to unsorted), 'good', or 'ignored'.
+        The groups are: `None` (corresponds to unsorted), `good`, or `ignored`.
 
         """
         return self._cluster_groups
@@ -249,7 +249,7 @@ class Wizard(object):
     def n_processed(self):
         """Numbered of processed clusters so far.
 
-        A cluster is considered processed if its group is not 'None'.
+        A cluster is considered processed if its group is not `None`.
 
         """
         return len(self._in_groups(self._best_list, ('good', 'ignored')))
