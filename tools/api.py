@@ -61,6 +61,7 @@ def _replace_docstring_header(paragraph):
 
 def _doc(obj):
     doc = inspect.getdoc(obj) or ''
+    doc = doc.strip()
     if doc and '---' in doc:
         return _replace_docstring_header(doc)
     else:
