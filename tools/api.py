@@ -180,18 +180,18 @@ def _concat(header, docstring):
                                             )
 
 
-def _fullname(o):
-    return o.__module__ + "." + o.__name__
-
-
-def _doc_function(func):
+def _function_header(subpackage, func):
     """Generate the docstring of a function."""
     args = inspect.formatargspec(*inspect.getfullargspec(func))
-    header = "`{name}{args}`".format(name=_fullname(func),
-                                     args=args,
-                                     )
-    docstring = _doc(func)
-    return _concat(header, docstring)
+    return "`{name}{args}`".format(name=_full_name(subpackage, func),
+                                   args=args,
+                                   )
+
+
+def _doc_function(subpackage, func):
+    return _concat(_function_header(subpackage, func),
+                   _doc(func),
+                   )
 
 
 def _doc_method(klass, func):
@@ -217,24 +217,45 @@ def _doc_property(klass, prop):
     return _concat(header, docstring)
 
 
-def _generate_paragraphs(package, subpackages):
-    """Generate the paragraphs of the API documentation."""
+def _link(name, anchor=None):
+    return "[{name}](#{anchor})".format(name=name,
+                                        anchor=anchor or _anchor(name),
+                                        )
+
+
+def _generate_preamble(package, subpackages):
 
     yield "# API documentation of {}".format(package)
 
     yield _doc(_import_module(package))
 
-    yield "Here is the list of subpackages:"
+    yield "## Table of contents"
 
     # Table of contents: list of modules.
     for subpackage in _iter_subpackages(package, subpackages):
         subpackage_name = subpackage.__name__
 
-        yield "* [{name}](#{anchor})".format(name=subpackage_name,
-                                             anchor=_anchor(subpackage_name),
-                                             )
+        yield "### " + _link(subpackage_name)
+
+        # List of top-level functions in the subpackage.
+        for func in _iter_functions(subpackage):
+            yield '* ' + _link(_full_name(subpackage, func),
+                               _anchor(_function_header(subpackage, func))
+                               )
+
+        # All public classes.
+        for klass in _iter_classes(subpackage):
+
+            # Class documentation.
+            yield "* " + _link(_full_name(subpackage, klass))
+
+        yield ""
 
     yield ""
+
+
+def _generate_paragraphs(package, subpackages):
+    """Generate the paragraphs of the API documentation."""
 
     # API doc of each module.
     for subpackage in _iter_subpackages(package, subpackages):
@@ -247,7 +268,7 @@ def _generate_paragraphs(package, subpackages):
 
         # List of top-level functions in the subpackage.
         for func in _iter_functions(subpackage):
-            yield '##### ' + _doc_function(func)
+            yield '##### ' + _doc_function(subpackage, func)
 
         # All public classes.
         for klass in _iter_classes(subpackage):
@@ -265,12 +286,20 @@ def _generate_paragraphs(package, subpackages):
                 yield '##### ' + _doc_property(klass, prop)
 
 
+def _print_paragraph(paragraph):
+    out = ''
+    out += paragraph + '\n'
+    if not paragraph.startswith('* '):
+        out += '\n'
+    return out
+
+
 def generate_api_doc(package, subpackages, path=None):
     out = ''
+    for paragraph in _generate_preamble(package, subpackages):
+        out += _print_paragraph(paragraph)
     for paragraph in _generate_paragraphs(package, subpackages):
-        out += paragraph + '\n'
-        if not paragraph.startswith('* '):
-            out += '\n'
+        out += _print_paragraph(paragraph)
     if path is None:
         return out
     else:
