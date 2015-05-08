@@ -376,7 +376,7 @@ class Session(EventEmitter):
     This is the main object used for manual clustering. It implements
     all common actions:
 
-    * Loading a dataset (.kwik file)
+    * Loading a dataset (`.kwik` file)
     * Listing the clusters
     * Changing the current channel group or current clustering
     * Showing views (waveforms, features, correlograms, etc.)
@@ -385,7 +385,7 @@ class Session(EventEmitter):
     * Save back to .kwik
 
     """
-    def __init__(self, phy_user_dir=None):
+    def __init__(self, kwik_path=None, phy_user_dir=None):
         super(Session, self).__init__()
         self.model = None
         self.phy_user_dir = phy_user_dir
@@ -400,6 +400,9 @@ class Session(EventEmitter):
         self.connect(self.on_close)
 
         self._create_view_functions()
+
+        if kwik_path:
+            self.open(kwik_path)
 
     # Settings
     # -------------------------------------------------------------------------
@@ -589,11 +592,11 @@ class Session(EventEmitter):
 
         # Initialize the progress reporter.
         pr_disk = ProgressReporter(
-            progress_message='Initializing the cluster store: {progress}.',
+            progress_message='Initializing the cluster store: {progress:.1f}.',
             complete_message='Cluster store initialized.')
 
         pr_memory = ProgressReporter(
-            progress_message='Computing cluster statistics: {progress}.',
+            progress_message='Computing cluster statistics: {progress:.1f}.',
             complete_message='Cluster statistics computed.')
 
         self.cluster_store.register_item(FeatureMasks,
