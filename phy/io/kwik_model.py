@@ -658,7 +658,7 @@ class KwikModel(BaseModel):
                  "Features won't be available.")
         self._kwd = self._open_h5_if_exists('raw.kwd')
         if self._kwd is None:
-            warn("The .raw.kwd file hasn't been found. "
+            warn("The `.raw.kwd` file hasn't been found. "
                  "Traces and waveforms won't be available.")
 
         # Load the data.
@@ -905,7 +905,7 @@ class KwikModel(BaseModel):
         The channel order is the same than the one from the PRB file.
         This order was used when generating the features and masks
         in SpikeDetekt2. The same order is used in phy when loading the
-        waveforms from the .raw.kwd file.
+        waveforms from the `.raw.kwd` file.
 
         """
         return self._channel_order
@@ -970,7 +970,7 @@ class KwikModel(BaseModel):
 
     @property
     def traces(self):
-        """Raw traces as found in the .raw.kwd file.
+        """Raw traces as found in the `.raw.kwd` file.
 
         This object is memory-mapped to the HDF5 file.
 
@@ -981,7 +981,7 @@ class KwikModel(BaseModel):
     def spike_samples(self):
         """Spike samples from the current channel group.
 
-        This is a NumPy array containing uint64 values (number of samples
+        This is a NumPy array containing `uint64` values (number of samples
         in unit of the sample rate).
 
         The spike times of all recordings are concatenated. There is no gap
@@ -994,7 +994,7 @@ class KwikModel(BaseModel):
     def spike_times(self):
         """Spike times from the current channel_group.
 
-        This is a NumPy array containing float64 values (in seconds).
+        This is a NumPy array containing `float64` values (in seconds).
 
         The spike times of all recordings are concatenated. There is no gap
         between consecutive recordings, currently.
@@ -1016,7 +1016,7 @@ class KwikModel(BaseModel):
     def spike_recordings(self):
         """The recording index for each spike.
 
-        This is a NumPy array of integers with n_spikes elements.
+        This is a NumPy array of integers with `n_spikes` elements.
 
         """
         return self._spike_recordings
@@ -1066,7 +1066,7 @@ class KwikModel(BaseModel):
     def waveforms(self):
         """High-passed filtered waveforms from the current channel group.
 
-        This is a virtual array mapped to the .raw.kwd file. Filtering is
+        This is a virtual array mapped to the `.raw.kwd` file. Filtering is
         done on the fly.
 
         The shape is `(n_spikes, n_samples, n_channels)`.
@@ -1080,7 +1080,7 @@ class KwikModel(BaseModel):
 
         Every element is the cluster identifier of a spike.
 
-        The shape is (n_spikes,).
+        The shape is `(n_spikes,)`.
 
         """
         return self._spike_clusters
