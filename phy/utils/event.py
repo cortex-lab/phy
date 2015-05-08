@@ -105,7 +105,15 @@ class EventEmitter(object):
 #------------------------------------------------------------------------------
 
 class ProgressReporter(EventEmitter):
-    """A class that reports progress done."""
+    """A class that reports progress done.
+
+    Emits
+    -----
+
+    * 'progress(value, value_max)'
+    * 'complete()'
+
+    """
     def __init__(self, progress_message=None, complete_message=None):
         super(ProgressReporter, self).__init__()
         self._value = 0
@@ -130,6 +138,7 @@ class ProgressReporter(EventEmitter):
 
     @property
     def value(self):
+        """Current value (integer)."""
         return self._value
 
     @value.setter
@@ -144,6 +153,7 @@ class ProgressReporter(EventEmitter):
 
     @property
     def value_max(self):
+        """Maximum value."""
         return self._value_max
 
     @value_max.setter
@@ -153,11 +163,14 @@ class ProgressReporter(EventEmitter):
         self._value_max = value_max
 
     def is_complete(self):
+        """Return wheter the task has completed."""
         return self._value >= self._value_max
 
     def set_complete(self):
+        """Set the task as complete."""
         self.value = self.value_max
 
     @property
     def progress(self):
+        """Return the current progress."""
         return self._value / float(self._value_max)
