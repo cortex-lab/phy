@@ -10,6 +10,8 @@ import hashlib
 
 import requests
 
+from .logging import info
+
 
 #------------------------------------------------------------------------------
 # Utility functions
@@ -35,6 +37,7 @@ def download_file(url, output=None, checksum=None):
     if output is None:
         output = url.split('/')[-1]
     r = requests.get(url, stream=True)
+    info("Downloading {0}...".format(url))
     with open(output, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
             if chunk:
@@ -51,7 +54,8 @@ def _download(url):
 
 
 def download_test_data(name, output=None):
+    """Download a test dataset."""
     url = _BASE_URL + name
     url_checksum = _BASE_URL + name + '.md5'
-    checksum = _download(url_checksum)
+    checksum = _download(url_checksum).split(' ')[0]
     download_file(url, output=output, checksum=checksum)
