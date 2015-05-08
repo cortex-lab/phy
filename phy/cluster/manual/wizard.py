@@ -90,7 +90,7 @@ class Wizard(object):
     #--------------------------------------------------------------------------
 
     def set_similarity_function(self, func):
-        """Register a function returing the similarity between two clusters.
+        """Register a function returning the similarity between two clusters.
 
         Can be used as a decorator.
 
@@ -99,7 +99,7 @@ class Wizard(object):
         return func
 
     def set_quality_function(self, func):
-        """Register a function returing the quality of a cluster.
+        """Register a function returning the quality of a cluster.
 
         Can be used as a decorator.
 
@@ -154,6 +154,11 @@ class Wizard(object):
 
     @property
     def cluster_groups(self):
+        """Dictionary with the groups of each cluster.
+
+        The groups are: 'None' (corresponds to unsorted), 'good', or 'ignored'.
+
+        """
         return self._cluster_groups
 
     # Core methods
@@ -162,7 +167,7 @@ class Wizard(object):
     def best_clusters(self, n_max=None, quality=None):
         """Return the list of best clusters sorted by decreasing quality.
 
-        The registered quality function is used for the cluster quality.
+        The default quality function is the registered one.
 
         """
         if quality is None:
@@ -171,8 +176,11 @@ class Wizard(object):
         return self._sort(best)
 
     def most_similar_clusters(self, cluster=None, n_max=None, similarity=None):
-        """Return the `n_max` most similar clusters to a given cluster
-        (the current best cluster by default)."""
+        """Return the `n_max` most similar clusters to a given cluster.
+
+        The default similarity function is the registered one.
+
+        """
         if cluster is None:
             cluster = self.best
             if cluster is None:
@@ -208,6 +216,7 @@ class Wizard(object):
 
     @property
     def best(self):
+        """Currently-selected best cluster."""
         return self._best
 
     @best.setter
@@ -217,6 +226,7 @@ class Wizard(object):
 
     @property
     def match(self):
+        """Currently-selected closest match."""
         return self._match
 
     @match.setter
@@ -227,24 +237,33 @@ class Wizard(object):
 
     @property
     def best_list(self):
+        """Current list of best clusters, by decreasing quality."""
         return self._best_list
 
     @property
     def match_list(self):
+        """Current list of closest matches, by decreasing similarity."""
         return self._match_list
 
     @property
     def n_processed(self):
+        """Numbered of processed clusters so far.
+
+        A cluster is considered processed if its group is not 'None'.
+
+        """
         return len(self._in_groups(self._best_list, ('good', 'ignored')))
 
     @property
     def n_clusters(self):
+        """Total number of clusters."""
         return len(self.cluster_ids)
 
     # Navigation
     #--------------------------------------------------------------------------
 
     def next_best(self):
+        """Select the next best cluster."""
         # Handle the case where we arrive at the end of the best list.
         if self.best is not None and len(self._best_list) <= 1:
             info("The wizard has finished.")
@@ -257,6 +276,7 @@ class Wizard(object):
             self._set_match_list()
 
     def previous_best(self):
+        """Select the previous best in cluster."""
         self.best = _previous(self._best_list,
                               self._best,
                               # self._is_not_ignored,
@@ -265,6 +285,7 @@ class Wizard(object):
             self._set_match_list()
 
     def next_match(self):
+        """Select the next match."""
         # Handle the case where we arrive at the end of the match list.
         if self.match is not None and len(self._match_list) <= 1:
             self.next_best()
@@ -275,30 +296,35 @@ class Wizard(object):
                                )
 
     def previous_match(self):
+        """Select the previous match."""
         self.match = _previous(self._match_list,
                                self._match,
                                # self._is_not_ignored,
                                )
 
     def next(self):
+        """Next cluster proposition."""
         if self.match is None:
             return self.next_best()
         else:
             return self.next_match()
 
     def previous(self):
+        """Previous cluster proposition."""
         if self.match is None:
             return self.previous_best()
         else:
             return self.previous_match()
 
     def first(self):
+        """First match or first best."""
         if self.match is None:
             self.best = self._best_list[0]
         else:
             self.match = self._match_list[0]
 
     def last(self):
+        """Last match or last best."""
         if self.match is None:
             self.best = self._best_list[-1]
         else:
@@ -308,9 +334,11 @@ class Wizard(object):
     #--------------------------------------------------------------------------
 
     def start(self):
+        """Start the wizard by setting the list of best clusters."""
         self._set_best_list()
 
     def pin(self, cluster=None):
+        """Pin the current best cluster and set the list of closest matches."""
         if cluster is None:
             cluster = self.best
         if self.match is not None and self.best == cluster:
@@ -319,6 +347,7 @@ class Wizard(object):
         self._set_match_list(cluster)
 
     def unpin(self):
+        """Unpin the current cluster."""
         if self.match is not None:
             self.match = None
             self._match_list = []
@@ -343,17 +372,16 @@ class Wizard(object):
                 self._best_list.insert(index, clu)
 
     def move(self, cluster, group):
+        """Move a cluster to a group."""
         self._cluster_groups[cluster] = group
         if cluster == self.best:
             self.next_best()
-            # self._set_match_list(cluster)
         elif cluster == self.match:
             self.next_match()
-        # if self.match is not None:
-        #     self._set_match_list()
         self._check()
 
     def merge(self, old, new, group):
+        """Merge a list of clusters to a new cluster."""
         if isinstance(new, (tuple, list)):
             assert len(new) == 1
             new = new[0]
@@ -369,6 +397,11 @@ class Wizard(object):
         self._check()
 
     def update_clusters(self, deleted, added, group):
+        """Update the list of clusters.
+
+        Specify the lists of deleted and added clusters.
+
+        """
         self._delete(deleted)
         self._add(added, group)
         # Update the best cluster if it was deleted.
