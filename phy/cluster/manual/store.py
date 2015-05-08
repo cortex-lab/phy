@@ -620,7 +620,7 @@ class StoreItem(object):
                                )
 
     def on_cluster(self, up):
-        """Udate the^stored data when a clustering change happens.
+        """Update the stored data when a clustering change happens.
 
         May be overridden.
 
