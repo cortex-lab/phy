@@ -125,14 +125,14 @@ class Clustering(object):
     This object is used throughout the `phy.cluster.manual` package to let
     different classes know about clustering changes.
 
-    `UpdateInfo` is a dictionary that also supports dot access ('Bunch' class).
+    `UpdateInfo` is a dictionary that also supports dot access (`Bunch` class).
     The keys are the following:
 
     description : str
-        Description of the clustering operation. It is one of  'merge',
-        'assign', or 'metadata_group'.
+        Description of the clustering operation. It is one of  `merge`,
+        `assign`, or `metadata_group`.
     history : str or None
-        This is None except when it is 'undo' or 'redo'.
+        This is None except when it is `undo` or `redo`.
     spikes : array
         Array of all spike ids affected by the update.
     added : list
@@ -234,7 +234,7 @@ class Clustering(object):
         cluster_ids : array-like
             List of clusters to merge.
         to : integer or None
-            The id of the new cluster. By default, this is 'new_cluster_id()'.
+            The id of the new cluster. By default, this is `new_cluster_id()`.
 
         Returns
         -------
@@ -340,8 +340,8 @@ class Clustering(object):
         spike_ids : array-like
             List of spike ids.
         spike_clusters_rel : array-like
-            Relative cluster ids of the spikes in 'spike_ids'. This
-            must have the same size as 'spike_ids'.
+            Relative cluster ids of the spikes in `spike_ids`. This
+            must have the same size as `spike_ids`.
 
         Returns
         -------
@@ -365,10 +365,10 @@ class Clustering(object):
 
         If a spike is assigned to a new cluster, then all other spikes
         belonging to the same cluster are assigned to a brand new cluster,
-        even if they were not changed explicitely by the 'assign()' method.
+        even if they were not changed explicitely by the `assign()` method.
 
-        In other words, the list of spikes affected by an 'assign()' is almost
-        always a strict superset of the 'spike_ids' parameter. The only case
+        In other words, the list of spikes affected by an `assign()` is almost
+        always a strict superset of the `spike_ids` parameter. The only case
         where this is not true is when whole clusters change: this is called
         a merge. It is implemented in a separate merge() method because it
         is logically much simpler, and faster to execute.
@@ -377,7 +377,7 @@ class Clustering(object):
 
         assert not isinstance(spike_ids, slice)
 
-        # Ensure 'spike_clusters_rel' is an array-like.
+        # Ensure `spike_clusters_rel` is an array-like.
         if not hasattr(spike_clusters_rel, '__len__'):
             spike_clusters_rel = spike_clusters_rel * np.ones(len(spike_ids),
                                                               dtype=np.int64)
@@ -422,7 +422,7 @@ class Clustering(object):
         Note
         ----
 
-        The note in the 'assign()' method applies here as well. The list
+        The note in the `assign()` method applies here as well. The list
         of spikes affected by the split is almost always a strict superset
         of the spike_ids parameter.
 
