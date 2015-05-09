@@ -28,6 +28,9 @@ class Bunch(dict):
         super(Bunch, self).__init__(*args, **kwargs)
         self.__dict__ = self
 
+    def copy(self):
+        return Bunch(super(Bunch, self).copy())
+
 
 def _as_dict(x):
     """Convert a list of tuples to a dict."""

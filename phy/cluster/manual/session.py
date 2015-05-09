@@ -634,7 +634,7 @@ class Session(EventEmitter):
             1: 'ignored',
             2: 'good',
             3: None,
-            None: 'ignored',
+            None: None,
         }[group_id]
 
     def _create_wizard(self):
@@ -664,6 +664,13 @@ class Session(EventEmitter):
 
         @self.connect
         def on_cluster(up):
+            # HACK: get the current group as it is not available in `up`
+            # currently.
+            if up.description.startswith('metadata'):
+                up = up.copy()
+                cluster = up.metadata_changed[0]
+                group = self.model.cluster_metadata.group(cluster)
+                up.metadata_value = self._to_wizard_group(group)
             # This called for both regular and history actions.
             # Save the wizard selection and update the wizard.
             self.wizard.on_cluster(up)
