@@ -595,11 +595,12 @@ class Session(EventEmitter):
 
         # Initialize the progress reporter.
         pr_disk = ProgressReporter(
-            progress_message='Initializing the cluster store: {progress:.1f}.',
+            progress_message=('Initializing the cluster store: '
+                              '{progress:.1f}%.'),
             complete_message='Cluster store initialized.')
 
         pr_memory = ProgressReporter(
-            progress_message='Computing cluster statistics: {progress:.1f}.',
+            progress_message='Computing cluster statistics: {progress:.1f}%.',
             complete_message='Cluster statistics computed.')
 
         self.cluster_store.register_item(FeatureMasks,
