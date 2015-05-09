@@ -13,7 +13,6 @@ import shutil
 
 import numpy as np
 
-from ...ext.six import integer_types
 from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of
 from ...utils.dock import DockWindow, qt_app, _create_web_view
@@ -396,7 +395,7 @@ class Session(EventEmitter):
         self._load_default_settings()
 
         self.connect(self.on_open)
-        self.connect(self.on_cluster)
+        # self.connect(self.on_cluster)
         self.connect(self.on_close)
 
         self._create_view_functions()
@@ -505,6 +504,7 @@ class Session(EventEmitter):
         clusters = list(clusters)
         info("Merge clusters {}.".format(str(clusters)))
         up = self.clustering.merge(clusters)
+        self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
 
     def split(self, spikes):
@@ -521,9 +521,10 @@ class Session(EventEmitter):
         self._check_list_argument(spikes, 'spikes')
         info("Split {0:d} spikes.".format(len(spikes)))
         up = self.clustering.split(spikes)
+        self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
 
-    def move(self, clusters, group, **kwargs):
+    def move(self, clusters, group):
         """Move some clusters to a cluster group.
 
         Here is the list of cluster groups:
@@ -538,21 +539,22 @@ class Session(EventEmitter):
         info("Move clusters {0} to {1}.".format(str(clusters), group))
         group_id = cluster_group_id(group)
         up = self._cluster_metadata_updater.set_group(clusters, group_id)
+        self._global_history.action(self._cluster_metadata_updater)
         # Extra UpdateInfo fields.
-        up.update(kwargs)
+        # up.update(kwargs)
         self.emit('cluster', up=up)
 
     def undo(self):
         """Undo the last clustering action."""
         info("Undo.")
         up = self._global_history.undo()
-        self.emit('cluster', up=up, add_to_stack=False)
+        self.emit('cluster', up=up)
 
     def redo(self):
         """Redo the last undone action."""
         info("Redo.")
         up = self._global_history.redo()
-        self.emit('cluster', up=up, add_to_stack=False)
+        self.emit('cluster', up=up)
 
     # Properties
     # -------------------------------------------------------------------------
@@ -564,10 +566,6 @@ class Session(EventEmitter):
 
     # Event callbacks
     # -------------------------------------------------------------------------
-
-    def _create_cluster_metadata(self):
-        self._cluster_metadata_updater = ClusterMetadataUpdater(
-            self.model.cluster_metadata)
 
     def _create_cluster_store(self):
 
@@ -610,23 +608,18 @@ class Session(EventEmitter):
         self.cluster_store.generate(self.clustering.spikes_per_cluster)
 
         @self.connect
-        def on_cluster(up=None, add_to_stack=None):
+        def on_cluster(up=None):
             self.cluster_store.on_cluster(up)
+
+    def _create_cluster_metadata(self):
+        self._cluster_metadata_updater = ClusterMetadataUpdater(
+            self.model.cluster_metadata)
 
     def _create_clustering(self):
         self.clustering = Clustering(self.model.spike_clusters)
 
     def _create_global_history(self):
         self._global_history = GlobalHistory(process_ups=_process_ups)
-
-        @self.connect
-        def on_cluster(up=None, add_to_stack=None):
-            # Update the global history.
-            if add_to_stack and up is not None:
-                if up.description.startswith('metadata'):
-                    self._global_history.action(self._cluster_metadata_updater)
-                elif up.description in ('merge', 'assign'):
-                    self._global_history.action(self.clustering)
 
     def _to_wizard_group(self, group_id):
         """Return the group name required by the wizard, as a function
@@ -665,21 +658,10 @@ class Session(EventEmitter):
             return self.cluster_store.mean_masks(cluster).max()
 
         @self.connect
-        def on_cluster(up=None, add_to_stack=None):
-            if up is None:
-                return
-            # Update the clusters in the wizard.
-            if up.description == 'merge':
-                group = self._cluster_metadata_updater.group(up.deleted[0])
-                self.wizard.merge(up.deleted, up.added, group)
-            elif up.description == 'assign':
-                group = self._cluster_metadata_updater.group(up.deleted[0])
-                self.wizard.assign(up.deleted, up.added, group)
-            elif up.description == 'metadata_group':
-                assert isinstance(up.metadata_value, integer_types)
-                for cluster in up.metadata_changed:
-                    group = self._to_wizard_group(up.metadata_value)
-                    self.wizard.move(cluster, group)
+        def on_cluster(up):
+            # This called for both regular and history actions.
+            # Save the wizard selection and update the wizard.
+            self.wizard.on_cluster(up)
 
     def _create_wizard_panel(self, cluster_ids=None):
         view = _create_web_view(self.wizard._repr_html_())
@@ -704,15 +686,6 @@ class Session(EventEmitter):
         self._create_cluster_metadata()
         self._create_cluster_store()
         self._create_wizard()
-
-    def on_cluster(self, up=None, add_to_stack=True):
-        """Update the history when clustering changes occur."""
-        # Update the global history.
-        if add_to_stack and up is not None:
-            if up.description.startswith('metadata'):
-                self._global_history.action(self._cluster_metadata_updater)
-            elif up.description in ('merge', 'assign'):
-                self._global_history.action(self.clustering)
 
     def on_close(self):
         """Save the settings when the data is closed."""

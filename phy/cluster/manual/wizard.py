@@ -385,57 +385,7 @@ class Wizard(object):
             if self.match is not None:
                 self._match_list.append(clu)
 
-    # def move(self, cluster, group):
-    #     """Move a cluster to a group."""
-    #     self._cluster_groups[cluster] = group
-    #     if cluster == self.best:
-    #         self.next_best()
-    #     elif cluster == self.match:
-    #         self.next_match()
-    #     self._check()
-
-    # def merge(self, old, new, group, pinned=None):
-    #     """Merge a list of clusters to a new cluster."""
-    #     if isinstance(new, (tuple, list)):
-    #         assert len(new) == 1
-    #         new = new[0]
-    #     # Add new cluster.
-    #     if pinned is not None:
-    #         # Pin the cluster at the position of the currently-pinned cluster.
-    #         position = self._best_list.index(self._best)
-    #     else:
-    #         position = None
-    #     self._add([new], group, position)
-    #     # Delete old clusters.
-    #     self._delete(old)
-    #     # Pin the newly-created cluster.
-    #     if pinned is not None:
-    #         assert pinned in self._best_list
-    #         self.pin(pinned)
-    #     self._check()
-
-    # def assign(self, deleted, added, group, pinned=None):
-    #     """Update the list of clusters.
-
-    #     Specify the lists of deleted and added clusters.
-
-    #     """
-    #     if pinned is not None:
-    #         # Pin the cluster at the position of the currently-pinned cluster.
-    #         position = self._best_list.index(self._best)
-    #     else:
-    #         position = None
-    #     self._add(added, group, position)
-    #     # Update the best cluster if it was deleted.
-    #     self._delete(deleted)
-    #     if pinned is not None:
-    #         self.pin(pinned)
-    #     self._check()
-
-    def on_cluster(self, up):
-        # Save current selection if not undo or redo.
-        if not up.history:
-            self._history.add((self.best, self.match))
+    def _update_state(self, up):
         # Update the cluster group.
         if up.description == 'metadata_group':
             cluster = up.metadata_changed[0]
@@ -447,10 +397,13 @@ class Wizard(object):
             parents = [x for (x, y) in up.descendants if y == clu]
             parent = parents[0]
             group = self._group(parent)
-            position = self._best_list.index(parent)
-            self._add([clu], group, position)
+            if self._best_list:
+                position = self._best_list.index(parent)
+                self._add([clu], group, position)
         # Delete old clusters.
         self._delete(up.deleted)
+
+    def _update_selection(self, up):
         # New selection.
         if up.history == 'undo':
             # Two undo except for the last one.
@@ -476,6 +429,16 @@ class Wizard(object):
                 self.next_best()
             elif cluster == self.match:
                 self.next_match()
+
+    def on_cluster(self, up):
+        if not self._best_list or not self._match_list:
+            self._update_state(up)
+            return
+        # Save current selection if not undo or redo.
+        if not up.history:
+            self._history.add((self.best, self.match))
+        self._update_state(up)
+        self._update_selection(up)
         # Save current selection if not undo or redo.
         if not up.history:
             self._history.add((self.best, self.match))
