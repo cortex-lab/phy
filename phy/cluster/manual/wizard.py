@@ -10,6 +10,7 @@ from operator import itemgetter
 
 from ...utils.array import _is_array_like
 from ...utils.logging import info
+from ._utils import History
 
 
 #------------------------------------------------------------------------------
@@ -85,6 +86,7 @@ class Wizard(object):
         self._match_list = []  # This list may often change.
         self._best = None
         self._match = None
+        self._history = History((None, None))
 
     # Quality functions
     #--------------------------------------------------------------------------
@@ -345,6 +347,7 @@ class Wizard(object):
             return
         self.best = cluster
         self._set_match_list(cluster)
+        self._check()
 
     def unpin(self):
         """Unpin the current cluster."""
@@ -382,52 +385,100 @@ class Wizard(object):
             if self.match is not None:
                 self._match_list.append(clu)
 
-    def move(self, cluster, group):
-        """Move a cluster to a group."""
-        self._cluster_groups[cluster] = group
-        if cluster == self.best:
-            self.next_best()
-        elif cluster == self.match:
-            self.next_match()
-        self._check()
+    # def move(self, cluster, group):
+    #     """Move a cluster to a group."""
+    #     self._cluster_groups[cluster] = group
+    #     if cluster == self.best:
+    #         self.next_best()
+    #     elif cluster == self.match:
+    #         self.next_match()
+    #     self._check()
 
-    def merge(self, old, new, group, pinned=None):
-        """Merge a list of clusters to a new cluster."""
-        if isinstance(new, (tuple, list)):
-            assert len(new) == 1
-            new = new[0]
-        # Add new cluster.
-        if pinned is not None:
-            # Pin the cluster at the position of the currently-pinned cluster.
-            position = self._best_list.index(self._best)
-        else:
-            position = None
-        self._add([new], group, position)
+    # def merge(self, old, new, group, pinned=None):
+    #     """Merge a list of clusters to a new cluster."""
+    #     if isinstance(new, (tuple, list)):
+    #         assert len(new) == 1
+    #         new = new[0]
+    #     # Add new cluster.
+    #     if pinned is not None:
+    #         # Pin the cluster at the position of the currently-pinned cluster.
+    #         position = self._best_list.index(self._best)
+    #     else:
+    #         position = None
+    #     self._add([new], group, position)
+    #     # Delete old clusters.
+    #     self._delete(old)
+    #     # Pin the newly-created cluster.
+    #     if pinned is not None:
+    #         assert pinned in self._best_list
+    #         self.pin(pinned)
+    #     self._check()
+
+    # def assign(self, deleted, added, group, pinned=None):
+    #     """Update the list of clusters.
+
+    #     Specify the lists of deleted and added clusters.
+
+    #     """
+    #     if pinned is not None:
+    #         # Pin the cluster at the position of the currently-pinned cluster.
+    #         position = self._best_list.index(self._best)
+    #     else:
+    #         position = None
+    #     self._add(added, group, position)
+    #     # Update the best cluster if it was deleted.
+    #     self._delete(deleted)
+    #     if pinned is not None:
+    #         self.pin(pinned)
+    #     self._check()
+
+    def on_cluster(self, up):
+        # Save current selection if not undo or redo.
+        if not up.history:
+            self._history.add((self.best, self.match))
+        # Update the cluster group.
+        if up.description == 'metadata_group':
+            cluster = up.metadata_changed[0]
+            group = up.metadata_value
+            self._cluster_groups[cluster] = group
+        # Update the wizard with new and old clusters.
+        for clu in up.added:
+            # Add the child at the parent's position.
+            parents = [x for (x, y) in up.descendants if y == clu]
+            parent = parents[0]
+            group = self._group(parent)
+            position = self._best_list.index(parent)
+            self._add([clu], group, position)
         # Delete old clusters.
-        self._delete(old)
-        # Pin the newly-created cluster.
-        if pinned is not None:
-            assert pinned in self._best_list
-            self.pin(pinned)
-        self._check()
-
-    def assign(self, deleted, added, group, pinned=None):
-        """Update the list of clusters.
-
-        Specify the lists of deleted and added clusters.
-
-        """
-        if pinned is not None:
-            # Pin the cluster at the position of the currently-pinned cluster.
-            position = self._best_list.index(self._best)
-        else:
-            position = None
-        self._add(added, group, position)
-        # Update the best cluster if it was deleted.
-        self._delete(deleted)
-        if pinned is not None:
-            self.pin(pinned)
-        self._check()
+        self._delete(up.deleted)
+        # New selection.
+        if up.history == 'undo':
+            # Two undo except for the last one.
+            if not self._history.is_last():
+                self._history.undo()
+            self._history.undo()
+            best, match = self._history.current_item
+            self.pin(best)
+            self.match = match
+        elif up.history == 'redo':
+            # Two redo except for the first one.
+            if not self._history.is_first():
+                self._history.redo()
+            self._history.redo()
+            best, match = self._history.current_item
+            self.pin(best)
+            self.match = match
+        elif up.description in ('merge', 'assign'):
+            self.pin(up.added[0])
+        elif up.description == 'metadata_group':
+            cluster = up.metadata_changed[0]
+            if cluster == self.best:
+                self.next_best()
+            elif cluster == self.match:
+                self.next_match()
+        # Save current selection if not undo or redo.
+        if not up.history:
+            self._history.add((self.best, self.match))
 
     # Panel
     #--------------------------------------------------------------------------
