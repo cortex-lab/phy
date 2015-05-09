@@ -125,18 +125,18 @@ class GlobalHistory(History):
         self.process_ups = process_ups
 
     def action(self, *controllers):
-        """Register one or several controllers for this action.
-
-        The order matters: the first controller does the first action, etc.
-
-        """
+        """Register one or several controllers for this action."""
         self.add(tuple(controllers))
+
+    def add_to_current_action(self, controller):
+        """Add a controller to the current action."""
+        item = self.current_item
+        self._history[self._index] = item + (controller,)
 
     def undo(self):
         """Undo the last action.
 
         This will call `undo()` on all controllers involved in this action.
-        The last controller to perform an action will be undone first, etc.
 
         """
         controllers = self.back()
@@ -144,7 +144,7 @@ class GlobalHistory(History):
             ups = ()
         else:
             ups = tuple([controller.undo()
-                        for controller in controllers[::-1]])
+                        for controller in controllers])
         if self.process_ups is not None:
             return self.process_ups(ups)
         else:
