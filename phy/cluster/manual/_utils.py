@@ -205,6 +205,7 @@ class ClusterMetadataUpdater(object):
                 self._set(clusters, field, value, add_to_stack=False)
         # Return the UpdateInfo instance of the undo action.
         info = args[-1]
+        info.history = 'undo'
         return info
 
     def redo(self):
@@ -221,4 +222,5 @@ class ClusterMetadataUpdater(object):
         clusters, field, value, info = args
         self._set(clusters, field, value, add_to_stack=False)
         # Return the UpdateInfo instance of the redo action.
+        info.history = 'redo'
         return info

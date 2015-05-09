@@ -434,6 +434,8 @@ class Wizard(object):
         if not self._best_list or not self._match_list:
             self._update_state(up)
             return
+        if up is None:
+            return
         # Save current selection if not undo or redo.
         if not up.history:
             self._history.add((self.best, self.match))

@@ -544,17 +544,22 @@ class Session(EventEmitter):
         # up.update(kwargs)
         self.emit('cluster', up=up)
 
+    def _undo_redo(self, up):
+        if up:
+            info("{} {}.".format(up.history.title(),
+                                 up.description,
+                                 ))
+            self.emit('cluster', up=up)
+
     def undo(self):
         """Undo the last clustering action."""
-        info("Undo.")
         up = self._global_history.undo()
-        self.emit('cluster', up=up)
+        self._undo_redo(up)
 
     def redo(self):
         """Redo the last undone action."""
-        info("Redo.")
         up = self._global_history.redo()
-        self.emit('cluster', up=up)
+        self._undo_redo(up)
 
     # Properties
     # -------------------------------------------------------------------------
