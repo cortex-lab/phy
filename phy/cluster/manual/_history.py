@@ -42,6 +42,12 @@ class History(object):
         # There should always be the base item at least.
         assert len(self._history) >= 1
 
+    def is_first(self):
+        return self._index == 1
+
+    def is_last(self):
+        return self._index == len(self._history) - 1
+
     def iter(self, start=0, end=None):
         """Iterate through successive history items.
 

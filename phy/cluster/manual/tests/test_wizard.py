@@ -250,9 +250,25 @@ def test_wizard_actions():
     wizard.next()
     _assert_wizard(20, 5)
 
+    # Move.
     _move([20], 'good')
     _assert_wizard(7, 20)
 
+    # Undo twice.
+    _undo_move([20], None)
+    _assert_wizard(20, 5)
+
+    _undo_merge([2, 3], 20)
+    _assert_wizard(2, 3)
+
+    # Redo twice.
+    _redo_merge([2, 3], 20)
+    _assert_wizard(20, 7)
+
+    _redo_move([20], 'good')
+    _assert_wizard(7, 20)
+
+    # End of wizard.
     wizard.last()
     _assert_wizard(7, 5)
 
