@@ -353,8 +353,9 @@ class PanZoom(object):
 
     def on_mouse_move(self, event):
         """Pan and zoom with the mouse."""
-
-        if event.is_dragging and not event.modifiers:
+        if event.modifiers:
+            return
+        if event.is_dragging:
             x0, y0 = self._normalize(event.press_event.pos)
             x1, y1 = self._normalize(event.last_event.pos, False)
             x, y = self._normalize(event.pos, False)
@@ -367,6 +368,8 @@ class PanZoom(object):
 
     def on_mouse_wheel(self, event):
         """Zoom with the mouse wheel."""
+        if event.modifiers:
+            return
         dx = np.sign(event.delta[1]) * self._wheel_coeff
         # Zoom toward the mouse pointer.
         x0, y0 = self._normalize(event.pos)

@@ -251,6 +251,22 @@ class WaveformView(BaseSpikeCanvas):
                 self.probe_scale = (u, v * coeff)
             self.update()
 
+    def on_mouse_wheel(self, event):
+        """Handle mouse wheel events."""
+        ctrl = 'Control' in event.modifiers
+        shift = 'Shift' in event.modifiers
+        coeff = 1. + .1 * event.delta[1]
+
+        # Box scale.
+        if ctrl:
+            u, v = self.box_scale
+            self.box_scale = (u * coeff, v)
+            self.update()
+        if shift:
+            u, v = self.box_scale
+            self.box_scale = (u, v * coeff)
+            self.update()
+
     def on_draw(self, event):
         """Draw the visual."""
         gloo.clear(color=True, depth=True)
