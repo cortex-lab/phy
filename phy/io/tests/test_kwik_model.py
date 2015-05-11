@@ -116,6 +116,7 @@ def test_kwik_open_full():
 
         # Test implicit open() method.
         kwik = KwikModel(filename)
+        kwik.describe()
 
         kwik.metadata
         ae(kwik.channels, np.arange(_N_CHANNELS))

@@ -702,6 +702,28 @@ class KwikModel(BaseModel):
         if to_close:
             self._kwik.close()
 
+    def describe(self):
+        """Display information about the dataset."""
+        def _print(name, value):
+            print("{0: <24}{1}".format(name, value))
+        _print("Kwik file", self.kwik_path)
+        _print("Recordings", self.n_recordings)
+
+        # List of channel groups.
+        cg = ['{:d}'.format(g) + ('*' if g == self.channel_group else '')
+              for g in self.channel_groups]
+        _print("List of shanks", ', '.join(cg))
+
+        # List of clusterings.
+        cl = ['{:s}'.format(c) + ('*' if c == self.clustering else '')
+              for c in self.clusterings]
+        _print("Clusterings", ', '.join(cl))
+
+        _print("Channels", self.n_channels)
+        _print("Spikes", self.n_spikes)
+        _print("Clusters", self.n_clusters)
+        _print("Duration", "{:.0f}s".format(self.duration))
+
     # Changing channel group and clustering
     # -------------------------------------------------------------------------
 
@@ -874,6 +896,11 @@ class KwikModel(BaseModel):
 
     # Data
     # -------------------------------------------------------------------------
+
+    @property
+    def duration(self):
+        """Duration of the experiment (in seconds)."""
+        return float(self.traces.shape[0]) / self.sample_rate
 
     @property
     def channel_groups(self):
