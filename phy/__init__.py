@@ -10,6 +10,7 @@ containing tens, hundreds, or thousands of channels.
 
 from .utils.logging import _default_logger, set_level
 from .utils.datasets import download_test_data
+from .utils.dock import enable_qt
 
 
 __author__ = 'Kwik Team'

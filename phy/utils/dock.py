@@ -13,7 +13,7 @@ from collections import defaultdict
 from vispy import app
 
 from ._misc import _is_interactive
-from .logging import warn
+from .logging import info, warn
 
 
 # -----------------------------------------------------------------------------
@@ -240,6 +240,7 @@ class DockWindow(QMainWindow):
 # -----------------------------------------------------------------------------
 
 _APP = None
+_APP_RUNNING = False
 
 
 def _close_qt_after(window, duration):
@@ -272,10 +273,25 @@ def _try_enable_ipython_qt():
     if not _is_interactive():
         return False
     if ip:
-        qt_app = ip.enable_gui('qt')
-        if qt_app:
-            return qt_app
+        ip.enable_gui('qt')
+        global _APP_RUNNING
+        _APP_RUNNING = True
+        return True
     return False
+
+
+def enable_qt():
+    if not _check_qt():
+        return
+    try:
+        from IPython import get_ipython
+        ip = get_ipython()
+        ip.enable_gui('qt')
+        global _APP_RUNNING
+        _APP_RUNNING = True
+        info("Qt event loop activated.")
+    except:
+        warn("Qt event loop not activated.")
 
 
 def start_qt_app():
@@ -289,10 +305,10 @@ def start_qt_app():
     # IPython event loop integration.
     if not _check_qt():
         return
-    app.use_app("pyqt4")
     global _APP
     if _try_enable_ipython_qt():
         return
+    app.use_app("pyqt4")
     if QtGui.QApplication.instance():
         _APP = QtGui.QApplication.instance()
         return
@@ -304,10 +320,12 @@ def start_qt_app():
 
 def run_qt_app():
     """Start the Qt application's event loop."""
+    global _APP_RUNNING
     if not _check_qt():
         return
-    if _APP is not None:
+    if _APP is not None and not _APP_RUNNING:
         _APP.exec_()
+        _APP_RUNNING = True
 
 
 @contextlib.contextmanager
