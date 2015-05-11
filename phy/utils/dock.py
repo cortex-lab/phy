@@ -324,8 +324,10 @@ def run_qt_app():
     if not _check_qt():
         return
     if _APP is not None and not _APP_RUNNING:
-        _APP.exec_()
         _APP_RUNNING = True
+        _APP.exec_()
+    if not _is_interactive():
+        _APP_RUNNING = False
 
 
 @contextlib.contextmanager

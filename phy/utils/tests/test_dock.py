@@ -100,8 +100,8 @@ def test_dock_state():
             'view2': 2,
         }
 
-        gui.close()
-        gs = gui.gs
+    gs = gui.gs
+    with qt_app():
 
         # Recreate the GUI with the saved state.
         gui = DockWindow()
@@ -115,4 +115,3 @@ def test_dock_state():
             gui.restore_geometry_state(gs)
 
         _show(gui)
-        gui.close()
