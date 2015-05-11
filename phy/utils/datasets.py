@@ -38,6 +38,9 @@ def download_file(url, output=None, checksum=None):
     """Download a binary file from an URL."""
     if output is None:
         output = url.split('/')[-1]
+    if op.exists(output):
+        info("The file {} already exists: skipping.".format(output))
+        return
     r = requests.get(url, stream=True)
     info("Downloading {0}...".format(url))
     with open(output, 'wb') as f:
