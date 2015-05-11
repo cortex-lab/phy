@@ -636,7 +636,7 @@ class Session(EventEmitter):
             2: 'good',
             3: None,
             None: None,
-        }[group_id]
+        }.get(group_id, 'good')
 
     def _create_wizard(self):
 
