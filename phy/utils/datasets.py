@@ -7,6 +7,8 @@
 #------------------------------------------------------------------------------
 
 import hashlib
+import os
+import os.path as op
 
 import requests
 
@@ -53,9 +55,16 @@ def _download(url):
     return requests.get(url).text
 
 
-def download_test_data(name, output=None):
+def download_test_data(name, output_dir=None):
     """Download a test dataset."""
-    url = _BASE_URL + name
-    url_checksum = _BASE_URL + name + '.md5'
-    checksum = _download(url_checksum).split(' ')[0]
-    download_file(url, output=output, checksum=checksum)
+    if output_dir is None:
+        output_dir = name
+    output_dir = op.realpath(output_dir)
+    if not op.exists(output_dir):
+        os.mkdir(output_dir)
+    for ext in ('.kwik', '.kwx', '.raw.kwd'):
+        url = _BASE_URL + name + ext
+        output = op.join(output_dir, name + ext)
+        url_checksum = _BASE_URL + name + ext + '.md5'
+        checksum = _download(url_checksum).split(' ')[0]
+        download_file(url, output=output, checksum=checksum)

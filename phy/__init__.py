@@ -9,6 +9,8 @@ containing tens, hundreds, or thousands of channels.
 """
 
 from .utils.logging import _default_logger, set_level
+from .utils.datasets import download_test_data
+
 
 __author__ = 'Kwik Team'
 __email__ = 'cyrille.rossant at gmail.com'

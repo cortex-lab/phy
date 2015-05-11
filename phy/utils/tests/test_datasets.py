@@ -92,12 +92,14 @@ def test_download_invalid_checksum():
 def test_download_test_data():
     name = 'test'
     url = _BASE_URL + name
-    _add_mock_response(url, _DATA.tostring())
-    _add_mock_response(url + '.md5', _CHECKSUM)
+    for ext in ('.kwik', '.kwx', '.raw.kwd'):
+        _add_mock_response(url + ext, _DATA.tostring())
+        _add_mock_response(url + ext + '.md5', _CHECKSUM)
 
     with TemporaryDirectory() as tmpdir:
-        output = op.join(tmpdir, name)
-        download_test_data(name, output)
-        with open(output, 'rb') as f:
-            data = f.read()
-        ae(np.fromstring(data, np.float32), _DATA)
+        output_dir = op.join(tmpdir, name)
+        download_test_data(name, output_dir)
+        for ext in ('.kwik', '.kwx', '.raw.kwd'):
+            with open(op.join(output_dir, name + ext), 'rb') as f:
+                data = f.read()
+            ae(np.fromstring(data, np.float32), _DATA)
