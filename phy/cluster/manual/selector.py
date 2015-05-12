@@ -20,6 +20,14 @@ def _concat(l):
     return np.sort(np.hstack(l))
 
 
+def _ensure_unique(func):
+    """Apply unique() to the output of a function."""
+    def wrapped(*args, **kwargs):
+        out = func(*args, **kwargs)
+        return _unique(out)
+    return wrapped
+
+
 #------------------------------------------------------------------------------
 # Selector class
 #------------------------------------------------------------------------------
@@ -61,6 +69,7 @@ class Selector(object):
         # Update the selected spikes accordingly.
         self.selected_spikes = self.subset_spikes()
 
+    @_ensure_unique
     def subset_spikes(self,
                       spikes=None,
                       n_spikes_max=None,
@@ -104,6 +113,7 @@ class Selector(object):
                                 excerpt_size=excerpt_size,
                                 )
 
+    @_ensure_unique
     def subset_spikes_clusters(self, clusters):
         """Take a subselection of spikes belonging to a set of clusters.
 
