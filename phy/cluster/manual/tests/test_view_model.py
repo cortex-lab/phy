@@ -41,15 +41,10 @@ def setup():
 def _test_empty(view_model_class, stop=True, **kwargs):
 
     model = MockModel(n_spikes=1, n_clusters=1)
-    clustering = Clustering(model.spike_clusters)
-
-    clusters = [0]
-    spikes = clustering.spikes_in_clusters(clusters)
-    print(spikes)
 
     vm = view_model_class(model, **kwargs)
     vm.on_open()
-    vm.on_select(clusters)
+    vm.on_select([0])
 
     # Show the view.
     show_test_start(vm.view)

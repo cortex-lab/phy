@@ -27,21 +27,20 @@ from ..utils.logging import debug
 # Features sisual
 #------------------------------------------------------------------------------
 
-class FeatureVisual(BaseSpikeVisual):
+class BaseFeatureVisual(BaseSpikeVisual):
     """Display a grid of multidimensional features."""
 
-    _shader_name = 'features'
+    _shader_name = None
     _gl_draw_mode = 'points'
 
     def __init__(self, **kwargs):
-        super(FeatureVisual, self).__init__(**kwargs)
+        super(BaseFeatureVisual, self).__init__(**kwargs)
 
         self._features = None
         self._spike_samples = None
         self._dimensions = []
         self.n_channels, self.n_features = None, None
         self.n_rows = None
-        self.program['u_size'] = 3.
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -68,6 +67,9 @@ class FeatureVisual(BaseSpikeVisual):
 
     @features.setter
     def features(self, value):
+        self._set_features_to_bake(value)
+
+    def _set_features_to_bake(self, value):
         # WARNING: when setting new data, features need to be set first.
         # n_spikes will be set as a function of features.
         value = _as_array(value)
@@ -76,7 +78,7 @@ class FeatureVisual(BaseSpikeVisual):
         self.n_spikes, self.n_channels, self.n_features = value.shape
         self._features = value
         self._empty = self.n_spikes == 0
-        self.set_to_bake('spikes', 'spikes_clusters', 'color')
+        self.set_to_bake('spikes',)
 
     def _check_dimension(self, dim):
         if isinstance(dim, tuple):
@@ -102,13 +104,6 @@ class FeatureVisual(BaseSpikeVisual):
                 t = -1. + 2 * t / m
             return t
 
-    def _get_mask_dim(self, dim):
-        if isinstance(dim, (tuple, list)):
-            channel, feature = dim
-            return self._masks[:, channel]
-        elif dim == 'time':
-            return np.ones(self.n_spikes)
-
     @property
     def dimensions(self):
         """Displayed dimensions.
@@ -123,16 +118,101 @@ class FeatureVisual(BaseSpikeVisual):
 
     @dimensions.setter
     def dimensions(self, value):
+        self._set_dimensions_to_bake(value)
+
+    def _set_dimensions_to_bake(self, value):
         self.n_rows = len(value)
         for dim in value:
             self._check_dimension(dim)
         self._dimensions = value
-        self.set_to_bake('spikes', 'spikes_clusters', 'color')
+        self.set_to_bake('spikes',)
 
     @property
     def n_boxes(self):
         """Number of boxes in the grid."""
         return self.n_rows * self.n_rows
+
+    # Data baking
+    # -------------------------------------------------------------------------
+
+    def _bake_spikes(self):
+        n_points = self.n_boxes * self.n_spikes
+
+        # index increases from top to bottom, left to right
+        # same as matrix indices (i, j) starting at 0
+        positions = []
+        boxes = []
+
+        for i in range(self.n_rows):
+            for j in range(self.n_rows):
+                index = self.n_rows * i + j
+
+                dim_i = self._dimensions[i]
+                dim_j = self._dimensions[j]
+
+                fet_i = self._get_feature_dim(dim_i)
+                # For non-time dimensions, the diagonal shows
+                # a different feature on y (same channel than x).
+                if i == j and dim_j != 'time' and self.n_features >= 1:
+                    channel, feature = dim_j
+                    # Choose the other feature on y axis.
+                    feature = 1 - feature
+                    fet_j = self._features[:, channel, feature]
+                else:
+                    fet_j = self._get_feature_dim(dim_j)
+
+                # NOTE: we switch here because we want to plot
+                # dim_i (y) over dim_j (x) on box (i, j).
+                pos = np.c_[fet_j, fet_i]
+                positions.append(pos)
+
+                boxes.append(index * np.ones(self.n_spikes, dtype=np.float32))
+
+        positions = np.vstack(positions).astype(np.float32)
+        boxes = np.hstack(boxes)
+
+        assert positions.shape == (n_points, 2)
+        assert boxes.shape == (n_points,)
+
+        self.program['a_position'] = positions.copy()
+        self.program['a_box'] = boxes
+        self.program['n_rows'] = self.n_rows
+
+        debug("bake features", positions.shape)
+
+
+class BackgroundFeatureVisual(BaseFeatureVisual):
+    """Display a grid of multidimensional features in the background."""
+
+    _shader_name = 'features_bg'
+
+
+class FeatureVisual(BaseFeatureVisual):
+    """Display a grid of multidimensional features."""
+
+    _shader_name = 'features'
+
+    def __init__(self, **kwargs):
+        super(FeatureVisual, self).__init__(**kwargs)
+        self.program['u_size'] = 3.
+
+    # Data properties
+    # -------------------------------------------------------------------------
+
+    def _set_features_to_bake(self, value):
+        super(FeatureVisual, self)._set_features_to_bake(value)
+        self.set_to_bake('spikes', 'spikes_clusters', 'color')
+
+    def _get_mask_dim(self, dim):
+        if isinstance(dim, (tuple, list)):
+            channel, feature = dim
+            return self._masks[:, channel]
+        elif dim == 'time':
+            return np.ones(self.n_spikes)
+
+    def _set_dimensions_to_bake(self, value):
+        super(FeatureVisual, self)._set_dimensions_to_bake(value)
+        self.set_to_bake('spikes', 'spikes_clusters', 'color')
 
     # Data baking
     # -------------------------------------------------------------------------
@@ -189,7 +269,7 @@ class FeatureVisual(BaseSpikeVisual):
         self.program['n_clusters'] = self.n_clusters
         self.program['n_rows'] = self.n_rows
 
-        debug("bake spikes", positions.shape)
+        debug("bake features", positions.shape)
 
     def _bake_spikes_clusters(self):
         # Get the spike cluster indices (between 0 and n_clusters-1).
