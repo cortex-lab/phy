@@ -16,6 +16,7 @@ from ...plot.waveforms import WaveformView
 from ...plot.traces import TraceView
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from .selector import Selector
+from ._utils import _concatenate_per_cluster_arrays
 
 
 #------------------------------------------------------------------------------
@@ -123,13 +124,11 @@ class BaseViewModel(object):
                                   name,
                                   cluster_ids,
                                   spikes,
-                                  spikes_per_cluster=None,
                                   ):
         if self._store is not None:
             return self._store.load(name,
                                     cluster_ids,
                                     spikes,
-                                    spikes_per_cluster=spikes_per_cluster,
                                     )
         else:
             return getattr(self._model, name)[spikes]
@@ -176,21 +175,34 @@ class WaveformViewModel(BaseViewModel):
         self.view.visual.channel_order = self.model.channel_order
 
     def on_select(self, cluster_ids):
-        super(WaveformViewModel, self).on_select(cluster_ids)
-        spikes = self.spike_ids
 
-        # Load waveforms.
-        debug("Loading {0:d} waveforms...".format(len(spikes)))
-        # waveforms = self.model.waveforms[spikes]
-        spc = {cluster: self._store.waveforms_spikes(cluster)
-               for cluster in cluster_ids} if self._store else None
-        waveforms = self._load_from_store_or_model('waveforms',
-                                                   cluster_ids,
-                                                   spikes,
-                                                   spikes_per_cluster=spc,
-                                                   )
-        # We may not get all requested spikes.
-        assert waveforms.shape[0] <= len(spikes)
+        # Get the spikes of the stored waveforms.
+        debug("Loading waveforms...")
+        if self._store is not None:
+            # Subset the stored spikes for each cluster.
+            k = len(cluster_ids)
+            spc = {cluster: self._store.waveforms_spikes(cluster)[::k]
+                   for cluster in cluster_ids}
+            # Get all the spikes for the clusters.
+            spikes = _concatenate_per_cluster_arrays(spc, spc)
+            # Subset the spikes with the selector.
+            self._selector.selected_spikes = spikes
+            spikes = self.spike_ids
+            # Load the waveforms for the subset spikes.
+            waveforms = self._store.load('waveforms',
+                                         cluster_ids,
+                                         spikes,
+                                         spikes_per_cluster=spc,
+                                         )
+        else:
+            # If there's no store, just take the waveforms from the traces
+            # (slower).
+            self._selector.selected_clusters = cluster_ids
+            spikes = self.spike_ids
+            waveforms = self.model.waveforms[spikes]
+
+        self._update_spike_clusters()
+        assert waveforms.shape[0] == len(spikes)
         debug("Done!")
 
         # Cluster display order.
