@@ -248,6 +248,7 @@ class ClusterStore(object):
     def __init__(self, model=None, path=None):
         self._model = model
         self._spikes_per_cluster = {}
+        self._spike_clusters = None
         self._memory = MemoryStore()
         self._disk = DiskStore(path) if path is not None else None
         self._items = []
@@ -284,6 +285,19 @@ class ClusterStore(object):
         self._spikes_per_cluster = value
         for item in self._items:
             item.spikes_per_cluster = value
+
+    @property
+    def spike_clusters(self):
+        """Spike clusters array."""
+        return self._spike_clusters
+
+    @spike_clusters.setter
+    def spike_clusters(self, value):
+        """Update the `spike_clusters` array."""
+        assert isinstance(value, np.ndarray)
+        self._spike_clusters = value
+        for item in self._items:
+            item.spike_clusters = value
 
     @property
     def cluster_ids(self):
@@ -482,7 +496,11 @@ class ClusterStore(object):
         n = len(to_delete)
         info("{0} clusters deleted from the cluster store.".format(n))
 
-    def generate(self, spikes_per_cluster=None, mode=None):
+    def generate(self,
+                 spikes_per_cluster=None,
+                 spike_clusters=None,
+                 mode=None,
+                 ):
         """Generate the cluster store.
 
         Parameters
@@ -490,6 +508,8 @@ class ClusterStore(object):
 
         spikes_per_cluster : dict
             A dictionary `{cluster_ids: spike_ids}`.
+        spike_clusters : array
+            Spike cluster mapping.
         mode : str (default is None)
             How the cluster store should be generated. Options are:
 
@@ -507,6 +527,8 @@ class ClusterStore(object):
             raise RuntimeError("The `spikes_per_cluster` structure "
                                "needs to be assigned to the cluster store.")
         assert isinstance(spikes_per_cluster, dict)
+        if spike_clusters is not None:
+            self.spike_clusters = spike_clusters
         if hasattr(self._model, 'name'):
             name = self._model.name
         else:
@@ -555,6 +577,15 @@ class StoreItem(object):
     @spikes_per_cluster.setter
     def spikes_per_cluster(self, value):
         self._spikes_per_cluster = value
+
+    @property
+    def spike_clusters(self):
+        """Spikes per cluster."""
+        return self._spike_clusters
+
+    @spike_clusters.setter
+    def spike_clusters(self, value):
+        self._spike_clusters = value
 
     @property
     def cluster_ids(self):
