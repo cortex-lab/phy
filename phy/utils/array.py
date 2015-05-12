@@ -433,3 +433,6 @@ class PartialArray(object):
                 raise ValueError("The array selection is invalid: "
                                  "{0}".format(str(item)))
             return self._arr[item]
+
+    def __len__(self):
+        return self.shape[0]

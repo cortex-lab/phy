@@ -261,12 +261,6 @@ class FeatureViewModel(BaseViewModel):
 
     def on_open(self):
         # Get background features.
-        # self._selector_bg = Selector(self.model.spike_clusters,
-        #                              n_spikes_max=self.n_spikes_max_bg,
-        #                              excerpt_size=self.excerpt_size_bg,
-        #                              )
-        # self._selector_bg.selected_spikes = np.arange(self.model.n_spikes)
-        # spikes = self._selector_bg.selected_spikes
         n_excerpts = self.n_spikes_max_bg // self.excerpt_size_bg
         features_bg = get_excerpts(self.model.features,
                                    n_excerpts=n_excerpts,
