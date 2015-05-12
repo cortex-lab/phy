@@ -38,6 +38,29 @@ def setup():
     set_level('info')
 
 
+def _test_empty(view_model_class, stop=True, **kwargs):
+
+    model = MockModel(n_spikes=1, n_clusters=1)
+    clustering = Clustering(model.spike_clusters)
+
+    clusters = [0]
+    spikes = clustering.spikes_in_clusters(clusters)
+    print(spikes)
+
+    vm = view_model_class(model, **kwargs)
+    vm.on_open()
+    vm.on_select(clusters)
+
+    # Show the view.
+    show_test_start(vm.view)
+    show_test_run(vm.view, _N_FRAMES)
+
+    if stop:
+        show_test_stop(vm.view)
+
+    return vm
+
+
 def _test_view_model(view_model_class, stop=True, **kwargs):
 
     model = MockModel()
@@ -78,8 +101,16 @@ def test_waveforms():
     _test_view_model(WaveformViewModel)
 
 
+def test_waveforms_empty():
+    _test_empty(WaveformViewModel)
+
+
 def test_features():
     _test_view_model(FeatureViewModel)
+
+
+def test_features_empty():
+    _test_empty(FeatureViewModel)
 
 
 def test_ccg():
@@ -89,6 +120,15 @@ def test_ccg():
                      n_excerpts=100,
                      excerpt_size=100,
                      )
+
+
+def test_ccg_empty():
+    _test_empty(CorrelogramViewModel,
+                binsize=20,
+                winsize_bins=51,
+                n_excerpts=100,
+                excerpt_size=100,
+                )
 
 
 def test_traces():
