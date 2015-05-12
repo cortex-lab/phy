@@ -1,4 +1,7 @@
+data
+doc
 experimental
+htmlcov
 wiki
 .idea
 .ipynb_checkpoints

@@ -13,7 +13,6 @@ import shutil
 
 import numpy as np
 
-from ...ext.six import integer_types
 from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of
 from ...utils.dock import DockWindow, qt_app, _create_web_view
@@ -23,7 +22,8 @@ from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel, cluster_group_id
 from ._history import GlobalHistory
 from .clustering import Clustering
-from ._utils import (_spikes_per_cluster,
+from ._utils import (ClusterMetadataUpdater,
+                     _spikes_per_cluster,
                      _concatenate_per_cluster_arrays,
                      )
 from .store import ClusterStore, StoreItem
@@ -186,10 +186,10 @@ class FeatureMasks(StoreItem):
             How to choose whether cluster files need to be re-generated.
             Can be one of the following options:
 
-            * None or 'default': only regenerate the missing or inconsistent
+            * `None` or `default`: only regenerate the missing or inconsistent
               clusters
-            * 'force': fully regenerate all clusters
-            * 'read-only': just load the existing files, do not write anything
+            * `force`: fully regenerate all clusters
+            * `read-only`: just load the existing files, do not write anything
 
         """
 
@@ -375,7 +375,7 @@ class Session(EventEmitter):
     This is the main object used for manual clustering. It implements
     all common actions:
 
-    * Loading a dataset (.kwik file)
+    * Loading a dataset (`.kwik` file)
     * Listing the clusters
     * Changing the current channel group or current clustering
     * Showing views (waveforms, features, correlograms, etc.)
@@ -384,7 +384,7 @@ class Session(EventEmitter):
     * Save back to .kwik
 
     """
-    def __init__(self, phy_user_dir=None):
+    def __init__(self, kwik_path=None, phy_user_dir=None):
         super(Session, self).__init__()
         self.model = None
         self.phy_user_dir = phy_user_dir
@@ -395,10 +395,13 @@ class Session(EventEmitter):
         self._load_default_settings()
 
         self.connect(self.on_open)
-        self.connect(self.on_cluster)
+        # self.connect(self.on_cluster)
         self.connect(self.on_close)
 
         self._create_view_functions()
+
+        if kwik_path:
+            self.open(kwik_path)
 
     # Settings
     # -------------------------------------------------------------------------
@@ -474,7 +477,7 @@ class Session(EventEmitter):
 
     def save(self):
         """Save the spike clusters and cluster groups to the Kwik file."""
-        groups = {cluster: self.cluster_metadata.group(cluster)
+        groups = {cluster: self._cluster_metadata_updater.group(cluster)
                   for cluster in self.clustering.cluster_ids}
         self.model.save(self.clustering.spike_clusters,
                         groups)
@@ -501,6 +504,7 @@ class Session(EventEmitter):
         clusters = list(clusters)
         info("Merge clusters {}.".format(str(clusters)))
         up = self.clustering.merge(clusters)
+        self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
 
     def split(self, spikes):
@@ -517,9 +521,10 @@ class Session(EventEmitter):
         self._check_list_argument(spikes, 'spikes')
         info("Split {0:d} spikes.".format(len(spikes)))
         up = self.clustering.split(spikes)
+        self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
 
-    def move(self, clusters, group, **kwargs):
+    def move(self, clusters, group):
         """Move some clusters to a cluster group.
 
         Here is the list of cluster groups:
@@ -533,22 +538,28 @@ class Session(EventEmitter):
         self._check_list_argument(clusters)
         info("Move clusters {0} to {1}.".format(str(clusters), group))
         group_id = cluster_group_id(group)
-        up = self.cluster_metadata.set_group(clusters, group_id)
+        up = self._cluster_metadata_updater.set_group(clusters, group_id)
+        self._global_history.action(self._cluster_metadata_updater)
         # Extra UpdateInfo fields.
-        up.update(kwargs)
+        # up.update(kwargs)
         self.emit('cluster', up=up)
+
+    def _undo_redo(self, up):
+        if up:
+            info("{} {}.".format(up.history.title(),
+                                 up.description,
+                                 ))
+            self.emit('cluster', up=up)
 
     def undo(self):
         """Undo the last clustering action."""
-        info("Undo.")
         up = self._global_history.undo()
-        self.emit('cluster', up=up, add_to_stack=False)
+        self._undo_redo(up)
 
     def redo(self):
         """Redo the last undone action."""
-        info("Redo.")
         up = self._global_history.redo()
-        self.emit('cluster', up=up, add_to_stack=False)
+        self._undo_redo(up)
 
     # Properties
     # -------------------------------------------------------------------------
@@ -560,9 +571,6 @@ class Session(EventEmitter):
 
     # Event callbacks
     # -------------------------------------------------------------------------
-
-    def _create_cluster_metadata(self):
-        self.cluster_metadata = self.model.cluster_metadata
 
     def _create_cluster_store(self):
 
@@ -587,11 +595,12 @@ class Session(EventEmitter):
 
         # Initialize the progress reporter.
         pr_disk = ProgressReporter(
-            progress_message='Initializing the cluster store: {progress}.',
+            progress_message=('Initializing the cluster store: '
+                              '{progress:.1f}%.'),
             complete_message='Cluster store initialized.')
 
         pr_memory = ProgressReporter(
-            progress_message='Computing cluster statistics: {progress}.',
+            progress_message='Computing cluster statistics: {progress:.1f}%.',
             complete_message='Cluster statistics computed.')
 
         self.cluster_store.register_item(FeatureMasks,
@@ -605,23 +614,18 @@ class Session(EventEmitter):
         self.cluster_store.generate(self.clustering.spikes_per_cluster)
 
         @self.connect
-        def on_cluster(up=None, add_to_stack=None):
+        def on_cluster(up=None):
             self.cluster_store.on_cluster(up)
+
+    def _create_cluster_metadata(self):
+        self._cluster_metadata_updater = ClusterMetadataUpdater(
+            self.model.cluster_metadata)
 
     def _create_clustering(self):
         self.clustering = Clustering(self.model.spike_clusters)
 
     def _create_global_history(self):
         self._global_history = GlobalHistory(process_ups=_process_ups)
-
-        @self.connect
-        def on_cluster(up=None, add_to_stack=None):
-            # Update the global history.
-            if add_to_stack and up is not None:
-                if up.description.startswith('metadata'):
-                    self._global_history.action(self.cluster_metadata)
-                elif up.description in ('merge', 'assign'):
-                    self._global_history.action(self.clustering)
 
     def _to_wizard_group(self, group_id):
         """Return the group name required by the wizard, as a function
@@ -631,14 +635,14 @@ class Session(EventEmitter):
             1: 'ignored',
             2: 'good',
             3: None,
-            None: 'ignored',
-        }[group_id]
+            None: None,
+        }.get(group_id, 'good')
 
     def _create_wizard(self):
 
         # Initialize the groups for the wizard.
         def _group(cluster):
-            group_id = self.cluster_metadata.group(cluster)
+            group_id = self._cluster_metadata_updater.group(cluster)
             return self._to_wizard_group(group_id)
 
         groups = {cluster: _group(cluster)
@@ -660,21 +664,17 @@ class Session(EventEmitter):
             return self.cluster_store.mean_masks(cluster).max()
 
         @self.connect
-        def on_cluster(up=None, add_to_stack=None):
-            if up is None:
-                return
-            # Update the clusters in the wizard.
-            if up.description == 'merge':
-                group = self.cluster_metadata.group(up.deleted[0])
-                self.wizard.merge(up.deleted, up.added, group)
-            elif up.description == 'assign':
-                group = self.cluster_metadata.group(up.deleted[0])
-                self.wizard.update_clusters(up.deleted, up.added, group)
-            elif up.description == 'metadata_group':
-                assert isinstance(up.metadata_value, integer_types)
-                for cluster in up.metadata_changed:
-                    group = self._to_wizard_group(up.metadata_value)
-                    self.wizard.move(cluster, group)
+        def on_cluster(up):
+            # HACK: get the current group as it is not available in `up`
+            # currently.
+            if up.description.startswith('metadata'):
+                up = up.copy()
+                cluster = up.metadata_changed[0]
+                group = self.model.cluster_metadata.group(cluster)
+                up.metadata_value = self._to_wizard_group(group)
+            # This called for both regular and history actions.
+            # Save the wizard selection and update the wizard.
+            self.wizard.on_cluster(up)
 
     def _create_wizard_panel(self, cluster_ids=None):
         view = _create_web_view(self.wizard._repr_html_())
@@ -699,15 +699,6 @@ class Session(EventEmitter):
         self._create_cluster_metadata()
         self._create_cluster_store()
         self._create_wizard()
-
-    def on_cluster(self, up=None, add_to_stack=True):
-        """Update the history when clustering changes occur."""
-        # Update the global history.
-        if add_to_stack and up is not None:
-            if up.description.startswith('metadata'):
-                self._global_history.action(self.cluster_metadata)
-            elif up.description in ('merge', 'assign'):
-                self._global_history.action(self.clustering)
 
     def on_close(self):
         """Save the settings when the data is closed."""
@@ -755,12 +746,6 @@ class Session(EventEmitter):
         vm = self.create_view(name, save_size_pos=False)
         dock = gui.add_view(vm.view, name.title(), **kwargs)
 
-        # Make sure the dock widget is closed when the view it contains
-        # is closed with the Escape key.
-        @vm.view.connect
-        def on_close(e):
-            dock.close()
-
         @vm.view.connect
         def on_draw(event):
             if vm.view.visual.empty:
@@ -773,6 +758,13 @@ class Session(EventEmitter):
             if cluster_ids is not None and len(cluster_ids) > 0:
                 vm.on_select(cluster_ids)
                 vm.view.update()
+
+        # Make sure the dock widget is closed when the view it contains
+        # is closed with the Escape key.
+        @vm.view.connect
+        def on_close(e):
+            self.unconnect(on_select)
+            dock.close()
 
         return vm
 
@@ -1193,7 +1185,7 @@ class Session(EventEmitter):
         ----------
 
         name : str
-            Can be 'waveforms', 'features', 'correlograms', or 'traces'.
+            Can be `waveforms`, `features`, `correlograms`, or `traces`.
         cluster_ids : array-like
             List of clusters to show.
 
@@ -1212,7 +1204,7 @@ class Session(EventEmitter):
         ----------
 
         name : str
-            Can be 'waveforms', 'features', 'correlograms', or 'traces'.
+            Can be `waveforms`, `features`, `correlograms`, or `traces`.
         cluster_ids : array-like
             List of clusters to show.
 

@@ -8,6 +8,7 @@ help:
 	@echo "test - run tests quickly with the default Python"
 	@echo "release - package and upload a release"
 	@echo "dist - package"
+	@echo "apidoc - build API doc"
 
 clean: clean-build clean-pyc
 
@@ -39,3 +40,6 @@ dist: clean
 	python setup.py sdist
 	python setup.py bdist_wheel
 	ls -l dist
+
+apidoc:
+	python tools/api.py

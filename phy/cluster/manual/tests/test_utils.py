@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Tests of sparse matrix structures."""
+"""Tests of manual clustering utility functions."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -9,13 +9,16 @@
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
-from .._utils import (_unique, _spikes_in_clusters,
+from .._utils import (ClusterMetadataUpdater,
+                      _unique,
+                      _spikes_in_clusters,
                       _spikes_per_cluster,
                       _flatten_spikes_per_cluster,
                       _concatenate_per_cluster_arrays,
                       _subset_spikes_per_cluster,
                       )
 from ....io.mock.artificial import artificial_spike_clusters
+from ....io.kwik_model import ClusterMetadata
 
 
 #------------------------------------------------------------------------------
@@ -116,3 +119,93 @@ def test_subset_spikes_per_cluster():
     ae(arrs[2], [1, 7])
     ae(arrs[3], [8])
     ae(arrs[5], [8])
+
+
+def test_metadata_history():
+    """Test ClusterMetadataUpdater history."""
+
+    data = {2: {'group': 2, 'color': 7}, 4: {'group': 5}}
+
+    base_meta = ClusterMetadata(data=data)
+
+    @base_meta.default
+    def group(cluster):
+        return 3
+
+    @base_meta.default
+    def color(cluster):
+        return 0
+
+    meta = ClusterMetadataUpdater(base_meta)
+
+    # Values set in 'data'.
+    assert meta.group(2) == 2
+    assert meta.color(2) == 7
+
+    # Default values.
+    assert meta.group(3) == 3
+    assert meta.color(3) != 7
+
+    assert meta.group(4) == 5
+    assert meta.color(4) != 7
+
+    ###########
+
+    meta.undo()
+    meta.redo()
+
+    # Action 1.
+    info = meta.set_group(2, 20)
+    assert meta.group(2) == 20
+    assert info.description == 'metadata_group'
+    assert info.metadata_changed == [2]
+
+    # Action 2.
+    info = meta.set_color(3, 30)
+    assert meta.color(3) == 30
+    assert info.description == 'metadata_color'
+    assert info.metadata_changed == [3]
+
+    # Action 3.
+    info = meta.set_color(2, 40)
+    assert meta.color(2) == 40
+    assert info.description == 'metadata_color'
+    assert info.metadata_changed == [2]
+
+    ###########
+
+    # Undo 3.
+    info = meta.undo()
+    assert meta.color(2) == 7
+    assert info.description == 'metadata_color'
+    assert info.metadata_changed == [2]
+
+    # Undo 2.
+    info = meta.undo()
+    assert meta.color(3) != 7
+    assert info.description == 'metadata_color'
+    assert info.metadata_changed == [3]
+
+    # Redo 2.
+    info = meta.redo()
+    assert meta.color(3) == 30
+    assert meta.group(2) == 20
+    assert info.description == 'metadata_color'
+    assert info.metadata_changed == [3]
+
+    # Undo 2.
+    info = meta.undo()
+    assert info.description == 'metadata_color'
+    assert info.metadata_changed == [3]
+
+    # Undo 1.
+    info = meta.undo()
+    assert meta.group(2) == 2
+    assert info.description == 'metadata_group'
+    assert info.metadata_changed == [2]
+
+    info = meta.undo()
+    assert info is None
+
+    info = meta.undo()
+    assert info is None

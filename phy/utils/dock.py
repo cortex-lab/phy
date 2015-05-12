@@ -13,7 +13,7 @@ from collections import defaultdict
 from vispy import app
 
 from ._misc import _is_interactive
-from .logging import warn
+from .logging import info, warn
 
 
 # -----------------------------------------------------------------------------
@@ -66,6 +66,7 @@ def _create_web_view(html=None):
 # -----------------------------------------------------------------------------
 
 class DockWindow(QMainWindow):
+    """A Qt main window holding docking Qt or VisPy widgets."""
     def __init__(self,
                  position=None,
                  size=None,
@@ -92,17 +93,21 @@ class DockWindow(QMainWindow):
     # -------------------------------------------------------------------------
 
     def on_close(self, func):
+        """Register a callback function when the window is closed."""
         self._on_close = func
 
     def on_show(self, func):
+        """Register a callback function when the window is shown."""
         self._on_show = func
 
     def closeEvent(self, e):
+        """Qt slot when the window is closed."""
         if self._on_close:
             self._on_close()
         super(DockWindow, self).closeEvent(e)
 
     def show(self):
+        """Show the window."""
         if self._on_show:
             self._on_show()
         super(DockWindow, self).show()
@@ -196,6 +201,7 @@ class DockWindow(QMainWindow):
                 child.height() >= 10]
 
     def view_counts(self):
+        """Return the number of opened views."""
         views = self.list_views()
         counts = defaultdict(lambda: 0)
         for view in views:
@@ -206,9 +212,9 @@ class DockWindow(QMainWindow):
     # -------------------------------------------------------------------------
 
     def save_geometry_state(self):
-        """Save the geometry and state of the main window and the docks.
+        """Return picklable geometry and state of the window and docks.
 
-        This function can be called in on_close().
+        This function can be called in `on_close()`.
 
         """
         return {
@@ -222,7 +228,7 @@ class DockWindow(QMainWindow):
 
         The dock widgets need to be recreated first.
 
-        This function can be called in on_show().
+        This function can be called in `on_show()`.
 
         """
         self.restoreGeometry((gs['geometry']))
@@ -234,6 +240,7 @@ class DockWindow(QMainWindow):
 # -----------------------------------------------------------------------------
 
 _APP = None
+_APP_RUNNING = False
 
 
 def _close_qt_after(window, duration):
@@ -266,10 +273,25 @@ def _try_enable_ipython_qt():
     if not _is_interactive():
         return False
     if ip:
-        qt_app = ip.enable_gui('qt')
-        if qt_app:
-            return qt_app
+        ip.enable_gui('qt')
+        global _APP_RUNNING
+        _APP_RUNNING = True
+        return True
     return False
+
+
+def enable_qt():
+    if not _check_qt():
+        return
+    try:
+        from IPython import get_ipython
+        ip = get_ipython()
+        ip.enable_gui('qt')
+        global _APP_RUNNING
+        _APP_RUNNING = True
+        info("Qt event loop activated.")
+    except:
+        warn("Qt event loop not activated.")
 
 
 def start_qt_app():
@@ -283,10 +305,10 @@ def start_qt_app():
     # IPython event loop integration.
     if not _check_qt():
         return
-    app.use_app("pyqt4")
     global _APP
     if _try_enable_ipython_qt():
         return
+    app.use_app("pyqt4")
     if QtGui.QApplication.instance():
         _APP = QtGui.QApplication.instance()
         return
@@ -298,14 +320,19 @@ def start_qt_app():
 
 def run_qt_app():
     """Start the Qt application's event loop."""
+    global _APP_RUNNING
     if not _check_qt():
         return
-    if _APP is not None:
+    if _APP is not None and not _APP_RUNNING:
+        _APP_RUNNING = True
         _APP.exec_()
+    if not _is_interactive():
+        _APP_RUNNING = False
 
 
 @contextlib.contextmanager
 def qt_app():
+    """Context manager to ensure that a Qt app is running."""
     if not _check_qt():
         return
     start_qt_app()

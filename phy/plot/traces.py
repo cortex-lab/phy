@@ -23,12 +23,17 @@ from ..utils.logging import debug
 #------------------------------------------------------------------------------
 
 class TraceVisual(BaseSpikeVisual):
+    """Display multi-channel extracellular traces with spikes.
+
+    The visual displays a small portion of the traces at once. There is an
+    optional offset.
+
+    """
 
     _shader_name = 'traces'
     _gl_draw_mode = 'line_strip'
     default_channel_scale = 1.
 
-    """TraceVisual visual."""
     def __init__(self, **kwargs):
         super(TraceVisual, self).__init__(**kwargs)
         self._traces = None
@@ -44,7 +49,11 @@ class TraceVisual(BaseSpikeVisual):
 
     @property
     def traces(self):
-        """Displayed traces."""
+        """Displayed traces.
+
+        This is a `(n_samples, n_channels)` array.
+
+        """
         return self._traces
 
     @traces.setter
@@ -71,6 +80,7 @@ class TraceVisual(BaseSpikeVisual):
 
     @property
     def spike_samples(self):
+        """Time samples of the displayed spikes."""
         return self._spike_samples
 
     @spike_samples.setter
@@ -82,6 +92,7 @@ class TraceVisual(BaseSpikeVisual):
 
     @property
     def n_samples_per_spike(self):
+        """Number of time samples per displayed spikes."""
         return self._n_samples_per_spike
 
     @n_samples_per_spike.setter
@@ -90,6 +101,7 @@ class TraceVisual(BaseSpikeVisual):
 
     @property
     def sample_rate(self):
+        """Sample rate of the recording."""
         return self._sample_rate
 
     @sample_rate.setter
@@ -98,6 +110,7 @@ class TraceVisual(BaseSpikeVisual):
 
     @property
     def offset(self):
+        """Offset of the displayed traces (in time samples)."""
         return self._offset
 
     @offset.setter
@@ -106,6 +119,7 @@ class TraceVisual(BaseSpikeVisual):
 
     @property
     def channel_scale(self):
+        """Vertical scaling of the traces."""
         return self.program['u_scale']
 
     @channel_scale.setter
@@ -186,18 +200,12 @@ class TraceVisual(BaseSpikeVisual):
 
 
 class TraceView(BaseSpikeCanvas):
-    """Display traces.
+    """A VisPy canvas displaying traces.
 
     Interactivity
     -------------
 
-    Load more data:
-
-    * Keyboard : Control and Left/Right
-
-    Change channel scale:
-
-    * Keyboard : Control and Up/Down
+    * change channel scale: `ctrl+up`, `ctrl+down`
 
     """
     _visual_class = TraceVisual
@@ -216,6 +224,7 @@ class TraceView(BaseSpikeCanvas):
 
     @property
     def channel_scale(self):
+        """Vertical scale of the traces."""
         return self.visual.channel_scale
 
     @channel_scale.setter
@@ -226,7 +235,7 @@ class TraceView(BaseSpikeCanvas):
     _arrows = ('Left', 'Right', 'Up', 'Down')
 
     def on_key_press(self, event):
-
+        """Handle key press events."""
         key = event.key
         ctrl = 'Control' in event.modifiers
 

@@ -25,7 +25,7 @@ vec2 get_box_pos(vec2 box) {  // box = (cluster, channel)
     // Spacing between cluster boxes.
     float h = 2.5 * u_data_scale.x;
     // TODO: add superposition
-    box_pos.x += h * (box.x - .5 * (n_clusters - 1.));
+    box_pos.x += h * (box.x - .5 * (n_clusters - 1.)) / n_clusters;
     return box_pos;
 }
 
@@ -38,7 +38,8 @@ void main() {
     float depth = depth_mask(a_box.x, a_data.y, n_clusters);
 
     // The z coordinate is the depth: it depends on the mask.
-    gl_Position = vec4(pan_zoom(pos + box_pos), depth, 1.);
+    vec2 x_coeff = vec2(1. / max(n_clusters, 1.), 1.);
+    gl_Position = vec4(pan_zoom(x_coeff * pos + box_pos), depth, 1.);
 
     // Compute the waveform color as a function of the cluster color
     // and the mask.

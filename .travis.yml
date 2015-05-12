@@ -25,10 +25,10 @@ install:
   - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION
   - source activate testenv
   # Optional dependencies.
-  - conda install pip numpy matplotlib scipy h5py pyqt pyzmq ipython
+  - conda install pip numpy matplotlib scipy h5py pyqt pyzmq ipython requests
   # Testing dependencies.
   - conda install pytest pip flake8 coverage
-  - pip install coveralls
+  - pip install coveralls responses
   - pip install python-coveralls
   - pip install pytest-cov
   # Install VisPy master.

@@ -11,8 +11,6 @@ import math
 
 import numpy as np
 
-# from vispy import gloo
-
 from ..utils.array import _as_array
 
 
@@ -39,19 +37,9 @@ class PanZoom(object):
     Interactivity
     -------------
 
-    Pan:
-
-    * Mouse : left-click and move (drag movement)
-    * Keyboard : arrows
-
-    Zoom:
-
-    * Mouse : wheel or right-click and move (drag movement)
-    * Keyboard : + and -
-
-    Reset:
-
-    * Keyboard : R
+    * pan: `arrows`, left-drag
+    * zoom: `+`, `-`, wheel, right-drag
+    * reset: `r`
 
     """
 
@@ -118,6 +106,7 @@ class PanZoom(object):
 
     @property
     def zoom_to_pointer(self):
+        """Whether to zoom toward the pointer position."""
         return self._zoom_to_pointer
 
     @zoom_to_pointer.setter
@@ -126,7 +115,7 @@ class PanZoom(object):
 
     @property
     def is_attached(self):
-        """Whether transform is attached to a canvas."""
+        """Whether the transform is attached to a canvas."""
         return self._canvas is not None
 
     @property
@@ -144,6 +133,7 @@ class PanZoom(object):
 
     @property
     def xmin(self):
+        """Minimum x allowed for pan."""
         return self._xmin
 
     @xmin.setter
@@ -155,6 +145,7 @@ class PanZoom(object):
 
     @property
     def xmax(self):
+        """Maximum x allowed for pan."""
         return self._xmax
 
     @xmax.setter
@@ -169,6 +160,7 @@ class PanZoom(object):
 
     @property
     def ymin(self):
+        """Minimum y allowed for pan."""
         return self._ymin
 
     @ymin.setter
@@ -180,6 +172,7 @@ class PanZoom(object):
 
     @property
     def ymax(self):
+        """Maximum y allowed for pan."""
         return self._ymax
 
     @ymax.setter
@@ -360,8 +353,9 @@ class PanZoom(object):
 
     def on_mouse_move(self, event):
         """Pan and zoom with the mouse."""
-
-        if event.is_dragging and not event.modifiers:
+        if event.modifiers:
+            return
+        if event.is_dragging:
             x0, y0 = self._normalize(event.press_event.pos)
             x1, y1 = self._normalize(event.last_event.pos, False)
             x, y = self._normalize(event.pos, False)
@@ -373,7 +367,9 @@ class PanZoom(object):
                 self._do_zoom((dx, dy), (x0, y0), c=c)
 
     def on_mouse_wheel(self, event):
-        """Zoom."""
+        """Zoom with the mouse wheel."""
+        if event.modifiers:
+            return
         dx = np.sign(event.delta[1]) * self._wheel_coeff
         # Zoom toward the mouse pointer.
         x0, y0 = self._normalize(event.pos)
@@ -408,6 +404,8 @@ class PanZoom(object):
         self._canvas.update()
 
     def on_key_press(self, event):
+        """Key press event."""
+
         # Zooming with the keyboard.
         key = event.key
         if event.modifiers:
@@ -429,7 +427,7 @@ class PanZoom(object):
     # -------------------------------------------------------------------------
 
     def add(self, programs):
-        """Attach programs to this tranform."""
+        """Add programs to this tranform."""
 
         if not isinstance(programs, (list, tuple)):
             programs = [programs]
@@ -468,27 +466,11 @@ class PanZoomGrid(PanZoom):
     Interactivity
     -------------
 
-    Pan:
-
-    * Mouse : left-click and move (drag movement)
-    * Keyboard : arrows
-
-    Subplot zoom:
-
-    * Mouse : wheel or right-click and move (drag movement)
-    * Keyboard : + and -
-
-    Global zoom:
-
-    * Mouse : Shift + wheel
-
-    Subplot reset:
-
-    * Keyboard : R
-
-    Global reset:
-
-    * Keyboard : Shift + R
+    * subplot pan: `arrows`, left-drag
+    * subplot zoom: `+`, `-`, right-drag
+    * subplot reset: `r`
+    * global zoom: `shift+wheel`
+    * global reset: `shift+r`
 
     """
 
@@ -505,6 +487,7 @@ class PanZoomGrid(PanZoom):
 
     @property
     def n_rows(self):
+        """Number of rows."""
         assert self._n_rows is not None
         return self._n_rows
 
@@ -565,6 +548,7 @@ class PanZoomGrid(PanZoom):
 
     @property
     def zoom_matrix(self):
+        """Zoom in every subplot."""
         return self._zoom_matrix
 
     def _apply_pan_zoom(self):
@@ -695,6 +679,19 @@ class PanZoomGrid(PanZoom):
 
     @property
     def global_pan_zoom_axis(self):
+        """Global pan zoom matrix.
+
+        This matrix indicates how each subplot reacts to global pan zoom
+        events.
+
+        Element `(i, j)` in this matrix is:
+
+        * `x` if only this axis is to be changed
+        * `y` if only this axis is to be changed
+        * `b` if both axes are to be changed
+        * `n` if no axis is to be changed
+
+        """
         return self._global_pan_zoom_axis
 
     @global_pan_zoom_axis.setter
@@ -747,12 +744,14 @@ class PanZoomGrid(PanZoom):
     # -------------------------------------------------------------------------
 
     def on_mouse_move(self, event):
+        """Mouse move event."""
         # Set box index as a function of the press position.
         if event.is_dragging:
             self._set_current_box(event.press_event.pos)
         super(PanZoomGrid, self).on_mouse_move(event)
 
     def on_mouse_wheel(self, event):
+        """Mouse wheel event."""
         # Set box index as a function of the press position.
         self._set_current_box(event.pos)
         super(PanZoomGrid, self).on_mouse_wheel(event)
@@ -766,6 +765,7 @@ class PanZoomGrid(PanZoom):
             self._canvas.update()
 
     def on_key_press(self, event):
+        """Key press event."""
         super(PanZoomGrid, self).on_key_press(event)
 
         key = event.key
@@ -787,7 +787,7 @@ class PanZoomGrid(PanZoom):
     # -------------------------------------------------------------------------
 
     def add(self, programs):
-        """ Attach programs to this tranform """
+        """Add programs to this tranform."""
         if not isinstance(programs, (list, tuple)):
             programs = [programs]
         for program in programs:

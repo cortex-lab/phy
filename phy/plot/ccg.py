@@ -26,11 +26,11 @@ from ..utils.logging import debug
 #------------------------------------------------------------------------------
 
 class CorrelogramVisual(BaseSpikeVisual):
+    """Display a grid of auto- and cross-correlograms."""
 
     _shader_name = 'correlograms'
     _gl_draw_mode = 'triangle_strip'
 
-    """CorrelogramVisual visual."""
     def __init__(self, **kwargs):
         super(CorrelogramVisual, self).__init__(**kwargs)
         self._correlograms = None
@@ -42,7 +42,11 @@ class CorrelogramVisual(BaseSpikeVisual):
 
     @property
     def correlograms(self):
-        """Displayed correlograms."""
+        """Displayed correlograms.
+
+        This is a `(n_clusters, n_clusters, n_bins)` array.
+
+        """
         return self._correlograms
 
     @correlograms.setter
@@ -60,6 +64,7 @@ class CorrelogramVisual(BaseSpikeVisual):
 
     @property
     def cluster_ids(self):
+        """Displayed cluster ids."""
         return self._cluster_ids
 
     @cluster_ids.setter
@@ -68,6 +73,7 @@ class CorrelogramVisual(BaseSpikeVisual):
 
     @property
     def n_boxes(self):
+        """Number of boxes in the grid view."""
         return self.n_clusters * self.n_clusters
 
     # Data baking
@@ -106,6 +112,8 @@ class CorrelogramVisual(BaseSpikeVisual):
 
 
 class CorrelogramView(BaseSpikeCanvas):
+    """A VisPy canvas displaying correlograms."""
+
     _visual_class = CorrelogramVisual
 
     def __init__(self, **kwargs):
@@ -126,6 +134,7 @@ class CorrelogramView(BaseSpikeCanvas):
 
     @property
     def cluster_ids(self):
+        """Displayed cluster ids."""
         return self.visual.cluster_ids
 
     @cluster_ids.setter
@@ -136,6 +145,7 @@ class CorrelogramView(BaseSpikeCanvas):
             self._pz.n_rows = self.visual.n_clusters
 
     def on_draw(self, event):
+        """Draw the correlograms visual."""
         gloo.clear()
         self.visual.draw()
         self.boxes.draw()

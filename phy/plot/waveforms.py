@@ -22,13 +22,13 @@ from ..utils.logging import debug
 #------------------------------------------------------------------------------
 
 class WaveformVisual(BaseSpikeVisual):
+    """Display waveforms with probe geometry."""
 
     _shader_name = 'waveforms'
     _gl_draw_mode = 'line_strip'
     default_box_scale = (.05, .03)
     default_probe_scale = (1., 1.)
 
-    """Waveform visual."""
     def __init__(self, **kwargs):
         super(WaveformVisual, self).__init__(**kwargs)
 
@@ -44,7 +44,11 @@ class WaveformVisual(BaseSpikeVisual):
 
     @property
     def waveforms(self):
-        """Displayed waveforms."""
+        """Displayed waveforms.
+
+        This is a `(n_spikes, n_samples, n_channels)` array.
+
+        """
         return self._waveforms
 
     @waveforms.setter
@@ -61,7 +65,11 @@ class WaveformVisual(BaseSpikeVisual):
 
     @property
     def channel_positions(self):
-        """Array with the coordinates of all channels."""
+        """Positions of the channels.
+
+        This is a `(n_channels, 2)` array.
+
+        """
         return self._channel_positions
 
     @channel_positions.setter
@@ -72,6 +80,11 @@ class WaveformVisual(BaseSpikeVisual):
 
     @property
     def box_scale(self):
+        """Scale of the waveforms.
+
+        This is a pair of scalars.
+
+        """
         return tuple(self.program['u_data_scale'])
 
     @box_scale.setter
@@ -81,6 +94,11 @@ class WaveformVisual(BaseSpikeVisual):
 
     @property
     def probe_scale(self):
+        """Scale of the probe.
+
+        This is a pair of scalars.
+
+        """
         return tuple(self.program['u_channel_scale'])
 
     @probe_scale.setter
@@ -158,24 +176,24 @@ class WaveformVisual(BaseSpikeVisual):
 
 
 class WaveformView(BaseSpikeCanvas):
-    """Display waveforms.
+    """A VisPy canvas displaying waveforms.
 
     Interactivity
     -------------
 
-    Waveforms scaling:
-
-    * Keyboard : Control + arrows
-
-    Probe scaling:
-
-    * Keyboard : Shift + arrows
+    * change waveform scaling: `ctrl+arrows`
+    * change probe scaling: `shift+arrows`
 
     """
     _visual_class = WaveformVisual
 
     @property
     def box_scale(self):
+        """Scale of the waveforms.
+
+        This is a pair of scalars.
+
+        """
         return self.visual.box_scale
 
     @box_scale.setter
@@ -185,6 +203,11 @@ class WaveformView(BaseSpikeCanvas):
 
     @property
     def probe_scale(self):
+        """Scale of the probe.
+
+        This is a pair of scalars.
+
+        """
         return self.visual.probe_scale
 
     @probe_scale.setter
@@ -195,7 +218,7 @@ class WaveformView(BaseSpikeCanvas):
     _arrows = ('Left', 'Right', 'Up', 'Down')
 
     def on_key_press(self, event):
-
+        """Handle key press events."""
         key = event.key
         ctrl = 'Control' in event.modifiers
         shift = 'Shift' in event.modifiers
@@ -228,6 +251,23 @@ class WaveformView(BaseSpikeCanvas):
                 self.probe_scale = (u, v * coeff)
             self.update()
 
+    def on_mouse_wheel(self, event):
+        """Handle mouse wheel events."""
+        ctrl = 'Control' in event.modifiers
+        shift = 'Shift' in event.modifiers
+        coeff = 1. + .1 * event.delta[1]
+
+        # Box scale.
+        if ctrl:
+            u, v = self.box_scale
+            self.box_scale = (u * coeff, v)
+            self.update()
+        if shift:
+            u, v = self.box_scale
+            self.box_scale = (u, v * coeff)
+            self.update()
+
     def on_draw(self, event):
+        """Draw the visual."""
         gloo.clear(color=True, depth=True)
         self.visual.draw()

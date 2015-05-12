@@ -101,9 +101,9 @@ def test_dock_state():
         }
 
     gs = gui.gs
-
-    # Recreate the GUI with the saved state.
     with qt_app():
+
+        # Recreate the GUI with the saved state.
         gui = DockWindow()
 
         gui.add_view(_create_canvas(), 'view1')

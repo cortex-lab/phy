@@ -18,13 +18,18 @@ from inspect import getargspec
 #------------------------------------------------------------------------------
 
 class EventEmitter(object):
-    """Class that emits events and accepts registered callbacks."""
+    """Class that emits events and accepts registered callbacks.
+
+    Derive from this class to emit events and let other classes know
+    of occurrences of actions and events.
+
+    """
 
     def __init__(self):
         self._callbacks = defaultdict(list)
 
     def _get_on_name(self, func):
-        """Return 'eventname' when the function name is `on_<eventname>()`."""
+        """Return `eventname` when the function name is `on_<eventname>()`."""
         r = re.match("^on_(.+)$", func.__name__)
         if r:
             event = r.group(1)
@@ -40,7 +45,24 @@ class EventEmitter(object):
                     lambda *args, **kwargs: self.emit(event, *args, **kwargs))
 
     def connect(self, func=None, event=None, set_method=False):
-        """Decorator for a function reacting to an event being raised."""
+        """Register a callback function to a given event.
+
+        To register a callback function to the `spam` event, where `obj` is
+        an instance of a class deriving from `EventEmitter`:
+
+        ```python
+        @obj.connect
+        def on_spam(arg1, arg2):
+            pass
+        ```
+
+        This is called when `obj.emit('spam', arg1, arg2)` is called.
+
+        Several callback functions can be registered for a given event.
+
+        The registration order is conserved and may matter in applications.
+
+        """
         if func is None:
             return partial(self.connect, set_method=set_method)
 
@@ -58,14 +80,19 @@ class EventEmitter(object):
         return func
 
     def unconnect(self, *funcs):
-        """Unconnect callback functions."""
+        """Unconnect specified callback functions."""
         for func in funcs:
             for callbacks in self._callbacks.values():
                 if func in callbacks:
                     callbacks.remove(func)
 
     def emit(self, event, *args, **kwargs):
-        """Call all callback functions registered for that event."""
+        """Call all callback functions registered with an event.
+
+        Any positional and keyword arguments can be passed here, and they will
+        be fowarded to the callback functions.
+
+        """
         for callback in self._callbacks.get(event, []):
             # Only keep the kwargs that are part of the callback's arg spec.
             kwargs = {n: v for n, v in kwargs.items()
@@ -78,7 +105,15 @@ class EventEmitter(object):
 #------------------------------------------------------------------------------
 
 class ProgressReporter(EventEmitter):
-    """A class that reports progress done."""
+    """A class that reports progress done.
+
+    Emits
+    -----
+
+    * `progress(value, value_max)`
+    * `complete()`
+
+    """
     def __init__(self, progress_message=None, complete_message=None):
         super(ProgressReporter, self).__init__()
         self._value = 0
@@ -103,6 +138,7 @@ class ProgressReporter(EventEmitter):
 
     @property
     def value(self):
+        """Current value (integer)."""
         return self._value
 
     @value.setter
@@ -117,6 +153,7 @@ class ProgressReporter(EventEmitter):
 
     @property
     def value_max(self):
+        """Maximum value."""
         return self._value_max
 
     @value_max.setter
@@ -126,11 +163,14 @@ class ProgressReporter(EventEmitter):
         self._value_max = value_max
 
     def is_complete(self):
+        """Return wheter the task has completed."""
         return self._value >= self._value_max
 
     def set_complete(self):
+        """Set the task as complete."""
         self.value = self.value_max
 
     @property
     def progress(self):
+        """Return the current progress."""
         return self._value / float(self._value_max)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""The KwikModel class manages in-memory structures and KWIK file open/save."""
+"""The KwikModel class manages in-memory structures and Kwik file open/save."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -9,12 +9,12 @@
 import os.path as op
 from random import randint
 import os
+from collections import defaultdict
 
 import numpy as np
 
 from ..ext import six
 from .base_model import BaseModel
-from ..cluster.manual.cluster_metadata import ClusterMetadata
 from .h5 import open_h5, File
 from ..waveform.loader import WaveformLoader
 from ..waveform.filter import bandpass_filter, apply_filter
@@ -25,7 +25,7 @@ from ..utils.array import (PartialArray,
                            _as_array,
                            _unique,
                            )
-from ..utils._misc import _is_integer
+from ..utils._misc import _is_integer, _as_list, _is_list
 
 
 #------------------------------------------------------------------------------
@@ -257,6 +257,88 @@ class SpikeLoader(object):
     def __getitem__(self, item):
         times = self._spike_samples[item]
         return self._waveforms[times]
+
+
+#------------------------------------------------------------------------------
+# ClusterMetadata class
+#------------------------------------------------------------------------------
+
+class ClusterMetadata(object):
+    """Hold cluster metadata.
+
+    Features
+    --------
+
+    * New metadata fields can be easily registered
+    * Arbitrary functions can be used for default values
+
+    Notes
+    ----
+
+    If a metadata field `group` is registered, then two methods are
+    dynamically created:
+
+    * `group(cluster)` returns the group of a cluster, or the default value
+      if the cluster doesn't exist.
+    * `set_group(cluster, value)` sets a value for the `group` metadata field.
+
+    """
+    def __init__(self, data=None):
+        self._fields = {}
+        self._data = defaultdict(dict)
+        # Fill the existing values.
+        if data is not None:
+            self._data.update(data)
+
+    @property
+    def data(self):
+        return self._data
+
+    def _get_one(self, cluster, field):
+        """Return the field value for a cluster, or the default value if it
+        doesn't exist."""
+        if cluster in self._data:
+            if field in self._data[cluster]:
+                return self._data[cluster][field]
+            elif field in self._fields:
+                # Call the default field function.
+                return self._fields[field](cluster)
+            else:
+                return None
+        else:
+            if field in self._fields:
+                return self._fields[field](cluster)
+            else:
+                return None
+
+    def _get(self, clusters, field):
+        if _is_list(clusters):
+            return [self._get_one(cluster, field)
+                    for cluster in _as_list(clusters)]
+        else:
+            return self._get_one(clusters, field)
+
+    def _set_one(self, cluster, field, value):
+        """Set a field value for a cluster."""
+        self._data[cluster][field] = value
+
+    def _set(self, clusters, field, value):
+        clusters = _as_list(clusters)
+        for cluster in clusters:
+            self._set_one(cluster, field, value)
+
+    def default(self, func):
+        """Register a new metadata field with a function
+        returning the default value of a cluster."""
+        field = func.__name__
+        # Register the decorated function as the default field function.
+        self._fields[field] = func
+        # Create self.<field>(clusters).
+        setattr(self, field, lambda clusters: self._get(clusters, field))
+        # Create self.set_<field>(clusters, value).
+        setattr(self, 'set_{0:s}'.format(field),
+                lambda clusters, value: self._set(clusters, field, value))
+        return func
 
 
 #------------------------------------------------------------------------------
@@ -520,36 +602,36 @@ class KwikModel(BaseModel):
     def open(self, kwik_path, channel_group=None, clustering=None):
         """Open a Kwik dataset.
 
-        The .kwik, .kwx, and .raw.kwd must be in the same folder with the
+        The `.kwik`, `.kwx`, and `.raw.kwd` must be in the same folder with the
         same basename.
 
         Notes
         -----
 
-        The .kwik file is opened in read-only mode, and is automatically
+        The `.kwik` file is opened in read-only mode, and is automatically
         closed when this function returns. It is temporarily reopened when
         the channel group or clustering changes.
 
-        The .kwik file is temporarily opened in append mode when saving.
+        The `.kwik` file is temporarily opened in append mode when saving.
 
-        The .kwx and .raw.kwd files stay open in read-only mode as long
-        as 'model.close()' is not called. This is because there might be
-        read accesses to features_masks (.kwx) and waveforms (.raw.kwd)
+        The `.kwx` and `.raw.kwd` files stay open in read-only mode as long
+        as `model.close()` is not called. This is because there might be
+        read accesses to `features_masks` (`.kwx`) and waveforms (`.raw.kwd`)
         while the dataset is opened.
 
         Parameters
         ----------
 
         kwik_path : str
-            Path to a .kwik file.
+            Path to a `.kwik` file.
         channel_group : int or None (default is None)
             The channel group (shank) index to use. This can be changed
             later after the file has been opened. By default, the first
             channel group is used.
         clustering : str or None (default is None)
             The clustering to use. This can be changed later after the file
-            has been opened. By default, the 'main' clustering is used. An
-            error is raised if the 'main' clustering doesn't exist.
+            has been opened. By default, the `main` clustering is used. An
+            error is raised if the `main` clustering doesn't exist.
 
         """
 
@@ -572,11 +654,11 @@ class KwikModel(BaseModel):
         # Open the KWX and KWD files.
         self._kwx = self._open_h5_if_exists('kwx')
         if self._kwx is None:
-            warn("The .kwx file hasn't been found. "
+            warn("The `.kwx` file hasn't been found. "
                  "Features won't be available.")
         self._kwd = self._open_h5_if_exists('raw.kwd')
         if self._kwd is None:
-            warn("The .raw.kwd file hasn't been found. "
+            warn("The `.raw.kwd` file hasn't been found. "
                  "Traces and waveforms won't be available.")
 
         # Load the data.
@@ -619,6 +701,28 @@ class KwikModel(BaseModel):
 
         if to_close:
             self._kwik.close()
+
+    def describe(self):
+        """Display information about the dataset."""
+        def _print(name, value):
+            print("{0: <24}{1}".format(name, value))
+        _print("Kwik file", self.kwik_path)
+        _print("Recordings", self.n_recordings)
+
+        # List of channel groups.
+        cg = ['{:d}'.format(g) + ('*' if g == self.channel_group else '')
+              for g in self.channel_groups]
+        _print("List of shanks", ', '.join(cg))
+
+        # List of clusterings.
+        cl = ['{:s}'.format(c) + ('*' if c == self.clustering else '')
+              for c in self.clusterings]
+        _print("Clusterings", ', '.join(cl))
+
+        _print("Channels", self.n_channels)
+        _print("Spikes", self.n_spikes)
+        _print("Clusters", self.n_clusters)
+        _print("Duration", "{:.0f}s".format(self.duration))
 
     # Changing channel group and clustering
     # -------------------------------------------------------------------------
@@ -754,11 +858,11 @@ class KwikModel(BaseModel):
             self._kwik.close()
 
     def rename_clustering(self, old_name, new_name):
-        """Rename a clustering in the .kwik file."""
+        """Rename a clustering in the `.kwik` file."""
         self._move_clustering(old_name, new_name, copy=False)
 
     def copy_clustering(self, name, new_name):
-        """Copy a clustering in the .kwik file."""
+        """Copy a clustering in the `.kwik` file."""
         self._move_clustering(name, new_name, copy=True)
 
     def delete_clustering(self, name):
@@ -794,6 +898,11 @@ class KwikModel(BaseModel):
     # -------------------------------------------------------------------------
 
     @property
+    def duration(self):
+        """Duration of the experiment (in seconds)."""
+        return float(self.traces.shape[0]) / self.sample_rate
+
+    @property
     def channel_groups(self):
         """List of channel groups found in the Kwik file."""
         return self._channel_groups
@@ -823,7 +932,7 @@ class KwikModel(BaseModel):
         The channel order is the same than the one from the PRB file.
         This order was used when generating the features and masks
         in SpikeDetekt2. The same order is used in phy when loading the
-        waveforms from the .raw.kwd file.
+        waveforms from the `.raw.kwd` file.
 
         """
         return self._channel_order
@@ -847,7 +956,7 @@ class KwikModel(BaseModel):
     def clusterings(self):
         """List of clusterings found in the Kwik file.
 
-        The first one is always 'main'.
+        The first one is always `main`.
 
         """
         return self._clusterings
@@ -856,7 +965,7 @@ class KwikModel(BaseModel):
     def clustering(self):
         """The currently-active clustering.
 
-        Default is 'main'.
+        Default is `main`.
 
         """
         return self._clustering
@@ -878,7 +987,7 @@ class KwikModel(BaseModel):
 
     @property
     def probe(self):
-        """A 'Probe' instance representing the probe used for the recording.
+        """A `Probe` instance representing the probe used for the recording.
 
         This object contains information about the adjacency graph and
         the channel positions.
@@ -888,7 +997,7 @@ class KwikModel(BaseModel):
 
     @property
     def traces(self):
-        """Raw traces as found in the .raw.kwd file.
+        """Raw traces as found in the `.raw.kwd` file.
 
         This object is memory-mapped to the HDF5 file.
 
@@ -899,7 +1008,7 @@ class KwikModel(BaseModel):
     def spike_samples(self):
         """Spike samples from the current channel group.
 
-        This is a NumPy array containing uint64 values (number of samples
+        This is a NumPy array containing `uint64` values (number of samples
         in unit of the sample rate).
 
         The spike times of all recordings are concatenated. There is no gap
@@ -912,7 +1021,7 @@ class KwikModel(BaseModel):
     def spike_times(self):
         """Spike times from the current channel_group.
 
-        This is a NumPy array containing float64 values (in seconds).
+        This is a NumPy array containing `float64` values (in seconds).
 
         The spike times of all recordings are concatenated. There is no gap
         between consecutive recordings, currently.
@@ -934,7 +1043,7 @@ class KwikModel(BaseModel):
     def spike_recordings(self):
         """The recording index for each spike.
 
-        This is a NumPy array of integers with n_spikes elements.
+        This is a NumPy array of integers with `n_spikes` elements.
 
         """
         return self._spike_recordings
@@ -948,7 +1057,7 @@ class KwikModel(BaseModel):
     def features(self):
         """Features from the current channel group.
 
-        This is memory-mapped to the .kwx file.
+        This is memory-mapped to the `.kwx` file.
 
         Note: in general, it is better to use the cluster store to access
         the features and masks of some clusters.
@@ -960,7 +1069,7 @@ class KwikModel(BaseModel):
     def masks(self):
         """Masks from the current channel group.
 
-        This is memory-mapped to the .kwx file.
+        This is memory-mapped to the `.kwx` file.
 
         Note: in general, it is better to use the cluster store to access
         the features and masks of some clusters.
@@ -972,7 +1081,7 @@ class KwikModel(BaseModel):
     def features_masks(self):
         """Features-masks from the current channel group.
 
-        This is memory-mapped to the .kwx file.
+        This is memory-mapped to the `.kwx` file.
 
         Note: in general, it is better to use the cluster store to access
         the features and masks of some clusters.
@@ -984,10 +1093,10 @@ class KwikModel(BaseModel):
     def waveforms(self):
         """High-passed filtered waveforms from the current channel group.
 
-        This is a virtual array mapped to the .raw.kwd file. Filtering is
+        This is a virtual array mapped to the `.raw.kwd` file. Filtering is
         done on the fly.
 
-        The shape is '(n_spikes, n_samples, n_channels)'.
+        The shape is `(n_spikes, n_samples, n_channels)`.
 
         """
         return SpikeLoader(self._waveform_loader, self.spike_samples)
@@ -998,7 +1107,7 @@ class KwikModel(BaseModel):
 
         Every element is the cluster identifier of a spike.
 
-        The shape is (n_spikes,).
+        The shape is `(n_spikes,)`.
 
         """
         return self._spike_clusters
@@ -1008,7 +1117,7 @@ class KwikModel(BaseModel):
         """Metadata about the clusters in the current channel group and
         clustering.
 
-        'cluster_metadata.group(cluster_id)' returns the group of a given
+        `cluster_metadata.group(cluster_id)` returns the group of a given
         cluster. The default group is 3 (unsorted).
 
         """
@@ -1019,7 +1128,7 @@ class KwikModel(BaseModel):
         """List of cluster ids from the current channel group and clustering.
 
         This is a sorted list of unique cluster ids as found in the current
-        'spike_clusters' array.
+        `spike_clusters` array.
 
         """
         return _unique(self._spike_clusters)
@@ -1043,7 +1152,7 @@ class KwikModel(BaseModel):
     # -------------------------------------------------------------------------
 
     def close(self):
-        """Close the .kwik, .kwx, and .raw.kwd files if they are open."""
+        """Close the `.kwik`, `.kwx`, and `.raw.kwd` files if they are open."""
         if self._kwx is not None:
             self._kwx.close()
         if self._kwd is not None:

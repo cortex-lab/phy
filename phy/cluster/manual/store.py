@@ -129,7 +129,7 @@ class DiskStore(object):
     def _cluster_path(self, cluster, key):
         """Return the absolute path of a cluster in the disk store."""
         # TODO: subfolders
-        # Example of filename: '123.mykey'.
+        # Example of filename: `123.mykey`.
         cluster = _as_int(cluster)
         filename = '{0:d}.{1:s}'.format(cluster, key)
         return op.realpath(op.join(self._directory, filename))
@@ -140,7 +140,7 @@ class DiskStore(object):
         return op.exists(self._cluster_path(cluster, key))
 
     def _is_cluster_file(self, path):
-        """Return whether a filename is of the form 'xxx.yyy' where xxx is a
+        """Return whether a filename is of the form `xxx.yyy` where xxx is a
         numbe and yyy belongs to the set of allowed extensions."""
         filename = op.basename(path)
         extensions = '({0})'.format('|'.join(sorted(self._allowed_extensions)))
@@ -259,23 +259,22 @@ class ClusterStore(object):
         elif location == 'disk':
             return self._disk
         else:
-            raise ValueError("The 'location' should be 'memory' "
-                             "or 'disk'.")
+            raise ValueError("The `location` should be `memory` "
+                             "or `disk`.")
 
     @property
     def memory_store(self):
-        """The memory store holds some cluster statistics."""
+        """Hold some cluster statistics."""
         return self._memory
 
     @property
     def disk_store(self):
-        """The disk store manages the cache of per-cluster data like
-        features and masks."""
+        """Manage the cache of per-cluster voluminous data."""
         return self._disk
 
     @property
     def spikes_per_cluster(self):
-        """Dictionary {cluster_id: spike_ids}."""
+        """Dictionary `{cluster_id: spike_ids}`."""
         return self._spikes_per_cluster
 
     @spikes_per_cluster.setter
@@ -288,8 +287,7 @@ class ClusterStore(object):
 
     @property
     def cluster_ids(self):
-        """Array of all cluster ids appearing in the `spikes_per_cluster`
-        dictionary."""
+        """All cluster ids appearing in the `spikes_per_cluster` dictionary."""
         return sorted(self._spikes_per_cluster)
 
     @property
@@ -306,12 +304,12 @@ class ClusterStore(object):
         name : str
             The name of the field.
         location : str
-            'memory' or 'disk'.
+            `memory` or `disk`.
         dtype : NumPy dtype or None
             The dtype of arrays stored for that field. This is only used when
-            the location is 'disk'.
+            the location is `disk`.
         shape : tuple or None
-            The shape of arrays. This is only used when the location is 'disk'.
+            The shape of arrays. This is only used when the location is `disk`.
             This is used by `np.reshape()`, so the shape can contain a `-1`.
 
         Notes
@@ -325,7 +323,7 @@ class ClusterStore(object):
         """
         # HACK: need to use a factory function because in Python
         # functions are closed over names, not values. Here we
-        # want 'name' to refer to the 'name' local variable.
+        # want `name` to refer to the `name` local variable.
         def _make_func(name, location):
             kwargs = {} if location == 'memory' else {'dtype': dtype,
                                                       'shape': shape}
@@ -348,9 +346,9 @@ class ClusterStore(object):
         setattr(self, name, load)
 
     def register_item(self, item_cls, **kwargs):
-        """Register a StoreItem class in the store.
+        """Register a `StoreItem` class in the store.
 
-        A StoreItem class is responsible for storing some data to disk
+        A `StoreItem` class is responsible for storing some data to disk
         and memory. It must register one or several pieces of data.
 
         """
@@ -391,7 +389,7 @@ class ClusterStore(object):
     def on_cluster(self, up):
         """Update the cluster store when clustering changes occur.
 
-        This method calls `item.on_cluster(up)` for all registered store items.
+        This method calls `item.on_cluster(up)` on all registered store items.
 
         """
         # No need to delete the old clusters from the store, we can keep
@@ -409,8 +407,7 @@ class ClusterStore(object):
 
     @property
     def old_clusters(self):
-        """List of clusters found in the cache that are no longer part
-        of the current clustering."""
+        """Clusters in the disk store that are no longer in the clustering."""
         return sorted(set(self.disk_store.cluster_ids) -
                       set(self.cluster_ids))
 
@@ -428,8 +425,12 @@ class ClusterStore(object):
         return _directory_size(self.path)
 
     def is_consistent(self):
-        """Return whether all cluster stores files exist and have
-        the expected file size."""
+        """Return whether the cluster store is probably consistent.
+
+        Return true if all cluster stores files exist and have the expected
+        file size.
+
+        """
         valid = set(self.cluster_ids)
         # All store items should be consistent on all valid clusters.
         consistent = all(all(item.is_consistent(clu,
@@ -488,14 +489,14 @@ class ClusterStore(object):
         ----------
 
         spikes_per_cluster : dict
-            A dictionary cluster_ids => array of spike_ids.
+            A dictionary `{cluster_ids: spike_ids}`.
         mode : str (default is None)
             How the cluster store should be generated. Options are:
 
-            * None or 'default': only regenerate the missing or inconsistent
+            * None or `default`: only regenerate the missing or inconsistent
               clusters
-            * 'force': fully regenerate the cluster
-            * 'read-only': just load the existing files, do not write anything
+            * `force`: fully regenerate the cluster
+            * `read-only`: just load the existing files, do not write anything
 
         """
         if spikes_per_cluster is None:
@@ -503,7 +504,7 @@ class ClusterStore(object):
         else:
             self.spikes_per_cluster = spikes_per_cluster
         if spikes_per_cluster is None:
-            raise RuntimeError("The 'spikes_per_cluster' structure "
+            raise RuntimeError("The `spikes_per_cluster` structure "
                                "needs to be assigned to the cluster store.")
         assert isinstance(spikes_per_cluster, dict)
         if hasattr(self._model, 'name'):
@@ -519,38 +520,21 @@ class ClusterStore(object):
 class StoreItem(object):
     """A class describing information stored in the cluster store.
 
-    Attributes
+    Parameters
     ----------
 
     fields : list
-        A list of pairs (field_name, storage_location).
-        storage_location is either 'memory' or 'disk'.
+        A list of pairs `(field_name, storage_location)`.
+        `storage_location` is either `memory` or `disk`.
     model : Model
-        A Model instance for the current dataset.
+        A `Model` instance for the current dataset.
     memory_store : MemoryStore
-        The MemoryStore instance for the current dataset.
+        The `MemoryStore` instance for the current dataset.
     disk_store : DiskStore
         The DiskStore instance for the current dataset.
 
-    Methods
-    -------
-
-    store_cluster(cluster, spikes)
-        Extract some data from the model and store it in the cluster store.
-        Must be overriden.
-    on_cluster(up)
-        Update the store when the clustering changes.
-        May be overriden.
-    is_consistent(cluster, spikes)
-        Return whether the cluster file of a given cluster exists and
-        has the expected file size.
-        May be overriden (default is to always return False).
-    store_all_clusters(mode=None)
-        Call store_cluster() on all clusters.
-        May be overriden.
-
     """
-    fields = None  # list of (field_name, storage_location)
+    fields = None  # list of `(field_name, storage_location)`
     name = 'item'
 
     def __init__(self,
@@ -565,6 +549,7 @@ class StoreItem(object):
 
     @property
     def spikes_per_cluster(self):
+        """Spikes per cluster."""
         return self._spikes_per_cluster
 
     @spikes_per_cluster.setter
@@ -573,10 +558,13 @@ class StoreItem(object):
 
     @property
     def cluster_ids(self):
+        """Array of cluster ids."""
         return sorted(self._spikes_per_cluster)
 
     def is_consistent(self, cluster, spikes):
-        """To be overriden."""
+        """Return whether the stored item is consistent.
+
+        To be overriden."""
         return False
 
     def to_generate(self, mode=None):
@@ -591,11 +579,17 @@ class StoreItem(object):
         elif mode == 'read-only':
             return []
         else:
-            raise ValueError("'mode' should be None, 'default', 'force', "
-                             "or 'read-only'.")
+            raise ValueError("`mode` should be None, `default`, `force`, "
+                             "or `read-only`.")
 
     def store_cluster(self, cluster, spikes, mode=None):
-        """May be overridden. No need to delete old clusters here."""
+        """Store data for a cluster from the model to the store.
+
+        May be overridden.
+
+        No need to delete old clusters here.
+
+        """
         pass
 
     def store_all_clusters(self, mode=None):
@@ -609,6 +603,10 @@ class StoreItem(object):
                                )
 
     def on_cluster(self, up):
-        """May be overridden. No need to delete old clusters here."""
+        """Update the stored data when a clustering change happens.
+
+        May be overridden.
+
+        No need to delete old clusters here."""
         for cluster in up.added:
             self.store_cluster(cluster, up.new_spikes_per_cluster[cluster])

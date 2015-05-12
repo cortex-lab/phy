@@ -39,7 +39,7 @@ def correlograms(spike_samples, spike_clusters,
                  cluster_order=None,
                  binsize=None, winsize_bins=None):
     """Compute all pairwise cross-correlograms among the clusters appearing
-    in 'spike_clusters'.
+    in `spike_clusters`.
 
     Parameters
     ----------
@@ -60,7 +60,7 @@ def correlograms(spike_samples, spike_clusters,
     -------
 
     correlograms : array
-        A (n_clusters, n_clusters, winsize_samples) array with all pairwise
+        A `(n_clusters, n_clusters, winsize_samples)` array with all pairwise
         CCGs.
 
     Notes
@@ -171,3 +171,22 @@ def _symmetrize_correlograms(correlograms):
     sym = np.transpose(sym, (1, 0, 2))
 
     return np.dstack((sym, correlograms))
+
+
+def pairwise_correlograms(spike_samples,
+                          spike_clusters,
+                          binsize=None,
+                          winsize_bins=None,
+                          ):
+    """Compute all pairwise correlograms in a set of neurons.
+
+    TODO: improve interface and documentation.
+
+    """
+    ccgs = correlograms(spike_samples,
+                        spike_clusters,
+                        binsize=binsize,
+                        winsize_bins=winsize_bins,
+                        )
+    ccgs = _symmetrize_correlograms(ccgs)
+    return ccgs

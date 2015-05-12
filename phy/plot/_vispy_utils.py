@@ -94,6 +94,7 @@ class _BakeVisual(Visual):
         self._empty = value
 
     def set_to_bake(self, *bakes):
+        """Mark data items to be prepared for GPU."""
         for bake in bakes:
             if bake not in self._to_bake:
                 self._to_bake.append(bake)
@@ -127,6 +128,11 @@ class _BakeVisual(Visual):
 
 
 class BaseSpikeVisual(_BakeVisual):
+    """Base class for a VisPy visual showing spike data.
+
+    There is a notion of displayed spikes and displayed clusters.
+
+    """
     def __init__(self, **kwargs):
         super(BaseSpikeVisual, self).__init__(**kwargs)
         self.n_spikes = None
@@ -183,7 +189,7 @@ class BaseSpikeVisual(_BakeVisual):
 
     @property
     def masks(self):
-        """Masks of the displayed waveforms."""
+        """Masks of the displayed spikes."""
         return self._masks
 
     @masks.setter
@@ -198,8 +204,7 @@ class BaseSpikeVisual(_BakeVisual):
 
     @property
     def spike_ids(self):
-        """The list of spike ids to display, should correspond to the
-        waveforms."""
+        """Spike ids to display."""
         if self._spike_ids is None:
             self._spike_ids = np.arange(self.n_spikes).astype(np.uint64)
         return self._spike_ids
@@ -213,7 +218,7 @@ class BaseSpikeVisual(_BakeVisual):
 
     @property
     def cluster_ids(self):
-        """Clusters of the displayed spikes."""
+        """Cluster ids of the displayed spikes."""
         return self._cluster_ids
 
     @cluster_ids.setter
@@ -223,6 +228,7 @@ class BaseSpikeVisual(_BakeVisual):
 
     @property
     def n_clusters(self):
+        """Number of displayed clusters."""
         if self._cluster_ids is None:
             return None
         else:
@@ -256,6 +262,7 @@ class BaseSpikeVisual(_BakeVisual):
 #------------------------------------------------------------------------------
 
 class BoxVisual(_BakeVisual):
+    """Box frames in a square grid of subplots."""
     _shader_name = 'box'
     _gl_draw_mode = 'lines'
 
@@ -265,6 +272,7 @@ class BoxVisual(_BakeVisual):
 
     @property
     def n_rows(self):
+        """Number of rows in the grid."""
         return self._n_rows
 
     @n_rows.setter
@@ -276,6 +284,7 @@ class BoxVisual(_BakeVisual):
 
     @property
     def n_boxes(self):
+        """Number of boxes in the grid."""
         return self._n_rows * self._n_rows
 
     def _bake_n_rows(self):
@@ -299,6 +308,7 @@ class BoxVisual(_BakeVisual):
 
 
 class AxisVisual(BoxVisual):
+    """Subplot axes in a subplot grid."""
     _shader_name = 'ax'
 
     def __init__(self, **kwargs):
@@ -344,6 +354,12 @@ class AxisVisual(BoxVisual):
 #------------------------------------------------------------------------------
 
 class BaseSpikeCanvas(app.Canvas):
+    """Base class for a VisPy canvas with spike data.
+
+    Display a main `BaseSpikeVisual` with pan zoom.
+
+    """
+
     _visual_class = None
     _pz = None
 
@@ -358,8 +374,10 @@ class BaseSpikeCanvas(app.Canvas):
         self._pz.attach(self)
 
     def on_draw(self, event):
+        """Draw the main visual."""
         self.context.clear()
         self.visual.draw()
 
     def on_resize(self, event):
+        """Resize the OpenGL context."""
         self.context.set_viewport(0, 0, event.size[0], event.size[1])

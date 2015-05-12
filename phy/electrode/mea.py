@@ -48,6 +48,7 @@ class MEA(object):
 
     @property
     def positions(self):
+        """Channel positions."""
         return self._positions
 
     @positions.setter
@@ -57,14 +58,17 @@ class MEA(object):
 
     @property
     def channels(self):
+        """Channel ids."""
         return self._channels
 
     @property
     def n_channels(self):
+        """Number of channels."""
         return len(self._channels)
 
     @property
     def adjacency(self):
+        """Adjacency graph."""
         return self._adjacency
 
     @adjacency.setter

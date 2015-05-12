@@ -84,6 +84,7 @@ class WaveformLoader(object):
 
     @property
     def traces(self):
+        """Raw traces."""
         return self._traces
 
     @traces.setter
@@ -93,6 +94,7 @@ class WaveformLoader(object):
 
     @property
     def channels(self):
+        """List of channels."""
         return self._channels
 
     @channels.setter
@@ -101,6 +103,7 @@ class WaveformLoader(object):
 
     @property
     def n_channels_waveforms(self):
+        """Number of channels kept for the waveforms."""
         if self._channels is not None:
             return len(self._channels)
         else:
@@ -151,7 +154,7 @@ class WaveformLoader(object):
         return out
 
     def __getitem__(self, item):
-        """Load a number of waveforms."""
+        """Load waveforms."""
         if isinstance(item, slice):
             raise NotImplementedError("Indexing with slices is not "
                                       "implemented yet.")

@@ -8,6 +8,7 @@
 
 from pytest import raises
 
+from .._utils import UpdateInfo
 from ..wizard import (_previous,
                       _next,
                       Wizard,
@@ -176,27 +177,102 @@ def test_wizard_actions():
     def _assert_wizard(best, match):
         assert (wizard.best, wizard.match) == (best, match)
 
+    def _move(clusters, group):
+        info = UpdateInfo(description='metadata_group',
+                          metadata_changed=clusters,
+                          metadata_value=group,
+                          )
+        wizard.on_cluster(info)
+
+    def _undo_move(clusters, old_group):
+        info = UpdateInfo(description='metadata_group',
+                          metadata_changed=clusters,
+                          metadata_value=old_group,
+                          history='undo',
+                          )
+        wizard.on_cluster(info)
+
+    def _redo_move(clusters, group):
+        info = UpdateInfo(description='metadata_group',
+                          metadata_changed=clusters,
+                          metadata_value=group,
+                          history='redo',
+                          )
+        wizard.on_cluster(info)
+
+    def _merge(clusters, new):
+        info = UpdateInfo(description='merge',
+                          added=[new],
+                          deleted=clusters,
+                          descendants=[(x, new) for x in clusters],
+                          )
+        wizard.on_cluster(info)
+
+    def _undo_merge(clusters, new):
+        info = UpdateInfo(description='assign',
+                          added=clusters,
+                          deleted=[new],
+                          history='undo',
+                          descendants=[(new, x) for x in clusters],
+                          )
+        wizard.on_cluster(info)
+
+    def _redo_merge(clusters, new):
+        info = UpdateInfo(description='assign',
+                          added=[new],
+                          deleted=clusters,
+                          history='redo',
+                          descendants=[(x, new) for x in clusters],
+                          )
+        wizard.on_cluster(info)
+
     # Loop over the best clusters.
     wizard.start()
     wizard.next()
     wizard.pin()
     _assert_wizard(2, 3)
 
-    wizard.merge([2, 3], 20, None)
-    assert wizard.best_list == [20, 7, 5]
+    _merge([2, 3], 20)
     _assert_wizard(20, 7)
+    assert wizard.best_list == [20, 7, 5]
+    assert wizard.match_list == [7, 5]
+
+    # Simulate an undo and redo.
+    _undo_merge([2, 3], 20)
+    _assert_wizard(2, 3)
+
+    _redo_merge([2, 3], 20)
+    _assert_wizard(20, 7)
+
+    assert wizard.best_list == [20, 7, 5]
     assert wizard.match_list == [7, 5]
 
     wizard.next()
     _assert_wizard(20, 5)
 
-    wizard.move(20, 'good')
+    # Move.
+    _move([20], 'good')
     _assert_wizard(7, 20)
 
+    # Undo twice.
+    _undo_move([20], None)
+    _assert_wizard(20, 5)
+
+    _undo_merge([2, 3], 20)
+    _assert_wizard(2, 3)
+
+    # Redo twice.
+    _redo_merge([2, 3], 20)
+    _assert_wizard(20, 7)
+
+    _redo_move([20], 'good')
+    _assert_wizard(7, 20)
+
+    # End of wizard.
     wizard.last()
     _assert_wizard(7, 5)
 
-    wizard.move(5, 'noise')
+    _move([5], 'noise')
     _assert_wizard(7, 5)
 
     wizard.next()

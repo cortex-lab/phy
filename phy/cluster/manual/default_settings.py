@@ -10,11 +10,11 @@ manual_clustering.correlograms_binsize = 20
 manual_clustering.correlograms_winsize_bins = 2 * 25 + 1
 
 # Maximum number of spikes for the correlograms.
-# Use 'None' to specify an infinite value.
+# Use `None` to specify an infinite value.
 manual_clustering.correlograms_n_spikes_max = 1000000
 
 # Contiguous chunks of spikes for computing the CCGs.
-# Use 'None' to have a regular (strided) subselection instead of a chunked
+# Use `None` to have a regular (strided) subselection instead of a chunked
 # subselection.
 manual_clustering.correlograms_excerpt_size = 100000
 
