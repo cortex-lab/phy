@@ -347,6 +347,7 @@ class Waveforms(StoreItem):
     """A cluster store item that manages the waveforms of all clusters."""
     name = 'waveforms'
     fields = [('waveforms', 'disk', np.float32,),
+              ('waveforms_spikes', 'disk', np.uint64,),
               ('mean_waveforms', 'memory'),
               ]
 
@@ -372,26 +373,32 @@ class Waveforms(StoreItem):
 
     def store_cluster(self, cluster, spikes=None, mode=None):
         spikes = self._selector.subset_spikes_clusters([cluster])
-        waveforms = self.model.waveforms[spikes].astype(np.float32)
+        waveforms = self.model.waveforms[spikes]
         self.disk_store.store(cluster,
-                              waveforms=waveforms,
+                              waveforms=waveforms.astype(np.float32),
+                              waveforms_spikes=spikes.astype(np.uint64),
                               )
         self.memory_store.store(cluster,
                                 mean_waveforms=waveforms.mean(axis=0),
                                 )
 
     def is_consistent(self, cluster, spikes):
-        """Return whether the filesizes of the two cluster store files
-        (`.features` and `.masks`) are correct."""
-        spikes = self._selector.subset_spikes_clusters([cluster])
-        n_spikes = len(spikes)
-        expected_file_size = n_spikes * self.n_channels * self.n_samples * 4
-        path = self.disk_store._cluster_path(cluster, 'waveforms')
-        if not op.exists(path):
+        """Return whether the waveforms and spikes file sizes match."""
+        path_w = self.disk_store._cluster_path(cluster, 'waveforms')
+        path_s = self.disk_store._cluster_path(cluster, 'waveforms_spikes')
+
+        if not op.exists(path_w) or not op.exists(path_s):
             return False
-        actual_file_size = os.stat(path).st_size
-        if expected_file_size != actual_file_size:
+
+        file_size_w = os.stat(path_w).st_size
+        file_size_s = os.stat(path_s).st_size
+
+        n_spikes_s = file_size_s // 8
+        n_spikes_w = file_size_w // (self.n_channels * self.n_samples * 4)
+
+        if n_spikes_s != n_spikes_w:
             return False
+
         return True
 
     def on_cluster(self, up=None):
