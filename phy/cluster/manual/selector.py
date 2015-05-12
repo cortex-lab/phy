@@ -104,7 +104,7 @@ class Selector(object):
                                 excerpt_size=excerpt_size,
                                 )
 
-    def _subset_spikes_clusters(self, clusters):
+    def subset_spikes_clusters(self, clusters):
         """Take a subselection of spikes belonging to a set of clusters.
 
         This method ensures that the same number of spikes is chosen
@@ -169,7 +169,7 @@ class Selector(object):
         """
         value = _as_array(value)
         # Make sure there are less spikes than n_spikes_max.
-        self.selected_spikes = self._subset_spikes_clusters(value)
+        self.selected_spikes = self.subset_spikes_clusters(value)
 
     @property
     def n_spikes(self):
