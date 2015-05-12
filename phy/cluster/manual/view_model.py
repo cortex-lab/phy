@@ -189,7 +189,8 @@ class WaveformViewModel(BaseViewModel):
                                                    spikes,
                                                    spikes_per_cluster=spc,
                                                    )
-        assert waveforms.shape[0] == len(spikes)
+        # We may not get all requested spikes.
+        assert waveforms.shape[0] <= len(spikes)
         debug("Done!")
 
         # Cluster display order.
