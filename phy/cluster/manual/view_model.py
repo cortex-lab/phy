@@ -395,6 +395,7 @@ class TraceViewModel(BaseViewModel):
             end = n
         self._interval = (start, end)
         self._load_traces((start, end))
+        self.view.update()
 
     def move(self, amount):
         """Move the current interval by a given amount (in samples)."""
@@ -417,17 +418,13 @@ class TraceViewModel(BaseViewModel):
         if 'Control' in event.modifiers:
             if key == 'Left':
                 self.move_left()
-                self.view.update()
             elif key == 'Right':
                 self.move_right()
-                self.view.update()
         if 'Shift' in event.modifiers:
             if key == 'Left':
                 self.move_left(1)
-                self.view.update()
             elif key == 'Right':
                 self.move_right(1)
-                self.view.update()
 
     def on_open(self):
         super(TraceViewModel, self).on_open()
