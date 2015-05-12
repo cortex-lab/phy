@@ -9,7 +9,7 @@
 import numpy as np
 
 from ...utils.logging import debug
-from ...utils.array import _unique
+from ...utils.array import _unique, get_excerpts
 from ...plot.ccg import CorrelogramView
 from ...plot.features import FeatureView
 from ...plot.waveforms import WaveformView
@@ -229,6 +229,8 @@ class FeatureViewModel(BaseViewModel):
     _view_name = 'features'
     scale_factor = 1.
     _dimension_selector = None
+    n_spikes_max_bg = 10000
+    excerpt_size_bg = 1000
 
     def set_dimension_selector(self, func):
         """Decorator for a function that selects the best projection.
@@ -245,6 +247,38 @@ class FeatureViewModel(BaseViewModel):
         """
         self._dimension_selector = func
 
+    def _rescale_features(self, features):
+        # WARNING: convert features to a 3D array
+        # (n_spikes, n_channels, n_features)
+        # because that's what the FeatureView expects currently.
+        n_fet = self.model.n_features_per_channel
+        n_channels = len(self.model.channel_order)
+        shape = (-1, n_channels, n_fet)
+        features = features[:, :n_fet * n_channels].reshape(shape)
+        # Scale factor.
+        features *= self.scale_factor
+        return features
+
+    def on_open(self):
+        # Get background features.
+        # self._selector_bg = Selector(self.model.spike_clusters,
+        #                              n_spikes_max=self.n_spikes_max_bg,
+        #                              excerpt_size=self.excerpt_size_bg,
+        #                              )
+        # self._selector_bg.selected_spikes = np.arange(self.model.n_spikes)
+        # spikes = self._selector_bg.selected_spikes
+        n_excerpts = self.n_spikes_max_bg // self.excerpt_size_bg
+        features_bg = get_excerpts(self.model.features,
+                                   n_excerpts=n_excerpts,
+                                   excerpt_size=self.excerpt_size_bg,
+                                   )
+        spike_samples = get_excerpts(self.model.spike_samples,
+                                     n_excerpts=n_excerpts,
+                                     excerpt_size=self.excerpt_size_bg,
+                                     )
+        self.view.background.features = self._rescale_features(features_bg)
+        self.view.background.spike_samples = spike_samples
+
     def on_select(self, cluster_ids):
         super(FeatureViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
@@ -258,17 +292,7 @@ class FeatureViewModel(BaseViewModel):
                                                cluster_ids,
                                                spikes)
 
-        # WARNING: convert features to a 3D array
-        # (n_spikes, n_channels, n_features)
-        # because that's what the FeatureView expects currently.
-        n_fet = self.model.n_features_per_channel
-        n_channels = len(self.model.channel_order)
-        shape = (-1, n_channels, n_fet)
-        features = features[:, :n_fet * n_channels].reshape(shape)
-        # Scale factor.
-        features *= self.scale_factor
-
-        self.view.visual.features = features
+        self.view.visual.features = self._rescale_features(features)
         self.view.visual.masks = masks
 
         # Spikes.
