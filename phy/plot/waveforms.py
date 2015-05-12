@@ -186,6 +186,9 @@ class WaveformView(BaseSpikeCanvas):
 
     """
     _visual_class = WaveformVisual
+    _arrows = ('Left', 'Right', 'Up', 'Down')
+    _events = ('channel_click',)
+    _key_pressed = None
 
     @property
     def box_scale(self):
@@ -215,11 +218,12 @@ class WaveformView(BaseSpikeCanvas):
         self.visual.probe_scale = value
         self.update()
 
-    _arrows = ('Left', 'Right', 'Up', 'Down')
-
     def on_key_press(self, event):
         """Handle key press events."""
         key = event.key
+
+        self._key_pressed = key
+
         ctrl = 'Control' in event.modifiers
         shift = 'Shift' in event.modifiers
 
@@ -251,6 +255,9 @@ class WaveformView(BaseSpikeCanvas):
                 self.probe_scale = (u, v * coeff)
             self.update()
 
+    def on_key_release(self, event):
+        self._key_pressed = None
+
     def on_mouse_wheel(self, event):
         """Handle mouse wheel events."""
         ctrl = 'Control' in event.modifiers
@@ -266,6 +273,15 @@ class WaveformView(BaseSpikeCanvas):
             u, v = self.box_scale
             self.box_scale = (u, v * coeff)
             self.update()
+
+    def on_mouse_press(self, e):
+        key = self._key_pressed
+        if not key:
+            return
+        self.emit("channel_click",
+                  channel_id=0,
+                  key=key,
+                  )
 
     def on_draw(self, event):
         """Draw the visual."""

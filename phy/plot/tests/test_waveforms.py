@@ -57,6 +57,10 @@ def _test_waveforms(n_spikes=None, n_clusters=None):
                                         for _ in range(n_clusters)])
     c.visual.channel_positions = channel_positions
 
+    @c.connect
+    def on_channel_click(e):
+        print(e.channel_id, e.key)
+
     show_test(c)
 
 

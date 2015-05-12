@@ -12,6 +12,7 @@ import os.path as op
 import numpy as np
 
 from vispy import app, gloo, config
+from vispy.util.event import Event
 from vispy.visuals import Visual
 
 from ..utils.array import _unique, _as_array
@@ -362,16 +363,24 @@ class BaseSpikeCanvas(app.Canvas):
 
     _visual_class = None
     _pz = None
+    _events = ()
 
     def __init__(self, **kwargs):
         super(BaseSpikeCanvas, self).__init__(keys='interactive', **kwargs)
         self.visual = self._visual_class()
         self._create_pan_zoom()
+        self._add_events()
+
+    def _add_events(self):
+        self.events.add(**{event: Event for event in self._events})
 
     def _create_pan_zoom(self):
         self._pz = PanZoom()
         self._pz.add(self.visual.program)
         self._pz.attach(self)
+
+    def emit(self, name, **kwargs):
+        getattr(self.events, name)(**kwargs)
 
     def on_draw(self, event):
         """Draw the main visual."""
