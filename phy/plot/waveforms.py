@@ -135,9 +135,10 @@ class WaveformVisual(BaseSpikeVisual):
         # Find closest channel.
         d = np.sum((positions - mouse_pos[None, :]) ** 2, axis=1)
         idx = np.argmin(d)
-        if self.channel_order is not None:
-            channel_id = self.channel_order[idx]
-        return channel_id
+        # if self.channel_order is not None:
+        #     channel_id = self.channel_order[idx]
+        # WARNING: by convention this is the relative channel index.
+        return idx
 
     # Data baking
     # -------------------------------------------------------------------------
@@ -318,9 +319,9 @@ class WaveformView(BaseSpikeCanvas):
         pan = self._pz.pan
         mouse_pos = ((position / zoom) - pan)
         # Find the channel id.
-        channel_id = self.visual.channel_hover(mouse_pos)
+        channel_idx = self.visual.channel_hover(mouse_pos)
         self.emit("channel_click",
-                  channel_id=channel_id,
+                  channel_idx=channel_idx,
                   key=key,
                   button=e.button,
                   )

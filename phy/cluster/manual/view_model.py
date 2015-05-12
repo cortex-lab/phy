@@ -209,7 +209,7 @@ class FeatureViewModel(BaseViewModel):
         @view_model.set_dimension_selector
         def choose(cluster_ids, store=None):
             # ...
-            return channels  # a list with 3 channel ids
+            return channel_idxs  # a list with 3 relative channel indices
         ```
 
         """

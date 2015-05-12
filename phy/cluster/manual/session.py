@@ -791,7 +791,7 @@ class Session(EventEmitter):
             @waveforms.connect
             def on_channel_click(e):
                 if e.key in map(str, range(10)):
-                    channel = e.channel_id
+                    channel = e.channel_idx
                     dimension = int(e.key.name)
                     feature = 0 if e.button == 1 else 1
                     if (0 <= dimension <= len(features.dimensions) - 1):
@@ -1138,10 +1138,11 @@ class Session(EventEmitter):
 
         @vm.set_dimension_selector
         def choose(cluster_ids, store=None):
-            sum_masks = np.vstack([store.sum_masks(cluster)
-                                   for cluster in cluster_ids]).sum(axis=0)
+            # spikes = vm.view.visual.spike_ids
+            fet = vm.view.visual.features
+            score = np.abs(fet).max(axis=0).max(axis=1)
             # Take the best 3 channels.
-            channels = np.argsort(sum_masks)[::-1][:3]
+            channels = np.argsort(score)[::-1][:3]
             return channels
 
         @vm.view.connect
