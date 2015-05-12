@@ -779,6 +779,25 @@ class Session(EventEmitter):
                                    name,
                                    cluster_ids=cluster_ids,
                                    position=self._default_positions[name])
+        self._connect_gui_views(gui)
+
+    def _connect_gui_views(self, gui):
+        """Connect views."""
+
+        # Select feature dimension from waveform view.
+        @gui.connect_views('waveforms', 'features')
+        def channel_click(waveforms, features):
+
+            @waveforms.connect
+            def on_channel_click(e):
+                if e.key in map(str, range(10)):
+                    channel = e.channel_id
+                    dimension = int(e.key.name)
+                    feature = 0 if e.button == 1 else 1
+                    if (0 <= dimension <= len(features.dimensions) - 1):
+                        features.dimensions[dimension] = (channel, feature)
+                        # Force view update.
+                        features.dimensions = features.dimensions
 
     def _create_gui_actions(self, gui):
 

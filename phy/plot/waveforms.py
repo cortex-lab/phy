@@ -34,7 +34,7 @@ class WaveformVisual(BaseSpikeVisual):
 
         self._waveforms = None
         self.n_channels, self.n_samples = None, None
-        self._channel_ids = None
+        self._channel_order = None
 
         self.program['u_data_scale'] = self.default_box_scale
         self.program['u_channel_scale'] = self.default_probe_scale
@@ -80,12 +80,12 @@ class WaveformVisual(BaseSpikeVisual):
         self.set_to_bake('channel_positions')
 
     @property
-    def channel_ids(self):
-        return self._channel_ids
+    def channel_order(self):
+        return self._channel_order
 
-    @channel_ids.setter
-    def channel_ids(self, value):
-        self._channel_ids = value
+    @channel_order.setter
+    def channel_order(self, value):
+        self._channel_order = value
 
     @property
     def box_scale(self):
@@ -135,7 +135,8 @@ class WaveformVisual(BaseSpikeVisual):
         # Find closest channel.
         d = np.sum((positions - mouse_pos[None, :]) ** 2, axis=1)
         idx = np.argmin(d)
-        channel_id = self.channel_ids[idx]
+        if self.channel_order is not None:
+            channel_id = self.channel_order[idx]
         return channel_id
 
     # Data baking
@@ -321,6 +322,7 @@ class WaveformView(BaseSpikeCanvas):
         self.emit("channel_click",
                   channel_id=channel_id,
                   key=key,
+                  button=e.button,
                   )
 
     def on_draw(self, event):

@@ -164,6 +164,7 @@ class WaveformViewModel(BaseViewModel):
     def on_open(self):
         super(WaveformViewModel, self).on_open()
         self.view.visual.channel_positions = self.model.probe.positions
+        self.view.visual.channel_order = self.model.channel_order
 
     def on_select(self, cluster_ids):
         super(WaveformViewModel, self).on_select(cluster_ids)
