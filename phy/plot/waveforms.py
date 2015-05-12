@@ -228,6 +228,7 @@ class WaveformView(BaseSpikeCanvas):
 
     * change waveform scaling: `ctrl+arrows`
     * change probe scaling: `shift+arrows`
+    * select channel: `key+click`
 
     """
     _visual_class = WaveformVisual
