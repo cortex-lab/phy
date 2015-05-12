@@ -34,6 +34,7 @@ class WaveformVisual(BaseSpikeVisual):
 
         self._waveforms = None
         self.n_channels, self.n_samples = None, None
+        self._channel_ids = None
 
         self.program['u_data_scale'] = self.default_box_scale
         self.program['u_channel_scale'] = self.default_probe_scale
@@ -79,6 +80,14 @@ class WaveformVisual(BaseSpikeVisual):
         self.set_to_bake('channel_positions')
 
     @property
+    def channel_ids(self):
+        return self._channel_ids
+
+    @channel_ids.setter
+    def channel_ids(self, value):
+        self._channel_ids = value
+
+    @property
     def box_scale(self):
         """Scale of the waveforms.
 
@@ -105,6 +114,29 @@ class WaveformVisual(BaseSpikeVisual):
     def probe_scale(self, value):
         assert isinstance(value, tuple) and len(value) == 2
         self.program['u_channel_scale'] = value
+
+    def channel_hover(self, position):
+        """Return the channel id closest to the mouse pointer.
+
+        Parameters
+        ----------
+
+        position : tuple
+            The normalized coordinates of the mouse pointer, in world
+            coordinates (in `[-1, 1]`).
+
+        """
+        mouse_pos = position / self.probe_scale
+        # Normalize channel positions.
+        positions = self.channel_positions.astype(np.float32)
+        positions = _normalize(positions, keep_ratio=True)
+        positions = .1 + .8 * positions
+        positions = 2 * positions - 1
+        # Find closest channel.
+        d = np.sum((positions - mouse_pos[None, :]) ** 2, axis=1)
+        idx = np.argmin(d)
+        channel_id = self.channel_ids[idx]
+        return channel_id
 
     # Data baking
     # -------------------------------------------------------------------------
@@ -278,8 +310,16 @@ class WaveformView(BaseSpikeCanvas):
         key = self._key_pressed
         if not key:
             return
+        # Normalise mouse position.
+        position = self._pz._normalize(e.pos)
+        position[1] = -position[1]
+        zoom = self._pz.zoom
+        pan = self._pz.pan
+        mouse_pos = ((position / zoom) - pan)
+        # Find the channel id.
+        channel_id = self.visual.channel_hover(mouse_pos)
         self.emit("channel_click",
-                  channel_id=0,
+                  channel_id=channel_id,
                   key=key,
                   )
 
