@@ -185,6 +185,7 @@ class BackgroundFeatureVisual(BaseFeatureVisual):
     """Display a grid of multidimensional features in the background."""
 
     _shader_name = 'features_bg'
+    _transparency = False
 
 
 class FeatureVisual(BaseFeatureVisual):
@@ -308,12 +309,14 @@ class FeatureView(BaseSpikeCanvas):
     def __init__(self, **kwargs):
         self.boxes = BoxVisual()
         self.axes = AxisVisual()
+        self.background = BackgroundFeatureVisual()
         super(FeatureView, self).__init__(**kwargs)
         _enable_depth_mask()
 
     def _create_pan_zoom(self):
         self._pz = PanZoomGrid()
         self._pz.add(self.visual.program)
+        self._pz.add(self.background.program)
         self._pz.add(self.axes.program)
         self._pz.aspect = None
         self._pz.attach(self)
@@ -365,6 +368,7 @@ class FeatureView(BaseSpikeCanvas):
         # and not in the visual. This is to make sure that the boxes are
         # updated as well.
         self.visual.dimensions = value
+        self.background.dimensions = value
         self.boxes.n_rows = self.visual.n_rows
         self.axes.n_rows = self.visual.n_rows
         self.axes.positions = (0, 0)
@@ -386,6 +390,7 @@ class FeatureView(BaseSpikeCanvas):
         """Draw the features in a grid view."""
         gloo.clear(color=True, depth=True)
         self.axes.draw()
+        self.background.draw()
         self.visual.draw()
         self.boxes.draw()
 

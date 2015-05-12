@@ -134,6 +134,9 @@ class BaseSpikeVisual(_BakeVisual):
     There is a notion of displayed spikes and displayed clusters.
 
     """
+
+    _transparency = True
+
     def __init__(self, **kwargs):
         super(BaseSpikeVisual, self).__init__(**kwargs)
         self.n_spikes = None
@@ -143,8 +146,9 @@ class BaseSpikeVisual(_BakeVisual):
         self._cluster_order = None
         self._update_clusters_automatically = True
 
-        gloo.set_state(clear_color='black', blend=True,
-                       blend_func=('src_alpha', 'one_minus_src_alpha'))
+        if self._transparency:
+            gloo.set_state(clear_color='black', blend=True,
+                           blend_func=('src_alpha', 'one_minus_src_alpha'))
 
     # Data properties
     # -------------------------------------------------------------------------
