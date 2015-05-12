@@ -129,7 +129,11 @@ def test_cluster_store_1():
         model = {'spike_clusters': spike_clusters}
 
         # We initialize the ClusterStore.
-        cs = ClusterStore(model=model, path=tempdir)
+        cs = ClusterStore(model=model,
+                          path=tempdir,
+                          spike_clusters=spike_clusters,
+                          spikes_per_cluster=spikes_per_cluster,
+                          )
 
         # We create a n_spikes item to be stored in memory,
         # and we define how to generate it for a given cluster.
@@ -137,7 +141,7 @@ def test_cluster_store_1():
             name = 'my item'
             fields = [('n_spikes', 'memory')]
 
-            def store_cluster(self, cluster, spikes, mode=None):
+            def store_cluster(self, cluster, spikes=None, mode=None):
                 self.memory_store.store(cluster, n_spikes=len(spikes))
 
             def on_cluster(self, up):
@@ -151,7 +155,7 @@ def test_cluster_store_1():
         cs.register_item(MyItem)
 
         # Now we generate the store.
-        cs.generate(spikes_per_cluster)
+        cs.generate()
 
         # We check that the n_spikes field has successfully been created.
         for cluster in sorted(spikes_per_cluster):
@@ -178,9 +182,13 @@ def test_cluster_store_1():
         assert cs.n_spikes(20) == len(spikes)
 
         # Recreate the cluster store.
-        cs = ClusterStore(model=model, path=tempdir)
+        cs = ClusterStore(model=model,
+                          spike_clusters=spike_clusters,
+                          spikes_per_cluster=spikes_per_cluster,
+                          path=tempdir,
+                          )
         cs.register_item(MyItem)
-        cs.generate(spikes_per_cluster)
+        cs.generate()
         ae(cs.memory_store.cluster_ids, list(range(n_clusters)))
         ae(cs.disk_store.cluster_ids, [])
 
@@ -188,19 +196,19 @@ def test_cluster_store_1():
 def test_cluster_store_multi():
     """This tests the cluster store when a store item has several fields."""
 
-    cs = ClusterStore()
+    cs = ClusterStore(spikes_per_cluster={0: [0, 2], 1: [1, 3, 4]})
 
     class MyItem(StoreItem):
         name = 'my item'
         fields = [('d', 'memory'),
                   ('m', 'memory')]
 
-        def store_cluster(self, cluster, spikes, mode=None):
+        def store_cluster(self, cluster, spikes=None, mode=None):
             self.memory_store.store(cluster, d=len(spikes), m=len(spikes)**2)
 
     cs.register_item(MyItem)
 
-    cs.generate({0: [0, 2], 1: [1, 3, 4]})
+    cs.generate()
 
     assert cs.memory_store.load(0, ['d', 'm']) == {'d': 2, 'm': 4}
     assert cs.d(0) == 2
@@ -226,7 +234,11 @@ def test_cluster_store_load():
         model = {'spike_clusters': spike_clusters}
 
         # We initialize the ClusterStore.
-        cs = ClusterStore(model=model, path=tempdir)
+        cs = ClusterStore(model=model,
+                          spike_clusters=spike_clusters,
+                          spikes_per_cluster=spikes_per_cluster,
+                          path=tempdir,
+                          )
 
         # We create a n_spikes item to be stored in memory,
         # and we define how to generate it for a given cluster.
@@ -234,14 +246,14 @@ def test_cluster_store_load():
             name = 'my item'
             fields = [('spikes_square', 'disk', np.int32)]
 
-            def store_cluster(self, cluster, spikes, mode=None):
+            def store_cluster(self, cluster, spikes=None, mode=None):
                 data = (spikes ** 2).astype(np.int32)
                 self.disk_store.store(cluster, spikes_square=data)
 
         cs.register_item(MyItem)
 
         # Now we generate the store.
-        cs.generate(spikes_per_cluster)
+        cs.generate()
 
         # All spikes in cluster 1.
         cluster = 1
@@ -285,7 +297,11 @@ def test_cluster_store_management():
                        })
 
         # We initialize the ClusterStore.
-        cs = ClusterStore(model=model, path=tempdir)
+        cs = ClusterStore(model=model,
+                          spike_clusters=spike_clusters,
+                          spikes_per_cluster=spikes_per_cluster,
+                          path=tempdir,
+                          )
 
         # We create a n_spikes item to be stored in memory,
         # and we define how to generate it for a given cluster.
@@ -293,7 +309,7 @@ def test_cluster_store_management():
             name = 'my item'
             fields = [('spikes_square', 'disk', np.int32)]
 
-            def store_cluster(self, cluster, spikes, mode=None):
+            def store_cluster(self, cluster, spikes=None, mode=None):
                 if not self.is_consistent(cluster, spikes):
                     data = (spikes ** 2).astype(np.int32)
                     self.disk_store.store(cluster, spikes_square=data)
@@ -311,7 +327,7 @@ def test_cluster_store_management():
                 return np.all(data == expected)
 
         cs.register_item(MyItem)
-        cs.spikes_per_cluster = spikes_per_cluster
+        cs.update_spikes_per_cluster(spikes_per_cluster)
 
         def _check_to_generate(cs, clusters):
             item = cs.store_items[0]
@@ -331,9 +347,13 @@ def test_cluster_store_management():
         assert 'True' in cs.status
 
         # We re-initialize the ClusterStore.
-        cs = ClusterStore(model=model, path=tempdir)
+        cs = ClusterStore(model=model,
+                          spike_clusters=spike_clusters,
+                          spikes_per_cluster=spikes_per_cluster,
+                          path=tempdir,
+                          )
         cs.register_item(MyItem)
-        cs.spikes_per_cluster = spikes_per_cluster
+        cs.update_spikes_per_cluster(spikes_per_cluster)
 
         # Check the list of clusters to generate.
         _check_to_generate(cs, [])
@@ -357,7 +377,7 @@ def test_cluster_store_management():
         spike_clusters = np.random.randint(size=n_spikes,
                                            low=n_clusters, high=n_clusters + 5)
         spikes_per_cluster = _spikes_per_cluster(spike_ids, spike_clusters)
-        cs.spikes_per_cluster = spikes_per_cluster
+        cs.update_spikes_per_cluster(spikes_per_cluster)
 
         # All files are now old and should be removed by clean().
         assert not cs.is_consistent()
