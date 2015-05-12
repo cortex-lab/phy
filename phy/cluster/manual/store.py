@@ -387,7 +387,7 @@ class ClusterStore(object):
             spc = {cluster: self._spikes_per_cluster[cluster]
                    for cluster in clusters}
         arrays = {cluster: load(cluster) for cluster in clusters}
-        spikes = _unique(spikes).astype(np.uint64)
+        spikes = _unique(spikes)
         spc, arrays = _subset_spikes_per_cluster(spc, arrays, spikes)
         # Return the concatenated array.
         return _concatenate_per_cluster_arrays(spc, arrays)

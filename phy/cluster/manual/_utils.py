@@ -29,7 +29,8 @@ def _unique(x):
     """
     if len(x) == 0:
         return np.array([], dtype=np.int64)
-    return np.nonzero(np.bincount(x))[0]
+    bc = np.bincount(x)
+    return np.nonzero(bc)[0]
 
 
 def _spikes_in_clusters(spike_clusters, clusters):
@@ -97,7 +98,7 @@ def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub,
                                allow_cut=False):
     """Cut spikes_per_cluster and arrays along a list of spikes."""
     # WARNING: spikes_sub should be sorted and without duplicates.
-    spikes_sub = _as_array(spikes_sub, np.uint64)
+    spikes_sub = _as_array(spikes_sub)
     spikes_per_cluster_subset = {}
     arrays_subset = {}
     n = 0
@@ -111,10 +112,11 @@ def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub,
     assert np.all(np.in1d(spikes_sub, _all_spikes))
 
     for cluster in sorted(spikes_per_cluster):
-        spikes_c = _as_array(spikes_per_cluster[cluster], np.uint64)
+        spikes_c = _as_array(spikes_per_cluster[cluster])
         array = _as_array(arrays[cluster])
-        spikes_sc = np.intersect1d(spikes_sub, spikes_c).astype(np.uint64)
-        assert spikes_sc.dtype == np.uint64
+        assert spikes_sub.dtype == spikes_c.dtype
+        spikes_sc = np.intersect1d(spikes_sub, spikes_c)
+        # assert spikes_sc.dtype == np.int64
         spikes_per_cluster_subset[cluster] = spikes_sc
         idx = _index_of(spikes_sc, spikes_c)
         arrays_subset[cluster] = array[idx, ...]

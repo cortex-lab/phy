@@ -14,7 +14,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises, mark
 
 from .._utils import _spikes_in_clusters
-from ..session import Session, FeatureMasks
+from ..session import Session
 from ....utils.testing import show_test
 from ....utils.dock import qt_app, _close_qt_after
 from ....utils.tempdir import TemporaryDirectory
@@ -58,11 +58,6 @@ def _show_view(session, name, cluster_ids=None):
 def test_session_store_features():
     """Check that the cluster store works for features and masks."""
 
-    # HACK: change the chunk size in this unit test to make sure that
-    # there are several chunks.
-    # cs = FeatureMasks.chunk_size
-    # FeatureMasks.chunk_size = 4
-
     with TemporaryDirectory() as tempdir:
         model = MockModel(n_spikes=50, n_clusters=3)
         s0 = np.nonzero(model.spike_clusters == 0)[0]
@@ -81,8 +76,6 @@ def test_session_store_features():
 
         ac(f, model.features[s0].reshape((f.shape[0], -1, 2)), 1e-3)
         ac(m, model.masks[s1], 1e-3)
-
-    # FeatureMasks.chunk_size = cs
 
 
 def test_session_mock():

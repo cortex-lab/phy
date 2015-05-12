@@ -347,7 +347,7 @@ class Waveforms(StoreItem):
     """A cluster store item that manages the waveforms of all clusters."""
     name = 'waveforms'
     fields = [('waveforms', 'disk', np.float32,),
-              ('waveforms_spikes', 'disk', np.uint64,),
+              ('waveforms_spikes', 'disk', np.int64,),
               ('mean_waveforms', 'memory'),
               ]
 
@@ -376,7 +376,7 @@ class Waveforms(StoreItem):
         waveforms = self.model.waveforms[spikes]
         self.disk_store.store(cluster,
                               waveforms=waveforms.astype(np.float32),
-                              waveforms_spikes=spikes.astype(np.uint64),
+                              waveforms_spikes=spikes.astype(np.int64),
                               )
         self.memory_store.store(cluster,
                                 mean_waveforms=waveforms.mean(axis=0),
