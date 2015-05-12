@@ -230,7 +230,7 @@ class FeatureViewModel(BaseViewModel):
     scale_factor = 1.
     _dimension_selector = None
     n_spikes_max_bg = 10000
-    excerpt_size_bg = 1000
+    # excerpt_size_bg = 1000
 
     def set_dimension_selector(self, func):
         """Decorator for a function that selects the best projection.
@@ -261,15 +261,11 @@ class FeatureViewModel(BaseViewModel):
 
     def on_open(self):
         # Get background features.
-        n_excerpts = self.n_spikes_max_bg // self.excerpt_size_bg
-        features_bg = get_excerpts(self.model.features,
-                                   n_excerpts=n_excerpts,
-                                   excerpt_size=self.excerpt_size_bg,
-                                   )
-        spike_samples = get_excerpts(self.model.spike_samples,
-                                     n_excerpts=n_excerpts,
-                                     excerpt_size=self.excerpt_size_bg,
-                                     )
+        # TODO OPTIM: precompute this once for all and store in the cluster
+        # store. But might be unnecessary.
+        k = max(1, self.model.n_spikes // self.n_spikes_max_bg)
+        features_bg = self.model.features[::k, ...]
+        spike_samples = self.model.spike_samples[::k]
         self.view.background.features = self._rescale_features(features_bg)
         self.view.background.spike_samples = spike_samples
 

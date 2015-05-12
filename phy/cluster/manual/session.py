@@ -970,7 +970,7 @@ class Session(EventEmitter):
             if cluster_ids == self._selected_clusters:
                 return
             assert set(cluster_ids) <= set(self.clustering.cluster_ids)
-            info("Select clusters {0:s}.".format(str(cluster_ids)))
+            debug("Select clusters {0:s}.".format(str(cluster_ids)))
             self._selected_clusters = cluster_ids
             self.emit('select', cluster_ids)
 
