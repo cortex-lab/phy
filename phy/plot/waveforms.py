@@ -313,7 +313,7 @@ class WaveformView(BaseSpikeCanvas):
         # Normalise mouse position.
         position = self._pz._normalize(e.pos)
         position[1] = -position[1]
-        zoom = self._pz.zoom
+        zoom = self._pz._zoom_aspect()
         pan = self._pz.pan
         mouse_pos = ((position / zoom) - pan)
         # Find the channel id.
