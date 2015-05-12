@@ -17,7 +17,7 @@ from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of
 from ...utils.dock import DockWindow, qt_app, _create_web_view
 from ...utils.event import EventEmitter, ProgressReporter
-from ...utils.logging import info
+from ...utils.logging import debug, info
 from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel, cluster_group_id
 from ._history import GlobalHistory
@@ -381,6 +381,20 @@ class Waveforms(StoreItem):
         self.memory_store.store(cluster,
                                 mean_waveforms=waveforms.mean(axis=0),
                                 )
+
+    def store_all_clusters(self, mode=None):
+        """Copy all data for that item from the model to the cluster store."""
+        clusters = self.to_generate(mode)
+        self._pr.value_max = len(clusters)
+        for cluster in clusters:
+            debug("Loading {0:s}, cluster {1:d}...".format(self.name,
+                  cluster))
+            self.store_cluster(cluster,
+                               spikes=self._spikes_per_cluster[cluster],
+                               mode=mode,
+                               )
+            self._pr += 1
+        self._pr.set_complete()
 
     def is_consistent(self, cluster, spikes):
         """Return whether the waveforms and spikes file sizes match."""
