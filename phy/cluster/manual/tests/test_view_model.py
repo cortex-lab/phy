@@ -113,13 +113,18 @@ def test_features_empty():
     _test_empty(FeatureViewModel)
 
 
-def test_ccg():
-    _test_view_model(CorrelogramViewModel,
-                     binsize=20,
-                     winsize_bins=51,
-                     n_excerpts=100,
-                     excerpt_size=100,
-                     )
+def test_ccg_full():
+    vm = _test_view_model(CorrelogramViewModel,
+                          binsize=20,
+                          winsize_bins=51,
+                          n_excerpts=100,
+                          excerpt_size=100,
+                          stop=False,
+                          )
+    show_test_run(vm.view, _N_FRAMES)
+    vm.change_bins(half_width=100., bin=1.)
+    show_test_run(vm.view, _N_FRAMES)
+    show_test_stop(vm.view)
 
 
 def test_ccg_empty():

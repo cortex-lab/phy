@@ -294,6 +294,27 @@ class CorrelogramViewModel(BaseViewModel):
     binsize = None
     winsize_bins = None
 
+    def change_bins(self, bin=None, half_width=None):
+        """Change the parameters of the correlograms.
+
+        Parameters
+        ----------
+        bin : float (ms)
+            Bin size.
+        half_width : float (ms)
+            Half window size.
+
+        """
+        sr = self.model.sample_rate
+
+        bin = np.clip(bin * .001, .001, 1e6)
+        self.binsize = int(sr * bin)
+
+        half_width = np.clip(half_width * .001, .001, 1e6)
+        self.winsize_bins = 2 * int(half_width / bin) + 1
+
+        self.on_select(self.cluster_ids)
+
     def on_select(self, cluster_ids):
         super(CorrelogramViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
@@ -303,6 +324,7 @@ class CorrelogramViewModel(BaseViewModel):
         # Compute the correlograms.
         spike_samples = self.model.spike_samples[spikes]
         spike_clusters = self.view.visual.spike_clusters
+
         ccgs = correlograms(spike_samples,
                             spike_clusters,
                             cluster_order=cluster_ids,
