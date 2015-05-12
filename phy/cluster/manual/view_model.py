@@ -198,6 +198,22 @@ class FeatureViewModel(BaseViewModel):
     _view_class = FeatureView
     _view_name = 'features'
     scale_factor = 1.
+    _dimension_selector = None
+
+    def set_dimension_selector(self, func):
+        """Decorator for a function that selects the best projection.
+
+        The decorated function must have the following signature:
+
+        ```python
+        @view_model.set_dimension_selector
+        def choose(cluster_ids, store=None):
+            # ...
+            return channels  # a list with 3 channel ids
+        ```
+
+        """
+        self._dimension_selector = func
 
     def on_select(self, cluster_ids):
         super(FeatureViewModel, self).on_select(cluster_ids)
@@ -234,11 +250,8 @@ class FeatureViewModel(BaseViewModel):
 
         # Choose best projection.
         # TODO: refactor this, enable/disable
-        if self.store:
-            sum_masks = np.vstack([self.store.sum_masks(cluster)
-                                   for cluster in cluster_ids]).sum(axis=0)
-            # Take the best 3 channels.
-            channels = np.argsort(sum_masks)[::-1][:3]
+        if self.store and self._dimension_selector is not None:
+            channels = self._dimension_selector(cluster_ids, store=self.store)
         else:
             channels = np.arange(len(self.model.channels[:3]))
         self.view.dimensions = ['time'] + [(ch, 0) for ch in channels]

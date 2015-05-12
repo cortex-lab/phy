@@ -1136,6 +1136,14 @@ class Session(EventEmitter):
                           )
         vm.view.marker_size = ms
 
+        @vm.set_dimension_selector
+        def choose(cluster_ids, store=None):
+            sum_masks = np.vstack([store.sum_masks(cluster)
+                                   for cluster in cluster_ids]).sum(axis=0)
+            # Take the best 3 channels.
+            channels = np.argsort(sum_masks)[::-1][:3]
+            return channels
+
         @vm.view.connect
         def on_draw(event):
             if vm.view.visual.empty:
