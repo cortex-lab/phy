@@ -393,7 +393,7 @@ class Waveforms(StoreItem):
                                spikes=self._spikes_per_cluster[cluster],
                                mode=mode,
                                )
-            self._pr += 1
+            self._pr.value += 1
         self._pr.set_complete()
 
     def is_consistent(self, cluster, spikes):
