@@ -38,6 +38,7 @@ class WaveformVisual(BaseSpikeVisual):
 
         self.program['u_data_scale'] = self.default_box_scale
         self.program['u_channel_scale'] = self.default_probe_scale
+        self.program['u_overlap'] = 0
         _enable_depth_mask()
 
     # Data properties
@@ -114,6 +115,16 @@ class WaveformVisual(BaseSpikeVisual):
     def probe_scale(self, value):
         assert isinstance(value, tuple) and len(value) == 2
         self.program['u_channel_scale'] = value
+
+    @property
+    def overlap(self):
+        """Whether to overlap waveforms."""
+        return self.program['u_overlap'] == 1.
+
+    @overlap.setter
+    def overlap(self, value):
+        assert value in (True, False)
+        self.program['u_overlap'] = 1. * value
 
     def channel_hover(self, position):
         """Return the channel id closest to the mouse pointer.
@@ -252,6 +263,16 @@ class WaveformView(BaseSpikeCanvas):
         self.visual.probe_scale = value
         self.update()
 
+    @property
+    def overlap(self):
+        """Whether to overlap waveforms."""
+        return self.visual.overlap
+
+    @overlap.setter
+    def overlap(self, value):
+        self.visual.overlap = value
+        self.update()
+
     def on_key_press(self, event):
         """Handle key press events."""
         key = event.key
@@ -273,7 +294,6 @@ class WaveformView(BaseSpikeCanvas):
                 self.box_scale = (u, v / coeff)
             elif key == 'Up':
                 self.box_scale = (u, v * coeff)
-            self.update()
 
         # Probe scale.
         if shift and key in self._arrows:
@@ -287,7 +307,9 @@ class WaveformView(BaseSpikeCanvas):
                 self.probe_scale = (u, v / coeff)
             elif key == 'Up':
                 self.probe_scale = (u, v * coeff)
-            self.update()
+
+        if not event.modifiers and key == 'o':
+            self.overlap = not(self.overlap)
 
     def on_key_release(self, event):
         self._key_pressed = None
@@ -302,11 +324,9 @@ class WaveformView(BaseSpikeCanvas):
         if ctrl:
             u, v = self.box_scale
             self.box_scale = (u * coeff, v)
-            self.update()
         if shift:
             u, v = self.box_scale
             self.box_scale = (u, v * coeff)
-            self.update()
 
     def on_mouse_press(self, e):
         key = self._key_pressed
