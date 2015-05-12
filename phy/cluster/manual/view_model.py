@@ -119,9 +119,18 @@ class BaseViewModel(object):
     def n_spikes(self):
         return self._selector.n_spikes
 
-    def _load_from_store_or_model(self, name, cluster_ids, spikes):
+    def _load_from_store_or_model(self,
+                                  name,
+                                  cluster_ids,
+                                  spikes,
+                                  subset_arrays=True,
+                                  ):
         if self._store is not None:
-            return self._store.load(name, cluster_ids, spikes)
+            return self._store.load(name,
+                                    cluster_ids,
+                                    spikes,
+                                    subset_arrays=subset_arrays,
+                                    )
         else:
             return getattr(self._model, name)[spikes]
 
@@ -172,7 +181,13 @@ class WaveformViewModel(BaseViewModel):
 
         # Load waveforms.
         debug("Loading {0:d} waveforms...".format(len(spikes)))
-        waveforms = self.model.waveforms[spikes]
+        # waveforms = self.model.waveforms[spikes]
+        waveforms = self._load_from_store_or_model('waveforms',
+                                                   cluster_ids,
+                                                   spikes,
+                                                   subset_arrays=False,
+                                                   )
+        assert waveforms.shape[0] == len(spikes)
         debug("Done!")
 
         # Cluster display order.
