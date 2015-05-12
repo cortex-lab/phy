@@ -9,7 +9,7 @@
 import numpy as np
 
 from ...utils.logging import debug
-from ...utils.array import _unique, get_excerpts
+from ...utils.array import _unique
 from ...plot.ccg import CorrelogramView
 from ...plot.features import FeatureView
 from ...plot.waveforms import WaveformView
