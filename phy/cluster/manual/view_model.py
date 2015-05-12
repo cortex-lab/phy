@@ -123,13 +123,13 @@ class BaseViewModel(object):
                                   name,
                                   cluster_ids,
                                   spikes,
-                                  subset_arrays=True,
+                                  spikes_per_cluster=None,
                                   ):
         if self._store is not None:
             return self._store.load(name,
                                     cluster_ids,
                                     spikes,
-                                    subset_arrays=subset_arrays,
+                                    spikes_per_cluster=spikes_per_cluster,
                                     )
         else:
             return getattr(self._model, name)[spikes]
@@ -182,10 +182,12 @@ class WaveformViewModel(BaseViewModel):
         # Load waveforms.
         debug("Loading {0:d} waveforms...".format(len(spikes)))
         # waveforms = self.model.waveforms[spikes]
+        spc = {cluster: self._store.waveforms_spikes(cluster)
+               for cluster in cluster_ids} if self._store else None
         waveforms = self._load_from_store_or_model('waveforms',
                                                    cluster_ids,
                                                    spikes,
-                                                   subset_arrays=False,
+                                                   spikes_per_cluster=spc,
                                                    )
         assert waveforms.shape[0] == len(spikes)
         debug("Done!")
