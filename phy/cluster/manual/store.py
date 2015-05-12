@@ -383,19 +383,12 @@ class ClusterStore(object):
         # Get spikes_per_cluster and data arrays for the specified spikes.
         if spikes_per_cluster is not None:
             spc = spikes_per_cluster
-            allow_cut = True
         else:
             spc = {cluster: self._spikes_per_cluster[cluster]
                    for cluster in clusters}
-            allow_cut = False
-        # WARNING: when spikes_per_cluster is specified, we are not guaranteed
-        # that the requeste `spikes` all belong to `spikes_per_cluster`.
-        # Therefore, we authorize `_subset_spikes_per_cluster()` to take
-        # the intersection.
         arrays = {cluster: load(cluster) for cluster in clusters}
         spikes = _unique(spikes).astype(np.uint64)
-        spc, arrays = _subset_spikes_per_cluster(spc, arrays, spikes,
-                                                 allow_cut=allow_cut)
+        spc, arrays = _subset_spikes_per_cluster(spc, arrays, spikes)
         # Return the concatenated array.
         return _concatenate_per_cluster_arrays(spc, arrays)
 
