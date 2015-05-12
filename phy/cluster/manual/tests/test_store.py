@@ -131,7 +131,6 @@ def test_cluster_store_1():
         # We initialize the ClusterStore.
         cs = ClusterStore(model=model,
                           path=tempdir,
-                          spike_clusters=spike_clusters,
                           spikes_per_cluster=spikes_per_cluster,
                           )
 
@@ -183,7 +182,6 @@ def test_cluster_store_1():
 
         # Recreate the cluster store.
         cs = ClusterStore(model=model,
-                          spike_clusters=spike_clusters,
                           spikes_per_cluster=spikes_per_cluster,
                           path=tempdir,
                           )
@@ -235,7 +233,6 @@ def test_cluster_store_load():
 
         # We initialize the ClusterStore.
         cs = ClusterStore(model=model,
-                          spike_clusters=spike_clusters,
                           spikes_per_cluster=spikes_per_cluster,
                           path=tempdir,
                           )
@@ -298,7 +295,6 @@ def test_cluster_store_management():
 
         # We initialize the ClusterStore.
         cs = ClusterStore(model=model,
-                          spike_clusters=spike_clusters,
                           spikes_per_cluster=spikes_per_cluster,
                           path=tempdir,
                           )
@@ -348,7 +344,6 @@ def test_cluster_store_management():
 
         # We re-initialize the ClusterStore.
         cs = ClusterStore(model=model,
-                          spike_clusters=spike_clusters,
                           spikes_per_cluster=spikes_per_cluster,
                           path=tempdir,
                           )

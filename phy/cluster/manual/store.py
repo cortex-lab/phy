@@ -247,12 +247,10 @@ class ClusterStore(object):
     """
     def __init__(self,
                  model=None,
-                 spike_clusters=None,
                  spikes_per_cluster=None,
                  path=None,
                  ):
         self._model = model
-        self._spike_clusters = spike_clusters
         self._spikes_per_cluster = spikes_per_cluster
         self._memory = MemoryStore()
         self._disk = DiskStore(path) if path is not None else None
@@ -282,23 +280,6 @@ class ClusterStore(object):
     def spikes_per_cluster(self):
         """Dictionary `{cluster_id: spike_ids}`."""
         return self._spikes_per_cluster
-
-    # @spikes_per_cluster.setter
-    # def spikes_per_cluster(self, value):
-    #     """Update the `spikes_per_cluster` structure."""
-    #     assert isinstance(value, dict)
-    #     self._spikes_per_cluster = value
-
-    @property
-    def spike_clusters(self):
-        """Spike clusters array."""
-        return self._spike_clusters
-
-    # @spike_clusters.setter
-    # def spike_clusters(self, value):
-    #     """Update the `spike_clusters` array."""
-    #     assert isinstance(value, np.ndarray)
-    #     self._spike_clusters = value
 
     def update_spikes_per_cluster(self, spikes_per_cluster):
         self._spikes_per_cluster = spikes_per_cluster
@@ -378,7 +359,6 @@ class ClusterStore(object):
                         memory_store=self._memory,
                         disk_store=self._disk,
                         spikes_per_cluster=self.spikes_per_cluster,
-                        spike_clusters=self.spike_clusters,
                         **kwargs)
         assert item.fields is not None
 
@@ -522,7 +502,6 @@ class ClusterStore(object):
 
         """
         assert isinstance(self._spikes_per_cluster, dict)
-        # assert isinstance(self._spike_clusters, np.ndarray)
         if hasattr(self._model, 'name'):
             name = self._model.name
         else:
@@ -557,14 +536,12 @@ class StoreItem(object):
                  model=None,
                  memory_store=None,
                  disk_store=None,
-                 spike_clusters=None,
                  spikes_per_cluster=None,
                  ):
         self.model = model
         self.memory_store = memory_store
         self.disk_store = disk_store
         self._spikes_per_cluster = spikes_per_cluster
-        self._spike_clusters = spike_clusters
 
     @property
     def spikes_per_cluster(self):
@@ -574,15 +551,6 @@ class StoreItem(object):
     @spikes_per_cluster.setter
     def spikes_per_cluster(self, value):
         self._spikes_per_cluster = value
-
-    @property
-    def spike_clusters(self):
-        """Spikes per cluster."""
-        return self._spike_clusters
-
-    # @spike_clusters.setter
-    # def spike_clusters(self, value):
-    #     self._spike_clusters = value
 
     @property
     def cluster_ids(self):
