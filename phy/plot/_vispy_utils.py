@@ -15,7 +15,8 @@ from vispy import app, gloo, config
 from vispy.util.event import Event
 from vispy.visuals import Visual
 
-from ..utils.array import _unique, _as_array
+from ..utils._types import _as_array
+from ..utils.array import _unique
 from ..utils.logging import debug
 from ._panzoom import PanZoom
 

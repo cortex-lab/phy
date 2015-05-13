@@ -11,8 +11,8 @@ import numpy as np
 from ...utils.logging import set_level
 from ..waveforms import WaveformView
 from ...utils._color import _random_color
-from ...io.mock.artificial import (artificial_waveforms, artificial_masks,
-                                   artificial_spike_clusters)
+from ...io.mock import (artificial_waveforms, artificial_masks,
+                        artificial_spike_clusters)
 from ...electrode.mea import staggered_positions
 from ...utils.testing import show_test
 

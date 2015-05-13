@@ -13,13 +13,10 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
 
-from ....utils._misc import Bunch
-from ....utils.tempdir import TemporaryDirectory
-from ....utils.logging import set_level
+from ...utils import Bunch, _spikes_per_cluster
+from ...utils.tempdir import TemporaryDirectory
+from ...utils.logging import set_level
 from ..store import MemoryStore, DiskStore, ClusterStore, StoreItem
-from .._utils import (UpdateInfo,
-                      _spikes_per_cluster,
-                      )
 
 
 #------------------------------------------------------------------------------
@@ -166,14 +163,14 @@ def test_cluster_store_1():
         spc[20] = spikes
         del spc[0]
         del spc[1]
-        up = UpdateInfo(description='merge',
-                        added=[20],
-                        deleted=[0, 1],
-                        spike_ids=spikes,
-                        new_spikes_per_cluster=spc,
-                        old_spikes_per_cluster=spikes_per_cluster,)
+        up = Bunch(description='merge',
+                   added=[20],
+                   deleted=[0, 1],
+                   spike_ids=spikes,
+                   new_spikes_per_cluster=spc,
+                   old_spikes_per_cluster=spikes_per_cluster,)
 
-        cs.on_cluster(up)
+        cs.store_items[0].on_cluster(up)
 
         # Check the list of clusters in the store.
         ae(cs.memory_store.cluster_ids, list(range(0, n_clusters)) + [20])

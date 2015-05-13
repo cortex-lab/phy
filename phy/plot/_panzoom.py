@@ -11,7 +11,7 @@ import math
 
 import numpy as np
 
-from ..utils.array import _as_array
+from ..utils._types import _as_array
 
 
 #------------------------------------------------------------------------------

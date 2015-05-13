@@ -8,7 +8,7 @@
 
 from operator import itemgetter
 
-from ...utils.array import _is_array_like
+from ...utils import _is_array_like
 from ...utils.logging import info
 from ._utils import History
 

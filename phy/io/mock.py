@@ -9,10 +9,9 @@
 import numpy as np
 import numpy.random as nr
 
-from ...utils._color import _random_color
-from ..base_model import BaseModel
-from ...io.kwik_model import ClusterMetadata
-from ...electrode.mea import MEA, staggered_positions
+from ..utils._color import _random_color
+from .base_model import BaseModel, ClusterMetadata
+from ..electrode.mea import MEA, staggered_positions
 
 
 #------------------------------------------------------------------------------

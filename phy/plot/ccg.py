@@ -17,7 +17,7 @@ from ._vispy_utils import (BaseSpikeVisual,
                            BoxVisual,
                            _tesselate_histogram)
 from ._panzoom import PanZoomGrid
-from ..utils.array import _as_array
+from ..utils._types import _as_array
 from ..utils.logging import debug
 
 

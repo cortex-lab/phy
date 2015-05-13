@@ -8,8 +8,14 @@
 
 import numpy as np
 
-from ...utils.array import _as_array, regular_subset, get_excerpts
-from ._utils import _unique, _spikes_in_clusters, _spikes_per_cluster
+from ._types import _as_array
+from .array import (regular_subset,
+                    get_excerpts,
+                    _unique,
+                    _ensure_unique,
+                    _spikes_in_clusters,
+                    _spikes_per_cluster,
+                    )
 
 
 #------------------------------------------------------------------------------
@@ -18,14 +24,6 @@ from ._utils import _unique, _spikes_in_clusters, _spikes_per_cluster
 
 def _concat(l):
     return np.sort(np.hstack(l))
-
-
-def _ensure_unique(func):
-    """Apply unique() to the output of a function."""
-    def wrapped(*args, **kwargs):
-        out = func(*args, **kwargs)
-        return _unique(out)
-    return wrapped
 
 
 #------------------------------------------------------------------------------

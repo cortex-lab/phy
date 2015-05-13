@@ -11,7 +11,7 @@ from math import floor
 import numpy as np
 
 from .logging import warn
-from ..ext import six
+from ._types import _as_tuple, _as_array
 
 
 #------------------------------------------------------------------------------
@@ -49,12 +49,24 @@ def _range_from_slice(myslice, start=None, stop=None, step=None, length=None):
 
 def _unique(x):
     """Faster version of np.unique().
+
     This version is restricted to 1D arrays of non-negative integers.
+
     It is only faster if len(x) >> len(unique(x)).
+
     """
     if len(x) == 0:
-        return np.array([], dtype=np.int)
-    return np.nonzero(np.bincount(x))[0]
+        return np.array([], dtype=np.int64)
+    bc = np.bincount(x)
+    return np.nonzero(bc)[0]
+
+
+def _ensure_unique(func):
+    """Apply unique() to the output of a function."""
+    def wrapped(*args, **kwargs):
+        out = func(*args, **kwargs)
+        return _unique(out)
+    return wrapped
 
 
 def _normalize(arr, keep_ratio=False):
@@ -100,32 +112,22 @@ def _index_of(arr, lookup):
     return tmp[arr]
 
 
-def _is_array_like(arr):
-    return isinstance(arr, (list, np.ndarray))
-
-
-_ACCEPTED_ARRAY_DTYPES = (np.float, np.float32, np.float64,
-                          np.int, np.int8, np.int16, np.uint8, np.uint16,
-                          np.int32, np.int64, np.uint32, np.uint64,
-                          np.bool)
-
-
-def _as_array(arr, dtype=None):
-    """Convert an object to a numerical NumPy array.
-
-    Avoid a copy if possible.
-
-    """
-    if isinstance(arr, six.integer_types + (float,)):
-        arr = [arr]
-    out = np.asarray(arr)
-    if dtype is not None:
-        if out.dtype != dtype:
-            out = out.astype(dtype)
-    if out.dtype not in _ACCEPTED_ARRAY_DTYPES:
-        raise ValueError("'arr' seems to have an invalid dtype: "
-                         "{0:s}".format(str(out.dtype)))
-    return out
+def _partial_shape(shape, trailing_index):
+    """Return the shape of a partial array."""
+    if shape is None:
+        shape = ()
+    if trailing_index is None:
+        trailing_index = ()
+    trailing_index = _as_tuple(trailing_index)
+    # Length of the selection items for the partial array.
+    len_item = len(shape) - len(trailing_index)
+    # Array for the trailing dimensions.
+    _arr = np.empty(shape=shape[len_item:])
+    try:
+        trailing_arr = _arr[trailing_index]
+    except IndexError:
+        raise ValueError("The partial shape index is invalid.")
+    return shape[:len_item] + trailing_arr.shape
 
 
 def _pad(arr, n, dir='right'):
@@ -202,6 +204,239 @@ def _fill_index(arr, item):
         return arr
 
 
+# -----------------------------------------------------------------------------
+# Chunking functions
+# -----------------------------------------------------------------------------
+
+def _excerpt_step(n_samples, n_excerpts=None, excerpt_size=None):
+    """Compute the step of an excerpt set as a function of the number
+    of excerpts or their sizes."""
+    assert n_excerpts >= 2
+    step = max((n_samples - excerpt_size) // (n_excerpts - 1),
+               excerpt_size)
+    return step
+
+
+def chunk_bounds(n_samples, chunk_size, overlap=0):
+    """Return chunk bounds.
+
+    Chunks have the form:
+
+        [ overlap/2 | chunk_size-overlap | overlap/2 ]
+        s_start   keep_start           keep_end     s_end
+
+    Except for the first and last chunks which do not have a left/right
+    overlap.
+
+    This generator yields (s_start, s_end, keep_start, keep_end).
+
+    """
+    s_start = 0
+    s_end = chunk_size
+    keep_start = s_start
+    keep_end = s_end - overlap // 2
+    yield s_start, s_end, keep_start, keep_end
+
+    while s_end - overlap + chunk_size < n_samples:
+        s_start = s_end - overlap
+        s_end = s_start + chunk_size
+        keep_start = keep_end
+        keep_end = s_end - overlap // 2
+        if s_start < s_end:
+            yield s_start, s_end, keep_start, keep_end
+
+    s_start = s_end - overlap
+    s_end = n_samples
+    keep_start = keep_end
+    keep_end = s_end
+    if s_start < s_end:
+        yield s_start, s_end, keep_start, keep_end
+
+
+def excerpts(n_samples, n_excerpts=None, excerpt_size=None):
+    """Yield (start, end) where start is included and end is excluded."""
+    assert n_excerpts >= 2
+    step = _excerpt_step(n_samples,
+                         n_excerpts=n_excerpts,
+                         excerpt_size=excerpt_size)
+    for i in range(n_excerpts):
+        start = i * step
+        if start >= n_samples:
+            break
+        end = min(start + excerpt_size, n_samples)
+        yield start, end
+
+
+def data_chunk(data, chunk, with_overlap=False):
+    """Get a data chunk."""
+    assert isinstance(chunk, tuple)
+    if len(chunk) == 2:
+        i, j = chunk
+    elif len(chunk) == 4:
+        if with_overlap:
+            i, j = chunk[:2]
+        else:
+            i, j = chunk[2:]
+    else:
+        raise ValueError("'chunk' should have 2 or 4 elements, "
+                         "not {0:d}".format(len(chunk)))
+    return data[i:j, ...]
+
+
+def get_excerpts(data, n_excerpts=None, excerpt_size=None):
+    assert n_excerpts is not None
+    assert excerpt_size is not None
+    if n_excerpts * excerpt_size > len(data):
+        return data
+    if n_excerpts == 1:
+        return data
+    return np.concatenate([data_chunk(data, chunk)
+                           for chunk in excerpts(len(data),
+                                                 n_excerpts=n_excerpts,
+                                                 excerpt_size=excerpt_size)])
+
+
+def regular_subset(spikes=None, n_spikes_max=None):
+    """Prune the current selection to get at most n_spikes_max spikes."""
+    assert spikes is not None
+    # Nothing to do if the selection already satisfies n_spikes_max.
+    if n_spikes_max is None or len(spikes) <= n_spikes_max:
+        return spikes
+    step = int(np.clip(1. / n_spikes_max * len(spikes),
+                       1, len(spikes)))
+    # Random shift.
+    start = np.random.randint(low=0, high=step)
+    my_spikes = spikes[start::step][:n_spikes_max]
+    assert len(my_spikes) <= len(spikes)
+    assert len(my_spikes) <= n_spikes_max
+    return my_spikes
+
+
+# -----------------------------------------------------------------------------
+# Spike clusters utility functions
+# -----------------------------------------------------------------------------
+
+def _spikes_in_clusters(spike_clusters, clusters):
+    """Return the ids of all spikes belonging to the specified clusters."""
+    if len(spike_clusters) == 0 or len(clusters) == 0:
+        return np.array([], dtype=np.int)
+    return np.nonzero(np.in1d(spike_clusters, clusters))[0]
+
+
+def _spikes_per_cluster(spike_ids, spike_clusters):
+    """Return a dictionary {cluster: list_of_spikes}."""
+    rel_spikes = np.argsort(spike_clusters)
+    abs_spikes = spike_ids[rel_spikes]
+    spike_clusters = spike_clusters[rel_spikes]
+
+    diff = np.empty_like(spike_clusters)
+    diff[0] = 1
+    diff[1:] = np.diff(spike_clusters)
+
+    idx = np.nonzero(diff > 0)[0]
+    clusters = spike_clusters[idx]
+
+    spikes_in_clusters = {clusters[i]: np.sort(abs_spikes[idx[i]:idx[i+1]])
+                          for i in range(len(clusters) - 1)}
+    spikes_in_clusters[clusters[-1]] = np.sort(abs_spikes[idx[-1]:])
+
+    return spikes_in_clusters
+
+
+def _flatten_spikes_per_cluster(spikes_per_cluster):
+    """Convert a dictionary {cluster: list_of_spikes} to a
+    spike_clusters array."""
+    clusters = sorted(spikes_per_cluster)
+    clusters_arr = np.concatenate([(cluster *
+                                   np.ones(len(spikes_per_cluster[cluster])))
+                                   for cluster in clusters]).astype(np.int64)
+    spikes_arr = np.concatenate([spikes_per_cluster[cluster]
+                                 for cluster in clusters])
+    spike_clusters = np.vstack((spikes_arr, clusters_arr))
+    ind = np.argsort(spike_clusters[0, :])
+    return spike_clusters[1, ind]
+
+
+def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
+    """Concatenate arrays from a {cluster: array} dictionary."""
+    assert set(arrays) <= set(spikes_per_cluster)
+    clusters = sorted(arrays)
+    # Check the sizes of the spikes per cluster and the arrays.
+    n_0 = [len(spikes_per_cluster[cluster]) for cluster in clusters]
+    n_1 = [len(arrays[cluster]) for cluster in clusters]
+    assert n_0 == n_1
+
+    # Concatenate all spikes to find the right insertion order.
+    spikes = np.concatenate([spikes_per_cluster[cluster]
+                             for cluster in clusters])
+    idx = np.argsort(spikes)
+    # NOTE: concatenate all arrays along the first axis, because we assume
+    # that the first axis represents the spikes.
+    arrays = np.concatenate([_as_array(arrays[cluster])
+                             for cluster in clusters])
+    return arrays[idx, ...]
+
+
+def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub,
+                               allow_cut=False):
+    """Cut spikes_per_cluster and arrays along a list of spikes."""
+    # WARNING: spikes_sub should be sorted and without duplicates.
+    spikes_sub = _as_array(spikes_sub)
+    spikes_per_cluster_subset = {}
+    arrays_subset = {}
+    n = 0
+
+    # Opt-in parameter to allow cutting the requested spikes with
+    # the spikes per cluster dictionary.
+    _all_spikes = np.hstack(spikes_per_cluster.values())
+    if allow_cut:
+        spikes_sub = np.intersect1d(spikes_sub,
+                                    _all_spikes)
+    assert np.all(np.in1d(spikes_sub, _all_spikes))
+
+    for cluster in sorted(spikes_per_cluster):
+        spikes_c = _as_array(spikes_per_cluster[cluster])
+        array = _as_array(arrays[cluster])
+        assert spikes_sub.dtype == spikes_c.dtype
+        spikes_sc = np.intersect1d(spikes_sub, spikes_c)
+        # assert spikes_sc.dtype == np.int64
+        spikes_per_cluster_subset[cluster] = spikes_sc
+        idx = _index_of(spikes_sc, spikes_c)
+        arrays_subset[cluster] = array[idx, ...]
+        assert len(spikes_sc) == len(arrays_subset[cluster])
+        n += len(spikes_sc)
+    assert n == len(spikes_sub)
+    return spikes_per_cluster_subset, arrays_subset
+
+
+# -----------------------------------------------------------------------------
+# PartialArray
+# -----------------------------------------------------------------------------
+
+class PartialArray(object):
+    """Proxy to a view of an array, allowing selection along the first
+    dimensions and fixing the trailing dimensions."""
+    def __init__(self, arr, trailing_index=None):
+        self._arr = arr
+        self._trailing_index = _as_tuple(trailing_index)
+        self.shape = _partial_shape(arr.shape, self._trailing_index)
+        self.dtype = arr.dtype
+
+    def __getitem__(self, item):
+        if self._trailing_index is None:
+            return self._arr[item]
+        else:
+            item = _as_tuple(item)
+            item += self._trailing_index
+            if len(item) != len(self._arr.shape):
+                raise ValueError("The array selection is invalid: "
+                                 "{0}".format(str(item)))
+            return self._arr[item]
+
+    def __len__(self):
+        return self.shape[0]
+
+
 class ConcatenatedArrays(object):
     """This object represents a concatenation of several memory-mapped
     arrays."""
@@ -270,169 +505,3 @@ def _concatenate_virtual_arrays(arrs):
     if n == 1:
         return arrs[0]
     return ConcatenatedArrays(arrs)
-
-
-# -----------------------------------------------------------------------------
-# Chunking functions
-# -----------------------------------------------------------------------------
-
-def chunk_bounds(n_samples, chunk_size, overlap=0):
-    """Return chunk bounds.
-
-    Chunks have the form:
-
-        [ overlap/2 | chunk_size-overlap | overlap/2 ]
-        s_start   keep_start           keep_end     s_end
-
-    Except for the first and last chunks which do not have a left/right
-    overlap.
-
-    This generator yields (s_start, s_end, keep_start, keep_end).
-
-    """
-    s_start = 0
-    s_end = chunk_size
-    keep_start = s_start
-    keep_end = s_end - overlap // 2
-    yield s_start, s_end, keep_start, keep_end
-
-    while s_end - overlap + chunk_size < n_samples:
-        s_start = s_end - overlap
-        s_end = s_start + chunk_size
-        keep_start = keep_end
-        keep_end = s_end - overlap // 2
-        if s_start < s_end:
-            yield s_start, s_end, keep_start, keep_end
-
-    s_start = s_end - overlap
-    s_end = n_samples
-    keep_start = keep_end
-    keep_end = s_end
-    if s_start < s_end:
-        yield s_start, s_end, keep_start, keep_end
-
-
-def _excerpt_step(n_samples, n_excerpts=None, excerpt_size=None):
-    """Compute the step of an excerpt set as a function of the number
-    of excerpts or their sizes."""
-    assert n_excerpts >= 2
-    step = max((n_samples - excerpt_size) // (n_excerpts - 1),
-               excerpt_size)
-    return step
-
-
-def excerpts(n_samples, n_excerpts=None, excerpt_size=None):
-    """Yield (start, end) where start is included and end is excluded."""
-    assert n_excerpts >= 2
-    step = _excerpt_step(n_samples,
-                         n_excerpts=n_excerpts,
-                         excerpt_size=excerpt_size)
-    for i in range(n_excerpts):
-        start = i * step
-        if start >= n_samples:
-            break
-        end = min(start + excerpt_size, n_samples)
-        yield start, end
-
-
-def data_chunk(data, chunk, with_overlap=False):
-    """Get a data chunk."""
-    assert isinstance(chunk, tuple)
-    if len(chunk) == 2:
-        i, j = chunk
-    elif len(chunk) == 4:
-        if with_overlap:
-            i, j = chunk[:2]
-        else:
-            i, j = chunk[2:]
-    else:
-        raise ValueError("'chunk' should have 2 or 4 elements, "
-                         "not {0:d}".format(len(chunk)))
-    return data[i:j, ...]
-
-
-def get_excerpts(data, n_excerpts=None, excerpt_size=None):
-    assert n_excerpts is not None
-    assert excerpt_size is not None
-    if n_excerpts * excerpt_size > len(data):
-        return data
-    if n_excerpts == 1:
-        return data
-    return np.concatenate([data_chunk(data, chunk)
-                           for chunk in excerpts(len(data),
-                                                 n_excerpts=n_excerpts,
-                                                 excerpt_size=excerpt_size)])
-
-
-def regular_subset(spikes=None, n_spikes_max=None):
-    """Prune the current selection to get at most n_spikes_max spikes."""
-    assert spikes is not None
-    # Nothing to do if the selection already satisfies n_spikes_max.
-    if n_spikes_max is None or len(spikes) <= n_spikes_max:
-        return spikes
-    step = int(np.clip(1. / n_spikes_max * len(spikes),
-                       1, len(spikes)))
-    # Random shift.
-    start = np.random.randint(low=0, high=step)
-    my_spikes = spikes[start::step][:n_spikes_max]
-    assert len(my_spikes) <= len(spikes)
-    assert len(my_spikes) <= n_spikes_max
-    return my_spikes
-
-
-# -----------------------------------------------------------------------------
-# PartialArray
-# -----------------------------------------------------------------------------
-
-def _as_tuple(item):
-    """Ensure an item is a tuple."""
-    if item is None:
-        return None
-    # elif hasattr(item, '__len__'):
-    #     return tuple(item)
-    elif not isinstance(item, tuple):
-        return (item,)
-    else:
-        return item
-
-
-def _partial_shape(shape, trailing_index):
-    """Return the shape of a partial array."""
-    if shape is None:
-        shape = ()
-    if trailing_index is None:
-        trailing_index = ()
-    trailing_index = _as_tuple(trailing_index)
-    # Length of the selection items for the partial array.
-    len_item = len(shape) - len(trailing_index)
-    # Array for the trailing dimensions.
-    _arr = np.empty(shape=shape[len_item:])
-    try:
-        trailing_arr = _arr[trailing_index]
-    except IndexError:
-        raise ValueError("The partial shape index is invalid.")
-    return shape[:len_item] + trailing_arr.shape
-
-
-class PartialArray(object):
-    """Proxy to a view of an array, allowing selection along the first
-    dimensions and fixing the trailing dimensions."""
-    def __init__(self, arr, trailing_index=None):
-        self._arr = arr
-        self._trailing_index = _as_tuple(trailing_index)
-        self.shape = _partial_shape(arr.shape, self._trailing_index)
-        self.dtype = arr.dtype
-
-    def __getitem__(self, item):
-        if self._trailing_index is None:
-            return self._arr[item]
-        else:
-            item = _as_tuple(item)
-            item += self._trailing_index
-            if len(item) != len(self._arr.shape):
-                raise ValueError("The array selection is invalid: "
-                                 "{0}".format(str(item)))
-            return self._arr[item]
-
-    def __len__(self):
-        return self.shape[0]

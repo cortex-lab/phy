@@ -12,12 +12,13 @@ import re
 
 import numpy as np
 
-from ._utils import (_concatenate_per_cluster_arrays,
-                     _subset_spikes_per_cluster,
-                     )
-from ...utils.array import _unique
-from ...utils.logging import debug, info
-from ...ext.six import string_types, integer_types
+from ..utils.array import (_unique,
+                           _concatenate_per_cluster_arrays,
+                           _subset_spikes_per_cluster,
+                           )
+from ..utils._types import _as_int
+from ..utils.logging import debug, info
+from ..ext.six import string_types
 
 
 #------------------------------------------------------------------------------
@@ -42,13 +43,6 @@ def _load_ndarray(f, dtype=None, shape=None):
         if shape is not None:
             arr = arr.reshape(shape)
         return arr
-
-
-def _as_int(x):
-    if isinstance(x, integer_types):
-        return x
-    x = np.asscalar(x)
-    return x
 
 
 def _file_cluster_id(path):
@@ -393,17 +387,6 @@ class ClusterStore(object):
         # Return the concatenated array.
         return _concatenate_per_cluster_arrays(spc, arrays)
 
-    def on_cluster(self, up):
-        """Update the cluster store when clustering changes occur.
-
-        This method calls `item.on_cluster(up)` on all registered store items.
-
-        """
-        # No need to delete the old clusters from the store, we can keep
-        # them for possible undo, and regularly clean up the store.
-        for item in self._items:
-            item.on_cluster(up)
-
     # Files
     #--------------------------------------------------------------------------
 
@@ -602,12 +585,3 @@ class StoreItem(object):
                                spikes=self._spikes_per_cluster[cluster],
                                mode=mode,
                                )
-
-    def on_cluster(self, up):
-        """Update the stored data when a clustering change happens.
-
-        May be overridden.
-
-        No need to delete old clusters here."""
-        for cluster in up.added:
-            self.store_cluster(cluster, up.new_spikes_per_cluster[cluster])

@@ -14,7 +14,8 @@ from vispy import gloo
 from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
                            )
-from ..utils.array import _as_array, _index_of
+from ..utils._types import _as_array
+from ..utils.array import _index_of
 from ..utils.logging import debug
 
 

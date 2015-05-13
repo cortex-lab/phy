@@ -13,7 +13,8 @@ from vispy import gloo
 from vispy.gloo import Texture2D
 
 from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas, _enable_depth_mask
-from ..utils.array import _as_array, _index_of, _normalize
+from ..utils._types import _as_array
+from ..utils.array import _index_of, _normalize
 from ..utils.logging import debug
 
 

@@ -10,17 +10,16 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
-from ...electrode.mea import MEA, staggered_positions
-from ...utils.tempdir import TemporaryDirectory
-from ..kwik_model import (KwikModel,
-                          ClusterMetadata,
-                          _list_channel_groups,
-                          _list_channels,
-                          _list_recordings,
-                          _list_clusterings,
-                          _concatenate_spikes,
-                          )
-from ..mock.kwik import create_mock_kwik
+from ....electrode.mea import MEA, staggered_positions
+from ....utils.tempdir import TemporaryDirectory
+from ..model import (KwikModel,
+                     _list_channel_groups,
+                     _list_channels,
+                     _list_recordings,
+                     _list_clusterings,
+                     _concatenate_spikes,
+                     )
+from ..mock import create_mock_kwik
 
 
 #------------------------------------------------------------------------------
@@ -32,38 +31,6 @@ _N_SPIKES = 100
 _N_CHANNELS = 28
 _N_FETS = 2
 _N_SAMPLES_TRACES = 10000
-
-
-def test_base_cluster_metadata():
-    meta = ClusterMetadata()
-
-    @meta.default
-    def group(cluster):
-        return 3
-
-    @meta.default
-    def color(cluster):
-        return 0
-
-    assert meta.group(0) is not None
-    assert meta.group(2) == 3
-    assert meta.group(10) == 3
-
-    meta.set_color(10, 5)
-    assert meta.color(10) == 5
-
-    # Alternative __setitem__ syntax.
-    meta.set_color([10, 11], 5)
-    assert meta.color(10) == 5
-    assert meta.color(11) == 5
-
-    meta.set_color([10, 11], 6)
-    assert meta.color(10) == 6
-    assert meta.color(11) == 6
-    assert meta.color([10, 11]) == [6, 6]
-
-    meta.set_color(10, 20)
-    assert meta.color(10) == 20
 
 
 def test_kwik_utility():

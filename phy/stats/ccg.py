@@ -8,7 +8,8 @@
 
 import numpy as np
 
-from ..utils.array import _index_of, _unique, _as_array
+from ..utils._types import _as_array
+from ..utils.array import _index_of, _unique
 
 
 #------------------------------------------------------------------------------

@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import numpy as np
+# import numpy as np
 from pytest import mark
 
 from ....utils.logging import set_level, debug
@@ -14,13 +14,13 @@ from ....utils.testing import (show_test_start,
                                show_test_stop,
                                show_test_run,
                                )
-from ....io.mock.artificial import MockModel
-from ..clustering import Clustering
-from ..view_model import (WaveformViewModel,
-                          FeatureViewModel,
-                          CorrelogramViewModel,
-                          TraceViewModel,
-                          )
+from ....io.mock import MockModel
+# from ..clustering import Clustering
+from ..kwik import (WaveformViewModel,
+                    FeatureViewModel,
+                    CorrelogramViewModel,
+                    TraceViewModel,
+                    )
 
 
 # Skip these tests in "make test-quick".
@@ -59,10 +59,10 @@ def _test_empty(view_model_class, stop=True, **kwargs):
 def _test_view_model(view_model_class, stop=True, do_cluster=False, **kwargs):
 
     model = MockModel()
-    clustering = Clustering(model.spike_clusters)
+    # clustering = Clustering(model.spike_clusters)
 
     clusters = [3, 4]
-    spikes = clustering.spikes_in_clusters(clusters)
+    # spikes = clustering.spikes_in_clusters(clusters)
 
     vm = view_model_class(model, **kwargs)
     vm.on_open()
@@ -75,17 +75,17 @@ def _test_view_model(view_model_class, stop=True, do_cluster=False, **kwargs):
     if do_cluster:
         # Merge the clusters and update the view.
         debug("Merging.")
-        up = clustering.merge(clusters)
-        vm.on_select(up.added)
-        show_test_run(vm.view, _N_FRAMES)
+        # up = clustering.merge(clusters)
+        # vm.on_select(up.added)
+        # show_test_run(vm.view, _N_FRAMES)
 
-        # Split some spikes and update the view.
-        debug("Splitting.")
-        spikes = spikes[::2]
-        up = clustering.assign(spikes, np.random.randint(low=0, high=5,
-                                                         size=len(spikes)))
-        vm.on_select(up.added)
-        show_test_run(vm.view, _N_FRAMES)
+        # # Split some spikes and update the view.
+        # debug("Splitting.")
+        # spikes = spikes[::2]
+        # up = clustering.assign(spikes, np.random.randint(low=0, high=5,
+        #                                                  size=len(spikes)))
+        # vm.on_select(up.added)
+        # show_test_run(vm.view, _N_FRAMES)
 
     if stop:
         show_test_stop(vm.view)
@@ -117,10 +117,10 @@ def test_features_lasso():
     vm.view.lasso.add((1, 1))
     vm.view.lasso.add((0, 1))
     show_test_run(vm.view, _N_FRAMES)
-    spikes = vm.spikes_in_lasso()
-    clustering = Clustering(vm.model.spike_clusters)
-    up = clustering.split(spikes)
-    vm.on_select(up.added)
+    # spikes = vm.spikes_in_lasso()
+    # clustering = Clustering(vm.model.spike_clusters)
+    # up = clustering.split(spikes)
+    # vm.on_select(up.added)
     show_test_run(vm.view, _N_FRAMES)
     show_test_stop(vm.view)
 

@@ -10,14 +10,14 @@ import os.path as op
 
 import numpy as np
 
-from ...io.mock.artificial import (artificial_spike_samples,
-                                   artificial_spike_clusters,
-                                   artificial_features,
-                                   artificial_masks,
-                                   artificial_traces)
 from ...electrode.mea import staggered_positions
+from ..mock import (artificial_spike_samples,
+                    artificial_spike_clusters,
+                    artificial_features,
+                    artificial_masks,
+                    artificial_traces)
 from ..h5 import open_h5
-from ..kwik_model import _kwik_filenames, _create_clustering
+from .model import _kwik_filenames, _create_clustering
 
 
 #------------------------------------------------------------------------------
