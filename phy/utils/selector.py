@@ -8,14 +8,14 @@
 
 import numpy as np
 
-from ...utils._types import _as_array
-from ...utils.array import (regular_subset,
-                            get_excerpts,
-                            _unique,
-                            _ensure_unique,
-                            _spikes_in_clusters,
-                            _spikes_per_cluster,
-                            )
+from ._types import _as_array
+from .array import (regular_subset,
+                    get_excerpts,
+                    _unique,
+                    _ensure_unique,
+                    _spikes_in_clusters,
+                    _spikes_per_cluster,
+                    )
 
 
 #------------------------------------------------------------------------------
