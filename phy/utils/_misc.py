@@ -119,10 +119,3 @@ def _phy_user_dir():
 def _ensure_path_exists(path):
     if not op.exists(path):
         os.makedirs(path)
-
-
-def _internal_path(path, root=None):
-    if root is None:
-        root = _phy_user_dir()
-    path = op.realpath(op.join(root, path))
-    return path
