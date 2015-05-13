@@ -9,7 +9,11 @@
 
 from vispy import app
 
-from ...utils.testing import show_test
+from ...utils.testing import (show_test,
+                              show_test_start,
+                              show_test_run,
+                              show_test_stop,
+                              )
 from .._vispy_utils import LassoVisual
 from .._panzoom import PanZoom, PanZoomGrid
 
@@ -17,6 +21,9 @@ from .._panzoom import PanZoom, PanZoomGrid
 #------------------------------------------------------------------------------
 # Tests VisPy
 #------------------------------------------------------------------------------
+
+_N_FRAMES = 20
+
 
 class TestCanvas(app.Canvas):
     _pz = None
@@ -46,8 +53,13 @@ class TestCanvas(app.Canvas):
         self.context.set_viewport(0, 0, event.size[0], event.size[1])
 
 
-def _show_visual(visual, grid=False):
-    show_test(TestCanvas(visual, grid=grid))
+def _show_visual(visual, grid=False, stop=True):
+    view = TestCanvas(visual, grid=grid)
+    show_test_start(view)
+    show_test_run(view, _N_FRAMES)
+    if stop:
+        show_test_stop(view)
+    return view
 
 
 def test_lasso():
@@ -58,4 +70,4 @@ def test_lasso():
                     [-.8, +.8],
                     [-.8, -.8],
                     ]
-    _show_visual(lasso, True)
+    view = _show_visual(lasso, grid=True)

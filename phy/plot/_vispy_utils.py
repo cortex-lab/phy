@@ -381,14 +381,25 @@ class LassoVisual(_BakeVisual):
         """Control points."""
         return self._points
 
+    def _update_points(self):
+        self._empty = len(self._points) <= 1
+        self.set_to_bake('points')
+
     @points.setter
     def points(self, value):
-        value = _as_array(value)
-        assert value.ndim == 2
-        assert value.shape[1] == 2
+        value = list(value)
         self._points = value
-        self._empty = len(value) <= 1
-        self.set_to_bake('points')
+        self._update_points()
+
+    def add_point(self, xy):
+        """Add a new point."""
+        self._points.append((xy))
+        self._update_points()
+
+    def clear(self):
+        """Remove all points."""
+        self._points = []
+        self._update_points()
 
     @property
     def n_points(self):
@@ -423,7 +434,7 @@ class LassoVisual(_BakeVisual):
     def _bake_points(self):
         if self.n_points <= 1:
             return
-        self.program['a_position'] = self._points.astype(np.float32)
+        self.program['a_position'] = np.array(self._points, dtype=np.float32)
 
 
 #------------------------------------------------------------------------------
