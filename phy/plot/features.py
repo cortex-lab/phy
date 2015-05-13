@@ -105,6 +105,36 @@ class BaseFeatureVisual(BaseSpikeVisual):
                 t = -1. + 2 * t / m
             return t
 
+    def project(self, data, box):
+        """Project data to a subplot's two-dimensional subspace.
+
+        Parameters
+        ----------
+        data : array
+            The shape is `(n_points, n_channels, n_features)`.
+        box : 2-tuple
+            The `(row, col)` of the box.
+
+        """
+        i, j = box
+        dim_i = self._dimensions[i]
+        dim_j = self._dimensions[j]
+
+        fet_i = self._get_feature_dim(dim_i)
+        # For non-time dimensions, the diagonal shows
+        # a different feature on y (same channel than x).
+        if i == j and dim_j != 'time' and self.n_features >= 1:
+            channel, feature = dim_j
+            # Choose the other feature on y axis.
+            feature = 1 - feature
+            fet_j = data[:, channel, feature]
+        else:
+            fet_j = self._get_feature_dim(dim_j)
+
+        # NOTE: we switch here because we want to plot
+        # dim_i (y) over dim_j (x) on box (i, j).
+        return np.c_[fet_j, fet_i]
+
     @property
     def dimensions(self):
         """Displayed dimensions.
@@ -146,27 +176,9 @@ class BaseFeatureVisual(BaseSpikeVisual):
 
         for i in range(self.n_rows):
             for j in range(self.n_rows):
-                index = self.n_rows * i + j
-
-                dim_i = self._dimensions[i]
-                dim_j = self._dimensions[j]
-
-                fet_i = self._get_feature_dim(dim_i)
-                # For non-time dimensions, the diagonal shows
-                # a different feature on y (same channel than x).
-                if i == j and dim_j != 'time' and self.n_features >= 1:
-                    channel, feature = dim_j
-                    # Choose the other feature on y axis.
-                    feature = 1 - feature
-                    fet_j = self._features[:, channel, feature]
-                else:
-                    fet_j = self._get_feature_dim(dim_j)
-
-                # NOTE: we switch here because we want to plot
-                # dim_i (y) over dim_j (x) on box (i, j).
-                pos = np.c_[fet_j, fet_i]
+                pos = self.project(self._features, (i, j))
                 positions.append(pos)
-
+                index = self.n_rows * i + j
                 boxes.append(index * np.ones(self.n_spikes, dtype=np.float32))
 
         positions = np.vstack(positions).astype(np.float32)
@@ -230,30 +242,16 @@ class FeatureVisual(BaseFeatureVisual):
 
         for i in range(self.n_rows):
             for j in range(self.n_rows):
-                index = self.n_rows * i + j
 
-                dim_i = self._dimensions[i]
-                dim_j = self._dimensions[j]
-
-                fet_i = self._get_feature_dim(dim_i)
-                # For non-time dimensions, the diagonal shows
-                # a different feature on y (same channel than x).
-                if i == j and dim_j != 'time' and self.n_features >= 1:
-                    channel, feature = dim_j
-                    # Choose the other feature on y axis.
-                    feature = 1 - feature
-                    fet_j = self._features[:, channel, feature]
-                else:
-                    fet_j = self._get_feature_dim(dim_j)
-
-                # NOTE: we switch here because we want to plot
-                # dim_i (y) over dim_j (x) on box (i, j).
-                pos = np.c_[fet_j, fet_i]
+                pos = self.project(self._features, (i, j))
                 positions.append(pos)
 
                 # TODO: how to choose the mask?
+                dim_i = self._dimensions[i]
                 mask = self._get_mask_dim(dim_i)
                 masks.append(mask.astype(np.float32))
+
+                index = self.n_rows * i + j
                 boxes.append(index * np.ones(self.n_spikes, dtype=np.float32))
 
         positions = np.vstack(positions).astype(np.float32)

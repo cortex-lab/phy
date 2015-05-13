@@ -395,11 +395,13 @@ class LassoVisual(_BakeVisual):
         """Add a new point."""
         self._points.append((xy))
         self._update_points()
+        debug("Add lasso point.")
 
     def clear(self):
         """Remove all points."""
         self._points = []
         self._update_points()
+        debug("Clear lasso.")
 
     @property
     def n_points(self):
