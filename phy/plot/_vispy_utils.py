@@ -354,6 +354,78 @@ class AxisVisual(BoxVisual):
         debug("bake ax", position.shape)
 
 
+class LassoVisual(_BakeVisual):
+    """Lasso."""
+    _shader_name = 'lasso'
+    _gl_draw_mode = 'line_loop'
+
+    def __init__(self, **kwargs):
+        super(LassoVisual, self).__init__(**kwargs)
+        self._points = []
+        self._n_rows = None
+        self.program['u_box'] = 0
+
+    @property
+    def n_rows(self):
+        """Number of rows in the grid."""
+        return self._n_rows
+
+    @n_rows.setter
+    def n_rows(self, value):
+        assert value >= 0
+        self._n_rows = value
+        self.set_to_bake('n_rows')
+
+    @property
+    def points(self):
+        """Control points."""
+        return self._points
+
+    @points.setter
+    def points(self, value):
+        value = _as_array(value)
+        assert value.ndim == 2
+        assert value.shape[1] == 2
+        self._points = value
+        self._empty = len(value) <= 1
+        self.set_to_bake('points')
+
+    @property
+    def n_points(self):
+        return len(self._points)
+
+    @property
+    def box(self):
+        """The row and column where the lasso is to be shown."""
+        u_box = self.program['u_box']
+        return (u_box // self._n_rows, u_box % self._n_rows)
+
+    @box.setter
+    def box(self, value):
+        assert len(value) == 2
+        i, j = value
+        assert 0 <= i < self._n_rows
+        assert 0 <= j < self._n_rows
+        u_box = i * self._n_rows + j
+        self.program['u_box'] = u_box
+
+    @property
+    def n_boxes(self):
+        """Number of boxes in the grid."""
+        return self._n_rows * self._n_rows
+
+    def _bake_n_rows(self):
+        if not self._n_rows:
+            return
+        self.program['n_rows'] = self._n_rows
+        debug("bake n_rows")
+
+    def _bake_points(self):
+        if self.n_points <= 1:
+            return
+        self.program['a_position'] = self._points.astype(np.float32)
+
+
 #------------------------------------------------------------------------------
 # Base spike canvas
 #------------------------------------------------------------------------------
