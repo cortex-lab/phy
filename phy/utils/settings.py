@@ -11,7 +11,7 @@ import os.path as op
 import re
 
 from ..ext.six.moves import cPickle
-from ._misc import Bunch
+from ._types import Bunch
 from .logging import debug, warn
 
 

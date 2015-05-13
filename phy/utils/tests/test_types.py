@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Tests of misc utility functions."""
+"""Tests of misc type utility functions."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from .._misc import Bunch, _is_integer
+from .._types import Bunch, _is_integer
 
 
 #------------------------------------------------------------------------------

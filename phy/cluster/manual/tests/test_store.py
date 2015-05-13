@@ -13,7 +13,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
 
-from ....utils._misc import Bunch
+from ....utils._types import Bunch
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
 from ..store import MemoryStore, DiskStore, ClusterStore, StoreItem

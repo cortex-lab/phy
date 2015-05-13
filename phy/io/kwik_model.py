@@ -25,7 +25,7 @@ from ..utils.array import (PartialArray,
                            _as_array,
                            _unique,
                            )
-from ..utils._misc import _is_integer, _as_list, _is_list
+from ..utils._types import _is_integer, _as_list, _is_list
 
 
 #------------------------------------------------------------------------------

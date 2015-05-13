@@ -12,7 +12,7 @@ import numpy as np
 
 from ._history import History
 from ...utils.array import _as_array, _index_of
-from ...utils._misc import Bunch, _as_list
+from ...utils._types import Bunch, _as_list
 
 
 #------------------------------------------------------------------------------
