@@ -13,8 +13,9 @@ from ...utils.array import (regular_subset,
                             get_excerpts,
                             _unique,
                             _ensure_unique,
+                            _spikes_in_clusters,
+                            _spikes_per_cluster,
                             )
-from ._utils import _spikes_in_clusters, _spikes_per_cluster
 
 
 #------------------------------------------------------------------------------

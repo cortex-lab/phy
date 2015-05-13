@@ -9,14 +9,14 @@
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
-from ....utils.array import _unique
-from .._utils import (ClusterMetadataUpdater,
-                      _spikes_in_clusters,
-                      _spikes_per_cluster,
-                      _flatten_spikes_per_cluster,
-                      _concatenate_per_cluster_arrays,
-                      _subset_spikes_per_cluster,
-                      )
+from ....utils.array import (_unique,
+                             _spikes_in_clusters,
+                             _spikes_per_cluster,
+                             _flatten_spikes_per_cluster,
+                             _concatenate_per_cluster_arrays,
+                             _subset_spikes_per_cluster,
+                             )
+from .._utils import ClusterMetadataUpdater
 from ....io.mock import artificial_spike_clusters
 from ....io.kwik.model import ClusterMetadata
 

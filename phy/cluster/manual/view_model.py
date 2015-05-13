@@ -9,14 +9,16 @@
 import numpy as np
 
 from ...utils.logging import debug
-from ...utils.array import _unique
+from ...utils.array import (_unique,
+                            _concatenate_per_cluster_arrays,
+                            _spikes_in_clusters,
+                            )
 from ...plot.ccg import CorrelogramView
 from ...plot.features import FeatureView
 from ...plot.waveforms import WaveformView
 from ...plot.traces import TraceView
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from .selector import Selector
-from ._utils import _concatenate_per_cluster_arrays, _spikes_in_clusters
 
 
 #------------------------------------------------------------------------------

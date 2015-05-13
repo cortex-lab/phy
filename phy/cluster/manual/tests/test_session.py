@@ -13,8 +13,8 @@ from numpy.testing import assert_allclose as ac
 from numpy.testing import assert_array_equal as ae
 from pytest import raises, mark
 
-from .._utils import _spikes_in_clusters
 from ..session import Session
+from ....utils import _spikes_in_clusters
 from ....utils.testing import show_test
 from ....utils.dock import qt_app, _close_qt_after
 from ....utils.tempdir import TemporaryDirectory
