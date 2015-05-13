@@ -173,7 +173,7 @@ def test_cluster_store_1():
                         new_spikes_per_cluster=spc,
                         old_spikes_per_cluster=spikes_per_cluster,)
 
-        cs.on_cluster(up)
+        cs.store_items[0].on_cluster(up)
 
         # Check the list of clusters in the store.
         ae(cs.memory_store.cluster_ids, list(range(0, n_clusters)) + [20])

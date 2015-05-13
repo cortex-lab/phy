@@ -729,7 +729,10 @@ class Session(EventEmitter):
 
         @self.connect
         def on_cluster(up=None):
-            self.cluster_store.on_cluster(up)
+            # No need to delete the old clusters from the store, we can keep
+            # them for possible undo, and regularly clean up the store.
+            for item in self.cluster_store.store_items:
+                item.on_cluster(up)
 
     def _create_cluster_metadata(self):
         self._cluster_metadata_updater = ClusterMetadataUpdater(
