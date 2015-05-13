@@ -57,6 +57,14 @@ def _unique(x):
     return np.nonzero(np.bincount(x))[0]
 
 
+def _ensure_unique(func):
+    """Apply unique() to the output of a function."""
+    def wrapped(*args, **kwargs):
+        out = func(*args, **kwargs)
+        return _unique(out)
+    return wrapped
+
+
 def _normalize(arr, keep_ratio=False):
     """Normalize an array into [0, 1]."""
     (x_min, y_min), (x_max, y_max) = arr.min(axis=0), arr.max(axis=0)
