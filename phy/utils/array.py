@@ -49,12 +49,16 @@ def _range_from_slice(myslice, start=None, stop=None, step=None, length=None):
 
 def _unique(x):
     """Faster version of np.unique().
+
     This version is restricted to 1D arrays of non-negative integers.
+
     It is only faster if len(x) >> len(unique(x)).
+
     """
     if len(x) == 0:
-        return np.array([], dtype=np.int)
-    return np.nonzero(np.bincount(x))[0]
+        return np.array([], dtype=np.int64)
+    bc = np.bincount(x)
+    return np.nonzero(bc)[0]
 
 
 def _ensure_unique(func):

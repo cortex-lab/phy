@@ -9,8 +9,8 @@
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
+from ....utils.array import _unique
 from .._utils import (ClusterMetadataUpdater,
-                      _unique,
                       _spikes_in_clusters,
                       _spikes_per_cluster,
                       _flatten_spikes_per_cluster,

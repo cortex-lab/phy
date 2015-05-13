@@ -11,9 +11,10 @@ import numpy as np
 from ...utils.array import (_as_array,
                             regular_subset,
                             get_excerpts,
+                            _unique,
                             _ensure_unique,
                             )
-from ._utils import _unique, _spikes_in_clusters, _spikes_per_cluster
+from ._utils import _spikes_in_clusters, _spikes_per_cluster
 
 
 #------------------------------------------------------------------------------
