@@ -400,11 +400,25 @@ class FeatureView(BaseSpikeCanvas):
         self.boxes.draw()
 
     def on_mouse_press(self, e):
-        box = self._pz._get_box(e.pos)
-        position = self._pz._normalize(e.pos)
-        self.lasso.box = box
-        x, y = position
-        self.lasso.add_point((x * self.lasso.n_rows, -y * self.lasso.n_rows))
+        ctrl = e.modifiers == ('Control',)
+        if not ctrl:
+            return
+        if e.button == 1:
+            n_rows = self.lasso.n_rows
+
+            box = self._pz._get_box(e.pos)
+            self.lasso.box = box
+
+            position = self._pz._normalize(e.pos)
+            x, y = position
+            x *= n_rows
+            y *= -n_rows
+            pos = (x, y)
+            # pos = self._pz._map_box((x, y), inverse=True)
+            pos = self._pz._map_pan_zoom(pos, inverse=True)
+            self.lasso.add_point(pos.ravel())
+        elif e.button == 2:
+            self.lasso.clear()
 
     def on_key_press(self, event):
         """Handle key press events."""

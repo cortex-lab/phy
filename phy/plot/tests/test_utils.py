@@ -9,8 +9,7 @@
 
 from vispy import app
 
-from ...utils.testing import (show_test,
-                              show_test_start,
+from ...utils.testing import (show_test_start,
                               show_test_run,
                               show_test_stop,
                               )
@@ -22,7 +21,7 @@ from .._panzoom import PanZoom, PanZoomGrid
 # Tests VisPy
 #------------------------------------------------------------------------------
 
-_N_FRAMES = 20
+_N_FRAMES = 2
 
 
 class TestCanvas(app.Canvas):
