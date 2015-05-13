@@ -7,9 +7,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os
 import sys
-import os.path as op
 from inspect import getargspec
 
 import numpy as np
@@ -100,22 +98,3 @@ def _is_interactive():
         return App.initialized() and App.instance().interact
     except (ImportError, AttributeError):
         return False
-
-
-#------------------------------------------------------------------------------
-# Config
-#------------------------------------------------------------------------------
-
-_PHY_USER_DIR_NAME = '.phy'
-
-
-def _phy_user_dir():
-    """Return the absolute path to the phy user directory."""
-    home = op.expanduser("~")
-    path = op.realpath(op.join(home, _PHY_USER_DIR_NAME))
-    return path
-
-
-def _ensure_path_exists(path):
-    if not op.exists(path):
-        os.makedirs(path)

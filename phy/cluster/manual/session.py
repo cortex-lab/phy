@@ -13,12 +13,14 @@ import shutil
 
 import numpy as np
 
-from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of
 from ...utils.dock import DockWindow, qt_app, _create_web_view
 from ...utils.event import EventEmitter, ProgressReporter
 from ...utils.logging import debug, info
-from ...utils.settings import SettingsManager, declare_namespace
+from ...utils.settings import (SettingsManager,
+                               declare_namespace,
+                               _ensure_path_exists,
+                               )
 from ...io.kwik_model import KwikModel, cluster_group_id
 from ._history import GlobalHistory
 from .clustering import Clustering

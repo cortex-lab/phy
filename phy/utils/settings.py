@@ -6,11 +6,12 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
 import os.path as op
 import re
 
 from ..ext.six.moves import cPickle
-from ._misc import Bunch, _phy_user_dir, _ensure_path_exists
+from ._misc import Bunch
 from .logging import debug, warn
 
 
@@ -311,3 +312,22 @@ class SettingsManager(object):
         for scope, settings in self._internal_settings.items():
             path = self.internal_settings_path(scope)
             settings.save(path)
+
+
+#------------------------------------------------------------------------------
+# Config
+#------------------------------------------------------------------------------
+
+_PHY_USER_DIR_NAME = '.phy'
+
+
+def _phy_user_dir():
+    """Return the absolute path to the phy user directory."""
+    home = op.expanduser("~")
+    path = op.realpath(op.join(home, _PHY_USER_DIR_NAME))
+    return path
+
+
+def _ensure_path_exists(path):
+    if not op.exists(path):
+        os.makedirs(path)
