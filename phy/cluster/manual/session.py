@@ -13,7 +13,10 @@ import shutil
 
 import numpy as np
 
-from ...utils.array import _index_of
+from ...utils.array import (_index_of,
+                            _spikes_per_cluster,
+                            _concatenate_per_cluster_arrays,
+                            )
 from ...utils.dock import DockWindow, qt_app, _create_web_view
 from ...utils.event import EventEmitter, ProgressReporter
 from ...utils.logging import debug, info
@@ -23,12 +26,9 @@ from ...utils.settings import (SettingsManager,
                                )
 from ...io.kwik.model import KwikModel, cluster_group_id
 from ._history import GlobalHistory
+from ._utils import ClusterMetadataUpdater
 from .clustering import Clustering
 from .selector import Selector
-from ._utils import (ClusterMetadataUpdater,
-                     _spikes_per_cluster,
-                     _concatenate_per_cluster_arrays,
-                     )
 from .store import ClusterStore, StoreItem
 from .view_model import (WaveformViewModel,
                          FeatureViewModel,
