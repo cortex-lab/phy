@@ -16,7 +16,7 @@ from ...plot.waveforms import WaveformView
 from ...plot.traces import TraceView
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from .selector import Selector
-from ._utils import _concatenate_per_cluster_arrays
+from ._utils import _concatenate_per_cluster_arrays, _spikes_in_clusters
 
 
 #------------------------------------------------------------------------------
@@ -123,15 +123,19 @@ class BaseViewModel(object):
     def _load_from_store_or_model(self,
                                   name,
                                   cluster_ids,
-                                  spikes,
+                                  spikes=None,
                                   ):
         if self._store is not None:
             return self._store.load(name,
                                     cluster_ids,
-                                    spikes,
+                                    spikes=spikes,
                                     )
         else:
-            return getattr(self._model, name)[spikes]
+            out = getattr(self._model, name)
+            if spikes is not None:
+                return out[spikes]
+            else:
+                return out
 
     def _update_spike_clusters(self, spikes=None):
         """Update the spike clusters and cluster colors."""
@@ -230,7 +234,6 @@ class FeatureViewModel(BaseViewModel):
     scale_factor = 1.
     _dimension_selector = None
     n_spikes_max_bg = 10000
-    # excerpt_size_bg = 1000
 
     def set_dimension_selector(self, func):
         """Decorator for a function that selects the best projection.
@@ -258,6 +261,19 @@ class FeatureViewModel(BaseViewModel):
         # Scale factor.
         features *= self.scale_factor
         return features
+
+    def spikes_in_lasso(self):
+        """Return the spike ids from the selected clusters within the lasso."""
+        if self.view.lasso.n_points <= 2:
+            return
+        clusters = self.cluster_ids
+        features = self._load_from_store_or_model('features', clusters)
+        features = self._rescale_features(features)
+        box = self.view.lasso.box
+        points = self.view.visual.project(features, box)
+        in_lasso = self.view.lasso.in_lasso(points)
+        spike_ids = _spikes_in_clusters(self.model.spike_clusters, clusters)
+        return spike_ids[in_lasso]
 
     def on_open(self):
         # Get background features.

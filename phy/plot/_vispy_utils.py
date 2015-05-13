@@ -391,7 +391,7 @@ class LassoVisual(_BakeVisual):
         self._points = value
         self._update_points()
 
-    def add_point(self, xy):
+    def add(self, xy):
         """Add a new point."""
         self._points.append((xy))
         self._update_points()
@@ -425,7 +425,7 @@ class LassoVisual(_BakeVisual):
     @property
     def box(self):
         """The row and column where the lasso is to be shown."""
-        u_box = self.program['u_box']
+        u_box = int(self.program['u_box'][0])
         return (u_box // self._n_rows, u_box % self._n_rows)
 
     @box.setter

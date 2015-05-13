@@ -375,7 +375,7 @@ class ClusterStore(object):
         # Register the StoreItem instance.
         self._items.append(item)
 
-    def load(self, name, clusters, spikes, spikes_per_cluster=None):
+    def load(self, name, clusters, spikes=None, spikes_per_cluster=None):
         """Load some data for a number of clusters and spikes."""
         # Ensure clusters and spikes are sorted and do not have duplicates.
         clusters = np.unique(clusters)
@@ -387,8 +387,9 @@ class ClusterStore(object):
             spc = {cluster: self._spikes_per_cluster[cluster]
                    for cluster in clusters}
         arrays = {cluster: load(cluster) for cluster in clusters}
-        spikes = _unique(spikes)
-        spc, arrays = _subset_spikes_per_cluster(spc, arrays, spikes)
+        if spikes is not None:
+            spikes = _unique(spikes)
+            spc, arrays = _subset_spikes_per_cluster(spc, arrays, spikes)
         # Return the concatenated array.
         return _concatenate_per_cluster_arrays(spc, arrays)
 

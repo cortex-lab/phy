@@ -422,7 +422,7 @@ class FeatureView(BaseSpikeCanvas):
             pos = (x, y)
             # pos = self._pz._map_box((x, y), inverse=True)
             pos = self._pz._map_pan_zoom(pos, inverse=True)
-            self.lasso.add_point(pos.ravel())
+            self.lasso.add(pos.ravel())
         elif e.button == 2:
             self.lasso.clear()
 

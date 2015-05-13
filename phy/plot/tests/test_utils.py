@@ -70,6 +70,6 @@ def test_lasso():
                     [-.8, -.8],
                     ]
     view = _show_visual(lasso, grid=True, stop=False)
-    view.visual.add_point([+.8, -.8])
+    view.visual.add([+.8, -.8])
     show_test_run(view, _N_FRAMES)
     show_test_stop(view)
