@@ -8,7 +8,7 @@
 
 from ....utils.tempdir import TemporaryDirectory
 from ...h5 import open_h5
-from ..kwik import create_mock_kwik
+from ..mock import create_mock_kwik
 
 
 #------------------------------------------------------------------------------

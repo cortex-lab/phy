@@ -11,7 +11,7 @@ import numpy as np
 from ...utils.logging import set_level
 from ..features import FeatureView
 from ...utils._color import _random_color
-from ...io.mock.artificial import (artificial_features,
+from ...io.mock import (artificial_features,
                                    artificial_masks,
                                    artificial_spike_clusters,
                                    artificial_spike_samples)

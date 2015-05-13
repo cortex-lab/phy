@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Tests of sparse matrix structures."""
+"""Test clustering."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -11,7 +11,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ....ext.six import itervalues
-from ....io.mock.artificial import artificial_spike_clusters
+from ....io.mock import artificial_spike_clusters
 from ..clustering import (_extend_spikes,
                           _concatenate_spike_clusters,
                           _extend_assignement,

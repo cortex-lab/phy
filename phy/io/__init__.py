@@ -6,4 +6,4 @@
 """
 
 from .h5 import File, open_h5
-from .kwik_model import KwikModel
+from .kwik.model import KwikModel

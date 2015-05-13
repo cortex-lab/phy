@@ -8,12 +8,44 @@
 
 from pytest import raises
 
-from ..base_model import BaseModel
+from ..base_model import BaseModel, ClusterMetadata
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
+
+def test_base_cluster_metadata():
+    meta = ClusterMetadata()
+
+    @meta.default
+    def group(cluster):
+        return 3
+
+    @meta.default
+    def color(cluster):
+        return 0
+
+    assert meta.group(0) is not None
+    assert meta.group(2) == 3
+    assert meta.group(10) == 3
+
+    meta.set_color(10, 5)
+    assert meta.color(10) == 5
+
+    # Alternative __setitem__ syntax.
+    meta.set_color([10, 11], 5)
+    assert meta.color(10) == 5
+    assert meta.color(11) == 5
+
+    meta.set_color([10, 11], 6)
+    assert meta.color(10) == 6
+    assert meta.color(11) == 6
+    assert meta.color([10, 11]) == [6, 6]
+
+    meta.set_color(10, 20)
+    assert meta.color(10) == 20
+
 
 def test_base_model():
     model = BaseModel()

@@ -12,7 +12,7 @@ from numpy.testing import assert_array_equal as ae
 import numpy.random as npr
 from pytest import raises
 
-from ...io.mock.artificial import artificial_traces
+from ...io.mock import artificial_traces
 from ..loader import _slice, WaveformLoader
 from ..filter import bandpass_filter, apply_filter
 

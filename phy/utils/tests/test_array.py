@@ -25,7 +25,7 @@ from ..array import (_unique,
                      _pad,
                      _concatenate_virtual_arrays,
                      )
-from ...io.mock.artificial import artificial_spike_clusters
+from ...io.mock import artificial_spike_clusters
 
 
 #------------------------------------------------------------------------------

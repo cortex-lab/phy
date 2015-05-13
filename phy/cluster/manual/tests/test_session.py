@@ -19,7 +19,7 @@ from ....utils.testing import show_test
 from ....utils.dock import qt_app, _close_qt_after
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
-from ....io.mock.artificial import MockModel
+from ....io.mock import MockModel
 from ....io.mock.kwik import create_mock_kwik
 
 

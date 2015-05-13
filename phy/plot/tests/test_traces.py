@@ -10,7 +10,7 @@ import numpy as np
 
 from ..traces import TraceView
 from ...utils._color import _random_color
-from ...io.mock.artificial import (artificial_traces,
+from ...io.mock import (artificial_traces,
                                    artificial_masks,
                                    artificial_spike_clusters,
                                    )

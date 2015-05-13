@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Tests of sparse matrix structures."""
+"""Test selector."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -9,7 +9,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
-from ....io.mock.artificial import artificial_spike_clusters
+from ....io.mock import artificial_spike_clusters
 from .._utils import _spikes_in_clusters
 from ..selector import Selector
 

@@ -11,7 +11,7 @@ import numpy as np
 from ..ccg import plot_ccg
 from ..ccg import CorrelogramView
 from ...utils._color import _random_color
-from ...io.mock.artificial import artificial_correlograms
+from ...io.mock import artificial_correlograms
 from ...utils.testing import show_test
 
 

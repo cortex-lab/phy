@@ -14,7 +14,7 @@ from ....utils.testing import (show_test_start,
                                show_test_stop,
                                show_test_run,
                                )
-from ....io.mock.artificial import MockModel
+from ....io.mock import MockModel
 from ..clustering import Clustering
 from ..view_model import (WaveformViewModel,
                           FeatureViewModel,
