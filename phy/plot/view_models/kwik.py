@@ -13,12 +13,12 @@ from ...utils.array import (_unique,
                             _concatenate_per_cluster_arrays,
                             _spikes_in_clusters,
                             )
-from ...utils import Selector
-from ...plot.ccg import CorrelogramView
-from ...plot.features import FeatureView
-from ...plot.waveforms import WaveformView
-from ...plot.traces import TraceView
+from ...utils.selector import Selector
 from ...stats.ccg import correlograms, _symmetrize_correlograms
+from ..ccg import CorrelogramView
+from ..features import FeatureView
+from ..waveforms import WaveformView
+from ..traces import TraceView
 
 
 #------------------------------------------------------------------------------

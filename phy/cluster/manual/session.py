@@ -23,14 +23,14 @@ from ...utils.settings import (SettingsManager,
 from ...io.store import ClusterStore
 from ...io.kwik.model import KwikModel, cluster_group_id
 from ...io.kwik.store_items import FeatureMasks, Waveforms
+from ...plot.view_models.kwik import (WaveformViewModel,
+                                      FeatureViewModel,
+                                      CorrelogramViewModel,
+                                      TraceViewModel,
+                                      )
 from ._history import GlobalHistory
 from ._utils import ClusterMetadataUpdater
 from .clustering import Clustering
-from .view_model import (WaveformViewModel,
-                         FeatureViewModel,
-                         CorrelogramViewModel,
-                         TraceViewModel,
-                         )
 from .wizard import Wizard
 
 
