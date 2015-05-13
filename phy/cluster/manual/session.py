@@ -1036,6 +1036,11 @@ class Session(EventEmitter):
             cluster_ids = (self.wizard.best, self.wizard.match)
             self.merge(cluster_ids)
 
+        @_add_gui_shortcut
+        def split():
+            # TODO: refactor
+            pass
+
         @self.connect
         def on_cluster(up):
             _wizard_select()
