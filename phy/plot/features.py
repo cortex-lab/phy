@@ -115,6 +115,12 @@ class BaseFeatureVisual(BaseSpikeVisual):
         box : 2-tuple
             The `(row, col)` of the box.
 
+        Notes
+        -----
+
+        The coordinate system is always the world coordinate system, i.e.
+        `[-1, 1]`.
+
         """
         i, j = box
         dim_i = self._dimensions[i]
@@ -301,6 +307,8 @@ class FeatureView(BaseSpikeCanvas):
     -------------
 
     * set marker size: `ctrl++`, `ctrl+-`
+    * add lasso point: `ctrl+left click`
+    * clear lasso: `ctrl+right click`
 
     """
     _visual_class = FeatureVisual

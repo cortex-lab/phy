@@ -403,6 +403,21 @@ class LassoVisual(_BakeVisual):
         self._update_points()
         debug("Clear lasso.")
 
+    def in_lasso(self, points):
+        """Find points within the lasso.
+
+        Parameters
+        ----------
+        points : array
+            A `(n_points, 2)` array with coordinates in `[-1, 1]`.
+
+        """
+        if self.n_points <= 1:
+            return
+        from matplotlib.path import Path
+        path = Path(np.array(self._points, dtype=np.float32), closed=True)
+        return path.contains_points(points)
+
     @property
     def n_points(self):
         return len(self._points)
