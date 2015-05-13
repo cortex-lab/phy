@@ -21,7 +21,7 @@ from ...utils.settings import (SettingsManager,
                                declare_namespace,
                                _ensure_path_exists,
                                )
-from ...io.kwik_model import KwikModel, cluster_group_id
+from ...io.kwik.model import KwikModel, cluster_group_id
 from ._history import GlobalHistory
 from .clustering import Clustering
 from .selector import Selector

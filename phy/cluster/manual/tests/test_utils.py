@@ -18,7 +18,7 @@ from .._utils import (ClusterMetadataUpdater,
                       _subset_spikes_per_cluster,
                       )
 from ....io.mock import artificial_spike_clusters
-from ....io.kwik_model import ClusterMetadata
+from ....io.kwik.model import ClusterMetadata
 
 
 #------------------------------------------------------------------------------

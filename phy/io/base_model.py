@@ -269,4 +269,3 @@ class ClusterMetadata(object):
         setattr(self, 'set_{0:s}'.format(field),
                 lambda clusters, value: self._set(clusters, field, value))
         return func
-
