@@ -15,6 +15,7 @@ from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
                            BoxVisual,
                            AxisVisual,
+                           LassoVisual,
                            _enable_depth_mask,
                            )
 from ._panzoom import PanZoomGrid
@@ -310,6 +311,7 @@ class FeatureView(BaseSpikeCanvas):
         self.boxes = BoxVisual()
         self.axes = AxisVisual()
         self.background = BackgroundFeatureVisual()
+        self.lasso = LassoVisual()
         super(FeatureView, self).__init__(**kwargs)
         _enable_depth_mask()
 
@@ -317,6 +319,7 @@ class FeatureView(BaseSpikeCanvas):
         self._pz = PanZoomGrid()
         self._pz.add(self.visual.program)
         self._pz.add(self.background.program)
+        self._pz.add(self.lasso.program)
         self._pz.add(self.axes.program)
         self._pz.aspect = None
         self._pz.attach(self)
@@ -370,6 +373,7 @@ class FeatureView(BaseSpikeCanvas):
         self.visual.dimensions = value
         self.background.dimensions = value
         self.boxes.n_rows = self.visual.n_rows
+        self.lasso.n_rows = self.visual.n_rows
         self.axes.n_rows = self.visual.n_rows
         self.axes.positions = (0, 0)
         self._pz.n_rows = self.visual.n_rows
@@ -392,7 +396,15 @@ class FeatureView(BaseSpikeCanvas):
         self.axes.draw()
         self.background.draw()
         self.visual.draw()
+        self.lasso.draw()
         self.boxes.draw()
+
+    def on_mouse_press(self, e):
+        box = self._pz._get_box(e.pos)
+        position = self._pz._normalize(e.pos)
+        self.lasso.box = box
+        x, y = position
+        self.lasso.add_point((x * self.lasso.n_rows, -y * self.lasso.n_rows))
 
     def on_key_press(self, event):
         """Handle key press events."""
