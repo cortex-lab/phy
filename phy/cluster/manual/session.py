@@ -24,12 +24,12 @@ from ...utils.settings import (SettingsManager,
                                declare_namespace,
                                _ensure_path_exists,
                                )
+from ...io.store import ClusterStore, StoreItem
 from ...io.kwik.model import KwikModel, cluster_group_id
 from ._history import GlobalHistory
 from ._utils import ClusterMetadataUpdater
 from .clustering import Clustering
 from .selector import Selector
-from .store import ClusterStore, StoreItem
 from .view_model import (WaveformViewModel,
                          FeatureViewModel,
                          CorrelogramViewModel,

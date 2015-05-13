@@ -7,3 +7,4 @@
 
 from .h5 import File, open_h5
 from .kwik.model import KwikModel
+from .store import ClusterStore, StoreItem
