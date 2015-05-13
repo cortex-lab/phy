@@ -13,6 +13,7 @@ uniform vec2 u_data_scale;
 uniform vec2 u_channel_scale;
 uniform sampler2D u_channel_pos;
 uniform sampler2D u_cluster_color;
+uniform float u_overlap;
 
 varying vec4 v_color;
 varying vec2 v_box;
@@ -24,8 +25,8 @@ vec2 get_box_pos(vec2 box) {  // box = (cluster, channel)
     box_pos = box_pos * u_channel_scale;
     // Spacing between cluster boxes.
     float h = 2.5 * u_data_scale.x;
-    // TODO: add superposition
-    box_pos.x += h * (box.x - .5 * (n_clusters - 1.)) / n_clusters;
+    if (u_overlap == 0.)
+        box_pos.x += h * (box.x - .5 * (n_clusters - 1.)) / n_clusters;
     return box_pos;
 }
 

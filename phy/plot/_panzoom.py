@@ -527,6 +527,11 @@ class PanZoomGrid(PanZoom):
         self._index = self._get_box(pos)
 
     @property
+    def _box(self):
+        i, j = self._index
+        return int(i * self._n_rows + j)
+
+    @property
     def _pan(self):
         i, j = self._index
         return self._pan_matrix[i, j, :]
@@ -554,11 +559,44 @@ class PanZoomGrid(PanZoom):
     def _apply_pan_zoom(self):
         pan = self._pan
         zoom = self._zoom_aspect(self._zoom)
-        i, j = self._index
-        box = int(i * self._n_rows + j)
         value = (pan[0], pan[1], zoom[0], zoom[1])
         for program in self._programs:
-            program["u_pan_zoom[{0:d}]".format(box)] = value
+            program["u_pan_zoom[{0:d}]".format(self._box)] = value
+
+    def _map_box(self, position, inverse=False):
+        position = _as_array(position)
+        if position.ndim == 1:
+            position = position[None, :]
+        n_rows = self._n_rows
+        rc_x, rc_y = self._index
+
+        rc_x += 0.5
+        rc_y += 0.5
+
+        x = -1.0 + rc_y * (2.0 / n_rows)
+        y = +1.0 - rc_x * (2.0 / n_rows)
+
+        width = 0.95 / (1.0 * n_rows)
+        height = 0.95 / (1.0 * n_rows)
+
+        if not inverse:
+            return (x + width * position[:, 0],
+                    y + height * position[:, 1])
+        else:
+            return np.c_[((position[:, 0] - x) / width,
+                         (position[:, 1] - y) / height)]
+
+    def _map_pan_zoom(self, position, inverse=False):
+        position = _as_array(position)
+        if position.ndim == 1:
+            position = position[None, :]
+        n_rows = self._n_rows
+        pan = self._pan
+        zoom = self._zoom_aspect(self._zoom)
+        if not inverse:
+            return zoom * (position + n_rows * pan)
+        else:
+            return (position / zoom - n_rows * pan)
 
     # xmin/xmax
     # -------------------------------------------------------------------------
@@ -749,6 +787,12 @@ class PanZoomGrid(PanZoom):
         if event.is_dragging:
             self._set_current_box(event.press_event.pos)
         super(PanZoomGrid, self).on_mouse_move(event)
+
+    def on_mouse_press(self, event):
+        """Mouse press event."""
+        # Set box index as a function of the press position.
+        self._set_current_box(event.pos)
+        super(PanZoomGrid, self).on_mouse_press(event)
 
     def on_mouse_wheel(self, event):
         """Mouse wheel event."""

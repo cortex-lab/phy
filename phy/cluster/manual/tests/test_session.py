@@ -14,7 +14,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises, mark
 
 from .._utils import _spikes_in_clusters
-from ..session import Session, FeatureMasks
+from ..session import Session
 from ....utils.testing import show_test
 from ....utils.dock import qt_app, _close_qt_after
 from ....utils.tempdir import TemporaryDirectory
@@ -35,8 +35,15 @@ def setup():
     set_level('info')
 
 
-def _start_manual_clustering(kwik_path=None, model=None, tempdir=None):
+def _start_manual_clustering(kwik_path=None,
+                             model=None,
+                             tempdir=None,
+                             chunk_size=None,
+                             ):
     session = Session(phy_user_dir=tempdir)
+    if chunk_size is not None:
+        session.set_user_settings('manual_clustering.'
+                                  'store_chunk_size', chunk_size)
     session.open(kwik_path=kwik_path, model=model)
     return session
 
@@ -48,13 +55,8 @@ def _show_view(session, name, cluster_ids=None):
     return vm.view
 
 
-def test_session_store():
+def test_session_store_features():
     """Check that the cluster store works for features and masks."""
-
-    # HACK: change the chunk size in this unit test to make sure that
-    # there are several chunks.
-    cs = FeatureMasks.chunk_size
-    FeatureMasks.chunk_size = 4
 
     with TemporaryDirectory() as tempdir:
         model = MockModel(n_spikes=50, n_clusters=3)
@@ -62,7 +64,9 @@ def test_session_store():
         s1 = np.nonzero(model.spike_clusters == 1)[0]
 
         session = _start_manual_clustering(model=model,
-                                           tempdir=tempdir)
+                                           tempdir=tempdir,
+                                           chunk_size=4,
+                                           )
 
         f = session.cluster_store.features(0)
         m = session.cluster_store.masks(1)
@@ -73,8 +77,6 @@ def test_session_store():
         ac(f, model.features[s0].reshape((f.shape[0], -1, 2)), 1e-3)
         ac(m, model.masks[s1], 1e-3)
 
-    FeatureMasks.chunk_size = cs
-
 
 def test_session_mock():
     with TemporaryDirectory() as tempdir:
@@ -82,6 +84,7 @@ def test_session_mock():
                                            tempdir=tempdir)
         _show_view(session, 'waveforms')
         _show_view(session, 'waveforms', [0])
+        _show_view(session, 'waveforms', [0, 1, 2, 3, 4])
 
 
 def test_session_gui():

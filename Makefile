@@ -28,6 +28,7 @@ lint:
 
 test: lint
 	py.test --cov-report term-missing --cov phy --ignore experimental
+	coverage --html
 
 test-quick: lint
 	py.test phy --ignore experimental --ignore phy/plot -m "not long"

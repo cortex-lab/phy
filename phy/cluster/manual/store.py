@@ -15,6 +15,7 @@ import numpy as np
 from ._utils import (_concatenate_per_cluster_arrays,
                      _subset_spikes_per_cluster,
                      )
+from ...utils.array import _unique
 from ...utils.logging import debug, info
 from ...ext.six import string_types, integer_types
 
@@ -245,9 +246,13 @@ class ClusterStore(object):
     when clustering changes occur.
 
     """
-    def __init__(self, model=None, path=None):
+    def __init__(self,
+                 model=None,
+                 spikes_per_cluster=None,
+                 path=None,
+                 ):
         self._model = model
-        self._spikes_per_cluster = {}
+        self._spikes_per_cluster = spikes_per_cluster
         self._memory = MemoryStore()
         self._disk = DiskStore(path) if path is not None else None
         self._items = []
@@ -277,13 +282,10 @@ class ClusterStore(object):
         """Dictionary `{cluster_id: spike_ids}`."""
         return self._spikes_per_cluster
 
-    @spikes_per_cluster.setter
-    def spikes_per_cluster(self, value):
-        """Update the `spikes_per_cluster` structure."""
-        assert isinstance(value, dict)
-        self._spikes_per_cluster = value
+    def update_spikes_per_cluster(self, spikes_per_cluster):
+        self._spikes_per_cluster = spikes_per_cluster
         for item in self._items:
-            item.spikes_per_cluster = value
+            item.spikes_per_cluster = spikes_per_cluster
 
     @property
     def cluster_ids(self):
@@ -357,6 +359,7 @@ class ClusterStore(object):
         item = item_cls(model=self._model,
                         memory_store=self._memory,
                         disk_store=self._disk,
+                        spikes_per_cluster=self.spikes_per_cluster,
                         **kwargs)
         assert item.fields is not None
 
@@ -372,19 +375,23 @@ class ClusterStore(object):
         # Register the StoreItem instance.
         self._items.append(item)
 
-    def load(self, name, clusters, spikes):
+    def load(self, name, clusters, spikes=None, spikes_per_cluster=None):
         """Load some data for a number of clusters and spikes."""
         # Ensure clusters and spikes are sorted and do not have duplicates.
         clusters = np.unique(clusters)
-        spikes = np.unique(spikes)
         load = getattr(self, name)
         # Get spikes_per_cluster and data arrays for the specified spikes.
-        spc = {cluster: self._spikes_per_cluster[cluster]
-               for cluster in clusters}
+        if spikes_per_cluster is not None:
+            spc = spikes_per_cluster
+        else:
+            spc = {cluster: self._spikes_per_cluster[cluster]
+                   for cluster in clusters}
         arrays = {cluster: load(cluster) for cluster in clusters}
-        spc_s, arrays_s = _subset_spikes_per_cluster(spc, arrays, spikes)
+        if spikes is not None:
+            spikes = _unique(spikes)
+            spc, arrays = _subset_spikes_per_cluster(spc, arrays, spikes)
         # Return the concatenated array.
-        return _concatenate_per_cluster_arrays(spc_s, arrays_s)
+        return _concatenate_per_cluster_arrays(spc, arrays)
 
     def on_cluster(self, up):
         """Update the cluster store when clustering changes occur.
@@ -482,14 +489,14 @@ class ClusterStore(object):
         n = len(to_delete)
         info("{0} clusters deleted from the cluster store.".format(n))
 
-    def generate(self, spikes_per_cluster=None, mode=None):
+    def generate(self,
+                 mode=None,
+                 ):
         """Generate the cluster store.
 
         Parameters
         ----------
 
-        spikes_per_cluster : dict
-            A dictionary `{cluster_ids: spike_ids}`.
         mode : str (default is None)
             How the cluster store should be generated. Options are:
 
@@ -499,14 +506,7 @@ class ClusterStore(object):
             * `read-only`: just load the existing files, do not write anything
 
         """
-        if spikes_per_cluster is None:
-            spikes_per_cluster = self._spikes_per_cluster
-        else:
-            self.spikes_per_cluster = spikes_per_cluster
-        if spikes_per_cluster is None:
-            raise RuntimeError("The `spikes_per_cluster` structure "
-                               "needs to be assigned to the cluster store.")
-        assert isinstance(spikes_per_cluster, dict)
+        assert isinstance(self._spikes_per_cluster, dict)
         if hasattr(self._model, 'name'):
             name = self._model.name
         else:
@@ -541,11 +541,12 @@ class StoreItem(object):
                  model=None,
                  memory_store=None,
                  disk_store=None,
+                 spikes_per_cluster=None,
                  ):
-        self._spikes_per_cluster = None
         self.model = model
         self.memory_store = memory_store
         self.disk_store = disk_store
+        self._spikes_per_cluster = spikes_per_cluster
 
     @property
     def spikes_per_cluster(self):
@@ -582,7 +583,7 @@ class StoreItem(object):
             raise ValueError("`mode` should be None, `default`, `force`, "
                              "or `read-only`.")
 
-    def store_cluster(self, cluster, spikes, mode=None):
+    def store_cluster(self, cluster, spikes=None, mode=None):
         """Store data for a cluster from the model to the store.
 
         May be overridden.
@@ -598,7 +599,7 @@ class StoreItem(object):
             debug("Loading {0:s}, cluster {1:d}...".format(self.name,
                   cluster))
             self.store_cluster(cluster,
-                               self._spikes_per_cluster[cluster],
+                               spikes=self._spikes_per_cluster[cluster],
                                mode=mode,
                                )
 

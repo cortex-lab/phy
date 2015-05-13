@@ -120,8 +120,8 @@ def _as_array(arr, dtype=None):
         arr = [arr]
     out = np.asarray(arr)
     if dtype is not None:
-        if arr.dtype != dtype:
-            arr = arr.astype(dtype)
+        if out.dtype != dtype:
+            out = out.astype(dtype)
     if out.dtype not in _ACCEPTED_ARRAY_DTYPES:
         raise ValueError("'arr' seems to have an invalid dtype: "
                          "{0:s}".format(str(out.dtype)))
@@ -433,3 +433,6 @@ class PartialArray(object):
                 raise ValueError("The array selection is invalid: "
                                  "{0}".format(str(item)))
             return self._arr[item]
+
+    def __len__(self):
+        return self.shape[0]

@@ -12,6 +12,7 @@ import os.path as op
 import numpy as np
 
 from vispy import app, gloo, config
+from vispy.util.event import Event
 from vispy.visuals import Visual
 
 from ..utils.array import _unique, _as_array
@@ -133,6 +134,9 @@ class BaseSpikeVisual(_BakeVisual):
     There is a notion of displayed spikes and displayed clusters.
 
     """
+
+    _transparency = True
+
     def __init__(self, **kwargs):
         super(BaseSpikeVisual, self).__init__(**kwargs)
         self.n_spikes = None
@@ -142,8 +146,9 @@ class BaseSpikeVisual(_BakeVisual):
         self._cluster_order = None
         self._update_clusters_automatically = True
 
-        gloo.set_state(clear_color='black', blend=True,
-                       blend_func=('src_alpha', 'one_minus_src_alpha'))
+        if self._transparency:
+            gloo.set_state(clear_color='black', blend=True,
+                           blend_func=('src_alpha', 'one_minus_src_alpha'))
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -206,7 +211,7 @@ class BaseSpikeVisual(_BakeVisual):
     def spike_ids(self):
         """Spike ids to display."""
         if self._spike_ids is None:
-            self._spike_ids = np.arange(self.n_spikes).astype(np.uint64)
+            self._spike_ids = np.arange(self.n_spikes)
         return self._spike_ids
 
     @spike_ids.setter
@@ -349,6 +354,106 @@ class AxisVisual(BoxVisual):
         debug("bake ax", position.shape)
 
 
+class LassoVisual(_BakeVisual):
+    """Lasso."""
+    _shader_name = 'lasso'
+    _gl_draw_mode = 'line_loop'
+
+    def __init__(self, **kwargs):
+        super(LassoVisual, self).__init__(**kwargs)
+        self._points = []
+        self._n_rows = None
+        self.program['u_box'] = 0
+
+    @property
+    def n_rows(self):
+        """Number of rows in the grid."""
+        return self._n_rows
+
+    @n_rows.setter
+    def n_rows(self, value):
+        assert value >= 0
+        self._n_rows = value
+        self.set_to_bake('n_rows')
+
+    @property
+    def points(self):
+        """Control points."""
+        return self._points
+
+    def _update_points(self):
+        self._empty = len(self._points) <= 1
+        self.set_to_bake('points')
+
+    @points.setter
+    def points(self, value):
+        value = list(value)
+        self._points = value
+        self._update_points()
+
+    def add(self, xy):
+        """Add a new point."""
+        self._points.append((xy))
+        self._update_points()
+        debug("Add lasso point.")
+
+    def clear(self):
+        """Remove all points."""
+        self._points = []
+        self._update_points()
+        debug("Clear lasso.")
+
+    def in_lasso(self, points):
+        """Find points within the lasso.
+
+        Parameters
+        ----------
+        points : array
+            A `(n_points, 2)` array with coordinates in `[-1, 1]`.
+
+        """
+        if self.n_points <= 1:
+            return
+        from matplotlib.path import Path
+        path = Path(np.array(self._points, dtype=np.float32), closed=True)
+        return path.contains_points(points)
+
+    @property
+    def n_points(self):
+        return len(self._points)
+
+    @property
+    def box(self):
+        """The row and column where the lasso is to be shown."""
+        u_box = int(self.program['u_box'][0])
+        return (u_box // self._n_rows, u_box % self._n_rows)
+
+    @box.setter
+    def box(self, value):
+        assert len(value) == 2
+        i, j = value
+        assert 0 <= i < self._n_rows
+        assert 0 <= j < self._n_rows
+        u_box = i * self._n_rows + j
+        self.program['u_box'] = u_box
+
+    @property
+    def n_boxes(self):
+        """Number of boxes in the grid."""
+        return self._n_rows * self._n_rows
+
+    def _bake_n_rows(self):
+        if not self._n_rows:
+            return
+        self.program['n_rows'] = self._n_rows
+        debug("bake n_rows")
+
+    def _bake_points(self):
+        if self.n_points <= 1:
+            return
+        self.program['a_position'] = np.array(self._points, dtype=np.float32)
+
+
 #------------------------------------------------------------------------------
 # Base spike canvas
 #------------------------------------------------------------------------------
@@ -362,16 +467,24 @@ class BaseSpikeCanvas(app.Canvas):
 
     _visual_class = None
     _pz = None
+    _events = ()
 
     def __init__(self, **kwargs):
         super(BaseSpikeCanvas, self).__init__(keys='interactive', **kwargs)
         self.visual = self._visual_class()
         self._create_pan_zoom()
+        self._add_events()
+
+    def _add_events(self):
+        self.events.add(**{event: Event for event in self._events})
 
     def _create_pan_zoom(self):
         self._pz = PanZoom()
         self._pz.add(self.visual.program)
         self._pz.attach(self)
+
+    def emit(self, name, **kwargs):
+        getattr(self.events, name)(**kwargs)
 
     def on_draw(self, event):
         """Draw the main visual."""

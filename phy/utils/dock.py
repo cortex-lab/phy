@@ -61,6 +61,15 @@ def _create_web_view(html=None):
     return view
 
 
+def _widget(dock_widget):
+    """Return a Qt or VisPy widget from a dock widget."""
+    widget = dock_widget.widget()
+    if hasattr(widget, '_vispy_canvas'):
+        return widget._vispy_canvas
+    else:
+        return widget
+
+
 # -----------------------------------------------------------------------------
 # Dock main window
 # -----------------------------------------------------------------------------
@@ -192,13 +201,15 @@ class DockWindow(QMainWindow):
 
     def list_views(self, title=''):
         """List all views which title start with a given string."""
+        title = title.lower()
         children = self.findChildren(QtGui.QWidget)
         return [child for child in children
                 if isinstance(child, QtGui.QDockWidget) and
                 _title(child).startswith(title) and
-                child.isVisible() and
+                # child.isVisible() and
                 child.width() >= 10 and
-                child.height() >= 10]
+                child.height() >= 10
+                ]
 
     def view_counts(self):
         """Return the number of opened views."""
@@ -207,6 +218,21 @@ class DockWindow(QMainWindow):
         for view in views:
             counts[_title(view)] += 1
         return dict(counts)
+
+    def connect_views(self, name_0, name_1):
+        """Decorator for a function that accepts any pair of views.
+
+        This is used to connect any view of type `name_0` to any other view
+        of type `name_1`.
+
+        """
+        def _make_func(func):
+            for widget_0 in self.list_views(name_0):
+                for widget_1 in self.list_views(name_1):
+                    view_0 = _widget(widget_0)
+                    view_1 = _widget(widget_1)
+                    func(view_0, view_1)
+        return _make_func
 
     # State
     # -------------------------------------------------------------------------

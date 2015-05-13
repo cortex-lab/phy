@@ -17,11 +17,12 @@ from ...utils._misc import _ensure_path_exists
 from ...utils.array import _index_of
 from ...utils.dock import DockWindow, qt_app, _create_web_view
 from ...utils.event import EventEmitter, ProgressReporter
-from ...utils.logging import info
+from ...utils.logging import debug, info
 from ...utils.settings import SettingsManager, declare_namespace
 from ...io.kwik_model import KwikModel, cluster_group_id
 from ._history import GlobalHistory
 from .clustering import Clustering
+from .selector import Selector
 from ._utils import (ClusterMetadataUpdater,
                      _spikes_per_cluster,
                      _concatenate_per_cluster_arrays,
@@ -54,13 +55,13 @@ class FeatureMasks(StoreItem):
               ('mean_probe_position', 'memory'),
               ]
 
-    # Size of the chunk used when reading features and masks from the HDF5
-    # .kwx file.
-    chunk_size = None
-
     def __init__(self, *args, **kwargs):
         self._pr_disk = kwargs.pop('progress_reporter_disk')
         self._pr_memory = kwargs.pop('progress_reporter_memory')
+        # Size of the chunk used when reading features and masks from the HDF5
+        # .kwx file.
+        self.chunk_size = kwargs.pop('chunk_size')
+
         super(FeatureMasks, self).__init__(*args, **kwargs)
 
         self.n_features = self.model.n_features_per_channel
@@ -154,6 +155,7 @@ class FeatureMasks(StoreItem):
                               masks=m,
                               append=True,
                               )
+        # TODO: compute stats here?
 
     def is_consistent(self, cluster, spikes):
         """Return whether the filesizes of the two cluster store files
@@ -339,6 +341,96 @@ class FeatureMasks(StoreItem):
             self._assign(up)
         # Compute the extra fields for the new clusters.
         self._store_extra_fields(up.added)
+
+
+class Waveforms(StoreItem):
+    """A cluster store item that manages the waveforms of all clusters."""
+    name = 'waveforms'
+    fields = [('waveforms', 'disk', np.float32,),
+              ('waveforms_spikes', 'disk', np.int64,),
+              ('mean_waveforms', 'memory'),
+              ]
+
+    def __init__(self, *args, **kwargs):
+        self._pr = kwargs.pop('progress_reporter')
+        self.n_spikes_max = kwargs.pop('n_spikes_max')
+        self.excerpt_size = kwargs.pop('excerpt_size')
+
+        super(Waveforms, self).__init__(*args, **kwargs)
+
+        self.n_channels = len(self.model.channel_order)
+        self.n_spikes = self.model.n_spikes
+        self.n_samples = self.model.n_samples_waveforms
+
+        # Set the shape of the features and masks.
+        self.fields[0] = ('waveforms', 'disk',
+                          np.float32, (-1, self.n_samples, self.n_channels))
+
+        self._selector = Selector(self.model.spike_clusters,
+                                  n_spikes_max=self.n_spikes_max,
+                                  excerpt_size=self.excerpt_size,
+                                  )
+
+    def store_cluster(self, cluster, spikes=None, mode=None):
+        spikes = self._selector.subset_spikes_clusters([cluster])
+        waveforms = self.model.waveforms[spikes]
+        self.disk_store.store(cluster,
+                              waveforms=waveforms.astype(np.float32),
+                              waveforms_spikes=spikes.astype(np.int64),
+                              )
+        self.memory_store.store(cluster,
+                                mean_waveforms=waveforms.mean(axis=0),
+                                )
+
+    def store_all_clusters(self, mode=None):
+        """Copy all data for that item from the model to the cluster store."""
+        clusters = self.to_generate(mode)
+        self._pr.value_max = len(clusters)
+        for cluster in clusters:
+            debug("Loading {0:s}, cluster {1:d}...".format(self.name,
+                  cluster))
+            self.store_cluster(cluster,
+                               spikes=self._spikes_per_cluster[cluster],
+                               mode=mode,
+                               )
+            self._pr.value += 1
+        self._pr.set_complete()
+
+    def is_consistent(self, cluster, spikes):
+        """Return whether the waveforms and spikes file sizes match."""
+        path_w = self.disk_store._cluster_path(cluster, 'waveforms')
+        path_s = self.disk_store._cluster_path(cluster, 'waveforms_spikes')
+
+        if not op.exists(path_w) or not op.exists(path_s):
+            return False
+
+        file_size_w = os.stat(path_w).st_size
+        file_size_s = os.stat(path_s).st_size
+
+        n_spikes_s = file_size_s // 8
+        n_spikes_w = file_size_w // (self.n_channels * self.n_samples * 4)
+
+        if n_spikes_s != n_spikes_w:
+            return False
+
+        return True
+
+    def on_cluster(self, up=None):
+        """Generate the `.waveforms` files of the newly-created
+        clusters, and compute their cluster statistics.
+
+        Old data is kept on disk and in memory, which is useful for
+        undo and redo. The `cluster_store.clean()` method can be called to
+        delete the old files.
+
+        """
+        # No need to change anything in the store if this is an undo or
+        # a redo.
+        if up is None or up.history is not None:
+            return
+        if up.description in ('merge', 'assign'):
+            for cluster in up.added:
+                self.store_cluster(cluster)
 
 
 #------------------------------------------------------------------------------
@@ -583,17 +675,15 @@ class Session(EventEmitter):
         _ensure_path_exists(store_path)
 
         # Instantiate the store.
+        spc = self.clustering.spikes_per_cluster
         self.cluster_store = ClusterStore(model=self.model,
+                                          spikes_per_cluster=spc,
                                           path=store_path,
                                           )
 
-        # chunk_size is the number of spikes to load at once from
-        # the features_masks array.
-        cs = self.get_user_settings('manual_clustering.'
-                                    'store_chunk_size') or 100000
-        FeatureMasks.chunk_size = cs
+        # Create the FeaturesMasks srore item.
 
-        # Initialize the progress reporter.
+        # Initialize the progress reporters.
         pr_disk = ProgressReporter(
             progress_message=('Initializing the cluster store: '
                               '{progress:.1f}%.'),
@@ -603,15 +693,37 @@ class Session(EventEmitter):
             progress_message='Computing cluster statistics: {progress:.1f}%.',
             complete_message='Cluster statistics computed.')
 
+        # chunk_size is the number of spikes to load at once from
+        # the features_masks array.
+        cs = self.get_user_settings('manual_clustering.'
+                                    'store_chunk_size') or 100000
         self.cluster_store.register_item(FeatureMasks,
                                          progress_reporter_disk=pr_disk,
                                          progress_reporter_memory=pr_memory,
+                                         chunk_size=cs,
+                                         )
+
+        # Create the waveforms store item.
+        pr_waveforms = ProgressReporter(
+            progress_message=('Initializing waveforms: '
+                              '{progress:.1f}%.'),
+            complete_message='Waveforms initialized.')
+
+        n_spikes_max = self.get_user_settings('manual_clustering.' +
+                                              'waveforms_n_spikes_max')
+        excerpt_size = self.get_user_settings('manual_clustering.' +
+                                              'waveforms_excerpt_size')
+
+        self.cluster_store.register_item(Waveforms,
+                                         progress_reporter=pr_waveforms,
+                                         n_spikes_max=n_spikes_max,
+                                         excerpt_size=excerpt_size,
                                          )
 
         # Generate the cluster store if it doesn't exist or is invalid.
         # If the cluster store already exists and is consistent
         # with the data, it is not recreated.
-        self.cluster_store.generate(self.clustering.spikes_per_cluster)
+        self.cluster_store.generate()
 
         @self.connect
         def on_cluster(up=None):
@@ -779,6 +891,25 @@ class Session(EventEmitter):
                                    name,
                                    cluster_ids=cluster_ids,
                                    position=self._default_positions[name])
+        self._connect_gui_views(gui)
+
+    def _connect_gui_views(self, gui):
+        """Connect views."""
+
+        # Select feature dimension from waveform view.
+        @gui.connect_views('waveforms', 'features')
+        def channel_click(waveforms, features):
+
+            @waveforms.connect
+            def on_channel_click(e):
+                if e.key in map(str, range(10)):
+                    channel = e.channel_idx
+                    dimension = int(e.key.name)
+                    feature = 0 if e.button == 1 else 1
+                    if (0 <= dimension <= len(features.dimensions) - 1):
+                        features.dimensions[dimension] = (channel, feature)
+                        # Force view update.
+                        features.dimensions = features.dimensions
 
     def _create_gui_actions(self, gui):
 
@@ -839,7 +970,7 @@ class Session(EventEmitter):
             if cluster_ids == self._selected_clusters:
                 return
             assert set(cluster_ids) <= set(self.clustering.cluster_ids)
-            info("Select clusters {0:s}.".format(str(cluster_ids)))
+            debug("Select clusters {0:s}.".format(str(cluster_ids)))
             self._selected_clusters = cluster_ids
             self.emit('select', cluster_ids)
 
@@ -904,6 +1035,11 @@ class Session(EventEmitter):
                 return
             cluster_ids = (self.wizard.best, self.wizard.match)
             self.merge(cluster_ids)
+
+        @_add_gui_shortcut
+        def split():
+            # TODO: refactor
+            pass
 
         @self.connect
         def on_cluster(up):
@@ -1116,6 +1252,15 @@ class Session(EventEmitter):
                           save_size_pos=save_size_pos,
                           )
         vm.view.marker_size = ms
+
+        @vm.set_dimension_selector
+        def choose(cluster_ids, store=None):
+            # spikes = vm.view.visual.spike_ids
+            fet = vm.view.visual.features
+            score = np.abs(fet).max(axis=0).max(axis=1)
+            # Take the best 3 channels.
+            channels = np.argsort(score)[::-1][:3]
+            return channels
 
         @vm.view.connect
         def on_draw(event):

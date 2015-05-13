@@ -53,6 +53,7 @@ manual_clustering.keyboard_shortcuts = {
     'pin': 'return',
     'unpin': 'backspace',
     'merge': 'g',
+    'split': 'k',
     'move_best_to_noise': 'alt+n',
     'move_best_to_mua': 'alt+m',
     'move_best_to_good': 'alt+g',

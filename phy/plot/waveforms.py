@@ -34,9 +34,11 @@ class WaveformVisual(BaseSpikeVisual):
 
         self._waveforms = None
         self.n_channels, self.n_samples = None, None
+        self._channel_order = None
 
         self.program['u_data_scale'] = self.default_box_scale
         self.program['u_channel_scale'] = self.default_probe_scale
+        self.program['u_overlap'] = 0
         _enable_depth_mask()
 
     # Data properties
@@ -79,6 +81,14 @@ class WaveformVisual(BaseSpikeVisual):
         self.set_to_bake('channel_positions')
 
     @property
+    def channel_order(self):
+        return self._channel_order
+
+    @channel_order.setter
+    def channel_order(self, value):
+        self._channel_order = value
+
+    @property
     def box_scale(self):
         """Scale of the waveforms.
 
@@ -105,6 +115,41 @@ class WaveformVisual(BaseSpikeVisual):
     def probe_scale(self, value):
         assert isinstance(value, tuple) and len(value) == 2
         self.program['u_channel_scale'] = value
+
+    @property
+    def overlap(self):
+        """Whether to overlap waveforms."""
+        return self.program['u_overlap'] == 1.
+
+    @overlap.setter
+    def overlap(self, value):
+        assert value in (True, False)
+        self.program['u_overlap'] = 1. * value
+
+    def channel_hover(self, position):
+        """Return the channel id closest to the mouse pointer.
+
+        Parameters
+        ----------
+
+        position : tuple
+            The normalized coordinates of the mouse pointer, in world
+            coordinates (in `[-1, 1]`).
+
+        """
+        mouse_pos = position / self.probe_scale
+        # Normalize channel positions.
+        positions = self.channel_positions.astype(np.float32)
+        positions = _normalize(positions, keep_ratio=True)
+        positions = .1 + .8 * positions
+        positions = 2 * positions - 1
+        # Find closest channel.
+        d = np.sum((positions - mouse_pos[None, :]) ** 2, axis=1)
+        idx = np.argmin(d)
+        # if self.channel_order is not None:
+        #     channel_id = self.channel_order[idx]
+        # WARNING: by convention this is the relative channel index.
+        return idx
 
     # Data baking
     # -------------------------------------------------------------------------
@@ -183,9 +228,13 @@ class WaveformView(BaseSpikeCanvas):
 
     * change waveform scaling: `ctrl+arrows`
     * change probe scaling: `shift+arrows`
+    * select channel: `key+click`
 
     """
     _visual_class = WaveformVisual
+    _arrows = ('Left', 'Right', 'Up', 'Down')
+    _events = ('channel_click',)
+    _key_pressed = None
 
     @property
     def box_scale(self):
@@ -215,11 +264,22 @@ class WaveformView(BaseSpikeCanvas):
         self.visual.probe_scale = value
         self.update()
 
-    _arrows = ('Left', 'Right', 'Up', 'Down')
+    @property
+    def overlap(self):
+        """Whether to overlap waveforms."""
+        return self.visual.overlap
+
+    @overlap.setter
+    def overlap(self, value):
+        self.visual.overlap = value
+        self.update()
 
     def on_key_press(self, event):
         """Handle key press events."""
         key = event.key
+
+        self._key_pressed = key
+
         ctrl = 'Control' in event.modifiers
         shift = 'Shift' in event.modifiers
 
@@ -235,7 +295,6 @@ class WaveformView(BaseSpikeCanvas):
                 self.box_scale = (u, v / coeff)
             elif key == 'Up':
                 self.box_scale = (u, v * coeff)
-            self.update()
 
         # Probe scale.
         if shift and key in self._arrows:
@@ -249,7 +308,12 @@ class WaveformView(BaseSpikeCanvas):
                 self.probe_scale = (u, v / coeff)
             elif key == 'Up':
                 self.probe_scale = (u, v * coeff)
-            self.update()
+
+        if not event.modifiers and key == 'o':
+            self.overlap = not(self.overlap)
+
+    def on_key_release(self, event):
+        self._key_pressed = None
 
     def on_mouse_wheel(self, event):
         """Handle mouse wheel events."""
@@ -261,11 +325,27 @@ class WaveformView(BaseSpikeCanvas):
         if ctrl:
             u, v = self.box_scale
             self.box_scale = (u * coeff, v)
-            self.update()
         if shift:
             u, v = self.box_scale
             self.box_scale = (u, v * coeff)
-            self.update()
+
+    def on_mouse_press(self, e):
+        key = self._key_pressed
+        if not key:
+            return
+        # Normalise mouse position.
+        position = self._pz._normalize(e.pos)
+        position[1] = -position[1]
+        zoom = self._pz._zoom_aspect()
+        pan = self._pz.pan
+        mouse_pos = ((position / zoom) - pan)
+        # Find the channel id.
+        channel_idx = self.visual.channel_hover(mouse_pos)
+        self.emit("channel_click",
+                  channel_idx=channel_idx,
+                  key=key,
+                  button=e.button,
+                  )
 
     def on_draw(self, event):
         """Draw the visual."""

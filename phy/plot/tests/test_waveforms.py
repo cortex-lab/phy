@@ -56,6 +56,11 @@ def _test_waveforms(n_spikes=None, n_clusters=None):
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])
     c.visual.channel_positions = channel_positions
+    c.visual.channel_order = np.arange(1, n_channels + 1)
+
+    @c.connect
+    def on_channel_click(e):
+        print(e.channel_id, e.key)
 
     show_test(c)
 

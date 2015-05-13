@@ -159,7 +159,6 @@ def _symmetrize_correlograms(correlograms):
 
     n_clusters, _, n_bins = correlograms.shape
     assert n_clusters == _
-    assert n_bins % 2 == 0
 
     # We symmetrize c[i, j, 0].
     # This is necessary because the algorithm in correlograms()

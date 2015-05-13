@@ -16,6 +16,7 @@ from ...plot.waveforms import WaveformView
 from ...plot.traces import TraceView
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from .selector import Selector
+from ._utils import _concatenate_per_cluster_arrays, _spikes_in_clusters
 
 
 #------------------------------------------------------------------------------
@@ -119,11 +120,22 @@ class BaseViewModel(object):
     def n_spikes(self):
         return self._selector.n_spikes
 
-    def _load_from_store_or_model(self, name, cluster_ids, spikes):
+    def _load_from_store_or_model(self,
+                                  name,
+                                  cluster_ids,
+                                  spikes=None,
+                                  ):
         if self._store is not None:
-            return self._store.load(name, cluster_ids, spikes)
+            return self._store.load(name,
+                                    cluster_ids,
+                                    spikes=spikes,
+                                    )
         else:
-            return getattr(self._model, name)[spikes]
+            out = getattr(self._model, name)
+            if spikes is not None:
+                return out[spikes]
+            else:
+                return out
 
     def _update_spike_clusters(self, spikes=None):
         """Update the spike clusters and cluster colors."""
@@ -164,14 +176,37 @@ class WaveformViewModel(BaseViewModel):
     def on_open(self):
         super(WaveformViewModel, self).on_open()
         self.view.visual.channel_positions = self.model.probe.positions
+        self.view.visual.channel_order = self.model.channel_order
 
     def on_select(self, cluster_ids):
-        super(WaveformViewModel, self).on_select(cluster_ids)
-        spikes = self.spike_ids
 
-        # Load waveforms.
-        debug("Loading {0:d} waveforms...".format(len(spikes)))
-        waveforms = self.model.waveforms[spikes]
+        # Get the spikes of the stored waveforms.
+        debug("Loading waveforms...")
+        if self._store is not None:
+            # Subset the stored spikes for each cluster.
+            k = len(cluster_ids)
+            spc = {cluster: self._store.waveforms_spikes(cluster)[::k]
+                   for cluster in cluster_ids}
+            # Get all the spikes for the clusters.
+            spikes = _concatenate_per_cluster_arrays(spc, spc)
+            # Subset the spikes with the selector.
+            self._selector.selected_spikes = spikes
+            spikes = self.spike_ids
+            # Load the waveforms for the subset spikes.
+            waveforms = self._store.load('waveforms',
+                                         cluster_ids,
+                                         spikes,
+                                         spikes_per_cluster=spc,
+                                         )
+        else:
+            # If there's no store, just take the waveforms from the traces
+            # (slower).
+            self._selector.selected_clusters = cluster_ids
+            spikes = self.spike_ids
+            waveforms = self.model.waveforms[spikes]
+
+        self._update_spike_clusters()
+        assert waveforms.shape[0] == len(spikes)
         debug("Done!")
 
         # Cluster display order.
@@ -197,6 +232,58 @@ class FeatureViewModel(BaseViewModel):
     _view_class = FeatureView
     _view_name = 'features'
     scale_factor = 1.
+    _dimension_selector = None
+    n_spikes_max_bg = 10000
+
+    def set_dimension_selector(self, func):
+        """Decorator for a function that selects the best projection.
+
+        The decorated function must have the following signature:
+
+        ```python
+        @view_model.set_dimension_selector
+        def choose(cluster_ids, store=None):
+            # ...
+            return channel_idxs  # a list with 3 relative channel indices
+        ```
+
+        """
+        self._dimension_selector = func
+
+    def _rescale_features(self, features):
+        # WARNING: convert features to a 3D array
+        # (n_spikes, n_channels, n_features)
+        # because that's what the FeatureView expects currently.
+        n_fet = self.model.n_features_per_channel
+        n_channels = len(self.model.channel_order)
+        shape = (-1, n_channels, n_fet)
+        features = features[:, :n_fet * n_channels].reshape(shape)
+        # Scale factor.
+        features *= self.scale_factor
+        return features
+
+    def spikes_in_lasso(self):
+        """Return the spike ids from the selected clusters within the lasso."""
+        if self.view.lasso.n_points <= 2:
+            return
+        clusters = self.cluster_ids
+        features = self._load_from_store_or_model('features', clusters)
+        features = self._rescale_features(features)
+        box = self.view.lasso.box
+        points = self.view.visual.project(features, box)
+        in_lasso = self.view.lasso.in_lasso(points)
+        spike_ids = _spikes_in_clusters(self.model.spike_clusters, clusters)
+        return spike_ids[in_lasso]
+
+    def on_open(self):
+        # Get background features.
+        # TODO OPTIM: precompute this once for all and store in the cluster
+        # store. But might be unnecessary.
+        k = max(1, self.model.n_spikes // self.n_spikes_max_bg)
+        features_bg = self.model.features[::k, ...]
+        spike_samples = self.model.spike_samples[::k]
+        self.view.background.features = self._rescale_features(features_bg)
+        self.view.background.spike_samples = spike_samples
 
     def on_select(self, cluster_ids):
         super(FeatureViewModel, self).on_select(cluster_ids)
@@ -211,17 +298,7 @@ class FeatureViewModel(BaseViewModel):
                                                cluster_ids,
                                                spikes)
 
-        # WARNING: convert features to a 3D array
-        # (n_spikes, n_channels, n_features)
-        # because that's what the FeatureView expects currently.
-        n_fet = self.model.n_features_per_channel
-        n_channels = len(self.model.channel_order)
-        shape = (-1, n_channels, n_fet)
-        features = features[:, :n_fet * n_channels].reshape(shape)
-        # Scale factor.
-        features *= self.scale_factor
-
-        self.view.visual.features = features
+        self.view.visual.features = self._rescale_features(features)
         self.view.visual.masks = masks
 
         # Spikes.
@@ -233,11 +310,8 @@ class FeatureViewModel(BaseViewModel):
 
         # Choose best projection.
         # TODO: refactor this, enable/disable
-        if self.store:
-            sum_masks = np.vstack([self.store.sum_masks(cluster)
-                                   for cluster in cluster_ids]).sum(axis=0)
-            # Take the best 3 channels.
-            channels = np.argsort(sum_masks)[::-1][:3]
+        if self.store and self._dimension_selector is not None:
+            channels = self._dimension_selector(cluster_ids, store=self.store)
         else:
             channels = np.arange(len(self.model.channels[:3]))
         self.view.dimensions = ['time'] + [(ch, 0) for ch in channels]
@@ -250,6 +324,27 @@ class CorrelogramViewModel(BaseViewModel):
     binsize = None
     winsize_bins = None
 
+    def change_bins(self, bin=None, half_width=None):
+        """Change the parameters of the correlograms.
+
+        Parameters
+        ----------
+        bin : float (ms)
+            Bin size.
+        half_width : float (ms)
+            Half window size.
+
+        """
+        sr = self.model.sample_rate
+
+        bin = np.clip(bin * .001, .001, 1e6)
+        self.binsize = int(sr * bin)
+
+        half_width = np.clip(half_width * .001, .001, 1e6)
+        self.winsize_bins = 2 * int(half_width / bin) + 1
+
+        self.on_select(self.cluster_ids)
+
     def on_select(self, cluster_ids):
         super(CorrelogramViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
@@ -259,6 +354,7 @@ class CorrelogramViewModel(BaseViewModel):
         # Compute the correlograms.
         spike_samples = self.model.spike_samples[spikes]
         spike_clusters = self.view.visual.spike_clusters
+
         ccgs = correlograms(spike_samples,
                             spike_clusters,
                             cluster_order=cluster_ids,
@@ -267,7 +363,7 @@ class CorrelogramViewModel(BaseViewModel):
                             )
         ccgs = _symmetrize_correlograms(ccgs)
         # Normalize the CCGs.
-        ccgs = ccgs * (1. / float(ccgs.max()))
+        ccgs = ccgs * (1. / max(1., ccgs.max()))
         self.view.visual.correlograms = ccgs
 
         # Take the cluster order into account.
@@ -351,6 +447,7 @@ class TraceViewModel(BaseViewModel):
             end = n
         self._interval = (start, end)
         self._load_traces((start, end))
+        self.view.update()
 
     def move(self, amount):
         """Move the current interval by a given amount (in samples)."""
@@ -373,17 +470,13 @@ class TraceViewModel(BaseViewModel):
         if 'Control' in event.modifiers:
             if key == 'Left':
                 self.move_left()
-                self.view.update()
             elif key == 'Right':
                 self.move_right()
-                self.view.update()
         if 'Shift' in event.modifiers:
             if key == 'Left':
                 self.move_left(1)
-                self.view.update()
             elif key == 'Right':
                 self.move_right(1)
-                self.view.update()
 
     def on_open(self):
         super(TraceViewModel, self).on_open()
