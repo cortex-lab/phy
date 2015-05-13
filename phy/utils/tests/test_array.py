@@ -10,11 +10,10 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
+from .._types import _as_array, _as_tuple
 from ..array import (_unique,
                      _normalize,
                      _index_of,
-                     _as_array,
-                     _as_tuple,
                      chunk_bounds,
                      excerpts,
                      data_chunk,

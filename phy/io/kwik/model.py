@@ -21,10 +21,9 @@ from ...electrode.mea import MEA
 from ...utils.logging import debug, warn
 from ...utils.array import (PartialArray,
                             _concatenate_virtual_arrays,
-                            _as_array,
                             _unique,
                             )
-from ...utils._types import _is_integer
+from ...utils._types import _is_integer, _as_array
 
 
 #------------------------------------------------------------------------------

@@ -11,8 +11,7 @@ from copy import deepcopy
 import numpy as np
 
 from ._history import History
-from ...utils.array import _as_array, _index_of
-from ...utils._types import Bunch, _as_list
+from ...utils import _index_of, Bunch, _as_list, _as_array
 
 
 #------------------------------------------------------------------------------

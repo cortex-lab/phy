@@ -8,8 +8,8 @@
 
 import numpy as np
 
-from ...utils.array import (_as_array,
-                            regular_subset,
+from ...utils._types import _as_array
+from ...utils.array import (regular_subset,
                             get_excerpts,
                             _unique,
                             _ensure_unique,

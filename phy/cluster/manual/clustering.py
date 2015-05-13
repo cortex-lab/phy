@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from ...utils.array import _as_array, _is_array_like, _unique
+from ...utils import _as_array, _is_array_like, _unique
 from ._utils import (_spikes_in_clusters,
                      _spikes_per_cluster,
                      UpdateInfo,
