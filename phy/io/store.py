@@ -12,13 +12,13 @@ import re
 
 import numpy as np
 
-from ...utils.array import (_unique,
-                            _concatenate_per_cluster_arrays,
-                            _subset_spikes_per_cluster,
-                            )
-from ...utils._types import _as_int
-from ...utils.logging import debug, info
-from ...ext.six import string_types
+from ..utils.array import (_unique,
+                           _concatenate_per_cluster_arrays,
+                           _subset_spikes_per_cluster,
+                           )
+from ..utils._types import _as_int
+from ..utils.logging import debug, info
+from ..ext.six import string_types
 
 
 #------------------------------------------------------------------------------
