@@ -34,6 +34,13 @@ def _is_integer(x):
     return isinstance(x, integer_types + (np.generic,))
 
 
+def _as_int(x):
+    if isinstance(x, integer_types):
+        return x
+    x = np.asscalar(x)
+    return x
+
+
 def _as_list(obj):
     """Ensure an object is a list."""
     if isinstance(obj, string_types):

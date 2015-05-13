@@ -16,8 +16,9 @@ from ._utils import (_concatenate_per_cluster_arrays,
                      _subset_spikes_per_cluster,
                      )
 from ...utils.array import _unique
+from ...utils._types import _as_int
 from ...utils.logging import debug, info
-from ...ext.six import string_types, integer_types
+from ...ext.six import string_types
 
 
 #------------------------------------------------------------------------------
@@ -42,13 +43,6 @@ def _load_ndarray(f, dtype=None, shape=None):
         if shape is not None:
             arr = arr.reshape(shape)
         return arr
-
-
-def _as_int(x):
-    if isinstance(x, integer_types):
-        return x
-    x = np.asscalar(x)
-    return x
 
 
 def _file_cluster_id(path):
