@@ -87,86 +87,6 @@ def test_session_store_features():
         ac(m, model.masks[s1], 1e-3)
 
 
-def test_session_mock():
-    with TemporaryDirectory() as tempdir:
-        session = _start_manual_clustering(model=MockModel(),
-                                           tempdir=tempdir)
-        _show_view(session, 'waveforms', [])
-        _show_view(session, 'waveforms', [0])
-        _show_view(session, 'waveforms', [0, 1])
-
-
-def test_session_gui():
-    n_clusters = 5
-    n_spikes = 100
-    n_channels = 30
-    n_fets = 3
-    n_samples_traces = 20000
-
-    with TemporaryDirectory() as tempdir:
-
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
-
-        session = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
-
-        with qt_app():
-            gui = session._create_gui()
-            _close_qt_after(gui, 0.2)
-            gui.show()
-
-
-def test_session_kwik():
-    n_clusters = 5
-    n_spikes = 50
-    n_channels = 28
-    n_fets = 2
-    n_samples_traces = 3000
-
-    with TemporaryDirectory() as tempdir:
-
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
-
-        session = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
-
-        # Check backup.
-        assert op.exists(op.join(tempdir, kwik_path + '.bak'))
-
-        cs = session.cluster_store
-
-        nc = n_channels - 2
-
-        # Check the stored items.
-        for cluster in range(n_clusters):
-            n_spikes = len(session.clustering.spikes_per_cluster[cluster])
-            n_unmasked_channels = cs.n_unmasked_channels(cluster)
-
-            assert cs.features(cluster).shape == (n_spikes, nc, n_fets)
-            assert cs.masks(cluster).shape == (n_spikes, nc)
-            assert cs.mean_masks(cluster).shape == (nc,)
-            assert n_unmasked_channels <= nc
-            assert cs.mean_probe_position(cluster).shape == (2,)
-            assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
-
-        _show_view(session, 'waveforms', [0])
-        _show_view(session, 'features', [0])
-
-        session.close()
-
-
 def test_session_clustering():
 
     n_clusters = 5
@@ -262,50 +182,6 @@ def test_session_clustering():
         assert groups[6] == 2
 
 
-def test_session_wizard():
-
-    n_clusters = 5
-    n_spikes = 100
-    n_channels = 28
-    n_fets = 2
-    n_samples_traces = 3000
-
-    with TemporaryDirectory() as tempdir:
-
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
-
-        session = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
-
-        clusters = np.arange(n_clusters)
-        best_clusters = session.wizard.best_clusters()
-
-        # assert session.wizard.best_clusters(1)[0] == best_clusters[0]
-        ae(np.unique(best_clusters), clusters)
-        assert len(session.wizard.most_similar_clusters()) == n_clusters - 1
-
-        assert len(session.wizard.most_similar_clusters(0, n_max=3)) == 3
-
-        session.merge([0, 1, 2])
-        assert np.all(np.in1d(session.wizard.best_clusters(), np.arange(3, 6)))
-        assert list(session.wizard.most_similar_clusters(5)) in ([3, 4],
-                                                                 [4, 3])
-
-        # Move a cluster to noise.
-        session.move([5], 0)
-        best = session.wizard.best_clusters(1)[0]
-        if best is not None:
-            assert best in (3, 4)
-            # The most similar cluster is 3 if best=4 and conversely.
-            assert session.wizard.most_similar_clusters(best)[0] == 7 - best
-
-
 def test_session_multiple_clusterings():
 
     n_clusters = 5
@@ -359,3 +235,127 @@ def test_session_multiple_clusterings():
         assert session.model.n_spikes == n_spikes
         assert session.model.n_clusters == 1
         assert session.model.cluster_ids == n_clusters * 2
+
+
+def test_session_mock():
+    with TemporaryDirectory() as tempdir:
+        session = _start_manual_clustering(model=MockModel(),
+                                           tempdir=tempdir)
+        _show_view(session, 'waveforms', [])
+        _show_view(session, 'waveforms', [0])
+        _show_view(session, 'waveforms', [0, 1])
+
+
+def test_session_kwik():
+    n_clusters = 5
+    n_spikes = 50
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 3000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        kwik_path = create_mock_kwik(tempdir,
+                                     n_clusters=n_clusters,
+                                     n_spikes=n_spikes,
+                                     n_channels=n_channels,
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
+
+        session = _start_manual_clustering(kwik_path=kwik_path,
+                                           tempdir=tempdir)
+
+        # Check backup.
+        assert op.exists(op.join(tempdir, kwik_path + '.bak'))
+
+        cs = session.cluster_store
+
+        nc = n_channels - 2
+
+        # Check the stored items.
+        for cluster in range(n_clusters):
+            n_spikes = len(session.clustering.spikes_per_cluster[cluster])
+            n_unmasked_channels = cs.n_unmasked_channels(cluster)
+
+            assert cs.features(cluster).shape == (n_spikes, nc, n_fets)
+            assert cs.masks(cluster).shape == (n_spikes, nc)
+            assert cs.mean_masks(cluster).shape == (nc,)
+            assert n_unmasked_channels <= nc
+            assert cs.mean_probe_position(cluster).shape == (2,)
+            assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
+
+        _show_view(session, 'waveforms', [0])
+        _show_view(session, 'features', [0])
+
+        session.close()
+
+
+def test_session_wizard():
+
+    n_clusters = 5
+    n_spikes = 100
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 3000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        kwik_path = create_mock_kwik(tempdir,
+                                     n_clusters=n_clusters,
+                                     n_spikes=n_spikes,
+                                     n_channels=n_channels,
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
+
+        session = _start_manual_clustering(kwik_path=kwik_path,
+                                           tempdir=tempdir)
+
+        clusters = np.arange(n_clusters)
+        best_clusters = session.wizard.best_clusters()
+
+        # assert session.wizard.best_clusters(1)[0] == best_clusters[0]
+        ae(np.unique(best_clusters), clusters)
+        assert len(session.wizard.most_similar_clusters()) == n_clusters - 1
+
+        assert len(session.wizard.most_similar_clusters(0, n_max=3)) == 3
+
+        session.merge([0, 1, 2])
+        assert np.all(np.in1d(session.wizard.best_clusters(), np.arange(3, 6)))
+        assert list(session.wizard.most_similar_clusters(5)) in ([3, 4],
+                                                                 [4, 3])
+
+        # Move a cluster to noise.
+        session.move([5], 0)
+        best = session.wizard.best_clusters(1)[0]
+        if best is not None:
+            assert best in (3, 4)
+            # The most similar cluster is 3 if best=4 and conversely.
+            assert session.wizard.most_similar_clusters(best)[0] == 7 - best
+
+
+def _test_session_gui():
+    n_clusters = 5
+    n_spikes = 100
+    n_channels = 30
+    n_fets = 3
+    n_samples_traces = 20000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        kwik_path = create_mock_kwik(tempdir,
+                                     n_clusters=n_clusters,
+                                     n_spikes=n_spikes,
+                                     n_channels=n_channels,
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
+
+        session = _start_manual_clustering(kwik_path=kwik_path,
+                                           tempdir=tempdir)
+
+        with qt_app():
+            gui = session._create_gui()
+            _close_qt_after(gui, 0.2)
+            gui.show()
