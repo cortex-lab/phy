@@ -159,6 +159,7 @@ class TraceVisual(BaseSpikeVisual):
                                dtype=np.float32)
             a_spike[:, 0] = -1.
             self.program['a_spike'] = a_spike
+            self.program['n_clusters'] = 0
             return
 
         spike_clusters_idx = self.spike_clusters
