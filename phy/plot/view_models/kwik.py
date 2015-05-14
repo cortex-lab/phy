@@ -125,6 +125,14 @@ class FeatureViewModel(BaseViewModel):
         """
         self._dimension_selector = func
 
+    def default_dimension_selector(cluster_ids, store=None):
+        # spikes = vm.view.visual.spike_ids
+        fet = self.view.visual.features
+        score = np.abs(fet).max(axis=0).max(axis=1)
+        # Take the best 3 channels.
+        channels = np.argsort(score)[::-1][:3]
+        return channels
+
     def _rescale_features(self, features):
         # WARNING: convert features to a 3D array
         # (n_spikes, n_channels, n_features)
@@ -188,8 +196,10 @@ class FeatureViewModel(BaseViewModel):
 
         # Choose best projection.
         # TODO: refactor this, enable/disable
-        if self.store and self._dimension_selector is not None:
-            channels = self._dimension_selector(cluster_ids, store=self.store)
+        dimension_selector = (self._dimension_selector or
+                              self.default_dimension_selector)
+        if self.store and dimension_selector is not None:
+            channels = dimension_selector(cluster_ids, store=self.store)
         else:
             channels = np.arange(len(self.model.channels[:3]))
         self.view.dimensions = ['time'] + [(ch, 0) for ch in channels]
@@ -198,8 +208,9 @@ class FeatureViewModel(BaseViewModel):
 
     def exported_params(self, save_size_pos=True):
         params = super(WaveformViewModel, self).exported_params(save_size_pos)
+        zoom = self._view._pz.zoom_matrix[1:, 1:, 1].min()
         params.update({
-            'scale_factor': self.scale_factor,
+            'scale_factor': zoom * self.scale_factor,
             'marker_size': self.view.marker_size,
         })
         return params

@@ -28,7 +28,7 @@ pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------
-# View model tests
+# Utilities
 #------------------------------------------------------------------------------
 
 _N_FRAMES = 2
@@ -78,6 +78,10 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
     return vm
 
 
+#------------------------------------------------------------------------------
+# Waveforms
+#------------------------------------------------------------------------------
+
 def test_waveforms_full():
     _test_view_model(WaveformViewModel)
 
@@ -85,6 +89,10 @@ def test_waveforms_full():
 def test_waveforms_empty():
     _test_empty(WaveformViewModel)
 
+
+#------------------------------------------------------------------------------
+# Features
+#------------------------------------------------------------------------------
 
 def test_features_full():
     _test_view_model(FeatureViewModel)
@@ -114,6 +122,10 @@ def test_features_empty():
     _test_empty(FeatureViewModel)
 
 
+#------------------------------------------------------------------------------
+# Correlograms
+#------------------------------------------------------------------------------
+
 def test_ccg_full():
     vm = _test_view_model(CorrelogramViewModel,
                           binsize=20,
@@ -136,6 +148,10 @@ def test_ccg_empty():
                 excerpt_size=100,
                 )
 
+
+#------------------------------------------------------------------------------
+# Traces
+#------------------------------------------------------------------------------
 
 def test_traces_empty():
     _test_empty(TraceViewModel)
