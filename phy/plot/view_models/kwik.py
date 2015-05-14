@@ -27,6 +27,7 @@ from .base import _selected_clusters_colors, BaseViewModel
 class WaveformViewModel(BaseViewModel):
     _view_class = WaveformView
     _view_name = 'waveforms'
+    _imported_params = ('scale_factor', 'box_scale', 'probe_scale', 'overlap')
 
     def on_open(self):
         super(WaveformViewModel, self).on_open()
@@ -134,6 +135,7 @@ class WaveformViewModel(BaseViewModel):
 class FeatureViewModel(BaseViewModel):
     _view_class = FeatureView
     _view_name = 'features'
+    _imported_params = ('scale_factor', 'n_spikes_max_bg', 'marker_size')
     n_spikes_max_bg = 10000
 
     def __init__(self, **kwargs):
@@ -264,6 +266,7 @@ class CorrelogramViewModel(BaseViewModel):
     _view_name = 'correlograms'
     binsize = 20
     winsize_bins = 41
+    _imported_params = ('binsize', 'winsize_bins')
 
     def change_bins(self, bin=None, half_width=None):
         """Change the parameters of the correlograms.
@@ -316,7 +319,7 @@ class CorrelogramViewModel(BaseViewModel):
 class TraceViewModel(BaseViewModel):
     _view_class = TraceView
     _view_name = 'traces'
-    n_samples_per_spike = 20
+    _imported_params = ('scale_factor', 'channel_scale', 'interval_size')
     interval_size = .25
 
     def __init__(self, **kwargs):
@@ -443,7 +446,6 @@ class TraceViewModel(BaseViewModel):
         self.on_select([])
 
     def on_select(self, cluster_ids):
-        # super(TraceViewModel, self).on_select(cluster_ids)
         self._selector.selected_clusters = cluster_ids
         # Get the spikes in the selected clusters.
         spikes = self.spike_ids
