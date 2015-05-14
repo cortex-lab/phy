@@ -18,6 +18,7 @@ from ...utils.event import EventEmitter, ProgressReporter
 from ...utils.logging import info
 from ...utils.settings import (Settings,
                                _ensure_dir_exists,
+                               _phy_user_dir,
                                )
 from ...io.store import ClusterStore
 from ...io.kwik.model import KwikModel, cluster_group_id
@@ -68,6 +69,9 @@ class Session(EventEmitter):
     def __init__(self, kwik_path=None, phy_user_dir=None):
         super(Session, self).__init__()
         self.model = None
+        if phy_user_dir is None:
+            phy_user_dir = _phy_user_dir()
+        _ensure_dir_exists(phy_user_dir)
         self.phy_user_dir = phy_user_dir
         self._create_settings()
         self._create_creators()
