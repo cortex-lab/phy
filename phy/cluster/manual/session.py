@@ -13,7 +13,7 @@ import shutil
 
 import numpy as np
 
-from ...utils.dock import qt_app, _create_web_view
+from ...utils.dock import qt_app
 from ...utils.event import EventEmitter, ProgressReporter
 from ...utils.logging import info
 from ...utils.settings import (Settings,
@@ -336,19 +336,6 @@ class Session(EventEmitter):
             # This called for both regular and history actions.
             # Save the wizard selection and update the wizard.
             self.wizard.on_cluster(up)
-
-    def _create_wizard_panel(self, cluster_ids=None):
-        view = _create_web_view(self.wizard._repr_html_())
-
-        @self.connect
-        def on_select(cluster_ids):
-            view.setHtml(self.wizard._repr_html_())
-
-        @self.connect
-        def on_cluster(up):
-            view.setHtml(self.wizard._repr_html_())
-
-        return view
 
     def on_open(self):
         """Update the session after new data has been loaded."""

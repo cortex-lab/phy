@@ -7,7 +7,7 @@ from __future__ import print_function
 # Imports
 #------------------------------------------------------------------------------
 
-from ...utils.dock import DockWindow
+from ...utils.dock import DockWindow, _create_web_view
 from ...utils import EventEmitter, debug
 from ...plot.view_models import BaseViewModel
 
@@ -34,9 +34,14 @@ class KlustaViewa(EventEmitter):
         for name, kwargs in config:
             # GUI-specific keyword arguments position, size, maximized
             position = kwargs.pop('position', None)
-            item = self.session.view_creator.add(name,
-                                                 cluster_ids=self._cluster_ids,
-                                                 **kwargs)
+            if name == 'wizard':
+                item = self._create_wizard_panel()
+            else:
+                clusters = self._cluster_ids
+                item = self.session.view_creator.add(name,
+                                                     cluster_ids=clusters,
+                                                     **kwargs)
+
             self.add_view(item, position=position)
 
         # Load geometry state
@@ -157,6 +162,19 @@ class KlustaViewa(EventEmitter):
         for which in ('best', 'match', 'both'):
             for group in ('noise', 'mua', 'good'):
                 _add_gui_shortcut(_make_func(which, group))
+
+    def _create_wizard_panel(self, cluster_ids=None):
+        view = _create_web_view(self.session.wizard._repr_html_())
+
+        @self.connect
+        def on_select(cluster_ids):
+            view.setHtml(self.session.wizard._repr_html_())
+
+        @self.connect
+        def on_cluster(up):
+            view.setHtml(self.session.wizard._repr_html_())
+
+        return view
 
     # General actions
     # ---------------------------------------------------------------------

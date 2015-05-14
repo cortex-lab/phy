@@ -362,5 +362,5 @@ def test_session_gui():
                        gui.get_views('features') +
                        gui.get_views('traces')):
                 vm.scale_factor = 1.
-            _close_qt_after(gui, 0.25)
+            # _close_qt_after(gui, 0.25)
             gui.show()
