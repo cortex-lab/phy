@@ -9,7 +9,7 @@ from __future__ import print_function
 
 from ...utils.dock import DockWindow
 from ...utils import EventEmitter, debug
-from ...io.view_models import BaseViewModel
+from ...plot.view_models import BaseViewModel
 
 
 #------------------------------------------------------------------------------
