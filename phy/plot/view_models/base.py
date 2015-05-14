@@ -68,16 +68,16 @@ class BaseViewModel(object):
                                   excerpt_size=excerpt_size,
                                   )
 
-        # Set passed keyword arguments as attributes.
-        for key in self.imported_params:
-            setattr(self, key, kwargs.pop(key, None))
-
         # Create the VisPy canvas.
         self._view = _create_view(self._view_class,
                                   backend=backend,
                                   position=position or (200, 200),
                                   size=size or (600, 600),
                                   )
+
+        # Set passed keyword arguments as attributes.
+        for key in self.imported_params:
+            setattr(self, key, kwargs.pop(key, None))
 
         @self._view.connect
         def on_draw(event):

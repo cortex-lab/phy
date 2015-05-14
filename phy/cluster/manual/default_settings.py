@@ -114,6 +114,7 @@ correlograms_size = None
 traces_position = None
 traces_size = None
 traces_scale_factor = .01
+traces_channel_scale = 1.
 traces_n_samples_per_spike = 20
 traces_interval_size = .25
 traces_n_spikes_max = None

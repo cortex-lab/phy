@@ -280,6 +280,7 @@ class TraceViewModel(BaseViewModel):
     imported_params = BaseViewModel.imported_params + ('scale_factor',
                                                        'n_samples_per_spike',
                                                        'interval_size',
+                                                       'channel_scale',
                                                        )
 
     def __init__(self, **kwargs):
@@ -357,6 +358,15 @@ class TraceViewModel(BaseViewModel):
         self._load_traces((start, end))
         self.view.update()
 
+    @property
+    def channel_scale(self):
+        """Vertical scale of the traces."""
+        return self.view.channel_scale
+
+    @channel_scale.setter
+    def channel_scale(self, value):
+        self.view.channel_scale = value
+
     def move(self, amount):
         """Move the current interval by a given amount (in samples)."""
         amount = int(amount)
@@ -426,5 +436,6 @@ class TraceViewModel(BaseViewModel):
         params = super(TraceViewModel, self).exported_params(save_size_pos)
         params.update({
             'scale_factor': self.scale_factor,
+            'channel_scale': self.channel_scale,
         })
         return params
