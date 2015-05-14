@@ -37,7 +37,9 @@ class WaveformViewModel(BaseViewModel):
             self.scale_factor = 1.
 
     def on_select(self, cluster_ids):
-
+        if len(cluster_ids) == 0:
+            self._view.visual.empty = True
+            return
         # Get the spikes of the stored waveforms.
         debug("Loading waveforms...")
         if self._store is not None:
@@ -173,6 +175,9 @@ class FeatureViewModel(BaseViewModel):
 
     def on_select(self, cluster_ids):
         super(FeatureViewModel, self).on_select(cluster_ids)
+        if len(cluster_ids) == 0:
+            self._view.visual.empty = True
+            return
         spikes = self.spike_ids
 
         # Load features.
@@ -246,6 +251,9 @@ class CorrelogramViewModel(BaseViewModel):
 
     def on_select(self, cluster_ids):
         super(CorrelogramViewModel, self).on_select(cluster_ids)
+        if len(cluster_ids) == 0:
+            self._view.visual.empty = True
+            return
         spikes = self.spike_ids
 
         self.view.cluster_ids = cluster_ids

@@ -48,10 +48,10 @@ def _start_manual_clustering(kwik_path=None,
 
 
 def _show_view(session, name, cluster_ids=None):
-    vm = session.create_view(name, cluster_ids=cluster_ids)
-    vm.scale_factor = 1.
+    vm = session.show_view(name, cluster_ids, show=False)
+    # vm.scale_factor = 1.
     show_test(vm.view)
-    return vm.view
+    return vm
 
 
 def test_session_store_features():
@@ -83,9 +83,10 @@ def test_session_mock():
     with TemporaryDirectory() as tempdir:
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
-        _show_view(session, 'waveforms')
+        # vm = session.show_view('waveforms', [], show=False)
+        # _show_view(session, 'waveforms', [])
         _show_view(session, 'waveforms', [0])
-        _show_view(session, 'waveforms', [0, 1, 2, 3, 4])
+        # _show_view(session, 'waveforms', [0, 1, 2, 3, 4])
 
 
 def test_session_gui():

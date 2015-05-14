@@ -25,6 +25,8 @@ from ...io.kwik.store_items import FeatureMasks, Waveforms
 from ._history import GlobalHistory
 from ._utils import ClusterMetadataUpdater
 from .clustering import Clustering
+from .views import ViewCreator
+from .gui import GUICreator
 from .wizard import Wizard
 
 
@@ -68,12 +70,17 @@ class Session(EventEmitter):
         self.model = None
         self.phy_user_dir = phy_user_dir
         self._create_settings()
+        self._create_creators()
 
         self.connect(self.on_open)
         self.connect(self.on_close)
 
         if kwik_path:
             self.open(kwik_path)
+
+    def _create_creators(self):
+        self.view_creator = ViewCreator(self)
+        self.gui_creator = GUICreator(self)
 
     def _create_settings(self):
         curdir = op.dirname(op.realpath(__file__))
@@ -392,7 +399,9 @@ class Session(EventEmitter):
         vm : `ViewModel` instance
 
         """
-        vm = self.view_creator.add(name, show=False, **kwargs)
+        do_show = kwargs.pop('show', True)
+        vm = self.view_creator.add(name, show=do_show, **kwargs)
         vm.on_select(cluster_ids)
-        vm.view.show()
-        return vm.view
+        if do_show:
+            vm.view.show()
+        return vm

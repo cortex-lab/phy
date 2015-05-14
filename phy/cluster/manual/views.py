@@ -48,7 +48,7 @@ class ViewCreator(object):
         @vm.view.connect
         def on_close(event):
             self.session.unconnect(vm.on_open)
-            to_save = vm.exported_settings(save_size_pos)
+            to_save = vm.exported_params(save_size_pos)
             for key, value in to_save.items():
                 self.session.settings['{}_{}'.format(vm.name, key)] = value
             vm.on_close()
@@ -57,11 +57,11 @@ class ViewCreator(object):
 
     def add(self, vm_or_name, show=True, **kwargs):
         if isinstance(vm_or_name, string_types):
-            vm = self.create_vm(vm_or_name, **kwargs)
+            vm = self._create_vm(vm_or_name, **kwargs)
         else:
             vm = vm_or_name
         if vm not in self._vms:
-            self._vms.appends(vm)
+            self._vms.append(vm)
         if show:
             vm.view.show()
         return vm
