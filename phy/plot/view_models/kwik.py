@@ -210,7 +210,7 @@ class FeatureViewModel(BaseViewModel):
         self.view.update()
 
     def exported_params(self, save_size_pos=True):
-        params = super(WaveformViewModel, self).exported_params(save_size_pos)
+        params = super(FeatureViewModel, self).exported_params(save_size_pos)
         zoom = self._view._pz.zoom_matrix[1:, 1:, 1].min()
         params.update({
             'scale_factor': zoom * self.scale_factor,

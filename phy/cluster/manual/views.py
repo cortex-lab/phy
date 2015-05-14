@@ -39,7 +39,7 @@ class ViewCreator(object):
                   for key in vm_class.imported_params}
         params.update(kwargs)
 
-        vm = vm_class(self.session.model,
+        vm = vm_class(model=self.session.model,
                       store=self.session.cluster_store,
                       **params)
 
