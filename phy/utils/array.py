@@ -106,9 +106,10 @@ def _index_of(arr, lookup):
     """
     # Equivalent of np.digitize(arr, lookup) - 1, but much faster.
     # TODO: assertions to disable in production for performance reasons.
-    m = lookup.max() + 1
+    m = (lookup.max() if len(lookup) else 0) + 1
     tmp = np.zeros(m, dtype=np.int)
-    tmp[lookup] = np.arange(len(lookup))
+    if len(lookup):
+        tmp[lookup] = np.arange(len(lookup))
     return tmp[arr]
 
 

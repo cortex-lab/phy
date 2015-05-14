@@ -264,7 +264,8 @@ class CorrelogramViewModel(BaseViewModel):
                             )
         ccgs = _symmetrize_correlograms(ccgs)
         # Normalize the CCGs.
-        ccgs = ccgs * (1. / max(1., ccgs.max()))
+        if len(ccgs):
+            ccgs = ccgs * (1. / max(1., ccgs.max()))
         self.view.visual.correlograms = ccgs
 
         # Take the cluster order into account.
