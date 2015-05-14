@@ -49,18 +49,23 @@ class ViewCreator(object):
         @vm.view.connect
         def on_close(event):
             self.session.unconnect(vm.on_open)
-            to_save = vm.exported_params(save_size_pos)
-            for key, value in to_save.items():
-                self.session.settings['{}_{}'.format(vm.name, key)] = value
+            self._save_vm_params(vm, save_size_pos)
             vm.on_close()
 
         return vm
 
+    def _save_vm_params(self, vm, save_size_pos=True):
+        to_save = vm.exported_params(save_size_pos)
+        for key, value in to_save.items():
+            print(vm, key, value)
+            self.session.settings['{}_{}'.format(vm.name, key)] = value
+
+    def save_view_params(self, save_size_pos=True):
+        for vm in self._vms:
+            self._save_vm_params(vm, save_size_pos=save_size_pos)
+
     def add(self, vm_or_name, show=True, **kwargs):
-        if vm_or_name == 'wizard':
-            # TODO
-            return
-        elif isinstance(vm_or_name, string_types):
+        if isinstance(vm_or_name, string_types):
             vm = self._create_vm(vm_or_name, **kwargs)
         else:
             vm = vm_or_name

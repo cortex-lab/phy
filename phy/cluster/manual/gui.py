@@ -292,6 +292,11 @@ class GUICreator(object):
         @gui.main_window.on_close
         def on_close():
             self._guis.remove(gui)
+            self.session.view_creator.save_view_params()
+            self.session.close()
+
+        if show:
+            gui.show()
 
         return gui
 
