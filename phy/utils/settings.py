@@ -23,7 +23,7 @@ def _load_python(path):
     with open(path, 'r') as f:
         contents = f.read()
     store = {}
-    exec(contents, store, {})
+    exec(contents, {}, store)
     return store
 
 
@@ -59,25 +59,33 @@ class BaseSettings(object):
         self._store[key] = value
         self._to_save[key] = value
 
+    def _try_load_pickle(self, path):
+        try:
+            self._store._update(_load_pickle(path))
+            return True
+        except Exception as e:
+            warn("Unable to read the internal settings. "
+                 "You may want to delete '{0}'.\n{1}".format(path, str(e)))
+
+    def _try_load_python(self, path):
+        try:
+            self._store.update(_load_python(path))
+            return True
+        except Exception as e:
+            warn("Unable to read the settings file "
+                 "'{0}':\n{1}".format(path, str(e)))
+            return {}
+
     def load(self, path):
         if not op.exists(path):
             debug("The settings file {} doesn't exist.".format(path))
         # Try pickle.
         if not op.splitext(path)[1]:
-            try:
-                self._store._update(_load_pickle(path))
-            except Exception as e:
-                warn("Unable to read the internal settings. "
-                     "You may want to delete '{0}'.\n{1}".format(path, str(e)))
-                return {}
+            if not self._try_load_pickle(path):
+                self._try_load_python(path)
         # Try Python.
         else:
-            try:
-                return self._store.update(_load_python(path))
-            except Exception as e:
-                warn("Unable to read the settings file "
-                     "'{0}':\n{1}".format(path, str(e)))
-                return {}
+            self._try_load_python(path)
 
     def save(self, path):
         try:
