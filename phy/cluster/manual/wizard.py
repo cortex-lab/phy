@@ -8,8 +8,7 @@
 
 from operator import itemgetter
 
-from ...utils import _is_array_like
-from ...utils.logging import info
+from ...utils import _is_array_like, info
 from ._utils import History
 
 
@@ -230,6 +229,16 @@ class Wizard(object):
     def match(self):
         """Currently-selected closest match."""
         return self._match
+
+    @property
+    def selection(self):
+        b, m = self.best, self.match
+        if b is None:
+            return []
+        elif m is None:
+            return [b]
+        else:
+            return [b, m]
 
     @match.setter
     def match(self, value):

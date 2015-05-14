@@ -25,6 +25,7 @@ class ViewCreator(object):
         'features': FeatureViewModel,
         'correlograms': CorrelogramViewModel,
         'traces': TraceViewModel,
+        # TODO: wizard
     }
 
     def __init__(self, session):
@@ -62,6 +63,11 @@ class ViewCreator(object):
             vm = vm_or_name
         if vm not in self._vms:
             self._vms.append(vm)
+
+        @vm.view.connect
+        def on_close(event):
+            self._vms.remove(vm)
+
         if show:
             vm.view.show()
         return vm
