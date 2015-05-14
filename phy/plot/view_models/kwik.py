@@ -27,12 +27,14 @@ from .base import _selected_clusters_colors, BaseViewModel
 class WaveformViewModel(BaseViewModel):
     _view_class = WaveformView
     _view_name = 'waveforms'
-    scale_factor = 1.
+    imported_params = BaseViewModel.imported_params + ('scale_factor',)
 
     def on_open(self):
         super(WaveformViewModel, self).on_open()
         self.view.visual.channel_positions = self.model.probe.positions
         self.view.visual.channel_order = self.model.channel_order
+        if self.scale_factor is None:
+            self.scale_factor = 1.
 
     def on_select(self, cluster_ids):
 
@@ -79,17 +81,34 @@ class WaveformViewModel(BaseViewModel):
         # Spikes.
         self.view.visual.spike_ids = spikes
 
+        self.view.update()
+
     def on_close(self):
         self.view.visual.channel_positions = []
         super(WaveformViewModel, self).on_close()
+
+    def exported_params(self, save_size_pos=True):
+        params = super(WaveformViewModel, self).exported_params(save_size_pos)
+        params.update({
+            'probe_scale': self.view.probe_scale,
+            'box_scale': self.view.box_scale,
+            'scale_factor': self.scale_factor,
+        })
+        return params
 
 
 class FeatureViewModel(BaseViewModel):
     _view_class = FeatureView
     _view_name = 'features'
-    scale_factor = 1.
-    _dimension_selector = None
-    n_spikes_max_bg = 10000
+    imported_params = BaseViewModel.imported_params + ('scale_factor',
+                                                       'n_spikes_max_bg',
+                                                       )
+
+    def __init__(self, **kwargs):
+        super(FeatureViewModel, self).__init__(**kwargs)
+        self._dimension_selector = None
+        if self.scale_factor is None:
+            self.scale_factor = 1.
 
     def set_dimension_selector(self, func):
         """Decorator for a function that selects the best projection.
@@ -135,7 +154,10 @@ class FeatureViewModel(BaseViewModel):
         # Get background features.
         # TODO OPTIM: precompute this once for all and store in the cluster
         # store. But might be unnecessary.
-        k = max(1, self.model.n_spikes // self.n_spikes_max_bg)
+        if self.n_spikes_max_bg is not None:
+            k = max(1, self.model.n_spikes // self.n_spikes_max_bg)
+        else:
+            k = 1
         features_bg = self.model.features[::k, ...]
         spike_samples = self.model.spike_samples[::k]
         self.view.background.features = self._rescale_features(features_bg)
@@ -172,13 +194,23 @@ class FeatureViewModel(BaseViewModel):
             channels = np.arange(len(self.model.channels[:3]))
         self.view.dimensions = ['time'] + [(ch, 0) for ch in channels]
 
+        self.view.update()
+
+    def exported_params(self, save_size_pos=True):
+        params = super(WaveformViewModel, self).exported_params(save_size_pos)
+        params.update({
+            'scale_factor': self.scale_factor,
+            'marker_size': self.view.marker_size,
+        })
+        return params
+
 
 class CorrelogramViewModel(BaseViewModel):
     _view_class = CorrelogramView
     _view_name = 'correlograms'
-
-    binsize = None
-    winsize_bins = None
+    imported_params = BaseViewModel.imported_params + ('binsize',
+                                                       'winsize_bins',
+                                                       )
 
     def change_bins(self, bin=None, half_width=None):
         """Change the parameters of the correlograms.
@@ -224,16 +256,21 @@ class CorrelogramViewModel(BaseViewModel):
 
         # Take the cluster order into account.
         self.view.visual.cluster_order = cluster_ids
+        self.view.update()
 
 
 class TraceViewModel(BaseViewModel):
     _view_class = TraceView
     _view_name = 'traces'
-    _interval = None
+    imported_params = BaseViewModel.imported_params + ('scale_factor',
+                                                       'n_samples_per_spike',
+                                                       'interval_size',
+                                                       )
 
-    scale_factor = 1.
-    n_samples_per_spike = 20
-    interval_size = .25  # default interval size in milliseconds
+    def __init__(self, **kwargs):
+        super(TraceViewModel, self).__init__(**kwargs)
+        self._view.connect(self.on_key_press)
+        self._interval = None
 
     def _load_traces(self, interval):
         start, end = interval
@@ -338,6 +375,10 @@ class TraceViewModel(BaseViewModel):
         super(TraceViewModel, self).on_open()
         self.view.visual.n_samples_per_spike = self.model.n_samples_waveforms
         self.view.visual.sample_rate = self.model.sample_rate
+        if self.scale_factor is None:
+            self.scale_factor = 1.
+        if self.interval_size is None:
+            self.interval_size = .25
 
     def on_select(self, cluster_ids):
         # super(TraceViewModel, self).on_select(cluster_ids)
@@ -364,3 +405,10 @@ class TraceViewModel(BaseViewModel):
         # Load traces by setting the interval.
         visual._update_clusters_automatically = False
         self.interval = sample - half_size, sample + half_size
+
+    def exported_params(self, save_size_pos=True):
+        params = super(WaveformViewModel, self).exported_params(save_size_pos)
+        params.update({
+            'scale_factor': self.scale_factor,
+        })
+        return params

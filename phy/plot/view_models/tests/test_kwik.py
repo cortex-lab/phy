@@ -9,7 +9,7 @@
 # import numpy as np
 from pytest import mark
 
-from ....utils.logging import set_level, debug
+from ....utils.logging import set_level
 from ....utils.testing import (show_test_start,
                                show_test_stop,
                                show_test_run,
@@ -42,7 +42,7 @@ def _test_empty(view_model_class, stop=True, **kwargs):
 
     model = MockModel(n_spikes=1, n_clusters=1)
 
-    vm = view_model_class(model, **kwargs)
+    vm = view_model_class(model=model, **kwargs)
     vm.on_open()
     vm.on_select([0])
 
@@ -56,7 +56,7 @@ def _test_empty(view_model_class, stop=True, **kwargs):
     return vm
 
 
-def _test_view_model(view_model_class, stop=True, do_cluster=False, **kwargs):
+def _test_view_model(view_model_class, stop=True, **kwargs):
 
     model = MockModel()
     # clustering = Clustering(model.spike_clusters)
@@ -64,28 +64,13 @@ def _test_view_model(view_model_class, stop=True, do_cluster=False, **kwargs):
     clusters = [3, 4]
     # spikes = clustering.spikes_in_clusters(clusters)
 
-    vm = view_model_class(model, **kwargs)
+    vm = view_model_class(model=model, **kwargs)
     vm.on_open()
     vm.on_select(clusters)
 
     # Show the view.
     show_test_start(vm.view)
     show_test_run(vm.view, _N_FRAMES)
-
-    if do_cluster:
-        # Merge the clusters and update the view.
-        debug("Merging.")
-        # up = clustering.merge(clusters)
-        # vm.on_select(up.added)
-        # show_test_run(vm.view, _N_FRAMES)
-
-        # # Split some spikes and update the view.
-        # debug("Splitting.")
-        # spikes = spikes[::2]
-        # up = clustering.assign(spikes, np.random.randint(low=0, high=5,
-        #                                                  size=len(spikes)))
-        # vm.on_select(up.added)
-        # show_test_run(vm.view, _N_FRAMES)
 
     if stop:
         show_test_stop(vm.view)
@@ -152,7 +137,11 @@ def test_ccg_empty():
                 )
 
 
-def test_traces():
+def test_traces_empty():
+    _test_empty(TraceViewModel)
+
+
+def test_traces_full():
     vm = _test_view_model(TraceViewModel, stop=False)
     vm.move_right()
     show_test_run(vm.view, _N_FRAMES)

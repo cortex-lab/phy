@@ -49,9 +49,11 @@ class BaseViewModel(object):
     """Used to create views from a model."""
     _view_class = None
     _view_name = ''
+    imported_params = ('n_spikes_max', 'excerpt_size')
 
-    def __init__(self, model, store=None,
+    def __init__(self, model=None, store=None,
                  n_spikes_max=None, excerpt_size=None,
+                 position=None, size=None, backend=None,
                  **kwargs):
         self._model = model
         self._store = store
@@ -62,25 +64,23 @@ class BaseViewModel(object):
                                   excerpt_size=excerpt_size,
                                   )
 
-        # Set all keyword arguments as attributes.
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-        # Extract VisPy keyword arguments.
-        vispy_kwargs_names = ('position', 'size',)
-        vispy_kwargs = {name: kwargs[name] for name in vispy_kwargs_names
-                        if name in kwargs}
-        backend = kwargs.pop('backend', None)
+        # Set passed keyword arguments as attributes.
+        for key in self.imported_params:
+            setattr(self, key, kwargs.pop(key, None))
 
         # Create the VisPy canvas.
         self._view = _create_view(self._view_class,
                                   backend=backend,
-                                  **vispy_kwargs)
+                                  position=position or (200, 200),
+                                  size=size or (600, 600),
+                                  )
 
-        # Bind VisPy event methods.
-        for method in ('on_key_press', 'on_mouse_move'):
-            if hasattr(self, method):
-                self._view.connect(getattr(self, method))
+        @self._view.connect
+        def on_draw(event):
+            if self._view.visual.empty:
+                self.on_open()
+                if self.cluster_ids:
+                    self.on_select(self.cluster_ids)
 
     @property
     def model(self):
@@ -157,6 +157,15 @@ class BaseViewModel(object):
     def on_close(self):
         self._view.visual.spike_clusters = []
         self._view.update()
+
+    def exported_params(self, save_size_pos=True):
+        if save_size_pos:
+            return {
+                'position': self._view.position,
+                'size': self._view.size,
+            }
+        else:
+            return {}
 
     def show(self):
         self._view.show()
