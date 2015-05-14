@@ -18,6 +18,7 @@ from ...plot.view_models import BaseViewModel
 
 class KlustaViewa(EventEmitter):
     def __init__(self, session, config=None):
+        super(KlustaViewa, self).__init__()
         self.session = session
         self._dock = DockWindow()
         self._load_config(config)
@@ -30,7 +31,7 @@ class KlustaViewa(EventEmitter):
 
     def _load_config(self, config=None):
         if config is None:
-            config = self.session['gui_config']
+            config = self.session.settings['gui_config']
         for name, kwargs in config:
             # GUI-specific keyword arguments position, size, maximized
             position = kwargs.pop('position', None)
@@ -54,10 +55,10 @@ class KlustaViewa(EventEmitter):
     def main_window(self):
         return self._dock
 
-    def add_view(self, item):
+    def add_view(self, item, **kwargs):
         if isinstance(item, BaseViewModel):
             view = item.view
-            dw = self._dock.add_view(view)
+            dw = self._dock.add_view(view, **kwargs)
 
             self.connect(item.on_select)
 
@@ -69,7 +70,7 @@ class KlustaViewa(EventEmitter):
                 dw.close()
 
         else:
-            self._dock.add_view(item)
+            self._dock.add_view(item, **kwargs)
 
     def get_views(self, name):
         vms = self.session.gui_creator.get(name)
@@ -79,7 +80,7 @@ class KlustaViewa(EventEmitter):
     def _set_default_view_connections(self):
 
         # Select feature dimension from waveform view.
-        @self.connect_views('waveforms', 'features')
+        @self._dock.connect_views('waveforms', 'features')
         def channel_click(waveforms, features):
 
             @waveforms.connect
@@ -245,7 +246,7 @@ class GUICreator(object):
         gui = KlustaViewa(self.session, config=config)
         self._guis.append(gui)
 
-        @gui.on_close
+        @gui.main_window.on_close
         def on_close():
             self._guis.remove(gui)
 

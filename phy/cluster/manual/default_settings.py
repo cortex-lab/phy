@@ -73,7 +73,7 @@ keyboard_shortcuts = {
 
 
 gui_config = [
-    ('wizard', {'position': 'right'}),
+    # ('wizard', {'position': 'right'}),
     ('features', {'position': 'left'}),
     ('correlograms', {'position': 'left'}),
     ('waveforms', {'position': 'right'}),
@@ -116,3 +116,5 @@ traces_size = None
 traces_scale_factor = .01
 traces_n_samples_per_spike = 20
 traces_interval_size = .25
+traces_n_spikes_max = None
+traces_excerpt_size = None

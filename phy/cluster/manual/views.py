@@ -57,7 +57,10 @@ class ViewCreator(object):
         return vm
 
     def add(self, vm_or_name, show=True, **kwargs):
-        if isinstance(vm_or_name, string_types):
+        if vm_or_name == 'wizard':
+            # TODO
+            return
+        elif isinstance(vm_or_name, string_types):
             vm = self._create_vm(vm_or_name, **kwargs)
         else:
             vm = vm_or_name

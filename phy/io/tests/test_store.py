@@ -27,6 +27,10 @@ def setup():
     set_level('debug')
 
 
+def teardown():
+    set_level('info')
+
+
 def test_memory_store():
     ms = MemoryStore()
     assert ms.load(2) == {}

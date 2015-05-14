@@ -375,11 +375,11 @@ class Session(EventEmitter):
     # Views and GUIs
     # -------------------------------------------------------------------------
 
-    def show_gui(self, config=None):
+    def show_gui(self, config=None, **kwargs):
         """Show a new manual clustering GUI."""
         # Ensure that a Qt application is running.
         with qt_app():
-            gui = self.gui_creator.add(config)
+            gui = self.gui_creator.add(config, **kwargs)
             return gui
 
     def show_view(self, name, cluster_ids, **kwargs):

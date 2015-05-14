@@ -356,6 +356,6 @@ def _test_session_gui():
                                            tempdir=tempdir)
 
         with qt_app():
-            gui = session._create_gui()
+            gui = session.show_gui(show=False)
             _close_qt_after(gui, 0.2)
             gui.show()
