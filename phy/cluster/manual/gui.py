@@ -20,14 +20,13 @@ class KlustaViewa(EventEmitter):
     def __init__(self, session, config=None):
         super(KlustaViewa, self).__init__()
         self.session = session
-        self._dock = DockWindow()
+        self.start()
+        self._dock = DockWindow(title=self.__class__.__name__)
         self._load_config(config)
         # Save the geometry state
         self._dock.on_close(self.on_close)
         self._create_gui_actions()
         self._set_default_view_connections()
-        self._cluster_ids = []
-        self.start()
 
     def _load_config(self, config=None):
         if config is None:
@@ -35,7 +34,9 @@ class KlustaViewa(EventEmitter):
         for name, kwargs in config:
             # GUI-specific keyword arguments position, size, maximized
             position = kwargs.pop('position', None)
-            item = self.session.view_creator.add(name, **kwargs)
+            item = self.session.view_creator.add(name,
+                                                 cluster_ids=self._cluster_ids,
+                                                 **kwargs)
             self.add_view(item, position=position)
 
         # Load geometry state
@@ -48,7 +49,7 @@ class KlustaViewa(EventEmitter):
 
     def start(self):
         self.session.wizard.start()
-        self._cluster_ids = [self.session.wizard.best]
+        self._cluster_ids = self.session.wizard.selection
 
     def on_close(self):
         gs = self._dock.save_geometry_state()
@@ -75,7 +76,7 @@ class KlustaViewa(EventEmitter):
             dw.close()
 
     def get_views(self, name):
-        vms = self.session.gui_creator.get(name)
+        vms = self.session.view_creator.get(name)
         dock_widgets = [_.widget() for _ in self._dock.list_views()]
         return [vm for vm in vms if vm.view.native in dock_widgets]
 

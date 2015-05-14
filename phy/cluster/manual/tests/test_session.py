@@ -357,5 +357,10 @@ def test_session_gui():
 
         with qt_app():
             gui = session.gui_creator.add(show=False)
-            # _close_qt_after(gui, 0.2)
+            # Force the scale factor to 1.0 for mock data.
+            for vm in (gui.get_views('waveforms') +
+                       gui.get_views('features') +
+                       gui.get_views('traces')):
+                vm.scale_factor = 1.
+            _close_qt_after(gui, 0.25)
             gui.show()
