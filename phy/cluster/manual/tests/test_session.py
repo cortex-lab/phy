@@ -336,11 +336,11 @@ def test_session_wizard():
 
 
 def test_session_gui():
-    n_clusters = 5
-    n_spikes = 100
+    n_clusters = 15
+    n_spikes = 500
     n_channels = 30
     n_fets = 3
-    n_samples_traces = 20000
+    n_samples_traces = 50000
 
     with TemporaryDirectory() as tempdir:
 

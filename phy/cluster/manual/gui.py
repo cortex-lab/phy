@@ -246,7 +246,7 @@ class KlustaViewa(EventEmitter):
     def merge(self):
         clusters = self._cluster_ids
         if len(clusters) >= 2:
-            self.merge(clusters)
+            self.session.merge(clusters)
 
     def split(self):
         # TODO: refactor
