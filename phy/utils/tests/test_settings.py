@@ -85,47 +85,49 @@ def test_internal_settings():
 
 def test_settings_manager():
     with TemporaryDirectory() as tmpdir:
-        sm = Settings(tmpdir)
+        with TemporaryDirectory() as tmpdir_exp:
+            sm = Settings(tmpdir)
 
-        # Check paths.
-        assert sm.phy_user_dir == tmpdir
-        assert sm.internal_settings_path == op.join(tmpdir,
-                                                    'internal_settings')
-        assert sm.user_settings_path == op.join(tmpdir, 'user_settings.py')
+            # Check paths.
+            assert sm.phy_user_dir == tmpdir
+            assert sm.internal_settings_path == op.join(tmpdir,
+                                                        'internal_settings')
+            assert sm.user_settings_path == op.join(tmpdir, 'user_settings.py')
 
-        # User settings.
-        with raises(KeyError):
-            sm['a']
-        # Artificially populate the user settings.
-        sm._bs._store['a'] = 3
-        assert sm['a'] == 3
+            # User settings.
+            with raises(KeyError):
+                sm['a']
+            # Artificially populate the user settings.
+            sm._bs._store['a'] = 3
+            assert sm['a'] == 3
 
-        # Internal settings.
-        sm['c'] = 5
-        assert sm['c'] == 5
+            # Internal settings.
+            sm['c'] = 5
+            assert sm['c'] == 5
 
-        # Set an experiment path.
-        path = op.join(tmpdir, 'myexperiment.dat')
-        sm.on_open(path)
-        assert sm.exp_path == path
-        assert sm.exp_name == 'myexperiment'
-        assert sm.exp_settings_dir == op.join(tmpdir, 'myexperiment.phy')
-        assert sm.exp_settings_path == op.join(tmpdir,
-                                               'myexperiment.phy/'
-                                               'user_settings.py')
+            # Set an experiment path.
+            path = op.join(tmpdir_exp, 'myexperiment.dat')
+            sm.on_open(path)
+            assert sm.exp_path == path
+            assert sm.exp_name == 'myexperiment'
+            assert sm.exp_settings_dir == op.join(tmpdir_exp,
+                                                  'myexperiment.phy')
+            assert sm.exp_settings_path == op.join(tmpdir_exp,
+                                                   'myexperiment.phy/'
+                                                   'user_settings.py')
 
-        # User settings.
-        assert sm['a'] == 3
-        sm._bs._store['a'] = 30
-        assert sm['a'] == 30
+            # User settings.
+            assert sm['a'] == 3
+            sm._bs._store['a'] = 30
+            assert sm['a'] == 30
 
-        # Internal settings.
-        sm['c'] = 50
-        assert sm['c'] == 50
+            # Internal settings.
+            sm['c'] = 50
+            assert sm['c'] == 50
 
-        # Check persistence.
-        sm.save()
-        sm = Settings(tmpdir)
-        sm.on_open(path)
-        assert sm['c'] == 50
-        assert 'a' not in sm
+            # Check persistence.
+            sm.save()
+            sm = Settings(tmpdir)
+            sm.on_open(path)
+            assert sm['c'] == 50
+            assert 'a' not in sm
