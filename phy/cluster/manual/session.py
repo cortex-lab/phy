@@ -18,7 +18,7 @@ from ...utils.event import EventEmitter, ProgressReporter
 from ...utils.logging import debug, info
 from ...utils.settings import (SettingsManager,
                                declare_namespace,
-                               _ensure_path_exists,
+                               _ensure_dir_exists,
                                )
 from ...io.store import ClusterStore
 from ...io.kwik.model import KwikModel, cluster_group_id
@@ -273,7 +273,7 @@ class Session(EventEmitter):
                              str(self.model.channel_group),
                              self.model.clustering
                              )
-        _ensure_path_exists(store_path)
+        _ensure_dir_exists(store_path)
 
         # Instantiate the store.
         spc = self.clustering.spikes_per_cluster
