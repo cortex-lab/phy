@@ -13,21 +13,15 @@ import shutil
 
 import numpy as np
 
-from ...utils.dock import DockWindow, qt_app, _create_web_view
+from ...utils.dock import qt_app, _create_web_view
 from ...utils.event import EventEmitter, ProgressReporter
-from ...utils.logging import debug, info
-from ...utils.settings import (SettingsManager,
-                               declare_namespace,
+from ...utils.logging import info
+from ...utils.settings import (Settings,
                                _ensure_dir_exists,
                                )
 from ...io.store import ClusterStore
 from ...io.kwik.model import KwikModel, cluster_group_id
 from ...io.kwik.store_items import FeatureMasks, Waveforms
-from ...plot.view_models.kwik import (WaveformViewModel,
-                                      FeatureViewModel,
-                                      CorrelogramViewModel,
-                                      TraceViewModel,
-                                      )
 from ._history import GlobalHistory
 from ._utils import ClusterMetadataUpdater
 from .clustering import Clustering
@@ -54,14 +48,6 @@ def _process_ups(ups):
         raise NotImplementedError()
 
 
-_VIEW_MODELS = {
-    'waveforms': WaveformViewModel,
-    'features': FeatureViewModel,
-    'correlograms': CorrelogramViewModel,
-    'traces': TraceViewModel,
-}
-
-
 class Session(EventEmitter):
     """A manual clustering session.
 
@@ -81,68 +67,23 @@ class Session(EventEmitter):
         super(Session, self).__init__()
         self.model = None
         self.phy_user_dir = phy_user_dir
-
-        # Instantiate the SettingsManager which manages
-        # the settings files.
-        self.settings_manager = SettingsManager(phy_user_dir)
-        self._load_default_settings()
+        self._create_settings()
 
         self.connect(self.on_open)
-        # self.connect(self.on_cluster)
         self.connect(self.on_close)
-
-        self._create_view_functions()
 
         if kwik_path:
             self.open(kwik_path)
 
-    # Settings
-    # -------------------------------------------------------------------------
-
-    def get_user_settings(self, key):
-        """Load a user settings."""
-        return self.settings_manager.get_user_settings(key,
-                                                       scope='experiment')
-
-    def load_user_settings(self, path=None, file_namespace=None):
-        return self.settings_manager.load_user_settings(path,
-                                                        file_namespace,
-                                                        scope='experiment')
-
-    def set_user_settings(self, key=None, value=None):
-        """Set a user settings."""
-        return self.settings_manager.set_user_settings(
-            key, value, scope='experiment')
-
-    def get_internal_settings(self, key, default=None, scope='experiment'):
-        """Get an internal settings."""
-        value = self.settings_manager.get_internal_settings(key, scope=scope)
-        if value is None:
-            value = default
-        return value
-
-    def set_internal_settings(self, key, value, scope='experiment'):
-        """Set an internal settings."""
-        return self.settings_manager.set_internal_settings(key,
-                                                           value,
-                                                           scope=scope,
-                                                           )
-
-    def _load_default_settings(self):
-        """Load default settings for manual clustering."""
+    def _create_settings(self):
         curdir = op.dirname(op.realpath(__file__))
-        # This is a namespace available in the config file.
-        # file_namespace = {
-        #     'n_spikes': self.model.n_spikes,
-        #     'n_channels': self.model.n_channels,
-        # }
-        declare_namespace('manual_clustering')
-        self.load_user_settings(path=op.join(curdir, 'default_settings.py'),
-                                # file_namespace=file_namespace
-                                )
+        self.settings = Settings(phy_user_dir=self.phy_user_dir,
+                                 default_path=op.join(curdir,
+                                                      'default_settings.py'))
 
-    def _load_experiment_settings(self):
-        self.settings_manager.set_experiment_path(self.experiment_path)
+        @self.connect
+        def on_open():
+            self.settings.on_open(self.experiment_path)
 
     # File-related actions
     # -------------------------------------------------------------------------
@@ -161,11 +102,12 @@ class Session(EventEmitter):
             self._backup_kwik(kwik_path)
         if model is None:
             model = KwikModel(kwik_path)
+        # Close the session if it is already open.
+        if self.model:
+            self.close()
         self.model = model
         self.experiment_path = (op.realpath(kwik_path)
                                 if kwik_path else self.phy_user_dir)
-        self.experiment_dir = op.dirname(self.experiment_path)
-        self.experiment_name = model.name
         self.emit('open')
 
     def save(self):
@@ -181,7 +123,6 @@ class Session(EventEmitter):
         self.emit('close')
         self.model = None
         self.experiment_path = None
-        self.experiment_dir = None
 
     # Clustering actions
     # -------------------------------------------------------------------------
@@ -268,7 +209,7 @@ class Session(EventEmitter):
     def _create_cluster_store(self):
 
         # Kwik store in experiment_dir/name.phy/1/main/cluster_store.
-        store_path = op.join(self.settings_manager.phy_experiment_dir,
+        store_path = op.join(self.settings.exp_settings_dir,
                              'cluster_store',
                              str(self.model.channel_group),
                              self.model.clustering
@@ -282,7 +223,7 @@ class Session(EventEmitter):
                                           path=store_path,
                                           )
 
-        # Create the FeatureMasks srore item.
+        # Create the FeatureMasks store item.
 
         # Initialize the progress reporters.
         pr_disk = ProgressReporter(
@@ -296,8 +237,7 @@ class Session(EventEmitter):
 
         # chunk_size is the number of spikes to load at once from
         # the features_masks array.
-        cs = self.get_user_settings('manual_clustering.'
-                                    'store_chunk_size') or 100000
+        cs = self.settings['store_chunk_size']
         self.cluster_store.register_item(FeatureMasks,
                                          progress_reporter_disk=pr_disk,
                                          progress_reporter_memory=pr_memory,
@@ -310,10 +250,8 @@ class Session(EventEmitter):
                               '{progress:.1f}%.'),
             complete_message='Waveforms initialized.')
 
-        n_spikes_max = self.get_user_settings('manual_clustering.' +
-                                              'waveforms_n_spikes_max')
-        excerpt_size = self.get_user_settings('manual_clustering.' +
-                                              'waveforms_excerpt_size')
+        n_spikes_max = self.settings['waveforms_n_spikes_max']
+        excerpt_size = self.settings['waveforms_excerpt_size']
 
         self.cluster_store.register_item(Waveforms,
                                          progress_reporter=pr_waveforms,
@@ -407,9 +345,6 @@ class Session(EventEmitter):
 
     def on_open(self):
         """Update the session after new data has been loaded."""
-
-        self._load_experiment_settings()
-
         self._create_global_history()
         self._create_clustering()
         self._create_cluster_metadata()
@@ -418,7 +353,7 @@ class Session(EventEmitter):
 
     def on_close(self):
         """Save the settings when the data is closed."""
-        self.settings_manager.save()
+        self.settings.save()
 
     def change_channel_group(self, channel_group):
         """Change the current channel group."""
@@ -430,523 +365,17 @@ class Session(EventEmitter):
         self.model.clustering = clustering
         self.emit('open')
 
-    # GUI
+    # Views and GUIs
     # -------------------------------------------------------------------------
 
-    # TODO: put this in default settings
-    _default_counts = {
-        'features': 1,
-        'correlograms': 1,
-        'waveforms': 1,
-        'traces': 1,
-        'wizard': 1,
-    }
-
-    _default_positions = {
-        'wizard': 'right',
-        'features': 'left',
-        'correlograms': 'left',
-        'waveforms': 'right',
-        'traces': 'right',
-    }
-
-    def _add_gui_view(self, gui, name, cluster_ids=None, **kwargs):
-
-        if name == 'wizard':
-            # Add the wizard panel widget.
-            panel_view = self._create_wizard_panel(cluster_ids)
-            gui.add_view(panel_view, 'Wizard')
-            return
-
-        # The other views are VisPy canvases.
-        vm = self.create_view(name, save_size_pos=False)
-        dock = gui.add_view(vm.view, name.title(), **kwargs)
-
-        @vm.view.connect
-        def on_draw(event):
-            if vm.view.visual.empty:
-                vm.on_open()
-                if cluster_ids:
-                    vm.on_select(cluster_ids)
-
-        @self.connect
-        def on_select(cluster_ids):
-            if cluster_ids is not None and len(cluster_ids) > 0:
-                vm.on_select(cluster_ids)
-                vm.view.update()
-
-        # Make sure the dock widget is closed when the view it contains
-        # is closed with the Escape key.
-        @vm.view.connect
-        def on_close(e):
-            self.unconnect(on_select)
-            dock.close()
-
-        return vm
-
-    def _add_gui_views(self, gui, cluster_ids, counts=None):
-        counts = counts if counts is not None else self._default_counts
-        # Create the appropriate number of views.
-        for name, count in counts.items():
-            name = name.lower()
-            # Add <count> views of that type.
-            for i in range(count):
-                self._add_gui_view(gui,
-                                   name,
-                                   cluster_ids=cluster_ids,
-                                   position=self._default_positions[name])
-        self._connect_gui_views(gui)
-
-    def _connect_gui_views(self, gui):
-        """Connect views."""
-
-        # Select feature dimension from waveform view.
-        @gui.connect_views('waveforms', 'features')
-        def channel_click(waveforms, features):
-
-            @waveforms.connect
-            def on_channel_click(e):
-                if e.key in map(str, range(10)):
-                    channel = e.channel_idx
-                    dimension = int(e.key.name)
-                    feature = 0 if e.button == 1 else 1
-                    if (0 <= dimension <= len(features.dimensions) - 1):
-                        features.dimensions[dimension] = (channel, feature)
-                        # Force view update.
-                        features.dimensions = features.dimensions
-
-    def _create_gui_actions(self, gui):
-
-        name = 'manual_clustering.keyboard_shortcuts'
-        shortcuts = self.get_user_settings(name)
-
-        def _add_gui_shortcut(func):
-            """Helper function to add a GUI action with a keyboard shortcut."""
-            name = func.__name__
-            shortcut = shortcuts.get(name, None)
-            gui.shortcut(name, shortcut)(func)
-
-        # General actions
-        # ---------------------------------------------------------------------
-
-        @_add_gui_shortcut
-        def reset_gui():
-            # Add missing views.
-            present = set(gui.view_counts())
-            default = set(self._default_counts)
-            to_add = default - present
-            counts = {name: 1 for name in to_add}
-            # Add the default views.
-            self._add_gui_views(gui, self._selected_clusters, counts=counts)
-
-        @_add_gui_shortcut
-        def save():
-            self.save()
-
-        @_add_gui_shortcut
-        def undo():
-            self.undo()
-
-        @_add_gui_shortcut
-        def redo():
-            self.redo()
-
-        @_add_gui_shortcut
-        def show_shortcuts():
-            name = 'manual_clustering.keyboard_shortcuts'
-            shortcuts = self.get_user_settings(name)
-            for name in sorted(shortcuts):
-                print("{0:<24}: {1:s}".format(name, str(shortcuts[name])))
-
-        @_add_gui_shortcut
-        def exit():
-            gui.close()
-
-        # Selection
-        # ---------------------------------------------------------------------
-
-        self._selected_clusters = []
-
-        def _select(cluster_ids):
-            cluster_ids = list(cluster_ids)
-            assert len(cluster_ids) == len(set(cluster_ids))
-            # Do not re-select an already-selected list of clusters.
-            if cluster_ids == self._selected_clusters:
-                return
-            assert set(cluster_ids) <= set(self.clustering.cluster_ids)
-            debug("Select clusters {0:s}.".format(str(cluster_ids)))
-            self._selected_clusters = cluster_ids
-            self.emit('select', cluster_ids)
-
-        @_add_gui_shortcut
-        def select(cluster_ids):
-            _select(cluster_ids)
-
-        # Wizard list
-        # ---------------------------------------------------------------------
-
-        def _wizard_select():
-            b, m = self.wizard.best, self.wizard.match
-            if m is None:
-                cluster_ids = [b]
-            else:
-                cluster_ids = [b, m]
-            _select(cluster_ids)
-
-        @_add_gui_shortcut
-        def reset_wizard():
-            self.wizard.start()
-            _wizard_select()
-
-        @_add_gui_shortcut
-        def first():
-            self.wizard.first()
-            _wizard_select()
-
-        @_add_gui_shortcut
-        def last():
-            self.wizard.last()
-            _wizard_select()
-
-        @_add_gui_shortcut
-        def next():
-            self.wizard.next()
-            _wizard_select()
-
-        @_add_gui_shortcut
-        def previous():
-            self.wizard.previous()
-            _wizard_select()
-
-        @_add_gui_shortcut
-        def pin():
-            self.wizard.pin()
-            _wizard_select()
-
-        @_add_gui_shortcut
-        def unpin():
-            self.wizard.unpin()
-            _wizard_select()
-
-        # Cluster actions
-        # ---------------------------------------------------------------------
-
-        @_add_gui_shortcut
-        def merge():
-            if self.wizard.best is None:
-                return
-            if self.wizard.match is None:
-                return
-            cluster_ids = (self.wizard.best, self.wizard.match)
-            self.merge(cluster_ids)
-
-        @_add_gui_shortcut
-        def split():
-            # TODO: refactor
-            pass
-
-        @self.connect
-        def on_cluster(up):
-            _wizard_select()
-
-        # Move best/match/both to noise/mua/good
-        # ---------------------------------------------------------------------
-
-        def _get_clusters(which):
-            return {
-                'best': [self.wizard.best],
-                'match': [self.wizard.match],
-                'both': [self.wizard.best, self.wizard.match],
-            }[which]
-
-        def _make_func(which, group):
-            """Return a function that moves best/match/both clusters to
-            a group."""
-
-            def func():
-                clusters = _get_clusters(which)
-                if None in clusters:
-                    return
-                self.move(clusters, group)
-
-            func.__name__ = 'move_{}_to_{}'.format(which, group)
-            return func
-
-        for which in ('best', 'match', 'both'):
-            for group in ('noise', 'mua', 'good'):
-                _add_gui_shortcut(_make_func(which, group))
-
-    def _create_gui(self):
-        """Create a manual clustering GUI.
-
-        A Qt application needs to be running.
-
-        """
-        gui = DockWindow(title="Manual clustering with phy")
-
-        # Save the geometry state
-        @gui.on_close
-        def on_close():
-            gs = gui.save_geometry_state()
-            self.set_internal_settings('manual_clustering.gui_state',
-                                       gs,
-                                       scope='global',
-                                       )
-
-        # Load geometry state
-        gs = self.get_internal_settings('manual_clustering.gui_state',
-                                        default={},
-                                        scope='global',
-                                        )
-        # Find the first cluster to select.
-        self.wizard.start()
-        # Create the GUI actions.
-        self._create_gui_actions(gui)
-        # Recreate the views and restore the state and position of the
-        # dock widgets.
-        self._selected_clusters = [self.wizard.best]
-        self._add_gui_views(gui, self._selected_clusters,
-                            counts=gs.get('view_counts', None))
-        # Restore the geometry state.
-        if gs:
-            gui.restore_geometry_state(gs)
-        return gui
-
-    def show_gui(self):
+    def show_gui(self, config=None):
         """Show a new manual clustering GUI."""
         # Ensure that a Qt application is running.
         with qt_app():
-            gui = self._create_gui()
-            gui.show()
+            gui = self.gui_creator.add(config)
             return gui
 
-    # Show views
-    # -------------------------------------------------------------------------
-
-    def _view_settings_name(self, view_name, name):
-        return 'manual_clustering.{0}_{1}'.format(view_name, name)
-
-    def _get_view_settings(self, view_name, name):
-        settings_name = self._view_settings_name(view_name, name)
-        return self.get_internal_settings(settings_name)
-
-    def _set_view_settings(self, view_name, name, value):
-        settings_name = self._view_settings_name(view_name, name)
-        self.set_internal_settings(settings_name, value)
-
-    def _create_view(self, view_model, cluster_ids=None, save_size_pos=True):
-        view = view_model.view
-        view_name = view_model.view_name
-
-        @self.connect
-        def on_open():
-            if self.model is None:
-                return
-            view_model.on_open()
-            view.update()
-
-        # Unregister the callbacks when the view is closed.
-        @view.connect
-        def on_close(event):
-            self.unconnect(on_open)
-
-            if save_size_pos:
-                # Save the canvas position and size.
-                self._set_view_settings(view_name,
-                                        'canvas_position',
-                                        view.position,
-                                        )
-                self._set_view_settings(view_name,
-                                        'canvas_size',
-                                        view.size,
-                                        )
-
-        # Make sure the view is correctly initialized when it is created
-        # *after* that the data has been loaded.
-        @view.connect
-        def on_draw(event):
-            if view.visual.empty:
-                on_open()
-                if cluster_ids:
-                    view_model.on_select(cluster_ids)
-
-        return view
-
-    def _create_view_model(self, name, **kwargs):
-        vm_class = _VIEW_MODELS[name]
-        save_size_pos = kwargs.pop('save_size_pos', True)
-
-        # Load the canvas position and size for that view.
-        if save_size_pos:
-            position = self._get_view_settings(name, 'canvas_position')
-            size = self._get_view_settings(name, 'canvas_size')
-            if position:
-                kwargs['position'] = position
-            if size:
-                kwargs['size'] = size
-
-        # Load the selector options for that view.
-        n_spikes_max = self.get_user_settings('manual_clustering.' +
-                                              name +
-                                              '_n_spikes_max')
-        excerpt_size = self.get_user_settings('manual_clustering.' +
-                                              name +
-                                              '_excerpt_size')
-
-        return vm_class(self.model,
-                        store=self.cluster_store,
-                        n_spikes_max=n_spikes_max,
-                        excerpt_size=excerpt_size,
-                        **kwargs)
-
-    def _create_waveforms_view(self, cluster_ids=None, save_size_pos=True):
-        """Create a WaveformView and return a ViewModel instance."""
-
-        # Persist scale factor.
-        sf_name = 'manual_clustering.waveforms_scale_factor'
-        sf = self.get_internal_settings(sf_name, .01)
-        vm = self._create_view_model('waveforms',
-                                     scale_factor=sf,
-                                     save_size_pos=save_size_pos,
-                                     )
-        self._create_view(vm,
-                          cluster_ids=cluster_ids,
-                          save_size_pos=save_size_pos,
-                          )
-
-        # Load box scale.
-        bs_name = 'manual_clustering.waveforms_box_scale'
-        bs = self.get_internal_settings(bs_name,
-                                        vm.view.visual.default_box_scale)
-        vm.view.box_scale = bs
-
-        # Load probe scale.
-        ps_name = 'manual_clustering.waveforms_probe_scale'
-        ps = self.get_internal_settings(ps_name,
-                                        vm.view.visual.default_probe_scale)
-        vm.view.probe_scale = ps
-
-        @vm.view.connect
-        def on_draw(event):
-            # OPTIM: put this when the model or the view is closed instead
-            # No need to run this at every draw!
-
-            # Save probe and box scales.
-            self.set_internal_settings(ps_name, vm.view.probe_scale)
-            self.set_internal_settings(bs_name, vm.view.box_scale)
-
-        return vm
-
-    def _create_features_view(self, cluster_ids=None, save_size_pos=True):
-        """Create a FeatureView and return a ViewModel instance."""
-
-        sf_name = 'manual_clustering.features_scale_factor'
-        sf = self.get_internal_settings(sf_name, .01)
-
-        ms_name = 'manual_clustering.features_marker_size'
-        ms = self.get_internal_settings(ms_name, 2., scope='global')
-
-        vm = self._create_view_model('features',
-                                     scale_factor=sf,
-                                     save_size_pos=save_size_pos,
-                                     )
-
-        self._create_view(vm,
-                          cluster_ids=cluster_ids,
-                          save_size_pos=save_size_pos,
-                          )
-        vm.view.marker_size = ms
-
-        @vm.set_dimension_selector
-        def choose(cluster_ids, store=None):
-            # spikes = vm.view.visual.spike_ids
-            fet = vm.view.visual.features
-            score = np.abs(fet).max(axis=0).max(axis=1)
-            # Take the best 3 channels.
-            channels = np.argsort(score)[::-1][:3]
-            return channels
-
-        @vm.view.connect
-        def on_draw(event):
-            if vm.view.visual.empty:
-                return
-            # Remember the minimum zoom_y for the scale factor.
-            zoom = vm.view._pz.zoom_matrix[1:, 1:, 1].min()
-            self.set_internal_settings(sf_name, zoom * vm.scale_factor)
-            self.set_internal_settings(ms_name,
-                                       vm.view.marker_size,
-                                       scope='global')
-
-        return vm
-
-    def _create_correlograms_view(self, cluster_ids=None, save_size_pos=True):
-        """Create a CorrelogramView and return a ViewModel instance."""
-        args = 'binsize', 'winsize_bins'
-        kwargs = {k: self.get_user_settings('manual_clustering.'
-                                            'correlograms_' + k)
-                  for k in args}
-        vm = self._create_view_model('correlograms',
-                                     save_size_pos=save_size_pos, **kwargs)
-        self._create_view(vm,
-                          cluster_ids=cluster_ids,
-                          save_size_pos=save_size_pos,
-                          )
-        return vm
-
-    def _create_traces_view(self, cluster_ids=None, save_size_pos=True):
-        """Create a TraceView and return a ViewModel instance."""
-
-        sf_name = 'manual_clustering.traces_scale_factor'
-        sf = self.get_internal_settings(sf_name, .001)
-
-        vm = self._create_view_model('traces',
-                                     scale_factor=sf,
-                                     save_size_pos=save_size_pos,
-                                     )
-        self._create_view(vm,
-                          cluster_ids=cluster_ids,
-                          save_size_pos=save_size_pos,
-                          )
-
-        @vm.view.connect
-        def on_draw(event):
-            if vm.view.visual.empty:
-                return
-            self.set_internal_settings(sf_name,
-                                       vm.view.channel_scale * vm.scale_factor)
-
-        return vm
-
-    def _create_view_functions(self):
-        """Create the show_<name>() public methods."""
-        def _make_func(name):
-            def func(cluster_ids, **kwargs):
-                kwargs['cluster_ids'] = cluster_ids
-                return self.show_view(name, **kwargs)
-            return func
-        for name in sorted(_VIEW_MODELS):
-            setattr(self, 'show_{}'.format(name), _make_func(name))
-
-    def create_view(self, name, **kwargs):
-        """Create a view without displaying it.
-
-        Parameters
-        ----------
-
-        name : str
-            Can be `waveforms`, `features`, `correlograms`, or `traces`.
-        cluster_ids : array-like
-            List of clusters to show.
-
-        Returns
-        -------
-
-        view_model : ViewModel instance
-
-        """
-        return getattr(self, '_create_{}_view'.format(name))(**kwargs)
-
-    def show_view(self, name, **kwargs):
+    def show_view(self, name, cluster_ids, **kwargs):
         """Create and display a new view.
 
         Parameters
@@ -960,9 +389,10 @@ class Session(EventEmitter):
         Returns
         -------
 
-        view : VisPy canvas instance
+        vm : `ViewModel` instance
 
         """
-        vm = self.create_view(name, **kwargs)
+        vm = self.view_creator.add(name, show=False, **kwargs)
+        vm.on_select(cluster_ids)
         vm.view.show()
         return vm.view

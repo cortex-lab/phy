@@ -42,8 +42,7 @@ def _start_manual_clustering(kwik_path=None,
                              ):
     session = Session(phy_user_dir=tempdir)
     if chunk_size is not None:
-        session.set_user_settings('manual_clustering.'
-                                  'store_chunk_size', chunk_size)
+        session.settings['store_chunk_size'] = chunk_size
     session.open(kwik_path=kwik_path, model=model)
     return session
 
@@ -70,9 +69,11 @@ def test_session_store_features():
 
         f = session.cluster_store.features(0)
         m = session.cluster_store.masks(1)
+        w = session.cluster_store.waveforms(1)
 
         assert f.shape == (len(s0), 28, 2)
         assert m.shape == (len(s1), 28,)
+        assert w.shape == (len(s1), model.n_samples_waveforms, 28,)
 
         ac(f, model.features[s0].reshape((f.shape[0], -1, 2)), 1e-3)
         ac(m, model.masks[s1], 1e-3)
