@@ -151,9 +151,6 @@ class BaseViewModel(object):
 
     def on_select(self, cluster_ids):
         """Must be overriden."""
-        if len(cluster_ids) == 0:
-            self._view.visual.empty = True
-            return
         self._selector.selected_clusters = cluster_ids
         self._update_spike_clusters()
 

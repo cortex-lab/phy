@@ -37,9 +37,6 @@ class WaveformViewModel(BaseViewModel):
             self.scale_factor = 1.
 
     def on_select(self, cluster_ids):
-        if len(cluster_ids) == 0:
-            self._view.visual.empty = True
-            return
         # Get the spikes of the stored waveforms.
         debug("Loading waveforms...")
         if self._store is not None:
@@ -127,13 +124,22 @@ class FeatureViewModel(BaseViewModel):
         """
         self._dimension_selector = func
 
-    def default_dimension_selector(cluster_ids, store=None):
+    def default_dimension_selector(self, cluster_ids, store=None):
         # spikes = vm.view.visual.spike_ids
         fet = self.view.visual.features
         score = np.abs(fet).max(axis=0).max(axis=1)
         # Take the best 3 channels.
         channels = np.argsort(score)[::-1][:3]
         return channels
+
+    def _default_dimensions(self, cluster_ids=None):
+        dimension_selector = (self._dimension_selector or
+                              self.default_dimension_selector)
+        if cluster_ids and self.store and dimension_selector is not None:
+            channels = dimension_selector(cluster_ids, store=self.store)
+        else:
+            channels = np.arange(len(self.model.channels[:3]))
+        return ['time'] + [(ch, 0) for ch in channels]
 
     def _rescale_features(self, features):
         # WARNING: convert features to a 3D array
@@ -172,12 +178,10 @@ class FeatureViewModel(BaseViewModel):
         spike_samples = self.model.spike_samples[::k]
         self.view.background.features = self._rescale_features(features_bg)
         self.view.background.spike_samples = spike_samples
+        self.view.update_dimensions(self._default_dimensions())
 
     def on_select(self, cluster_ids):
         super(FeatureViewModel, self).on_select(cluster_ids)
-        if len(cluster_ids) == 0:
-            self._view.visual.empty = True
-            return
         spikes = self.spike_ids
 
         # Load features.
@@ -200,14 +204,7 @@ class FeatureViewModel(BaseViewModel):
         self.view.visual.cluster_order = cluster_ids
 
         # Choose best projection.
-        # TODO: refactor this, enable/disable
-        dimension_selector = (self._dimension_selector or
-                              self.default_dimension_selector)
-        if self.store and dimension_selector is not None:
-            channels = dimension_selector(cluster_ids, store=self.store)
-        else:
-            channels = np.arange(len(self.model.channels[:3]))
-        self.view.dimensions = ['time'] + [(ch, 0) for ch in channels]
+        self.view.dimensions = self._default_dimensions(cluster_ids)
 
         self.view.update()
 
@@ -251,9 +248,6 @@ class CorrelogramViewModel(BaseViewModel):
 
     def on_select(self, cluster_ids):
         super(CorrelogramViewModel, self).on_select(cluster_ids)
-        if len(cluster_ids) == 0:
-            self._view.visual.empty = True
-            return
         spikes = self.spike_ids
 
         self.view.cluster_ids = cluster_ids

@@ -331,8 +331,8 @@ class FeatureView(BaseSpikeCanvas):
         self._pz.aspect = None
         self._pz.attach(self)
 
-    def _set_pan_constraints(self):
-        n = len(self.visual.dimensions)
+    def _set_pan_constraints(self, dimensions):
+        n = len(dimensions)
         xmin = np.empty((n, n))
         xmax = np.empty((n, n))
         ymin = np.empty((n, n))
@@ -342,8 +342,8 @@ class FeatureView(BaseSpikeCanvas):
         for arr in (xmin, xmax, ymin, ymax):
             arr.fill(np.nan)
         _index_set = False
-        if self.visual.dimensions is not None:
-            for i, dim in enumerate(self.visual.dimensions):
+        if dimensions is not None:
+            for i, dim in enumerate(dimensions):
                 if dim == 'time':
                     ymin[i, :] = -1.
                     xmin[:, i] = -1.
@@ -370,7 +370,7 @@ class FeatureView(BaseSpikeCanvas):
     @property
     def dimensions(self):
         """Dimensions."""
-        return self.visual.dimensions
+        return self.background.dimensions
 
     @dimensions.setter
     def dimensions(self, value):
@@ -378,13 +378,17 @@ class FeatureView(BaseSpikeCanvas):
         # and not in the visual. This is to make sure that the boxes are
         # updated as well.
         self.visual.dimensions = value
-        self.background.dimensions = value
-        self.boxes.n_rows = self.visual.n_rows
-        self.lasso.n_rows = self.visual.n_rows
-        self.axes.n_rows = self.visual.n_rows
+        self.update_dimensions(value)
+
+    def update_dimensions(self, dimensions):
+        n_rows = len(dimensions)
+        self.background.dimensions = dimensions
+        self.boxes.n_rows = n_rows
+        self.lasso.n_rows = n_rows
+        self.axes.n_rows = n_rows
         self.axes.positions = (0, 0)
-        self._pz.n_rows = self.visual.n_rows
-        self._set_pan_constraints()
+        self._pz.n_rows = n_rows
+        self._set_pan_constraints(dimensions)
         self.update()
 
     @property
