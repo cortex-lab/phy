@@ -39,7 +39,7 @@ class WaveformViewModel(BaseViewModel):
     def on_select(self, cluster_ids):
         # Get the spikes of the stored waveforms.
         debug("Loading waveforms...")
-        if self._store is not None:
+        if self._store is not None and len(cluster_ids):
             # Subset the stored spikes for each cluster.
             k = len(cluster_ids)
             spc = {cluster: self._store.waveforms_spikes(cluster)[::k]
@@ -135,7 +135,8 @@ class FeatureViewModel(BaseViewModel):
     def _default_dimensions(self, cluster_ids=None):
         dimension_selector = (self._dimension_selector or
                               self.default_dimension_selector)
-        if cluster_ids and self.store and dimension_selector is not None:
+        if (cluster_ids is not None and self.store and
+                dimension_selector is not None):
             channels = dimension_selector(cluster_ids, store=self.store)
         else:
             channels = np.arange(len(self.model.channels[:3]))

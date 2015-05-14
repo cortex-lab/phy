@@ -74,13 +74,15 @@ class BaseViewModel(object):
                                   position=position or (200, 200),
                                   size=size or (600, 600),
                                   )
+        self._opened = False
 
         @self._view.connect
         def on_draw(event):
-            if self._view.visual.empty:
+            if not self._opened:
                 self.on_open()
-                if self.cluster_ids:
+                if len(self.cluster_ids):
                     self.on_select(self.cluster_ids)
+                self._opened = True
 
     @property
     def model(self):
@@ -123,7 +125,7 @@ class BaseViewModel(object):
                                   cluster_ids,
                                   spikes=None,
                                   ):
-        if self._store is not None:
+        if self._store is not None and len(cluster_ids):
             return self._store.load(name,
                                     cluster_ids,
                                     spikes=spikes,

@@ -62,10 +62,7 @@ def _test_empty(view_model_class, stop=True, **kwargs):
 def _test_view_model(view_model_class, stop=True, **kwargs):
 
     model = MockModel()
-    # clustering = Clustering(model.spike_clusters)
-
     clusters = [3, 4]
-    # spikes = clustering.spikes_in_clusters(clusters)
 
     vm = view_model_class(model=model, **kwargs)
     vm.on_open()
@@ -113,10 +110,6 @@ def test_features_lasso():
     vm.view.lasso.add((1, 1))
     vm.view.lasso.add((0, 1))
     show_test_run(vm.view, _N_FRAMES)
-    # spikes = vm.spikes_in_lasso()
-    # clustering = Clustering(vm.model.spike_clusters)
-    # up = clustering.split(spikes)
-    # vm.on_select(up.added)
     show_test_run(vm.view, _N_FRAMES)
     show_test_stop(vm.view)
 
