@@ -423,7 +423,7 @@ class TraceViewModel(BaseViewModel):
         self.interval = sample - half_size, sample + half_size
 
     def exported_params(self, save_size_pos=True):
-        params = super(WaveformViewModel, self).exported_params(save_size_pos)
+        params = super(TraceViewModel, self).exported_params(save_size_pos)
         params.update({
             'scale_factor': self.scale_factor,
         })

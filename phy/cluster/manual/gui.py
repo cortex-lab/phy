@@ -29,9 +29,6 @@ class KlustaViewa(EventEmitter):
         self._cluster_ids = []
         self.start()
 
-    def show(self):
-        self._dock.show()
-
     def _load_config(self, config=None):
         if config is None:
             config = self.session.settings['gui_config']
@@ -46,6 +43,9 @@ class KlustaViewa(EventEmitter):
         if gs:
             self._dock.restore_geometry_state(gs)
 
+    def show(self):
+        self._dock.show()
+
     def start(self):
         self.session.wizard.start()
         self._cluster_ids = [self.session.wizard.best]
@@ -59,21 +59,20 @@ class KlustaViewa(EventEmitter):
         return self._dock
 
     def add_view(self, item, **kwargs):
-        if isinstance(item, BaseViewModel):
-            view = item.view
-            dw = self._dock.add_view(view, **kwargs)
+        view = item.view if isinstance(item, BaseViewModel) else item
+        dw = self._dock.add_view(view, **kwargs)
 
-            self.connect(item.on_select)
+        if not isinstance(item, BaseViewModel):
+            return
 
-            # Make sure the dock widget is closed when the view it contains
-            # is closed with the Escape key.
-            @view.connect
-            def on_close(e):
-                self.unconnect(item.on_select)
-                dw.close()
+        self.connect(item.on_select)
 
-        else:
-            self._dock.add_view(item, **kwargs)
+        # Make sure the dock widget is closed when the view it contains
+        # is closed with the Escape key.
+        @view.connect
+        def on_close(e):
+            self.unconnect(item.on_select)
+            dw.close()
 
     def get_views(self, name):
         vms = self.session.gui_creator.get(name)
@@ -106,6 +105,25 @@ class KlustaViewa(EventEmitter):
             name = func.__name__
             shortcut = shortcuts.get(name, None)
             self._dock.shortcut(name, shortcut)(func)
+
+        for name in ['reset_gui',
+                     'save',
+                     'undo',
+                     'redo',
+                     'show_shortcuts',
+                     'exit',
+                     'select',
+                     'reset_wizard',
+                     'first',
+                     'last',
+                     'next',
+                     'previous',
+                     'pin',
+                     'unpin',
+                     'merge',
+                     'split',
+                     ]:
+            _add_gui_shortcut(getattr(self, name))
 
         # Update the wizard selection after a clustering action.
         @self.session.connect
