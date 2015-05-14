@@ -27,7 +27,6 @@ from .base import _selected_clusters_colors, BaseViewModel
 class WaveformViewModel(BaseViewModel):
     _view_class = WaveformView
     _view_name = 'waveforms'
-    imported_params = BaseViewModel.imported_params + ('scale_factor',)
 
     def on_open(self):
         super(WaveformViewModel, self).on_open()
@@ -86,12 +85,48 @@ class WaveformViewModel(BaseViewModel):
         self.view.visual.channel_positions = []
         super(WaveformViewModel, self).on_close()
 
+    @property
+    def box_scale(self):
+        """Scale of the waveforms.
+
+        This is a pair of scalars.
+
+        """
+        return self.view.box_scale
+
+    @box_scale.setter
+    def box_scale(self, value):
+        self.view.box_scale = value
+
+    @property
+    def probe_scale(self):
+        """Scale of the probe.
+
+        This is a pair of scalars.
+
+        """
+        return self.view.probe_scale
+
+    @probe_scale.setter
+    def probe_scale(self, value):
+        self.view.probe_scale = value
+
+    @property
+    def overlap(self):
+        """Whether to overlap waveforms."""
+        return self.view.overlap
+
+    @overlap.setter
+    def overlap(self, value):
+        self.view.overlap = value
+
     def exported_params(self, save_size_pos=True):
         params = super(WaveformViewModel, self).exported_params(save_size_pos)
         params.update({
-            'probe_scale': self.view.probe_scale,
-            'box_scale': self.view.box_scale,
             'scale_factor': self.scale_factor,
+            'box_scale': self.view.box_scale,
+            'probe_scale': self.view.probe_scale,
+            'overlap': self.view.box_scale,
         })
         return params
 
@@ -99,15 +134,11 @@ class WaveformViewModel(BaseViewModel):
 class FeatureViewModel(BaseViewModel):
     _view_class = FeatureView
     _view_name = 'features'
-    imported_params = BaseViewModel.imported_params + ('scale_factor',
-                                                       'n_spikes_max_bg',
-                                                       )
+    n_spikes_max_bg = 10000
 
     def __init__(self, **kwargs):
         super(FeatureViewModel, self).__init__(**kwargs)
         self._dimension_selector = None
-        if self.scale_factor is None:
-            self.scale_factor = 1.
 
     def set_dimension_selector(self, func):
         """Decorator for a function that selects the best projection.
@@ -167,6 +198,15 @@ class FeatureViewModel(BaseViewModel):
         spike_ids = _spikes_in_clusters(self.model.spike_clusters, clusters)
         return spike_ids[in_lasso]
 
+    @property
+    def marker_size(self):
+        """Marker size."""
+        return self.view.marker_size
+
+    @marker_size.setter
+    def marker_size(self, value):
+        self.view.marker_size = value
+
     def on_open(self):
         # Get background features.
         # TODO OPTIM: precompute this once for all and store in the cluster
@@ -214,7 +254,7 @@ class FeatureViewModel(BaseViewModel):
         zoom = self._view._pz.zoom_matrix[1:, 1:, 1].min()
         params.update({
             'scale_factor': zoom * self.scale_factor,
-            'marker_size': self.view.marker_size,
+            'marker_size': self.marker_size,
         })
         return params
 
@@ -222,9 +262,8 @@ class FeatureViewModel(BaseViewModel):
 class CorrelogramViewModel(BaseViewModel):
     _view_class = CorrelogramView
     _view_name = 'correlograms'
-    imported_params = BaseViewModel.imported_params + ('binsize',
-                                                       'winsize_bins',
-                                                       )
+    binsize = 20
+    winsize_bins = 41
 
     def change_bins(self, bin=None, half_width=None):
         """Change the parameters of the correlograms.
@@ -277,11 +316,8 @@ class CorrelogramViewModel(BaseViewModel):
 class TraceViewModel(BaseViewModel):
     _view_class = TraceView
     _view_name = 'traces'
-    imported_params = BaseViewModel.imported_params + ('scale_factor',
-                                                       'n_samples_per_spike',
-                                                       'interval_size',
-                                                       'channel_scale',
-                                                       )
+    n_samples_per_spike = 20
+    interval_size = .25
 
     def __init__(self, **kwargs):
         super(TraceViewModel, self).__init__(**kwargs)

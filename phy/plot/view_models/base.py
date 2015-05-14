@@ -50,13 +50,14 @@ class BaseViewModel(object):
     """Used to create views from a model."""
     _view_class = None
     _view_name = ''
-    imported_params = ('n_spikes_max', 'excerpt_size')
+    scale_factor = 1.
 
     def __init__(self, model=None, store=None,
                  n_spikes_max=None, excerpt_size=None,
                  position=None, size=None, backend=None,
                  cluster_ids=None,
                  **kwargs):
+
         self._model = model
         self._store = store
         if cluster_ids is not None:
@@ -76,8 +77,8 @@ class BaseViewModel(object):
                                   )
 
         # Set passed keyword arguments as attributes.
-        for key in self.imported_params:
-            setattr(self, key, kwargs.pop(key, None))
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
         @self._view.connect
         def on_draw(event):

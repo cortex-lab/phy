@@ -33,7 +33,6 @@ class TraceVisual(BaseSpikeVisual):
 
     _shader_name = 'traces'
     _gl_draw_mode = 'line_strip'
-    default_channel_scale = 1.
 
     def __init__(self, **kwargs):
         super(TraceVisual, self).__init__(**kwargs)
@@ -43,7 +42,7 @@ class TraceVisual(BaseSpikeVisual):
         self._sample_rate = None
         self._offset = None
 
-        self.program['u_scale'] = self.default_channel_scale
+        self.program['u_scale'] = 1.
 
     # Data properties
     # -------------------------------------------------------------------------
