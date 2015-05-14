@@ -8,6 +8,7 @@ from __future__ import print_function
 #------------------------------------------------------------------------------
 
 from ...ext.six import string_types
+from ...plot.view_models.base import BaseViewModel
 from ...plot.view_models.kwik import (WaveformViewModel,
                                       FeatureViewModel,
                                       CorrelogramViewModel,
@@ -36,8 +37,11 @@ class ViewCreator(object):
         vm_class = self.view_model_classes[name]
 
         # Load the default options for that view.
+        param_names = (BaseViewModel._imported_params +
+                       vm_class._imported_params)
         params = {key: self.session.settings[name + '_' + key]
-                  for key in vm_class.imported_params}
+                  for key in param_names
+                  if (name + '_' + key) in self.session.settings}
         params.update(kwargs)
 
         vm = vm_class(model=self.session.model,
@@ -57,7 +61,6 @@ class ViewCreator(object):
     def _save_vm_params(self, vm, save_size_pos=True):
         to_save = vm.exported_params(save_size_pos)
         for key, value in to_save.items():
-            print(vm, key, value)
             self.session.settings['{}_{}'.format(vm.name, key)] = value
 
     def save_view_params(self, save_size_pos=True):

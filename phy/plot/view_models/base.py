@@ -51,6 +51,7 @@ class BaseViewModel(object):
     _view_class = None
     _view_name = ''
     scale_factor = 1.
+    _imported_params = ('position', 'size',)
 
     def __init__(self, model=None, store=None,
                  n_spikes_max=None, excerpt_size=None,

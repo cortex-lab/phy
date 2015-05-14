@@ -241,9 +241,10 @@ def test_session_mock():
     with TemporaryDirectory() as tempdir:
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
-        _show_view(session, 'waveforms', [])
-        _show_view(session, 'waveforms', [0])
-        _show_view(session, 'waveforms', [0, 1])
+        for name in ('waveforms', 'features', 'correlograms', 'traces'):
+            _show_view(session, name, [])
+            _show_view(session, name, [0])
+            _show_view(session, name, [0, 1])
 
 
 def test_session_kwik():

@@ -127,7 +127,7 @@ class WaveformViewModel(BaseViewModel):
             'scale_factor': self.scale_factor,
             'box_scale': self.view.box_scale,
             'probe_scale': self.view.probe_scale,
-            'overlap': self.view.box_scale,
+            'overlap': self.view.overlap,
         })
         return params
 
