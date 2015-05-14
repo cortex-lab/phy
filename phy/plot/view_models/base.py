@@ -8,6 +8,7 @@
 
 import numpy as np
 
+from ...utils import _as_list
 from ...utils.array import _unique
 from ...utils.selector import Selector
 
@@ -54,9 +55,12 @@ class BaseViewModel(object):
     def __init__(self, model=None, store=None,
                  n_spikes_max=None, excerpt_size=None,
                  position=None, size=None, backend=None,
+                 cluster_ids=None,
                  **kwargs):
         self._model = model
         self._store = store
+        if cluster_ids is not None:
+            cluster_ids = _as_list(cluster_ids)
 
         # Create the spike/cluster selector.
         self._selector = Selector(model.spike_clusters,
@@ -74,15 +78,13 @@ class BaseViewModel(object):
                                   position=position or (200, 200),
                                   size=size or (600, 600),
                                   )
-        self._opened = False
 
         @self._view.connect
         def on_draw(event):
-            if not self._opened:
+            if self._view.visual.empty:
                 self.on_open()
-                if len(self.cluster_ids):
-                    self.on_select(self.cluster_ids)
-                self._opened = True
+                if cluster_ids:
+                    self.on_select(cluster_ids)
 
     @property
     def model(self):
@@ -155,6 +157,7 @@ class BaseViewModel(object):
         """Must be overriden."""
         self._selector.selected_clusters = cluster_ids
         self._update_spike_clusters()
+        self._view.update()
 
     def on_close(self):
         self._view.visual.spike_clusters = []
