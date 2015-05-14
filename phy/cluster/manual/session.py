@@ -400,8 +400,10 @@ class Session(EventEmitter):
 
         """
         do_show = kwargs.pop('show', True)
-        vm = self.view_creator.add(name, show=do_show, **kwargs)
-        vm.on_select(cluster_ids)
+        vm = self.view_creator.add(name,
+                                   show=do_show,
+                                   cluster_ids=cluster_ids,
+                                   **kwargs)
         if do_show:
             vm.view.show()
         return vm

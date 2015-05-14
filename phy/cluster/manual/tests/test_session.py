@@ -15,7 +15,9 @@ from pytest import raises, mark
 
 from ..session import Session
 from ....utils import _spikes_in_clusters
-from ....utils.testing import show_test
+from ....utils.testing import (show_test, show_test_start, show_test_run,
+                               show_test_stop,
+                               )
 from ....utils.dock import qt_app, _close_qt_after
 from ....utils.tempdir import TemporaryDirectory
 from ....utils.logging import set_level
@@ -30,6 +32,9 @@ pytestmark = mark.long()
 #------------------------------------------------------------------------------
 # Kwik tests
 #------------------------------------------------------------------------------
+
+_N_FRAMES = 2
+
 
 def setup():
     set_level('info')
@@ -47,10 +52,13 @@ def _start_manual_clustering(kwik_path=None,
     return session
 
 
-def _show_view(session, name, cluster_ids=None):
+def _show_view(session, name, cluster_ids=None, stop=True):
     vm = session.show_view(name, cluster_ids, show=False)
-    # vm.scale_factor = 1.
-    show_test(vm.view)
+    vm.scale_factor = 1.
+    show_test_start(vm.view)
+    show_test_run(vm.view, _N_FRAMES)
+    if stop:
+        show_test_stop(vm.view)
     return vm
 
 
@@ -83,10 +91,9 @@ def test_session_mock():
     with TemporaryDirectory() as tempdir:
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
-        # vm = session.show_view('waveforms', [], show=False)
-        # _show_view(session, 'waveforms', [])
+        _show_view(session, 'waveforms', [])
         _show_view(session, 'waveforms', [0])
-        # _show_view(session, 'waveforms', [0, 1, 2, 3, 4])
+        _show_view(session, 'waveforms', [0, 1])
 
 
 def test_session_gui():
