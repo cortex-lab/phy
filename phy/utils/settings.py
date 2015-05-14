@@ -111,21 +111,26 @@ class Settings(object):
         self.phy_user_dir = phy_user_dir
         _ensure_dir_exists(self.phy_user_dir)
 
+        self._default_path = default_path
+
         self._bs = BaseSettings()
+        self._load_user_settings()
+
+    def _load_user_settings(self):
 
         # Load phy's defaults.
-        if default_path:
-            self._bs.load(default_path)
-
-        # Load the user's internal settings.
-        self.internal_settings_path = op.join(self.phy_user_dir,
-                                              'internal_settings')
-        self._bs.load(self.internal_settings_path)
+        if self._default_path:
+            self._bs.load(self._default_path)
 
         # load the user defaults.
         self.user_settings_path = op.join(self.phy_user_dir,
                                           'user_settings.py')
         self._bs.load(self.user_settings_path)
+
+        # Load the user's internal settings.
+        self.internal_settings_path = op.join(self.phy_user_dir,
+                                              'internal_settings')
+        self._bs.load(self.internal_settings_path)
 
     def on_open(self, path):
         # Get the experiment settings path.
@@ -139,6 +144,7 @@ class Settings(object):
         _ensure_dir_exists(self.exp_settings_dir)
 
         # Load experiment-wide settings.
+        self._load_user_settings()
         self._bs.load(self.exp_settings_path)
 
     def save(self):
