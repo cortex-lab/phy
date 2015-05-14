@@ -335,7 +335,7 @@ def test_session_wizard():
             assert session.wizard.most_similar_clusters(best)[0] == 7 - best
 
 
-def _test_session_gui():
+def test_session_gui():
     n_clusters = 5
     n_spikes = 100
     n_channels = 30
@@ -356,6 +356,6 @@ def _test_session_gui():
                                            tempdir=tempdir)
 
         with qt_app():
-            gui = session.show_gui(show=False)
-            _close_qt_after(gui, 0.2)
+            gui = session.gui_creator.add(show=False)
+            # _close_qt_after(gui, 0.2)
             gui.show()

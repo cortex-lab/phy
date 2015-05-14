@@ -29,6 +29,9 @@ class KlustaViewa(EventEmitter):
         self._cluster_ids = []
         self.start()
 
+    def show(self):
+        self._dock.show()
+
     def _load_config(self, config=None):
         if config is None:
             config = self.session.settings['gui_config']
@@ -164,8 +167,11 @@ class KlustaViewa(EventEmitter):
         for name in sorted(shortcuts):
             print("{0:<24}: {1:s}".format(name, str(shortcuts[name])))
 
-    def exit(self):
+    def close(self):
         self._dock.close()
+
+    def exit(self):
+        self.close()
 
     # Selection
     # ---------------------------------------------------------------------
