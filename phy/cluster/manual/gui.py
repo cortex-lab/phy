@@ -24,7 +24,6 @@ class KlustaViewa(EventEmitter):
         self._dock = DockWindow(title=self.__class__.__name__)
         self._load_config(config)
         # Save the geometry state
-        self._dock.on_close(self.on_close)
         self._create_gui_actions()
         self._set_default_view_connections()
 
@@ -45,7 +44,7 @@ class KlustaViewa(EventEmitter):
             self.add_view(item, position=position)
 
         # Load geometry state
-        gs = self.session.settings['gui_state']
+        gs = self.session.settings.get('gui_state', None)
         if gs:
             self._dock.restore_geometry_state(gs)
 
@@ -55,10 +54,6 @@ class KlustaViewa(EventEmitter):
     def start(self):
         self.session.wizard.start()
         self._cluster_ids = self.session.wizard.selection
-
-    def on_close(self):
-        gs = self._dock.save_geometry_state()
-        self.session.settings['gui_state'] = gs
 
     @property
     def main_window(self):
@@ -293,6 +288,8 @@ class GUICreator(object):
         def on_close():
             self._guis.remove(gui)
             self.session.view_creator.save_view_params()
+            gs = gui._dock.save_geometry_state()
+            self.session.settings['gui_state'] = gs
             self.session.close()
 
         if show:

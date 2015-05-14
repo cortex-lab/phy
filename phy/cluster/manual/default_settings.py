@@ -93,29 +93,6 @@ store_chunk_size = 100000
 # -----------------------------------------------------------------------------
 # Internal settings
 # -----------------------------------------------------------------------------
-# NEVER TOUCH THE NONES
 
-gui_state = None
-
-# waveforms_position = None
-# waveforms_size = None
-# # waveforms_scale_factor = .01
-# # waveforms_box_scale = (.05, .03)
-# # waveforms_probe_scale = (1., 1.)
-
-# features_position = None
-# features_size = None
-# # features_scale_factor = .01
-# # features_marker_size = 2.
-
-# correlograms_position = None
-# correlograms_size = None
-
-# traces_position = None
-# traces_size = None
-# # traces_scale_factor = .01
-# # traces_channel_scale = 1.
-# # traces_n_samples_per_spike = 20
-# # traces_interval_size = .25
-# # traces_n_spikes_max = None
-# # traces_excerpt_size = None
+waveforms_scale_factor = .01
+traces_scale_factor = .01

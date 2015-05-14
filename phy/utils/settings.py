@@ -147,6 +147,12 @@ class Settings(object):
     def save(self):
         self._bs.save(self.internal_settings_path)
 
+    def get(self, key, default=None):
+        if key in self:
+            return self[key]
+        else:
+            return default
+
     def __getitem__(self, key):
         return self._bs[key]
 
