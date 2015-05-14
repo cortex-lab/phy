@@ -59,6 +59,9 @@ class BaseSettings(object):
         self._store[key] = value
         self._to_save[key] = value
 
+    def __contains__(self, key):
+        return key in self._store
+
     def _try_load_pickle(self, path):
         try:
             self._store.update(_load_pickle(path))
@@ -79,6 +82,7 @@ class BaseSettings(object):
     def load(self, path):
         if not op.exists(path):
             debug("The settings file {} doesn't exist.".format(path))
+            return
         # Try pickle.
         if not op.splitext(path)[1]:
             if not self._try_load_pickle(path):
@@ -110,7 +114,8 @@ class Settings(object):
         self._bs = BaseSettings()
 
         # Load phy's defaults.
-        self._bs.load(default_path)
+        if default_path:
+            self._bs.load(default_path)
 
         # Load the user's internal settings.
         self.internal_settings_path = op.join(self.phy_user_dir,
@@ -124,6 +129,8 @@ class Settings(object):
 
     def on_open(self, path):
         # Get the experiment settings path.
+        path = op.realpath(op.expanduser(path))
+        self.exp_path = path
         self.exp_name = op.splitext(op.basename(path))[0]
         self.exp_dir = op.dirname(path)
         self.exp_settings_dir = op.join(self.exp_dir, self.exp_name + '.phy')
@@ -133,6 +140,18 @@ class Settings(object):
 
         # Load experiment-wide settings.
         self._bs.load(self.exp_settings_path)
+
+    def save(self):
+        self._bs.save(self.internal_settings_path)
+
+    def __getitem__(self, key):
+        return self._bs[key]
+
+    def __setitem__(self, key, value):
+        self._bs[key] = value
+
+    def __contains__(self, key):
+        return key in self._bs
 
 
 #------------------------------------------------------------------------------
