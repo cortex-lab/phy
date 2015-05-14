@@ -105,9 +105,6 @@ class Settings(object):
 
     def __init__(self, phy_user_dir=None, default_path=None):
         assert phy_user_dir is not None
-        # `.phy/` user directory, ~/.phy by default.
-        # if phy_user_dir is None:
-            # phy_user_dir = _phy_user_dir()
         self.phy_user_dir = phy_user_dir
         _ensure_dir_exists(self.phy_user_dir)
 

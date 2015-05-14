@@ -15,7 +15,7 @@ from pytest import raises, mark
 
 from ..session import Session
 from ....utils import _spikes_in_clusters
-from ....utils.testing import (show_test, show_test_start, show_test_run,
+from ....utils.testing import (show_test_start, show_test_run,
                                show_test_stop,
                                )
 from ....utils.dock import qt_app, _close_qt_after
