@@ -393,6 +393,7 @@ class TraceViewModel(BaseViewModel):
             self.scale_factor = 1.
         if self.interval_size is None:
             self.interval_size = .25
+        self.on_select([])
 
     def on_select(self, cluster_ids):
         # super(TraceViewModel, self).on_select(cluster_ids)

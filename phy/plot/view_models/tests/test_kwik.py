@@ -31,7 +31,7 @@ pytestmark = mark.long()
 # Utilities
 #------------------------------------------------------------------------------
 
-_N_FRAMES = 20
+_N_FRAMES = 2
 
 
 def setup():
@@ -40,7 +40,7 @@ def setup():
 
 def _test_empty(view_model_class, stop=True, **kwargs):
 
-    model = MockModel(n_spikes=1000, n_clusters=1)
+    model = MockModel(n_spikes=1, n_clusters=1)
 
     vm = view_model_class(model=model, **kwargs)
     vm.on_open()
