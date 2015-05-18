@@ -41,7 +41,7 @@ class KlustaViewa(EventEmitter):
                                                      cluster_ids=clusters,
                                                      **kwargs)
 
-            self.add_view(item, position=position)
+            self.add_view(item, title=name.title(), position=position)
 
         # Load geometry state
         gs = self.session.settings.get('gui_state', None)
@@ -66,7 +66,9 @@ class KlustaViewa(EventEmitter):
         if not isinstance(item, BaseViewModel):
             return
 
-        self.connect(item.on_select)
+        @self.connect
+        def on_select(cluster_ids):
+            item.select(cluster_ids)
 
         # Make sure the dock widget is closed when the view it contains
         # is closed with the Escape key.
