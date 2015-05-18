@@ -95,4 +95,5 @@ store_chunk_size = 100000
 # -----------------------------------------------------------------------------
 
 waveforms_scale_factor = .01
+features_scale_factor = .01
 traces_scale_factor = .01
