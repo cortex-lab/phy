@@ -232,6 +232,7 @@ class Wizard(object):
 
     @property
     def selection(self):
+        """Return the current best/match cluster selection."""
         b, m = self.best, self.match
         if b is None:
             return []
