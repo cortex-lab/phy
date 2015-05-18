@@ -163,7 +163,11 @@ class KlustaViewa(EventEmitter):
         # Update the wizard selection after a clustering action.
         @self.session.connect
         def on_cluster(up):
-            self._wizard_select()
+            # Special case: split.
+            if not up.history and up.description == 'assign':
+                self.select(up.added)
+            else:
+                self._wizard_select()
 
         # Move best/match/both to noise/mua/good.
         def _get_clusters(which):
@@ -315,6 +319,7 @@ class KlustaViewa(EventEmitter):
             spikes = features.spikes_in_lasso()
             if spikes is not None:
                 self.session.split(spikes)
+                features.lasso.clear()
                 return
 
 

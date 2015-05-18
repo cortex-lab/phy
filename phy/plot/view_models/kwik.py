@@ -188,6 +188,10 @@ class FeatureViewModel(BaseViewModel):
         features *= self.scale_factor
         return features
 
+    @property
+    def lasso(self):
+        return self.view.lasso
+
     def spikes_in_lasso(self):
         """Return the spike ids from the selected clusters within the lasso."""
         if self.view.lasso.n_points <= 2:
