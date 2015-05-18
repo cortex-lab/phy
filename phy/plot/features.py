@@ -430,6 +430,7 @@ class FeatureView(BaseSpikeCanvas):
             self.lasso.add(pos.ravel())
         elif e.button == 2:
             self.lasso.clear()
+        self.update()
 
     def on_key_press(self, event):
         """Handle key press events."""
