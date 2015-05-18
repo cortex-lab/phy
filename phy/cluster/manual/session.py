@@ -147,6 +147,8 @@ class Session(EventEmitter):
     def merge(self, clusters):
         """Merge some clusters."""
         clusters = list(clusters)
+        if len(clusters) <= 1:
+            return
         info("Merge clusters {}.".format(str(clusters)))
         up = self.clustering.merge(clusters)
         self._global_history.action(self.clustering)
@@ -213,6 +215,11 @@ class Session(EventEmitter):
     def cluster_ids(self):
         """Array of all cluster ids used in the current clustering."""
         return self.clustering.cluster_ids
+
+    @property
+    def n_clusters(self):
+        """Number of clusters in the current clustering."""
+        return self.clustering.n_clusters
 
     # Event callbacks
     # -------------------------------------------------------------------------
