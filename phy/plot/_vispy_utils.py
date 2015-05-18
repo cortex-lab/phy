@@ -16,7 +16,7 @@ from vispy.util.event import Event
 from vispy.visuals import Visual
 
 from ..utils._types import _as_array
-from ..utils.array import _unique
+from ..utils.array import _unique, _in_polygon
 from ..utils.logging import debug
 from ._panzoom import PanZoom
 
@@ -425,9 +425,10 @@ class LassoVisual(_BakeVisual):
         """
         if self.n_points <= 1:
             return
-        from matplotlib.path import Path
-        path = Path(np.array(self._points, dtype=np.float32), closed=True)
-        return path.contains_points(points)
+        polygon = self._points
+        # Close the polygon.
+        polygon.append(polygon[0])
+        return _in_polygon(points, polygon)
 
     @property
     def n_points(self):
