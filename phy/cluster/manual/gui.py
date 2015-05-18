@@ -335,6 +335,23 @@ class GUICreator(object):
         self._guis = []
 
     def add(self, config=None, show=True):
+        """Add a new manual clustering GUI.
+
+        Parameters
+        ----------
+
+        config : list
+            A list of tuples `(name, kwargs)` describing the views in the GUI.
+        show : bool
+            Whether to show the newly-created GUI.
+
+        Returns
+        -------
+
+        gui : KlustaViewa
+            The GUI.
+
+        """
         gui = KlustaViewa(self.session, config=config)
         self._guis.append(gui)
 
@@ -353,10 +370,12 @@ class GUICreator(object):
 
     @property
     def guis(self):
+        """List of GUIs."""
         return self._guis
 
     @property
     def gui(self):
+        """The GUI if there is only one."""
         if len(self._guis) != 1:
             return
         return self._guis[0]
