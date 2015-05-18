@@ -205,6 +205,17 @@ def _fill_index(arr, item):
         return arr
 
 
+def _in_polygon(points, polygon):
+    """Return the points that are inside a polygon."""
+    from matplotlib.path import Path
+    points = _as_array(points)
+    polygon = _as_array(polygon)
+    assert points.ndim == 2
+    assert polygon.ndim == 2
+    path = Path(polygon, closed=True)
+    return path.contains_points(points)
+
+
 # -----------------------------------------------------------------------------
 # Chunking functions
 # -----------------------------------------------------------------------------

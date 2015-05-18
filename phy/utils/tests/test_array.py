@@ -14,6 +14,7 @@ from .._types import _as_array, _as_tuple
 from ..array import (_unique,
                      _normalize,
                      _index_of,
+                     _in_polygon,
                      chunk_bounds,
                      excerpts,
                      data_chunk,
@@ -225,6 +226,17 @@ def test_concatenate_virtual_arrays():
         ae(concat[6:, idx], arr2[1:, idx])
         # Both arrays.
         ae(concat[1:7, idx], _concat(arr1[1:, idx], arr2[:-2, idx]))
+
+
+def test_in_polygon():
+    polygon = [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]
+    points = np.random.uniform(size=(100, 2), low=-1, high=1)
+    idx_expected = np.nonzero((points[:, 0] > 0) &
+                              (points[:, 1] > 0) &
+                              (points[:, 0] < 1) &
+                              (points[:, 1] < 1))[0]
+    idx = np.nonzero(_in_polygon(points, polygon))[0]
+    ae(idx, idx_expected)
 
 
 #------------------------------------------------------------------------------
