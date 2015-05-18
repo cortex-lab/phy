@@ -89,7 +89,9 @@ class ViewCreator(object):
             vm.view.show()
         return vm
 
-    def get(self, name):
+    def get(self, name=None):
         """Return the list of views of a given type."""
+        if name is None:
+            return self._vms
         cls = self.view_model_classes[name]
         return [vm for vm in self._vms if isinstance(vm, cls)]

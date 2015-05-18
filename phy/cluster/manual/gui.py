@@ -7,7 +7,7 @@ from __future__ import print_function
 # Imports
 #------------------------------------------------------------------------------
 
-from ...utils.dock import DockWindow, _create_web_view
+from ...utils.dock import DockWindow, _create_web_view, _title
 from ...utils import EventEmitter, debug
 from ...plot.view_models import BaseViewModel
 
@@ -107,11 +107,15 @@ class KlustaViewa(EventEmitter):
             self.unconnect(item.on_select)
             dw.close()
 
-    def get_views(self, name):
+    @property
+    def dock_widgets(self):
+        return [_.widget() for _ in self._dock.list_views()]
+
+    def get_views(self, name=None):
         """Return the list of views of a given type."""
         vms = self.session.view_creator.get(name)
-        dock_widgets = [_.widget() for _ in self._dock.list_views()]
-        return [vm for vm in vms if vm.view.native in dock_widgets]
+        # Among all created view models, return those that are in the GUI.
+        return [vm for vm in vms if vm.view.native in self.dock_widgets]
 
     def _set_default_view_connections(self):
         """Set view connections."""
@@ -212,15 +216,11 @@ class KlustaViewa(EventEmitter):
 
     def reset_gui(self):
         """Reset the GUI configuration."""
-        # TODO
-        pass
-        # # Add missing views.
-        # present = set(self._dock.view_counts())
-        # default = set(self._default_counts)
-        # to_add = default - present
-        # counts = {name: 1 for name in to_add}
-        # # Add the default views.
-        # self._add_gui_views(gui, self._cluster_ids, counts=counts)
+        config = self.session.settings['gui_config']
+        dock_widgets = self._dock.list_views(is_visible=True)
+        existing = [_title(view) for view in dock_widgets]
+        to_add = [(name, _) for (name, _) in config if name not in existing]
+        self._load_config(to_add)
 
     def save(self):
         """Save the clustering changes to the `.kwik` file."""
@@ -237,6 +237,8 @@ class KlustaViewa(EventEmitter):
     def show_shortcuts(self):
         """Show the list off all keyboard shortcuts."""
         shortcuts = self.session.settings['keyboard_shortcuts']
+        print("Keyboard shortcuts")
+        print("------------------")
         for name in sorted(shortcuts):
             print("{0:<24}: {1:s}".format(name, str(shortcuts[name])))
 
