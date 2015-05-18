@@ -58,14 +58,17 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
         spike_recordings = np.zeros(n_spikes, dtype=np.uint16)
         # Size of the first recording.
         recording_size = 2 * n_spikes // 3
-        # Find the recording offset.
-        recording_offset = spike_samples[recording_size]
-        recording_offset += spike_samples[recording_size + 1]
-        recording_offset //= 2
-        spike_recordings[recording_size:] = 1
-        # Make sure the spike samples of the second recording start over.
-        spike_samples[recording_size:] -= spike_samples[recording_size]
-        spike_samples[recording_size:] += 10
+        if recording_size > 0:
+            # Find the recording offset.
+            recording_offset = spike_samples[recording_size]
+            recording_offset += spike_samples[recording_size + 1]
+            recording_offset //= 2
+            spike_recordings[recording_size:] = 1
+            # Make sure the spike samples of the second recording start over.
+            spike_samples[recording_size:] -= spike_samples[recording_size]
+            spike_samples[recording_size:] += 10
+        else:
+            recording_offset = 1
 
         if spike_samples.max() >= n_samples_traces:
             raise ValueError("There are too many spikes: decrease 'n_spikes'.")
