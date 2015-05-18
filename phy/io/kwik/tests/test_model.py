@@ -276,7 +276,8 @@ def test_kwik_manage_clusterings():
             kwik.clustering = 'automatic'
         kwik.clustering = 'original'
         n_clu = kwik.n_clusters
-        assert kwik.cluster_groups[n_clu - 1] == 3
+        if (n_clu - 1) in kwik.cluster_groups:
+            assert kwik.cluster_groups[n_clu - 1] == 3
         assert len(kwik.cluster_ids) == n_clu
 
         # Test copy.
