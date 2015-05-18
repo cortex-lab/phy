@@ -332,6 +332,7 @@ class TraceViewModel(BaseViewModel):
         debug("Loading traces...")
         # Using channel_order ensures that we get rid of the dead channels.
         # We also keep the channel order as specified by the PRM file.
+        # WARNING: HDF5 does not support out-of-order indexing (...!!)
         traces = self.model.traces[start:end, :][:, self.model.channel_order]
         debug("Done!")
 

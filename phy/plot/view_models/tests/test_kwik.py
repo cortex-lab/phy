@@ -10,12 +10,13 @@
 from pytest import mark
 
 from ....utils.logging import set_level
+from ....utils.tempdir import TemporaryDirectory
 from ....utils.testing import (show_test_start,
                                show_test_stop,
                                show_test_run,
                                )
-from ....io.mock import MockModel
-# from ..clustering import Clustering
+from ....io.kwik.mock import create_mock_kwik
+from ....io.kwik import KwikModel
 from ..kwik import (WaveformViewModel,
                     FeatureViewModel,
                     CorrelogramViewModel,
@@ -31,6 +32,11 @@ pytestmark = mark.long()
 # Utilities
 #------------------------------------------------------------------------------
 
+_N_CLUSTERS = 10
+_N_SPIKES = 100
+_N_CHANNELS = 28
+_N_FETS = 2
+_N_SAMPLES_TRACES = 10000
 _N_FRAMES = 2
 
 
@@ -39,43 +45,59 @@ def setup():
 
 
 def _test_empty(view_model_class, stop=True, **kwargs):
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=1,
+                                    n_spikes=1,
+                                    n_channels=_N_CHANNELS,
+                                    n_features_per_channel=_N_FETS,
+                                    n_samples_traces=_N_SAMPLES_TRACES)
+        model = KwikModel(filename)
 
-    model = MockModel(n_spikes=1, n_clusters=1)
+        vm = view_model_class(model=model, **kwargs)
+        vm.on_open()
 
-    vm = view_model_class(model=model, **kwargs)
-    vm.on_open()
+        # Show the view.
+        show_test_start(vm.view)
+        show_test_run(vm.view, _N_FRAMES)
+        vm.select([0])
+        show_test_run(vm.view, _N_FRAMES)
+        vm.select([])
+        show_test_run(vm.view, _N_FRAMES)
 
-    # Show the view.
-    show_test_start(vm.view)
-    show_test_run(vm.view, _N_FRAMES)
-    vm.select([0])
-    show_test_run(vm.view, _N_FRAMES)
-    vm.select([])
-    show_test_run(vm.view, _N_FRAMES)
+        if stop:
+            show_test_stop(vm.view)
 
-    if stop:
-        show_test_stop(vm.view)
-
-    return vm
+        return vm
 
 
 def _test_view_model(view_model_class, stop=True, **kwargs):
 
-    model = MockModel()
-    clusters = [3, 4]
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=_N_CLUSTERS,
+                                    n_spikes=_N_SPIKES,
+                                    n_channels=_N_CHANNELS,
+                                    n_features_per_channel=_N_FETS,
+                                    n_samples_traces=_N_SAMPLES_TRACES)
+        model = KwikModel(filename)
 
-    vm = view_model_class(model=model, **kwargs)
-    vm.on_open()
-    vm.select(clusters)
+        clusters = [3, 4]
 
-    # Show the view.
-    show_test_start(vm.view)
-    show_test_run(vm.view, _N_FRAMES)
+        vm = view_model_class(model=model, **kwargs)
+        vm.on_open()
+        vm.select(clusters)
 
-    if stop:
-        show_test_stop(vm.view)
+        # Show the view.
+        show_test_start(vm.view)
+        show_test_run(vm.view, _N_FRAMES)
 
-    return vm
+        if stop:
+            show_test_stop(vm.view)
+
+        return vm
 
 
 #------------------------------------------------------------------------------

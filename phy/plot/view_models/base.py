@@ -9,7 +9,7 @@
 import numpy as np
 
 from ...utils import _as_list
-from ...utils.array import _unique
+from ...utils.array import _unique, _spikes_in_clusters
 from ...utils.selector import Selector
 
 
@@ -141,7 +141,13 @@ class BaseViewModel(object):
             return self._store.load(name, self.cluster_ids, spikes=spikes)
         else:
             out = getattr(self._model, name)
-            return out[spikes] if spikes is not None else out
+            if spikes is None:
+                spikes = _spikes_in_clusters(self.model.spike_clusters,
+                                             self.cluster_ids)
+            if len(spikes) == 0:
+                return np.zeros((0,) + out.shape[1:], dtype=out.dtype)
+            else:
+                return out[spikes]
 
     def _update_spike_clusters(self, spikes=None):
         """Update the spike clusters and cluster colors."""
