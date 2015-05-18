@@ -232,6 +232,9 @@ class FeatureViewModel(BaseViewModel):
         features = self.load('features')
         masks = self.load('masks')
 
+        nc = len(self.model.channel_order)
+        nf = self.model.n_features_per_channel
+        features = features.reshape((len(spikes), nc, nf))
         self.view.visual.features = self._rescale_features(features)
         self.view.visual.masks = masks
 

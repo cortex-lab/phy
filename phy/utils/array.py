@@ -422,6 +422,7 @@ class PartialArray(object):
         self._trailing_index = _as_tuple(trailing_index)
         self.shape = _partial_shape(arr.shape, self._trailing_index)
         self.dtype = arr.dtype
+        self.ndim = len(self.shape)
 
     def __getitem__(self, item):
         if self._trailing_index is None:
