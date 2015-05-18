@@ -87,11 +87,11 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
         vm = view_model_class(model=model, **kwargs)
         vm.on_open()
 
-        vm.select([3, 4])
+        vm.select([2, 3])
         show_test_start(vm.view)
         show_test_run(vm.view, _N_FRAMES)
 
-        vm.select([4, 3])
+        vm.select([3, 2])
         show_test_start(vm.view)
         show_test_run(vm.view, _N_FRAMES)
 
@@ -122,7 +122,7 @@ def test_features_empty():
 
 
 def test_features_full():
-    _test_view_model(FeatureViewModel)
+    _test_view_model(FeatureViewModel, marker_size=10)
 
 
 def test_features_lasso():

@@ -245,7 +245,11 @@ class BaseSpikeVisual(_BakeVisual):
 
     @property
     def cluster_colors(self):
-        """Colors of the displayed clusters."""
+        """Colors of the displayed clusters.
+
+        The first color is the color of the smallest cluster.
+
+        """
         return self._cluster_colors
 
     @cluster_colors.setter
