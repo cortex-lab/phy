@@ -8,7 +8,7 @@
 
 from operator import itemgetter
 
-from ...utils import _is_array_like, info
+from ...utils import _is_array_like, info, warn
 from ._utils import History
 
 
@@ -222,7 +222,9 @@ class Wizard(object):
 
     @best.setter
     def best(self, value):
-        assert value in self._best_list
+        if value not in self._best_list:
+            warn("Cluster {} is not in the list ".format(value) +
+                 "of best clusters.")
         self._best = value
 
     @property
@@ -243,8 +245,9 @@ class Wizard(object):
 
     @match.setter
     def match(self, value):
-        if value is not None:
-            assert value in self._match_list
+        if value is not None and value not in self._match_list:
+            warn("Cluster {} is not in the list ".format(value) +
+                 "of closest matches.")
         self._match = value
 
     @property
@@ -279,10 +282,10 @@ class Wizard(object):
         # Handle the case where we arrive at the end of the best list.
         if self.best is not None and len(self._best_list) <= 1:
             info("The wizard has finished.")
+            return
         else:
             self.best = _next(self._best_list,
                               self._best,
-                              # self._is_not_ignored,
                               )
         if self.match is not None:
             self._set_match_list()
@@ -407,9 +410,9 @@ class Wizard(object):
             parents = [x for (x, y) in up.descendants if y == clu]
             parent = parents[0]
             group = self._group(parent)
-            if self._best_list:
-                position = self._best_list.index(parent)
-                self._add([clu], group, position)
+            position = (self._best_list.index(parent)
+                        if self._best_list else None)
+            self._add([clu], group, position)
         # Delete old clusters.
         self._delete(up.deleted)
 
