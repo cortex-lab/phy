@@ -165,9 +165,7 @@ class KlustaViewa(EventEmitter):
         def on_cluster(up):
             self._wizard_select()
 
-        # Move best/match/both to noise/mua/good
-        # ---------------------------------------------------------------------
-
+        # Move best/match/both to noise/mua/good.
         def _get_clusters(which):
             return {
                 'best': [self.session.wizard.best],
@@ -313,8 +311,11 @@ class KlustaViewa(EventEmitter):
 
     def split(self):
         """Create a new cluster out of the selected spikes."""
-        # TODO: refactor
-        pass
+        for features in self.get_views('features'):
+            spikes = features.spikes_in_lasso()
+            if spikes is not None:
+                self.session.split(spikes)
+                return
 
 
 #------------------------------------------------------------------------------
