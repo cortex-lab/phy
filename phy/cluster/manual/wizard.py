@@ -413,6 +413,14 @@ class Wizard(object):
         # Delete old clusters.
         self._delete(up.deleted)
 
+    def _select_history(self):
+        best, match = self._history.current_item
+        if match is not None:
+            self.pin(best)
+            self.match = match
+        else:
+            self.best = best
+
     def _update_selection(self, up):
         # New selection.
         if up.history == 'undo':
@@ -420,17 +428,13 @@ class Wizard(object):
             if not self._history.is_last():
                 self._history.undo()
             self._history.undo()
-            best, match = self._history.current_item
-            self.pin(best)
-            self.match = match
+            self._select_history()
         elif up.history == 'redo':
             # Two redo except for the first one.
             if not self._history.is_first():
                 self._history.redo()
             self._history.redo()
-            best, match = self._history.current_item
-            self.pin(best)
-            self.match = match
+            self._select_history()
         elif up.description in ('merge', 'assign'):
             self.pin(up.added[0])
         elif up.description == 'metadata_group':
@@ -443,6 +447,8 @@ class Wizard(object):
     def on_cluster(self, up):
         if not self._best_list or not self._match_list:
             self._update_state(up)
+            if self._best_list:
+                self._update_selection(up)
             return
         if up is None:
             return
