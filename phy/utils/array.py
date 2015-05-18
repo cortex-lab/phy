@@ -428,8 +428,13 @@ class PartialArray(object):
             return self._arr[item]
         else:
             item = _as_tuple(item)
+            k = len(item)
+            n = len(self._arr.shape)
+            t = len(self._trailing_index)
+            if k < (n - t):
+                item += (slice(None, None, None),) * (n - k - t)
             item += self._trailing_index
-            if len(item) != len(self._arr.shape):
+            if len(item) != n:
                 raise ValueError("The array selection is invalid: "
                                  "{0}".format(str(item)))
             return self._arr[item]

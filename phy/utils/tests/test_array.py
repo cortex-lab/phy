@@ -344,8 +344,7 @@ def test_partial_array():
     ae(pa[0, 2], arr[0, 2, 1])
     ae(pa[0:2, 1], arr[0:2, 1, 1])
     ae(pa[[1, 2], 0], arr[[1, 2], 0, 1])
-    with raises(ValueError):
-        pa[[1, 2]]
+    ae(pa[[1, 2]], arr[[1, 2], :, 1])
 
     # Slice and 3D.
     arr = np.random.rand(5, 10, 2)
