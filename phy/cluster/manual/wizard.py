@@ -379,7 +379,7 @@ class Wizard(object):
             if clu in self._match_list:
                 self._match_list.remove(clu)
             if clu == self._best:
-                self.unpin()
+                self._best = self._best_list[0] if self._best_list else None
             if clu == self._match:
                 self._match = None
 
@@ -426,6 +426,7 @@ class Wizard(object):
             self.best = self._best_list[0]
         # Select the history match.
         if match is not None and self._match_list:
+            self._set_match_list()
             assert match in self._match_list
             self.match = match
         # Ensure the current match is valid.
