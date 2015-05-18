@@ -10,7 +10,6 @@ import os.path as op
 
 from pytest import raises
 
-from ..logging import set_level
 from ..settings import (BaseSettings,
                         Settings,
                         )
@@ -20,14 +19,6 @@ from ..tempdir import TemporaryDirectory
 #------------------------------------------------------------------------------
 # Test settings
 #------------------------------------------------------------------------------
-
-def setup():
-    set_level('debug')
-
-
-def teardown():
-    set_level('info')
-
 
 def test_base_settings():
     s = BaseSettings()
