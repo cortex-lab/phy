@@ -333,6 +333,32 @@ def test_session_wizard():
             assert session.wizard.most_similar_clusters(best)[0] == 7 - best
 
 
+def test_session_history():
+
+    n_clusters = 5
+    n_spikes = 100
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 3000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        kwik_path = create_mock_kwik(tempdir,
+                                     n_clusters=n_clusters,
+                                     n_spikes=n_spikes,
+                                     n_channels=n_channels,
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
+
+        session = _start_manual_clustering(kwik_path=kwik_path,
+                                           tempdir=tempdir)
+
+        session.wizard.start()
+        session.wizard.pin()
+        session.merge(session.wizard.selection)
+
+
 @mark.long
 def test_session_gui():
     n_clusters = 15
