@@ -200,7 +200,10 @@ class BaseSpikeVisual(_BakeVisual):
 
     @masks.setter
     def masks(self, value):
+        assert isinstance(value, np.ndarray)
         value = _as_array(value)
+        if value.ndim == 1:
+            value = value[None, :]
         self._set_or_assert_n_spikes(value)
         # TODO: support sparse structures
         assert value.ndim == 2
