@@ -26,7 +26,6 @@ class ViewCreator(object):
         'features': FeatureViewModel,
         'correlograms': CorrelogramViewModel,
         'traces': TraceViewModel,
-        # TODO: wizard
     }
 
     def __init__(self, session):

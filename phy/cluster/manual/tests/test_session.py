@@ -25,10 +25,6 @@ from ....io.mock import MockModel
 from ....io.kwik.mock import create_mock_kwik
 
 
-# Skip these tests in "make test-quick".
-pytestmark = mark.long()
-
-
 #------------------------------------------------------------------------------
 # Kwik tests
 #------------------------------------------------------------------------------
@@ -237,6 +233,7 @@ def test_session_multiple_clusterings():
         assert session.model.cluster_ids == n_clusters * 2
 
 
+@mark.long
 def test_session_mock():
     with TemporaryDirectory() as tempdir:
         session = _start_manual_clustering(model=MockModel(),
@@ -286,8 +283,8 @@ def test_session_kwik():
             assert cs.mean_probe_position(cluster).shape == (2,)
             assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
 
-        _show_view(session, 'waveforms', [0])
-        _show_view(session, 'features', [0])
+        # _show_view(session, 'waveforms', [0])
+        # _show_view(session, 'features', [0])
 
         session.close()
 
@@ -336,6 +333,7 @@ def test_session_wizard():
             assert session.wizard.most_similar_clusters(best)[0] == 7 - best
 
 
+@mark.long
 def test_session_gui():
     n_clusters = 15
     n_spikes = 500
