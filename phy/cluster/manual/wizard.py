@@ -8,7 +8,7 @@
 
 from operator import itemgetter
 
-from ...utils import _is_array_like, info, warn
+from ...utils import _is_array_like, warn
 from ._utils import History
 
 
@@ -225,6 +225,7 @@ class Wizard(object):
         if value not in self._best_list:
             warn("Cluster {} is not in the list ".format(value) +
                  "of best clusters.")
+            return
         self._best = value
 
     @property
@@ -248,6 +249,7 @@ class Wizard(object):
         if value is not None and value not in self._match_list:
             warn("Cluster {} is not in the list ".format(value) +
                  "of closest matches.")
+            return
         self._match = value
 
     @property
@@ -277,24 +279,26 @@ class Wizard(object):
     # Navigation
     #--------------------------------------------------------------------------
 
+    @property
+    def _has_finished(self):
+        return self.best is not None and len(self._best_list) <= 1
+
     def next_best(self):
         """Select the next best cluster."""
-        # Handle the case where we arrive at the end of the best list.
-        if self.best is not None and len(self._best_list) <= 1:
-            info("The wizard has finished.")
+        if self._has_finished:
             return
-        else:
-            self.best = _next(self._best_list,
-                              self._best,
-                              )
+        self.best = _next(self._best_list,
+                          self._best,
+                          )
         if self.match is not None:
             self._set_match_list()
 
     def previous_best(self):
         """Select the previous best in cluster."""
+        if self._has_finished:
+            return
         self.best = _previous(self._best_list,
                               self._best,
-                              # self._is_not_ignored,
                               )
         if self.match is not None:
             self._set_match_list()
@@ -307,14 +311,12 @@ class Wizard(object):
         else:
             self.match = _next(self._match_list,
                                self._match,
-                               # self._is_not_ignored,
                                )
 
     def previous_match(self):
         """Select the previous match."""
         self.match = _previous(self._match_list,
                                self._match,
-                               # self._is_not_ignored,
                                )
 
     def next(self):
@@ -354,6 +356,8 @@ class Wizard(object):
 
     def pin(self, cluster=None):
         """Pin the current best cluster and set the list of closest matches."""
+        if self._has_finished:
+            return
         if cluster is None:
             cluster = self.best
         if self.match is not None and self.best == cluster:
@@ -448,6 +452,8 @@ class Wizard(object):
                 self.next_match()
 
     def on_cluster(self, up):
+        if self._has_finished:
+            return
         if not self._best_list or not self._match_list:
             self._update_state(up)
             if self._best_list:

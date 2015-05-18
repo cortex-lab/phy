@@ -384,6 +384,8 @@ class Clustering(object):
                                                               dtype=np.int64)
 
         spike_ids = _as_array(spike_ids)
+        if len(spike_ids) == 0:
+            return UpdateInfo()
         assert len(spike_ids) == len(spike_clusters_rel)
         assert spike_ids.min() >= 0
         assert spike_ids.max() < self._n_spikes

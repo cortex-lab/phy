@@ -31,8 +31,8 @@ def _update_cluster_selection(clusters, up):
 def update_info(**kwargs):
     """Hold information about clustering changes."""
     d = dict(
-        description=None,  # information about the update: 'merge', 'assign',
-                           # or 'metadata_<name>'
+        description='',  # information about the update: 'merge', 'assign',
+                         # or 'metadata_<name>'
         history=None,  # None, 'undo', or 'redo'
         spikes=[],  # all spikes affected by the update
         added=[],  # new clusters

@@ -335,11 +335,11 @@ def test_session_wizard():
 
 def test_session_history():
 
-    n_clusters = 5
-    n_spikes = 100
+    n_clusters = 15
+    n_spikes = 300
     n_channels = 28
     n_fets = 2
-    n_samples_traces = 3000
+    n_samples_traces = 10000
 
     with TemporaryDirectory() as tempdir:
 
@@ -356,7 +356,27 @@ def test_session_history():
 
         session.wizard.start()
         session.wizard.pin()
-        session.merge(session.wizard.selection)
+
+        for _ in range(10):
+            session.merge(session.wizard.selection)
+            session.wizard.next()
+            session.undo()
+            session.wizard.next()
+            session.redo()
+            session.wizard.next()
+
+            spikes = _spikes_in_clusters(session.model.spike_clusters,
+                                         session.wizard.selection)
+            if len(spikes):
+                session.split(spikes[::10])
+                session.wizard.next()
+                session.undo()
+            session.merge(session.wizard.selection)
+            session.wizard.next()
+            session.wizard.next()
+
+            session.wizard.next_best()
+            ae(session.model.spike_clusters, session.clustering.spike_clusters)
 
 
 @mark.long
