@@ -8,7 +8,7 @@
 
 from operator import itemgetter
 
-from ...utils import _is_array_like, warn
+from ...utils import _is_array_like
 from ._utils import History
 
 
@@ -222,10 +222,7 @@ class Wizard(object):
 
     @best.setter
     def best(self, value):
-        if value not in self._best_list:
-            warn("Cluster {} is not in the list ".format(value) +
-                 "of best clusters.")
-            return
+        assert value in self._best_list
         self._best = value
 
     @property
@@ -246,10 +243,8 @@ class Wizard(object):
 
     @match.setter
     def match(self, value):
-        if value is not None and value not in self._match_list:
-            warn("Cluster {} is not in the list ".format(value) +
-                 "of closest matches.")
-            return
+        if value is not None:
+            assert value in self._match_list
         self._match = value
 
     @property
@@ -422,11 +417,20 @@ class Wizard(object):
 
     def _select_history(self):
         best, match = self._history.current_item
-        if match is not None:
-            self.pin(best)
-            self.match = match
-        else:
+        # Select the history best.
+        if best is not None and self._best_list:
+            assert best in self._best_list
             self.best = best
+        # Ensure the current best cluster is valid.
+        if self.best is not None and self.best not in self._best_list:
+            self.best = self._best_list[0]
+        # Select the history match.
+        if match is not None and self._match_list:
+            assert match in self._match_list
+            self.match = match
+        # Ensure the current match is valid.
+        if self.match is not None and self.match not in self._match_list:
+            self.match = self._match_list[0]
 
     def _update_selection(self, up):
         # New selection.
@@ -450,6 +454,7 @@ class Wizard(object):
                 self.next_best()
             elif cluster == self.match:
                 self.next_match()
+        self._check()
 
     def on_cluster(self, up):
         if self._has_finished:

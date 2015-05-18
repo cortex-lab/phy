@@ -355,7 +355,14 @@ def test_session_history():
                                            tempdir=tempdir)
 
         session.wizard.start()
-        session.wizard.pin()
+
+        spikes = _spikes_in_clusters(session.model.spike_clusters,
+                                     session.wizard.selection)
+        session.split(spikes[::3])
+        session.undo()
+        session.wizard.next()
+        session.redo()
+        session.undo()
 
         for _ in range(10):
             session.merge(session.wizard.selection)
