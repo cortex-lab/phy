@@ -84,13 +84,14 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
                                     n_samples_traces=_N_SAMPLES_TRACES)
         model = KwikModel(filename)
 
-        clusters = [3, 4]
-
         vm = view_model_class(model=model, **kwargs)
         vm.on_open()
-        vm.select(clusters)
 
-        # Show the view.
+        vm.select([3, 4])
+        show_test_start(vm.view)
+        show_test_run(vm.view, _N_FRAMES)
+
+        vm.select([4, 3])
         show_test_start(vm.view)
         show_test_run(vm.view, _N_FRAMES)
 
@@ -116,6 +117,10 @@ def test_waveforms_empty():
 # Features
 #------------------------------------------------------------------------------
 
+def test_features_empty():
+    _test_empty(FeatureViewModel)
+
+
 def test_features_full():
     _test_view_model(FeatureViewModel)
 
@@ -136,13 +141,27 @@ def test_features_lasso():
     show_test_stop(vm.view)
 
 
-def test_features_empty():
-    _test_empty(FeatureViewModel)
-
-
 #------------------------------------------------------------------------------
 # Correlograms
 #------------------------------------------------------------------------------
+
+def test_ccg_empty():
+    _test_empty(CorrelogramViewModel,
+                binsize=20,
+                winsize_bins=51,
+                n_excerpts=100,
+                excerpt_size=100,
+                )
+
+
+def test_ccg_simple():
+    _test_view_model(CorrelogramViewModel,
+                     binsize=10,
+                     winsize_bins=61,
+                     n_excerpts=80,
+                     excerpt_size=120,
+                     )
+
 
 def test_ccg_full():
     vm = _test_view_model(CorrelogramViewModel,
@@ -158,21 +177,16 @@ def test_ccg_full():
     show_test_stop(vm.view)
 
 
-def test_ccg_empty():
-    _test_empty(CorrelogramViewModel,
-                binsize=20,
-                winsize_bins=51,
-                n_excerpts=100,
-                excerpt_size=100,
-                )
-
-
 #------------------------------------------------------------------------------
 # Traces
 #------------------------------------------------------------------------------
 
 def test_traces_empty():
     _test_empty(TraceViewModel)
+
+
+def test_traces_simple():
+    _test_view_model(TraceViewModel)
 
 
 def test_traces_full():
