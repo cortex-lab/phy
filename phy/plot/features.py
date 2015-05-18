@@ -26,7 +26,7 @@ from ..utils.logging import debug
 
 
 #------------------------------------------------------------------------------
-# Features sisual
+# Features visual
 #------------------------------------------------------------------------------
 
 class BaseFeatureVisual(BaseSpikeVisual):
