@@ -32,8 +32,8 @@ pytestmark = mark.long()
 # Utilities
 #------------------------------------------------------------------------------
 
-_N_CLUSTERS = 10
-_N_SPIKES = 100
+_N_CLUSTERS = 5
+_N_SPIKES = 200
 _N_CHANNELS = 28
 _N_FETS = 2
 _N_SAMPLES_TRACES = 10000
@@ -122,21 +122,29 @@ def test_features_empty():
 
 
 def test_features_full():
-    _test_view_model(FeatureViewModel, marker_size=10)
+    _test_view_model(FeatureViewModel, marker_size=8)
 
 
 def test_features_lasso():
     vm = _test_view_model(FeatureViewModel,
+                          marker_size=8,
                           stop=False,
-                          do_cluster=False,
                           )
     show_test_run(vm.view, _N_FRAMES)
-    vm.view.lasso.box = 1, 2
-    vm.view.lasso.add((0, 0))
-    vm.view.lasso.add((1, 0))
-    vm.view.lasso.add((1, 1))
-    vm.view.lasso.add((0, 1))
+    box = (1, 2)
+    vm.view.lasso.box = box
+    x, y = 0., 1.
+    vm.view.lasso.add((x, x))
+    vm.view.lasso.add((y, x))
+    vm.view.lasso.add((y, y))
+    vm.view.lasso.add((x, y))
     show_test_run(vm.view, _N_FRAMES)
+    # Find spikes in lasso.
+    spikes = vm.spikes_in_lasso()
+    # Change their clusters.
+    vm.model.spike_clusters[spikes] = 3
+    sc = vm.model.spike_clusters
+    vm.view.visual.spike_clusters = sc[vm.view.visual.spike_ids]
     show_test_run(vm.view, _N_FRAMES)
     show_test_stop(vm.view)
 
