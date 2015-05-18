@@ -124,22 +124,13 @@ class BaseViewModel(object):
     def n_spikes(self):
         return self._selector.n_spikes
 
-    def _load_from_store_or_model(self,
-                                  name,
-                                  cluster_ids,
-                                  spikes=None,
-                                  ):
-        if self._store is not None and len(cluster_ids):
-            return self._store.load(name,
-                                    cluster_ids,
-                                    spikes=spikes,
-                                    )
+    def load(self, name, spike_selection=None):
+        spikes = self.spike_ids if spike_selection is None else None
+        if self._store is not None and len(self.cluster_ids):
+            return self._store.load(name, self.cluster_ids, spikes=spikes)
         else:
             out = getattr(self._model, name)
-            if spikes is not None:
-                return out[spikes]
-            else:
-                return out
+            return out[spikes] if spikes is not None else out
 
     def _update_spike_clusters(self, spikes=None):
         """Update the spike clusters and cluster colors."""

@@ -74,7 +74,7 @@ class WaveformViewModel(BaseViewModel):
         self.view.visual.waveforms = waveforms
 
         # Masks.
-        masks = self._load_from_store_or_model('masks', cluster_ids, spikes)
+        masks = self.load('masks')
         self.view.visual.masks = masks
 
         # Spikes.
@@ -192,7 +192,7 @@ class FeatureViewModel(BaseViewModel):
         if self.view.lasso.n_points <= 2:
             return
         clusters = self.cluster_ids
-        features = self._load_from_store_or_model('features', clusters)
+        features = self.load('features')
         features = self._rescale_features(features)
         box = self.view.lasso.box
         points = self.view.visual.project(features, box)
@@ -227,14 +227,8 @@ class FeatureViewModel(BaseViewModel):
         super(FeatureViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
 
-        # Load features.
-        features = self._load_from_store_or_model('features',
-                                                  cluster_ids,
-                                                  spikes)
-        # Load masks.
-        masks = self._load_from_store_or_model('masks',
-                                               cluster_ids,
-                                               spikes)
+        features = self.load('features')
+        masks = self.load('masks')
 
         self.view.visual.features = self._rescale_features(features)
         self.view.visual.masks = masks
