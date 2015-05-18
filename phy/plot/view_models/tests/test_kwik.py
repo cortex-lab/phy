@@ -48,9 +48,9 @@ def _test_empty(view_model_class, stop=True, **kwargs):
     # Show the view.
     show_test_start(vm.view)
     show_test_run(vm.view, _N_FRAMES)
-    vm.on_select([0])
+    vm.select([0])
     show_test_run(vm.view, _N_FRAMES)
-    vm.on_select([])
+    vm.select([])
     show_test_run(vm.view, _N_FRAMES)
 
     if stop:
@@ -66,7 +66,7 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
 
     vm = view_model_class(model=model, **kwargs)
     vm.on_open()
-    vm.on_select(clusters)
+    vm.select(clusters)
 
     # Show the view.
     show_test_start(vm.view)

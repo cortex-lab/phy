@@ -36,14 +36,15 @@ class WaveformViewModel(BaseViewModel):
         if self.scale_factor is None:
             self.scale_factor = 1.
 
-    def on_select(self, cluster_ids):
+    def on_select(self):
         # Get the spikes of the stored waveforms.
         debug("Loading waveforms...")
-        if self._store is not None and len(cluster_ids):
+        clusters = self.cluster_ids
+        if self._store is not None and len(clusters):
             # Subset the stored spikes for each cluster.
-            k = len(cluster_ids)
+            k = len(clusters)
             spc = {cluster: self._store.waveforms_spikes(cluster)[::k]
-                   for cluster in cluster_ids}
+                   for cluster in clusters}
             # Get all the spikes for the clusters.
             spikes = _concatenate_per_cluster_arrays(spc, spc)
             # Subset the spikes with the selector.
@@ -51,14 +52,14 @@ class WaveformViewModel(BaseViewModel):
             spikes = self.spike_ids
             # Load the waveforms for the subset spikes.
             waveforms = self._store.load('waveforms',
-                                         cluster_ids,
+                                         clusters,
                                          spikes,
                                          spikes_per_cluster=spc,
                                          )
         else:
             # If there's no store, just take the waveforms from the traces
             # (slower).
-            self._selector.selected_clusters = cluster_ids
+            self._selector.selected_clusters = clusters
             spikes = self.spike_ids
             waveforms = self.model.waveforms[spikes]
 
@@ -67,7 +68,7 @@ class WaveformViewModel(BaseViewModel):
         debug("Done!")
 
         # Cluster display order.
-        self.view.visual.cluster_order = cluster_ids
+        self.view.visual.cluster_order = clusters
 
         # Waveforms.
         waveforms *= self.scale_factor
@@ -223,9 +224,10 @@ class FeatureViewModel(BaseViewModel):
         self.view.background.spike_samples = spike_samples
         self.view.update_dimensions(self._default_dimensions())
 
-    def on_select(self, cluster_ids):
-        super(FeatureViewModel, self).on_select(cluster_ids)
+    def on_select(self):
+        super(FeatureViewModel, self).on_select()
         spikes = self.spike_ids
+        clusters = self.cluster_ids
 
         features = self.load('features')
         masks = self.load('masks')
@@ -238,10 +240,10 @@ class FeatureViewModel(BaseViewModel):
         self.view.visual.spike_samples = self.model.spike_samples[spikes]
 
         # Cluster display order.
-        self.view.visual.cluster_order = cluster_ids
+        self.view.visual.cluster_order = clusters
 
         # Choose best projection.
-        self.view.dimensions = self._default_dimensions(cluster_ids)
+        self.view.dimensions = self._default_dimensions(clusters)
 
         self.view.update()
 
@@ -281,13 +283,14 @@ class CorrelogramViewModel(BaseViewModel):
         half_width = np.clip(half_width * .001, .001, 1e6)
         self.winsize_bins = 2 * int(half_width / bin) + 1
 
-        self.on_select(self.cluster_ids)
+        self.select(self.cluster_ids)
 
-    def on_select(self, cluster_ids):
-        super(CorrelogramViewModel, self).on_select(cluster_ids)
+    def on_select(self):
+        super(CorrelogramViewModel, self).on_select()
         spikes = self.spike_ids
+        clusters = self.cluster_ids
 
-        self.view.cluster_ids = cluster_ids
+        self.view.cluster_ids = clusters
 
         # Compute the correlograms.
         spike_samples = self.model.spike_samples[spikes]
@@ -295,7 +298,7 @@ class CorrelogramViewModel(BaseViewModel):
 
         ccgs = correlograms(spike_samples,
                             spike_clusters,
-                            cluster_order=cluster_ids,
+                            cluster_order=clusters,
                             binsize=self.binsize,
                             winsize_bins=self.winsize_bins,
                             )
@@ -306,7 +309,7 @@ class CorrelogramViewModel(BaseViewModel):
         self.view.visual.correlograms = ccgs
 
         # Take the cluster order into account.
-        self.view.visual.cluster_order = cluster_ids
+        self.view.visual.cluster_order = clusters
         self.view.update()
 
 
@@ -437,20 +440,20 @@ class TraceViewModel(BaseViewModel):
             self.scale_factor = 1.
         if self.interval_size is None:
             self.interval_size = .25
-        self.on_select([])
+        self.select([])
 
-    def on_select(self, cluster_ids):
-        self._selector.selected_clusters = cluster_ids
+    def on_select(self):
         # Get the spikes in the selected clusters.
         spikes = self.spike_ids
-        n_clusters = len(cluster_ids)
+        clusters = self.cluster_ids
+        n_clusters = len(clusters)
         spike_clusters = self.model.spike_clusters[spikes]
 
         # Update the clusters of the trace view.
         visual = self._view.visual
         visual.spike_clusters = spike_clusters
-        visual.cluster_ids = cluster_ids
-        visual.cluster_order = cluster_ids
+        visual.cluster_ids = clusters
+        visual.cluster_order = clusters
         visual.cluster_colors = _selected_clusters_colors(n_clusters)
 
         # Select the default interval.

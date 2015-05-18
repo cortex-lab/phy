@@ -47,11 +47,11 @@ def _selected_clusters_colors(n_clusters):
 #------------------------------------------------------------------------------
 
 class BaseViewModel(object):
-    """Used to create views from a model."""
+    """Create a view from a model."""
     _view_class = None
     _view_name = ''
-    scale_factor = 1.
     _imported_params = ('position', 'size',)
+    scale_factor = 1.
 
     def __init__(self, model=None, store=None,
                  n_spikes_max=None, excerpt_size=None,
@@ -86,7 +86,7 @@ class BaseViewModel(object):
             if self._view.visual.empty:
                 self.on_open()
                 if cluster_ids:
-                    self.on_select(cluster_ids)
+                    self.select(cluster_ids)
 
     @property
     def model(self):
@@ -110,21 +110,32 @@ class BaseViewModel(object):
 
     @property
     def cluster_ids(self):
+        """Selected clusters."""
         return self._selector.selected_clusters
 
     @property
     def spike_ids(self):
+        """Selected spikes."""
         return self._selector.selected_spikes
 
     @property
     def n_clusters(self):
+        """Number of selected clusters."""
         return self._selector.n_clusters
 
     @property
     def n_spikes(self):
+        """Number of selected spikes."""
         return self._selector.n_spikes
 
     def load(self, name, spike_selection=None):
+        """Load data from the store or the model.
+
+        By default, the data for the selected spikes is loaded.
+        Load the data from all spikes in the selected clusters with
+        `spike_selection='all'`.
+
+        """
         spikes = self.spike_ids if spike_selection is None else None
         if self._store is not None and len(self.cluster_ids):
             return self._store.load(name, self.cluster_ids, spikes=spikes)
@@ -144,19 +155,29 @@ class BaseViewModel(object):
         visual.cluster_colors = _selected_clusters_colors(n_clusters)
 
     def on_open(self):
-        """May be overriden."""
+        """Initialize the view after the model has been loaded.
 
-    def on_select(self, cluster_ids):
-        """Must be overriden."""
+        May be overriden."""
+
+    def select(self, cluster_ids):
+        """Select a set of clusters."""
         self._selector.selected_clusters = cluster_ids
+        self.on_select()
+
+    def on_select(self):
+        """Update the view after a new selection has been made.
+
+        Must be overriden."""
         self._update_spike_clusters()
         self._view.update()
 
     def on_close(self):
+        """Clear the view when the model is closed."""
         self._view.visual.spike_clusters = []
         self._view.update()
 
     def exported_params(self, save_size_pos=True):
+        """Return a dictionary of variables to save when the view is closed."""
         if save_size_pos:
             return {
                 'position': self._view.position,
@@ -166,4 +187,5 @@ class BaseViewModel(object):
             return {}
 
     def show(self):
+        """Show the view."""
         self._view.show()
