@@ -21,7 +21,7 @@ class KlustaViewa(EventEmitter):
         super(KlustaViewa, self).__init__()
         self.session = session
         self.start()
-        self._dock = DockWindow(title=self.__class__.__name__)
+        self._dock = DockWindow(title=self.title)
         self._load_config(config)
         # Save the geometry state
         self._create_gui_actions()
@@ -58,6 +58,19 @@ class KlustaViewa(EventEmitter):
     @property
     def main_window(self):
         return self._dock
+
+    @property
+    def title(self):
+        name = self.__class__.__name__
+        filename = self.session.model.kwik_path
+        clustering = self.session.model.clustering
+        channel_group = self.session.model.channel_group
+        template = "{name} - {filename} (shank {channel_group}, {clustering})"
+        return template.format(name=name,
+                               filename=filename,
+                               channel_group=channel_group,
+                               clustering=clustering,
+                               )
 
     def add_view(self, item, **kwargs):
         view = item.view if isinstance(item, BaseViewModel) else item
