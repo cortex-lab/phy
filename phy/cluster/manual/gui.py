@@ -17,6 +17,17 @@ from ...plot.view_models import BaseViewModel
 #------------------------------------------------------------------------------
 
 class KlustaViewa(EventEmitter):
+    """Manual clustering GUI.
+
+    This object represents a main window with:
+
+    * multiple views
+    * a wizard panel
+    * high-level clustering methods
+    * global keyboard shortcuts
+
+    """
+
     def __init__(self, session, config=None):
         super(KlustaViewa, self).__init__()
         self.session = session
@@ -28,6 +39,7 @@ class KlustaViewa(EventEmitter):
         self._set_default_view_connections()
 
     def _load_config(self, config=None):
+        """Load a GUI configuration dictionary."""
         if config is None:
             config = self.session.settings['gui_config']
         for name, kwargs in config:
@@ -49,18 +61,22 @@ class KlustaViewa(EventEmitter):
             self._dock.restore_geometry_state(gs)
 
     def show(self):
+        """Show the GUI"""
         self._dock.show()
 
     def start(self):
+        """Start the wizard."""
         self.session.wizard.start()
         self._cluster_ids = self.session.wizard.selection
 
     @property
     def main_window(self):
+        """Dock main window."""
         return self._dock
 
     @property
     def title(self):
+        """Title of the main window."""
         name = self.__class__.__name__
         filename = self.session.model.kwik_path
         clustering = self.session.model.clustering
@@ -73,6 +89,7 @@ class KlustaViewa(EventEmitter):
                                )
 
     def add_view(self, item, **kwargs):
+        """Add a new view model instance to the GUI."""
         view = item.view if isinstance(item, BaseViewModel) else item
         dw = self._dock.add_view(view, **kwargs)
 
@@ -91,11 +108,13 @@ class KlustaViewa(EventEmitter):
             dw.close()
 
     def get_views(self, name):
+        """Return the list of views of a given type."""
         vms = self.session.view_creator.get(name)
         dock_widgets = [_.widget() for _ in self._dock.list_views()]
         return [vm for vm in vms if vm.view.native in dock_widgets]
 
     def _set_default_view_connections(self):
+        """Set view connections."""
 
         # Select feature dimension from waveform view.
         @self._dock.connect_views('waveforms', 'features')
@@ -190,6 +209,7 @@ class KlustaViewa(EventEmitter):
     # ---------------------------------------------------------------------
 
     def reset_gui(self):
+        """Reset the GUI configuration."""
         # TODO
         pass
         # # Add missing views.
@@ -201,29 +221,36 @@ class KlustaViewa(EventEmitter):
         # self._add_gui_views(gui, self._cluster_ids, counts=counts)
 
     def save(self):
+        """Save the clustering changes to the `.kwik` file."""
         self.session.save()
 
     def undo(self):
+        """Undo the last clustering action."""
         self.session.undo()
 
     def redo(self):
+        """Redo the last clustering action."""
         self.session.redo()
 
     def show_shortcuts(self):
+        """Show the list off all keyboard shortcuts."""
         shortcuts = self.session.settings['keyboard_shortcuts']
         for name in sorted(shortcuts):
             print("{0:<24}: {1:s}".format(name, str(shortcuts[name])))
 
     def close(self):
+        """Close the GUI."""
         self._dock.close()
 
     def exit(self):
+        """Close the GUI."""
         self.close()
 
     # Selection
     # ---------------------------------------------------------------------
 
     def select(self, cluster_ids):
+        """Select clusters."""
         cluster_ids = list(cluster_ids)
         assert len(cluster_ids) == len(set(cluster_ids))
         # Do not re-select an already-selected list of clusters.
@@ -241,30 +268,37 @@ class KlustaViewa(EventEmitter):
         self.select(self.session.wizard.selection)
 
     def reset_wizard(self):
+        """Restart the wizard."""
         self.session.wizard.start()
         self._wizard_select()
 
     def first(self):
+        """Go to the first cluster proposed by the wizard."""
         self.session.wizard.first()
         self._wizard_select()
 
     def last(self):
+        """Go to the last cluster proposed by the wizard."""
         self.session.wizard.last()
         self._wizard_select()
 
     def next(self):
+        """Go to the next cluster proposed by the wizard."""
         self.session.wizard.next()
         self._wizard_select()
 
     def previous(self):
+        """Go to the previous cluster proposed by the wizard."""
         self.session.wizard.previous()
         self._wizard_select()
 
     def pin(self):
+        """Pin the current best cluster."""
         self.session.wizard.pin()
         self._wizard_select()
 
     def unpin(self):
+        """Unpin the current best cluster."""
         self.session.wizard.unpin()
         self._wizard_select()
 
@@ -272,11 +306,13 @@ class KlustaViewa(EventEmitter):
     # ---------------------------------------------------------------------
 
     def merge(self):
+        """Merge all selected clusters together."""
         clusters = self._cluster_ids
         if len(clusters) >= 2:
             self.session.merge(clusters)
 
     def split(self):
+        """Create a new cluster out of the selected spikes."""
         # TODO: refactor
         pass
 
@@ -289,11 +325,6 @@ class GUICreator(object):
     def __init__(self, session):
         self.session = session
         self._guis = []
-
-    @property
-    def default_config(self):
-        # TODO: find default config in user params
-        return []
 
     def add(self, config=None, show=True):
         gui = KlustaViewa(self.session, config=config)
