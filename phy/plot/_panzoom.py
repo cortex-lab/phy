@@ -443,7 +443,7 @@ class PanZoom(object):
         self._width = float(canvas.size[0])
         self._height = float(canvas.size[1])
 
-        aspect = self._width / self._height
+        aspect = self._width / max(1, self._height)
         if aspect > 1.0:
             self._canvas_aspect = np.array([1.0 / aspect, 1.0])
         else:

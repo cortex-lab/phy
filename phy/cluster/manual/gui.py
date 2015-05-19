@@ -7,7 +7,7 @@ from __future__ import print_function
 # Imports
 #------------------------------------------------------------------------------
 
-from ...utils.dock import DockWindow, _create_web_view, _title
+from ...utils.dock import DockWindow, _create_web_view
 from ...utils import EventEmitter, debug
 from ...plot.view_models import BaseViewModel
 
@@ -33,22 +33,23 @@ class KlustaViewa(EventEmitter):
         self.session = session
         self.start()
         self._dock = DockWindow(title=self.title)
+        # Load the saved view count.
+        vc = self.session.settings.get('gui_view_count', None)
+        # Default GUI config.
+        config = config or self.session.settings['gui_config']
+        # Remove non-existing views.
+        if vc and config:
+            config = [(name, _) for (name, _) in config
+                      if name in vc]
+        # Create the views.
         self._load_config(config)
-        # Save the geometry state
+        self._load_geometry_state()
         self._create_gui_actions()
         self._set_default_view_connections()
 
     def _load_config(self, config=None):
         """Load a GUI configuration dictionary."""
-        if config is None:
-            config = self.session.settings['gui_config']
-
-        vc = self.session.settings.get('gui_view_count', None)
-
         for name, kwargs in config:
-            # Discard non-existing views.
-            if vc and name not in vc:
-                continue
             debug("Adding {} view in GUI.".format(name))
             # GUI-specific keyword arguments position, size, maximized
             position = kwargs.pop('position', None)
@@ -59,9 +60,9 @@ class KlustaViewa(EventEmitter):
                 item = self.session.view_creator.add(name,
                                                      cluster_ids=clusters,
                                                      **kwargs)
-
             self.add_view(item, title=name.title(), position=position)
 
+    def _load_geometry_state(self):
         # Load geometry state
         gs = self.session.settings.get('gui_state', None)
         if gs:
@@ -224,10 +225,10 @@ class KlustaViewa(EventEmitter):
     def reset_gui(self):
         """Reset the GUI configuration."""
         config = self.session.settings['gui_config']
-        dock_widgets = self._dock.list_views()
-        existing = [_title(view) for view in dock_widgets]
+        existing = sorted(self._dock.view_counts())
         to_add = [(name, _) for (name, _) in config if name not in existing]
         self._load_config(to_add)
+        self.session.settings['gui_state'] = None
 
     def save(self):
         """Save the clustering changes to the `.kwik` file."""
