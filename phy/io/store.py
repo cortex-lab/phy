@@ -258,6 +258,9 @@ class StoreItem(object):
         self.disk_store = disk_store
         self._spikes_per_cluster = spikes_per_cluster
         self._pr = ProgressReporter()
+        self._pr.set_progress_message('Initializing ' + self.name +
+                                      ': {progress:.1f}%.')
+        self._pr.set_complete_message(self.name.capitalize() + ' initialized.')
 
     @property
     def progress_reporter(self):
