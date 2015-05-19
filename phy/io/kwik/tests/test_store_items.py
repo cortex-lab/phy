@@ -23,7 +23,7 @@ from ..store_items import FeatureMasks, Waveforms, ClusterStatistics
 # Tests
 #------------------------------------------------------------------------------
 
-_N_CLUSTERS = 15
+_N_CLUSTERS = 5
 _N_SPIKES = 100
 _N_CHANNELS = 28
 _N_FETS = 2
@@ -41,8 +41,12 @@ def test_kwik_store():
                                     n_features_per_channel=_N_FETS,
                                     n_samples_traces=_N_SAMPLES_TRACES)
 
+        nc = _N_CHANNELS - 2
+        nf = _N_FETS
+
         model = KwikModel(filename)
         spc = _spikes_per_cluster(np.arange(_N_SPIKES), model.spike_clusters)
+        clusters = sorted(spc.keys())
 
         # We initialize the ClusterStore.
         cs = ClusterStore(model=model,
@@ -51,6 +55,16 @@ def test_kwik_store():
                           )
 
         cs.register_item(FeatureMasks, chunk_size=15)
+        cs.register_item(Waveforms,
+                         n_spikes_max=5,
+                         excerpt_size=2,
+                         )
+        stats = cs.register_item(ClusterStatistics)
 
         # Now we generate the store.
         cs.generate()
+
+        for cluster in clusters:
+            fet_store = cs.features(cluster)
+            fet_expected = model.features[spc[cluster]].reshape((-1, nc, nf))
+            ae(fet_store, fet_expected)

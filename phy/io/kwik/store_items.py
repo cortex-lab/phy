@@ -39,6 +39,8 @@ class ClusterStatistics(StoreItem):
     def __init__(self, *args, **kwargs):
         super(ClusterStatistics, self).__init__(*args, **kwargs)
         self._funcs = {}
+        self.n_channels = len(self.model.channel_order)
+        self.n_samples_waveforms = self.model.n_samples_waveforms
 
     def add(self, name, func):
         """Add a new statistics."""
@@ -114,7 +116,6 @@ class FeatureMasks(StoreItem):
 
         self.n_features = self.model.n_features_per_channel
         self.n_channels = len(self.model.channel_order)
-        self.n_samples_waveforms = self.model.n_samples_waveforms
         self.n_spikes = self.model.n_spikes
         self.n_chunks = self.n_spikes // self.chunk_size + 1
 
