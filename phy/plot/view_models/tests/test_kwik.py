@@ -106,7 +106,10 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
 #------------------------------------------------------------------------------
 
 def test_waveforms_full():
-    _test_view_model(WaveformViewModel)
+    vm = _test_view_model(WaveformViewModel, stop=False)
+    vm.show_mean = True
+    show_test_run(vm.view, _N_FRAMES)
+    show_test_stop(vm.view)
 
 
 def test_waveforms_empty():

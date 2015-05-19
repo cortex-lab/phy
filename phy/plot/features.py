@@ -44,6 +44,8 @@ class BaseFeatureVisual(BaseSpikeVisual):
         self.n_channels, self.n_features = None, None
         self.n_rows = None
 
+        _enable_depth_mask()
+
     # Data properties
     # -------------------------------------------------------------------------
 
@@ -314,13 +316,12 @@ class FeatureView(BaseSpikeCanvas):
     """
     _visual_class = FeatureVisual
 
-    def __init__(self, **kwargs):
+    def _create_visuals(self):
         self.boxes = BoxVisual()
         self.axes = AxisVisual()
         self.background = BackgroundFeatureVisual()
         self.lasso = LassoVisual()
-        super(FeatureView, self).__init__(**kwargs)
-        _enable_depth_mask()
+        super(FeatureView, self)._create_visuals()
 
     def _create_pan_zoom(self):
         self._pz = PanZoomGrid()

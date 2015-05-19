@@ -12,6 +12,7 @@ import numpy as np
 from vispy import gloo
 from vispy.gloo import Texture2D
 
+from ._panzoom import PanZoom
 from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas, _enable_depth_mask
 from ..utils._types import _as_array
 from ..utils.array import _index_of, _normalize
@@ -234,6 +235,17 @@ class WaveformView(BaseSpikeCanvas):
     _arrows = ('Left', 'Right', 'Up', 'Down')
     _events = ('channel_click',)
     _key_pressed = None
+    _show_mean = False
+
+    def _create_visuals(self):
+        super(WaveformView, self)._create_visuals()
+        self.mean = WaveformVisual()
+
+    def _create_pan_zoom(self):
+        self._pz = PanZoom()
+        self._pz.add(self.visual.program)
+        self._pz.add(self.mean.program)
+        self._pz.attach(self)
 
     @property
     def box_scale(self):
@@ -247,6 +259,7 @@ class WaveformView(BaseSpikeCanvas):
     @box_scale.setter
     def box_scale(self, value):
         self.visual.box_scale = value
+        self.mean.box_scale = value
         self.update()
 
     @property
@@ -261,6 +274,7 @@ class WaveformView(BaseSpikeCanvas):
     @probe_scale.setter
     def probe_scale(self, value):
         self.visual.probe_scale = value
+        self.mean.probe_scale = value
         self.update()
 
     @property
@@ -271,6 +285,17 @@ class WaveformView(BaseSpikeCanvas):
     @overlap.setter
     def overlap(self, value):
         self.visual.overlap = value
+        self.mean.overlap = value
+        self.update()
+
+    @property
+    def show_mean(self):
+        """Whether to show_mean waveforms."""
+        return self._show_mean
+
+    @show_mean.setter
+    def show_mean(self, value):
+        self._show_mean = value
         self.update()
 
     def on_key_press(self, event):
@@ -349,4 +374,7 @@ class WaveformView(BaseSpikeCanvas):
     def on_draw(self, event):
         """Draw the visual."""
         gloo.clear(color=True, depth=True)
-        self.visual.draw()
+        if self._show_mean:
+            self.mean.draw()
+        else:
+            self.visual.draw()

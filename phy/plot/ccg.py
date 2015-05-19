@@ -116,9 +116,9 @@ class CorrelogramView(BaseSpikeCanvas):
 
     _visual_class = CorrelogramVisual
 
-    def __init__(self, **kwargs):
+    def _create_visuals(self):
+        super(CorrelogramView, self)._create_visuals()
         self.boxes = BoxVisual()
-        super(CorrelogramView, self).__init__(**kwargs)
 
     def _create_pan_zoom(self):
         self._pz = PanZoomGrid()

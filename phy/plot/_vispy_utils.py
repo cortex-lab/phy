@@ -483,17 +483,20 @@ class BaseSpikeCanvas(app.Canvas):
 
     def __init__(self, **kwargs):
         super(BaseSpikeCanvas, self).__init__(keys='interactive', **kwargs)
-        self.visual = self._visual_class()
+        self._create_visuals()
         self._create_pan_zoom()
         self._add_events()
 
-    def _add_events(self):
-        self.events.add(**{event: Event for event in self._events})
+    def _create_visuals(self):
+        self.visual = self._visual_class()
 
     def _create_pan_zoom(self):
         self._pz = PanZoom()
         self._pz.add(self.visual.program)
         self._pz.attach(self)
+
+    def _add_events(self):
+        self.events.add(**{event: Event for event in self._events})
 
     def emit(self, name, **kwargs):
         getattr(self.events, name)(**kwargs)
