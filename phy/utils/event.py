@@ -12,8 +12,6 @@ from collections import defaultdict
 from functools import partial
 from inspect import getargspec
 
-from ..ext.six import string_types
-
 
 #------------------------------------------------------------------------------
 # Event system

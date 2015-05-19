@@ -221,6 +221,36 @@ class Session(EventEmitter):
         """Number of clusters in the current clustering."""
         return self.clustering.n_clusters
 
+    # Customization methods
+    # -------------------------------------------------------------------------
+
+    def register_statistic(self, func):
+        """Decorator registering a custom cluster statistic.
+
+        Parameters
+        ----------
+
+        func : function
+            A function that takes a cluster index as argument, and returns
+            some statistics (generally a NumPy array).
+
+        Notes
+        -----
+
+        This function will be called on every cluster when a dataset is opened.
+        It is also automatically called on new clusters when clusters change.
+        You can access the data from the model and from the cluster store.
+
+        """
+        name = func.__name__
+
+        def _wrapper(cluster):
+            out = func(cluster)
+            self.cluster_store.memory_store.store(cluster, **{name: out})
+
+        self._statistics.add(name, _wrapper)
+        self.cluster_store.register_field(name, 'memory')
+
     # Event callbacks
     # -------------------------------------------------------------------------
 
@@ -267,33 +297,6 @@ class Session(EventEmitter):
             # them for possible undo, and regularly clean up the store.
             for item in self.cluster_store.store_items:
                 item.on_cluster(up)
-
-    def register_statistic(self, func):
-        """Decorator registering a custom cluster statistic.
-
-        Parameters
-        ----------
-
-        func : function
-            A function that takes a cluster index as argument, and returns
-            some statistics (generally a NumPy array).
-
-        Notes
-        -----
-
-        This function will be called on every cluster when a dataset is opened.
-        It is also automatically called on new clusters when clusters change.
-        You can access the data from the model and from the cluster store.
-
-        """
-        name = func.__name__
-
-        def _wrapper(cluster):
-            out = func(cluster)
-            self.cluster_store.memory_store.store(cluster, **{name: out})
-
-        self._statistics.add(name, _wrapper)
-        self.cluster_store.register_field(name, 'memory')
 
     def _create_cluster_metadata(self):
         self._cluster_metadata_updater = ClusterMetadataUpdater(

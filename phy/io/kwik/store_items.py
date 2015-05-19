@@ -13,7 +13,7 @@ import os.path as op
 
 import numpy as np
 
-from ...utils import debug, Selector
+from ...utils import Selector
 from ...utils.array import (_index_of,
                             _spikes_per_cluster,
                             _concatenate_per_cluster_arrays,
