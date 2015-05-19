@@ -63,6 +63,7 @@ class BaseViewModel(object):
         self._store = store
         if cluster_ids is not None:
             cluster_ids = _as_list(cluster_ids)
+        self._clusters_to_select = cluster_ids
 
         # Create the spike/cluster selector.
         self._selector = Selector(model.spike_clusters,
@@ -81,12 +82,14 @@ class BaseViewModel(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        @self._view.connect
-        def on_draw(event):
-            if self._view.visual.empty:
-                self.on_open()
-                if cluster_ids:
-                    self.select(cluster_ids)
+        self._view.connect(self.on_draw)
+
+    def on_draw(self, event):
+        if self._view.visual.empty:
+            self.on_open()
+        if self._clusters_to_select:
+            self.select(self._clusters_to_select)
+            self._clusters_to_select = None
 
     @property
     def model(self):
@@ -175,6 +178,7 @@ class BaseViewModel(object):
 
         Must be overriden."""
         self._update_spike_clusters()
+        self._clusters_to_select = self.cluster_ids
         self._view.update()
 
     def on_close(self):
