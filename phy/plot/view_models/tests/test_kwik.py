@@ -86,13 +86,15 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
 
         vm = view_model_class(model=model, **kwargs)
         vm.on_open()
+        show_test_start(vm.view)
+
+        vm.select([2])
+        show_test_run(vm.view, _N_FRAMES)
 
         vm.select([2, 3])
-        show_test_start(vm.view)
         show_test_run(vm.view, _N_FRAMES)
 
         vm.select([3, 2])
-        show_test_start(vm.view)
         show_test_run(vm.view, _N_FRAMES)
 
         if stop:
