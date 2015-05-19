@@ -74,7 +74,7 @@ class WaveformViewModel(BaseViewModel):
         return spikes, waveforms
 
     def _load_mean_waveforms(self):
-        if not self._store:
+        if not self._store or len(self.cluster_ids) == 0:
             return (np.zeros((len(self.cluster_ids),
                               self._n_samples,
                               self._n_channels,
