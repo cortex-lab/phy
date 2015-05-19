@@ -278,17 +278,18 @@ class FeatureViewModel(BaseViewModel):
         """The list of displayed dimensions."""
         return self._view.dimensions
 
-    def set_dimensions(self, dimensions):
-        """Set the feature view dimensions.
+    @dimensions.setter
+    def dimensions(self, value):
+        self._view.dimensions = value
 
-        Parameters
-        ----------
+    @property
+    def diagonal_dimensions(self):
+        """The list of displayed diagonal_dimensions."""
+        return self._view.diagonal_dimensions
 
-        dimensions : list
-            Every item is either `time` or `(channel_id, feature_idx)`.
-
-        """
-        self._view.dimensions = dimensions
+    @diagonal_dimensions.setter
+    def diagonal_dimensions(self, value):
+        self._view.diagonal_dimensions = value
 
     def on_open(self):
         # Get background features.
@@ -332,17 +333,23 @@ class FeatureViewModel(BaseViewModel):
 
     def on_mouse_double_click(self, e):
         if self._previous_dimensions:
-            self.set_dimensions(self._previous_dimensions)
+            self.dimensions = self._previous_dimensions
+            self.diagonal_dimensions = []  # self._previous_diagonal_dimensions
+            # Reset previous (diagonal) dimensions.
             self._previous_dimensions = None
+            # self._previous_diagonal_dimensions = None
         else:
+            # Save previous (diagonal) dimensions.
             self._previous_dimensions = self.dimensions
+            # self._previous_diagonal_dimensions = self.diagonal_dimensions
+            # Find the current box.
             i, j = self._view._pz._get_box(e.pos)
-            # TODO: use the exact pair of dimensions in the box.
-            # There is a limitation currently that prevents to use the
-            # dimensions in a non-diagonal boxes.
-            # In other words, we can only set the dimensions of a full row
-            # or column, not of any box.
-            self.set_dimensions([self.dimensions[i]])
+            dim_i = self.dimensions[i]
+            dim_j = self.dimensions[j]
+            # Set the dimensions.
+            self.dimensions = [dim_i]
+            if i != j:
+                self.diagonal_dimensions = [dim_j]
 
     def exported_params(self, save_size_pos=True):
         params = super(FeatureViewModel, self).exported_params(save_size_pos)

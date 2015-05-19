@@ -40,6 +40,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
         self._features = None
         self._spike_samples = None
         self._dimensions = []
+        self._diagonal_dimensions = []
         self.n_channels, self.n_features = None, None
         self.n_rows = None
 
@@ -95,10 +96,10 @@ class BaseFeatureVisual(BaseSpikeVisual):
             raise ValueError('{0} should be (channel, feature) '.format(dim) +
                              'or "time".')
 
-    def _get_feature_dim(self, dim):
+    def _get_feature_dim(self, data, dim):
         if isinstance(dim, (tuple, list)):
             channel, feature = dim
-            return self._features[:, channel, feature]
+            return data[:, channel, feature]
         elif dim == 'time':
             t = self._spike_samples
             # Normalize time feature.
@@ -128,16 +129,17 @@ class BaseFeatureVisual(BaseSpikeVisual):
         dim_i = self._dimensions[i]
         dim_j = self._dimensions[j]
 
-        fet_i = self._get_feature_dim(dim_i)
+        fet_i = self._get_feature_dim(self._features, dim_i)
         # For non-time dimensions, the diagonal shows
         # a different feature on y (same channel than x).
         if i == j and dim_j != 'time' and self.n_features >= 1:
-            channel, feature = dim_j
-            # Choose the other feature on y axis.
-            feature = 1 - feature
-            fet_j = data[:, channel, feature]
-        else:
-            fet_j = self._get_feature_dim(dim_j)
+            if i <= len(self._diagonal_dimensions) - 1:
+                dim_j = self._diagonal_dimensions[i]
+            else:
+                # By default, choose the other feature on y axis.
+                channel, feature = dim_j
+                dim_j = (channel, 1 - feature)
+        fet_j = self._get_feature_dim(self._features, dim_j)
 
         # NOTE: we switch here because we want to plot
         # dim_i (y) over dim_j (x) on box (i, j).
@@ -158,6 +160,27 @@ class BaseFeatureVisual(BaseSpikeVisual):
     @dimensions.setter
     def dimensions(self, value):
         self._set_dimensions_to_bake(value)
+
+    @property
+    def diagonal_dimensions(self):
+        """Displayed dimensions on the diagonal.
+
+        This is a list of items which can be:
+
+        * tuple `(channel_id, feature_idx)`
+        * `'time'`
+
+        """
+        return self._diagonal_dimensions
+
+    @diagonal_dimensions.setter
+    def diagonal_dimensions(self, value):
+        if not value:
+            self._diagonal_dimensions = value
+            return
+        assert len(value) == self.n_rows
+        self._diagonal_dimensions = value
+        self._set_dimensions_to_bake(self._dimensions)
 
     def _set_dimensions_to_bake(self, value):
         self.n_rows = len(value)
@@ -374,6 +397,22 @@ class FeatureView(BaseSpikeCanvas):
         # updated as well.
         self.visual.dimensions = value
         self.update_dimensions(value)
+
+    @property
+    def diagonal_dimensions(self):
+        """Dimensions."""
+        return self.background.diagonal_dimensions
+
+    @diagonal_dimensions.setter
+    def diagonal_dimensions(self, value):
+        # WARNING: diagonal_dimensions should be changed here, in the Canvas,
+        # and not in the visual. This is to make sure that the boxes are
+        # updated as well.
+        if not value:
+            return
+        self.visual.diagonal_dimensions = value
+        self.background.diagonal_dimensions = value
+        self.update()
 
     def update_dimensions(self, dimensions):
         n_rows = len(dimensions)
