@@ -8,7 +8,6 @@
 
 import numpy as np
 
-from ...utils.logging import debug
 from ...utils.array import (_concatenate_per_cluster_arrays,
                             _spikes_in_clusters,
                             )
@@ -47,7 +46,7 @@ class WaveformViewModel(BaseViewModel):
 
     def _load_waveforms(self):
         clusters = self.cluster_ids
-        debug("Loading waveforms...")
+        # debug("Loading waveforms...")
         if self._store is not None and len(clusters):
             # Subset the stored spikes for each cluster.
             k = len(clusters)
@@ -70,7 +69,6 @@ class WaveformViewModel(BaseViewModel):
             self._selector.selected_clusters = clusters
             spikes = self.spike_ids
             waveforms = self.model.waveforms[spikes]
-        debug("Done!")
         return spikes, waveforms
 
     def _load_mean_waveforms(self):
@@ -395,12 +393,11 @@ class TraceViewModel(BaseViewModel):
         spikes = self.spike_ids
 
         # Load the traces.
-        debug("Loading traces...")
+        # debug("Loading traces...")
         # Using channel_order ensures that we get rid of the dead channels.
         # We also keep the channel order as specified by the PRM file.
         # WARNING: HDF5 does not support out-of-order indexing (...!!)
         traces = self.model.traces[start:end, :][:, self.model.channel_order]
-        debug("Done!")
 
         # Normalize and set the traces.
         traces_f = np.empty_like(traces, dtype=np.float32)

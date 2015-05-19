@@ -16,7 +16,6 @@ from ._panzoom import PanZoom
 from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas, _enable_depth_mask
 from ..utils._types import _as_array
 from ..utils.array import _index_of, _normalize
-from ..utils.logging import debug
 
 
 #------------------------------------------------------------------------------
@@ -178,7 +177,6 @@ class WaveformVisual(BaseSpikeVisual):
         # TODO: more efficient to update the data from an existing texture
         self.program['u_channel_pos'] = Texture2D(u_channel_pos,
                                                   wrapping='clamp_to_edge')
-        debug("bake channel pos", u_channel_pos.shape)
 
     def _bake_spikes(self):
 
@@ -208,8 +206,6 @@ class WaveformVisual(BaseSpikeVisual):
         self.program['a_time'] = a_time
         self.program['n_channels'] = self.n_channels
 
-        debug("bake spikes", waveforms.shape)
-
     def _bake_spikes_clusters(self):
         # WARNING: needs to be called *after* _bake_spikes().
         if not hasattr(self, '_n_channels_per_spike'):
@@ -227,7 +223,6 @@ class WaveformVisual(BaseSpikeVisual):
         # TODO: more efficient to update the data from an existing VBO
         self.program['a_box'] = a_box
         self.program['n_clusters'] = self.n_clusters
-        debug("bake spikes clusters", a_box.shape)
 
 
 class WaveformView(BaseSpikeCanvas):

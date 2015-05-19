@@ -16,7 +16,6 @@ from ._vispy_utils import (BaseSpikeVisual,
                            )
 from ..utils._types import _as_array
 from ..utils.array import _index_of
-from ..utils.logging import debug
 
 
 #------------------------------------------------------------------------------
@@ -141,16 +140,12 @@ class TraceVisual(BaseSpikeVisual):
         self.program['n_channels'] = nc
         self.program['n_samples'] = ns
 
-        debug("bake traces", self._traces.shape)
-
     def _bake_channel_color(self):
         u_channel_color = self._channel_colors.reshape((1,
                                                         self.n_channels,
                                                         -1))
         u_channel_color = (u_channel_color * 255).astype(np.uint8)
         self.program['u_channel_color'] = gloo.Texture2D(u_channel_color)
-
-        debug("bake channel color", u_channel_color.shape)
 
     def _bake_spikes(self):
         # Handle the case where there are no spikes.

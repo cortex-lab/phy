@@ -18,7 +18,6 @@ from ._vispy_utils import (BaseSpikeVisual,
                            _tesselate_histogram)
 from ._panzoom import PanZoomGrid
 from ..utils._types import _as_array
-from ..utils.logging import debug
 
 
 #------------------------------------------------------------------------------
@@ -107,8 +106,6 @@ class CorrelogramVisual(BaseSpikeVisual):
         self.program['a_position'] = positions.copy()
         self.program['a_box'] = boxes
         self.program['n_rows'] = self.n_clusters
-
-        debug("bake correlograms", positions.shape)
 
 
 class CorrelogramView(BaseSpikeCanvas):

@@ -317,8 +317,6 @@ class StoreItem(object):
         clusters = self.to_generate(mode)
         self._pr.value_max = len(clusters)
         for cluster in clusters:
-            debug("Loading {0:s}, cluster {1:d}...".format(self.name,
-                  cluster))
             self.store_cluster(cluster,
                                spikes=self._spikes_per_cluster[cluster],
                                mode=mode,
@@ -638,7 +636,6 @@ class ClusterStore(object):
             name = self._model.name
         else:
             name = 'the current model'
-        debug("Initializing the cluster store for {0:s}...".format(name))
+        debug("Initializing the cluster store for {0:s}.".format(name))
         for item in self._items:
             item.store_all_clusters(mode)
-        debug("Done!")

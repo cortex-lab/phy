@@ -22,7 +22,6 @@ from ._panzoom import PanZoomGrid
 from ..ext.six import string_types
 from ..utils._types import _as_array
 from ..utils.array import _index_of
-from ..utils.logging import debug
 
 
 #------------------------------------------------------------------------------
@@ -200,8 +199,6 @@ class BaseFeatureVisual(BaseSpikeVisual):
         self.program['a_box'] = boxes
         self.program['n_rows'] = self.n_rows
 
-        debug("bake features", positions.shape)
-
 
 class BackgroundFeatureVisual(BaseFeatureVisual):
     """Display a grid of multidimensional features in the background."""
@@ -278,8 +275,6 @@ class FeatureVisual(BaseFeatureVisual):
         self.program['n_clusters'] = self.n_clusters
         self.program['n_rows'] = self.n_rows
 
-        debug("bake features", positions.shape)
-
     def _bake_spikes_clusters(self):
         # Get the spike cluster indices (between 0 and n_clusters-1).
         spike_clusters_idx = self.spike_clusters
@@ -289,7 +284,6 @@ class FeatureVisual(BaseFeatureVisual):
                             self.n_boxes).astype(np.float32)
         self.program['a_cluster'] = a_cluster
         self.program['n_clusters'] = self.n_clusters
-        debug("bake spikes clusters", spike_clusters_idx.shape)
 
     @property
     def marker_size(self):
