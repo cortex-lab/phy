@@ -8,14 +8,13 @@
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import raises
 
 from ....utils.array import _spikes_per_cluster
 from ....utils.tempdir import TemporaryDirectory
 from ..model import (KwikModel,
                      )
-from ..mock import create_mock_kwik
 from ...store import ClusterStore
+from ..mock import create_mock_kwik
 from ..store_items import FeatureMasks, Waveforms, ClusterStatistics
 
 
