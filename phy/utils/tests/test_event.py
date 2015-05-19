@@ -84,3 +84,17 @@ def test_progress_reporter():
     pr.value = pr.value_max
     pr.value = pr.value_max
     assert _completed == [True, True, True]
+
+
+def test_progress_message():
+    """Test messages with the progress reporter."""
+    pr = ProgressReporter()
+    pr.set_progress_message("The progress is {progress}.")
+    pr.set_complete_message("Finished.")
+
+    pr.value_max = 10
+    pr.value = 0
+    print()
+    pr.value = 5
+    print()
+    pr.value = 10
