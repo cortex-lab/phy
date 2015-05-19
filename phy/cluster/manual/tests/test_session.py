@@ -49,8 +49,7 @@ def _start_manual_clustering(kwik_path=None,
 
 
 def _show_view(session, name, cluster_ids=None, stop=True):
-    vm = session.show_view(name, cluster_ids, show=False)
-    vm.scale_factor = 1.
+    vm = session.show_view(name, cluster_ids, show=False, scale_factor=1)
     show_test_start(vm.view)
     show_test_run(vm.view, _N_FRAMES)
     if stop:
@@ -239,9 +238,12 @@ def test_session_mock():
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
         for name in ('waveforms', 'features', 'correlograms', 'traces'):
-            _show_view(session, name, [])
-            _show_view(session, name, [0])
-            _show_view(session, name, [0, 1])
+            vm = _show_view(session, name, [], stop=False)
+            vm.select([0])
+            show_test_run(vm.view, _N_FRAMES)
+            vm.select([0, 1])
+            show_test_run(vm.view, _N_FRAMES)
+            show_test_stop(vm.view)
 
 
 def test_session_kwik():
