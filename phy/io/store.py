@@ -306,6 +306,7 @@ class StoreItem(object):
         No need to delete old clusters here.
 
         """
+        # TODO: remove mode: unused?
         pass
 
     def store_all_clusters(self, mode=None):
@@ -321,6 +322,45 @@ class StoreItem(object):
                                )
             self._pr.value += 1
         self._pr.set_complete()
+
+    def on_merge(self, up):
+        """Called when a new merge occurs.
+
+        May be overriden if there's an efficient way to update the data
+        after a merge.
+
+        """
+        self.on_assign(up)
+
+    def on_assign(self, up):
+        """Called when a new split occurs.
+
+        May be overriden.
+
+        """
+        for cluster in up.added:
+            self.store_cluster(cluster,
+                               spikes=self._spikes_per_cluster[cluster],
+                               )
+
+    def on_cluster(self, up=None):
+        """Called when the clusters change.
+
+        Old data is kept on disk and in memory, which is useful for
+        undo and redo. The `cluster_store.clean()` method can be called to
+        delete the old files.
+
+        Nothing happens during undo and redo (the data is already there).
+
+        """
+        # No need to change anything in the store if this is an undo or
+        # a redo.
+        if up is None or up.history is not None:
+            return
+        if up.description == 'merge':
+            self.on_merge(up)
+        elif up.description == 'assign':
+            self.on_assign(up)
 
 
 #------------------------------------------------------------------------------
@@ -448,7 +488,7 @@ class ClusterStore(object):
         and memory. It must register one or several pieces of data.
 
         """
-
+        # TODO: pass instance instead of class?
         # Instantiate the item.
         item = item_cls(model=self._model,
                         memory_store=self._memory,
