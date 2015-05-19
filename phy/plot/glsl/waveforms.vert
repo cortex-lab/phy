@@ -14,6 +14,7 @@ uniform vec2 u_channel_scale;
 uniform sampler2D u_channel_pos;
 uniform sampler2D u_cluster_color;
 uniform float u_overlap;
+uniform float u_alpha;
 
 varying vec4 v_color;
 varying vec2 v_box;
@@ -46,5 +47,5 @@ void main() {
     // and the mask.
     v_color.rgb = color_mask(get_color(a_box.x, u_cluster_color, n_clusters),
                              a_data.y);
-    v_color.a = .5;
+    v_color.a = u_alpha;
 }

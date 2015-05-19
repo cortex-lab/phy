@@ -39,6 +39,7 @@ class WaveformVisual(BaseSpikeVisual):
         self.program['u_data_scale'] = (.05, .05)
         self.program['u_channel_scale'] = (1., 1.)
         self.program['u_overlap'] = 0
+        self.program['u_alpha'] = 0.5
         _enable_depth_mask()
 
     # Data properties
@@ -87,6 +88,15 @@ class WaveformVisual(BaseSpikeVisual):
     @channel_order.setter
     def channel_order(self, value):
         self._channel_order = value
+
+    @property
+    def alpha(self):
+        """Alpha transparency (between 0 and 1)."""
+        return self.program['u_alpha']
+
+    @alpha.setter
+    def alpha(self, value):
+        self.program['u_alpha'] = value
 
     @property
     def box_scale(self):
@@ -240,6 +250,7 @@ class WaveformView(BaseSpikeCanvas):
     def _create_visuals(self):
         super(WaveformView, self)._create_visuals()
         self.mean = WaveformVisual()
+        self.mean.alpha = 1.
 
     def _create_pan_zoom(self):
         self._pz = PanZoom()

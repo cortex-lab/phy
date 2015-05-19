@@ -86,8 +86,10 @@ class WaveformViewModel(BaseViewModel):
         mean_waveforms = []
         mean_masks = []
         for cluster in sorted(self.cluster_ids):
-            mean_waveforms.append(self._store.mean_waveforms(cluster))
-            mean_masks.append(self._store.mean_masks(cluster))
+            mw = self._store.mean_waveforms(cluster)[None, :]
+            mm = self._store.mean_masks(cluster)[None, :]
+            mean_waveforms.append(mw)
+            mean_masks.append(mm)
         return np.vstack(mean_waveforms), np.vstack(mean_masks)
 
     def _update_spike_clusters(self, spikes=None):
