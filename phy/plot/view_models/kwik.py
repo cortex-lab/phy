@@ -199,8 +199,8 @@ class FeatureViewModel(BaseViewModel):
     n_spikes_max_bg = 10000
 
     def __init__(self, **kwargs):
-        super(FeatureViewModel, self).__init__(**kwargs)
         self._dimension_selector = None
+        super(FeatureViewModel, self).__init__(**kwargs)
 
     def set_dimension_selector(self, func):
         """Decorator for a function that selects the best projection.
