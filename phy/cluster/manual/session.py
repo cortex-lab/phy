@@ -14,7 +14,7 @@ import shutil
 import numpy as np
 
 from ...utils.dock import qt_app
-from ...utils.event import EventEmitter, ProgressReporter
+from ...utils.event import EventEmitter
 from ...utils.logging import info
 from ...utils.settings import (Settings,
                                _ensure_dir_exists,
@@ -22,7 +22,7 @@ from ...utils.settings import (Settings,
                                )
 from ...io.store import ClusterStore
 from ...io.kwik.model import KwikModel, cluster_group_id
-from ...io.kwik.store_items import FeatureMasks, Waveforms
+from ...io.kwik.store_items import FeatureMasks, Waveforms, ClusterStatistics
 from ._history import GlobalHistory
 from ._utils import ClusterMetadataUpdater
 from .clustering import Clustering
@@ -242,40 +242,19 @@ class Session(EventEmitter):
                                           )
 
         # Create the FeatureMasks store item.
-
-        # Initialize the progress reporters.
-        pr_disk = ProgressReporter(
-            progress_message=('Initializing the cluster store: '
-                              '{progress:.1f}%.'),
-            complete_message='Cluster store initialized.')
-
-        pr_memory = ProgressReporter(
-            progress_message='Computing cluster statistics: {progress:.1f}%.',
-            complete_message='Cluster statistics computed.')
-
         # chunk_size is the number of spikes to load at once from
         # the features_masks array.
         cs = self.settings['store_chunk_size']
-        self.cluster_store.register_item(FeatureMasks,
-                                         progress_reporter_disk=pr_disk,
-                                         progress_reporter_memory=pr_memory,
-                                         chunk_size=cs,
-                                         )
-
-        # Create the waveforms store item.
-        pr_waveforms = ProgressReporter(
-            progress_message=('Initializing waveforms: '
-                              '{progress:.1f}%.'),
-            complete_message='Waveforms initialized.')
+        self.cluster_store.register_item(FeatureMasks, chunk_size=cs)
 
         n_spikes_max = self.settings['waveforms_n_spikes_max']
         excerpt_size = self.settings['waveforms_excerpt_size']
-
         self.cluster_store.register_item(Waveforms,
-                                         progress_reporter=pr_waveforms,
                                          n_spikes_max=n_spikes_max,
                                          excerpt_size=excerpt_size,
                                          )
+
+        self._statistics = self.cluster_store.register_item(ClusterStatistics)
 
         # Generate the cluster store if it doesn't exist or is invalid.
         # If the cluster store already exists and is consistent
@@ -288,6 +267,33 @@ class Session(EventEmitter):
             # them for possible undo, and regularly clean up the store.
             for item in self.cluster_store.store_items:
                 item.on_cluster(up)
+
+    def register_statistic(self, func):
+        """Decorator registering a custom cluster statistic.
+
+        Parameters
+        ----------
+
+        func : function
+            A function that takes a cluster index as argument, and returns
+            some statistics (generally a NumPy array).
+
+        Notes
+        -----
+
+        This function will be called on every cluster when a dataset is opened.
+        It is also automatically called on new clusters when clusters change.
+        You can access the data from the model and from the cluster store.
+
+        """
+        name = func.__name__
+
+        def _wrapper(cluster):
+            out = func(cluster)
+            self.cluster_store.memory_store.store(cluster, **{name: out})
+
+        self._statistics.add(name, _wrapper)
+        self.cluster_store.register_field(name, 'memory')
 
     def _create_cluster_metadata(self):
         self._cluster_metadata_updater = ClusterMetadataUpdater(
