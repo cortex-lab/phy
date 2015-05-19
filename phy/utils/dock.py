@@ -199,7 +199,7 @@ class DockWindow(QMainWindow):
         dockwidget.show()
         return dockwidget
 
-    def list_views(self, title='', is_visible=None):
+    def list_views(self, title='', is_visible=True):
         """List all views which title start with a given string."""
         title = title.lower()
         children = self.findChildren(QtGui.QWidget)

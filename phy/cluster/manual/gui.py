@@ -42,7 +42,14 @@ class KlustaViewa(EventEmitter):
         """Load a GUI configuration dictionary."""
         if config is None:
             config = self.session.settings['gui_config']
+
+        vc = self.session.settings.get('gui_view_count', None)
+
         for name, kwargs in config:
+            # Discard non-existing views.
+            if vc and name not in vc:
+                continue
+            debug("Adding {} view in GUI.".format(name))
             # GUI-specific keyword arguments position, size, maximized
             position = kwargs.pop('position', None)
             if name == 'wizard':
@@ -217,7 +224,7 @@ class KlustaViewa(EventEmitter):
     def reset_gui(self):
         """Reset the GUI configuration."""
         config = self.session.settings['gui_config']
-        dock_widgets = self._dock.list_views(is_visible=True)
+        dock_widgets = self._dock.list_views()
         existing = [_title(view) for view in dock_widgets]
         to_add = [(name, _) for (name, _) in config if name not in existing]
         self._load_config(to_add)
@@ -361,6 +368,7 @@ class GUICreator(object):
             self.session.view_creator.save_view_params()
             gs = gui._dock.save_geometry_state()
             self.session.settings['gui_state'] = gs
+            self.session.settings['gui_view_count'] = gui._dock.view_counts()
             self.session.close()
 
         if show:
