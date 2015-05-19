@@ -198,7 +198,9 @@ class FeatureViewModel(BaseViewModel):
 
     def __init__(self, **kwargs):
         self._dimension_selector = None
+        self._previous_dimensions = None
         super(FeatureViewModel, self).__init__(**kwargs)
+        self._view.connect(self.on_mouse_double_click)
 
     def set_dimension_selector(self, func):
         """Decorator for a function that selects the best projection.
@@ -271,6 +273,23 @@ class FeatureViewModel(BaseViewModel):
     def marker_size(self, value):
         self.view.marker_size = value
 
+    @property
+    def dimensions(self):
+        """The list of displayed dimensions."""
+        return self._view.dimensions
+
+    def set_dimensions(self, dimensions):
+        """Set the feature view dimensions.
+
+        Parameters
+        ----------
+
+        dimensions : list
+            Every item is either `time` or `(channel_id, feature_idx)`.
+
+        """
+        self._view.dimensions = dimensions
+
     def on_open(self):
         # Get background features.
         # TODO OPTIM: precompute this once for all and store in the cluster
@@ -310,6 +329,20 @@ class FeatureViewModel(BaseViewModel):
         self.view.dimensions = self._default_dimensions(clusters)
 
         self.view.update()
+
+    def on_mouse_double_click(self, e):
+        if self._previous_dimensions:
+            self.set_dimensions(self._previous_dimensions)
+            self._previous_dimensions = None
+        else:
+            self._previous_dimensions = self.dimensions
+            i, j = self._view._pz._get_box(e.pos)
+            # TODO: use the exact pair of dimensions in the box.
+            # There is a limitation currently that prevents to use the
+            # dimensions in a non-diagonal boxes.
+            # In other words, we can only set the dimensions of a full row
+            # or column, not of any box.
+            self.set_dimensions([self.dimensions[i]])
 
     def exported_params(self, save_size_pos=True):
         params = super(FeatureViewModel, self).exported_params(save_size_pos)
