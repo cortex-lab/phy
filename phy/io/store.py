@@ -17,6 +17,7 @@ from ..utils.array import (_concatenate_per_cluster_arrays,
                            )
 from ..utils._types import _as_int
 from ..utils.logging import debug, info
+from ..utils.event import ProgressReporter
 from ..ext.six import string_types
 
 
@@ -256,6 +257,11 @@ class StoreItem(object):
         self.memory_store = memory_store
         self.disk_store = disk_store
         self._spikes_per_cluster = spikes_per_cluster
+        self._pr = ProgressReporter()
+
+    @property
+    def progress_reporter(self):
+        return self._pr
 
     @property
     def spikes_per_cluster(self):
@@ -304,13 +310,17 @@ class StoreItem(object):
 
     def store_all_clusters(self, mode=None):
         """Copy all data for that item from the model to the cluster store."""
-        for cluster in self.to_generate(mode):
+        clusters = self.to_generate(mode)
+        self._pr.value_max = len(clusters)
+        for cluster in clusters:
             debug("Loading {0:s}, cluster {1:d}...".format(self.name,
                   cluster))
             self.store_cluster(cluster,
                                spikes=self._spikes_per_cluster[cluster],
                                mode=mode,
                                )
+            self._pr.value += 1
+        self._pr.set_complete()
 
 
 #------------------------------------------------------------------------------
@@ -458,6 +468,7 @@ class ClusterStore(object):
 
         # Register the StoreItem instance.
         self._items.append(item)
+        return item
 
     def load(self, name, clusters, spikes=None, spikes_per_cluster=None):
         """Load some data for a number of clusters and spikes."""
