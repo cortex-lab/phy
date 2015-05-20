@@ -315,16 +315,7 @@ class FeatureVisual(BaseFeatureVisual):
 
 
 class FeatureView(BaseSpikeCanvas):
-    """A VisPy canvas displaying features.
-
-    Interactivity
-    -------------
-
-    * set marker size: `ctrl++`, `ctrl+-`
-    * add lasso point: `ctrl+left click`
-    * clear lasso: `ctrl+right click`
-
-    """
+    """A VisPy canvas displaying features."""
     _visual_class = FeatureVisual
 
     def _create_visuals(self):
@@ -436,6 +427,13 @@ class FeatureView(BaseSpikeCanvas):
         self.lasso.draw()
         self.boxes.draw()
 
+    keyboard_shortcuts = {
+        'increase_marker_size': 'ctrl+[+]',
+        'decrease_marker_size': 'ctrl+[-]',
+        'add_lasso_point': 'ctrl+left click',
+        'clear_lasso': 'ctrl+right click',
+    }
+
     def on_mouse_press(self, e):
         ctrl = e.modifiers == ('Control',)
         if not ctrl:
@@ -466,4 +464,3 @@ class FeatureView(BaseSpikeCanvas):
                 self.marker_size += coeff
             if event.key == '-':
                 self.marker_size -= coeff
-            self.update()

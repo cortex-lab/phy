@@ -196,14 +196,7 @@ class TraceVisual(BaseSpikeVisual):
 
 
 class TraceView(BaseSpikeCanvas):
-    """A VisPy canvas displaying traces.
-
-    Interactivity
-    -------------
-
-    * change channel scale: `ctrl+up`, `ctrl+down`
-
-    """
+    """A VisPy canvas displaying traces."""
     _visual_class = TraceVisual
 
     def _create_pan_zoom(self):
@@ -225,7 +218,10 @@ class TraceView(BaseSpikeCanvas):
         self.visual.channel_scale = value
         self.update()
 
-    _arrows = ('Left', 'Right', 'Up', 'Down')
+    keyboard_shortcuts = {
+        'increase_channel_scale': 'ctrl+[+]',
+        'decrease_channel_scale': 'ctrl+[-]',
+    }
 
     def on_key_press(self, event):
         """Handle key press events."""
@@ -233,11 +229,10 @@ class TraceView(BaseSpikeCanvas):
         ctrl = 'Control' in event.modifiers
 
         # Box scale.
-        if ctrl and key in self._arrows:
+        if ctrl and key in ('+', '-'):
             coeff = 1.1
             u = self.channel_scale
-            if key == 'Down':
+            if key == '-':
                 self.channel_scale = u / coeff
-            elif key == 'Up':
+            elif key == '+':
                 self.channel_scale = u * coeff
-            self.update()

@@ -226,18 +226,10 @@ class WaveformVisual(BaseSpikeVisual):
 
 
 class WaveformView(BaseSpikeCanvas):
-    """A VisPy canvas displaying waveforms.
-
-    Interactivity
-    -------------
-
-    * change waveform scaling: `ctrl+arrows`
-    * change probe scaling: `shift+arrows`
-    * select channel: `key+click`
-
-    """
+    """A VisPy canvas displaying waveforms."""
     _visual_class = WaveformVisual
     _arrows = ('Left', 'Right', 'Up', 'Down')
+    _pm = ('+', '-')
     _events = ('channel_click',)
     _key_pressed = None
     _show_mean = False
@@ -304,6 +296,18 @@ class WaveformView(BaseSpikeCanvas):
         self._show_mean = value
         self.update()
 
+    keyboard_shortcuts = {
+        'increase_waveform_scale': ('ctrl+[+]', 'ctrl+up'),
+        'decrease_waveform_scale': ('ctrl+[-]', 'ctrl+down'),
+        'increase_waveform_width': 'ctrl+right',
+        'decrease_waveform_width': 'ctrl+left',
+        'increase_probe_width': 'shift+right',
+        'decrease_probe_width': 'shift+left',
+        'increase_probe_height': 'shift+up',
+        'decrease_probe_height': 'shift+down',
+        'select_channel': '[number key]+[left click]',
+    }
+
     def on_key_press(self, event):
         """Handle key press events."""
         key = event.key
@@ -314,16 +318,16 @@ class WaveformView(BaseSpikeCanvas):
         shift = 'Shift' in event.modifiers
 
         # Box scale.
-        if ctrl and key in self._arrows:
+        if ctrl and key in self._arrows + self._pm:
             coeff = 1.1
             u, v = self.box_scale
             if key == 'Left':
                 self.box_scale = (u / coeff, v)
             elif key == 'Right':
                 self.box_scale = (u * coeff, v)
-            elif key == 'Down':
+            elif key in ('Down', '-'):
                 self.box_scale = (u, v / coeff)
-            elif key == 'Up':
+            elif key == ('Up', '+'):
                 self.box_scale = (u, v * coeff)
 
         # Probe scale.

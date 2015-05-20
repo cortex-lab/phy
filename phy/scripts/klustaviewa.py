@@ -63,7 +63,7 @@ def main():
     start_qt_app()
     kv = session.show_gui(show=False)
 
-    print("Press `h` to see the list of keyboard shortcuts.")
+    print("Press `ctrl+h` to see the list of keyboard shortcuts.")
 
     # Interactive mode with IPython.
     if '-i' in sys.argv:

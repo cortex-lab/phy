@@ -173,10 +173,17 @@ class WaveformViewModel(BaseViewModel):
     def show_mean(self, value):
         self.view.show_mean = value
 
+    keyboard_shortcuts = {
+        'toggle_mean_waveforms': 'm',
+        'toggle_overlap': 'o',
+    }
+
     def on_key_press(self, event):
         key = event.key
         if key == 'm':
             self.show_mean = not(self.show_mean)
+        if key == 'o':
+            self.overlap = not(self.overlap)
 
     def exported_params(self, save_size_pos=True):
         params = super(WaveformViewModel, self).exported_params(save_size_pos)
@@ -330,6 +337,10 @@ class FeatureViewModel(BaseViewModel):
         self.view.dimensions = self._default_dimensions(clusters)
 
         self.view.update()
+
+    keyboard_shortcuts = {
+        'select_subplot': 'double left click',
+    }
 
     def on_mouse_double_click(self, e):
         if self._previous_dimensions:
@@ -518,6 +529,13 @@ class TraceViewModel(BaseViewModel):
         """Move the current interval to the left."""
         start, end = self.interval
         self.move(int(-(end - start) * fraction))
+
+    keyboard_shortcuts = {
+        'scroll_left': 'ctrl+left',
+        'scroll_right': 'ctrl+right',
+        'scroll_left_more': 'shift+left',
+        'scroll_right_more': 'shift+right',
+    }
 
     def on_key_press(self, event):
         key = event.key

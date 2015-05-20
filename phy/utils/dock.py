@@ -227,8 +227,8 @@ class DockWindow(QMainWindow):
 
         """
         def _make_func(func):
-            for widget_0 in self.list_views(name_0):
-                for widget_1 in self.list_views(name_1):
+            for widget_0 in self.list_views(name_0, is_visible=False):
+                for widget_1 in self.list_views(name_1, is_visible=False):
                     view_0 = _widget(widget_0)
                     view_1 = _widget(widget_1)
                     func(view_0, view_1)

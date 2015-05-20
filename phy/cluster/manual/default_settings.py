@@ -50,7 +50,7 @@ keyboard_shortcuts = {
     'undo': 'ctrl+z',
     'redo': ('ctrl+shift+z', 'ctrl+y'),
     'exit': 'ctrl+q',
-    'show_shortcuts': 'h',
+    'show_shortcuts': 'ctrl+h',
     'reset_wizard': 'ctrl+w',
     'next': 'space',
     'previous': 'shift+space',
