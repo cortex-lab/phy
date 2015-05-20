@@ -39,6 +39,7 @@ from phy.utils import start_qt_app, run_qt_app
 #------------------------------------------------------------------------------
 
 def main():
+    print("KlustaViewa {}".format(phy.__version__))
     # TODO: use argparse
 
     if '-h' in sys.argv or '--help' in sys.argv:
@@ -54,9 +55,9 @@ def main():
         print("The file `{}` doesn't exist.".format(kwik_path))
         exit(1)
 
+    print("\nLoading {}...".format(kwik_path))
     session = Session(kwik_path)
-
-    print("\nLoading the data...")
+    print("Data successfully loaded!\n")
     session.model.describe()
 
     start_qt_app()
