@@ -297,14 +297,14 @@ class WaveformView(BaseSpikeCanvas):
         self.update()
 
     keyboard_shortcuts = {
-        'increase_waveform_scale': ('ctrl+[+]', 'ctrl+up'),
-        'decrease_waveform_scale': ('ctrl+[-]', 'ctrl+down'),
-        'increase_waveform_width': 'ctrl+right',
-        'decrease_waveform_width': 'ctrl+left',
-        'increase_probe_width': 'shift+right',
-        'decrease_probe_width': 'shift+left',
-        'increase_probe_height': 'shift+up',
-        'decrease_probe_height': 'shift+down',
+        'waveform_scale_increase': ('ctrl+[+]', 'ctrl+up'),
+        'waveform_scale_decrease': ('ctrl+[-]', 'ctrl+down'),
+        'waveform_width_increase': 'ctrl+right',
+        'waveform_width_decrease': 'ctrl+left',
+        'probe_width_increase': 'shift+right',
+        'probe_width_decrease': 'shift+left',
+        'probe_height_increase': 'shift+up',
+        'probe_height_decrease': 'shift+down',
         'select_channel': '[number key]+[left click]',
     }
 

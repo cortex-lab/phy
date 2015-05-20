@@ -336,7 +336,7 @@ class FeatureViewModel(BaseViewModel):
         self.view.update()
 
     keyboard_shortcuts = {
-        'select_subplot': 'double left click',
+        'enlarge_subplot': 'double left click',
     }
 
     def on_mouse_double_click(self, e):
@@ -529,8 +529,8 @@ class TraceViewModel(BaseViewModel):
     keyboard_shortcuts = {
         'scroll_left': 'ctrl+left',
         'scroll_right': 'ctrl+right',
-        'scroll_left_more': 'shift+left',
-        'scroll_right_more': 'shift+right',
+        'fast_scroll_left': 'shift+left',
+        'fast_scroll_right': 'shift+right',
     }
 
     def on_key_press(self, event):

@@ -476,13 +476,14 @@ class BaseSpikeCanvas(app.Canvas):
     _visual_class = None
     _pz = None
     _events = ()
+    keyboard_shortcuts = {}
 
     def __init__(self, **kwargs):
         super(BaseSpikeCanvas, self).__init__(keys='interactive', **kwargs)
         self._create_visuals()
         self._create_pan_zoom()
         self._add_events()
-        self.keyboard_shortcuts = self._pz.keyboard_shortcuts
+        self.keyboard_shortcuts.update(self._pz.keyboard_shortcuts)
 
     def _create_visuals(self):
         self.visual = self._visual_class()
