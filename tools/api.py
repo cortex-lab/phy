@@ -12,6 +12,8 @@ import os.path as op
 import re
 import sys
 
+from phy.ext.six import string_types
+
 
 #------------------------------------------------------------------------------
 # Utility functions
@@ -110,7 +112,7 @@ def _import_module(module_name):
 #------------------------------------------------------------------------------
 
 def _is_public(obj):
-    name = _name(obj)
+    name = _name(obj) if not isinstance(obj, string_types) else obj
     if name:
         return not name.startswith('_')
     else:
@@ -198,7 +200,8 @@ def _doc_method(klass, func):
     """Generate the docstring of a method."""
     argspec = inspect.getfullargspec(func)
     # Remove first 'self' argument.
-    del argspec.args[0]
+    if argspec.args and argspec.args[0] == 'self':
+        del argspec.args[0]
     args = inspect.formatargspec(*argspec)
     header = "`{klass}.{name}{args}`".format(klass=klass.__name__,
                                              name=_name(func),
