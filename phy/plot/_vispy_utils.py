@@ -16,7 +16,7 @@ from vispy.util.event import Event
 from vispy.visuals import Visual
 
 from ..utils._types import _as_array
-from ..utils.array import _unique
+from ..utils.array import _unique, _in_polygon
 from ..utils.logging import debug
 from ._panzoom import PanZoom
 
@@ -200,7 +200,10 @@ class BaseSpikeVisual(_BakeVisual):
 
     @masks.setter
     def masks(self, value):
+        assert isinstance(value, np.ndarray)
         value = _as_array(value)
+        if value.ndim == 1:
+            value = value[None, :]
         self._set_or_assert_n_spikes(value)
         # TODO: support sparse structures
         assert value.ndim == 2
@@ -242,7 +245,11 @@ class BaseSpikeVisual(_BakeVisual):
 
     @property
     def cluster_colors(self):
-        """Colors of the displayed clusters."""
+        """Colors of the displayed clusters.
+
+        The first color is the color of the smallest cluster.
+
+        """
         return self._cluster_colors
 
     @cluster_colors.setter
@@ -256,8 +263,11 @@ class BaseSpikeVisual(_BakeVisual):
 
     def _bake_cluster_color(self):
         if self.n_clusters == 0:
-            return
-        u_cluster_color = self.cluster_colors.reshape((1, self.n_clusters, -1))
+            u_cluster_color = np.zeros((0, 0, 3))
+        else:
+            u_cluster_color = self.cluster_colors.reshape((1,
+                                                           self.n_clusters,
+                                                           -1))
         u_cluster_color = (u_cluster_color * 255).astype(np.uint8)
         self.program['u_cluster_color'] = gloo.Texture2D(u_cluster_color)
         debug("bake cluster color", u_cluster_color.shape)
@@ -415,9 +425,10 @@ class LassoVisual(_BakeVisual):
         """
         if self.n_points <= 1:
             return
-        from matplotlib.path import Path
-        path = Path(np.array(self._points, dtype=np.float32), closed=True)
-        return path.contains_points(points)
+        polygon = self._points
+        # Close the polygon.
+        polygon.append(polygon[0])
+        return _in_polygon(points, polygon)
 
     @property
     def n_points(self):

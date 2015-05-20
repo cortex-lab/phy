@@ -15,17 +15,12 @@ from numpy.testing import assert_allclose as ac
 
 from ...utils import Bunch, _spikes_per_cluster
 from ...utils.tempdir import TemporaryDirectory
-from ...utils.logging import set_level
 from ..store import MemoryStore, DiskStore, ClusterStore, StoreItem
 
 
 #------------------------------------------------------------------------------
 # Test data stores
 #------------------------------------------------------------------------------
-
-def setup():
-    set_level('debug')
-
 
 def test_memory_store():
     ms = MemoryStore()

@@ -157,7 +157,7 @@ class DockWindow(QMainWindow):
     def add_view(self,
                  view,
                  title='view',
-                 position='right',
+                 position=None,
                  closable=True,
                  floatable=True,
                  floating=None,
@@ -192,21 +192,21 @@ class DockWindow(QMainWindow):
             'right': QtCore.Qt.RightDockWidgetArea,
             'top': QtCore.Qt.TopDockWidgetArea,
             'bottom': QtCore.Qt.BottomDockWidgetArea,
-        }[position]
+        }[position or 'right']
         self.addDockWidget(q_position, dockwidget)
         if floating is not None:
             dockwidget.setFloating(floating)
         dockwidget.show()
         return dockwidget
 
-    def list_views(self, title=''):
+    def list_views(self, title='', is_visible=None):
         """List all views which title start with a given string."""
         title = title.lower()
         children = self.findChildren(QtGui.QWidget)
         return [child for child in children
                 if isinstance(child, QtGui.QDockWidget) and
                 _title(child).startswith(title) and
-                # child.isVisible() and
+                (child.isVisible() if is_visible else True) and
                 child.width() >= 10 and
                 child.height() >= 10
                 ]

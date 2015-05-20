@@ -77,8 +77,9 @@ def test_selector_clusters():
 
     # Specify a maximum number of spikes.
     selector.n_spikes_max = 10
-    selector.selected_clusters = [2, 4]
+    selector.selected_clusters = [4, 2]
     assert len(selector.selected_spikes) <= 10
+    assert selector.selected_clusters == [4, 2]
     assert np.all(np.in1d(spike_clusters[selector.selected_spikes], (2, 4)))
 
     # Reduce the number of maximum spikes: the selection should update

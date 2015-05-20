@@ -9,7 +9,6 @@
 from operator import itemgetter
 
 from ...utils import _is_array_like
-from ...utils.logging import info
 from ._utils import History
 
 
@@ -231,6 +230,17 @@ class Wizard(object):
         """Currently-selected closest match."""
         return self._match
 
+    @property
+    def selection(self):
+        """Return the current best/match cluster selection."""
+        b, m = self.best, self.match
+        if b is None:
+            return []
+        elif m is None:
+            return [b]
+        else:
+            return [b, m]
+
     @match.setter
     def match(self, value):
         if value is not None:
@@ -264,24 +274,26 @@ class Wizard(object):
     # Navigation
     #--------------------------------------------------------------------------
 
+    @property
+    def _has_finished(self):
+        return self.best is not None and len(self._best_list) <= 1
+
     def next_best(self):
         """Select the next best cluster."""
-        # Handle the case where we arrive at the end of the best list.
-        if self.best is not None and len(self._best_list) <= 1:
-            info("The wizard has finished.")
-        else:
-            self.best = _next(self._best_list,
-                              self._best,
-                              # self._is_not_ignored,
-                              )
+        if self._has_finished:
+            return
+        self.best = _next(self._best_list,
+                          self._best,
+                          )
         if self.match is not None:
             self._set_match_list()
 
     def previous_best(self):
         """Select the previous best in cluster."""
+        if self._has_finished:
+            return
         self.best = _previous(self._best_list,
                               self._best,
-                              # self._is_not_ignored,
                               )
         if self.match is not None:
             self._set_match_list()
@@ -294,14 +306,12 @@ class Wizard(object):
         else:
             self.match = _next(self._match_list,
                                self._match,
-                               # self._is_not_ignored,
                                )
 
     def previous_match(self):
         """Select the previous match."""
         self.match = _previous(self._match_list,
                                self._match,
-                               # self._is_not_ignored,
                                )
 
     def next(self):
@@ -341,6 +351,8 @@ class Wizard(object):
 
     def pin(self, cluster=None):
         """Pin the current best cluster and set the list of closest matches."""
+        if self._has_finished:
+            return
         if cluster is None:
             cluster = self.best
         if self.match is not None and self.best == cluster:
@@ -367,7 +379,7 @@ class Wizard(object):
             if clu in self._match_list:
                 self._match_list.remove(clu)
             if clu == self._best:
-                self.unpin()
+                self._best = self._best_list[0] if self._best_list else None
             if clu == self._match:
                 self._match = None
 
@@ -397,11 +409,29 @@ class Wizard(object):
             parents = [x for (x, y) in up.descendants if y == clu]
             parent = parents[0]
             group = self._group(parent)
-            if self._best_list:
-                position = self._best_list.index(parent)
-                self._add([clu], group, position)
+            position = (self._best_list.index(parent)
+                        if self._best_list else None)
+            self._add([clu], group, position)
         # Delete old clusters.
         self._delete(up.deleted)
+
+    def _select_history(self):
+        best, match = self._history.current_item
+        # Select the history best.
+        if best is not None and self._best_list:
+            assert best in self._best_list
+            self.best = best
+        # Ensure the current best cluster is valid.
+        if self.best is not None and self.best not in self._best_list:
+            self.best = self._best_list[0]
+        # Select the history match.
+        if match is not None and self._match_list:
+            self._set_match_list()
+            assert match in self._match_list
+            self.match = match
+        # Ensure the current match is valid.
+        if self.match is not None and self.match not in self._match_list:
+            self.match = self._match_list[0]
 
     def _update_selection(self, up):
         # New selection.
@@ -410,17 +440,13 @@ class Wizard(object):
             if not self._history.is_last():
                 self._history.undo()
             self._history.undo()
-            best, match = self._history.current_item
-            self.pin(best)
-            self.match = match
+            self._select_history()
         elif up.history == 'redo':
             # Two redo except for the first one.
             if not self._history.is_first():
                 self._history.redo()
             self._history.redo()
-            best, match = self._history.current_item
-            self.pin(best)
-            self.match = match
+            self._select_history()
         elif up.description in ('merge', 'assign'):
             self.pin(up.added[0])
         elif up.description == 'metadata_group':
@@ -429,10 +455,15 @@ class Wizard(object):
                 self.next_best()
             elif cluster == self.match:
                 self.next_match()
+        self._check()
 
     def on_cluster(self, up):
+        if self._has_finished:
+            return
         if not self._best_list or not self._match_list:
             self._update_state(up)
+            if self._best_list:
+                self._update_selection(up)
             return
         if up is None:
             return

@@ -1050,6 +1050,11 @@ class KwikModel(BaseModel):
         return _unique(self._spike_clusters)
 
     @property
+    def spike_ids(self):
+        """List of spike ids."""
+        return np.arange(self.n_spikes, dtype=np.int32)
+
+    @property
     def cluster_groups(self):
         """Groups of all clusters in the current channel group and clustering.
 

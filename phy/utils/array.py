@@ -106,9 +106,10 @@ def _index_of(arr, lookup):
     """
     # Equivalent of np.digitize(arr, lookup) - 1, but much faster.
     # TODO: assertions to disable in production for performance reasons.
-    m = lookup.max() + 1
+    m = (lookup.max() if len(lookup) else 0) + 1
     tmp = np.zeros(m, dtype=np.int)
-    tmp[lookup] = np.arange(len(lookup))
+    if len(lookup):
+        tmp[lookup] = np.arange(len(lookup))
     return tmp[arr]
 
 
@@ -202,6 +203,17 @@ def _fill_index(arr, item):
         return arr[item]
     else:
         return arr
+
+
+def _in_polygon(points, polygon):
+    """Return the points that are inside a polygon."""
+    from matplotlib.path import Path
+    points = _as_array(points)
+    polygon = _as_array(polygon)
+    assert points.ndim == 2
+    assert polygon.ndim == 2
+    path = Path(polygon, closed=True)
+    return path.contains_points(points)
 
 
 # -----------------------------------------------------------------------------
@@ -421,14 +433,20 @@ class PartialArray(object):
         self._trailing_index = _as_tuple(trailing_index)
         self.shape = _partial_shape(arr.shape, self._trailing_index)
         self.dtype = arr.dtype
+        self.ndim = len(self.shape)
 
     def __getitem__(self, item):
         if self._trailing_index is None:
             return self._arr[item]
         else:
             item = _as_tuple(item)
+            k = len(item)
+            n = len(self._arr.shape)
+            t = len(self._trailing_index)
+            if k < (n - t):
+                item += (slice(None, None, None),) * (n - k - t)
             item += self._trailing_index
-            if len(item) != len(self._arr.shape):
+            if len(item) != n:
                 raise ValueError("The array selection is invalid: "
                                  "{0}".format(str(item)))
             return self._arr[item]

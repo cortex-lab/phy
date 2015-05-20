@@ -9,13 +9,14 @@
 # import numpy as np
 from pytest import mark
 
-from ....utils.logging import set_level, debug
+from ....utils.logging import set_level
+from ....utils.tempdir import TemporaryDirectory
 from ....utils.testing import (show_test_start,
                                show_test_stop,
                                show_test_run,
                                )
-from ....io.mock import MockModel
-# from ..clustering import Clustering
+from ....io.kwik.mock import create_mock_kwik
+from ....io.kwik import KwikModel
 from ..kwik import (WaveformViewModel,
                     FeatureViewModel,
                     CorrelogramViewModel,
@@ -28,9 +29,14 @@ pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------
-# View model tests
+# Utilities
 #------------------------------------------------------------------------------
 
+_N_CLUSTERS = 5
+_N_SPIKES = 200
+_N_CHANNELS = 28
+_N_FETS = 2
+_N_SAMPLES_TRACES = 10000
 _N_FRAMES = 2
 
 
@@ -39,59 +45,65 @@ def setup():
 
 
 def _test_empty(view_model_class, stop=True, **kwargs):
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=1,
+                                    n_spikes=1,
+                                    n_channels=_N_CHANNELS,
+                                    n_features_per_channel=_N_FETS,
+                                    n_samples_traces=_N_SAMPLES_TRACES)
+        model = KwikModel(filename)
 
-    model = MockModel(n_spikes=1, n_clusters=1)
+        vm = view_model_class(model=model, **kwargs)
+        vm.on_open()
 
-    vm = view_model_class(model, **kwargs)
-    vm.on_open()
-    vm.on_select([0])
+        # Show the view.
+        show_test_start(vm.view)
+        show_test_run(vm.view, _N_FRAMES)
+        vm.select([0])
+        show_test_run(vm.view, _N_FRAMES)
+        vm.select([])
+        show_test_run(vm.view, _N_FRAMES)
 
-    # Show the view.
-    show_test_start(vm.view)
-    show_test_run(vm.view, _N_FRAMES)
+        if stop:
+            show_test_stop(vm.view)
 
-    if stop:
-        show_test_stop(vm.view)
-
-    return vm
+        return vm
 
 
-def _test_view_model(view_model_class, stop=True, do_cluster=False, **kwargs):
+def _test_view_model(view_model_class, stop=True, **kwargs):
 
-    model = MockModel()
-    # clustering = Clustering(model.spike_clusters)
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = create_mock_kwik(tempdir,
+                                    n_clusters=_N_CLUSTERS,
+                                    n_spikes=_N_SPIKES,
+                                    n_channels=_N_CHANNELS,
+                                    n_features_per_channel=_N_FETS,
+                                    n_samples_traces=_N_SAMPLES_TRACES)
+        model = KwikModel(filename)
 
-    clusters = [3, 4]
-    # spikes = clustering.spikes_in_clusters(clusters)
+        vm = view_model_class(model=model, **kwargs)
+        vm.on_open()
 
-    vm = view_model_class(model, **kwargs)
-    vm.on_open()
-    vm.on_select(clusters)
+        vm.select([2, 3])
+        show_test_start(vm.view)
+        show_test_run(vm.view, _N_FRAMES)
 
-    # Show the view.
-    show_test_start(vm.view)
-    show_test_run(vm.view, _N_FRAMES)
+        vm.select([3, 2])
+        show_test_start(vm.view)
+        show_test_run(vm.view, _N_FRAMES)
 
-    if do_cluster:
-        # Merge the clusters and update the view.
-        debug("Merging.")
-        # up = clustering.merge(clusters)
-        # vm.on_select(up.added)
-        # show_test_run(vm.view, _N_FRAMES)
+        if stop:
+            show_test_stop(vm.view)
 
-        # # Split some spikes and update the view.
-        # debug("Splitting.")
-        # spikes = spikes[::2]
-        # up = clustering.assign(spikes, np.random.randint(low=0, high=5,
-        #                                                  size=len(spikes)))
-        # vm.on_select(up.added)
-        # show_test_run(vm.view, _N_FRAMES)
+        return vm
 
-    if stop:
-        show_test_stop(vm.view)
 
-    return vm
-
+#------------------------------------------------------------------------------
+# Waveforms
+#------------------------------------------------------------------------------
 
 def test_waveforms_full():
     _test_view_model(WaveformViewModel)
@@ -101,32 +113,62 @@ def test_waveforms_empty():
     _test_empty(WaveformViewModel)
 
 
+#------------------------------------------------------------------------------
+# Features
+#------------------------------------------------------------------------------
+
+def test_features_empty():
+    _test_empty(FeatureViewModel)
+
+
 def test_features_full():
-    _test_view_model(FeatureViewModel)
+    _test_view_model(FeatureViewModel, marker_size=8)
 
 
 def test_features_lasso():
     vm = _test_view_model(FeatureViewModel,
+                          marker_size=8,
                           stop=False,
-                          do_cluster=False,
                           )
     show_test_run(vm.view, _N_FRAMES)
-    vm.view.lasso.box = 1, 2
-    vm.view.lasso.add((0, 0))
-    vm.view.lasso.add((1, 0))
-    vm.view.lasso.add((1, 1))
-    vm.view.lasso.add((0, 1))
+    box = (1, 2)
+    vm.view.lasso.box = box
+    x, y = 0., 1.
+    vm.view.lasso.add((x, x))
+    vm.view.lasso.add((y, x))
+    vm.view.lasso.add((y, y))
+    vm.view.lasso.add((x, y))
     show_test_run(vm.view, _N_FRAMES)
-    # spikes = vm.spikes_in_lasso()
-    # clustering = Clustering(vm.model.spike_clusters)
-    # up = clustering.split(spikes)
-    # vm.on_select(up.added)
+    # Find spikes in lasso.
+    spikes = vm.spikes_in_lasso()
+    # Change their clusters.
+    vm.model.spike_clusters[spikes] = 3
+    sc = vm.model.spike_clusters
+    vm.view.visual.spike_clusters = sc[vm.view.visual.spike_ids]
     show_test_run(vm.view, _N_FRAMES)
     show_test_stop(vm.view)
 
 
-def test_features_empty():
-    _test_empty(FeatureViewModel)
+#------------------------------------------------------------------------------
+# Correlograms
+#------------------------------------------------------------------------------
+
+def test_ccg_empty():
+    _test_empty(CorrelogramViewModel,
+                binsize=20,
+                winsize_bins=51,
+                n_excerpts=100,
+                excerpt_size=100,
+                )
+
+
+def test_ccg_simple():
+    _test_view_model(CorrelogramViewModel,
+                     binsize=10,
+                     winsize_bins=61,
+                     n_excerpts=80,
+                     excerpt_size=120,
+                     )
 
 
 def test_ccg_full():
@@ -143,16 +185,19 @@ def test_ccg_full():
     show_test_stop(vm.view)
 
 
-def test_ccg_empty():
-    _test_empty(CorrelogramViewModel,
-                binsize=20,
-                winsize_bins=51,
-                n_excerpts=100,
-                excerpt_size=100,
-                )
+#------------------------------------------------------------------------------
+# Traces
+#------------------------------------------------------------------------------
+
+def test_traces_empty():
+    _test_empty(TraceViewModel)
 
 
-def test_traces():
+def test_traces_simple():
+    _test_view_model(TraceViewModel)
+
+
+def test_traces_full():
     vm = _test_view_model(TraceViewModel, stop=False)
     vm.move_right()
     show_test_run(vm.view, _N_FRAMES)

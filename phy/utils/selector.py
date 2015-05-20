@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from ._types import _as_array
+from ._types import _as_array, _as_list
 from .array import (regular_subset,
                     get_excerpts,
                     _unique,
@@ -40,6 +40,7 @@ class Selector(object):
         self._n_spikes_max = n_spikes_max
         self._excerpt_size = excerpt_size
         self._selected_spikes = np.array([], dtype=np.int64)
+        self._selected_clusters = None
 
     @property
     def n_spikes_max(self):
@@ -165,7 +166,10 @@ class Selector(object):
     @property
     def selected_clusters(self):
         """Cluster ids appearing in the current spike selection."""
-        return _unique(self._spike_clusters[self._selected_spikes])
+        if self._selected_clusters is not None:
+            return self._selected_clusters
+        clusters = _unique(self._spike_clusters[self._selected_spikes])
+        return clusters
 
     @selected_clusters.setter
     def selected_clusters(self, value):
@@ -175,6 +179,7 @@ class Selector(object):
         those clusters.
 
         """
+        self._selected_clusters = _as_list(value)
         value = _as_array(value)
         # Make sure there are less spikes than n_spikes_max.
         self.selected_spikes = self.subset_spikes_clusters(value)

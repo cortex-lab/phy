@@ -8,10 +8,8 @@
 
 import os
 import os.path as op
-import re
 
 from ..ext.six.moves import cPickle
-from ._types import Bunch
 from .logging import debug, warn
 
 
@@ -19,299 +17,150 @@ from .logging import debug, warn
 # Utility functions
 #------------------------------------------------------------------------------
 
-def _split_namespace(name, namespace=None):
-    if '.' in name:
-        namespace, name = name.split('.')
-    if namespace is None:
-        raise ValueError("The namespace must be specified.")
-    return namespace, name
+def _load_python(path):
+    path = op.realpath(op.expanduser(path))
+    assert op.exists(path)
+    with open(path, 'r') as f:
+        contents = f.read()
+    store = {}
+    exec(contents, {}, store)
+    return store
+
+
+def _load_pickle(path):
+    path = op.realpath(op.expanduser(path))
+    assert op.exists(path)
+    with open(path, 'rb') as f:
+        store = cPickle.load(f)
+        assert isinstance(store, dict)
+        return store
+
+
+def _save_pickle(path, store):
+    path = op.realpath(op.expanduser(path))
+    with open(path, 'wb') as f:
+        cPickle.dump(store, f)
 
 
 #------------------------------------------------------------------------------
-# Base Settings
+# Settings
 #------------------------------------------------------------------------------
 
 class BaseSettings(object):
     """Store key-value pairs."""
     def __init__(self):
-        self._store = {'global': {}}
-
-    @property
-    def _namespaces(self):
-        return sorted(self._store['global'])
-
-    def get(self, name, namespace=None, scope='global'):
-        """Get a settings value.
-
-        Parameters
-        ----------
-        name : str
-            The settings name
-        scope : str (default is `global`)
-            The scope for that setting. Can be `global` or a dataset name.
-
-        """
-        namespace, name = _split_namespace(name, namespace=namespace)
-        if scope not in self._store:
-            scope = 'global'
-        out = self._store[scope].get(namespace, {}).get(name, None)
-        # Fallback to 'global' scope if the requested value is None.
-        if scope != 'global' and out is None:
-            out = self._store['global'].get(namespace, {}).get(name, None)
-        return out
-
-    def set(self, key, value, namespace=None, scope='global'):
-        """Set some settings
-
-        Parameters
-        ----------
-        key : str
-        value : object
-        namespace : str
-            The namespace if it is not specified in the keys.
-        scope : str (default is `global`)
-            The scope for that setting. Can be `global` or a dataset name.
-
-        """
-        if scope not in self._store:
-            self._store[scope] = Bunch()
-        namespace, name = _split_namespace(key, namespace=namespace)
-
-        # Create dictionaries if they do not exist.
-        if namespace not in self._store[scope]:
-            self._store[scope][namespace] = Bunch()
-
-        # Update the settings.
-        self._store[scope][namespace][name] = value
-
-
-#------------------------------------------------------------------------------
-# User Settings
-#------------------------------------------------------------------------------
-
-class UserSettings(BaseSettings):
-    """Support Python settings files."""
-
-    def declare_namespace(self, namespace, scope='global'):
-        self._store[scope][namespace] = Bunch()
-
-    def load(self, path, file_namespace=None, scope='global'):
-        """Load a settings file.
-
-        Parameters
-        ----------
-        path : str
-            A path to a Python settings file.
-        file_namespace : dict
-            A namespace to pass to the Python settings file.
-        scope : str (default is `global`)
-            The scope for that setting. Can be `global` or a dataset name.
-
-        """
-        path = op.expanduser(path)
-        path = op.realpath(path)
-        assert op.exists(path)
-        with open(path, 'r') as f:
-            contents = f.read()
-        if file_namespace is None:
-            file_namespace = {}
-        # Executing the code directly updates the internal store.
-        # The current store is passed as a global namespace.
-        try:
-            exec(contents, Bunch(self._store[scope]), file_namespace)
-        except NameError as e:
-            r = re.search("'([^']+)'", e.args[0])
-            if r:
-                name = r.group(1)
-            namespaces = ', '.join(self._namespaces)
-            raise NameError("Unknown namespace '{0:s}'. ".format(name) +
-                            "Known namespaces are: {0:s}.".format(namespaces))
-
-    def set(self, key=None, value=None, namespace=None, scope='global'):
-        """Set some settings
-
-        Parameters
-        ----------
-        key : str
-        value : str
-        namespace : str
-            The namespace if it is not specified in the keys.
-        scope : str (default is `global`)
-            The scope for that setting. Can be `global` or a dataset name.
-
-        """
-        super(UserSettings, self).set(key, value,
-                                      namespace=namespace,
-                                      scope=scope,
-                                      )
-
-
-_USER_SETTINGS = UserSettings()
-
-
-def get(*args, **kwargs):
-    return _USER_SETTINGS.get(*args, **kwargs)
-
-
-def load(*args, **kwargs):
-    return _USER_SETTINGS.load(*args, **kwargs)
-
-
-def set(*args, **kwargs):
-    return _USER_SETTINGS.set(*args, **kwargs)
-
-
-def declare_namespace(*args, **kwargs):
-    return _USER_SETTINGS.declare_namespace(*args, **kwargs)
-
-
-#------------------------------------------------------------------------------
-# Internal Settings
-#------------------------------------------------------------------------------
-
-class InternalSettings(object):
-    """Settings to be modified by the program, not the user."""
-
-    def __init__(self):
         self._store = {}
+        self._to_save = {}
 
-    def load(self, path):
-        path = op.realpath(op.expanduser(path))
-        if not op.exists(path):
-            raise ValueError("The file '{0}' doesn't exist.".format(path))
+    def __getitem__(self, key):
+        return self._store[key]
+
+    def __setitem__(self, key, value):
+        self._store[key] = value
+        self._to_save[key] = value
+
+    def __contains__(self, key):
+        return key in self._store
+
+    def _try_load_pickle(self, path):
         try:
-            with open(path, 'rb') as f:
-                store = cPickle.load(f)
-                assert isinstance(store, dict)
+            self._store.update(_load_pickle(path))
+            return True
         except Exception as e:
             warn("Unable to read the internal settings. "
                  "You may want to delete '{0}'.\n{1}".format(path, str(e)))
-            store = None
-        debug("Loaded internal settings from '{0}'.".format(path))
-        self._store = store
+
+    def _try_load_python(self, path):
+        try:
+            self._store.update(_load_python(path))
+            return True
+        except Exception as e:
+            warn("Unable to read the settings file "
+                 "'{0}':\n{1}".format(path, str(e)))
+            return {}
+
+    def load(self, path):
+        if not op.exists(path):
+            debug("The settings file {} doesn't exist.".format(path))
+            return
+        # Try pickle.
+        if not op.splitext(path)[1]:
+            if not self._try_load_pickle(path):
+                self._try_load_python(path)
+        # Try Python.
+        else:
+            self._try_load_python(path)
 
     def save(self, path):
-        if self._store is None:
-            return
-        path = op.realpath(op.expanduser(path))
-        with open(path, 'wb') as f:
-            cPickle.dump(self._store, f)
-        debug("Saved internal settings to '{0}'.".format(path))
-
-    def get(self, name):
-        if self._store is None:
-            return
-        return self._store.get(name, None)
-
-    def set(self, name, value):
-        if self._store is None:
-            return
-        self._store[name] = value
+        try:
+            _save_pickle(path, self._to_save)
+        except Exception as e:
+            warn("Unable to save the internal settings file "
+                 "at '{}':\n{}".format(path, str(e)))
+        self._to_save = {}
 
 
-#------------------------------------------------------------------------------
-# Settings files manager
-#------------------------------------------------------------------------------
+class Settings(object):
+    """Manage default, user-wide, and experiment-wide settings."""
 
-def _create_internal_settings(path):
-    # Initialize the global InternalSettings instance.
-    internal_settings = InternalSettings()
-    # Create the file if it doesn't exist.
-    if not op.exists(path):
-        internal_settings.save(path)
-    else:
-        internal_settings.load(path)
-    return internal_settings
-
-
-class SettingsManager(object):
-    """Manage global and per-experiment user and internal settings."""
-
-    def __init__(self, phy_user_dir=None):
-        self.phy_experiment_dir = None
-        self.experiment_name = None
-
-        # `.phy/` user directory, ~/.phy by default.
-        if phy_user_dir is None:
-            phy_user_dir = _phy_user_dir()
+    def __init__(self, phy_user_dir=None, default_path=None):
+        assert phy_user_dir is not None
         self.phy_user_dir = phy_user_dir
-        _ensure_path_exists(self.phy_user_dir)
+        _ensure_dir_exists(self.phy_user_dir)
 
-        # provide a default namespace for user settings
-        declare_namespace("phy")
-        # Load global user settings.
-        self._load_user_settings('global')
+        self._default_path = default_path
 
-        # Initialize the global InternalSettings instance.
-        path = self.internal_settings_path('global')
-        self._internal_settings = {
-            'global': _create_internal_settings(path),
-            'experiment': None}
+        self._bs = BaseSettings()
+        self._load_user_settings()
 
-    def _load_user_settings(self, scope):
-        path = self.user_settings_path(scope)
-        if op.exists(path):
-            _USER_SETTINGS.load(path=path)
+    def _load_user_settings(self):
 
-    def set_experiment_path(self, experiment_path):
-        self.experiment_path = experiment_path
-        self.experiment_name = op.splitext(op.basename(experiment_path))[0]
+        # Load phy's defaults.
+        if self._default_path:
+            self._bs.load(self._default_path)
 
-        # Experiment directory.
-        self.experiment_dir = op.dirname(experiment_path)
-        _ensure_path_exists(self.experiment_dir)
+        # load the user defaults.
+        self.user_settings_path = op.join(self.phy_user_dir,
+                                          'user_settings.py')
+        self._bs.load(self.user_settings_path)
 
-        # _phy subdirectory in the experiment directory.
-        self.phy_experiment_dir = op.join(self.experiment_dir,
-                                          self.experiment_name + '.phy')
-        _ensure_path_exists(self.phy_experiment_dir)
+        # Load the user's internal settings.
+        self.internal_settings_path = op.join(self.phy_user_dir,
+                                              'internal_settings')
+        self._bs.load(self.internal_settings_path)
 
-        # Load per-experiment user settings.
-        self._load_user_settings('experiment')
+    def on_open(self, path):
+        # Get the experiment settings path.
+        path = op.realpath(op.expanduser(path))
+        self.exp_path = path
+        self.exp_name = op.splitext(op.basename(path))[0]
+        self.exp_dir = op.dirname(path)
+        self.exp_settings_dir = op.join(self.exp_dir, self.exp_name + '.phy')
+        self.exp_settings_path = op.join(self.exp_settings_dir,
+                                         'user_settings.py')
+        _ensure_dir_exists(self.exp_settings_dir)
 
-        # Initialize the experiment InternalSettings instance.
-        path = self.internal_settings_path('experiment')
-        self._internal_settings['experiment'] = _create_internal_settings(path)
-
-    def user_settings_path(self, scope):
-        assert scope in ('global', 'experiment')
-        if scope == 'global':
-            return op.join(self.phy_user_dir, 'user_settings.py')
-        elif scope == 'experiment':
-            return op.join(self.phy_experiment_dir, 'user_settings.py')
-
-    def internal_settings_path(self, scope):
-        assert scope in ('global', 'experiment')
-        root = {'global': self.phy_user_dir,
-                'experiment': self.phy_experiment_dir}
-        return op.join(root[scope], 'internal_settings')
-
-    def get_internal_settings(self, key, scope='global'):
-        return self._internal_settings[scope].get(key)
-
-    def set_internal_settings(self, key, value, scope='global'):
-        return self._internal_settings[scope].set(key, value)
-
-    def get_user_settings(self, key, scope='global'):
-        if scope == 'experiment':
-            scope = self.experiment_name or 'global'
-        return get(key, scope=scope)
-
-    def load_user_settings(self, path, file_namespace=None, scope='global'):
-        if scope == 'experiment':
-            scope = self.experiment_name or 'global'
-        return _USER_SETTINGS.load(path, file_namespace, scope)
-
-    def set_user_settings(self, key, value, scope='global'):
-        if scope == 'experiment':
-            scope = self.experiment_name or 'global'
-        return _USER_SETTINGS.set(key, value,
-                                  scope=scope)
+        # Load experiment-wide settings.
+        self._load_user_settings()
+        self._bs.load(self.exp_settings_path)
 
     def save(self):
-        for scope, settings in self._internal_settings.items():
-            path = self.internal_settings_path(scope)
-            settings.save(path)
+        self._bs.save(self.internal_settings_path)
+
+    def get(self, key, default=None):
+        if key in self:
+            return self[key]
+        else:
+            return default
+
+    def __getitem__(self, key):
+        return self._bs[key]
+
+    def __setitem__(self, key, value):
+        self._bs[key] = value
+
+    def __contains__(self, key):
+        return key in self._bs
 
 
 #------------------------------------------------------------------------------
@@ -328,6 +177,6 @@ def _phy_user_dir():
     return path
 
 
-def _ensure_path_exists(path):
+def _ensure_dir_exists(path):
     if not op.exists(path):
         os.makedirs(path)

@@ -12,8 +12,7 @@ import re
 
 import numpy as np
 
-from ..utils.array import (_unique,
-                           _concatenate_per_cluster_arrays,
+from ..utils.array import (_concatenate_per_cluster_arrays,
                            _subset_spikes_per_cluster,
                            )
 from ..utils._types import _as_int
@@ -382,7 +381,7 @@ class ClusterStore(object):
                    for cluster in clusters}
         arrays = {cluster: load(cluster) for cluster in clusters}
         if spikes is not None:
-            spikes = _unique(spikes)
+            spikes = np.unique(spikes)
             spc, arrays = _subset_spikes_per_cluster(spc, arrays, spikes)
         # Return the concatenated array.
         return _concatenate_per_cluster_arrays(spc, arrays)

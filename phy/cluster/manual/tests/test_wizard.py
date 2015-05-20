@@ -231,6 +231,7 @@ def test_wizard_actions():
     wizard.next()
     wizard.pin()
     _assert_wizard(2, 3)
+    assert wizard.match_list == [3, 7, 5]
 
     _merge([2, 3], 20)
     _assert_wizard(20, 7)
@@ -239,6 +240,7 @@ def test_wizard_actions():
 
     # Simulate an undo and redo.
     _undo_merge([2, 3], 20)
+    assert wizard.match_list == [3, 7, 5]
     _assert_wizard(2, 3)
 
     _redo_merge([2, 3], 20)

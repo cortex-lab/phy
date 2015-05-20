@@ -14,6 +14,7 @@ from .._types import _as_array, _as_tuple
 from ..array import (_unique,
                      _normalize,
                      _index_of,
+                     _in_polygon,
                      chunk_bounds,
                      excerpts,
                      data_chunk,
@@ -227,6 +228,17 @@ def test_concatenate_virtual_arrays():
         ae(concat[1:7, idx], _concat(arr1[1:, idx], arr2[:-2, idx]))
 
 
+def test_in_polygon():
+    polygon = [[0, 0], [1, 0], [1, 1], [0, 1], [0, 0]]
+    points = np.random.uniform(size=(100, 2), low=-1, high=1)
+    idx_expected = np.nonzero((points[:, 0] > 0) &
+                              (points[:, 1] > 0) &
+                              (points[:, 0] < 1) &
+                              (points[:, 1] < 1))[0]
+    idx = np.nonzero(_in_polygon(points, polygon))[0]
+    ae(idx, idx_expected)
+
+
 #------------------------------------------------------------------------------
 # Test chunking
 #------------------------------------------------------------------------------
@@ -344,8 +356,7 @@ def test_partial_array():
     ae(pa[0, 2], arr[0, 2, 1])
     ae(pa[0:2, 1], arr[0:2, 1, 1])
     ae(pa[[1, 2], 0], arr[[1, 2], 0, 1])
-    with raises(ValueError):
-        pa[[1, 2]]
+    ae(pa[[1, 2]], arr[[1, 2], :, 1])
 
     # Slice and 3D.
     arr = np.random.rand(5, 10, 2)
