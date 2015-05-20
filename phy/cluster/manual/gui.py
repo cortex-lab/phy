@@ -7,6 +7,7 @@ from __future__ import print_function
 # Imports
 #------------------------------------------------------------------------------
 
+import phy
 from ...utils.dock import DockWindow, _create_web_view
 from ...utils import EventEmitter, debug
 from ...plot.view_models import BaseViewModel
@@ -89,8 +90,10 @@ class KlustaViewa(EventEmitter):
         filename = self.session.model.kwik_path
         clustering = self.session.model.clustering
         channel_group = self.session.model.channel_group
-        template = "{name} - {filename} (shank {channel_group}, {clustering})"
+        template = ("{name} {version} - {filename} (shank {channel_group}, "
+                    "{clustering} clustering)")
         return template.format(name=name,
+                               version=phy.__version__,
                                filename=filename,
                                channel_group=channel_group,
                                clustering=clustering,
