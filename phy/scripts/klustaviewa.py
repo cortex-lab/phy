@@ -27,6 +27,7 @@ Once the GUI is closed, quit IPython with `exit()`.
 #------------------------------------------------------------------------------
 
 import sys
+import os.path as op
 
 import phy
 from phy.cluster.manual import Session
@@ -44,7 +45,15 @@ def main():
         print(sys.modules[__name__].__doc__)
         return
 
+    if len(sys.argv) == 1:
+        print("Please specify a path to a `.kwik` file.")
+        exit(1)
+
     kwik_path = sys.argv[1]
+    if not op.exists(kwik_path):
+        print("The file `{}` doesn't exist.".format(kwik_path))
+        exit(1)
+
     session = Session(kwik_path)
 
     print("\nLoading the data...")

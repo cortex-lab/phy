@@ -4,18 +4,30 @@
 """
 phy is an open source electrophysiological data analysis package in Python
 for neuronal recordings made with high-density multielectrode arrays
-containing tens, hundreds, or thousands of channels.
-
+containing up to thousands of channels.
 """
+
+
+#------------------------------------------------------------------------------
+# Imports
+#------------------------------------------------------------------------------
+
+import os.path as op
+from pkg_resources import get_distribution, DistributionNotFound
 
 from .utils.logging import _default_logger, set_level
 from .utils.datasets import download_test_data
-from .utils.dock import enable_qt
+from .utils.dock import enable_qt, qt_app
 
 
-__author__ = 'Kwik Team'
+#------------------------------------------------------------------------------
+# Global variables and functions
+#------------------------------------------------------------------------------
+
+__author__ = 'Kwik team'
 __email__ = 'cyrille.rossant at gmail.com'
-__version__ = '0.1.0-alpha'
+__version__ = '0.1.0-dev'
+
 
 __all__ = ['debug', 'set_level']
 
