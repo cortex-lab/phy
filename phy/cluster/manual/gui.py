@@ -91,8 +91,9 @@ class KlustaViewa(EventEmitter):
         filename = self.session.model.kwik_path
         clustering = self.session.model.clustering
         channel_group = self.session.model.channel_group
-        template = ("{name} {version} - {filename} (shank {channel_group}, "
-                    "{clustering} clustering)")
+        template = ("{filename} (shank {channel_group}, "
+                    "{clustering} clustering) "
+                    "- {name} {version}")
         return template.format(name=name,
                                version=phy.__version__,
                                filename=filename,
