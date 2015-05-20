@@ -333,8 +333,8 @@ class PanZoom(object):
     # -------------------------------------------------------------------------
 
     keyboard_shortcuts = {
-        'pan': ('left-drag', 'arrows'),
-        'zoom': ('right-drag', '+', '-'),
+        'pan': ('left click and drag', 'arrows'),
+        'zoom': ('right click and drag', '+', '-'),
         'reset': 'r',
     }
 
@@ -771,8 +771,8 @@ class PanZoomGrid(PanZoom):
     # -------------------------------------------------------------------------
 
     keyboard_shortcuts = {
-        'subplot_pan': ('left-drag', 'arrows'),
-        'subplot_zoom': ('right-drag', '+', '-'),
+        'subplot_pan': ('left click and drag', 'arrows'),
+        'subplot_zoom': ('right click and drag', '+', '-'),
         'subplot_reset': 'r',
         'global_zoom': 'shift+r',
         'global_reset': 'shift+r',

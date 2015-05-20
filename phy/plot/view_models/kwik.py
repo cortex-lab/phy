@@ -29,10 +29,6 @@ class WaveformViewModel(BaseViewModel):
     _imported_params = ('scale_factor', 'box_scale', 'probe_scale',
                         'overlap', 'show_mean')
 
-    def __init__(self, **kwargs):
-        super(WaveformViewModel, self).__init__(**kwargs)
-        self._view.connect(self.on_key_press)
-
     def on_open(self):
         super(WaveformViewModel, self).on_open()
         # Waveforms.
@@ -179,6 +175,7 @@ class WaveformViewModel(BaseViewModel):
     }
 
     def on_key_press(self, event):
+        super(WaveformViewModel, self).on_key_press(event)
         key = event.key
         if key == 'm':
             self.show_mean = not(self.show_mean)
@@ -432,7 +429,6 @@ class TraceViewModel(BaseViewModel):
 
     def __init__(self, **kwargs):
         super(TraceViewModel, self).__init__(**kwargs)
-        self._view.connect(self.on_key_press)
         self._interval = None
 
     def _load_traces(self, interval):
@@ -538,6 +534,7 @@ class TraceViewModel(BaseViewModel):
     }
 
     def on_key_press(self, event):
+        super(TraceViewModel, self).on_key_press(event)
         key = event.key
         if 'Control' in event.modifiers:
             if key == 'Left':

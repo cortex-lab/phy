@@ -482,6 +482,7 @@ class BaseSpikeCanvas(app.Canvas):
         self._create_visuals()
         self._create_pan_zoom()
         self._add_events()
+        self.keyboard_shortcuts = self._pz.keyboard_shortcuts
 
     def _create_visuals(self):
         self.visual = self._visual_class()

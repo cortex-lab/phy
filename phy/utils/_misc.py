@@ -10,6 +10,7 @@
 import sys
 from inspect import getargspec
 
+from ..ext.six import string_types
 from ..ext.six.moves import builtins
 
 
@@ -51,3 +52,20 @@ def _is_interactive():
         return App.initialized() and App.instance().interact
     except (ImportError, AttributeError):
         return False
+
+
+def _show_shortcut(shortcut):
+    if isinstance(shortcut, string_types):
+        return shortcut
+    elif isinstance(shortcut, tuple):
+        return ', '.join(shortcut)
+
+
+def _show_shortcuts(shortcuts, name=''):
+    print()
+    if name:
+        name = ' for ' + name
+    print('Keyboard shortcuts' + name)
+    for name in sorted(shortcuts):
+        print('{0:<24}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
+    print()

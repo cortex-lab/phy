@@ -8,6 +8,7 @@ from __future__ import print_function
 #------------------------------------------------------------------------------
 
 import phy
+from ...utils._misc import _show_shortcuts
 from ...utils.dock import DockWindow, _create_web_view
 from ...utils import EventEmitter, debug
 from ...plot.view_models import BaseViewModel
@@ -248,10 +249,7 @@ class KlustaViewa(EventEmitter):
     def show_shortcuts(self):
         """Show the list off all keyboard shortcuts."""
         shortcuts = self.session.settings['keyboard_shortcuts']
-        print("Keyboard shortcuts")
-        print("------------------")
-        for name in sorted(shortcuts):
-            print("{0:<24}: {1:s}".format(name, str(shortcuts[name])))
+        _show_shortcuts(shortcuts, name=self.__class__.__name__)
 
     def close(self):
         """Close the GUI."""
