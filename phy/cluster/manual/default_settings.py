@@ -80,6 +80,7 @@ gui_config = [
     ('traces', {'position': 'right'}),
 ]
 
+# Whether to ask the user if they want to save when the GUI is closed.
 prompt_save_on_exit = True
 
 
