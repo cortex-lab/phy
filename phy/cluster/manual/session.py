@@ -13,7 +13,6 @@ import shutil
 
 import numpy as np
 
-from ...utils.dock import qt_app
 from ...utils.event import EventEmitter
 from ...utils.logging import info
 from ...utils.settings import (Settings,
@@ -385,9 +384,8 @@ class Session(EventEmitter):
     def show_gui(self, config=None, **kwargs):
         """Show a new manual clustering GUI."""
         # Ensure that a Qt application is running.
-        with qt_app():
-            gui = self.gui_creator.add(config, **kwargs)
-            return gui
+        gui = self.gui_creator.add(config, **kwargs)
+        return gui
 
     def show_view(self, name, cluster_ids, **kwargs):
         """Create and display a new view.
