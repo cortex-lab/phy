@@ -410,11 +410,10 @@ def test_session_gui():
                                            tempdir=tempdir)
 
         with qt_app():
-            gui = session.gui_creator.add(show=False)
-            # Force the scale factor to 1.0 for mock data.
-            for vm in (gui.get_views('waveforms') +
-                       gui.get_views('features') +
-                       gui.get_views('traces')):
-                vm.scale_factor = 1.
+            config = session.settings['gui_config']
+            for name, kwargs in config:
+                if name in ('waveforms', 'features', 'traces'):
+                    kwargs['scale_factor'] = 1
+            gui = session.gui_creator.add(config=config, show=False)
             _close_qt_after(gui, 0.25)
             gui.show()
