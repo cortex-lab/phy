@@ -9,7 +9,7 @@ from __future__ import print_function
 
 import phy
 from ...utils._misc import _show_shortcuts
-from ...utils.dock import DockWindow, _create_web_view
+from ...utils.dock import DockWindow, _create_web_view, _prompt
 from ...utils import EventEmitter, debug
 from ...plot.view_models import BaseViewModel
 
@@ -256,8 +256,15 @@ class KlustaViewa(EventEmitter):
         """Close the GUI."""
         if (self.session.settings['prompt_save_on_exit'] and
                 self.session.has_unsaved_changes):
-            print("TODO: prompt save, cancel, exit.")
-            # return
+            res = _prompt(self._dock,
+                          "Do you want to save your changes?",
+                          ('save', 'cancel', 'close'))
+            if res == 'save':
+                self.save()
+            elif res == 'cancel':
+                return
+            elif res == 'close':
+                pass
         self._dock.close()
 
     def exit(self):
