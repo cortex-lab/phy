@@ -14,6 +14,7 @@ from ..dock import (DockWindow,
                     qt_app,
                     _create_web_view,
                     _close_qt_after,
+                    _prompt,
                     )
 from .._color import _random_color
 
@@ -114,4 +115,16 @@ def test_dock_state():
         def on_show():
             gui.restore_geometry_state(gs)
 
+        _show(gui)
+
+
+@mark.skipif
+def test_prompt():
+    with qt_app():
+        gui = DockWindow()
+        result = _prompt(gui,
+                         "How are you doing?",
+                         buttons=['save', 'cancel', 'close'],
+                         )
+        print(result)
         _show(gui)
