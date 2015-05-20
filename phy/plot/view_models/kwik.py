@@ -284,7 +284,7 @@ class FeatureViewModel(BaseViewModel):
 
     @property
     def diagonal_dimensions(self):
-        """The list of displayed diagonal_dimensions."""
+        """The list of dimensions on the diagonal (y axis)."""
         return self._view.diagonal_dimensions
 
     @diagonal_dimensions.setter
@@ -334,14 +334,10 @@ class FeatureViewModel(BaseViewModel):
     def on_mouse_double_click(self, e):
         if self._previous_dimensions:
             self.dimensions = self._previous_dimensions
-            self.diagonal_dimensions = []  # self._previous_diagonal_dimensions
-            # Reset previous (diagonal) dimensions.
             self._previous_dimensions = None
-            # self._previous_diagonal_dimensions = None
         else:
             # Save previous (diagonal) dimensions.
             self._previous_dimensions = self.dimensions
-            # self._previous_diagonal_dimensions = self.diagonal_dimensions
             # Find the current box.
             i, j = self._view._pz._get_box(e.pos)
             dim_i = self.dimensions[i]

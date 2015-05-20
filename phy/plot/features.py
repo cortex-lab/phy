@@ -127,18 +127,9 @@ class BaseFeatureVisual(BaseSpikeVisual):
         """
         i, j = box
         dim_i = self._dimensions[i]
-        dim_j = self._dimensions[j]
+        dim_j = self._dimensions[j] if i != j else self._diagonal_dimensions[i]
 
         fet_i = self._get_feature_dim(self._features, dim_i)
-        # For non-time dimensions, the diagonal shows
-        # a different feature on y (same channel than x).
-        if i == j and dim_j != 'time' and self.n_features >= 1:
-            if i <= len(self._diagonal_dimensions) - 1:
-                dim_j = self._diagonal_dimensions[i]
-            else:
-                # By default, choose the other feature on y axis.
-                channel, feature = dim_j
-                dim_j = (channel, 1 - feature)
         fet_j = self._get_feature_dim(self._features, dim_j)
 
         # NOTE: we switch here because we want to plot
@@ -160,10 +151,16 @@ class BaseFeatureVisual(BaseSpikeVisual):
     @dimensions.setter
     def dimensions(self, value):
         self._set_dimensions_to_bake(value)
+        self.diagonal_dimensions = self._default_diagonal(value)
+
+    def _default_diagonal(self, dimensions):
+        return [((dim[0], min(1 - dim[1], self.n_features - 1))
+                 if dim != 'time' else 'time')
+                for dim in dimensions]
 
     @property
     def diagonal_dimensions(self):
-        """Displayed dimensions on the diagonal.
+        """Displayed dimensions on the diagonal y axis.
 
         This is a list of items which can be:
 
@@ -175,9 +172,6 @@ class BaseFeatureVisual(BaseSpikeVisual):
 
     @diagonal_dimensions.setter
     def diagonal_dimensions(self, value):
-        if not value:
-            self._diagonal_dimensions = value
-            return
         assert len(value) == self.n_rows
         self._diagonal_dimensions = value
         self._set_dimensions_to_bake(self._dimensions)
@@ -408,8 +402,6 @@ class FeatureView(BaseSpikeCanvas):
         # WARNING: diagonal_dimensions should be changed here, in the Canvas,
         # and not in the visual. This is to make sure that the boxes are
         # updated as well.
-        if not value:
-            return
         self.visual.diagonal_dimensions = value
         self.background.diagonal_dimensions = value
         self.update()
