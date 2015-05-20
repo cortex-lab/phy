@@ -61,12 +61,12 @@ def test_kwik_store():
         stats = cs.register_item(ClusterStatistics)
 
         # We add a custom statistic function.
-        def mean_features(cluster):
+        def mean_features_bis(cluster):
             fet = cs.features(cluster)
-            cs.memory_store.store(cluster, mean_features=fet.mean(axis=0))
+            cs.memory_store.store(cluster, mean_features_bis=fet.mean(axis=0))
 
-        stats.add('mean_features', mean_features)
-        cs.register_field('mean_features', 'memory')
+        stats.add('mean_features_bis', mean_features_bis)
+        cs.register_field('mean_features_bis', 'memory')
 
         # Now we generate the store.
         cs.generate()
@@ -93,5 +93,5 @@ def test_kwik_store():
                masks_expected.mean(axis=0))
             ae(cs.mean_waveforms(cluster),
                waveforms_expected.mean(axis=0))
-            ae(cs.mean_features(cluster),
+            ae(cs.mean_features_bis(cluster),
                fet_expected.mean(axis=0))
