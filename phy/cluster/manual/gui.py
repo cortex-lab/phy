@@ -253,6 +253,10 @@ class KlustaViewa(EventEmitter):
 
     def close(self):
         """Close the GUI."""
+        if (self.session.settings['prompt_save_on_exit'] and
+                self.session.has_unsaved_changes):
+            print("TODO: prompt save, cancel, exit.")
+            # return
         self._dock.close()
 
     def exit(self):

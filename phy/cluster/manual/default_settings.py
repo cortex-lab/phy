@@ -80,6 +80,8 @@ gui_config = [
     ('traces', {'position': 'right'}),
 ]
 
+prompt_save_on_exit = True
+
 
 # -----------------------------------------------------------------------------
 # Store settings

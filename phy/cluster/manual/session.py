@@ -72,6 +72,8 @@ class Session(EventEmitter):
             phy_user_dir = _phy_user_dir()
         _ensure_dir_exists(phy_user_dir)
         self.phy_user_dir = phy_user_dir
+        # True if there are possibly unsaved changes.
+        self._is_dirty = False
         self._create_settings()
         self._create_creators()
 
@@ -97,6 +99,10 @@ class Session(EventEmitter):
 
     # File-related actions
     # -------------------------------------------------------------------------
+
+    @property
+    def has_unsaved_changes(self):
+        return self._is_dirty
 
     def _backup_kwik(self, kwik_path):
         """Save a copy of the Kwik file before opening it."""
@@ -127,6 +133,7 @@ class Session(EventEmitter):
         self.model.save(self.clustering.spike_clusters,
                         groups)
         info("Saved {0:s}.".format(self.model.kwik_path))
+        self._is_dirty = False
 
     def close(self):
         """Close the currently-open dataset."""
@@ -149,6 +156,7 @@ class Session(EventEmitter):
         if len(clusters) <= 1:
             return
         info("Merge clusters {}.".format(str(clusters)))
+        self._is_dirty = True
         up = self.clustering.merge(clusters)
         self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
@@ -166,6 +174,7 @@ class Session(EventEmitter):
         """
         self._check_list_argument(spikes, 'spikes')
         info("Split {0:d} spikes.".format(len(spikes)))
+        self._is_dirty = True
         up = self.clustering.split(spikes)
         self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
@@ -183,6 +192,7 @@ class Session(EventEmitter):
         """
         self._check_list_argument(clusters)
         info("Move clusters {0} to {1}.".format(str(clusters), group))
+        self._is_dirty = True
         group_id = cluster_group_id(group)
         up = self._cluster_metadata_updater.set_group(clusters, group_id)
         self._global_history.action(self._cluster_metadata_updater)
