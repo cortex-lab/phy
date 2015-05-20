@@ -33,6 +33,7 @@ class ClusterStatistics(StoreItem):
               ('n_unmasked_channels', 'memory'),
               ('main_channels', 'memory'),
               ('mean_probe_position', 'memory'),
+              ('mean_features', 'memory'),
               ('mean_waveforms', 'memory'),
               ]
 
@@ -41,6 +42,7 @@ class ClusterStatistics(StoreItem):
         self._funcs = {}
         self.n_channels = len(self.model.channel_order)
         self.n_samples_waveforms = self.model.n_samples_waveforms
+        self.n_features = self.model.n_features_per_channel
 
     def add(self, name, func):
         """Add a new statistics."""
@@ -60,6 +62,15 @@ class ClusterStatistics(StoreItem):
                                      dtype=np.float32,
                                      shape=(-1, self.n_channels))
         assert isinstance(masks, np.ndarray)
+
+        # Load the features.
+        features = self.disk_store.load(cluster,
+                                        'features',
+                                        dtype=np.float32,
+                                        shape=(-1, self.n_channels *
+                                               self.n_features))
+        assert isinstance(features, np.ndarray)
+        mean_features = features.mean(axis=0)
 
         # Load the waveforms.
         waveforms = self.disk_store.load(cluster,
@@ -86,6 +97,7 @@ class ClusterStatistics(StoreItem):
 
         self.memory_store.store(cluster,
                                 mean_masks=mean_masks,
+                                mean_features=mean_features,
                                 sum_masks=sum_masks,
                                 n_unmasked_channels=n_unmasked_channels,
                                 mean_probe_position=mean_probe_position,
