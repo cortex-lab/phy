@@ -428,8 +428,8 @@ class TraceViewModel(BaseViewModel):
     interval_size = .25
 
     def __init__(self, **kwargs):
-        super(TraceViewModel, self).__init__(**kwargs)
         self._interval = None
+        super(TraceViewModel, self).__init__(**kwargs)
 
     def _load_traces(self, interval):
         start, end = interval

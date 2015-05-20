@@ -327,7 +327,7 @@ class WaveformView(BaseSpikeCanvas):
                 self.box_scale = (u * coeff, v)
             elif key in ('Down', '-'):
                 self.box_scale = (u, v / coeff)
-            elif key == ('Up', '+'):
+            elif key in ('Up', '+'):
                 self.box_scale = (u, v * coeff)
 
         # Probe scale.
