@@ -226,7 +226,7 @@ class ClusterManualGUI(EventEmitter):
         '''
 
         def _get_html():
-            return self.session.wizard._repr_html_(extra_styles=styles)
+            return self.session.wizard.get_panel(extra_styles=styles)
 
         view = _create_web_view(_get_html())
 

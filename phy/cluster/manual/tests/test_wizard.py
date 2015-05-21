@@ -152,7 +152,7 @@ def test_wizard_nav():
     assert wizard.match == 2
 
     # Test HTML representation.
-    html = wizard._repr_html_()
+    html = wizard.get_panel()
     assert '>3<' in html
     assert '>2<' in html
 

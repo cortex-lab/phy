@@ -494,7 +494,7 @@ class Wizard(object):
         maximum = self.n_clusters
         return _progress(value, maximum)
 
-    def _repr_html_(self, extra_styles=''):
+    def get_panel(self, extra_styles=''):
         return _wizard_panel_html(best=self.best,
                                   match=self.match,
                                   best_progress=self._best_progress,
