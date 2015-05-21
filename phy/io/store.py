@@ -435,6 +435,12 @@ class ClusterStore(object):
         """List of registered store items."""
         return self._items
 
+    def get_item(self, name):
+        """Return a store item from its name."""
+        for item in self._items:
+            if item.name == name:
+                return item
+
     def register_field(self, name, location, dtype=None, shape=None):
         """Register a new piece of data to store on memory or on disk.
 
