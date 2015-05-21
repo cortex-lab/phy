@@ -105,11 +105,15 @@ class ClusterStatistics(StoreItem):
                                 mean_waveforms=mean_waveforms,
                                 )
 
-    def store_cluster(self, cluster, spikes=None, mode=None):
+    def store_cluster(self, cluster, spikes=None, mode=None, name=None):
         """Compute all statistics for one cluster."""
-        self.store_cluster_default(cluster, spikes=spikes, mode=mode)
-        for func in self._funcs.values():
-            func(cluster)
+        if name is None:
+            self.store_cluster_default(cluster, spikes=spikes, mode=mode)
+            for func in self._funcs.values():
+                func(cluster)
+        else:
+            assert name in self._funcs
+            self._funcs[name](cluster)
 
     def is_consistent(self, cluster, spikes):
         return cluster in self.memory_store

@@ -335,6 +335,55 @@ def test_session_wizard():
             assert session.wizard.most_similar_clusters(best)[0] == 7 - best
 
 
+def test_session_statistics():
+    """Test registration of new statistic."""
+    n_clusters = 5
+    n_spikes = 100
+    n_channels = 28
+    n_fets = 2
+    n_samples_traces = 3000
+
+    with TemporaryDirectory() as tempdir:
+
+        # Create the test HDF5 file in the temporary directory.
+        kwik_path = create_mock_kwik(tempdir,
+                                     n_clusters=n_clusters,
+                                     n_spikes=n_spikes,
+                                     n_channels=n_channels,
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
+
+        session = _start_manual_clustering(kwik_path=kwik_path,
+                                           tempdir=tempdir)
+
+        @session.register_statistic
+        def n_spikes(cluster):
+            return session.clustering.cluster_counts.get(cluster, 0)
+
+        store = session.cluster_store
+        stats = store.get_item('statistics')
+
+        def _check():
+            for clu in session.cluster_ids:
+                assert store.n_spikes(clu) == store.features(clu).shape[0]
+
+        assert ('n_spikes', 'memory') in stats.fields
+        _check()
+
+        # Merge the clusters and check that the statistics has been
+        # recomputed for the new cluster.
+        clusters = session.cluster_ids
+        session.merge(clusters)
+        _check()
+        assert session.cluster_ids == [max(clusters) + 1]
+
+        session.undo()
+        _check()
+
+        session.merge(session.cluster_ids[::2])
+        _check()
+
+
 def test_session_history():
 
     n_clusters = 15

@@ -263,8 +263,14 @@ class Session(EventEmitter):
             out = func(cluster)
             self.cluster_store.memory_store.store(cluster, **{name: out})
 
+        # Add the statistics.
         self._statistics.add(name, _wrapper)
+        # Register it in the global cluster store.
         self.cluster_store.register_field(name, 'memory')
+        # Compute it on all existing clusters.
+        stats = self.cluster_store.get_item('statistics')
+        stats.store_all_clusters(name=name, mode='force')
+        info("Registered statistic `{}`.".format(name))
 
     # Event callbacks
     # -------------------------------------------------------------------------

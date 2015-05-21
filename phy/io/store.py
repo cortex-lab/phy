@@ -315,7 +315,7 @@ class StoreItem(object):
         # TODO: remove mode: unused?
         pass
 
-    def store_all_clusters(self, mode=None):
+    def store_all_clusters(self, mode=None, **kwargs):
         """Copy all data for that item from the model to the cluster store."""
         clusters = self.to_generate(mode)
         self._pr.value_max = len(clusters)
@@ -323,7 +323,7 @@ class StoreItem(object):
             self.store_cluster(cluster,
                                spikes=self._spikes_per_cluster[cluster],
                                mode=mode,
-                               )
+                               **kwargs)
             self._pr.value += 1
         self._pr.set_complete()
 
