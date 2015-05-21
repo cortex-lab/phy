@@ -111,6 +111,9 @@ class ClusterStatistics(StoreItem):
         for func in self._funcs.values():
             func(cluster)
 
+    def is_consistent(self, cluster, spikes):
+        return cluster in self.memory_store
+
 
 class FeatureMasks(StoreItem):
     """Store all features and masks of all clusters."""

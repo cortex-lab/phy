@@ -91,6 +91,9 @@ class MemoryStore(object):
         """Clear the store completely by deleting all clusters."""
         self.erase(self.cluster_ids)
 
+    def __contains__(self, item):
+        return item in self._ds
+
 
 #------------------------------------------------------------------------------
 # Disk store
