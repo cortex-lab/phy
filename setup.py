@@ -31,11 +31,9 @@ with open(filename, 'r') as f:
 
 
 requirements = [
-    # TODO: put package requirements here
 ]
 
 test_requirements = [
-    # TODO: put package test requirements here
 ]
 
 setup(
@@ -61,7 +59,7 @@ setup(
     zip_safe=False,
     keywords='phy,data analysis,electrophysiology,neuroscience',
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
+        'Development Status :: 4 - Beta',
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
