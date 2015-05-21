@@ -20,6 +20,14 @@ from .base import _selected_clusters_colors, BaseViewModel
 
 
 #------------------------------------------------------------------------------
+# Misc functions
+#------------------------------------------------------------------------------
+
+def _oddify(x):
+    return x if x % 2 == 1 else x + 1
+
+
+#------------------------------------------------------------------------------
 # View models
 #------------------------------------------------------------------------------
 
@@ -408,7 +416,8 @@ class CorrelogramViewModel(BaseViewModel):
                             spike_clusters,
                             cluster_order=clusters,
                             binsize=self.binsize,
-                            winsize_bins=self.winsize_bins,
+                            # NOTE: this must be an odd number, for symmetry
+                            winsize_bins=_oddify(self.winsize_bins),
                             )
         ccgs = _symmetrize_correlograms(ccgs)
         # Normalize the CCGs.
