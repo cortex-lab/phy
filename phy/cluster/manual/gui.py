@@ -286,6 +286,11 @@ class ClusterManualGUI(EventEmitter):
         self._cluster_ids = cluster_ids
         self.emit('select', cluster_ids)
 
+    @property
+    def selected_clusters(self):
+        """The list of selected clusters."""
+        return self._cluster_ids
+
     # Wizard list
     # ---------------------------------------------------------------------
 
@@ -378,7 +383,8 @@ class GUICreator(object):
 
         @gui.main_window.on_close
         def on_close():
-            self._guis.remove(gui)
+            if gui in self._guis:
+                self._guis.remove(gui)
             self.session.view_creator.save_view_params()
             gs = gui._dock.save_geometry_state()
             self.session.settings['gui_state'] = gs
