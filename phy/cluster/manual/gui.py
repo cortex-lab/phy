@@ -212,15 +212,31 @@ class ClusterManualGUI(EventEmitter):
                 _add_gui_shortcut(_make_func(which, group))
 
     def _create_wizard_panel(self, cluster_ids=None):
-        view = _create_web_view(self.session.wizard._repr_html_())
+        styles = '''
+
+        html, body, div {
+            background-color: black;
+        }
+
+        .control-panel {
+            background-color: black;
+            color: white;
+        }
+
+        '''
+
+        def _get_html():
+            return self.session.wizard._repr_html_(extra_styles=styles)
+
+        view = _create_web_view(_get_html())
 
         @self.connect
         def on_select(cluster_ids):
-            view.setHtml(self.session.wizard._repr_html_())
+            view.setHtml(_get_html())
 
         @self.connect
         def on_cluster(up):
-            view.setHtml(self.session.wizard._repr_html_())
+            view.setHtml(_get_html())
 
         return view
 

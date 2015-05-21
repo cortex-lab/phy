@@ -482,7 +482,8 @@ class Wizard(object):
     @property
     def _best_progress(self):
         """Progress in the best clusters."""
-        value = self.best_list.index(self.best)
+        value = (self.best_list.index(self.best)
+                 if self.best in self.best_list else 0)
         maximum = len(self.best_list)
         return _progress(value, maximum)
 
@@ -493,13 +494,14 @@ class Wizard(object):
         maximum = self.n_clusters
         return _progress(value, maximum)
 
-    def _repr_html_(self):
+    def _repr_html_(self, extra_styles=''):
         return _wizard_panel_html(best=self.best,
                                   match=self.match,
                                   best_progress=self._best_progress,
                                   match_progress=self._match_progress,
                                   best_group=self._group(self.best),
                                   match_group=self._group(self.match),
+                                  extra_styles=extra_styles,
                                   )
 
 
@@ -525,13 +527,8 @@ _PANEL_HTML = """
 
 
 _PANEL_CSS = """
-html, body, div {
-    background-color: black;
-}
-
 .control-panel {
-    background-color: black;
-    color: white;
+    margin: 0;
     font-weight: bold;
     font-family: sans-serif;
     font-size: 24pt;
@@ -588,8 +585,9 @@ def _wizard_panel_html(best=None,
                        match_progress=None,
                        best_group=None,
                        match_group=None,
+                       extra_styles='',
                        ):
-    out = '<style>' + _PANEL_CSS + '</style>\n'
+    out = '<style>' + extra_styles + _PANEL_CSS + '</style>\n'
     out += _PANEL_HTML.format(best=best if best is not None else '',
                               match=match if match is not None else '',
                               best_progress=best_progress,
