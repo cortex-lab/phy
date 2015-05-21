@@ -1,6 +1,15 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
+# flake8: noqa
 
+"""Installation script."""
+
+
+#------------------------------------------------------------------------------
+# Imports
+#------------------------------------------------------------------------------
+
+import re
+import os.path as op
 
 try:
     from setuptools import setup
@@ -8,7 +17,18 @@ except ImportError:
     from distutils.core import setup
 
 
+#------------------------------------------------------------------------------
+# Setup
+#------------------------------------------------------------------------------
+
 readme = open('README.md').read()
+
+
+# Find version number from `__init__.py` without executing it.
+filename = op.join(op.dirname(op.realpath(__file__)), 'phy/__init__.py')
+with open(filename, 'r') as f:
+    version = re.search(r"__version__ = '([^']+)'", f.read()).group(1)
+
 
 requirements = [
     # TODO: put package requirements here
@@ -20,7 +40,7 @@ test_requirements = [
 
 setup(
     name='phy',
-    version='0.1.0-alpha',
+    version=version,
     description='Electrophysiological data analysis.',
     long_description=readme,
     author='Kwik Team',
@@ -30,11 +50,16 @@ setup(
         'phy',
     ],
     package_dir={'phy': 'phy'},
+    entry_points={
+        'console_scripts': [
+            'phy=phy.scripts.phy_script:main',
+        ],
+    },
     include_package_data=True,
     install_requires=requirements,
     license="BSD",
     zip_safe=False,
-    keywords='phy',
+    keywords='phy,data analysis,electrophysiology,neuroscience',
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',

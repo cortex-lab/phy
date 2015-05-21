@@ -143,7 +143,9 @@ def test_cluster_store_1():
                 else:
                     super(MyItem, self).on_cluster(up)
 
-        cs.register_item(MyItem)
+        item = cs.register_item(MyItem)
+        item.progress_reporter.set_progress_message("Progress {progress}.\n")
+        item.progress_reporter.set_complete_message("Finished.\n")
 
         # Now we generate the store.
         cs.generate()

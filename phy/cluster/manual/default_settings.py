@@ -50,7 +50,7 @@ keyboard_shortcuts = {
     'undo': 'ctrl+z',
     'redo': ('ctrl+shift+z', 'ctrl+y'),
     'exit': 'ctrl+q',
-    'show_shortcuts': 'h',
+    'show_shortcuts': 'ctrl+h',
     'reset_wizard': 'ctrl+w',
     'next': 'space',
     'previous': 'shift+space',
@@ -79,6 +79,9 @@ gui_config = [
     ('waveforms', {'position': 'right'}),
     ('traces', {'position': 'right'}),
 ]
+
+# Whether to ask the user if they want to save when the GUI is closed.
+prompt_save_on_exit = True
 
 
 # -----------------------------------------------------------------------------

@@ -22,7 +22,6 @@ from ._panzoom import PanZoomGrid
 from ..ext.six import string_types
 from ..utils._types import _as_array
 from ..utils.array import _index_of
-from ..utils.logging import debug
 
 
 #------------------------------------------------------------------------------
@@ -41,8 +40,11 @@ class BaseFeatureVisual(BaseSpikeVisual):
         self._features = None
         self._spike_samples = None
         self._dimensions = []
+        self._diagonal_dimensions = []
         self.n_channels, self.n_features = None, None
         self.n_rows = None
+
+        _enable_depth_mask()
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -94,10 +96,10 @@ class BaseFeatureVisual(BaseSpikeVisual):
             raise ValueError('{0} should be (channel, feature) '.format(dim) +
                              'or "time".')
 
-    def _get_feature_dim(self, dim):
+    def _get_feature_dim(self, data, dim):
         if isinstance(dim, (tuple, list)):
             channel, feature = dim
-            return self._features[:, channel, feature]
+            return data[:, channel, feature]
         elif dim == 'time':
             t = self._spike_samples
             # Normalize time feature.
@@ -125,18 +127,10 @@ class BaseFeatureVisual(BaseSpikeVisual):
         """
         i, j = box
         dim_i = self._dimensions[i]
-        dim_j = self._dimensions[j]
+        dim_j = self._dimensions[j] if i != j else self._diagonal_dimensions[i]
 
-        fet_i = self._get_feature_dim(dim_i)
-        # For non-time dimensions, the diagonal shows
-        # a different feature on y (same channel than x).
-        if i == j and dim_j != 'time' and self.n_features >= 1:
-            channel, feature = dim_j
-            # Choose the other feature on y axis.
-            feature = 1 - feature
-            fet_j = data[:, channel, feature]
-        else:
-            fet_j = self._get_feature_dim(dim_j)
+        fet_i = self._get_feature_dim(self._features, dim_i)
+        fet_j = self._get_feature_dim(self._features, dim_j)
 
         # NOTE: we switch here because we want to plot
         # dim_i (y) over dim_j (x) on box (i, j).
@@ -157,6 +151,30 @@ class BaseFeatureVisual(BaseSpikeVisual):
     @dimensions.setter
     def dimensions(self, value):
         self._set_dimensions_to_bake(value)
+        self.diagonal_dimensions = self._default_diagonal(value)
+
+    def _default_diagonal(self, dimensions):
+        return [((dim[0], min(1 - dim[1], self.n_features - 1))
+                 if dim != 'time' else 'time')
+                for dim in dimensions]
+
+    @property
+    def diagonal_dimensions(self):
+        """Displayed dimensions on the diagonal y axis.
+
+        This is a list of items which can be:
+
+        * tuple `(channel_id, feature_idx)`
+        * `'time'`
+
+        """
+        return self._diagonal_dimensions
+
+    @diagonal_dimensions.setter
+    def diagonal_dimensions(self, value):
+        assert len(value) == self.n_rows
+        self._diagonal_dimensions = value
+        self._set_dimensions_to_bake(self._dimensions)
 
     def _set_dimensions_to_bake(self, value):
         self.n_rows = len(value)
@@ -197,8 +215,6 @@ class BaseFeatureVisual(BaseSpikeVisual):
         self.program['a_position'] = positions.copy()
         self.program['a_box'] = boxes
         self.program['n_rows'] = self.n_rows
-
-        debug("bake features", positions.shape)
 
 
 class BackgroundFeatureVisual(BaseFeatureVisual):
@@ -276,8 +292,6 @@ class FeatureVisual(BaseFeatureVisual):
         self.program['n_clusters'] = self.n_clusters
         self.program['n_rows'] = self.n_rows
 
-        debug("bake features", positions.shape)
-
     def _bake_spikes_clusters(self):
         # Get the spike cluster indices (between 0 and n_clusters-1).
         spike_clusters_idx = self.spike_clusters
@@ -287,7 +301,6 @@ class FeatureVisual(BaseFeatureVisual):
                             self.n_boxes).astype(np.float32)
         self.program['a_cluster'] = a_cluster
         self.program['n_clusters'] = self.n_clusters
-        debug("bake spikes clusters", spike_clusters_idx.shape)
 
     @property
     def marker_size(self):
@@ -302,25 +315,15 @@ class FeatureVisual(BaseFeatureVisual):
 
 
 class FeatureView(BaseSpikeCanvas):
-    """A VisPy canvas displaying features.
-
-    Interactivity
-    -------------
-
-    * set marker size: `ctrl++`, `ctrl+-`
-    * add lasso point: `ctrl+left click`
-    * clear lasso: `ctrl+right click`
-
-    """
+    """A VisPy canvas displaying features."""
     _visual_class = FeatureVisual
 
-    def __init__(self, **kwargs):
+    def _create_visuals(self):
         self.boxes = BoxVisual()
         self.axes = AxisVisual()
         self.background = BackgroundFeatureVisual()
         self.lasso = LassoVisual()
-        super(FeatureView, self).__init__(**kwargs)
-        _enable_depth_mask()
+        super(FeatureView, self)._create_visuals()
 
     def _create_pan_zoom(self):
         self._pz = PanZoomGrid()
@@ -380,6 +383,20 @@ class FeatureView(BaseSpikeCanvas):
         self.visual.dimensions = value
         self.update_dimensions(value)
 
+    @property
+    def diagonal_dimensions(self):
+        """Dimensions."""
+        return self.background.diagonal_dimensions
+
+    @diagonal_dimensions.setter
+    def diagonal_dimensions(self, value):
+        # WARNING: diagonal_dimensions should be changed here, in the Canvas,
+        # and not in the visual. This is to make sure that the boxes are
+        # updated as well.
+        self.visual.diagonal_dimensions = value
+        self.background.diagonal_dimensions = value
+        self.update()
+
     def update_dimensions(self, dimensions):
         n_rows = len(dimensions)
         self.background.dimensions = dimensions
@@ -409,6 +426,13 @@ class FeatureView(BaseSpikeCanvas):
         self.visual.draw()
         self.lasso.draw()
         self.boxes.draw()
+
+    keyboard_shortcuts = {
+        'marker_size_increase': 'ctrl+[+]',
+        'marker_size_decrease': 'ctrl+[-]',
+        'add_lasso_point': 'ctrl+left click',
+        'clear_lasso': 'ctrl+right click',
+    }
 
     def on_mouse_press(self, e):
         ctrl = e.modifiers == ('Control',)
@@ -440,4 +464,3 @@ class FeatureView(BaseSpikeCanvas):
                 self.marker_size += coeff
             if event.key == '-':
                 self.marker_size -= coeff
-            self.update()

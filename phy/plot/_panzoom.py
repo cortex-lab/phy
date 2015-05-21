@@ -34,17 +34,12 @@ class PanZoom(object):
     * zmin  : minimum zoom level
     * zmax  : maximum zoom level
 
-    Interactivity
-    -------------
-
-    * pan: `arrows`, left-drag
-    * zoom: `+`, `-`, wheel, right-drag
-    * reset: `r`
-
     """
 
     _default_zoom_coeff = 1.5
     _default_wheel_coeff = .1
+    _arrows = ('Left', 'Right', 'Up', 'Down')
+    _pm = ('+', '-')
 
     def __init__(self, aspect=1.0, pan=(0.0, 0.0), zoom=(1.0, 1.0),
                  zmin=1e-5, zmax=1e5,
@@ -337,6 +332,12 @@ class PanZoom(object):
     # Event callbacks
     # -------------------------------------------------------------------------
 
+    keyboard_shortcuts = {
+        'pan': ('left click and drag', 'arrows'),
+        'zoom': ('right click and drag', '+', '-'),
+        'reset': 'r',
+    }
+
     def on_resize(self, event):
         """Resize event."""
 
@@ -374,9 +375,6 @@ class PanZoom(object):
         # Zoom toward the mouse pointer.
         x0, y0 = self._normalize(event.pos)
         self._do_zoom((dx, dx), (x0, y0))
-
-    _arrows = ('Left', 'Right', 'Up', 'Down')
-    _pm = ('+', '-')
 
     def _zoom_keyboard(self, key):
         k = .05
@@ -443,7 +441,7 @@ class PanZoom(object):
         self._width = float(canvas.size[0])
         self._height = float(canvas.size[1])
 
-        aspect = self._width / self._height
+        aspect = self._width / max(1, self._height)
         if aspect > 1.0:
             self._canvas_aspect = np.array([1.0 / aspect, 1.0])
         else:
@@ -462,15 +460,6 @@ class PanZoomGrid(PanZoom):
 
     The currently-active subplot depends on where the cursor was when
     the mouse was clicked.
-
-    Interactivity
-    -------------
-
-    * subplot pan: `arrows`, left-drag
-    * subplot zoom: `+`, `-`, right-drag
-    * subplot reset: `r`
-    * global zoom: `shift+wheel`
-    * global reset: `shift+r`
 
     """
 
@@ -780,6 +769,14 @@ class PanZoomGrid(PanZoom):
 
     # Event callbacks
     # -------------------------------------------------------------------------
+
+    keyboard_shortcuts = {
+        'subplot_pan': ('left click and drag', 'arrows'),
+        'subplot_zoom': ('right click and drag', '+', '-'),
+        'subplot_reset': 'r',
+        'global_zoom': 'shift+r',
+        'global_reset': 'shift+r',
+    }
 
     def on_mouse_move(self, event):
         """Mouse move event."""

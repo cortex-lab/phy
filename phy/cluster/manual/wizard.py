@@ -533,6 +533,7 @@ html, body, div {
     background-color: black;
     color: white;
     font-weight: bold;
+    font-family: sans-serif;
     font-size: 24pt;
     padding: 10px;
     text-align: center

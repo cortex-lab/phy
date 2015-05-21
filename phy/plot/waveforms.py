@@ -12,10 +12,10 @@ import numpy as np
 from vispy import gloo
 from vispy.gloo import Texture2D
 
+from ._panzoom import PanZoom
 from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas, _enable_depth_mask
 from ..utils._types import _as_array
 from ..utils.array import _index_of, _normalize
-from ..utils.logging import debug
 
 
 #------------------------------------------------------------------------------
@@ -38,6 +38,7 @@ class WaveformVisual(BaseSpikeVisual):
         self.program['u_data_scale'] = (.05, .05)
         self.program['u_channel_scale'] = (1., 1.)
         self.program['u_overlap'] = 0
+        self.program['u_alpha'] = 0.5
         _enable_depth_mask()
 
     # Data properties
@@ -86,6 +87,15 @@ class WaveformVisual(BaseSpikeVisual):
     @channel_order.setter
     def channel_order(self, value):
         self._channel_order = value
+
+    @property
+    def alpha(self):
+        """Alpha transparency (between 0 and 1)."""
+        return self.program['u_alpha']
+
+    @alpha.setter
+    def alpha(self, value):
+        self.program['u_alpha'] = value
 
     @property
     def box_scale(self):
@@ -167,7 +177,6 @@ class WaveformVisual(BaseSpikeVisual):
         # TODO: more efficient to update the data from an existing texture
         self.program['u_channel_pos'] = Texture2D(u_channel_pos,
                                                   wrapping='clamp_to_edge')
-        debug("bake channel pos", u_channel_pos.shape)
 
     def _bake_spikes(self):
 
@@ -197,8 +206,6 @@ class WaveformVisual(BaseSpikeVisual):
         self.program['a_time'] = a_time
         self.program['n_channels'] = self.n_channels
 
-        debug("bake spikes", waveforms.shape)
-
     def _bake_spikes_clusters(self):
         # WARNING: needs to be called *after* _bake_spikes().
         if not hasattr(self, '_n_channels_per_spike'):
@@ -216,24 +223,27 @@ class WaveformVisual(BaseSpikeVisual):
         # TODO: more efficient to update the data from an existing VBO
         self.program['a_box'] = a_box
         self.program['n_clusters'] = self.n_clusters
-        debug("bake spikes clusters", a_box.shape)
 
 
 class WaveformView(BaseSpikeCanvas):
-    """A VisPy canvas displaying waveforms.
-
-    Interactivity
-    -------------
-
-    * change waveform scaling: `ctrl+arrows`
-    * change probe scaling: `shift+arrows`
-    * select channel: `key+click`
-
-    """
+    """A VisPy canvas displaying waveforms."""
     _visual_class = WaveformVisual
     _arrows = ('Left', 'Right', 'Up', 'Down')
+    _pm = ('+', '-')
     _events = ('channel_click',)
     _key_pressed = None
+    _show_mean = False
+
+    def _create_visuals(self):
+        super(WaveformView, self)._create_visuals()
+        self.mean = WaveformVisual()
+        self.mean.alpha = 1.
+
+    def _create_pan_zoom(self):
+        self._pz = PanZoom()
+        self._pz.add(self.visual.program)
+        self._pz.add(self.mean.program)
+        self._pz.attach(self)
 
     @property
     def box_scale(self):
@@ -247,6 +257,7 @@ class WaveformView(BaseSpikeCanvas):
     @box_scale.setter
     def box_scale(self, value):
         self.visual.box_scale = value
+        self.mean.box_scale = value
         self.update()
 
     @property
@@ -261,6 +272,7 @@ class WaveformView(BaseSpikeCanvas):
     @probe_scale.setter
     def probe_scale(self, value):
         self.visual.probe_scale = value
+        self.mean.probe_scale = value
         self.update()
 
     @property
@@ -271,7 +283,30 @@ class WaveformView(BaseSpikeCanvas):
     @overlap.setter
     def overlap(self, value):
         self.visual.overlap = value
+        self.mean.overlap = value
         self.update()
+
+    @property
+    def show_mean(self):
+        """Whether to show_mean waveforms."""
+        return self._show_mean
+
+    @show_mean.setter
+    def show_mean(self, value):
+        self._show_mean = value
+        self.update()
+
+    keyboard_shortcuts = {
+        'waveform_scale_increase': ('ctrl+[+]', 'ctrl+up'),
+        'waveform_scale_decrease': ('ctrl+[-]', 'ctrl+down'),
+        'waveform_width_increase': 'ctrl+right',
+        'waveform_width_decrease': 'ctrl+left',
+        'probe_width_increase': 'shift+right',
+        'probe_width_decrease': 'shift+left',
+        'probe_height_increase': 'shift+up',
+        'probe_height_decrease': 'shift+down',
+        'select_channel': '[number key]+[left click]',
+    }
 
     def on_key_press(self, event):
         """Handle key press events."""
@@ -283,16 +318,16 @@ class WaveformView(BaseSpikeCanvas):
         shift = 'Shift' in event.modifiers
 
         # Box scale.
-        if ctrl and key in self._arrows:
+        if ctrl and key in self._arrows + self._pm:
             coeff = 1.1
             u, v = self.box_scale
             if key == 'Left':
                 self.box_scale = (u / coeff, v)
             elif key == 'Right':
                 self.box_scale = (u * coeff, v)
-            elif key == 'Down':
+            elif key in ('Down', '-'):
                 self.box_scale = (u, v / coeff)
-            elif key == 'Up':
+            elif key in ('Up', '+'):
                 self.box_scale = (u, v * coeff)
 
         # Probe scale.
@@ -349,4 +384,7 @@ class WaveformView(BaseSpikeCanvas):
     def on_draw(self, event):
         """Draw the visual."""
         gloo.clear(color=True, depth=True)
-        self.visual.draw()
+        if self._show_mean:
+            self.mean.draw()
+        else:
+            self.visual.draw()

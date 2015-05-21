@@ -81,7 +81,7 @@ class BaseSettings(object):
 
     def load(self, path):
         if not op.exists(path):
-            debug("The settings file {} doesn't exist.".format(path))
+            debug("Skipping non-existing settings file: {}.".format(path))
             return
         # Try pickle.
         if not op.splitext(path)[1]:

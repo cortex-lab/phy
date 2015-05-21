@@ -8,9 +8,10 @@
 
 import numpy as np
 
-from ...utils import _as_list
 from ...utils.array import _unique, _spikes_in_clusters
 from ...utils.selector import Selector
+from ...utils._misc import _show_shortcuts
+from ...utils import _as_list
 
 
 #------------------------------------------------------------------------------
@@ -51,6 +52,7 @@ class BaseViewModel(object):
     _view_class = None
     _view_name = ''
     _imported_params = ('position', 'size',)
+    keyboard_shortcuts = {}
     scale_factor = 1.
 
     def __init__(self, model=None, store=None,
@@ -81,12 +83,11 @@ class BaseViewModel(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        @self._view.connect
-        def on_draw(event):
-            if self._view.visual.empty:
-                self.on_open()
-                if cluster_ids:
-                    self.select(cluster_ids)
+        self.on_open()
+        if cluster_ids:
+            self.select(cluster_ids)
+
+        self._view.connect(self.on_key_press)
 
     @property
     def model(self):
@@ -181,6 +182,12 @@ class BaseViewModel(object):
         """Clear the view when the model is closed."""
         self._view.visual.spike_clusters = []
         self._view.update()
+
+    def on_key_press(self, event):
+        if event.key == 'h' and 'control' not in event.modifiers:
+            shortcuts = self._view.keyboard_shortcuts
+            shortcuts.update(self.keyboard_shortcuts)
+            _show_shortcuts(shortcuts, name=self.name)
 
     def exported_params(self, save_size_pos=True):
         """Return a dictionary of variables to save when the view is closed."""

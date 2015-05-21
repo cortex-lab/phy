@@ -270,7 +270,6 @@ class BaseSpikeVisual(_BakeVisual):
                                                            -1))
         u_cluster_color = (u_cluster_color * 255).astype(np.uint8)
         self.program['u_cluster_color'] = gloo.Texture2D(u_cluster_color)
-        debug("bake cluster color", u_cluster_color.shape)
 
 
 #------------------------------------------------------------------------------
@@ -320,7 +319,6 @@ class BoxVisual(_BakeVisual):
         position[:, 2] = np.repeat(np.arange(self.n_boxes), 8)
         self.program['a_position'] = position
         self.program['n_rows'] = self._n_rows
-        debug("bake boxes", position.shape)
 
 
 class AxisVisual(BoxVisual):
@@ -362,7 +360,6 @@ class AxisVisual(BoxVisual):
         # Axes.
         position[:, 3] = np.tile([0, 0, 1, 1], self.n_boxes)
         self.program['a_position'] = position
-        debug("bake ax", position.shape)
 
 
 class LassoVisual(_BakeVisual):
@@ -458,7 +455,6 @@ class LassoVisual(_BakeVisual):
         if not self._n_rows:
             return
         self.program['n_rows'] = self._n_rows
-        debug("bake n_rows")
 
     def _bake_points(self):
         if self.n_points <= 1:
@@ -480,20 +476,25 @@ class BaseSpikeCanvas(app.Canvas):
     _visual_class = None
     _pz = None
     _events = ()
+    keyboard_shortcuts = {}
 
     def __init__(self, **kwargs):
         super(BaseSpikeCanvas, self).__init__(keys='interactive', **kwargs)
-        self.visual = self._visual_class()
+        self._create_visuals()
         self._create_pan_zoom()
         self._add_events()
+        self.keyboard_shortcuts.update(self._pz.keyboard_shortcuts)
 
-    def _add_events(self):
-        self.events.add(**{event: Event for event in self._events})
+    def _create_visuals(self):
+        self.visual = self._visual_class()
 
     def _create_pan_zoom(self):
         self._pz = PanZoom()
         self._pz.add(self.visual.program)
         self._pz.attach(self)
+
+    def _add_events(self):
+        self.events.add(**{event: Event for event in self._events})
 
     def emit(self, name, **kwargs):
         getattr(self.events, name)(**kwargs)

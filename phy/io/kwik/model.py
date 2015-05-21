@@ -18,7 +18,7 @@ from ..h5 import open_h5, File
 from ...waveform.loader import WaveformLoader
 from ...waveform.filter import bandpass_filter, apply_filter
 from ...electrode.mea import MEA
-from ...utils.logging import debug, warn
+from ...utils.logging import warn
 from ...utils.array import (PartialArray,
                             _concatenate_virtual_arrays,
                             _unique,
@@ -395,7 +395,8 @@ class KwikModel(BaseModel):
                 try:
                     metadata[field] = self._kwik.read_attr(path, field)
                 except TypeError:
-                    debug("Metadata field '{0:s}' not found.".format(field))
+                    # debug("Metadata field '{0:s}' not found.".format(field))
+                    pass
         self._metadata = metadata
 
     def _load_probe(self):

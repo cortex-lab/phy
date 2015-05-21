@@ -7,7 +7,9 @@ from __future__ import print_function
 # Imports
 #------------------------------------------------------------------------------
 
-from ...utils.dock import DockWindow, _create_web_view, _title
+import phy
+from ...utils._misc import _show_shortcuts
+from ...utils.dock import DockWindow, _create_web_view, _prompt
 from ...utils import EventEmitter, debug
 from ...plot.view_models import BaseViewModel
 
@@ -16,7 +18,7 @@ from ...plot.view_models import BaseViewModel
 # Manual clustering window
 #------------------------------------------------------------------------------
 
-class KlustaViewa(EventEmitter):
+class ClusterManualGUI(EventEmitter):
     """Manual clustering GUI.
 
     This object represents a main window with:
@@ -29,20 +31,28 @@ class KlustaViewa(EventEmitter):
     """
 
     def __init__(self, session, config=None):
-        super(KlustaViewa, self).__init__()
+        super(ClusterManualGUI, self).__init__()
         self.session = session
         self.start()
         self._dock = DockWindow(title=self.title)
+        # Load the saved view count.
+        vc = self.session.settings.get('gui_view_count', None)
+        # Default GUI config.
+        config = config or self.session.settings['gui_config']
+        # Remove non-existing views.
+        if vc and config:
+            config = [(name, _) for (name, _) in config
+                      if name in vc]
+        # Create the views.
         self._load_config(config)
-        # Save the geometry state
+        self._load_geometry_state()
         self._create_gui_actions()
         self._set_default_view_connections()
 
     def _load_config(self, config=None):
         """Load a GUI configuration dictionary."""
-        if config is None:
-            config = self.session.settings['gui_config']
         for name, kwargs in config:
+            debug("Adding {} view in GUI.".format(name))
             # GUI-specific keyword arguments position, size, maximized
             position = kwargs.pop('position', None)
             if name == 'wizard':
@@ -52,9 +62,9 @@ class KlustaViewa(EventEmitter):
                 item = self.session.view_creator.add(name,
                                                      cluster_ids=clusters,
                                                      **kwargs)
-
             self.add_view(item, title=name.title(), position=position)
 
+    def _load_geometry_state(self):
         # Load geometry state
         gs = self.session.settings.get('gui_state', None)
         if gs:
@@ -81,8 +91,11 @@ class KlustaViewa(EventEmitter):
         filename = self.session.model.kwik_path
         clustering = self.session.model.clustering
         channel_group = self.session.model.channel_group
-        template = "{name} - {filename} (shank {channel_group}, {clustering})"
+        template = ("{filename} (shank {channel_group}, "
+                    "{clustering} clustering) "
+                    "- {name} {version}")
         return template.format(name=name,
+                               version=phy.__version__,
                                filename=filename,
                                channel_group=channel_group,
                                clustering=clustering,
@@ -217,10 +230,10 @@ class KlustaViewa(EventEmitter):
     def reset_gui(self):
         """Reset the GUI configuration."""
         config = self.session.settings['gui_config']
-        dock_widgets = self._dock.list_views(is_visible=True)
-        existing = [_title(view) for view in dock_widgets]
+        existing = sorted(self._dock.view_counts())
         to_add = [(name, _) for (name, _) in config if name not in existing]
         self._load_config(to_add)
+        self.session.settings['gui_state'] = None
 
     def save(self):
         """Save the clustering changes to the `.kwik` file."""
@@ -237,13 +250,21 @@ class KlustaViewa(EventEmitter):
     def show_shortcuts(self):
         """Show the list off all keyboard shortcuts."""
         shortcuts = self.session.settings['keyboard_shortcuts']
-        print("Keyboard shortcuts")
-        print("------------------")
-        for name in sorted(shortcuts):
-            print("{0:<24}: {1:s}".format(name, str(shortcuts[name])))
+        _show_shortcuts(shortcuts, name=self.__class__.__name__)
 
     def close(self):
         """Close the GUI."""
+        if (self.session.settings['prompt_save_on_exit'] and
+                self.session.has_unsaved_changes):
+            res = _prompt(self._dock,
+                          "Do you want to save your changes?",
+                          ('save', 'cancel', 'close'))
+            if res == 'save':
+                self.save()
+            elif res == 'cancel':
+                return
+            elif res == 'close':
+                pass
         self._dock.close()
 
     def exit(self):
@@ -264,6 +285,11 @@ class KlustaViewa(EventEmitter):
         debug("Select clusters {0:s}.".format(str(cluster_ids)))
         self._cluster_ids = cluster_ids
         self.emit('select', cluster_ids)
+
+    @property
+    def selected_clusters(self):
+        """The list of selected clusters."""
+        return self._cluster_ids
 
     # Wizard list
     # ---------------------------------------------------------------------
@@ -348,19 +374,21 @@ class GUICreator(object):
         Returns
         -------
 
-        gui : KlustaViewa
+        gui : ClusterManualGUI
             The GUI.
 
         """
-        gui = KlustaViewa(self.session, config=config)
+        gui = ClusterManualGUI(self.session, config=config)
         self._guis.append(gui)
 
         @gui.main_window.on_close
         def on_close():
-            self._guis.remove(gui)
+            if gui in self._guis:
+                self._guis.remove(gui)
             self.session.view_creator.save_view_params()
             gs = gui._dock.save_geometry_state()
             self.session.settings['gui_state'] = gs
+            self.session.settings['gui_view_count'] = gui._dock.view_counts()
             self.session.close()
 
         if show:

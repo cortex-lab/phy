@@ -13,8 +13,7 @@ import shutil
 
 import numpy as np
 
-from ...utils.dock import qt_app
-from ...utils.event import EventEmitter, ProgressReporter
+from ...utils.event import EventEmitter
 from ...utils.logging import info
 from ...utils.settings import (Settings,
                                _ensure_dir_exists,
@@ -22,7 +21,7 @@ from ...utils.settings import (Settings,
                                )
 from ...io.store import ClusterStore
 from ...io.kwik.model import KwikModel, cluster_group_id
-from ...io.kwik.store_items import FeatureMasks, Waveforms
+from ...io.kwik.store_items import FeatureMasks, Waveforms, ClusterStatistics
 from ._history import GlobalHistory
 from ._utils import ClusterMetadataUpdater
 from .clustering import Clustering
@@ -73,6 +72,8 @@ class Session(EventEmitter):
             phy_user_dir = _phy_user_dir()
         _ensure_dir_exists(phy_user_dir)
         self.phy_user_dir = phy_user_dir
+        # True if there are possibly unsaved changes.
+        self._is_dirty = False
         self._create_settings()
         self._create_creators()
 
@@ -98,6 +99,16 @@ class Session(EventEmitter):
 
     # File-related actions
     # -------------------------------------------------------------------------
+
+    @property
+    def has_unsaved_changes(self):
+        """Whether there are unsaved changes in the model.
+
+        If true, a prompt message for saving will be displayed when closing
+        the GUI.
+
+        """
+        return self._is_dirty
 
     def _backup_kwik(self, kwik_path):
         """Save a copy of the Kwik file before opening it."""
@@ -128,6 +139,7 @@ class Session(EventEmitter):
         self.model.save(self.clustering.spike_clusters,
                         groups)
         info("Saved {0:s}.".format(self.model.kwik_path))
+        self._is_dirty = False
 
     def close(self):
         """Close the currently-open dataset."""
@@ -150,6 +162,7 @@ class Session(EventEmitter):
         if len(clusters) <= 1:
             return
         info("Merge clusters {}.".format(str(clusters)))
+        self._is_dirty = True
         up = self.clustering.merge(clusters)
         self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
@@ -167,6 +180,7 @@ class Session(EventEmitter):
         """
         self._check_list_argument(spikes, 'spikes')
         info("Split {0:d} spikes.".format(len(spikes)))
+        self._is_dirty = True
         up = self.clustering.split(spikes)
         self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
@@ -184,6 +198,7 @@ class Session(EventEmitter):
         """
         self._check_list_argument(clusters)
         info("Move clusters {0} to {1}.".format(str(clusters), group))
+        self._is_dirty = True
         group_id = cluster_group_id(group)
         up = self._cluster_metadata_updater.set_group(clusters, group_id)
         self._global_history.action(self._cluster_metadata_updater)
@@ -221,6 +236,36 @@ class Session(EventEmitter):
         """Number of clusters in the current clustering."""
         return self.clustering.n_clusters
 
+    # Customization methods
+    # -------------------------------------------------------------------------
+
+    def register_statistic(self, func):
+        """Decorator registering a custom cluster statistic.
+
+        Parameters
+        ----------
+
+        func : function
+            A function that takes a cluster index as argument, and returns
+            some statistics (generally a NumPy array).
+
+        Notes
+        -----
+
+        This function will be called on every cluster when a dataset is opened.
+        It is also automatically called on new clusters when clusters change.
+        You can access the data from the model and from the cluster store.
+
+        """
+        name = func.__name__
+
+        def _wrapper(cluster):
+            out = func(cluster)
+            self.cluster_store.memory_store.store(cluster, **{name: out})
+
+        self._statistics.add(name, _wrapper)
+        self.cluster_store.register_field(name, 'memory')
+
     # Event callbacks
     # -------------------------------------------------------------------------
 
@@ -242,40 +287,19 @@ class Session(EventEmitter):
                                           )
 
         # Create the FeatureMasks store item.
-
-        # Initialize the progress reporters.
-        pr_disk = ProgressReporter(
-            progress_message=('Initializing the cluster store: '
-                              '{progress:.1f}%.'),
-            complete_message='Cluster store initialized.')
-
-        pr_memory = ProgressReporter(
-            progress_message='Computing cluster statistics: {progress:.1f}%.',
-            complete_message='Cluster statistics computed.')
-
         # chunk_size is the number of spikes to load at once from
         # the features_masks array.
         cs = self.settings['store_chunk_size']
-        self.cluster_store.register_item(FeatureMasks,
-                                         progress_reporter_disk=pr_disk,
-                                         progress_reporter_memory=pr_memory,
-                                         chunk_size=cs,
-                                         )
-
-        # Create the waveforms store item.
-        pr_waveforms = ProgressReporter(
-            progress_message=('Initializing waveforms: '
-                              '{progress:.1f}%.'),
-            complete_message='Waveforms initialized.')
+        self.cluster_store.register_item(FeatureMasks, chunk_size=cs)
 
         n_spikes_max = self.settings['waveforms_n_spikes_max']
         excerpt_size = self.settings['waveforms_excerpt_size']
-
         self.cluster_store.register_item(Waveforms,
-                                         progress_reporter=pr_waveforms,
                                          n_spikes_max=n_spikes_max,
                                          excerpt_size=excerpt_size,
                                          )
+
+        self._statistics = self.cluster_store.register_item(ClusterStatistics)
 
         # Generate the cluster store if it doesn't exist or is invalid.
         # If the cluster store already exists and is consistent
@@ -376,9 +400,8 @@ class Session(EventEmitter):
     def show_gui(self, config=None, **kwargs):
         """Show a new manual clustering GUI."""
         # Ensure that a Qt application is running.
-        with qt_app():
-            gui = self.gui_creator.add(config, **kwargs)
-            return gui
+        gui = self.gui_creator.add(config, **kwargs)
+        return gui
 
     def show_view(self, name, cluster_ids, **kwargs):
         """Create and display a new view.

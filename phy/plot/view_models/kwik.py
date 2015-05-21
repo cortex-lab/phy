@@ -8,7 +8,6 @@
 
 import numpy as np
 
-from ...utils.logging import debug
 from ...utils.array import (_concatenate_per_cluster_arrays,
                             _spikes_in_clusters,
                             )
@@ -27,19 +26,23 @@ from .base import _selected_clusters_colors, BaseViewModel
 class WaveformViewModel(BaseViewModel):
     _view_class = WaveformView
     _view_name = 'waveforms'
-    _imported_params = ('scale_factor', 'box_scale', 'probe_scale', 'overlap')
+    _imported_params = ('scale_factor', 'box_scale', 'probe_scale',
+                        'overlap', 'show_mean')
 
     def on_open(self):
         super(WaveformViewModel, self).on_open()
+        # Waveforms.
         self.view.visual.channel_positions = self.model.probe.positions
         self.view.visual.channel_order = self.model.channel_order
+        # Mean waveforms.
+        self.view.mean.channel_positions = self.model.probe.positions
+        self.view.mean.channel_order = self.model.channel_order
         if self.scale_factor is None:
             self.scale_factor = 1.
 
-    def on_select(self):
-        # Get the spikes of the stored waveforms.
-        debug("Loading waveforms...")
+    def _load_waveforms(self):
         clusters = self.cluster_ids
+        # debug("Loading waveforms...")
         if self._store is not None and len(clusters):
             # Subset the stored spikes for each cluster.
             k = len(clusters)
@@ -62,29 +65,64 @@ class WaveformViewModel(BaseViewModel):
             self._selector.selected_clusters = clusters
             spikes = self.spike_ids
             waveforms = self.model.waveforms[spikes]
+        return spikes, waveforms
+
+    def _load_mean_waveforms(self):
+        if not self._store or len(self.cluster_ids) == 0:
+            return (np.zeros((len(self.cluster_ids),
+                              self._n_samples,
+                              self._n_channels,
+                              )),
+                    np.zeros((len(self.cluster_ids),
+                              self._n_channels,
+                              ))
+                    )
+        mean_waveforms = []
+        mean_masks = []
+        for cluster in sorted(self.cluster_ids):
+            mw = self._store.mean_waveforms(cluster)[None, :]
+            mm = self._store.mean_masks(cluster)[None, :]
+            mean_waveforms.append(mw)
+            mean_masks.append(mm)
+        return np.vstack(mean_waveforms), np.vstack(mean_masks)
+
+    def _update_spike_clusters(self, spikes=None):
+        super(WaveformViewModel, self)._update_spike_clusters(spikes=spikes)
+        self._view.mean.spike_clusters = np.sort(self.cluster_ids)
+        self._view.mean.cluster_colors = self._view.visual.cluster_colors
+
+    def on_select(self):
+        # Get the spikes of the stored waveforms.
+        clusters = self.cluster_ids
+        spikes, waveforms = self._load_waveforms()
+        _, self._n_samples, self._n_channels = waveforms.shape
+        mean_waveforms, mean_masks = self._load_mean_waveforms()
 
         self._update_spike_clusters()
         assert waveforms.shape[0] == len(spikes)
-        debug("Done!")
 
         # Cluster display order.
         self.view.visual.cluster_order = clusters
+        self.view.mean.cluster_order = clusters
 
         # Waveforms.
-        waveforms *= self.scale_factor
-        self.view.visual.waveforms = waveforms
+        self.view.visual.waveforms = waveforms * self.scale_factor
+        self.view.mean.waveforms = mean_waveforms * self.scale_factor
 
         # Masks.
         masks = self.load('masks')
         self.view.visual.masks = masks
+        self.view.mean.masks = mean_masks
 
         # Spikes.
         self.view.visual.spike_ids = spikes
+        self.view.mean.spike_ids = np.arange(len(clusters))
 
         self.view.update()
 
     def on_close(self):
         self.view.visual.channel_positions = []
+        self.view.mean.channel_positions = []
         super(WaveformViewModel, self).on_close()
 
     @property
@@ -122,6 +160,28 @@ class WaveformViewModel(BaseViewModel):
     def overlap(self, value):
         self.view.overlap = value
 
+    @property
+    def show_mean(self):
+        """Whether to show mean waveforms."""
+        return self.view.show_mean
+
+    @show_mean.setter
+    def show_mean(self, value):
+        self.view.show_mean = value
+
+    keyboard_shortcuts = {
+        'toggle_mean_waveforms': 'm',
+        'toggle_overlap': 'o',
+    }
+
+    def on_key_press(self, event):
+        super(WaveformViewModel, self).on_key_press(event)
+        key = event.key
+        if key == 'm':
+            self.show_mean = not(self.show_mean)
+        if key == 'o':
+            self.overlap = not(self.overlap)
+
     def exported_params(self, save_size_pos=True):
         params = super(WaveformViewModel, self).exported_params(save_size_pos)
         params.update({
@@ -129,6 +189,7 @@ class WaveformViewModel(BaseViewModel):
             'box_scale': self.view.box_scale,
             'probe_scale': self.view.probe_scale,
             'overlap': self.view.overlap,
+            'show_mean': self.view.show_mean,
         })
         return params
 
@@ -140,8 +201,10 @@ class FeatureViewModel(BaseViewModel):
     n_spikes_max_bg = 10000
 
     def __init__(self, **kwargs):
-        super(FeatureViewModel, self).__init__(**kwargs)
         self._dimension_selector = None
+        self._previous_dimensions = None
+        super(FeatureViewModel, self).__init__(**kwargs)
+        self._view.connect(self.on_mouse_double_click)
 
     def set_dimension_selector(self, func):
         """Decorator for a function that selects the best projection.
@@ -214,6 +277,24 @@ class FeatureViewModel(BaseViewModel):
     def marker_size(self, value):
         self.view.marker_size = value
 
+    @property
+    def dimensions(self):
+        """The list of displayed dimensions."""
+        return self._view.dimensions
+
+    @dimensions.setter
+    def dimensions(self, value):
+        self._view.dimensions = value
+
+    @property
+    def diagonal_dimensions(self):
+        """The list of dimensions on the diagonal (y axis)."""
+        return self._view.diagonal_dimensions
+
+    @diagonal_dimensions.setter
+    def diagonal_dimensions(self, value):
+        self._view.diagonal_dimensions = value
+
     def on_open(self):
         # Get background features.
         # TODO OPTIM: precompute this once for all and store in the cluster
@@ -253,6 +334,26 @@ class FeatureViewModel(BaseViewModel):
         self.view.dimensions = self._default_dimensions(clusters)
 
         self.view.update()
+
+    keyboard_shortcuts = {
+        'enlarge_subplot': 'double left click',
+    }
+
+    def on_mouse_double_click(self, e):
+        if self._previous_dimensions:
+            self.dimensions = self._previous_dimensions
+            self._previous_dimensions = None
+        else:
+            # Save previous (diagonal) dimensions.
+            self._previous_dimensions = self.dimensions
+            # Find the current box.
+            i, j = self._view._pz._get_box(e.pos)
+            dim_i = self.dimensions[i]
+            dim_j = self.dimensions[j]
+            # Set the dimensions.
+            self.dimensions = [dim_i]
+            if i != j:
+                self.diagonal_dimensions = [dim_j]
 
     def exported_params(self, save_size_pos=True):
         params = super(FeatureViewModel, self).exported_params(save_size_pos)
@@ -327,21 +428,19 @@ class TraceViewModel(BaseViewModel):
     interval_size = .25
 
     def __init__(self, **kwargs):
-        super(TraceViewModel, self).__init__(**kwargs)
-        self._view.connect(self.on_key_press)
         self._interval = None
+        super(TraceViewModel, self).__init__(**kwargs)
 
     def _load_traces(self, interval):
         start, end = interval
         spikes = self.spike_ids
 
         # Load the traces.
-        debug("Loading traces...")
+        # debug("Loading traces...")
         # Using channel_order ensures that we get rid of the dead channels.
         # We also keep the channel order as specified by the PRM file.
         # WARNING: HDF5 does not support out-of-order indexing (...!!)
         traces = self.model.traces[start:end, :][:, self.model.channel_order]
-        debug("Done!")
 
         # Normalize and set the traces.
         traces_f = np.empty_like(traces, dtype=np.float32)
@@ -427,7 +526,15 @@ class TraceViewModel(BaseViewModel):
         start, end = self.interval
         self.move(int(-(end - start) * fraction))
 
+    keyboard_shortcuts = {
+        'scroll_left': 'ctrl+left',
+        'scroll_right': 'ctrl+right',
+        'fast_scroll_left': 'shift+left',
+        'fast_scroll_right': 'shift+right',
+    }
+
     def on_key_press(self, event):
+        super(TraceViewModel, self).on_key_press(event)
         key = event.key
         if 'Control' in event.modifiers:
             if key == 'Left':

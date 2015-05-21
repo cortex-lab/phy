@@ -3,4 +3,5 @@
 
 """Kwik format."""
 
+from .store_items import FeatureMasks, Waveforms, ClusterStatistics
 from .model import KwikModel

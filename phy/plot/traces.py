@@ -16,7 +16,6 @@ from ._vispy_utils import (BaseSpikeVisual,
                            )
 from ..utils._types import _as_array
 from ..utils.array import _index_of
-from ..utils.logging import debug
 
 
 #------------------------------------------------------------------------------
@@ -141,16 +140,12 @@ class TraceVisual(BaseSpikeVisual):
         self.program['n_channels'] = nc
         self.program['n_samples'] = ns
 
-        debug("bake traces", self._traces.shape)
-
     def _bake_channel_color(self):
         u_channel_color = self._channel_colors.reshape((1,
                                                         self.n_channels,
                                                         -1))
         u_channel_color = (u_channel_color * 255).astype(np.uint8)
         self.program['u_channel_color'] = gloo.Texture2D(u_channel_color)
-
-        debug("bake channel color", u_channel_color.shape)
 
     def _bake_spikes(self):
         # Handle the case where there are no spikes.
@@ -201,18 +196,8 @@ class TraceVisual(BaseSpikeVisual):
 
 
 class TraceView(BaseSpikeCanvas):
-    """A VisPy canvas displaying traces.
-
-    Interactivity
-    -------------
-
-    * change channel scale: `ctrl+up`, `ctrl+down`
-
-    """
+    """A VisPy canvas displaying traces."""
     _visual_class = TraceVisual
-
-    def __init__(self, *args, **kwargs):
-        super(TraceView, self).__init__(*args, **kwargs)
 
     def _create_pan_zoom(self):
         super(TraceView, self)._create_pan_zoom()
@@ -233,7 +218,10 @@ class TraceView(BaseSpikeCanvas):
         self.visual.channel_scale = value
         self.update()
 
-    _arrows = ('Left', 'Right', 'Up', 'Down')
+    keyboard_shortcuts = {
+        'channel_scale_increase': 'ctrl+[+]',
+        'channel_scale_decrease': 'ctrl+[-]',
+    }
 
     def on_key_press(self, event):
         """Handle key press events."""
@@ -241,11 +229,10 @@ class TraceView(BaseSpikeCanvas):
         ctrl = 'Control' in event.modifiers
 
         # Box scale.
-        if ctrl and key in self._arrows:
+        if ctrl and key in ('+', '-'):
             coeff = 1.1
             u = self.channel_scale
-            if key == 'Down':
+            if key == '-':
                 self.channel_scale = u / coeff
-            elif key == 'Up':
+            elif key == '+':
                 self.channel_scale = u * coeff
-            self.update()

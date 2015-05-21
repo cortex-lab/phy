@@ -49,8 +49,7 @@ def _start_manual_clustering(kwik_path=None,
 
 
 def _show_view(session, name, cluster_ids=None, stop=True):
-    vm = session.show_view(name, cluster_ids, show=False)
-    vm.scale_factor = 1.
+    vm = session.show_view(name, cluster_ids, show=False, scale_factor=1)
     show_test_start(vm.view)
     show_test_run(vm.view, _N_FRAMES)
     if stop:
@@ -239,9 +238,12 @@ def test_session_mock():
         session = _start_manual_clustering(model=MockModel(),
                                            tempdir=tempdir)
         for name in ('waveforms', 'features', 'correlograms', 'traces'):
-            _show_view(session, name, [])
-            _show_view(session, name, [0])
-            _show_view(session, name, [0, 1])
+            vm = _show_view(session, name, [], stop=False)
+            vm.select([0])
+            show_test_run(vm.view, _N_FRAMES)
+            vm.select([0, 1])
+            show_test_run(vm.view, _N_FRAMES)
+            show_test_stop(vm.view)
 
 
 def test_session_kwik():
@@ -408,11 +410,10 @@ def test_session_gui():
                                            tempdir=tempdir)
 
         with qt_app():
-            gui = session.gui_creator.add(show=False)
-            # Force the scale factor to 1.0 for mock data.
-            for vm in (gui.get_views('waveforms') +
-                       gui.get_views('features') +
-                       gui.get_views('traces')):
-                vm.scale_factor = 1.
+            config = session.settings['gui_config']
+            for name, kwargs in config:
+                if name in ('waveforms', 'features', 'traces'):
+                    kwargs['scale_factor'] = 1
+            gui = session.gui_creator.add(config=config, show=False)
             _close_qt_after(gui, 0.25)
             gui.show()

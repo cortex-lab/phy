@@ -104,6 +104,20 @@ class EventEmitter(object):
 # Progress reporter
 #------------------------------------------------------------------------------
 
+def _default_on_progress(message, value, value_max):
+    if value_max == 0:
+        return
+    if value < value_max:
+        progress = 100 * value / float(value_max)
+        print(message.format(progress=progress), end='\r')
+
+
+def _default_on_complete(message):
+    # Override the initializing message and clear the terminal
+    # line.
+    print(message + '\033[K', end='\n')
+
+
 class ProgressReporter(EventEmitter):
     """A class that reports progress done.
 
@@ -114,27 +128,29 @@ class ProgressReporter(EventEmitter):
     * `complete()`
 
     """
-    def __init__(self, progress_message=None, complete_message=None):
+    def __init__(self):
         super(ProgressReporter, self).__init__()
         self._value = 0
         self._value_max = 0
         self._has_completed = False
 
-        if progress_message is not None:
-            @self.connect
-            def on_progress(value, value_max):
-                if value_max == 0:
-                    return
-                if value < value_max:
-                    progress = 100 * value / float(value_max)
-                    print(progress_message.format(progress=progress), end='\r')
+    def set_progress_message(self, message):
+        """Set a progress message.
 
-        if complete_message is not None:
-            @self.connect
-            def on_complete():
-                # Override the initializing message and clear the terminal
-                # line.
-                print(complete_message + '\033[K', end='\n')
+        The string needs to contain `{progress}`.
+
+        """
+
+        @self.connect
+        def on_progress(value, value_max):
+            _default_on_progress(message, value, value_max)
+
+    def set_complete_message(self, message):
+        """Set a complete message."""
+
+        @self.connect
+        def on_complete():
+            _default_on_complete(message)
 
     @property
     def value(self):

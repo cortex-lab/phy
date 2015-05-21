@@ -17,6 +17,7 @@ from ..utils.array import (_concatenate_per_cluster_arrays,
                            )
 from ..utils._types import _as_int
 from ..utils.logging import debug, info
+from ..utils.event import ProgressReporter
 from ..ext.six import string_types
 
 
@@ -223,6 +224,147 @@ class DiskStore(object):
 
 
 #------------------------------------------------------------------------------
+# Store item
+#------------------------------------------------------------------------------
+
+class StoreItem(object):
+    """A class describing information stored in the cluster store.
+
+    Parameters
+    ----------
+
+    fields : list
+        A list of pairs `(field_name, storage_location)`.
+        `storage_location` is either `memory` or `disk`.
+    model : Model
+        A `Model` instance for the current dataset.
+    memory_store : MemoryStore
+        The `MemoryStore` instance for the current dataset.
+    disk_store : DiskStore
+        The DiskStore instance for the current dataset.
+
+    """
+    fields = None  # list of `(field_name, storage_location)`
+    name = 'item'
+
+    def __init__(self,
+                 model=None,
+                 memory_store=None,
+                 disk_store=None,
+                 spikes_per_cluster=None,
+                 ):
+        self.model = model
+        self.memory_store = memory_store
+        self.disk_store = disk_store
+        self._spikes_per_cluster = spikes_per_cluster
+        self._pr = ProgressReporter()
+        self._pr.set_progress_message('Initializing ' + self.name +
+                                      ': {progress:.1f}%.')
+        self._pr.set_complete_message(self.name.capitalize() + ' initialized.')
+
+    @property
+    def progress_reporter(self):
+        return self._pr
+
+    @property
+    def spikes_per_cluster(self):
+        """Spikes per cluster."""
+        return self._spikes_per_cluster
+
+    @spikes_per_cluster.setter
+    def spikes_per_cluster(self, value):
+        self._spikes_per_cluster = value
+
+    @property
+    def cluster_ids(self):
+        """Array of cluster ids."""
+        return sorted(self._spikes_per_cluster)
+
+    def is_consistent(self, cluster, spikes):
+        """Return whether the stored item is consistent.
+
+        To be overriden."""
+        return False
+
+    def to_generate(self, mode=None):
+        """Return the list of clusters that need to be regenerated."""
+        if mode in (None, 'default'):
+            return [cluster for cluster in self.cluster_ids
+                    if not self.is_consistent(cluster,
+                                              self.spikes_per_cluster[cluster],
+                                              )]
+        elif mode == 'force':
+            return self.cluster_ids
+        elif mode == 'read-only':
+            return []
+        else:
+            raise ValueError("`mode` should be None, `default`, `force`, "
+                             "or `read-only`.")
+
+    def store_cluster(self, cluster, spikes=None, mode=None):
+        """Store data for a cluster from the model to the store.
+
+        May be overridden.
+
+        No need to delete old clusters here.
+
+        """
+        # TODO: remove mode: unused?
+        pass
+
+    def store_all_clusters(self, mode=None):
+        """Copy all data for that item from the model to the cluster store."""
+        clusters = self.to_generate(mode)
+        self._pr.value_max = len(clusters)
+        for cluster in clusters:
+            self.store_cluster(cluster,
+                               spikes=self._spikes_per_cluster[cluster],
+                               mode=mode,
+                               )
+            self._pr.value += 1
+        self._pr.set_complete()
+
+    def on_merge(self, up):
+        """Called when a new merge occurs.
+
+        May be overriden if there's an efficient way to update the data
+        after a merge.
+
+        """
+        self.on_assign(up)
+
+    def on_assign(self, up):
+        """Called when a new split occurs.
+
+        May be overriden.
+
+        """
+        for cluster in up.added:
+            self.store_cluster(cluster,
+                               spikes=self._spikes_per_cluster[cluster],
+                               )
+
+    def on_cluster(self, up=None):
+        """Called when the clusters change.
+
+        Old data is kept on disk and in memory, which is useful for
+        undo and redo. The `cluster_store.clean()` method can be called to
+        delete the old files.
+
+        Nothing happens during undo and redo (the data is already there).
+
+        """
+        # No need to change anything in the store if this is an undo or
+        # a redo.
+        if up is None or up.history is not None:
+            return
+        if up.description == 'merge':
+            self.on_merge(up)
+        elif up.description == 'assign':
+            self.on_assign(up)
+
+
+#------------------------------------------------------------------------------
 # Cluster store
 #------------------------------------------------------------------------------
 
@@ -347,7 +489,7 @@ class ClusterStore(object):
         and memory. It must register one or several pieces of data.
 
         """
-
+        # TODO: pass instance instead of class?
         # Instantiate the item.
         item = item_cls(model=self._model,
                         memory_store=self._memory,
@@ -367,6 +509,7 @@ class ClusterStore(object):
 
         # Register the StoreItem instance.
         self._items.append(item)
+        return item
 
     def load(self, name, clusters, spikes=None, spikes_per_cluster=None):
         """Load some data for a number of clusters and spikes."""
@@ -493,94 +636,6 @@ class ClusterStore(object):
             name = self._model.name
         else:
             name = 'the current model'
-        debug("Initializing the cluster store for {0:s}...".format(name))
+        debug("Initializing the cluster store for {0:s}.".format(name))
         for item in self._items:
             item.store_all_clusters(mode)
-        debug("Done!")
-
-
-class StoreItem(object):
-    """A class describing information stored in the cluster store.
-
-    Parameters
-    ----------
-
-    fields : list
-        A list of pairs `(field_name, storage_location)`.
-        `storage_location` is either `memory` or `disk`.
-    model : Model
-        A `Model` instance for the current dataset.
-    memory_store : MemoryStore
-        The `MemoryStore` instance for the current dataset.
-    disk_store : DiskStore
-        The DiskStore instance for the current dataset.
-
-    """
-    fields = None  # list of `(field_name, storage_location)`
-    name = 'item'
-
-    def __init__(self,
-                 model=None,
-                 memory_store=None,
-                 disk_store=None,
-                 spikes_per_cluster=None,
-                 ):
-        self.model = model
-        self.memory_store = memory_store
-        self.disk_store = disk_store
-        self._spikes_per_cluster = spikes_per_cluster
-
-    @property
-    def spikes_per_cluster(self):
-        """Spikes per cluster."""
-        return self._spikes_per_cluster
-
-    @spikes_per_cluster.setter
-    def spikes_per_cluster(self, value):
-        self._spikes_per_cluster = value
-
-    @property
-    def cluster_ids(self):
-        """Array of cluster ids."""
-        return sorted(self._spikes_per_cluster)
-
-    def is_consistent(self, cluster, spikes):
-        """Return whether the stored item is consistent.
-
-        To be overriden."""
-        return False
-
-    def to_generate(self, mode=None):
-        """Return the list of clusters that need to be regenerated."""
-        if mode in (None, 'default'):
-            return [cluster for cluster in self.cluster_ids
-                    if not self.is_consistent(cluster,
-                                              self.spikes_per_cluster[cluster],
-                                              )]
-        elif mode == 'force':
-            return self.cluster_ids
-        elif mode == 'read-only':
-            return []
-        else:
-            raise ValueError("`mode` should be None, `default`, `force`, "
-                             "or `read-only`.")
-
-    def store_cluster(self, cluster, spikes=None, mode=None):
-        """Store data for a cluster from the model to the store.
-
-        May be overridden.
-
-        No need to delete old clusters here.
-
-        """
-        pass
-
-    def store_all_clusters(self, mode=None):
-        """Copy all data for that item from the model to the cluster store."""
-        for cluster in self.to_generate(mode):
-            debug("Loading {0:s}, cluster {1:d}...".format(self.name,
-                  cluster))
-            self.store_cluster(cluster,
-                               spikes=self._spikes_per_cluster[cluster],
-                               mode=mode,
-                               )
