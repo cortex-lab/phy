@@ -332,6 +332,8 @@ class Session(EventEmitter):
     def _to_wizard_group(self, group_id):
         """Return the group name required by the wizard, as a function
         of the Kwik cluster group."""
+        if hasattr(group_id, '__len__'):
+            group_id = group_id[0]
         return {
             0: 'ignored',
             1: 'ignored',
