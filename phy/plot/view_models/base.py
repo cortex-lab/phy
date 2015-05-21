@@ -51,7 +51,7 @@ class BaseViewModel(object):
     """Create a view from a model."""
     _view_class = None
     _view_name = ''
-    _imported_params = ('position', 'size',)
+    _imported_params = ('position', 'size', 'n_spikes_max', 'excerpt_size')
     keyboard_shortcuts = {}
     scale_factor = 1.
 

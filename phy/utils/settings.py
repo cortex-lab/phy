@@ -62,6 +62,9 @@ class BaseSettings(object):
     def __contains__(self, key):
         return key in self._store
 
+    def keys(self):
+        return self._store.keys()
+
     def _try_load_pickle(self, path):
         try:
             self._store.update(_load_pickle(path))
@@ -161,6 +164,9 @@ class Settings(object):
 
     def __contains__(self, key):
         return key in self._bs
+
+    def keys(self):
+        return self._bs.keys()
 
 
 #------------------------------------------------------------------------------
