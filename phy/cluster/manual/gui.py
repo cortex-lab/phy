@@ -18,7 +18,7 @@ from ...plot.view_models import BaseViewModel
 # Manual clustering window
 #------------------------------------------------------------------------------
 
-class KlustaViewa(EventEmitter):
+class ClusterManualGUI(EventEmitter):
     """Manual clustering GUI.
 
     This object represents a main window with:
@@ -31,7 +31,7 @@ class KlustaViewa(EventEmitter):
     """
 
     def __init__(self, session, config=None):
-        super(KlustaViewa, self).__init__()
+        super(ClusterManualGUI, self).__init__()
         self.session = session
         self.start()
         self._dock = DockWindow(title=self.title)
@@ -369,11 +369,11 @@ class GUICreator(object):
         Returns
         -------
 
-        gui : KlustaViewa
+        gui : ClusterManualGUI
             The GUI.
 
         """
-        gui = KlustaViewa(self.session, config=config)
+        gui = ClusterManualGUI(self.session, config=config)
         self._guis.append(gui)
 
         @gui.main_window.on_close

@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
-"""KlustaViewa CLI tool.
+"""ClusterManualGUI CLI tool.
 
 Usage:
 
-    klustaviewa /path/to/myfile.kwik [-i]
+    phy cluster manual /path/to/myfile.kwik [-i]
 
 Options:
 
@@ -16,7 +16,7 @@ Once within IPython, you have access to the following variables:
 * `kwik_path`: the path to the Kwik file
 * `session`: the `Session` instance
 * `model`: the `KwikModel` instance
-* `kv`: the `KlustaViewa` instance
+* `gui`: the `ClusterManualGUI` instance
 
 Once the GUI is closed, quit IPython with `exit()`.
 
@@ -38,22 +38,45 @@ from phy.utils import start_qt_app, run_qt_app
 # Main function
 #------------------------------------------------------------------------------
 
+def _pop(l, el, default=None):
+    if el in l:
+        l.remove(el)
+        return el
+    else:
+        return default
+
+
 def main():
-    print("KlustaViewa {}".format(phy.__version__))
     # TODO: use argparse
+    args = sys.argv
 
-    if '-h' in sys.argv or '--help' in sys.argv:
+    if '-h' in args or '--help' in args:
         print(sys.modules[__name__].__doc__)
-        return
+        return 0
 
-    if len(sys.argv) == 1:
+    if '-v' in args or '--version' in args:
+        print("phy v{}".format(phy.__version__))
+        return 0
+
+    if len(args) <= 3 or args[1] != 'cluster' or args[2] != 'manual':
+        print("Only the `phy cluster manual [-i] myfile.kwik` command "
+              "is currently supported.")
+        return 1
+
+    args = args[3:]
+
+    print("ClusterManualGUI")
+
+    interactive = _pop(args, '-i', False) or _pop(args, '--interactive', False)
+
+    if len(args) == 0:
         print("Please specify a path to a `.kwik` file.")
-        exit(1)
+        return 1
 
-    kwik_path = sys.argv[1]
+    kwik_path = args[0]
     if not op.exists(kwik_path):
         print("The file `{}` doesn't exist.".format(kwik_path))
-        exit(1)
+        return 1
 
     print("\nLoading {}...".format(kwik_path))
     session = Session(kwik_path)
@@ -61,12 +84,12 @@ def main():
     session.model.describe()
 
     start_qt_app()
-    kv = session.show_gui(show=False)
+    gui = session.show_gui(show=False)
 
     print("\nPress `ctrl+h` to see the list of keyboard shortcuts.\n")
 
     # Interactive mode with IPython.
-    if '-i' in sys.argv:
+    if interactive:
         print("\nStarting IPython...")
         from IPython import start_ipython
 
@@ -75,11 +98,11 @@ def main():
               'session': session,
               'model': session.model,
               'kwik_path': kwik_path,
-              'kv': kv,
+              'gui': gui,
               }
-        start_ipython(["--gui=qt", "-i", "-c='kv.show()'"], user_ns=ns)
+        start_ipython(["--gui=qt", "-i", "-c='gui.show()'"], user_ns=ns)
     else:
-        kv.show()
+        gui.show()
         run_qt_app()
 
 
@@ -88,4 +111,4 @@ def main():
 #------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    main()
+    exit(main())

@@ -52,7 +52,7 @@ setup(
     package_dir={'phy': 'phy'},
     entry_points={
         'console_scripts': [
-            'klustaviewa=phy.scripts.klustaviewa:main',
+            'phy=phy.scripts.phy_script:main',
         ],
     },
     include_package_data=True,
