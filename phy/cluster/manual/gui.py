@@ -93,7 +93,7 @@ class ClusterManualGUI(EventEmitter):
         channel_group = self.session.model.channel_group
         template = ("{filename} (shank {channel_group}, "
                     "{clustering} clustering) "
-                    "- {name} {version}")
+                    "- {name} - phy {version}")
         return template.format(name=name,
                                version=phy.__version__,
                                filename=filename,
