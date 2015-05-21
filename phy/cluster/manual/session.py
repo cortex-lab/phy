@@ -263,8 +263,14 @@ class Session(EventEmitter):
             out = func(cluster)
             self.cluster_store.memory_store.store(cluster, **{name: out})
 
+        # Add the statistics.
         self._statistics.add(name, _wrapper)
+        # Register it in the global cluster store.
         self.cluster_store.register_field(name, 'memory')
+        # Compute it on all existing clusters.
+        stats = self.cluster_store.get_item('statistics')
+        stats.store_all_clusters(name=name, mode='force')
+        info("Registered statistic `{}`.".format(name))
 
     # Event callbacks
     # -------------------------------------------------------------------------
@@ -326,6 +332,8 @@ class Session(EventEmitter):
     def _to_wizard_group(self, group_id):
         """Return the group name required by the wizard, as a function
         of the Kwik cluster group."""
+        if hasattr(group_id, '__len__'):
+            group_id = group_id[0]
         return {
             0: 'ignored',
             1: 'ignored',

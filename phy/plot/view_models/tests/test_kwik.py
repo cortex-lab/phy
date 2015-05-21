@@ -109,6 +109,8 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
 
 def test_waveforms_full():
     vm = _test_view_model(WaveformViewModel, stop=False)
+    vm.overlap = True
+    show_test_run(vm.view, _N_FRAMES)
     vm.show_mean = True
     show_test_run(vm.view, _N_FRAMES)
     show_test_stop(vm.view)

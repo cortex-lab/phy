@@ -62,7 +62,7 @@ class ClusterManualGUI(EventEmitter):
                 item = self.session.view_creator.add(name,
                                                      cluster_ids=clusters,
                                                      **kwargs)
-            self.add_view(item, title=name.title(), position=position)
+            self.add_view(item, title=name.capitalize(), position=position)
 
     def _load_geometry_state(self):
         # Load geometry state
@@ -93,7 +93,7 @@ class ClusterManualGUI(EventEmitter):
         channel_group = self.session.model.channel_group
         template = ("{filename} (shank {channel_group}, "
                     "{clustering} clustering) "
-                    "- {name} {version}")
+                    "- {name} - phy {version}")
         return template.format(name=name,
                                version=phy.__version__,
                                filename=filename,
@@ -101,10 +101,16 @@ class ClusterManualGUI(EventEmitter):
                                clustering=clustering,
                                )
 
-    def add_view(self, item, **kwargs):
+    def add_view(self, item, title=None, **kwargs):
         """Add a new view model instance to the GUI."""
         view = item.view if isinstance(item, BaseViewModel) else item
-        dw = self._dock.add_view(view, **kwargs)
+        # Default dock title.
+        if title is None:
+            if hasattr(item, 'name'):
+                title = item.name.capitalize()
+            else:
+                title = item.__class__.__name__.capitalize()
+        dw = self._dock.add_view(view, title=title, **kwargs)
 
         if not isinstance(item, BaseViewModel):
             return
@@ -212,15 +218,31 @@ class ClusterManualGUI(EventEmitter):
                 _add_gui_shortcut(_make_func(which, group))
 
     def _create_wizard_panel(self, cluster_ids=None):
-        view = _create_web_view(self.session.wizard._repr_html_())
+        styles = '''
+
+        html, body, div {
+            background-color: black;
+        }
+
+        .control-panel {
+            background-color: black;
+            color: white;
+        }
+
+        '''
+
+        def _get_html():
+            return self.session.wizard.get_panel(extra_styles=styles)
+
+        view = _create_web_view(_get_html())
 
         @self.connect
         def on_select(cluster_ids):
-            view.setHtml(self.session.wizard._repr_html_())
+            view.setHtml(_get_html())
 
         @self.connect
         def on_cluster(up):
-            view.setHtml(self.session.wizard._repr_html_())
+            view.setHtml(_get_html())
 
         return view
 
@@ -389,7 +411,6 @@ class GUICreator(object):
             gs = gui._dock.save_geometry_state()
             self.session.settings['gui_state'] = gs
             self.session.settings['gui_view_count'] = gui._dock.view_counts()
-            self.session.close()
 
         if show:
             gui.show()

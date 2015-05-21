@@ -54,6 +54,7 @@ keyboard_shortcuts = {
     'reset_wizard': 'ctrl+w',
     'next': 'space',
     'previous': 'shift+space',
+    'reset_wizard': 'ctrl+alt+space',
     'first': 'home',
     'last': 'end',
     'pin': 'return',

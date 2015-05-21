@@ -91,6 +91,9 @@ class MemoryStore(object):
         """Clear the store completely by deleting all clusters."""
         self.erase(self.cluster_ids)
 
+    def __contains__(self, item):
+        return item in self._ds
+
 
 #------------------------------------------------------------------------------
 # Disk store
@@ -312,7 +315,7 @@ class StoreItem(object):
         # TODO: remove mode: unused?
         pass
 
-    def store_all_clusters(self, mode=None):
+    def store_all_clusters(self, mode=None, **kwargs):
         """Copy all data for that item from the model to the cluster store."""
         clusters = self.to_generate(mode)
         self._pr.value_max = len(clusters)
@@ -320,7 +323,7 @@ class StoreItem(object):
             self.store_cluster(cluster,
                                spikes=self._spikes_per_cluster[cluster],
                                mode=mode,
-                               )
+                               **kwargs)
             self._pr.value += 1
         self._pr.set_complete()
 
@@ -431,6 +434,12 @@ class ClusterStore(object):
     def store_items(self):
         """List of registered store items."""
         return self._items
+
+    def get_item(self, name):
+        """Return a store item from its name."""
+        for item in self._items:
+            if item.name == name:
+                return item
 
     def register_field(self, name, location, dtype=None, shape=None):
         """Register a new piece of data to store on memory or on disk.

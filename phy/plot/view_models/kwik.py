@@ -20,6 +20,14 @@ from .base import _selected_clusters_colors, BaseViewModel
 
 
 #------------------------------------------------------------------------------
+# Misc functions
+#------------------------------------------------------------------------------
+
+def _oddify(x):
+    return x if x % 2 == 1 else x + 1
+
+
+#------------------------------------------------------------------------------
 # View models
 #------------------------------------------------------------------------------
 
@@ -168,19 +176,6 @@ class WaveformViewModel(BaseViewModel):
     @show_mean.setter
     def show_mean(self, value):
         self.view.show_mean = value
-
-    keyboard_shortcuts = {
-        'toggle_mean_waveforms': 'm',
-        'toggle_overlap': 'o',
-    }
-
-    def on_key_press(self, event):
-        super(WaveformViewModel, self).on_key_press(event)
-        key = event.key
-        if key == 'm':
-            self.show_mean = not(self.show_mean)
-        if key == 'o':
-            self.overlap = not(self.overlap)
 
     def exported_params(self, save_size_pos=True):
         params = super(WaveformViewModel, self).exported_params(save_size_pos)
@@ -408,7 +403,8 @@ class CorrelogramViewModel(BaseViewModel):
                             spike_clusters,
                             cluster_order=clusters,
                             binsize=self.binsize,
-                            winsize_bins=self.winsize_bins,
+                            # NOTE: this must be an odd number, for symmetry
+                            winsize_bins=_oddify(self.winsize_bins),
                             )
         ccgs = _symmetrize_correlograms(ccgs)
         # Normalize the CCGs.

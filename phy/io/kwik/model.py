@@ -263,6 +263,10 @@ class SpikeLoader(object):
 
 class KwikModel(BaseModel):
     """Holds data contained in a kwik file."""
+
+    """Names of the default cluster groups."""
+    default_cluster_groups = dict(_DEFAULT_GROUPS)
+
     def __init__(self, kwik_path=None,
                  channel_group=None,
                  clustering=None):
@@ -391,7 +395,7 @@ class KwikModel(BaseModel):
         path = '/application_data/spikedetekt/'
         metadata_fields = self._kwik.attrs(path)
         for field in metadata_fields:
-            if field.islower():
+            if field.islower() and not field.startswith('_'):
                 try:
                     metadata[field] = self._kwik.read_attr(path, field)
                 except TypeError:
