@@ -102,6 +102,12 @@ class Session(EventEmitter):
 
     @property
     def has_unsaved_changes(self):
+        """Whether there are unsaved changes in the model.
+
+        If true, a prompt message for saving will be displayed when closing
+        the GUI.
+
+        """
         return self._is_dirty
 
     def _backup_kwik(self, kwik_path):
