@@ -62,7 +62,7 @@ class ClusterManualGUI(EventEmitter):
                 item = self.session.view_creator.add(name,
                                                      cluster_ids=clusters,
                                                      **kwargs)
-            self.add_view(item, title=name.title(), position=position)
+            self.add_view(item, title=name.capitalize(), position=position)
 
     def _load_geometry_state(self):
         # Load geometry state
@@ -101,10 +101,16 @@ class ClusterManualGUI(EventEmitter):
                                clustering=clustering,
                                )
 
-    def add_view(self, item, **kwargs):
+    def add_view(self, item, title=None, **kwargs):
         """Add a new view model instance to the GUI."""
         view = item.view if isinstance(item, BaseViewModel) else item
-        dw = self._dock.add_view(view, **kwargs)
+        # Default dock title.
+        if title is None:
+            if hasattr(item, 'name'):
+                title = item.name.capitalize()
+            else:
+                title = item.__class__.__name__.capitalize()
+        dw = self._dock.add_view(view, title=title, **kwargs)
 
         if not isinstance(item, BaseViewModel):
             return
@@ -405,7 +411,6 @@ class GUICreator(object):
             gs = gui._dock.save_geometry_state()
             self.session.settings['gui_state'] = gs
             self.session.settings['gui_view_count'] = gui._dock.view_counts()
-            self.session.close()
 
         if show:
             gui.show()
