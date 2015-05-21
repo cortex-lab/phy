@@ -26,7 +26,7 @@ vec2 get_box_pos(vec2 box) {  // box = (cluster, channel)
     box_pos = box_pos * u_channel_scale;
     // Spacing between cluster boxes.
     float h = 2.5 * u_data_scale.x;
-    if (u_overlap == 0.)
+    if (u_overlap < 0.5)
         box_pos.x += h * (box.x - .5 * (n_clusters - 1.)) / n_clusters;
     return box_pos;
 }

@@ -37,7 +37,7 @@ class WaveformVisual(BaseSpikeVisual):
 
         self.program['u_data_scale'] = (.05, .05)
         self.program['u_channel_scale'] = (1., 1.)
-        self.program['u_overlap'] = 0
+        self.program['u_overlap'] = 0.
         self.program['u_alpha'] = 0.5
         _enable_depth_mask()
 
@@ -128,12 +128,12 @@ class WaveformVisual(BaseSpikeVisual):
     @property
     def overlap(self):
         """Whether to overlap waveforms."""
-        return self.program['u_overlap'] == 1.
+        return True if self.program['u_overlap'][0] > .5 else False
 
     @overlap.setter
     def overlap(self, value):
         assert value in (True, False)
-        self.program['u_overlap'] = 1. * value
+        self.program['u_overlap'] = 1. if value else 0.
 
     def channel_hover(self, position):
         """Return the channel id closest to the mouse pointer.
@@ -306,6 +306,8 @@ class WaveformView(BaseSpikeCanvas):
         'probe_height_increase': 'shift+up',
         'probe_height_decrease': 'shift+down',
         'select_channel': '[number key]+[left click]',
+        'toggle_mean_waveforms': 'm',
+        'toggle_overlap': 'o',
     }
 
     def on_key_press(self, event):
@@ -343,6 +345,8 @@ class WaveformView(BaseSpikeCanvas):
             elif key == 'Up':
                 self.probe_scale = (u, v * coeff)
 
+        if not event.modifiers and key == 'm':
+            self.show_mean = not(self.show_mean)
         if not event.modifiers and key == 'o':
             self.overlap = not(self.overlap)
 
