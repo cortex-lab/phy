@@ -395,7 +395,7 @@ class KwikModel(BaseModel):
         path = '/application_data/spikedetekt/'
         metadata_fields = self._kwik.attrs(path)
         for field in metadata_fields:
-            if field.islower():
+            if field.islower() and not field.startswith('_'):
                 try:
                     metadata[field] = self._kwik.read_attr(path, field)
                 except TypeError:
