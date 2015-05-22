@@ -10,6 +10,7 @@ from math import floor
 
 import numpy as np
 
+from ..ext.six import integer_types
 from .logging import warn
 from ._types import _as_tuple, _as_array
 
@@ -202,8 +203,12 @@ def _len_index(item, max_len=0):
     if isinstance(item, (list, np.ndarray)):
         return len(item)
     elif isinstance(item, slice):
-        return 1 + (((item.stop or max_len) - 1 - (item.start or 0)) //
-                    (item.step or 1))
+        stop = item.stop or max_len
+        start = item.start or 0
+        step = item.step or 1
+        start = np.clip(start, 0, stop)
+        assert 0 <= start <= stop
+        return 1 + ((stop - 1 - start) // step)
     else:
         return 1
 
@@ -526,6 +531,24 @@ class ConcatenatedArrays(object):
         l += [chunk_stop]
         # Apply the rest of the index.
         return _fill_index(np.concatenate(l, axis=0), item)
+
+
+class VirtualMappedArray(object):
+    """A virtual mapped array that yields null arrays to any selection."""
+    def __init__(self, shape, dtype):
+        self.shape = shape
+        self.dtype = dtype
+        self.ndim = len(self.shape)
+
+    def __getitem__(self, item):
+        if isinstance(item, integer_types):
+            return np.zeros(self.shape[1:], dtype=self.dtype)
+        else:
+            n = _len_index(item, max_len=self.shape[0])
+            return np.zeros((n,) + self.shape[1:], dtype=self.dtype)
+
+    def __len__(self):
+        return self.shape[0]
 
 
 def _concatenate_virtual_arrays(arrs):

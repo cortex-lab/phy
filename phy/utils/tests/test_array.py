@@ -21,6 +21,7 @@ from ..array import (_unique,
                      data_chunk,
                      get_excerpts,
                      PartialArray,
+                     VirtualMappedArray,
                      _partial_shape,
                      _range_from_slice,
                      _pad,
@@ -170,20 +171,52 @@ def test_len_index():
 
     class _Check(object):
         def __getitem__(self, item):
-            assert _len_index(item) == (len(arr[item])
-                                        if hasattr(arr[item],
-                                                   '__len__') else 1)
+            if isinstance(item, tuple):
+                item, max_len = item
+            else:
+                max_len = None
+            assert _len_index(item, max_len) == (len(arr[item])
+                                                 if hasattr(arr[item],
+                                                            '__len__') else 1)
 
     _check = _Check()
 
     for start in (0, 1, 2):
-        _check[0]
-        _check[0:1]
-        _check[0:2]
-        _check[0:3]
-        _check[0:3:2]
-        _check[0:5]
-        _check[0:5:2]
+        _check[start]
+        _check[start:1]
+        _check[start:2]
+        _check[start:3]
+        _check[start:3:2]
+        _check[start:5]
+        _check[start:5:2]
+        _check[start:, 10]
+        _check[start::2, 10]
+        _check[start::3, 10]
+
+
+def test_virtual_mapped_array():
+    shape = (10, 2)
+    dtype = np.float32
+    arr = VirtualMappedArray(shape, dtype)
+    arr_actual = np.zeros(shape, dtype=dtype)
+
+    class _Check(object):
+        def __getitem__(self, item):
+            ae(arr[item], arr_actual[item])
+
+    _check = _Check()
+
+    for start in (0, 1, 2):
+        _check[start]
+        _check[start:1]
+        _check[start:2]
+        _check[start:3]
+        _check[start:3:2]
+        _check[start:5]
+        _check[start:5:2]
+        _check[start:]
+        _check[start::2]
+        _check[start::3]
 
 
 def test_as_array():
