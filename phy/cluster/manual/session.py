@@ -292,11 +292,15 @@ class Session(EventEmitter):
                                           path=store_path,
                                           )
 
-        # Create the FeatureMasks store item.
-        # chunk_size is the number of spikes to load at once from
-        # the features_masks array.
-        cs = self.settings['store_chunk_size']
-        self.cluster_store.register_item(FeatureMasks, chunk_size=cs)
+        # Don't create the features/masks store if the `.kwx` file is
+        # not present.
+        # MockModel doesn't have this method.
+        if not isinstance(self.model, KwikModel) or self.model.has_kwx():
+            # Create the FeatureMasks store item.
+            # chunk_size is the number of spikes to load at once from
+            # the features_masks array.
+            cs = self.settings['store_chunk_size']
+            self.cluster_store.register_item(FeatureMasks, chunk_size=cs)
 
         n_spikes_max = self.settings['waveforms_n_spikes_max']
         excerpt_size = self.settings['waveforms_excerpt_size']

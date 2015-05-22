@@ -138,7 +138,9 @@ class BaseViewModel(object):
 
         """
         spikes = self.spike_ids if spike_selection is None else None
-        if self._store is not None and len(self.cluster_ids):
+        if (self._store is not None and
+                len(self.cluster_ids) and
+                hasattr(self._store, name)):
             return self._store.load(name, self.cluster_ids, spikes=spikes)
         else:
             out = getattr(self._model, name)

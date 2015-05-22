@@ -19,6 +19,7 @@ from ...utils.array import (_index_of,
                             _concatenate_per_cluster_arrays,
                             )
 from ..store import StoreItem
+from .model import KwikModel
 
 
 #------------------------------------------------------------------------------
@@ -56,34 +57,48 @@ class ClusterStatistics(StoreItem):
 
     def store_cluster_default(self, cluster, spikes=None, mode=None):
         """Compute the built-in statistics for one cluster."""
-        # Load the masks.
-        masks = self.disk_store.load(cluster,
-                                     'masks',
-                                     dtype=np.float32,
-                                     shape=(-1, self.n_channels))
-        assert isinstance(masks, np.ndarray)
+        n_spikes = len(self.spikes_per_cluster[cluster])
 
-        # Load the features.
-        features = self.disk_store.load(cluster,
-                                        'features',
-                                        dtype=np.float32,
-                                        shape=(-1, self.n_channels *
-                                               self.n_features))
-        assert isinstance(features, np.ndarray)
-        mean_features = features.mean(axis=0)
-
-        # Load the waveforms.
-        waveforms = self.disk_store.load(cluster,
-                                         'waveforms',
+        if not isinstance(self.model, KwikModel) or self.model.has_kwx():
+            # Load the masks.
+            masks = self.disk_store.load(cluster,
+                                         'masks',
                                          dtype=np.float32,
-                                         shape=(-1,
-                                                self.n_samples_waveforms,
-                                                self.n_channels,
-                                                ))
+                                         shape=(-1, self.n_channels))
+
+            # Load the features.
+            features = self.disk_store.load(cluster,
+                                            'features',
+                                            dtype=np.float32,
+                                            shape=(-1, self.n_channels *
+                                                   self.n_features))
+        else:
+            masks = np.ones((n_spikes, self.n_channels),
+                            dtype=np.float32)
+            features = np.zeros((n_spikes, self.n_channels, self.n_features),
+                                dtype=np.float32)
+        assert isinstance(masks, np.ndarray)
+        assert isinstance(features, np.ndarray)
+
+        if not isinstance(self.model, KwikModel) or self.model.has_kwd():
+            # Load the waveforms.
+            waveforms = self.disk_store.load(cluster,
+                                             'waveforms',
+                                             dtype=np.float32,
+                                             shape=(-1,
+                                                    self.n_samples_waveforms,
+                                                    self.n_channels,
+                                                    ))
+        else:
+            waveforms = np.zeros((n_spikes,
+                                  self.n_samples_waveforms,
+                                  self.n_channels),
+                                 type=np.float32)
         assert isinstance(waveforms, np.ndarray)
-        mean_waveforms = waveforms.mean(axis=0)
 
         # Default statistics.
+        mean_features = features.mean(axis=0)
+        mean_waveforms = waveforms.mean(axis=0)
         sum_masks = masks.sum(axis=0)
         mean_masks = sum_masks / float(masks.shape[0])
         unmasked_channels = np.nonzero(mean_masks > .1)[0]

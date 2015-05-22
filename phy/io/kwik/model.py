@@ -442,20 +442,23 @@ class KwikModel(BaseModel):
         # Load features masks.
         path = '{0:s}/features_masks'.format(self._channel_groups_path)
 
+        nfpc = self._metadata['nfeatures_per_channel']
+        nc = len(self.channel_order)
+
         if self._kwx is not None:
             fm = self._kwx.read(path)
             self._features_masks = fm
             self._features = PartialArray(fm, 0)
 
-            nfpc = self._metadata['nfeatures_per_channel']
-            nc = len(self.channel_order)
             # This partial array simulates a (n_spikes, n_channels) array.
             self._masks = PartialArray(fm, (slice(0, nfpc * nc, nfpc), 1))
             assert self._masks.shape == (self.n_spikes, nc)
         else:
             # Virtually-mapped array that always returns arrays full of zeros.
-            shape = (self.n_spikes, len(self.channel_order))
-            self._masks = VirtualMappedArray(shape, np.float32)
+            self._masks = VirtualMappedArray((self.n_spikes, nc),
+                                             np.float32)
+            self._features = VirtualMappedArray((self.n_spikes, nc, nfpc),
+                                                np.float32)
 
     def _load_spikes(self):
         # Load spike samples.
@@ -597,7 +600,7 @@ class KwikModel(BaseModel):
         self._kwx = self._open_h5_if_exists('kwx')
         if self._kwx is None:
             warn("The `.kwx` file hasn't been found. "
-                 "Features won't be available.")
+                 "Features and masks won't be available.")
         self._kwd = self._open_h5_if_exists('raw.kwd')
         if self._kwd is None:
             warn("The `.raw.kwd` file hasn't been found. "

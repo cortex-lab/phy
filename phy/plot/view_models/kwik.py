@@ -300,7 +300,7 @@ class FeatureViewModel(BaseViewModel):
             k = 1
         if self.model.features is not None:
             # Background features.
-            features_bg = self.model.features[::k, ...]
+            features_bg = self.model.features[::k]
             self.view.background.features = self._rescale_features(features_bg)
             # Time dimension.
             spike_samples = self.model.spike_samples[::k]
