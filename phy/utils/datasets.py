@@ -10,7 +10,10 @@ import hashlib
 import os
 import os.path as op
 
-import requests
+try:
+    from requests import get
+except ImportError:
+    get = None
 
 from .logging import info
 
@@ -41,7 +44,9 @@ def download_file(url, output=None, checksum=None):
     if op.exists(output):
         info("The file {} already exists: skipping.".format(output))
         return
-    r = requests.get(url, stream=True)
+    if not get:
+        raise ImportError("Please install the requests package.")
+    r = get(url, stream=True)
     info("Downloading {0}...".format(url))
     with open(output, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
@@ -55,7 +60,9 @@ def download_file(url, output=None, checksum=None):
 
 
 def _download(url):
-    return requests.get(url).text
+    if not get:
+        raise ImportError("Please install the requests package.")
+    return get(url).text
 
 
 def download_test_data(name, output_dir=None):

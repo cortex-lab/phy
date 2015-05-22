@@ -10,8 +10,6 @@ import sys
 import contextlib
 from collections import defaultdict
 
-from vispy import app
-
 from ._misc import _is_interactive
 from .logging import info, warn
 
@@ -160,7 +158,11 @@ def start_qt_app():
     global _APP
     if _try_enable_ipython_qt():
         return
-    app.use_app("pyqt4")
+    try:
+        from vispy import app
+        app.use_app("pyqt4")
+    except ImportError:
+        pass
     if QtGui.QApplication.instance():
         _APP = QtGui.QApplication.instance()
         return
@@ -286,8 +288,12 @@ class DockWindow(QMainWindow):
                  **kwargs):
         """Add a widget to the main window."""
 
-        if isinstance(view, app.Canvas):
-            view = view.native
+        try:
+            from vispy.app import Canvas
+            if isinstance(view, Canvas):
+                view = view.native
+        except ImportError:
+            pass
 
         # Create the dock widget.
         dockwidget = QtGui.QDockWidget(self)
