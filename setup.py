@@ -8,8 +8,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import re
+import os
 import os.path as op
+import re
 
 try:
     from setuptools import setup
@@ -21,11 +22,21 @@ except ImportError:
 # Setup
 #------------------------------------------------------------------------------
 
-readme = open('README.md').read()
+
+def _package_tree(pkgroot):
+    path = op.dirname(__file__)
+    subdirs = [op.relpath(i[0], path).replace(op.sep, '.')
+               for i in os.walk(op.join(path, pkgroot))
+               if '__init__.py' in i[2]]
+    return subdirs
+
+
+curdir = op.dirname(op.realpath(__file__))
+readme = open(op.join(curdir, 'README.md')).read()
 
 
 # Find version number from `__init__.py` without executing it.
-filename = op.join(op.dirname(op.realpath(__file__)), 'phy/__init__.py')
+filename = op.join(curdir, 'phy/__init__.py')
 with open(filename, 'r') as f:
     version = re.search(r"__version__ = '([^']+)'", f.read()).group(1)
 
@@ -44,10 +55,11 @@ setup(
     author='Kwik Team',
     author_email='cyrille.rossant at gmail.com',
     url='https://github.com/kwikteam/phy',
-    packages=[
-        'phy',
-    ],
+    packages=_package_tree('phy'),
     package_dir={'phy': 'phy'},
+    package_data={
+        'phy.plot.glsl': ['*.vert', '*.frag', '*.glsl'],
+    },
     entry_points={
         'console_scripts': [
             'phy=phy.scripts.phy_script:main',
