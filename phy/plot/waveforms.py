@@ -297,14 +297,20 @@ class WaveformView(BaseSpikeCanvas):
         self.update()
 
     keyboard_shortcuts = {
-        'waveform_scale_increase': ('ctrl+[+]', 'ctrl+up'),
-        'waveform_scale_decrease': ('ctrl+[-]', 'ctrl+down'),
-        'waveform_width_increase': 'ctrl+right',
-        'waveform_width_decrease': 'ctrl+left',
-        'probe_width_increase': 'shift+right',
-        'probe_width_decrease': 'shift+left',
-        'probe_height_increase': 'shift+up',
-        'probe_height_decrease': 'shift+down',
+        'waveform_scale_increase': ('ctrl+[+]',
+                                    'ctrl+up',
+                                    'shift+wheel up',
+                                    ),
+        'waveform_scale_decrease': ('ctrl+[-]',
+                                    'ctrl+down',
+                                    'shift+wheel down',
+                                    ),
+        'waveform_width_increase': ('ctrl+right', 'ctrl+wheel up'),
+        'waveform_width_decrease': ('ctrl+left', 'ctrl+wheel down'),
+        'probe_width_increase': ('shift+right', 'ctrl+alt+wheel up'),
+        'probe_width_decrease': ('shift+left', 'ctrl+alt+wheel down'),
+        'probe_height_increase': ('shift+up', 'shift+alt+wheel up'),
+        'probe_height_decrease': ('shift+down', 'shift+alt+wheel down'),
         'select_channel': '[number key]+[left click]',
         'toggle_mean_waveforms': 'm',
         'toggle_overlap': 'o',
@@ -357,15 +363,24 @@ class WaveformView(BaseSpikeCanvas):
         """Handle mouse wheel events."""
         ctrl = 'Control' in event.modifiers
         shift = 'Shift' in event.modifiers
+        alt = 'Alt' in event.modifiers
         coeff = 1. + .1 * event.delta[1]
 
         # Box scale.
-        if ctrl:
+        if ctrl and not alt:
             u, v = self.box_scale
             self.box_scale = (u * coeff, v)
-        if shift:
+        if shift and not alt:
             u, v = self.box_scale
             self.box_scale = (u, v * coeff)
+
+        # Probe scale.
+        if ctrl and alt:
+            u, v = self.probe_scale
+            self.probe_scale = (u * coeff, v)
+        if shift and alt:
+            u, v = self.probe_scale
+            self.probe_scale = (u, v * coeff)
 
     def on_mouse_press(self, e):
         key = self._key_pressed
