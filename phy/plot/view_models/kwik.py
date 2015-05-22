@@ -298,10 +298,20 @@ class FeatureViewModel(BaseViewModel):
             k = max(1, self.model.n_spikes // self.n_spikes_max_bg)
         else:
             k = 1
-        features_bg = self.model.features[::k, ...]
-        spike_samples = self.model.spike_samples[::k]
-        self.view.background.features = self._rescale_features(features_bg)
-        self.view.background.spike_samples = spike_samples
+        if self.model.features is not None:
+            # Background features.
+            features_bg = self.model.features[::k, ...]
+            self.view.background.features = self._rescale_features(features_bg)
+            # Time dimension.
+            spike_samples = self.model.spike_samples[::k]
+            self.view.background.spike_samples = spike_samples
+        # else:
+        #     nc = len(self.model.channel_order)
+        #     nf = self.model.n_features_per_channel
+        #     self.view.background.spike_samples = np.zeros((2,),
+        #                                                   dtype=np.uint64)
+        #     self.view.background.features = np.zeros((2, nc, nf),
+        #                                              dtype=np.float32)
         self.view.update_dimensions(self._default_dimensions())
 
     def on_select(self):

@@ -399,7 +399,8 @@ class FeatureView(BaseSpikeCanvas):
 
     def update_dimensions(self, dimensions):
         n_rows = len(dimensions)
-        self.background.dimensions = dimensions
+        if self.background.features is not None:
+            self.background.dimensions = dimensions
         self.boxes.n_rows = n_rows
         self.lasso.n_rows = n_rows
         self.axes.n_rows = n_rows
