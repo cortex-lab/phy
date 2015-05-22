@@ -10,7 +10,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 
 from ...io.mock import artificial_spike_clusters
-from ..array import _spikes_in_clusters
+from ..array import _spikes_in_clusters, _spikes_per_cluster
 from ..selector import Selector
 
 
@@ -97,3 +97,17 @@ def test_selector_subset():
     selector = Selector(spike_clusters)
     selector.subset_spikes(excerpt_size=10)
     selector.subset_spikes(np.arange(n_spikes), excerpt_size=10)
+
+
+def test_selector_subset_clusters():
+    n_spikes = 100
+    spike_clusters = np.zeros(n_spikes, dtype=np.int32)
+    spike_clusters[10:15] = 1
+    spike_clusters[85:90] = 1
+
+    selector = Selector(spike_clusters)
+    spk = selector.subset_spikes_clusters([0, 1], excerpt_size=10)
+    spc = _spikes_per_cluster(spk, spike_clusters[spk])
+    counts = {_: len(spc[_]) for _ in sorted(spc.keys())}
+    # TODO
+    assert counts
