@@ -197,6 +197,17 @@ def _start_stop(item):
         return item, item + 1
 
 
+def _len_index(item, max_len=0):
+    """Return the expected length of the output of __getitem__(item)."""
+    if isinstance(item, (list, np.ndarray)):
+        return len(item)
+    elif isinstance(item, slice):
+        return 1 + (((item.stop or max_len) - 1 - (item.start or 0)) //
+                    (item.step or 1))
+    else:
+        return 1
+
+
 def _fill_index(arr, item):
     if isinstance(item, tuple):
         item = (slice(None, None, None),) + item[1:]

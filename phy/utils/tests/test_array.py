@@ -15,6 +15,7 @@ from ..array import (_unique,
                      _normalize,
                      _index_of,
                      _in_polygon,
+                     _len_index,
                      chunk_bounds,
                      excerpts,
                      data_chunk,
@@ -162,6 +163,27 @@ def test_as_tuple():
     assert _as_tuple((3, 4)) == (3, 4)
     assert _as_tuple([3]) == ([3], )
     assert _as_tuple([3, 4]) == ([3, 4], )
+
+
+def test_len_index():
+    arr = np.arange(10)
+
+    class _Check(object):
+        def __getitem__(self, item):
+            assert _len_index(item) == (len(arr[item])
+                                        if hasattr(arr[item],
+                                                   '__len__') else 1)
+
+    _check = _Check()
+
+    for start in (0, 1, 2):
+        _check[0]
+        _check[0:1]
+        _check[0:2]
+        _check[0:3]
+        _check[0:3:2]
+        _check[0:5]
+        _check[0:5:2]
 
 
 def test_as_array():
