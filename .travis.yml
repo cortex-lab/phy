@@ -28,17 +28,10 @@ install:
   - conda install pip numpy matplotlib scipy h5py pyqt pyzmq ipython requests
   # Testing dependencies.
   - conda install pytest pip flake8 coverage
-  - pip install coveralls responses
-  - pip install python-coveralls
-  - pip install pytest-cov
-  # Install VisPy master.
-  - pushd ~
-  - git clone https://github.com/vispy/vispy.git
-  - cd vispy
-  - python setup.py install
-  - popd
+  - pip install coveralls responses python-coveralls pytest-cov
+  - pip install git+https://github.com/vispy/vispy.git
   # Install phy.
-  - python setup.py install
+  # - python setup.py install
 before_script:
     - export DISPLAY=:99.0
     - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render
