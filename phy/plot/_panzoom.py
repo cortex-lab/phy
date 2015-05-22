@@ -772,9 +772,9 @@ class PanZoomGrid(PanZoom):
 
     keyboard_shortcuts = {
         'subplot_pan': ('left click and drag', 'arrows'),
-        'subplot_zoom': ('right click and drag', '+', '-'),
+        'subplot_zoom': ('right click and drag', '+/-'),
         'subplot_reset': 'r',
-        'global_zoom': 'shift+r',
+        'global_zoom': ('shift+[+/-]', 'shift+wheel'),
         'global_reset': 'shift+r',
     }
 
@@ -802,6 +802,8 @@ class PanZoomGrid(PanZoom):
 
         # Global zoom.
         if shift:
+            dx = np.sign(event.delta[1]) * self._wheel_coeff
+            self.zoom *= (1. + dx)
             self._global_pan_zoom(zoom=self._zoom)
             self._canvas.update()
 
