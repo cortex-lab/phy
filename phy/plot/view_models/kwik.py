@@ -217,10 +217,20 @@ class FeatureViewModel(BaseViewModel):
         self._dimension_selector = func
 
     def default_dimension_selector(self, cluster_ids, store=None):
-        # spikes = vm.view.visual.spike_ids
-        fet = self.view.visual.features
-        score = np.abs(fet).max(axis=0).max(axis=1)
+        """Return the channels with the largest mean features.
+
+        The first cluster is used currently.
+
+        """
+        if len(cluster_ids) >= 1:
+            n_fet = self.model.n_features_per_channel
+            score = self.store.mean_features(cluster_ids[0])
+            score = score.reshape((-1, n_fet)).mean(axis=1)
+        else:
+            fet = self.view.visual.features
+            score = np.mean(fet, axis=0).mean(axis=1)
         # Take the best 3 channels.
+        assert len(score) == len(self.model.channel_order)
         channels = np.argsort(score)[::-1][:3]
         return channels
 
