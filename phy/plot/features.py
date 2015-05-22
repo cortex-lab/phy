@@ -105,7 +105,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
             # Normalize time feature.
             m = t.max()
             if m > 0:
-                t = -1. + 2 * t / m
+                t = (-1. + 2 * t / m) * .8
             return t
 
     def project(self, data, box):
