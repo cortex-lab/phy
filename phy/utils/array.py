@@ -535,17 +535,20 @@ class ConcatenatedArrays(object):
 
 class VirtualMappedArray(object):
     """A virtual mapped array that yields null arrays to any selection."""
-    def __init__(self, shape, dtype):
+    def __init__(self, shape, dtype, fill=0):
         self.shape = shape
         self.dtype = dtype
         self.ndim = len(self.shape)
+        self._fill = fill
 
     def __getitem__(self, item):
         if isinstance(item, integer_types):
-            return np.zeros(self.shape[1:], dtype=self.dtype)
+            return self._fill * np.ones(self.shape[1:], dtype=self.dtype)
         else:
+            assert not isinstance(item, tuple)
             n = _len_index(item, max_len=self.shape[0])
-            return np.zeros((n,) + self.shape[1:], dtype=self.dtype)
+            return self._fill * np.ones((n,) + self.shape[1:],
+                                        dtype=self.dtype)
 
     def __len__(self):
         return self.shape[0]

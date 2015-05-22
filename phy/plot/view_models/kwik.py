@@ -305,13 +305,6 @@ class FeatureViewModel(BaseViewModel):
             # Time dimension.
             spike_samples = self.model.spike_samples[::k]
             self.view.background.spike_samples = spike_samples
-        # else:
-        #     nc = len(self.model.channel_order)
-        #     nf = self.model.n_features_per_channel
-        #     self.view.background.spike_samples = np.zeros((2,),
-        #                                                   dtype=np.uint64)
-        #     self.view.background.features = np.zeros((2, nc, nf),
-        #                                              dtype=np.float32)
         self.view.update_dimensions(self._default_dimensions())
 
     def on_select(self):

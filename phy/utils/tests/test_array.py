@@ -197,8 +197,8 @@ def test_len_index():
 def test_virtual_mapped_array():
     shape = (10, 2)
     dtype = np.float32
-    arr = VirtualMappedArray(shape, dtype)
-    arr_actual = np.zeros(shape, dtype=dtype)
+    arr = VirtualMappedArray(shape, dtype, 1)
+    arr_actual = np.ones(shape, dtype=dtype)
 
     class _Check(object):
         def __getitem__(self, item):
