@@ -17,7 +17,7 @@ from ..utils.array import _flatten_per_cluster
 from ..utils._types import _as_int, _is_integer
 from ..utils.logging import debug, info
 from ..utils.event import ProgressReporter
-from ..ext.six import string_types, integer_types
+from ..ext.six import string_types
 
 
 #------------------------------------------------------------------------------
@@ -46,6 +46,13 @@ def _load_ndarray(f, dtype=None, shape=None):
 
 def _file_cluster_id(path):
     return int(op.splitext(op.basename(path))[0])
+
+
+def _empty_values(values, flatten=None, return_spikes=None):
+    if flatten is False:
+        return {}
+    else:
+        return values if not return_spikes else (values, np.array([]))
 
 
 #------------------------------------------------------------------------------
@@ -633,10 +640,10 @@ class ClusterStore(object):
         if clusters is not None:
             # Empty clusters.
             if not len(clusters):
-                if flatten is False:
-                    return {}
-                else:
-                    return item.empty_values(name)
+                return _empty_values(item.empty_values(name),
+                                     flatten=flatten,
+                                     return_spikes=return_spikes,
+                                     )
             # The store item's load() function returns either an array or
             # a pair (array, spikes) when not all spikes from the cluster
             # are requested.
