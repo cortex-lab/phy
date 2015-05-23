@@ -73,32 +73,33 @@ class WaveformViewModel(BaseViewModel):
     def on_select(self):
         # Get the spikes of the stored waveforms.
         clusters = self.cluster_ids
+        n_clusters = len(clusters)
         waveforms, spikes = self._load_waveforms()
+        n_spikes = len(spikes)
         _, self._n_samples, self._n_channels = waveforms.shape
         mean_waveforms, mean_masks = self._load_mean_waveforms()
 
-        self._update_spike_clusters()
-        assert waveforms.shape[0] == len(spikes)
+        self._update_spike_clusters(spikes)
 
         # Cluster display order.
         self.view.visual.cluster_order = clusters
         self.view.mean.cluster_order = clusters
 
         # Waveforms.
+        assert waveforms.shape[0] == n_spikes
         self.view.visual.waveforms = waveforms * self.scale_factor
+
+        assert mean_waveforms.shape == (n_clusters,
+                                        self._n_samples,
+                                        self._n_channels)
         self.view.mean.waveforms = mean_waveforms * self.scale_factor
 
         # Masks.
         masks = self.store.load('masks', spikes=spikes)
-        # Subset the spikes with the requested waveform spikes.
-        # idx = _index_of(spikes, all_spikes)
-        # print(spikes)
-        # print(all_spikes)
-        # print(idx)
-        # print(masks.shape)
-        # self.view.visual.masks = masks[idx]
-        # TODO: alternative: just use spikes=spikes in load()
+        assert masks.shape == (n_spikes, self._n_channels)
         self.view.visual.masks = masks
+
+        assert mean_masks.shape == (n_clusters, self._n_channels)
         self.view.mean.masks = mean_masks
 
         # Spikes.

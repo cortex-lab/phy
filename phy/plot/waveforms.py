@@ -183,6 +183,11 @@ class WaveformVisual(BaseSpikeVisual):
         # Bake masks.
         # WARNING: swap channel/time axes in the waveforms array.
         waveforms = np.swapaxes(self._waveforms, 1, 2)
+        assert waveforms.shape == (self.n_spikes,
+                                   self.n_channels,
+                                   self.n_samples,
+                                   )
+        assert self._masks.shape == (self.n_spikes, self.n_channels)
         masks = np.repeat(self._masks.ravel(), self.n_samples)
         data = np.c_[waveforms.ravel(), masks.ravel()].astype(np.float32)
         # TODO: more efficient to update the data from an existing VBO
@@ -216,6 +221,7 @@ class WaveformVisual(BaseSpikeVisual):
         # We take the cluster order into account here.
         spike_clusters_idx = _index_of(spike_clusters_idx, self.cluster_order)
         # Generate the box attribute.
+        assert len(spike_clusters_idx) == len(self._n_channels_per_spike)
         a_cluster = np.repeat(spike_clusters_idx,
                               self._n_channels_per_spike * self.n_samples)
         a_channel = np.repeat(self._channels_per_spike, self.n_samples)
