@@ -105,6 +105,12 @@ def test_disk_store():
         assert ds.load(3, ['key']) == {'key': None}
         assert ds.cluster_ids == []
 
+        # Test load/save file.
+        ds.save_file('test', {'a': a})
+        ds = DiskStore(tempdir)
+        data = ds.load_file('test')
+        ae(data['a'], a)
+
 
 def test_cluster_store_1():
     with TemporaryDirectory() as tempdir:

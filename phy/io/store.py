@@ -17,6 +17,7 @@ from ..utils._types import _as_int, _is_integer
 from ..utils.logging import debug, info
 from ..utils.event import ProgressReporter
 from ..ext.six import string_types
+from ..ext.six.moves import cPickle
 
 
 #------------------------------------------------------------------------------
@@ -196,6 +197,16 @@ class DiskStore(object):
         for key in keys:
             out[key] = self._get(cluster, key, dtype=dtype, shape=shape)
         return out
+
+    def save_file(self, filename, data):
+        path = op.realpath(op.join(self._directory, filename))
+        with open(path, 'wb') as f:
+            cPickle.dump(data, f)
+
+    def load_file(self, filename):
+        path = op.realpath(op.join(self._directory, filename))
+        with open(path, 'rb') as f:
+            return cPickle.load(f)
 
     @property
     def files(self):
