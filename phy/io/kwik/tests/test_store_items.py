@@ -99,41 +99,51 @@ def test_kwik_store():
             assert cs.mean_probe_position(cluster).shape == (2,)
 
         # Multiple clusters.
-        clusters = clusters[::2]
-        n_clusters = len(clusters)
-        spikes = _spikes_in_clusters(model.spike_clusters, clusters)
-        n_spikes = len(spikes)
+        for clusters in (clusters[::2], [clusters[0]], []):
+            n_clusters = len(clusters)
+            spikes = _spikes_in_clusters(model.spike_clusters, clusters)
+            n_spikes = len(spikes)
 
-        # Features.
-        fet_expected = model.features[spikes].reshape((n_spikes, nc, nf))
-        ae(cs.load('features', clusters=clusters), fet_expected)
-        ae(cs.load('features', spikes=spikes), fet_expected)
+            # Features.
+            if n_clusters:
+                fet_expected = model.features[spikes].reshape((n_spikes,
+                                                               nc, nf))
+            else:
+                fet_expected = np.zeros((0, nc, nf), dtype=np.float32)
+            ae(cs.load('features', clusters=clusters), fet_expected)
+            ae(cs.load('features', spikes=spikes), fet_expected)
 
-        # Masks.
-        masks_expected = model.masks[spikes]
-        ae(cs.load('masks', clusters=clusters), masks_expected)
-        ae(cs.load('masks', spikes=spikes), masks_expected)
+            # Masks.
+            if n_clusters:
+                masks_expected = model.masks[spikes]
+            else:
+                masks_expected = np.ones((0, nc), dtype=np.float32)
+            ae(cs.load('masks', clusters=clusters), masks_expected)
+            ae(cs.load('masks', spikes=spikes), masks_expected)
 
-        # Waveforms.
-        spc = waveforms_item.spikes_per_cluster
-        spikes = waveforms_item._concat({cluster: spc[cluster]
-                                         for cluster in clusters})
-        waveforms_expected = model.waveforms[spikes]
-        ae(cs.load('waveforms', clusters=clusters), waveforms_expected)
-        ae(cs.load('waveforms', spikes=spikes), waveforms_expected)
+            # Waveforms.
+            spc = waveforms_item.spikes_per_cluster
+            spikes = waveforms_item._concat({cluster: spc[cluster]
+                                             for cluster in clusters})
+            if n_clusters:
+                waveforms_expected = model.waveforms[spikes]
+            else:
+                waveforms_expected = np.zeros((0, ns, nc), dtype=np.float32)
+            ae(cs.load('waveforms', clusters=clusters), waveforms_expected)
+            ae(cs.load('waveforms', spikes=spikes), waveforms_expected)
 
-        assert (cs.load('mean_features', clusters=clusters).shape ==
-                (n_clusters, nc, nf))
-        assert (cs.load('mean_features_bis', clusters=clusters).shape ==
-                (n_clusters, nc, nf))
-        assert (cs.load('mean_masks', clusters=clusters).shape ==
-                (n_clusters, nc))
-        assert (cs.load('mean_waveforms', clusters=clusters).shape ==
-                (n_clusters, ns, nc))
+            assert (cs.load('mean_features', clusters=clusters).shape ==
+                    (n_clusters, nc, nf))
+            assert (cs.load('mean_features_bis', clusters=clusters).shape ==
+                    (n_clusters, nc, nf) if n_clusters else (0,))
+            assert (cs.load('mean_masks', clusters=clusters).shape ==
+                    (n_clusters, nc))
+            assert (cs.load('mean_waveforms', clusters=clusters).shape ==
+                    (n_clusters, ns, nc))
 
-        assert (cs.load('n_unmasked_channels', clusters=clusters).shape ==
-                (n_clusters,))
-        assert (cs.load('main_channels', clusters=clusters).shape ==
-                (n_clusters, nc))
-        assert (cs.load('mean_probe_position', clusters=clusters).shape ==
-                (n_clusters, 2))
+            assert (cs.load('n_unmasked_channels', clusters=clusters).shape ==
+                    (n_clusters,))
+            assert (cs.load('main_channels', clusters=clusters).shape ==
+                    (n_clusters, nc))
+            assert (cs.load('mean_probe_position', clusters=clusters).shape ==
+                    (n_clusters, 2))

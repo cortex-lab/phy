@@ -221,7 +221,7 @@ class FeatureMasks(StoreItem):
         assert name in ('features', 'masks')
         shape = getattr(self, name + '_shape')
         data = getattr(self.model, name)
-        if data is not None:
+        if data is not None and len(spikes):
             out = data[spikes]
         # Default masks and features.
         else:
@@ -409,7 +409,7 @@ class Waveforms(StoreItem):
         """Load features or masks for an array of spikes."""
         assert name == 'waveforms'
         data = getattr(self.model, name)
-        if data is not None:
+        if data is not None and len(spikes):
             return data[spikes]
         # Default waveforms.
         return _default_array(self.shape, value=0., n_spikes=len(spikes))
@@ -496,6 +496,7 @@ class ClusterStatistics(StoreItem):
             'mean_features': (0, self.n_channels, self.n_features),
             'mean_waveforms': (0, self.n_samples_waveforms, self.n_channels),
             'mean_probe_position': (0, 2),
+            'main_channels': (0, self.n_channels),
         }.get(name, (0,))
         # Default waveforms.
         return _default_array(shape, value=0. if name != 'mean_masks' else 1.)
