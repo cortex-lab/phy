@@ -123,6 +123,8 @@ class Selector(object):
         This method ensures that the same number of spikes is chosen
         for every spike.
 
+        `n_spikes_max` is the maximym number of spikers *per cluster*.
+
         """
         n_clusters = len(clusters)
         if n_clusters == 0:
@@ -139,13 +141,13 @@ class Selector(object):
             return spikes
         # Group the spikes per cluster.
         spc = _spikes_per_cluster(spikes, self._spike_clusters[spikes])
-        n_spikes_max_c = n_spikes_max // n_clusters
+        # n_spikes_max_c = n_spikes_max // n_clusters
         # Take a regular or chunked subset of the spikes.
         if excerpt_size is None:
-            return _concat([regular_subset(spc[cluster], n_spikes_max_c)
+            return _concat([regular_subset(spc[cluster], n_spikes_max)
                             for cluster in clusters])
         else:
-            n_excerpts = n_spikes_max_c // excerpt_size
+            n_excerpts = n_spikes_max // excerpt_size
             return _concat([get_excerpts(spc[cluster],
                                          n_excerpts=n_excerpts,
                                          excerpt_size=excerpt_size,
