@@ -437,14 +437,17 @@ def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub,
     return spikes_per_cluster_subset, arrays_subset
 
 
-def _flatten_per_cluster(arrs, spc=None):
+def _flatten_per_cluster(arrs, spc=None, output_type=None):
     """Return an array from a dictionary `{cluster: data}`.
 
     There are three cases:
 
-    * `data` is a scalar: return a `n_clusters` vector
     * `data` is an array: return a `(n_spikes, ...)` matrix
+      (`output_type='all_spikes'`)
     * `data` is `(arr, spikes)`: return a `(n_spikes, ...)` matrix
+      (`output_type='some_spikes'`)
+    * `data` is a scalar: return a `n_clusters` vector
+      (`output_type='fixed_size'`)
 
     """
     assert isinstance(arrs, dict)
@@ -453,26 +456,15 @@ def _flatten_per_cluster(arrs, spc=None):
         assert isinstance(spc, dict)
         assert set(clusters) <= set(spc)
 
-    # First case: scalar.
-    if clusters and not isinstance(arrs[clusters[0]], (np.ndarray,
-                                                       list,
-                                                       tuple)):
+    if output_type == 'fixed_size':
         return np.array([arrs[cluster] for cluster in clusters])
-
-    def _spikes_clusters(cluster, res):
-        if isinstance(res, tuple) and len(res) == 2:
-            arr, spk = res
-            arr = _as_array(arr)
-            assert arr.shape[0] == len(spk)
-            return arr, spk
-        else:
-            return res, spc[cluster]
-
-    arrs = {cluster: _spikes_clusters(cluster, arr)
-            for cluster, arr in arrs.items()}
-    spc = {cluster: spk for cluster, (_, spk) in arrs.items()}
-    arrays = {cluster: arr for cluster, (arr, _) in arrs.items()}
-    return _concatenate_per_cluster_arrays(spc, arrays)
+    elif output_type == 'all_spikes':
+        return _concatenate_per_cluster_arrays(spc, arrs)
+    elif output_type == 'some_spikes':
+        arrs, spc = ({cluster: arr for cluster, (arr, _) in arrs.items()},
+                     {cluster: spk for cluster, (_, spk) in arrs.items()})
+        return _concatenate_per_cluster_arrays(spc, arrs)
+    raise ValueError("'output_type' is invalid.")
 
 
 # -----------------------------------------------------------------------------

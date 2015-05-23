@@ -18,6 +18,11 @@ from ..array import (_unique,
                      _in_polygon,
                      _len_index,
                      _flatten_per_cluster,
+                     _spikes_in_clusters,
+                     _spikes_per_cluster,
+                     _flatten_spikes_per_cluster,
+                     _concatenate_per_cluster_arrays,
+                     _subset_spikes_per_cluster,
                      chunk_bounds,
                      excerpts,
                      data_chunk,
@@ -298,7 +303,8 @@ def test_in_polygon():
 
 def test_flatten_per_cluster():
     arrs = {2: 20, 3: 30, 5: 50}
-    ac(_flatten_per_cluster(arrs), [20, 30, 50])
+    ac(_flatten_per_cluster(arrs, output_type='fixed_size'),
+       [20, 30, 50])
 
     spc = {2: [2, 22],
            3: [13],
@@ -307,13 +313,15 @@ def test_flatten_per_cluster():
     arrs = {2: [102, 122],
             3: [113],
             5: [105, 115, 125]}
-    ac(_flatten_per_cluster(arrs, spc), [102, 105, 113, 115, 122, 125])
+    ac(_flatten_per_cluster(arrs, spc, output_type='all_spikes'),
+       [102, 105, 113, 115, 122, 125])
 
     # Do not return all spikes.
     arrs = {2: ([102, 122], [2, 22]),
             3: ([], []),
             5: ([115, 125], [15, 25])}
-    ac(_flatten_per_cluster(arrs, spc), [102, 115, 122, 125])
+    ac(_flatten_per_cluster(arrs, spc, output_type='some_spikes'),
+       [102, 115, 122, 125])
 
 
 #------------------------------------------------------------------------------
@@ -378,6 +386,93 @@ def test_get_excerpts():
     data = np.random.rand(10, 2)
     subdata = get_excerpts(data, n_excerpts=10, excerpt_size=5)
     ae(subdata, data)
+
+
+#------------------------------------------------------------------------------
+# Test spike clusters functions
+#------------------------------------------------------------------------------
+
+def test_spikes_in_clusters():
+    """Test _spikes_in_clusters()."""
+
+    n_spikes = 1000
+    n_clusters = 10
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+
+    ae(_spikes_in_clusters(spike_clusters, []), [])
+
+    for i in range(n_clusters):
+        assert np.all(spike_clusters[_spikes_in_clusters(spike_clusters,
+                                                         [i])] == i)
+
+    clusters = [1, 5, 9]
+    assert np.all(np.in1d(spike_clusters[_spikes_in_clusters(spike_clusters,
+                                                             clusters)],
+                          clusters))
+
+
+def test_spikes_per_cluster():
+    """Test _spikes_per_cluster()."""
+
+    n_spikes = 1000
+    spike_ids = np.arange(n_spikes).astype(np.int64)
+    n_clusters = 10
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+
+    spikes_per_cluster = _spikes_per_cluster(spike_ids, spike_clusters)
+    assert list(spikes_per_cluster.keys()) == list(range(n_clusters))
+
+    for i in range(10):
+        ae(spikes_per_cluster[i], np.sort(spikes_per_cluster[i]))
+        assert np.all(spike_clusters[spikes_per_cluster[i]] == i)
+
+    sc = _flatten_spikes_per_cluster(spikes_per_cluster)
+    ae(spike_clusters, sc)
+
+
+def test_concatenate_per_cluster_arrays():
+    """Test _spikes_per_cluster()."""
+
+    def _column(arr):
+        out = np.zeros((len(arr), 10))
+        out[:, 0] = arr
+        return out
+
+    # 8, 11, 12, 13, 17, 18, 20
+    spikes_per_cluster = {2: [11, 13, 17], 3: [8, 12], 5: [18, 20]}
+
+    arrays_1d = {2: [1, 3, 7], 3: [8, 2], 5: [8, 0]}
+
+    arrays_2d = {2: _column([1, 3, 7]),
+                 3: _column([8, 2]),
+                 5: _column([8, 0])}
+
+    concat = _concatenate_per_cluster_arrays(spikes_per_cluster, arrays_1d)
+    ae(concat, [8, 1, 2, 3, 7, 8, 0])
+
+    concat = _concatenate_per_cluster_arrays(spikes_per_cluster, arrays_2d)
+    ae(concat[:, 0], [8, 1, 2, 3, 7, 8, 0])
+    ae(concat[:, 1:], np.zeros((7, 9)))
+
+
+def test_subset_spikes_per_cluster():
+
+    # 8, 11, 12, 13, 17, 18, 20
+    spikes_per_cluster = {2: [11, 13, 17], 3: [8, 12], 5: [18, 20]}
+
+    arrays = {2: [1, 3, 7], 3: [8, 2], 5: [8, 0]}
+
+    spikes = [8, 11, 17, 18]
+
+    spc, arrs = _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes)
+
+    ae(spc[2], [11, 17])
+    ae(spc[3], [8])
+    ae(spc[5], [18])
+
+    ae(arrs[2], [1, 7])
+    ae(arrs[3], [8])
+    ae(arrs[5], [8])
 
 
 #------------------------------------------------------------------------------
