@@ -207,7 +207,6 @@ def test_cluster_store_multi():
     class MyItem(StoreItem):
         name = 'my item'
         fields = ['d', 'm']
-        output_type = 'fixed_size'
 
         def store(self, cluster):
             spikes = self.spikes_per_cluster[cluster]
@@ -215,6 +214,10 @@ def test_cluster_store_multi():
 
         def load(self, cluster, name):
             return self.memory_store.load(cluster, name)
+
+        def load_multi(self, clusters, name):
+            return np.array([self.load(cluster, name)
+                             for cluster in clusters], dtype=np.int64)
 
     cs.register_item(MyItem)
 
