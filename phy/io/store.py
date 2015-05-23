@@ -602,7 +602,7 @@ class ClusterStore(object):
             # Single cluster case.
             # NOTE: the case with spikes subset is not implemented yet here.
             if isinstance(clusters, integer_types):
-                return item.load(clusters)
+                return item.load(clusters, name)
             clusters = np.unique(clusters)
         if spikes is not None:
             spikes = np.unique(spikes)
@@ -612,7 +612,7 @@ class ClusterStore(object):
             # a pair (array, spikes) when not all spikes from the cluster
             # are requested.
             # The store item is responsible for loading the data.
-            out = {cluster: item.load(cluster) for cluster in clusters}
+            out = {cluster: item.load(cluster, name) for cluster in clusters}
             # Flatten the output if requested.
             if flatten:
                 return _flatten_per_cluster(out, self._spikes_per_cluster)

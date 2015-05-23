@@ -136,8 +136,8 @@ def test_cluster_store_1():
                 spikes = self.spikes_per_cluster[cluster]
                 self.memory_store.store(cluster, n_spikes=len(spikes))
 
-            def load(self, cluster):
-                return self.memory_store.load(cluster, 'n_spikes')
+            def load(self, cluster, name):
+                return self.memory_store.load(cluster, name)
 
             def on_cluster(self, up):
                 if up.description == 'merge':
@@ -196,11 +196,14 @@ def test_cluster_store_multi():
 
     class MyItem(StoreItem):
         name = 'my item'
-        fields = [('d', 'memory'),
-                  ('m', 'memory')]
+        fields = ['d', 'm']
 
-        def store_cluster(self, cluster, spikes=None, mode=None):
+        def store_cluster(self, cluster):
+            spikes = self.spikes_per_cluster[cluster]
             self.memory_store.store(cluster, d=len(spikes), m=len(spikes)**2)
+
+        def load(self, cluster, name):
+            return self.memory_store.load(cluster, name)
 
     cs.register_item(MyItem)
 
