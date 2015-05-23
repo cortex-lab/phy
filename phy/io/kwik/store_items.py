@@ -425,8 +425,7 @@ class ClusterStatistics(StoreItem):
                     arr = arr[0]
                 assert isinstance(arr, np.ndarray)
                 return arr.mean(axis=0)
-            else:
-                return np.zeros(shape, dtype=np.float32)
+            return np.zeros(shape, dtype=np.float32)
 
         # Default statistics.
         mean_masks = _mean(masks, (self.n_channels,))

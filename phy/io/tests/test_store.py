@@ -266,13 +266,17 @@ def test_cluster_store_load():
         # All spikes in cluster 1.
         cluster = 1
         spikes = spikes_per_cluster[cluster]
-        ae(cs.load('spikes_square', [cluster]), spikes ** 2)
+        ae(cs.load('spikes_square', clusters=[cluster]), spikes ** 2)
 
         # Some spikes in several clusters.
         clusters = [2, 3, 5]
         spikes = np.concatenate([spikes_per_cluster[cl][::3]
                                  for cl in clusters])
         ae(cs.load('spikes_square', spikes=spikes), np.unique(spikes) ** 2)
+
+        # Empty selection.
+        cs.load('spikes_square', clusters=[])
+        cs.load('spikes_square', spikes=[])
 
 
 def test_cluster_store_management():
