@@ -19,9 +19,8 @@ from ...utils.settings import (Settings,
                                _ensure_dir_exists,
                                _phy_user_dir,
                                )
-from ...io.store import ClusterStore
 from ...io.kwik.model import KwikModel, cluster_group_id
-from ...io.kwik.store_items import FeatureMasks, Waveforms, ClusterStatistics
+from ...io.kwik.store_items import create_store
 from ._history import GlobalHistory
 from ._utils import ClusterMetadataUpdater
 from .clustering import Clustering
@@ -264,7 +263,7 @@ class Session(EventEmitter):
             self.cluster_store.memory_store.store(cluster, **{name: out})
 
         # Add the statistics.
-        self._statistics.add(name, _wrapper)
+        self.cluster_store.items['statistics'].add(name, _wrapper)
         # Register it in the global cluster store.
         self.cluster_store.register_field(name, 'memory')
         # Compute it on all existing clusters.
@@ -287,29 +286,16 @@ class Session(EventEmitter):
 
         # Instantiate the store.
         spc = self.clustering.spikes_per_cluster
-        self.cluster_store = ClusterStore(model=self.model,
-                                          spikes_per_cluster=spc,
+        cs = self.settings['features_masks_chunk_size']
+        wns = self.settings['waveforms_n_spikes_max']
+        wes = self.settings['waveforms_excerpt_size']
+        self.cluster_store = create_store(self.model,
                                           path=store_path,
+                                          spikes_per_cluster=spc,
+                                          features_masks_chunk_size=cs,
+                                          waveforms_n_spikes_max=wns,
+                                          waveforms_excerpt_size=wes,
                                           )
-
-        # Don't create the features/masks store if the `.kwx` file is
-        # not present.
-        # MockModel doesn't have this method.
-        if not isinstance(self.model, KwikModel) or self.model.has_kwx():
-            # Create the FeatureMasks store item.
-            # chunk_size is the number of spikes to load at once from
-            # the features_masks array.
-            cs = self.settings['store_chunk_size']
-            self.cluster_store.register_item(FeatureMasks, chunk_size=cs)
-
-        n_spikes_max = self.settings['waveforms_n_spikes_max']
-        excerpt_size = self.settings['waveforms_excerpt_size']
-        self.cluster_store.register_item(Waveforms,
-                                         n_spikes_max=n_spikes_max,
-                                         excerpt_size=excerpt_size,
-                                         )
-
-        self._statistics = self.cluster_store.register_item(ClusterStatistics)
 
         # Generate the cluster store if it doesn't exist or is invalid.
         # If the cluster store already exists and is consistent

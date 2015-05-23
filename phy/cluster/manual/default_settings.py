@@ -91,7 +91,7 @@ prompt_save_on_exit = True
 
 # Number of spikes to load at once from the features_masks array
 # during the cluster store generation.
-store_chunk_size = 100000
+features_masks_chunk_size = 100000
 
 
 # -----------------------------------------------------------------------------

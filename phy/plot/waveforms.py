@@ -187,7 +187,6 @@ class WaveformVisual(BaseSpikeVisual):
                                    self.n_channels,
                                    self.n_samples,
                                    )
-        assert self._masks.shape == (self.n_spikes, self.n_channels)
         masks = np.repeat(self._masks.ravel(), self.n_samples)
         data = np.c_[waveforms.ravel(), masks.ravel()].astype(np.float32)
         # TODO: more efficient to update the data from an existing VBO
