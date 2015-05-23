@@ -28,14 +28,17 @@ Once the GUI is closed, quit IPython with `exit()`.
 
 import sys
 import os.path as op
+import cProfile
+import pstats
 
 import phy
 from phy.cluster.manual import Session
-from phy.utils import start_qt_app, run_qt_app
+from phy.utils import start_qt_app, run_qt_app, _ensure_dir_exists
+from phy.ext.six import StringIO
 
 
 #------------------------------------------------------------------------------
-# Main function
+# Utility functions
 #------------------------------------------------------------------------------
 
 def _pop(l, el, default=None):
@@ -45,6 +48,31 @@ def _pop(l, el, default=None):
     else:
         return default
 
+
+def _read_stats(stats_file_bin):
+    old_stdout = sys.stdout
+    sys.stdout = output = StringIO()
+    pstats.Stats(stats_file_bin).strip_dirs(). \
+        sort_stats("cumulative").print_stats()
+    sys.stdout = old_stdout
+    return output.getvalue()
+
+
+def _profile(statement, glob, loc):
+    dir = '.profile'
+    dir = op.realpath(dir)
+    _ensure_dir_exists(dir)
+    stats_file_bin = op.join(dir, 'stats')
+    cProfile.runctx(statement, glob, loc, stats_file_bin)
+    out = _read_stats(stats_file_bin)
+    stats_file = op.join(dir, 'stats.txt')
+    with open(stats_file, 'w') as f:
+        f.write(out)
+
+
+#------------------------------------------------------------------------------
+# Main function
+#------------------------------------------------------------------------------
 
 def main():
     # TODO: use argparse
@@ -63,6 +91,8 @@ def main():
               "is currently supported.")
         return 1
 
+    profile = _pop(args, '-p', False)
+
     args = args[3:]
 
     print("ClusterManualGUI")
@@ -74,6 +104,15 @@ def main():
         return 1
 
     kwik_path = args[0]
+
+    if not profile:
+        run(kwik_path, interactive=interactive)
+    else:
+        _profile('run(kwik_path, interactive=interactive)',
+                 globals(), locals())
+
+
+def run(kwik_path, interactive=False):
     if not op.exists(kwik_path):
         print("The file `{}` doesn't exist.".format(kwik_path))
         return 1
