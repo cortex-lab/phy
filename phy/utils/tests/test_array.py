@@ -323,6 +323,13 @@ def test_flatten_per_cluster():
     ac(_flatten_per_cluster(arrs, output_type='some_spikes'),
        [102, 115, 122, 125])
 
+    data, spikes = _flatten_per_cluster(arrs,
+                                        output_type='some_spikes',
+                                        return_spikes=True,
+                                        )
+    ae(data, [102, 115, 122, 125])
+    ae(spikes, [2, 15, 22, 25])
+
 
 #------------------------------------------------------------------------------
 # Test chunking

@@ -437,7 +437,9 @@ def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub,
     return spikes_per_cluster_subset, arrays_subset
 
 
-def _flatten_per_cluster(arrs, spc=None, output_type=None, return_spikes=None):
+def _flatten_per_cluster(arrs, spc=None,
+                         output_type=None, return_spikes=None,
+                         ):
     """Return an array from a dictionary `{cluster: data}`.
 
     There are three cases:
