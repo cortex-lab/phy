@@ -43,6 +43,7 @@ def test_kwik_store():
         nf = _N_FETS
 
         model = KwikModel(filename)
+        ns = model.n_samples_waveforms
         spc = _spikes_per_cluster(np.arange(_N_SPIKES), model.spike_clusters)
         clusters = sorted(spc.keys())
 
@@ -88,12 +89,10 @@ def test_kwik_store():
             ae(waveforms_store, waveforms_expected)
 
             # Check some statistics.
-            ae(cs.mean_masks(cluster),
-               masks_expected.mean(axis=0))
-            ae(cs.mean_waveforms(cluster),
-               waveforms_expected.mean(axis=0))
-            ae(cs.mean_features_bis(cluster),
-               fet_expected.mean(axis=0))
+            ae(cs.mean_features(cluster), fet_expected.mean(axis=0))
+            ae(cs.mean_features_bis(cluster), fet_expected.mean(axis=0))
+            ae(cs.mean_masks(cluster), masks_expected.mean(axis=0))
+            ae(cs.mean_waveforms(cluster), waveforms_expected.mean(axis=0))
 
             assert cs.n_unmasked_channels(cluster) >= 0
             assert cs.main_channels(cluster).shape == (nc,)
@@ -101,13 +100,14 @@ def test_kwik_store():
 
         # Multiple clusters.
         clusters = clusters[::2]
+        n_clusters = len(clusters)
         spikes = _spikes_in_clusters(model.spike_clusters, clusters)
         n_spikes = len(spikes)
 
         # Features.
-        features_expected = model.features[spikes].reshape((n_spikes, nc, nf))
-        ae(cs.load('features', clusters=clusters), features_expected)
-        ae(cs.load('features', spikes=spikes), features_expected)
+        fet_expected = model.features[spikes].reshape((n_spikes, nc, nf))
+        ae(cs.load('features', clusters=clusters), fet_expected)
+        ae(cs.load('features', spikes=spikes), fet_expected)
 
         # Masks.
         masks_expected = model.masks[spikes]
@@ -121,3 +121,19 @@ def test_kwik_store():
         waveforms_expected = model.waveforms[spikes]
         ae(cs.load('waveforms', clusters=clusters), waveforms_expected)
         ae(cs.load('waveforms', spikes=spikes), waveforms_expected)
+
+        assert (cs.load('mean_features', clusters=clusters).shape ==
+                (n_clusters, nc, nf))
+        assert (cs.load('mean_features_bis', clusters=clusters).shape ==
+                (n_clusters, nc, nf))
+        assert (cs.load('mean_masks', clusters=clusters).shape ==
+                (n_clusters, nc))
+        assert (cs.load('mean_waveforms', clusters=clusters).shape ==
+                (n_clusters, ns, nc))
+
+        assert (cs.load('n_unmasked_channels', clusters=clusters).shape ==
+                (n_clusters,))
+        assert (cs.load('main_channels', clusters=clusters).shape ==
+                (n_clusters, nc))
+        assert (cs.load('mean_probe_position', clusters=clusters).shape ==
+                (n_clusters, 2))

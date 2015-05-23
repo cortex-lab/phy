@@ -496,7 +496,6 @@ class ClusterStatistics(StoreItem):
             'mean_features': (0, self.n_channels, self.n_features),
             'mean_waveforms': (0, self.n_samples_waveforms, self.n_channels),
             'mean_probe_position': (0, 2),
-
         }.get(name, (0,))
         # Default waveforms.
         return _default_array(shape, value=0. if name != 'mean_masks' else 1.)
@@ -505,8 +504,10 @@ class ClusterStatistics(StoreItem):
         return self.memory_store.load(cluster, name)
 
     def load_multi(self, clusters, name):
+        if not len(clusters):
+            return self.empty_values(name)
         return np.array([self.load(cluster, name)
-                         for cluster in clusters], dtype=np.int64)
+                         for cluster in clusters])
 
     def is_consistent(self, cluster, spikes):
         return cluster in self.memory_store
