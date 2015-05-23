@@ -46,7 +46,6 @@ class FeatureMasks(StoreItem):
     """Store all features and masks of all clusters."""
     name = 'features and masks'
     fields = ['features', 'masks']
-    output_type = 'all_spikes'
 
     def __init__(self, *args, **kwargs):
         # Size of the chunk used when reading features and masks from the HDF5
@@ -231,6 +230,13 @@ class FeatureMasks(StoreItem):
                               n_spikes=len(spikes),
                               )
 
+    def load_multi(self, clusters, name):
+        if not len(clusters):
+            return self.empty_values(name)
+        arrays = {cluster: self.load(cluster, name)
+                  for cluster in clusters}
+        return self._concat(arrays)
+
     def on_merge(self, up):
         """Create the cluster store files of the merged cluster
         from the files of the old clusters.
@@ -316,8 +322,7 @@ class FeatureMasks(StoreItem):
 class Waveforms(StoreItem):
     """A cluster store item that manages the waveforms of all clusters."""
     name = 'waveforms'
-    fields = ['waveforms', 'waveforms_spikes']
-    output_type = 'some_spikes'
+    fields = ['waveforms']
 
     def __init__(self, *args, **kwargs):
         self.n_spikes_max = kwargs.pop('n_spikes_max')
@@ -329,40 +334,42 @@ class Waveforms(StoreItem):
         self.n_spikes = self.model.n_spikes
         self.n_samples = self.model.n_samples_waveforms
 
+        # Get or create the subset spikes per cluster dictionary.
+        spc = self.disk_store.load_file('waveforms_spikes')
+        if spc is None:
+            spc = self._subset_spikes()
+            self.disk_store.save_file('waveforms_spikes', spc)
+        self._spikes_per_cluster = spc
+
+    def _subset_spikes(self):
+        """Create a new `spikes_per_cluster` array with the spikes subset."""
         self._selector = Selector(self.model.spike_clusters,
                                   n_spikes_max=self.n_spikes_max,
                                   excerpt_size=self.excerpt_size,
                                   )
+        # Take a selection of spikes.
+        spikes = self._selector.subset_spikes_clusters(self.cluster_ids)
+        return _spikes_per_cluster(spikes, self.model.spike_clusters[spikes])
 
     def store(self, cluster):
-        spikes = self._selector.subset_spikes_clusters([cluster])
+        # spikes = self._selector.subset_spikes_clusters([cluster])
+        spikes = self.spikes_per_cluster[cluster]
         waveforms = self.model.waveforms[spikes]
         self.disk_store.store(cluster,
                               waveforms=waveforms.astype(np.float32),
-                              waveforms_spikes=spikes.astype(np.int64),
+                              # waveforms_spikes=spikes.astype(np.int64),
                               )
 
     def is_consistent(self, cluster, spikes):
-        """Return whether the waveforms and spikes file sizes match."""
+        """Return whether the waveforms and spikes match."""
         path_w = self.disk_store._cluster_path(cluster, 'waveforms')
-        path_s = self.disk_store._cluster_path(cluster, 'waveforms_spikes')
-
-        if not op.exists(path_w) or not op.exists(path_s):
+        if not op.exists(path_w):
             return False
-
         file_size_w = os.stat(path_w).st_size
-        file_size_s = os.stat(path_s).st_size
-
-        n_spikes_s = file_size_s // 8
         n_spikes_w = file_size_w // (self.n_channels * self.n_samples * 4)
-
-        if n_spikes_s != n_spikes_w:
+        if n_spikes_w != len(self.spikes_per_cluster[cluster]):
             return False
-
         return True
-
-    def load_waveforms_spikes(self, cluster):
-        return self.disk_store.load(cluster, 'waveforms_spikes', np.int64)
 
     @property
     def shape(self):
@@ -384,14 +391,18 @@ class Waveforms(StoreItem):
         if self.disk_store:
             data = self.disk_store.load(cluster, name, dtype, self.shape)
             if data is not None:
-                # Find the corresponding spikes.
-                spikes = self.load_waveforms_spikes(cluster)
-                assert spikes is not None
-                return data, spikes
+                return data
         # Fallback to load_spikes if the data could not be obtained from
         # the store.
-        spikes = self._selector.subset_spikes_clusters([cluster])
-        return self.load_spikes(spikes, name), spikes
+        spikes = self.spikes_per_cluster[cluster]
+        return self.load_spikes(spikes, name)
+
+    def load_multi(self, clusters, name):
+        if not len(clusters):
+            return self.empty_values(name)
+        arrays = {cluster: self.load(cluster, name)
+                  for cluster in clusters}
+        return self._concat(arrays)
 
     def load_spikes(self, spikes, name):
         """Load features or masks for an array of spikes."""
@@ -406,7 +417,6 @@ class Waveforms(StoreItem):
 class ClusterStatistics(StoreItem):
     """Manage cluster statistics."""
     name = 'statistics'
-    output_type = 'fixed_size'
     fields = ['mean_masks',
               'sum_masks',
               'n_unmasked_channels',
@@ -441,9 +451,6 @@ class ClusterStatistics(StoreItem):
 
         def _mean(arr, shape):
             if arr is not None:
-                if isinstance(arr, tuple):
-                    assert len(arr) == 2
-                    arr = arr[0]
                 assert isinstance(arr, np.ndarray)
                 if arr.shape[0]:
                     return arr.mean(axis=0)
@@ -496,6 +503,10 @@ class ClusterStatistics(StoreItem):
 
     def load(self, cluster, name):
         return self.memory_store.load(cluster, name)
+
+    def load_multi(self, clusters, name):
+        return np.array([self.load(cluster, name)
+                         for cluster in clusters], dtype=np.int64)
 
     def is_consistent(self, cluster, spikes):
         return cluster in self.memory_store

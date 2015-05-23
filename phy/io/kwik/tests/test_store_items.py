@@ -81,8 +81,8 @@ def test_kwik_store():
             waveforms_store = cs.waveforms(cluster)
             # Find the spikes.
             item = cs.items['waveforms']
-            waveforms_spikes = item.load_waveforms_spikes(cluster)
-            waveforms_expected = model.waveforms[waveforms_spikes]
+            spikes = item.spikes_per_cluster[cluster]
+            waveforms_expected = model.waveforms[spikes]
             ae(waveforms_store, waveforms_expected)
 
             # Check some statistics.
