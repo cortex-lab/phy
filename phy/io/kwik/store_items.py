@@ -124,7 +124,7 @@ class FeatureMasks(StoreItem):
                 return False
         return True
 
-    def store_all_clusters(self, mode=None):
+    def store_all(self, mode=None):
         """Store the features and masks of the clusters that need it.
 
         Parameters

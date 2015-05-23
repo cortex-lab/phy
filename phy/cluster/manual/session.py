@@ -268,7 +268,7 @@ class Session(EventEmitter):
         self.cluster_store.register_field(name, 'memory')
         # Compute it on all existing clusters.
         stats = self.cluster_store.get_item('statistics')
-        stats.store_all_clusters(name=name, mode='force')
+        stats.store_all(name=name, mode='force')
         info("Registered statistic `{}`.".format(name))
 
     # Event callbacks

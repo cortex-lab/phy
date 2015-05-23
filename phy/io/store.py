@@ -325,7 +325,7 @@ class StoreItem(object):
         """
         pass
 
-    def store_all_clusters(self, mode=None, **kwargs):
+    def store_all(self, mode=None, **kwargs):
         """Copy all data for that item from the model to the cluster store."""
         clusters = self.to_generate(mode)
         self._pr.value_max = len(clusters)
@@ -611,7 +611,7 @@ class ClusterStore(object):
             name = 'the current model'
         debug("Initializing the cluster store for {0:s}.".format(name))
         for item in self._items.values():
-            item.store_all_clusters(mode)
+            item.store_all(mode)
 
     # Load
     #--------------------------------------------------------------------------
