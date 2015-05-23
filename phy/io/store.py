@@ -396,6 +396,9 @@ class ClusterStore(object):
         self._items = []
         self._locations = {}
 
+    # Core methods
+    #--------------------------------------------------------------------------
+
     def _store(self, location):
         if location == 'memory':
             return self._memory
@@ -429,6 +432,9 @@ class ClusterStore(object):
     def cluster_ids(self):
         """All cluster ids appearing in the `spikes_per_cluster` dictionary."""
         return sorted(self._spikes_per_cluster)
+
+    # Store items
+    #--------------------------------------------------------------------------
 
     @property
     def store_items(self):
@@ -519,24 +525,6 @@ class ClusterStore(object):
         # Register the StoreItem instance.
         self._items.append(item)
         return item
-
-    def load(self, name, clusters, spikes=None, spikes_per_cluster=None):
-        """Load some data for a number of clusters and spikes."""
-        # Ensure clusters and spikes are sorted and do not have duplicates.
-        clusters = np.unique(clusters)
-        load = getattr(self, name)
-        # Get spikes_per_cluster and data arrays for the specified spikes.
-        if spikes_per_cluster is not None:
-            spc = spikes_per_cluster
-        else:
-            spc = {cluster: self._spikes_per_cluster[cluster]
-                   for cluster in clusters}
-        arrays = {cluster: load(cluster) for cluster in clusters}
-        if spikes is not None:
-            spikes = np.unique(spikes)
-            spc, arrays = _subset_spikes_per_cluster(spc, arrays, spikes)
-        # Return the concatenated array.
-        return _concatenate_per_cluster_arrays(spc, arrays)
 
     # Files
     #--------------------------------------------------------------------------
@@ -648,3 +636,24 @@ class ClusterStore(object):
         debug("Initializing the cluster store for {0:s}.".format(name))
         for item in self._items:
             item.store_all_clusters(mode)
+
+    # Load
+    #--------------------------------------------------------------------------
+
+    def load(self, name, clusters, spikes=None, spikes_per_cluster=None):
+        """Load some data for a number of clusters and spikes."""
+        # Ensure clusters and spikes are sorted and do not have duplicates.
+        clusters = np.unique(clusters)
+        load = getattr(self, name)
+        # Get spikes_per_cluster and data arrays for the specified spikes.
+        if spikes_per_cluster is not None:
+            spc = spikes_per_cluster
+        else:
+            spc = {cluster: self._spikes_per_cluster[cluster]
+                   for cluster in clusters}
+        arrays = {cluster: load(cluster) for cluster in clusters}
+        if spikes is not None:
+            spikes = np.unique(spikes)
+            spc, arrays = _subset_spikes_per_cluster(spc, arrays, spikes)
+        # Return the concatenated array.
+        return _concatenate_per_cluster_arrays(spc, arrays)
