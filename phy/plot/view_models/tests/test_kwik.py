@@ -94,8 +94,18 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
                                     n_features_per_channel=_N_FETS,
                                     n_samples_traces=_N_SAMPLES_TRACES)
         model = KwikModel(filename)
+        spikes_per_cluster = _spikes_per_cluster(model.spike_ids,
+                                                 model.spike_clusters)
+        store = create_store(model,
+                             path=tempdir,
+                             spikes_per_cluster=spikes_per_cluster,
+                             features_masks_chunk_size=10,
+                             waveforms_n_spikes_max=10,
+                             waveforms_excerpt_size=5,
+                             )
+        store.generate()
 
-        vm = view_model_class(model=model, **kwargs)
+        vm = view_model_class(model=model, store=store, **kwargs)
         vm.on_open()
         show_test_start(vm.view)
 

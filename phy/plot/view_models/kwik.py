@@ -10,6 +10,7 @@ import numpy as np
 
 from ...utils.array import (_concatenate_per_cluster_arrays,
                             _spikes_in_clusters,
+                            _index_of,
                             )
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from ..ccg import CorrelogramView
@@ -88,7 +89,15 @@ class WaveformViewModel(BaseViewModel):
         self.view.mean.waveforms = mean_waveforms * self.scale_factor
 
         # Masks.
-        masks = self.store.load('masks', clusters=clusters)
+        masks = self.store.load('masks', spikes=spikes)
+        # Subset the spikes with the requested waveform spikes.
+        # idx = _index_of(spikes, all_spikes)
+        # print(spikes)
+        # print(all_spikes)
+        # print(idx)
+        # print(masks.shape)
+        # self.view.visual.masks = masks[idx]
+        # TODO: alternative: just use spikes=spikes in load()
         self.view.visual.masks = masks
         self.view.mean.masks = mean_masks
 
@@ -198,6 +207,8 @@ class FeatureViewModel(BaseViewModel):
             score = score.reshape((-1, n_fet)).mean(axis=1)
         else:
             fet = self.view.visual.features
+            if not fet.shape[0]:
+                return np.arange(len(self.model.channels[:3]))
             score = np.mean(fet, axis=0).mean(axis=1)
         # Take the best 3 channels.
         assert len(score) == len(self.model.channel_order)

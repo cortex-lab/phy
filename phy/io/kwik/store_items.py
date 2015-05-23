@@ -434,7 +434,8 @@ class ClusterStatistics(StoreItem):
                     assert len(arr) == 2
                     arr = arr[0]
                 assert isinstance(arr, np.ndarray)
-                return arr.mean(axis=0)
+                if arr.shape[0]:
+                    return arr.mean(axis=0)
             return np.zeros(shape, dtype=np.float32)
 
         # Default statistics.
@@ -446,8 +447,8 @@ class ClusterStatistics(StoreItem):
         unmasked_channels = np.nonzero(mean_masks > .1)[0]
         n_unmasked_channels = len(unmasked_channels)
         # Weighted mean of the channels, weighted by the mean masks.
-        mean_probe_position = (self.model.probe.positions *
-                               mean_masks[:, np.newaxis]).mean(axis=0)
+        mean_probe_position = _mean(self.model.probe.positions *
+                                    mean_masks[:, np.newaxis], (2,))
         main_channels = np.argsort(mean_masks)[::-1]
         main_channels = np.array([c for c in main_channels
                                   if c in unmasked_channels])
