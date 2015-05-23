@@ -110,6 +110,7 @@ def test_disk_store():
         ds = DiskStore(tempdir)
         data = ds.load_file('test')
         ae(data['a'], a)
+        assert ds.load_file('test2') is None
 
 
 def test_cluster_store_1():

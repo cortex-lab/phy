@@ -198,6 +198,8 @@ class DiskStore(object):
 
     def load_file(self, filename):
         path = op.realpath(op.join(self._directory, filename))
+        if not op.exists(path):
+            return None
         with open(path, 'rb') as f:
             return cPickle.load(f)
 
