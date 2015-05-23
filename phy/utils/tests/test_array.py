@@ -8,7 +8,6 @@
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from numpy.testing import assert_allclose as ac
 from pytest import raises
 
 from .._types import _as_array, _as_tuple
@@ -17,7 +16,6 @@ from ..array import (_unique,
                      _index_of,
                      _in_polygon,
                      _len_index,
-                     _flatten_per_cluster,
                      _spikes_in_clusters,
                      _spikes_per_cluster,
                      _flatten_spikes_per_cluster,
@@ -299,55 +297,6 @@ def test_in_polygon():
                               (points[:, 1] < 1))[0]
     idx = np.nonzero(_in_polygon(points, polygon))[0]
     ae(idx, idx_expected)
-
-
-def test_flatten_per_cluster():
-
-    # Empty arguments.
-    for output_type in ('fixed_size', 'all_spikes', 'some_spikes'):
-        for return_spikes in (None, True):
-            if output_type == 'fixed_size' and return_spikes:
-                continue
-            expected = ([], []) if return_spikes else []
-            out = _flatten_per_cluster({},
-                                       spc={},
-                                       output_type=output_type,
-                                       return_spikes=return_spikes,
-                                       )
-            if return_spikes:
-                assert len(out) == 2
-                ac(out[0], expected[0])
-                ac(out[1], expected[1])
-            else:
-                ac(out, expected)
-
-    arrs = {2: 20, 3: 30, 5: 50}
-    ac(_flatten_per_cluster(arrs, output_type='fixed_size'),
-       [20, 30, 50])
-
-    spc = {2: [2, 22],
-           3: [13],
-           5: [5, 15, 25]}
-
-    arrs = {2: [102, 122],
-            3: [113],
-            5: [105, 115, 125]}
-    ac(_flatten_per_cluster(arrs, spc, output_type='all_spikes'),
-       [102, 105, 113, 115, 122, 125])
-
-    # Do not return all spikes.
-    arrs = {2: ([102, 122], [2, 22]),
-            3: ([], []),
-            5: ([115, 125], [15, 25])}
-    ac(_flatten_per_cluster(arrs, output_type='some_spikes'),
-       [102, 115, 122, 125])
-
-    data, spikes = _flatten_per_cluster(arrs,
-                                        output_type='some_spikes',
-                                        return_spikes=True,
-                                        )
-    ae(data, [102, 115, 122, 125])
-    ae(spikes, [2, 15, 22, 25])
 
 
 #------------------------------------------------------------------------------

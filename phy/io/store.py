@@ -13,7 +13,6 @@ import re
 
 import numpy as np
 
-from ..utils.array import _flatten_per_cluster
 from ..utils._types import _as_int, _is_integer
 from ..utils.logging import debug, info
 from ..utils.event import ProgressReporter
