@@ -198,6 +198,7 @@ def test_cluster_store_multi():
     class MyItem(StoreItem):
         name = 'my item'
         fields = ['d', 'm']
+        output_type = 'fixed_size'
 
         def store(self, cluster):
             spikes = self.spikes_per_cluster[cluster]
@@ -244,6 +245,7 @@ def test_cluster_store_load():
         class MyItem(StoreItem):
             name = 'my item'
             fields = ['spikes_square']
+            output_type = 'all_spikes'
 
             def store(self, cluster):
                 spikes = spikes_per_cluster[cluster]
@@ -300,6 +302,7 @@ def test_cluster_store_management():
         class MyItem(StoreItem):
             name = 'my item'
             fields = ['spikes_square']
+            output_type = 'all_spikes'
 
             def store(self, cluster):
                 spikes = self.spikes_per_cluster[cluster]

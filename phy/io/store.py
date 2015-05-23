@@ -14,7 +14,7 @@ import re
 import numpy as np
 
 from ..utils.array import _flatten_per_cluster
-from ..utils._types import _as_int
+from ..utils._types import _as_int, _is_integer
 from ..utils.logging import debug, info
 from ..utils.event import ProgressReporter
 from ..ext.six import string_types, integer_types
@@ -235,8 +235,18 @@ class StoreItem(object):
     Parameters
     ----------
 
+    name : str
+        Name of the item.
     fields : list
         A list of field names.
+    output_type : str
+        Describes the output of the `load()` method.
+
+        * `'all_spikes'`: returns a `(n_spikes, ...)` array
+        * `'some_spikes'`: returns a `(n_spikes_subset, ...)` array
+        * `'fixed_size'`: returns some object that doesn't depend on the
+          cluster size.
+
     model : Model
         A `Model` instance for the current dataset.
     memory_store : MemoryStore
@@ -245,8 +255,8 @@ class StoreItem(object):
         The DiskStore instance for the current dataset.
 
     """
-    fields = None  # list of names
     name = 'item'
+    fields = None  # list of names
     output_type = None  # 'all_spikes', 'some_spikes', 'fixed_size'
 
     def __init__(self, cluster_store=None):
@@ -432,7 +442,7 @@ class ClusterStore(object):
         """Dictionary of registered store items."""
         return self._items
 
-    def register_field(self, name):
+    def register_field(self, name, item_name=None):
         """Register a new piece of data to store on memory or on disk.
 
         Parameters
@@ -440,8 +450,12 @@ class ClusterStore(object):
 
         name : str
             The name of the field.
+        item_name : str
+            The name of the item.
+
 
         """
+        self._item_per_field[name] = self._items[item_name]
         if self._disk:
             self._disk.register_file_extensions(name)
 
@@ -469,13 +483,13 @@ class ClusterStore(object):
         item = item_cls(cluster_store=self, **kwargs)
         assert item.fields is not None
 
-        # Register all fields declared by the store item.
-        for field in item.fields:
-            self._item_per_field[field] = item
-            self.register_field(field)
-
         # Register the StoreItem instance.
         self._items[item.name] = item
+
+        # Register all fields declared by the store item.
+        for field in item.fields:
+            self.register_field(field, item_name=item.name)
+
         return item
 
     # Files
@@ -590,7 +604,7 @@ class ClusterStore(object):
     # Load
     #--------------------------------------------------------------------------
 
-    def load(self, name, clusters=None, spikes=None):
+    def load(self, name, clusters=None, spikes=None, flatten=None):
         """Load some data for a number of clusters and spikes."""
         # clusters and spikes cannot be both None or both set.
         assert not (clusters is None and spikes is None)
@@ -601,9 +615,11 @@ class ClusterStore(object):
         # Ensure clusters and spikes are sorted and do not have duplicates.
         if clusters is not None:
             # Single cluster case.
-            # NOTE: the case with spikes subset is not implemented yet here.
-            if isinstance(clusters, integer_types):
-                return item.load(clusters, name)
+            if _is_integer(clusters):
+                if output_type == 'fixed_size':
+                    return item.load(clusters, name)
+                else:
+                    clusters = [clusters]
             clusters = np.unique(clusters)
         if spikes is not None:
             spikes = np.unique(spikes)
@@ -614,11 +630,14 @@ class ClusterStore(object):
             # are requested.
             # The store item is responsible for loading the data.
             out = {cluster: item.load(cluster, name) for cluster in clusters}
+            # One can disable the flattenning in order to get a dictionary
+            # instead of an array with all spikes concatenated.
+            if flatten is False:
+                return out
             # Flatten the output if requested.
             return _flatten_per_cluster(out,
                                         self._spikes_per_cluster,
                                         output_type=output_type)
-            return out
         # Loading spikes.
         elif spikes is not None:
             out = item.load_spikes(spikes, name)
