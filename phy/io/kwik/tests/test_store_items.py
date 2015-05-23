@@ -58,15 +58,15 @@ def test_kwik_store():
                          n_spikes_max=5,
                          excerpt_size=2,
                          )
-        # stats = cs.register_item(ClusterStatistics)
+        stats = cs.register_item(ClusterStatistics)
 
         # We add a custom statistic function.
         def mean_features_bis(cluster):
             fet = cs.features(cluster)
             cs.memory_store.store(cluster, mean_features_bis=fet.mean(axis=0))
 
-        # stats.add('mean_features_bis', mean_features_bis)
-        # cs.register_field('mean_features_bis', 'memory')
+        stats.add('mean_features_bis', mean_features_bis)
+        cs.register_field('mean_features_bis')
 
         # Now we generate the store.
         cs.generate()
@@ -90,10 +90,10 @@ def test_kwik_store():
             waveforms_expected = model.waveforms[waveforms_spikes]
             ae(waveforms_store, waveforms_expected)
 
-            # # Check some statistics.
-            # ae(cs.mean_masks(cluster),
-            #    masks_expected.mean(axis=0))
-            # ae(cs.mean_waveforms(cluster),
-            #    waveforms_expected.mean(axis=0))
-            # ae(cs.mean_features_bis(cluster),
+            # Check some statistics.
+            ae(cs.mean_masks(cluster, flatten=False)[cluster],
+               masks_expected.mean(axis=0))
+            ae(cs.mean_waveforms(cluster, flatten=False)[cluster],
+               waveforms_expected.mean(axis=0))
+            # ae(cs.mean_features_bis(cluster, flatten=False)[cluster],
             #    fet_expected.mean(axis=0))
