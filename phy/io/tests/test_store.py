@@ -242,11 +242,18 @@ def test_cluster_store_load():
         # and we define how to generate it for a given cluster.
         class MyItem(StoreItem):
             name = 'my item'
-            fields = [('spikes_square', 'disk', np.int32)]
+            fields = ['spikes_square']
 
-            def store_cluster(self, cluster, spikes=None, mode=None):
+            def store_cluster(self, cluster):
+                spikes = spikes_per_cluster[cluster]
                 data = (spikes ** 2).astype(np.int32)
                 self.disk_store.store(cluster, spikes_square=data)
+
+            def load(self, cluster, name):
+                return self.disk_store.load(cluster, name, np.int32)
+
+            def load_spikes(self, spikes, name):
+                return (spikes ** 2).astype(np.int32)
 
         cs.register_item(MyItem)
 
@@ -256,26 +263,13 @@ def test_cluster_store_load():
         # All spikes in cluster 1.
         cluster = 1
         spikes = spikes_per_cluster[cluster]
-        ae(cs.load('spikes_square', [cluster], spikes), spikes ** 2)
-
-        # Some spikes in cluster 1.
-        spikes = spikes_per_cluster[cluster][1::2]
-        ae(cs.load('spikes_square', [cluster], spikes), spikes ** 2)
-
-        # All spikes in several clusters.
-        clusters = [2, 3, 5]
-        spikes = np.concatenate([spikes_per_cluster[cl]
-                                 for cl in clusters])
-
-        # # Reverse the order of spikes.
-        # spikes = np.r_[spikes, spikes[::-1]]
-        # ae(cs.load('spikes_square', clusters, spikes), spikes ** 2)
+        ae(cs.load('spikes_square', [cluster]), spikes ** 2)
 
         # Some spikes in several clusters.
+        clusters = [2, 3, 5]
         spikes = np.concatenate([spikes_per_cluster[cl][::3]
                                  for cl in clusters])
-        spikes = np.unique(spikes)
-        ae(cs.load('spikes_square', clusters, spikes), spikes ** 2)
+        ae(cs.load('spikes_square', spikes=spikes), np.unique(spikes) ** 2)
 
 
 def test_cluster_store_management():
@@ -304,9 +298,10 @@ def test_cluster_store_management():
         # and we define how to generate it for a given cluster.
         class MyItem(StoreItem):
             name = 'my item'
-            fields = [('spikes_square', 'disk', np.int32)]
+            fields = ['spikes_square']
 
-            def store_cluster(self, cluster, spikes=None, mode=None):
+            def store_cluster(self, cluster):
+                spikes = self.spikes_per_cluster[cluster]
                 if not self.is_consistent(cluster, spikes):
                     data = (spikes ** 2).astype(np.int32)
                     self.disk_store.store(cluster, spikes_square=data)

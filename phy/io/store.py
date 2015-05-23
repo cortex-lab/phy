@@ -182,6 +182,7 @@ class DiskStore(object):
         """Load cluster-related data. Return a file handle, to be used
         with np.fromfile() once the dtype and shape are known."""
         assert keys is not None
+        assert dtype is not None
         if isinstance(keys, string_types):
             return self._get(cluster, keys, dtype=dtype, shape=shape)
         assert isinstance(keys, list)
@@ -619,7 +620,7 @@ class ClusterStore(object):
             return out
         # Loading spikes.
         elif spikes is not None:
-            out = item.load_spikes(spikes)
+            out = item.load_spikes(spikes, name)
             assert (isinstance(out, np.ndarray) and
-                    out.shape[0] == len(clusters))
+                    out.shape[0] == len(spikes))
             return out
