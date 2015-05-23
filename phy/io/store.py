@@ -52,7 +52,8 @@ def _empty_values(values, flatten=None, return_spikes=None):
     if flatten is False:
         return {}
     else:
-        return values if not return_spikes else (values, np.array([]))
+        return (values if not return_spikes else
+                (values, np.array([], dtype=np.int64)))
 
 
 #------------------------------------------------------------------------------

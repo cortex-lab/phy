@@ -32,6 +32,16 @@ def _default_array(shape, value=0, n_spikes=0, dtype=np.float32):
     return out
 
 
+def _atleast_nd(arr, ndim):
+    if arr.ndim == ndim:
+        return arr
+    assert arr.ndim < ndim
+    if ndim - arr.ndim == 1:
+        return arr[None, ...]
+    elif ndim - arr.ndim == 2:
+        return arr[None, None, ...]
+
+
 class FeatureMasks(StoreItem):
     """Store all features and masks of all clusters."""
     name = 'features and masks'
@@ -213,7 +223,8 @@ class FeatureMasks(StoreItem):
         assert name in ('features', 'masks')
         data = getattr(self.model, name)
         if data is not None:
-            return data[spikes]
+            out = data[spikes]
+            return _atleast_nd(out, 2 if name == 'masks' else 3)
         # Default masks and features.
         return _default_array(getattr(self, name + '_shape'),
                               value=0. if name == 'features' else 1.,
