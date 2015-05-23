@@ -20,7 +20,6 @@ from ...waveform.filter import bandpass_filter, apply_filter
 from ...electrode.mea import MEA
 from ...utils.logging import warn
 from ...utils.array import (PartialArray,
-                            VirtualMappedArray,
                             _concatenate_virtual_arrays,
                             _unique,
                             )
@@ -453,12 +452,6 @@ class KwikModel(BaseModel):
             # This partial array simulates a (n_spikes, n_channels) array.
             self._masks = PartialArray(fm, (slice(0, nfpc * nc, nfpc), 1))
             assert self._masks.shape == (self.n_spikes, nc)
-        else:
-            # Virtually-mapped array that always returns arrays full of zeros.
-            self._masks = VirtualMappedArray((self.n_spikes, nc),
-                                             np.float32)
-            self._features = VirtualMappedArray((self.n_spikes, nc, nfpc),
-                                                np.float32)
 
     def _load_spikes(self):
         # Load spike samples.
