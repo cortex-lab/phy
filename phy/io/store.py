@@ -320,9 +320,11 @@ class StoreItem(object):
         self._pr.set_complete()
 
     def load(self, cluster, name):
+        """Load data for one cluster."""
         raise NotImplementedError()
 
     def load_spikes(self, spikes, name):
+        """Load data from an array of spikes."""
         raise NotImplementedError()
 
     def on_merge(self, up):
