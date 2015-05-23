@@ -9,7 +9,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
-from ....utils.array import _spikes_per_cluster
+from ....utils.array import _spikes_per_cluster, _spikes_in_clusters
 from ....utils.tempdir import TemporaryDirectory
 from ..model import (KwikModel,
                      )
@@ -66,6 +66,7 @@ def test_kwik_store():
         # Now we generate the store.
         cs.generate()
 
+        # One cluster at a time.
         for cluster in clusters:
             # Check features.
             fet_store = cs.features(cluster)
@@ -96,3 +97,10 @@ def test_kwik_store():
             assert cs.n_unmasked_channels(cluster) >= 0
             assert cs.main_channels(cluster).shape == (nc,)
             assert cs.mean_probe_position(cluster).shape == (2,)
+
+        # Multiple clusters.
+        clusters = clusters[::2]
+        spikes = _spikes_in_clusters(model.spike_clusters, clusters)
+        n_spikes = len(spikes)
+        fet = cs.load('features', clusters=clusters)
+        ae(fet, model.features[spikes].reshape((n_spikes, nc, nf)))
