@@ -248,16 +248,12 @@ class StoreItem(object):
     fields = None  # list of names
     name = 'item'
 
-    def __init__(self,
-                 model=None,
-                 memory_store=None,
-                 disk_store=None,
-                 spikes_per_cluster=None,
-                 ):
-        self.model = model
-        self.memory_store = memory_store
-        self.disk_store = disk_store
-        self._spikes_per_cluster = spikes_per_cluster
+    def __init__(self, cluster_store=None):
+        self.cluster_store = cluster_store
+        self.model = cluster_store.model
+        self.memory_store = cluster_store.memory_store
+        self.disk_store = cluster_store.disk_store
+        self._spikes_per_cluster = cluster_store.spikes_per_cluster
         self._pr = ProgressReporter()
         self._pr.set_progress_message('Initializing ' + self.name +
                                       ': {progress:.1f}%.')
@@ -398,6 +394,11 @@ class ClusterStore(object):
     #--------------------------------------------------------------------------
 
     @property
+    def model(self):
+        """Model."""
+        return self._model
+
+    @property
     def memory_store(self):
         """Hold some cluster statistics."""
         return self._memory
@@ -464,11 +465,7 @@ class ClusterStore(object):
 
         """
         # Instantiate the item.
-        item = item_cls(model=self._model,
-                        memory_store=self._memory,
-                        disk_store=self._disk,
-                        spikes_per_cluster=self.spikes_per_cluster,
-                        **kwargs)
+        item = item_cls(cluster_store=self, **kwargs)
         assert item.fields is not None
 
         # Register all fields declared by the store item.
