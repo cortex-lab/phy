@@ -92,3 +92,7 @@ def test_kwik_store():
                waveforms_expected.mean(axis=0))
             ae(cs.mean_features_bis(cluster),
                fet_expected.mean(axis=0))
+
+            assert cs.n_unmasked_channels(cluster) >= 0
+            assert cs.main_channels(cluster).shape == (nc,)
+            assert cs.mean_probe_position(cluster).shape == (2,)

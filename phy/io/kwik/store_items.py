@@ -418,7 +418,6 @@ class ClusterStatistics(StoreItem):
     """Manage cluster statistics."""
     name = 'statistics'
     fields = ['mean_masks',
-              'sum_masks',
               'n_unmasked_channels',
               'main_channels',
               'mean_probe_position',
