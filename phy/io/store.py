@@ -16,6 +16,7 @@ import numpy as np
 from ..utils._types import _as_int, _is_integer
 from ..utils.logging import debug, info
 from ..utils.event import ProgressReporter
+from ..utils.array import _concatenate_per_cluster_arrays
 from ..ext.six import string_types
 from ..ext.six.moves import cPickle
 
@@ -257,14 +258,6 @@ class StoreItem(object):
         Name of the item.
     fields : list
         A list of field names.
-    output_type : str
-        Describes the output of the `load()` method.
-
-        * `'all_spikes'`: returns a `(n_spikes, ...)` array
-        * `'some_spikes'`: returns a `(n_spikes_subset, ...)` array
-        * `'fixed_size'`: returns some object that doesn't depend on the
-          cluster size.
-
     model : Model
         A `Model` instance for the current dataset.
     memory_store : MemoryStore
@@ -275,7 +268,6 @@ class StoreItem(object):
     """
     name = 'item'
     fields = None  # list of names
-    output_type = None  # 'all_spikes', 'some_spikes', 'fixed_size'
 
     def __init__(self, cluster_store=None):
         self.cluster_store = cluster_store
@@ -346,6 +338,15 @@ class StoreItem(object):
 
     def load(self, cluster, name):
         """Load data for one cluster."""
+        raise NotImplementedError()
+
+    def _concat(self, arrays):
+        """Convvert a `{cluster: array}` dictionary into a single array."""
+        return _concatenate_per_cluster_arrays(self._spikes_per_cluster,
+                                               arrays)
+
+    def load_multi(self, clusters, name):
+        """Load data for several clusters."""
         raise NotImplementedError()
 
     def load_spikes(self, spikes, name):
@@ -626,54 +627,21 @@ class ClusterStore(object):
     # Load
     #--------------------------------------------------------------------------
 
-    def load(self, name, clusters=None, spikes=None,
-             flatten=None, return_spikes=None,
-             ):
+    def load(self, name, clusters=None, spikes=None):
         """Load some data for a number of clusters and spikes."""
-        # clusters and spikes cannot be both None or both set.
-        assert not (clusters is None and spikes is None)
-        assert not (clusters is not None and spikes is not None)
-        # Get the store item responsible for the requested field.
         item = self._item_per_field[name]
-        output_type = item.output_type or 'all_spikes'
-        # Ensure clusters and spikes are sorted and do not have duplicates.
-        if clusters is not None:
-            # Single cluster case.
-            if _is_integer(clusters):
-                if output_type == 'fixed_size':
-                    return item.load(clusters, name)
-                else:
-                    clusters = [clusters]
-            clusters = np.unique(clusters)
+        # Spikes requested.
         if spikes is not None:
+            assert clusters is None
             spikes = np.unique(spikes)
-        # Loading clusters.
-        if clusters is not None:
-            # Empty clusters.
-            if not len(clusters):
-                return _empty_values(item.empty_values(name),
-                                     flatten=flatten,
-                                     return_spikes=return_spikes,
-                                     )
-            # The store item's load() function returns either an array or
-            # a pair (array, spikes) when not all spikes from the cluster
-            # are requested.
-            out = {cluster: item.load(cluster, name) for cluster in clusters}
-            # One can disable the flattenning in order to get a dictionary
-            # instead of an array with all spikes concatenated.
-            if flatten is False:
-                return out
-            # Flatten the output if requested.
-            return _flatten_per_cluster(out,
-                                        self._spikes_per_cluster,
-                                        output_type=output_type,
-                                        return_spikes=return_spikes,
-                                        )
-        # Loading spikes.
-        elif spikes is not None:
-            if not len(spikes):
-                return item.empty_values(name)
             out = item.load_spikes(spikes, name)
             assert (isinstance(out, np.ndarray) and
                     out.shape[0] == len(spikes))
             return out
+        # Clusters requested.
+        elif clusters is not None:
+            if _is_integer(clusters):
+                # Single cluster case.
+                return item.load(clusters, name)
+            clusters = np.unique(clusters)
+            return item.load_multi(clusters, name)
