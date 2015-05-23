@@ -63,6 +63,8 @@ def test_kwik_store():
         cs.items['statistics'].add('mean_features_bis', mean_features_bis)
         cs.register_field('mean_features_bis', 'statistics')
 
+        waveforms_item = cs.items['waveforms']
+
         # Now we generate the store.
         cs.generate()
 
@@ -81,8 +83,7 @@ def test_kwik_store():
             # Check waveforms.
             waveforms_store = cs.waveforms(cluster)
             # Find the spikes.
-            item = cs.items['waveforms']
-            spikes = item.spikes_per_cluster[cluster]
+            spikes = waveforms_item.spikes_per_cluster[cluster]
             waveforms_expected = model.waveforms[spikes]
             ae(waveforms_store, waveforms_expected)
 
@@ -103,10 +104,20 @@ def test_kwik_store():
         spikes = _spikes_in_clusters(model.spike_clusters, clusters)
         n_spikes = len(spikes)
 
+        # Features.
         features_expected = model.features[spikes].reshape((n_spikes, nc, nf))
         ae(cs.load('features', clusters=clusters), features_expected)
         ae(cs.load('features', spikes=spikes), features_expected)
 
+        # Masks.
         masks_expected = model.masks[spikes]
         ae(cs.load('masks', clusters=clusters), masks_expected)
         ae(cs.load('masks', spikes=spikes), masks_expected)
+
+        # Waveforms.
+        spc = waveforms_item.spikes_per_cluster
+        spikes = waveforms_item._concat({cluster: spc[cluster]
+                                         for cluster in clusters})
+        waveforms_expected = model.waveforms[spikes]
+        ae(cs.load('waveforms', clusters=clusters), waveforms_expected)
+        ae(cs.load('waveforms', spikes=spikes), waveforms_expected)
