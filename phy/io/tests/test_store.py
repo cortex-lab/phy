@@ -130,10 +130,14 @@ def test_cluster_store_1():
         # and we define how to generate it for a given cluster.
         class MyItem(StoreItem):
             name = 'my item'
-            fields = [('n_spikes', 'memory')]
+            fields = ['n_spikes']
 
-            def store_cluster(self, cluster, spikes=None, mode=None):
+            def store_cluster(self, cluster):
+                spikes = self.spikes_per_cluster[cluster]
                 self.memory_store.store(cluster, n_spikes=len(spikes))
+
+            def load(self, cluster):
+                return self.memory_store.load(cluster, 'n_spikes')
 
             def on_cluster(self, up):
                 if up.description == 'merge':
@@ -167,7 +171,7 @@ def test_cluster_store_1():
                    new_spikes_per_cluster=spc,
                    old_spikes_per_cluster=spikes_per_cluster,)
 
-        cs.store_items[0].on_cluster(up)
+        cs.items['my item'].on_cluster(up)
 
         # Check the list of clusters in the store.
         ae(cs.memory_store.cluster_ids, list(range(0, n_clusters)) + [20])
