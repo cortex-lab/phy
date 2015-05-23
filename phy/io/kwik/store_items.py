@@ -167,6 +167,14 @@ class FeatureMasks(StoreItem):
 
         self._pr.set_complete()
 
+    @property
+    def masks_shape(self):
+        return (-1, self.n_channels)
+
+    @property
+    def features_shape(self):
+        return (-1, self.n_channels, self.n_features)
+
     def load(self, cluster, name):
         """Load features or masks for a cluster.
 
@@ -176,8 +184,8 @@ class FeatureMasks(StoreItem):
         """
         assert name in ('features', 'masks')
         dtype = np.float32
-        shape = ((-1, self.n_channels, self.n_features) if name == 'features'
-                 else (-1, self.n_channels))
+        shape = (self.features_shape if name == 'features'
+                 else self.masks_shape)
         if self.disk_store:
             data = self.disk_store.load(cluster, name, dtype, shape)
             if data is not None:
@@ -193,6 +201,9 @@ class FeatureMasks(StoreItem):
         data = getattr(self.model, name)
         if data is not None:
             return data[spikes]
+        # Default masks and features.
+        shape = (len(spikes),) + getattr(self, name + '_shape')[1:]
+        return np.zeros(shape, dtype=np.float32)
 
     def on_merge(self, up):
         """Create the cluster store files of the merged cluster
