@@ -257,7 +257,6 @@ def test_cluster_store_load():
         class MyItem(StoreItem):
             name = 'my item'
             fields = ['spikes_square']
-            output_type = 'all_spikes'
 
             def store(self, cluster):
                 spikes = spikes_per_cluster[cluster]
@@ -269,6 +268,11 @@ def test_cluster_store_load():
 
             def load_spikes(self, spikes, name):
                 return (spikes ** 2).astype(np.int32)
+
+            def load_multi(self, clusters, name):
+                arrays = {cluster: self.load(cluster, name)
+                          for cluster in clusters}
+                return self._concat(arrays)
 
         cs.register_item(MyItem)
 
