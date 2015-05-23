@@ -437,6 +437,39 @@ def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub,
     return spikes_per_cluster_subset, arrays_subset
 
 
+def _flatten_per_cluster(arrs, spc=None):
+    """Return an array from a dictionary `{cluster: data}`.
+
+    There are three cases:
+
+    * `data` is a scalar: return a `n_clusters` vector
+    * `data` is an array: return a `(n_spikes, ...)` matrix
+    * `data` is `(arr, spikes)`: return a `(n_spikes, ...)` matrix
+
+    """
+    assert isinstance(arrs, dict)
+    clusters = sorted(arrs)
+    if spc:
+        assert isinstance(spc, dict)
+        assert set(clusters) <= set(spc)
+
+    # First case: scalar.
+    if clusters and not isinstance(arrs[clusters[0]], (np.ndarray, tuple)):
+        return np.array([arrs[cluster] for cluster in clusters])
+
+    def _spikes_clusters(cluster, res):
+        if isinstance(res, tuple) and len(res) == 2:
+            arr, spk = res
+            assert arr.shape[0] == len(spk)
+            return arr, spk
+        else:
+            return res, spc[cluster]
+
+    spc = {cluster: spk for cluster, (_, spk) in arrs.items()}
+    arrays = {cluster: arr for cluster, (arr, _) in arrs.items()}
+    return _concatenate_per_cluster_arrays(spc, arrays)
+
+
 # -----------------------------------------------------------------------------
 # PartialArray
 # -----------------------------------------------------------------------------

@@ -8,6 +8,7 @@
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
+from numpy.testing import assert_allclose as ac
 from pytest import raises
 
 from .._types import _as_array, _as_tuple
@@ -16,6 +17,7 @@ from ..array import (_unique,
                      _index_of,
                      _in_polygon,
                      _len_index,
+                     _flatten_per_cluster,
                      chunk_bounds,
                      excerpts,
                      data_chunk,
@@ -292,6 +294,11 @@ def test_in_polygon():
                               (points[:, 1] < 1))[0]
     idx = np.nonzero(_in_polygon(points, polygon))[0]
     ae(idx, idx_expected)
+
+
+def test_flatten_per_cluster():
+    arrs = {2: 20, 3: 30, 5: 50}
+    ac(_flatten_per_cluster(arrs), [20, 30, 50])
 
 
 #------------------------------------------------------------------------------
