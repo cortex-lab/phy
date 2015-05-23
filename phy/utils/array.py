@@ -395,6 +395,9 @@ def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
     assert n_0 == n_1
 
     # Concatenate all spikes to find the right insertion order.
+    if not len(clusters):
+        return np.array([])
+
     spikes = np.concatenate([spikes_per_cluster[cluster]
                              for cluster in clusters])
     idx = np.argsort(spikes)
@@ -437,8 +440,10 @@ def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub,
     return spikes_per_cluster_subset, arrays_subset
 
 
-def _flatten_per_cluster(arrs, spc=None,
-                         output_type=None, return_spikes=None,
+def _flatten_per_cluster(arrs,
+                         spc=None,
+                         output_type=None,
+                         return_spikes=None,
                          ):
     """Return an array from a dictionary `{cluster: data}`.
 
@@ -459,6 +464,7 @@ def _flatten_per_cluster(arrs, spc=None,
         assert set(clusters) <= set(spc)
 
     if output_type == 'fixed_size':
+        assert not return_spikes
         return np.array([arrs[cluster] for cluster in clusters])
     elif output_type == 'all_spikes':
         out = _concatenate_per_cluster_arrays(spc, arrs)

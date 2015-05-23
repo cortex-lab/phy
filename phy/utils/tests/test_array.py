@@ -302,6 +302,25 @@ def test_in_polygon():
 
 
 def test_flatten_per_cluster():
+
+    # Empty arguments.
+    for output_type in ('fixed_size', 'all_spikes', 'some_spikes'):
+        for return_spikes in (None, True):
+            if output_type == 'fixed_size' and return_spikes:
+                continue
+            expected = ([], []) if return_spikes else []
+            out = _flatten_per_cluster({},
+                                       spc={},
+                                       output_type=output_type,
+                                       return_spikes=return_spikes,
+                                       )
+            if return_spikes:
+                assert len(out) == 2
+                ac(out[0], expected[0])
+                ac(out[1], expected[1])
+            else:
+                ac(out, expected)
+
     arrs = {2: 20, 3: 30, 5: 50}
     ac(_flatten_per_cluster(arrs, output_type='fixed_size'),
        [20, 30, 50])
