@@ -132,7 +132,7 @@ def test_cluster_store_1():
             name = 'my item'
             fields = ['n_spikes']
 
-            def store_cluster(self, cluster):
+            def store(self, cluster):
                 spikes = self.spikes_per_cluster[cluster]
                 self.memory_store.store(cluster, n_spikes=len(spikes))
 
@@ -198,7 +198,7 @@ def test_cluster_store_multi():
         name = 'my item'
         fields = ['d', 'm']
 
-        def store_cluster(self, cluster):
+        def store(self, cluster):
             spikes = self.spikes_per_cluster[cluster]
             self.memory_store.store(cluster, d=len(spikes), m=len(spikes)**2)
 
@@ -244,7 +244,7 @@ def test_cluster_store_load():
             name = 'my item'
             fields = ['spikes_square']
 
-            def store_cluster(self, cluster):
+            def store(self, cluster):
                 spikes = spikes_per_cluster[cluster]
                 data = (spikes ** 2).astype(np.int32)
                 self.disk_store.store(cluster, spikes_square=data)
@@ -300,7 +300,7 @@ def test_cluster_store_management():
             name = 'my item'
             fields = ['spikes_square']
 
-            def store_cluster(self, cluster):
+            def store(self, cluster):
                 spikes = self.spikes_per_cluster[cluster]
                 if not self.is_consistent(cluster, spikes):
                     data = (spikes ** 2).astype(np.int32)

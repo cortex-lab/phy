@@ -98,7 +98,7 @@ class ClusterStatistics(StoreItem):
         assert isinstance(waveforms, np.ndarray)
         return waveforms
 
-    def store_cluster_default(self, cluster, spikes=None, mode=None):
+    def store_default(self, cluster, spikes=None, mode=None):
         """Compute the built-in statistics for one cluster."""
         masks, features = self._load_masks_features(cluster)
         waveforms = self._load_waveforms(cluster)
@@ -127,10 +127,10 @@ class ClusterStatistics(StoreItem):
                                 mean_waveforms=mean_waveforms,
                                 )
 
-    def store_cluster(self, cluster, spikes=None, mode=None, name=None):
+    def store(self, cluster, spikes=None, mode=None, name=None):
         """Compute all statistics for one cluster."""
         if name is None:
-            self.store_cluster_default(cluster, spikes=spikes, mode=mode)
+            self.store_default(cluster, spikes=spikes, mode=mode)
             for func in self._funcs.values():
                 func(cluster)
         else:
@@ -166,7 +166,7 @@ class FeatureMasks(StoreItem):
         self.fields[1] = ('masks', 'disk',
                           np.float32, (-1, self.n_channels))
 
-    def _store_cluster(self,
+    def _store(self,
                        cluster,
                        chunk_spikes,
                        chunk_spikes_per_cluster,
@@ -279,7 +279,7 @@ class FeatureMasks(StoreItem):
                 clusters = (set(chunk_spc.keys()).
                             intersection(set(clusters_to_generate)))
                 for cluster in sorted(clusters):
-                    self._store_cluster(cluster,
+                    self._store(cluster,
                                         chunk_spikes,
                                         chunk_spc,
                                         chunk_features_masks,
@@ -398,7 +398,7 @@ class Waveforms(StoreItem):
                                   excerpt_size=self.excerpt_size,
                                   )
 
-    def store_cluster(self, cluster, spikes=None, mode=None):
+    def store(self, cluster, spikes=None, mode=None):
         spikes = self._selector.subset_spikes_clusters([cluster])
         waveforms = self.model.waveforms[spikes]
         self.disk_store.store(cluster,

@@ -302,7 +302,7 @@ class StoreItem(object):
             raise ValueError("`mode` should be None, `default`, `force`, "
                              "or `read-only`.")
 
-    def store_cluster(self, cluster):
+    def store(self, cluster):
         """Store data for a cluster from the model to the store.
 
         May be overridden.
@@ -315,7 +315,7 @@ class StoreItem(object):
         clusters = self.to_generate(mode)
         self._pr.value_max = len(clusters)
         for cluster in clusters:
-            self.store_cluster(cluster, **kwargs)
+            self.store(cluster, **kwargs)
             self._pr.value += 1
         self._pr.set_complete()
 
@@ -341,7 +341,7 @@ class StoreItem(object):
 
         """
         for cluster in up.added:
-            self.store_cluster(cluster)
+            self.store(cluster)
 
     def on_cluster(self, up=None):
         """Called when the clusters change.
