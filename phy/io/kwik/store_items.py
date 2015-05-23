@@ -55,10 +55,8 @@ class ClusterStatistics(StoreItem):
         self.fields.remove((name, 'memory'))
         del self.funcs[name]
 
-    def store_cluster_default(self, cluster, spikes=None, mode=None):
-        """Compute the built-in statistics for one cluster."""
+    def _load_masks_features(self, cluster):
         n_spikes = len(self.spikes_per_cluster[cluster])
-
         if not isinstance(self.model, KwikModel) or self.model.has_kwx():
             # Load the masks.
             masks = self.disk_store.load(cluster,
@@ -79,7 +77,10 @@ class ClusterStatistics(StoreItem):
                                 dtype=np.float32)
         assert isinstance(masks, np.ndarray)
         assert isinstance(features, np.ndarray)
+        return masks, features
 
+    def _load_waveforms(self, cluster):
+        n_spikes = len(self.spikes_per_cluster[cluster])
         if not isinstance(self.model, KwikModel) or self.model.has_kwd():
             # Load the waveforms.
             waveforms = self.disk_store.load(cluster,
@@ -95,6 +96,12 @@ class ClusterStatistics(StoreItem):
                                   self.n_channels),
                                  type=np.float32)
         assert isinstance(waveforms, np.ndarray)
+        return waveforms
+
+    def store_cluster_default(self, cluster, spikes=None, mode=None):
+        """Compute the built-in statistics for one cluster."""
+        masks, features = self._load_masks_features(cluster)
+        waveforms = self._load_waveforms(cluster)
 
         # Default statistics.
         mean_features = features.mean(axis=0)
