@@ -49,50 +49,20 @@ class WaveformViewModel(BaseViewModel):
             self.scale_factor = 1.
 
     def _load_waveforms(self):
-        clusters = self.cluster_ids
-        # debug("Loading waveforms...")
-        if self._store is not None and len(clusters):
-            # Subset the stored spikes for each cluster.
-            k = len(clusters)
-            spc = {cluster: self._store.waveforms_spikes(cluster)[::k]
-                   for cluster in clusters}
-            # Get all the spikes for the clusters.
-            spikes = _concatenate_per_cluster_arrays(spc, spc)
-            # Subset the spikes with the selector.
-            self._selector.selected_spikes = spikes
-            spikes = self.spike_ids
-            # Load the waveforms for the subset spikes.
-            waveforms = self._store.load('waveforms',
-                                         clusters,
-                                         spikes,
-                                         spikes_per_cluster=spc,
-                                         )
-        else:
-            # If there's no store, just take the waveforms from the traces
-            # (slower).
-            self._selector.selected_clusters = clusters
-            spikes = self.spike_ids
-            waveforms = self.model.waveforms[spikes]
-        return spikes, waveforms
+        waveforms, spikes = self.store.load('waveforms',
+                                            clusters=self.cluster_ids,
+                                            return_spikes=True,
+                                            )
+        return waveforms, spikes
 
     def _load_mean_waveforms(self):
-        if not self._store or len(self.cluster_ids) == 0:
-            return (np.zeros((len(self.cluster_ids),
-                              self._n_samples,
-                              self._n_channels,
-                              )),
-                    np.zeros((len(self.cluster_ids),
-                              self._n_channels,
-                              ))
-                    )
-        mean_waveforms = []
-        mean_masks = []
-        for cluster in sorted(self.cluster_ids):
-            mw = self._store.mean_waveforms(cluster)[None, :]
-            mm = self._store.mean_masks(cluster)[None, :]
-            mean_waveforms.append(mw)
-            mean_masks.append(mm)
-        return np.vstack(mean_waveforms), np.vstack(mean_masks)
+        mean_waveforms = self.store.load('mean_waveforms',
+                                         clusters=self.cluster_ids,
+                                         )
+        mean_masks = self.store.load('mean_masks',
+                                     clusters=self.cluster_ids,
+                                     )
+        return mean_waveforms, mean_masks
 
     def _update_spike_clusters(self, spikes=None):
         super(WaveformViewModel, self)._update_spike_clusters(spikes=spikes)
@@ -102,7 +72,7 @@ class WaveformViewModel(BaseViewModel):
     def on_select(self):
         # Get the spikes of the stored waveforms.
         clusters = self.cluster_ids
-        spikes, waveforms = self._load_waveforms()
+        waveforms, spikes = self._load_waveforms()
         _, self._n_samples, self._n_channels = waveforms.shape
         mean_waveforms, mean_masks = self._load_mean_waveforms()
 
@@ -118,7 +88,7 @@ class WaveformViewModel(BaseViewModel):
         self.view.mean.waveforms = mean_waveforms * self.scale_factor
 
         # Masks.
-        masks = self.load('masks')
+        masks = self.store.load('masks', clusters=clusters)
         self.view.visual.masks = masks
         self.view.mean.masks = mean_masks
 
@@ -208,7 +178,7 @@ class FeatureViewModel(BaseViewModel):
 
         ```python
         @view_model.set_dimension_selector
-        def choose(cluster_ids, store=None):
+        def choose(cluster_ids):
             # ...
             return channel_idxs  # a list with 3 relative channel indices
         ```
@@ -216,7 +186,7 @@ class FeatureViewModel(BaseViewModel):
         """
         self._dimension_selector = func
 
-    def default_dimension_selector(self, cluster_ids, store=None):
+    def default_dimension_selector(self, cluster_ids):
         """Return the channels with the largest mean features.
 
         The first cluster is used currently.
@@ -239,7 +209,7 @@ class FeatureViewModel(BaseViewModel):
                               self.default_dimension_selector)
         if (cluster_ids is not None and self.store and
                 dimension_selector is not None):
-            channels = dimension_selector(cluster_ids, store=self.store)
+            channels = dimension_selector(cluster_ids)
         else:
             channels = np.arange(len(self.model.channels[:3]))
         return ['time'] + [(ch, 0) for ch in channels]
@@ -265,7 +235,7 @@ class FeatureViewModel(BaseViewModel):
         if self.view.lasso.n_points <= 2:
             return
         clusters = self.cluster_ids
-        features = self.load('features')
+        features = self.store.load('features', clusters=clusters)
         features = self._rescale_features(features)
         box = self.view.lasso.box
         points = self.view.visual.project(features, box)
@@ -322,8 +292,8 @@ class FeatureViewModel(BaseViewModel):
         spikes = self.spike_ids
         clusters = self.cluster_ids
 
-        features = self.load('features')
-        masks = self.load('masks')
+        features = self.store.load('features', clusters=clusters)
+        masks = self.store.load('masks', clusters=clusters)
 
         nc = len(self.model.channel_order)
         nf = self.model.n_features_per_channel

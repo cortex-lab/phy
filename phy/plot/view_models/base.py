@@ -62,6 +62,7 @@ class BaseViewModel(object):
                  **kwargs):
 
         self._model = model
+        assert store is not None
         self._store = store
         if cluster_ids is not None:
             cluster_ids = _as_list(cluster_ids)

@@ -455,10 +455,10 @@ class ClusterStatistics(StoreItem):
         self.memory_store.store(cluster,
                                 mean_masks=mean_masks,
                                 mean_features=mean_features,
-                                n_unmasked_channels=n_unmasked_channels,
+                                mean_waveforms=mean_waveforms,
                                 mean_probe_position=mean_probe_position,
                                 main_channels=main_channels,
-                                mean_waveforms=mean_waveforms,
+                                n_unmasked_channels=n_unmasked_channels,
                                 )
 
     def store(self, cluster, name=None):
@@ -470,6 +470,17 @@ class ClusterStatistics(StoreItem):
         else:
             assert name in self._funcs
             self._funcs[name](cluster)
+
+    def empty_values(self, name):
+        shape = {
+            'mean_masks': (0, self.n_channels),
+            'mean_features': (0, self.n_channels, self.n_features),
+            'mean_waveforms': (0, self.n_samples_waveforms, self.n_channels),
+            'mean_probe_position': (0, 2),
+
+        }.get(name, (0,))
+        # Default waveforms.
+        return _default_array(shape, value=0. if name != 'mean_masks' else 1.)
 
     def load(self, cluster, name):
         return self.memory_store.load(cluster, name)
