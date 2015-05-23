@@ -334,6 +334,10 @@ class StoreItem(object):
         """Load data from an array of spikes."""
         raise NotImplementedError()
 
+    def empty_values(self, name):
+        """Return an empty array when the cluster list is empty."""
+        return np.array([])
+
     def on_merge(self, up):
         """Called when a new merge occurs.
 
@@ -627,10 +631,15 @@ class ClusterStore(object):
             spikes = np.unique(spikes)
         # Loading clusters.
         if clusters is not None:
+            # Empty clusters.
+            if not len(clusters):
+                if flatten is False:
+                    return {}
+                else:
+                    return item.empty_values(name)
             # The store item's load() function returns either an array or
             # a pair (array, spikes) when not all spikes from the cluster
             # are requested.
-            # The store item is responsible for loading the data.
             out = {cluster: item.load(cluster, name) for cluster in clusters}
             # One can disable the flattenning in order to get a dictionary
             # instead of an array with all spikes concatenated.
@@ -644,6 +653,8 @@ class ClusterStore(object):
                                         )
         # Loading spikes.
         elif spikes is not None:
+            if not len(spikes):
+                return item.empty_values(name)
             out = item.load_spikes(spikes, name)
             assert (isinstance(out, np.ndarray) and
                     out.shape[0] == len(spikes))

@@ -25,7 +25,7 @@ from ..store import ClusterStore, StoreItem
 # Store items
 #------------------------------------------------------------------------------
 
-def _default_array(shape, value=0, n_spikes=None, dtype=np.float32):
+def _default_array(shape, value=0, n_spikes=0, dtype=np.float32):
     shape = (n_spikes,) + shape[1:]
     out = np.empty(shape, dtype=dtype)
     out.fill(value)
@@ -181,6 +181,12 @@ class FeatureMasks(StoreItem):
     @property
     def features_shape(self):
         return (-1, self.n_channels, self.n_features)
+
+    def empty_values(self, name):
+        # Default masks and features.
+        return _default_array(getattr(self, name + '_shape'),
+                              value=0. if name == 'features' else 1.,
+                              )
 
     def load(self, cluster, name):
         """Load features or masks for a cluster.
@@ -350,6 +356,10 @@ class Waveforms(StoreItem):
     @property
     def shape(self):
         return (-1, self.n_samples, self.n_channels)
+
+    def empty_values(self, name):
+        # Default waveforms.
+        return _default_array(self.shape, value=0.)
 
     def load(self, cluster, name='waveforms'):
         """Load features or masks for a cluster.
