@@ -131,6 +131,7 @@ def test_cluster_store_1():
         class MyItem(StoreItem):
             name = 'my item'
             fields = ['n_spikes']
+            output_type = 'fixed_size'
 
             def store(self, cluster):
                 spikes = self.spikes_per_cluster[cluster]

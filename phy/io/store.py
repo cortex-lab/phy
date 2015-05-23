@@ -247,6 +247,7 @@ class StoreItem(object):
     """
     fields = None  # list of names
     name = 'item'
+    output_type = None  # 'all_spikes', 'some_spikes', 'fixed_size'
 
     def __init__(self, cluster_store=None):
         self.cluster_store = cluster_store
@@ -589,13 +590,14 @@ class ClusterStore(object):
     # Load
     #--------------------------------------------------------------------------
 
-    def load(self, name, clusters=None, spikes=None, flatten=True):
+    def load(self, name, clusters=None, spikes=None):
         """Load some data for a number of clusters and spikes."""
         # clusters and spikes cannot be both None or both set.
         assert not (clusters is None and spikes is None)
         assert not (clusters is not None and spikes is not None)
         # Get the store item responsible for the requested field.
         item = self._item_per_field[name]
+        output_type = item.output_type or 'all_spikes'
         # Ensure clusters and spikes are sorted and do not have duplicates.
         if clusters is not None:
             # Single cluster case.
@@ -613,8 +615,9 @@ class ClusterStore(object):
             # The store item is responsible for loading the data.
             out = {cluster: item.load(cluster, name) for cluster in clusters}
             # Flatten the output if requested.
-            if flatten:
-                return _flatten_per_cluster(out, self._spikes_per_cluster)
+            return _flatten_per_cluster(out,
+                                        self._spikes_per_cluster,
+                                        output_type=output_type)
             return out
         # Loading spikes.
         elif spikes is not None:

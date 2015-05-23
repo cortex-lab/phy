@@ -320,7 +320,7 @@ def test_flatten_per_cluster():
     arrs = {2: ([102, 122], [2, 22]),
             3: ([], []),
             5: ([115, 125], [15, 25])}
-    ac(_flatten_per_cluster(arrs, spc, output_type='some_spikes'),
+    ac(_flatten_per_cluster(arrs, output_type='some_spikes'),
        [102, 115, 122, 125])
 
 
