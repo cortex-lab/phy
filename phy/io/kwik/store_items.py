@@ -29,6 +29,7 @@ class FeatureMasks(StoreItem):
     """Store all features and masks of all clusters."""
     name = 'features and masks'
     fields = ['features', 'masks']
+    output_type = 'all_spikes'
 
     def __init__(self, *args, **kwargs):
         # Size of the chunk used when reading features and masks from the HDF5
@@ -279,6 +280,7 @@ class Waveforms(StoreItem):
     """A cluster store item that manages the waveforms of all clusters."""
     name = 'waveforms'
     fields = ['waveforms', 'waveforms_spikes']
+    output_type = 'some_spikes'
 
     def __init__(self, *args, **kwargs):
         self.n_spikes_max = kwargs.pop('n_spikes_max')
@@ -358,6 +360,7 @@ class Waveforms(StoreItem):
 class ClusterStatistics(StoreItem):
     """Manage cluster statistics."""
     name = 'statistics'
+    output_type = 'fixed_size'
     fields = ['mean_masks',
               'sum_masks',
               'n_unmasked_channels',
@@ -392,6 +395,10 @@ class ClusterStatistics(StoreItem):
 
         def _mean(arr, shape):
             if arr is not None:
+                if isinstance(arr, tuple):
+                    assert len(arr) == 2
+                    arr = arr[0]
+                assert isinstance(arr, np.ndarray)
                 return arr.mean(axis=0)
             else:
                 return np.zeros(shape, dtype=np.float32)

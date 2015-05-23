@@ -66,7 +66,7 @@ def test_kwik_store():
             cs.memory_store.store(cluster, mean_features_bis=fet.mean(axis=0))
 
         stats.add('mean_features_bis', mean_features_bis)
-        cs.register_field('mean_features_bis')
+        cs.register_field('mean_features_bis', 'statistics')
 
         # Now we generate the store.
         cs.generate()
@@ -91,9 +91,9 @@ def test_kwik_store():
             ae(waveforms_store, waveforms_expected)
 
             # Check some statistics.
-            ae(cs.mean_masks(cluster, flatten=False)[cluster],
+            ae(cs.mean_masks(cluster),
                masks_expected.mean(axis=0))
-            ae(cs.mean_waveforms(cluster, flatten=False)[cluster],
+            ae(cs.mean_waveforms(cluster),
                waveforms_expected.mean(axis=0))
-            # ae(cs.mean_features_bis(cluster, flatten=False)[cluster],
-            #    fet_expected.mean(axis=0))
+            ae(cs.mean_features_bis(cluster),
+               fet_expected.mean(axis=0))
