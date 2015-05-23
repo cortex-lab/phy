@@ -129,29 +129,6 @@ class BaseViewModel(object):
         """Number of selected spikes."""
         return self._selector.n_spikes
 
-    def load(self, name, spike_selection=None):
-        """Load data from the store or the model.
-
-        By default, the data for the selected spikes is loaded.
-        Load the data from all spikes in the selected clusters with
-        `spike_selection='all'`.
-
-        """
-        spikes = self.spike_ids if spike_selection is None else None
-        if (self._store is not None and
-                len(self.cluster_ids) and
-                hasattr(self._store, name)):
-            return self._store.load(name, self.cluster_ids, spikes=spikes)
-        else:
-            out = getattr(self._model, name)
-            if spikes is None:
-                spikes = _spikes_in_clusters(self.model.spike_clusters,
-                                             self.cluster_ids)
-            if len(spikes) == 0:
-                return np.zeros((0,) + out.shape[1:], dtype=out.dtype)
-            else:
-                return out[spikes]
-
     def _update_spike_clusters(self, spikes=None):
         """Update the spike clusters and cluster colors."""
         if spikes is None:

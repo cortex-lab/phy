@@ -604,7 +604,9 @@ class ClusterStore(object):
     # Load
     #--------------------------------------------------------------------------
 
-    def load(self, name, clusters=None, spikes=None, flatten=None):
+    def load(self, name, clusters=None, spikes=None,
+             flatten=None, return_spikes=None,
+             ):
         """Load some data for a number of clusters and spikes."""
         # clusters and spikes cannot be both None or both set.
         assert not (clusters is None and spikes is None)
@@ -637,7 +639,9 @@ class ClusterStore(object):
             # Flatten the output if requested.
             return _flatten_per_cluster(out,
                                         self._spikes_per_cluster,
-                                        output_type=output_type)
+                                        output_type=output_type,
+                                        return_spikes=return_spikes,
+                                        )
         # Loading spikes.
         elif spikes is not None:
             out = item.load_spikes(spikes, name)

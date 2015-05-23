@@ -327,7 +327,7 @@ class Waveforms(StoreItem):
     def load_waveforms_spikes(self, cluster):
         return self.disk_store.load(cluster, 'waveforms_spikes', np.int64)
 
-    def load(self, cluster, name):
+    def load(self, cluster, name='waveforms'):
         """Load features or masks for a cluster.
 
         This uses the cluster store if possible, otherwise it falls back

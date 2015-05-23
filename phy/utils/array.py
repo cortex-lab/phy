@@ -437,7 +437,7 @@ def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub,
     return spikes_per_cluster_subset, arrays_subset
 
 
-def _flatten_per_cluster(arrs, spc=None, output_type=None):
+def _flatten_per_cluster(arrs, spc=None, output_type=None, return_spikes=None):
     """Return an array from a dictionary `{cluster: data}`.
 
     There are three cases:
@@ -459,12 +459,17 @@ def _flatten_per_cluster(arrs, spc=None, output_type=None):
     if output_type == 'fixed_size':
         return np.array([arrs[cluster] for cluster in clusters])
     elif output_type == 'all_spikes':
-        return _concatenate_per_cluster_arrays(spc, arrs)
+        out = _concatenate_per_cluster_arrays(spc, arrs)
     elif output_type == 'some_spikes':
         arrs, spc = ({cluster: arr for cluster, (arr, _) in arrs.items()},
                      {cluster: spk for cluster, (_, spk) in arrs.items()})
-        return _concatenate_per_cluster_arrays(spc, arrs)
-    raise ValueError("'output_type' is invalid.")
+        out = _concatenate_per_cluster_arrays(spc, arrs)
+    # Can return spikes along with the concatenated data.
+    if return_spikes:
+        spikes = _concatenate_per_cluster_arrays(spc, spc)
+        return out, spikes
+    else:
+        return out
 
 
 # -----------------------------------------------------------------------------
