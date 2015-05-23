@@ -322,7 +322,7 @@ def test_cluster_store_management():
         cs.update_spikes_per_cluster(spikes_per_cluster)
 
         def _check_to_generate(cs, clusters):
-            item = cs.store_items[0]
+            item = cs.items['my item']
             ae(item.to_generate(), clusters)
             ae(item.to_generate(None), clusters)
             ae(item.to_generate('default'), clusters)
@@ -372,7 +372,7 @@ def test_cluster_store_management():
 
         # All files are now old and should be removed by clean().
         assert not cs.is_consistent()
-        item = cs.store_items[0]
+        item = cs.items['my item']
         ae(item.to_generate(), np.arange(n_clusters, n_clusters + 5))
 
         ae(cs.cluster_ids, np.arange(n_clusters, n_clusters + 5))

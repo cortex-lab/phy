@@ -182,7 +182,6 @@ class DiskStore(object):
         """Load cluster-related data. Return a file handle, to be used
         with np.fromfile() once the dtype and shape are known."""
         assert keys is not None
-        assert dtype is not None
         if isinstance(keys, string_types):
             return self._get(cluster, keys, dtype=dtype, shape=shape)
         assert isinstance(keys, list)
