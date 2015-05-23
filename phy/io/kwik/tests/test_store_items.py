@@ -102,5 +102,11 @@ def test_kwik_store():
         clusters = clusters[::2]
         spikes = _spikes_in_clusters(model.spike_clusters, clusters)
         n_spikes = len(spikes)
-        fet = cs.load('features', clusters=clusters)
-        ae(fet, model.features[spikes].reshape((n_spikes, nc, nf)))
+
+        features_expected = model.features[spikes].reshape((n_spikes, nc, nf))
+        ae(cs.load('features', clusters=clusters), features_expected)
+        ae(cs.load('features', spikes=spikes), features_expected)
+
+        masks_expected = model.masks[spikes]
+        ae(cs.load('masks', clusters=clusters), masks_expected)
+        ae(cs.load('masks', spikes=spikes), masks_expected)

@@ -206,8 +206,7 @@ class FeatureMasks(StoreItem):
         """
         assert name in ('features', 'masks')
         dtype = np.float32
-        shape = (self.features_shape if name == 'features'
-                 else self.masks_shape)
+        shape = getattr(self, name + '_shape')
         if self.disk_store:
             data = self.disk_store.load(cluster, name, dtype, shape)
             if data is not None:
@@ -220,15 +219,17 @@ class FeatureMasks(StoreItem):
     def load_spikes(self, spikes, name):
         """Load features or masks for an array of spikes."""
         assert name in ('features', 'masks')
+        shape = getattr(self, name + '_shape')
         data = getattr(self.model, name)
         if data is not None:
             out = data[spikes]
-            return _atleast_nd(out, 2 if name == 'masks' else 3)
         # Default masks and features.
-        return _default_array(getattr(self, name + '_shape'),
-                              value=0. if name == 'features' else 1.,
-                              n_spikes=len(spikes),
-                              )
+        else:
+            out = _default_array(shape,
+                                 value=0. if name == 'features' else 1.,
+                                 n_spikes=len(spikes),
+                                 )
+        return out.reshape(shape)
 
     def load_multi(self, clusters, name):
         if not len(clusters):
