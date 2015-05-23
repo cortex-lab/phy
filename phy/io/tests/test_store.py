@@ -243,7 +243,7 @@ def test_cluster_store_load():
         spike_clusters = np.random.randint(size=n_spikes,
                                            low=0, high=n_clusters)
         spikes_per_cluster = _spikes_per_cluster(spike_ids, spike_clusters)
-
+        clusters = sorted(spikes_per_cluster)
         model = {'spike_clusters': spike_clusters}
 
         # We initialize the ClusterStore.
@@ -275,8 +275,6 @@ def test_cluster_store_load():
                 return self._concat(arrays)
 
         cs.register_item(MyItem)
-
-        # Now we generate the store.
         cs.generate()
 
         # All spikes in cluster 1.
@@ -285,14 +283,16 @@ def test_cluster_store_load():
         ae(cs.load('spikes_square', clusters=[cluster]), spikes ** 2)
 
         # Some spikes in several clusters.
-        clusters = [2, 3, 5]
         spikes = np.concatenate([spikes_per_cluster[cl][::3]
-                                 for cl in clusters])
+                                 for cl in [2, 3, 5]])
         ae(cs.load('spikes_square', spikes=spikes), np.unique(spikes) ** 2)
 
         # Empty selection.
         cs.load('spikes_square', clusters=[])
         cs.load('spikes_square', spikes=[])
+
+        spc = {clu: spikes_per_cluster[clu][::2] for clu in clusters}
+        cs.update_spikes_per_cluster(spc)
 
 
 def test_cluster_store_management():
