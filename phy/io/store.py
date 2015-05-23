@@ -49,14 +49,6 @@ def _file_cluster_id(path):
     return int(op.splitext(op.basename(path))[0])
 
 
-def _empty_values(values, flatten=None, return_spikes=None):
-    if flatten is False:
-        return {}
-    else:
-        return (values if not return_spikes else
-                (values, np.array([], dtype=np.int64)))
-
-
 #------------------------------------------------------------------------------
 # Memory store
 #------------------------------------------------------------------------------
@@ -352,10 +344,6 @@ class StoreItem(object):
     def load_spikes(self, spikes, name):
         """Load data from an array of spikes."""
         raise NotImplementedError()
-
-    def empty_values(self, name):
-        """Return an empty array when the cluster list is empty."""
-        return np.array([])
 
     def on_merge(self, up):
         """Called when a new merge occurs.
