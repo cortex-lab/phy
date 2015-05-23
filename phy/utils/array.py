@@ -454,17 +454,22 @@ def _flatten_per_cluster(arrs, spc=None):
         assert set(clusters) <= set(spc)
 
     # First case: scalar.
-    if clusters and not isinstance(arrs[clusters[0]], (np.ndarray, tuple)):
+    if clusters and not isinstance(arrs[clusters[0]], (np.ndarray,
+                                                       list,
+                                                       tuple)):
         return np.array([arrs[cluster] for cluster in clusters])
 
     def _spikes_clusters(cluster, res):
         if isinstance(res, tuple) and len(res) == 2:
             arr, spk = res
+            arr = _as_array(arr)
             assert arr.shape[0] == len(spk)
             return arr, spk
         else:
             return res, spc[cluster]
 
+    arrs = {cluster: _spikes_clusters(cluster, arr)
+            for cluster, arr in arrs.items()}
     spc = {cluster: spk for cluster, (_, spk) in arrs.items()}
     arrays = {cluster: arr for cluster, (arr, _) in arrs.items()}
     return _concatenate_per_cluster_arrays(spc, arrays)

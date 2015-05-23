@@ -300,6 +300,21 @@ def test_flatten_per_cluster():
     arrs = {2: 20, 3: 30, 5: 50}
     ac(_flatten_per_cluster(arrs), [20, 30, 50])
 
+    spc = {2: [2, 22],
+           3: [13],
+           5: [5, 15, 25]}
+
+    arrs = {2: [102, 122],
+            3: [113],
+            5: [105, 115, 125]}
+    ac(_flatten_per_cluster(arrs, spc), [102, 105, 113, 115, 122, 125])
+
+    # Do not return all spikes.
+    arrs = {2: ([102, 122], [2, 22]),
+            3: ([], []),
+            5: ([115, 125], [15, 25])}
+    ac(_flatten_per_cluster(arrs, spc), [102, 115, 122, 125])
+
 
 #------------------------------------------------------------------------------
 # Test chunking
