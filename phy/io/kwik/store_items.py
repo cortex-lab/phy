@@ -25,6 +25,13 @@ from ..store import StoreItem
 # Store items
 #------------------------------------------------------------------------------
 
+def _default_array(shape, value=0, n_spikes=None, dtype=np.float32):
+    shape = (n_spikes,) + shape[1:]
+    out = np.empty(shape, dtype=dtype)
+    out.fill(value)
+    return out
+
+
 class FeatureMasks(StoreItem):
     """Store all features and masks of all clusters."""
     name = 'features and masks'
@@ -202,8 +209,10 @@ class FeatureMasks(StoreItem):
         if data is not None:
             return data[spikes]
         # Default masks and features.
-        shape = (len(spikes),) + getattr(self, name + '_shape')[1:]
-        return np.zeros(shape, dtype=np.float32)
+        return _default_array(getattr(self, name + '_shape'),
+                              value=0. if name == 'features' else 1.,
+                              n_spikes=len(spikes),
+                              )
 
     def on_merge(self, up):
         """Create the cluster store files of the merged cluster
@@ -338,6 +347,10 @@ class Waveforms(StoreItem):
     def load_waveforms_spikes(self, cluster):
         return self.disk_store.load(cluster, 'waveforms_spikes', np.int64)
 
+    @property
+    def shape(self):
+        return (-1, self.n_samples, self.n_channels)
+
     def load(self, cluster, name='waveforms'):
         """Load features or masks for a cluster.
 
@@ -347,9 +360,8 @@ class Waveforms(StoreItem):
         """
         assert name == 'waveforms'
         dtype = np.float32
-        shape = (-1, self.n_samples, self.n_channels)
         if self.disk_store:
-            data = self.disk_store.load(cluster, name, dtype, shape)
+            data = self.disk_store.load(cluster, name, dtype, self.shape)
             if data is not None:
                 # Find the corresponding spikes.
                 spikes = self.load_waveforms_spikes(cluster)
@@ -366,6 +378,8 @@ class Waveforms(StoreItem):
         data = getattr(self.model, name)
         if data is not None:
             return data[spikes]
+        # Default waveforms.
+        return _default_array(self.shape, value=0., n_spikes=len(spikes))
 
 
 class ClusterStatistics(StoreItem):
