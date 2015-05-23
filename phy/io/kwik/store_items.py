@@ -18,7 +18,7 @@ from ...utils.array import (_index_of,
                             _spikes_per_cluster,
                             _concatenate_per_cluster_arrays,
                             )
-from ..store import StoreItem
+from ..store import ClusterStore, StoreItem
 
 
 #------------------------------------------------------------------------------
@@ -467,3 +467,35 @@ class ClusterStatistics(StoreItem):
 
     def is_consistent(self, cluster, spikes):
         return cluster in self.memory_store
+
+
+#------------------------------------------------------------------------------
+# Store creation
+#------------------------------------------------------------------------------
+
+def create_store(model,
+                 path=None,
+                 spikes_per_cluster=None,
+                 features_masks_chunk_size=100000,
+                 waveforms_n_spikes_max=None,
+                 waveforms_excerpt_size=None,
+                 ):
+    """Create a cluster store for a model."""
+    cluster_store = ClusterStore(model=model,
+                                 spikes_per_cluster=spikes_per_cluster,
+                                 path=path,
+                                 )
+
+    # Create the FeatureMasks store item.
+    # chunk_size is the number of spikes to load at once from
+    # the features_masks array.
+    cluster_store.register_item(FeatureMasks,
+                                chunk_size=features_masks_chunk_size,
+                                )
+    cluster_store.register_item(Waveforms,
+                                n_spikes_max=waveforms_n_spikes_max,
+                                excerpt_size=waveforms_excerpt_size,
+                                )
+    cluster_store.register_item(ClusterStatistics)
+
+    return cluster_store

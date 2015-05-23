@@ -13,9 +13,8 @@ from ....utils.array import _spikes_per_cluster
 from ....utils.tempdir import TemporaryDirectory
 from ..model import (KwikModel,
                      )
-from ...store import ClusterStore
 from ..mock import create_mock_kwik
-from ..store_items import FeatureMasks, Waveforms, ClusterStatistics
+from ..store_items import create_store
 
 
 #------------------------------------------------------------------------------
@@ -48,24 +47,20 @@ def test_kwik_store():
         clusters = sorted(spc.keys())
 
         # We initialize the ClusterStore.
-        cs = ClusterStore(model=model,
+        cs = create_store(model,
                           path=tempdir,
                           spikes_per_cluster=spc,
+                          features_masks_chunk_size=15,
+                          waveforms_n_spikes_max=5,
+                          waveforms_excerpt_size=2,
                           )
-
-        cs.register_item(FeatureMasks, chunk_size=15)
-        cs.register_item(Waveforms,
-                         n_spikes_max=5,
-                         excerpt_size=2,
-                         )
-        stats = cs.register_item(ClusterStatistics)
 
         # We add a custom statistic function.
         def mean_features_bis(cluster):
             fet = cs.features(cluster)
             cs.memory_store.store(cluster, mean_features_bis=fet.mean(axis=0))
 
-        stats.add('mean_features_bis', mean_features_bis)
+        cs.items['statistics'].add('mean_features_bis', mean_features_bis)
         cs.register_field('mean_features_bis', 'statistics')
 
         # Now we generate the store.
