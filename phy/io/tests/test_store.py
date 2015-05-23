@@ -291,9 +291,6 @@ def test_cluster_store_load():
         cs.load('spikes_square', clusters=[])
         cs.load('spikes_square', spikes=[])
 
-        spc = {clu: spikes_per_cluster[clu][::2] for clu in clusters}
-        cs.update_spikes_per_cluster(spc)
-
 
 def test_cluster_store_management():
     with TemporaryDirectory() as tempdir:
