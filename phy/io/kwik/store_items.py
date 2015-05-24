@@ -346,7 +346,7 @@ class Waveforms(VariableSizeItem):
     def store(self, cluster):
         # NOTE: make sure to erase old spikes for that cluster.
         # Typical case merge, undo, different merge.
-        spikes = self._subset_spikes_cluster(cluster, force=False)
+        spikes = self._subset_spikes_cluster(cluster, force=True)
         waveforms = self.model.waveforms[spikes]
         self.disk_store.store(cluster,
                               waveforms=waveforms.astype(np.float32),

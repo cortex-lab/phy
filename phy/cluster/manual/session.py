@@ -160,9 +160,10 @@ class Session(EventEmitter):
         clusters = list(clusters)
         if len(clusters) <= 1:
             return
-        info("Merge clusters {}.".format(str(clusters)))
         self._is_dirty = True
         up = self.clustering.merge(clusters)
+        info("Merge clusters {} to {}.".format(str(clusters),
+                                               str(up.added[0])))
         self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
         return up

@@ -163,6 +163,10 @@ def test_session_clustering():
         session.undo()
         for cluster in clusters:
             _check_arrays(cluster, spikes=spc[cluster])
+        # Another merge.
+        clusters = session.cluster_ids[1:5]
+        up = session.merge(clusters)
+        _check_arrays(up.added[0], spikes=up.spike_ids)
 
         # Move a cluster to a group.
         cluster = session.cluster_ids[0]
