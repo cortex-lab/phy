@@ -4,7 +4,7 @@
 
 Usage:
 
-    phy cluster manual /path/to/myfile.kwik [-i]
+    phy cluster-manual /path/to/myfile.kwik [-i]
 
 Options:
 
@@ -86,14 +86,14 @@ def main():
         print("phy v{}".format(phy.__version__))
         return 0
 
-    if len(args) <= 3 or args[1] != 'cluster' or args[2] != 'manual':
-        print("Only the `phy cluster manual [-i] myfile.kwik` command "
+    if len(args) <= 2 or args[1] != 'cluster-manual':
+        print("Only the `phy cluster-manual [-i] myfile.kwik` command "
               "is currently supported.")
         return 1
 
     profile = _pop(args, '-p', False)
 
-    args = args[3:]
+    args = args[2:]
 
     print("ClusterManualGUI")
 
