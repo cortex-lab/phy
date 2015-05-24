@@ -425,7 +425,7 @@ def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub,
                                     _all_spikes)
     assert np.all(np.in1d(spikes_sub, _all_spikes))
 
-    for cluster in sorted(spikes_per_cluster):
+    for cluster in sorted(arrays):
         spikes_c = _as_array(spikes_per_cluster[cluster])
         array = _as_array(arrays[cluster])
         assert spikes_sub.dtype == spikes_c.dtype

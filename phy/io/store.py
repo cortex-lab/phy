@@ -17,7 +17,6 @@ import numpy as np
 
 from ..utils._types import _as_int, _is_integer, _is_array_like
 from ..utils.array import (_concatenate_per_cluster_arrays,
-                           _subset_spikes_per_cluster,
                            )
 from ..utils.event import ProgressReporter
 from ..utils.logging import debug, info
@@ -301,7 +300,7 @@ class StoreItem(object):
         self._shapes = {}
 
     def empty_values(self, name):
-        return _default_array(self._shapes[name], value=0.)
+        return _default_array(self._shapes.get(name, (-1,)), value=0.)
 
     @property
     def progress_reporter(self):
@@ -364,7 +363,7 @@ class StoreItem(object):
         raise NotImplementedError()
 
     def _concat(self, arrays):
-        """Convvert a `{cluster: array}` dictionary into a single array."""
+        """Convert a `{cluster: array}` dictionary into a single array."""
         return _concatenate_per_cluster_arrays(self._spikes_per_cluster,
                                                arrays)
 
@@ -430,16 +429,11 @@ class FixedSizeItem(StoreItem):
 
 class VariableSizeItem(StoreItem):
     """Per-cluster data."""
-    def load_multi(self, clusters, name, spikes=None):
+    def load_multi(self, clusters, name):
         if not len(clusters):
             return self.empty_values(name)
         arrays = {cluster: self.load(cluster, name)
                   for cluster in clusters}
-        if spikes is not None:
-            return _subset_spikes_per_cluster(self._spikes_per_cluster,
-                                              arrays,
-                                              spikes,
-                                              )
         return self._concat(arrays)
 
 

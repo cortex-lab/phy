@@ -15,8 +15,13 @@ from numpy.testing import assert_allclose as ac
 
 from ...utils import Bunch, _spikes_per_cluster
 from ...utils.tempdir import TemporaryDirectory
-from ..store import (_load_ndarray, MemoryStore, DiskStore,
-                     ClusterStore, StoreItem)
+from ..store import (_load_ndarray,
+                     MemoryStore,
+                     DiskStore,
+                     ClusterStore,
+                     VariableSizeItem,
+                     FixedSizeItem,
+                     )
 
 
 #------------------------------------------------------------------------------
@@ -158,7 +163,7 @@ def test_cluster_store_1():
 
         # We create a n_spikes item to be stored in memory,
         # and we define how to generate it for a given cluster.
-        class MyItem(StoreItem):
+        class MyItem(FixedSizeItem):
             name = 'my item'
             fields = ['n_spikes']
 
@@ -168,10 +173,6 @@ def test_cluster_store_1():
 
             def load(self, cluster, name):
                 return self.memory_store.load(cluster, name)
-
-            def load_multi(self, clusters, name):
-                return np.array([self.load(cluster, name)
-                                 for cluster in clusters], dtype=np.int64)
 
             def on_cluster(self, up):
                 if up.description == 'merge':
@@ -228,7 +229,7 @@ def test_cluster_store_multi():
 
     cs = ClusterStore(spikes_per_cluster={0: [0, 2], 1: [1, 3, 4]})
 
-    class MyItem(StoreItem):
+    class MyItem(FixedSizeItem):
         name = 'my item'
         fields = ['d', 'm']
 
@@ -238,10 +239,6 @@ def test_cluster_store_multi():
 
         def load(self, cluster, name):
             return self.memory_store.load(cluster, name)
-
-        def load_multi(self, clusters, name):
-            return np.array([self.load(cluster, name)
-                             for cluster in clusters], dtype=np.int64)
 
     cs.register_item(MyItem)
 
@@ -277,7 +274,7 @@ def test_cluster_store_load():
 
         # We create a n_spikes item to be stored in memory,
         # and we define how to generate it for a given cluster.
-        class MyItem(StoreItem):
+        class MyItem(VariableSizeItem):
             name = 'my item'
             fields = ['spikes_square']
 
@@ -292,11 +289,6 @@ def test_cluster_store_load():
             def load_spikes(self, spikes, name):
                 return (spikes ** 2).astype(np.int32)
 
-            def load_multi(self, clusters, name):
-                arrays = {cluster: self.load(cluster, name)
-                          for cluster in clusters}
-                return self._concat(arrays)
-
         cs.register_item(MyItem)
         cs.generate()
 
@@ -306,13 +298,14 @@ def test_cluster_store_load():
         ae(cs.load('spikes_square', clusters=[cluster]), spikes ** 2)
 
         # Some spikes in several clusters.
+        clusters = [2, 3, 5]
         spikes = np.concatenate([spikes_per_cluster[cl][::3]
-                                 for cl in [2, 3, 5]])
+                                 for cl in clusters])
         ae(cs.load('spikes_square', spikes=spikes), np.unique(spikes) ** 2)
 
         # Empty selection.
-        cs.load('spikes_square', clusters=[])
-        cs.load('spikes_square', spikes=[])
+        assert len(cs.load('spikes_square', clusters=[])) == 0
+        assert len(cs.load('spikes_square', spikes=[])) == 0
 
 
 def test_cluster_store_management():
@@ -339,7 +332,7 @@ def test_cluster_store_management():
 
         # We create a n_spikes item to be stored in memory,
         # and we define how to generate it for a given cluster.
-        class MyItem(StoreItem):
+        class MyItem(VariableSizeItem):
             name = 'my item'
             fields = ['spikes_square']
 
@@ -360,11 +353,6 @@ def test_cluster_store_management():
                     return False
                 expected = (spikes ** 2).astype(np.int32)
                 return np.all(data == expected)
-
-            def load_multi(self, clusters, name):
-                arrays = {cluster: self.load(cluster, name)
-                          for cluster in clusters}
-                return self._concat(arrays)
 
         cs.register_item(MyItem)
         cs.update_spikes_per_cluster(spikes_per_cluster)
