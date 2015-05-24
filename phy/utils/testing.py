@@ -9,7 +9,10 @@
 import sys
 import time
 from contextlib import contextmanager
+from timeit import default_timer
+
 from ..ext.six import StringIO
+from .logging import info
 
 
 #------------------------------------------------------------------------------
@@ -25,6 +28,14 @@ def captured_output():
         yield sys.stdout, sys.stderr
     finally:
         sys.stdout, sys.stderr = old_out, old_err
+
+
+@contextmanager
+def benchmark(name='', repeats=1):
+    start = default_timer()
+    yield
+    duration = (default_timer() - start) * 1000.
+    info("{} took {:.6f}ms.".format(name, duration / repeats))
 
 
 #------------------------------------------------------------------------------

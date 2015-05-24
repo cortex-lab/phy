@@ -15,12 +15,35 @@ from numpy.testing import assert_allclose as ac
 
 from ...utils import Bunch, _spikes_per_cluster
 from ...utils.tempdir import TemporaryDirectory
-from ..store import MemoryStore, DiskStore, ClusterStore, StoreItem
+from ..store import (_load_ndarray, MemoryStore, DiskStore,
+                     ClusterStore, StoreItem)
 
 
 #------------------------------------------------------------------------------
 # Test data stores
 #------------------------------------------------------------------------------
+
+def _test_load_ndarray(memmap=None):
+    n, m = 10000, 100
+    dtype = np.float32
+    arr = np.random.randn(n, m).astype(dtype)
+    with TemporaryDirectory() as tmpdir:
+        path = op.join(tmpdir, 'test')
+        with open(path, 'wb') as f:
+            arr.tofile(f)
+        with open(path, 'rb') as f:
+            arr_m = _load_ndarray(f, dtype=dtype,
+                                  shape=(n, m), memmap=memmap)
+        ae(arr, arr_m)
+
+
+def test_load_ndarray_nomemmap():
+    _test_load_ndarray(False)
+
+
+def test_load_ndarray_memmap():
+    _test_load_ndarray(True)
+
 
 def test_memory_store():
     ms = MemoryStore()
