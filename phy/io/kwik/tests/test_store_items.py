@@ -150,3 +150,18 @@ def test_kwik_store():
                     (n_clusters, nc))
             assert (cs.load('mean_probe_position', clusters=clusters).shape ==
                     (n_clusters, 2))
+
+        # Slice spikes.
+        spikes = slice(None, None, 3)
+
+        # Features.
+        fet_expected = model.features[spikes].reshape((-1, nc, nf))
+        ae(cs.load('features', spikes=spikes), fet_expected)
+
+        # Masks.
+        masks_expected = model.masks[spikes]
+        ae(cs.load('masks', spikes=spikes), masks_expected)
+
+        # Waveforms.
+        waveforms_expected = model.waveforms[spikes]
+        ae(cs.load('waveforms', spikes=spikes), waveforms_expected)

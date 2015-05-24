@@ -18,7 +18,7 @@ from ...utils.array import (_index_of,
                             _spikes_per_cluster,
                             _concatenate_per_cluster_arrays,
                             )
-from ..store import ClusterStore, StoreItem, FixedSizeItem, VariableSizeItem
+from ..store import ClusterStore, FixedSizeItem, VariableSizeItem
 
 
 #------------------------------------------------------------------------------
@@ -209,7 +209,7 @@ class FeatureMasks(VariableSizeItem):
         assert name in ('features', 'masks')
         shape = self._shapes[name]
         data = getattr(self.model, name)
-        if data is not None and len(spikes):
+        if data is not None and (isinstance(spikes, slice) or len(spikes)):
             out = data[spikes]
         # Default masks and features.
         else:
@@ -381,7 +381,7 @@ class Waveforms(VariableSizeItem):
         assert name == 'waveforms'
         data = getattr(self.model, name)
         shape = self._shapes[name]
-        if data is not None and len(spikes):
+        if data is not None and (isinstance(spikes, slice) or len(spikes)):
             return data[spikes]
         # Default waveforms.
         return _default_array(shape, value=0., n_spikes=len(spikes))

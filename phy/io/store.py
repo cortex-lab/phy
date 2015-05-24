@@ -13,7 +13,7 @@ import re
 
 import numpy as np
 
-from ..utils._types import _as_int, _is_integer
+from ..utils._types import _as_int, _is_integer, _is_array_like
 from ..utils.logging import debug, info
 from ..utils.event import ProgressReporter
 from ..utils.array import _concatenate_per_cluster_arrays
@@ -656,10 +656,12 @@ class ClusterStore(object):
         # Spikes requested.
         if spikes is not None:
             assert clusters is None
-            spikes = np.unique(spikes)
+            if _is_array_like(spikes):
+                spikes = np.unique(spikes)
             out = item.load_spikes(spikes, name)
-            assert (isinstance(out, np.ndarray) and
-                    out.shape[0] == len(spikes))
+            assert isinstance(out, np.ndarray)
+            if _is_array_like(spikes):
+                assert out.shape[0] == len(spikes)
             return out
         # Clusters requested.
         elif clusters is not None:
