@@ -6,13 +6,22 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from .._utils import ClusterMetadataUpdater
+from ....utils.logging import set_level, debug
+from .._utils import ClusterMetadataUpdater, UpdateInfo
 from ....io.kwik.model import ClusterMetadata
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
+
+def setup():
+    set_level('debug')
+
+
+def teardown():
+    set_level('info')
+
 
 def test_metadata_history():
     """Test ClusterMetadataUpdater history."""
@@ -102,3 +111,10 @@ def test_metadata_history():
 
     info = meta.undo()
     assert info is None
+
+
+def test_update_info():
+    debug(UpdateInfo(deleted=range(5), added=[5], description='merge'))
+    debug(UpdateInfo(deleted=range(5), added=[5], description='assign'))
+    debug(UpdateInfo(deleted=range(5), added=[5],
+                     description='assign', history='undo'))
