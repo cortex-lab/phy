@@ -356,7 +356,7 @@ def test_session_statistics():
         session = _start_manual_clustering(kwik_path=kwik_path,
                                            tempdir=tempdir)
 
-        @session.register_statistic
+        @session.register_statistic(shape=(-1,))
         def n_spikes(cluster):
             return session.clustering.cluster_counts.get(cluster, 0)
 
@@ -367,7 +367,7 @@ def test_session_statistics():
             for clu in session.cluster_ids:
                 assert store.n_spikes(clu) == store.features(clu).shape[0]
 
-        assert ('n_spikes', 'memory') in stats.fields
+        assert 'n_spikes' in stats.fields
         _check()
 
         # Merge the clusters and check that the statistics has been

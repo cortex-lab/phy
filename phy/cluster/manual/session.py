@@ -238,7 +238,7 @@ class Session(EventEmitter):
     # Customization methods
     # -------------------------------------------------------------------------
 
-    def register_statistic(self, shape):
+    def register_statistic(self, shape=(-1,)):
         """Decorator registering a custom cluster statistic.
 
         Parameters
@@ -269,7 +269,7 @@ class Session(EventEmitter):
             stats = self.cluster_store.items['statistics']
             stats.add(name, _wrapper, shape)
             # Register it in the global cluster store.
-            self.cluster_store.register_field(name, 'memory')
+            self.cluster_store.register_field(name, 'statistics')
             # Compute it on all existing clusters.
             stats.store_all(name=name, mode='force')
             info("Registered statistic `{}`.".format(name))
