@@ -219,6 +219,13 @@ class FeatureMasks(VariableSizeItem):
                                  )
         return out.reshape(shape)
 
+    def load_multi(self, clusters, name, spikes=None):
+        if not len(clusters):
+            return self.empty_values(name)
+        arrays = {cluster: self.load(cluster, name)
+                  for cluster in clusters}
+        return self._concat(arrays)
+
     def on_merge(self, up):
         """Create the cluster store files of the merged cluster
         from the files of the old clusters.
