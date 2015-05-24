@@ -335,13 +335,14 @@ class Waveforms(VariableSizeItem):
         return _spikes_per_cluster(spikes, self.model.spike_clusters[spikes])
 
     def store(self, cluster):
-        # spikes = self._selector.subset_spikes_clusters([cluster])
-        spikes = self.spikes_per_cluster[cluster]
+        spikes = self._selector.subset_spikes_clusters([cluster])
         waveforms = self.model.waveforms[spikes]
         self.disk_store.store(cluster,
                               waveforms=waveforms.astype(np.float32),
-                              # waveforms_spikes=spikes.astype(np.int64),
                               )
+        # Persist the new _spikes_per_cluster array on disk.
+        self._spikes_per_cluster[cluster] = spikes
+        self.disk_store.save_file('waveforms_spikes', self._spikes_per_cluster)
 
     def is_consistent(self, cluster, spikes):
         """Return whether the waveforms and spikes match."""
@@ -385,17 +386,6 @@ class Waveforms(VariableSizeItem):
             return data[spikes]
         # Default waveforms.
         return _default_array(shape, value=0., n_spikes=len(spikes))
-
-    def on_assign(self, up):
-        """Update the _spikes_per_cluster selection."""
-        # Take a selection of the spikes in the new clusters.
-        spikes = self._selector.subset_spikes_clusters(up.added)
-        # NOTE: model.spike_clusters need to be in sync (pointer array).
-        spc = _spikes_per_cluster(spikes, self.model.spike_clusters[spikes])
-        # Update _spikes_per_cluster.
-        self._spikes_per_cluster.update(spc)
-        # Persist the new _spikes_per_cluster array on disk.
-        self.disk_store.save_file('waveforms_spikes', self._spikes_per_cluster)
 
 
 class ClusterStatistics(FixedSizeItem):
