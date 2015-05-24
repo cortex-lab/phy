@@ -316,33 +316,39 @@ class Waveforms(VariableSizeItem):
         self.n_spikes = self.model.n_spikes
         self.n_samples = self.model.n_samples_waveforms
         self._shapes['waveforms'] = (-1, self.n_samples, self.n_channels)
-
-        # Get or create the subset spikes per cluster dictionary.
-        spc = self.disk_store.load_file('waveforms_spikes')
-        if spc is None:
-            spc = self._subset_spikes()
-            self.disk_store.save_file('waveforms_spikes', spc)
-        self._spikes_per_cluster = spc
-
-    def _subset_spikes(self):
-        """Create a new `spikes_per_cluster` array with the spikes subset."""
         self._selector = Selector(self.model.spike_clusters,
                                   n_spikes_max=self.n_spikes_max,
                                   excerpt_size=self.excerpt_size,
                                   )
+
+        # Get or create the subset spikes per cluster dictionary.
+        spc = self.disk_store.load_file('waveforms_spikes')
+        if spc is None:
+            spc = self._create_spikes_per_cluster()
+            self.disk_store.save_file('waveforms_spikes', spc)
+        self._spikes_per_cluster = spc
+
+    def _create_spikes_per_cluster(self):
+        """Create a new `spikes_per_cluster` array with the spikes subset."""
         # Take a selection of spikes.
-        spikes = self._selector.subset_spikes_clusters(self.cluster_ids)
+        spikes = self._selector.subset_spikes_clusters(self.model.cluster_ids)
         return _spikes_per_cluster(spikes, self.model.spike_clusters[spikes])
 
+    def _subset_spikes_cluster(self, cluster):
+        if cluster not in self._spikes_per_cluster:
+            spikes = self._selector.subset_spikes_clusters([cluster])
+            # Persist the new _spikes_per_cluster array on disk.
+            self._spikes_per_cluster[cluster] = spikes
+            self.disk_store.save_file('waveforms_spikes',
+                                      self._spikes_per_cluster)
+        return self._spikes_per_cluster[cluster]
+
     def store(self, cluster):
-        spikes = self._selector.subset_spikes_clusters([cluster])
+        spikes = self._subset_spikes_cluster(cluster)
         waveforms = self.model.waveforms[spikes]
         self.disk_store.store(cluster,
                               waveforms=waveforms.astype(np.float32),
                               )
-        # Persist the new _spikes_per_cluster array on disk.
-        self._spikes_per_cluster[cluster] = spikes
-        self.disk_store.save_file('waveforms_spikes', self._spikes_per_cluster)
 
     def is_consistent(self, cluster, spikes):
         """Return whether the waveforms and spikes match."""
@@ -374,7 +380,7 @@ class Waveforms(VariableSizeItem):
                 return data
         # Fallback to load_spikes if the data could not be obtained from
         # the store.
-        spikes = self.spikes_per_cluster[cluster]
+        spikes = self._subset_spikes_cluster(cluster)
         return self.load_spikes(spikes, name)
 
     def load_spikes(self, spikes, name):

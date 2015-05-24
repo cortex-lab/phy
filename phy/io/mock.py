@@ -10,6 +10,7 @@ import numpy as np
 import numpy.random as nr
 
 from ..utils._color import _random_color
+from ..utils.array import _unique
 from .base_model import BaseModel, ClusterMetadata
 from ..electrode.mea import MEA, staggered_positions
 
@@ -129,6 +130,10 @@ class MockModel(BaseModel):
     @property
     def spike_clusters(self):
         return self._spike_clusters
+
+    @property
+    def cluster_ids(self):
+        return _unique(self._spike_clusters)
 
     @property
     def cluster_metadata(self):
