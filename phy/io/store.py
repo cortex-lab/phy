@@ -16,9 +16,11 @@ import re
 import numpy as np
 
 from ..utils._types import _as_int, _is_integer, _is_array_like
-from ..utils.logging import debug, info
+from ..utils.array import (_concatenate_per_cluster_arrays,
+                           _subset_spikes_per_cluster,
+                           )
 from ..utils.event import ProgressReporter
-from ..utils.array import _concatenate_per_cluster_arrays
+from ..utils.logging import debug, info
 from ..ext.six import string_types
 from ..ext.six.moves import cPickle
 
@@ -418,7 +420,7 @@ class StoreItem(object):
 
 
 class FixedSizeItem(StoreItem):
-
+    """Per-spike data."""
     def load_multi(self, clusters, name):
         if not len(clusters):
             return self.empty_values(name)
@@ -427,12 +429,17 @@ class FixedSizeItem(StoreItem):
 
 
 class VariableSizeItem(StoreItem):
-
-    def load_multi(self, clusters, name):
+    """Per-cluster data."""
+    def load_multi(self, clusters, name, spikes=None):
         if not len(clusters):
             return self.empty_values(name)
         arrays = {cluster: self.load(cluster, name)
                   for cluster in clusters}
+        if spikes is not None:
+            return _subset_spikes_per_cluster(self._spikes_per_cluster,
+                                              arrays,
+                                              spikes,
+                                              )
         return self._concat(arrays)
 
 
@@ -671,8 +678,18 @@ class ClusterStore(object):
     def load(self, name, clusters=None, spikes=None):
         """Load some data for a number of clusters and spikes."""
         item = self._item_per_field[name]
+        # Clusters requested.
+        if clusters is not None:
+            if _is_integer(clusters):
+                # Single cluster case.
+                return item.load(clusters, name)
+            clusters = np.unique(clusters)
+            if spikes is None:
+                return item.load_multi(clusters, name)
+            else:
+                return item.load_multi(clusters, name, spikes=spikes)
         # Spikes requested.
-        if spikes is not None:
+        elif spikes is not None:
             assert clusters is None
             if _is_array_like(spikes):
                 spikes = np.unique(spikes)
@@ -681,10 +698,3 @@ class ClusterStore(object):
             if _is_array_like(spikes):
                 assert out.shape[0] == len(spikes)
             return out
-        # Clusters requested.
-        elif clusters is not None:
-            if _is_integer(clusters):
-                # Single cluster case.
-                return item.load(clusters, name)
-            clusters = np.unique(clusters)
-            return item.load_multi(clusters, name)
