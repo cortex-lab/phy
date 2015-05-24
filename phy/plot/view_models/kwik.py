@@ -8,10 +8,7 @@
 
 import numpy as np
 
-from ...utils.array import (_concatenate_per_cluster_arrays,
-                            _spikes_in_clusters,
-                            _index_of,
-                            )
+from ...utils.array import _spikes_in_clusters
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from ..ccg import CorrelogramView
 from ..features import FeatureView

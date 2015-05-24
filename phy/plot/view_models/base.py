@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from ...utils.array import _unique, _spikes_in_clusters
+from ...utils.array import _unique
 from ...utils.selector import Selector
 from ...utils._misc import _show_shortcuts
 from ...utils import _as_list

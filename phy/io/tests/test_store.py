@@ -244,7 +244,6 @@ def test_cluster_store_load():
         spike_clusters = np.random.randint(size=n_spikes,
                                            low=0, high=n_clusters)
         spikes_per_cluster = _spikes_per_cluster(spike_ids, spike_clusters)
-        clusters = sorted(spikes_per_cluster)
         model = {'spike_clusters': spike_clusters}
 
         # We initialize the ClusterStore.
