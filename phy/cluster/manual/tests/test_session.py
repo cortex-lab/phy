@@ -155,13 +155,14 @@ def test_session_clustering():
         _check_arrays(6, spikes=spikes)
 
         # Test merge-undo-different-merge combo.
+        spc = session.clustering.spikes_per_cluster.copy()
         clusters = session.cluster_ids[:3]
         up = session.merge(clusters)
         _check_arrays(up.added[0], spikes=up.spike_ids)
-
-        # session.undo()
-        # for cluster in clusters:
-        #     _check_arrays(cluster, clusters)
+        # Undo.
+        session.undo()
+        for cluster in clusters:
+            _check_arrays(cluster, spikes=spc[cluster])
 
         # Move a cluster to a group.
         cluster = session.cluster_ids[0]
