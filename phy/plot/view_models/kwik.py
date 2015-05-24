@@ -202,7 +202,7 @@ class FeatureViewModel(BaseViewModel):
         The first cluster is used currently.
 
         """
-        if cluster_ids is None and not len(cluster_ids):
+        if cluster_ids is None or not len(cluster_ids):
             return np.arange(len(self.model.channels[:3]))
         n_fet = self.model.n_features_per_channel
         score = self.store.mean_features(cluster_ids[0])
