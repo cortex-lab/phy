@@ -440,6 +440,110 @@ def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub,
     return spikes_per_cluster_subset, arrays_subset
 
 
+class PerClusterData(object):
+    def __init__(self,
+                 spike_ids=None, array=None, spike_clusters=None,
+                 spc=None, arrays=None):
+        if (array is not None and spike_ids is not None):
+            # From array to per-cluster arrays.
+            self._spike_ids = spike_ids
+            self._array = array
+            self._spike_clusters = spike_clusters
+            self._check_array()
+            self._split()
+            self._check_dict()
+        elif (arrays is not None and spc is not None):
+            # From per-cluster arrays to array.
+            self._spc = spc
+            self._arrays = arrays
+            self._check_dict()
+            self._concatenate()
+            self._check_array()
+        else:
+            raise ValueError()
+
+    @property
+    def spike_ids(self):
+        return self._spike_ids
+
+    @property
+    def spike_clusters(self):
+        return self._spike_clusters
+
+    @property
+    def array(self):
+        return self._array
+
+    @property
+    def arrays(self):
+        return self._arrays
+
+    @property
+    def spc(self):
+        return self._spc
+
+    @property
+    def cluster_ids(self):
+        return self._cluster_ids
+
+    def _check_dict(self):
+        assert set(self._arrays) == set(self._spc)
+        clusters = sorted(self._arrays)
+        n_0 = [len(self._spc[cluster]) for cluster in clusters]
+        n_1 = [len(self._arrays[cluster]) for cluster in clusters]
+        assert n_0 == n_1
+
+    def _check_array(self):
+        assert len(self._array) == len(self._spike_ids)
+        assert len(self._spike_clusters) == len(self._spike_ids)
+
+    def _concatenate(self):
+        if not self._cluster_ids:
+            self._array = np.array([])
+        # Concatenate all spikes to find the right insertion order.
+        spikes = np.concatenate([self._spc[cluster]
+                                 for cluster in self.cluster_ids])
+        idx = np.argsort(spikes)
+        # NOTE: concatenate all arrays along the first axis, because we assume
+        # that the first axis represents the spikes.
+        arrays = np.concatenate([_as_array(self._arrays[cluster])
+                                 for cluster in self.cluster_ids])
+        self._spike_ids = np.sort(spikes)
+        self._array = arrays[idx, ...]
+
+    def _split(self):
+        self._spc = _spikes_per_cluster(self._spike_ids,
+                                        self._spike_clusters)
+        self._cluster_ids = sorted(self._spc)
+        self._arrays = {}
+        for cluster in sorted(self._cluster_ids):
+            spk = self._spc[cluster]
+            spk_rel = _index_of(spk, self._spike_ids)
+            self._arrays[cluster] = self._array[spk_rel]
+
+    def subset(self, clusters=None, spc=None, spike_ids=None):
+        if clusters is not None:
+            spc_s = {clu: self._spc[clu] for clu in clusters}
+            arrays_s = {clu: self._arrays[clu] for clu in clusters}
+            return PerClusterData(spc=spc_s, arrays_s=arrays_s)
+        elif spc is not None:
+            clusters = sorted(spc)
+            assert set(clusters) <= set(self._cluster_ids)
+            arrays_s = {}
+            for cluster in clusters:
+                spk_rel = _index_of(spc[cluster], self._spc[cluster])
+                arrays_s[cluster] = self._arrays[spk_rel]
+            return PerClusterData(spc=spc, arrays_s=arrays_s)
+        elif spike_ids is not None:
+            spike_ids_s = _index_of(spike_ids, self._spike_ids)
+            array_s = self._array[spike_ids_s]
+            spike_clusters_s = self._spike_clusters[spike_ids_s]
+            return PerClusterData(spike_ids=spike_ids_s,
+                                  array=array_s,
+                                  spike_clusters=spike_clusters_s,
+                                  )
+
+
 # -----------------------------------------------------------------------------
 # PartialArray
 # -----------------------------------------------------------------------------
