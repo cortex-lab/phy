@@ -61,7 +61,10 @@ def test_kwik_store():
             fet = cs.features(cluster)
             cs.memory_store.store(cluster, mean_features_bis=fet.mean(axis=0))
 
-        cs.items['statistics'].add('mean_features_bis', mean_features_bis)
+        cs.items['statistics'].add('mean_features_bis',
+                                   mean_features_bis,
+                                   (-1, nc),
+                                   )
         cs.register_field('mean_features_bis', 'statistics')
 
         waveforms_item = cs.items['waveforms']

@@ -18,7 +18,7 @@ from ...utils.array import (_index_of,
                             _spikes_per_cluster,
                             _concatenate_per_cluster_arrays,
                             )
-from ..store import ClusterStore, StoreItem
+from ..store import ClusterStore, StoreItem, FixedSizeItem, VariableSizeItem
 
 
 #------------------------------------------------------------------------------
@@ -42,7 +42,7 @@ def _atleast_nd(arr, ndim):
         return arr[None, None, ...]
 
 
-class FeatureMasks(StoreItem):
+class FeatureMasks(VariableSizeItem):
     """Store all features and masks of all clusters."""
     name = 'features and masks'
     fields = ['features', 'masks']
@@ -58,6 +58,8 @@ class FeatureMasks(StoreItem):
         self.n_channels = len(self.model.channel_order)
         self.n_spikes = self.model.n_spikes
         self.n_chunks = self.n_spikes // self.chunk_size + 1
+        self._shapes['masks'] = (-1, self.n_channels)
+        self._shapes['features'] = (-1, self.n_channels, self.n_features)
 
     def _store(self,
                cluster,
@@ -183,20 +185,6 @@ class FeatureMasks(StoreItem):
 
         self._pr.set_complete()
 
-    @property
-    def masks_shape(self):
-        return (-1, self.n_channels)
-
-    @property
-    def features_shape(self):
-        return (-1, self.n_channels, self.n_features)
-
-    def empty_values(self, name):
-        # Default masks and features.
-        return _default_array(getattr(self, name + '_shape'),
-                              value=0. if name == 'features' else 1.,
-                              )
-
     def load(self, cluster, name):
         """Load features or masks for a cluster.
 
@@ -206,7 +194,7 @@ class FeatureMasks(StoreItem):
         """
         assert name in ('features', 'masks')
         dtype = np.float32
-        shape = getattr(self, name + '_shape')
+        shape = self._shapes[name]
         if self.disk_store:
             data = self.disk_store.load(cluster, name, dtype, shape)
             if data is not None:
@@ -219,7 +207,7 @@ class FeatureMasks(StoreItem):
     def load_spikes(self, spikes, name):
         """Load features or masks for an array of spikes."""
         assert name in ('features', 'masks')
-        shape = getattr(self, name + '_shape')
+        shape = self._shapes[name]
         data = getattr(self.model, name)
         if data is not None and len(spikes):
             out = data[spikes]
@@ -230,13 +218,6 @@ class FeatureMasks(StoreItem):
                                  n_spikes=len(spikes),
                                  )
         return out.reshape(shape)
-
-    def load_multi(self, clusters, name):
-        if not len(clusters):
-            return self.empty_values(name)
-        arrays = {cluster: self.load(cluster, name)
-                  for cluster in clusters}
-        return self._concat(arrays)
 
     def on_merge(self, up):
         """Create the cluster store files of the merged cluster
@@ -320,7 +301,7 @@ class FeatureMasks(StoreItem):
                 self.disk_store.store(new, **{name: concat})
 
 
-class Waveforms(StoreItem):
+class Waveforms(VariableSizeItem):
     """A cluster store item that manages the waveforms of all clusters."""
     name = 'waveforms'
     fields = ['waveforms']
@@ -334,6 +315,7 @@ class Waveforms(StoreItem):
         self.n_channels = len(self.model.channel_order)
         self.n_spikes = self.model.n_spikes
         self.n_samples = self.model.n_samples_waveforms
+        self._shapes['waveforms'] = (-1, self.n_samples, self.n_channels)
 
         # Get or create the subset spikes per cluster dictionary.
         spc = self.disk_store.load_file('waveforms_spikes')
@@ -372,14 +354,6 @@ class Waveforms(StoreItem):
             return False
         return True
 
-    @property
-    def shape(self):
-        return (-1, self.n_samples, self.n_channels)
-
-    def empty_values(self, name):
-        # Default waveforms.
-        return _default_array(self.shape, value=0.)
-
     def load(self, cluster, name='waveforms'):
         """Load features or masks for a cluster.
 
@@ -390,7 +364,11 @@ class Waveforms(StoreItem):
         assert name == 'waveforms'
         dtype = np.float32
         if self.disk_store:
-            data = self.disk_store.load(cluster, name, dtype, self.shape)
+            data = self.disk_store.load(cluster,
+                                        name,
+                                        dtype,
+                                        self._shapes[name],
+                                        )
             if data is not None:
                 return data
         # Fallback to load_spikes if the data could not be obtained from
@@ -398,32 +376,26 @@ class Waveforms(StoreItem):
         spikes = self.spikes_per_cluster[cluster]
         return self.load_spikes(spikes, name)
 
-    def load_multi(self, clusters, name):
-        if not len(clusters):
-            return self.empty_values(name)
-        arrays = {cluster: self.load(cluster, name)
-                  for cluster in clusters}
-        return self._concat(arrays)
-
     def load_spikes(self, spikes, name):
         """Load features or masks for an array of spikes."""
         assert name == 'waveforms'
         data = getattr(self.model, name)
+        shape = self._shapes[name]
         if data is not None and len(spikes):
             return data[spikes]
         # Default waveforms.
-        return _default_array(self.shape, value=0., n_spikes=len(spikes))
+        return _default_array(shape, value=0., n_spikes=len(spikes))
 
 
-class ClusterStatistics(StoreItem):
+class ClusterStatistics(FixedSizeItem):
     """Manage cluster statistics."""
     name = 'statistics'
     fields = ['mean_masks',
-              'n_unmasked_channels',
-              'main_channels',
-              'mean_probe_position',
               'mean_features',
               'mean_waveforms',
+              'mean_probe_position',
+              'main_channels',
+              'n_unmasked_channels',
               ]
 
     def __init__(self, *args, **kwargs):
@@ -432,11 +404,20 @@ class ClusterStatistics(StoreItem):
         self.n_channels = len(self.model.channel_order)
         self.n_samples_waveforms = self.model.n_samples_waveforms
         self.n_features = self.model.n_features_per_channel
+        self._shapes = {
+            'mean_masks': (-1, self.n_channels),
+            'mean_features': (-1, self.n_channels, self.n_features),
+            'mean_waveforms': (-1, self.n_samples_waveforms, self.n_channels),
+            'mean_probe_position': (-1, 2),
+            'main_channels': (-1, self.n_channels),
+            'n_unmasked_channels': (-1,),
+        }
 
-    def add(self, name, func):
+    def add(self, name, func, shape):
         """Add a new statistics."""
         self.fields.append(name)
         self._funcs[name] = func
+        self._shapes[name] = shape
 
     def remove(self, name):
         """Remove a statistics."""
@@ -490,25 +471,8 @@ class ClusterStatistics(StoreItem):
             assert name in self._funcs
             self._funcs[name](cluster)
 
-    def empty_values(self, name):
-        shape = {
-            'mean_masks': (0, self.n_channels),
-            'mean_features': (0, self.n_channels, self.n_features),
-            'mean_waveforms': (0, self.n_samples_waveforms, self.n_channels),
-            'mean_probe_position': (0, 2),
-            'main_channels': (0, self.n_channels),
-        }.get(name, (0,))
-        # Default waveforms.
-        return _default_array(shape, value=0. if name != 'mean_masks' else 1.)
-
     def load(self, cluster, name):
         return self.memory_store.load(cluster, name)
-
-    def load_multi(self, clusters, name):
-        if not len(clusters):
-            return self.empty_values(name)
-        return np.array([self.load(cluster, name)
-                         for cluster in clusters])
 
     def is_consistent(self, cluster, spikes):
         return cluster in self.memory_store
