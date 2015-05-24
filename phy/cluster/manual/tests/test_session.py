@@ -154,9 +154,19 @@ def test_session_clustering():
         session.split(spikes)  # Create cluster 6 and more.
         _check_arrays(6, spikes=spikes)
 
+        # Test merge-undo-different-merge combo.
+        clusters = session.cluster_ids[:3]
+        up = session.merge(clusters)
+        _check_arrays(up.added[0], spikes=up.spike_ids)
+
+        # session.undo()
+        # for cluster in clusters:
+        #     _check_arrays(cluster, clusters)
+
         # Move a cluster to a group.
-        session.move([6], 2)
-        assert len(session.cluster_store.mean_probe_position(6)) == 2
+        cluster = session.cluster_ids[0]
+        session.move([cluster], 2)
+        assert len(session.cluster_store.mean_probe_position(cluster)) == 2
 
         # Save.
         spike_clusters_new = session.model.spike_clusters.copy()
@@ -174,7 +184,7 @@ def test_session_clustering():
         #  Check the cluster groups.
         clusters = session.clustering.cluster_ids
         groups = session.model.cluster_groups
-        assert groups[6] == 2
+        assert groups[cluster] == 2
 
 
 def test_session_multiple_clusterings():

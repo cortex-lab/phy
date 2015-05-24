@@ -334,8 +334,8 @@ class Waveforms(VariableSizeItem):
         spikes = self._selector.subset_spikes_clusters(self.model.cluster_ids)
         return _spikes_per_cluster(spikes, self.model.spike_clusters[spikes])
 
-    def _subset_spikes_cluster(self, cluster):
-        if cluster not in self._spikes_per_cluster:
+    def _subset_spikes_cluster(self, cluster, force=False):
+        if force or cluster not in self._spikes_per_cluster:
             spikes = self._selector.subset_spikes_clusters([cluster])
             # Persist the new _spikes_per_cluster array on disk.
             self._spikes_per_cluster[cluster] = spikes
@@ -344,7 +344,9 @@ class Waveforms(VariableSizeItem):
         return self._spikes_per_cluster[cluster]
 
     def store(self, cluster):
-        spikes = self._subset_spikes_cluster(cluster)
+        # NOTE: make sure to erase old spikes for that cluster.
+        # Typical case merge, undo, different merge.
+        spikes = self._subset_spikes_cluster(cluster, force=False)
         waveforms = self.model.waveforms[spikes]
         self.disk_store.store(cluster,
                               waveforms=waveforms.astype(np.float32),

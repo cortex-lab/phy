@@ -165,6 +165,7 @@ class Session(EventEmitter):
         up = self.clustering.merge(clusters)
         self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
+        return up
 
     def split(self, spikes):
         """Make a new cluster out of some spikes.
@@ -183,6 +184,7 @@ class Session(EventEmitter):
         up = self.clustering.split(spikes)
         self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
+        return up
 
     def move(self, clusters, group):
         """Move some clusters to a cluster group.
@@ -204,6 +206,7 @@ class Session(EventEmitter):
         # Extra UpdateInfo fields.
         # up.update(kwargs)
         self.emit('cluster', up=up)
+        return up
 
     def _undo_redo(self, up):
         if up:
@@ -216,11 +219,13 @@ class Session(EventEmitter):
         """Undo the last clustering action."""
         up = self._global_history.undo()
         self._undo_redo(up)
+        return up
 
     def redo(self):
         """Redo the last undone action."""
         up = self._global_history.redo()
         self._undo_redo(up)
+        return up
 
     # Properties
     # -------------------------------------------------------------------------

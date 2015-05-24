@@ -34,7 +34,7 @@ def update_info(**kwargs):
         description='',  # information about the update: 'merge', 'assign',
                          # or 'metadata_<name>'
         history=None,  # None, 'undo', or 'redo'
-        spikes=[],  # all spikes affected by the update
+        spike_ids=[],  # all spikes affected by the update
         added=[],  # new clusters
         deleted=[],  # deleted clusters
         descendants=[],  # pairs of (old_cluster, new_cluster)
