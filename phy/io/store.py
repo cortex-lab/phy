@@ -49,6 +49,13 @@ def _file_cluster_id(path):
     return int(op.splitext(op.basename(path))[0])
 
 
+def _default_array(shape, value=0, n_spikes=0, dtype=np.float32):
+    shape = (n_spikes,) + shape[1:]
+    out = np.empty(shape, dtype=dtype)
+    out.fill(value)
+    return out
+
+
 #------------------------------------------------------------------------------
 # Memory store
 #------------------------------------------------------------------------------
@@ -273,6 +280,10 @@ class StoreItem(object):
         self._pr.set_progress_message('Initializing ' + self.name +
                                       ': {progress:.1f}%.')
         self._pr.set_complete_message(self.name.capitalize() + ' initialized.')
+        self._shapes = {}
+
+    def empty_values(self, name):
+        return _default_array(self._shapes[name], value=0.)
 
     @property
     def progress_reporter(self):
@@ -339,6 +350,9 @@ class StoreItem(object):
         return _concatenate_per_cluster_arrays(self._spikes_per_cluster,
                                                arrays)
 
+    def spikes_in_clusters(self, clusters):
+        return self._concat(self._spikes_per_cluster)
+
     def load_multi(self, clusters, name):
         """Load data for several clusters."""
         raise NotImplementedError()
@@ -383,6 +397,25 @@ class StoreItem(object):
             self.on_merge(up)
         elif up.description == 'assign':
             self.on_assign(up)
+
+
+class FixedSizeItem(StoreItem):
+
+    def load_multi(self, clusters, name):
+        if not len(clusters):
+            return self.empty_values(name)
+        return np.array([self.load(cluster, name)
+                         for cluster in clusters])
+
+
+class VariableSizeItem(StoreItem):
+
+    def load_multi(self, clusters, name):
+        if not len(clusters):
+            return self.empty_values(name)
+        arrays = {cluster: self.load(cluster, name)
+                  for cluster in clusters}
+        return self._concat(arrays)
 
 
 #------------------------------------------------------------------------------
