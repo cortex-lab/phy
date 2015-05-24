@@ -50,11 +50,10 @@ class WaveformViewModel(BaseViewModel):
             self.scale_factor = 1.
 
     def _load_waveforms(self):
-        waveforms, spikes = self.store.load('waveforms',
-                                            clusters=self.cluster_ids,
-                                            return_spikes=True,
-                                            )
-        return waveforms, spikes
+        waveforms = self.store.load('waveforms',
+                                    clusters=self.cluster_ids,
+                                    )
+        return waveforms
 
     def _load_mean_waveforms(self):
         mean_waveforms = self.store.load('mean_waveforms',
@@ -74,7 +73,8 @@ class WaveformViewModel(BaseViewModel):
         # Get the spikes of the stored waveforms.
         clusters = self.cluster_ids
         n_clusters = len(clusters)
-        waveforms, spikes = self._load_waveforms()
+        waveforms = self._load_waveforms()
+        spikes = self.store.items['waveforms'].spikes_in_clusters(clusters)
         n_spikes = len(spikes)
         _, self._n_samples, self._n_channels = waveforms.shape
         mean_waveforms, mean_masks = self._load_mean_waveforms()
@@ -202,15 +202,11 @@ class FeatureViewModel(BaseViewModel):
         The first cluster is used currently.
 
         """
-        if len(cluster_ids) >= 1:
-            n_fet = self.model.n_features_per_channel
-            score = self.store.mean_features(cluster_ids[0])
-            score = score.reshape((-1, n_fet)).mean(axis=1)
-        else:
-            fet = self.view.visual.features
-            if not fet.shape[0]:
-                return np.arange(len(self.model.channels[:3]))
-            score = np.mean(fet, axis=0).mean(axis=1)
+        if cluster_ids is None and not len(cluster_ids):
+            return np.arange(len(self.model.channels[:3]))
+        n_fet = self.model.n_features_per_channel
+        score = self.store.mean_features(cluster_ids[0])
+        score = score.reshape((-1, n_fet)).mean(axis=1)
         # Take the best 3 channels.
         assert len(score) == len(self.model.channel_order)
         channels = np.argsort(score)[::-1][:3]
@@ -219,11 +215,7 @@ class FeatureViewModel(BaseViewModel):
     def _default_dimensions(self, cluster_ids=None):
         dimension_selector = (self._dimension_selector or
                               self.default_dimension_selector)
-        if (cluster_ids is not None and self.store and
-                dimension_selector is not None):
-            channels = dimension_selector(cluster_ids)
-        else:
-            channels = np.arange(len(self.model.channels[:3]))
+        channels = dimension_selector(cluster_ids)
         return ['time'] + [(ch, 0) for ch in channels]
 
     def _rescale_features(self, features):
@@ -244,7 +236,7 @@ class FeatureViewModel(BaseViewModel):
 
     def spikes_in_lasso(self):
         """Return the spike ids from the selected clusters within the lasso."""
-        if self.view.lasso.n_points <= 2:
+        if not len(self.cluster_ids) or self.view.lasso.n_points <= 2:
             return
         clusters = self.cluster_ids
         features = self.store.load('features', clusters=clusters)
@@ -292,7 +284,8 @@ class FeatureViewModel(BaseViewModel):
             k = 1
         if self.model.features is not None:
             # Background features.
-            features_bg = self.model.features[::k]
+            features_bg = self.store.load('features',
+                                          spikes=slice(None, None, k))
             self.view.background.features = self._rescale_features(features_bg)
             # Time dimension.
             spike_samples = self.model.spike_samples[::k]

@@ -353,7 +353,7 @@ class StoreItem(object):
     def spikes_in_clusters(self, clusters):
         return self._concat({c: s
                              for (c, s) in self._spikes_per_cluster.items()
-                             if c in clusters})
+                             if c in clusters}).astype(np.int64)
 
     def load_multi(self, clusters, name):
         """Load data for several clusters."""
