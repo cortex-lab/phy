@@ -43,7 +43,7 @@ def _start_manual_clustering(kwik_path=None,
                              ):
     session = Session(phy_user_dir=tempdir)
     if chunk_size is not None:
-        session.settings['store_chunk_size'] = chunk_size
+        session.settings['features_masks_chunk_size'] = chunk_size
     session.open(kwik_path=kwik_path, model=model)
     return session
 
@@ -361,7 +361,7 @@ def test_session_statistics():
             return session.clustering.cluster_counts.get(cluster, 0)
 
         store = session.cluster_store
-        stats = store.get_item('statistics')
+        stats = store.items['statistics']
 
         def _check():
             for clu in session.cluster_ids:

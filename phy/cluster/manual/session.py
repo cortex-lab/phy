@@ -238,7 +238,7 @@ class Session(EventEmitter):
     # Customization methods
     # -------------------------------------------------------------------------
 
-    def register_statistic(self, func):
+    def register_statistic(self, shape):
         """Decorator registering a custom cluster statistic.
 
         Parameters
@@ -256,20 +256,25 @@ class Session(EventEmitter):
         You can access the data from the model and from the cluster store.
 
         """
-        name = func.__name__
 
-        def _wrapper(cluster):
-            out = func(cluster)
-            self.cluster_store.memory_store.store(cluster, **{name: out})
+        def decorator(func):
 
-        # Add the statistics.
-        self.cluster_store.items['statistics'].add(name, _wrapper)
-        # Register it in the global cluster store.
-        self.cluster_store.register_field(name, 'memory')
-        # Compute it on all existing clusters.
-        stats = self.cluster_store.get_item('statistics')
-        stats.store_all(name=name, mode='force')
-        info("Registered statistic `{}`.".format(name))
+            name = func.__name__
+
+            def _wrapper(cluster):
+                out = func(cluster)
+                self.cluster_store.memory_store.store(cluster, **{name: out})
+
+            # Add the statistics.
+            stats = self.cluster_store.items['statistics']
+            stats.add(name, _wrapper, shape)
+            # Register it in the global cluster store.
+            self.cluster_store.register_field(name, 'memory')
+            # Compute it on all existing clusters.
+            stats.store_all(name=name, mode='force')
+            info("Registered statistic `{}`.".format(name))
+
+        return decorator
 
     # Event callbacks
     # -------------------------------------------------------------------------
@@ -306,7 +311,7 @@ class Session(EventEmitter):
         def on_cluster(up=None):
             # No need to delete the old clusters from the store, we can keep
             # them for possible undo, and regularly clean up the store.
-            for item in self.cluster_store.store_items:
+            for item in self.cluster_store.items.values():
                 item.on_cluster(up)
 
     def _create_cluster_metadata(self):
