@@ -502,37 +502,50 @@ class PerClusterData(object):
 
     def _concatenate(self):
         self._cluster_ids = sorted(self._spc)
-        if not self._cluster_ids:
+        n = len(self.cluster_ids)
+        if n == 0:
             self._array = np.array([])
-        # Concatenate all spikes to find the right insertion order.
-        spikes = np.concatenate([self._spc[cluster]
-                                 for cluster in self.cluster_ids])
-        idx = np.argsort(spikes)
-        self._spike_ids = np.sort(spikes)
-        # NOTE: concatenate all arrays along the first axis, because we assume
-        # that the first axis represents the spikes.
-        # TODO OPTIM: use ConcatenatedArray and implement custom indices.
-        # array = ConcatenatedArrays([_as_array(self._arrays[cluster])
-        #                             for cluster in self.cluster_ids])
-        # NOTE: This is a big optimization when there is a single huge
-        # memory-mapped array.
-        if len(self.cluster_ids) >= 2:
+            self._spike_clusters = np.array([], dtype=np.int32)
+            self._spike_ids = np.array([], dtype=np.int64)
+        elif n == 1:
+            c = self.cluster_ids[0]
+            self._array = _as_array(self._arrays[c])
+            self._spike_ids = self._spc[c]
+            self._spike_clusters = c * np.ones(len(self._spike_ids),
+                                               dtype=np.int32)
+        else:
+            # Concatenate all spikes to find the right insertion order.
+            spikes = np.concatenate([self._spc[cluster]
+                                     for cluster in self.cluster_ids])
+            idx = np.argsort(spikes)
+            self._spike_ids = np.sort(spikes)
+            # NOTE: concatenate all arrays along the first axis, because we
+            # assume that the first axis represents the spikes.
+            # TODO OPTIM: use ConcatenatedArray and implement custom indices.
+            # array = ConcatenatedArrays([_as_array(self._arrays[cluster])
+            #                             for cluster in self.cluster_ids])
             array = np.concatenate([_as_array(self._arrays[cluster])
                                     for cluster in self.cluster_ids])
-        else:
-            array = _as_array(self._arrays[self.cluster_ids[0]])
-        self._array = array[idx]
-        self._spike_clusters = _flatten_spikes_per_cluster(self._spc)
+            self._array = array[idx]
+            self._spike_clusters = _flatten_spikes_per_cluster(self._spc)
 
     def _split(self):
         self._spc = _spikes_per_cluster(self._spike_ids,
                                         self._spike_clusters)
         self._cluster_ids = sorted(self._spc)
-        self._arrays = {}
-        for cluster in sorted(self._cluster_ids):
-            spk = _as_array(self._spc[cluster])
-            spk_rel = _index_of(spk, self._spike_ids)
-            self._arrays[cluster] = self._array[spk_rel]
+        n = len(self.cluster_ids)
+        # Optimization for single cluster.
+        if n == 0:
+            self._arrays = {}
+        elif n == 1:
+            c = self._cluster_ids[0]
+            self._arrays = {c: self._array}
+        else:
+            self._arrays = {}
+            for cluster in sorted(self._cluster_ids):
+                spk = _as_array(self._spc[cluster])
+                spk_rel = _index_of(spk, self._spike_ids)
+                self._arrays[cluster] = self._array[spk_rel]
 
     def subset(self, spike_ids=None, clusters=None, spc=None):
         """Return a new PerClusterData instance with a subset of the data.
