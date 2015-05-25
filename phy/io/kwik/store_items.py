@@ -150,7 +150,8 @@ class FeatureMasks(VariableSizeItem):
         return True
 
     def store_all(self, mode=None):
-        """Store the features and masks of the clusters that need it.
+        """Store the features, masks, and their means of the clusters that
+        need it.
 
         Parameters
         ----------
@@ -375,6 +376,7 @@ class Waveforms(VariableSizeItem):
         return self._spikes_per_cluster[cluster]
 
     def store(self, cluster):
+        """Store waveforms and mean waveforms."""
         # NOTE: make sure to erase old spikes for that cluster.
         # Typical case merge, undo, different merge.
         spikes = self._subset_spikes_cluster(cluster, force=True)
@@ -472,7 +474,11 @@ class ClusterStatistics(FixedSizeItem):
         return out
 
     def store_default(self, cluster):
-        """Compute the built-in statistics for one cluster."""
+        """Compute the built-in statistics for one cluster.
+
+        The mean masks, features, and waveforms are loaded from disk.
+
+        """
         mean_masks = self._load_mean(cluster, 'mean_masks')
         mean_features = self._load_mean(cluster, 'mean_features')
         mean_waveforms = self._load_mean(cluster, 'mean_waveforms')
@@ -506,9 +512,11 @@ class ClusterStatistics(FixedSizeItem):
             self._funcs[name](cluster)
 
     def load(self, cluster, name):
+        """Return a cluster statistic."""
         return self.memory_store.load(cluster, name)
 
     def is_consistent(self, cluster, spikes):
+        """Return whether a cluster is consistent."""
         return cluster in self.memory_store
 
 

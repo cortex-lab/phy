@@ -299,10 +299,12 @@ class StoreItem(object):
         self._shapes = {}
 
     def empty_values(self, name):
+        """Return a null array of the right shape for a given field."""
         return _default_array(self._shapes.get(name, (-1,)), value=0.)
 
     @property
     def progress_reporter(self):
+        """Progress reporter instance."""
         return self._pr
 
     @property
@@ -315,6 +317,7 @@ class StoreItem(object):
         self._spikes_per_cluster = value
 
     def spikes_in_clusters(self, clusters):
+        """Return the spikes belonging to clusters."""
         return _spikes_in_clusters(self._spikes_per_cluster, clusters)
 
     @property
@@ -411,8 +414,9 @@ class StoreItem(object):
 
 
 class FixedSizeItem(StoreItem):
-    """Per-spike data."""
+    """Store data which size doesn't depend on the cluster size."""
     def load_multi(self, clusters, name):
+        """Load data for several clusters."""
         if not len(clusters):
             return self.empty_values(name)
         return np.array([self.load(cluster, name)
@@ -420,9 +424,13 @@ class FixedSizeItem(StoreItem):
 
 
 class VariableSizeItem(StoreItem):
-    """Per-cluster data."""
-
+    """Store data which size does depend on the cluster size."""
     def load_multi(self, clusters, name, spikes=None):
+        """Load data for several clusters.
+
+        A subset of spikes caan also be specified.
+
+        """
         if not len(clusters) or (spikes is not None and not len(spikes)):
             return self.empty_values(name)
         arrays = {cluster: self.load(cluster, name)
@@ -447,11 +455,9 @@ class ClusterStore(object):
     Note
     ----
 
-    Currently, this is used to accelerate access to features, masks, and
-    cluster statistics. Features and masks of all clusters are stored in a
-    disk cache. Cluster statistics are computed when loading a dataset,
-    and are kept in memory afterwards. All data is dynamically updated
-    when clustering changes occur.
+    Currently, this is used to accelerate access to per-cluster data
+    and statistics. All data is dynamically updated when clustering
+    changes occur.
 
     """
     def __init__(self,
