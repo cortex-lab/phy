@@ -48,7 +48,12 @@ def _selected_clusters_colors(n_clusters):
 #------------------------------------------------------------------------------
 
 class BaseViewModel(object):
-    """Create a view from a model."""
+    """Create a view from a model.
+
+    This object uses an internal `Selector` instance to manage spike and
+    cluster selection.
+
+    """
     _view_class = None
     _view_name = ''
     _imported_params = ('position', 'size', 'n_spikes_max', 'excerpt_size')

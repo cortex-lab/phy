@@ -106,8 +106,7 @@ def test_selector_subset_clusters():
     spike_clusters[85:90] = 1
 
     selector = Selector(spike_clusters)
-    spk = selector.subset_spikes_clusters([0, 1], excerpt_size=10)
-    spc = _spikes_per_cluster(spk, spike_clusters[spk])
+    spc = selector.subset_spikes_clusters([0, 1], excerpt_size=10)
     counts = {_: len(spc[_]) for _ in sorted(spc.keys())}
     # TODO
     assert counts
