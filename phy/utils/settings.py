@@ -100,6 +100,8 @@ class BaseSettings(object):
         """Save the settings to a pickle file."""
         try:
             _save_pickle(path, self._to_save)
+            debug("Saved internal settings file "
+                  "at '{}'.".format(path))
         except Exception as e:
             warn("Unable to save the internal settings file "
                  "at '{}':\n{}".format(path, str(e)))
