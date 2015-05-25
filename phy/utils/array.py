@@ -348,6 +348,10 @@ def _spikes_in_clusters(spike_clusters, clusters):
     """Return the ids of all spikes belonging to the specified clusters."""
     if len(spike_clusters) == 0 or len(clusters) == 0:
         return np.array([], dtype=np.int)
+    # spikes_per_cluster case.
+    if isinstance(spike_clusters, dict):
+        return np.sort(np.concatenate([spike_clusters[cluster]
+                                       for cluster in clusters]))
     return np.nonzero(np.in1d(spike_clusters, clusters))[0]
 
 
@@ -408,36 +412,9 @@ def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
     return arrays[idx, ...]
 
 
-def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub,
-                               allow_cut=False):
-    """Cut spikes_per_cluster and arrays along a list of spikes."""
-    # WARNING: spikes_sub should be sorted and without duplicates.
-    spikes_sub = _as_array(spikes_sub)
-    spikes_per_cluster_subset = {}
-    arrays_subset = {}
-    n = 0
-
-    # Opt-in parameter to allow cutting the requested spikes with
-    # the spikes per cluster dictionary.
-    _all_spikes = np.hstack(spikes_per_cluster.values())
-    if allow_cut:
-        spikes_sub = np.intersect1d(spikes_sub,
-                                    _all_spikes)
-    assert np.all(np.in1d(spikes_sub, _all_spikes))
-
-    for cluster in sorted(arrays):
-        spikes_c = _as_array(spikes_per_cluster[cluster])
-        array = _as_array(arrays[cluster])
-        assert spikes_sub.dtype == spikes_c.dtype
-        spikes_sc = np.intersect1d(spikes_sub, spikes_c)
-        # assert spikes_sc.dtype == np.int64
-        spikes_per_cluster_subset[cluster] = spikes_sc
-        idx = _index_of(spikes_sc, spikes_c)
-        arrays_subset[cluster] = array[idx, ...]
-        assert len(spikes_sc) == len(arrays_subset[cluster])
-        n += len(spikes_sc)
-    assert n == len(spikes_sub)
-    return spikes_per_cluster_subset, arrays_subset
+def _subset_spc(spc, clusters):
+    return {c: s for c, s in spc.items()
+            if c in clusters}
 
 
 class PerClusterData(object):
