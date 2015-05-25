@@ -92,7 +92,7 @@ class WaveformViewModel(BaseViewModel):
         self.view.mean.waveforms = mean_waveforms * self.scale_factor
 
         # Masks.
-        masks = self.store.load('masks', spikes=spikes)
+        masks = self.store.load('masks', clusters=clusters, spikes=spikes)
         assert masks.shape == (n_spikes, self._n_channels)
         self.view.visual.masks = masks
 
