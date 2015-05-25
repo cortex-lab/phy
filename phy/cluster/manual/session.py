@@ -244,7 +244,7 @@ class Session(EventEmitter):
     # Customization methods
     # -------------------------------------------------------------------------
 
-    def register_statistic(self, shape=(-1,)):
+    def register_statistic(self, func=None, shape=(-1,)):
         """Decorator registering a custom cluster statistic.
 
         Parameters
@@ -262,6 +262,8 @@ class Session(EventEmitter):
         You can access the data from the model and from the cluster store.
 
         """
+        if func is not None:
+            return self.register_statistic()(func)
 
         def decorator(func):
 

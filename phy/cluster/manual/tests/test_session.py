@@ -371,7 +371,7 @@ def test_session_statistics():
         session = _start_manual_clustering(kwik_path=kwik_path,
                                            tempdir=tempdir)
 
-        @session.register_statistic(shape=(-1,))
+        @session.register_statistic
         def n_spikes(cluster):
             return session.clustering.cluster_counts.get(cluster, 0)
 
