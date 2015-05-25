@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from .._types import _as_array, _as_tuple
@@ -33,6 +32,7 @@ from ..array import (_unique,
                      _pad,
                      _concatenate_virtual_arrays,
                      )
+from ..testing import _assert_equal as ae
 from ...io.mock import artificial_spike_clusters
 
 
@@ -471,12 +471,15 @@ def test_per_cluster_data():
         ae(pcd.spike_ids, spike_ids)
         ae(pcd.spike_clusters, spike_clusters)
         ae(pcd.array, array)
-        for (k, kk) in zip(sorted(pcd.spc), sorted(spc)):
-            assert k == kk
-            ae(pcd.spc[k], spc[kk])
-        for (k, kk) in zip(sorted(pcd.arrays), sorted(arrays)):
-            assert k == kk
-            ae(pcd.arrays[k], arrays[kk])
+        ae(pcd.spc, spc)
+        ae(pcd.arrays, arrays)
+
+        pcd_s = pcd.subset(clusters=[2])
+        ae(pcd_s.spike_ids, [11, 13, 17])
+        ae(pcd_s.spike_clusters, [2, 2, 2])
+        ae(pcd_s.array, [1, 3, 7])
+        ae(pcd_s.spc, {2: [11, 13, 17]})
+        ae(pcd_s.arrays, {2: [1, 3, 7]})
 
     pcd = PerClusterData(spike_ids=spike_ids,
                          array=array,

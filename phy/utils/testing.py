@@ -11,7 +11,11 @@ import time
 from contextlib import contextmanager
 from timeit import default_timer
 
+from numpy.testing import assert_array_equal as ae
+from numpy.testing import assert_allclose as ac
+
 from ..ext.six import StringIO
+from ._types import _is_array_like
 from .logging import info
 
 
@@ -36,6 +40,25 @@ def benchmark(name='', repeats=1):
     yield
     duration = (default_timer() - start) * 1000.
     info("{} took {:.6f}ms.".format(name, duration / repeats))
+
+
+def _assert_equal(d_0, d_1):
+    """Check that two objects are equal."""
+    # Compare arrays.
+    if _is_array_like(d_0):
+        try:
+            ae(d_0, d_1)
+        except AssertionError:
+            ac(d_0, d_1)
+    # Compare dicts recursively.
+    elif isinstance(d_0, dict):
+        assert sorted(d_0) == sorted(d_1)
+        for (k_0, k_1) in zip(sorted(d_0), sorted(d_1)):
+            assert k_0 == k_1
+            _assert_equal(d_0[k_0], d_1[k_1])
+    else:
+        # General comparison.
+        assert d_0 == d_1
 
 
 #------------------------------------------------------------------------------

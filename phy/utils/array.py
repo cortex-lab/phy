@@ -525,9 +525,10 @@ class PerClusterData(object):
 
     def subset(self, clusters=None, spc=None, spike_ids=None):
         if clusters is not None:
+            assert set(clusters) <= set(self._cluster_ids)
             spc_s = {clu: self._spc[clu] for clu in clusters}
             arrays_s = {clu: self._arrays[clu] for clu in clusters}
-            return PerClusterData(spc=spc_s, arrays_s=arrays_s)
+            return PerClusterData(spc=spc_s, arrays=arrays_s)
         elif spc is not None:
             clusters = sorted(spc)
             assert set(clusters) <= set(self._cluster_ids)
@@ -535,8 +536,9 @@ class PerClusterData(object):
             for cluster in clusters:
                 spk_rel = _index_of(spc[cluster], self._spc[cluster])
                 arrays_s[cluster] = self._arrays[spk_rel]
-            return PerClusterData(spc=spc, arrays_s=arrays_s)
+            return PerClusterData(spc=spc, arrays=arrays_s)
         elif spike_ids is not None:
+            assert np.all(np.in1d(spike_ids, self._spike_ids))
             spike_ids_s = _index_of(spike_ids, self._spike_ids)
             array_s = self._array[spike_ids_s]
             spike_clusters_s = self._spike_clusters[spike_ids_s]
