@@ -22,7 +22,7 @@ from ..store import ClusterStore, FixedSizeItem, VariableSizeItem
 
 
 #------------------------------------------------------------------------------
-# Store items
+# Utility functions
 #------------------------------------------------------------------------------
 
 def _default_array(shape, value=0, n_spikes=0, dtype=np.float32):
@@ -41,6 +41,18 @@ def _atleast_nd(arr, ndim):
     elif ndim - arr.ndim == 2:
         return arr[None, None, ...]
 
+
+def _mean(arr, shape):
+    if arr is not None:
+        assert isinstance(arr, np.ndarray)
+        if arr.shape[0]:
+            return arr.mean(axis=0)
+    return np.zeros(shape, dtype=np.float32)
+
+
+#------------------------------------------------------------------------------
+# Store items
+#------------------------------------------------------------------------------
 
 class FeatureMasks(VariableSizeItem):
     """Store all features and masks of all clusters."""
@@ -432,13 +444,6 @@ class ClusterStatistics(FixedSizeItem):
         masks = self.cluster_store.masks(cluster)
         features = self.cluster_store.features(cluster)
         waveforms = self.cluster_store.waveforms(cluster)
-
-        def _mean(arr, shape):
-            if arr is not None:
-                assert isinstance(arr, np.ndarray)
-                if arr.shape[0]:
-                    return arr.mean(axis=0)
-            return np.zeros(shape, dtype=np.float32)
 
         # Default statistics.
         mean_masks = _mean(masks, (self.n_channels,))
