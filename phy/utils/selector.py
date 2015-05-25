@@ -188,8 +188,8 @@ class Selector(object):
         those clusters.
 
         """
+        self._selected_clusters = _as_list(value)
         value = _as_array(value)
-        self._selected_clusters = value
         # Make sure there are less spikes than n_spikes_max.
         spk = self.subset_spikes_clusters(value)
         self._selected_spikes = _concat(spk.values())
