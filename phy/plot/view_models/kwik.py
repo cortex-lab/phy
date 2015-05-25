@@ -47,6 +47,9 @@ class WaveformViewModel(BaseViewModel):
             self.scale_factor = 1.
 
     def _load_waveforms(self):
+        # NOTE: we load all spikes from the store.
+        # The waveforms store item is responsible for making a subselection
+        # of spikes both on disk and in the view.
         waveforms = self.store.load('waveforms',
                                     clusters=self.cluster_ids,
                                     )
@@ -294,8 +297,12 @@ class FeatureViewModel(BaseViewModel):
         spikes = self.spike_ids
         clusters = self.cluster_ids
 
-        features = self.store.load('features', clusters=clusters)
-        masks = self.store.load('masks', clusters=clusters)
+        features = self.store.load('features',
+                                   clusters=clusters,
+                                   spikes=spikes)
+        masks = self.store.load('masks',
+                                clusters=clusters,
+                                spikes=spikes)
 
         nc = len(self.model.channel_order)
         nf = self.model.n_features_per_channel

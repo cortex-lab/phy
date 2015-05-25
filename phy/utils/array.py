@@ -314,14 +314,18 @@ def data_chunk(data, chunk, with_overlap=False):
 def get_excerpts(data, n_excerpts=None, excerpt_size=None):
     assert n_excerpts is not None
     assert excerpt_size is not None
-    if n_excerpts * excerpt_size > len(data):
+    if len(data) < n_excerpts * excerpt_size:
         return data
-    if n_excerpts == 1:
-        return data
-    return np.concatenate([data_chunk(data, chunk)
-                           for chunk in excerpts(len(data),
-                                                 n_excerpts=n_excerpts,
-                                                 excerpt_size=excerpt_size)])
+    elif n_excerpts == 0:
+        return data[:0]
+    elif n_excerpts == 1:
+        return data[:excerpt_size]
+    out = np.concatenate([data_chunk(data, chunk)
+                          for chunk in excerpts(len(data),
+                                                n_excerpts=n_excerpts,
+                                                excerpt_size=excerpt_size)])
+    assert len(out) <= n_excerpts * excerpt_size
+    return out
 
 
 def regular_subset(spikes=None, n_spikes_max=None):
