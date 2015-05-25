@@ -441,6 +441,13 @@ def _subset_spikes_per_cluster(spikes_per_cluster, arrays, spikes_sub,
 
 
 class PerClusterData(object):
+    """Store data associated to every spike.
+
+    This class provides several data structures, with per-spike data and
+    per-cluster data. It also defines a `subset()` method that allows to
+    make a subset of the data using either spikes or clusters.
+
+    """
     def __init__(self,
                  spike_ids=None, array=None, spike_clusters=None,
                  spc=None, arrays=None):
@@ -464,26 +471,42 @@ class PerClusterData(object):
 
     @property
     def spike_ids(self):
+        """Sorted array of all spike ids."""
         return self._spike_ids
 
     @property
     def spike_clusters(self):
+        """Array with the cluster id of every spike."""
         return self._spike_clusters
 
     @property
     def array(self):
+        """Data array.
+
+        The first dimension of the array corresponds to the spikes in the
+        cluster.
+
+        """
         return self._array
 
     @property
     def arrays(self):
+        """Dictionary of arrays `{cluster: array}`.
+
+        The first dimension of the arrays correspond to the spikes in the
+        cluster.
+
+        """
         return self._arrays
 
     @property
     def spc(self):
+        """Spikes per cluster dictionary."""
         return self._spc
 
     @property
     def cluster_ids(self):
+        """Sorted list of clusters."""
         return self._cluster_ids
 
     def _check_dict(self):
@@ -523,8 +546,26 @@ class PerClusterData(object):
             spk_rel = _index_of(spk, self._spike_ids)
             self._arrays[cluster] = self._array[spk_rel]
 
-    def subset(self, clusters=None, spc=None, spike_ids=None):
-        if clusters is not None:
+    def subset(self, spike_ids=None, clusters=None, spc=None):
+        """Return a new PerClusterData instance with a subset of the data.
+
+        There are three ways to specify the subset:
+
+        * With a list of spikes
+        * With a list of clusters
+        * With a dictionary of `{cluster: some_spikes}`
+
+        """
+        if spike_ids is not None:
+            assert np.all(np.in1d(spike_ids, self._spike_ids))
+            spike_ids_s_rel = _index_of(spike_ids, self._spike_ids)
+            array_s = self._array[spike_ids_s_rel]
+            spike_clusters_s = self._spike_clusters[spike_ids_s_rel]
+            return PerClusterData(spike_ids=spike_ids,
+                                  array=array_s,
+                                  spike_clusters=spike_clusters_s,
+                                  )
+        elif clusters is not None:
             assert set(clusters) <= set(self._cluster_ids)
             spc_s = {clu: self._spc[clu] for clu in clusters}
             arrays_s = {clu: self._arrays[clu] for clu in clusters}
@@ -538,15 +579,6 @@ class PerClusterData(object):
                                     _as_array(self._spc[cluster]))
                 arrays_s[cluster] = _as_array(self._arrays[cluster])[spk_rel]
             return PerClusterData(spc=spc, arrays=arrays_s)
-        elif spike_ids is not None:
-            assert np.all(np.in1d(spike_ids, self._spike_ids))
-            spike_ids_s_rel = _index_of(spike_ids, self._spike_ids)
-            array_s = self._array[spike_ids_s_rel]
-            spike_clusters_s = self._spike_clusters[spike_ids_s_rel]
-            return PerClusterData(spike_ids=spike_ids,
-                                  array=array_s,
-                                  spike_clusters=spike_clusters_s,
-                                  )
 
 
 # -----------------------------------------------------------------------------

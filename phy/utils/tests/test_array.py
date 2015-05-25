@@ -482,7 +482,15 @@ def test_per_cluster_data():
         ae(pcd_s.spc, {2: [11, 13, 17]})
         ae(pcd_s.arrays, {2: [1, 3, 7]})
 
-        # Check subset on 2 clusters.
+        # Check subset on some spikes.
+        pcd_s = pcd.subset(spike_ids=[11, 12, 13, 17])
+        ae(pcd_s.spike_ids, [11, 12, 13, 17])
+        ae(pcd_s.spike_clusters, [2, 3, 2, 2])
+        ae(pcd_s.array, [1, 2, 3, 7])
+        ae(pcd_s.spc, {2: [11, 13, 17], 3: [12]})
+        ae(pcd_s.arrays, {2: [1, 3, 7], 3: [2]})
+
+        # Check subset on 2 complete clusters.
         pcd_s = pcd.subset(clusters=[3, 5])
         ae(pcd_s.spike_ids, [8, 12, 18, 20])
         ae(pcd_s.spike_clusters, [3, 3, 5, 5])
@@ -498,20 +506,14 @@ def test_per_cluster_data():
         ae(pcd_s.spc, {3: [8, 12], 5: [20]})
         ae(pcd_s.arrays, {3: [8, 2], 5: [0]})
 
-        # Check subset on 2 incomplete clusters.
-        pcd_s = pcd.subset(spike_ids=[11, 12, 13, 17])
-        ae(pcd_s.spike_ids, [11, 12, 13, 17])
-        ae(pcd_s.spike_clusters, [2, 3, 2, 2])
-        ae(pcd_s.array, [1, 2, 3, 7])
-        ae(pcd_s.spc, {2: [11, 13, 17], 3: [12]})
-        ae(pcd_s.arrays, {2: [1, 3, 7], 3: [2]})
-
+    # From flat arrays.
     pcd = PerClusterData(spike_ids=spike_ids,
                          array=array,
                          spike_clusters=spike_clusters,
                          )
     _check(pcd)
 
+    # From dicts.
     pcd = PerClusterData(spc=spc, arrays=arrays)
     _check(pcd)
 
