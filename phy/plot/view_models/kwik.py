@@ -227,8 +227,7 @@ class FeatureViewModel(BaseViewModel):
         shape = (-1, n_channels, n_fet)
         features = features[:, :n_fet * n_channels].reshape(shape)
         # Scale factor.
-        features *= self.scale_factor
-        return features
+        return features * self.scale_factor
 
     @property
     def lasso(self):
