@@ -489,6 +489,10 @@ class PerClusterData(object):
         """Sorted list of clusters."""
         return self._cluster_ids
 
+    @property
+    def n_clusters(self):
+        return len(self._cluster_ids)
+
     def _check_dict(self):
         assert set(self._arrays) == set(self._spc)
         clusters = sorted(self._arrays)
@@ -558,6 +562,8 @@ class PerClusterData(object):
 
         """
         if spike_ids is not None:
+            if np.array_equal(spike_ids, self._spike_ids):
+                return self
             assert np.all(np.in1d(spike_ids, self._spike_ids))
             spike_ids_s_rel = _index_of(spike_ids, self._spike_ids)
             array_s = self._array[spike_ids_s_rel]
