@@ -31,13 +31,13 @@ waveforms_n_spikes_max = 100
 waveforms_excerpt_size = 20
 
 # Maximum number of spikes to display in the feature view.
-features_n_spikes_max = 10000
+features_n_spikes_max = 2500
 
 # Load a regular subselection of spikes from the cluster store.
 features_excerpt_size = None
 
 # Maximum number of background spikes to display in the feature view.
-features_n_spikes_max_bg = 10000
+features_n_spikes_max_bg = features_n_spikes_max
 
 
 # -----------------------------------------------------------------------------
