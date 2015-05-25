@@ -88,7 +88,7 @@ def test_kwik_store():
             waveforms_store = cs.waveforms(cluster)
             # Find the spikes.
             spikes = waveforms_item.spikes_per_cluster[cluster]
-            ae(waveforms_item.spikes_in_clusters([cluster]), spikes)
+            ae(waveforms_item.spikes_per_cluster[cluster], spikes)
             waveforms_expected = model.waveforms[spikes]
             ae(waveforms_store, waveforms_expected)
 
@@ -127,12 +127,12 @@ def test_kwik_store():
 
             # Waveforms.
             spc = waveforms_item.spikes_per_cluster
-            spikes = waveforms_item._concat({cluster: spc[cluster]
-                                             for cluster in clusters})
-            ae(waveforms_item.spikes_in_clusters(clusters), spikes)
             if n_clusters:
+                spikes = np.sort(np.concatenate([spc[cluster]
+                                                 for cluster in clusters]))
                 waveforms_expected = model.waveforms[spikes]
             else:
+                spikes = np.array([], dtype=np.int64)
                 waveforms_expected = np.zeros((0, ns, nc), dtype=np.float32)
             ae(cs.load('waveforms', clusters=clusters), waveforms_expected)
             ae(cs.load('waveforms', spikes=spikes), waveforms_expected)

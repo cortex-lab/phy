@@ -219,13 +219,6 @@ class FeatureMasks(VariableSizeItem):
                                  )
         return out.reshape(shape)
 
-    def load_multi(self, clusters, name, spikes=None):
-        if not len(clusters):
-            return self.empty_values(name)
-        arrays = {cluster: self.load(cluster, name)
-                  for cluster in clusters}
-        return self._concat(arrays)
-
     def on_merge(self, up):
         """Create the cluster store files of the merged cluster
         from the files of the old clusters.
@@ -331,19 +324,13 @@ class Waveforms(VariableSizeItem):
         # Get or create the subset spikes per cluster dictionary.
         spc = self.disk_store.load_file('waveforms_spikes')
         if spc is None:
-            spc = self._create_spikes_per_cluster()
+            spc = self._selector.subset_spikes_clusters(self.model.cluster_ids)
             self.disk_store.save_file('waveforms_spikes', spc)
         self._spikes_per_cluster = spc
 
-    def _create_spikes_per_cluster(self):
-        """Create a new `spikes_per_cluster` array with the spikes subset."""
-        # Take a selection of spikes.
-        spikes = self._selector.subset_spikes_clusters(self.model.cluster_ids)
-        return _spikes_per_cluster(spikes, self.model.spike_clusters[spikes])
-
     def _subset_spikes_cluster(self, cluster, force=False):
         if force or cluster not in self._spikes_per_cluster:
-            spikes = self._selector.subset_spikes_clusters([cluster])
+            spikes = self._selector.subset_spikes_clusters([cluster])[cluster]
             # Persist the new _spikes_per_cluster array on disk.
             self._spikes_per_cluster[cluster] = spikes
             self.disk_store.save_file('waveforms_spikes',
