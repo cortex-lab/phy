@@ -16,8 +16,7 @@ import re
 import numpy as np
 
 from ..utils._types import _as_int, _is_integer, _is_array_like
-from ..utils.array import (_concatenate_per_cluster_arrays,
-                           )
+from ..utils.array import PerClusterData
 from ..utils.event import ProgressReporter
 from ..utils.logging import debug, info
 from ..ext.six import string_types
@@ -362,16 +361,6 @@ class StoreItem(object):
         """Load data for one cluster."""
         raise NotImplementedError()
 
-    def _concat(self, arrays):
-        """Convert a `{cluster: array}` dictionary into a single array."""
-        return _concatenate_per_cluster_arrays(self._spikes_per_cluster,
-                                               arrays)
-
-    def spikes_in_clusters(self, clusters):
-        return self._concat({c: s
-                             for (c, s) in self._spikes_per_cluster.items()
-                             if c in clusters}).astype(np.int64)
-
     def load_multi(self, clusters, name):
         """Load data for several clusters."""
         raise NotImplementedError()
@@ -429,12 +418,21 @@ class FixedSizeItem(StoreItem):
 
 class VariableSizeItem(StoreItem):
     """Per-cluster data."""
-    def load_multi(self, clusters, name):
-        if not len(clusters):
+
+    def load_multi(self, clusters, name, spikes=None):
+        if not len(clusters) or (spikes is not None and not len(spikes)):
             return self.empty_values(name)
         arrays = {cluster: self.load(cluster, name)
                   for cluster in clusters}
-        return self._concat(arrays)
+        spc = {c: s for c, s in self._spikes_per_cluster.items()
+               if c in clusters}
+        pcd = PerClusterData(spc=spc,
+                             arrays=arrays,
+                             )
+        if spikes is not None:
+            pcd = pcd.subset(spike_ids=spikes)
+            assert pcd.array.shape[0] == len(spikes)
+        return pcd.array
 
 
 #------------------------------------------------------------------------------
