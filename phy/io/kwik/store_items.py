@@ -455,17 +455,16 @@ class ClusterStatistics(FixedSizeItem):
         self.fields.remove(name)
         del self.funcs[name]
 
+    def _load_mean(self, cluster, name):
+        out = self.disk_store.load(cluster, name,
+                                   np.float32, self._shapes[name][1:])
+        return out
+
     def store_default(self, cluster):
         """Compute the built-in statistics for one cluster."""
-        masks = self.cluster_store.masks(cluster)
-        features = self.cluster_store.features(cluster)
-        waveforms = self.cluster_store.waveforms(cluster)
-
-        # Default statistics.
-        mean_masks = _mean(masks, (self.n_channels,))
-        mean_features = _mean(features, (self.n_channels,))
-        mean_waveforms = _mean(waveforms,
-                               (self.n_samples_waveforms, self.n_channels))
+        mean_masks = self._load_mean(cluster, 'mean_masks')
+        mean_features = self._load_mean(cluster, 'mean_features')
+        mean_waveforms = self._load_mean(cluster, 'mean_waveforms')
 
         unmasked_channels = np.nonzero(mean_masks > .1)[0]
         n_unmasked_channels = len(unmasked_channels)
