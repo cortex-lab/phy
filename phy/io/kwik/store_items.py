@@ -367,9 +367,11 @@ class Waveforms(VariableSizeItem):
         # NOTE: make sure to erase old spikes for that cluster.
         # Typical case merge, undo, different merge.
         spikes = self._subset_spikes_cluster(cluster, force=True)
-        waveforms = self.model.waveforms[spikes]
+        waveforms = self.model.waveforms[spikes].astype(np.float32)
+        mean_waveforms = _mean(waveforms, (self.n_samples, self.n_channels))
         self.disk_store.store(cluster,
-                              waveforms=waveforms.astype(np.float32),
+                              waveforms=waveforms,
+                              mean_waveforms=mean_waveforms,
                               )
 
     def is_consistent(self, cluster, spikes):
