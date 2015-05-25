@@ -540,10 +540,10 @@ class PerClusterData(object):
             return PerClusterData(spc=spc, arrays=arrays_s)
         elif spike_ids is not None:
             assert np.all(np.in1d(spike_ids, self._spike_ids))
-            spike_ids_s = _index_of(spike_ids, self._spike_ids)
-            array_s = self._array[spike_ids_s]
-            spike_clusters_s = self._spike_clusters[spike_ids_s]
-            return PerClusterData(spike_ids=spike_ids_s,
+            spike_ids_s_rel = _index_of(spike_ids, self._spike_ids)
+            array_s = self._array[spike_ids_s_rel]
+            spike_clusters_s = self._spike_clusters[spike_ids_s_rel]
+            return PerClusterData(spike_ids=spike_ids,
                                   array=array_s,
                                   spike_clusters=spike_clusters_s,
                                   )
