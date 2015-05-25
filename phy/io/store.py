@@ -16,7 +16,7 @@ import re
 import numpy as np
 
 from ..utils._types import _as_int, _is_integer, _is_array_like
-from ..utils.array import PerClusterData
+from ..utils.array import PerClusterData, _spikes_in_clusters, _subset_spc
 from ..utils.event import ProgressReporter
 from ..utils.logging import debug, info
 from ..ext.six import string_types
@@ -314,6 +314,9 @@ class StoreItem(object):
     def spikes_per_cluster(self, value):
         self._spikes_per_cluster = value
 
+    def spikes_in_clusters(self, clusters):
+        return _spikes_in_clusters(self._spikes_per_cluster, clusters)
+
     @property
     def cluster_ids(self):
         """Array of cluster ids."""
@@ -424,8 +427,7 @@ class VariableSizeItem(StoreItem):
             return self.empty_values(name)
         arrays = {cluster: self.load(cluster, name)
                   for cluster in clusters}
-        spc = {c: s for c, s in self._spikes_per_cluster.items()
-               if c in clusters}
+        spc = _subset_spc(self._spikes_per_cluster, clusters)
         pcd = PerClusterData(spc=spc,
                              arrays=arrays,
                              )

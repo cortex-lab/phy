@@ -128,8 +128,7 @@ def test_kwik_store():
             # Waveforms.
             spc = waveforms_item.spikes_per_cluster
             if n_clusters:
-                spikes = np.sort(np.concatenate([spc[cluster]
-                                                 for cluster in clusters]))
+                spikes = _spikes_in_clusters(spc, clusters)
                 waveforms_expected = model.waveforms[spikes]
             else:
                 spikes = np.array([], dtype=np.int64)
