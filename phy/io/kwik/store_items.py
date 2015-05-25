@@ -172,7 +172,7 @@ class FeatureMasks(VariableSizeItem):
 
         if need_generate:
 
-            self._pr.value_max = self.n_chunks + len(clusters_to_generate)
+            self._pr.value_max = self.n_chunks
 
             fm = self.model.features_masks
             assert fm.shape[0] == self.n_spikes
@@ -208,6 +208,8 @@ class FeatureMasks(VariableSizeItem):
                 self._pr.value += 1
 
             # Store mean features and waveforms on disk.
+            self._pr.value = 0
+            self._pr.value_max = len(clusters_to_generate)
             for cluster in clusters_to_generate:
                 self._store_means(cluster)
                 self._pr.value += 1
