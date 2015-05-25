@@ -117,6 +117,18 @@ class FeatureMasks(VariableSizeItem):
                               append=True,
                               )
 
+    def _store_means(self, cluster):
+        # Load masks and features.
+        masks = self.cluster_store.masks(cluster)
+        features = self.cluster_store.features(cluster)
+        # Load masks and features.
+        mean_masks = _mean(masks, (self.n_channels,))
+        mean_features = _mean(features, (self.n_channels,))
+        self.disk_store.store(cluster,
+                              mean_masks=mean_masks,
+                              mean_features=mean_features,
+                              )
+
     def is_consistent(self, cluster, spikes):
         """Return whether the filesizes of the two cluster store files
         (`.features` and `.masks`) are correct."""
@@ -197,16 +209,7 @@ class FeatureMasks(VariableSizeItem):
 
             # Store mean features and waveforms on disk.
             for cluster in clusters_to_generate:
-                # Load masks and features.
-                masks = self.cluster_store.masks(cluster)
-                features = self.cluster_store.features(cluster)
-                # Load masks and features.
-                mean_masks = _mean(masks, (self.n_channels,))
-                mean_features = _mean(features, (self.n_channels,))
-                self.disk_store.store(cluster,
-                                      mean_masks=mean_masks,
-                                      mean_features=mean_features,
-                                      )
+                self._store_means(cluster)
                 self._pr.value += 1
 
         self._pr.set_complete()
@@ -325,6 +328,12 @@ class FeatureMasks(VariableSizeItem):
                                                          old_arrays_sub)
                 # Save it in the cluster store.
                 self.disk_store.store(new, **{name: concat})
+
+    def on_cluster(self, up=None):
+        super(FeatureMasks, self).on_cluster(up)
+        # Store the means of the new clusters.
+        for cluster in up.added:
+            self._store_means(cluster)
 
 
 class Waveforms(VariableSizeItem):

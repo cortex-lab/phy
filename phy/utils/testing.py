@@ -11,7 +11,6 @@ import time
 from contextlib import contextmanager
 from timeit import default_timer
 from cProfile import Profile
-import pstats
 import os.path as op
 import functools
 
