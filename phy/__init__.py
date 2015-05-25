@@ -12,14 +12,6 @@ containing up to thousands of channels.
 # Imports
 #------------------------------------------------------------------------------
 
-# Define a mock @profile decorator to avoid NameErrors when profiling.
-import sys
-if sys.version_info[0] == 3:
-    import builtins
-else:
-    import __builtin__ as builtins
-builtins.__dict__['profile'] = lambda func: func
-
 import os.path as op
 from pkg_resources import get_distribution, DistributionNotFound
 

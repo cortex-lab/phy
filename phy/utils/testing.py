@@ -117,6 +117,8 @@ class ContextualProfile(Profile):
 
 
 def _enable_profiler(line_by_line=False):
+    if 'profile' in builtins.__dict__:
+        return builtins.__dict__['profile']
     if line_by_line:
         import line_profiler
         prof = line_profiler.LineProfiler()
