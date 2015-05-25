@@ -399,6 +399,7 @@ def test_session_statistics():
         _check()
 
 
+@mark.long
 def test_session_history():
 
     n_clusters = 15

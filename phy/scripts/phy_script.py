@@ -68,6 +68,9 @@ def main():
         print("phy v{}".format(phy.__version__))
         return 0
 
+    if _pop(args, '--debug', False):
+        phy.debug()
+
     if len(args) <= 2 or args[1] != 'cluster-manual':
         print("Only the `phy cluster-manual [-i] myfile.kwik` command "
               "is currently supported.")
