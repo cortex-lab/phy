@@ -127,15 +127,6 @@ def _enable_profiler(line_by_line=False):
     return prof
 
 
-def _read_stats(stats_file_bin):
-    old_stdout = sys.stdout
-    sys.stdout = output = StringIO()
-    pstats.Stats(stats_file_bin).strip_dirs(). \
-        sort_stats("cumulative").print_stats()
-    sys.stdout = old_stdout
-    return output.getvalue()
-
-
 def _profile(prof, statement, glob, loc):
     dir = '.profile'
     dir = op.realpath(dir)
