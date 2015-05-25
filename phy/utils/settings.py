@@ -63,6 +63,7 @@ class BaseSettings(object):
         return key in self._store
 
     def keys(self):
+        """List of settings keys."""
         return self._store.keys()
 
     def _try_load_pickle(self, path):
@@ -83,6 +84,7 @@ class BaseSettings(object):
             return {}
 
     def load(self, path):
+        """Load a settings Python file."""
         if not op.exists(path):
             debug("Skipping non-existing settings file: {}.".format(path))
             return
@@ -95,6 +97,7 @@ class BaseSettings(object):
             self._try_load_python(path)
 
     def save(self, path):
+        """Save the settings to a pickle file."""
         try:
             _save_pickle(path, self._to_save)
         except Exception as e:
@@ -117,7 +120,6 @@ class Settings(object):
         self._load_user_settings()
 
     def _load_user_settings(self):
-
         # Load phy's defaults.
         if self._default_path:
             self._bs.load(self._default_path)
@@ -133,6 +135,7 @@ class Settings(object):
         self._bs.load(self.internal_settings_path)
 
     def on_open(self, path):
+        """Initialize settings when loading an experiment."""
         # Get the experiment settings path.
         path = op.realpath(op.expanduser(path))
         self.exp_path = path
@@ -148,9 +151,11 @@ class Settings(object):
         self._bs.load(self.exp_settings_path)
 
     def save(self):
+        """Save settings to an internal settings file."""
         self._bs.save(self.internal_settings_path)
 
     def get(self, key, default=None):
+        """Return a settings value."""
         if key in self:
             return self[key]
         else:
@@ -166,6 +171,7 @@ class Settings(object):
         return key in self._bs
 
     def keys(self):
+        """Return the list of settings keys."""
         return self._bs.keys()
 
 
