@@ -9,7 +9,7 @@ void main (void)
     vec2 box_position = to_box(position, a_box);
 
     gl_Position = vec4(box_position, 0., 1.);
-    gl_PointSize = 1.0;
+    gl_PointSize = 3.0;
 
     // Used for clipping.
     v_position = position;
