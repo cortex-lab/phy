@@ -446,9 +446,9 @@ class PerClusterData(object):
                  spc=None, arrays=None):
         if (array is not None and spike_ids is not None):
             # From array to per-cluster arrays.
-            self._spike_ids = spike_ids
-            self._array = array
-            self._spike_clusters = spike_clusters
+            self._spike_ids = _as_array(spike_ids)
+            self._array = _as_array(array)
+            self._spike_clusters = _as_array(spike_clusters)
             self._check_array()
             self._split()
             self._check_dict()
@@ -498,6 +498,7 @@ class PerClusterData(object):
         assert len(self._spike_clusters) == len(self._spike_ids)
 
     def _concatenate(self):
+        self._cluster_ids = sorted(self._spc)
         if not self._cluster_ids:
             self._array = np.array([])
         # Concatenate all spikes to find the right insertion order.
@@ -510,6 +511,7 @@ class PerClusterData(object):
                                  for cluster in self.cluster_ids])
         self._spike_ids = np.sort(spikes)
         self._array = arrays[idx, ...]
+        self._spike_clusters = _flatten_spikes_per_cluster(self._spc)
 
     def _split(self):
         self._spc = _spikes_per_cluster(self._spike_ids,
@@ -517,7 +519,7 @@ class PerClusterData(object):
         self._cluster_ids = sorted(self._spc)
         self._arrays = {}
         for cluster in sorted(self._cluster_ids):
-            spk = self._spc[cluster]
+            spk = _as_array(self._spc[cluster])
             spk_rel = _index_of(spk, self._spike_ids)
             self._arrays[cluster] = self._array[spk_rel]
 

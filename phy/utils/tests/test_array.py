@@ -27,6 +27,7 @@ from ..array import (_unique,
                      get_excerpts,
                      PartialArray,
                      VirtualMappedArray,
+                     PerClusterData,
                      _partial_shape,
                      _range_from_slice,
                      _pad,
@@ -448,6 +449,43 @@ def test_subset_spikes_per_cluster():
     ae(arrs[2], [1, 7])
     ae(arrs[3], [8])
     ae(arrs[5], [8])
+
+
+def test_per_cluster_data():
+
+    spike_ids = [8, 11, 12, 13, 17, 18, 20]
+    spc = {
+        2: [11, 13, 17],
+        3: [8, 12],
+        5: [18, 20],
+    }
+    spike_clusters = [3, 2, 3, 2, 2, 5, 5]
+    arrays = {
+        2: [1, 3, 7],
+        3: [8, 2],
+        5: [8, 0],
+    }
+    array = [8, 1, 2, 3, 7, 8, 0]
+
+    def _check(pcd):
+        ae(pcd.spike_ids, spike_ids)
+        ae(pcd.spike_clusters, spike_clusters)
+        ae(pcd.array, array)
+        for (k, kk) in zip(sorted(pcd.spc), sorted(spc)):
+            assert k == kk
+            ae(pcd.spc[k], spc[kk])
+        for (k, kk) in zip(sorted(pcd.arrays), sorted(arrays)):
+            assert k == kk
+            ae(pcd.arrays[k], arrays[kk])
+
+    pcd = PerClusterData(spike_ids=spike_ids,
+                         array=array,
+                         spike_clusters=spike_clusters,
+                         )
+    _check(pcd)
+
+    pcd = PerClusterData(spc=spc, arrays=arrays)
+    _check(pcd)
 
 
 #------------------------------------------------------------------------------
