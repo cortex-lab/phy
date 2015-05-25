@@ -10,7 +10,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 
 from ...io.mock import artificial_spike_clusters
-from ..array import _spikes_in_clusters, _spikes_per_cluster
+from ..array import _spikes_in_clusters
 from ..selector import Selector
 
 
