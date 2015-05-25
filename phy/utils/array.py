@@ -534,8 +534,9 @@ class PerClusterData(object):
             assert set(clusters) <= set(self._cluster_ids)
             arrays_s = {}
             for cluster in clusters:
-                spk_rel = _index_of(spc[cluster], self._spc[cluster])
-                arrays_s[cluster] = self._arrays[spk_rel]
+                spk_rel = _index_of(_as_array(spc[cluster]),
+                                    _as_array(self._spc[cluster]))
+                arrays_s[cluster] = _as_array(self._arrays[cluster])[spk_rel]
             return PerClusterData(spc=spc, arrays=arrays_s)
         elif spike_ids is not None:
             assert np.all(np.in1d(spike_ids, self._spike_ids))

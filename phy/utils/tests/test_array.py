@@ -488,6 +488,13 @@ def test_per_cluster_data():
         ae(pcd_s.spc, {3: [8, 12], 5: [18, 20]})
         ae(pcd_s.arrays, {3: [8, 2], 5: [8, 0]})
 
+        pcd_s = pcd.subset(spc={3: [8, 12], 5: [20]})
+        ae(pcd_s.spike_ids, [8, 12, 20])
+        ae(pcd_s.spike_clusters, [3, 3, 5])
+        ae(pcd_s.array, [8, 2, 0])
+        ae(pcd_s.spc, {3: [8, 12], 5: [20]})
+        ae(pcd_s.arrays, {3: [8, 2], 5: [0]})
+
     pcd = PerClusterData(spike_ids=spike_ids,
                          array=array,
                          spike_clusters=spike_clusters,
