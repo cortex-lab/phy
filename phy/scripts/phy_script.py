@@ -28,13 +28,6 @@ Once the GUI is closed, quit IPython with `exit()`.
 
 import sys
 import os.path as op
-import cProfile
-import pstats
-
-import phy
-from phy.cluster.manual import Session
-from phy.utils import start_qt_app, run_qt_app, _ensure_dir_exists
-from phy.ext.six import StringIO
 
 
 #------------------------------------------------------------------------------
@@ -49,27 +42,6 @@ def _pop(l, el, default=None):
         return default
 
 
-def _read_stats(stats_file_bin):
-    old_stdout = sys.stdout
-    sys.stdout = output = StringIO()
-    pstats.Stats(stats_file_bin).strip_dirs(). \
-        sort_stats("cumulative").print_stats()
-    sys.stdout = old_stdout
-    return output.getvalue()
-
-
-def _profile(statement, glob, loc):
-    dir = '.profile'
-    dir = op.realpath(dir)
-    _ensure_dir_exists(dir)
-    stats_file_bin = op.join(dir, 'stats')
-    cProfile.runctx(statement, glob, loc, stats_file_bin)
-    out = _read_stats(stats_file_bin)
-    stats_file = op.join(dir, 'stats.txt')
-    with open(stats_file, 'w') as f:
-        f.write(out)
-
-
 #------------------------------------------------------------------------------
 # Main function
 #------------------------------------------------------------------------------
@@ -78,10 +50,20 @@ def main():
     # TODO: use argparse
     args = sys.argv
 
+    # Profiling.
+    profile = _pop(args, '-p', False)
+    profile_line = _pop(args, '-pl', False)
+    if profile or profile_line:
+        from phy.utils.testing import _enable_profiler, _profile
+        prof = _enable_profiler(profile_line)
+    else:
+        prof = None
+
     if '-h' in args or '--help' in args:
         print(sys.modules[__name__].__doc__)
         return 0
 
+    import phy
     if '-v' in args or '--version' in args:
         print("phy v{}".format(phy.__version__))
         return 0
@@ -91,12 +73,8 @@ def main():
               "is currently supported.")
         return 1
 
-    profile = _pop(args, '-p', False)
-
     args = args[2:]
-
-    print("ClusterManualGUI")
-
+    # print("ClusterManualGUI")
     interactive = _pop(args, '-i', False) or _pop(args, '--interactive', False)
 
     if len(args) == 0:
@@ -105,14 +83,18 @@ def main():
 
     kwik_path = args[0]
 
-    if not profile:
+    if not prof:
         run(kwik_path, interactive=interactive)
     else:
-        _profile('run(kwik_path, interactive=interactive)',
+        _profile(prof, 'run(kwik_path, interactive=interactive)',
                  globals(), locals())
 
 
 def run(kwik_path, interactive=False):
+    import phy
+    from phy.cluster.manual import Session
+    from phy.utils import start_qt_app, run_qt_app
+
     if not op.exists(kwik_path):
         print("The file `{}` doesn't exist.".format(kwik_path))
         return 1
