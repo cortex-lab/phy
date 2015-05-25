@@ -191,8 +191,7 @@ def _start_stop(item):
         return item.start, item.stop
     elif isinstance(item, (list, np.ndarray)):
         # List or array of indices.
-        # return item[0], item[-1]
-        raise NotImplementedError()
+        return np.min(item), np.max(item)
     else:
         # Integer.
         return item, item + 1
@@ -509,12 +508,20 @@ class PerClusterData(object):
         spikes = np.concatenate([self._spc[cluster]
                                  for cluster in self.cluster_ids])
         idx = np.argsort(spikes)
+        self._spike_ids = np.sort(spikes)
         # NOTE: concatenate all arrays along the first axis, because we assume
         # that the first axis represents the spikes.
-        arrays = np.concatenate([_as_array(self._arrays[cluster])
-                                 for cluster in self.cluster_ids])
-        self._spike_ids = np.sort(spikes)
-        self._array = arrays[idx, ...]
+        # TODO OPTIM: use ConcatenatedArray and implement custom indices.
+        # array = ConcatenatedArrays([_as_array(self._arrays[cluster])
+        #                             for cluster in self.cluster_ids])
+        # NOTE: This is a big optimization when there is a single huge
+        # memory-mapped array.
+        if len(self.cluster_ids) >= 2:
+            array = np.concatenate([_as_array(self._arrays[cluster])
+                                    for cluster in self.cluster_ids])
+        else:
+            array = _as_array(self._arrays[self.cluster_ids[0]])
+        self._array = array[idx]
         self._spike_clusters = _flatten_spikes_per_cluster(self._spc)
 
     def _split(self):
