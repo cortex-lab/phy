@@ -60,9 +60,6 @@ setup(
     package_data={
         'phy': ['*.vert', '*.frag', '*.glsl'],
     },
-    data_files={
-        'phy/plot/glsl': ['*.vert', '*.frag', '*.glsl'],
-    },
     entry_points={
         'console_scripts': [
             'phy=phy.scripts.phy_script:main',
