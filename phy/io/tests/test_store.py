@@ -15,12 +15,40 @@ from numpy.testing import assert_allclose as ac
 
 from ...utils import Bunch, _spikes_per_cluster
 from ...utils.tempdir import TemporaryDirectory
-from ..store import MemoryStore, DiskStore, ClusterStore, StoreItem
+from ..store import (_load_ndarray,
+                     MemoryStore,
+                     DiskStore,
+                     ClusterStore,
+                     VariableSizeItem,
+                     FixedSizeItem,
+                     )
 
 
 #------------------------------------------------------------------------------
 # Test data stores
 #------------------------------------------------------------------------------
+
+def _test_load_ndarray(memmap=None):
+    n, m = 10000, 100
+    dtype = np.float32
+    arr = np.random.randn(n, m).astype(dtype)
+    with TemporaryDirectory() as tmpdir:
+        path = op.join(tmpdir, 'test')
+        with open(path, 'wb') as f:
+            arr.tofile(f)
+        with open(path, 'rb') as f:
+            arr_m = _load_ndarray(f, dtype=dtype,
+                                  shape=(n, m), memmap=memmap)
+        ae(arr, arr_m)
+
+
+def test_load_ndarray_nomemmap():
+    _test_load_ndarray(False)
+
+
+def test_load_ndarray_memmap():
+    _test_load_ndarray(True)
+
 
 def test_memory_store():
     ms = MemoryStore()
@@ -105,6 +133,13 @@ def test_disk_store():
         assert ds.load(3, ['key']) == {'key': None}
         assert ds.cluster_ids == []
 
+        # Test load/save file.
+        ds.save_file('test', {'a': a})
+        ds = DiskStore(tempdir)
+        data = ds.load_file('test')
+        ae(data['a'], a)
+        assert ds.load_file('test2') is None
+
 
 def test_cluster_store_1():
     with TemporaryDirectory() as tempdir:
@@ -128,12 +163,16 @@ def test_cluster_store_1():
 
         # We create a n_spikes item to be stored in memory,
         # and we define how to generate it for a given cluster.
-        class MyItem(StoreItem):
+        class MyItem(FixedSizeItem):
             name = 'my item'
-            fields = [('n_spikes', 'memory')]
+            fields = ['n_spikes']
 
-            def store_cluster(self, cluster, spikes=None, mode=None):
+            def store(self, cluster):
+                spikes = self.spikes_per_cluster[cluster]
                 self.memory_store.store(cluster, n_spikes=len(spikes))
+
+            def load(self, cluster, name):
+                return self.memory_store.load(cluster, name)
 
             def on_cluster(self, up):
                 if up.description == 'merge':
@@ -167,7 +206,7 @@ def test_cluster_store_1():
                    new_spikes_per_cluster=spc,
                    old_spikes_per_cluster=spikes_per_cluster,)
 
-        cs.store_items[0].on_cluster(up)
+        cs.items['my item'].on_cluster(up)
 
         # Check the list of clusters in the store.
         ae(cs.memory_store.cluster_ids, list(range(0, n_clusters)) + [20])
@@ -190,13 +229,16 @@ def test_cluster_store_multi():
 
     cs = ClusterStore(spikes_per_cluster={0: [0, 2], 1: [1, 3, 4]})
 
-    class MyItem(StoreItem):
+    class MyItem(FixedSizeItem):
         name = 'my item'
-        fields = [('d', 'memory'),
-                  ('m', 'memory')]
+        fields = ['d', 'm']
 
-        def store_cluster(self, cluster, spikes=None, mode=None):
+        def store(self, cluster):
+            spikes = self.spikes_per_cluster[cluster]
             self.memory_store.store(cluster, d=len(spikes), m=len(spikes)**2)
+
+        def load(self, cluster, name):
+            return self.memory_store.load(cluster, name)
 
     cs.register_item(MyItem)
 
@@ -222,7 +264,6 @@ def test_cluster_store_load():
         spike_clusters = np.random.randint(size=n_spikes,
                                            low=0, high=n_clusters)
         spikes_per_cluster = _spikes_per_cluster(spike_ids, spike_clusters)
-
         model = {'spike_clusters': spike_clusters}
 
         # We initialize the ClusterStore.
@@ -233,42 +274,38 @@ def test_cluster_store_load():
 
         # We create a n_spikes item to be stored in memory,
         # and we define how to generate it for a given cluster.
-        class MyItem(StoreItem):
+        class MyItem(VariableSizeItem):
             name = 'my item'
-            fields = [('spikes_square', 'disk', np.int32)]
+            fields = ['spikes_square']
 
-            def store_cluster(self, cluster, spikes=None, mode=None):
+            def store(self, cluster):
+                spikes = spikes_per_cluster[cluster]
                 data = (spikes ** 2).astype(np.int32)
                 self.disk_store.store(cluster, spikes_square=data)
 
-        cs.register_item(MyItem)
+            def load(self, cluster, name):
+                return self.disk_store.load(cluster, name, np.int32)
 
-        # Now we generate the store.
+            def load_spikes(self, spikes, name):
+                return (spikes ** 2).astype(np.int32)
+
+        cs.register_item(MyItem)
         cs.generate()
 
         # All spikes in cluster 1.
         cluster = 1
         spikes = spikes_per_cluster[cluster]
-        ae(cs.load('spikes_square', [cluster], spikes), spikes ** 2)
-
-        # Some spikes in cluster 1.
-        spikes = spikes_per_cluster[cluster][1::2]
-        ae(cs.load('spikes_square', [cluster], spikes), spikes ** 2)
-
-        # All spikes in several clusters.
-        clusters = [2, 3, 5]
-        spikes = np.concatenate([spikes_per_cluster[cl]
-                                 for cl in clusters])
-
-        # # Reverse the order of spikes.
-        # spikes = np.r_[spikes, spikes[::-1]]
-        # ae(cs.load('spikes_square', clusters, spikes), spikes ** 2)
+        ae(cs.load('spikes_square', clusters=[cluster]), spikes ** 2)
 
         # Some spikes in several clusters.
+        clusters = [2, 3, 5]
         spikes = np.concatenate([spikes_per_cluster[cl][::3]
                                  for cl in clusters])
-        spikes = np.unique(spikes)
-        ae(cs.load('spikes_square', clusters, spikes), spikes ** 2)
+        ae(cs.load('spikes_square', spikes=spikes), np.unique(spikes) ** 2)
+
+        # Empty selection.
+        assert len(cs.load('spikes_square', clusters=[])) == 0
+        assert len(cs.load('spikes_square', spikes=[])) == 0
 
 
 def test_cluster_store_management():
@@ -295,11 +332,12 @@ def test_cluster_store_management():
 
         # We create a n_spikes item to be stored in memory,
         # and we define how to generate it for a given cluster.
-        class MyItem(StoreItem):
+        class MyItem(VariableSizeItem):
             name = 'my item'
-            fields = [('spikes_square', 'disk', np.int32)]
+            fields = ['spikes_square']
 
-            def store_cluster(self, cluster, spikes=None, mode=None):
+            def store(self, cluster):
+                spikes = self.spikes_per_cluster[cluster]
                 if not self.is_consistent(cluster, spikes):
                     data = (spikes ** 2).astype(np.int32)
                     self.disk_store.store(cluster, spikes_square=data)
@@ -320,7 +358,7 @@ def test_cluster_store_management():
         cs.update_spikes_per_cluster(spikes_per_cluster)
 
         def _check_to_generate(cs, clusters):
-            item = cs.store_items[0]
+            item = cs.items['my item']
             ae(item.to_generate(), clusters)
             ae(item.to_generate(None), clusters)
             ae(item.to_generate('default'), clusters)
@@ -370,7 +408,7 @@ def test_cluster_store_management():
 
         # All files are now old and should be removed by clean().
         assert not cs.is_consistent()
-        item = cs.store_items[0]
+        item = cs.items['my item']
         ae(item.to_generate(), np.arange(n_clusters, n_clusters + 5))
 
         ae(cs.cluster_ids, np.arange(n_clusters, n_clusters + 5))

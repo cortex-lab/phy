@@ -4,7 +4,7 @@
 
 Usage:
 
-    phy cluster manual /path/to/myfile.kwik [-i]
+    phy cluster-manual /path/to/myfile.kwik [-i]
 
 Options:
 
@@ -29,13 +29,9 @@ Once the GUI is closed, quit IPython with `exit()`.
 import sys
 import os.path as op
 
-import phy
-from phy.cluster.manual import Session
-from phy.utils import start_qt_app, run_qt_app
-
 
 #------------------------------------------------------------------------------
-# Main function
+# Utility functions
 #------------------------------------------------------------------------------
 
 def _pop(l, el, default=None):
@@ -46,27 +42,42 @@ def _pop(l, el, default=None):
         return default
 
 
+#------------------------------------------------------------------------------
+# Main function
+#------------------------------------------------------------------------------
+
 def main():
     # TODO: use argparse
     args = sys.argv
+
+    # Profiling.
+    profile = _pop(args, '-p', False)
+    profile_line = _pop(args, '-pl', False)
+    if profile or profile_line:
+        from phy.utils.testing import _enable_profiler, _profile
+        prof = _enable_profiler(profile_line)
+    else:
+        prof = None
 
     if '-h' in args or '--help' in args:
         print(sys.modules[__name__].__doc__)
         return 0
 
+    import phy
     if '-v' in args or '--version' in args:
         print("phy v{}".format(phy.__version__))
         return 0
 
-    if len(args) <= 3 or args[1] != 'cluster' or args[2] != 'manual':
-        print("Only the `phy cluster manual [-i] myfile.kwik` command "
+    if _pop(args, '--debug', False):
+        phy.debug()
+
+    if len(args) <= 2 or args[1] != 'cluster-manual':
+        print("Only the `phy cluster-manual [-i] myfile.kwik` command "
               "is currently supported.")
         return 1
 
-    args = args[3:]
-
-    print("ClusterManualGUI")
-
+    args = args[2:]
+    # print("ClusterManualGUI")
     interactive = _pop(args, '-i', False) or _pop(args, '--interactive', False)
 
     if len(args) == 0:
@@ -74,6 +85,19 @@ def main():
         return 1
 
     kwik_path = args[0]
+
+    if not prof:
+        run(kwik_path, interactive=interactive)
+    else:
+        _profile(prof, 'run(kwik_path, interactive=interactive)',
+                 globals(), locals())
+
+
+def run(kwik_path, interactive=False):
+    import phy
+    from phy.cluster.manual import Session
+    from phy.utils import start_qt_app, run_qt_app
+
     if not op.exists(kwik_path):
         print("The file `{}` doesn't exist.".format(kwik_path))
         return 1

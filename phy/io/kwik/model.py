@@ -281,6 +281,7 @@ class KwikModel(BaseModel):
         self._channels = []
         self._channel_order = None
         self._features = None
+        self._features_masks = None
         self._masks = None
         self._waveforms = None
         self._cluster_metadata = None
@@ -440,16 +441,16 @@ class KwikModel(BaseModel):
         # Load features masks.
         path = '{0:s}/features_masks'.format(self._channel_groups_path)
 
+        nfpc = self._metadata['nfeatures_per_channel']
+        nc = len(self.channel_order)
+
         if self._kwx is not None:
             fm = self._kwx.read(path)
             self._features_masks = fm
             self._features = PartialArray(fm, 0)
 
-            nfpc = self._metadata['nfeatures_per_channel']
-            nc = len(self.channel_order)
             # This partial array simulates a (n_spikes, n_channels) array.
-            self._masks = PartialArray(fm,
-                                       (slice(0, nfpc * nc, nfpc), 1))
+            self._masks = PartialArray(fm, (slice(0, nfpc * nc, nfpc), 1))
             assert self._masks.shape == (self.n_spikes, nc)
 
     def _load_spikes(self):
@@ -520,6 +521,22 @@ class KwikModel(BaseModel):
             # Virtual concatenation of the arrays.
             self._traces = _concatenate_virtual_arrays(traces)
 
+    def has_kwx(self):
+        """Returns whether the `.kwx` file is present.
+
+        If not, the features and masks won't be available.
+
+        """
+        return self._kwx is not None
+
+    def has_kwd(self):
+        """Returns whether the `.raw.kwd` file is present.
+
+        If not, the waveforms won't be available.
+
+        """
+        return self._kwd is not None
+
     def open(self, kwik_path, channel_group=None, clustering=None):
         """Open a Kwik dataset.
 
@@ -576,7 +593,7 @@ class KwikModel(BaseModel):
         self._kwx = self._open_h5_if_exists('kwx')
         if self._kwx is None:
             warn("The `.kwx` file hasn't been found. "
-                 "Features won't be available.")
+                 "Features and masks won't be available.")
         self._kwd = self._open_h5_if_exists('raw.kwd')
         if self._kwd is None:
             warn("The `.raw.kwd` file hasn't been found. "

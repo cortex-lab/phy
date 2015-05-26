@@ -419,19 +419,19 @@ class Wizard(object):
         best, match = self._history.current_item
         # Select the history best.
         if best is not None and self._best_list:
-            assert best in self._best_list
-            self.best = best
-        # Ensure the current best cluster is valid.
-        if self.best is not None and self.best not in self._best_list:
-            self.best = self._best_list[0]
+            # Ensure the current best cluster is valid.
+            if best in self._best_list:
+                self.best = best
+            else:
+                self.best = self._best_list[0]
         # Select the history match.
         if match is not None and self._match_list:
+            # Ensure the current match is valid.
             self._set_match_list()
-            assert match in self._match_list
-            self.match = match
-        # Ensure the current match is valid.
-        if self.match is not None and self.match not in self._match_list:
-            self.match = self._match_list[0]
+            if match in self._match_list:
+                self.match = match
+            else:
+                self.match = self._match_list[0]
 
     def _update_selection(self, up):
         # New selection.

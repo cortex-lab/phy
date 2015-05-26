@@ -18,113 +18,46 @@ from ...utils.array import (_index_of,
                             _spikes_per_cluster,
                             _concatenate_per_cluster_arrays,
                             )
-from ..store import StoreItem
+from ..store import ClusterStore, FixedSizeItem, VariableSizeItem
+
+
+#------------------------------------------------------------------------------
+# Utility functions
+#------------------------------------------------------------------------------
+
+def _default_array(shape, value=0, n_spikes=0, dtype=np.float32):
+    shape = (n_spikes,) + shape[1:]
+    out = np.empty(shape, dtype=dtype)
+    out.fill(value)
+    return out
+
+
+def _atleast_nd(arr, ndim):
+    if arr.ndim == ndim:
+        return arr
+    assert arr.ndim < ndim
+    if ndim - arr.ndim == 1:
+        return arr[None, ...]
+    elif ndim - arr.ndim == 2:
+        return arr[None, None, ...]
+
+
+def _mean(arr, shape):
+    if arr is not None:
+        assert isinstance(arr, np.ndarray)
+        if arr.shape[0]:
+            return arr.mean(axis=0)
+    return np.zeros(shape, dtype=np.float32)
 
 
 #------------------------------------------------------------------------------
 # Store items
 #------------------------------------------------------------------------------
 
-class ClusterStatistics(StoreItem):
-    """Manage cluster statistics."""
-    name = 'statistics'
-    fields = [('mean_masks', 'memory'),
-              ('sum_masks', 'memory'),
-              ('n_unmasked_channels', 'memory'),
-              ('main_channels', 'memory'),
-              ('mean_probe_position', 'memory'),
-              ('mean_features', 'memory'),
-              ('mean_waveforms', 'memory'),
-              ]
-
-    def __init__(self, *args, **kwargs):
-        super(ClusterStatistics, self).__init__(*args, **kwargs)
-        self._funcs = {}
-        self.n_channels = len(self.model.channel_order)
-        self.n_samples_waveforms = self.model.n_samples_waveforms
-        self.n_features = self.model.n_features_per_channel
-
-    def add(self, name, func):
-        """Add a new statistics."""
-        self.fields.append((name, 'memory'))
-        self._funcs[name] = func
-
-    def remove(self, name):
-        """Remove a statistics."""
-        self.fields.remove((name, 'memory'))
-        del self.funcs[name]
-
-    def store_cluster_default(self, cluster, spikes=None, mode=None):
-        """Compute the built-in statistics for one cluster."""
-        # Load the masks.
-        masks = self.disk_store.load(cluster,
-                                     'masks',
-                                     dtype=np.float32,
-                                     shape=(-1, self.n_channels))
-        assert isinstance(masks, np.ndarray)
-
-        # Load the features.
-        features = self.disk_store.load(cluster,
-                                        'features',
-                                        dtype=np.float32,
-                                        shape=(-1, self.n_channels *
-                                               self.n_features))
-        assert isinstance(features, np.ndarray)
-        mean_features = features.mean(axis=0)
-
-        # Load the waveforms.
-        waveforms = self.disk_store.load(cluster,
-                                         'waveforms',
-                                         dtype=np.float32,
-                                         shape=(-1,
-                                                self.n_samples_waveforms,
-                                                self.n_channels,
-                                                ))
-        assert isinstance(waveforms, np.ndarray)
-        mean_waveforms = waveforms.mean(axis=0)
-
-        # Default statistics.
-        sum_masks = masks.sum(axis=0)
-        mean_masks = sum_masks / float(masks.shape[0])
-        unmasked_channels = np.nonzero(mean_masks > .1)[0]
-        n_unmasked_channels = len(unmasked_channels)
-        # Weighted mean of the channels, weighted by the mean masks.
-        mean_probe_position = (self.model.probe.positions *
-                               mean_masks[:, np.newaxis]).mean(axis=0)
-        main_channels = np.argsort(mean_masks)[::-1]
-        main_channels = np.array([c for c in main_channels
-                                  if c in unmasked_channels])
-
-        self.memory_store.store(cluster,
-                                mean_masks=mean_masks,
-                                mean_features=mean_features,
-                                sum_masks=sum_masks,
-                                n_unmasked_channels=n_unmasked_channels,
-                                mean_probe_position=mean_probe_position,
-                                main_channels=main_channels,
-                                mean_waveforms=mean_waveforms,
-                                )
-
-    def store_cluster(self, cluster, spikes=None, mode=None, name=None):
-        """Compute all statistics for one cluster."""
-        if name is None:
-            self.store_cluster_default(cluster, spikes=spikes, mode=mode)
-            for func in self._funcs.values():
-                func(cluster)
-        else:
-            assert name in self._funcs
-            self._funcs[name](cluster)
-
-    def is_consistent(self, cluster, spikes):
-        return cluster in self.memory_store
-
-
-class FeatureMasks(StoreItem):
+class FeatureMasks(VariableSizeItem):
     """Store all features and masks of all clusters."""
     name = 'features and masks'
-    fields = [('features', 'disk', np.float32,),
-              ('masks', 'disk', np.float32,),
-              ]
+    fields = ['features', 'masks']
 
     def __init__(self, *args, **kwargs):
         # Size of the chunk used when reading features and masks from the HDF5
@@ -137,19 +70,15 @@ class FeatureMasks(StoreItem):
         self.n_channels = len(self.model.channel_order)
         self.n_spikes = self.model.n_spikes
         self.n_chunks = self.n_spikes // self.chunk_size + 1
+        self._shapes['masks'] = (-1, self.n_channels)
+        self._shapes['features'] = (-1, self.n_channels, self.n_features)
 
-        # Set the shape of the features and masks.
-        self.fields[0] = ('features', 'disk',
-                          np.float32, (-1, self.n_channels, self.n_features))
-        self.fields[1] = ('masks', 'disk',
-                          np.float32, (-1, self.n_channels))
-
-    def _store_cluster(self,
-                       cluster,
-                       chunk_spikes,
-                       chunk_spikes_per_cluster,
-                       chunk_features_masks,
-                       ):
+    def _store(self,
+               cluster,
+               chunk_spikes,
+               chunk_spikes_per_cluster,
+               chunk_features_masks,
+               ):
 
         nc = self.n_channels
         nf = self.n_features
@@ -188,6 +117,18 @@ class FeatureMasks(StoreItem):
                               append=True,
                               )
 
+    def _store_means(self, cluster):
+        # Load masks and features.
+        masks = self.cluster_store.masks(cluster)
+        features = self.cluster_store.features(cluster)
+        # Load masks and features.
+        mean_masks = _mean(masks, (self.n_channels,))
+        mean_features = _mean(features, (self.n_channels,))
+        self.disk_store.store(cluster,
+                              mean_masks=mean_masks,
+                              mean_features=mean_features,
+                              )
+
     def is_consistent(self, cluster, spikes):
         """Return whether the filesizes of the two cluster store files
         (`.features` and `.masks`) are correct."""
@@ -208,8 +149,9 @@ class FeatureMasks(StoreItem):
                 return False
         return True
 
-    def store_all_clusters(self, mode=None):
-        """Store the features and masks of the clusters that need it.
+    def store_all(self, mode=None):
+        """Store the features, masks, and their means of the clusters that
+        need it.
 
         Parameters
         ----------
@@ -257,16 +199,57 @@ class FeatureMasks(StoreItem):
                 clusters = (set(chunk_spc.keys()).
                             intersection(set(clusters_to_generate)))
                 for cluster in sorted(clusters):
-                    self._store_cluster(cluster,
-                                        chunk_spikes,
-                                        chunk_spc,
-                                        chunk_features_masks,
-                                        )
+                    self._store(cluster,
+                                chunk_spikes,
+                                chunk_spc,
+                                chunk_features_masks,
+                                )
 
                 # Update the progress reporter.
                 self._pr.value += 1
 
+            # Store mean features and waveforms on disk.
+            self._pr.value = 0
+            self._pr.value_max = len(clusters_to_generate)
+            for cluster in clusters_to_generate:
+                self._store_means(cluster)
+                self._pr.value += 1
+
         self._pr.set_complete()
+
+    def load(self, cluster, name):
+        """Load features or masks for a cluster.
+
+        This uses the cluster store if possible, otherwise it falls back
+        to the model (much slower).
+
+        """
+        assert name in ('features', 'masks')
+        dtype = np.float32
+        shape = self._shapes[name]
+        if self.disk_store:
+            data = self.disk_store.load(cluster, name, dtype, shape)
+            if data is not None:
+                return data
+        # Fallback to load_spikes if the data could not be obtained from
+        # the store.
+        spikes = self.spikes_per_cluster[cluster]
+        return self.load_spikes(spikes, name)
+
+    def load_spikes(self, spikes, name):
+        """Load features or masks for an array of spikes."""
+        assert name in ('features', 'masks')
+        shape = self._shapes[name]
+        data = getattr(self.model, name)
+        if data is not None and (isinstance(spikes, slice) or len(spikes)):
+            out = data[spikes]
+        # Default masks and features.
+        else:
+            out = _default_array(shape,
+                                 value=0. if name == 'features' else 1.,
+                                 n_spikes=len(spikes),
+                                 )
+        return out.reshape(shape)
 
     def on_merge(self, up):
         """Create the cluster store files of the merged cluster
@@ -349,13 +332,17 @@ class FeatureMasks(StoreItem):
                 # Save it in the cluster store.
                 self.disk_store.store(new, **{name: concat})
 
+    def on_cluster(self, up=None):
+        super(FeatureMasks, self).on_cluster(up)
+        # Store the means of the new clusters.
+        for cluster in up.added:
+            self._store_means(cluster)
 
-class Waveforms(StoreItem):
+
+class Waveforms(VariableSizeItem):
     """A cluster store item that manages the waveforms of all clusters."""
     name = 'waveforms'
-    fields = [('waveforms', 'disk', np.float32,),
-              ('waveforms_spikes', 'disk', np.int64,),
-              ]
+    fields = ['waveforms']
 
     def __init__(self, *args, **kwargs):
         self.n_spikes_max = kwargs.pop('n_spikes_max')
@@ -366,39 +353,200 @@ class Waveforms(StoreItem):
         self.n_channels = len(self.model.channel_order)
         self.n_spikes = self.model.n_spikes
         self.n_samples = self.model.n_samples_waveforms
-
-        # Set the shape of the features and masks.
-        self.fields[0] = ('waveforms', 'disk',
-                          np.float32, (-1, self.n_samples, self.n_channels))
-
+        self._shapes['waveforms'] = (-1, self.n_samples, self.n_channels)
         self._selector = Selector(self.model.spike_clusters,
                                   n_spikes_max=self.n_spikes_max,
                                   excerpt_size=self.excerpt_size,
                                   )
 
-    def store_cluster(self, cluster, spikes=None, mode=None):
-        spikes = self._selector.subset_spikes_clusters([cluster])
-        waveforms = self.model.waveforms[spikes]
+        # Get or create the subset spikes per cluster dictionary.
+        spc = self.disk_store.load_file('waveforms_spikes')
+        if spc is None:
+            spc = self._selector.subset_spikes_clusters(self.model.cluster_ids)
+            self.disk_store.save_file('waveforms_spikes', spc)
+        self._spikes_per_cluster = spc
+
+    def _subset_spikes_cluster(self, cluster, force=False):
+        if force or cluster not in self._spikes_per_cluster:
+            spikes = self._selector.subset_spikes_clusters([cluster])[cluster]
+            # Persist the new _spikes_per_cluster array on disk.
+            self._spikes_per_cluster[cluster] = spikes
+            self.disk_store.save_file('waveforms_spikes',
+                                      self._spikes_per_cluster)
+        return self._spikes_per_cluster[cluster]
+
+    def store(self, cluster):
+        """Store waveforms and mean waveforms."""
+        # NOTE: make sure to erase old spikes for that cluster.
+        # Typical case merge, undo, different merge.
+        spikes = self._subset_spikes_cluster(cluster, force=True)
+        waveforms = self.model.waveforms[spikes].astype(np.float32)
+        mean_waveforms = _mean(waveforms, (self.n_samples, self.n_channels))
         self.disk_store.store(cluster,
-                              waveforms=waveforms.astype(np.float32),
-                              waveforms_spikes=spikes.astype(np.int64),
+                              waveforms=waveforms,
+                              mean_waveforms=mean_waveforms,
                               )
 
     def is_consistent(self, cluster, spikes):
-        """Return whether the waveforms and spikes file sizes match."""
+        """Return whether the waveforms and spikes match."""
         path_w = self.disk_store._cluster_path(cluster, 'waveforms')
-        path_s = self.disk_store._cluster_path(cluster, 'waveforms_spikes')
-
-        if not op.exists(path_w) or not op.exists(path_s):
+        if not op.exists(path_w):
             return False
-
         file_size_w = os.stat(path_w).st_size
-        file_size_s = os.stat(path_s).st_size
-
-        n_spikes_s = file_size_s // 8
         n_spikes_w = file_size_w // (self.n_channels * self.n_samples * 4)
-
-        if n_spikes_s != n_spikes_w:
+        if n_spikes_w != len(self.spikes_per_cluster[cluster]):
             return False
-
         return True
+
+    def load(self, cluster, name='waveforms'):
+        """Load features or masks for a cluster.
+
+        This uses the cluster store if possible, otherwise it falls back
+        to the model (much slower).
+
+        """
+        assert name == 'waveforms'
+        dtype = np.float32
+        if self.disk_store:
+            data = self.disk_store.load(cluster,
+                                        name,
+                                        dtype,
+                                        self._shapes[name],
+                                        )
+            if data is not None:
+                return data
+        # Fallback to load_spikes if the data could not be obtained from
+        # the store.
+        spikes = self._subset_spikes_cluster(cluster)
+        return self.load_spikes(spikes, name)
+
+    def load_spikes(self, spikes, name):
+        """Load features or masks for an array of spikes."""
+        assert name == 'waveforms'
+        data = getattr(self.model, name)
+        shape = self._shapes[name]
+        if data is not None and (isinstance(spikes, slice) or len(spikes)):
+            return data[spikes]
+        # Default waveforms.
+        return _default_array(shape, value=0., n_spikes=len(spikes))
+
+
+class ClusterStatistics(FixedSizeItem):
+    """Manage cluster statistics."""
+    name = 'statistics'
+    fields = ['mean_masks',
+              'mean_features',
+              'mean_waveforms',
+              'mean_probe_position',
+              'main_channels',
+              'n_unmasked_channels',
+              ]
+
+    def __init__(self, *args, **kwargs):
+        super(ClusterStatistics, self).__init__(*args, **kwargs)
+        self._funcs = {}
+        self.n_channels = len(self.model.channel_order)
+        self.n_samples_waveforms = self.model.n_samples_waveforms
+        self.n_features = self.model.n_features_per_channel
+        self._shapes = {
+            'mean_masks': (-1, self.n_channels),
+            'mean_features': (-1, self.n_channels, self.n_features),
+            'mean_waveforms': (-1, self.n_samples_waveforms, self.n_channels),
+            'mean_probe_position': (-1, 2),
+            'main_channels': (-1, self.n_channels),
+            'n_unmasked_channels': (-1,),
+        }
+
+    def add(self, name, func, shape):
+        """Add a new statistics."""
+        self.fields.append(name)
+        self._funcs[name] = func
+        self._shapes[name] = shape
+
+    def remove(self, name):
+        """Remove a statistics."""
+        self.fields.remove(name)
+        del self.funcs[name]
+
+    def _load_mean(self, cluster, name):
+        out = self.disk_store.load(cluster, name,
+                                   np.float32, self._shapes[name][1:])
+        return out
+
+    def store_default(self, cluster):
+        """Compute the built-in statistics for one cluster.
+
+        The mean masks, features, and waveforms are loaded from disk.
+
+        """
+        mean_masks = self._load_mean(cluster, 'mean_masks')
+        mean_features = self._load_mean(cluster, 'mean_features')
+        mean_waveforms = self._load_mean(cluster, 'mean_waveforms')
+
+        unmasked_channels = np.nonzero(mean_masks > .1)[0]
+        n_unmasked_channels = len(unmasked_channels)
+        # Weighted mean of the channels, weighted by the mean masks.
+        mean_probe_position = _mean(self.model.probe.positions *
+                                    mean_masks[:, np.newaxis], (2,))
+        main_channels = np.argsort(mean_masks)[::-1]
+        main_channels = np.array([c for c in main_channels
+                                  if c in unmasked_channels])
+
+        self.memory_store.store(cluster,
+                                mean_masks=mean_masks,
+                                mean_features=mean_features,
+                                mean_waveforms=mean_waveforms,
+                                mean_probe_position=mean_probe_position,
+                                main_channels=main_channels,
+                                n_unmasked_channels=n_unmasked_channels,
+                                )
+
+    def store(self, cluster, name=None):
+        """Compute all statistics for one cluster."""
+        if name is None:
+            self.store_default(cluster)
+            for func in self._funcs.values():
+                func(cluster)
+        else:
+            assert name in self._funcs
+            self._funcs[name](cluster)
+
+    def load(self, cluster, name):
+        """Return a cluster statistic."""
+        return self.memory_store.load(cluster, name)
+
+    def is_consistent(self, cluster, spikes):
+        """Return whether a cluster is consistent."""
+        return cluster in self.memory_store
+
+
+#------------------------------------------------------------------------------
+# Store creation
+#------------------------------------------------------------------------------
+
+def create_store(model,
+                 path=None,
+                 spikes_per_cluster=None,
+                 features_masks_chunk_size=100000,
+                 waveforms_n_spikes_max=None,
+                 waveforms_excerpt_size=None,
+                 ):
+    """Create a cluster store for a model."""
+    cluster_store = ClusterStore(model=model,
+                                 spikes_per_cluster=spikes_per_cluster,
+                                 path=path,
+                                 )
+
+    # Create the FeatureMasks store item.
+    # chunk_size is the number of spikes to load at once from
+    # the features_masks array.
+    cluster_store.register_item(FeatureMasks,
+                                chunk_size=features_masks_chunk_size,
+                                )
+    cluster_store.register_item(Waveforms,
+                                n_spikes_max=waveforms_n_spikes_max,
+                                excerpt_size=waveforms_excerpt_size,
+                                )
+    cluster_store.register_item(ClusterStatistics)
+
+    return cluster_store

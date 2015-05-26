@@ -43,7 +43,7 @@ def _start_manual_clustering(kwik_path=None,
                              ):
     session = Session(phy_user_dir=tempdir)
     if chunk_size is not None:
-        session.settings['store_chunk_size'] = chunk_size
+        session.settings['features_masks_chunk_size'] = chunk_size
     session.open(kwik_path=kwik_path, model=model)
     return session
 
@@ -154,9 +154,24 @@ def test_session_clustering():
         session.split(spikes)  # Create cluster 6 and more.
         _check_arrays(6, spikes=spikes)
 
+        # Test merge-undo-different-merge combo.
+        spc = session.clustering.spikes_per_cluster.copy()
+        clusters = session.cluster_ids[:3]
+        up = session.merge(clusters)
+        _check_arrays(up.added[0], spikes=up.spike_ids)
+        # Undo.
+        session.undo()
+        for cluster in clusters:
+            _check_arrays(cluster, spikes=spc[cluster])
+        # Another merge.
+        clusters = session.cluster_ids[1:5]
+        up = session.merge(clusters)
+        _check_arrays(up.added[0], spikes=up.spike_ids)
+
         # Move a cluster to a group.
-        session.move([6], 2)
-        assert len(session.cluster_store.mean_probe_position(6)) == 2
+        cluster = session.cluster_ids[0]
+        session.move([cluster], 2)
+        assert len(session.cluster_store.mean_probe_position(cluster)) == 2
 
         # Save.
         spike_clusters_new = session.model.spike_clusters.copy()
@@ -174,7 +189,7 @@ def test_session_clustering():
         #  Check the cluster groups.
         clusters = session.clustering.cluster_ids
         groups = session.model.cluster_groups
-        assert groups[6] == 2
+        assert groups[cluster] == 2
 
 
 def test_session_multiple_clusterings():
@@ -361,13 +376,13 @@ def test_session_statistics():
             return session.clustering.cluster_counts.get(cluster, 0)
 
         store = session.cluster_store
-        stats = store.get_item('statistics')
+        stats = store.items['statistics']
 
         def _check():
             for clu in session.cluster_ids:
                 assert store.n_spikes(clu) == store.features(clu).shape[0]
 
-        assert ('n_spikes', 'memory') in stats.fields
+        assert 'n_spikes' in stats.fields
         _check()
 
         # Merge the clusters and check that the statistics has been
@@ -384,6 +399,7 @@ def test_session_statistics():
         _check()
 
 
+@mark.long
 def test_session_history():
 
     n_clusters = 15

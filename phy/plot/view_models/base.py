@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from ...utils.array import _unique, _spikes_in_clusters
+from ...utils.array import _unique
 from ...utils.selector import Selector
 from ...utils._misc import _show_shortcuts
 from ...utils import _as_list
@@ -48,10 +48,15 @@ def _selected_clusters_colors(n_clusters):
 #------------------------------------------------------------------------------
 
 class BaseViewModel(object):
-    """Create a view from a model."""
+    """Create a view from a model.
+
+    This object uses an internal `Selector` instance to manage spike and
+    cluster selection.
+
+    """
     _view_class = None
     _view_name = ''
-    _imported_params = ('position', 'size',)
+    _imported_params = ('position', 'size', 'n_spikes_max', 'excerpt_size')
     keyboard_shortcuts = {}
     scale_factor = 1.
 
@@ -62,6 +67,7 @@ class BaseViewModel(object):
                  **kwargs):
 
         self._model = model
+        assert store is not None
         self._store = store
         if cluster_ids is not None:
             cluster_ids = _as_list(cluster_ids)
@@ -128,27 +134,6 @@ class BaseViewModel(object):
     def n_spikes(self):
         """Number of selected spikes."""
         return self._selector.n_spikes
-
-    def load(self, name, spike_selection=None):
-        """Load data from the store or the model.
-
-        By default, the data for the selected spikes is loaded.
-        Load the data from all spikes in the selected clusters with
-        `spike_selection='all'`.
-
-        """
-        spikes = self.spike_ids if spike_selection is None else None
-        if self._store is not None and len(self.cluster_ids):
-            return self._store.load(name, self.cluster_ids, spikes=spikes)
-        else:
-            out = getattr(self._model, name)
-            if spikes is None:
-                spikes = _spikes_in_clusters(self.model.spike_clusters,
-                                             self.cluster_ids)
-            if len(spikes) == 0:
-                return np.zeros((0,) + out.shape[1:], dtype=out.dtype)
-            else:
-                return out[spikes]
 
     def _update_spike_clusters(self, spikes=None):
         """Update the spike clusters and cluster colors."""

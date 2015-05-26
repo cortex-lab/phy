@@ -8,9 +8,7 @@
 
 import numpy as np
 
-from ...utils.array import (_concatenate_per_cluster_arrays,
-                            _spikes_in_clusters,
-                            )
+from ...utils.array import _spikes_in_clusters
 from ...stats.ccg import correlograms, _symmetrize_correlograms
 from ..ccg import CorrelogramView
 from ..features import FeatureView
@@ -49,50 +47,22 @@ class WaveformViewModel(BaseViewModel):
             self.scale_factor = 1.
 
     def _load_waveforms(self):
-        clusters = self.cluster_ids
-        # debug("Loading waveforms...")
-        if self._store is not None and len(clusters):
-            # Subset the stored spikes for each cluster.
-            k = len(clusters)
-            spc = {cluster: self._store.waveforms_spikes(cluster)[::k]
-                   for cluster in clusters}
-            # Get all the spikes for the clusters.
-            spikes = _concatenate_per_cluster_arrays(spc, spc)
-            # Subset the spikes with the selector.
-            self._selector.selected_spikes = spikes
-            spikes = self.spike_ids
-            # Load the waveforms for the subset spikes.
-            waveforms = self._store.load('waveforms',
-                                         clusters,
-                                         spikes,
-                                         spikes_per_cluster=spc,
-                                         )
-        else:
-            # If there's no store, just take the waveforms from the traces
-            # (slower).
-            self._selector.selected_clusters = clusters
-            spikes = self.spike_ids
-            waveforms = self.model.waveforms[spikes]
-        return spikes, waveforms
+        # NOTE: we load all spikes from the store.
+        # The waveforms store item is responsible for making a subselection
+        # of spikes both on disk and in the view.
+        waveforms = self.store.load('waveforms',
+                                    clusters=self.cluster_ids,
+                                    )
+        return waveforms
 
     def _load_mean_waveforms(self):
-        if not self._store or len(self.cluster_ids) == 0:
-            return (np.zeros((len(self.cluster_ids),
-                              self._n_samples,
-                              self._n_channels,
-                              )),
-                    np.zeros((len(self.cluster_ids),
-                              self._n_channels,
-                              ))
-                    )
-        mean_waveforms = []
-        mean_masks = []
-        for cluster in sorted(self.cluster_ids):
-            mw = self._store.mean_waveforms(cluster)[None, :]
-            mm = self._store.mean_masks(cluster)[None, :]
-            mean_waveforms.append(mw)
-            mean_masks.append(mm)
-        return np.vstack(mean_waveforms), np.vstack(mean_masks)
+        mean_waveforms = self.store.load('mean_waveforms',
+                                         clusters=self.cluster_ids,
+                                         )
+        mean_masks = self.store.load('mean_masks',
+                                     clusters=self.cluster_ids,
+                                     )
+        return mean_waveforms, mean_masks
 
     def _update_spike_clusters(self, spikes=None):
         super(WaveformViewModel, self)._update_spike_clusters(spikes=spikes)
@@ -102,24 +72,34 @@ class WaveformViewModel(BaseViewModel):
     def on_select(self):
         # Get the spikes of the stored waveforms.
         clusters = self.cluster_ids
-        spikes, waveforms = self._load_waveforms()
+        n_clusters = len(clusters)
+        waveforms = self._load_waveforms()
+        spikes = self.store.items['waveforms'].spikes_in_clusters(clusters)
+        n_spikes = len(spikes)
         _, self._n_samples, self._n_channels = waveforms.shape
         mean_waveforms, mean_masks = self._load_mean_waveforms()
 
-        self._update_spike_clusters()
-        assert waveforms.shape[0] == len(spikes)
+        self._update_spike_clusters(spikes)
 
         # Cluster display order.
         self.view.visual.cluster_order = clusters
         self.view.mean.cluster_order = clusters
 
         # Waveforms.
+        assert waveforms.shape[0] == n_spikes
         self.view.visual.waveforms = waveforms * self.scale_factor
+
+        assert mean_waveforms.shape == (n_clusters,
+                                        self._n_samples,
+                                        self._n_channels)
         self.view.mean.waveforms = mean_waveforms * self.scale_factor
 
         # Masks.
-        masks = self.load('masks')
+        masks = self.store.load('masks', clusters=clusters, spikes=spikes)
+        assert masks.shape == (n_spikes, self._n_channels)
         self.view.visual.masks = masks
+
+        assert mean_masks.shape == (n_clusters, self._n_channels)
         self.view.mean.masks = mean_masks
 
         # Spikes.
@@ -198,6 +178,7 @@ class FeatureViewModel(BaseViewModel):
     def __init__(self, **kwargs):
         self._dimension_selector = None
         self._previous_dimensions = None
+        self._previous_pan_zoom = None
         super(FeatureViewModel, self).__init__(**kwargs)
         self._view.connect(self.on_mouse_double_click)
 
@@ -208,7 +189,7 @@ class FeatureViewModel(BaseViewModel):
 
         ```python
         @view_model.set_dimension_selector
-        def choose(cluster_ids, store=None):
+        def choose(cluster_ids):
             # ...
             return channel_idxs  # a list with 3 relative channel indices
         ```
@@ -216,22 +197,26 @@ class FeatureViewModel(BaseViewModel):
         """
         self._dimension_selector = func
 
-    def default_dimension_selector(self, cluster_ids, store=None):
-        # spikes = vm.view.visual.spike_ids
-        fet = self.view.visual.features
-        score = np.abs(fet).max(axis=0).max(axis=1)
+    def default_dimension_selector(self, cluster_ids):
+        """Return the channels with the largest mean features.
+
+        The first cluster is used currently.
+
+        """
+        if cluster_ids is None or not len(cluster_ids):
+            return np.arange(len(self.model.channels[:3]))
+        n_fet = self.model.n_features_per_channel
+        score = self.store.mean_features(cluster_ids[0])
+        score = score.reshape((-1, n_fet)).mean(axis=1)
         # Take the best 3 channels.
+        assert len(score) == len(self.model.channel_order)
         channels = np.argsort(score)[::-1][:3]
         return channels
 
     def _default_dimensions(self, cluster_ids=None):
         dimension_selector = (self._dimension_selector or
                               self.default_dimension_selector)
-        if (cluster_ids is not None and self.store and
-                dimension_selector is not None):
-            channels = dimension_selector(cluster_ids, store=self.store)
-        else:
-            channels = np.arange(len(self.model.channels[:3]))
+        channels = dimension_selector(cluster_ids)
         return ['time'] + [(ch, 0) for ch in channels]
 
     def _rescale_features(self, features):
@@ -243,8 +228,7 @@ class FeatureViewModel(BaseViewModel):
         shape = (-1, n_channels, n_fet)
         features = features[:, :n_fet * n_channels].reshape(shape)
         # Scale factor.
-        features *= self.scale_factor
-        return features
+        return features * self.scale_factor
 
     @property
     def lasso(self):
@@ -252,10 +236,10 @@ class FeatureViewModel(BaseViewModel):
 
     def spikes_in_lasso(self):
         """Return the spike ids from the selected clusters within the lasso."""
-        if self.view.lasso.n_points <= 2:
+        if not len(self.cluster_ids) or self.view.lasso.n_points <= 2:
             return
         clusters = self.cluster_ids
-        features = self.load('features')
+        features = self.store.load('features', clusters=clusters)
         features = self._rescale_features(features)
         box = self.view.lasso.box
         points = self.view.visual.project(features, box)
@@ -298,10 +282,14 @@ class FeatureViewModel(BaseViewModel):
             k = max(1, self.model.n_spikes // self.n_spikes_max_bg)
         else:
             k = 1
-        features_bg = self.model.features[::k, ...]
-        spike_samples = self.model.spike_samples[::k]
-        self.view.background.features = self._rescale_features(features_bg)
-        self.view.background.spike_samples = spike_samples
+        if self.model.features is not None:
+            # Background features.
+            features_bg = self.store.load('features',
+                                          spikes=slice(None, None, k))
+            self.view.background.features = self._rescale_features(features_bg)
+            # Time dimension.
+            spike_samples = self.model.spike_samples[::k]
+            self.view.background.spike_samples = spike_samples
         self.view.update_dimensions(self._default_dimensions())
 
     def on_select(self):
@@ -309,8 +297,12 @@ class FeatureViewModel(BaseViewModel):
         spikes = self.spike_ids
         clusters = self.cluster_ids
 
-        features = self.load('features')
-        masks = self.load('masks')
+        features = self.store.load('features',
+                                   clusters=clusters,
+                                   spikes=spikes)
+        masks = self.store.load('masks',
+                                clusters=clusters,
+                                spikes=spikes)
 
         nc = len(self.model.channel_order)
         nf = self.model.n_features_per_channel
@@ -338,23 +330,44 @@ class FeatureViewModel(BaseViewModel):
         if self._previous_dimensions:
             self.dimensions = self._previous_dimensions
             self._previous_dimensions = None
+
+            p, z = self._previous_pan_zoom
+            self._view._pz._index = (0, 0)
+            self._view._pz.pan = p
+            self._view._pz.zoom = z
+            self._previous_pan_zoom = None
+
+            self._view._pz._index = self._previous_index
+            self._previous_index = None
         else:
-            # Save previous (diagonal) dimensions.
-            self._previous_dimensions = self.dimensions
             # Find the current box.
             i, j = self._view._pz._get_box(e.pos)
+            # Save previous (diagonal) dimensions.
+            self._previous_dimensions = self.dimensions
+            self._previous_index = (i, j)
+            # Save the previous pan-zoom of the first subplot (which is
+            # going to be replaced).
+            self._previous_pan_zoom = (self._view._pz.pan_matrix[0, 0],
+                                       self._view._pz.zoom_matrix[0, 0])
+            p = self._view._pz.pan
+            z = self._view._pz.zoom
             dim_i = self.dimensions[i]
             dim_j = self.dimensions[j]
             # Set the dimensions.
             self.dimensions = [dim_i]
             if i != j:
                 self.diagonal_dimensions = [dim_j]
+            self._view._pz._index = (0, 0)
+            self._view._pz.pan = p
+            self._view._pz.zoom = z
+            # Update the pan zoom of the new subplot.
+        self._view.update()
 
     def exported_params(self, save_size_pos=True):
         params = super(FeatureViewModel, self).exported_params(save_size_pos)
-        zoom = self._view._pz.zoom_matrix[1:, 1:, 1].min()
+        zoom = self._view._pz.zoom
         params.update({
-            'scale_factor': zoom * self.scale_factor,
+            'scale_factor': zoom.mean() * self.scale_factor,
             'marker_size': self.marker_size,
         })
         return params

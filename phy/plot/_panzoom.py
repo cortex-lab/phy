@@ -545,6 +545,11 @@ class PanZoomGrid(PanZoom):
         """Zoom in every subplot."""
         return self._zoom_matrix
 
+    @property
+    def pan_matrix(self):
+        """Pan in every subplot."""
+        return self._pan_matrix
+
     def _apply_pan_zoom(self):
         pan = self._pan
         zoom = self._zoom_aspect(self._zoom)
@@ -772,9 +777,9 @@ class PanZoomGrid(PanZoom):
 
     keyboard_shortcuts = {
         'subplot_pan': ('left click and drag', 'arrows'),
-        'subplot_zoom': ('right click and drag', '+', '-'),
+        'subplot_zoom': ('right click and drag', '+/-'),
         'subplot_reset': 'r',
-        'global_zoom': 'shift+r',
+        'global_zoom': ('shift+[+/-]', 'shift+wheel'),
         'global_reset': 'shift+r',
     }
 
@@ -791,6 +796,12 @@ class PanZoomGrid(PanZoom):
         self._set_current_box(event.pos)
         super(PanZoomGrid, self).on_mouse_press(event)
 
+    def on_mouse_double_click(self, event):
+        """Double click event."""
+        # Set box index as a function of the press position.
+        self._set_current_box(event.pos)
+        super(PanZoomGrid, self).on_mouse_double_click(event)
+
     def on_mouse_wheel(self, event):
         """Mouse wheel event."""
         # Set box index as a function of the press position.
@@ -802,6 +813,8 @@ class PanZoomGrid(PanZoom):
 
         # Global zoom.
         if shift:
+            dx = np.sign(event.delta[1]) * self._wheel_coeff
+            self.zoom *= (1. + dx)
             self._global_pan_zoom(zoom=self._zoom)
             self._canvas.update()
 

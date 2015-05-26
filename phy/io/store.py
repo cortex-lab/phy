@@ -6,19 +6,21 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from collections import OrderedDict
+from operator import mul
+from functools import reduce
 import os
 import os.path as op
 import re
 
 import numpy as np
 
-from ..utils.array import (_concatenate_per_cluster_arrays,
-                           _subset_spikes_per_cluster,
-                           )
-from ..utils._types import _as_int
-from ..utils.logging import debug, info
+from ..utils._types import _as_int, _is_integer, _is_array_like
+from ..utils.array import PerClusterData, _spikes_in_clusters, _subset_spc
 from ..utils.event import ProgressReporter
+from ..utils.logging import debug, info
 from ..ext.six import string_types
+from ..ext.six.moves import cPickle
 
 
 #------------------------------------------------------------------------------
@@ -35,18 +37,39 @@ def _directory_size(path):
     return total_size
 
 
-def _load_ndarray(f, dtype=None, shape=None):
+def _prod(l):
+    return reduce(mul, l, 1)
+
+
+def _load_ndarray(f, dtype=None, shape=None, memmap=True):
     if dtype is None:
         return f
     else:
-        arr = np.fromfile(f, dtype=dtype)
-        if shape is not None:
-            arr = arr.reshape(shape)
+        if not memmap:
+            arr = np.fromfile(f, dtype=dtype)
+            if shape is not None:
+                arr = arr.reshape(shape)
+        else:
+            # memmap doesn't accept -1 in shapes.
+            if shape and shape[0] == -1:
+                n_bytes = os.fstat(f.fileno()).st_size
+                n_items = n_bytes // np.dtype(dtype).itemsize
+                n_rows = n_items // _prod(shape[1:])
+                shape = (n_rows,) + shape[1:]
+                assert _prod(shape) == n_items
+            arr = np.memmap(f, dtype=dtype, shape=shape, mode='r')
         return arr
 
 
 def _file_cluster_id(path):
     return int(op.splitext(op.basename(path))[0])
+
+
+def _default_array(shape, value=0, n_spikes=0, dtype=np.float32):
+    shape = (n_spikes,) + shape[1:]
+    out = np.empty(shape, dtype=dtype)
+    out.fill(value)
+    return out
 
 
 #------------------------------------------------------------------------------
@@ -191,6 +214,18 @@ class DiskStore(object):
             out[key] = self._get(cluster, key, dtype=dtype, shape=shape)
         return out
 
+    def save_file(self, filename, data):
+        path = op.realpath(op.join(self._directory, filename))
+        with open(path, 'wb') as f:
+            cPickle.dump(data, f)
+
+    def load_file(self, filename):
+        path = op.realpath(op.join(self._directory, filename))
+        if not op.exists(path):
+            return None
+        with open(path, 'rb') as f:
+            return cPickle.load(f)
+
     @property
     def files(self):
         """List of files present in the directory."""
@@ -236,9 +271,10 @@ class StoreItem(object):
     Parameters
     ----------
 
+    name : str
+        Name of the item.
     fields : list
-        A list of pairs `(field_name, storage_location)`.
-        `storage_location` is either `memory` or `disk`.
+        A list of field names.
     model : Model
         A `Model` instance for the current dataset.
     memory_store : MemoryStore
@@ -247,26 +283,28 @@ class StoreItem(object):
         The DiskStore instance for the current dataset.
 
     """
-    fields = None  # list of `(field_name, storage_location)`
     name = 'item'
+    fields = None  # list of names
 
-    def __init__(self,
-                 model=None,
-                 memory_store=None,
-                 disk_store=None,
-                 spikes_per_cluster=None,
-                 ):
-        self.model = model
-        self.memory_store = memory_store
-        self.disk_store = disk_store
-        self._spikes_per_cluster = spikes_per_cluster
+    def __init__(self, cluster_store=None):
+        self.cluster_store = cluster_store
+        self.model = cluster_store.model
+        self.memory_store = cluster_store.memory_store
+        self.disk_store = cluster_store.disk_store
+        self._spikes_per_cluster = cluster_store.spikes_per_cluster
         self._pr = ProgressReporter()
         self._pr.set_progress_message('Initializing ' + self.name +
                                       ': {progress:.1f}%.')
         self._pr.set_complete_message(self.name.capitalize() + ' initialized.')
+        self._shapes = {}
+
+    def empty_values(self, name):
+        """Return a null array of the right shape for a given field."""
+        return _default_array(self._shapes.get(name, (-1,)), value=0.)
 
     @property
     def progress_reporter(self):
+        """Progress reporter instance."""
         return self._pr
 
     @property
@@ -277,6 +315,10 @@ class StoreItem(object):
     @spikes_per_cluster.setter
     def spikes_per_cluster(self, value):
         self._spikes_per_cluster = value
+
+    def spikes_in_clusters(self, clusters):
+        """Return the spikes belonging to clusters."""
+        return _spikes_in_clusters(self._spikes_per_cluster, clusters)
 
     @property
     def cluster_ids(self):
@@ -304,28 +346,34 @@ class StoreItem(object):
             raise ValueError("`mode` should be None, `default`, `force`, "
                              "or `read-only`.")
 
-    def store_cluster(self, cluster, spikes=None, mode=None):
+    def store(self, cluster):
         """Store data for a cluster from the model to the store.
 
         May be overridden.
 
-        No need to delete old clusters here.
-
         """
-        # TODO: remove mode: unused?
         pass
 
-    def store_all_clusters(self, mode=None, **kwargs):
+    def store_all(self, mode=None, **kwargs):
         """Copy all data for that item from the model to the cluster store."""
         clusters = self.to_generate(mode)
         self._pr.value_max = len(clusters)
         for cluster in clusters:
-            self.store_cluster(cluster,
-                               spikes=self._spikes_per_cluster[cluster],
-                               mode=mode,
-                               **kwargs)
+            self.store(cluster, **kwargs)
             self._pr.value += 1
         self._pr.set_complete()
+
+    def load(self, cluster, name):
+        """Load data for one cluster."""
+        raise NotImplementedError()
+
+    def load_multi(self, clusters, name):
+        """Load data for several clusters."""
+        raise NotImplementedError()
+
+    def load_spikes(self, spikes, name):
+        """Load data from an array of spikes."""
+        raise NotImplementedError()
 
     def on_merge(self, up):
         """Called when a new merge occurs.
@@ -343,9 +391,7 @@ class StoreItem(object):
 
         """
         for cluster in up.added:
-            self.store_cluster(cluster,
-                               spikes=self._spikes_per_cluster[cluster],
-                               )
+            self.store(cluster)
 
     def on_cluster(self, up=None):
         """Called when the clusters change.
@@ -367,6 +413,38 @@ class StoreItem(object):
             self.on_assign(up)
 
 
+class FixedSizeItem(StoreItem):
+    """Store data which size doesn't depend on the cluster size."""
+    def load_multi(self, clusters, name):
+        """Load data for several clusters."""
+        if not len(clusters):
+            return self.empty_values(name)
+        return np.array([self.load(cluster, name)
+                         for cluster in clusters])
+
+
+class VariableSizeItem(StoreItem):
+    """Store data which size does depend on the cluster size."""
+    def load_multi(self, clusters, name, spikes=None):
+        """Load data for several clusters.
+
+        A subset of spikes caan also be specified.
+
+        """
+        if not len(clusters) or (spikes is not None and not len(spikes)):
+            return self.empty_values(name)
+        arrays = {cluster: self.load(cluster, name)
+                  for cluster in clusters}
+        spc = _subset_spc(self._spikes_per_cluster, clusters)
+        pcd = PerClusterData(spc=spc,
+                             arrays=arrays,
+                             )
+        if spikes is not None:
+            pcd = pcd.subset(spike_ids=spikes)
+            assert pcd.array.shape[0] == len(spikes)
+        return pcd.array
+
+
 #------------------------------------------------------------------------------
 # Cluster store
 #------------------------------------------------------------------------------
@@ -377,11 +455,9 @@ class ClusterStore(object):
     Note
     ----
 
-    Currently, this is used to accelerate access to features, masks, and
-    cluster statistics. Features and masks of all clusters are stored in a
-    disk cache. Cluster statistics are computed when loading a dataset,
-    and are kept in memory afterwards. All data is dynamically updated
-    when clustering changes occur.
+    Currently, this is used to accelerate access to per-cluster data
+    and statistics. All data is dynamically updated when clustering
+    changes occur.
 
     """
     def __init__(self,
@@ -393,17 +469,16 @@ class ClusterStore(object):
         self._spikes_per_cluster = spikes_per_cluster
         self._memory = MemoryStore()
         self._disk = DiskStore(path) if path is not None else None
-        self._items = []
-        self._locations = {}
+        self._items = OrderedDict()
+        self._item_per_field = {}
 
-    def _store(self, location):
-        if location == 'memory':
-            return self._memory
-        elif location == 'disk':
-            return self._disk
-        else:
-            raise ValueError("The `location` should be `memory` "
-                             "or `disk`.")
+    # Core methods
+    #--------------------------------------------------------------------------
+
+    @property
+    def model(self):
+        """Model."""
+        return self._model
 
     @property
     def memory_store(self):
@@ -422,7 +497,7 @@ class ClusterStore(object):
 
     def update_spikes_per_cluster(self, spikes_per_cluster):
         self._spikes_per_cluster = spikes_per_cluster
-        for item in self._items:
+        for item in self._items.values():
             item.spikes_per_cluster = spikes_per_cluster
 
     @property
@@ -430,18 +505,15 @@ class ClusterStore(object):
         """All cluster ids appearing in the `spikes_per_cluster` dictionary."""
         return sorted(self._spikes_per_cluster)
 
+    # Store items
+    #--------------------------------------------------------------------------
+
     @property
-    def store_items(self):
-        """List of registered store items."""
+    def items(self):
+        """Dictionary of registered store items."""
         return self._items
 
-    def get_item(self, name):
-        """Return a store item from its name."""
-        for item in self._items:
-            if item.name == name:
-                return item
-
-    def register_field(self, name, location, dtype=None, shape=None):
+    def register_field(self, name, item_name=None):
         """Register a new piece of data to store on memory or on disk.
 
         Parameters
@@ -449,44 +521,24 @@ class ClusterStore(object):
 
         name : str
             The name of the field.
-        location : str
-            `memory` or `disk`.
-        dtype : NumPy dtype or None
-            The dtype of arrays stored for that field. This is only used when
-            the location is `disk`.
-        shape : tuple or None
-            The shape of arrays. This is only used when the location is `disk`.
-            This is used by `np.reshape()`, so the shape can contain a `-1`.
+        item_name : str
+            The name of the item.
 
-        Notes
-        -----
-
-        When storing information to disk, only NumPy arrays are supported
-        currently. They are saved as flat binary files. This is why the
-        dtype and shape must be registered here, otherwise that information
-        is lost. This metadata is not saved in the files.
 
         """
-        # HACK: need to use a factory function because in Python
-        # functions are closed over names, not values. Here we
-        # want `name` to refer to the `name` local variable.
-        def _make_func(name, location):
-            kwargs = {} if location == 'memory' else {'dtype': dtype,
-                                                      'shape': shape}
-            return lambda cluster: self._store(location).load(cluster,
-                                                              name,
-                                                              **kwargs)
-
-        # Register the item location (memory or store).
-        assert name not in self._locations
+        self._item_per_field[name] = self._items[item_name]
         if self._disk:
             self._disk.register_file_extensions(name)
-        self._locations[name] = location
 
-        # Get the load function.
-        load = _make_func(name, location)
+        # Create the load function.
+        def _make_func(name):
+            def load(*args, **kwargs):
+                return self.load(name, *args, **kwargs)
+            return load
 
-        # We create the self.<name>(cluster) method for loading.
+        load = _make_func(name)
+
+        # We create the `self.<name>()` method for loading.
         # We need to ensure that the method name isn't already attributed.
         assert not hasattr(self, name)
         setattr(self, name, load)
@@ -498,45 +550,18 @@ class ClusterStore(object):
         and memory. It must register one or several pieces of data.
 
         """
-        # TODO: pass instance instead of class?
         # Instantiate the item.
-        item = item_cls(model=self._model,
-                        memory_store=self._memory,
-                        disk_store=self._disk,
-                        spikes_per_cluster=self.spikes_per_cluster,
-                        **kwargs)
+        item = item_cls(cluster_store=self, **kwargs)
         assert item.fields is not None
+
+        # Register the StoreItem instance.
+        self._items[item.name] = item
 
         # Register all fields declared by the store item.
         for field in item.fields:
+            self.register_field(field, item_name=item.name)
 
-            name, location = field[:2]
-            dtype = field[2] if len(field) >= 3 else None
-            shape = field[3] if len(field) == 4 else None
-
-            self.register_field(name, location, dtype=dtype, shape=shape)
-
-        # Register the StoreItem instance.
-        self._items.append(item)
         return item
-
-    def load(self, name, clusters, spikes=None, spikes_per_cluster=None):
-        """Load some data for a number of clusters and spikes."""
-        # Ensure clusters and spikes are sorted and do not have duplicates.
-        clusters = np.unique(clusters)
-        load = getattr(self, name)
-        # Get spikes_per_cluster and data arrays for the specified spikes.
-        if spikes_per_cluster is not None:
-            spc = spikes_per_cluster
-        else:
-            spc = {cluster: self._spikes_per_cluster[cluster]
-                   for cluster in clusters}
-        arrays = {cluster: load(cluster) for cluster in clusters}
-        if spikes is not None:
-            spikes = np.unique(spikes)
-            spc, arrays = _subset_spikes_per_cluster(spc, arrays, spikes)
-        # Return the concatenated array.
-        return _concatenate_per_cluster_arrays(spc, arrays)
 
     # Files
     #--------------------------------------------------------------------------
@@ -577,7 +602,7 @@ class ClusterStore(object):
         consistent = all(all(item.is_consistent(clu,
                              self.spikes_per_cluster.get(clu, []))
                              for clu in valid)
-                         for item in self._items)
+                         for item in self._items.values())
         return consistent
 
     @property
@@ -623,9 +648,7 @@ class ClusterStore(object):
         n = len(to_delete)
         info("{0} clusters deleted from the cluster store.".format(n))
 
-    def generate(self,
-                 mode=None,
-                 ):
+    def generate(self, mode=None):
         """Generate the cluster store.
 
         Parameters
@@ -646,5 +669,32 @@ class ClusterStore(object):
         else:
             name = 'the current model'
         debug("Initializing the cluster store for {0:s}.".format(name))
-        for item in self._items:
-            item.store_all_clusters(mode)
+        for item in self._items.values():
+            item.store_all(mode)
+
+    # Load
+    #--------------------------------------------------------------------------
+
+    def load(self, name, clusters=None, spikes=None):
+        """Load some data for a number of clusters and spikes."""
+        item = self._item_per_field[name]
+        # Clusters requested.
+        if clusters is not None:
+            if _is_integer(clusters):
+                # Single cluster case.
+                return item.load(clusters, name)
+            clusters = np.unique(clusters)
+            if spikes is None:
+                return item.load_multi(clusters, name)
+            else:
+                return item.load_multi(clusters, name, spikes=spikes)
+        # Spikes requested.
+        elif spikes is not None:
+            assert clusters is None
+            if _is_array_like(spikes):
+                spikes = np.unique(spikes)
+            out = item.load_spikes(spikes, name)
+            assert isinstance(out, np.ndarray)
+            if _is_array_like(spikes):
+                assert out.shape[0] == len(spikes)
+            return out

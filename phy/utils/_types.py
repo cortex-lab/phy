@@ -67,6 +67,8 @@ def _as_array(arr, dtype=None):
     Avoid a copy if possible.
 
     """
+    if isinstance(arr, np.ndarray) and dtype is None:
+        return arr
     if isinstance(arr, integer_types + (float,)):
         arr = [arr]
     out = np.asarray(arr)

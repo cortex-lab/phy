@@ -19,9 +19,8 @@ from ...utils.settings import (Settings,
                                _ensure_dir_exists,
                                _phy_user_dir,
                                )
-from ...io.store import ClusterStore
 from ...io.kwik.model import KwikModel, cluster_group_id
-from ...io.kwik.store_items import FeatureMasks, Waveforms, ClusterStatistics
+from ...io.kwik.store_items import create_store
 from ._history import GlobalHistory
 from ._utils import ClusterMetadataUpdater
 from .clustering import Clustering
@@ -161,11 +160,13 @@ class Session(EventEmitter):
         clusters = list(clusters)
         if len(clusters) <= 1:
             return
-        info("Merge clusters {}.".format(str(clusters)))
         self._is_dirty = True
         up = self.clustering.merge(clusters)
+        info("Merge clusters {} to {}.".format(str(clusters),
+                                               str(up.added[0])))
         self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
+        return up
 
     def split(self, spikes):
         """Make a new cluster out of some spikes.
@@ -184,6 +185,7 @@ class Session(EventEmitter):
         up = self.clustering.split(spikes)
         self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
+        return up
 
     def move(self, clusters, group):
         """Move some clusters to a cluster group.
@@ -205,6 +207,7 @@ class Session(EventEmitter):
         # Extra UpdateInfo fields.
         # up.update(kwargs)
         self.emit('cluster', up=up)
+        return up
 
     def _undo_redo(self, up):
         if up:
@@ -217,11 +220,13 @@ class Session(EventEmitter):
         """Undo the last clustering action."""
         up = self._global_history.undo()
         self._undo_redo(up)
+        return up
 
     def redo(self):
         """Redo the last undone action."""
         up = self._global_history.redo()
         self._undo_redo(up)
+        return up
 
     # Properties
     # -------------------------------------------------------------------------
@@ -239,7 +244,7 @@ class Session(EventEmitter):
     # Customization methods
     # -------------------------------------------------------------------------
 
-    def register_statistic(self, func):
+    def register_statistic(self, func=None, shape=(-1,)):
         """Decorator registering a custom cluster statistic.
 
         Parameters
@@ -257,20 +262,27 @@ class Session(EventEmitter):
         You can access the data from the model and from the cluster store.
 
         """
-        name = func.__name__
+        if func is not None:
+            return self.register_statistic()(func)
 
-        def _wrapper(cluster):
-            out = func(cluster)
-            self.cluster_store.memory_store.store(cluster, **{name: out})
+        def decorator(func):
 
-        # Add the statistics.
-        self._statistics.add(name, _wrapper)
-        # Register it in the global cluster store.
-        self.cluster_store.register_field(name, 'memory')
-        # Compute it on all existing clusters.
-        stats = self.cluster_store.get_item('statistics')
-        stats.store_all_clusters(name=name, mode='force')
-        info("Registered statistic `{}`.".format(name))
+            name = func.__name__
+
+            def _wrapper(cluster):
+                out = func(cluster)
+                self.cluster_store.memory_store.store(cluster, **{name: out})
+
+            # Add the statistics.
+            stats = self.cluster_store.items['statistics']
+            stats.add(name, _wrapper, shape)
+            # Register it in the global cluster store.
+            self.cluster_store.register_field(name, 'statistics')
+            # Compute it on all existing clusters.
+            stats.store_all(name=name, mode='force')
+            info("Registered statistic `{}`.".format(name))
+
+        return decorator
 
     # Event callbacks
     # -------------------------------------------------------------------------
@@ -287,25 +299,16 @@ class Session(EventEmitter):
 
         # Instantiate the store.
         spc = self.clustering.spikes_per_cluster
-        self.cluster_store = ClusterStore(model=self.model,
-                                          spikes_per_cluster=spc,
+        cs = self.settings['features_masks_chunk_size']
+        wns = self.settings['waveforms_n_spikes_max']
+        wes = self.settings['waveforms_excerpt_size']
+        self.cluster_store = create_store(self.model,
                                           path=store_path,
+                                          spikes_per_cluster=spc,
+                                          features_masks_chunk_size=cs,
+                                          waveforms_n_spikes_max=wns,
+                                          waveforms_excerpt_size=wes,
                                           )
-
-        # Create the FeatureMasks store item.
-        # chunk_size is the number of spikes to load at once from
-        # the features_masks array.
-        cs = self.settings['store_chunk_size']
-        self.cluster_store.register_item(FeatureMasks, chunk_size=cs)
-
-        n_spikes_max = self.settings['waveforms_n_spikes_max']
-        excerpt_size = self.settings['waveforms_excerpt_size']
-        self.cluster_store.register_item(Waveforms,
-                                         n_spikes_max=n_spikes_max,
-                                         excerpt_size=excerpt_size,
-                                         )
-
-        self._statistics = self.cluster_store.register_item(ClusterStatistics)
 
         # Generate the cluster store if it doesn't exist or is invalid.
         # If the cluster store already exists and is consistent
@@ -316,7 +319,7 @@ class Session(EventEmitter):
         def on_cluster(up=None):
             # No need to delete the old clusters from the store, we can keep
             # them for possible undo, and regularly clean up the store.
-            for item in self.cluster_store.store_items:
+            for item in self.cluster_store.items.values():
                 item.on_cluster(up)
 
     def _create_cluster_metadata(self):

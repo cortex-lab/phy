@@ -411,6 +411,7 @@ class GUICreator(object):
             gs = gui._dock.save_geometry_state()
             self.session.settings['gui_state'] = gs
             self.session.settings['gui_view_count'] = gui._dock.view_counts()
+            self.session.settings.save()
 
         if show:
             gui.show()

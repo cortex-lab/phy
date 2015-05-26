@@ -78,7 +78,7 @@ def test_selector_clusters():
     # Specify a maximum number of spikes.
     selector.n_spikes_max = 10
     selector.selected_clusters = [4, 2]
-    assert len(selector.selected_spikes) <= 10
+    assert len(selector.selected_spikes) <= (10 * 2)
     assert selector.selected_clusters == [4, 2]
     assert np.all(np.in1d(spike_clusters[selector.selected_spikes], (2, 4)))
 
@@ -97,3 +97,16 @@ def test_selector_subset():
     selector = Selector(spike_clusters)
     selector.subset_spikes(excerpt_size=10)
     selector.subset_spikes(np.arange(n_spikes), excerpt_size=10)
+
+
+def test_selector_subset_clusters():
+    n_spikes = 100
+    spike_clusters = np.zeros(n_spikes, dtype=np.int32)
+    spike_clusters[10:15] = 1
+    spike_clusters[85:90] = 1
+
+    selector = Selector(spike_clusters)
+    spc = selector.subset_spikes_clusters([0, 1], excerpt_size=10)
+    counts = {_: len(spc[_]) for _ in sorted(spc.keys())}
+    # TODO
+    assert counts

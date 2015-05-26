@@ -24,30 +24,54 @@ def _update_cluster_selection(clusters, up):
     return clusters + [clu for clu in up.added if clu not in clusters]
 
 
+def _join(clusters):
+    return '[{}]'.format(', '.join(map(str, clusters)))
+
+
 #------------------------------------------------------------------------------
 # UpdateInfo class
 #------------------------------------------------------------------------------
 
-def update_info(**kwargs):
+class UpdateInfo(Bunch):
     """Hold information about clustering changes."""
-    d = dict(
-        description='',  # information about the update: 'merge', 'assign',
-                         # or 'metadata_<name>'
-        history=None,  # None, 'undo', or 'redo'
-        spikes=[],  # all spikes affected by the update
-        added=[],  # new clusters
-        deleted=[],  # deleted clusters
-        descendants=[],  # pairs of (old_cluster, new_cluster)
-        metadata_changed=[],  # clusters with changed metadata
-        metadata_value=None,  # new metadata value
-        old_spikes_per_cluster={},  # only for the affected clusters
-        new_spikes_per_cluster={},  # only for the affected clusters
-    )
-    d.update(kwargs)
-    return Bunch(d)
+    def __init__(self, **kwargs):
+        d = dict(
+            description='',  # information about the update: 'merge', 'assign',
+                             # or 'metadata_<name>'
+            history=None,  # None, 'undo', or 'redo'
+            spike_ids=[],  # all spikes affected by the update
+            added=[],  # new clusters
+            deleted=[],  # deleted clusters
+            descendants=[],  # pairs of (old_cluster, new_cluster)
+            metadata_changed=[],  # clusters with changed metadata
+            metadata_value=None,  # new metadata value
+            old_spikes_per_cluster={},  # only for the affected clusters
+            new_spikes_per_cluster={},  # only for the affected clusters
+        )
+        d.update(kwargs)
+        super(UpdateInfo, self).__init__(d)
 
-
-UpdateInfo = update_info
+    def __repr__(self):
+        desc = self.description
+        h = ' ({})'.format(self.history) if self.history else ''
+        if not desc:
+            return '<UpdateInfo>'
+        elif desc in ('merge', 'assign'):
+            a, d = _join(self.added), _join(self.deleted)
+            return '<{desc}{h} {d} => {a}>'.format(desc=desc,
+                                                   a=a,
+                                                   d=d,
+                                                   h=h,
+                                                   )
+        elif desc.startswith('metadata'):
+            c = _join(self.metadata_changed)
+            m = self.metadata_value
+            return '<{desc}{h} {c} => {m}>'.format(desc=desc,
+                                                   c=c,
+                                                   m=m,
+                                                   h=h,
+                                                   )
+        return '<UpdateInfo>'
 
 
 #------------------------------------------------------------------------------
