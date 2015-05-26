@@ -58,7 +58,10 @@ setup(
     packages=_package_tree('phy'),
     package_dir={'phy': 'phy'},
     package_data={
-        'phy.plot.glsl': ['*.vert', '*.frag', '*.glsl'],
+        'phy': ['*.vert', '*.frag', '*.glsl'],
+    },
+    data_files={
+        'phy/plot/glsl': ['*.vert', '*.frag', '*.glsl'],
     },
     entry_points={
         'console_scripts': [
