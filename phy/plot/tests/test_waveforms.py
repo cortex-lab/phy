@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from pytest import mark
+
 import numpy as np
 
 from ..waveforms import WaveformView
@@ -14,6 +16,10 @@ from ...io.mock import (artificial_waveforms, artificial_masks,
                         artificial_spike_clusters)
 from ...electrode.mea import staggered_positions
 from ...utils.testing import show_test
+
+
+# Skip these tests in "make test-quick".
+pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------

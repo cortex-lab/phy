@@ -6,7 +6,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-# import numpy as np
 from pytest import mark
 
 from ....utils.array import _spikes_per_cluster
