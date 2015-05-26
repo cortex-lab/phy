@@ -31,7 +31,7 @@ test: lint
 	coverage --html
 
 test-quick: lint
-	py.test phy --ignore experimental --ignore phy/plot -m "not long"
+	py.test phy --ignore experimental -m "not long"
 
 release: clean
 	python setup.py sdist upload
