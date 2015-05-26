@@ -545,6 +545,11 @@ class PanZoomGrid(PanZoom):
         """Zoom in every subplot."""
         return self._zoom_matrix
 
+    @property
+    def pan_matrix(self):
+        """Pan in every subplot."""
+        return self._pan_matrix
+
     def _apply_pan_zoom(self):
         pan = self._pan
         zoom = self._zoom_aspect(self._zoom)
@@ -790,6 +795,12 @@ class PanZoomGrid(PanZoom):
         # Set box index as a function of the press position.
         self._set_current_box(event.pos)
         super(PanZoomGrid, self).on_mouse_press(event)
+
+    def on_mouse_double_click(self, event):
+        """Double click event."""
+        # Set box index as a function of the press position.
+        self._set_current_box(event.pos)
+        super(PanZoomGrid, self).on_mouse_double_click(event)
 
     def on_mouse_wheel(self, event):
         """Mouse wheel event."""

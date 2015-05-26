@@ -14,6 +14,7 @@ from ...plot.view_models.kwik import (WaveformViewModel,
                                       CorrelogramViewModel,
                                       TraceViewModel,
                                       )
+from ...utils.logging import debug
 
 
 #------------------------------------------------------------------------------
@@ -65,7 +66,9 @@ class ViewCreator(object):
         """Save the parameters exported by a view model instance."""
         to_save = vm.exported_params(save_size_pos)
         for key, value in to_save.items():
-            self.session.settings['{}_{}'.format(vm.name, key)] = value
+            name = '{}_{}'.format(vm.name, key)
+            self.session.settings[name] = value
+            debug("Save {0}={1} for {2}.".format(name, value, vm.name))
 
     def save_view_params(self, save_size_pos=True):
         """Save all view parameters to user settings."""

@@ -178,6 +178,7 @@ class FeatureViewModel(BaseViewModel):
     def __init__(self, **kwargs):
         self._dimension_selector = None
         self._previous_dimensions = None
+        self._previous_pan_zoom = None
         super(FeatureViewModel, self).__init__(**kwargs)
         self._view.connect(self.on_mouse_double_click)
 
@@ -329,23 +330,44 @@ class FeatureViewModel(BaseViewModel):
         if self._previous_dimensions:
             self.dimensions = self._previous_dimensions
             self._previous_dimensions = None
+
+            p, z = self._previous_pan_zoom
+            self._view._pz._index = (0, 0)
+            self._view._pz.pan = p
+            self._view._pz.zoom = z
+            self._previous_pan_zoom = None
+
+            self._view._pz._index = self._previous_index
+            self._previous_index = None
         else:
-            # Save previous (diagonal) dimensions.
-            self._previous_dimensions = self.dimensions
             # Find the current box.
             i, j = self._view._pz._get_box(e.pos)
+            # Save previous (diagonal) dimensions.
+            self._previous_dimensions = self.dimensions
+            self._previous_index = (i, j)
+            # Save the previous pan-zoom of the first subplot (which is
+            # going to be replaced).
+            self._previous_pan_zoom = (self._view._pz.pan_matrix[0, 0],
+                                       self._view._pz.zoom_matrix[0, 0])
+            p = self._view._pz.pan
+            z = self._view._pz.zoom
             dim_i = self.dimensions[i]
             dim_j = self.dimensions[j]
             # Set the dimensions.
             self.dimensions = [dim_i]
             if i != j:
                 self.diagonal_dimensions = [dim_j]
+            self._view._pz._index = (0, 0)
+            self._view._pz.pan = p
+            self._view._pz.zoom = z
+            # Update the pan zoom of the new subplot.
+        self._view.update()
 
     def exported_params(self, save_size_pos=True):
         params = super(FeatureViewModel, self).exported_params(save_size_pos)
-        zoom = self._view._pz.zoom_matrix[1:, 1:, 1].min()
+        zoom = self._view._pz.zoom
         params.update({
-            'scale_factor': zoom * self.scale_factor,
+            'scale_factor': zoom.mean() * self.scale_factor,
             'marker_size': self.marker_size,
         })
         return params
