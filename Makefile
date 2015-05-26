@@ -7,7 +7,6 @@ help:
 	@echo "lint - check style with flake8"
 	@echo "test - run tests quickly with the default Python"
 	@echo "release - package and upload a release"
-	@echo "dist - package"
 	@echo "apidoc - build API doc"
 
 clean: clean-build clean-pyc
@@ -31,16 +30,16 @@ test: lint
 	coverage --html
 
 test-quick: lint
-	py.test phy --ignore experimental --ignore phy/plot -m "not long"
-
-release: clean
-	python setup.py sdist upload
-	python setup.py bdist_wheel upload
-
-dist: clean
-	python setup.py sdist
-	python setup.py bdist_wheel
-	ls -l dist
+	py.test phy --ignore experimental -m "not long"
 
 apidoc:
 	python tools/api.py
+
+upload:
+	python setup.py sdist upload
+
+test-docker:
+	docker build -t phy-stable docker/stable && docker run --rm phy-stable /root/miniconda/bin/py.test /root/miniconda/lib/python3.4/site-packages/phy/ -m "not long"
+
+release: clean
+	make test-quick && make upload && make test-docker

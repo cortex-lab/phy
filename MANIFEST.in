@@ -2,7 +2,6 @@ include LICENSE
 include README.md
 
 recursive-include tests *
+recursive-include phy/plot/glsl *.vert *.frag *.glsl
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
-
-recursive-include docs *.rst conf.py Makefile make.bat

@@ -58,7 +58,7 @@ setup(
     packages=_package_tree('phy'),
     package_dir={'phy': 'phy'},
     package_data={
-        'phy.plot.glsl': ['*.vert', '*.frag', '*.glsl'],
+        'phy': ['*.vert', '*.frag', '*.glsl'],
     },
     entry_points={
         'console_scripts': [
@@ -75,6 +75,7 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: BSD License',
         'Natural Language :: English',
+        "Framework :: IPython",
         "Programming Language :: Python :: 2",
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',

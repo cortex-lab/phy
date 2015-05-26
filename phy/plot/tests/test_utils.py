@@ -2,10 +2,11 @@
 
 """Test utils plotting."""
 
-
 #------------------------------------------------------------------------------
 # Imports
 #------------------------------------------------------------------------------
+
+from pytest import mark
 
 from vispy import app
 
@@ -15,6 +16,10 @@ from ...utils.testing import (show_test_start,
                               )
 from .._vispy_utils import LassoVisual
 from .._panzoom import PanZoom, PanZoomGrid
+
+
+# Skip these tests in "make test-quick".
+pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------

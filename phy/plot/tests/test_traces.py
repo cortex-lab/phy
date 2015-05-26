@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from pytest import mark
+
 import numpy as np
 
 from ..traces import TraceView
@@ -15,6 +17,10 @@ from ...io.mock import (artificial_traces,
                         artificial_spike_clusters,
                         )
 from ...utils.testing import show_test
+
+
+# Skip these tests in "make test-quick".
+pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------

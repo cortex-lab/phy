@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from pytest import mark
+
 import numpy as np
 
 from ..ccg import plot_ccg
@@ -13,6 +15,10 @@ from ..ccg import CorrelogramView
 from ...utils._color import _random_color
 from ...io.mock import artificial_correlograms
 from ...utils.testing import show_test
+
+
+# Skip these tests in "make test-quick".
+pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------
