@@ -42,4 +42,4 @@ test-docker:
 	docker build -t "phy-stable" docker/stable && docker run --rm phy-stable py.test /opt/conda/lib/python3.4/site-packages/phy -m "not long"
 
 release: clean
-	make test-quick && make upload && make docker
+	make test-quick && make upload && make test-docker
