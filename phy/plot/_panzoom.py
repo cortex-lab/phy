@@ -676,7 +676,7 @@ class PanZoomGrid(PanZoom):
         x0 *= self._n_rows
         y0 *= self._n_rows
 
-        return (math.floor(y0), math.floor(x0))
+        return (int(math.floor(y0)), int(math.floor(x0)))
 
     def _normalize(self, x_y, restrict_to_box=True):
         x0, y0 = x_y
