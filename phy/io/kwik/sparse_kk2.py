@@ -8,12 +8,6 @@
 
 import numpy as np
 
-try:
-    from klustakwik2 import RawSparseData
-except ImportError as e:
-    raise ImportError("KlustaKwik2 is required. Install it with "
-                      "`pip install klustakwik2`.")
-
 from ...utils.array import chunk_bounds
 from ...ext import six
 
@@ -23,6 +17,8 @@ from ...ext import six
 #------------------------------------------------------------------------------
 
 def sparsify_features_masks(features, masks, chunk_size=10000):
+    from klustakwik2 import RawSparseData
+
     assert features.ndim == 2
     assert masks.ndim == 2
     assert features.shape == masks.shape
