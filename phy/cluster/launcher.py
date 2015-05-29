@@ -38,7 +38,7 @@ def run(model, algorithm='klustakwik2', ipp_view=None, **kwargs):
         A model.
     algorithm : str
         Only 'klustakwik2' is supported currently.
-    ipp_view : `IPython.parallel.Client` instance
+    ipp_view : `IPython.parallel` view instance
         Use this to run the algorithm with IPython.
 
     """
