@@ -5,11 +5,6 @@ python:
   - "3.3"
   - "3.4"
 install:
-  # - sudo apt-get update
-  # You may want to periodically update this, although the conda update
-  # conda line below will keep everything up-to-date.  We do this
-  # conditionally because it saves us some downloading if the version is
-  # the same.
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
     else
@@ -24,12 +19,8 @@ install:
   # Create the environment.
   - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION
   - source activate testenv
-  # Optional dependencies.
-  - conda install pip numpy matplotlib scipy h5py pyqt pyzmq ipython requests
-  # Testing dependencies.
-  - conda install pytest pip flake8 coverage
-  - pip install coveralls responses python-coveralls pytest-cov
-  - pip install git+https://github.com/vispy/vispy.git
+  - conda install pip numpy matplotlib scipy h5py pyqt pyzmq ipython requests pytest pip flake8 coverage
+  - pip install six klustakwik2 vispy coveralls responses python-coveralls pytest-cov
 before_script:
     - export DISPLAY=:99.0
     - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render
