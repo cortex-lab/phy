@@ -585,8 +585,10 @@ class KwikModel(BaseModel):
 
         # Open the KWIK file.
         self._kwik = self._open_h5_if_exists('kwik')
+        if self._kwik is None:
+            raise IOError("File `{0}` doesn't exist.".format(kwik_path))
         if not self._kwik.is_open():
-            raise ValueError("File {0} failed to open.".format(kwik_path))
+            raise IOError("File `{0}` failed to open.".format(kwik_path))
         self._check_kwik_version()
 
         # Open the KWX and KWD files.
