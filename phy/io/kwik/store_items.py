@@ -360,10 +360,12 @@ class Waveforms(VariableSizeItem):
                                   )
 
         # Get or create the subset spikes per cluster dictionary.
-        spc = self.disk_store.load_file('waveforms_spikes')
+        spc = (self.disk_store.load_file('waveforms_spikes')
+               if self.disk_store else None)
         if spc is None:
             spc = self._selector.subset_spikes_clusters(self.model.cluster_ids)
-            self.disk_store.save_file('waveforms_spikes', spc)
+            if self.disk_store:
+                self.disk_store.save_file('waveforms_spikes', spc)
         self._spikes_per_cluster = spc
 
     def _subset_spikes_cluster(self, cluster, force=False):

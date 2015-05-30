@@ -135,11 +135,12 @@ class BaseViewModel(object):
         """Number of selected spikes."""
         return self._selector.n_spikes
 
-    def _update_spike_clusters(self, spikes=None):
+    def update_spike_clusters(self, spikes=None, spike_clusters=None):
         """Update the spike clusters and cluster colors."""
         if spikes is None:
             spikes = self.spike_ids
-        spike_clusters = self.model.spike_clusters[spikes]
+        if spike_clusters is None:
+            spike_clusters = self.model.spike_clusters[spikes]
         n_clusters = len(_unique(spike_clusters))
         visual = self._view.visual
         # This updates the list of unique clusters in the view.
@@ -160,7 +161,7 @@ class BaseViewModel(object):
         """Update the view after a new selection has been made.
 
         Must be overriden."""
-        self._update_spike_clusters()
+        self.update_spike_clusters()
         self._view.update()
 
     def on_close(self):
