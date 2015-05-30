@@ -431,11 +431,9 @@ class Session(EventEmitter):
         vm : `ViewModel` instance
 
         """
-        do_show = kwargs.pop('show', True)
+        show = kwargs.pop('show', True)
         vm = self.view_creator.add(name,
-                                   show=do_show,
+                                   show=show,
                                    cluster_ids=cluster_ids,
                                    **kwargs)
-        if do_show:
-            vm.view.show()
         return vm
