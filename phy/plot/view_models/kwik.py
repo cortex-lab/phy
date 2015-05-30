@@ -34,7 +34,10 @@ class KwikViewModel(BaseViewModel):
     def __init__(self, *args, **kwargs):
         # Create a default cluster store if needed.
         if not kwargs.get('store', None):
-            kwargs['store'] = create_store(kwargs.get('model'))
+            model = kwargs.get('model')
+            spc = model.spikes_per_cluster
+            kwargs['store'] = create_store(model,
+                                           spikes_per_cluster=spc)
         super(KwikViewModel, self).__init__(*args, **kwargs)
 
 

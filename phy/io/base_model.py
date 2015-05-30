@@ -128,7 +128,7 @@ class BaseModel(object):
         raise NotImplementedError()
 
     @property
-    def spikes_per_clusters(self):
+    def spikes_per_cluster(self):
         """Spikes per cluster dictionary.
 
         Must be implemented by child classes.

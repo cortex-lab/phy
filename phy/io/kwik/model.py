@@ -276,7 +276,7 @@ class KwikModel(BaseModel):
         # Initialize fields.
         self._spike_samples = None
         self._spike_clusters = None
-        self._spikes_per_clusters = None
+        self._spikes_per_cluster = None
         self._metadata = None
         self._clustering = 'main'
         self._probe = None
@@ -1055,11 +1055,11 @@ class KwikModel(BaseModel):
         return self._spike_clusters
 
     @property
-    def spikes_per_clusters(self):
+    def spikes_per_cluster(self):
         """Spikes per cluster from the current channel group and clustering."""
         if self._spikes_per_cluster is None:
             self._spikes_per_cluster = \
-                _spikes_per_cluster(self._spike_clusters)
+                _spikes_per_cluster(self.spike_ids, self._spike_clusters)
         return self._spikes_per_cluster
 
     @property
