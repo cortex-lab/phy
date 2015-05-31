@@ -8,12 +8,37 @@ from __future__ import print_function
 #------------------------------------------------------------------------------
 
 from ...ext.six import string_types
+from ...plot.view_models.base import HTMLViewModel
 from ...plot.view_models.kwik import (WaveformViewModel,
                                       FeatureViewModel,
                                       CorrelogramViewModel,
                                       TraceViewModel,
                                       )
 from ...utils.logging import debug
+
+
+#------------------------------------------------------------------------------
+# Wizard view model
+#------------------------------------------------------------------------------
+
+class WizardViewModel(HTMLViewModel):
+    def _get_html(self, cluster_ids):
+        styles = '''
+        html, body, div {
+            background-color: black;
+        }
+
+        .control-panel {
+            background-color: black;
+            color: white;
+        }
+
+        '''
+        return self._wizard.get_panel(extra_styles=styles)
+
+    def _create_view(self, **kwargs):
+        kwargs['html'] = self._get_html
+        return super(WizardViewModel, self)._create_view(**kwargs)
 
 
 #------------------------------------------------------------------------------
@@ -29,6 +54,7 @@ class ViewCreator(object):
         'features': FeatureViewModel,
         'correlograms': CorrelogramViewModel,
         'traces': TraceViewModel,
+        'wizard': WizardViewModel,
     }
 
     def __init__(self, session):
@@ -47,6 +73,7 @@ class ViewCreator(object):
 
         vm = vm_class(model=self.session.model,
                       store=self.session.cluster_store,
+                      wizard=self.session.wizard,
                       **params)
 
         self.session.connect(vm.on_open)
