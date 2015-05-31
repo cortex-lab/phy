@@ -14,7 +14,6 @@ from ...utils.array import _unique
 from ...utils.selector import Selector
 from ...utils._misc import _show_shortcuts
 from ...utils import _as_list
-from ...ext.six import string_types
 
 
 #------------------------------------------------------------------------------
@@ -138,10 +137,10 @@ class BaseViewModel(object):
 
     def exported_params(self, save_size_pos=True):
         """Return a dictionary of variables to save when the view is closed."""
-        if save_size_pos:
+        if save_size_pos and hasattr(self._view, 'pos'):
             return {
-                'position': self._view.position,
-                'size': self._view.size,
+                'position': (self._view.x(), self._view.y()),
+                'size': (self._view.width(), self._view.height()),
             }
         else:
             return {}
@@ -183,13 +182,12 @@ class HTMLViewModel(BaseViewModel):
 
     def _create_view(self, **kwargs):
         from PyQt4.QtWebKit import QWebView
-        if 'html' in kwargs:
-            self._html = kwargs['html']
+        self._html = kwargs['html']
         view = QWebView()
         return view
 
     def update(self):
-        if inspect.isfunction(self._html):
+        if hasattr(self._html, '__call__'):
             html = self._html(self._cluster_ids)
         else:
             html = self._html
@@ -300,3 +298,14 @@ class VispyViewModel(BaseViewModel):
             shortcuts = self._view.keyboard_shortcuts
             shortcuts.update(self.keyboard_shortcuts)
             _show_shortcuts(shortcuts, name=self.name)
+
+    def exported_params(self, save_size_pos=True):
+        """Return a dictionary of variables to save when the view is closed."""
+        if save_size_pos:
+            # These fields are implemented in VisPy Canvas.
+            return {
+                'position': self._view.position,
+                'size': self._view.size,
+            }
+        else:
+            return {}
