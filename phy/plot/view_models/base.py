@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import inspect
+
 import numpy as np
 
 from ...utils.array import _unique
@@ -48,51 +50,47 @@ def _selected_clusters_colors(n_clusters):
 #------------------------------------------------------------------------------
 
 class BaseViewModel(object):
-    """Create a view from a model.
-
-    This object uses an internal `Selector` instance to manage spike and
-    cluster selection.
-
-    """
+    """Interface between a view and a model."""
     _view_class = None
     _view_name = ''
-    _imported_params = ('position', 'size', 'n_spikes_max', 'excerpt_size')
+    _imported_params = ('position', 'size',)
     keyboard_shortcuts = {}
     scale_factor = 1.
 
-    def __init__(self, model=None, store=None, position=None, size=None,
-                 backend=None, n_spikes_max=None, excerpt_size=None,
-                 cluster_ids=None,
-                 **kwargs):
+    def __init__(self, model=None, store=None, cluster_ids=None, **kwargs):
 
         self._model = model
         assert store is not None
         self._store = store
-        if cluster_ids is not None:
-            cluster_ids = _as_list(cluster_ids)
+        self._cluster_ids = None
 
-        # Create the spike/cluster selector.
-        self._selector = Selector(model.spike_clusters,
-                                  n_spikes_max=n_spikes_max,
-                                  excerpt_size=excerpt_size,
-                                  )
-
-        # Create the VisPy canvas.
-        self._view = _create_view(self._view_class,
-                                  backend=backend,
-                                  position=position or (200, 200),
-                                  size=size or (600, 600),
-                                  )
+        # Instanciate the underlying view.
+        self._create_view(**kwargs)
 
         # Set passed keyword arguments as attributes.
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+        for param in self.imported_params():
+            value = kwargs.get(param, None)
+            if value is not None:
+                setattr(self, param, value)
 
         self.on_open()
-        if cluster_ids:
-            self.select(cluster_ids)
+        if cluster_ids is not None:
+            self.select(_as_list(cluster_ids))
 
-        self._view.connect(self.on_key_press)
+    @classmethod
+    def imported_params(cls):
+        out = ()
+        for base_class in inspect.getmro(cls):
+            if base_class == object:
+                continue
+            out += base_class._imported_params
+        return out
+
+    def _create_view(self, **kwargs):
+        """Create the view with the parameters passed to the constructor.
+
+        Must be overriden."""
+        self._view = None
 
     @property
     def model(self):
@@ -107,12 +105,90 @@ class BaseViewModel(object):
         return self._store
 
     @property
-    def selector(self):
-        return self._selector
-
-    @property
     def view(self):
         return self._view
+
+    @property
+    def cluster_ids(self):
+        """Selected clusters."""
+        return self._cluster_ids
+
+    @property
+    def n_clusters(self):
+        """Number of selected clusters."""
+        return len(self._cluster_ids)
+
+    def on_open(self):
+        """Initialize the view after the model has been loaded.
+
+        May be overriden."""
+
+    def select(self, cluster_ids):
+        """Select a set of clusters."""
+        cluster_ids = _as_list(cluster_ids)
+        self._cluster_ids = cluster_ids
+        self.on_select(cluster_ids)
+
+    def on_select(self, cluster_ids):
+        """Update the view after a new selection has been made.
+
+        Must be overriden."""
+
+    def on_close(self):
+        """Clear the view when the model is closed.
+
+        May be overriden."""
+
+    def exported_params(self, save_size_pos=True):
+        """Return a dictionary of variables to save when the view is closed."""
+        if save_size_pos:
+            return {
+                'position': self._view.position,
+                'size': self._view.size,
+            }
+        else:
+            return {}
+
+    def show(self):
+        """Show the view."""
+        self._view.show()
+
+
+class VispyViewModel(BaseViewModel):
+    """Create a view from a model.
+
+    This object uses an internal `Selector` instance to manage spike and
+    cluster selection.
+
+    """
+    _imported_params = ('n_spikes_max', 'excerpt_size')
+    keyboard_shortcuts = {}
+    scale_factor = 1.
+
+    def _create_view(self, **kwargs):
+        n_spikes_max = kwargs.get('n_spikes_max', None)
+        excerpt_size = kwargs.get('excerpt_size', None)
+        backend = kwargs.get('backend', None)
+        position = kwargs.get('position', None)
+        size = kwargs.get('size', None)
+
+        # Create the spike/cluster selector.
+        self._selector = Selector(self._model.spike_clusters,
+                                  n_spikes_max=n_spikes_max,
+                                  excerpt_size=excerpt_size,
+                                  )
+
+        # Create the VisPy canvas.
+        self._view = _create_view(self._view_class,
+                                  backend=backend,
+                                  position=position or (200, 200),
+                                  size=size or (600, 600),
+                                  )
+        self._view.connect(self.on_key_press)
+
+    @property
+    def selector(self):
+        return self._selector
 
     @property
     def cluster_ids(self):
@@ -146,17 +222,12 @@ class BaseViewModel(object):
         visual.spike_clusters = spike_clusters
         visual.cluster_colors = _selected_clusters_colors(n_clusters)
 
-    def on_open(self):
-        """Initialize the view after the model has been loaded.
-
-        May be overriden."""
-
     def select(self, cluster_ids):
         """Select a set of clusters."""
         self._selector.selected_clusters = cluster_ids
-        self.on_select()
+        self.on_select(cluster_ids)
 
-    def on_select(self):
+    def on_select(self, cluster_ids):
         """Update the view after a new selection has been made.
 
         Must be overriden."""
@@ -173,17 +244,3 @@ class BaseViewModel(object):
             shortcuts = self._view.keyboard_shortcuts
             shortcuts.update(self.keyboard_shortcuts)
             _show_shortcuts(shortcuts, name=self.name)
-
-    def exported_params(self, save_size_pos=True):
-        """Return a dictionary of variables to save when the view is closed."""
-        if save_size_pos:
-            return {
-                'position': self._view.position,
-                'size': self._view.size,
-            }
-        else:
-            return {}
-
-    def show(self):
-        """Show the view."""
-        self._view.show()

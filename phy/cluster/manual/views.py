@@ -8,7 +8,6 @@ from __future__ import print_function
 #------------------------------------------------------------------------------
 
 from ...ext.six import string_types
-from ...plot.view_models.base import BaseViewModel
 from ...plot.view_models.kwik import (WaveformViewModel,
                                       FeatureViewModel,
                                       CorrelogramViewModel,
@@ -41,8 +40,7 @@ class ViewCreator(object):
         vm_class = self.view_model_classes[name]
 
         # Load the default options for that view.
-        param_names = (BaseViewModel._imported_params +
-                       vm_class._imported_params)
+        param_names = vm_class.imported_params()
         params = {key: self.session.settings[name + '_' + key]
                   for key in param_names
                   if (name + '_' + key) in self.session.settings}

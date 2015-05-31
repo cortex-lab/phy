@@ -15,7 +15,7 @@ from ..ccg import CorrelogramView
 from ..features import FeatureView
 from ..waveforms import WaveformView
 from ..traces import TraceView
-from .base import _selected_clusters_colors, BaseViewModel
+from .base import _selected_clusters_colors, VispyViewModel
 
 
 #------------------------------------------------------------------------------
@@ -30,7 +30,7 @@ def _oddify(x):
 # View models
 #------------------------------------------------------------------------------
 
-class KwikViewModel(BaseViewModel):
+class KwikViewModel(VispyViewModel):
     def __init__(self, *args, **kwargs):
         # Create a default cluster store if needed.
         if not kwargs.get('store', None):
@@ -81,7 +81,7 @@ class WaveformViewModel(KwikViewModel):
         self._view.mean.spike_clusters = np.sort(self.cluster_ids)
         self._view.mean.cluster_colors = self._view.visual.cluster_colors
 
-    def on_select(self):
+    def on_select(self, cluster_ids):
         # Get the spikes of the stored waveforms.
         clusters = self.cluster_ids
         n_clusters = len(clusters)
@@ -304,8 +304,8 @@ class FeatureViewModel(KwikViewModel):
             self.view.background.spike_samples = spike_samples
         self.view.update_dimensions(self._default_dimensions())
 
-    def on_select(self):
-        super(FeatureViewModel, self).on_select()
+    def on_select(self, cluster_ids):
+        super(FeatureViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
         clusters = self.cluster_ids
 
@@ -413,8 +413,8 @@ class CorrelogramViewModel(KwikViewModel):
 
         self.select(self.cluster_ids)
 
-    def on_select(self):
-        super(CorrelogramViewModel, self).on_select()
+    def on_select(self, cluster_ids):
+        super(CorrelogramViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
         clusters = self.cluster_ids
 
@@ -578,7 +578,7 @@ class TraceViewModel(KwikViewModel):
             self.interval_size = .25
         self.select([])
 
-    def on_select(self):
+    def on_select(self, cluster_ids):
         # Get the spikes in the selected clusters.
         spikes = self.spike_ids
         clusters = self.cluster_ids
