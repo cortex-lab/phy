@@ -58,11 +58,13 @@ class BaseViewModel(object):
     keyboard_shortcuts = {}
     scale_factor = 1.
 
-    def __init__(self, model=None, store=None, cluster_ids=None, **kwargs):
+    def __init__(self, model=None, store=None, wizard=None,
+                 cluster_ids=None, **kwargs):
 
         self._model = model
         assert store is not None
         self._store = store
+        self._wizard = wizard
         self._cluster_ids = None
 
         # Instanciate the underlying view.
@@ -96,6 +98,9 @@ class BaseViewModel(object):
         Must be overriden."""
         return None
 
+    # Public properties
+    #--------------------------------------------------------------------------
+
     @property
     def model(self):
         return self._model
@@ -122,26 +127,14 @@ class BaseViewModel(object):
         """Number of selected clusters."""
         return len(self._cluster_ids)
 
-    def on_open(self):
-        """Initialize the view after the model has been loaded.
-
-        May be overriden."""
+    # Public methods
+    #--------------------------------------------------------------------------
 
     def select(self, cluster_ids):
         """Select a set of clusters."""
         cluster_ids = _as_list(cluster_ids)
         self._cluster_ids = cluster_ids
         self.on_select(cluster_ids)
-
-    def on_select(self, cluster_ids):
-        """Update the view after a new selection has been made.
-
-        Must be overriden."""
-
-    def on_close(self):
-        """Clear the view when the model is closed.
-
-        May be overriden."""
 
     def exported_params(self, save_size_pos=True):
         """Return a dictionary of variables to save when the view is closed."""
@@ -157,6 +150,29 @@ class BaseViewModel(object):
         """Show the view."""
         self._view.show()
 
+    # Callback methods
+    #--------------------------------------------------------------------------
+
+    def on_open(self):
+        """Initialize the view after the model has been loaded.
+
+        May be overriden."""
+
+    def on_select(self, cluster_ids):
+        """Update the view after a new selection has been made.
+
+        Must be overriden."""
+
+    def on_cluster(self):
+        """Called when a clustering action occurs.
+
+        May be overriden."""
+
+    def on_close(self):
+        """Called when the model is closed.
+
+        May be overriden."""
+
 
 #------------------------------------------------------------------------------
 # HTMLViewModel
@@ -164,18 +180,26 @@ class BaseViewModel(object):
 
 class HTMLViewModel(BaseViewModel):
     """Widget with custom HTML code."""
+
     def _create_view(self, **kwargs):
         from PyQt4.QtWebKit import QWebView
-        self._html = kwargs.get('html', None)
+        if 'html' in kwargs:
+            self._html = kwargs['html']
         view = QWebView()
         return view
 
-    def on_select(self, cluster_ids):
-        if isinstance(self._html, string_types):
+    def update(self):
+        if inspect.isfunction(self._html):
+            html = self._html(self._cluster_ids)
+        else:
             html = self._html
-        elif inspect.isfunction(self._html):
-            html = self._html(cluster_ids)
         self._view.setHtml(html)
+
+    def on_select(self, cluster_ids):
+        self.update()
+
+    def on_cluster(self, up):
+        self.update()
 
 
 #------------------------------------------------------------------------------
