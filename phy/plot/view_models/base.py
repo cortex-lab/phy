@@ -60,9 +60,8 @@ class BaseViewModel(object):
     keyboard_shortcuts = {}
     scale_factor = 1.
 
-    def __init__(self, model=None, store=None,
-                 n_spikes_max=None, excerpt_size=None,
-                 position=None, size=None, backend=None,
+    def __init__(self, model=None, store=None, position=None, size=None,
+                 backend=None, n_spikes_max=None, excerpt_size=None,
                  cluster_ids=None,
                  **kwargs):
 
