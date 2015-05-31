@@ -14,6 +14,7 @@ from ...utils.array import _unique
 from ...utils.selector import Selector
 from ...utils._misc import _show_shortcuts
 from ...utils import _as_list
+from ...ext.six import string_types
 
 
 #------------------------------------------------------------------------------
@@ -65,7 +66,7 @@ class BaseViewModel(object):
         self._cluster_ids = None
 
         # Instanciate the underlying view.
-        self._create_view(**kwargs)
+        self._view = self._create_view(**kwargs)
 
         # Set passed keyword arguments as attributes.
         for param in self.imported_params():
@@ -76,6 +77,9 @@ class BaseViewModel(object):
         self.on_open()
         if cluster_ids is not None:
             self.select(_as_list(cluster_ids))
+
+    def connect(self, func):
+        pass
 
     @classmethod
     def imported_params(cls):
@@ -90,7 +94,7 @@ class BaseViewModel(object):
         """Create the view with the parameters passed to the constructor.
 
         Must be overriden."""
-        self._view = None
+        return None
 
     @property
     def model(self):
@@ -154,8 +158,32 @@ class BaseViewModel(object):
         self._view.show()
 
 
+#------------------------------------------------------------------------------
+# HTMLViewModel
+#------------------------------------------------------------------------------
+
+class HTMLViewModel(BaseViewModel):
+    """Widget with custom HTML code."""
+    def _create_view(self, **kwargs):
+        from PyQt4.QtWebKit import QWebView
+        self._html = kwargs.get('html', None)
+        view = QWebView()
+        return view
+
+    def on_select(self, cluster_ids):
+        if isinstance(self._html, string_types):
+            html = self._html
+        elif inspect.isfunction(self._html):
+            html = self._html(cluster_ids)
+        self._view.setHtml(html)
+
+
+#------------------------------------------------------------------------------
+# VispyViewModel
+#------------------------------------------------------------------------------
+
 class VispyViewModel(BaseViewModel):
-    """Create a view from a model.
+    """Create a VisPy view from a model.
 
     This object uses an internal `Selector` instance to manage spike and
     cluster selection.
@@ -164,6 +192,9 @@ class VispyViewModel(BaseViewModel):
     _imported_params = ('n_spikes_max', 'excerpt_size')
     keyboard_shortcuts = {}
     scale_factor = 1.
+
+    def connect(self, func):
+        self._view.connect(func)
 
     def _create_view(self, **kwargs):
         n_spikes_max = kwargs.get('n_spikes_max', None)
@@ -179,12 +210,13 @@ class VispyViewModel(BaseViewModel):
                                   )
 
         # Create the VisPy canvas.
-        self._view = _create_view(self._view_class,
-                                  backend=backend,
-                                  position=position or (200, 200),
-                                  size=size or (600, 600),
-                                  )
-        self._view.connect(self.on_key_press)
+        view = _create_view(self._view_class,
+                            backend=backend,
+                            position=position or (200, 200),
+                            size=size or (600, 600),
+                            )
+        view.connect(self.on_key_press)
+        return view
 
     @property
     def selector(self):

@@ -35,10 +35,9 @@ class ViewCreator(object):
         self.session = session
         self._vms = []
 
-    def _create_vm(self, name, save_size_pos=True, **kwargs):
+    def _create_vm(self, vm_class, save_size_pos=True, **kwargs):
         """Create a new view model instance."""
-        vm_class = self.view_model_classes[name]
-
+        name = vm_class._view_name
         # Load the default options for that view.
         param_names = vm_class.imported_params()
         params = {key: self.session.settings[name + '_' + key]
@@ -52,13 +51,35 @@ class ViewCreator(object):
 
         self.session.connect(vm.on_open)
 
-        @vm.view.connect
+        @vm.connect
         def on_close(event):
             self.session.unconnect(vm.on_open)
             self._save_vm_params(vm, save_size_pos)
             vm.on_close()
 
         return vm
+
+    def add(self, vm_cls, show=True, **kwargs):
+        """Add a new view."""
+        if isinstance(vm_cls, string_types):
+            vm_cls = self.view_model_classes.get(vm_cls)
+        vm = self._create_vm(vm_cls, **kwargs)
+        if vm not in self._vms:
+            self._vms.append(vm)
+
+        @vm.connect
+        def on_close(event):
+            self._vms.remove(vm)
+
+        if show:
+            vm.show()
+        return vm
+
+    def get(self, name=None):
+        """Return the list of views of a given type."""
+        if name is None:
+            return self._vms
+        return [vm for vm in self._vms if vm.name == name]
 
     def _save_vm_params(self, vm, save_size_pos=True):
         """Save the parameters exported by a view model instance."""
@@ -72,27 +93,3 @@ class ViewCreator(object):
         """Save all view parameters to user settings."""
         for vm in self._vms:
             self._save_vm_params(vm, save_size_pos=save_size_pos)
-
-    def add(self, vm_or_name, show=True, **kwargs):
-        """Add a new view."""
-        if isinstance(vm_or_name, string_types):
-            vm = self._create_vm(vm_or_name, **kwargs)
-        else:
-            vm = vm_or_name
-        if vm not in self._vms:
-            self._vms.append(vm)
-
-        @vm.view.connect
-        def on_close(event):
-            self._vms.remove(vm)
-
-        if show:
-            vm.view.show()
-        return vm
-
-    def get(self, name=None):
-        """Return the list of views of a given type."""
-        if name is None:
-            return self._vms
-        cls = self.view_model_classes[name]
-        return [vm for vm in self._vms if isinstance(vm, cls)]
