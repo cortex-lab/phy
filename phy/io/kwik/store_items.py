@@ -454,6 +454,7 @@ class ClusterStatistics(FixedSizeItem):
               'mean_probe_position',
               'main_channels',
               'n_unmasked_channels',
+              'n_spikes',
               ]
 
     def __init__(self, *args, **kwargs):
@@ -517,6 +518,9 @@ class ClusterStatistics(FixedSizeItem):
         return _mean(self.model.probe.positions *
                      mean_masks[:, np.newaxis], (2,))
 
+    def n_spikes(self, cluster):
+        return len(self._spikes_per_cluster[cluster])
+
     def main_channels(self, cluster):
         mean_masks = self.load(cluster, 'mean_masks')
         unmasked_channels = self.load(cluster, 'unmasked_channels')
@@ -538,6 +542,8 @@ class ClusterStatistics(FixedSizeItem):
                                 mean_waveforms=self.mean_waveforms(cluster),
                                 )
 
+        n_spikes = self.n_spikes(cluster)
+
         # Note: some of the default statistics below rely on other statistics
         # computed previously and stored in the memory store.
         unmasked_channels = self.unmasked_channels(cluster)
@@ -555,6 +561,7 @@ class ClusterStatistics(FixedSizeItem):
                                 mean_probe_position=mean_probe_position,
                                 main_channels=main_channels,
                                 n_unmasked_channels=n_unmasked_channels,
+                                n_spikes=n_spikes,
                                 )
 
     def store(self, cluster, name=None):
