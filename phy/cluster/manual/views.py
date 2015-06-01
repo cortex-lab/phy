@@ -27,7 +27,17 @@ from .static import _wrap_html, _read
 #------------------------------------------------------------------------------
 
 class HTMLViewModel(BaseViewModel):
-    """Widget with custom HTML code."""
+    """Widget with custom HTML code.
+
+    To create a new HTML view, derive from `HTMLViewModel`, and implement
+    `get_html(cluster_ids=None, up=None)` which returns HTML code.
+    You have access to:
+
+    * `self.model`
+    * `self.store`
+    * `self.wizard`
+
+    """
 
     def get_html(self, cluster_ids=None, up=None):
         """Return the HTML contents of the view.
@@ -46,6 +56,7 @@ class HTMLViewModel(BaseViewModel):
         return view
 
     def update(self, cluster_ids=None, up=None):
+        """Update the widget's HTML after a new selection or clustering."""
         if 'up' in inspect.getargspec(self.get_html).args:
             html = self.get_html(cluster_ids=cluster_ids, up=up)
         else:
@@ -53,9 +64,11 @@ class HTMLViewModel(BaseViewModel):
         self._view.setHtml(_wrap_html(html=html))
 
     def on_select(self, cluster_ids):
+        """Called when clusters are selected."""
         self.update(cluster_ids=cluster_ids)
 
     def on_cluster(self, up):
+        """Called after any clustering change."""
         self.update(cluster_ids=self._cluster_ids, up=up)
 
 
