@@ -24,7 +24,6 @@ class ClusterManualGUI(EventEmitter):
     This object represents a main window with:
 
     * multiple views
-    * a wizard panel
     * high-level clustering methods
     * global keyboard shortcuts
 
@@ -36,13 +35,9 @@ class ClusterManualGUI(EventEmitter):
         self.start()
         self._dock = DockWindow(title=self.title)
         # Load the saved view count.
-        vc = self.session.settings.get('gui_view_count', None)
+        # vc = self.session.settings.get('gui_view_count', None)
         # Default GUI config.
         config = config or self.session.settings['gui_config']
-        # Remove non-existing views.
-        if vc and config:
-            config = [(name, _) for (name, _) in config
-                      if name in vc]
         # Create the views.
         self._load_config(config)
         self._load_geometry_state()

@@ -89,7 +89,11 @@ class ViewCreator(object):
     def add(self, vm_cls, show=True, **kwargs):
         """Add a new view."""
         if isinstance(vm_cls, string_types):
-            vm_cls = self.view_model_classes.get(vm_cls)
+            # If a string, the class can be either specified with the
+            # `view_model` keyword argument, or it is one of the predefined
+            # view models.
+            vm_cls = (kwargs.get('view_model', None) or
+                      self.view_model_classes.get(vm_cls))
         vm = self._create_vm(vm_cls, **kwargs)
         if vm not in self._vms:
             self._vms.append(vm)

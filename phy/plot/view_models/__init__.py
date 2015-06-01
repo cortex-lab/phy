@@ -3,4 +3,4 @@
 
 """View models"""
 
-from .base import BaseViewModel
+from .base import BaseViewModel, HTMLViewModel, VispyViewModel
