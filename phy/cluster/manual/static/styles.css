@@ -46,3 +46,9 @@
 .control-panel .ignored {
     background-color: #331d12;
 }
+
+/* Stats panel */
+
+.stats p {
+    margin: 0;
+}

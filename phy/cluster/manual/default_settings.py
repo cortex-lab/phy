@@ -75,6 +75,7 @@ keyboard_shortcuts = {
 
 gui_config = [
     ('wizard', {'position': 'right'}),
+    ('stats', {'position': 'right'}),
     ('features', {'position': 'left'}),
     ('correlograms', {'position': 'left'}),
     ('waveforms', {'position': 'right'}),

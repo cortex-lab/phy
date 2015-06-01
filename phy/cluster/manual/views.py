@@ -9,6 +9,8 @@ from __future__ import print_function
 
 import inspect
 
+import numpy as np
+
 from ...ext.six import string_types
 from ...plot.view_models.base import BaseViewModel
 from ...plot.view_models.kwik import (WaveformViewModel,
@@ -69,6 +71,25 @@ class WizardViewModel(HTMLViewModel):
 
 
 #------------------------------------------------------------------------------
+# Stats view model
+#------------------------------------------------------------------------------
+
+class StatsViewModel(HTMLViewModel):
+    def get_html(self, cluster_ids=None, up=None):
+        stats = self.store.items['statistics']
+        names = stats.fields
+        if cluster_ids is None:
+            return ''
+        cluster = cluster_ids[0]
+        html = ''
+        for name in names:
+            value = getattr(self.store, name)(cluster)
+            if not isinstance(value, np.ndarray):
+                html += '<p>{}: {}</p>\n'.format(name, value)
+        return '<div class="stats">\n' + html + '</div>'
+
+
+#------------------------------------------------------------------------------
 # View creator
 #------------------------------------------------------------------------------
 
@@ -82,6 +103,7 @@ class ViewCreator(object):
         'correlograms': CorrelogramViewModel,
         'traces': TraceViewModel,
         'wizard': WizardViewModel,
+        'stats': StatsViewModel,
     }
 
     def __init__(self, session):
