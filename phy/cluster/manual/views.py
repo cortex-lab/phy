@@ -7,15 +7,54 @@ from __future__ import print_function
 # Imports
 #------------------------------------------------------------------------------
 
+import inspect
+
 from ...ext.six import string_types
-from ...plot.view_models.base import HTMLViewModel
+from ...plot.view_models.base import BaseViewModel
 from ...plot.view_models.kwik import (WaveformViewModel,
                                       FeatureViewModel,
                                       CorrelogramViewModel,
                                       TraceViewModel,
                                       )
 from ...utils.logging import debug
-from .static import _get_html
+from .static import _wrap_html, _read
+
+
+#------------------------------------------------------------------------------
+# HTMLViewModel
+#------------------------------------------------------------------------------
+
+class HTMLViewModel(BaseViewModel):
+    """Widget with custom HTML code."""
+
+    def get_html(self, cluster_ids=None, up=None):
+        """Return the HTML contents of the view.
+
+        May be overriden."""
+        if hasattr(self._html, '__call__'):
+            html = self._html(cluster_ids)
+        else:
+            html = self._html
+        return html
+
+    def _create_view(self, **kwargs):
+        from PyQt4.QtWebKit import QWebView
+        self._html = kwargs.get('html', '')
+        view = QWebView()
+        return view
+
+    def update(self, cluster_ids=None, up=None):
+        if 'up' in inspect.getargspec(self.get_html).args:
+            html = self.get_html(cluster_ids=cluster_ids, up=up)
+        else:
+            html = self.get_html(cluster_ids=cluster_ids)
+        self._view.setHtml(_wrap_html(html=html))
+
+    def on_select(self, cluster_ids):
+        self.update(cluster_ids=cluster_ids)
+
+    def on_cluster(self, up):
+        self.update(cluster_ids=self._cluster_ids, up=up)
 
 
 #------------------------------------------------------------------------------
@@ -23,14 +62,10 @@ from .static import _get_html
 #------------------------------------------------------------------------------
 
 class WizardViewModel(HTMLViewModel):
-    def _get_html(self, cluster_ids):
+    def get_html(self, cluster_ids=None, up=None):
         params = self._wizard.get_panel_params()
-        html = _get_html('wizard.html', **params)
+        html = _read('wizard.html').format(**params)
         return html
-
-    def _create_view(self, **kwargs):
-        kwargs['html'] = self._get_html
-        return super(WizardViewModel, self)._create_view(**kwargs)
 
 
 #------------------------------------------------------------------------------

@@ -23,13 +23,12 @@ def _read(fn):
         return f.read()
 
 
-def _get_html(fn=None, html=None, wrap='qt', **params):
+def _wrap_html(fn=None, html=None, wrap='qt'):
     # Read the styles.css file.
     css = _read('styles.css')
 
     # Read and format the HTML code.
     html = html or _read(fn)
-    html = html.format(**params)
 
     # Read the wrap HTML.
     wrapped = _read('wrap_{}.html'.format(wrap))

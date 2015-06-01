@@ -174,33 +174,6 @@ class BaseViewModel(object):
 
 
 #------------------------------------------------------------------------------
-# HTMLViewModel
-#------------------------------------------------------------------------------
-
-class HTMLViewModel(BaseViewModel):
-    """Widget with custom HTML code."""
-
-    def _create_view(self, **kwargs):
-        from PyQt4.QtWebKit import QWebView
-        self._html = kwargs['html']
-        view = QWebView()
-        return view
-
-    def update(self):
-        if hasattr(self._html, '__call__'):
-            html = self._html(self._cluster_ids)
-        else:
-            html = self._html
-        self._view.setHtml(html)
-
-    def on_select(self, cluster_ids):
-        self.update()
-
-    def on_cluster(self, up):
-        self.update()
-
-
-#------------------------------------------------------------------------------
 # VispyViewModel
 #------------------------------------------------------------------------------
 
