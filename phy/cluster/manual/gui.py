@@ -111,7 +111,7 @@ class ClusterManualGUI(EventEmitter):
         def on_select(cluster_ids):
             item.select(cluster_ids)
 
-        @self.connect
+        @self.session.connect
         def on_cluster(up):
             item.on_cluster(up)
 

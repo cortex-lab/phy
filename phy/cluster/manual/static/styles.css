@@ -1,0 +1,48 @@
+/* Wizard panel */
+
+.control-panel {
+    margin: 0;
+    font-weight: bold;
+    font-size: 24pt;
+    padding: 10px;
+    text-align: center
+}
+
+.control-panel > div {
+    display: inline-block;
+    margin: 0 auto;
+}
+
+.control-panel .best {
+    margin-right: 20px;
+    color: rgb(102, 194, 165);
+}
+
+.control-panel .match {
+    color: rgb(252, 141, 98);
+}
+
+.control-panel > div .id {
+    margin: 10px 0 20px 0;
+    height: 40px;
+    text-align: center;
+    vertical-align: middle;
+    padding: 5px 0 10px 0;
+}
+
+/* Progress bar */
+.control-panel progress[value] {
+    width: 200px;
+}
+
+/* Cluster group */
+.control-panel .unsorted {
+}
+
+.control-panel .good {
+    background-color: #243318;
+}
+
+.control-panel .ignored {
+    background-color: #331d12;
+}

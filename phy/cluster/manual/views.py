@@ -15,6 +15,7 @@ from ...plot.view_models.kwik import (WaveformViewModel,
                                       TraceViewModel,
                                       )
 from ...utils.logging import debug
+from .static import _get_html
 
 
 #------------------------------------------------------------------------------
@@ -23,18 +24,9 @@ from ...utils.logging import debug
 
 class WizardViewModel(HTMLViewModel):
     def _get_html(self, cluster_ids):
-        styles = '''
-        html, body, div {
-            background-color: black;
-        }
-
-        .control-panel {
-            background-color: black;
-            color: white;
-        }
-
-        '''
-        return self._wizard.get_panel(extra_styles=styles)
+        params = self._wizard.get_panel_params()
+        html = _get_html('wizard.html', **params)
+        return html
 
     def _create_view(self, **kwargs):
         kwargs['html'] = self._get_html

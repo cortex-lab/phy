@@ -162,7 +162,7 @@ class BaseViewModel(object):
 
         Must be overriden."""
 
-    def on_cluster(self):
+    def on_cluster(self, up):
         """Called when a clustering action occurs.
 
         May be overriden."""

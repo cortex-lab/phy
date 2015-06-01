@@ -494,108 +494,15 @@ class Wizard(object):
         maximum = self.n_clusters
         return _progress(value, maximum)
 
-    def get_panel(self, extra_styles=''):
-        return _wizard_panel_html(best=self.best,
-                                  match=self.match,
-                                  best_progress=self._best_progress,
-                                  match_progress=self._match_progress,
-                                  best_group=self._group(self.best),
-                                  match_group=self._group(self.match),
-                                  extra_styles=extra_styles,
-                                  )
-
-
-#------------------------------------------------------------------------------
-# Wizard panel
-#------------------------------------------------------------------------------
-
-_PANEL_HTML = """
-<div class="control-panel">
-    <div class="best">
-        <div class="id {best_group}">{best}</div>
-        <div class="progress">
-            <progress value="{best_progress:d}" max="100"></progress>
-        </div>
-    </div>
-    <div class="match">
-        <div class="id {match_group}">{match}</div>
-        <div class="progress">
-            <progress value="{match_progress:d}" max="100"></progress>
-        </div>
-    </div>
-</div>"""
-
-
-_PANEL_CSS = """
-.control-panel {
-    margin: 0;
-    font-weight: bold;
-    font-family: sans-serif;
-    font-size: 24pt;
-    padding: 10px;
-    text-align: center
-}
-
-.control-panel > div {
-    display: inline-block;
-    margin: 0 auto;
-}
-
-.control-panel .best {
-    margin-right: 20px;
-    color: rgb(102, 194, 165);
-}
-
-.control-panel .match {
-    color: rgb(252, 141, 98);
-}
-
-.control-panel > div .id {
-    margin: 10px 0 20px 0;
-    height: 40px;
-    text-align: center;
-    vertical-align: middle;
-    padding: 5px 0 10px 0;
-}
-
-/* Progress bar */
-.control-panel progress[value] {
-    width: 200px;
-}
-
-/* Cluster group */
-.control-panel .unsorted {
-    /*background-color: #333;*/
-}
-
-.control-panel .good {
-    background-color: #243318;
-}
-
-.control-panel .ignored {
-    background-color: #331d12;
-}
-
-"""
-
-
-def _wizard_panel_html(best=None,
-                       match=None,
-                       best_progress=None,
-                       match_progress=None,
-                       best_group=None,
-                       match_group=None,
-                       extra_styles='',
-                       ):
-    out = '<style>' + extra_styles + _PANEL_CSS + '</style>\n'
-    out += _PANEL_HTML.format(best=best if best is not None else '',
-                              match=match if match is not None else '',
-                              best_progress=best_progress,
-                              match_progress=match_progress,
-                              best_group=best_group or 'unsorted',
-                              match_group=match_group or 'unsorted',
-                              )
-    return out
+    def get_panel_params(self):
+        """Return the parameters for the HTML panel."""
+        return dict(best=self.best if self.best is not None else '',
+                    match=self.match if self.match is not None else '',
+                    best_progress=self._best_progress,
+                    match_progress=self._match_progress,
+                    best_group=self._group(self.best) or 'unsorted',
+                    match_group=self._group(self.match) or 'unsorted',
+                    )
 
 
 def _progress(value, maximum):
