@@ -8,10 +8,11 @@ from __future__ import print_function
 #------------------------------------------------------------------------------
 
 import phy
-from ...utils._misc import _show_shortcuts
-from ...utils.dock import DockWindow, _prompt
-from ...utils import EventEmitter, debug
-from ...plot.view_models import BaseViewModel
+from .dock import DockWindow
+from .qt import _prompt
+from ..utils._misc import _show_shortcuts
+from ..utils import EventEmitter, debug
+from ..plot.view_models import BaseViewModel
 
 
 #------------------------------------------------------------------------------

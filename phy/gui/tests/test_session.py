@@ -14,15 +14,15 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises, mark
 
 from ..session import Session
-from ....utils import _spikes_in_clusters
-from ....utils.testing import (show_test_start, show_test_run,
-                               show_test_stop,
-                               )
-from ....utils.dock import qt_app, _close_qt_after
-from ....utils.tempdir import TemporaryDirectory
-from ....utils.logging import set_level
-from ....io.mock import MockModel
-from ....io.kwik.mock import create_mock_kwik
+from ...utils import _spikes_in_clusters
+from ...utils.testing import (show_test_start, show_test_run,
+                              show_test_stop,
+                              )
+from ...gui.qt import qt_app, _close_qt_after
+from ...utils.tempdir import TemporaryDirectory
+from ...utils.logging import set_level
+from ...io.mock import MockModel
+from ...io.kwik.mock import create_mock_kwik
 
 
 #------------------------------------------------------------------------------

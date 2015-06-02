@@ -11,14 +11,14 @@ import inspect
 
 import numpy as np
 
-from ...ext.six import string_types
-from ...plot.view_models.base import BaseViewModel
-from ...plot.view_models.kwik import (WaveformViewModel,
-                                      FeatureViewModel,
-                                      CorrelogramViewModel,
-                                      TraceViewModel,
-                                      )
-from ...utils.logging import debug
+from ..ext.six import string_types
+from ..plot.view_models.base import BaseViewModel
+from ..plot.view_models.kwik import (WaveformViewModel,
+                                     FeatureViewModel,
+                                     CorrelogramViewModel,
+                                     TraceViewModel,
+                                     )
+from ..utils.logging import debug
 from .static import _wrap_html, _read
 
 

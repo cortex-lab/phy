@@ -13,20 +13,20 @@ import shutil
 
 import numpy as np
 
-from ...utils.event import EventEmitter
-from ...utils.logging import info
-from ...utils.settings import (Settings,
-                               _ensure_dir_exists,
-                               _phy_user_dir,
-                               )
-from ...io.kwik.model import KwikModel, cluster_group_id
-from ...io.kwik.store_items import create_store
-from ._history import GlobalHistory
-from ._utils import ClusterMetadataUpdater
-from .clustering import Clustering
+from ..utils.event import EventEmitter
+from ..utils.logging import info
+from ..utils.settings import (Settings,
+                              _ensure_dir_exists,
+                              _phy_user_dir,
+                              )
+from ..io.kwik.model import KwikModel, cluster_group_id
+from ..io.kwik.store_items import create_store
+from ..cluster.manual._history import GlobalHistory
+from ..cluster.manual._utils import ClusterMetadataUpdater
+from ..cluster.manual.clustering import Clustering
+from ..cluster.manual.wizard import Wizard
 from .views import ViewCreator
 from .gui import GUICreator
-from .wizard import Wizard
 
 
 #------------------------------------------------------------------------------
@@ -89,8 +89,9 @@ class Session(EventEmitter):
     def _create_settings(self):
         curdir = op.dirname(op.realpath(__file__))
         self.settings = Settings(phy_user_dir=self.phy_user_dir,
+                                 # TODO
                                  default_path=op.join(curdir,
-                                                      'default_settings.py'))
+                                                      '../cluster/default_settings.py'))
 
         @self.connect
         def on_open():
