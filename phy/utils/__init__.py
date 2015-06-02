@@ -12,7 +12,6 @@ from .array import (_unique,
                     _concatenate_per_cluster_arrays,
                     )
 from .event import EventEmitter, ProgressReporter
-from .dock import DockWindow, start_qt_app, run_qt_app, qt_app, enable_qt
 from .datasets import download_file, download_test_data
 from .selector import Selector
 from .settings import Settings, _ensure_dir_exists

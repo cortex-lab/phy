@@ -10,12 +10,12 @@ from pytest import mark
 
 from vispy import app
 
-from ..dock import (DockWindow,
-                    qt_app,
-                    _close_qt_after,
-                    _prompt,
-                    )
-from .._color import _random_color
+from ..qt import (qt_app,
+                  _close_qt_after,
+                  _prompt,
+                  )
+from ..dock import DockWindow
+from ...utils._color import _random_color
 
 
 # Skip these tests in "make test-quick".
