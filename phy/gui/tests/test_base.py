@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-1
 
-"""Tests of ba0se classes."""
+"""Tests of base classes."""
 
 #------------------------------------------------------------------------------
 # Imports
 #------------------------------------------------------------------------------
+
+from pytest import raises
 
 from ..base import WidgetCreator, BaseGUI, BaseSession
 from ...utils import EventEmitter
@@ -40,6 +42,9 @@ def test_widget_creator():
     wc = WidgetCreator(widget_classes=widget_classes)
     assert not wc.get()
     assert not wc.get('my_widget')
+
+    with raises(ValueError):
+        wc.add('my_widget_bis')
 
     for show in (False, True):
         w = wc.add('my_widget', show=show)

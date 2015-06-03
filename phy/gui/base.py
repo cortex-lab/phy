@@ -66,7 +66,10 @@ class WidgetCreator(EventEmitter):
         # widget_class can also be a name, but in this case it must be
         # registered in self._widget_classes.
         if isinstance(widget_class, string_types):
-            widget_class = self.widget_classes.get(widget_class)
+            if widget_class not in self.widget_classes:
+                raise ValueError("Unknown widget class "
+                                 "`{}`.".format(widget_class))
+            widget_class = self.widget_classes[widget_class]
         widget = self._create_widget(widget_class, **kwargs)
         if widget not in self._widgets:
             self._widgets.append(widget)
