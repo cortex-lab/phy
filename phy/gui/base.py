@@ -29,6 +29,7 @@ class BaseViewModel(object):
     _imported_params = ('position', 'size',)
 
     def __init__(self, model=None, **kwargs):
+        self._on_view_close = None
         self._model = model
 
         # Instantiate the underlying view.
@@ -52,7 +53,8 @@ class BaseViewModel(object):
         return None
 
     def connect(self, func):
-        pass
+        if func.__name__ == 'on_close':
+            self._on_view_close = func
 
     def on_open(self):
         """Initialize the view after the model has been loaded.
@@ -117,6 +119,8 @@ class BaseViewModel(object):
 
     def close(self):
         self._view.close()
+        if self._on_view_close:
+            self._on_view_close()
 
     def show(self):
         """Show the view."""
@@ -390,7 +394,12 @@ class BaseGUI(EventEmitter):
         # Get the underlying view.
         view = item.view if isinstance(item, BaseViewModel) else item
         # Add the view to the main window.
-        self._dock.add_view(view, title=title, position=position)
+        dw = self._dock.add_view(view, title=title, position=position)
+
+        @item.connect
+        def on_close(e=None):
+            dw.close()
+
         self.emit('add_view', view)
 
     def get_views(self, name=None):
