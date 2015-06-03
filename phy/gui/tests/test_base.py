@@ -141,3 +141,6 @@ def test_base_gui():
         gui = TestGUI()
         _close_qt_after(gui.main_window, _DURATION)
         gui.show()
+        v2 = gui.get_views('v2')
+        assert len(v2) == 2
+        v2[1].close()

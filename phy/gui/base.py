@@ -198,11 +198,20 @@ class WidgetCreator(EventEmitter):
     def widget_classes(self):
         return self._widget_classes
 
+    def _widget_name(self, widget):
+        if widget.name:
+            return widget.name
+        # Fallback to the name given in widget_classes.
+        for name, cls in self._widget_classes.items():
+            if cls == widget.__class__:
+                return name
+
     def get(self, name=None):
         """Return the list of widgets of a given type."""
         if name is None:
             return self._widgets
-        return [widget for widget in self._widgets if widget.name == name]
+        return [widget for widget in self._widgets
+                if self._widget_name(widget) == name]
 
     def add(self, widget_class, show=True, **kwargs):
         """Add a new widget."""
@@ -405,13 +414,13 @@ class BaseGUI(EventEmitter):
         _show_shortcuts(self._shortcuts, name=self.__class__.__name__)
 
     def close(self):
-    #     """Close the GUI."""
-    #     self.emit('close')
+        """Close the GUI."""
+        self.emit('close')
         self._dock.close()
 
-    # def exit(self):
-    #     """Close the GUI."""
-    #     self.close()
+    def exit(self):
+        """Close the GUI."""
+        self.close()
 
 
 #------------------------------------------------------------------------------
