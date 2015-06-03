@@ -104,11 +104,18 @@ def test_widget_creator():
 
 
 def test_base_gui():
-    vm_classes = {'my_widget': HTMLViewModel}
+
+    class V1(HTMLViewModel):
+        _html = 'view 1'
+
+    class V2(HTMLViewModel):
+        _html = 'view 2'
+
+    vm_classes = {'v1': V1, 'v2': V2}
 
     with qt_app():
         gui = BaseGUI(vm_classes=vm_classes,
                       )
-        gui.add_view('my_widget', html='hello')
+        gui.add_view('v1')
         _close_qt_after(gui, _DURATION)
         gui.show()
