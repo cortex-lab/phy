@@ -24,8 +24,12 @@ def test_widget_creator():
             self._shown = False
             self.param = param
 
-        def close(self):
-            self.emit('close')
+        @property
+        def shown(self):
+            return self._shown
+
+        def close(self, e=None):
+            self.emit('close', e)
             self._shown = False
 
         def show(self):
@@ -37,6 +41,15 @@ def test_widget_creator():
     assert not wc.get()
     assert not wc.get('my_widget')
 
-    wc.add('my_widget')
-    assert len(wc.get()) == 1
-    assert len(wc.get('my_widget')) == 1
+    for show in (False, True):
+        w = wc.add('my_widget', show=show)
+        assert len(wc.get()) == 1
+        assert len(wc.get('my_widget')) == 1
+
+        assert w.shown is show
+        w.show()
+        assert w.shown
+
+        w.close()
+        assert not wc.get()
+        assert not wc.get('my_widget')
