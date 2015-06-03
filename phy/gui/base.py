@@ -19,10 +19,10 @@ from ..plot.view_models.base import BaseViewModel
 
 
 #------------------------------------------------------------------------------
-# Widget creator (base class for ViewCreator and GUICreator)
+# Widget creator (used to create views and GUIs)
 #------------------------------------------------------------------------------
 
-class WidgetCreator(object):
+class WidgetCreator(EventEmitter):
     """Manage the creation of widgets.
 
     A widget must implement:
@@ -30,6 +30,12 @@ class WidgetCreator(object):
     * `name`
     * `show()`
     * `connect` (for `close` event)
+
+    Events
+    ------
+
+    add(widget): when a widget is added.
+    close(widget): when a widget is closed.
 
     """
     def __init__(self, widget_classes=None):
@@ -39,10 +45,10 @@ class WidgetCreator(object):
     def _create_widget(self, widget_class, **kwargs):
         """Create a new widget of a given class.
 
-        Must be overriden.
+        May be overriden.
 
         """
-        pass
+        return widget_class(**kwargs)
 
     @property
     def widget_classes(self):
@@ -61,100 +67,19 @@ class WidgetCreator(object):
         if isinstance(widget_class, string_types):
             widget_class = self.widget_classes.get(widget_class)
         widget = self._create_widget(widget_class, **kwargs)
-
         if widget not in self._widgets:
             self._widgets.append(widget)
+        self.emit('add', widget)
 
         @widget.connect
         def on_close(event):
+            self.emit('close', widget)
             self._widgets.remove(widget)
 
         if show:
             widget.show()
 
         return widget
-
-
-#------------------------------------------------------------------------------
-# View creator
-#------------------------------------------------------------------------------
-
-class ViewCreator(WidgetCreator):
-    """Create views from a model."""
-
-    def __init__(self, session, vm_classes=None, save_size_pos=True):
-        super(ViewCreator, self).__init__(widget_classes=vm_classes)
-        self.session = session
-        self._save_size_pos = save_size_pos
-
-    def _create_widget(self, vm_class, **kwargs):
-        """Create a new view model instance."""
-
-        # Load parameters from the settings.
-        params = vm_class.get_params(self.session.settings)
-        params.update(kwargs)
-
-        vm = vm_class(model=self.session.model,
-                      store=self.session.cluster_store,
-                      **params)
-
-        self.session.connect(vm.on_open)
-
-        @vm.connect
-        def on_close(event):
-            self.session.unconnect(vm.on_open)
-            self._save_vm_params(vm)
-
-        return vm
-
-    def _save_vm_params(self, vm):
-        """Save the parameters exported by a view model instance."""
-        to_save = vm.exported_params(self._save_size_pos)
-        for key, value in to_save.items():
-            name = '{}_{}'.format(vm.name, key)
-            self.session.settings[name] = value
-            debug("Save {0}={1} for {2}.".format(name, value, vm.name))
-
-    def save_view_params(self):
-        """Save all view parameters to user settings."""
-        for vm in self._vms:
-            self._save_vm_params(vm)
-
-
-#------------------------------------------------------------------------------
-# GUI creator
-#------------------------------------------------------------------------------
-
-class GUICreator(WidgetCreator):
-    def __init__(self, session, gui_classes=None):
-        super(GUICreator, self).__init__(widget_classes=gui_classes)
-        self.session = session
-
-    def _create_widget(self, widget_class, **kwargs):
-        gui = widget_class(self.session, **kwargs)
-
-        @gui.connect
-        def on_close():
-            gui.view_creator.save_view_params()
-            gs = gui.main_window.save_geometry_state()
-            vc = gui.main_window.view_counts()
-            self.session.settings['gui_state'] = gs
-            self.session.settings['gui_view_count'] = vc
-            self.session.settings.save()
-
-        return gui
-
-    @property
-    def guis(self):
-        """List of GUIs."""
-        return self._widgets
-
-    @property
-    def gui(self):
-        """The GUI if there is only one."""
-        if len(self.guis) != 1:
-            return
-        return self.guis[0]
 
 
 #------------------------------------------------------------------------------
@@ -195,6 +120,7 @@ class BaseGUI(EventEmitter):
 
     add_view(view)
     reset_gui()
+    close()
 
     """
 
@@ -208,7 +134,7 @@ class BaseGUI(EventEmitter):
         self._shortcuts = {}
         self._config = config
         self._dock = DockWindow(title=self.title)
-        self._view_creator = ViewCreator(vm_classes=vm_classes)
+        self._view_creator = WidgetCreator(vm_classes=vm_classes)
         self._load_config(config)
         self._load_geometry_state(gui_state)
         self._create_gui_actions()
@@ -300,6 +226,10 @@ class BaseGUI(EventEmitter):
         """Return the list of views of a given type."""
         return self._view_creator.get(name=name)
 
+    @property
+    def views(self):
+        return self.get_views()
+
     def reset_gui(self):
         """Reset the GUI configuration."""
         existing = sorted(self._dock.view_counts())
@@ -350,8 +280,8 @@ class BaseSession(EventEmitter):
             phy_user_dir = _phy_user_dir()
         _ensure_dir_exists(phy_user_dir)
         self.phy_user_dir = phy_user_dir
-        self.view_creator = ViewCreator(self, vm_classes=vm_classes)
-        self.gui_creator = GUICreator(self, gui_classes=gui_classes)
+        self.view_creator = WidgetCreator(widget_classes=vm_classes)
+        self.gui_creator = WidgetCreator(widget_classes=gui_classes)
         self._create_settings(default_settings_path)
 
         self.connect(self.on_open)
@@ -401,22 +331,36 @@ class BaseSession(EventEmitter):
     # Views and GUIs
     # -------------------------------------------------------------------------
 
-    def show_gui(self, config=None, **kwargs):
-        """Show a new manual clustering GUI."""
-        # Ensure that a Qt application is running.
-        gui = self.gui_creator.add(config, **kwargs)
-        return gui
+    def show_gui(self, name, **kwargs):
+        """Show a new GUI."""
+        # Get the default GUI config.
+        params = {'config': self.settings['{}_{}'.format(name, 'config')]}
+        params.update(kwargs)
+        # Create the GUI.
+        gui = self._gui_creator.add(name, **params)
+        # Connect the 'open' event.
+        self.connect(gui.on_open)
 
-    def show_view(self, name, cluster_ids, **kwargs):
+        @gui.connect
+        def on_close():
+            self.unconnect(gui.on_open)
+            # Save the params of every view in the GUI.
+            for vm in gui.views:
+                self.save_view_params(vm)
+            gs = gui.main_window.save_geometry_state()
+            vc = gui.main_window.view_counts()
+            self.settings['gui_state'] = gs
+            self.settings['gui_view_count'] = vc
+            self.settings.save()
+
+    def show_view(self, name, **kwargs):
         """Create and display a new view.
 
         Parameters
         ----------
 
         name : str
-            Can be `waveforms`, `features`, `correlograms`, or `traces`.
-        cluster_ids : array-like
-            List of clusters to show.
+            A view model name.
 
         Returns
         -------
@@ -424,9 +368,31 @@ class BaseSession(EventEmitter):
         vm : `ViewModel` instance
 
         """
-        show = kwargs.pop('show', True)
-        vm = self.view_creator.add(name,
-                                   show=show,
-                                   cluster_ids=cluster_ids,
-                                   **kwargs)
+        # Get the view class.
+        vm_class = self._view_creator.widget_classes[name]
+        # Get default and user parameters.
+        params = vm_class.get_params(self.session.settings)
+        params.update(kwargs)
+
+        vm = self._view_creator.add(vm_class,
+                                    model=self._model,
+                                    store=self._store,
+                                    **params)
+        # Connect the 'open' event.
+        self.connect(vm.on_open)
+
+        # Save the view parameters when the view is closed.
+        @vm.connect
+        def on_close(event):
+            self.unconnect(vm.on_open)
+            self.save_view_params(vm)
+
         return vm
+
+    def save_view_params(self, vm):
+        """Save the parameters exported by a view model instance."""
+        to_save = vm.exported_params(save_size_pos=True)
+        for key, value in to_save.items():
+            name = '{}_{}'.format(vm.name, key)
+            self.settings[name] = value
+            debug("Save {0}={1} for {2}.".format(name, value, vm.name))
