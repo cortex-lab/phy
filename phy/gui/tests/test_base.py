@@ -8,8 +8,10 @@
 
 from pytest import raises
 
-from ..base import WidgetCreator, BaseGUI, BaseSession
-from ..qt import _close_qt_after, qt_app
+from ..base import (BaseViewModel, HTMLViewModel, WidgetCreator,
+                    BaseGUI, BaseSession,
+                    )
+from ..qt import _close_qt_after, qt_app, QtGui
 from ...utils import EventEmitter
 
 
@@ -18,6 +20,31 @@ from ...utils import EventEmitter
 #------------------------------------------------------------------------------
 
 _DURATION = .5
+
+
+def test_base_view_model():
+    class MyViewModel(BaseViewModel):
+        _view_name = 'main_window'
+        _imported_params = ('text',)
+
+        def _create_view(self, text='', size=None):
+            view = QtGui.QMainWindow()
+            view.setWindowTitle(text)
+            if size is not None:
+                view.resize(*size)
+            return view
+
+    size = (400, 20)
+    text = 'hello'
+
+    with qt_app():
+        vm = MyViewModel(text=text, size=size)
+        _close_qt_after(vm, _DURATION)
+        vm.show()
+        assert vm.view.windowTitle() == text
+        assert vm.text == text
+        assert vm.size == size
+        assert (vm.view.width(), vm.view.height()) == size
 
 
 def test_widget_creator():
@@ -65,12 +92,12 @@ def test_widget_creator():
         assert not wc.get('my_widget')
 
 
-def wip_test_base_gui():
-    vm_classes = {'my_widget': HTMLWidget}
+def test_base_gui():
+    vm_classes = {'my_widget': HTMLViewModel}
 
     with qt_app():
         gui = BaseGUI(vm_classes=vm_classes,
                       )
-        gui.add_view('my_widget', text='hello')
+        gui.add_view('my_widget', html='hello')
         _close_qt_after(gui, _DURATION)
         gui.show()

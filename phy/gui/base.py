@@ -6,6 +6,7 @@
 #------------------------------------------------------------------------------
 # Imports
 #------------------------------------------------------------------------------
+import inspect
 
 from ..ext.six import string_types
 from ..utils._misc import _show_shortcuts
@@ -14,8 +15,143 @@ from ..utils.settings import (Settings,
                               _ensure_dir_exists,
                               _phy_user_dir,
                               )
+from .static import _wrap_html
 from .dock import DockWindow
-from ..plot.view_models.base import BaseViewModel
+
+
+#------------------------------------------------------------------------------
+# BaseViewModel
+#------------------------------------------------------------------------------
+
+class BaseViewModel(object):
+    """Interface between a view and a model."""
+    _view_name = ''
+    _imported_params = ('position', 'size',)
+
+    def __init__(self, model=None, **kwargs):
+        self._model = model
+
+        # Instantiate the underlying view.
+        self._view = self._create_view(**kwargs)
+
+        # Set passed keyword arguments as attributes.
+        for param in self.imported_params():
+            value = kwargs.get(param, None)
+            if value is not None:
+                setattr(self, param, value)
+
+        self.on_open()
+
+    # Methods to override
+    #--------------------------------------------------------------------------
+
+    def _create_view(self, **kwargs):
+        """Create the view with the parameters passed to the constructor.
+
+        Must be overriden."""
+        return None
+
+    def connect(self, func):
+        pass
+
+    def on_open(self):
+        """Initialize the view after the model has been loaded.
+
+        May be overriden."""
+
+    def on_close(self):
+        """Called when the model is closed.
+
+        May be overriden."""
+
+    # Parameters
+    #--------------------------------------------------------------------------
+
+    @classmethod
+    def imported_params(cls):
+        """All parameter names to be imported on object creation."""
+        out = ()
+        for base_class in inspect.getmro(cls):
+            if base_class == object:
+                continue
+            out += base_class._imported_params
+        return out
+
+    def exported_params(self, save_size_pos=True):
+        """Return a dictionary of variables to save when the view is closed."""
+        if save_size_pos and hasattr(self._view, 'pos'):
+            return {
+                'position': (self._view.x(), self._view.y()),
+                'size': (self._view.width(), self._view.height()),
+            }
+        else:
+            return {}
+
+    @classmethod
+    def get_params(cls, settings):
+        """Return the parameter values for the creation of the view."""
+        name = cls._view_name
+        param_names = cls.imported_params()
+        params = {key: settings[name + '_' + key]
+                  for key in param_names
+                  if (name + '_' + key) in settings}
+        return params
+
+    # Properties
+    #--------------------------------------------------------------------------
+
+    @property
+    def model(self):
+        return self._model
+
+    @property
+    def name(self):
+        return self._view_name
+
+    @property
+    def view(self):
+        return self._view
+
+    # Public methods
+    #--------------------------------------------------------------------------
+
+    def close(self):
+        self._view.close()
+
+    def show(self):
+        """Show the view."""
+        self._view.show()
+
+
+#------------------------------------------------------------------------------
+# HTMLViewModel
+#------------------------------------------------------------------------------
+
+class HTMLViewModel(BaseViewModel):
+    """Widget with custom HTML code.
+
+    To create a new HTML view, derive from `HTMLViewModel`, and implement
+    `get_html()` which returns HTML code.
+
+    """
+
+    def _create_view(self, **kwargs):
+        from PyQt4.QtWebKit import QWebView
+        self._html = kwargs.get('html', '')
+        view = QWebView()
+        return view
+
+    def get_html(self, **kwargs):
+        """Return the HTML contents of the view.
+
+        Must be overriden.
+
+        """
+        return self._html
+
+    def update(self, **kwargs):
+        """Update the widget's HTML contents."""
+        self._view.setHtml(_wrap_html(html=self.get_html(**kwargs)))
 
 
 #------------------------------------------------------------------------------
@@ -220,7 +356,7 @@ class BaseGUI(EventEmitter):
         return self._dock
 
     def add_view(self, item, title=None, **kwargs):
-        """Add a new view model instance to the GUI."""
+        """Add a new view instance to the GUI."""
         position = kwargs.pop('position', None)
         # Item may be a string.
         if isinstance(item, string_types):
