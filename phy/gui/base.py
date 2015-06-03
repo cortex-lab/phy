@@ -129,19 +129,19 @@ class BaseGUI(EventEmitter):
     """
 
     def __init__(self,
-                 config=None,
                  vm_classes=None,
                  gui_state=None,
                  shortcuts=None,
+                 config=None,
                  ):
         super(BaseGUI, self).__init__()
         self._shortcuts = {}
         self._config = config
         self._dock = DockWindow(title=self.title)
-        self._view_creator = WidgetCreator(vm_classes=vm_classes)
+        self._view_creator = WidgetCreator(widget_classes=vm_classes)
         self._load_config(config)
         self._load_geometry_state(gui_state)
-        self._create_gui_actions()
+        self._create_actions()
         self._set_default_view_connections()
 
     #--------------------------------------------------------------------------
@@ -174,13 +174,21 @@ class BaseGUI(EventEmitter):
         """
         pass
 
+    def _create_actions(self):
+        """Create default actions in the GUI.
+
+        The `_add_gui_shortcut()` method can be used.
+
+        """
+        pass
+
     #--------------------------------------------------------------------------
     # Internal methods
     #--------------------------------------------------------------------------
 
     def _load_config(self, config=None):
         """Load a GUI configuration dictionary."""
-        for name, kwargs in config:
+        for name, kwargs in config or []:
             debug("Adding {} view in GUI.".format(name))
             # GUI-specific keyword arguments position, size, maximized
             position = kwargs.pop('position', None)
