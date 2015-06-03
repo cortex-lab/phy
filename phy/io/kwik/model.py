@@ -297,6 +297,10 @@ class KwikModel(BaseModel):
                   channel_group=channel_group,
                   clustering=clustering)
 
+    @property
+    def path(self):
+        return self.kwik_path
+
     # Internal properties and methods
     # -------------------------------------------------------------------------
 
@@ -579,6 +583,7 @@ class KwikModel(BaseModel):
             raise ValueError("No kwik_path specified.")
 
         # Open the file.
+        kwik_path = op.realpath(kwik_path)
         self.kwik_path = kwik_path
         self.name = op.splitext(op.basename(kwik_path))[0]
 

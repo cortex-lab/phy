@@ -79,11 +79,21 @@ class BaseViewModel(object):
         if cluster_ids is not None:
             self.select(_as_list(cluster_ids))
 
+    def _create_view(self, **kwargs):
+        """Create the view with the parameters passed to the constructor.
+
+        Must be overriden."""
+        return None
+
     def connect(self, func):
         pass
 
+    # Parameters
+    #--------------------------------------------------------------------------
+
     @classmethod
     def imported_params(cls):
+        """All parameter names to be imported on object creation."""
         out = ()
         for base_class in inspect.getmro(cls):
             if base_class == object:
@@ -91,11 +101,25 @@ class BaseViewModel(object):
             out += base_class._imported_params
         return out
 
-    def _create_view(self, **kwargs):
-        """Create the view with the parameters passed to the constructor.
+    def exported_params(self, save_size_pos=True):
+        """Return a dictionary of variables to save when the view is closed."""
+        if save_size_pos and hasattr(self._view, 'pos'):
+            return {
+                'position': (self._view.x(), self._view.y()),
+                'size': (self._view.width(), self._view.height()),
+            }
+        else:
+            return {}
 
-        Must be overriden."""
-        return None
+    @classmethod
+    def get_params(cls, settings):
+        """Return the parameter values for the creation of the view."""
+        name = cls._view_name
+        param_names = cls.imported_params()
+        params = {key: settings[name + '_' + key]
+                  for key in param_names
+                  if (name + '_' + key) in settings}
+        return params
 
     # Public properties
     #--------------------------------------------------------------------------
@@ -134,16 +158,6 @@ class BaseViewModel(object):
         cluster_ids = _as_list(cluster_ids)
         self._cluster_ids = cluster_ids
         self.on_select(cluster_ids)
-
-    def exported_params(self, save_size_pos=True):
-        """Return a dictionary of variables to save when the view is closed."""
-        if save_size_pos and hasattr(self._view, 'pos'):
-            return {
-                'position': (self._view.x(), self._view.y()),
-                'size': (self._view.width(), self._view.height()),
-            }
-        else:
-            return {}
 
     def show(self):
         """Show the view."""
@@ -187,6 +201,14 @@ class VispyViewModel(BaseViewModel):
     _imported_params = ('n_spikes_max', 'excerpt_size')
     keyboard_shortcuts = {}
     scale_factor = 1.
+
+    def __init__(self, **kwargs):
+        super(VispyViewModel, self).__init__(**kwargs)
+
+        # Call on_close() when the view is closed.
+        @self.connect
+        def on_close(e):
+            self.on_close()
 
     def connect(self, func):
         self._view.connect(func)

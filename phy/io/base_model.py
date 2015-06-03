@@ -27,6 +27,10 @@ class BaseModel(object):
         self._channel_group = None
         self._clustering = None
 
+    @property
+    def path(self):
+        return None
+
     # Channel groups
     # -------------------------------------------------------------------------
 
