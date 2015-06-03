@@ -63,6 +63,13 @@ def _prompt(parent, message, buttons=('yes', 'no'), title='Question'):
             return name
 
 
+def _set_qt_widget_position_size(widget, position=None, size=None):
+    if position is not None:
+        widget.moveTo(*position)
+    if size is not None:
+        widget.resize(*size)
+
+
 # -----------------------------------------------------------------------------
 # Qt app and event loop integration with IPython
 # -----------------------------------------------------------------------------

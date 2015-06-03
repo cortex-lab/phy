@@ -134,11 +134,15 @@ class HTMLViewModel(BaseViewModel):
     `get_html()` which returns HTML code.
 
     """
+    def _update(self, view, **kwargs):
+        view.setHtml(_wrap_html(html=self.get_html(**kwargs)))
 
     def _create_view(self, **kwargs):
         from PyQt4.QtWebKit import QWebView
         self._html = kwargs.get('html', '')
         view = QWebView()
+        if self._html:
+            self._update(view, **kwargs)
         return view
 
     def get_html(self, **kwargs):
@@ -151,7 +155,7 @@ class HTMLViewModel(BaseViewModel):
 
     def update(self, **kwargs):
         """Update the widget's HTML contents."""
-        self._view.setHtml(_wrap_html(html=self.get_html(**kwargs)))
+        self._update(self._view, **kwargs)
 
 
 #------------------------------------------------------------------------------

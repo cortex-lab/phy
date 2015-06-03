@@ -11,7 +11,9 @@ from pytest import raises
 from ..base import (BaseViewModel, HTMLViewModel, WidgetCreator,
                     BaseGUI, BaseSession,
                     )
-from ..qt import _close_qt_after, qt_app, QtGui
+from ..qt import (_close_qt_after, qt_app, QtGui,
+                  _set_qt_widget_position_size,
+                  )
 from ...utils import EventEmitter
 
 
@@ -27,11 +29,13 @@ def test_base_view_model():
         _view_name = 'main_window'
         _imported_params = ('text',)
 
-        def _create_view(self, text='', size=None):
+        def _create_view(self, text='', position=None, size=None):
             view = QtGui.QMainWindow()
             view.setWindowTitle(text)
-            if size is not None:
-                view.resize(*size)
+            _set_qt_widget_position_size(view,
+                                         position=position,
+                                         size=size,
+                                         )
             return view
 
     size = (400, 20)
@@ -45,6 +49,13 @@ def test_base_view_model():
         assert vm.text == text
         assert vm.size == size
         assert (vm.view.width(), vm.view.height()) == size
+
+
+def test_html_view_model():
+    with qt_app():
+        vm = HTMLViewModel(html='hello world!')
+        _close_qt_after(vm, _DURATION)
+        vm.show()
 
 
 def test_widget_creator():
