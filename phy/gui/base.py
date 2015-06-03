@@ -278,12 +278,16 @@ class BaseGUI(EventEmitter):
                  config=None,
                  ):
         super(BaseGUI, self).__init__()
-        self._shortcuts = {}
+        self._shortcuts = shortcuts or {}
         self._config = config
         self._dock = DockWindow(title=self.title)
         self._view_creator = WidgetCreator(widget_classes=vm_classes)
         self._load_config(config)
         self._load_geometry_state(gui_state)
+        # Default close shortcut.
+        if 'close' not in self._shortcuts:
+            self._shortcuts['close'] = 'ctrl+q'
+            self._add_gui_shortcut('close')
         self._create_actions()
         self._set_default_view_connections()
 
@@ -347,7 +351,10 @@ class BaseGUI(EventEmitter):
         # Get the keyboard shortcut for this method.
         shortcut = self._shortcuts.get(method_name, None)
         # Bind the shortcut to the method.
-        self._dock.shortcut(method_name, shortcut)(getattr(self, method_name))
+        self._dock.add_action(method_name,
+                              getattr(self, method_name),
+                              shortcut=shortcut,
+                              )
 
     #--------------------------------------------------------------------------
     # Public methods
@@ -398,13 +405,13 @@ class BaseGUI(EventEmitter):
         _show_shortcuts(self._shortcuts, name=self.__class__.__name__)
 
     def close(self):
-        """Close the GUI."""
-        self.emit('close')
+    #     """Close the GUI."""
+    #     self.emit('close')
         self._dock.close()
 
-    def exit(self):
-        """Close the GUI."""
-        self.close()
+    # def exit(self):
+    #     """Close the GUI."""
+    #     self.close()
 
 
 #------------------------------------------------------------------------------

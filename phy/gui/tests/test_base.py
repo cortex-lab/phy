@@ -21,7 +21,7 @@ from ...utils import EventEmitter
 # Base tests
 #------------------------------------------------------------------------------
 
-_DURATION = .5
+_DURATION = 1
 
 
 def test_base_view_model():
@@ -111,11 +111,33 @@ def test_base_gui():
     class V2(HTMLViewModel):
         _html = 'view 2'
 
-    vm_classes = {'v1': V1, 'v2': V2}
+    class V3(HTMLViewModel):
+        _html = 'view 3'
+
+    vm_classes = {'v1': V1, 'v2': V2, 'v3': V3}
+
+    config = [('v1', {'position': 'right'}),
+              ('v2', {'position': 'left'}),
+              ('v2', {'position': 'bottom'}),
+              ]
+
+    shortcuts = {'test': 't'}
+
+    class TestGUI(BaseGUI):
+        def __init__(self):
+            super(TestGUI, self).__init__(vm_classes=vm_classes,
+                                          config=config,
+                                          shortcuts=shortcuts,
+                                          )
+
+        def _create_actions(self):
+            self._add_gui_shortcut('test')
+
+        def test(self):
+            self.show_shortcuts()
+            self.reset_gui()
 
     with qt_app():
-        gui = BaseGUI(vm_classes=vm_classes,
-                      )
-        gui.add_view('v1')
-        _close_qt_after(gui, _DURATION)
+        gui = TestGUI()
+        _close_qt_after(gui.main_window, _DURATION)
         gui.show()

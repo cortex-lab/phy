@@ -57,9 +57,9 @@ def test_dock_1():
 
         gui = DockWindow()
 
-        @gui.shortcut('press', 'ctrl+g')
-        def press():
-            pass
+        @gui.shortcut('quit', 'ctrl+q')
+        def quit():
+            gui.close()
 
         gui.add_view(_create_canvas(), 'view1')
         gui.add_view(_create_canvas(), 'view2')
