@@ -14,7 +14,9 @@ from ..base import (BaseViewModel, HTMLViewModel, WidgetCreator,
 from ..qt import (_close_qt_after, qt_app, QtGui,
                   _set_qt_widget_position_size,
                   )
-from ...utils import EventEmitter
+from ...utils.event import EventEmitter
+from ...utils.tempdir import TemporaryDirectory
+from ...io.base_model import BaseModel
 
 
 #------------------------------------------------------------------------------
@@ -148,3 +150,14 @@ def test_base_gui():
         v3 = gui.get_views('v3')
         v3[0].close()
         gui.reset_gui()
+
+
+def test_base_session():
+    model = BaseModel()
+    with TemporaryDirectory() as tmpdir:
+        session = BaseSession(model=model,
+                              phy_user_dir=tmpdir,
+                              # default_settings_path=default_settings_path,
+                              # vm_classes=vm_classes,
+                              # gui_classes=gui_classes,
+                              )

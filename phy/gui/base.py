@@ -464,9 +464,6 @@ class BaseSession(EventEmitter):
         self.gui_creator = WidgetCreator(widget_classes=gui_classes)
         self._create_settings(default_settings_path)
 
-        self.connect(self.on_open)
-        self.connect(self.on_close)
-
         if model:
             self.open(path=path, model=model)
 

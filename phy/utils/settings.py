@@ -138,6 +138,10 @@ class Settings(object):
 
     def on_open(self, path):
         """Initialize settings when loading an experiment."""
+        if path is None:
+            debug("Unable to initialize the settings for unspecified "
+                  "model path.")
+            return
         # Get the experiment settings path.
         path = op.realpath(op.expanduser(path))
         self.exp_path = path
