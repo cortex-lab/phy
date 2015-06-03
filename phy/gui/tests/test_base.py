@@ -119,6 +119,7 @@ def test_base_gui():
     config = [('v1', {'position': 'right'}),
               ('v2', {'position': 'left'}),
               ('v2', {'position': 'bottom'}),
+              ('v3', {'position': 'left'}),
               ]
 
     shortcuts = {'test': 't'}
@@ -144,3 +145,6 @@ def test_base_gui():
         v2 = gui.get_views('v2')
         assert len(v2) == 2
         v2[1].close()
+        v3 = gui.get_views('v3')
+        v3[0].close()
+        gui.reset_gui()
