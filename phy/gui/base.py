@@ -39,6 +39,7 @@ class WidgetCreator(EventEmitter):
 
     """
     def __init__(self, widget_classes=None):
+        super(WidgetCreator, self).__init__()
         self._widget_classes = widget_classes or {}
         self._widgets = []
 
