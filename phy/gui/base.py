@@ -6,6 +6,8 @@
 #------------------------------------------------------------------------------
 # Imports
 #------------------------------------------------------------------------------
+
+from collections import defaultdict
 import inspect
 
 from ..ext.six import string_types
@@ -61,7 +63,7 @@ class BaseViewModel(object):
 
         May be overriden."""
 
-    def on_close(self):
+    def on_close(self, e=None):
         """Called when the model is closed.
 
         May be overriden."""
@@ -232,9 +234,10 @@ class WidgetCreator(EventEmitter):
         self.emit('add', widget)
 
         @widget.connect
-        def on_close(event):
+        def on_close(e=None):
             self.emit('close', widget)
-            self._widgets.remove(widget)
+            if widget in self._widgets:
+                self._widgets.remove(widget)
 
         if show:
             widget.show()
@@ -270,23 +273,17 @@ class BaseGUI(EventEmitter):
         List of pairs `(name, kwargs)` to create default views.
     vm_classes : dict
         Dictionary `{name: view_model_class}`.
-    gui_state : object
+    state : object
         Default Qt GUI state.
     shortcuts : dict
         Dictionary `{function_name: keyboard_shortcut}`.
-
-    Events
-    ------
-
-    add_view(view)
-    reset_gui()
-    close()
 
     """
 
     def __init__(self,
                  vm_classes=None,
-                 gui_state=None,
+                 state=None,
+                 view_count=None,
                  shortcuts=None,
                  config=None,
                  ):
@@ -295,8 +292,8 @@ class BaseGUI(EventEmitter):
         self._config = config
         self._dock = DockWindow(title=self.title)
         self._view_creator = WidgetCreator(widget_classes=vm_classes)
-        self._load_config(config)
-        self._load_geometry_state(gui_state)
+        self._load_config(config, view_count)
+        self._load_geometry_state(state)
         # Default close shortcut.
         if 'close' not in self._shortcuts:
             self._shortcuts['close'] = 'ctrl+q'
@@ -346,14 +343,19 @@ class BaseGUI(EventEmitter):
     # Internal methods
     #--------------------------------------------------------------------------
 
-    def _load_config(self, config=None):
+    def _load_config(self, config=None, view_count=None):
         """Load a GUI configuration dictionary."""
+        current_count = defaultdict(lambda: 0)
         for name, kwargs in config or []:
+            # Add the right number of views of each type.
+            if view_count and current_count[name] > view_count.get(name, 0):
+                continue
             debug("Adding {} view in GUI.".format(name))
             # GUI-specific keyword arguments position, size, maximized
             position = kwargs.pop('position', None)
             vm = self._view_creator.add(name, **kwargs)
             self.add_view(vm, title=name.capitalize(), position=position)
+            current_count[name] += 1
 
     def _load_geometry_state(self, gui_state):
         if gui_state:
@@ -368,6 +370,9 @@ class BaseGUI(EventEmitter):
                               getattr(self, method_name),
                               shortcut=shortcut,
                               )
+
+    def on_open(self):
+        pass
 
     #--------------------------------------------------------------------------
     # Public methods
@@ -412,10 +417,7 @@ class BaseGUI(EventEmitter):
 
     def reset_gui(self):
         """Reset the GUI configuration."""
-        existing = sorted(self._dock.view_counts())
-        to_add = [(name, _) for (name, _) in self._config
-                  if name not in existing]
-        self._load_config(to_add)
+        self._load_config(self._config, self._dock.view_count())
         self.emit('reset_gui')
 
     def show_shortcuts(self):
@@ -460,9 +462,14 @@ class BaseSession(EventEmitter):
             phy_user_dir = _phy_user_dir()
         _ensure_dir_exists(phy_user_dir)
         self.phy_user_dir = phy_user_dir
-        self.view_creator = WidgetCreator(widget_classes=vm_classes)
-        self.gui_creator = WidgetCreator(widget_classes=gui_classes)
+
         self._create_settings(default_settings_path)
+
+        self._view_creator = WidgetCreator(widget_classes=vm_classes)
+
+        if gui_classes is None:
+            gui_classes = self.settings['gui_classes']
+        self._gui_creator = WidgetCreator(widget_classes=gui_classes)
 
         if model:
             self.open(path=path, model=model)
@@ -511,8 +518,10 @@ class BaseSession(EventEmitter):
     def show_gui(self, name, **kwargs):
         """Show a new GUI."""
         # Get the default GUI config.
-        params = {'config': self.settings['{}_{}'.format(name, 'config')]}
+        params = {p: self.settings.get('{}_{}'.format(name, p), None)
+                  for p in ('config', 'shortcuts', 'state')}
         params.update(kwargs)
+
         # Create the GUI.
         gui = self._gui_creator.add(name, **params)
         # Connect the 'open' event.
@@ -525,10 +534,10 @@ class BaseSession(EventEmitter):
             for vm in gui.views:
                 self.save_view_params(vm)
             gs = gui.main_window.save_geometry_state()
-            vc = gui.main_window.view_counts()
-            self.settings['gui_state'] = gs
-            self.settings['gui_view_count'] = vc
+            self.settings['{}_state'.format(name)] = gs
             self.settings.save()
+
+        return gui
 
     def show_view(self, name, **kwargs):
         """Create and display a new view.
@@ -548,19 +557,18 @@ class BaseSession(EventEmitter):
         # Get the view class.
         vm_class = self._view_creator.widget_classes[name]
         # Get default and user parameters.
-        params = vm_class.get_params(self.session.settings)
+        params = vm_class.get_params(self.settings)
         params.update(kwargs)
 
         vm = self._view_creator.add(vm_class,
-                                    model=self._model,
-                                    store=self._store,
+                                    model=self.model,
                                     **params)
         # Connect the 'open' event.
         self.connect(vm.on_open)
 
         # Save the view parameters when the view is closed.
         @vm.connect
-        def on_close(event):
+        def on_close(e=None):
             self.unconnect(vm.on_open)
             self.save_view_params(vm)
 

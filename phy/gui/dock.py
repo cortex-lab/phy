@@ -173,7 +173,7 @@ class DockWindow(QtGui.QMainWindow):
                 child.height() >= 10
                 ]
 
-    def view_counts(self):
+    def view_count(self):
         """Return the number of opened views."""
         views = self.list_views()
         counts = defaultdict(lambda: 0)
@@ -208,7 +208,7 @@ class DockWindow(QtGui.QMainWindow):
         return {
             'geometry': self.saveGeometry(),
             'state': self.saveState(),
-            'view_counts': self.view_counts(),
+            'view_count': self.view_count(),
         }
 
     def restore_geometry_state(self, gs):

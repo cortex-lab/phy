@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 from pytest import raises
 
 from ..base import (BaseViewModel, HTMLViewModel, WidgetCreator,
@@ -23,7 +25,7 @@ from ...io.base_model import BaseModel
 # Base tests
 #------------------------------------------------------------------------------
 
-_DURATION = 1
+_DURATION = .1
 
 
 def test_base_view_model():
@@ -154,10 +156,76 @@ def test_base_gui():
 
 def test_base_session():
     model = BaseModel()
+
+    class V1(HTMLViewModel):
+        _html = 'view 1'
+
+    class V2(HTMLViewModel):
+        _html = 'view 2'
+
+    vm_classes = {'v1': V1, 'v2': V2}
+
+    config = [('v1', {'position': 'right'}),
+              ('v2', {'position': 'left'}),
+              ('v2', {'position': 'bottom'}),
+              ]
+
+    shortcuts = {'test': 't', 'close': 'ctrl+q'}
+
+    class TestGUI(BaseGUI):
+        def __init__(self, **kwargs):
+            super(TestGUI, self).__init__(vm_classes=vm_classes,
+                                          **kwargs)
+
+        def _create_actions(self):
+            self._add_gui_shortcut('test')
+            self._add_gui_shortcut('close')
+
+        def test(self):
+            self.show_shortcuts()
+            self.reset_gui()
+
+    gui_classes = {'gui': TestGUI}
+
     with TemporaryDirectory() as tmpdir:
-        session = BaseSession(model=model,
-                              phy_user_dir=tmpdir,
-                              # default_settings_path=default_settings_path,
-                              # vm_classes=vm_classes,
-                              # gui_classes=gui_classes,
-                              )
+        with qt_app():
+
+            default_settings_path = op.join(tmpdir, 'settings.py')
+
+            with open(default_settings_path, 'w') as f:
+                f.write("gui_config = {}\n".format(str(config)) +
+                        "gui_shortcuts = {}".format(str(shortcuts)))
+
+            session = BaseSession(model=model,
+                                  phy_user_dir=tmpdir,
+                                  default_settings_path=default_settings_path,
+                                  vm_classes=vm_classes,
+                                  gui_classes=gui_classes,
+                                  )
+
+            view = session.show_view('v1', show=False)
+            _close_qt_after(view, _DURATION)
+            view.show()
+
+            def _show_gui():
+                gui = session.show_gui('gui', show=False)
+                _close_qt_after(gui, _DURATION)
+                gui.show()
+                return gui
+
+            gui = _show_gui()
+            v2 = gui.get_views('v2')
+            assert len(v2) == 2
+            print(len(v2))
+            v2[0].close()
+            gui.close()
+
+            gui = _show_gui()
+            v2 = gui.get_views('v2')
+            print(len(v2))
+            gui.reset_gui()
+            gui.close()
+
+            gui = _show_gui()
+            v2 = gui.get_views('v2')
+            print(len(v2))

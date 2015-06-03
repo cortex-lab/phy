@@ -87,7 +87,7 @@ def test_dock_state():
         _show(gui)
 
         assert len(gui.list_views('view')) == 3
-        assert gui.view_counts() == {
+        assert gui.view_count() == {
             'view1': 1,
             'view2': 2,
         }

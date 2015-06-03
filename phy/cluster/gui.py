@@ -222,7 +222,7 @@ class ClusterManualGUI(EventEmitter):
     def reset_gui(self):
         """Reset the GUI configuration."""
         config = self.session.settings['gui_config']
-        existing = sorted(self._dock.view_counts())
+        existing = sorted(self._dock.view_count())
         to_add = [(name, _) for (name, _) in config if name not in existing]
         self._load_config(to_add)
         self.session.settings['gui_state'] = None
@@ -380,7 +380,7 @@ class GUICreator(object):
             self.session.view_creator.save_view_params()
             gs = gui._dock.save_geometry_state()
             self.session.settings['gui_state'] = gs
-            self.session.settings['gui_view_count'] = gui._dock.view_counts()
+            self.session.settings['gui_view_count'] = gui._dock.view_count()
             self.session.settings.save()
 
         if show:
