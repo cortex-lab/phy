@@ -39,7 +39,6 @@ class DockWindow(QtGui.QMainWindow):
     Events
     ------
 
-    close_widget
     close_gui
     show_gui
 
@@ -130,7 +129,7 @@ class DockWindow(QtGui.QMainWindow):
                  closable=True,
                  floatable=True,
                  floating=None,
-                 parent=None,  # object to pass in the raised events
+                 # parent=None,  # object to pass in the raised events
                  **kwargs):
         """Add a widget to the main window."""
 
@@ -141,12 +140,20 @@ class DockWindow(QtGui.QMainWindow):
         except ImportError:
             pass
 
-        parent = self
-
         class DockWidget(QtGui.QDockWidget):
+            def __init__(self, *args, **kwargs):
+                super(DockWidget, self).__init__(*args, **kwargs)
+                self._event = EventEmitter()
+
+            def emit(self, *args, **kwargs):
+                self._event.emit(*args, **kwargs)
+
+            def connect_(self, *args, **kwargs):
+                self._event.connect(*args, **kwargs)
+
             def closeEvent(self, e):
                 """Qt slot when the window is closed."""
-                parent.emit('close_widget', parent or view)
+                self.emit('close_widget')
                 super(DockWidget, self).closeEvent(e)
 
         # Create the dock widget.
