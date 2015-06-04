@@ -9,6 +9,7 @@
 from collections import defaultdict
 
 from .qt import QtCore, QtGui
+from ..utils.event import EventEmitter
 
 
 # -----------------------------------------------------------------------------
@@ -33,7 +34,21 @@ def _widget(dock_widget):
 # -----------------------------------------------------------------------------
 
 class DockWindow(QtGui.QMainWindow):
-    """A Qt main window holding docking Qt or VisPy widgets."""
+    """A Qt main window holding docking Qt or VisPy widgets.
+
+    Events
+    ------
+
+    close_widget
+    close_gui
+    show_gui
+
+    Note
+    ----
+
+    Use `connect_()`, not `connect()`, because of a name conflict with Qt.
+
+    """
     def __init__(self,
                  position=None,
                  size=None,
@@ -53,30 +68,26 @@ class DockWindow(QtGui.QMainWindow):
                             QtGui.QMainWindow.AllowNestedDocks |
                             QtGui.QMainWindow.AnimatedDocks
                             )
-        self._on_show = None
-        self._on_close = None
+        # We can derive from EventEmitter because of a conflict with connect.
+        self._event = EventEmitter()
 
     # Events
     # -------------------------------------------------------------------------
 
-    def on_close(self, func):
-        """Register a callback function when the window is closed."""
-        self._on_close = func
+    def emit(self, *args, **kwargs):
+        self._event.emit(*args, **kwargs)
 
-    def on_show(self, func):
-        """Register a callback function when the window is shown."""
-        self._on_show = func
+    def connect_(self, *args, **kwargs):
+        self._event.connect(*args, **kwargs)
 
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
-        if self._on_close:
-            self._on_close()
+        self.emit('close_gui')
         super(DockWindow, self).closeEvent(e)
 
     def show(self):
         """Show the window."""
-        if self._on_show:
-            self._on_show()
+        self.emit('show_gui')
         super(DockWindow, self).show()
 
     # Actions
@@ -119,6 +130,7 @@ class DockWindow(QtGui.QMainWindow):
                  closable=True,
                  floatable=True,
                  floating=None,
+                 parent=None,  # object to pass in the raised events
                  **kwargs):
         """Add a widget to the main window."""
 
@@ -129,8 +141,16 @@ class DockWindow(QtGui.QMainWindow):
         except ImportError:
             pass
 
+        parent = self
+
+        class DockWidget(QtGui.QDockWidget):
+            def closeEvent(self, e):
+                """Qt slot when the window is closed."""
+                parent.emit('close_widget', parent or view)
+                super(DockWidget, self).closeEvent(e)
+
         # Create the dock widget.
-        dockwidget = QtGui.QDockWidget(self)
+        dockwidget = DockWidget(self)
         dockwidget.setObjectName(title)
         dockwidget.setWindowTitle(title)
         dockwidget.setWidget(view)

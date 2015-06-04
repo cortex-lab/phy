@@ -10,12 +10,10 @@ from pytest import mark
 
 from vispy import app
 
-from ..qt import (qt_app,
-                  _close_qt_after,
-                  _prompt,
-                  )
+from ..qt import wrap_qt
 from ..dock import DockWindow
 from ...utils._color import _random_color
+from ...utils.logging import set_level
 
 
 # Skip these tests in "make test-quick".
@@ -26,7 +24,12 @@ pytestmark = mark.long
 # Tests
 #------------------------------------------------------------------------------
 
-_DURATION = .1
+def setup():
+    set_level('debug')
+
+
+def teardown():
+    set_level('info')
 
 
 def _create_canvas():
@@ -46,76 +49,68 @@ def _create_canvas():
     return c
 
 
-def _show(gui):
-    _close_qt_after(gui, _DURATION)
-    gui.show()
-    return gui
-
-
+@wrap_qt
 def test_dock_1():
-    with qt_app():
 
-        gui = DockWindow()
+    gui = DockWindow()
 
-        @gui.shortcut('quit', 'ctrl+q')
-        def quit():
-            gui.close()
+    @gui.shortcut('quit', 'ctrl+q')
+    def quit():
+        gui.close()
 
-        gui.add_view(_create_canvas(), 'view1')
-        gui.add_view(_create_canvas(), 'view2')
-        _show(gui)
-        assert len(gui.list_views('view')) == 2
+    gui.add_view(_create_canvas(), 'view1')
+    gui.add_view(_create_canvas(), 'view2')
+    gui.show()
+    yield
+
+    assert len(gui.list_views('view')) == 2
+    gui.close()
+    yield
 
 
+@wrap_qt
 def test_dock_state():
-    with qt_app():
+    _gs = None
+    gui = DockWindow()
 
-        gui = DockWindow()
+    @gui.shortcut('press', 'ctrl+g')
+    def press():
+        pass
 
-        @gui.shortcut('press', 'ctrl+g')
-        def press():
-            pass
+    gui.add_view(_create_canvas(), 'view1')
+    gui.add_view(_create_canvas(), 'view2')
+    gui.add_view(_create_canvas(), 'view2')
 
-        gui.add_view(_create_canvas(), 'view1')
-        gui.add_view(_create_canvas(), 'view2')
-        gui.add_view(_create_canvas(), 'view2')
+    @gui.connect_
+    def on_close_gui():
+        global _gs
+        _gs = gui.save_geometry_state()
 
-        @gui.on_close
-        def on_close():
-            gui.gs = gui.save_geometry_state()
+    gui.show()
+    yield
 
-        _show(gui)
+    assert len(gui.list_views('view')) == 3
+    assert gui.view_count() == {
+        'view1': 1,
+        'view2': 2,
+    }
 
-        assert len(gui.list_views('view')) == 3
-        assert gui.view_count() == {
-            'view1': 1,
-            'view2': 2,
-        }
+    gui.close()
 
-    gs = gui.gs
-    with qt_app():
+    # Recreate the GUI with the saved state.
+    gui = DockWindow()
 
-        # Recreate the GUI with the saved state.
-        gui = DockWindow()
+    gui.add_view(_create_canvas(), 'view1')
+    gui.add_view(_create_canvas(), 'view2')
+    gui.add_view(_create_canvas(), 'view2')
 
-        gui.add_view(_create_canvas(), 'view1')
-        gui.add_view(_create_canvas(), 'view2')
-        gui.add_view(_create_canvas(), 'view2')
+    @gui.connect_
+    def on_show():
+        print(_gs)
+        gui.restore_geometry_state(_gs)
 
-        @gui.on_show
-        def on_show():
-            gui.restore_geometry_state(gs)
+    gui.show()
+    yield
 
-        _show(gui)
-
-
-@mark.skipif
-def test_prompt():
-    with qt_app():
-        gui = DockWindow()
-        result = _prompt(gui,
-                         "How are you doing?",
-                         buttons=['save', 'cancel', 'close'],
-                         )
-        print(result)
-        _show(gui)
+    gui.close()
+    yield
