@@ -334,7 +334,6 @@ class BaseGUI(EventEmitter):
             self._add_gui_shortcut('close')
         self._create_actions()
         self._set_default_view_connections()
-        # self.on_open()
 
     #--------------------------------------------------------------------------
     # Methods to override
