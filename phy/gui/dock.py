@@ -173,7 +173,7 @@ class DockWindow(QtGui.QMainWindow):
                 child.height() >= 10
                 ]
 
-    def view_count(self):
+    def view_count(self, is_visible=True):
         """Return the number of opened views."""
         views = self.list_views()
         counts = defaultdict(lambda: 0)

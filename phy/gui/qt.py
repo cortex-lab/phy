@@ -224,10 +224,12 @@ def wrap_qt(func):
                         if _ and not _.isVisible():
                             _.show()
                     except StopIteration:
-                        view.close()
+                        if view.isVisible():
+                            view.close()
                 QtCore.QTimer.singleShot(int(1000 * _DELAY * (i + 1)),
                                          callback)
 
-            view.show()
+            if not view.isVisible():
+                view.show()
 
     return wrapped

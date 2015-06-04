@@ -7,7 +7,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from collections import defaultdict
+from collections import Counter
 import inspect
 
 from ..ext.six import string_types
@@ -166,6 +166,9 @@ class HTMLViewModel(BaseViewModel):
         """Update the widget's HTML contents."""
         self._update(self._view, **kwargs)
 
+    def isVisible(self):
+        return self._view.isVisible()
+
 
 #------------------------------------------------------------------------------
 # Widget creator (used to create views and GUIs)
@@ -283,16 +286,19 @@ class BaseGUI(EventEmitter):
     def __init__(self,
                  vm_classes=None,
                  state=None,
-                 view_count=None,
                  shortcuts=None,
                  config=None,
                  ):
         super(BaseGUI, self).__init__()
+        if state is None:
+            state = {}
         self._shortcuts = shortcuts or {}
         self._config = config
         self._dock = DockWindow(title=self.title)
         self._view_creator = WidgetCreator(widget_classes=vm_classes)
-        self._load_config(config, view_count)
+        self._load_config(config,
+                          requested_count=state.get('view_count', None),
+                          )
         self._load_geometry_state(state)
         # Default close shortcut.
         if 'close' not in self._shortcuts:
@@ -343,21 +349,30 @@ class BaseGUI(EventEmitter):
     # Internal methods
     #--------------------------------------------------------------------------
 
-    def _load_config(self, config=None, view_count=None):
+    def _load_config(self, config=None,
+                     current_count=None,
+                     requested_count=None):
         """Load a GUI configuration dictionary."""
-        current_count = defaultdict(lambda: 0)
-        for name, kwargs in config or []:
+        config = config or []
+        current_count = current_count or {}
+        requested_count = requested_count or Counter([name
+                                                      for name, _ in config])
+        for name, kwargs in config:
             # Add the right number of views of each type.
-            if view_count and current_count[name] > view_count.get(name, 0):
+            if current_count.get(name, 0) >= requested_count.get(name, 0):
                 continue
             debug("Adding {} view in GUI.".format(name))
             # GUI-specific keyword arguments position, size, maximized
             position = kwargs.pop('position', None)
             vm = self._view_creator.add(name, **kwargs)
             self.add_view(vm, title=name.capitalize(), position=position)
+            if name not in current_count:
+                current_count[name] = 0
             current_count[name] += 1
+        assert current_count == requested_count
 
     def _load_geometry_state(self, gui_state):
+        return
         if gui_state:
             self._dock.restore_geometry_state(gui_state)
 
@@ -417,12 +432,19 @@ class BaseGUI(EventEmitter):
 
     def reset_gui(self):
         """Reset the GUI configuration."""
-        self._load_config(self._config, self._dock.view_count())
+        count = {name: len(self.get_views(name))
+                 for name in self._view_creator.widget_classes.keys()}
+        self._load_config(self._config,
+                          current_count=count,
+                          )
         self.emit('reset_gui')
 
     def show_shortcuts(self):
         """Show the list of all keyboard shortcuts."""
         _show_shortcuts(self._shortcuts, name=self.__class__.__name__)
+
+    def isVisible(self):
+        return self._dock.isVisible()
 
     def close(self):
         """Close the GUI."""
@@ -536,6 +558,10 @@ class BaseSession(EventEmitter):
             gs = gui.main_window.save_geometry_state()
             self.settings['{}_state'.format(name)] = gs
             self.settings.save()
+
+        @gui.connect
+        def on_reset_gui():
+            self.settings['{}_state'.format(name)] = None
 
         return gui
 

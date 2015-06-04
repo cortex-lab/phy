@@ -15,6 +15,7 @@ from ..base import (BaseViewModel, HTMLViewModel, WidgetCreator,
                     )
 from ..qt import (_close_qt_after, qt_app, QtGui,
                   _set_qt_widget_position_size,
+                  wrap_qt,
                   )
 from ...utils.event import EventEmitter
 from ...utils.tempdir import TemporaryDirectory
@@ -188,44 +189,54 @@ def test_base_session():
     gui_classes = {'gui': TestGUI}
 
     with TemporaryDirectory() as tmpdir:
-        with qt_app():
+        # with qt_app():
 
-            default_settings_path = op.join(tmpdir, 'settings.py')
+        default_settings_path = op.join(tmpdir, 'settings.py')
 
-            with open(default_settings_path, 'w') as f:
-                f.write("gui_config = {}\n".format(str(config)) +
-                        "gui_shortcuts = {}".format(str(shortcuts)))
+        with open(default_settings_path, 'w') as f:
+            f.write("gui_config = {}\n".format(str(config)) +
+                    "gui_shortcuts = {}".format(str(shortcuts)))
 
-            session = BaseSession(model=model,
-                                  phy_user_dir=tmpdir,
-                                  default_settings_path=default_settings_path,
-                                  vm_classes=vm_classes,
-                                  gui_classes=gui_classes,
-                                  )
+        session = BaseSession(model=model,
+                              phy_user_dir=tmpdir,
+                              default_settings_path=default_settings_path,
+                              vm_classes=vm_classes,
+                              gui_classes=gui_classes,
+                              )
 
-            view = session.show_view('v1', show=False)
-            _close_qt_after(view, _DURATION)
-            view.show()
+        @wrap_qt
+        def test():
+            view = session.show_view('v1')
+            yield view
+            view.close()
 
-            def _show_gui():
-                gui = session.show_gui('gui', show=False)
-                _close_qt_after(gui, _DURATION)
-                gui.show()
-                return gui
+            gui = session.show_gui('gui')
+            yield gui
 
-            gui = _show_gui()
             v2 = gui.get_views('v2')
             assert len(v2) == 2
-            print(len(v2))
             v2[0].close()
+            yield
+
             gui.close()
 
-            gui = _show_gui()
+            gui = session.show_gui('gui')
             v2 = gui.get_views('v2')
-            print(len(v2))
+            assert len(v2) == 1
+            yield gui
+
             gui.reset_gui()
+            v2 = gui.get_views('v2')
+            assert len(v2) == 2
+            yield
+
             gui.close()
 
-            gui = _show_gui()
+            gui = session.show_gui('gui')
+            yield gui
+
             v2 = gui.get_views('v2')
-            print(len(v2))
+            assert len(v2) == 2
+            gui.close()
+
+        test()
