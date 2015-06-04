@@ -207,58 +207,46 @@ def test_gui_statistics():
     gui.close()
 
 
+@wrap_qt
 @mark.long
 def test_gui_history():
 
-    n_clusters = 15
-    n_spikes = 300
-    n_channels = 28
-    n_fets = 2
-    n_samples_traces = 10000
+    gui = _start_manual_clustering()
+    gui.show()
+    yield
 
-    with TemporaryDirectory() as tempdir:
+    gui.wizard.start()
 
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
+    spikes = _spikes_in_clusters(gui.model.spike_clusters,
+                                 gui.wizard.selection)
+    gui.split(spikes[::3])
+    gui.undo()
+    gui.wizard.next()
+    gui.redo()
+    gui.undo()
 
-        gui = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
-
-        gui.wizard.start()
-
-        spikes = _spikes_in_clusters(gui.model.spike_clusters,
-                                     gui.wizard.selection)
-        gui.split(spikes[::3])
+    for _ in range(10):
+        gui.merge(gui.wizard.selection)
+        gui.wizard.next()
         gui.undo()
         gui.wizard.next()
         gui.redo()
-        gui.undo()
+        gui.wizard.next()
 
-        for _ in range(10):
-            gui.merge(gui.wizard.selection)
+        spikes = _spikes_in_clusters(gui.model.spike_clusters,
+                                     gui.wizard.selection)
+        if len(spikes):
+            gui.split(spikes[::10])
             gui.wizard.next()
             gui.undo()
-            gui.wizard.next()
-            gui.redo()
-            gui.wizard.next()
+        gui.merge(gui.wizard.selection)
+        gui.wizard.next()
+        gui.wizard.next()
 
-            spikes = _spikes_in_clusters(gui.model.spike_clusters,
-                                         gui.wizard.selection)
-            if len(spikes):
-                gui.split(spikes[::10])
-                gui.wizard.next()
-                gui.undo()
-            gui.merge(gui.wizard.selection)
-            gui.wizard.next()
-            gui.wizard.next()
+        gui.wizard.next_best()
+        ae(gui.model.spike_clusters, gui.clustering.spike_clusters)
 
-            gui.wizard.next_best()
-            ae(gui.model.spike_clusters, gui.clustering.spike_clusters)
+    gui.close()
 
 
 @mark.long
