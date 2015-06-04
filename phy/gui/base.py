@@ -319,7 +319,7 @@ class BaseGUI(EventEmitter):
             state = {}
         self.model = model
         self._shortcuts = shortcuts or {}
-        self._config = config
+        self._config = config or [(vm.name, {}) for vm in (vm_classes or {})]
         self._dock = DockWindow(title=self.title)
         self._view_creator = WidgetCreator(widget_classes=vm_classes)
         self._load_config(config,

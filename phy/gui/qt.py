@@ -11,7 +11,7 @@ import sys
 import contextlib
 
 from ..utils._misc import _is_interactive
-from ..utils.logging import debug, info, warn
+from ..utils.logging import info, warn
 
 
 # -----------------------------------------------------------------------------
@@ -226,10 +226,8 @@ def wrap_qt(func):
                 def callback():
                     try:
                         next(gen)
-                        debug("Qt wrap iteration.")
                     except StopIteration:
-                        debug("Qt wrap loop stopped.")
-                        # QtGui.QApplication.quit()
+                        pass
                 QtCore.QTimer.singleShot(int(1000 * _DELAY * i),
                                          callback)
 
