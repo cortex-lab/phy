@@ -128,6 +128,8 @@ class FeatureMasks(VariableSizeItem):
         return mean_features
 
     def _store_means(self, cluster):
+        if not self.disk_store:
+            return
         self.disk_store.store(cluster,
                               mean_masks=self.mean_masks(cluster),
                               mean_features=self.mean_features(cluster),
@@ -263,6 +265,8 @@ class FeatureMasks(VariableSizeItem):
         needs to be taken into account.
 
         """
+        if not self.disk_store:
+            return
         clusters = up.deleted
         spc = up.old_spikes_per_cluster
         # We load all masks and features of the merged clusters.
@@ -294,6 +298,8 @@ class FeatureMasks(VariableSizeItem):
         to form the new cluster files.
 
         """
+        if not self.disk_store:
+            return
         for name, shape in [('features',
                              (-1, self.n_channels, self.n_features)),
                             ('masks',
@@ -393,6 +399,8 @@ class Waveforms(VariableSizeItem):
 
     def store(self, cluster):
         """Store waveforms and mean waveforms."""
+        if not self.disk_store:
+            return
         # NOTE: make sure to erase old spikes for that cluster.
         # Typical case merge, undo, different merge.
         waveforms, mean_waveforms = self.waveforms_and_mean(cluster)
