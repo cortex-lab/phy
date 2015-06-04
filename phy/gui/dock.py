@@ -246,5 +246,7 @@ class DockWindow(QtGui.QMainWindow):
         This function can be called in `on_show()`.
 
         """
-        self.restoreGeometry((gs['geometry']))
-        self.restoreState((gs['state']))
+        if gs.get('geometry', None):
+            self.restoreGeometry((gs['geometry']))
+        if gs.get('state', None):
+            self.restoreState((gs['state']))

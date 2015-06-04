@@ -27,9 +27,6 @@ from ...io.base_model import BaseModel
 # Base tests
 #------------------------------------------------------------------------------
 
-_DURATION = .1
-
-
 def setup():
     set_level('debug')
 
@@ -215,7 +212,7 @@ def test_base_session():
     with TemporaryDirectory() as tmpdir:
         # with qt_app():
 
-        default_settings_path = op.join(tmpdir, 'settings.py')
+        default_settings_path = op.join(tmpdir, 'default_settings.py')
 
         with open(default_settings_path, 'w') as f:
             f.write("gui_config = {}\n".format(str(config)) +
@@ -228,39 +225,43 @@ def test_base_session():
                               gui_classes=gui_classes,
                               )
 
+        # Need to wrap here because of the temporary directory.
         @wrap_qt
         def test():
             # view = session.show_view('v1')
             # yield view
             # view.close()
 
+            # New GUI.
+            gui = session.show_gui('gui')
+            yield gui
+
+            # Remove a v2 view.
+            v2 = gui.get_views('v2')
+            assert len(v2) == 2
+            v2[0].close()
+            yield
+            gui.close()
+
+            # Reopen and check that the v2 is gone.
+            gui = session.show_gui('gui')
+            v2 = gui.get_views('v2')
+            assert len(v2) == 1
+            yield gui
+            # gui.close()
+
+            gui.reset_gui()
+            v2 = gui.get_views('v2')
+            assert len(v2) == 2
+            yield
+            gui.close()
+
             gui = session.show_gui('gui')
             yield gui
 
             v2 = gui.get_views('v2')
             assert len(v2) == 2
-            v2[0].close()
-            yield
-
             gui.close()
-
-            # gui = session.show_gui('gui')
-            # v2 = gui.get_views('v2')
-            # assert len(v2) == 1
-            # yield gui
-
-            # gui.reset_gui()
-            # v2 = gui.get_views('v2')
-            # assert len(v2) == 2
-            # yield
-
-            # gui.close()
-
-            # gui = session.show_gui('gui')
-            # yield gui
-
-            # v2 = gui.get_views('v2')
-            # assert len(v2) == 2
-            # gui.close()
+            yield gui
 
         test()

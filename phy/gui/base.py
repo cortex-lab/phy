@@ -589,6 +589,7 @@ class BaseSession(EventEmitter):
 
         # Create the GUI.
         gui = self._gui_creator.add(name, **params)
+        gui._save_state = True
         # Connect the 'open' event.
         self.connect(gui.on_open)
 
@@ -600,17 +601,21 @@ class BaseSession(EventEmitter):
                 self.save_view_params(vm, save_size_pos=False)
             gs = gui.main_window.save_geometry_state()
             gs['view_count'] = gui.view_count()
-            print(gs['view_count'])
+            if not gui._save_state:
+                gs['state'] = None
+                gs['geometry'] = None
             self.settings['{}_state'.format(name)] = gs
             self.settings.save()
 
-        # @gui.connect
-        # def on_close_view(view):
-            # self.settings['{}_state'.format(name)] = None
+        # HACK: do not save GUI state when views have been closed or reset
+        # in the session, otherwise Qt messes things up in the GUI.
+        @gui.connect
+        def on_close_view(view):
+            gui._save_state = False
 
-        # @gui.connect
-        # def on_reset_gui():
-        #     self.settings['{}_state'.format(name)] = None
+        @gui.connect
+        def on_reset_gui():
+            gui._save_state = False
 
         return gui
 
