@@ -210,7 +210,6 @@ def test_base_session():
     gui_classes = {'gui': TestGUI}
 
     with TemporaryDirectory() as tmpdir:
-        # with qt_app():
 
         default_settings_path = op.join(tmpdir, 'default_settings.py')
 

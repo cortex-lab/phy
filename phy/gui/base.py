@@ -308,6 +308,7 @@ class BaseGUI(EventEmitter):
     """
 
     def __init__(self,
+                 model=None,
                  vm_classes=None,
                  state=None,
                  shortcuts=None,
@@ -316,6 +317,7 @@ class BaseGUI(EventEmitter):
         super(BaseGUI, self).__init__()
         if state is None:
             state = {}
+        self.model = model
         self._shortcuts = shortcuts or {}
         self._config = config
         self._dock = DockWindow(title=self.title)
@@ -330,6 +332,7 @@ class BaseGUI(EventEmitter):
             self._add_gui_shortcut('close')
         self._create_actions()
         self._set_default_view_connections()
+        self.on_open()
 
     #--------------------------------------------------------------------------
     # Methods to override
@@ -366,10 +369,17 @@ class BaseGUI(EventEmitter):
 
         The `_add_gui_shortcut()` method can be used.
 
+        Must be overriden.
+
         """
         pass
 
     def on_open(self):
+        """Callback function when the model is opened.
+
+        Must be overriden.
+
+        """
         pass
 
     #--------------------------------------------------------------------------
@@ -560,6 +570,14 @@ class BaseSession(EventEmitter):
         """
         pass
 
+    def _save_model(self):
+        """Save a model.
+
+        Must be overriden.
+
+        """
+        pass
+
     def open(self, path=None, model=None):
         """Open a dataset."""
         # Close the session if it is already open.
@@ -569,6 +587,9 @@ class BaseSession(EventEmitter):
             model = self._create_model(path)
         self.model = model
         self.emit('open')
+
+    def save(self):
+        self._save_model()
 
     def close(self):
         """Close the currently-open dataset."""
@@ -588,8 +609,9 @@ class BaseSession(EventEmitter):
         params.update(kwargs)
 
         # Create the GUI.
-        gui = self._gui_creator.add(name, **params)
+        gui = self._gui_creator.add(name, model=self.model, **params)
         gui._save_state = True
+
         # Connect the 'open' event.
         self.connect(gui.on_open)
 
