@@ -26,13 +26,21 @@ from .dock import DockWindow
 #------------------------------------------------------------------------------
 
 class BaseViewModel(object):
-    """Interface between a view and a model."""
+    """Interface between a view and a model.
+
+    Events
+    ------
+
+    show_view
+    close_view
+
+    """
     _view_name = ''
     _imported_params = ('position', 'size',)
 
     def __init__(self, model=None, **kwargs):
-        self._on_close_view = None
         self._model = model
+        self._event = EventEmitter()
 
         # Instantiate the underlying view.
         self._view = self._create_view(**kwargs)
@@ -45,6 +53,12 @@ class BaseViewModel(object):
 
         self.on_open()
 
+    def emit(self, *args, **kwargs):
+        self._event.emit(*args, **kwargs)
+
+    def connect(self, *args, **kwargs):
+        self._event.connect(*args, **kwargs)
+
     # Methods to override
     #--------------------------------------------------------------------------
 
@@ -54,16 +68,12 @@ class BaseViewModel(object):
         Must be overriden."""
         return None
 
-    def connect(self, func):
-        if func.__name__ == 'on_close_view':
-            self._on_close_view = func
-
     def on_open(self):
         """Initialize the view after the model has been loaded.
 
         May be overriden."""
 
-    def on_close(self, e=None):
+    def on_close(self):
         """Called when the model is closed.
 
         May be overriden."""
@@ -121,12 +131,12 @@ class BaseViewModel(object):
 
     def close(self):
         self._view.close()
-        if self._on_close_view:
-            self._on_close_view()
+        self.emit('close_view')
 
     def show(self):
         """Show the view."""
         self._view.show()
+        self.emit('show_view')
 
 
 #------------------------------------------------------------------------------
@@ -239,13 +249,19 @@ class WidgetCreator(EventEmitter):
         @widget.connect
         def on_close(e=None):
             self.emit('close', widget)
-            if widget in self._widgets:
-                self._widgets.remove(widget)
+            self.remove(widget)
 
         if show:
             widget.show()
 
         return widget
+
+    def remove(self, widget):
+        if widget in self._widgets:
+            debug("Remove widget {}.".format(widget))
+            self._widgets.remove(widget)
+        else:
+            debug("Unable to remove widget {}.".format(widget))
 
 
 #------------------------------------------------------------------------------
@@ -307,7 +323,7 @@ class BaseGUI(EventEmitter):
         self._load_config(config,
                           requested_count=state.get('view_count', None),
                           )
-        # self._load_geometry_state(state)
+        self._load_geometry_state(state)
         # Default close shortcut.
         if 'close' not in self._shortcuts:
             self._shortcuts['close'] = 'ctrl+q'
@@ -353,6 +369,9 @@ class BaseGUI(EventEmitter):
         """
         pass
 
+    def on_open(self):
+        pass
+
     #--------------------------------------------------------------------------
     # Internal methods
     #--------------------------------------------------------------------------
@@ -393,9 +412,6 @@ class BaseGUI(EventEmitter):
                               shortcut=shortcut,
                               )
 
-    def on_open(self):
-        pass
-
     #--------------------------------------------------------------------------
     # Public methods
     #--------------------------------------------------------------------------
@@ -414,19 +430,35 @@ class BaseGUI(EventEmitter):
         position = kwargs.pop('position', None)
         # Item may be a string.
         if isinstance(item, string_types):
+            name = item
             item = self._view_creator.add(item, **kwargs)
+            # Set the view name if necessary.
+            if not item._view_name:
+                item._view_name = name
         # Default dock title.
         if title is None:
             title = _title(item)
         # Get the underlying view.
         view = item.view if isinstance(item, BaseViewModel) else item
         # Add the view to the main window.
-        dw = self._dock.add_view(view, title=title, position=position)
+        dw = self._dock.add_view(view,
+                                 title=title,
+                                 position=position,
+                                 )
 
+        # Dock widget close event.
+        @dw.connect_
+        def on_close_widget():
+            # debug("Close dock widget {}.".format(item))
+            self._view_creator.remove(item)
+            self.emit('close_view', item)
+
+        # Make sure the callback above is called when the dock widget
+        # is closed directly.
+        # View model close event.
         @item.connect
         def on_close_view(e=None):
             dw.close()
-            self.emit('close_view', view)
 
         self.emit('add_view', view)
 
@@ -438,10 +470,13 @@ class BaseGUI(EventEmitter):
     def views(self):
         return self.get_views()
 
+    def view_count(self):
+        return {name: len(self.get_views(name))
+                for name in self._view_creator.widget_classes.keys()}
+
     def reset_gui(self):
         """Reset the GUI configuration."""
-        count = {name: len(self.get_views(name))
-                 for name in self._view_creator.widget_classes.keys()}
+        count = self.view_count()
         self._load_config(self._config,
                           current_count=count,
                           )
@@ -562,14 +597,20 @@ class BaseSession(EventEmitter):
             self.unconnect(gui.on_open)
             # Save the params of every view in the GUI.
             for vm in gui.views:
-                self.save_view_params(vm)
+                self.save_view_params(vm, save_size_pos=False)
             gs = gui.main_window.save_geometry_state()
+            gs['view_count'] = gui.view_count()
+            print(gs['view_count'])
             self.settings['{}_state'.format(name)] = gs
             self.settings.save()
 
-        @gui.connect
-        def on_reset_gui():
-            self.settings['{}_state'.format(name)] = None
+        # @gui.connect
+        # def on_close_view(view):
+            # self.settings['{}_state'.format(name)] = None
+
+        # @gui.connect
+        # def on_reset_gui():
+        #     self.settings['{}_state'.format(name)] = None
 
         return gui
 
@@ -590,6 +631,8 @@ class BaseSession(EventEmitter):
         """
         # Get the view class.
         vm_class = self._view_creator.widget_classes[name]
+        if not vm_class._view_name:
+            vm_class._view_name = name
         # Get default and user parameters.
         params = vm_class.get_params(self.settings)
         params.update(kwargs)
@@ -608,10 +651,11 @@ class BaseSession(EventEmitter):
 
         return vm
 
-    def save_view_params(self, vm):
+    def save_view_params(self, vm, save_size_pos=True):
         """Save the parameters exported by a view model instance."""
-        to_save = vm.exported_params(save_size_pos=True)
+        to_save = vm.exported_params(save_size_pos=save_size_pos)
         for key, value in to_save.items():
+            assert vm.name
             name = '{}_{}'.format(vm.name, key)
             self.settings[name] = value
             debug("Save {0}={1} for {2}.".format(name, value, vm.name))

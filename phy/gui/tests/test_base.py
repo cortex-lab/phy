@@ -18,6 +18,7 @@ from ..qt import (_close_qt_after, qt_app, QtGui,
                   wrap_qt,
                   )
 from ...utils.event import EventEmitter
+from ...utils.logging import set_level
 from ...utils.tempdir import TemporaryDirectory
 from ...io.base_model import BaseModel
 
@@ -29,6 +30,15 @@ from ...io.base_model import BaseModel
 _DURATION = .1
 
 
+def setup():
+    set_level('debug')
+
+
+def teardown():
+    set_level('info')
+
+
+@wrap_qt
 def test_base_view_model():
     class MyViewModel(BaseViewModel):
         _view_name = 'main_window'
@@ -43,24 +53,28 @@ def test_base_view_model():
                                          )
             return view
 
-    size = (400, 20)
+    size = (400, 100)
     text = 'hello'
 
-    with qt_app():
-        vm = MyViewModel(text=text, size=size)
-        _close_qt_after(vm, _DURATION)
-        vm.show()
-        assert vm.view.windowTitle() == text
-        assert vm.text == text
-        assert vm.size == size
-        assert (vm.view.width(), vm.view.height()) == size
+    vm = MyViewModel(text=text, size=size)
+    vm.show()
+    yield
+
+    assert vm.view.windowTitle() == text
+    assert vm.text == text
+    assert vm.size == size
+    assert (vm.view.width(), vm.view.height()) == size
+
+    vm.close()
+    yield
 
 
+@wrap_qt
 def test_html_view_model():
-    with qt_app():
-        vm = HTMLViewModel(html='hello world!')
-        _close_qt_after(vm, _DURATION)
-        vm.show()
+    vm = HTMLViewModel(html='hello world!')
+    vm.show()
+    yield
+    vm.close()
 
 
 def test_widget_creator():
@@ -108,6 +122,7 @@ def test_widget_creator():
         assert not wc.get('my_widget')
 
 
+@wrap_qt
 def test_base_gui():
 
     class V1(HTMLViewModel):
@@ -143,19 +158,28 @@ def test_base_gui():
             self.show_shortcuts()
             self.reset_gui()
 
-    with qt_app():
-        gui = TestGUI()
-        _close_qt_after(gui.main_window, _DURATION)
-        gui.show()
-        v2 = gui.get_views('v2')
-        assert len(v2) == 2
-        v2[1].close()
-        v3 = gui.get_views('v3')
-        v3[0].close()
-        gui.reset_gui()
+    gui = TestGUI()
+    gui.show()
+    yield
+
+    v2 = gui.get_views('v2')
+    assert len(v2) == 2
+    v2[1].close()
+    yield
+
+    v3 = gui.get_views('v3')
+    v3[0].close()
+    yield
+
+    gui.reset_gui()
+    yield
+
+    gui.close()
+    yield
 
 
 def test_base_session():
+
     model = BaseModel()
 
     class V1(HTMLViewModel):
@@ -206,9 +230,9 @@ def test_base_session():
 
         @wrap_qt
         def test():
-            view = session.show_view('v1')
-            yield view
-            view.close()
+            # view = session.show_view('v1')
+            # yield view
+            # view.close()
 
             gui = session.show_gui('gui')
             yield gui
@@ -220,23 +244,23 @@ def test_base_session():
 
             gui.close()
 
-            gui = session.show_gui('gui')
-            v2 = gui.get_views('v2')
-            assert len(v2) == 1
-            yield gui
+            # gui = session.show_gui('gui')
+            # v2 = gui.get_views('v2')
+            # assert len(v2) == 1
+            # yield gui
 
-            gui.reset_gui()
-            v2 = gui.get_views('v2')
-            assert len(v2) == 2
-            yield
+            # gui.reset_gui()
+            # v2 = gui.get_views('v2')
+            # assert len(v2) == 2
+            # yield
 
-            gui.close()
+            # gui.close()
 
-            gui = session.show_gui('gui')
-            yield gui
+            # gui = session.show_gui('gui')
+            # yield gui
 
-            v2 = gui.get_views('v2')
-            assert len(v2) == 2
-            gui.close()
+            # v2 = gui.get_views('v2')
+            # assert len(v2) == 2
+            # gui.close()
 
         test()
