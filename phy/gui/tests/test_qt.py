@@ -63,9 +63,11 @@ def test_wrap():
     yield
 
 
+@mark.skipif()
 def test_prompt():
     with qt_app():
         w = QtGui.QWidget()
+        w.show()
         result = _prompt(w,
                          "How are you doing?",
                          buttons=['save', 'cancel', 'close'],

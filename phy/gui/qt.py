@@ -215,7 +215,7 @@ def wrap_qt(func):
     -----
 
     * You must explicitely call `show()` and `close()`.
-    * Never call `yield` after a `close()` if no window is still open,
+    * Never call `yield` right after a `close()` if no window is still open,
       otherwise the Qt application will close auttomatically.
 
     """
@@ -229,7 +229,7 @@ def wrap_qt(func):
                         debug("Qt wrap iteration.")
                     except StopIteration:
                         debug("Qt wrap loop stopped.")
-                        QtGui.QApplication.quit()
+                        # QtGui.QApplication.quit()
                 QtCore.QTimer.singleShot(int(1000 * _DELAY * (i + 1)),
                                          callback)
 
