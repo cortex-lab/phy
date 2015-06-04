@@ -319,7 +319,9 @@ class BaseGUI(EventEmitter):
             state = {}
         self.model = model
         self._shortcuts = shortcuts or {}
-        self._config = config or [(name, {}) for name in (vm_classes or {})]
+        if config is None:
+            config = [(name, {}) for name in (vm_classes or {})]
+        self._config = config
         self._dock = DockWindow(title=self.title)
         self._view_creator = WidgetCreator(widget_classes=vm_classes)
         self._load_config(self._config,
@@ -381,10 +383,6 @@ class BaseGUI(EventEmitter):
 
         """
         pass
-
-    # def _view_kwargs(self, name):
-    #     """Return the keyword arguments required to create a view."""
-    #     return {}
 
     #--------------------------------------------------------------------------
     # Internal methods
