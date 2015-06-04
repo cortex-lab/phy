@@ -168,54 +168,43 @@ def test_gui_wizard():
     gui.close()
 
 
+@wrap_qt
 def test_gui_statistics():
     """Test registration of new statistic."""
-    n_clusters = 5
-    n_spikes = 100
-    n_channels = 28
-    n_fets = 2
-    n_samples_traces = 3000
 
-    with TemporaryDirectory() as tempdir:
+    gui = _start_manual_clustering()
+    gui.show()
+    yield
 
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
+    @gui.register_statistic
+    def n_spikes_2(cluster):
+        return gui.clustering.cluster_counts.get(cluster, 0) ** 2
 
-        gui = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
+    store = gui.store
+    stats = store.items['statistics']
 
-        @gui.register_statistic
-        def n_spikes_2(cluster):
-            return gui.clustering.cluster_counts.get(cluster, 0) ** 2
+    def _check():
+        for clu in gui.cluster_ids:
+            assert (store.n_spikes_2(clu) ==
+                    store.features(clu).shape[0] ** 2)
 
-        store = gui.cluster_store
-        stats = store.items['statistics']
+    assert 'n_spikes_2' in stats.fields
+    _check()
 
-        def _check():
-            for clu in gui.cluster_ids:
-                assert (store.n_spikes_2(clu) ==
-                        store.features(clu).shape[0] ** 2)
+    # Merge the clusters and check that the statistics has been
+    # recomputed for the new cluster.
+    clusters = gui.cluster_ids
+    gui.merge(clusters)
+    _check()
+    assert gui.cluster_ids == [max(clusters) + 1]
 
-        assert 'n_spikes_2' in stats.fields
-        _check()
+    gui.undo()
+    _check()
 
-        # Merge the clusters and check that the statistics has been
-        # recomputed for the new cluster.
-        clusters = gui.cluster_ids
-        gui.merge(clusters)
-        _check()
-        assert gui.cluster_ids == [max(clusters) + 1]
+    gui.merge(gui.cluster_ids[::2])
+    _check()
 
-        gui.undo()
-        _check()
-
-        gui.merge(gui.cluster_ids[::2])
-        _check()
+    gui.close()
 
 
 @mark.long
