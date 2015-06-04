@@ -219,7 +219,10 @@ def wrap_qt(func):
             for i in range(_MAX_ITER):
                 def callback():
                     try:
-                        next(gen)
+                        _ = next(gen)
+                        # Open the view again if necessary.
+                        if _ and not _.isVisible():
+                            _.show()
                     except StopIteration:
                         view.close()
                 QtCore.QTimer.singleShot(int(1000 * _DELAY * (i + 1)),

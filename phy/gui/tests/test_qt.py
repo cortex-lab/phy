@@ -29,3 +29,11 @@ def test_wrap():
     yield
     view.setHtml("!")
     yield
+    # Close a view and open a new one.
+    # NOTE: the new view must be yielded at the next iteration.
+    view.close()
+    view = QtWebKit.QWebView()
+    _set_qt_widget_position_size(view, size=(100, 100))
+    yield view
+    view.setHtml("finished")
+    yield
