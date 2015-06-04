@@ -69,6 +69,8 @@ class BaseSettings(object):
     def _try_load_pickle(self, path):
         try:
             self._store.update(_load_pickle(path))
+            debug("Loaded internal settings file "
+                  "from `{}`.".format(path))
             return True
         except Exception as e:
             warn("Unable to read the internal settings. "
@@ -77,6 +79,8 @@ class BaseSettings(object):
     def _try_load_python(self, path):
         try:
             self._store.update(_load_python(path))
+            debug("Loaded internal settings file "
+                  "from `{}`.".format(path))
             return True
         except Exception as e:
             warn("Unable to read the settings file "
