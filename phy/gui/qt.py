@@ -11,7 +11,7 @@ import sys
 import contextlib
 
 from ..utils._misc import _is_interactive
-from ..utils.logging import info, warn
+from ..utils.logging import debug, info, warn
 
 
 # -----------------------------------------------------------------------------
@@ -220,16 +220,18 @@ def wrap_qt(func):
                 def callback():
                     try:
                         _ = next(gen)
-                        # Open the view again if necessary.
-                        if _ and not _.isVisible():
-                            _.show()
+                        debug("Qt wrap iteration")
+                        # # Open the view again if necessary.
+                        # if _ and not _.isVisible():
+                        #     _.show()
                     except StopIteration:
-                        if view.isVisible():
-                            view.close()
+                        debug("Qt wrap loop stopped.")
+                        # if view.isVisible():
+                        #     view.close()
                 QtCore.QTimer.singleShot(int(1000 * _DELAY * (i + 1)),
                                          callback)
 
-            if not view.isVisible():
-                view.show()
+            # if not view.isVisible():
+            #     view.show()
 
     return wrapped
