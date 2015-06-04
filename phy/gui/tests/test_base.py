@@ -13,9 +13,9 @@ from pytest import raises
 from ..base import (BaseViewModel, HTMLViewModel, WidgetCreator,
                     BaseGUI, BaseSession,
                     )
-from ..qt import (_close_qt_after, qt_app, QtGui,
-                  _set_qt_widget_position_size,
+from ..qt import (QtGui,
                   wrap_qt,
+                  _set_qt_widget_position_size,
                   )
 from ...utils.event import EventEmitter
 from ...utils.logging import set_level
