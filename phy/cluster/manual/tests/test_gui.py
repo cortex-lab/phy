@@ -141,162 +141,31 @@ def test_gui_clustering():
     gui.close()
 
 
-def test_gui_multiple_clusterings():
-
-    n_clusters = 5
-    n_spikes = 100
-    n_channels = 28
-    n_fets = 2
-    n_samples_traces = 10000
-
-    with TemporaryDirectory() as tempdir:
-
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
-
-        gui = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
-
-        assert gui.model.n_spikes == n_spikes
-        assert gui.model.n_clusters == n_clusters
-        assert len(gui.model.cluster_ids) == n_clusters
-        assert gui.clustering.n_clusters == n_clusters
-        assert gui.model.cluster_metadata.group(1) == 1
-
-        # Change clustering.
-        with raises(ValueError):
-            gui.change_clustering('automat')
-        gui.change_clustering('automatic')
-
-        assert gui.model.n_spikes == n_spikes
-        assert gui.model.n_clusters == n_clusters * 2
-        assert len(gui.model.cluster_ids) == n_clusters * 2
-        assert gui.clustering.n_clusters == n_clusters * 2
-        assert gui.model.cluster_metadata.group(2) == 2
-
-        # Merge the clusters and save, for the current clustering.
-        gui.clustering.merge(gui.clustering.cluster_ids)
-        gui.save()
-        gui.close()
-
-        # Re-open the gui.
-        gui = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
-        # The default clustering is the main one: nothing should have
-        # changed here.
-        assert gui.model.n_clusters == n_clusters
-        gui.change_clustering('automatic')
-        assert gui.model.n_spikes == n_spikes
-        assert gui.model.n_clusters == 1
-        assert gui.model.cluster_ids == n_clusters * 2
-
-
-@mark.long
-def test_gui_mock():
-    with TemporaryDirectory() as tempdir:
-        gui = _start_manual_clustering(model=MockModel(),
-                                           tempdir=tempdir)
-        for name in ('waveforms', 'features', 'correlograms', 'traces'):
-            vm = _show_view(gui, name, [], stop=False)
-            vm.select([0])
-            show_test_run(vm.view, _N_FRAMES)
-            vm.select([0, 1])
-            show_test_run(vm.view, _N_FRAMES)
-            show_test_stop(vm.view)
-
-
-def test_gui_kwik():
-    n_clusters = 5
-    n_spikes = 50
-    n_channels = 28
-    n_fets = 2
-    n_samples_traces = 3000
-
-    with TemporaryDirectory() as tempdir:
-
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
-
-        gui = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
-
-        # Check backup.
-        assert op.exists(op.join(tempdir, kwik_path + '.bak'))
-
-        cs = gui.cluster_store
-
-        nc = n_channels - 2
-
-        # Check the stored items.
-        for cluster in range(n_clusters):
-            n_spikes = len(gui.clustering.spikes_per_cluster[cluster])
-            n_unmasked_channels = cs.n_unmasked_channels(cluster)
-
-            assert cs.features(cluster).shape == (n_spikes, nc, n_fets)
-            assert cs.masks(cluster).shape == (n_spikes, nc)
-            assert cs.mean_masks(cluster).shape == (nc,)
-            assert n_unmasked_channels <= nc
-            assert cs.mean_probe_position(cluster).shape == (2,)
-            assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
-
-        # _show_view(gui, 'waveforms', [0])
-        # _show_view(gui, 'features', [0])
-
-        gui.close()
-
-
+@wrap_qt
 def test_gui_wizard():
+    gui = _start_manual_clustering()
+    n = gui.n_clusters
+    gui.show()
+    yield
 
-    n_clusters = 5
-    n_spikes = 100
-    n_channels = 28
-    n_fets = 2
-    n_samples_traces = 3000
+    clusters = np.arange(gui.n_clusters)
+    best_clusters = gui.wizard.best_clusters()
 
-    with TemporaryDirectory() as tempdir:
+    # assert gui.wizard.best_clusters(1)[0] == best_clusters[0]
+    ae(np.unique(best_clusters), clusters)
+    assert len(gui.wizard.most_similar_clusters()) == n - 1
 
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
+    assert len(gui.wizard.most_similar_clusters(0, n_max=3)) == 3
 
-        gui = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
+    clusters = gui.cluster_ids[:2]
+    up = gui.merge(clusters)
+    new = up.added[0]
+    assert np.all(np.in1d(gui.wizard.best_clusters(),
+                  np.arange(clusters[-1] + 1, new + 1)))
+    assert np.all(np.in1d(gui.wizard.most_similar_clusters(new),
+                  np.arange(clusters[-1] + 1, new)))
 
-        clusters = np.arange(n_clusters)
-        best_clusters = gui.wizard.best_clusters()
-
-        # assert gui.wizard.best_clusters(1)[0] == best_clusters[0]
-        ae(np.unique(best_clusters), clusters)
-        assert len(gui.wizard.most_similar_clusters()) == n_clusters - 1
-
-        assert len(gui.wizard.most_similar_clusters(0, n_max=3)) == 3
-
-        gui.merge([0, 1, 2])
-        assert np.all(np.in1d(gui.wizard.best_clusters(), np.arange(3, 6)))
-        assert list(gui.wizard.most_similar_clusters(5)) in ([3, 4],
-                                                                 [4, 3])
-
-        # Move a cluster to noise.
-        gui.move([5], 0)
-        best = gui.wizard.best_clusters(1)[0]
-        if best is not None:
-            assert best in (3, 4)
-            # The most similar cluster is 3 if best=4 and conversely.
-            assert gui.wizard.most_similar_clusters(best)[0] == 7 - best
+    gui.close()
 
 
 def test_gui_statistics():

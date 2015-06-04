@@ -444,7 +444,7 @@ class Wizard(object):
                 self.match = self._match_list[0]
 
     def _update_selection(self, up):
-        #  TODO: improve this
+        #  TODO: improve this by saving the selection in `up`
         return
         # New selection.
         if up.history == 'undo':
