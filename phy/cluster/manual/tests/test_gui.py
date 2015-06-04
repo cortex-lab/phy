@@ -37,11 +37,13 @@ def setup():
     set_level('info')
 
 
-def _start_manual_clustering():
+def _start_manual_clustering(config='none'):
+    if config is 'none':
+        config = []
     model = MockModel()
     spc = model.spikes_per_cluster
     store = create_store(model, spikes_per_cluster=spc)
-    gui = ClusterManualGUI(model=model, store=store, config=[])
+    gui = ClusterManualGUI(model=model, store=store, config=config)
     return gui
 
 
@@ -249,32 +251,11 @@ def test_gui_history():
     gui.close()
 
 
+@wrap_qt
 @mark.long
 def test_gui_gui():
-    n_clusters = 15
-    n_spikes = 500
-    n_channels = 30
-    n_fets = 3
-    n_samples_traces = 50000
+    gui = _start_manual_clustering(config=None)
+    gui.show()
+    yield
 
-    with TemporaryDirectory() as tempdir:
-
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
-
-        gui = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
-
-        with qt_app():
-            config = gui.settings['gui_config']
-            for name, kwargs in config:
-                if name in ('waveforms', 'features', 'traces'):
-                    kwargs['scale_factor'] = 1
-            gui = gui.gui_creator.add(config=config, show=False)
-            _close_qt_after(gui, 0.25)
-            gui.show()
+    gui.close()

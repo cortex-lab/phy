@@ -322,7 +322,7 @@ class BaseGUI(EventEmitter):
         self._config = config or [(name, {}) for name in (vm_classes or {})]
         self._dock = DockWindow(title=self.title)
         self._view_creator = WidgetCreator(widget_classes=vm_classes)
-        self._load_config(config,
+        self._load_config(self._config,
                           requested_count=state.get('view_count', None),
                           )
         self._load_geometry_state(state)
@@ -382,6 +382,10 @@ class BaseGUI(EventEmitter):
         """
         pass
 
+    # def _view_kwargs(self, name):
+    #     """Return the keyword arguments required to create a view."""
+    #     return {}
+
     #--------------------------------------------------------------------------
     # Internal methods
     #--------------------------------------------------------------------------
@@ -400,9 +404,12 @@ class BaseGUI(EventEmitter):
                 continue
             debug("Adding {} view in GUI.".format(name))
             # GUI-specific keyword arguments position, size, maximized
-            position = kwargs.pop('position', None)
-            vm = self._view_creator.add(name, **kwargs)
-            self.add_view(vm, title=name.capitalize(), position=position)
+            # position = kwargs.pop('position', None)
+            # vm = self._view_creator.add(name, **kwargs)
+            self.add_view(name,
+                          title=name.capitalize(),
+                          # position=position,
+                          **kwargs)
             if name not in current_count:
                 current_count[name] = 0
             current_count[name] += 1
