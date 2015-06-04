@@ -319,7 +319,7 @@ class BaseGUI(EventEmitter):
             state = {}
         self.model = model
         self._shortcuts = shortcuts or {}
-        self._config = config or [(vm.name, {}) for vm in (vm_classes or {})]
+        self._config = config or [(name, {}) for name in (vm_classes or {})]
         self._dock = DockWindow(title=self.title)
         self._view_creator = WidgetCreator(widget_classes=vm_classes)
         self._load_config(config,
@@ -332,7 +332,7 @@ class BaseGUI(EventEmitter):
             self._add_gui_shortcut('close')
         self._create_actions()
         self._set_default_view_connections()
-        self.on_open()
+        # self.on_open()
 
     #--------------------------------------------------------------------------
     # Methods to override

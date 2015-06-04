@@ -198,6 +198,7 @@ def test_base_session():
         def __init__(self, **kwargs):
             super(TestGUI, self).__init__(vm_classes=vm_classes,
                                           **kwargs)
+            self.on_open()
 
         def _create_actions(self):
             self._add_gui_shortcut('test')
