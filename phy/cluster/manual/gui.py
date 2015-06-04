@@ -1,22 +1,28 @@
-# TODO: refactor
-
 # -*- coding: utf-8 -*-
 from __future__ import print_function
 
 """GUI creator."""
 
+
 #------------------------------------------------------------------------------
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
+
 import phy
-from ..gui.qt import _prompt
-from ..gui.base import BaseGUI
-from .view_models import (WaveformViewModel,
+from ...gui.base import BaseGUI
+from ..view_models import (WaveformViewModel,
                           FeatureViewModel,
                           CorrelogramViewModel,
                           TraceViewModel,
                           )
+from ...utils.logging import debug, info
+from ...io.kwik.model import cluster_group_id
+from ._history import GlobalHistory
+from ._utils import ClusterMetadataUpdater
+from .clustering import Clustering
+from .wizard import Wizard
 
 
 #------------------------------------------------------------------------------
@@ -86,14 +92,14 @@ class ClusterManualGUI(BaseGUI):
 
     def __init__(self, model=None, store=None,
                  config=None, shortcuts=None):
-        self.store = store
         super(ClusterManualGUI, self).__init__(model=model,
                                                vm_classes=self._vm_classes,
                                                config=config,
                                                shortcuts=shortcuts,
                                                )
-
+        self.store = store
         self.connect(self._connect_view, event='add_view')
+        self.on_open()
         self.start()
 
     # View methods
@@ -103,9 +109,9 @@ class ClusterManualGUI(BaseGUI):
     def title(self):
         """Title of the main window."""
         name = self.__class__.__name__
-        filename = self._model.kwik_path
-        clustering = self._model.clustering
-        channel_group = self._model.channel_group
+        filename = getattr(self.model, 'kwik_path', 'mock')
+        clustering = self.model.clustering
+        channel_group = self.model.channel_group
         template = ("{filename} (shank {channel_group}, "
                     "{clustering} clustering) "
                     "- {name} - phy {version}")
@@ -126,61 +132,14 @@ class ClusterManualGUI(BaseGUI):
         def on_cluster(up):
             view.on_cluster(up)
 
-    def _create_actions(self):
-        for action in ['reset_gui',
-                       'save',
-                       'undo',
-                       'redo',
-                       'show_shortcuts',
-                       'exit',
-                       'select',
-                       'reset_wizard',
-                       'first',
-                       'last',
-                       'next',
-                       'previous',
-                       'pin',
-                       'unpin',
-                       'merge',
-                       'split',
-                       ]:
-            self._add_gui_shortcut(action)
-
-        # Update the wizard selection after a clustering action.
-        @self.session.connect
-        def on_cluster(up):
-            # Special case: split.
-            if not up.history and up.description == 'assign':
-                self.select(up.added)
-            else:
-                self._wizard_select()
-
-        # Move best/match/both to noise/mua/good.
-        def _get_clusters(which):
-            return {
-                'best': [self.wizard.best],
-                'match': [self.wizard.match],
-                'both': [self.wizard.best, self.wizard.match],
-            }[which]
-
-        def _make_func(which, group):
-            """Return a function that moves best/match/both clusters to
-            a group."""
-
-            def func():
-                clusters = _get_clusters(which)
-                if None in clusters:
-                    return
-                self.session.move(clusters, group)
-
-            name = 'move_{}_to_{}'.format(which, group)
-            func.__name__ = name
-            setattr(self, name, func)
-            return name
-
-        for which in ('best', 'match', 'both'):
-            for group in ('noise', 'mua', 'good'):
-                self._add_gui_shortcut(_make_func(which, group))
+    def _connect_store(self):
+        @self.connect
+        def on_cluster(up=None):
+            self.store.update_spikes_per_cluster(self.model.spikes_per_cluster)
+            # No need to delete the old clusters from the store, we can keep
+            # them for possible undo, and regularly clean up the store.
+            for item in self.store.items.values():
+                item.on_cluster(up)
 
     def _set_default_view_connections(self):
         """Set view connections."""
@@ -203,12 +162,64 @@ class ClusterManualGUI(BaseGUI):
     # Creation methods
     # ---------------------------------------------------------------------
 
+    def _create_actions(self):
+        for action in ['reset_gui',
+                       # 'save',
+                       'undo',
+                       'redo',
+                       'show_shortcuts',
+                       # 'exit',
+                       'select',
+                       'reset_wizard',
+                       'first',
+                       'last',
+                       'next',
+                       'previous',
+                       'pin',
+                       'unpin',
+                       'merge',
+                       'split',
+                       ]:
+            self._add_gui_shortcut(action)
+
+        # Move best/match/both to noise/mua/good.
+        def _get_clusters(which):
+            return {
+                'best': [self.wizard.best],
+                'match': [self.wizard.match],
+                'both': [self.wizard.best, self.wizard.match],
+            }[which]
+
+        def _make_func(which, group):
+            """Return a function that moves best/match/both clusters to
+            a group."""
+
+            def func():
+                clusters = _get_clusters(which)
+                if None in clusters:
+                    return
+                self.move(clusters, group)
+
+            name = 'move_{}_to_{}'.format(which, group)
+            func.__name__ = name
+            setattr(self, name, func)
+            return name
+
+        for which in ('best', 'match', 'both'):
+            for group in ('noise', 'mua', 'good'):
+                self._add_gui_shortcut(_make_func(which, group))
+
     def _create_cluster_metadata(self):
         self._cluster_metadata_updater = ClusterMetadataUpdater(
             self.model.cluster_metadata)
 
     def _create_clustering(self):
         self.clustering = Clustering(self.model.spike_clusters)
+
+        # TODO: improve the updating of the model during clustering.
+        @self.connect
+        def on_cluster(up):
+            self.model._spikes_per_cluster = self.clustering.spikes_per_cluster
 
     def _create_global_history(self):
         self._global_history = GlobalHistory(process_ups=_process_ups)
@@ -251,26 +262,25 @@ class ClusterManualGUI(BaseGUI):
             # Save the wizard selection and update the wizard.
             self.wizard.on_cluster(up)
 
+            # Update the wizard selection after a clustering action.
+            # Special case: split.
+            if not up.history and up.description == 'assign':
+                self.select(up.added)
+            else:
+                self._wizard_select()
+
     # Open data
     # -------------------------------------------------------------------------
 
     def on_open(self):
-        """Update the session after new data has been loaded."""
+        """Reinitialize the GUI after new data has been loaded."""
         self._create_global_history()
+        # This connects the callback that updates the model spikes_per_cluster.
         self._create_clustering()
         self._create_cluster_metadata()
-        self._create_cluster_store()
+        # This connects the callback that updates the store.
+        self._connect_store()
         self._create_wizard()
-
-    def change_channel_group(self, channel_group):
-        """Change the current channel group."""
-        self.model.channel_group = channel_group
-        self.emit('open')
-
-    def change_clustering(self, clustering):
-        """Change the current clustering."""
-        self.model.clustering = clustering
-        self.emit('open')
 
     # General actions
     # ---------------------------------------------------------------------
@@ -279,11 +289,6 @@ class ClusterManualGUI(BaseGUI):
         """Start the wizard."""
         self.wizard.start()
         self._cluster_ids = self.wizard.selection
-
-    def show_shortcuts(self):
-        """Show the list off all keyboard shortcuts."""
-        shortcuts = self.session.settings['keyboard_shortcuts']
-        _show_shortcuts(shortcuts, name=self.__class__.__name__)
 
     @property
     def cluster_ids(self):
@@ -335,25 +340,6 @@ class ClusterManualGUI(BaseGUI):
 
         return decorator
 
-    def close(self):
-        """Close the GUI."""
-        if (self.session.settings['prompt_save_on_exit'] and
-                self.session.has_unsaved_changes):
-            res = _prompt(self._dock,
-                          "Do you want to save your changes?",
-                          ('save', 'cancel', 'close'))
-            if res == 'save':
-                self.save()
-            elif res == 'cancel':
-                return
-            elif res == 'close':
-                pass
-        self._dock.close()
-
-    def exit(self):
-        """Close the GUI."""
-        self.close()
-
     # Selection
     # ---------------------------------------------------------------------
 
@@ -364,7 +350,7 @@ class ClusterManualGUI(BaseGUI):
         # Do not re-select an already-selected list of clusters.
         if cluster_ids == self._cluster_ids:
             return
-        assert set(cluster_ids) <= set(self.session.clustering.cluster_ids)
+        assert set(cluster_ids) <= set(self.clustering.cluster_ids)
         debug("Select clusters {0:s}.".format(str(cluster_ids)))
         self._cluster_ids = cluster_ids
         self.emit('select', cluster_ids)

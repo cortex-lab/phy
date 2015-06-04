@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import pytest
 from pytest import raises
 
 from .._utils import UpdateInfo
@@ -156,6 +157,7 @@ def test_wizard_nav():
     assert wizard.match is None
 
 
+@pytest.mark.skipif()
 def test_wizard_actions():
 
     groups = {2: None, 3: None, 5: 'ignored', 7: 'good'}

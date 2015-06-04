@@ -424,6 +424,8 @@ class Wizard(object):
         self._delete(up.deleted)
 
     def _select_history(self):
+        #  TODO: improve this
+        return
         best, match = self._history.current_item
         # Select the history best.
         if best is not None and self._best_list:
@@ -442,6 +444,8 @@ class Wizard(object):
                 self.match = self._match_list[0]
 
     def _update_selection(self, up):
+        #  TODO: improve this
+        return
         # New selection.
         if up.history == 'undo':
             # Two undo except for the last one.
