@@ -10,6 +10,8 @@ from operator import itemgetter
 
 from ...utils import _is_array_like
 from ._utils import History
+from ...gui.base import HTMLViewModel
+from .static import _read
 
 
 #------------------------------------------------------------------------------
@@ -65,6 +67,12 @@ def _next(items, current, filter=None):
         return _find_first(items[i + 1:], filter)
     except StopIteration:
         return current
+
+
+def _progress(value, maximum):
+    if maximum <= 1:
+        return 1
+    return int(100 * value / float(maximum - 1))
 
 
 #------------------------------------------------------------------------------
@@ -505,7 +513,12 @@ class Wizard(object):
                     )
 
 
-def _progress(value, maximum):
-    if maximum <= 1:
-        return 1
-    return int(100 * value / float(maximum - 1))
+#------------------------------------------------------------------------------
+# Wizard view model
+#------------------------------------------------------------------------------
+
+class WizardViewModel(HTMLViewModel):
+    def get_html(self, cluster_ids=None, up=None):
+        params = self._wizard.get_panel_params()
+        html = _read('wizard.html').format(**params)
+        return html

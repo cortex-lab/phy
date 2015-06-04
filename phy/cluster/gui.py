@@ -21,7 +21,7 @@ from ..plot.view_models import BaseViewModel
 # Manual clustering window
 #------------------------------------------------------------------------------
 
-class ClusterManualGUI(EventEmitter):
+class ClusterManualGUI(BaseGUI):
     """Manual clustering GUI.
 
     This object represents a main window with:

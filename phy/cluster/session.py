@@ -51,7 +51,7 @@ def _process_ups(ups):
         raise NotImplementedError()
 
 
-class Session(EventEmitter):
+class Session(BaseSession):
     """A manual clustering session.
 
     This is the main object used for manual clustering. It implements
