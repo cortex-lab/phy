@@ -228,9 +228,9 @@ def test_base_session():
         # Need to wrap here because of the temporary directory.
         @wrap_qt
         def test():
-            # view = session.show_view('v1')
-            # yield view
-            # view.close()
+            view = session.show_view('v1')
+            yield view
+            view.close()
 
             # New GUI.
             gui = session.show_gui('gui')
