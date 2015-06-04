@@ -6,6 +6,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+import os
 import sys
 import contextlib
 
@@ -19,12 +20,12 @@ from ..utils.logging import info, warn
 
 _PYQT = False
 try:
-    from PyQt4 import QtCore, QtGui
+    from PyQt4 import QtCore, QtGui, QtWebKit  # noqa
     from PyQt4.QtGui import QMainWindow
     _PYQT = True
 except ImportError:
     try:
-        from PyQt5 import QtCore, QtGui
+        from PyQt5 import QtCore, QtGui, QtWebKit  # noqa
         from PyQt5.QtGui import QMainWindow
         _PYQT = True
     except ImportError:
@@ -71,18 +72,11 @@ def _set_qt_widget_position_size(widget, position=None, size=None):
 
 
 # -----------------------------------------------------------------------------
-# Qt app and event loop integration with IPython
+# Event loop integration with IPython
 # -----------------------------------------------------------------------------
 
 _APP = None
 _APP_RUNNING = False
-
-
-def _close_qt_after(window, duration):
-    """Close a Qt window after a given duration."""
-    def callback():
-        window.close()
-    QtCore.QTimer.singleShot(int(1000 * duration), callback)
 
 
 def _try_enable_ipython_qt():
@@ -128,6 +122,10 @@ def enable_qt():
     except:
         warn("Qt event loop not activated.")
 
+
+# -----------------------------------------------------------------------------
+# Qt app
+# -----------------------------------------------------------------------------
 
 def start_qt_app():
     """Start a Qt application if necessary.
@@ -177,3 +175,56 @@ def qt_app():
     app = start_qt_app()
     yield app
     run_qt_app()
+
+
+# -----------------------------------------------------------------------------
+# Testing utilities
+# -----------------------------------------------------------------------------
+
+def _close_qt_after(window, duration):
+    """Close a Qt window after a given duration."""
+    def callback():
+        window.close()
+    QtCore.QTimer.singleShot(int(1000 * duration), callback)
+
+
+_MAX_ITER = 100
+_DELAY = max(0, float(os.environ.get('PHY_EVENT_LOOP_DELAY', .25)))
+
+
+def wrap_qt(func):
+    """Automatically test a Qt view.
+
+    Used as a decorator on a generator function:
+
+    ```python
+    @wrap_qt
+    def test_qt():
+        view = QtGui.QWidget()
+        view...
+        yield view
+        ...
+        yield
+        ...
+    ```
+
+    The application will run for x seconds between two yields. The delay can be
+    specified via the command-line with the PHY_EVENT_LOOP_DELAY env variable.
+
+    """
+    def wrapped():
+        with qt_app():
+            gen = func()
+            view = next(gen)
+            for i in range(_MAX_ITER):
+                def callback():
+                    try:
+                        next(gen)
+                    except StopIteration:
+                        view.close()
+                QtCore.QTimer.singleShot(int(1000 * _DELAY * (i + 1)),
+                                         callback)
+
+            view.show()
+
+    return wrapped
