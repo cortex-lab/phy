@@ -8,7 +8,12 @@
 
 from pytest import mark
 
-from ..qt import QtWebKit, wrap_qt, _set_qt_widget_position_size
+from ..qt import (QtWebKit, QtGui,
+                  qt_app,
+                  wrap_qt,
+                  _set_qt_widget_position_size,
+                  _prompt,
+                  )
 from ...utils.logging import set_level
 
 
@@ -56,3 +61,13 @@ def test_wrap():
 
     view.close()
     yield
+
+
+def test_prompt():
+    with qt_app():
+        w = QtGui.QWidget()
+        result = _prompt(w,
+                         "How are you doing?",
+                         buttons=['save', 'cancel', 'close'],
+                         )
+        print(result)

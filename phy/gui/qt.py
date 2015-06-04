@@ -229,6 +229,7 @@ def wrap_qt(func):
                         debug("Qt wrap iteration.")
                     except StopIteration:
                         debug("Qt wrap loop stopped.")
+                        QtGui.QApplication.quit()
                 QtCore.QTimer.singleShot(int(1000 * _DELAY * (i + 1)),
                                          callback)
 
