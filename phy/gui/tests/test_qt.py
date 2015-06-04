@@ -9,6 +9,7 @@
 from pytest import mark
 
 from ..qt import QtWebKit, wrap_qt, _set_qt_widget_position_size
+from ...utils.logging import set_level
 
 
 # Skip these tests in "make test-quick".
@@ -19,8 +20,17 @@ pytestmark = mark.long
 # Tests
 #------------------------------------------------------------------------------
 
+def setup():
+    set_level('debug')
+
+
+def teardown():
+    set_level('info')
+
+
 @wrap_qt
 def test_wrap():
+
     view = QtWebKit.QWebView()
     _set_qt_widget_position_size(view, size=(100, 100))
     view.setHtml("hello")
@@ -34,13 +44,15 @@ def test_wrap():
     yield
 
     # Close a view and open a new one.
-    # NOTE: the new view must be yielded at the next iteration.
     view.close()
+
     view = QtWebKit.QWebView()
     _set_qt_widget_position_size(view, size=(100, 100))
     view.show()
     yield
 
     view.setHtml("finished")
-    view.show()
+    yield
+
+    view.close()
     yield

@@ -211,27 +211,25 @@ def wrap_qt(func):
     The application will run for x seconds between two yields. The delay can be
     specified via the command-line with the PHY_EVENT_LOOP_DELAY env variable.
 
+    Notes
+    -----
+
+    * You must explicitely call `show()` and `close()`.
+    * Never call `yield` after a `close()` if no window is still open,
+      otherwise the Qt application will close auttomatically.
+
     """
     def wrapped():
         with qt_app():
             gen = func()
-            view = next(gen)
             for i in range(_MAX_ITER):
                 def callback():
                     try:
-                        _ = next(gen)
-                        debug("Qt wrap iteration")
-                        # # Open the view again if necessary.
-                        # if _ and not _.isVisible():
-                        #     _.show()
+                        next(gen)
+                        debug("Qt wrap iteration.")
                     except StopIteration:
                         debug("Qt wrap loop stopped.")
-                        # if view.isVisible():
-                        #     view.close()
                 QtCore.QTimer.singleShot(int(1000 * _DELAY * (i + 1)),
                                          callback)
-
-            # if not view.isVisible():
-            #     view.show()
 
     return wrapped
