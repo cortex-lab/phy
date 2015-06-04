@@ -31,7 +31,7 @@ class BaseViewModel(object):
     _imported_params = ('position', 'size',)
 
     def __init__(self, model=None, **kwargs):
-        self._on_view_close = None
+        self._on_close_view = None
         self._model = model
 
         # Instantiate the underlying view.
@@ -55,8 +55,8 @@ class BaseViewModel(object):
         return None
 
     def connect(self, func):
-        if func.__name__ == 'on_close':
-            self._on_view_close = func
+        if func.__name__ == 'on_close_view':
+            self._on_close_view = func
 
     def on_open(self):
         """Initialize the view after the model has been loaded.
@@ -121,8 +121,8 @@ class BaseViewModel(object):
 
     def close(self):
         self._view.close()
-        if self._on_view_close:
-            self._on_view_close()
+        if self._on_close_view:
+            self._on_close_view()
 
     def show(self):
         """Show the view."""
@@ -281,6 +281,14 @@ class BaseGUI(EventEmitter):
     shortcuts : dict
         Dictionary `{function_name: keyboard_shortcut}`.
 
+    Events
+    ------
+
+    add_view
+    close_view
+    reset_gui
+    close_gui
+
     """
 
     def __init__(self,
@@ -299,7 +307,7 @@ class BaseGUI(EventEmitter):
         self._load_config(config,
                           requested_count=state.get('view_count', None),
                           )
-        self._load_geometry_state(state)
+        # self._load_geometry_state(state)
         # Default close shortcut.
         if 'close' not in self._shortcuts:
             self._shortcuts['close'] = 'ctrl+q'
@@ -372,7 +380,6 @@ class BaseGUI(EventEmitter):
         assert current_count == requested_count
 
     def _load_geometry_state(self, gui_state):
-        return
         if gui_state:
             self._dock.restore_geometry_state(gui_state)
 
@@ -417,8 +424,9 @@ class BaseGUI(EventEmitter):
         dw = self._dock.add_view(view, title=title, position=position)
 
         @item.connect
-        def on_close(e=None):
+        def on_close_view(e=None):
             dw.close()
+            self.emit('close_view', view)
 
         self.emit('add_view', view)
 
@@ -448,7 +456,7 @@ class BaseGUI(EventEmitter):
 
     def close(self):
         """Close the GUI."""
-        self.emit('close')
+        self.emit('close_gui')
         self._dock.close()
 
     def exit(self):
@@ -550,7 +558,7 @@ class BaseSession(EventEmitter):
         self.connect(gui.on_open)
 
         @gui.connect
-        def on_close():
+        def on_close_gui():
             self.unconnect(gui.on_open)
             # Save the params of every view in the GUI.
             for vm in gui.views:
