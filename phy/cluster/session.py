@@ -173,14 +173,6 @@ class Session(BaseSession):
     # Views and GUIs
     # -------------------------------------------------------------------------
 
-    def show_waveforms(self, **kwargs):
-        return self.show_view('waveforms', **kwargs)
-
-    def show_features(self, **kwargs):
-        return self.show_view('features', **kwargs)
-
-    def show_correlograms(self, **kwargs):
-        return self.show_view('correlograms', **kwargs)
-
-    def show_traces(self, **kwargs):
-        return self.show_view('traces', **kwargs)
+    def show_gui(self, **kwargs):
+        return super(Session, self).show_gui(store=self.cluster_store,
+                                             **kwargs)

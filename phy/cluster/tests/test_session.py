@@ -11,14 +11,14 @@ import os.path as op
 import numpy as np
 from numpy.testing import assert_allclose as ac
 from numpy.testing import assert_array_equal as ae
-from pytest import raises, mark
+from pytest import raises, mark, fixture
 
 from ..session import Session
 from ...utils import _spikes_in_clusters
 from ...utils.testing import (show_test_start, show_test_run,
                               show_test_stop,
                               )
-from ...gui.qt import qt_app, _close_qt_after
+from ...gui.qt import qt_app, _close_qt_after, wrap_qt
 from ...utils.tempdir import TemporaryDirectory
 from ...utils.logging import set_level
 from ...io.mock import MockModel
@@ -82,114 +82,143 @@ def test_session_store_features():
         ac(m, model.masks[s1], 1e-3)
 
 
-def test_session_clustering():
+n_clusters = 5
+n_spikes = 50
+n_channels = 28
+n_fets = 2
+n_samples_traces = 3000
 
-    n_clusters = 5
-    n_spikes = 50
-    n_channels = 28
-    n_fets = 2
-    n_samples_traces = 3000
 
-    with TemporaryDirectory() as tempdir:
+@fixture
+def session(request):
+    tmpdir = TemporaryDirectory()
 
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
+    # Create the test HDF5 file in the temporary directory.
+    kwik_path = create_mock_kwik(tmpdir.name,
+                                 n_clusters=n_clusters,
+                                 n_spikes=n_spikes,
+                                 n_channels=n_channels,
+                                 n_features_per_channel=n_fets,
+                                 n_samples_traces=n_samples_traces)
 
-        session = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
-        cs = session.cluster_store
-        spike_clusters = session.model.spike_clusters.copy()
+    session = _start_manual_clustering(kwik_path=kwik_path,
+                                       tempdir=tmpdir.name)
+    session.tempdir = tmpdir.name
 
-        f = session.model.features
-        m = session.model.masks
+    def end():
+        session.close()
+        tmpdir.cleanup()
+    request.addfinalizer(end)
 
-        def _check_arrays(cluster, clusters_for_sc=None, spikes=None):
-            """Check the features and masks in the cluster store
-            of a given custer."""
-            if spikes is None:
-                if clusters_for_sc is None:
-                    clusters_for_sc = [cluster]
-                spikes = _spikes_in_clusters(spike_clusters, clusters_for_sc)
-            shape = (len(spikes),
-                     len(session.model.channel_order),
-                     session.model.n_features_per_channel)
-            ac(cs.features(cluster), f[spikes, :].reshape(shape))
-            ac(cs.masks(cluster), m[spikes])
+    return session
 
-        _check_arrays(0)
-        _check_arrays(2)
 
-        # Merge two clusters.
-        clusters = [0, 2]
-        session.merge(clusters)  # Create cluster 5.
-        _check_arrays(5, clusters)
+@wrap_qt
+def test_session_clustering(session):
 
-        # Split some spikes.
-        spikes = [2, 3, 5, 7, 11, 13]
-        # clusters = np.unique(spike_clusters[spikes])
-        session.split(spikes)  # Create cluster 6 and more.
-        _check_arrays(6, spikes=spikes)
+    cs = session.cluster_store
+    spike_clusters = session.model.spike_clusters.copy()
 
-        # Undo.
-        session.undo()
-        _check_arrays(5, clusters)
+    f = session.model.features
+    m = session.model.masks
 
-        # Undo.
-        session.undo()
-        _check_arrays(0)
-        _check_arrays(2)
+    def _check_arrays(cluster, clusters_for_sc=None, spikes=None):
+        """Check the features and masks in the cluster store
+        of a given custer."""
+        if spikes is None:
+            if clusters_for_sc is None:
+                clusters_for_sc = [cluster]
+            spikes = _spikes_in_clusters(spike_clusters, clusters_for_sc)
+        shape = (len(spikes),
+                 len(session.model.channel_order),
+                 session.model.n_features_per_channel)
+        ac(cs.features(cluster), f[spikes, :].reshape(shape))
+        ac(cs.masks(cluster), m[spikes])
 
-        # Redo.
-        session.redo()
-        _check_arrays(5, clusters)
+    _check_arrays(0)
+    _check_arrays(2)
 
-        # Split some spikes.
-        spikes = [5, 7, 11, 13, 17, 19]
-        # clusters = np.unique(spike_clusters[spikes])
-        session.split(spikes)  # Create cluster 6 and more.
-        _check_arrays(6, spikes=spikes)
+    gui = session.show_gui()
+    yield
 
-        # Test merge-undo-different-merge combo.
-        spc = session.clustering.spikes_per_cluster.copy()
-        clusters = session.cluster_ids[:3]
-        up = session.merge(clusters)
-        _check_arrays(up.added[0], spikes=up.spike_ids)
-        # Undo.
-        session.undo()
-        for cluster in clusters:
-            _check_arrays(cluster, spikes=spc[cluster])
-        # Another merge.
-        clusters = session.cluster_ids[1:5]
-        up = session.merge(clusters)
-        _check_arrays(up.added[0], spikes=up.spike_ids)
+    # Merge two clusters.
+    clusters = [0, 2]
+    gui.merge(clusters)  # Create cluster 5.
+    _check_arrays(5, clusters)
+    yield
 
-        # Move a cluster to a group.
-        cluster = session.cluster_ids[0]
-        session.move([cluster], 2)
-        assert len(session.cluster_store.mean_probe_position(cluster)) == 2
+    # Split some spikes.
+    spikes = [2, 3, 5, 7, 11, 13]
+    # clusters = np.unique(spike_clusters[spikes])
+    gui.split(spikes)  # Create cluster 6 and more.
+    _check_arrays(6, spikes=spikes)
+    yield
 
-        # Save.
-        spike_clusters_new = session.model.spike_clusters.copy()
-        # Check that the spike clusters have changed.
-        assert not np.all(spike_clusters_new == spike_clusters)
-        ac(session.model.spike_clusters, session.clustering.spike_clusters)
-        session.save()
+    # Undo.
+    gui.undo()
+    _check_arrays(5, clusters)
+    yield
 
-        # Re-open the file and check that the spike clusters and
-        # cluster groups have correctly been saved.
-        session = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
-        ac(session.model.spike_clusters, session.clustering.spike_clusters)
-        ac(session.model.spike_clusters, spike_clusters_new)
-        #  Check the cluster groups.
-        clusters = session.clustering.cluster_ids
-        groups = session.model.cluster_groups
-        assert groups[cluster] == 2
+    # Undo.
+    gui.undo()
+    _check_arrays(0)
+    _check_arrays(2)
+    yield
+
+    # Redo.
+    gui.redo()
+    _check_arrays(5, clusters)
+    yield
+
+    # Split some spikes.
+    spikes = [5, 7, 11, 13, 17, 19]
+    # clusters = np.unique(spike_clusters[spikes])
+    gui.split(spikes)  # Create cluster 6 and more.
+    _check_arrays(6, spikes=spikes)
+    yield
+
+    # Test merge-undo-different-merge combo.
+    spc = gui.clustering.spikes_per_cluster.copy()
+    clusters = gui.cluster_ids[:3]
+    up = gui.merge(clusters)
+    _check_arrays(up.added[0], spikes=up.spike_ids)
+    # Undo.
+    gui.undo()
+    for cluster in clusters:
+        _check_arrays(cluster, spikes=spc[cluster])
+    # Another merge.
+    clusters = gui.cluster_ids[1:5]
+    up = gui.merge(clusters)
+    _check_arrays(up.added[0], spikes=up.spike_ids)
+    yield
+
+    # Move a cluster to a group.
+    cluster = gui.cluster_ids[0]
+    gui.move([cluster], 2)
+    assert len(gui.store.mean_probe_position(cluster)) == 2
+    yield
+
+    # Save.
+    spike_clusters_new = gui.model.spike_clusters.copy()
+    # Check that the spike clusters have changed.
+    assert not np.all(spike_clusters_new == spike_clusters)
+    ac(session.model.spike_clusters, gui.clustering.spike_clusters)
+    session.save()
+    yield
+
+    # Re-open the file and check that the spike clusters and
+    # cluster groups have correctly been saved.
+    session = _start_manual_clustering(kwik_path=session.model.path,
+                                       tempdir=session.tempdir)
+    ac(session.model.spike_clusters, gui.clustering.spike_clusters)
+    ac(session.model.spike_clusters, spike_clusters_new)
+    #  Check the cluster groups.
+    clusters = gui.clustering.cluster_ids
+    groups = session.model.cluster_groups
+    assert groups[cluster] == 2
+    yield
+
+    gui.close()
 
 
 def test_session_multiple_clusterings():

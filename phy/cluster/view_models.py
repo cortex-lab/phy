@@ -711,6 +711,9 @@ class TraceViewModel(KwikViewModel):
         elif end >= n:
             start -= (end - n)
             end = n
+        start = np.clip(start, 0, end)
+        end = np.clip(end, start, n - 1)
+        assert 0 <= start < end < n
         self._interval = (start, end)
         self._load_traces((start, end))
         self.view.update()

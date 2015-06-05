@@ -193,6 +193,14 @@ _MAX_ITER = 100
 _DELAY = max(0, float(os.environ.get('PHY_EVENT_LOOP_DELAY', .1)))
 
 
+def _debug_trace():
+    """Set a tracepoint in the Python debugger that works with Qt."""
+    from PyQt4.QtCore import pyqtRemoveInputHook
+    from pdb import set_trace
+    pyqtRemoveInputHook()
+    set_trace()
+
+
 def wrap_qt(func):
     """Automatically test a Qt view.
 
