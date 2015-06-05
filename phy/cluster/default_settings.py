@@ -44,7 +44,7 @@ features_n_spikes_max_bg = features_n_spikes_max
 # Clustering GUI
 # -----------------------------------------------------------------------------
 
-cluster_manual_keyboard_shortcuts = {
+cluster_manual_shortcuts = {
     'reset_gui': 'alt+r',
     'save': 'ctrl+s',
     'undo': 'ctrl+z',

@@ -89,6 +89,7 @@ class BaseSettings(object):
 
     def load(self, path):
         """Load a settings Python file."""
+        path = op.realpath(path)
         if not op.exists(path):
             debug("Skipping non-existing settings file: {}.".format(path))
             return
@@ -102,6 +103,7 @@ class BaseSettings(object):
 
     def save(self, path):
         """Save the settings to a pickle file."""
+        path = op.realpath(path)
         try:
             _save_pickle(path, self._to_save)
             debug("Saved internal settings file "

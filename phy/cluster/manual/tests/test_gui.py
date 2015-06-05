@@ -6,12 +6,15 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 import numpy as np
 from numpy.testing import assert_allclose as ac
 from numpy.testing import assert_array_equal as ae
 from pytest import mark
 
 from ..gui import ClusterManualGUI
+from ....utils.settings import Settings
 from ....utils import _spikes_in_clusters, set_level
 from ....gui.qt import wrap_qt
 from ....io.mock import MockModel
@@ -26,13 +29,14 @@ def setup():
     set_level('debug')
 
 
-def _start_manual_clustering(config='none'):
+def _start_manual_clustering(config='none', shortcuts=None):
     if config is 'none':
         config = []
     model = MockModel()
     spc = model.spikes_per_cluster
     store = create_store(model, spikes_per_cluster=spc)
-    gui = ClusterManualGUI(model=model, store=store, config=config)
+    gui = ClusterManualGUI(model=model, store=store,
+                           config=config, shortcuts=shortcuts)
     return gui
 
 
@@ -234,7 +238,15 @@ def test_gui_history():
 @wrap_qt
 @mark.long
 def test_gui_gui():
-    gui = _start_manual_clustering(config=None)
+    curdir = op.dirname(op.realpath(__file__))
+    default_settings_path = op.join(curdir, '../../default_settings.py')
+    settings = Settings(default_path=default_settings_path)
+    config = settings['cluster_manual_config']
+    shortcuts = settings['cluster_manual_shortcuts']
+
+    gui = _start_manual_clustering(config=config,
+                                   shortcuts=shortcuts,
+                                   )
     gui.show()
     yield
 
