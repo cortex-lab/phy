@@ -376,6 +376,9 @@ class BaseGUI(EventEmitter):
         """
         pass
 
+    def _view_model_kwargs(self, name):
+        return {}
+
     def on_open(self):
         """Callback function when the model is opened.
 
@@ -441,6 +444,7 @@ class BaseGUI(EventEmitter):
         # Item may be a string.
         if isinstance(item, string_types):
             name = item
+            kwargs.update(self._view_model_kwargs(name))
             item = self._view_creator.add(item, model=self.model, **kwargs)
             # Set the view name if necessary.
             if not item._view_name:
