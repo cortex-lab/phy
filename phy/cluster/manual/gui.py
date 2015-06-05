@@ -13,10 +13,10 @@ import numpy as np
 import phy
 from ...gui.base import BaseGUI
 from ..view_models import (WaveformViewModel,
-                          FeatureViewModel,
-                          CorrelogramViewModel,
-                          TraceViewModel,
-                          )
+                           FeatureViewModel,
+                           CorrelogramViewModel,
+                           TraceViewModel,
+                           )
 from ...utils.logging import debug, info
 from ...io.kwik.model import cluster_group_id
 from ._history import GlobalHistory
