@@ -8,7 +8,7 @@
 
 from operator import itemgetter
 
-from ...utils import _is_array_like
+from ...utils import _is_array_like, debug
 from ...gui.base import HTMLViewModel
 from .static import _read
 
@@ -382,8 +382,10 @@ class Wizard(object):
                 del self._cluster_groups[clu]
             if clu in self._best_list:
                 self._best_list.remove(clu)
+                debug("Removed {} from best list.".format(clu))
             if clu in self._match_list:
                 self._match_list.remove(clu)
+                debug("Removed {} from match list.".format(clu))
             if clu == self._best:
                 self._best = self._best_list[0] if self._best_list else None
             if clu == self._match:
@@ -400,8 +402,10 @@ class Wizard(object):
                     self._best_list.insert(position, clu)
                 else:
                     self._best_list.append(clu)
+                debug("Added {} in best list.".format(clu))
             if self.match is not None:
                 self._match_list.append(clu)
+                debug("Added {} in match list.".format(clu))
 
     def _update_state(self, up):
         # Update the cluster group.
@@ -421,28 +425,11 @@ class Wizard(object):
         # Delete old clusters.
         self._delete(up.deleted)
 
-    # def _update_selection(self, up):
-    #     # New selection.
-    #     if up.history:
-    #         return
-    #     if up.description in ('merge', 'assign'):
-    #         self.pin(up.added[0])
-    #     elif up.description == 'metadata_group':
-    #         cluster = up.metadata_changed[0]
-    #         if cluster == self.best:
-    #             self.next_best()
-    #         elif cluster == self.match:
-    #             self.next_match()
-    #     self._check()
-
     def on_cluster(self, up):
         if self._has_finished:
             return
-        if not self._best_list or not self._match_list:
+        if self._best_list or self._match_list:
             self._update_state(up)
-            # if self._best_list:
-            #     self._update_selection(up)
-            # return
 
     # Panel
     #--------------------------------------------------------------------------
