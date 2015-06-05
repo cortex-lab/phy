@@ -218,13 +218,20 @@ class ClusterManualGUI(BaseGUI):
         self._cluster_metadata_updater = ClusterMetadataUpdater(
             self.model.cluster_metadata)
 
+        @self.connect
+        def on_cluster(up):
+            for cluster in up.metadata_changed:
+                group_0 = self._cluster_metadata_updater.group(cluster)
+                group_1 = self.model.cluster_metadata.group(cluster)
+                assert group_0 == group_1
+
     def _create_clustering(self):
         self.clustering = Clustering(self.model.spike_clusters)
 
-        # TODO: improve the updating of the model during clustering.
         @self.connect
         def on_cluster(up):
-            self.model._spikes_per_cluster = self.clustering.spikes_per_cluster
+            spc = self.clustering.spikes_per_cluster
+            self.model.update_spikes_per_cluster(spc)
 
     def _create_global_history(self):
         self._global_history = GlobalHistory(process_ups=_process_ups)
@@ -490,8 +497,6 @@ class ClusterManualGUI(BaseGUI):
         up = self._cluster_metadata_updater.set_group(clusters, group_id)
         up.selection = self.selected_clusters
         self._global_history.action(self._cluster_metadata_updater)
-        # Extra UpdateInfo fields.
-        # up.update(kwargs)
         self.emit('cluster', up=up)
         return up
 

@@ -1067,6 +1067,9 @@ class KwikModel(BaseModel):
                 _spikes_per_cluster(self.spike_ids, self._spike_clusters)
         return self._spikes_per_cluster
 
+    def update_spikes_per_cluster(self, spc):
+        self._spikes_per_cluster = spc
+
     @property
     def cluster_metadata(self):
         """Metadata about the clusters in the current channel group and

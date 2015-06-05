@@ -138,6 +138,9 @@ class MockModel(BaseModel):
     def spikes_per_cluster(self):
         return self._spikes_per_cluster
 
+    def update_spikes_per_cluster(self, spc):
+        self._spikes_per_cluster = spc
+
     @property
     def spike_ids(self):
         return self._spike_ids

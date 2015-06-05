@@ -140,6 +140,9 @@ class BaseModel(object):
         """
         raise NotImplementedError()
 
+    def update_spikes_per_cluster(self, spc):
+        raise NotImplementedError()
+
     @property
     def cluster_metadata(self):
         """ClusterMetadata instance holding information about the clusters.
