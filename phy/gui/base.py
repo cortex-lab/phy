@@ -604,7 +604,7 @@ class BaseSession(EventEmitter):
         self.model.close()
         self.emit('close')
         self.model = None
-        self.experiment_path = None
+        self.path = None
 
     # Views and GUIs
     # -------------------------------------------------------------------------

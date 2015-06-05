@@ -237,13 +237,6 @@ class VispyViewModel(BaseClusterViewModel):
 
 class KwikViewModel(VispyViewModel):
     pass
-    # def __init__(self, *args, **kwargs):
-    #     # Create a default cluster store if needed.
-    #     if not kwargs.get('store', None):
-    #         model = kwargs.get('model')
-    #         spc = model.spikes_per_cluster
-    #         kwargs['store'] = create_store(model, spikes_per_cluster=spc)
-    #     super(KwikViewModel, self).__init__(*args, **kwargs)
 
 
 class WaveformViewModel(KwikViewModel):
