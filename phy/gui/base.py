@@ -563,7 +563,7 @@ class BaseSession(EventEmitter):
             # Initialize the settings with the model's path.
             self.settings.on_open(self.model.path)
 
-    # File-related actions
+    # Methods to override
     # -------------------------------------------------------------------------
 
     def _create_model(self, path):
@@ -582,6 +582,9 @@ class BaseSession(EventEmitter):
         """
         pass
 
+    # File-related actions
+    # -------------------------------------------------------------------------
+
     def open(self, path=None, model=None):
         """Open a dataset."""
         # Close the session if it is already open.
@@ -590,6 +593,7 @@ class BaseSession(EventEmitter):
         if model is None:
             model = self._create_model(path)
         self.model = model
+        self.path = path
         self.emit('open')
 
     def save(self):
@@ -605,8 +609,13 @@ class BaseSession(EventEmitter):
     # Views and GUIs
     # -------------------------------------------------------------------------
 
-    def show_gui(self, name, **kwargs):
+    def show_gui(self, name=None, **kwargs):
         """Show a new GUI."""
+        if name is None:
+            gui_classes = list(self._gui_creator.widget_classes.keys())
+            if gui_classes:
+                name = gui_classes[0]
+
         # Get the default GUI config.
         params = {p: self.settings.get('{}_{}'.format(name, p), None)
                   for p in ('config', 'shortcuts', 'state')}
