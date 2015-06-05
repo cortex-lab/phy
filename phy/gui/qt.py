@@ -230,6 +230,9 @@ def wrap_qt(func):
                         next(gen)
                     except StopIteration:
                         pass
+                    except Exception as e:
+                        _APP.exit()
+                        raise e
                 QtCore.QTimer.singleShot(int(1000 * _DELAY * i),
                                          callback)
 
