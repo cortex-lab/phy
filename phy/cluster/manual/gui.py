@@ -16,13 +16,14 @@ from ..view_models import (WaveformViewModel,
                            FeatureViewModel,
                            CorrelogramViewModel,
                            TraceViewModel,
+                           StatsViewModel,
                            )
 from ...utils.logging import debug, info
 from ...io.kwik.model import cluster_group_id
 from ._history import GlobalHistory
 from ._utils import ClusterMetadataUpdater
 from .clustering import Clustering
-from .wizard import Wizard
+from .wizard import Wizard, WizardViewModel
 
 
 #------------------------------------------------------------------------------
@@ -88,15 +89,18 @@ class ClusterManualGUI(BaseGUI):
         'features': FeatureViewModel,
         'correlograms': CorrelogramViewModel,
         'traces': TraceViewModel,
+        'wizard': WizardViewModel,
+        'stats': StatsViewModel,
     }
 
     def __init__(self, model=None, store=None,
-                 config=None, shortcuts=None):
+                 config=None, shortcuts=None, state=None):
         self.store = store
         super(ClusterManualGUI, self).__init__(model=model,
                                                vm_classes=self._vm_classes,
                                                config=config,
                                                shortcuts=shortcuts,
+                                               state=state,
                                                )
         self.connect(self._connect_view, event='add_view')
         self.on_open()
