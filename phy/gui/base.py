@@ -9,6 +9,7 @@
 
 from collections import Counter
 import inspect
+import os.path as op
 
 from ..ext.six import string_types
 from ..utils._misc import _show_shortcuts
@@ -561,7 +562,7 @@ class BaseSession(EventEmitter):
         @self.connect
         def on_open():
             # Initialize the settings with the model's path.
-            self.settings.on_open(self.model.path)
+            self.settings.on_open(self.experiment_path)
 
     # Methods to override
     # -------------------------------------------------------------------------
@@ -593,7 +594,8 @@ class BaseSession(EventEmitter):
         if model is None:
             model = self._create_model(path)
         self.model = model
-        self.path = path
+        self.experiment_path = (op.realpath(path)
+                                if path else self.phy_user_dir)
         self.emit('open')
 
     def save(self):
@@ -604,7 +606,6 @@ class BaseSession(EventEmitter):
         self.model.close()
         self.emit('close')
         self.model = None
-        self.path = None
 
     # Views and GUIs
     # -------------------------------------------------------------------------

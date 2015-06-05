@@ -61,7 +61,8 @@ class Session(BaseSession):
     def __init__(self, model=None, kwik_path=None, phy_user_dir=None):
         curdir = op.dirname(op.realpath(__file__))
         settings_path = op.join(curdir, 'default_settings.py')
-        kwik_path = op.realpath(kwik_path)
+        if kwik_path:
+            kwik_path = op.realpath(kwik_path)
         super(Session, self).__init__(model=model,
                                       path=kwik_path,
                                       phy_user_dir=phy_user_dir,
@@ -94,9 +95,12 @@ class Session(BaseSession):
     # File-related actions
     # -------------------------------------------------------------------------
 
+    def open(self, model=None, kwik_path=None):
+        return super(Session, self).open(model=model, path=kwik_path)
+
     @property
     def kwik_path(self):
-        return self.path
+        return self.model.path
 
     @property
     def has_unsaved_changes(self):
