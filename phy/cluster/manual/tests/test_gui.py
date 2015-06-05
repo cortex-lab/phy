@@ -12,7 +12,7 @@ from numpy.testing import assert_array_equal as ae
 from pytest import mark
 
 from ..gui import ClusterManualGUI
-from ....utils import _spikes_in_clusters
+from ....utils import _spikes_in_clusters, set_level
 from ....gui.qt import wrap_qt
 from ....io.mock import MockModel
 from ....io.kwik.store_items import create_store
@@ -21,6 +21,10 @@ from ....io.kwik.store_items import create_store
 #------------------------------------------------------------------------------
 # Kwik tests
 #------------------------------------------------------------------------------
+
+def setup():
+    set_level('debug')
+
 
 def _start_manual_clustering(config='none'):
     if config is 'none':

@@ -47,6 +47,7 @@ class UpdateInfo(Bunch):
             metadata_value=None,  # new metadata value
             old_spikes_per_cluster={},  # only for the affected clusters
             new_spikes_per_cluster={},  # only for the affected clusters
+            selection=[],  # clusters selected before the action
         )
         d.update(kwargs)
         super(UpdateInfo, self).__init__(d)

@@ -245,7 +245,10 @@ class Wizard(object):
         elif m is None:
             return [b]
         else:
-            return [b, m]
+            if b == m:
+                return [b]
+            else:
+                return [b, m]
 
     @match.setter
     def match(self, value):
@@ -382,10 +385,8 @@ class Wizard(object):
                 del self._cluster_groups[clu]
             if clu in self._best_list:
                 self._best_list.remove(clu)
-                debug("Removed {} from best list.".format(clu))
             if clu in self._match_list:
                 self._match_list.remove(clu)
-                debug("Removed {} from match list.".format(clu))
             if clu == self._best:
                 self._best = self._best_list[0] if self._best_list else None
             if clu == self._match:
@@ -402,10 +403,8 @@ class Wizard(object):
                     self._best_list.insert(position, clu)
                 else:
                     self._best_list.append(clu)
-                debug("Added {} in best list.".format(clu))
             if self.match is not None:
                 self._match_list.append(clu)
-                debug("Added {} in match list.".format(clu))
 
     def _update_state(self, up):
         # Update the cluster group.

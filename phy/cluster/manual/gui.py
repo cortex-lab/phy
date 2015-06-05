@@ -263,16 +263,36 @@ class ClusterManualGUI(BaseGUI):
                 cluster = up.metadata_changed[0]
                 group = self.model.cluster_metadata.group(cluster)
                 up.metadata_value = _to_wizard_group(group)
+
             # This called for both regular and history actions.
             # Save the wizard selection and update the wizard.
             self.wizard.on_cluster(up)
 
             # Update the wizard selection after a clustering action.
+            self._wizard_select_after_clustering(up)
+
+    def _wizard_select_after_clustering(self, up):
+        if up.history != 'undo':
             # Special case: split.
-            if not up.history and up.description == 'assign':
+            if up.description == 'assign':
                 self.select(up.added)
-            else:
+            elif up.description == 'merge':
+                self.wizard.pin(up.added[0])
                 self._wizard_select()
+            elif up.description == 'metadata_group':
+                cluster = up.metadata_changed[0]
+                if cluster == self.wizard.best:
+                    self.wizard.next_best()
+                elif cluster == self.wizard.match:
+                    self.wizard.next_match()
+                self._wizard_select()
+        elif up.history == 'undo':
+            clusters = up.selection
+            if len(clusters) >= 1:
+                self.wizard.best = clusters[0]
+            if len(clusters) >= 2:
+                self.wizard.match = clusters[1]
+            self._wizard_select()
 
     # Open data
     # -------------------------------------------------------------------------
@@ -417,6 +437,7 @@ class ClusterManualGUI(BaseGUI):
         if len(clusters) <= 1:
             return
         up = self.clustering.merge(clusters)
+        up.selection = self.selected_clusters
         info("Merge clusters {} to {}.".format(str(clusters),
                                                str(up.added[0])))
         self._global_history.action(self.clustering)
@@ -424,6 +445,7 @@ class ClusterManualGUI(BaseGUI):
         return up
 
     def _spikes_to_split(self):
+        """Find the spikes lasso selected in a feature view for split."""
         for features in self.get_views('features'):
             spikes = features.spikes_in_lasso()
             if spikes is not None:
@@ -446,6 +468,7 @@ class ClusterManualGUI(BaseGUI):
         _check_list_argument(spikes, 'spikes')
         info("Split {0:d} spikes.".format(len(spikes)))
         up = self.clustering.split(spikes)
+        up.selection = self.selected_clusters
         self._global_history.action(self.clustering)
         self.emit('cluster', up=up)
         return up
@@ -465,6 +488,7 @@ class ClusterManualGUI(BaseGUI):
         info("Move clusters {0} to {1}.".format(str(clusters), group))
         group_id = cluster_group_id(group)
         up = self._cluster_metadata_updater.set_group(clusters, group_id)
+        up.selection = self.selected_clusters
         self._global_history.action(self._cluster_metadata_updater)
         # Extra UpdateInfo fields.
         # up.update(kwargs)
@@ -486,6 +510,8 @@ class ClusterManualGUI(BaseGUI):
 
     def redo(self):
         """Redo the last undone action."""
+        # debug("The saved selection before the undo is {}.".format(clusters))
         up = self._global_history.redo()
+        up.selection = self.selected_clusters
         self._undo_redo(up)
         return up
