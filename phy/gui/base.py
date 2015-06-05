@@ -402,12 +402,7 @@ class BaseGUI(EventEmitter):
                 continue
             debug("Adding {} view in GUI.".format(name))
             # GUI-specific keyword arguments position, size, maximized
-            # position = kwargs.pop('position', None)
-            # vm = self._view_creator.add(name, **kwargs)
-            self.add_view(name,
-                          title=name.capitalize(),
-                          # position=position,
-                          **kwargs)
+            self.add_view(name, **kwargs)
             if name not in current_count:
                 current_count[name] = 0
             current_count[name] += 1
@@ -456,10 +451,7 @@ class BaseGUI(EventEmitter):
         # Get the underlying view.
         view = item.view if isinstance(item, BaseViewModel) else item
         # Add the view to the main window.
-        dw = self._dock.add_view(view,
-                                 title=title,
-                                 position=position,
-                                 )
+        dw = self._dock.add_view(view, title=title, position=position)
 
         # Dock widget close event.
         @dw.connect_
@@ -681,9 +673,7 @@ class BaseSession(EventEmitter):
         params = vm_class.get_params(self.settings)
         params.update(kwargs)
 
-        vm = self._view_creator.add(vm_class,
-                                    model=self.model,
-                                    **params)
+        vm = self._view_creator.add(vm_class, model=self.model, **params)
         # Connect the 'open' event.
         self.connect(vm.on_open)
 

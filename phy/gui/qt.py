@@ -217,13 +217,13 @@ def wrap_qt(func):
 
     * You must explicitely call `show()` and `close()`.
     * Never call `yield` right after a `close()` if no window is still open,
-      otherwise the Qt application will close auttomatically.
+      otherwise the Qt application will close automatically.
 
     """
     @wraps(func)
-    def wrapped():
+    def wrapped(*args, **kwargs):
         with qt_app():
-            gen = func()
+            gen = func(*args, **kwargs)
             for i in range(_MAX_ITER):
                 def callback():
                     try:
