@@ -636,9 +636,6 @@ class ConcatenatedArrays(object):
 
     def _get_recording(self, index):
         """Return the recording that contains a given index."""
-        if index < 0:
-            from phy.gui.qt import _debug_trace
-            _debug_trace()
         assert index >= 0
         recs = np.nonzero((index - self.offsets[:-1]) >= 0)[0]
         if len(recs) == 0:
