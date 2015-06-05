@@ -96,7 +96,7 @@ class ClusterManualGUI(BaseGUI):
     def __init__(self, model=None, store=None,
                  config=None, shortcuts=None, state=None):
         self.store = store
-        self.wizard = None
+        self.wizard = Wizard()
         super(ClusterManualGUI, self).__init__(model=model,
                                                vm_classes=self._vm_classes,
                                                config=config,
@@ -253,7 +253,8 @@ class ClusterManualGUI(BaseGUI):
 
         groups = {cluster: _group(cluster)
                   for cluster in self.clustering.cluster_ids}
-        self.wizard = Wizard(groups)
+        self.wizard.cluster_groups = groups
+        self.wizard.reset()
 
         # Set the similarity and quality functions for the wizard.
         @self.wizard.set_similarity_function
