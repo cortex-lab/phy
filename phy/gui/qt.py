@@ -190,7 +190,7 @@ def _close_qt_after(window, duration):
 
 
 _MAX_ITER = 100
-_DELAY = max(0, float(os.environ.get('PHY_EVENT_LOOP_DELAY', .25)))
+_DELAY = max(0, float(os.environ.get('PHY_EVENT_LOOP_DELAY', .1)))
 
 
 def wrap_qt(func):

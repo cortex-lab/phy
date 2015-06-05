@@ -441,7 +441,7 @@ class BaseGUI(EventEmitter):
         # Item may be a string.
         if isinstance(item, string_types):
             name = item
-            item = self._view_creator.add(item, **kwargs)
+            item = self._view_creator.add(item, model=self.model, **kwargs)
             # Set the view name if necessary.
             if not item._view_name:
                 item._view_name = name
