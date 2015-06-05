@@ -320,14 +320,13 @@ class BaseGUI(EventEmitter):
             state = {}
         self.model = model
         self._shortcuts = shortcuts or {}
+        self._state = state
         if config is None:
             config = [(name, {}) for name in (vm_classes or {})]
         self._config = config
         self._dock = DockWindow(title=self.title)
         self._view_creator = WidgetCreator(widget_classes=vm_classes)
-        self._load_config(self._config,
-                          requested_count=state.get('view_count', None),
-                          )
+        self._initialize_views()
         self._load_geometry_state(state)
         # Default close shortcut.
         if 'close' not in self._shortcuts:
@@ -335,6 +334,11 @@ class BaseGUI(EventEmitter):
             self._add_gui_shortcut('close')
         self._create_actions()
         self._set_default_view_connections()
+
+    def _initialize_views(self):
+        self._load_config(self._config,
+                          requested_count=self._state.get('view_count', None),
+                          )
 
     #--------------------------------------------------------------------------
     # Methods to override
@@ -471,7 +475,7 @@ class BaseGUI(EventEmitter):
         def on_close_view(e=None):
             dw.close()
 
-        self.emit('add_view', view)
+        self.emit('add_view', item)
 
     def get_views(self, name=None):
         """Return the list of views of a given type."""

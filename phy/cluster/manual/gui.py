@@ -103,9 +103,13 @@ class ClusterManualGUI(BaseGUI):
                                                shortcuts=shortcuts,
                                                state=state,
                                                )
-        self.connect(self._connect_view, event='add_view')
         self.on_open()
         self.start()
+        self._wizard_select()
+
+    def _initialize_views(self):
+        self.connect(self._connect_view, event='add_view')
+        super(ClusterManualGUI, self)._initialize_views()
 
     # View methods
     # ---------------------------------------------------------------------
@@ -167,9 +171,8 @@ class ClusterManualGUI(BaseGUI):
     def _view_model_kwargs(self, name):
         kwargs = {'model': self.model,
                   'store': self.store,
+                  'wizard': self.wizard,
                   }
-        if name == 'wizard':
-            kwargs.update({'wizard': self.wizard})
         return kwargs
 
     # Creation methods
