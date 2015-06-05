@@ -59,7 +59,6 @@ class Session(BaseSession):
     _gui_classes = {'cluster_manual': ClusterManualGUI}
 
     def __init__(self, model=None, kwik_path=None, phy_user_dir=None):
-        self._is_dirty = False
         curdir = op.dirname(op.realpath(__file__))
         settings_path = op.join(curdir, 'default_settings.py')
         kwik_path = op.realpath(kwik_path)
@@ -87,13 +86,10 @@ class Session(BaseSession):
 
     def _save_model(self):
         """Save the spike clusters and cluster groups to the Kwik file."""
-        # TODO: ensure that the model is up to date with the changes.
-        # groups = {cluster: self._cluster_metadata_updater.group(cluster)
-        #           for cluster in self.clustering.cluster_ids}
-        # self.model.save(self.clustering.spike_clusters,
-        #                 groups)
+        groups = {cluster: self.model.cluster_metadata.group(cluster)
+                  for cluster in self.cluster_ids}
+        self.model.save(self.model.spike_clusters, groups)
         info("Saved {0:s}.".format(self.model.kwik_path))
-        self._is_dirty = False
 
     # File-related actions
     # -------------------------------------------------------------------------
@@ -110,7 +106,8 @@ class Session(BaseSession):
         the GUI.
 
         """
-        return self._is_dirty
+        # TODO
+        pass
 
     # Properties
     # -------------------------------------------------------------------------
