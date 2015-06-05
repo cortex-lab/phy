@@ -423,6 +423,13 @@ class ClusterManualGUI(BaseGUI):
         self.emit('cluster', up=up)
         return up
 
+    def _spikes_to_split(self):
+        for features in self.get_views('features'):
+            spikes = features.spikes_in_lasso()
+            if spikes is not None:
+                features.lasso.clear()
+                return spikes
+
     def split(self, spikes=None):
         """Make a new cluster out of some spikes.
 
@@ -434,20 +441,14 @@ class ClusterManualGUI(BaseGUI):
         cluster id must be used as soon as a cluster changes.
 
         """
-        if spikes is not None:
-            _check_list_argument(spikes, 'spikes')
-            info("Split {0:d} spikes.".format(len(spikes)))
-            up = self.clustering.split(spikes)
-            self._global_history.action(self.clustering)
-            self.emit('cluster', up=up)
-            return up
-        else:
-            for features in self.get_views('features'):
-                spikes = features.spikes_in_lasso()
-                if spikes is not None:
-                    self.split(spikes)
-                    features.lasso.clear()
-                    return
+        if spikes is None:
+            spikes = self._spikes_to_split()
+        _check_list_argument(spikes, 'spikes')
+        info("Split {0:d} spikes.".format(len(spikes)))
+        up = self.clustering.split(spikes)
+        self._global_history.action(self.clustering)
+        self.emit('cluster', up=up)
+        return up
 
     def move(self, clusters, group):
         """Move some clusters to a cluster group.

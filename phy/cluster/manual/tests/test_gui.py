@@ -6,36 +6,21 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
-
 import numpy as np
 from numpy.testing import assert_allclose as ac
 from numpy.testing import assert_array_equal as ae
-from pytest import raises, mark
+from pytest import mark
 
 from ..gui import ClusterManualGUI
 from ....utils import _spikes_in_clusters
-from ....utils.testing import (show_test_start, show_test_run,
-                               show_test_stop,
-                               )
-from ....gui.qt import qt_app, _close_qt_after, wrap_qt
-from ....utils.tempdir import TemporaryDirectory
-from ....utils.logging import set_level
+from ....gui.qt import wrap_qt
 from ....io.mock import MockModel
-from ....io.kwik.mock import create_mock_kwik
 from ....io.kwik.store_items import create_store
 
 
 #------------------------------------------------------------------------------
 # Kwik tests
 #------------------------------------------------------------------------------
-
-_N_FRAMES = 2
-
-
-def setup():
-    set_level('info')
-
 
 def _start_manual_clustering(config='none'):
     if config is 'none':
@@ -45,15 +30,6 @@ def _start_manual_clustering(config='none'):
     store = create_store(model, spikes_per_cluster=spc)
     gui = ClusterManualGUI(model=model, store=store, config=config)
     return gui
-
-
-def _show_view(gui, name, cluster_ids=None, stop=True):
-    vm = gui.show_view(name, cluster_ids, show=False, scale_factor=1)
-    show_test_start(vm.view)
-    show_test_run(vm.view, _N_FRAMES)
-    if stop:
-        show_test_stop(vm.view)
-    return vm
 
 
 @wrap_qt
