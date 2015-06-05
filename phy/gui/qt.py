@@ -9,6 +9,7 @@
 import os
 import sys
 import contextlib
+from functools import wraps
 
 from ..utils._misc import _is_interactive
 from ..utils.logging import info, warn
@@ -219,6 +220,7 @@ def wrap_qt(func):
       otherwise the Qt application will close auttomatically.
 
     """
+    @wraps(func)
     def wrapped():
         with qt_app():
             gen = func()
