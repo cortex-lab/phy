@@ -445,7 +445,7 @@ class BaseGUI(EventEmitter):
         if isinstance(item, string_types):
             name = item
             kwargs.update(self._view_model_kwargs(name))
-            item = self._view_creator.add(item, model=self.model, **kwargs)
+            item = self._view_creator.add(item, **kwargs)
             # Set the view name if necessary.
             if not item._view_name:
                 item._view_name = name
@@ -653,41 +653,6 @@ class BaseSession(EventEmitter):
             gui._save_state = False
 
         return gui
-
-    def show_view(self, name, **kwargs):
-        """Create and display a new view.
-
-        Parameters
-        ----------
-
-        name : str
-            A view model name.
-
-        Returns
-        -------
-
-        vm : `ViewModel` instance
-
-        """
-        # Get the view class.
-        vm_class = self._view_creator.widget_classes[name]
-        if not vm_class._view_name:
-            vm_class._view_name = name
-        # Get default and user parameters.
-        params = vm_class.get_params(self.settings)
-        params.update(kwargs)
-
-        vm = self._view_creator.add(vm_class, model=self.model, **params)
-        # Connect the 'open' event.
-        self.connect(vm.on_open)
-
-        # Save the view parameters when the view is closed.
-        @vm.connect
-        def on_close(e=None):
-            self.unconnect(vm.on_open)
-            self.save_view_params(vm)
-
-        return vm
 
     def save_view_params(self, vm, save_size_pos=True):
         """Save the parameters exported by a view model instance."""
