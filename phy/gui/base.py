@@ -464,7 +464,6 @@ class BaseGUI(EventEmitter):
         # Dock widget close event.
         @dw.connect_
         def on_close_widget():
-            # debug("Close dock widget {}.".format(item))
             self._view_creator.remove(item)
             self.emit('close_view', item)
 

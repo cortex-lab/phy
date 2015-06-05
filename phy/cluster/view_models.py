@@ -113,7 +113,7 @@ class BaseClusterViewModel(BaseViewModel):
         May be overriden."""
 
 
-class StatsViewModel(HTMLViewModel):
+class StatsViewModel(HTMLViewModel, BaseClusterViewModel):
     def get_html(self, cluster_ids=None, up=None):
         stats = self.store.items['statistics']
         names = stats.fields
@@ -712,8 +712,8 @@ class TraceViewModel(KwikViewModel):
             start -= (end - n)
             end = n
         start = np.clip(start, 0, end)
-        end = np.clip(end, start, n - 1)
-        assert 0 <= start < end < n
+        end = np.clip(end, start, n)
+        assert 0 <= start < end <= n
         self._interval = (start, end)
         self._load_traces((start, end))
         self.view.update()

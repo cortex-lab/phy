@@ -103,12 +103,14 @@ class ClusterManualGUI(BaseGUI):
                                                shortcuts=shortcuts,
                                                state=state,
                                                )
-        self.on_open()
-        self.start()
-        self._wizard_select()
 
     def _initialize_views(self):
+        # The wizard needs to be started *before* the views are created,
+        # so that the first cluster selection is already set for the views
+        # when they're created.
         self.connect(self._connect_view, event='add_view')
+        self.on_open()
+        self.start()
         super(ClusterManualGUI, self)._initialize_views()
 
     # View methods
@@ -172,6 +174,7 @@ class ClusterManualGUI(BaseGUI):
         kwargs = {'model': self.model,
                   'store': self.store,
                   'wizard': self.wizard,
+                  'cluster_ids': self._cluster_ids,
                   }
         return kwargs
 

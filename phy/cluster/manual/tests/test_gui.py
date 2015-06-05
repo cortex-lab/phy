@@ -251,3 +251,4 @@ def test_gui_gui():
     yield
 
     gui.close()
+    yield
