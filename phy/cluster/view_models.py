@@ -12,7 +12,6 @@ from ..utils.array import _unique, _spikes_in_clusters
 from ..utils.selector import Selector
 from ..utils._misc import _show_shortcuts
 from ..utils import _as_list
-from ..io.kwik.store_items import create_store
 from ..stats.ccg import correlograms, _symmetrize_correlograms
 from ..plot.ccg import CorrelogramView
 from ..plot.features import FeatureView
