@@ -96,6 +96,7 @@ class ClusterManualGUI(BaseGUI):
     def __init__(self, model=None, store=None,
                  config=None, shortcuts=None, state=None):
         self.store = store
+        self.wizard = None
         super(ClusterManualGUI, self).__init__(model=model,
                                                vm_classes=self._vm_classes,
                                                config=config,
@@ -163,10 +164,13 @@ class ClusterManualGUI(BaseGUI):
                         # Force view update.
                         features.dimensions = features.dimensions
 
-    def add_view(self, *args, **kwargs):
-        kwargs['model'] = self.model
-        kwargs['store'] = self.store
-        super(ClusterManualGUI, self).add_view(*args, **kwargs)
+    def _view_model_kwargs(self, name):
+        kwargs = {'model': self.model,
+                  'store': self.store,
+                  }
+        if name == 'wizard':
+            kwargs.update({'wizard': self.wizard})
+        return kwargs
 
     # Creation methods
     # ---------------------------------------------------------------------
