@@ -116,9 +116,9 @@ class Settings(object):
     """Manage default, user-wide, and experiment-wide settings."""
 
     def __init__(self, phy_user_dir=None, default_path=None):
-        assert phy_user_dir is not None
         self.phy_user_dir = phy_user_dir
-        _ensure_dir_exists(self.phy_user_dir)
+        if self.phy_user_dir:
+            _ensure_dir_exists(self.phy_user_dir)
 
         self._default_path = default_path
 
@@ -130,7 +130,10 @@ class Settings(object):
         if self._default_path:
             self._bs.load(self._default_path)
 
-        # load the user defaults.
+        if not self.phy_user_dir:
+            return
+
+        # Load the user defaults.
         self.user_settings_path = op.join(self.phy_user_dir,
                                           'user_settings.py')
         self._bs.load(self.user_settings_path)
