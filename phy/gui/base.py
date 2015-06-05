@@ -598,6 +598,9 @@ class BaseSession(EventEmitter):
                                 if path else self.phy_user_dir)
         self.emit('open')
 
+    def reopen(self):
+        self.open(model=self.model)
+
     def save(self):
         self._save_model()
 
