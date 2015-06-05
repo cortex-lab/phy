@@ -8,7 +8,7 @@
 
 from operator import itemgetter
 
-from ...utils import _is_array_like, debug
+from ...utils import _is_array_like
 from ...gui.base import HTMLViewModel
 from .static import _read
 
@@ -80,16 +80,15 @@ def _progress(value, maximum):
 
 class Wizard(object):
     """Propose a selection of high-quality clusters and merge candidates."""
-    def __init__(self, cluster_groups):
-        self._similarity = None
-        self._quality = None
-        # cluster_groups is a dictionary or is converted to one.
-        if _is_array_like(cluster_groups):
-            # A group can be None (unsorted), `good`, or `ignored`.
-            cluster_groups = {clu: None for clu in cluster_groups}
-        self._cluster_groups = cluster_groups
+    def __init__(self, cluster_groups=None):
+        self.cluster_groups = cluster_groups
+        self.reset()
+
+    def reset(self):
         self._best_list = []  # This list is fixed (modulo clustering actions).
         self._match_list = []  # This list may often change.
+        self._similarity = None
+        self._quality = None
         self._best = None
         self._match = None
 
@@ -167,6 +166,14 @@ class Wizard(object):
 
         """
         return self._cluster_groups
+
+    @cluster_groups.setter
+    def cluster_groups(self, cluster_groups):
+        # cluster_groups is a dictionary or is converted to one.
+        if _is_array_like(cluster_groups):
+            # A group can be None (unsorted), `good`, or `ignored`.
+            cluster_groups = {clu: None for clu in cluster_groups}
+        self._cluster_groups = cluster_groups
 
     # Core methods
     #--------------------------------------------------------------------------
