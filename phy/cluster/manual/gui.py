@@ -93,16 +93,12 @@ class ClusterManualGUI(BaseGUI):
         'stats': StatsViewModel,
     }
 
-    def __init__(self, model=None, store=None,
-                 config=None, shortcuts=None, state=None):
+    def __init__(self, model=None, store=None, **kwargs):
         self.store = store
         self.wizard = Wizard()
         super(ClusterManualGUI, self).__init__(model=model,
                                                vm_classes=self._vm_classes,
-                                               config=config,
-                                               shortcuts=shortcuts,
-                                               state=state,
-                                               )
+                                               **kwargs)
 
     def _initialize_views(self):
         # The wizard needs to be started *before* the views are created,

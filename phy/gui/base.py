@@ -289,6 +289,12 @@ def _title(item):
         return item.__class__.__name__.capitalize()
 
 
+def _assert_counters_equal(c_0, c_1):
+    c_0 = {(k, v) for (k, v) in c_0.items() if v > 0}
+    c_1 = {(k, v) for (k, v) in c_1.items() if v > 0}
+    assert c_0 == c_1
+
+
 class BaseGUI(EventEmitter):
     """Base GUI.
 
@@ -326,8 +332,10 @@ class BaseGUI(EventEmitter):
                  state=None,
                  shortcuts=None,
                  config=None,
+                 settings=None,
                  ):
         super(BaseGUI, self).__init__()
+        self.settings = settings or {}
         if state is None:
             state = {}
         self.model = model
@@ -425,7 +433,7 @@ class BaseGUI(EventEmitter):
             if name not in current_count:
                 current_count[name] = 0
             current_count[name] += 1
-        assert current_count == requested_count
+        _assert_counters_equal(current_count, requested_count)
 
     def _load_geometry_state(self, gui_state):
         if gui_state:
@@ -460,7 +468,11 @@ class BaseGUI(EventEmitter):
         # Item may be a string.
         if isinstance(item, string_types):
             name = item
+            # Default view model kwargs.
             kwargs.update(self._view_model_kwargs(name))
+            # View model parameters from settings.
+            vm_class = self._view_creator._widget_classes[name]
+            kwargs.update(vm_class.get_params(self.settings))
             item = self._view_creator.add(item, **kwargs)
             # Set the view name if necessary.
             if not item._view_name:
@@ -642,7 +654,10 @@ class BaseSession(EventEmitter):
         params.update(kwargs)
 
         # Create the GUI.
-        gui = self._gui_creator.add(name, model=self.model, **params)
+        gui = self._gui_creator.add(name,
+                                    model=self.model,
+                                    settings=self.settings,
+                                    **params)
         gui._save_state = True
 
         # Connect the 'open' event.
