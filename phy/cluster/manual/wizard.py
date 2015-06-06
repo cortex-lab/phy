@@ -6,11 +6,11 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
 from operator import itemgetter
 
 from ...utils import _is_array_like
 from ..view_models import HTMLClusterViewModel
-from .static import _read
 
 
 #------------------------------------------------------------------------------
@@ -471,7 +471,8 @@ class Wizard(object):
 #------------------------------------------------------------------------------
 
 class WizardViewModel(HTMLClusterViewModel):
-    def get_html(self, cluster_ids=None, up=None):
-        params = self._wizard.get_panel_params()
-        html = _read('wizard.html').format(**params)
-        return html
+    _static_path = op.join(op.dirname(op.realpath(__file__)), 'static')
+    _html_filename = 'wizard.html'
+
+    def _format_dict(self, **kwargs):
+        return self._wizard.get_panel_params()
