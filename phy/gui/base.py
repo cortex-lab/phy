@@ -18,7 +18,7 @@ from ..utils.settings import (Settings,
                               _ensure_dir_exists,
                               _phy_user_dir,
                               )
-from .static import _wrap_html
+from ._utils import _wrap_html, _read
 from .dock import DockWindow
 
 
@@ -151,10 +151,23 @@ class HTMLViewModel(BaseViewModel):
     `get_html()` which returns HTML code.
 
     """
+    _static_path = None
+    _html_filename = None
     _html = ''
 
+    def _format_dict(self, **kwargs):
+        """Return the dictionary of variables used to format the HTML.
+
+        May be overriden.
+
+        """
+        return {}
+
     def _update(self, view, **kwargs):
-        view.setHtml(_wrap_html(html=self.get_html(**kwargs)))
+        html = self.get_html(**kwargs)
+        html = html.format(self._format_dict(**kwargs))
+        view.setHtml(_wrap_html(html=html,
+                                static_path=self._static_path))
 
     def _create_view(self, **kwargs):
         from PyQt4.QtWebKit import QWebView
@@ -166,12 +179,11 @@ class HTMLViewModel(BaseViewModel):
         return view
 
     def get_html(self, **kwargs):
-        """Return the HTML contents of the view.
-
-        Must be overriden.
-
-        """
-        return self._html
+        """Return the non-formatted HTML contents of the view."""
+        if self._html:
+            return self._html
+        elif self._html_filename:
+            return _read(self._html_filename, static_path=self._static_path)
 
     def update(self, **kwargs):
         """Update the widget's HTML contents."""
