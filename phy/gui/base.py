@@ -165,7 +165,7 @@ class HTMLViewModel(BaseViewModel):
 
     def _update(self, view, **kwargs):
         html = self.get_html(**kwargs)
-        html = html.format(self._format_dict(**kwargs))
+        html = html.format(**self._format_dict(**kwargs))
         view.setHtml(_wrap_html(html=html,
                                 static_path=self._static_path))
 
