@@ -75,6 +75,8 @@ class Session(BaseSession):
 
     def _backup_kwik(self, kwik_path):
         """Save a copy of the Kwik file before opening it."""
+        if kwik_path is None:
+            return
         backup_kwik_path = kwik_path + '.bak'
         if not op.exists(backup_kwik_path):
             info("Saving a backup of the Kwik file "
