@@ -96,6 +96,7 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def open(self, model=None, kwik_path=None):
+        self._backup_kwik(kwik_path)
         return super(Session, self).open(model=model, path=kwik_path)
 
     @property

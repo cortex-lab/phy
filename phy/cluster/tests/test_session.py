@@ -259,46 +259,25 @@ def test_session_multiple_clusterings(session):
     gui.close()
 
 
-def test_session_kwik():
-    n_clusters = 5
-    n_spikes = 50
-    n_channels = 28
-    n_fets = 2
-    n_samples_traces = 3000
+def test_session_kwik(session):
 
-    with TemporaryDirectory() as tempdir:
+    # Check backup.
+    assert op.exists(op.join(session.tempdir, session.kwik_path + '.bak'))
 
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
+    cs = session.cluster_store
+    nc = n_channels - 2
 
-        session = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
+    # Check the stored items.
+    for cluster in range(n_clusters):
+        n_spikes = len(session.model.spikes_per_cluster[cluster])
+        n_unmasked_channels = cs.n_unmasked_channels(cluster)
 
-        # Check backup.
-        assert op.exists(op.join(tempdir, kwik_path + '.bak'))
-
-        cs = session.cluster_store
-
-        nc = n_channels - 2
-
-        # Check the stored items.
-        for cluster in range(n_clusters):
-            n_spikes = len(gui.clustering.spikes_per_cluster[cluster])
-            n_unmasked_channels = cs.n_unmasked_channels(cluster)
-
-            assert cs.features(cluster).shape == (n_spikes, nc, n_fets)
-            assert cs.masks(cluster).shape == (n_spikes, nc)
-            assert cs.mean_masks(cluster).shape == (nc,)
-            assert n_unmasked_channels <= nc
-            assert cs.mean_probe_position(cluster).shape == (2,)
-            assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
-
-        session.close()
+        assert cs.features(cluster).shape == (n_spikes, nc, n_fets)
+        assert cs.masks(cluster).shape == (n_spikes, nc)
+        assert cs.mean_masks(cluster).shape == (nc,)
+        assert n_unmasked_channels <= nc
+        assert cs.mean_probe_position(cluster).shape == (2,)
+        assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
 
 
 def test_session_wizard():
