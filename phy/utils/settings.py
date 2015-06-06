@@ -62,6 +62,9 @@ class BaseSettings(object):
     def __contains__(self, key):
         return key in self._store
 
+    def __repr__(self):
+        return self._store.__repr__()
+
     def keys(self):
         """List of settings keys."""
         return self._store.keys()
@@ -184,6 +187,9 @@ class Settings(object):
 
     def __contains__(self, key):
         return key in self._bs
+
+    def __repr__(self):
+        return "<Settings {}>".format(self._bs.__repr__())
 
     def keys(self):
         """Return the list of settings keys."""

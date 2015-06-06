@@ -26,7 +26,7 @@ from ...io.kwik.mock import create_mock_kwik
 #------------------------------------------------------------------------------
 
 def setup():
-    set_level('info')
+    set_level('debug')
 
 
 n_clusters = 5
@@ -42,9 +42,12 @@ def _start_manual_clustering(kwik_path=None,
                              chunk_size=None,
                              ):
     session = Session(phy_user_dir=tempdir)
+    session.open(kwik_path=kwik_path, model=model)
+    session.settings['waveforms_scale_factor'] = 1.
+    session.settings['features_scale_factor'] = 1.
+    session.settings['traces_scale_factor'] = 1.
     if chunk_size is not None:
         session.settings['features_masks_chunk_size'] = chunk_size
-    session.open(kwik_path=kwik_path, model=model)
     return session
 
 
