@@ -212,59 +212,51 @@ def test_session_clustering(session):
     gui.close()
 
 
-def test_session_multiple_clusterings():
+@wrap_qt
+def test_session_multiple_clusterings(session):
 
-    n_clusters = 5
-    n_spikes = 100
-    n_channels = 28
-    n_fets = 2
-    n_samples_traces = 10000
+    gui = session.show_gui()
+    yield
 
-    with TemporaryDirectory() as tempdir:
+    assert session.model.n_spikes == n_spikes
+    assert session.model.n_clusters == n_clusters
+    assert len(session.model.cluster_ids) == n_clusters
+    assert gui.clustering.n_clusters == n_clusters
+    assert session.model.cluster_metadata.group(1) == 1
 
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
+    # Change clustering.
+    with raises(ValueError):
+        session.change_clustering('automat')
+    session.change_clustering('automatic')
+    yield
 
-        session = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
+    assert session.model.n_spikes == n_spikes
+    assert session.model.n_clusters == n_clusters * 2
+    assert len(session.model.cluster_ids) == n_clusters * 2
+    assert gui.clustering.n_clusters == n_clusters * 2
+    assert session.model.cluster_metadata.group(2) == 2
 
-        assert session.model.n_spikes == n_spikes
-        assert session.model.n_clusters == n_clusters
-        assert len(session.model.cluster_ids) == n_clusters
-        assert session.clustering.n_clusters == n_clusters
-        assert session.model.cluster_metadata.group(1) == 1
+    # Merge the clusters and save, for the current clustering.
+    gui.clustering.merge(gui.clustering.cluster_ids)
+    session.save()
+    yield
 
-        # Change clustering.
-        with raises(ValueError):
-            session.change_clustering('automat')
-        session.change_clustering('automatic')
+    # Re-open the session.
+    session = _start_manual_clustering(kwik_path=session.model.path,
+                                       tempdir=session.tempdir)
+    yield
 
-        assert session.model.n_spikes == n_spikes
-        assert session.model.n_clusters == n_clusters * 2
-        assert len(session.model.cluster_ids) == n_clusters * 2
-        assert session.clustering.n_clusters == n_clusters * 2
-        assert session.model.cluster_metadata.group(2) == 2
+    # The default clustering is the main one: nothing should have
+    # changed here.
+    assert session.model.n_clusters == n_clusters
 
-        # Merge the clusters and save, for the current clustering.
-        session.clustering.merge(session.clustering.cluster_ids)
-        session.save()
-        session.close()
+    session.change_clustering('automatic')
+    assert session.model.n_spikes == n_spikes
+    assert session.model.n_clusters == 1
+    assert session.model.cluster_ids == n_clusters * 2
+    yield
 
-        # Re-open the session.
-        session = _start_manual_clustering(kwik_path=kwik_path,
-                                           tempdir=tempdir)
-        # The default clustering is the main one: nothing should have
-        # changed here.
-        assert session.model.n_clusters == n_clusters
-        session.change_clustering('automatic')
-        assert session.model.n_spikes == n_spikes
-        assert session.model.n_clusters == 1
-        assert session.model.cluster_ids == n_clusters * 2
+    gui.close()
 
 
 def test_session_kwik():
@@ -296,7 +288,7 @@ def test_session_kwik():
 
         # Check the stored items.
         for cluster in range(n_clusters):
-            n_spikes = len(session.clustering.spikes_per_cluster[cluster])
+            n_spikes = len(gui.clustering.spikes_per_cluster[cluster])
             n_unmasked_channels = cs.n_unmasked_channels(cluster)
 
             assert cs.features(cluster).shape == (n_spikes, nc, n_fets)
@@ -376,7 +368,7 @@ def test_session_statistics():
 
         @session.register_statistic
         def n_spikes_2(cluster):
-            return session.clustering.cluster_counts.get(cluster, 0) ** 2
+            return gui.clustering.cluster_counts.get(cluster, 0) ** 2
 
         store = session.cluster_store
         stats = store.items['statistics']
@@ -454,7 +446,7 @@ def test_session_history():
             session.wizard.next()
 
             session.wizard.next_best()
-            ae(session.model.spike_clusters, session.clustering.spike_clusters)
+            ae(session.model.spike_clusters, gui.clustering.spike_clusters)
 
 
 @mark.long
