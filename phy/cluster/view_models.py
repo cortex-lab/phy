@@ -113,7 +113,15 @@ class BaseClusterViewModel(BaseViewModel):
         May be overriden."""
 
 
-class StatsViewModel(HTMLViewModel, BaseClusterViewModel):
+class HTMLClusterViewModel(BaseClusterViewModel, HTMLViewModel):
+    def on_select(self, cluster_ids):
+        self.update(cluster_ids=cluster_ids)
+
+    def on_cluster(self, up):
+        self.update(cluster_ids=self._cluster_ids, up=up)
+
+
+class StatsViewModel(HTMLClusterViewModel):
     def get_html(self, cluster_ids=None, up=None):
         stats = self.store.items['statistics']
         names = stats.fields
@@ -126,12 +134,6 @@ class StatsViewModel(HTMLViewModel, BaseClusterViewModel):
             if not isinstance(value, np.ndarray):
                 html += '<p>{}: {}</p>\n'.format(name, value)
         return '<div class="stats">\n' + html + '</div>'
-
-    def on_select(self, cluster_ids):
-        self.update(cluster_ids=cluster_ids)
-
-    def on_cluster(self, up):
-        self.update(cluster_ids=self._cluster_ids, up=up)
 
 
 class VispyViewModel(BaseClusterViewModel):

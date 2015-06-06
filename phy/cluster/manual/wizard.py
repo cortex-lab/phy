@@ -9,8 +9,7 @@
 from operator import itemgetter
 
 from ...utils import _is_array_like
-from ..view_models import BaseClusterViewModel
-from ...gui.base import HTMLViewModel
+from ..view_models import HTMLClusterViewModel
 from .static import _read
 
 
@@ -471,18 +470,8 @@ class Wizard(object):
 # Wizard view model
 #------------------------------------------------------------------------------
 
-class WizardViewModel(HTMLViewModel, BaseClusterViewModel):
-    def __init__(self, *args, **kwargs):
-        self.wizard = kwargs.pop('wizard', None)
-        super(WizardViewModel, self).__init__(*args, **kwargs)
-
+class WizardViewModel(HTMLClusterViewModel):
     def get_html(self, cluster_ids=None, up=None):
-        params = self.wizard.get_panel_params()
+        params = self._wizard.get_panel_params()
         html = _read('wizard.html').format(**params)
         return html
-
-    def on_select(self, cluster_ids):
-        self.update(cluster_ids=cluster_ids)
-
-    def on_cluster(self, up):
-        self.update(cluster_ids=self._cluster_ids, up=up)
