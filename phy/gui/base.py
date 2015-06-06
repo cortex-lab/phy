@@ -445,7 +445,7 @@ class BaseGUI(EventEmitter):
         shortcut = self._shortcuts.get(method_name, None)
         # Bind the shortcut to the method.
         self._dock.add_action(method_name,
-                              getattr(self, method_name),
+                              lambda: getattr(self, method_name)(),
                               shortcut=shortcut,
                               )
 

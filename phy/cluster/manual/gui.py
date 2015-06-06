@@ -450,7 +450,7 @@ class ClusterManualGUI(BaseGUI):
     def merge(self, clusters=None):
         """Merge some clusters."""
         if clusters is None:
-            clusters = self.cluster_ids
+            clusters = self.selected_clusters
         clusters = list(clusters)
         if len(clusters) <= 1:
             return
