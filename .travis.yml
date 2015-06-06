@@ -20,7 +20,8 @@ install:
   - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION
   - source activate testenv
   - conda install pip numpy matplotlib scipy h5py pyqt pyzmq ipython requests pytest pip flake8 coverage
-  - pip install six klustakwik2 vispy coveralls responses python-coveralls pytest-cov
+  - pip install --pre klustakwik2
+  - pip install six vispy coveralls responses python-coveralls pytest-cov
 before_script:
     - export DISPLAY=:99.0
     - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render
