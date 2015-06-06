@@ -388,6 +388,13 @@ class Waveforms(VariableSizeItem):
                                           self._spikes_per_cluster)
         return self._spikes_per_cluster[cluster]
 
+    @property
+    def spikes_per_cluster(self):
+        """Spikes per cluster."""
+        # WARNING: this is read-only, because this item is responsible
+        # for the spike subselection.
+        return self._spikes_per_cluster
+
     def waveforms_and_mean(self, cluster):
         spikes = self._subset_spikes_cluster(cluster, force=True)
         waveforms = self.model.waveforms[spikes].astype(np.float32)

@@ -294,7 +294,7 @@ class ClusterManualGUI(BaseGUI):
             # Special case: split.
             if up.description == 'assign':
                 self.select(up.added)
-            elif up.description == 'merge':
+            elif up.description == 'merge' or up.history == 'redo':
                 self.wizard.pin(up.added[0])
                 self._wizard_select()
             elif up.description == 'metadata_group':
@@ -528,6 +528,7 @@ class ClusterManualGUI(BaseGUI):
         """Redo the last undone action."""
         # debug("The saved selection before the undo is {}.".format(clusters))
         up = self._global_history.redo()
-        up.selection = self.selected_clusters
+        if up:
+            up.selection = self.selected_clusters
         self._undo_redo(up)
         return up

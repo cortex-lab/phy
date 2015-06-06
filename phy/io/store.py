@@ -505,7 +505,11 @@ class ClusterStore(object):
     def update_spikes_per_cluster(self, spikes_per_cluster):
         self._spikes_per_cluster = spikes_per_cluster
         for item in self._items.values():
-            item.spikes_per_cluster = spikes_per_cluster
+            try:
+                item.spikes_per_cluster = spikes_per_cluster
+            except AttributeError:
+                debug("Skipping set spikes_per_cluster on "
+                      "store item {}.".format(item.name))
 
     @property
     def cluster_ids(self):

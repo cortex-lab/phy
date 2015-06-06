@@ -473,7 +473,7 @@ class BaseGUI(EventEmitter):
             # View model parameters from settings.
             vm_class = self._view_creator._widget_classes[name]
             kwargs.update(vm_class.get_params(self.settings))
-            debug("Create {} with {}.".format(name, kwargs))
+            # debug("Create {} with {}.".format(name, kwargs))
             item = self._view_creator.add(item, **kwargs)
             # Set the view name if necessary.
             if not item._view_name:
