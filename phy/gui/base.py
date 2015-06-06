@@ -548,6 +548,7 @@ class BaseSession(EventEmitter):
                  gui_classes=None,
                  ):
         super(BaseSession, self).__init__()
+
         self.model = None
         if phy_user_dir is None:
             phy_user_dir = _phy_user_dir()
@@ -562,6 +563,7 @@ class BaseSession(EventEmitter):
             gui_classes = self.settings['gui_classes']
         self._gui_creator = WidgetCreator(widget_classes=gui_classes)
 
+        self.connect(self.on_open)
         if model or path:
             self.open(path, model=model)
 
@@ -592,6 +594,9 @@ class BaseSession(EventEmitter):
         Must be overriden.
 
         """
+        pass
+
+    def on_open(self):
         pass
 
     # File-related actions
