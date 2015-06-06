@@ -456,14 +456,6 @@ class Waveforms(VariableSizeItem):
 class ClusterStatistics(FixedSizeItem):
     """Manage cluster statistics."""
     name = 'statistics'
-    fields = ['mean_masks',
-              'mean_features',
-              'mean_waveforms',
-              'mean_probe_position',
-              'main_channels',
-              'n_unmasked_channels',
-              'n_spikes',
-              ]
 
     def __init__(self, *args, **kwargs):
         super(ClusterStatistics, self).__init__(*args, **kwargs)
@@ -478,7 +470,9 @@ class ClusterStatistics(FixedSizeItem):
             'mean_probe_position': (-1, 2),
             'main_channels': (-1, self.n_channels),
             'n_unmasked_channels': (-1,),
+            'n_spikes': (-1,),
         }
+        self.fields = list(self._shapes.keys())
 
     def add(self, name, func, shape):
         """Add a new statistics."""
@@ -629,5 +623,4 @@ def create_store(model,
                                 excerpt_size=waveforms_excerpt_size,
                                 )
     cluster_store.register_item(ClusterStatistics)
-
     return cluster_store

@@ -64,7 +64,6 @@ class BaseClusterViewModel(BaseViewModel):
     def __init__(self, model=None,
                  store=None, wizard=None,
                  cluster_ids=None, **kwargs):
-
         assert store is not None
         self._store = store
         self._wizard = wizard
@@ -79,6 +78,10 @@ class BaseClusterViewModel(BaseViewModel):
     @property
     def store(self):
         return self._store
+
+    @property
+    def wizard(self):
+        return self._wizard
 
     @property
     def cluster_ids(self):
