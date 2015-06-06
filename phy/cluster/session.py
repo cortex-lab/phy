@@ -58,7 +58,7 @@ class Session(BaseSession):
     _vm_classes = ClusterManualGUI._vm_classes
     _gui_classes = {'cluster_manual': ClusterManualGUI}
 
-    def __init__(self, model=None, kwik_path=None, phy_user_dir=None):
+    def __init__(self, kwik_path=None, model=None, phy_user_dir=None):
         curdir = op.dirname(op.realpath(__file__))
         settings_path = op.join(curdir, 'default_settings.py')
         if kwik_path:
@@ -97,7 +97,7 @@ class Session(BaseSession):
     # File-related actions
     # -------------------------------------------------------------------------
 
-    def open(self, model=None, kwik_path=None):
+    def open(self, kwik_path=None, model=None):
         self._backup_kwik(kwik_path)
         return super(Session, self).open(model=model, path=kwik_path)
 
@@ -147,18 +147,18 @@ class Session(BaseSession):
         cs = self.settings['features_masks_chunk_size']
         wns = self.settings['waveforms_n_spikes_max']
         wes = self.settings['waveforms_excerpt_size']
-        self.cluster_store = create_store(self.model,
-                                          path=store_path,
-                                          spikes_per_cluster=spc,
-                                          features_masks_chunk_size=cs,
-                                          waveforms_n_spikes_max=wns,
-                                          waveforms_excerpt_size=wes,
-                                          )
+        self.store = create_store(self.model,
+                                  path=store_path,
+                                  spikes_per_cluster=spc,
+                                  features_masks_chunk_size=cs,
+                                  waveforms_n_spikes_max=wns,
+                                  waveforms_excerpt_size=wes,
+                                  )
 
         # Generate the cluster store if it doesn't exist or is invalid.
         # If the cluster store already exists and is consistent
         # with the data, it is not recreated.
-        self.cluster_store.generate()
+        self.store.generate()
 
     def change_channel_group(self, channel_group):
         """Change the current channel group."""
@@ -177,5 +177,5 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def show_gui(self, **kwargs):
-        return super(Session, self).show_gui(store=self.cluster_store,
+        return super(Session, self).show_gui(store=self.store,
                                              **kwargs)

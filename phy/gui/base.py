@@ -562,8 +562,8 @@ class BaseSession(EventEmitter):
             gui_classes = self.settings['gui_classes']
         self._gui_creator = WidgetCreator(widget_classes=gui_classes)
 
-        if model:
-            self.open(path=path, model=model)
+        if model or path:
+            self.open(path, model=model)
 
     def _create_settings(self, default_settings_path):
         self.settings = Settings(phy_user_dir=self.phy_user_dir,

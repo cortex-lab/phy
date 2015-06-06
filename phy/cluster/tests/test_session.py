@@ -54,9 +54,9 @@ def test_session_store_features():
                                            chunk_size=4,
                                            )
 
-        f = session.cluster_store.features(0)
-        m = session.cluster_store.masks(1)
-        w = session.cluster_store.waveforms(1)
+        f = session.store.features(0)
+        m = session.store.masks(1)
+        w = session.store.waveforms(1)
 
         assert f.shape == (len(s0), 28, 2)
         assert m.shape == (len(s1), 28,)
@@ -100,7 +100,7 @@ def session(request):
 @wrap_qt
 def test_session_clustering(session):
 
-    cs = session.cluster_store
+    cs = session.store
     spike_clusters = session.model.spike_clusters.copy()
 
     f = session.model.features
@@ -258,7 +258,7 @@ def test_session_kwik(session):
     # Check backup.
     assert op.exists(op.join(session.tempdir, session.kwik_path + '.bak'))
 
-    cs = session.cluster_store
+    cs = session.store
     nc = n_channels - 2
 
     # Check the stored items.

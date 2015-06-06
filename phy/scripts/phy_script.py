@@ -95,8 +95,8 @@ def main():
 
 def run(kwik_path, interactive=False):
     import phy
-    from phy.cluster.manual import Session
-    from phy.utils import start_qt_app, run_qt_app
+    from phy.cluster import Session
+    from phy.gui import start_qt_app, run_qt_app
 
     if not op.exists(kwik_path):
         print("The file `{}` doesn't exist.".format(kwik_path))

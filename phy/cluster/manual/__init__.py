@@ -7,3 +7,4 @@
 
 from .clustering import Clustering
 from .wizard import Wizard
+from .gui import ClusterManualGUI
