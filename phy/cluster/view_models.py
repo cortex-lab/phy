@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 import numpy as np
 
 from ..utils.array import _unique, _spikes_in_clusters
@@ -117,6 +119,21 @@ class BaseClusterViewModel(BaseViewModel):
 
 
 class HTMLClusterViewModel(BaseClusterViewModel, HTMLViewModel):
+    """HTML view model that displays per-cluster information."""
+
+    # To be overriden
+    #--------------------------------------------------------------------------
+
+    _static_path = None
+    _html_filename = None
+    _html = ''
+
+    def _format_dict(self, **kwargs):
+        return {}
+
+    # Callbacks
+    #--------------------------------------------------------------------------
+
     def on_select(self, cluster_ids):
         self.update(cluster_ids=cluster_ids)
 
@@ -125,6 +142,8 @@ class HTMLClusterViewModel(BaseClusterViewModel, HTMLViewModel):
 
 
 class StatsViewModel(HTMLClusterViewModel):
+    _static_path = op.join(op.dirname(op.realpath(__file__)), 'manual/static')
+
     def get_html(self, cluster_ids=None, up=None):
         stats = self.store.items['statistics']
         names = stats.fields
@@ -239,11 +258,7 @@ class VispyViewModel(BaseClusterViewModel):
 # Kwik view models
 #------------------------------------------------------------------------------
 
-class KwikViewModel(VispyViewModel):
-    pass
-
-
-class WaveformViewModel(KwikViewModel):
+class WaveformViewModel(VispyViewModel):
     _view_class = WaveformView
     _view_name = 'waveforms'
     _imported_params = ('scale_factor', 'box_scale', 'probe_scale',
@@ -382,7 +397,7 @@ class WaveformViewModel(KwikViewModel):
         return params
 
 
-class FeatureViewModel(KwikViewModel):
+class FeatureViewModel(VispyViewModel):
     _view_class = FeatureView
     _view_name = 'features'
     _imported_params = ('scale_factor', 'n_spikes_max_bg', 'marker_size')
@@ -585,7 +600,7 @@ class FeatureViewModel(KwikViewModel):
         return params
 
 
-class CorrelogramViewModel(KwikViewModel):
+class CorrelogramViewModel(VispyViewModel):
     _view_class = CorrelogramView
     _view_name = 'correlograms'
     binsize = 20
@@ -640,7 +655,7 @@ class CorrelogramViewModel(KwikViewModel):
         self.view.update()
 
 
-class TraceViewModel(KwikViewModel):
+class TraceViewModel(VispyViewModel):
     _view_class = TraceView
     _view_name = 'traces'
     _imported_params = ('scale_factor', 'channel_scale', 'interval_size')
