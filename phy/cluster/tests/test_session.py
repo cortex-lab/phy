@@ -48,15 +48,6 @@ def _start_manual_clustering(kwik_path=None,
     return session
 
 
-def _show_view(session, name, cluster_ids=None, stop=True):
-    vm = session.show_view(name, cluster_ids, show=False, scale_factor=1)
-    show_test_start(vm.view)
-    show_test_run(vm.view, _N_FRAMES)
-    if stop:
-        show_test_stop(vm.view)
-    return vm
-
-
 def test_session_store_features():
     """Check that the cluster store works for features and masks."""
 
@@ -276,20 +267,6 @@ def test_session_multiple_clusterings():
         assert session.model.cluster_ids == n_clusters * 2
 
 
-@mark.long
-def test_session_mock():
-    with TemporaryDirectory() as tempdir:
-        session = _start_manual_clustering(model=MockModel(),
-                                           tempdir=tempdir)
-        for name in ('waveforms', 'features', 'correlograms', 'traces'):
-            vm = _show_view(session, name, [], stop=False)
-            vm.select([0])
-            show_test_run(vm.view, _N_FRAMES)
-            vm.select([0, 1])
-            show_test_run(vm.view, _N_FRAMES)
-            show_test_stop(vm.view)
-
-
 def test_session_kwik():
     n_clusters = 5
     n_spikes = 50
@@ -328,9 +305,6 @@ def test_session_kwik():
             assert n_unmasked_channels <= nc
             assert cs.mean_probe_position(cluster).shape == (2,)
             assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
-
-        # _show_view(session, 'waveforms', [0])
-        # _show_view(session, 'features', [0])
 
         session.close()
 
