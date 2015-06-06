@@ -72,6 +72,12 @@ def _default_array(shape, value=0, n_spikes=0, dtype=np.float32):
     return out
 
 
+def _assert_per_cluster_data_compatible(d_0, d_1):
+    n_0 = {k: len(v) for (k, v) in d_0.items()}
+    n_1 = {k: len(v) for (k, v) in d_1.items()}
+    assert n_0 == n_1
+
+
 #------------------------------------------------------------------------------
 # Memory store
 #------------------------------------------------------------------------------
@@ -428,7 +434,7 @@ class VariableSizeItem(StoreItem):
     def load_multi(self, clusters, name, spikes=None):
         """Load data for several clusters.
 
-        A subset of spikes caan also be specified.
+        A subset of spikes can also be specified.
 
         """
         if not len(clusters) or (spikes is not None and not len(spikes)):
@@ -436,6 +442,7 @@ class VariableSizeItem(StoreItem):
         arrays = {cluster: self.load(cluster, name)
                   for cluster in clusters}
         spc = _subset_spc(self._spikes_per_cluster, clusters)
+        _assert_per_cluster_data_compatible(spc, arrays)
         pcd = PerClusterData(spc=spc,
                              arrays=arrays,
                              )
