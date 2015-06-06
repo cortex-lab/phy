@@ -223,10 +223,11 @@ def test_session_multiple_clusterings(session):
     session.change_clustering('automatic')
     yield
 
+    n_clusters_2 = session.model.n_clusters
     assert session.model.n_spikes == n_spikes
-    assert session.model.n_clusters == n_clusters * 2
-    assert len(session.model.cluster_ids) == n_clusters * 2
-    assert gui.clustering.n_clusters == n_clusters * 2
+    assert session.model.n_clusters == n_clusters_2
+    assert len(session.model.cluster_ids) == n_clusters_2
+    assert gui.clustering.n_clusters == n_clusters_2
     assert session.model.cluster_metadata.group(2) == 2
 
     # Merge the clusters and save, for the current clustering.
@@ -246,7 +247,7 @@ def test_session_multiple_clusterings(session):
     session.change_clustering('automatic')
     assert session.model.n_spikes == n_spikes
     assert session.model.n_clusters == 1
-    assert session.model.cluster_ids == n_clusters * 2
+    assert session.model.cluster_ids == n_clusters_2
     yield
 
     gui.close()
