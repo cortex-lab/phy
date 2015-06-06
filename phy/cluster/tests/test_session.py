@@ -22,11 +22,18 @@ from ...io.kwik.mock import create_mock_kwik
 
 
 #------------------------------------------------------------------------------
-# Kwik tests
+# Fixtures
 #------------------------------------------------------------------------------
 
 def setup():
     set_level('info')
+
+
+n_clusters = 5
+n_spikes = 50
+n_channels = 28
+n_fets = 2
+n_samples_traces = 3000
 
 
 def _start_manual_clustering(kwik_path=None,
@@ -39,38 +46,6 @@ def _start_manual_clustering(kwik_path=None,
         session.settings['features_masks_chunk_size'] = chunk_size
     session.open(kwik_path=kwik_path, model=model)
     return session
-
-
-def test_session_store_features():
-    """Check that the cluster store works for features and masks."""
-
-    with TemporaryDirectory() as tempdir:
-        model = MockModel(n_spikes=50, n_clusters=3)
-        s0 = np.nonzero(model.spike_clusters == 0)[0]
-        s1 = np.nonzero(model.spike_clusters == 1)[0]
-
-        session = _start_manual_clustering(model=model,
-                                           tempdir=tempdir,
-                                           chunk_size=4,
-                                           )
-
-        f = session.store.features(0)
-        m = session.store.masks(1)
-        w = session.store.waveforms(1)
-
-        assert f.shape == (len(s0), 28, 2)
-        assert m.shape == (len(s1), 28,)
-        assert w.shape == (len(s1), model.n_samples_waveforms, 28,)
-
-        ac(f, model.features[s0].reshape((f.shape[0], -1, 2)), 1e-3)
-        ac(m, model.masks[s1], 1e-3)
-
-
-n_clusters = 5
-n_spikes = 50
-n_channels = 28
-n_fets = 2
-n_samples_traces = 3000
 
 
 @fixture
@@ -95,6 +70,35 @@ def session(request):
     request.addfinalizer(end)
 
     return session
+
+
+#------------------------------------------------------------------------------
+# Tests
+#------------------------------------------------------------------------------
+
+def test_session_store_features():
+    """Check that the cluster store works for features and masks."""
+
+    with TemporaryDirectory() as tempdir:
+        model = MockModel(n_spikes=50, n_clusters=3)
+        s0 = np.nonzero(model.spike_clusters == 0)[0]
+        s1 = np.nonzero(model.spike_clusters == 1)[0]
+
+        session = _start_manual_clustering(model=model,
+                                           tempdir=tempdir,
+                                           chunk_size=4,
+                                           )
+
+        f = session.store.features(0)
+        m = session.store.masks(1)
+        w = session.store.waveforms(1)
+
+        assert f.shape == (len(s0), 28, 2)
+        assert m.shape == (len(s1), 28,)
+        assert w.shape == (len(s1), model.n_samples_waveforms, 28,)
+
+        ac(f, model.features[s0].reshape((f.shape[0], -1, 2)), 1e-3)
+        ac(m, model.masks[s1], 1e-3)
 
 
 @wrap_qt
