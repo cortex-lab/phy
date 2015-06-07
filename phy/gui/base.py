@@ -245,7 +245,7 @@ class WidgetCreator(EventEmitter):
         return [widget for widget in self._widgets
                 if self._widget_name(widget) == name]
 
-    def add(self, widget_class, show=True, **kwargs):
+    def add(self, widget_class, show=False, **kwargs):
         """Add a new widget."""
         # widget_class can also be a name, but in this case it must be
         # registered in self._widget_classes.
