@@ -12,6 +12,7 @@ import numpy as np
 
 import phy
 from ...gui.base import BaseGUI
+from ...gui.qt import _prompt
 from ..view_models import (WaveformViewModel,
                            FeatureViewModel,
                            CorrelogramViewModel,
@@ -97,6 +98,7 @@ class ClusterManualGUI(BaseGUI):
     def __init__(self, model=None, store=None, **kwargs):
         self.store = store
         self.wizard = Wizard()
+        self._is_dirty = False
         super(ClusterManualGUI, self).__init__(model=model,
                                                vm_classes=self._vm_classes,
                                                **kwargs)
@@ -325,9 +327,30 @@ class ClusterManualGUI(BaseGUI):
         # This connects the callback that updates the store.
         self._connect_store()
         self._create_wizard()
+        self._is_dirty = False
+
+        @self.connect
+        def on_cluster(up):
+            self._is_dirty = True
 
     def save(self):
+        # The session saves the model when this event is emitted.
         self.emit('request_save')
+
+    def close(self):
+        """Close the GUI."""
+        if (self.settings.get('prompt_save_on_exit', False) and
+            self._is_dirty):
+            res = _prompt(self.main_window,
+                          "Do you want to save your changes?",
+                          ('save', 'cancel', 'close'))
+            if res == 'save':
+                self.save()
+            elif res == 'cancel':
+                return
+            elif res == 'close':
+                pass
+        super(ClusterManualGUI, self).close()
 
     # General actions
     # ---------------------------------------------------------------------
