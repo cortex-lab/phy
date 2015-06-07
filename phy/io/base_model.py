@@ -9,6 +9,8 @@
 from ..ext import six
 from collections import defaultdict
 
+import numpy as np
+
 from ..utils._types import _as_list, _is_list
 
 
@@ -123,6 +125,22 @@ class BaseModel(object):
         raise NotImplementedError()
 
     @property
+    def sample_rate(self):
+        pass
+
+    @property
+    def spike_times(self):
+        """Spike times from the current channel_group.
+
+        This is a NumPy array containing `float64` values (in seconds).
+
+        The spike times of all recordings are concatenated. There is no gap
+        between consecutive recordings, currently.
+
+        """
+        return self.spike_samples.astype(np.float64) / self.sample_rate
+
+    @property
     def spike_clusters(self):
         """Spike clusters from the current channel_group.
 
@@ -130,6 +148,10 @@ class BaseModel(object):
 
         """
         raise NotImplementedError()
+
+    def spike_train(self, cluster_id):
+        """Return the spike times of a given cluster."""
+        return self.spike_times[self.spikes_per_cluster[cluster_id]]
 
     @property
     def spikes_per_cluster(self):

@@ -965,19 +965,6 @@ class KwikModel(BaseModel):
         return self._spike_samples
 
     @property
-    def spike_times(self):
-        """Spike times from the current channel_group.
-
-        This is a NumPy array containing `float64` values (in seconds).
-
-        The spike times of all recordings are concatenated. There is no gap
-        between consecutive recordings, currently.
-
-        """
-        sr = self.sample_rate
-        return self._spike_samples.astype(np.float64) / sr
-
-    @property
     def sample_rate(self):
         """Sample rate of the recording.
 
