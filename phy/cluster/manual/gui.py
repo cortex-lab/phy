@@ -177,6 +177,14 @@ class ClusterManualGUI(BaseGUI):
     # Creation methods
     # ---------------------------------------------------------------------
 
+    def _get_clusters(self, which):
+        # Move best/match/both to noise/mua/good.
+        return {
+            'best': [self.wizard.best],
+            'match': [self.wizard.match],
+            'both': [self.wizard.best, self.wizard.match],
+        }[which]
+
     def _create_actions(self):
         for action in ['reset_gui',
                        # 'save',
@@ -197,20 +205,12 @@ class ClusterManualGUI(BaseGUI):
                        ]:
             self._add_gui_shortcut(action)
 
-        # Move best/match/both to noise/mua/good.
-        def _get_clusters(which):
-            return {
-                'best': [self.wizard.best],
-                'match': [self.wizard.match],
-                'both': [self.wizard.best, self.wizard.match],
-            }[which]
-
         def _make_func(which, group):
             """Return a function that moves best/match/both clusters to
             a group."""
 
             def func():
-                clusters = _get_clusters(which)
+                clusters = self._get_clusters(which)
                 if None in clusters:
                     return
                 self.move(clusters, group)
