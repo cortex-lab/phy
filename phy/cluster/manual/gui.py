@@ -81,6 +81,7 @@ class ClusterManualGUI(BaseGUI):
 
     cluster
     select
+    request_save
 
     """
 
@@ -187,11 +188,11 @@ class ClusterManualGUI(BaseGUI):
 
     def _create_actions(self):
         for action in ['reset_gui',
-                       # 'save',
+                       'save',
+                       'close',
                        'undo',
                        'redo',
                        'show_shortcuts',
-                       # 'exit',
                        'select',
                        'reset_wizard',
                        'first',
@@ -324,6 +325,9 @@ class ClusterManualGUI(BaseGUI):
         # This connects the callback that updates the store.
         self._connect_store()
         self._create_wizard()
+
+    def save(self):
+        self.emit('request_save')
 
     # General actions
     # ---------------------------------------------------------------------

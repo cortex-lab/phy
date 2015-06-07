@@ -175,5 +175,11 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def show_gui(self, **kwargs):
-        return super(Session, self).show_gui(store=self.store,
-                                             **kwargs)
+        gui = super(Session, self).show_gui(store=self.store,
+                                            **kwargs)
+
+        @gui.connect
+        def on_request_save():
+            self.save()
+
+        return gui

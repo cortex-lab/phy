@@ -49,7 +49,7 @@ cluster_manual_shortcuts = {
     'save': 'ctrl+s',
     'undo': 'ctrl+z',
     'redo': ('ctrl+shift+z', 'ctrl+y'),
-    'exit': 'ctrl+q',
+    'close': 'ctrl+q',
     'show_shortcuts': 'ctrl+h',
     'reset_wizard': 'ctrl+w',
     'next': 'space',
