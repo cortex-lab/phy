@@ -642,7 +642,7 @@ class BaseSession(EventEmitter):
     # Views and GUIs
     # -------------------------------------------------------------------------
 
-    def show_gui(self, name=None, **kwargs):
+    def show_gui(self, name=None, show=True, **kwargs):
         """Show a new GUI."""
         if name is None:
             gui_classes = list(self._gui_creator.widget_classes.keys())
@@ -687,6 +687,9 @@ class BaseSession(EventEmitter):
         @gui.connect
         def on_reset_gui():
             gui._save_state = False
+
+        if show:
+            gui.show()
 
         return gui
 
