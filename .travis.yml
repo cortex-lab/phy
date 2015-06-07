@@ -22,7 +22,7 @@ install:
   # NOTE: cython is only temporarily needed for building KK2.
   # Once we have KK2 binary builds on binstar we can remove this dependency.
   - conda install pip numpy matplotlib scipy h5py pyqt pyzmq ipython requests pytest pip flake8 coverage cython
-  - pip install --pre klustakwik2
+  - pip install klustakwik2
   - pip install six vispy coveralls responses python-coveralls pytest-cov
 before_script:
     - export DISPLAY=:99.0
