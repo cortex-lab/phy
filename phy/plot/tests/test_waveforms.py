@@ -10,7 +10,7 @@ from pytest import mark
 
 import numpy as np
 
-from ..waveforms import WaveformView
+from ..waveforms import WaveformView, plot_waveforms
 from ...utils._color import _random_color
 from ...io.mock import (artificial_waveforms, artificial_masks,
                         artificial_spike_clusters)
@@ -64,3 +64,31 @@ def test_waveforms_empty():
 
 def test_waveforms_full():
     _test_waveforms(n_spikes=100, n_clusters=3)
+
+
+def test_plot_waveforms():
+    n_spikes = 100
+    n_clusters = 2
+    n_channels = 32
+    n_samples = 40
+
+    channel_positions = staggered_positions(n_channels)
+
+    waveforms = artificial_waveforms(n_spikes, n_samples, n_channels)
+    masks = artificial_masks(n_spikes, n_channels)
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+
+    c = plot_waveforms(waveforms, show=False)
+    show_test(c)
+
+    c = plot_waveforms(waveforms, masks=masks, show=False)
+    show_test(c)
+
+    c = plot_waveforms(waveforms, spike_clusters=spike_clusters, show=False)
+    show_test(c)
+
+    c = plot_waveforms(waveforms,
+                       spike_clusters=spike_clusters,
+                       channel_positions=channel_positions,
+                       show=False)
+    show_test(c)

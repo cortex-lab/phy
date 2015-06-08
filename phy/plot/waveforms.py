@@ -13,9 +13,15 @@ from vispy import gloo
 from vispy.gloo import Texture2D
 
 from ._panzoom import PanZoom
-from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas, _enable_depth_mask
+from ._vispy_utils import (BaseSpikeVisual,
+                           BaseSpikeCanvas,
+                           _enable_depth_mask,
+                           _wrap_vispy,
+                           )
 from ..utils._types import _as_array
-from ..utils.array import _index_of, _normalize
+from ..utils._color import _selected_clusters_colors
+from ..utils.array import _index_of, _normalize, _unique
+from ..electrode.mea import linear_positions
 
 
 #------------------------------------------------------------------------------
@@ -410,3 +416,53 @@ class WaveformView(BaseSpikeCanvas):
             self.mean.draw()
         else:
             self.visual.draw()
+
+
+#------------------------------------------------------------------------------
+# Plotting functions
+#------------------------------------------------------------------------------
+
+@_wrap_vispy
+def plot_waveforms(waveforms,
+                   masks=None,
+                   spike_clusters=None,
+                   channel_positions=None,
+                   channel_order=None,
+                   colors=None,
+                   ):
+    assert isinstance(waveforms, np.ndarray)
+    assert waveforms.ndim == 3
+    n_spikes, n_samples, n_channels = waveforms.shape
+
+    if spike_clusters is None:
+        spike_clusters = np.zeros(n_spikes, dtype=np.int32)
+    cluster_ids = _unique(spike_clusters)
+    n_clusters = len(cluster_ids)
+
+    if masks is None:
+        masks = np.ones((n_spikes, n_channels), dtype=np.float32)
+
+    if colors is None:
+        colors = _selected_clusters_colors(n_clusters)
+
+    if channel_order is None:
+        channel_order = np.arange(n_channels)
+
+    if channel_positions is None:
+        channel_positions = linear_positions(n_channels)
+
+    c = WaveformView()
+    c.visual.waveforms = waveforms.astype(np.float32)
+
+    if masks is not None:
+        c.visual.masks = masks
+
+    c.visual.spike_clusters = spike_clusters
+    assert spike_clusters.shape == (n_spikes,)
+
+    c.visual.cluster_colors = colors
+
+    c.visual.channel_positions = channel_positions
+    c.visual.channel_order = channel_order
+
+    return c
