@@ -13,6 +13,7 @@ import numpy as np
 from ..utils.array import _unique, _spikes_in_clusters
 from ..utils.selector import Selector
 from ..utils._misc import _show_shortcuts
+from ..utils._color import _selected_clusters_colors
 from ..utils import _as_list
 from ..stats.ccg import correlograms, _symmetrize_correlograms
 from ..plot.ccg import CorrelogramView
@@ -26,29 +27,10 @@ from ..gui.base import BaseViewModel, HTMLViewModel
 # Misc
 #------------------------------------------------------------------------------
 
-# Default color map for the selected clusters.
-_COLORMAP = np.array([[102, 194, 165],
-                      [252, 141, 98],
-                      [141, 160, 203],
-                      [231, 138, 195],
-                      [166, 216, 84],
-                      [255, 217, 47],
-                      [229, 196, 148],
-                      ])
-
-
 def _create_view(cls, backend=None, **kwargs):
     if backend in ('pyqt4', None):
         kwargs.update({'always_on_top': True})
     return cls(**kwargs)
-
-
-def _selected_clusters_colors(n_clusters):
-    if n_clusters > _COLORMAP.shape[0]:
-        colors = np.tile(_COLORMAP, (1 + n_clusters // _COLORMAP.shape[0], 1))
-    else:
-        colors = _COLORMAP
-    return colors[:n_clusters, ...] / 255.
 
 
 def _oddify(x):
