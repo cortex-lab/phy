@@ -456,7 +456,7 @@ class ClusterManualGUI(BaseGUI):
 
     def _spikes_to_split(self):
         """Find the spikes lasso selected in a feature view for split."""
-        for features in self.get_views('features'):
+        for features in self.get_views('features', 'features_grid'):
             spikes = features.spikes_in_lasso()
             if spikes is not None:
                 features.lasso.clear()
@@ -475,6 +475,8 @@ class ClusterManualGUI(BaseGUI):
         """
         if spikes is None:
             spikes = self._spikes_to_split()
+            if spikes is None:
+                return
         _check_list_argument(spikes, 'spikes')
         info("Split {0:d} spikes.".format(len(spikes)))
         up = self.clustering.split(spikes)

@@ -406,14 +406,14 @@ class FeatureView(BaseSpikeCanvas):
     keyboard_shortcuts = {
         'marker_size_increase': 'alt++',
         'marker_size_decrease': 'alt+-',
-        'add_lasso_point': 'alt+left click',
-        'clear_lasso': 'alt+right click',
+        'add_lasso_point': 'shift+left click',
+        'clear_lasso': 'shift+right click',
     }
 
     def on_mouse_press(self, e):
-        alt = e.modifiers == ('Alt',)
         control = e.modifiers == ('Control',)
-        if alt:
+        shift = e.modifiers == ('Shift',)
+        if shift:
             if e.button == 1:
                 n_rows = self.lasso.n_rows
 

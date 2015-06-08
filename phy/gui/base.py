@@ -238,12 +238,12 @@ class WidgetCreator(EventEmitter):
             if cls == widget.__class__:
                 return name
 
-    def get(self, name=None):
+    def get(self, *names):
         """Return the list of widgets of a given type."""
-        if name is None:
+        if not names:
             return self._widgets
         return [widget for widget in self._widgets
-                if self._widget_name(widget) == name]
+                if self._widget_name(widget) in names]
 
     def add(self, widget_class, show=False, **kwargs):
         """Add a new widget."""
@@ -502,9 +502,9 @@ class BaseGUI(EventEmitter):
 
         self.emit('add_view', item)
 
-    def get_views(self, name=None):
+    def get_views(self, *names):
         """Return the list of views of a given type."""
-        return self._view_creator.get(name=name)
+        return self._view_creator.get(*names)
 
     def connect_views(self, name_0, name_1):
         """Decorator for a function called on every pair of views of a
