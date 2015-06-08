@@ -405,10 +405,7 @@ class FeatureViewModel(VispyViewModel):
 
     def __init__(self, **kwargs):
         self._dimension_selector = None
-        self._previous_dimensions = None
-        self._previous_pan_zoom = None
         super(FeatureViewModel, self).__init__(**kwargs)
-        self._view.connect(self.on_mouse_double_click)
 
     def set_dimension_selector(self, func):
         """Decorator for a function that selects the best projection.
@@ -552,43 +549,6 @@ class FeatureViewModel(VispyViewModel):
     keyboard_shortcuts = {
         'enlarge_subplot': 'double left click',
     }
-
-    def on_mouse_double_click(self, e):
-        if self._previous_dimensions:
-            self.dimensions = self._previous_dimensions
-            self._previous_dimensions = None
-
-            p, z = self._previous_pan_zoom
-            self._view._pz._index = (0, 0)
-            self._view._pz.pan = p
-            self._view._pz.zoom = z
-            self._previous_pan_zoom = None
-
-            self._view._pz._index = self._previous_index
-            self._previous_index = None
-        else:
-            # Find the current box.
-            i, j = self._view._pz._get_box(e.pos)
-            # Save previous (diagonal) dimensions.
-            self._previous_dimensions = self.dimensions
-            self._previous_index = (i, j)
-            # Save the previous pan-zoom of the first subplot (which is
-            # going to be replaced).
-            self._previous_pan_zoom = (self._view._pz.pan_matrix[0, 0],
-                                       self._view._pz.zoom_matrix[0, 0])
-            p = self._view._pz.pan
-            z = self._view._pz.zoom
-            dim_i = self.dimensions[i]
-            dim_j = self.dimensions[j]
-            # Set the dimensions.
-            self.dimensions = [dim_i]
-            if i != j:
-                self.diagonal_dimensions = [dim_j]
-            self._view._pz._index = (0, 0)
-            self._view._pz.pan = p
-            self._view._pz.zoom = z
-            # Update the pan zoom of the new subplot.
-        self._view.update()
 
     def exported_params(self, save_size_pos=True):
         params = super(FeatureViewModel, self).exported_params(save_size_pos)

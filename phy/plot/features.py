@@ -317,6 +317,7 @@ class FeatureVisual(BaseFeatureVisual):
 class FeatureView(BaseSpikeCanvas):
     """A VisPy canvas displaying features."""
     _visual_class = FeatureVisual
+    _events = ('enlarge',)
 
     def _create_visuals(self):
         self.boxes = BoxVisual()
@@ -456,6 +457,10 @@ class FeatureView(BaseSpikeCanvas):
         elif e.button == 2:
             self.lasso.clear()
         self.update()
+
+    def on_mouse_double_click(self, e):
+        box = self._pz._get_box(e.pos)
+        self.emit('enlarge', box=box)
 
     def on_key_press(self, event):
         """Handle key press events."""
