@@ -397,169 +397,6 @@ class WaveformViewModel(VispyViewModel):
         return params
 
 
-class FeatureViewModel(VispyViewModel):
-    _view_class = FeatureView
-    _view_name = 'features'
-    _imported_params = ('scale_factor', 'n_spikes_max_bg', 'marker_size')
-    n_spikes_max_bg = 10000
-
-    def __init__(self, **kwargs):
-        self._dimension_selector = None
-        super(FeatureViewModel, self).__init__(**kwargs)
-
-    def set_dimension_selector(self, func):
-        """Decorator for a function that selects the best projection.
-
-        The decorated function must have the following signature:
-
-        ```python
-        @view_model.set_dimension_selector
-        def choose(cluster_ids):
-            # ...
-            return channel_idxs  # a list with 3 relative channel indices
-        ```
-
-        """
-        self._dimension_selector = func
-
-    def default_dimension_selector(self, cluster_ids):
-        """Return the channels with the largest mean features.
-
-        The first cluster is used currently.
-
-        """
-        if cluster_ids is None or not len(cluster_ids):
-            return np.arange(len(self.model.channels[:3]))
-        n_fet = self.model.n_features_per_channel
-        score = self.store.mean_features(cluster_ids[0])
-        score = score.reshape((-1, n_fet)).mean(axis=1)
-        # Take the best 3 channels.
-        assert len(score) == len(self.model.channel_order)
-        channels = np.argsort(score)[::-1][:3]
-        return channels
-
-    def _default_dimensions(self, cluster_ids=None):
-        dimension_selector = (self._dimension_selector or
-                              self.default_dimension_selector)
-        channels = dimension_selector(cluster_ids)
-        return ['time'] + [(ch, 0) for ch in channels]
-
-    def _rescale_features(self, features):
-        # WARNING: convert features to a 3D array
-        # (n_spikes, n_channels, n_features)
-        # because that's what the FeatureView expects currently.
-        n_fet = self.model.n_features_per_channel
-        n_channels = len(self.model.channel_order)
-        shape = (-1, n_channels, n_fet)
-        features = features[:, :n_fet * n_channels].reshape(shape)
-        # Scale factor.
-        return features * self.scale_factor
-
-    @property
-    def lasso(self):
-        return self.view.lasso
-
-    def spikes_in_lasso(self):
-        """Return the spike ids from the selected clusters within the lasso."""
-        if not len(self.cluster_ids) or self.view.lasso.n_points <= 2:
-            return
-        clusters = self.cluster_ids
-        features = self.store.load('features', clusters=clusters)
-        features = self._rescale_features(features)
-        box = self.view.lasso.box
-        points = self.view.visual.project(features, box)
-        in_lasso = self.view.lasso.in_lasso(points)
-        spike_ids = _spikes_in_clusters(self.model.spike_clusters, clusters)
-        return spike_ids[in_lasso]
-
-    @property
-    def marker_size(self):
-        """Marker size."""
-        return self.view.marker_size
-
-    @marker_size.setter
-    def marker_size(self, value):
-        self.view.marker_size = value
-
-    @property
-    def dimensions(self):
-        """The list of displayed dimensions."""
-        return self._view.dimensions
-
-    @dimensions.setter
-    def dimensions(self, value):
-        self._view.dimensions = value
-
-    @property
-    def diagonal_dimensions(self):
-        """The list of dimensions on the diagonal (y axis)."""
-        return self._view.diagonal_dimensions
-
-    @diagonal_dimensions.setter
-    def diagonal_dimensions(self, value):
-        self._view.diagonal_dimensions = value
-
-    def on_open(self):
-        # Get background features.
-        # TODO OPTIM: precompute this once for all and store in the cluster
-        # store. But might be unnecessary.
-        if self.n_spikes_max_bg is not None:
-            k = max(1, self.model.n_spikes // self.n_spikes_max_bg)
-        else:
-            k = 1
-        if self.model.features is not None:
-            # Background features.
-            features_bg = self.store.load('features',
-                                          spikes=slice(None, None, k))
-            self.view.background.features = self._rescale_features(features_bg)
-            # Time dimension.
-            spike_samples = self.model.spike_samples[::k]
-            self.view.background.spike_samples = spike_samples
-        self.view.update_dimensions(self._default_dimensions())
-
-    def on_select(self, clusters):
-        super(FeatureViewModel, self).on_select(clusters)
-        spikes = self.spike_ids
-
-        features = self.store.load('features',
-                                   clusters=clusters,
-                                   spikes=spikes)
-        masks = self.store.load('masks',
-                                clusters=clusters,
-                                spikes=spikes)
-
-        nc = len(self.model.channel_order)
-        nf = self.model.n_features_per_channel
-        features = features.reshape((len(spikes), nc, nf))
-        self.view.visual.features = self._rescale_features(features)
-        self.view.visual.masks = masks
-
-        # Spikes.
-        self.view.visual.spike_ids = spikes
-        self.view.visual.spike_samples = self.model.spike_samples[spikes]
-
-        # Cluster display order.
-        self.view.visual.cluster_order = clusters
-
-        # Choose best projection.
-        self.view.dimensions = self._default_dimensions(clusters)
-
-        self.view.update()
-
-    keyboard_shortcuts = {
-        'enlarge_subplot': 'double left click',
-    }
-
-    def exported_params(self, save_size_pos=True):
-        params = super(FeatureViewModel, self).exported_params(save_size_pos)
-        zoom = self._view._pz.zoom
-        params.update({
-            'scale_factor': zoom.mean() * self.scale_factor,
-            'marker_size': self.marker_size,
-        })
-        return params
-
-
 class CorrelogramViewModel(VispyViewModel):
     _view_class = CorrelogramView
     _view_name = 'correlograms'
@@ -785,3 +622,197 @@ class TraceViewModel(VispyViewModel):
             'channel_scale': self.channel_scale,
         })
         return params
+
+
+#------------------------------------------------------------------------------
+# Feature view models
+#------------------------------------------------------------------------------
+
+class BaseFeatureViewModel(VispyViewModel):
+    _view_class = FeatureView
+    _view_name = 'base_features'
+    _imported_params = ('scale_factor', 'n_spikes_max_bg', 'marker_size')
+    n_spikes_max_bg = 10000
+
+    def _rescale_features(self, features):
+        # WARNING: convert features to a 3D array
+        # (n_spikes, n_channels, n_features)
+        # because that's what the FeatureView expects currently.
+        n_fet = self.model.n_features_per_channel
+        n_channels = len(self.model.channel_order)
+        shape = (-1, n_channels, n_fet)
+        features = features[:, :n_fet * n_channels].reshape(shape)
+        # Scale factor.
+        return features * self.scale_factor
+
+    @property
+    def lasso(self):
+        return self.view.lasso
+
+    def spikes_in_lasso(self):
+        """Return the spike ids from the selected clusters within the lasso."""
+        if not len(self.cluster_ids) or self.view.lasso.n_points <= 2:
+            return
+        clusters = self.cluster_ids
+        features = self.store.load('features', clusters=clusters)
+        features = self._rescale_features(features)
+        box = self.view.lasso.box
+        points = self.view.visual.project(features, box)
+        in_lasso = self.view.lasso.in_lasso(points)
+        spike_ids = _spikes_in_clusters(self.model.spike_clusters, clusters)
+        return spike_ids[in_lasso]
+
+    @property
+    def marker_size(self):
+        """Marker size."""
+        return self.view.marker_size
+
+    @marker_size.setter
+    def marker_size(self, value):
+        self.view.marker_size = value
+
+    @property
+    def dimensions(self):
+        """The list of displayed dimensions."""
+        return self._view.dimensions
+
+    @dimensions.setter
+    def dimensions(self, value):
+        self._view.dimensions = value
+
+    @property
+    def diagonal_dimensions(self):
+        """The list of dimensions on the diagonal (y axis)."""
+        return self._view.diagonal_dimensions
+
+    @diagonal_dimensions.setter
+    def diagonal_dimensions(self, value):
+        self._view.diagonal_dimensions = value
+
+    @property
+    def default_dimensions(self):
+        """Return the chosen dimensions of the view.
+
+        Must be overriden.
+
+        """
+        return []
+
+    def on_open(self):
+        # Get background features.
+        # TODO OPTIM: precompute this once for all and store in the cluster
+        # store. But might be unnecessary.
+        if self.n_spikes_max_bg is not None:
+            k = max(1, self.model.n_spikes // self.n_spikes_max_bg)
+        else:
+            k = 1
+        if self.model.features is not None:
+            # Background features.
+            features_bg = self.store.load('features',
+                                          spikes=slice(None, None, k))
+            self.view.background.features = self._rescale_features(features_bg)
+            # Time dimension.
+            spike_samples = self.model.spike_samples[::k]
+            self.view.background.spike_samples = spike_samples
+        self.view.update_dimensions(self.default_dimensions)
+
+    def on_select(self, clusters):
+        super(BaseFeatureViewModel, self).on_select(clusters)
+        spikes = self.spike_ids
+
+        features = self.store.load('features',
+                                   clusters=clusters,
+                                   spikes=spikes)
+        masks = self.store.load('masks',
+                                clusters=clusters,
+                                spikes=spikes)
+
+        nc = len(self.model.channel_order)
+        nf = self.model.n_features_per_channel
+        features = features.reshape((len(spikes), nc, nf))
+        self.view.visual.features = self._rescale_features(features)
+        self.view.visual.masks = masks
+
+        # Spikes.
+        self.view.visual.spike_ids = spikes
+        self.view.visual.spike_samples = self.model.spike_samples[spikes]
+
+        # Cluster display order.
+        self.view.visual.cluster_order = clusters
+
+        # Choose best projection.
+        self.view.dimensions = self.default_dimensions
+        self.view.update()
+
+    def exported_params(self, save_size_pos=True):
+        params = super(BaseFeatureViewModel,
+                       self).exported_params(save_size_pos)
+        zoom = self._view._pz.zoom
+        params.update({
+            'scale_factor': zoom.mean() * self.scale_factor,
+            'marker_size': self.marker_size,
+        })
+        return params
+
+
+class MultiFeatureViewModel(BaseFeatureViewModel):
+    _view_name = 'multi_features'
+
+    def __init__(self, **kwargs):
+        self._dimension_selector = None
+        super(MultiFeatureViewModel, self).__init__(**kwargs)
+
+    def set_dimension_selector(self, func):
+        """Decorator for a function that selects the best projection.
+
+        The decorated function must have the following signature:
+
+        ```python
+        @view_model.set_dimension_selector
+        def choose(cluster_ids):
+            # ...
+            return channel_idxs  # a list with 3 relative channel indices
+        ```
+
+        """
+        self._dimension_selector = func
+
+    def default_dimension_selector(self, cluster_ids):
+        """Return the channels with the largest mean features.
+
+        The first cluster is used currently.
+
+        """
+        if cluster_ids is None or not len(cluster_ids):
+            return np.arange(len(self.model.channels[:3]))
+        n_fet = self.model.n_features_per_channel
+        score = self.store.mean_features(cluster_ids[0])
+        score = score.reshape((-1, n_fet)).mean(axis=1)
+        # Take the best 3 channels.
+        assert len(score) == len(self.model.channel_order)
+        channels = np.argsort(score)[::-1][:3]
+        return channels
+
+    @property
+    def default_dimensions(self):
+        dimension_selector = (self._dimension_selector or
+                              self.default_dimension_selector)
+        channels = dimension_selector(self.cluster_ids)
+        return ['time'] + [(ch, 0) for ch in channels]
+
+    keyboard_shortcuts = {
+        'enlarge_subplot': 'double left click',
+    }
+
+
+class SingleFeatureViewModel(BaseFeatureViewModel):
+    _view_name = 'single_features'
+
+    @property
+    def default_dimensions(self):
+        return [(0, 0)]
+
+    def set_dimensions(self, dim_0, dim_1):
+        self.dimensions = [dim_0]
+        self.diagonal_dimensions = [dim_0]
+        self.view.update()

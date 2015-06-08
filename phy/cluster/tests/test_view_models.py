@@ -18,7 +18,7 @@ from ...utils.testing import (show_test_start,
 from ...io.kwik.mock import create_mock_kwik
 from ...io.kwik import KwikModel, create_store
 from ..view_models import (WaveformViewModel,
-                           FeatureViewModel,
+                           MultiFeatureViewModel,
                            CorrelogramViewModel,
                            TraceViewModel,
                            )
@@ -145,15 +145,15 @@ def test_waveforms_empty():
 #------------------------------------------------------------------------------
 
 def test_features_empty():
-    _test_empty(FeatureViewModel)
+    _test_empty(MultiFeatureViewModel)
 
 
 def test_features_full():
-    _test_view_model(FeatureViewModel, marker_size=8, n_spikes_max=20)
+    _test_view_model(MultiFeatureViewModel, marker_size=8, n_spikes_max=20)
 
 
 def test_features_lasso():
-    vm = _test_view_model(FeatureViewModel,
+    vm = _test_view_model(MultiFeatureViewModel,
                           marker_size=8,
                           stop=False,
                           )
