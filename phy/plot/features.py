@@ -161,7 +161,23 @@ class BaseFeatureVisual(BaseSpikeVisual):
     @dimensions.setter
     def dimensions(self, value):
         matrix = self._matrix_from_dimensions(value)
-        self._set_dimensions_to_bake(matrix)
+        self.dimensions_matrix = matrix
+
+    @property
+    def dimensions_matrix(self):
+        """Displayed dimensions matrix.
+
+        This is a matrix of pairs of items which can be:
+
+        * tuple `(channel_id, feature_idx)`
+        * `'time'`
+
+        """
+        return self._dimensions_matrix
+
+    @dimensions_matrix.setter
+    def dimensions_matrix(self, value):
+        self._set_dimensions_to_bake(value)
 
     def _default_diagonal(self, dimensions):
         return [((dim[0], min(1 - dim[1], self.n_features - 1))
