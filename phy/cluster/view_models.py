@@ -766,7 +766,7 @@ class BaseFeatureViewModel(VispyViewModel):
 
 
 class MultiFeatureViewModel(BaseFeatureViewModel):
-    _view_name = 'features'
+    _view_name = 'features_grid'
 
     def __init__(self, **kwargs):
         self._dimension_selector = None
@@ -826,7 +826,7 @@ class MultiFeatureViewModel(BaseFeatureViewModel):
 
 
 class SingleFeatureViewModel(BaseFeatureViewModel):
-    _view_name = 'enlarged_features'
+    _view_name = 'features'
 
     def _set_dimensions_after_select(self):
         self.view.dimensions_matrix = self.view.dimensions_matrix

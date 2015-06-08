@@ -89,8 +89,8 @@ class ClusterManualGUI(BaseGUI):
 
     _vm_classes = {
         'waveforms': WaveformViewModel,
-        'features': MultiFeatureViewModel,
-        'enlarged_features': SingleFeatureViewModel,
+        'features': SingleFeatureViewModel,
+        'features_grid': MultiFeatureViewModel,
         'correlograms': CorrelogramViewModel,
         'traces': TraceViewModel,
         'wizard': WizardViewModel,
@@ -157,7 +157,7 @@ class ClusterManualGUI(BaseGUI):
         """Set view connections."""
 
         # Select feature dimension from waveform view.
-        @self.connect_views('waveforms', 'enlarged_features')
+        @self.connect_views('waveforms', 'features')
         def channel_click(waveforms, features):
 
             @waveforms.view.connect
@@ -167,12 +167,12 @@ class ClusterManualGUI(BaseGUI):
                 features.set_dimension((channel, feature))
 
         # Enlarge feature subplot.
-        @self.connect_views('features', 'enlarged_features')
-        def enlarge(features, enlarged_features):
+        @self.connect_views('features_grid', 'features')
+        def enlarge(grid, features):
 
-            @features.view.connect
+            @grid.view.connect
             def on_enlarge(e):
-                enlarged_features.set_dimensions(*e.dimensions)
+                features.set_dimensions(*e.dimensions)
 
     def _view_model_kwargs(self, name):
         kwargs = {'model': self.model,

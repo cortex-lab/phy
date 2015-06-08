@@ -39,9 +39,9 @@ features_excerpt_size = None
 # Maximum number of background spikes to display in the feature view.
 features_n_spikes_max_bg = features_n_spikes_max
 
-enlarged_features_n_spikes_max = features_n_spikes_max
-enlarged_features_excerpt_size = features_excerpt_size
-enlarged_features_n_spikes_max_bg = features_n_spikes_max_bg
+features_grid_n_spikes_max = features_n_spikes_max
+features_grid_excerpt_size = features_excerpt_size
+features_grid_n_spikes_max_bg = features_n_spikes_max_bg
 
 
 # -----------------------------------------------------------------------------
@@ -80,8 +80,8 @@ cluster_manual_shortcuts = {
 cluster_manual_config = [
     ('wizard', {'position': 'right'}),
     ('stats', {'position': 'right'}),
+    ('features_grid', {'position': 'left'}),
     ('features', {'position': 'left'}),
-    ('enlarged_features', {'position': 'left'}),
     ('correlograms', {'position': 'left'}),
     ('waveforms', {'position': 'right'}),
     ('traces', {'position': 'right'}),
@@ -117,5 +117,5 @@ features_masks_chunk_size = 100000
 
 waveforms_scale_factor = .01
 features_scale_factor = .01
-enlarged_features_scale_factor = features_scale_factor
+features_grid_scale_factor = features_scale_factor
 traces_scale_factor = .01

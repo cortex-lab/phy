@@ -507,6 +507,8 @@ class BaseGUI(EventEmitter):
         return self._view_creator.get(name=name)
 
     def connect_views(self, name_0, name_1):
+        """Decorator for a function called on every pair of views of a
+        given type."""
         def wrap(func):
             for view_0 in self.get_views(name_0):
                 for view_1 in self.get_views(name_1):
