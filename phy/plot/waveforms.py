@@ -388,9 +388,9 @@ class WaveformView(BaseSpikeCanvas):
             self.probe_scale = (u, v * coeff)
 
     def on_mouse_press(self, e):
-        key = self._key_pressed
-        if not key:
-            return
+        # key = self._key_pressed
+        # if not key:
+        #     return
         # Normalise mouse position.
         position = self._pz._normalize(e.pos)
         position[1] = -position[1]
@@ -401,7 +401,7 @@ class WaveformView(BaseSpikeCanvas):
         channel_idx = self.visual.channel_hover(mouse_pos)
         self.emit("channel_click",
                   channel_idx=channel_idx,
-                  key=key,
+                  # key=key,
                   button=e.button,
                   )
 

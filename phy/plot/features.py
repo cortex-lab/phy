@@ -350,7 +350,14 @@ class FeatureView(BaseSpikeCanvas):
 
     @property
     def dimensions_matrix(self):
-        """Dimensions matrix."""
+        """Displayed dimensions matrix.
+
+        This is a matrix of pairs of items which can be:
+
+        * tuple `(channel_id, feature_idx)`
+        * `'time'`
+
+        """
         return self.background.dimensions_matrix
 
     @dimensions_matrix.setter
