@@ -756,7 +756,7 @@ class BaseFeatureViewModel(VispyViewModel):
 
 
 class MultiFeatureViewModel(BaseFeatureViewModel):
-    _view_name = 'multi_features'
+    _view_name = 'features'
 
     def __init__(self, **kwargs):
         self._dimension_selector = None
@@ -806,7 +806,7 @@ class MultiFeatureViewModel(BaseFeatureViewModel):
 
 
 class SingleFeatureViewModel(BaseFeatureViewModel):
-    _view_name = 'single_features'
+    _view_name = 'enlarged_features'
 
     @property
     def default_dimensions(self):
