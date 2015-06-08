@@ -821,7 +821,7 @@ class MultiFeatureViewModel(BaseFeatureViewModel):
         self.view.update()
 
     keyboard_shortcuts = {
-        'enlarge_subplot': 'double left click',
+        'enlarge_subplot': 'ctrl+click',
     }
 
 
@@ -832,3 +832,12 @@ class SingleFeatureViewModel(BaseFeatureViewModel):
         # Update the dimensions.
         self.view.dimensions_matrix = self.view.dimensions_matrix
         self.view.update()
+
+    def set_dimension(self, dim):
+        matrix = self._matrix_from_dimensions([dim])
+        self.view.update_dimensions_matrix(matrix)
+
+    def set_dimensions(self, dim_x, dim_y):
+        matrix = self.view.dimensions_matrix
+        matrix[0, 0] = (dim_x, dim_y)
+        self.view.update_dimensions_matrix(matrix)

@@ -302,11 +302,11 @@ class WaveformView(BaseSpikeCanvas):
         self.update()
 
     keyboard_shortcuts = {
-        'waveform_scale_increase': ('ctrl+[+]',
+        'waveform_scale_increase': ('ctrl++',
                                     'ctrl+up',
                                     'shift+wheel up',
                                     ),
-        'waveform_scale_decrease': ('ctrl+[-]',
+        'waveform_scale_decrease': ('ctrl+-',
                                     'ctrl+down',
                                     'shift+wheel down',
                                     ),
@@ -316,7 +316,7 @@ class WaveformView(BaseSpikeCanvas):
         'probe_width_decrease': ('shift+left', 'ctrl+alt+wheel down'),
         'probe_height_increase': ('shift+up', 'shift+alt+wheel up'),
         'probe_height_decrease': ('shift+down', 'shift+alt+wheel down'),
-        'select_channel': '[number key]+[left click]',
+        'select_channel': ('ctrl+left click', 'ctrl+right click'),
         'toggle_mean_waveforms': 'm',
         'toggle_overlap': 'o',
     }
@@ -388,9 +388,8 @@ class WaveformView(BaseSpikeCanvas):
             self.probe_scale = (u, v * coeff)
 
     def on_mouse_press(self, e):
-        # key = self._key_pressed
-        # if not key:
-        #     return
+        if 'Control' not in e.modifiers:
+            return
         # Normalise mouse position.
         position = self._pz._normalize(e.pos)
         position[1] = -position[1]
@@ -401,7 +400,6 @@ class WaveformView(BaseSpikeCanvas):
         channel_idx = self.visual.channel_hover(mouse_pos)
         self.emit("channel_click",
                   channel_idx=channel_idx,
-                  # key=key,
                   button=e.button,
                   )
 

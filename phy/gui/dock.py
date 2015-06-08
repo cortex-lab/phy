@@ -208,21 +208,6 @@ class DockWindow(QtGui.QMainWindow):
             counts[_title(view)] += 1
         return dict(counts)
 
-    def connect_views(self, name_0, name_1):
-        """Decorator for a function that accepts any pair of views.
-
-        This is used to connect any view of type `name_0` to any other view
-        of type `name_1`.
-
-        """
-        def _make_func(func):
-            for widget_0 in self.list_views(name_0, is_visible=False):
-                for widget_1 in self.list_views(name_1, is_visible=False):
-                    view_0 = _widget(widget_0)
-                    view_1 = _widget(widget_1)
-                    func(view_0, view_1)
-        return _make_func
-
     # State
     # -------------------------------------------------------------------------
 

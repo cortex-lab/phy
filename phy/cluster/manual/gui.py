@@ -157,30 +157,22 @@ class ClusterManualGUI(BaseGUI):
         """Set view connections."""
 
         # Select feature dimension from waveform view.
-        @self._dock.connect_views('waveforms', 'enlarged_features')
+        @self.connect_views('waveforms', 'enlarged_features')
         def channel_click(waveforms, features):
 
-            @waveforms.connect
+            @waveforms.view.connect
             def on_channel_click(e):
-                # if e.key in map(str, range(10)):
                 channel = e.channel_idx
-                # dimension = int(e.key.name)
                 feature = 0 if e.button == 1 else 1
-                # if (0 <= dimension <= len(features.dimensions) - 1):
-                features.dimensions_matrix[0, 0] = (channel, feature)
-                # Force view update.
-                features.dimensions_matrix = features.dimensions_matrix
+                features.set_dimension((channel, feature))
 
         # Enlarge feature subplot.
-        @self._dock.connect_views('features', 'enlarged_features')
+        @self.connect_views('features', 'enlarged_features')
         def enlarge(features, enlarged_features):
 
-            @features.connect
+            @features.view.connect
             def on_enlarge(e):
-                matrix = np.empty((1, 1), dtype=object)
-                matrix[0, 0] = e.dimensions
-                enlarged_features.dimensions_matrix = matrix
-                # enlarged_features.update()
+                enlarged_features.set_dimensions(*e.dimensions)
 
     def _view_model_kwargs(self, name):
         kwargs = {'model': self.model,

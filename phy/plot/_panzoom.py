@@ -777,10 +777,9 @@ class PanZoomGrid(PanZoom):
 
     keyboard_shortcuts = {
         'subplot_pan': ('left click and drag', 'arrows'),
-        'subplot_zoom': ('right click and drag', '+/-'),
-        'subplot_reset': 'r',
-        'global_zoom': ('shift+[+/-]', 'shift+wheel'),
-        'global_reset': 'shift+r',
+        'subplot_zoom': 'right click and drag',
+        'global_zoom': ('+/-', 'shift+wheel'),
+        'global_reset': 'r',
     }
 
     def on_mouse_move(self, event):
@@ -824,15 +823,14 @@ class PanZoomGrid(PanZoom):
 
         key = event.key
         modifiers = event.modifiers
-        shift = 'Shift' in modifiers
 
         # Reset with 'R'.
-        if key == 'R' and shift:
+        if key == 'R':
             self._reset()
             self._canvas.update()
 
         # Global zoom.
-        if shift and key in self._pm:
+        if key in self._pm:
             self._zoom_keyboard(key)
             self._global_pan_zoom(zoom=self._zoom)
             self._canvas.update()

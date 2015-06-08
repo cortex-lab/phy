@@ -506,6 +506,13 @@ class BaseGUI(EventEmitter):
         """Return the list of views of a given type."""
         return self._view_creator.get(name=name)
 
+    def connect_views(self, name_0, name_1):
+        def wrap(func):
+            for view_0 in self.get_views(name_0):
+                for view_1 in self.get_views(name_1):
+                    func(view_0, view_1)
+        return wrap
+
     @property
     def views(self):
         return self.get_views()

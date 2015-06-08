@@ -219,8 +219,8 @@ class TraceView(BaseSpikeCanvas):
         self.update()
 
     keyboard_shortcuts = {
-        'channel_scale_increase': 'ctrl+[+]',
-        'channel_scale_decrease': 'ctrl+[-]',
+        'channel_scale_increase': 'ctrl++',
+        'channel_scale_decrease': 'ctrl+-',
     }
 
     def on_key_press(self, event):

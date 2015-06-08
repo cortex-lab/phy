@@ -20,7 +20,7 @@ from ._vispy_utils import (BaseSpikeVisual,
                            )
 from ._panzoom import PanZoomGrid
 from ..ext.six import string_types
-from ..utils._types import _as_array
+from ..utils._types import _as_array, _is_integer
 from ..utils.array import _index_of
 
 
@@ -84,9 +84,13 @@ class BaseFeatureVisual(BaseSpikeVisual):
         self.set_to_bake('spikes',)
 
     def _check_dimension(self, dim):
+        if _is_integer(dim):
+            dim = (dim, 0)
         if isinstance(dim, tuple):
             assert len(dim) == 2
             channel, feature = dim
+            assert _is_integer(channel)
+            assert _is_integer(feature)
             assert 0 <= channel < self.n_channels
             assert 0 <= feature < self.n_features
         elif isinstance(dim, string_types):
@@ -400,45 +404,44 @@ class FeatureView(BaseSpikeCanvas):
         self.boxes.draw()
 
     keyboard_shortcuts = {
-        'marker_size_increase': 'ctrl+[+]',
-        'marker_size_decrease': 'ctrl+[-]',
-        'add_lasso_point': 'ctrl+left click',
-        'clear_lasso': 'ctrl+right click',
+        'marker_size_increase': 'alt++',
+        'marker_size_decrease': 'alt+-',
+        'add_lasso_point': 'alt+left click',
+        'clear_lasso': 'alt+right click',
     }
 
     def on_mouse_press(self, e):
-        ctrl = e.modifiers == ('Control',)
-        if not ctrl:
-            return
-        if e.button == 1:
-            n_rows = self.lasso.n_rows
+        alt = e.modifiers == ('Alt',)
+        shift = e.modifiers == ('Shift',)
+        if alt:
+            if e.button == 1:
+                n_rows = self.lasso.n_rows
 
+                box = self._pz._get_box(e.pos)
+                self.lasso.box = box
+
+                position = self._pz._normalize(e.pos)
+                x, y = position
+                x *= n_rows
+                y *= -n_rows
+                pos = (x, y)
+                # pos = self._pz._map_box((x, y), inverse=True)
+                pos = self._pz._map_pan_zoom(pos, inverse=True)
+                self.lasso.add(pos.ravel())
+            elif e.button == 2:
+                self.lasso.clear()
+            self.update()
+        elif shift:
             box = self._pz._get_box(e.pos)
-            self.lasso.box = box
-
-            position = self._pz._normalize(e.pos)
-            x, y = position
-            x *= n_rows
-            y *= -n_rows
-            pos = (x, y)
-            # pos = self._pz._map_box((x, y), inverse=True)
-            pos = self._pz._map_pan_zoom(pos, inverse=True)
-            self.lasso.add(pos.ravel())
-        elif e.button == 2:
-            self.lasso.clear()
-        self.update()
-
-    def on_mouse_double_click(self, e):
-        box = self._pz._get_box(e.pos)
-        self.emit('enlarge',
-                  box=box,
-                  dimensions=self.dimensions_matrix[box],
-                  )
+            self.emit('enlarge',
+                      box=box,
+                      dimensions=self.dimensions_matrix[box],
+                      )
 
     def on_key_press(self, event):
         """Handle key press events."""
         coeff = .25
-        if 'Control' in event.modifiers:
+        if 'Alt' in event.modifiers:
             if event.key == '+':
                 self.marker_size += coeff
             if event.key == '-':
