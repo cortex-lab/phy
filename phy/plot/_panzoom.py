@@ -822,7 +822,6 @@ class PanZoomGrid(PanZoom):
         super(PanZoomGrid, self).on_key_press(event)
 
         key = event.key
-        modifiers = event.modifiers
 
         # Reset with 'R'.
         if key == 'R':
