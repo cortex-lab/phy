@@ -39,8 +39,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
 
         self._features = None
         self._spike_samples = None
-        self._dimensions = []
-        self._diagonal_dimensions = []
+        self._dimensions_matrix = np.empty((0, 0), dtype=object)
         self.n_channels, self.n_features = None, None
         self.n_rows = None
 
@@ -126,8 +125,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
 
         """
         i, j = box
-        dim_i = self._dimensions[i]
-        dim_j = self._dimensions[j] if i != j else self._diagonal_dimensions[i]
+        dim_i, dim_j = self._dimensions_matrix[i, j]
 
         fet_i = self._get_feature_dim(self._features, dim_i)
         fet_j = self._get_feature_dim(self._features, dim_j)
@@ -135,6 +133,18 @@ class BaseFeatureVisual(BaseSpikeVisual):
         # NOTE: we switch here because we want to plot
         # dim_i (y) over dim_j (x) on box (i, j).
         return np.c_[fet_j, fet_i]
+
+    def _matrix_from_dimensions(self, dimensions):
+        n = len(dimensions)
+        diagonal = self._default_diagonal(dimensions)
+        matrix = np.empty((n, n), dtype=object)
+        for i in range(n):
+            for j in range(n):
+                if i != j:
+                    matrix[i, j] = (dimensions[i], dimensions[j])
+                else:
+                    matrix[i, j] = (dimensions[i], diagonal[i])
+        return matrix
 
     @property
     def dimensions(self):
@@ -146,12 +156,12 @@ class BaseFeatureVisual(BaseSpikeVisual):
         * `'time'`
 
         """
-        return self._dimensions
+        return [x for (x, _) in self._dimensions_matrix[0, :]]
 
     @dimensions.setter
     def dimensions(self, value):
-        self._set_dimensions_to_bake(value)
-        self.diagonal_dimensions = self._default_diagonal(value)
+        matrix = self._matrix_from_dimensions(value)
+        self._set_dimensions_to_bake(matrix)
 
     def _default_diagonal(self, dimensions):
         return [((dim[0], min(1 - dim[1], self.n_features - 1))
@@ -168,19 +178,25 @@ class BaseFeatureVisual(BaseSpikeVisual):
         * `'time'`
 
         """
-        return self._diagonal_dimensions
+        i = np.arange(self.n_rows)
+        return [y for (_, y) in self._dimensions_matrix[i, i]]
 
     @diagonal_dimensions.setter
     def diagonal_dimensions(self, value):
         assert len(value) == self.n_rows
-        self._diagonal_dimensions = value
-        self._set_dimensions_to_bake(self._dimensions)
+        i = np.arange(self.n_rows)
+        self._dimensions_matrix[i, i] = (self._dimensions_matrix[i, i][0],
+                                         value)
+        self._set_dimensions_to_bake(self._dimensions_matrix)
 
     def _set_dimensions_to_bake(self, value):
+        assert isinstance(value, np.ndarray)
+        assert value.dtype == object
         self.n_rows = len(value)
-        for dim in value:
-            self._check_dimension(dim)
-        self._dimensions = value
+        for (dim_x, dim_y) in value.flatten():
+            self._check_dimension(dim_x)
+            self._check_dimension(dim_y)
+        self._dimensions_matrix = value
         self.set_to_bake('spikes',)
 
     @property
@@ -262,6 +278,7 @@ class FeatureVisual(BaseFeatureVisual):
         positions = []
         masks = []
         boxes = []
+        dimensions = self.dimensions
 
         for i in range(self.n_rows):
             for j in range(self.n_rows):
@@ -270,7 +287,7 @@ class FeatureVisual(BaseFeatureVisual):
                 positions.append(pos)
 
                 # TODO: how to choose the mask?
-                dim_i = self._dimensions[i]
+                dim_i = dimensions[i]
                 mask = self._get_mask_dim(dim_i)
                 masks.append(mask.astype(np.float32))
 
