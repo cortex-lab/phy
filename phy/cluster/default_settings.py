@@ -82,6 +82,14 @@ cluster_manual_config = [
     ('traces', {'position': 'right'}),
 ]
 
+
+def on_open(session):
+    # @session.register_statistic
+    # def n_spikes_2(cluster):
+    #     return session.store.n_spikes(cluster) ** 2
+    pass
+
+
 # Whether to ask the user if they want to save when the GUI is closed.
 prompt_save_on_exit = True
 

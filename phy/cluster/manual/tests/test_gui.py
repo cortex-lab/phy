@@ -155,45 +155,6 @@ def test_gui_wizard():
 
 
 @wrap_qt
-def test_gui_statistics():
-    """Test registration of new statistic."""
-
-    gui = _start_manual_clustering()
-    gui.show()
-    yield
-
-    @gui.register_statistic
-    def n_spikes_2(cluster):
-        return gui.clustering.cluster_counts.get(cluster, 0) ** 2
-
-    store = gui.store
-    stats = store.items['statistics']
-
-    def _check():
-        for clu in gui.cluster_ids:
-            assert (store.n_spikes_2(clu) ==
-                    store.features(clu).shape[0] ** 2)
-
-    assert 'n_spikes_2' in stats.fields
-    _check()
-
-    # Merge the clusters and check that the statistics has been
-    # recomputed for the new cluster.
-    clusters = gui.cluster_ids
-    gui.merge(clusters)
-    _check()
-    assert gui.cluster_ids == [max(clusters) + 1]
-
-    gui.undo()
-    _check()
-
-    gui.merge(gui.cluster_ids[::2])
-    _check()
-
-    gui.close()
-
-
-@wrap_qt
 @mark.long
 def test_gui_history():
 

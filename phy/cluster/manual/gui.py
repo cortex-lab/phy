@@ -370,46 +370,6 @@ class ClusterManualGUI(BaseGUI):
         """Number of clusters in the current clustering."""
         return self.clustering.n_clusters
 
-    def register_statistic(self, func=None, shape=(-1,)):
-        """Decorator registering a custom cluster statistic.
-
-        Parameters
-        ----------
-
-        func : function
-            A function that takes a cluster index as argument, and returns
-            some statistics (generally a NumPy array).
-
-        Notes
-        -----
-
-        This function will be called on every cluster when a dataset is opened.
-        It is also automatically called on new clusters when clusters change.
-        You can access the data from the model and from the cluster store.
-
-        """
-        if func is not None:
-            return self.register_statistic()(func)
-
-        def decorator(func):
-
-            name = func.__name__
-
-            def _wrapper(cluster):
-                out = func(cluster)
-                self.store.memory_store.store(cluster, **{name: out})
-
-            # Add the statistics.
-            stats = self.store.items['statistics']
-            stats.add(name, _wrapper, shape)
-            # Register it in the global cluster store.
-            self.store.register_field(name, 'statistics')
-            # Compute it on all existing clusters.
-            stats.store_all(name=name, mode='force')
-            info("Registered statistic `{}`.".format(name))
-
-        return decorator
-
     # Selection
     # ---------------------------------------------------------------------
 

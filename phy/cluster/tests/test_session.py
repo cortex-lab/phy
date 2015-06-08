@@ -46,6 +46,7 @@ def _start_manual_clustering(kwik_path=None,
     session.settings['waveforms_scale_factor'] = 1.
     session.settings['features_scale_factor'] = 1.
     session.settings['traces_scale_factor'] = 1.
+    session.settings['prompt_save_on_exit'] = False
     if chunk_size is not None:
         session.settings['features_masks_chunk_size'] = chunk_size
     return session
@@ -279,3 +280,44 @@ def test_session_kwik(session):
         assert n_unmasked_channels <= nc
         assert cs.mean_probe_position(cluster).shape == (2,)
         assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
+
+
+@wrap_qt
+def test_session_statistics(session):
+    """Test registration of new statistic."""
+
+    gui = session.show_gui()
+    yield
+
+    @session.register_statistic
+    def n_spikes_2(cluster):
+        return gui.clustering.cluster_counts.get(cluster, 0) ** 2
+
+    store = gui.store
+    stats = store.items['statistics']
+
+    def _check():
+        for clu in gui.cluster_ids:
+            assert (store.n_spikes_2(clu) ==
+                    store.features(clu).shape[0] ** 2)
+
+    assert 'n_spikes_2' in stats.fields
+    _check()
+
+    # Merge the clusters and check that the statistics has been
+    # recomputed for the new cluster.
+    clusters = gui.cluster_ids
+    gui.merge(clusters)
+    _check()
+    assert gui.cluster_ids == [max(clusters) + 1]
+    yield
+
+    gui.undo()
+    _check()
+    yield
+
+    gui.merge(gui.cluster_ids[::2])
+    _check()
+    yield
+
+    gui.close()

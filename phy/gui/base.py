@@ -551,6 +551,12 @@ class BaseSession(EventEmitter):
     * `model.path`
     * `model.close()`
 
+    Events
+    ------
+
+    open
+    close
+
     """
     def __init__(self,
                  model=None,
@@ -576,6 +582,7 @@ class BaseSession(EventEmitter):
             gui_classes = self.settings['gui_classes']
         self._gui_creator = WidgetCreator(widget_classes=gui_classes)
 
+        self._pre_open()
         self.connect(self.on_open)
         if model or path:
             self.open(path, model=model)
@@ -592,6 +599,9 @@ class BaseSession(EventEmitter):
 
     # Methods to override
     # -------------------------------------------------------------------------
+
+    def _pre_open(self):
+        pass
 
     def _create_model(self, path):
         """Create a model from a path.

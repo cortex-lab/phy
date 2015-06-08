@@ -236,7 +236,7 @@ def wrap_qt(func):
                 def callback():
                     try:
                         next(gen)
-                    except StopIteration:
+                    except (StopIteration, ValueError):
                         pass
                     except Exception as e:
                         _APP.exit()
