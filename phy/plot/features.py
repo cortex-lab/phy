@@ -146,6 +146,9 @@ class BaseFeatureVisual(BaseSpikeVisual):
                     matrix[i, j] = (dimensions[i], diagonal[i])
         return matrix
 
+    def _dimensions_from_matrix(self, matrix):
+        return [x for (x, _) in matrix[0, :]]
+
     @property
     def dimensions(self):
         """Displayed dimensions.
@@ -156,7 +159,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
         * `'time'`
 
         """
-        return [x for (x, _) in self._dimensions_matrix[0, :]]
+        return self._dimensions_from_matrix(self._dimensions_matrix)
 
     @dimensions.setter
     def dimensions(self, value):
@@ -206,10 +209,13 @@ class BaseFeatureVisual(BaseSpikeVisual):
         self._set_dimensions_to_bake(self._dimensions_matrix)
 
     def _set_dimensions_to_bake(self, value):
-        assert isinstance(value, np.ndarray)
+        if not isinstance(value, np.ndarray):
+            value = np.array(value, dtype=object)
+        assert value.ndim == 2
+        assert value.shape[0] == value.shape[1]
         assert value.dtype == object
         self.n_rows = len(value)
-        for (dim_x, dim_y) in value.flatten():
+        for (dim_x, dim_y) in value.flat:
             self._check_dimension(dim_x)
             self._check_dimension(dim_y)
         self._dimensions_matrix = value
@@ -418,6 +424,19 @@ class FeatureView(BaseSpikeCanvas):
         self.update_dimensions(value)
 
     @property
+    def dimensions_matrix(self):
+        """Dimensions matrix."""
+        return self.background.dimensions_matrix
+
+    @dimensions_matrix.setter
+    def dimensions_matrix(self, value):
+        # WARNING: dimensions_matrix should be changed here, in the Canvas,
+        # and not in the visual. This is to make sure that the boxes are
+        # updated as well.
+        self.visual.dimensions_matrix = value
+        self.update_dimensions_matrix(value)
+
+    @property
     def diagonal_dimensions(self):
         """Dimensions."""
         return self.background.diagonal_dimensions
@@ -431,15 +450,27 @@ class FeatureView(BaseSpikeCanvas):
         self.background.diagonal_dimensions = value
         self.update()
 
-    def update_dimensions(self, dimensions):
-        n_rows = len(dimensions)
-        if self.background.features is not None:
-            self.background.dimensions = dimensions
+    def _update(self, n_rows):
         self.boxes.n_rows = n_rows
         self.lasso.n_rows = n_rows
         self.axes.n_rows = n_rows
         self.axes.positions = (0, 0)
         self._pz.n_rows = n_rows
+
+    def update_dimensions(self, dimensions):
+        n_rows = len(dimensions)
+        if self.background.features is not None:
+            self.background.dimensions = dimensions
+        self._update(n_rows)
+        self._set_pan_constraints(dimensions)
+        self.update()
+
+    def update_dimensions_matrix(self, matrix):
+        dimensions = self.background._dimensions_from_matrix(matrix)
+        n_rows = len(dimensions)
+        if self.background.features is not None:
+            self.background.dimensions_matrix = matrix
+        self._update(n_rows)
         self._set_pan_constraints(dimensions)
         self.update()
 
@@ -493,7 +524,10 @@ class FeatureView(BaseSpikeCanvas):
 
     def on_mouse_double_click(self, e):
         box = self._pz._get_box(e.pos)
-        self.emit('enlarge', box=box)
+        self.emit('enlarge',
+                  box=box,
+                  dimensions=self.dimensions_matrix[box],
+                  )
 
     def on_key_press(self, event):
         """Handle key press events."""

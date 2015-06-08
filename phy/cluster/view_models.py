@@ -681,6 +681,15 @@ class BaseFeatureViewModel(VispyViewModel):
         self._view.dimensions = value
 
     @property
+    def dimensions_matrix(self):
+        """The matrix of displayed dimensions."""
+        return self._view.dimensions_matrix
+
+    @dimensions_matrix.setter
+    def dimensions_matrix(self, value):
+        self._view.dimensions_matrix = value
+
+    @property
     def diagonal_dimensions(self):
         """The list of dimensions on the diagonal (y axis)."""
         return self._view.diagonal_dimensions

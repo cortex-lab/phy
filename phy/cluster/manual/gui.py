@@ -177,8 +177,10 @@ class ClusterManualGUI(BaseGUI):
 
             @features.connect
             def on_enlarge(e):
-                # TODO
-                pass
+                matrix = np.empty((1, 1), dtype=object)
+                matrix[0, 0] = e.dimensions
+                enlarged_features.dimensions_matrix = matrix
+                enlarged_features.update()
 
     def _view_model_kwargs(self, name):
         kwargs = {'model': self.model,
