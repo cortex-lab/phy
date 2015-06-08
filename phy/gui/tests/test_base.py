@@ -8,7 +8,7 @@
 
 import os.path as op
 
-from pytest import raises
+from pytest import raises, mark
 
 from ..base import (BaseViewModel, HTMLViewModel, WidgetCreator,
                     BaseGUI, BaseSession,
@@ -21,6 +21,10 @@ from ...utils.event import EventEmitter
 from ...utils.logging import set_level
 from ...utils.tempdir import TemporaryDirectory
 from ...io.base_model import BaseModel
+
+
+# Skip these tests in "make test-quick".
+pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------

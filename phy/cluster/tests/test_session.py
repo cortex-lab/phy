@@ -10,7 +10,7 @@ import os.path as op
 
 import numpy as np
 from numpy.testing import assert_allclose as ac
-from pytest import raises, fixture
+from pytest import raises, fixture, mark
 
 from ..session import Session
 from ...utils import _spikes_in_clusters
@@ -19,6 +19,10 @@ from ...utils.tempdir import TemporaryDirectory
 from ...utils.logging import set_level
 from ...io.mock import MockModel
 from ...io.kwik.mock import create_mock_kwik
+
+
+# Skip these tests in "make test-quick".
+pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------

@@ -8,10 +8,10 @@
 
 import os.path as op
 
+from pytest import mark
 import numpy as np
 from numpy.testing import assert_allclose as ac
 from numpy.testing import assert_array_equal as ae
-from pytest import mark
 
 from ..gui import ClusterManualGUI
 from ....utils.settings import Settings
@@ -19,6 +19,10 @@ from ....utils import _spikes_in_clusters, set_level
 from ....gui.qt import wrap_qt
 from ....io.mock import MockModel
 from ....io.kwik.store_items import create_store
+
+
+# Skip these tests in "make test-quick".
+pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------
