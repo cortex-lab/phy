@@ -147,7 +147,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
         return matrix
 
     def _dimensions_from_matrix(self, matrix):
-        return [x for (x, _) in matrix[0, :]]
+        return [x for (x, _) in matrix[:, 0]]
 
     @property
     def dimensions(self):

@@ -284,9 +284,10 @@ class WidgetCreator(EventEmitter):
 def _title(item):
     """Default view model title."""
     if hasattr(item, 'name'):
-        return item.name.capitalize()
+        name = item.name.capitalize()
     else:
-        return item.__class__.__name__.capitalize()
+        name = item.__class__.__name__.capitalize()
+    return name
 
 
 def _assert_counters_equal(c_0, c_1):
