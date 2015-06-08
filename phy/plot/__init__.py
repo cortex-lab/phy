@@ -8,6 +8,6 @@
 from ._panzoom import PanZoom, PanZoomGrid
 from ._vispy_utils import BaseSpikeCanvas, BaseSpikeVisual
 from .waveforms import WaveformView, WaveformVisual
-from .features import FeatureView, FeatureVisual
+from .features import FeatureView, FeatureVisual, plot_features
 from .traces import TraceView, TraceView
 from .ccg import CorrelogramView, CorrelogramView, plot_correlograms
