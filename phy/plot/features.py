@@ -404,7 +404,8 @@ class FeatureView(BaseSpikeCanvas):
         self.boxes.n_rows = n_rows
         self.lasso.n_rows = n_rows
         self.axes.n_rows = n_rows
-        self.axes.positions = (0, 0)
+        self.axes.xs = [0]
+        self.axes.ys = [0]
         self._pz.n_rows = n_rows
         self._set_pan_constraints(matrix)
         self.update()

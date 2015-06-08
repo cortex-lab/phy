@@ -15,7 +15,7 @@ from vispy import app, gloo, config
 from vispy.util.event import Event
 from vispy.visuals import Visual
 
-from ..utils._types import _as_array
+from ..utils._types import _as_array, _as_list
 from ..utils.array import _unique, _in_polygon
 from ..utils.logging import debug
 from ._panzoom import PanZoom
@@ -342,38 +342,51 @@ class AxisVisual(BoxVisual):
 
     def __init__(self, **kwargs):
         super(AxisVisual, self).__init__(**kwargs)
-        self._positions = (0., 0.)
+        self._xs = []
+        self._ys = []
 
     def _bake_n_rows(self):
         self.program['n_rows'] = self._n_rows
 
     @property
-    def positions(self):
-        """A pair of (x, y) values for the two axes."""
-        return self._positions
+    def xs(self):
+        """A list of x coordinates."""
+        return self._xs
 
-    @positions.setter
-    def positions(self, value):
-        assert len(value) == 2
-        self._positions = value
+    @xs.setter
+    def xs(self, value):
+        self._xs = _as_list(value)
+        self.set_to_bake('positions')
+
+    @property
+    def ys(self):
+        """A list of y coordinates."""
+        return self._ys
+
+    @ys.setter
+    def ys(self, value):
+        self._ys = _as_list(value)
         self.set_to_bake('positions')
 
     def _bake_positions(self):
         if not self._n_rows:
             return
-        position = np.empty((4 * self.n_boxes, 4), dtype=np.float32)
-        x, y = self._positions
+        nx = len(self._xs)
+        ny = len(self._ys)
+        n = nx + ny
+        position = np.empty((2 * n * self.n_boxes, 4), dtype=np.float32)
         c = 1.
-        arr = np.array([[x, -c],
-                        [x, +c],
-                        [-c, y],
-                        [+c, y]], dtype=np.float32)
+        arr = np.hstack([np.hstack([[x, -c, x, +c] for x in self._xs]),
+                         np.hstack([[-c, y, +c, y] for y in self._ys])])
+        arr = arr.astype(np.float32)
+        arr = arr.reshape((-1, 2))
         # Positions.
         position[:, :2] = np.tile(arr, (self.n_boxes, 1))
         # Index.
-        position[:, 2] = np.repeat(np.arange(self.n_boxes), 4)
+        position[:, 2] = np.repeat(np.arange(self.n_boxes), 2 * n)
         # Axes.
-        position[:, 3] = np.tile([0, 0, 1, 1], self.n_boxes)
+        position[:, 3] = np.tile(([0] * (2 * nx)) + ([1] * (2 * ny)),
+                                 self.n_boxes)
         self.program['a_position'] = position
 
 
