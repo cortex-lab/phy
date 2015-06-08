@@ -8,7 +8,6 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-
 from vispy import gloo
 
 from ._mpl_utils import _bottom_left_frame
@@ -18,6 +17,7 @@ from ._vispy_utils import (BaseSpikeVisual,
                            _tesselate_histogram)
 from ._panzoom import PanZoomGrid
 from ..utils._types import _as_array
+from ..utils._color import _selected_clusters_colors
 
 
 #------------------------------------------------------------------------------
@@ -152,7 +152,51 @@ class CorrelogramView(BaseSpikeCanvas):
 # CCG plotting
 #------------------------------------------------------------------------------
 
-def plot_ccg(ccg, baseline=None, bin=1., color=None, ax=None):
+def _wrap(f):
+    """Decorator for a function returning a VisPy canvas.
+
+    Add `show=True` parameter.
+
+    """
+    def wrapped(*args, **kwargs):
+        show = kwargs.pop('show', True)
+        canvas = f(*args, **kwargs)
+        if show:
+            canvas.show()
+        return canvas
+    return wrapped
+
+
+@_wrap
+def plot_correlograms(correlograms, colors=None):
+    """Plot an array of correlograms.
+
+    Parameters
+    ----------
+
+    correlograms : array
+        A `(n_clusters, n_clusters, n_bins)` array.
+    colors : array-like (optional)
+        A list of colors as RGB tuples.
+
+    """
+    correlograms = np.asarray(correlograms)
+    n_clusters = len(correlograms)
+    assert correlograms.ndim == 3
+    assert correlograms.shape[:2] == (n_clusters, n_clusters)
+
+    if colors is None:
+        colors = _selected_clusters_colors(n_clusters)
+
+    c = CorrelogramView()
+    c.cluster_ids = np.arange(n_clusters)
+    c.visual.correlograms = correlograms
+    c.visual.cluster_colors = colors
+
+    return c
+
+
+def _plot_ccg_mpl(ccg, baseline=None, bin=1., color=None, ax=None):
     """Plot a CCG with matplotlib and return an Axes instance."""
     import matplotlib.pyplot as plt
     if ax is None:
