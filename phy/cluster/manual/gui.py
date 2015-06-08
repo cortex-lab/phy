@@ -340,7 +340,7 @@ class ClusterManualGUI(BaseGUI):
     def close(self):
         """Close the GUI."""
         if (self.settings.get('prompt_save_on_exit', False) and
-            self._is_dirty):
+                self._is_dirty):
             res = _prompt(self.main_window,
                           "Do you want to save your changes?",
                           ('save', 'cancel', 'close'))

@@ -84,9 +84,12 @@ cluster_manual_config = [
 
 
 def on_open(session):
-    # @session.register_statistic
-    # def n_spikes_2(cluster):
-    #     return session.store.n_spikes(cluster) ** 2
+    """You can update the session when a model is opened.
+
+    For example, you can register custom statistics with
+    `session.register_statistic`.
+
+    """
     pass
 
 
