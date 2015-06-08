@@ -15,6 +15,7 @@ from ...gui.base import BaseGUI
 from ...gui.qt import _prompt
 from ..view_models import (WaveformViewModel,
                            MultiFeatureViewModel,
+                           SingleFeatureViewModel,
                            CorrelogramViewModel,
                            TraceViewModel,
                            StatsViewModel,
@@ -89,6 +90,7 @@ class ClusterManualGUI(BaseGUI):
     _vm_classes = {
         'waveforms': WaveformViewModel,
         'features': MultiFeatureViewModel,
+        'enlarged_features': SingleFeatureViewModel,
         'correlograms': CorrelogramViewModel,
         'traces': TraceViewModel,
         'wizard': WizardViewModel,
@@ -168,6 +170,15 @@ class ClusterManualGUI(BaseGUI):
                         features.dimensions[dimension] = (channel, feature)
                         # Force view update.
                         features.dimensions = features.dimensions
+
+        # Enlarge feature subplot.
+        @self._dock.connect_views('features', 'enlarged_features')
+        def enlarge(features, enlarged_features):
+
+            @features.connect
+            def on_enlarge(e):
+                # TODO
+                pass
 
     def _view_model_kwargs(self, name):
         kwargs = {'model': self.model,

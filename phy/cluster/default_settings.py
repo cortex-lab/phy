@@ -77,6 +77,7 @@ cluster_manual_config = [
     ('wizard', {'position': 'right'}),
     ('stats', {'position': 'right'}),
     ('features', {'position': 'left'}),
+    ('enlarged_features', {'position': 'left'}),
     ('correlograms', {'position': 'left'}),
     ('waveforms', {'position': 'right'}),
     ('traces', {'position': 'right'}),
