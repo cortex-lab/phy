@@ -211,6 +211,9 @@ def plot_correlograms(correlograms, colors=None, lines=None):
     c.visual.correlograms = correlograms
     c.visual.cluster_colors = colors
 
+    if lines is not None:
+        c.lines = lines
+
     return c
 
 

@@ -33,7 +33,7 @@ def test_plot_ccg():
 def test_plot_correlograms():
     n_bins = 51
     ccg = np.random.uniform(size=(3, 3, n_bins))
-    c = plot_correlograms(ccg, show=False)
+    c = plot_correlograms(ccg, lines=[-10, 0, 20], show=False)
     show_test(c)
 
 
