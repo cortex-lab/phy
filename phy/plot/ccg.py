@@ -14,7 +14,8 @@ from ._mpl_utils import _bottom_left_frame
 from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
                            BoxVisual,
-                           _tesselate_histogram)
+                           _tesselate_histogram,
+                           _wrap_vispy)
 from ._panzoom import PanZoomGrid
 from ..utils._types import _as_array
 from ..utils._color import _selected_clusters_colors
@@ -152,22 +153,7 @@ class CorrelogramView(BaseSpikeCanvas):
 # CCG plotting
 #------------------------------------------------------------------------------
 
-def _wrap(f):
-    """Decorator for a function returning a VisPy canvas.
-
-    Add `show=True` parameter.
-
-    """
-    def wrapped(*args, **kwargs):
-        show = kwargs.pop('show', True)
-        canvas = f(*args, **kwargs)
-        if show:
-            canvas.show()
-        return canvas
-    return wrapped
-
-
-@_wrap
+@_wrap_vispy
 def plot_correlograms(correlograms, colors=None):
     """Plot an array of correlograms.
 
