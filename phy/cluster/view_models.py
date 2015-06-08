@@ -676,7 +676,7 @@ class BaseFeatureViewModel(VispyViewModel):
             return (0, 0)
         else:
             channel, fet = dim
-            return (channel, (fet + 1) % self.n_features)
+            return (channel, (fet + 1) % self.view.background.n_features)
 
     def _matrix_from_dimensions(self, dimensions):
         n = len(dimensions)
@@ -690,15 +690,6 @@ class BaseFeatureViewModel(VispyViewModel):
         return matrix
 
     @property
-    def dimensions(self):
-        """The list of displayed dimensions."""
-        return self._view.dimensions
-
-    @dimensions.setter
-    def dimensions(self, value):
-        self._view.dimensions = value
-
-    @property
     def dimensions_matrix(self):
         """The matrix of displayed dimensions."""
         return self._view.dimensions_matrix
@@ -707,23 +698,13 @@ class BaseFeatureViewModel(VispyViewModel):
     def dimensions_matrix(self, value):
         self._view.dimensions_matrix = value
 
-    @property
-    def diagonal_dimensions(self):
-        """The list of dimensions on the diagonal (y axis)."""
-        return self._view.diagonal_dimensions
+    def _set_dimensions_after_open(self):
+        matrix = self._matrix_from_dimensions(['time'])
+        self.view.update_dimensions_matrix(matrix)
 
-    @diagonal_dimensions.setter
-    def diagonal_dimensions(self, value):
-        self._view.diagonal_dimensions = value
-
-    @property
-    def default_dimensions(self):
-        """Return the chosen dimensions of the view.
-
-        Must be overriden.
-
-        """
-        return []
+    def _set_dimensions_after_select(self):
+        # Update the dimensions.
+        self.view.dimensions_matrix = self.view.dimensions_matrix
 
     def on_open(self):
         # Get background features.
@@ -741,7 +722,8 @@ class BaseFeatureViewModel(VispyViewModel):
             # Time dimension.
             spike_samples = self.model.spike_samples[::k]
             self.view.background.spike_samples = spike_samples
-        self.view.update_dimensions(self.default_dimensions)
+        # Default dimensions.
+        self._set_dimensions_after_open()
 
     def on_select(self, clusters):
         super(BaseFeatureViewModel, self).on_select(clusters)
@@ -767,9 +749,8 @@ class BaseFeatureViewModel(VispyViewModel):
         # Cluster display order.
         self.view.visual.cluster_order = clusters
 
-        # Choose best projection.
-        self.view.dimensions = self.default_dimensions
-        self.view.update()
+        # Default dimensions.
+        self._set_dimensions_after_select()
 
     def exported_params(self, save_size_pos=True):
         params = super(BaseFeatureViewModel,
@@ -827,6 +808,14 @@ class MultiFeatureViewModel(BaseFeatureViewModel):
         channels = dimension_selector(self.cluster_ids)
         return ['time'] + [(ch, 0) for ch in channels]
 
+    def _set_dimensions_after_open(self):
+        matrix = self._matrix_from_dimensions(self.default_dimensions)
+        self.view.update_dimensions_matrix(matrix)
+
+    def _set_dimensions_after_select(self):
+        # Update the dimensions.
+        self.view.dimensions_matrix = self.view.dimensions_matrix
+
     keyboard_shortcuts = {
         'enlarge_subplot': 'double left click',
     }
@@ -835,11 +824,5 @@ class MultiFeatureViewModel(BaseFeatureViewModel):
 class SingleFeatureViewModel(BaseFeatureViewModel):
     _view_name = 'enlarged_features'
 
-    @property
-    def default_dimensions(self):
-        return [(0, 0)]
-
-    def set_dimensions(self, dim_0, dim_1):
-        self.dimensions = [dim_0]
-        self.diagonal_dimensions = [dim_0]
-        self.view.update()
+    def _set_dimensions_after_select(self):
+        pass
