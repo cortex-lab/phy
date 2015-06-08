@@ -412,7 +412,7 @@ class FeatureView(BaseSpikeCanvas):
 
     def on_mouse_press(self, e):
         alt = e.modifiers == ('Alt',)
-        shift = e.modifiers == ('Shift',)
+        control = e.modifiers == ('Control',)
         if alt:
             if e.button == 1:
                 n_rows = self.lasso.n_rows
@@ -431,7 +431,7 @@ class FeatureView(BaseSpikeCanvas):
             elif e.button == 2:
                 self.lasso.clear()
             self.update()
-        elif shift:
+        elif control:
             box = self._pz._get_box(e.pos)
             self.emit('enlarge',
                       box=box,

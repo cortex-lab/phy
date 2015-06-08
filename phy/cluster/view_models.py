@@ -829,15 +829,14 @@ class SingleFeatureViewModel(BaseFeatureViewModel):
     _view_name = 'enlarged_features'
 
     def _set_dimensions_after_select(self):
-        # Update the dimensions.
         self.view.dimensions_matrix = self.view.dimensions_matrix
         self.view.update()
 
     def set_dimension(self, dim):
         matrix = self._matrix_from_dimensions([dim])
-        self.view.update_dimensions_matrix(matrix)
+        self.view.dimensions_matrix = matrix
 
     def set_dimensions(self, dim_x, dim_y):
         matrix = self.view.dimensions_matrix
         matrix[0, 0] = (dim_x, dim_y)
-        self.view.update_dimensions_matrix(matrix)
+        self.view.dimensions_matrix = matrix
