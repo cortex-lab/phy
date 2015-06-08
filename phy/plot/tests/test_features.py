@@ -10,7 +10,7 @@ from pytest import mark
 
 import numpy as np
 
-from ..features import FeatureView
+from ..features import FeatureView, plot_features
 from ...utils._color import _random_color
 from ...io.mock import (artificial_features,
                         artificial_masks,
@@ -61,3 +61,30 @@ def test_features_empty():
 
 def test_features_full():
     _test_features(n_spikes=100, n_clusters=3)
+
+
+def test_plot_features():
+    n_spikes = 1000
+    n_channels = 32
+    n_features = 3
+    n_clusters = 2
+
+    features = artificial_features(n_spikes, n_channels, n_features)
+    masks = artificial_masks(n_spikes, n_channels)
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    spike_samples = artificial_spike_samples(n_spikes).astype(np.float32)
+
+    c = plot_features(features, show=False)
+    show_test(c)
+
+    c = plot_features(features, masks=masks, show=False)
+    show_test(c)
+
+    c = plot_features(features, spike_clusters=spike_clusters, show=False)
+    show_test(c)
+
+    c = plot_features(features,
+                      spike_samples=spike_samples,
+                      dimensions=['time', (5, 0)],
+                      show=False)
+    show_test(c)

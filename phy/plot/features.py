@@ -384,7 +384,7 @@ class FeatureView(BaseSpikeCanvas):
         * `'time'`
 
         """
-        return self.background.dimensions_matrix
+        return self.visual.dimensions_matrix
 
     @dimensions_matrix.setter
     def dimensions_matrix(self, value):
@@ -484,13 +484,16 @@ def plot_features(features,
                   colors=None,
                   ):
     assert isinstance(features, np.ndarray)
-    assert features.ndim == 2
-    n_spikes, n_features = features.shape
+    assert features.ndim == 3
+    n_spikes, n_channels, n_features = features.shape
 
     if spike_clusters is None:
         spike_clusters = np.zeros(n_spikes, dtype=np.int32)
     cluster_ids = _unique(spike_clusters)
     n_clusters = len(cluster_ids)
+
+    if masks is None:
+        masks = np.ones(features.shape[:2], dtype=np.float32)
 
     if dimensions is None:
         dimensions = [(0, 0)]
@@ -499,21 +502,26 @@ def plot_features(features,
         colors = _selected_clusters_colors(n_clusters)
 
     c = FeatureView()
-    c.visual.features = features
+    c.visual.features = features.astype(np.float32)
 
     if background_features is not None:
-        c.background.features = background_features
+        assert features.shape[1:] == background_features.shape[1:]
+        c.background.features = background_features.astype(np.float32)
         if spike_samples is not None:
+            assert spike_samples.shape == (n_spikes,)
             c.background.spike_samples = spike_samples
 
     if masks is not None:
         c.visual.masks = masks
 
-    matrix = _matrix_from_dimensions(dimensions)
+    matrix = _matrix_from_dimensions(dimensions, n_features=n_features)
     c.dimensions_matrix = matrix
 
     c.visual.spike_clusters = spike_clusters
+    assert spike_clusters.shape == (n_spikes,)
     if spike_samples is not None:
         c.visual.spike_samples = spike_samples
 
     c.visual.cluster_colors = colors
+
+    return c
