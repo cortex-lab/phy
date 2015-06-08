@@ -829,7 +829,7 @@ class PanZoomGrid(PanZoom):
             self._canvas.update()
 
         # Global zoom.
-        if key in self._pm:
+        if key in self._pm and not event.modifiers:
             self._zoom_keyboard(key)
             self._global_pan_zoom(zoom=self._zoom)
             self._canvas.update()
