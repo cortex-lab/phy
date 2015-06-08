@@ -384,7 +384,10 @@ class FeatureView(BaseSpikeCanvas):
         * `'time'`
 
         """
-        return self.visual.dimensions_matrix
+        if len(self.background.dimensions_matrix):
+            return self.background.dimensions_matrix
+        else:
+            return self.visual.dimensions_matrix
 
     @dimensions_matrix.setter
     def dimensions_matrix(self, value):
