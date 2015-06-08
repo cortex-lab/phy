@@ -344,6 +344,7 @@ class AxisVisual(BoxVisual):
         super(AxisVisual, self).__init__(**kwargs)
         self._xs = []
         self._ys = []
+        self.program['u_color'] = (.2, .2, .2, 1.)
 
     def _bake_n_rows(self):
         self.program['n_rows'] = self._n_rows
@@ -367,6 +368,14 @@ class AxisVisual(BoxVisual):
     def ys(self, value):
         self._ys = _as_list(value)
         self.set_to_bake('positions')
+
+    @property
+    def color(self):
+        return tuple(self.program['u_color'])
+
+    @color.setter
+    def color(self, value):
+        self.program['u_color'] = tuple(value)
 
     def _bake_positions(self):
         if not self._n_rows:

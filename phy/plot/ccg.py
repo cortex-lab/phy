@@ -162,6 +162,15 @@ class CorrelogramView(BaseSpikeCanvas):
         assert self.visual.n_samples > 0
         c = 2. / (float(self.visual.n_samples))
         self.axes.xs = np.array(self._lines) * c
+        self.axes.color = (.5, .5, .5, 1.)
+
+    @property
+    def lines_color(self):
+        return self.axes.color
+
+    @lines_color.setter
+    def lines_color(self, value):
+        self.axes.color = value
 
     def on_draw(self, event):
         """Draw the correlograms visual."""
@@ -177,7 +186,7 @@ class CorrelogramView(BaseSpikeCanvas):
 #------------------------------------------------------------------------------
 
 @_wrap_vispy
-def plot_correlograms(correlograms, colors=None):
+def plot_correlograms(correlograms, colors=None, lines=None):
     """Plot an array of correlograms.
 
     Parameters
