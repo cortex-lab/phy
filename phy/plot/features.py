@@ -134,38 +134,6 @@ class BaseFeatureVisual(BaseSpikeVisual):
         # dim_i (y) over dim_j (x) on box (i, j).
         return np.c_[fet_j, fet_i]
 
-    def _matrix_from_dimensions(self, dimensions):
-        n = len(dimensions)
-        diagonal = self._default_diagonal(dimensions)
-        matrix = np.empty((n, n), dtype=object)
-        for i in range(n):
-            for j in range(n):
-                if i != j:
-                    matrix[i, j] = (dimensions[i], dimensions[j])
-                else:
-                    matrix[i, j] = (dimensions[i], diagonal[i])
-        return matrix
-
-    def _dimensions_from_matrix(self, matrix):
-        return [x for (x, _) in matrix[:, 0]]
-
-    @property
-    def dimensions(self):
-        """Displayed dimensions.
-
-        This is a list of items which can be:
-
-        * tuple `(channel_id, feature_idx)`
-        * `'time'`
-
-        """
-        return self._dimensions_from_matrix(self._dimensions_matrix)
-
-    @dimensions.setter
-    def dimensions(self, value):
-        matrix = self._matrix_from_dimensions(value)
-        self.dimensions_matrix = matrix
-
     @property
     def dimensions_matrix(self):
         """Displayed dimensions matrix.
@@ -181,32 +149,6 @@ class BaseFeatureVisual(BaseSpikeVisual):
     @dimensions_matrix.setter
     def dimensions_matrix(self, value):
         self._set_dimensions_to_bake(value)
-
-    def _default_diagonal(self, dimensions):
-        return [((dim[0], min(1 - dim[1], self.n_features - 1))
-                 if dim != 'time' else 'time')
-                for dim in dimensions]
-
-    @property
-    def diagonal_dimensions(self):
-        """Displayed dimensions on the diagonal y axis.
-
-        This is a list of items which can be:
-
-        * tuple `(channel_id, feature_idx)`
-        * `'time'`
-
-        """
-        i = np.arange(self.n_rows)
-        return [y for (_, y) in self._dimensions_matrix[i, i]]
-
-    @diagonal_dimensions.setter
-    def diagonal_dimensions(self, value):
-        assert len(value) == self.n_rows
-        i = np.arange(self.n_rows)
-        self._dimensions_matrix[i, i] = (self._dimensions_matrix[i, i][0],
-                                         value)
-        self._set_dimensions_to_bake(self._dimensions_matrix)
 
     def _set_dimensions_to_bake(self, value):
         if not isinstance(value, np.ndarray):
@@ -300,7 +242,6 @@ class FeatureVisual(BaseFeatureVisual):
         positions = []
         masks = []
         boxes = []
-        dimensions = self.dimensions
 
         for i in range(self.n_rows):
             for j in range(self.n_rows):
@@ -308,9 +249,9 @@ class FeatureVisual(BaseFeatureVisual):
                 pos = self.project(self._features, (i, j))
                 positions.append(pos)
 
-                # TODO: how to choose the mask?
-                dim_i = dimensions[i]
-                mask = self._get_mask_dim(dim_i)
+                # The mask depends on the `y` coordinate.
+                dim = self._dimensions_matrix[i, j][1]
+                mask = self._get_mask_dim(dim)
                 masks.append(mask.astype(np.float32))
 
                 index = self.n_rows * i + j
@@ -374,8 +315,8 @@ class FeatureView(BaseSpikeCanvas):
         self._pz.aspect = None
         self._pz.attach(self)
 
-    def _set_pan_constraints(self, dimensions):
-        n = len(dimensions)
+    def _set_pan_constraints(self, matrix):
+        n = len(matrix)
         xmin = np.empty((n, n))
         xmax = np.empty((n, n))
         ymin = np.empty((n, n))
@@ -385,20 +326,17 @@ class FeatureView(BaseSpikeCanvas):
         for arr in (xmin, xmax, ymin, ymax):
             arr.fill(np.nan)
         _index_set = False
-        if dimensions is not None:
-            for i, dim in enumerate(dimensions):
-                if dim == 'time':
-                    ymin[i, :] = -1.
-                    xmin[:, i] = -1.
-                    ymax[i, :] = +1.
-                    xmax[:, i] = +1.
-                    xmin[i, i] = -1.
-                    xmax[i, i] = +1.
-                    # Only update one axis for time dimensions during
-                    # global zoom.
-                    gpza[i, :] = 'x'
-                    gpza[:, i] = 'y'
-                    gpza[i, i] = 'n'
+        for i in range(n):
+            for j in range(n):
+                dim_i, dim_j = matrix[i, j]
+                if dim_i == 'time':
+                    xmin[i, j] = -1.
+                    xmax[i, j] = +1.
+                    gpza[i, j] = 'x'
+                if dim_j == 'time':
+                    ymin[i, j] = -1.
+                    ymax[i, j] = +1.
+                    gpza[i, j] = 'y' if gpza[i, j] != 'x' else 'n'
                 else:
                     # Set the current index to the first non-time axis.
                     if not _index_set:
@@ -409,19 +347,6 @@ class FeatureView(BaseSpikeCanvas):
         self._pz._ymin = ymin
         self._pz._ymax = ymax
         self._pz.global_pan_zoom_axis = gpza
-
-    @property
-    def dimensions(self):
-        """Dimensions."""
-        return self.background.dimensions
-
-    @dimensions.setter
-    def dimensions(self, value):
-        # WARNING: dimensions should be changed here, in the Canvas,
-        # and not in the visual. This is to make sure that the boxes are
-        # updated as well.
-        self.visual.dimensions = value
-        self.update_dimensions(value)
 
     @property
     def dimensions_matrix(self):
@@ -436,42 +361,16 @@ class FeatureView(BaseSpikeCanvas):
         self.visual.dimensions_matrix = value
         self.update_dimensions_matrix(value)
 
-    @property
-    def diagonal_dimensions(self):
-        """Dimensions."""
-        return self.background.diagonal_dimensions
-
-    @diagonal_dimensions.setter
-    def diagonal_dimensions(self, value):
-        # WARNING: diagonal_dimensions should be changed here, in the Canvas,
-        # and not in the visual. This is to make sure that the boxes are
-        # updated as well.
-        self.visual.diagonal_dimensions = value
-        self.background.diagonal_dimensions = value
-        self.update()
-
-    def _update(self, n_rows):
+    def update_dimensions_matrix(self, matrix):
+        n_rows = len(matrix)
+        if self.background.features is not None:
+            self.background.dimensions_matrix = matrix
         self.boxes.n_rows = n_rows
         self.lasso.n_rows = n_rows
         self.axes.n_rows = n_rows
         self.axes.positions = (0, 0)
         self._pz.n_rows = n_rows
-
-    def update_dimensions(self, dimensions):
-        n_rows = len(dimensions)
-        if self.background.features is not None:
-            self.background.dimensions = dimensions
-        self._update(n_rows)
-        self._set_pan_constraints(dimensions)
-        self.update()
-
-    def update_dimensions_matrix(self, matrix):
-        dimensions = self.background._dimensions_from_matrix(matrix)
-        n_rows = len(dimensions)
-        if self.background.features is not None:
-            self.background.dimensions_matrix = matrix
-        self._update(n_rows)
-        self._set_pan_constraints(dimensions)
+        self._set_pan_constraints(matrix)
         self.update()
 
     @property

@@ -671,6 +671,24 @@ class BaseFeatureViewModel(VispyViewModel):
     def marker_size(self, value):
         self.view.marker_size = value
 
+    def _alternative_dimension(self, dim):
+        if dim == 'time':
+            return (0, 0)
+        else:
+            channel, fet = dim
+            return (channel, (fet + 1) % self.n_features)
+
+    def _matrix_from_dimensions(self, dimensions):
+        n = len(dimensions)
+        matrix = np.empty((n, n), dtype=object)
+        for i in range(n):
+            for j in range(n):
+                dim_i, dim_j = dimensions[i], dimensions[j]
+                if dim_i == dim_j:
+                    dim_j = self._alternative_dimension(dim_i)
+                matrix[i, j] = (dim_i, dim_j)
+        return matrix
+
     @property
     def dimensions(self):
         """The list of displayed dimensions."""
