@@ -701,10 +701,12 @@ class BaseFeatureViewModel(VispyViewModel):
     def _set_dimensions_after_open(self):
         matrix = self._matrix_from_dimensions(['time'])
         self.view.update_dimensions_matrix(matrix)
+        self.view.update()
 
     def _set_dimensions_after_select(self):
         # Update the dimensions.
         self.view.dimensions_matrix = self.view.dimensions_matrix
+        self.view.update()
 
     def on_open(self):
         # Get background features.
@@ -811,10 +813,12 @@ class MultiFeatureViewModel(BaseFeatureViewModel):
     def _set_dimensions_after_open(self):
         matrix = self._matrix_from_dimensions(self.default_dimensions)
         self.view.update_dimensions_matrix(matrix)
+        self.view.update()
 
     def _set_dimensions_after_select(self):
-        # Update the dimensions.
-        self.view.dimensions_matrix = self.view.dimensions_matrix
+        matrix = self._matrix_from_dimensions(self.default_dimensions)
+        self.view.dimensions_matrix = matrix
+        self.view.update()
 
     keyboard_shortcuts = {
         'enlarge_subplot': 'double left click',
@@ -825,4 +829,6 @@ class SingleFeatureViewModel(BaseFeatureViewModel):
     _view_name = 'enlarged_features'
 
     def _set_dimensions_after_select(self):
-        pass
+        # Update the dimensions.
+        self.view.dimensions_matrix = self.view.dimensions_matrix
+        self.view.update()

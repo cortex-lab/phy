@@ -125,14 +125,14 @@ class BaseFeatureVisual(BaseSpikeVisual):
 
         """
         i, j = box
-        dim_i, dim_j = self._dimensions_matrix[i, j]
+        dim_x, dim_y = self._dimensions_matrix[i, j]
 
-        fet_i = self._get_feature_dim(self._features, dim_i)
-        fet_j = self._get_feature_dim(self._features, dim_j)
+        fet_x = self._get_feature_dim(self._features, dim_x)
+        fet_y = self._get_feature_dim(self._features, dim_y)
 
         # NOTE: we switch here because we want to plot
-        # dim_i (y) over dim_j (x) on box (i, j).
-        return np.c_[fet_j, fet_i]
+        # dim_x (y) over dim_y (x) on box (i, j).
+        return np.c_[fet_x, fet_y]
 
     @property
     def dimensions_matrix(self):
@@ -328,12 +328,12 @@ class FeatureView(BaseSpikeCanvas):
         _index_set = False
         for i in range(n):
             for j in range(n):
-                dim_i, dim_j = matrix[i, j]
-                if dim_i == 'time':
+                dim_x, dim_y = matrix[i, j]
+                if dim_x == 'time':
                     xmin[i, j] = -1.
                     xmax[i, j] = +1.
                     gpza[i, j] = 'x'
-                if dim_j == 'time':
+                if dim_y == 'time':
                     ymin[i, j] = -1.
                     ymax[i, j] = +1.
                     gpza[i, j] = 'y' if gpza[i, j] != 'x' else 'n'
