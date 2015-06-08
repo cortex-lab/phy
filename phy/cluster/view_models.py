@@ -17,7 +17,7 @@ from ..utils._color import _selected_clusters_colors
 from ..utils import _as_list
 from ..stats.ccg import correlograms, _symmetrize_correlograms
 from ..plot.ccg import CorrelogramView
-from ..plot.features import FeatureView
+from ..plot.features import FeatureView, _matrix_from_dimensions
 from ..plot.waveforms import WaveformView
 from ..plot.traces import TraceView
 from ..gui.base import BaseViewModel, HTMLViewModel
@@ -685,24 +685,6 @@ class BaseFeatureViewModel(VispyViewModel):
     def marker_size(self, value):
         self.view.marker_size = value
 
-    def _alternative_dimension(self, dim):
-        if dim == 'time':
-            return (0, 0)
-        else:
-            channel, fet = dim
-            return (channel, (fet + 1) % self.view.background.n_features)
-
-    def _matrix_from_dimensions(self, dimensions):
-        n = len(dimensions)
-        matrix = np.empty((n, n), dtype=object)
-        for i in range(n):
-            for j in range(n):
-                dim_i, dim_j = dimensions[i], dimensions[j]
-                if dim_i == dim_j:
-                    dim_j = self._alternative_dimension(dim_i)
-                matrix[i, j] = (dim_i, dim_j)
-        return matrix
-
     @property
     def dimensions_matrix(self):
         """The matrix of displayed dimensions."""
@@ -711,6 +693,10 @@ class BaseFeatureViewModel(VispyViewModel):
     @dimensions_matrix.setter
     def dimensions_matrix(self, value):
         self._view.dimensions_matrix = value
+
+    def _matrix_from_dimensions(self, dimensions):
+        return _matrix_from_dimensions(dimensions,
+                                       self.view.background.n_features)
 
     def _set_dimensions_after_open(self):
         matrix = self._matrix_from_dimensions(['time'])

@@ -17,16 +17,38 @@ from ._vispy_utils import (BaseSpikeVisual,
                            AxisVisual,
                            LassoVisual,
                            _enable_depth_mask,
+                           _wrap_vispy,
                            )
 from ._panzoom import PanZoomGrid
 from ..ext.six import string_types
 from ..utils._types import _as_array, _is_integer
-from ..utils.array import _index_of
+from ..utils.array import _index_of, _unique
+from ..utils._color import _selected_clusters_colors
 
 
 #------------------------------------------------------------------------------
 # Features visual
 #------------------------------------------------------------------------------
+
+def _alternative_dimension(dim, n_features=None):
+    if dim == 'time':
+        return (0, 0)
+    else:
+        channel, fet = dim
+        return (channel, (fet + 1) % n_features)
+
+
+def _matrix_from_dimensions(dimensions, n_features=None):
+    n = len(dimensions)
+    matrix = np.empty((n, n), dtype=object)
+    for i in range(n):
+        for j in range(n):
+            dim_i, dim_j = dimensions[i], dimensions[j]
+            if dim_i == dim_j:
+                dim_j = _alternative_dimension(dim_i, n_features=n_features)
+            matrix[i, j] = (dim_i, dim_j)
+    return matrix
+
 
 class BaseFeatureVisual(BaseSpikeVisual):
     """Display a grid of multidimensional features."""
@@ -446,3 +468,52 @@ class FeatureView(BaseSpikeCanvas):
                 self.marker_size += coeff
             if event.key == '-':
                 self.marker_size -= coeff
+
+
+#------------------------------------------------------------------------------
+# Plotting functions
+#------------------------------------------------------------------------------
+
+@_wrap_vispy
+def plot_features(features,
+                  dimensions=None,
+                  masks=None,
+                  spike_clusters=None,
+                  spike_samples=None,
+                  background_features=None,
+                  colors=None,
+                  ):
+    assert isinstance(features, np.ndarray)
+    assert features.ndim == 2
+    n_spikes, n_features = features.shape
+
+    if spike_clusters is None:
+        spike_clusters = np.zeros(n_spikes, dtype=np.int32)
+    cluster_ids = _unique(spike_clusters)
+    n_clusters = len(cluster_ids)
+
+    if dimensions is None:
+        dimensions = [(0, 0)]
+
+    if colors is None:
+        colors = _selected_clusters_colors(n_clusters)
+
+    c = FeatureView()
+    c.visual.features = features
+
+    if background_features is not None:
+        c.background.features = background_features
+        if spike_samples is not None:
+            c.background.spike_samples = spike_samples
+
+    if masks is not None:
+        c.visual.masks = masks
+
+    matrix = _matrix_from_dimensions(dimensions)
+    c.dimensions_matrix = matrix
+
+    c.visual.spike_clusters = spike_clusters
+    if spike_samples is not None:
+        c.visual.spike_samples = spike_samples
+
+    c.visual.cluster_colors = colors
