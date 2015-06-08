@@ -403,6 +403,8 @@ class CorrelogramViewModel(VispyViewModel):
     binsize = 20
     winsize_bins = 41
     _imported_params = ('binsize', 'winsize_bins')
+    _normalization = 'equal'  # or 'independent'
+    _ccgs = None
 
     def change_bins(self, bin=None, half_width=None):
         """Change the parameters of the correlograms.
@@ -441,15 +443,45 @@ class CorrelogramViewModel(VispyViewModel):
                             # NOTE: this must be an odd number, for symmetry
                             winsize_bins=_oddify(self.winsize_bins),
                             )
-        ccgs = _symmetrize_correlograms(ccgs)
+        self._ccgs = _symmetrize_correlograms(ccgs)
         # Normalize the CCGs.
-        if len(ccgs):
-            ccgs = ccgs * (1. / max(1., ccgs.max()))
-        self.view.visual.correlograms = ccgs
+        self.view.visual.correlograms = self._normalize(self._ccgs)
 
         # Take the cluster order into account.
         self.view.visual.cluster_order = clusters
         self.view.update()
+
+    def _normalize(self, ccgs):
+        if not len(ccgs):
+            return ccgs
+        if self._normalization == 'equal':
+            return ccgs * (1. / max(1., ccgs.max()))
+        elif self._normalization == 'independent':
+            return ccgs * (1. / np.maximum(1., ccgs.max(axis=2)[:, :, None]))
+
+    @property
+    def normalization(self):
+        return self._normalization
+
+    @normalization.setter
+    def normalization(self, value):
+        self._normalization = value
+        self.view.visual.correlograms = self._normalize(self._ccgs)
+        self.view.update()
+
+    def toggle_normalization(self):
+        self.normalization = ('equal' if self._normalization == 'independent'
+                              else 'independent')
+
+    keyboard_shortcuts = {
+        'toggle_normalization': 'n',
+    }
+
+    def on_key_press(self, event):
+        super(CorrelogramViewModel, self).on_key_press(event)
+        if not event.modifiers:
+            if event.key == 'N':
+                self.toggle_normalization()
 
 
 class TraceViewModel(VispyViewModel):
