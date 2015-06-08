@@ -51,7 +51,7 @@ def _test_correlograms(n_clusters=None):
     c.visual.correlograms = correlograms
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])
-
+    c.lines = [-5, 0, 5]
     show_test(c)
 
 

@@ -14,10 +14,11 @@ from ._mpl_utils import _bottom_left_frame
 from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
                            BoxVisual,
+                           AxisVisual,
                            _tesselate_histogram,
                            _wrap_vispy)
 from ._panzoom import PanZoomGrid
-from ..utils._types import _as_array
+from ..utils._types import _as_array, _as_list
 from ..utils._color import _selected_clusters_colors
 
 
@@ -113,14 +114,17 @@ class CorrelogramView(BaseSpikeCanvas):
     """A VisPy canvas displaying correlograms."""
 
     _visual_class = CorrelogramVisual
+    _lines = []
 
     def _create_visuals(self):
         super(CorrelogramView, self)._create_visuals()
         self.boxes = BoxVisual()
+        self.axes = AxisVisual()
 
     def _create_pan_zoom(self):
         self._pz = PanZoomGrid()
         self._pz.add(self.visual.program)
+        self._pz.add(self.axes.program)
         self._pz.attach(self)
         self._pz.aspect = None
         self._pz.zmin = 1.
@@ -141,12 +145,31 @@ class CorrelogramView(BaseSpikeCanvas):
         self.boxes.n_rows = self.visual.n_clusters
         if self.visual.n_clusters >= 1:
             self._pz.n_rows = self.visual.n_clusters
+        self.axes.n_rows = self.visual.n_clusters
+
+    @property
+    def lines(self):
+        """List of x coordinates where to put vertical lines.
+
+        This is unit of samples.
+
+        """
+        return self._lines
+
+    @lines.setter
+    def lines(self, value):
+        self._lines = _as_list(value)
+        assert self.visual.n_samples > 0
+        c = 2. / (float(self.visual.n_samples))
+        self.axes.xs = np.array(self._lines) * c
 
     def on_draw(self, event):
         """Draw the correlograms visual."""
         gloo.clear()
         self.visual.draw()
         self.boxes.draw()
+        if self._lines:
+            self.axes.draw()
 
 
 #------------------------------------------------------------------------------

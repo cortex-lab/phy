@@ -376,9 +376,9 @@ class AxisVisual(BoxVisual):
         n = nx + ny
         position = np.empty((2 * n * self.n_boxes, 4), dtype=np.float32)
         c = 1.
-        arr = np.hstack([np.hstack([[x, -c, x, +c] for x in self._xs]),
-                         np.hstack([[-c, y, +c, y] for y in self._ys])])
-        arr = arr.astype(np.float32)
+        arr = [[x, -c, x, +c] for x in self._xs]
+        arr += [[-c, y, +c, y] for y in self._ys]
+        arr = np.hstack(arr).astype(np.float32)
         arr = arr.reshape((-1, 2))
         # Positions.
         position[:, :2] = np.tile(arr, (self.n_boxes, 1))
