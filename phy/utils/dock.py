@@ -51,14 +51,6 @@ def _title(widget):
     return str(widget.windowTitle()).lower()
 
 
-def _create_web_view(html=None):
-    from PyQt4.QtWebKit import QWebView
-    view = QWebView()
-    if html:
-        view.setHtml(html)
-    return view
-
-
 def _widget(dock_widget):
     """Return a Qt or VisPy widget from a dock widget."""
     widget = dock_widget.widget()

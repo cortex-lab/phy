@@ -82,7 +82,7 @@ def _test_empty(view_model_class, stop=True, **kwargs):
         return vm
 
 
-def _test_view_model(view_model_class, stop=True, **kwargs):
+def _test_view_model(view_model_class, stop=True, use_store=True, **kwargs):
 
     with TemporaryDirectory() as tempdir:
         # Create the test HDF5 file in the temporary directory.
@@ -95,14 +95,17 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
         model = KwikModel(filename)
         spikes_per_cluster = _spikes_per_cluster(model.spike_ids,
                                                  model.spike_clusters)
-        store = create_store(model,
-                             path=tempdir,
-                             spikes_per_cluster=spikes_per_cluster,
-                             features_masks_chunk_size=15,
-                             waveforms_n_spikes_max=20,
-                             waveforms_excerpt_size=5,
-                             )
-        store.generate()
+        if use_store:
+            store = create_store(model,
+                                 path=tempdir,
+                                 spikes_per_cluster=spikes_per_cluster,
+                                 features_masks_chunk_size=15,
+                                 waveforms_n_spikes_max=20,
+                                 waveforms_excerpt_size=5,
+                                 )
+            store.generate()
+        else:
+            store = None
 
         vm = view_model_class(model=model, store=store, **kwargs)
         vm.on_open()
@@ -128,7 +131,7 @@ def _test_view_model(view_model_class, stop=True, **kwargs):
 #------------------------------------------------------------------------------
 
 def test_waveforms_full():
-    vm = _test_view_model(WaveformViewModel, stop=False)
+    vm = _test_view_model(WaveformViewModel, stop=False, use_store=True)
     vm.overlap = True
     show_test_run(vm.view, _N_FRAMES)
     vm.show_mean = True

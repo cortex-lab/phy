@@ -151,11 +151,6 @@ def test_wizard_nav():
     assert wizard.best == 3
     assert wizard.match == 2
 
-    # Test HTML representation.
-    html = wizard.get_panel()
-    assert '>3<' in html
-    assert '>2<' in html
-
     wizard.unpin()
     assert wizard.best == 3
     assert wizard.match is None

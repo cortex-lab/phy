@@ -128,6 +128,15 @@ class BaseModel(object):
         raise NotImplementedError()
 
     @property
+    def spikes_per_cluster(self):
+        """Spikes per cluster dictionary.
+
+        Must be implemented by child classes.
+
+        """
+        raise NotImplementedError()
+
+    @property
     def cluster_metadata(self):
         """ClusterMetadata instance holding information about the clusters.
 

@@ -126,6 +126,10 @@ def csr_matrix(dense=None, shape=None,
                      data=data, channels=channels, spikes_ptr=spikes_ptr)
 
 
+#------------------------------------------------------------------------------
+# HDF5 functions
+#------------------------------------------------------------------------------
+
 def save_h5(f, path, arr, overwrite=False):
     """Save a sparse array into an HDF5 file."""
     if isinstance(arr, SparseCSR):

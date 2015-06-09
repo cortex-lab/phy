@@ -2,3 +2,5 @@
 # flake8: noqa
 
 """Automatic and manual clustering facilities."""
+
+from .launcher import run

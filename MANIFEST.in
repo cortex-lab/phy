@@ -3,5 +3,6 @@ include README.md
 
 recursive-include tests *
 recursive-include phy/plot/glsl *.vert *.frag *.glsl
+recursive-include phy/cluster/manual/static *.html *.css
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]

@@ -10,11 +10,12 @@ import numpy as np
 
 from ...utils.array import _spikes_in_clusters
 from ...stats.ccg import correlograms, _symmetrize_correlograms
+from ...io.kwik.store_items import create_store
 from ..ccg import CorrelogramView
 from ..features import FeatureView
 from ..waveforms import WaveformView
 from ..traces import TraceView
-from .base import _selected_clusters_colors, BaseViewModel
+from .base import _selected_clusters_colors, VispyViewModel
 
 
 #------------------------------------------------------------------------------
@@ -29,7 +30,18 @@ def _oddify(x):
 # View models
 #------------------------------------------------------------------------------
 
-class WaveformViewModel(BaseViewModel):
+class KwikViewModel(VispyViewModel):
+    def __init__(self, *args, **kwargs):
+        # Create a default cluster store if needed.
+        if not kwargs.get('store', None):
+            model = kwargs.get('model')
+            spc = model.spikes_per_cluster
+            kwargs['store'] = create_store(model,
+                                           spikes_per_cluster=spc)
+        super(KwikViewModel, self).__init__(*args, **kwargs)
+
+
+class WaveformViewModel(KwikViewModel):
     _view_class = WaveformView
     _view_name = 'waveforms'
     _imported_params = ('scale_factor', 'box_scale', 'probe_scale',
@@ -64,12 +76,12 @@ class WaveformViewModel(BaseViewModel):
                                      )
         return mean_waveforms, mean_masks
 
-    def _update_spike_clusters(self, spikes=None):
-        super(WaveformViewModel, self)._update_spike_clusters(spikes=spikes)
+    def update_spike_clusters(self, spikes=None):
+        super(WaveformViewModel, self).update_spike_clusters(spikes=spikes)
         self._view.mean.spike_clusters = np.sort(self.cluster_ids)
         self._view.mean.cluster_colors = self._view.visual.cluster_colors
 
-    def on_select(self):
+    def on_select(self, cluster_ids):
         # Get the spikes of the stored waveforms.
         clusters = self.cluster_ids
         n_clusters = len(clusters)
@@ -79,7 +91,7 @@ class WaveformViewModel(BaseViewModel):
         _, self._n_samples, self._n_channels = waveforms.shape
         mean_waveforms, mean_masks = self._load_mean_waveforms()
 
-        self._update_spike_clusters(spikes)
+        self.update_spike_clusters(spikes)
 
         # Cluster display order.
         self.view.visual.cluster_order = clusters
@@ -169,7 +181,7 @@ class WaveformViewModel(BaseViewModel):
         return params
 
 
-class FeatureViewModel(BaseViewModel):
+class FeatureViewModel(KwikViewModel):
     _view_class = FeatureView
     _view_name = 'features'
     _imported_params = ('scale_factor', 'n_spikes_max_bg', 'marker_size')
@@ -292,8 +304,8 @@ class FeatureViewModel(BaseViewModel):
             self.view.background.spike_samples = spike_samples
         self.view.update_dimensions(self._default_dimensions())
 
-    def on_select(self):
-        super(FeatureViewModel, self).on_select()
+    def on_select(self, cluster_ids):
+        super(FeatureViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
         clusters = self.cluster_ids
 
@@ -373,7 +385,7 @@ class FeatureViewModel(BaseViewModel):
         return params
 
 
-class CorrelogramViewModel(BaseViewModel):
+class CorrelogramViewModel(KwikViewModel):
     _view_class = CorrelogramView
     _view_name = 'correlograms'
     binsize = 20
@@ -401,8 +413,8 @@ class CorrelogramViewModel(BaseViewModel):
 
         self.select(self.cluster_ids)
 
-    def on_select(self):
-        super(CorrelogramViewModel, self).on_select()
+    def on_select(self, cluster_ids):
+        super(CorrelogramViewModel, self).on_select(cluster_ids)
         spikes = self.spike_ids
         clusters = self.cluster_ids
 
@@ -430,7 +442,7 @@ class CorrelogramViewModel(BaseViewModel):
         self.view.update()
 
 
-class TraceViewModel(BaseViewModel):
+class TraceViewModel(KwikViewModel):
     _view_class = TraceView
     _view_name = 'traces'
     _imported_params = ('scale_factor', 'channel_scale', 'interval_size')
@@ -472,7 +484,7 @@ class TraceViewModel(BaseViewModel):
         # We update the spike clusters according to the subselection of spikes.
         # We don't update the list of unique clusters, which only change
         # when selecting or clustering, not when changing the interval.
-        # self._update_spike_clusters(spikes)
+        # self.update_spike_clusters(spikes)
         self.view.visual.spike_clusters = self.model.spike_clusters[spikes]
 
         # Set the spike samples.
@@ -566,7 +578,7 @@ class TraceViewModel(BaseViewModel):
             self.interval_size = .25
         self.select([])
 
-    def on_select(self):
+    def on_select(self, cluster_ids):
         # Get the spikes in the selected clusters.
         spikes = self.spike_ids
         clusters = self.cluster_ids

@@ -9,7 +9,7 @@ from __future__ import print_function
 
 import phy
 from ...utils._misc import _show_shortcuts
-from ...utils.dock import DockWindow, _create_web_view, _prompt
+from ...utils.dock import DockWindow, _prompt
 from ...utils import EventEmitter, debug
 from ...plot.view_models import BaseViewModel
 
@@ -24,7 +24,6 @@ class ClusterManualGUI(EventEmitter):
     This object represents a main window with:
 
     * multiple views
-    * a wizard panel
     * high-level clustering methods
     * global keyboard shortcuts
 
@@ -36,13 +35,9 @@ class ClusterManualGUI(EventEmitter):
         self.start()
         self._dock = DockWindow(title=self.title)
         # Load the saved view count.
-        vc = self.session.settings.get('gui_view_count', None)
+        # vc = self.session.settings.get('gui_view_count', None)
         # Default GUI config.
         config = config or self.session.settings['gui_config']
-        # Remove non-existing views.
-        if vc and config:
-            config = [(name, _) for (name, _) in config
-                      if name in vc]
         # Create the views.
         self._load_config(config)
         self._load_geometry_state()
@@ -55,13 +50,10 @@ class ClusterManualGUI(EventEmitter):
             debug("Adding {} view in GUI.".format(name))
             # GUI-specific keyword arguments position, size, maximized
             position = kwargs.pop('position', None)
-            if name == 'wizard':
-                item = self._create_wizard_panel()
-            else:
-                clusters = self._cluster_ids
-                item = self.session.view_creator.add(name,
-                                                     cluster_ids=clusters,
-                                                     **kwargs)
+            clusters = self._cluster_ids
+            item = self.session.view_creator.add(name,
+                                                 cluster_ids=clusters,
+                                                 **kwargs)
             self.add_view(item, title=name.capitalize(), position=position)
 
     def _load_geometry_state(self):
@@ -119,9 +111,13 @@ class ClusterManualGUI(EventEmitter):
         def on_select(cluster_ids):
             item.select(cluster_ids)
 
+        @self.session.connect
+        def on_cluster(up):
+            item.on_cluster(up)
+
         # Make sure the dock widget is closed when the view it contains
         # is closed with the Escape key.
-        @view.connect
+        @item.connect
         def on_close(e):
             self.unconnect(item.on_select)
             dw.close()
@@ -216,35 +212,6 @@ class ClusterManualGUI(EventEmitter):
         for which in ('best', 'match', 'both'):
             for group in ('noise', 'mua', 'good'):
                 _add_gui_shortcut(_make_func(which, group))
-
-    def _create_wizard_panel(self, cluster_ids=None):
-        styles = '''
-
-        html, body, div {
-            background-color: black;
-        }
-
-        .control-panel {
-            background-color: black;
-            color: white;
-        }
-
-        '''
-
-        def _get_html():
-            return self.session.wizard.get_panel(extra_styles=styles)
-
-        view = _create_web_view(_get_html())
-
-        @self.connect
-        def on_select(cluster_ids):
-            view.setHtml(_get_html())
-
-        @self.connect
-        def on_cluster(up):
-            view.setHtml(_get_html())
-
-        return view
 
     # General actions
     # ---------------------------------------------------------------------

@@ -372,17 +372,18 @@ def test_session_statistics():
                                            tempdir=tempdir)
 
         @session.register_statistic
-        def n_spikes(cluster):
-            return session.clustering.cluster_counts.get(cluster, 0)
+        def n_spikes_2(cluster):
+            return session.clustering.cluster_counts.get(cluster, 0) ** 2
 
         store = session.cluster_store
         stats = store.items['statistics']
 
         def _check():
             for clu in session.cluster_ids:
-                assert store.n_spikes(clu) == store.features(clu).shape[0]
+                assert (store.n_spikes_2(clu) ==
+                        store.features(clu).shape[0] ** 2)
 
-        assert 'n_spikes' in stats.fields
+        assert 'n_spikes_2' in stats.fields
         _check()
 
         # Merge the clusters and check that the statistics has been

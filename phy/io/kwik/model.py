@@ -21,6 +21,7 @@ from ...electrode.mea import MEA
 from ...utils.logging import warn
 from ...utils.array import (PartialArray,
                             _concatenate_virtual_arrays,
+                            _spikes_per_cluster,
                             _unique,
                             )
 from ...utils._types import _is_integer, _as_array
@@ -275,6 +276,7 @@ class KwikModel(BaseModel):
         # Initialize fields.
         self._spike_samples = None
         self._spike_clusters = None
+        self._spikes_per_cluster = None
         self._metadata = None
         self._clustering = 'main'
         self._probe = None
@@ -585,8 +587,10 @@ class KwikModel(BaseModel):
 
         # Open the KWIK file.
         self._kwik = self._open_h5_if_exists('kwik')
+        if self._kwik is None:
+            raise IOError("File `{0}` doesn't exist.".format(kwik_path))
         if not self._kwik.is_open():
-            raise ValueError("File {0} failed to open.".format(kwik_path))
+            raise IOError("File `{0}` failed to open.".format(kwik_path))
         self._check_kwik_version()
 
         # Open the KWX and KWD files.
@@ -1049,6 +1053,14 @@ class KwikModel(BaseModel):
 
         """
         return self._spike_clusters
+
+    @property
+    def spikes_per_cluster(self):
+        """Spikes per cluster from the current channel group and clustering."""
+        if self._spikes_per_cluster is None:
+            self._spikes_per_cluster = \
+                _spikes_per_cluster(self.spike_ids, self._spike_clusters)
+        return self._spikes_per_cluster
 
     @property
     def cluster_metadata(self):
