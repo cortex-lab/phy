@@ -8,12 +8,11 @@
 
 import numpy as np
 
-from ...utils import (_as_array,
-                      _is_array_like,
-                      _unique,
-                      _spikes_in_clusters,
-                      _spikes_per_cluster,
-                      )
+from ...utils._types import _as_array, _is_array_like
+from ...utils.array import (_unique,
+                            _spikes_in_clusters,
+                            _spikes_per_cluster,
+                            )
 from ._utils import UpdateInfo
 from ._history import History
 

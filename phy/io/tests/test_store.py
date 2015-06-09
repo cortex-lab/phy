@@ -13,7 +13,8 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
 
-from ...utils import Bunch, _spikes_per_cluster
+from ...utils._types import Bunch
+from ...utils.array import _spikes_per_cluster
 from ...utils.tempdir import TemporaryDirectory
 from ..store import (_load_ndarray,
                      MemoryStore,

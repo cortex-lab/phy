@@ -114,6 +114,11 @@ def _index_of(arr, lookup):
     return tmp[arr]
 
 
+def index_of_small(arr, lookup):
+    """Faster on small arrays with large values."""
+    return np.searchsorted(lookup, arr)
+
+
 def _partial_shape(shape, trailing_index):
     """Return the shape of a partial array."""
     if shape is None:

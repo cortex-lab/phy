@@ -13,8 +13,8 @@ from numpy.testing import assert_allclose as ac
 from pytest import raises, fixture, mark
 
 from ..session import Session
-from ...utils import _spikes_in_clusters
 from ...gui.qt import wrap_qt
+from ...utils.array import _spikes_in_clusters
 from ...utils.tempdir import TemporaryDirectory
 from ...utils.logging import set_level
 from ...io.mock import MockModel

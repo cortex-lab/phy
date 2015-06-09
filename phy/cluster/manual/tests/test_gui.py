@@ -15,7 +15,8 @@ from numpy.testing import assert_array_equal as ae
 
 from ..gui import ClusterManualGUI
 from ....utils.settings import Settings
-from ....utils import _spikes_in_clusters, set_level
+from ....utils.logging import set_level
+from ....utils.array import _spikes_in_clusters
 from ....gui.qt import wrap_qt
 from ....io.mock import MockModel
 from ....io.kwik.store_items import create_store
