@@ -9,8 +9,8 @@
 import os
 import sys
 import contextlib
-from functools import wraps
 
+from ..ext.six import wraps
 from ..utils._misc import _is_interactive
 from ..utils.logging import info, warn
 
