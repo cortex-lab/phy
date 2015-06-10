@@ -20,13 +20,18 @@ class KlustaKwik(object):
         self._kwargs = kwargs
         self.__dict__.update(kwargs)
 
-    def cluster(self, model=None, features=None, masks=None):
+    def cluster(self, model=None, features=None,
+                spike_ids=None, masks=None):
         # Get the features and masks.
         if model is not None:
             if features is None:
                 features = PartialArray(model.features_masks, 0)
             if masks is None:
                 masks = PartialArray(model.features_masks, 1)
+        # Select some spikes if needed.
+        if spike_ids is not None:
+            features = features[spike_ids]
+            masks = masks[spike_ids]
         # Convert the features and masks to the sparse structure used
         # by KlustaKwik2.
         data = sparsify_features_masks(features, masks)
@@ -40,7 +45,7 @@ class KlustaKwik(object):
         return spike_clusters
 
 
-def run(model, algorithm='klustakwik2', **kwargs):
+def run(model, algorithm='klustakwik2', spike_ids=None, **kwargs):
     """Launch an automatic clustering algorithm on the model.
 
     Parameters
@@ -56,4 +61,4 @@ def run(model, algorithm='klustakwik2', **kwargs):
     """
     assert algorithm == 'klustakwik2'
     kk = KlustaKwik(**kwargs)
-    return kk.cluster(model=model)
+    return kk.cluster(model=model, spike_ids=spike_ids)
