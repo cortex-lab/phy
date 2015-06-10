@@ -1,9 +1,7 @@
 # -*- coding: utf-8 -*-
 # flake8: noqa
 
-"""Interactive and static visualization of data.
-
-"""
+"""Interactive and static visualization of data."""
 
 from ._panzoom import PanZoom, PanZoomGrid
 from ._vispy_utils import BaseSpikeCanvas, BaseSpikeVisual

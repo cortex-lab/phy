@@ -59,7 +59,7 @@ def run(kwik_path, interactive=False):
 
 
 def main():
-    desc = sys.modules[__name__].__doc__
+    desc = sys.modules['phy'].__doc__
     parser = argparse.ArgumentParser(description=desc)
 
     # Allowed subcommands.
@@ -72,23 +72,27 @@ def main():
         # 'detect-spikes',
     ]
 
-    parser.add_argument('command', required=True, choices=commands,
+    parser.add_argument('command', choices=commands,
                         help='command to execute')
 
-    parser.add_argument('file', required=True,
+    parser.add_argument('file',
                         help='file to execute the command on')
 
-    parser.add_argument('--version', '-v', action='store_true',
+    import phy
+    parser.add_argument('--version', '-v', action='version',
+                        version=phy.__version__,
                         help='print the version of phy')
 
     parser.add_argument('--debug', '-d', action='store_true',
                         help='activate debug logging mode')
 
     parser.add_argument('--profile', '-p', action='store_true',
-                        help='activate the profile')
+                        help='activate the profiler')
 
-    parser.add_argument('--profile-line', '-pl', action='store_true',
-                        help='activate the line-profile -- you need to '
+    parser.add_argument('--profile-line', '-pl',
+                        dest='profile_line',
+                        action='store_true',
+                        help='activate the line-profiler -- you need to '
                         'decorate the functions to profile with `@profile` '
                         'in the code')
 
@@ -99,39 +103,20 @@ def main():
     # Parse the CLI arguments.
     args = parser.parse_args()
 
+    if args.profile or args.profile_line:
+        from phy.utils.testing import _enable_profiler, _profile
+        prof = _enable_profiler(args.profile_line)
+    else:
+        prof = None
 
-    # if profile or profile_line:
-    #     from phy.utils.testing import _enable_profiler, _profile
-    #     prof = _enable_profiler(profile_line)
-    # else:
-    #     prof = None
+    if args.debug:
+        phy.debug()
 
-    # if '-h' in args or '--help' in args:
-    #     print(sys.modules[__name__].__doc__)
-    #     return 0
-
-    # import phy
-    # if '-v' in args or '--version' in args:
-    #     print("phy v{}".format(phy.__version__))
-    #     return 0
-
-    # if _pop(args, '--debug', False):
-    #     phy.debug()
-
-    # if len(args) <= 2 or args[1] != 'cluster-manual':
-    #     print("Only the `phy cluster-manual [-i] myfile.kwik` command "
-    #           "is currently supported.")
-    #     return 1
-
-    # if len(args) == 0:
-    #     print("Please specify a path to a `.kwik` file.")
-    #     return 1
-
-    # if not prof:
-    #     run(kwik_path, interactive=interactive)
-    # else:
-    #     _profile(prof, 'run(kwik_path, interactive=interactive)',
-    #              globals(), locals())
+    if not prof:
+        run(args.file, interactive=args.ipython)
+    else:
+        _profile(prof, 'run(args.file, interactive=args.ipython)',
+                 globals(), locals())
 
 
 #------------------------------------------------------------------------------
