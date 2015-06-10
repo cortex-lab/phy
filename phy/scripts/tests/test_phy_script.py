@@ -56,3 +56,17 @@ def test_script():
 
         for cmd in ('cluster-manual', 'cluster-auto'):
             assert _parse([cmd, kwik_path]).command == cmd
+
+        args = _parse(['cluster-manual', '-i', '--debug', kwik_path])
+        assert args.command == 'cluster-manual'
+        assert args.ipython
+        assert args.debug
+        assert not args.profiler
+        assert not args.line_profiler
+
+        args = _parse(['cluster-auto', '-lp', kwik_path])
+        assert args.command == 'cluster-auto'
+        assert not args.ipython
+        assert not args.debug
+        assert not args.profiler
+        assert args.line_profiler

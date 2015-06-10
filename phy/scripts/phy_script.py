@@ -72,25 +72,29 @@ def _parse_args(args):
         # 'detect-spikes',
     ]
 
-    parser.add_argument('command', choices=commands,
+    parser.add_argument('command',
+                        choices=commands,
                         help='command to execute')
 
     parser.add_argument('file',
                         help='file to execute the command on')
 
     import phy
-    parser.add_argument('--version', '-v', action='version',
+    parser.add_argument('--version', '-v',
+                        action='version',
                         version=phy.__version__,
                         help='print the version of phy')
 
-    parser.add_argument('--debug', '-d', action='store_true',
+    parser.add_argument('--debug', '-d',
+                        action='store_true',
                         help='activate debug logging mode')
 
-    parser.add_argument('--profile', '-p', action='store_true',
+    parser.add_argument('--profiler', '-p',
+                        action='store_true',
                         help='activate the profiler')
 
-    parser.add_argument('--profile-line', '-pl',
-                        dest='profile_line',
+    parser.add_argument('--line-profiler', '-lp',
+                        dest='line_profiler',
                         action='store_true',
                         help='activate the line-profiler -- you need to '
                         'decorate the functions to profile with `@profile` '
