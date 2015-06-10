@@ -271,8 +271,21 @@ class ClusterManualGUI(BaseGUI):
         def similarity(target, candidate):
             """Compute the dot product between the mean masks of
             two clusters."""
-            return np.dot(self.store.mean_masks(target),
-                          self.store.mean_masks(candidate))
+
+            mu_0 = self.store.mean_features(target).ravel()
+            mu_1 = self.store.mean_features(candidate).ravel()
+
+            omeg_0 = self.store.mean_masks(target)
+            omeg_1 = self.store.mean_masks(candidate)
+
+            omeg_0 = np.repeat(omeg_0, self.model.n_features_per_channel)
+            omeg_1 = np.repeat(omeg_1, self.model.n_features_per_channel)
+
+            d_0 = mu_0 * omeg_0
+            d_1 = mu_1 * omeg_1
+
+            # WARNING: "-" because this is a distance, not a score.
+            return -np.linalg.norm(d_0 - d_1)
 
         @self.wizard.set_quality_function
         def quality(cluster):
