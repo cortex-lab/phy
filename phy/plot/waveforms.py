@@ -256,6 +256,57 @@ class WaveformView(BaseSpikeCanvas):
         self._pz.add(self.mean.program)
         self._pz.attach(self)
 
+    def set_data(self,
+                 waveforms=None,
+                 masks=None,
+                 spike_clusters=None,
+                 channel_positions=None,
+                 channel_order=None,
+                 colors=None,
+                 ):
+
+        if waveforms is not None:
+            assert isinstance(waveforms, np.ndarray)
+            if waveforms.ndim == 2:
+                waveforms = waveforms[None, ...]
+            assert waveforms.ndim == 3
+            waveforms = waveforms.astype(np.float32)
+        else:
+            waveforms = self.visual.waveforms
+        n_spikes, n_samples, n_channels = waveforms.shape
+
+        if spike_clusters is None:
+            spike_clusters = np.zeros(n_spikes, dtype=np.int32)
+        cluster_ids = _unique(spike_clusters)
+        n_clusters = len(cluster_ids)
+
+        if masks is None:
+            masks = np.ones((n_spikes, n_channels), dtype=np.float32)
+
+        if colors is None:
+            colors = _selected_clusters_colors(n_clusters)
+
+        if channel_order is None:
+            channel_order = np.arange(n_channels)
+
+        if channel_positions is None:
+            channel_positions = linear_positions(n_channels)
+
+        self.visual.waveforms = waveforms.astype(np.float32)
+
+        if masks is not None:
+            self.visual.masks = masks
+
+        self.visual.spike_clusters = spike_clusters
+        assert spike_clusters.shape == (n_spikes,)
+
+        self.visual.cluster_colors = colors
+
+        self.visual.channel_positions = channel_positions
+        self.visual.channel_order = channel_order
+
+        self.update()
+
     @property
     def box_scale(self):
         """Scale of the waveforms.
@@ -423,46 +474,8 @@ class WaveformView(BaseSpikeCanvas):
 #------------------------------------------------------------------------------
 
 @_wrap_vispy
-def plot_waveforms(waveforms,
-                   masks=None,
-                   spike_clusters=None,
-                   channel_positions=None,
-                   channel_order=None,
-                   colors=None,
-                   ):
-    assert isinstance(waveforms, np.ndarray)
-    assert waveforms.ndim == 3
-    n_spikes, n_samples, n_channels = waveforms.shape
-
-    if spike_clusters is None:
-        spike_clusters = np.zeros(n_spikes, dtype=np.int32)
-    cluster_ids = _unique(spike_clusters)
-    n_clusters = len(cluster_ids)
-
-    if masks is None:
-        masks = np.ones((n_spikes, n_channels), dtype=np.float32)
-
-    if colors is None:
-        colors = _selected_clusters_colors(n_clusters)
-
-    if channel_order is None:
-        channel_order = np.arange(n_channels)
-
-    if channel_positions is None:
-        channel_positions = linear_positions(n_channels)
-
+def plot_waveforms(waveforms, **kwargs):
     c = WaveformView()
-    c.visual.waveforms = waveforms.astype(np.float32)
-
-    if masks is not None:
-        c.visual.masks = masks
-
-    c.visual.spike_clusters = spike_clusters
-    assert spike_clusters.shape == (n_spikes,)
-
-    c.visual.cluster_colors = colors
-
-    c.visual.channel_positions = channel_positions
-    c.visual.channel_order = channel_order
-
+    c.visual.waveforms = waveforms
+    c.set_data(**kwargs)
     return c
