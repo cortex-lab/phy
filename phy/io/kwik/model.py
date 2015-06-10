@@ -128,7 +128,7 @@ def _create_clustering(f, name,
     assert not f.exists(path)
 
     # Save spike_clusters.
-    f.write(path, spike_clusters.astype(np.uint32))
+    f.write(path, spike_clusters.astype(np.int32))
 
     cluster_ids = _unique(spike_clusters)
 
