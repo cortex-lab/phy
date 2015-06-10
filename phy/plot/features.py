@@ -421,8 +421,6 @@ class FeatureView(BaseSpikeCanvas):
             dimensions = [(0, 0)]
 
         if colors is None:
-            colors = self.visual.cluster_colors
-        if colors is None:
             colors = _selected_clusters_colors(n_clusters)
 
         self.visual.features = features

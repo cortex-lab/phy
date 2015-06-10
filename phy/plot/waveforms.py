@@ -284,8 +284,6 @@ class WaveformView(BaseSpikeCanvas):
             masks = np.ones((n_spikes, n_channels), dtype=np.float32)
 
         if colors is None:
-            colors = self.visual.cluster_colors
-        if colors is None:
             colors = _selected_clusters_colors(n_clusters)
 
         if channel_order is None:

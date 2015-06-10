@@ -283,7 +283,9 @@ class BaseSpikeVisual(_BakeVisual):
         else:
             u_cluster_color = self.cluster_colors.reshape((1,
                                                            self.n_clusters,
-                                                           -1))
+                                                           3))
+        assert u_cluster_color.ndim == 3
+        assert u_cluster_color.shape[2] == 3
         u_cluster_color = (u_cluster_color * 255).astype(np.uint8)
         self.program['u_cluster_color'] = gloo.Texture2D(u_cluster_color)
 

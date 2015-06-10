@@ -148,8 +148,6 @@ class CorrelogramView(BaseSpikeCanvas):
         assert correlograms.shape[:2] == (n_clusters, n_clusters)
 
         if colors is None:
-            colors = self.visual.cluster_colors
-        if colors is None:
             colors = _selected_clusters_colors(n_clusters)
 
         self.cluster_ids = np.arange(n_clusters)
