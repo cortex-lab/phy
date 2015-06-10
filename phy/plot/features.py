@@ -39,8 +39,10 @@ def _alternative_dimension(dim, n_features=None, n_channels=None):
         channel, fet = dim
         if n_features >= 2:
             return (channel, (fet + 1) % n_features)
-        else:
+        elif n_channels >= 2:
             return ((channel + 1) % n_channels, fet)
+        else:
+            return 'time'
 
 
 def _matrix_from_dimensions(dimensions, n_features=None, n_channels=None):
@@ -54,6 +56,10 @@ def _matrix_from_dimensions(dimensions, n_features=None, n_channels=None):
                                                n_features=n_features,
                                                n_channels=n_channels,
                                                )
+                # For aesthetical reasons, put time on the x axis if it is
+                # the alternative dimension.
+                if dim_y == 'time':
+                    dim_x, dim_y = dim_y, dim_x
             matrix[i, j] = (dim_x, dim_y)
     return matrix
 
@@ -135,6 +141,9 @@ class BaseFeatureVisual(BaseSpikeVisual):
             return data[:, channel, feature]
         elif dim == 'time':
             t = self._spike_samples
+            # Default times.
+            if t is None:
+                t = np.arange(self.n_spikes)
             # Normalize time feature.
             m = t.max()
             if m > 0:

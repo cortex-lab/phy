@@ -76,6 +76,15 @@ def test_plot_features():
     spike_clusters[::3] = -1
     spike_samples = artificial_spike_samples(n_spikes).astype(np.float32)
 
+    c = plot_features(features[:, :1, :],
+                      show=False)
+    show_test(c)
+
+    c = plot_features(features,
+                      spike_samples=spike_samples,
+                      show=False)
+    show_test(c)
+
     c = plot_features(features, show=False)
     show_test(c)
 
