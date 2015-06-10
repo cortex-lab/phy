@@ -220,28 +220,36 @@ class Session(BaseSession):
     # Automatic clustering
     # -------------------------------------------------------------------------
 
-    def cluster(self, spike_ids=None, algorithm='klustakwik',
-                clustering_name='automatic', **kwargs):
+    def cluster(self,
+                clustering_name='automatic',
+                algorithm='klustakwik',
+                spike_ids=None,
+                **kwargs):
         """Run an automatic clustering algorithm on all or some of the spikes.
 
         Parameters
         ----------
 
-        spike_ids : array-like
-            Array of spikes to cluster.
-        algorithm : str
-            The algorithm name. Only `klustakwik` currently.
         clustering_name : str
             The name of the clustering in which to save the results.
+        algorithm : str
+            The algorithm name. Only `klustakwik` currently.
+        spike_ids : array-like
+            Array of spikes to cluster.
 
         """
         kk = KlustaKwik(**kwargs)
         info("Running {}...".format(algorithm))
+        # Run KK.
         spike_clusters = kk.cluster(model=self.model, spike_ids=spike_ids)
+        # Save the results in the Kwik file.
         self.model.add_clustering(clustering_name, spike_clusters)
+        self.change_clustering(clustering_name)
+        self.save()
         info("The automatic clustering has finished.")
         info("The clustering has been saved in the "
              "`{}` clustering in the `.kwik` file.".format(clustering_name))
+        return spike_clusters
 
     # GUI
     # -------------------------------------------------------------------------

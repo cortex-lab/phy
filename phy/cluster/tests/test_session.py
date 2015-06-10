@@ -33,6 +33,10 @@ def setup():
     set_level('debug')
 
 
+def teardown():
+    set_level('info')
+
+
 n_clusters = 5
 n_spikes = 50
 n_channels = 28
@@ -325,3 +329,18 @@ def test_session_statistics(session):
     yield
 
     gui.close()
+
+
+def test_session_automatic(session):
+    clustering = 'clustering_test'
+    sc = session.cluster(clustering_name=clustering,
+                         num_starting_clusters=10,
+                         )
+    assert session.model.clustering == clustering
+
+    # Re-open the dataset and check that the clustering has been saved.
+    session = _start_manual_clustering(kwik_path=session.model.path,
+                                       tempdir=session.tempdir)
+    assert not np.all(session.model.spike_clusters == sc)
+    session.change_clustering(clustering)
+    assert np.all(session.model.spike_clusters == sc)

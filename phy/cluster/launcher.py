@@ -17,6 +17,7 @@ from ..io.kwik.sparse_kk2 import sparsify_features_masks
 class KlustaKwik(object):
     """KlustaKwik automatic clustering algorithm."""
     def __init__(self, **kwargs):
+        assert 'num_starting_clusters' in kwargs
         self._kwargs = kwargs
         self.__dict__.update(kwargs)
 
@@ -42,7 +43,7 @@ class KlustaKwik(object):
         data = data.to_sparse_data()
         # Run KK.
         from klustakwik2 import KK
-        num_starting_clusters = self._kwargs.pop('num_starting_clusters')
+        num_starting_clusters = self._kwargs.pop('num_starting_clusters', 100)
         kk = KK(data, **self._kwargs)
         kk.cluster_mask_starts(num_starting_clusters)
         spike_clusters = kk.clusters
