@@ -14,21 +14,33 @@ from ..io.kwik.sparse_kk2 import sparsify_features_masks
 # Clustering class
 #------------------------------------------------------------------------------
 
-def run_klustakwik2(model, ipp_view=None, **kwargs):
-    from klustakwik2 import KK
-    num_starting_clusters = kwargs.pop('num_starting_clusters')
-    f = PartialArray(model.features_masks, 0)
-    m = PartialArray(model.features_masks, 1)
-    data = sparsify_features_masks(f, m)
-    data = data.to_sparse_data()
-    # TODO: pass ipp_view when KK2 supports it
-    kk = KK(data, **kwargs)
-    kk.cluster_mask_starts(num_starting_clusters)
-    spike_clusters = kk.clusters
-    return spike_clusters
+class KlustaKwik(object):
+    """KlustaKwik automatic clustering algorithm."""
+    def __init__(self, **kwargs):
+        self._kwargs = kwargs
+        self.__dict__.update(kwargs)
+
+    def cluster(self, model=None, features=None, masks=None):
+        # Get the features and masks.
+        if model is not None:
+            if features is None:
+                features = PartialArray(model.features_masks, 0)
+            if masks is None:
+                masks = PartialArray(model.features_masks, 1)
+        # Convert the features and masks to the sparse structure used
+        # by KlustaKwik2.
+        data = sparsify_features_masks(features, masks)
+        data = data.to_sparse_data()
+        # Run KK2.
+        from klustakwik2 import KK
+        num_starting_clusters = self._kwargs.pop('num_starting_clusters')
+        kk = KK(data, **self._kwargs)
+        kk.cluster_mask_starts(num_starting_clusters)
+        spike_clusters = kk.clusters
+        return spike_clusters
 
 
-def run(model, algorithm='klustakwik2', ipp_view=None, **kwargs):
+def run(model, algorithm='klustakwik2', **kwargs):
     """Launch an automatic clustering algorithm on the model.
 
     Parameters
@@ -38,8 +50,10 @@ def run(model, algorithm='klustakwik2', ipp_view=None, **kwargs):
         A model.
     algorithm : str
         Only 'klustakwik2' is supported currently.
-    ipp_view : `IPython.parallel` view instance
-        Use this to run the algorithm with IPython.
+    **kwargs
+        Parameters for KK2.
 
     """
-    return globals()['run_{}'.format(algorithm)](model, ipp_view, **kwargs)
+    assert algorithm == 'klustakwik2'
+    kk = KlustaKwik(**kwargs)
+    return kk.cluster(model=model)
