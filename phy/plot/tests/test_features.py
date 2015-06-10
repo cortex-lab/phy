@@ -72,6 +72,8 @@ def test_plot_features():
     features = artificial_features(n_spikes, n_channels, n_features)
     masks = artificial_masks(n_spikes, n_channels)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    # Unclustered spikes.
+    spike_clusters[::3] = -1
     spike_samples = artificial_spike_samples(n_spikes).astype(np.float32)
 
     c = plot_features(features, show=False)
