@@ -40,6 +40,7 @@ class WaveformVisual(BaseSpikeVisual):
         self._waveforms = None
         self.n_channels, self.n_samples = None, None
         self._channel_order = None
+        self._channel_positions = None
 
         self.program['u_data_scale'] = (.05, .05)
         self.program['u_channel_scale'] = (1., 1.)
@@ -283,11 +284,17 @@ class WaveformView(BaseSpikeCanvas):
             masks = np.ones((n_spikes, n_channels), dtype=np.float32)
 
         if colors is None:
+            colors = self.visual.cluster_colors
+        if colors is None:
             colors = _selected_clusters_colors(n_clusters)
 
         if channel_order is None:
+            channel_order = self.visual.channel_order
+        if channel_order is None:
             channel_order = np.arange(n_channels)
 
+        if channel_positions is None:
+            channel_positions = self.visual.channel_positions
         if channel_positions is None:
             channel_positions = linear_positions(n_channels)
 
@@ -300,7 +307,6 @@ class WaveformView(BaseSpikeCanvas):
         assert spike_clusters.shape == (n_spikes,)
 
         self.visual.cluster_colors = colors
-
         self.visual.channel_positions = channel_positions
         self.visual.channel_order = channel_order
 

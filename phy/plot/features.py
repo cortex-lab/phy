@@ -412,6 +412,8 @@ class FeatureView(BaseSpikeCanvas):
             dimensions = [(0, 0)]
 
         if colors is None:
+            colors = self.visual.cluster_colors
+        if colors is None:
             colors = _selected_clusters_colors(n_clusters)
 
         self.visual.features = features
@@ -426,11 +428,12 @@ class FeatureView(BaseSpikeCanvas):
         if masks is not None:
             self.visual.masks = masks
 
-        matrix = _matrix_from_dimensions(dimensions,
-                                         n_features=n_features,
-                                         n_channels=n_channels,
-                                         )
-        self.dimensions_matrix = matrix
+        if not len(self.dimensions_matrix):
+            matrix = _matrix_from_dimensions(dimensions,
+                                             n_features=n_features,
+                                             n_channels=n_channels,
+                                             )
+            self.dimensions_matrix = matrix
 
         self.visual.spike_clusters = spike_clusters
         assert spike_clusters.shape == (n_spikes,)

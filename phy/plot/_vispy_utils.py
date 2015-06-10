@@ -160,6 +160,7 @@ class BaseSpikeVisual(_BakeVisual):
         self._spike_ids = None
         self._cluster_ids = None
         self._cluster_order = None
+        self._cluster_colors = None
         self._update_clusters_automatically = True
 
         if self._transparency:
