@@ -58,7 +58,7 @@ def run(kwik_path, interactive=False):
         run_qt_app()
 
 
-def main():
+def _parse_args(args):
     desc = sys.modules['phy'].__doc__
     parser = argparse.ArgumentParser(description=desc)
 
@@ -100,8 +100,12 @@ def main():
                         help='launch the script in an interactive '
                         'IPython console')
 
-    # Parse the CLI arguments.
-    args = parser.parse_args()
+    return parser.parse_args(args)
+
+
+def main():
+
+    args = _parse_args(sys.argv[1:])
 
     if args.profile or args.profile_line:
         from phy.utils.testing import _enable_profiler, _profile
@@ -109,6 +113,7 @@ def main():
     else:
         prof = None
 
+    import phy
     if args.debug:
         phy.debug()
 
@@ -124,4 +129,4 @@ def main():
 #------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    exit(main())
+    main()

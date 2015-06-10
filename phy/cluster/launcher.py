@@ -48,6 +48,7 @@ class KlustaKwik(object):
         from klustakwik2 import KK
         num_starting_clusters = self._kwargs.pop('num_starting_clusters', 100)
         kk = KK(data, **self._kwargs)
+        self.params = kk.all_params
         kk.cluster_mask_starts(num_starting_clusters)
         spike_clusters = kk.clusters
         return spike_clusters

@@ -260,9 +260,10 @@ class Session(BaseSession):
         self.model.add_clustering(clustering_name, spike_clusters)
         self.change_clustering(clustering_name)
         # Set the new clustering metadata.
-        kwargs['version'] = kk.version
+        params = kk.params
+        params['version'] = kk.version
         metadata = {'{}_{}'.format(algorithm, name): value
-                    for name, value in kwargs.items()}
+                    for name, value in params.items()}
         self.model.clustering_metadata.update(metadata)
         self.save()
         info("The automatic clustering has finished.")

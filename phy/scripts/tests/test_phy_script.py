@@ -12,6 +12,7 @@ from pytest import raises
 
 from ...utils.tempdir import TemporaryDirectory
 from ...io.kwik.mock import create_mock_kwik
+from ..phy_script import _parse_args
 
 
 #------------------------------------------------------------------------------
@@ -31,6 +32,10 @@ def _call(cmd):
         raise RuntimeError()
 
 
+def _parse(args):
+    return _parse_args(args)
+
+
 def test_script():
 
     with TemporaryDirectory() as tmpdir:
@@ -46,5 +51,8 @@ def test_script():
         with raises(RuntimeError):
             _call('phy')
 
-        _call('phy -h')
         _call('phy -v')
+        _call('phy -h')
+
+        for cmd in ('cluster-manual', 'cluster-auto'):
+            assert _parse([cmd, kwik_path]).command == cmd
