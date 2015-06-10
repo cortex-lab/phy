@@ -9,6 +9,7 @@
 import h5py
 
 from ..ext.six import string_types
+from ..utils.logging import warn
 
 
 #------------------------------------------------------------------------------
@@ -171,10 +172,16 @@ class File(object):
         """Write an attribute of an HDF5 group."""
         assert isinstance(path, string_types)
         assert isinstance(attr_name, string_types)
+        if value is None:
+            value = ''
         # If the parent group doesn't already exist, create it.
         if path not in self._h5py_file:
             self._h5py_file.create_group(path)
-        self._h5py_file[path].attrs[attr_name] = value
+        try:
+            self._h5py_file[path].attrs[attr_name] = value
+        except TypeError:
+            warn("Unable to write attribute `{}={}` at `{}`.".format(
+                 attr_name, value, path))
 
     def attrs(self, path='/'):
         """Return the list of attributes at the given path."""

@@ -12,50 +12,34 @@ Usage:
 # Imports
 #------------------------------------------------------------------------------
 
+import argparse
 import sys
 import os.path as op
-import argparse
+import re
+
+from ..ext.six import exec_
 
 
 #------------------------------------------------------------------------------
 # Main function
 #------------------------------------------------------------------------------
 
-def run(kwik_path, interactive=False):
-    import phy
-    from phy.cluster import Session
-    from phy.gui import start_qt_app, run_qt_app
-
-    if not op.exists(kwik_path):
-        print("The file `{}` doesn't exist.".format(kwik_path))
-        return 1
-
-    print("\nLoading {}...".format(kwik_path))
-    session = Session(kwik_path)
-    print("Data successfully loaded!\n")
-    session.model.describe()
-
-    start_qt_app()
-    gui = session.show_gui(show=False)
-
-    print("\nPress `ctrl+h` to see the list of keyboard shortcuts.\n")
-
-    # Interactive mode with IPython.
-    if interactive:
-        print("\nStarting IPython...")
-        from IPython import start_ipython
-
-        # Namespace.
-        ns = {'phy': phy,
-              'session': session,
-              'model': session.model,
-              'kwik_path': kwik_path,
-              'gui': gui,
-              }
-        start_ipython(["--gui=qt", "-i", "-c='gui.show()'"], user_ns=ns)
-    else:
-        gui.show()
-        run_qt_app()
+def _parse_extra(extra):
+    kwargs = {}
+    reg = re.compile(r'^--([^\=]+)=([^\=]+)$')
+    for e in extra:
+        r = reg.match(e)
+        if r:
+            key, value = r.group(1), r.group(2)
+            try:
+                value = int(value)
+            except ValueError:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
+            kwargs[key] = value
+    return kwargs
 
 
 def _parse_args(args):
@@ -104,16 +88,68 @@ def _parse_args(args):
                         help='launch the script in an interactive '
                         'IPython console')
 
-    return parser.parse_args(args)
+    parse, extra = parser.parse_known_args(args)
+    kwargs = _parse_extra(extra)
+    return parse, kwargs
+
+
+def run_manual(kwik_path, interactive=False):
+    import phy
+    from phy.cluster import Session
+    from phy.gui import start_qt_app, run_qt_app
+
+    if not op.exists(kwik_path):
+        print("The file `{}` doesn't exist.".format(kwik_path))
+        return 1
+
+    print("\nLoading {}...".format(kwik_path))
+    session = Session(kwik_path)
+    print("Data successfully loaded!\n")
+    session.model.describe()
+
+    start_qt_app()
+    gui = session.show_gui(show=False)
+
+    print("\nPress `ctrl+h` to see the list of keyboard shortcuts.\n")
+
+    # Interactive mode with IPython.
+    if interactive:
+        print("\nStarting IPython...")
+        from IPython import start_ipython
+
+        # Namespace.
+        ns = {'phy': phy,
+              'session': session,
+              'model': session.model,
+              'kwik_path': kwik_path,
+              'gui': gui,
+              }
+        start_ipython(["--gui=qt", "-i", "-c='gui.show()'"], user_ns=ns)
+    else:
+        gui.show()
+        run_qt_app()
+
+
+def run_auto(kwik_path, interactive=False, **kwargs):
+    from phy.cluster import Session
+
+    if not op.exists(kwik_path):
+        print("The file `{}` doesn't exist.".format(kwik_path))
+        return
+
+    session = Session(kwik_path, use_store=False)
+    session.cluster(**kwargs)
+    session.save()
+    session.close()
 
 
 def main():
 
-    args = _parse_args(sys.argv[1:])
+    args, kwargs = _parse_args(sys.argv[1:])
 
-    if args.profile or args.profile_line:
+    if args.profiler or args.line_profiler:
         from phy.utils.testing import _enable_profiler, _profile
-        prof = _enable_profiler(args.profile_line)
+        prof = _enable_profiler(args.line_profiler)
     else:
         prof = None
 
@@ -121,11 +157,17 @@ def main():
     if args.debug:
         phy.debug()
 
-    if not prof:
-        run(args.file, interactive=args.ipython)
+    if args.command == 'cluster-manual':
+        cmd = 'run_manual(args.file, interactive=args.ipython)'
+    elif args.command == 'cluster-auto':
+        cmd = 'run_auto(args.file, interactive=args.ipython, **kwargs)'
     else:
-        _profile(prof, 'run(args.file, interactive=args.ipython)',
-                 globals(), locals())
+        raise NotImplementedError()
+
+    if not prof:
+        exec_(cmd, globals(), locals())
+    else:
+        _profile(prof, cmd, globals(), locals())
 
 
 #------------------------------------------------------------------------------

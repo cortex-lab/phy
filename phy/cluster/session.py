@@ -11,7 +11,7 @@ from __future__ import print_function
 import os.path as op
 import shutil
 
-from ..utils.logging import info
+from ..utils.logging import info, warn
 from ..utils.settings import _ensure_dir_exists
 from ..io.kwik.model import KwikModel
 from ..io.kwik.store_items import create_store
@@ -59,7 +59,13 @@ class Session(BaseSession):
     _vm_classes = ClusterManualGUI._vm_classes
     _gui_classes = {'cluster_manual': ClusterManualGUI}
 
-    def __init__(self, kwik_path=None, model=None, phy_user_dir=None):
+    def __init__(self,
+                 kwik_path=None,
+                 model=None,
+                 use_store=True,
+                 phy_user_dir=None,
+                 ):
+        self._use_store = use_store
         curdir = op.dirname(op.realpath(__file__))
         settings_path = op.join(curdir, 'default_settings.py')
         if kwik_path:
@@ -140,6 +146,12 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def _create_cluster_store(self):
+        if not self._use_store:
+            # Just use a mock store.
+            self.store = create_store(self.model,
+                                      self.model.spikes_per_cluster,
+                                      )
+            return
 
         # Kwik store in experiment_dir/name.phy/1/main/cluster_store.
         store_path = op.join(self.settings.exp_settings_dir,
@@ -249,6 +261,18 @@ class Session(BaseSession):
             The spike_clusters assignements returned by the algorithm.
 
         """
+        # Make sure the clustering name does not exist already.
+        if clustering_name in self.model.clusterings:
+            old = clustering_name
+            i = 0
+            while True:
+                new = '{}_{}'.format(clustering_name, i)
+                if new not in self.model.clusterings:
+                    break
+                i += 1
+            clustering_name = new
+            warn("The clustering `{}` already exists -- ".format(old) +
+                 "switching to `{}`.".format(new))
         kk = KlustaKwik(**kwargs)
         info("Running {}...".format(algorithm))
         # Run KK.

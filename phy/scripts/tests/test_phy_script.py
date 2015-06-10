@@ -33,10 +33,43 @@ def _call(cmd):
 
 
 def _parse(args):
-    return _parse_args(args)
+    return _parse_args(args)[0]
 
 
-def test_script():
+def test_script_parser():
+
+    kwik_path = 'test'
+
+    for cmd in ('cluster-manual', 'cluster-auto'):
+        assert _parse([cmd, kwik_path]).command == cmd
+
+    args = _parse(['cluster-manual', '-i', '--debug', kwik_path])
+    assert args.command == 'cluster-manual'
+    assert args.ipython
+    assert args.debug
+    assert not args.profiler
+    assert not args.line_profiler
+
+    args = _parse(['cluster-auto', '-lp', kwik_path])
+    assert args.command == 'cluster-auto'
+    assert not args.ipython
+    assert not args.debug
+    assert not args.profiler
+    assert args.line_profiler
+
+    # Test extra arguments.
+    args, kwargs = _parse_args(['cluster-auto',
+                                kwik_path,
+                                '--a=foo',
+                                '--b-b=1.5',
+                                '--c=2',
+                                ])
+    assert kwargs['a'] == 'foo'
+    assert kwargs['b-b'] == 1.5
+    assert kwargs['c'] == 2
+
+
+def test_script_run():
 
     with TemporaryDirectory() as tmpdir:
 
@@ -54,19 +87,5 @@ def test_script():
         _call('phy -v')
         _call('phy -h')
 
-        for cmd in ('cluster-manual', 'cluster-auto'):
-            assert _parse([cmd, kwik_path]).command == cmd
-
-        args = _parse(['cluster-manual', '-i', '--debug', kwik_path])
-        assert args.command == 'cluster-manual'
-        assert args.ipython
-        assert args.debug
-        assert not args.profiler
-        assert not args.line_profiler
-
-        args = _parse(['cluster-auto', '-lp', kwik_path])
-        assert args.command == 'cluster-auto'
-        assert not args.ipython
-        assert not args.debug
-        assert not args.profiler
-        assert args.line_profiler
+        cmd = 'phy cluster-auto {} --num_starting_clusters=10'
+        _call(cmd.format(kwik_path))
