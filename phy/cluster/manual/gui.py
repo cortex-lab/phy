@@ -269,8 +269,7 @@ class ClusterManualGUI(BaseGUI):
         # Set the similarity and quality functions for the wizard.
         @self.wizard.set_similarity_function
         def similarity(target, candidate):
-            """Compute the dot product between the mean masks of
-            two clusters."""
+            """Compute the distance between the mean masked features."""
 
             mu_0 = self.store.mean_features(target).ravel()
             mu_1 = self.store.mean_features(candidate).ravel()
