@@ -20,6 +20,9 @@ class KlustaKwik(object):
         assert 'num_starting_clusters' in kwargs
         self._kwargs = kwargs
         self.__dict__.update(kwargs)
+        # Set the version.
+        from klustakwik2 import __version__
+        self.version = __version__
 
     def cluster(self,
                 model=None,

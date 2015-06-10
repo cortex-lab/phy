@@ -95,7 +95,10 @@ class Session(BaseSession):
         """Save the spike clusters and cluster groups to the Kwik file."""
         groups = {cluster: self.model.cluster_metadata.group(cluster)
                   for cluster in self.cluster_ids}
-        self.model.save(self.model.spike_clusters, groups)
+        self.model.save(self.model.spike_clusters,
+                        groups,
+                        clustering_metadata=self.model.clustering_metadata,
+                        )
         info("Saved {0:s}.".format(self.model.kwik_path))
 
     # File-related actions
@@ -253,8 +256,14 @@ class Session(BaseSession):
         # Save the results in the Kwik file.
         spike_clusters = self.model.spike_clusters.copy()
         spike_clusters[spike_ids] = sc
+        # Add a new clustering and switch to it.
         self.model.add_clustering(clustering_name, spike_clusters)
         self.change_clustering(clustering_name)
+        # Set the new clustering metadata.
+        kwargs['version'] = kk.version
+        metadata = {'{}_{}'.format(algorithm, name): value
+                    for name, value in kwargs.items()}
+        self.model.clustering_metadata.update(metadata)
         self.save()
         info("The automatic clustering has finished.")
         info("The clustering has been saved in the "
