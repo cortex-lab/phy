@@ -349,6 +349,8 @@ def test_session_automatic(session, spike_ids):
     assert len(session.model.spike_clusters) == n_spikes
     assert not np.all(session.model.spike_clusters[spike_ids] == sc)
 
+    assert 'klustakwik_version' not in session.model.clustering_metadata
+
     session.change_clustering(clustering)
     assert len(session.model.spike_clusters) == n_spikes
     assert np.all(session.model.spike_clusters[spike_ids] == sc)
