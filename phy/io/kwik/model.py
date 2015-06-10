@@ -287,6 +287,7 @@ class KwikModel(BaseModel):
         self._masks = None
         self._waveforms = None
         self._cluster_metadata = None
+        self._clustering_metadata = {}
         self._traces = None
         self._recording_offsets = None
         self._waveform_loader = None
@@ -506,6 +507,21 @@ class KwikModel(BaseModel):
             self._kwik.write_attr(path, 'cluster_group', group)
             self._cluster_metadata.set_group([cluster], group)
 
+    def _load_clustering_metadata(self):
+        attrs = self._kwik.attrs(self._clustering_path)
+        metadata = {attr: self._kwik.read_attr(self._clustering_path, attr)
+                    for attr in attrs}
+        self._clustering_metadata = metadata
+
+    def _save_clustering_metadata(self, metadata):
+        if not metadata:
+            return
+        assert isinstance(metadata, dict)
+        for name, value in metadata.items():
+            path = self._clustering_path
+            self._kwik.write_attr(path, name, value)
+        self._clustering_metadata.update(metadata)
+
     def _load_traces(self):
         if self._kwd is not None:
             i = 0
@@ -637,7 +653,7 @@ class KwikModel(BaseModel):
         # No need to keep the kwik file open.
         self._kwik.close()
 
-    def save(self, spike_clusters, cluster_groups):
+    def save(self, spike_clusters, cluster_groups, clustering_metadata=None):
         """Save the spike clusters and cluster groups in the Kwik file."""
 
         # REFACTOR: with() to open/close the file if needed
@@ -645,6 +661,7 @@ class KwikModel(BaseModel):
 
         self._save_spike_clusters(spike_clusters)
         self._save_cluster_groups(cluster_groups)
+        self._save_clustering_metadata(clustering_metadata)
 
         if to_close:
             self._kwik.close()
@@ -703,6 +720,7 @@ class KwikModel(BaseModel):
         self._create_cluster_metadata()
         self._load_spike_clusters()
         self._load_cluster_groups()
+        self._load_clustering_metadata()
         if _to_close:
             self._kwik.close()
 
@@ -922,6 +940,12 @@ class KwikModel(BaseModel):
     def clustering(self, value):
         """Change the currently-active clustering."""
         self._clustering_changed(value)
+
+    @property
+    def clustering_metadata(self):
+        """A dictionary of key-value metadata specific to the current
+        clustering."""
+        return self._clustering_metadata
 
     @property
     def metadata(self):

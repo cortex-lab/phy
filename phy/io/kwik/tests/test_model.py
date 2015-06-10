@@ -204,7 +204,7 @@ def test_kwik_save():
         ae(kwik.spike_clusters, sc_0)
 
         assert kwik.cluster_metadata.group(new_cluster) == 3
-        kwik.save(sc_1, cluster_groups)
+        kwik.save(sc_1, cluster_groups, {'test': (1, 2.)})
         ae(kwik.spike_clusters, sc_1)
         assert kwik.cluster_metadata.group(new_cluster) == 7
 
@@ -213,6 +213,7 @@ def test_kwik_save():
         kwik = KwikModel(filename)
         ae(kwik.spike_clusters, sc_1)
         assert kwik.cluster_metadata.group(new_cluster) == 7
+        ae(kwik.clustering_metadata['test'], [1, 2])
 
 
 def test_kwik_clusterings():
