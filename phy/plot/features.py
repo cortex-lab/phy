@@ -30,23 +30,31 @@ from ..utils._color import _selected_clusters_colors
 # Features visual
 #------------------------------------------------------------------------------
 
-def _alternative_dimension(dim, n_features=None):
+def _alternative_dimension(dim, n_features=None, n_channels=None):
+    assert n_features >= 1
+    assert n_channels >= 1
     if dim == 'time':
         return (0, 0)
     else:
         channel, fet = dim
-        return (channel, (fet + 1) % n_features)
+        if n_features >= 2:
+            return (channel, (fet + 1) % n_features)
+        else:
+            return ((channel + 1) % n_channels, fet)
 
 
-def _matrix_from_dimensions(dimensions, n_features=None):
+def _matrix_from_dimensions(dimensions, n_features=None, n_channels=None):
     n = len(dimensions)
     matrix = np.empty((n, n), dtype=object)
     for i in range(n):
         for j in range(n):
-            dim_i, dim_j = dimensions[i], dimensions[j]
-            if dim_i == dim_j:
-                dim_j = _alternative_dimension(dim_i, n_features=n_features)
-            matrix[i, j] = (dim_i, dim_j)
+            dim_x, dim_y = dimensions[i], dimensions[j]
+            if dim_x == dim_y:
+                dim_y = _alternative_dimension(dim_x,
+                                               n_features=n_features,
+                                               n_channels=n_channels,
+                                               )
+            matrix[i, j] = (dim_x, dim_y)
     return matrix
 
 
@@ -385,6 +393,8 @@ class FeatureView(BaseSpikeCanvas):
                  ):
         if features is not None:
             assert isinstance(features, np.ndarray)
+            if features.ndim == 2:
+                features = features[..., None]
             assert features.ndim == 3
         else:
             features = self.visual.features
@@ -416,7 +426,10 @@ class FeatureView(BaseSpikeCanvas):
         if masks is not None:
             self.visual.masks = masks
 
-        matrix = _matrix_from_dimensions(dimensions, n_features=n_features)
+        matrix = _matrix_from_dimensions(dimensions,
+                                         n_features=n_features,
+                                         n_channels=n_channels,
+                                         )
         self.dimensions_matrix = matrix
 
         self.visual.spike_clusters = spike_clusters

@@ -695,8 +695,12 @@ class BaseFeatureViewModel(VispyViewModel):
         self._view.dimensions_matrix = value
 
     def _matrix_from_dimensions(self, dimensions):
+        n_features = self.view.background.n_features
+        n_channels = self.view.background.n_channels
         return _matrix_from_dimensions(dimensions,
-                                       self.view.background.n_features)
+                                       n_features=n_features,
+                                       n_channels=n_channels,
+                                       )
 
     def _set_dimensions_after_open(self):
         matrix = self._matrix_from_dimensions(['time'])

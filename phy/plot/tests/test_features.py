@@ -66,7 +66,7 @@ def test_features_full():
 def test_plot_features():
     n_spikes = 1000
     n_channels = 32
-    n_features = 3
+    n_features = 1
     n_clusters = 2
 
     features = artificial_features(n_spikes, n_channels, n_features)
