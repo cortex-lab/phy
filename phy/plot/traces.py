@@ -210,6 +210,57 @@ class TraceView(BaseSpikeCanvas):
         self._pz.ymin = -2.
         self._pz.ymax = +2.
 
+    def set_data(self,
+                 traces=None,
+                 spike_samples=None,
+                 spike_clusters=None,
+                 n_samples_per_spike=50,
+                 masks=None,
+                 colors=None,
+                 ):
+        if traces is not None:
+            assert isinstance(traces, np.ndarray)
+            assert traces.ndim == 2
+        else:
+            traces = self.visual.traces
+        n_samples, n_channels = traces.shape
+
+        if spike_samples is not None:
+            n_spikes = len(spike_samples)
+        else:
+            n_spikes = 0
+
+        if spike_clusters is None:
+            spike_clusters = np.zeros(n_spikes, dtype=np.int32)
+        cluster_ids = _unique(spike_clusters)
+        n_clusters = len(cluster_ids)
+
+        if masks is None:
+            masks = np.ones((n_spikes, n_channels), dtype=np.float32)
+
+        if colors is None:
+            colors = _selected_clusters_colors(n_clusters)
+
+        self.visual.traces = traces.astype(np.float32)
+
+        if masks is not None:
+            self.visual.masks = masks
+
+        if n_samples_per_spike is not None:
+            self.visual.n_samples_per_spike = n_samples_per_spike
+
+        if spike_samples is not None:
+            assert spike_samples.shape == (n_spikes,)
+            self.visual.spike_samples = spike_samples
+
+        if spike_clusters is not None:
+            assert spike_clusters.shape == (n_spikes,)
+            self.visual.spike_clusters = spike_clusters
+
+        self.visual.cluster_colors = colors
+
+        self.update()
+
     @property
     def channel_scale(self):
         """Vertical scale of the traces."""
@@ -245,50 +296,7 @@ class TraceView(BaseSpikeCanvas):
 #------------------------------------------------------------------------------
 
 @_wrap_vispy
-def plot_traces(traces,
-                spike_samples=None,
-                spike_clusters=None,
-                n_samples_per_spike=50,
-                masks=None,
-                colors=None,
-                ):
-    assert isinstance(traces, np.ndarray)
-    assert traces.ndim == 2
-    n_samples, n_channels = traces.shape
-
-    if spike_samples is not None:
-        n_spikes = len(spike_samples)
-    else:
-        n_spikes = 0
-
-    if spike_clusters is None:
-        spike_clusters = np.zeros(n_spikes, dtype=np.int32)
-    cluster_ids = _unique(spike_clusters)
-    n_clusters = len(cluster_ids)
-
-    if masks is None:
-        masks = np.ones((n_spikes, n_channels), dtype=np.float32)
-
-    if colors is None:
-        colors = _selected_clusters_colors(n_clusters)
-
+def plot_traces(traces, **kwargs):
     c = TraceView()
-    c.visual.traces = traces.astype(np.float32)
-
-    if masks is not None:
-        c.visual.masks = masks
-
-    if n_samples_per_spike is not None:
-        c.visual.n_samples_per_spike = n_samples_per_spike
-
-    if spike_samples is not None:
-        assert spike_samples.shape == (n_spikes,)
-        c.visual.spike_samples = spike_samples
-
-    if spike_clusters is not None:
-        assert spike_clusters.shape == (n_spikes,)
-        c.visual.spike_clusters = spike_clusters
-
-    c.visual.cluster_colors = colors
-
+    c.set_data(traces, **kwargs)
     return c
