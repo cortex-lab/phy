@@ -238,7 +238,7 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def cluster(self,
-                clustering_name='automatic',
+                clustering_name='original',
                 algorithm='klustakwik',
                 spike_ids=None,
                 **kwargs):

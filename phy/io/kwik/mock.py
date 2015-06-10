@@ -89,7 +89,7 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
 
         # Create spike clusters.
         clusterings = [('main', n_clusters),
-                       ('automatic', n_clusters * 2),
+                       ('original', n_clusters * 2),
                        ]
         for clustering, n_clusters_rec in clusterings:
             spike_clusters = artificial_spike_clusters(n_spikes,

@@ -236,7 +236,7 @@ def test_session_multiple_clusterings(session):
     # Change clustering.
     with raises(ValueError):
         session.change_clustering('automat')
-    session.change_clustering('automatic')
+    session.change_clustering('original')
     yield
 
     n_clusters_2 = session.model.n_clusters
@@ -260,7 +260,7 @@ def test_session_multiple_clusterings(session):
     # changed here.
     assert session.model.n_clusters == n_clusters
 
-    session.change_clustering('automatic')
+    session.change_clustering('original')
     assert session.model.n_spikes == n_spikes
     assert session.model.n_clusters == 1
     assert session.model.cluster_ids == n_clusters_2
