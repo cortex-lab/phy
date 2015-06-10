@@ -535,6 +535,5 @@ class FeatureView(BaseSpikeCanvas):
 @_wrap_vispy
 def plot_features(features, **kwargs):
     c = FeatureView()
-    c.visual.features = features
-    c.set_data(**kwargs)
+    c.set_data(features, **kwargs)
     return c

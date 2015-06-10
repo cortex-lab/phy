@@ -134,6 +134,31 @@ class CorrelogramView(BaseSpikeCanvas):
         self._pz.ymax = +1.
         self._pz.zoom_to_pointer = False
 
+    def set_data(self,
+                 correlograms=None,
+                 colors=None,
+                 lines=None):
+
+        if correlograms is not None:
+            correlograms = np.asarray(correlograms)
+        else:
+            correlograms = self.visual.correlograms
+        assert correlograms.ndim == 3
+        n_clusters = len(correlograms)
+        assert correlograms.shape[:2] == (n_clusters, n_clusters)
+
+        if colors is None:
+            colors = _selected_clusters_colors(n_clusters)
+
+        self.cluster_ids = np.arange(n_clusters)
+        self.visual.correlograms = correlograms
+        self.visual.cluster_colors = colors
+
+        if lines is not None:
+            self.lines = lines
+
+        self.update()
+
     @property
     def cluster_ids(self):
         """Displayed cluster ids."""
@@ -186,7 +211,7 @@ class CorrelogramView(BaseSpikeCanvas):
 #------------------------------------------------------------------------------
 
 @_wrap_vispy
-def plot_correlograms(correlograms, colors=None, lines=None):
+def plot_correlograms(correlograms, **kwargs):
     """Plot an array of correlograms.
 
     Parameters
@@ -198,22 +223,8 @@ def plot_correlograms(correlograms, colors=None, lines=None):
         A list of colors as RGB tuples.
 
     """
-    correlograms = np.asarray(correlograms)
-    n_clusters = len(correlograms)
-    assert correlograms.ndim == 3
-    assert correlograms.shape[:2] == (n_clusters, n_clusters)
-
-    if colors is None:
-        colors = _selected_clusters_colors(n_clusters)
-
     c = CorrelogramView()
-    c.cluster_ids = np.arange(n_clusters)
-    c.visual.correlograms = correlograms
-    c.visual.cluster_colors = colors
-
-    if lines is not None:
-        c.lines = lines
-
+    c.set_data(correlograms, **kwargs)
     return c
 
 

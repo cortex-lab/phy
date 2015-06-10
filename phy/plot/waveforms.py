@@ -475,6 +475,5 @@ class WaveformView(BaseSpikeCanvas):
 @_wrap_vispy
 def plot_waveforms(waveforms, **kwargs):
     c = WaveformView()
-    c.visual.waveforms = waveforms
-    c.set_data(**kwargs)
+    c.set_data(waveforms, **kwargs)
     return c
