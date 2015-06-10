@@ -1,24 +1,10 @@
 # -*- coding: utf-8 -*-
 
-"""ClusterManualGUI CLI tool.
+"""phy main CLI tool.
 
 Usage:
 
-    phy cluster-manual /path/to/myfile.kwik [-i]
-
-Options:
-
-* `-i`: launch the GUI in interactive mode with an IPython terminal.
-  This gives you access to the underlying Python API for programmatic access.
-
-Once within IPython, you have access to the following variables:
-
-* `kwik_path`: the path to the Kwik file
-* `session`: the `Session` instance
-* `model`: the `KwikModel` instance
-* `gui`: the `ClusterManualGUI` instance
-
-Once the GUI is closed, quit IPython with `exit()`.
+    phy --help
 
 """
 
@@ -28,70 +14,12 @@ Once the GUI is closed, quit IPython with `exit()`.
 
 import sys
 import os.path as op
-
-
-#------------------------------------------------------------------------------
-# Utility functions
-#------------------------------------------------------------------------------
-
-def _pop(l, el, default=None):
-    if el in l:
-        l.remove(el)
-        return el
-    else:
-        return default
+import argparse
 
 
 #------------------------------------------------------------------------------
 # Main function
 #------------------------------------------------------------------------------
-
-def main():
-    # TODO: use argparse
-    args = sys.argv
-
-    # Profiling.
-    profile = _pop(args, '-p', False)
-    profile_line = _pop(args, '-pl', False)
-    if profile or profile_line:
-        from phy.utils.testing import _enable_profiler, _profile
-        prof = _enable_profiler(profile_line)
-    else:
-        prof = None
-
-    if '-h' in args or '--help' in args:
-        print(sys.modules[__name__].__doc__)
-        return 0
-
-    import phy
-    if '-v' in args or '--version' in args:
-        print("phy v{}".format(phy.__version__))
-        return 0
-
-    if _pop(args, '--debug', False):
-        phy.debug()
-
-    if len(args) <= 2 or args[1] != 'cluster-manual':
-        print("Only the `phy cluster-manual [-i] myfile.kwik` command "
-              "is currently supported.")
-        return 1
-
-    args = args[2:]
-    # print("ClusterManualGUI")
-    interactive = _pop(args, '-i', False) or _pop(args, '--interactive', False)
-
-    if len(args) == 0:
-        print("Please specify a path to a `.kwik` file.")
-        return 1
-
-    kwik_path = args[0]
-
-    if not prof:
-        run(kwik_path, interactive=interactive)
-    else:
-        _profile(prof, 'run(kwik_path, interactive=interactive)',
-                 globals(), locals())
-
 
 def run(kwik_path, interactive=False):
     import phy
@@ -128,6 +56,82 @@ def run(kwik_path, interactive=False):
     else:
         gui.show()
         run_qt_app()
+
+
+def main():
+    desc = sys.modules[__name__].__doc__
+    parser = argparse.ArgumentParser(description=desc)
+
+    # Allowed subcommands.
+    commands = [
+        'cluster-auto',
+        'cluster-manual',
+        # TODO:
+        # 'describe',  # describe a dataset
+        # 'notebook',  # start a new analysis notebook
+        # 'detect-spikes',
+    ]
+
+    parser.add_argument('command', required=True, choices=commands,
+                        help='command to execute')
+
+    parser.add_argument('file', required=True,
+                        help='file to execute the command on')
+
+    parser.add_argument('--version', '-v', action='store_true',
+                        help='print the version of phy')
+
+    parser.add_argument('--debug', '-d', action='store_true',
+                        help='activate debug logging mode')
+
+    parser.add_argument('--profile', '-p', action='store_true',
+                        help='activate the profile')
+
+    parser.add_argument('--profile-line', '-pl', action='store_true',
+                        help='activate the line-profile -- you need to '
+                        'decorate the functions to profile with `@profile` '
+                        'in the code')
+
+    parser.add_argument('--ipython', '-i', action='store_true',
+                        help='launch the script in an interactive '
+                        'IPython console')
+
+    # Parse the CLI arguments.
+    args = parser.parse_args()
+
+
+    # if profile or profile_line:
+    #     from phy.utils.testing import _enable_profiler, _profile
+    #     prof = _enable_profiler(profile_line)
+    # else:
+    #     prof = None
+
+    # if '-h' in args or '--help' in args:
+    #     print(sys.modules[__name__].__doc__)
+    #     return 0
+
+    # import phy
+    # if '-v' in args or '--version' in args:
+    #     print("phy v{}".format(phy.__version__))
+    #     return 0
+
+    # if _pop(args, '--debug', False):
+    #     phy.debug()
+
+    # if len(args) <= 2 or args[1] != 'cluster-manual':
+    #     print("Only the `phy cluster-manual [-i] myfile.kwik` command "
+    #           "is currently supported.")
+    #     return 1
+
+    # if len(args) == 0:
+    #     print("Please specify a path to a `.kwik` file.")
+    #     return 1
+
+    # if not prof:
+    #     run(kwik_path, interactive=interactive)
+    # else:
+    #     _profile(prof, 'run(kwik_path, interactive=interactive)',
+    #              globals(), locals())
 
 
 #------------------------------------------------------------------------------
