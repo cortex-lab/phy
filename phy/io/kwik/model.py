@@ -18,7 +18,7 @@ from ..h5 import open_h5, File
 from ...waveform.loader import WaveformLoader
 from ...waveform.filter import bandpass_filter, apply_filter
 from ...electrode.mea import MEA
-from ...utils.logging import warn
+from ...utils.logging import debug, warn
 from ...utils.array import (PartialArray,
                             _concatenate_virtual_arrays,
                             _spikes_per_cluster,
@@ -509,8 +509,14 @@ class KwikModel(BaseModel):
 
     def _load_clustering_metadata(self):
         attrs = self._kwik.attrs(self._clustering_path)
-        metadata = {attr: self._kwik.read_attr(self._clustering_path, attr)
-                    for attr in attrs}
+        metadata = {}
+        for attr in attrs:
+            try:
+                metadata[attr] = self._kwik.read_attr(self._clustering_path,
+                                                      attr)
+            except OSError:
+                debug("Error when reading `{}:{}`.".format(
+                      self._clustering_path, attr))
         self._clustering_metadata = metadata
 
     def _save_clustering_metadata(self, metadata):
