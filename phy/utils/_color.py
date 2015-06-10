@@ -53,7 +53,9 @@ _COLORMAP = np.array([[102, 194, 165],
                       ])
 
 
-def _selected_clusters_colors(n_clusters):
+def _selected_clusters_colors(n_clusters=None):
+    if n_clusters is None:
+        n_clusters = _COLORMAP.shape[0]
     if n_clusters > _COLORMAP.shape[0]:
         colors = np.tile(_COLORMAP, (1 + n_clusters // _COLORMAP.shape[0], 1))
     else:

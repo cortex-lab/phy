@@ -163,11 +163,18 @@ class HTMLViewModel(BaseViewModel):
         """
         return {}
 
+    def _css_replacements(self):
+        return {}
+
     def _update(self, view, **kwargs):
         html = self.get_html(**kwargs)
-        html = html.format(**self._format_dict(**kwargs))
-        view.setHtml(_wrap_html(html=html,
-                                static_path=self._static_path))
+        params = self._format_dict(**kwargs)
+        html = html.format(**params)
+        html = _wrap_html(html=html,
+                          static_path=self._static_path,
+                          css_replacements=self._css_replacements(),
+                          )
+        view.setHtml(html)
 
     def _create_view(self, **kwargs):
         from PyQt4.QtWebKit import QWebView

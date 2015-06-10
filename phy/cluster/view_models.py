@@ -110,8 +110,15 @@ class HTMLClusterViewModel(BaseClusterViewModel, HTMLViewModel):
     _html_filename = None
     _html = ''
 
-    def _format_dict(self, **kwargs):
-        return {}
+    def _css_replacements(self, **kwargs):
+        colors = _selected_clusters_colors()
+
+        def _get_color(c):
+            c = (255 * c).astype(np.int32)
+            return 'rgb({}, {}, {})'.format(*c)
+
+        return {'%CLUSTER_COLOR_{}%'.format(i): _get_color(colors[i])
+                for i in range(len(colors))}
 
     # Callbacks
     #--------------------------------------------------------------------------
@@ -121,23 +128,6 @@ class HTMLClusterViewModel(BaseClusterViewModel, HTMLViewModel):
 
     def on_cluster(self, up):
         self.update(cluster_ids=self._cluster_ids, up=up)
-
-
-class StatsViewModel(HTMLClusterViewModel):
-    _static_path = op.join(op.dirname(op.realpath(__file__)), 'manual/static')
-
-    def get_html(self, cluster_ids=None, up=None):
-        stats = self.store.items['statistics']
-        names = stats.fields
-        if cluster_ids is None:
-            return ''
-        cluster = cluster_ids[0]
-        html = ''
-        for name in names:
-            value = getattr(self.store, name)(cluster)
-            if not isinstance(value, np.ndarray):
-                html += '<p>{}: {}</p>\n'.format(name, value)
-        return '<div class="stats">\n' + html + '</div>'
 
 
 class VispyViewModel(BaseClusterViewModel):
@@ -234,6 +224,39 @@ class VispyViewModel(BaseClusterViewModel):
             shortcuts = self._view.keyboard_shortcuts
             shortcuts.update(self.keyboard_shortcuts)
             _show_shortcuts(shortcuts, name=self.name)
+
+
+#------------------------------------------------------------------------------
+# Stats panel
+#------------------------------------------------------------------------------
+
+class StatsViewModel(HTMLClusterViewModel):
+    _static_path = op.join(op.dirname(op.realpath(__file__)), 'manual/static')
+
+    def get_html(self, cluster_ids=None, up=None):
+        stats = self.store.items['statistics']
+        names = stats.fields
+        if cluster_ids is None:
+            return ''
+        # Only keep scalar stats.
+        _arrays = {name: isinstance(getattr(self.store, name)(cluster_ids[0]),
+                   np.ndarray) for name in names}
+        names = sorted([name for name in _arrays if not _arrays[name]])
+        # Generate the table.
+        html = '<tr><th></th>'
+        for i, cluster in enumerate(cluster_ids):
+            html += '<th class="{style}">{cluster}</th>'.format(
+                    cluster=cluster, style='cluster_{}'.format(i))
+        html += '</tr>'
+        for name in names:
+            html += '<tr>'
+            html += '<td>{name}</td>'.format(name=name)
+            for i, cluster in enumerate(cluster_ids):
+                value = getattr(self.store, name)(cluster)
+                html += '<td class="{style}">{value}</td>'.format(
+                        value=value, style='cluster_{}'.format(i))
+            html += '</tr>'
+        return '<div class="stats"><table>\n' + html + '</table></div>'
 
 
 #------------------------------------------------------------------------------
