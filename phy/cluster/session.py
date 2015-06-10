@@ -167,11 +167,13 @@ class Session(BaseSession):
     def change_channel_group(self, channel_group):
         """Change the current channel group."""
         self.model.channel_group = channel_group
+        info("Switched to channel group {}.".format(channel_group))
         self.emit('open')
 
     def change_clustering(self, clustering):
         """Change the current clustering."""
         self.model.clustering = clustering
+        info("Switched to `{}` clustering.".format(clustering))
         self.emit('open')
 
     def on_open(self):
@@ -237,19 +239,27 @@ class Session(BaseSession):
         spike_ids : array-like
             Array of spikes to cluster.
 
+        Returns
+        -------
+
+        spike_clusters : array
+            The spike_clusters assignements returned by the algorithm.
+
         """
         kk = KlustaKwik(**kwargs)
         info("Running {}...".format(algorithm))
         # Run KK.
-        spike_clusters = kk.cluster(model=self.model, spike_ids=spike_ids)
+        sc = kk.cluster(model=self.model, spike_ids=spike_ids)
         # Save the results in the Kwik file.
+        spike_clusters = self.model.spike_clusters.copy()
+        spike_clusters[spike_ids] = sc
         self.model.add_clustering(clustering_name, spike_clusters)
         self.change_clustering(clustering_name)
         self.save()
         info("The automatic clustering has finished.")
         info("The clustering has been saved in the "
              "`{}` clustering in the `.kwik` file.".format(clustering_name))
-        return spike_clusters
+        return sc
 
     # GUI
     # -------------------------------------------------------------------------

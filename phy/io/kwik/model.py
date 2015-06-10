@@ -757,6 +757,7 @@ class KwikModel(BaseModel):
         if name in self._clusterings:
             raise ValueError("The clustering '{0}' ".format(name) +
                              "already exists.")
+        assert len(spike_clusters) == self.n_spikes
 
         _to_close = self._open_kwik_if_needed(mode='a')
 

@@ -331,16 +331,24 @@ def test_session_statistics(session):
     gui.close()
 
 
-def test_session_automatic(session):
+@mark.parametrize('spike_ids', [None, np.arange(20)])
+def test_session_automatic(session, spike_ids):
+    set_level('info')
     clustering = 'clustering_test'
     sc = session.cluster(clustering_name=clustering,
                          num_starting_clusters=10,
+                         spike_ids=spike_ids,
                          )
     assert session.model.clustering == clustering
 
     # Re-open the dataset and check that the clustering has been saved.
     session = _start_manual_clustering(kwik_path=session.model.path,
                                        tempdir=session.tempdir)
-    assert not np.all(session.model.spike_clusters == sc)
+    if spike_ids is None:
+        spike_ids = slice(None, None, None)
+    assert len(session.model.spike_clusters) == n_spikes
+    assert not np.all(session.model.spike_clusters[spike_ids] == sc)
+
     session.change_clustering(clustering)
-    assert np.all(session.model.spike_clusters == sc)
+    assert len(session.model.spike_clusters) == n_spikes
+    assert np.all(session.model.spike_clusters[spike_ids] == sc)
