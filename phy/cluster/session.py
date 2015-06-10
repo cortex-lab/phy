@@ -17,6 +17,7 @@ from ..io.kwik.model import KwikModel
 from ..io.kwik.store_items import create_store
 from .manual.gui import ClusterManualGUI
 from ..gui.base import BaseSession
+from .launcher import KlustaKwik
 
 
 #------------------------------------------------------------------------------
@@ -216,7 +217,33 @@ class Session(BaseSession):
 
         return decorator
 
-    # Views and GUIs
+    # Automatic clustering
+    # -------------------------------------------------------------------------
+
+    def cluster(self, spike_ids=None, algorithm='klustakwik',
+                clustering_name='automatic', **kwargs):
+        """Run an automatic clustering algorithm on all or some of the spikes.
+
+        Parameters
+        ----------
+
+        spike_ids : array-like
+            Array of spikes to cluster.
+        algorithm : str
+            The algorithm name. Only `klustakwik` currently.
+        clustering_name : str
+            The name of the clustering in which to save the results.
+
+        """
+        kk = KlustaKwik(**kwargs)
+        info("Running {}...".format(algorithm))
+        spike_clusters = kk.cluster(model=self.model, spike_ids=spike_ids)
+        self.model.add_clustering(clustering_name, spike_clusters)
+        info("The automatic clustering has finished.")
+        info("The clustering has been saved in the "
+             "`{}` clustering in the `.kwik` file.".format(clustering_name))
+
+    # GUI
     # -------------------------------------------------------------------------
 
     def show_gui(self, **kwargs):
