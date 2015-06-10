@@ -270,7 +270,6 @@ class WaveformView(BaseSpikeCanvas):
             if waveforms.ndim == 2:
                 waveforms = waveforms[None, ...]
             assert waveforms.ndim == 3
-            waveforms = waveforms.astype(np.float32)
         else:
             waveforms = self.visual.waveforms
         n_spikes, n_samples, n_channels = waveforms.shape
