@@ -9,6 +9,7 @@ from __future__ import print_function
 #------------------------------------------------------------------------------
 
 import sys
+import os
 import os.path as op
 import re
 from subprocess import call
@@ -22,8 +23,11 @@ from github3 import login
 # Utilities
 # -----------------------------------------------------------------------------
 
-def _call(cmd):
-    ret = call(cmd.split(' '))
+def _call(cmd, system=False):
+    if system:
+        ret = os.system(cmd)
+    else:
+        ret = call(cmd.split(' '))
     if ret != 0:
         raise RuntimeError()
 
@@ -139,7 +143,12 @@ def _build_docker():
 
 
 def _test_docker():
-    _call('docker run --rm phy-stable /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render && python -c "import phy; phy.test()"')
+    _call('docker run --rm phy-release-test /sbin/start-stop-daemon --start '
+          '--quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile '
+          '--background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 '
+          '-ac +extension GLX +render && '
+          'python -c "import phy; phy.test()"',
+          system=True)
 
 
 # -----------------------------------------------------------------------------
@@ -166,3 +175,7 @@ if __name__ == '__main__':
         release_test()
     elif sys.argv[1] == 'release':
         release()
+    elif sys.argv[1] == 'docker_test':
+        _test_docker()
+    elif sys.argv[1] == 'docker_build':
+        _build_docker()
