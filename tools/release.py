@@ -171,11 +171,4 @@ def release():
 
 
 if __name__ == '__main__':
-    if sys.argv[1] == 'release_test':
-        release_test()
-    elif sys.argv[1] == 'release':
-        release()
-    elif sys.argv[1] == 'docker_test':
-        _test_docker()
-    elif sys.argv[1] == 'docker_build':
-        _build_docker()
+    globals()[sys.argv[1]]()
