@@ -13,7 +13,7 @@ import os
 import numpy as np
 
 from ...ext import six
-from ..base_model import BaseModel, ClusterMetadata
+from ..base import BaseModel, ClusterMetadata
 from ..h5 import open_h5, File
 from ...waveform.loader import WaveformLoader
 from ...waveform.filter import bandpass_filter, apply_filter

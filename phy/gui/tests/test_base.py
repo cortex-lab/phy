@@ -22,7 +22,7 @@ from ..qt import (QtGui,
 from ...utils.event import EventEmitter
 from ...utils.logging import set_level
 from ...utils.tempdir import TemporaryDirectory
-from ...io.base_model import BaseModel, BaseSession
+from ...io.base import BaseModel, BaseSession
 
 
 # Skip these tests in "make test-quick".

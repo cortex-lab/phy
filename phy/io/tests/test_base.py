@@ -8,7 +8,7 @@
 
 from pytest import raises
 
-from ..base_model import BaseModel, ClusterMetadata
+from ..base import BaseModel, ClusterMetadata
 
 
 #------------------------------------------------------------------------------
@@ -47,7 +47,7 @@ def test_base_cluster_metadata():
     assert meta.color(10) == 20
 
 
-def test_base_model():
+def test_base():
     model = BaseModel()
 
     assert model.channel_group is None

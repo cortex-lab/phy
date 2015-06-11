@@ -11,7 +11,7 @@ import numpy.random as nr
 
 from ..utils._color import _random_color
 from ..utils.array import _unique, _spikes_per_cluster
-from .base_model import BaseModel, ClusterMetadata
+from .base import BaseModel, ClusterMetadata
 from ..electrode.mea import MEA, staggered_positions
 
 
