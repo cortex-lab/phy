@@ -135,11 +135,11 @@ def _upload_pypi():
 # -----------------------------------------------------------------------------
 
 def _build_docker():
-    pass
+    _call('docker build -t phy-release-test docker/stable')
 
 
 def _test_docker():
-    pass
+    _call('docker run --rm phy-stable /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render && python -c "import phy; phy.test()"')
 
 
 # -----------------------------------------------------------------------------
