@@ -42,3 +42,9 @@ def debug(enable=True):
         set_level('debug')
     else:
         set_level('info')
+
+
+def test():
+    """Run the full testing suite of phy."""
+    import pytest
+    pytest.main()

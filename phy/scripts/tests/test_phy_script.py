@@ -10,7 +10,7 @@ from subprocess import call
 import time
 
 import numpy as np
-from pytest import raises
+from pytest import raises, mark
 
 from ...utils.tempdir import TemporaryDirectory
 from ...io.kwik.mock import create_mock_kwik
@@ -72,6 +72,7 @@ def test_script_parser():
     assert kwargs['c_c'] == 2
 
 
+@mark.long
 def test_script_run():
 
     with TemporaryDirectory() as tmpdir:

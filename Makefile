@@ -26,13 +26,13 @@ lint:
 	${FLAKE8} phy --exclude=phy/ext/*,default_settings.py --ignore=E226,E265,F811
 
 test: lint
-	py.test --cov-report term-missing --cov phy --ignore experimental -s
+	py.test --cov-report term-missing --cov phy -s
 
 coverage:
 	coverage --html
 
 test-quick: lint
-	py.test phy --ignore experimental -m "not long"
+	py.test phy -m "not long"
 
 apidoc:
 	python tools/api.py
