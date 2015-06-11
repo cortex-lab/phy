@@ -498,17 +498,6 @@ class CorrelogramViewModel(VispyViewModel):
         self.normalization = ('equal' if self._normalization == 'independent'
                               else 'independent')
 
-    keyboard_shortcuts = {
-        'toggle_normalization': 'n',
-    }
-
-    def on_key_press(self, event):
-        """Called when a key is pressed."""
-        super(CorrelogramViewModel, self).on_key_press(event)
-        if not event.modifiers:
-            if event.key == 'N':
-                self.toggle_normalization()
-
 
 class TraceViewModel(VispyViewModel):
     """Traces."""

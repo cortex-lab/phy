@@ -75,6 +75,7 @@ cluster_manual_shortcuts = {
     'move_both_to_noise': 'ctrl+alt+n',
     'move_both_to_mua': 'ctrl+alt+m',
     'move_both_to_good': 'ctrl+alt+g',
+    'toggle_correlogram_normalization': 'n',
 }
 
 

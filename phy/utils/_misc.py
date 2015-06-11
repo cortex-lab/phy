@@ -67,5 +67,5 @@ def _show_shortcuts(shortcuts, name=''):
         name = ' for ' + name
     print('Keyboard shortcuts' + name)
     for name in sorted(shortcuts):
-        print('{0:<24}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
+        print('{0:<40}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
     print()

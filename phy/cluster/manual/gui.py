@@ -197,10 +197,9 @@ class ClusterManualGUI(BaseGUI):
         for action in ['reset_gui',
                        'save',
                        'close',
-                       'undo',
-                       'redo',
                        'show_shortcuts',
                        'select',
+                       # Wizard.
                        'reset_wizard',
                        'first',
                        'last',
@@ -208,8 +207,13 @@ class ClusterManualGUI(BaseGUI):
                        'previous',
                        'pin',
                        'unpin',
+                       # Actions.
                        'merge',
                        'split',
+                       'undo',
+                       'redo',
+                       # Views.
+                       'toggle_correlogram_normalization',
                        ]:
             self._add_gui_shortcut(action)
 
@@ -386,6 +390,13 @@ class ClusterManualGUI(BaseGUI):
     def n_clusters(self):
         """Number of clusters in the current clustering."""
         return self.clustering.n_clusters
+
+    # View-related actions
+    # ---------------------------------------------------------------------
+
+    def toggle_correlogram_normalization(self):
+        for vm in self.get_views('correlograms'):
+            vm.toggle_normalization()
 
     # Selection
     # ---------------------------------------------------------------------
