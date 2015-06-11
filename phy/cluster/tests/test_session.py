@@ -88,6 +88,31 @@ def session(request):
 # Tests
 #------------------------------------------------------------------------------
 
+def test_store_corruption():
+    with TemporaryDirectory() as tmpdir:
+        # Create the test HDF5 file in the temporary directory.
+        kwik_path = create_mock_kwik(tmpdir,
+                                     n_clusters=n_clusters,
+                                     n_spikes=n_spikes,
+                                     n_channels=n_channels,
+                                     n_features_per_channel=n_fets,
+                                     n_samples_traces=n_samples_traces)
+
+        session = Session(kwik_path)
+        store_path = session.store.path
+        session.close()
+
+        # Corrupt a file in the store.
+        fn = op.join(store_path, 'waveforms_spikes')
+        with open(fn, 'rb') as f:
+            contents = f.read()
+        with open(fn, 'wb') as f:
+            f.write(contents[1:-1])
+
+        session = Session(kwik_path)
+        session.close()
+
+
 def test_session_store_features():
     """Check that the cluster store works for features and masks."""
 
