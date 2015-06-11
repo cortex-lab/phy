@@ -51,8 +51,8 @@ def _parse_args(args):
     commands = [
         'cluster-auto',
         'cluster-manual',
+        'describe',  # describe a dataset
         # TODO:
-        # 'describe',  # describe a dataset
         # 'notebook',  # start a new analysis notebook
         # 'detect-spikes',
     ]
@@ -144,6 +144,18 @@ def run_auto(kwik_path, interactive=False, **kwargs):
     session.close()
 
 
+def describe(kwik_path):
+    from phy.io.kwik import KwikModel
+
+    if not op.exists(kwik_path):
+        print("The file `{}` doesn't exist.".format(kwik_path))
+        return
+
+    model = KwikModel(kwik_path)
+    model.describe()
+    model.close()
+
+
 def main():
 
     args, kwargs = _parse_args(sys.argv[1:])
@@ -162,6 +174,8 @@ def main():
         cmd = 'run_manual(args.file, interactive=args.ipython)'
     elif args.command == 'cluster-auto':
         cmd = 'run_auto(args.file, interactive=args.ipython, **kwargs)'
+    elif args.command == 'describe':
+        cmd = 'describe(args.file)'
     else:
         raise NotImplementedError()
 

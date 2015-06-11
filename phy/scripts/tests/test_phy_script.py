@@ -88,6 +88,7 @@ def test_script_run():
 
         _call('phy -v')
         _call('phy -h')
+        _call('phy describe ' + kwik_path)
 
         cmd = ('phy cluster-auto {} --num_starting_clusters=10 '
                '--clustering-name=auto')
