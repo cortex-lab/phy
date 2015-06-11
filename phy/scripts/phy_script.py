@@ -31,6 +31,7 @@ def _parse_extra(extra):
         r = reg.match(e)
         if r:
             key, value = r.group(1), r.group(2)
+            key = key.replace('-', '_')
             try:
                 value = int(value)
             except ValueError:

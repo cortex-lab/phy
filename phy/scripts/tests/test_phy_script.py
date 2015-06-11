@@ -8,10 +8,12 @@
 
 from subprocess import call
 
+import numpy as np
 from pytest import raises
 
 from ...utils.tempdir import TemporaryDirectory
 from ...io.kwik.mock import create_mock_kwik
+from ...cluster.session import Session
 from ..phy_script import _parse_args
 
 
@@ -65,7 +67,7 @@ def test_script_parser():
                                 '--c=2',
                                 ])
     assert kwargs['a'] == 'foo'
-    assert kwargs['b-b'] == 1.5
+    assert kwargs['b_b'] == 1.5
     assert kwargs['c'] == 2
 
 
@@ -87,6 +89,10 @@ def test_script_run():
         _call('phy -v')
         _call('phy -h')
 
-        cmd = 'phy cluster-auto {} --num_starting_clusters=10'
+        cmd = ('phy cluster-auto {} --num_starting_clusters=10 '
+               '--clustering-name=auto')
         _call(cmd.format(kwik_path))
-        # TODO: test
+
+        session = Session(kwik_path)
+        session.change_clustering('auto')
+        assert np.all(session.model.spike_clusters == 0)
