@@ -740,8 +740,13 @@ class BaseFeatureViewModel(VispyViewModel):
     def dimensions_matrix(self):
         """The matrix of displayed dimensions.
 
-        * `matrix[i, j]` is a pair of *dimensions*.
+        * `matrix[i, j]` is a pair of *dimensions* (one entry per subplot).
         * *dimension* is either `'time'` or `(channel_idx, feature_idx)`.
+
+        This variable offers fine-grained selection of dimensions in all
+        subplots and all axes.
+
+        Use `dimensions` for a more user-friendly, but less powerful parameter.
 
         """
         return self._view.dimensions_matrix
@@ -749,6 +754,30 @@ class BaseFeatureViewModel(VispyViewModel):
     @dimensions_matrix.setter
     def dimensions_matrix(self, value):
         self._view.dimensions_matrix = value
+
+    @property
+    def dimensions(self):
+        """The list of displayed dimensions.
+
+        * `dimensions[i]` is a *dimensions* (one entry per column).
+        * *dimension* is either `'time'` or `(channel_idx, feature_idx)`.
+
+        This variable offers user-friendly selection of dimensions in every
+        row/column, instead of in every subplot like `dimensions_matrix`.
+        The assumption is that subplot `(i, j)` shows
+        `(dimensions[i], dimensions[j])`, with some extra logic for
+        the diagonal and time dimensions.
+
+        Use `dimensions_matrix` for a less user-friendly, but more
+        powerful parameter.
+
+        """
+        return [self.dimensions_matrix[0, i][0]
+                for i in range(len(self.dimensions_matrix))]
+
+    @dimensions.setter
+    def dimensions(self, value):
+        self.dimensions_matrix = self._matrix_from_dimensions(value)
 
     def _matrix_from_dimensions(self, dimensions):
         n_features = self.view.background.n_features
