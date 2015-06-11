@@ -43,8 +43,8 @@ build:
 upload:
 	python setup.py sdist --formats=zip upload
 
-# test-docker:
-# 	docker build -t phy-stable docker/stable && docker run --rm phy-stable /root/miniconda/bin/py.test /root/miniconda/lib/python3.4/site-packages/phy/ -m "not long"
+release-test:
+	python tools/release.py release_test
 
-# release-test: clean
-	# make test-quick && make upload && make test-docker
+release:
+	python tools/release.py release
