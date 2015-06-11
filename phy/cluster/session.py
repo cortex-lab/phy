@@ -61,10 +61,12 @@ class Session(BaseSession):
 
     def __init__(self,
                  kwik_path=None,
+                 clustering=None,
                  model=None,
                  use_store=True,
                  phy_user_dir=None,
                  ):
+        self._clustering = clustering
         self._use_store = use_store
         curdir = op.dirname(op.realpath(__file__))
         settings_path = op.join(curdir, 'default_settings.py')
@@ -94,7 +96,7 @@ class Session(BaseSession):
             shutil.copyfile(kwik_path, backup_kwik_path)
 
     def _create_model(self, path):
-        model = KwikModel(path)
+        model = KwikModel(path, clustering=self._clustering)
         return model
 
     def _save_model(self):
@@ -187,6 +189,7 @@ class Session(BaseSession):
 
     def change_clustering(self, clustering):
         """Change the current clustering."""
+        self._clustering = clustering
         self.model.clustering = clustering
         info("Switched to `{}` clustering.".format(clustering))
         self.emit('open')
@@ -238,7 +241,7 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def cluster(self,
-                clustering_name='original',
+                clustering=None,
                 algorithm='klustakwik',
                 spike_ids=None,
                 **kwargs):
@@ -247,7 +250,7 @@ class Session(BaseSession):
         Parameters
         ----------
 
-        clustering_name : str
+        clustering : str
             The name of the clustering in which to save the results.
         algorithm : str
             The algorithm name. Only `klustakwik` currently.
@@ -261,16 +264,18 @@ class Session(BaseSession):
             The spike_clusters assignements returned by the algorithm.
 
         """
+        if clustering is None:
+            clustering = 'original'
         # Make sure the clustering name does not exist already.
-        if clustering_name in self.model.clusterings:
-            old = clustering_name
+        if clustering in self.model.clusterings:
+            old = clustering
             i = 0
             while True:
-                new = '{}_{}'.format(clustering_name, i)
+                new = '{}_{}'.format(clustering, i)
                 if new not in self.model.clusterings:
                     break
                 i += 1
-            clustering_name = new
+            clustering = new
             warn("The clustering `{}` already exists -- ".format(old) +
                  "switching to `{}`.".format(new))
         kk = KlustaKwik(**kwargs)
@@ -281,8 +286,8 @@ class Session(BaseSession):
         spike_clusters = self.model.spike_clusters.copy()
         spike_clusters[spike_ids] = sc
         # Add a new clustering and switch to it.
-        self.model.add_clustering(clustering_name, spike_clusters)
-        self.change_clustering(clustering_name)
+        self.model.add_clustering(clustering, spike_clusters)
+        self.change_clustering(clustering)
         # Set the new clustering metadata.
         params = kk.params
         params['version'] = kk.version
@@ -292,7 +297,7 @@ class Session(BaseSession):
         self.save()
         info("The automatic clustering has finished.")
         info("The clustering has been saved in the "
-             "`{}` clustering in the `.kwik` file.".format(clustering_name))
+             "`{}` clustering in the `.kwik` file.".format(clustering))
         return sc
 
     # GUI

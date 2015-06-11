@@ -62,13 +62,13 @@ def test_script_parser():
     # Test extra arguments.
     args, kwargs = _parse_args(['cluster-auto',
                                 kwik_path,
-                                '--a=foo',
+                                '--aa=foo',
                                 '--b-b=1.5',
-                                '--c=2',
+                                '--c_c=2',
                                 ])
-    assert kwargs['a'] == 'foo'
+    assert kwargs['aa'] == 'foo'
     assert kwargs['b_b'] == 1.5
-    assert kwargs['c'] == 2
+    assert kwargs['c_c'] == 2
 
 
 def test_script_run():
@@ -91,7 +91,7 @@ def test_script_run():
         _call('phy describe ' + kwik_path)
 
         cmd = ('phy cluster-auto {} --num_starting_clusters=10 '
-               '--clustering-name=auto')
+               '--clustering=auto')
         _call(cmd.format(kwik_path))
 
         session = Session(kwik_path)

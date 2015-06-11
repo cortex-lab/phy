@@ -335,7 +335,7 @@ def test_session_statistics(session):
 def test_session_automatic(session, spike_ids):
     set_level('info')
     clustering = 'clustering_test'
-    sc = session.cluster(clustering_name=clustering,
+    sc = session.cluster(clustering=clustering,
                          num_starting_clusters=10,
                          spike_ids=spike_ids,
                          )

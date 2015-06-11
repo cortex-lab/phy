@@ -89,12 +89,15 @@ def _parse_args(args):
                         help='launch the script in an interactive '
                         'IPython console')
 
+    parser.add_argument('--clustering', '-c', default='main',
+                        help='name of the clustering to use')
+
     parse, extra = parser.parse_known_args(args)
     kwargs = _parse_extra(extra)
     return parse, kwargs
 
 
-def run_manual(kwik_path, interactive=False):
+def run_manual(kwik_path, clustering=None, interactive=False):
     import phy
     from phy.cluster import Session
     from phy.gui import start_qt_app, run_qt_app
@@ -104,7 +107,7 @@ def run_manual(kwik_path, interactive=False):
         return 1
 
     print("\nLoading {}...".format(kwik_path))
-    session = Session(kwik_path)
+    session = Session(kwik_path, clustering=clustering)
     print("Data successfully loaded!\n")
     session.model.describe()
 
@@ -131,7 +134,7 @@ def run_manual(kwik_path, interactive=False):
         run_qt_app()
 
 
-def run_auto(kwik_path, interactive=False, **kwargs):
+def run_auto(kwik_path, clustering=None, interactive=False, **kwargs):
     from phy.cluster import Session
 
     if not op.exists(kwik_path):
@@ -139,19 +142,19 @@ def run_auto(kwik_path, interactive=False, **kwargs):
         return
 
     session = Session(kwik_path, use_store=False)
-    session.cluster(**kwargs)
+    session.cluster(clustering=clustering, **kwargs)
     session.save()
     session.close()
 
 
-def describe(kwik_path):
+def describe(kwik_path, clustering=None):
     from phy.io.kwik import KwikModel
 
     if not op.exists(kwik_path):
         print("The file `{}` doesn't exist.".format(kwik_path))
         return
 
-    model = KwikModel(kwik_path)
+    model = KwikModel(kwik_path, clustering=clustering)
     model.describe()
     model.close()
 
@@ -171,9 +174,11 @@ def main():
         phy.debug()
 
     if args.command == 'cluster-manual':
-        cmd = 'run_manual(args.file, interactive=args.ipython)'
+        cmd = ('run_manual(args.file, clustering=args.clustering, '
+               'interactive=args.ipython)')
     elif args.command == 'cluster-auto':
-        cmd = 'run_auto(args.file, interactive=args.ipython, **kwargs)'
+        cmd = ('run_auto(args.file, clustering=args.clustering, '
+               'interactive=args.ipython, **kwargs)')
     elif args.command == 'describe':
         cmd = 'describe(args.file)'
     else:

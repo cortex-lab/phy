@@ -278,7 +278,7 @@ class KwikModel(BaseModel):
         self._spike_clusters = None
         self._spikes_per_cluster = None
         self._metadata = None
-        self._clustering = 'main'
+        self._clustering = clustering or 'main'
         self._probe = None
         self._channels = []
         self._channel_order = None
