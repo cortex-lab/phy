@@ -13,10 +13,10 @@ import shutil
 
 from ..utils.logging import info, warn
 from ..utils.settings import _ensure_dir_exists
+from ..io.base_model import BaseSession
 from ..io.kwik.model import KwikModel
 from ..io.kwik.store_items import create_store
 from .manual.gui import ClusterManualGUI
-from ..gui.base import BaseSession
 from .launcher import KlustaKwik
 
 

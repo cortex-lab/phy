@@ -10,8 +10,10 @@ import os.path as op
 
 from pytest import raises, mark
 
-from ..base import (BaseViewModel, HTMLViewModel, WidgetCreator,
-                    BaseGUI, BaseSession,
+from ..base import (BaseViewModel,
+                    HTMLViewModel,
+                    WidgetCreator,
+                    BaseGUI,
                     )
 from ..qt import (QtGui,
                   wrap_qt,
@@ -20,7 +22,7 @@ from ..qt import (QtGui,
 from ...utils.event import EventEmitter
 from ...utils.logging import set_level
 from ...utils.tempdir import TemporaryDirectory
-from ...io.base_model import BaseModel
+from ...io.base_model import BaseModel, BaseSession
 
 
 # Skip these tests in "make test-quick".

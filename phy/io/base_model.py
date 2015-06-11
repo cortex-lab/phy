@@ -6,12 +6,101 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from ..ext import six
+import os.path as op
 from collections import defaultdict
 
 import numpy as np
 
+from ..ext import six
+from ..utils import debug, EventEmitter
 from ..utils._types import _as_list, _is_list
+from ..utils.settings import (Settings,
+                              _ensure_dir_exists,
+                              _phy_user_dir,
+                              )
+from ..gui.base import WidgetCreator
+
+
+#------------------------------------------------------------------------------
+# ClusterMetadata class
+#------------------------------------------------------------------------------
+
+class ClusterMetadata(object):
+    """Hold cluster metadata.
+
+    Features
+    --------
+
+    * New metadata fields can be easily registered
+    * Arbitrary functions can be used for default values
+
+    Notes
+    ----
+
+    If a metadata field `group` is registered, then two methods are
+    dynamically created:
+
+    * `group(cluster)` returns the group of a cluster, or the default value
+      if the cluster doesn't exist.
+    * `set_group(cluster, value)` sets a value for the `group` metadata field.
+
+    """
+    def __init__(self, data=None):
+        self._fields = {}
+        self._data = defaultdict(dict)
+        # Fill the existing values.
+        if data is not None:
+            self._data.update(data)
+
+    @property
+    def data(self):
+        return self._data
+
+    def _get_one(self, cluster, field):
+        """Return the field value for a cluster, or the default value if it
+        doesn't exist."""
+        if cluster in self._data:
+            if field in self._data[cluster]:
+                return self._data[cluster][field]
+            elif field in self._fields:
+                # Call the default field function.
+                return self._fields[field](cluster)
+            else:
+                return None
+        else:
+            if field in self._fields:
+                return self._fields[field](cluster)
+            else:
+                return None
+
+    def _get(self, clusters, field):
+        if _is_list(clusters):
+            return [self._get_one(cluster, field)
+                    for cluster in _as_list(clusters)]
+        else:
+            return self._get_one(clusters, field)
+
+    def _set_one(self, cluster, field, value):
+        """Set a field value for a cluster."""
+        self._data[cluster][field] = value
+
+    def _set(self, clusters, field, value):
+        clusters = _as_list(clusters)
+        for cluster in clusters:
+            self._set_one(cluster, field, value)
+
+    def default(self, func):
+        """Register a new metadata field with a function
+        returning the default value of a cluster."""
+        field = func.__name__
+        # Register the decorated function as the default field function.
+        self._fields[field] = func
+        # Create self.<field>(clusters).
+        setattr(self, field, lambda clusters: self._get(clusters, field))
+        # Create self.set_<field>(clusters, value).
+        setattr(self, 'set_{0:s}'.format(field),
+                lambda clusters, value: self._set(clusters, field, value))
+        return func
 
 
 #------------------------------------------------------------------------------
@@ -228,82 +317,173 @@ class BaseModel(object):
 
 
 #------------------------------------------------------------------------------
-# ClusterMetadata class
+# Session
 #------------------------------------------------------------------------------
 
-class ClusterMetadata(object):
-    """Hold cluster metadata.
+class BaseSession(EventEmitter):
+    """Give access to the data, views, and GUIs in an interactive session.
 
-    Features
-    --------
+    The model must implement:
 
-    * New metadata fields can be easily registered
-    * Arbitrary functions can be used for default values
+    * `model(path)`
+    * `model.path`
+    * `model.close()`
 
-    Notes
-    ----
+    Events
+    ------
 
-    If a metadata field `group` is registered, then two methods are
-    dynamically created:
-
-    * `group(cluster)` returns the group of a cluster, or the default value
-      if the cluster doesn't exist.
-    * `set_group(cluster, value)` sets a value for the `group` metadata field.
+    open
+    close
 
     """
-    def __init__(self, data=None):
-        self._fields = {}
-        self._data = defaultdict(dict)
-        # Fill the existing values.
-        if data is not None:
-            self._data.update(data)
+    def __init__(self,
+                 model=None,
+                 path=None,
+                 phy_user_dir=None,
+                 default_settings_path=None,
+                 vm_classes=None,
+                 gui_classes=None,
+                 ):
+        super(BaseSession, self).__init__()
 
-    @property
-    def data(self):
-        return self._data
+        self.model = None
+        if phy_user_dir is None:
+            phy_user_dir = _phy_user_dir()
+        _ensure_dir_exists(phy_user_dir)
+        self.phy_user_dir = phy_user_dir
 
-    def _get_one(self, cluster, field):
-        """Return the field value for a cluster, or the default value if it
-        doesn't exist."""
-        if cluster in self._data:
-            if field in self._data[cluster]:
-                return self._data[cluster][field]
-            elif field in self._fields:
-                # Call the default field function.
-                return self._fields[field](cluster)
-            else:
-                return None
-        else:
-            if field in self._fields:
-                return self._fields[field](cluster)
-            else:
-                return None
+        self._create_settings(default_settings_path)
 
-    def _get(self, clusters, field):
-        if _is_list(clusters):
-            return [self._get_one(cluster, field)
-                    for cluster in _as_list(clusters)]
-        else:
-            return self._get_one(clusters, field)
+        if gui_classes is None:
+            gui_classes = self.settings['gui_classes']
+        self._gui_creator = WidgetCreator(widget_classes=gui_classes)
 
-    def _set_one(self, cluster, field, value):
-        """Set a field value for a cluster."""
-        self._data[cluster][field] = value
+        self.connect(self.on_open)
+        self._pre_open()
+        if model or path:
+            self.open(path, model=model)
 
-    def _set(self, clusters, field, value):
-        clusters = _as_list(clusters)
-        for cluster in clusters:
-            self._set_one(cluster, field, value)
+    def _create_settings(self, default_settings_path):
+        self.settings = Settings(phy_user_dir=self.phy_user_dir,
+                                 default_path=default_settings_path,
+                                 )
 
-    def default(self, func):
-        """Register a new metadata field with a function
-        returning the default value of a cluster."""
-        field = func.__name__
-        # Register the decorated function as the default field function.
-        self._fields[field] = func
-        # Create self.<field>(clusters).
-        setattr(self, field, lambda clusters: self._get(clusters, field))
-        # Create self.set_<field>(clusters, value).
-        setattr(self, 'set_{0:s}'.format(field),
-                lambda clusters, value: self._set(clusters, field, value))
-        return func
+        @self.connect
+        def on_open():
+            # Initialize the settings with the model's path.
+            self.settings.on_open(self.experiment_path)
+
+    # Methods to override
+    # -------------------------------------------------------------------------
+
+    def _pre_open(self):
+        pass
+
+    def _create_model(self, path):
+        """Create a model from a path.
+
+        Must be overriden.
+
+        """
+        pass
+
+    def _save_model(self):
+        """Save a model.
+
+        Must be overriden.
+
+        """
+        pass
+
+    def on_open(self):
+        pass
+
+    # File-related actions
+    # -------------------------------------------------------------------------
+
+    def open(self, path=None, model=None):
+        """Open a dataset."""
+        # Close the session if it is already open.
+        if self.model:
+            self.close()
+        if model is None:
+            model = self._create_model(path)
+        self.model = model
+        self.experiment_path = (op.realpath(path)
+                                if path else self.phy_user_dir)
+        self.emit('open')
+
+    def reopen(self):
+        self.open(model=self.model)
+
+    def save(self):
+        self._save_model()
+
+    def close(self):
+        """Close the currently-open dataset."""
+        self.model.close()
+        self.emit('close')
+        self.model = None
+
+    # Views and GUIs
+    # -------------------------------------------------------------------------
+
+    def show_gui(self, name=None, show=True, **kwargs):
+        """Show a new GUI."""
+        if name is None:
+            gui_classes = list(self._gui_creator.widget_classes.keys())
+            if gui_classes:
+                name = gui_classes[0]
+
+        # Get the default GUI config.
+        params = {p: self.settings.get('{}_{}'.format(name, p), None)
+                  for p in ('config', 'shortcuts', 'state')}
+        params.update(kwargs)
+
+        # Create the GUI.
+        gui = self._gui_creator.add(name,
+                                    model=self.model,
+                                    settings=self.settings,
+                                    **params)
+        gui._save_state = True
+
+        # Connect the 'open' event.
+        self.connect(gui.on_open)
+
+        @gui.connect
+        def on_close_gui():
+            self.unconnect(gui.on_open)
+            # Save the params of every view in the GUI.
+            for vm in gui.views:
+                self.save_view_params(vm, save_size_pos=False)
+            gs = gui.main_window.save_geometry_state()
+            gs['view_count'] = gui.view_count()
+            if not gui._save_state:
+                gs['state'] = None
+                gs['geometry'] = None
+            self.settings['{}_state'.format(name)] = gs
+            self.settings.save()
+
+        # HACK: do not save GUI state when views have been closed or reset
+        # in the session, otherwise Qt messes things up in the GUI.
+        @gui.connect
+        def on_close_view(view):
+            gui._save_state = False
+
+        @gui.connect
+        def on_reset_gui():
+            gui._save_state = False
+
+        if show:
+            gui.show()
+
+        return gui
+
+    def save_view_params(self, vm, save_size_pos=True):
+        """Save the parameters exported by a view model instance."""
+        to_save = vm.exported_params(save_size_pos=save_size_pos)
+        for key, value in to_save.items():
+            assert vm.name
+            name = '{}_{}'.format(vm.name, key)
+            self.settings[name] = value
+            debug("Save {0}={1} for {2}.".format(name, value, vm.name))
