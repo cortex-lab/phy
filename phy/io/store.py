@@ -16,11 +16,11 @@ import re
 import numpy as np
 
 from ..utils._types import _as_int, _is_integer, _is_array_like
+from ..utils._misc import _load_pickle, _save_pickle
 from ..utils.array import PerClusterData, _spikes_in_clusters, _subset_spc
 from ..utils.event import ProgressReporter
 from ..utils.logging import debug, info
 from ..ext.six import string_types
-from ..ext.six.moves import cPickle
 
 
 #------------------------------------------------------------------------------
@@ -222,15 +222,13 @@ class DiskStore(object):
 
     def save_file(self, filename, data):
         path = op.realpath(op.join(self._directory, filename))
-        with open(path, 'wb') as f:
-            cPickle.dump(data, f)
+        _save_pickle(path, data)
 
     def load_file(self, filename):
         path = op.realpath(op.join(self._directory, filename))
         if not op.exists(path):
             return None
-        with open(path, 'rb') as f:
-            return cPickle.load(f)
+        return _load_pickle(path)
 
     @property
     def files(self):

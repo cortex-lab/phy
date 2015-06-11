@@ -9,8 +9,8 @@
 import os
 import os.path as op
 
-from ..ext.six.moves import cPickle
 from .logging import debug, warn
+from ._misc import _load_pickle, _save_pickle
 
 
 #------------------------------------------------------------------------------
@@ -25,21 +25,6 @@ def _load_python(path):
     store = {}
     exec(contents, {}, store)
     return store
-
-
-def _load_pickle(path):
-    path = op.realpath(op.expanduser(path))
-    assert op.exists(path)
-    with open(path, 'rb') as f:
-        store = cPickle.load(f)
-        assert isinstance(store, dict)
-        return store
-
-
-def _save_pickle(path, store):
-    path = op.realpath(op.expanduser(path))
-    with open(path, 'wb') as f:
-        cPickle.dump(store, f)
 
 
 #------------------------------------------------------------------------------
@@ -110,10 +95,10 @@ class BaseSettings(object):
         try:
             _save_pickle(path, self._to_save)
             debug("Saved internal settings file "
-                  "at `{}`.".format(path))
+                  "to `{}`.".format(path))
         except Exception as e:
             warn("Unable to save the internal settings file "
-                 "at `{}`:\n{}".format(path, str(e)))
+                 "from `{}`:\n{}".format(path, str(e)))
         self._to_save = {}
 
 

@@ -12,17 +12,30 @@ Usage:
 # Imports
 #------------------------------------------------------------------------------
 
-import argparse
 import sys
 import os.path as op
 import re
+import argparse
+from textwrap import dedent
 
 from ..ext.six import exec_
 
 
 #------------------------------------------------------------------------------
-# Main function
+# Main script
 #------------------------------------------------------------------------------
+
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.stderr.write(message + '\n\n')
+        self.print_help()
+        sys.exit(2)
+
+
+class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                      argparse.RawDescriptionHelpFormatter):
+    pass
+
 
 def _parse_extra(extra):
     kwargs = {}
@@ -45,7 +58,21 @@ def _parse_extra(extra):
 
 def _parse_args(args):
     desc = sys.modules['phy'].__doc__
-    parser = argparse.ArgumentParser(description=desc)
+    epilog = dedent("""
+
+    examples:
+      phy -v                display the version of phy
+      phy describe my_file.kwik
+                            display information about a Kwik dataset
+      phy cluster-auto my_file.kwik --num-clusters-start=100
+                            run klustakwik on a dataset
+      phy cluster-manual my_file.kwik
+                            run the manual clustering GUI
+
+    """)
+    parser = Parser(description=desc, epilog=epilog,
+                    formatter_class=CustomFormatter,
+                    )
 
     # Allowed subcommands.
     commands = [
