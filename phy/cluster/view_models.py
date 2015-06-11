@@ -61,10 +61,12 @@ class BaseClusterViewModel(BaseViewModel):
 
     @property
     def store(self):
+        """The cluster store."""
         return self._store
 
     @property
     def wizard(self):
+        """The wizard."""
         return self._wizard
 
     @property
@@ -81,7 +83,7 @@ class BaseClusterViewModel(BaseViewModel):
     #--------------------------------------------------------------------------
 
     def select(self, cluster_ids):
-        """Select a set of clusters."""
+        """Select a list of clusters."""
         cluster_ids = _as_list(cluster_ids)
         self._cluster_ids = cluster_ids
         self.on_select(cluster_ids)
@@ -124,9 +126,11 @@ class HTMLClusterViewModel(BaseClusterViewModel, HTMLViewModel):
     #--------------------------------------------------------------------------
 
     def on_select(self, cluster_ids):
+        """Update the view after a new selection has been made."""
         self.update(cluster_ids=cluster_ids)
 
     def on_cluster(self, up):
+        """Update the view after a clustering action."""
         self.update(cluster_ids=self._cluster_ids, up=up)
 
 
@@ -173,6 +177,7 @@ class VispyViewModel(BaseClusterViewModel):
 
     @property
     def selector(self):
+        """A Selector instance managing the selected spikes and clusters."""
         return self._selector
 
     @property
@@ -210,7 +215,9 @@ class VispyViewModel(BaseClusterViewModel):
     def on_select(self, cluster_ids):
         """Update the view after a new selection has been made.
 
-        Must be overriden."""
+        Must be overriden.
+
+        """
         self.update_spike_clusters()
         self._view.update()
 
@@ -220,6 +227,7 @@ class VispyViewModel(BaseClusterViewModel):
         self._view.update()
 
     def on_key_press(self, event):
+        """Called when a key is pressed."""
         if event.key == 'h' and 'control' not in event.modifiers:
             shortcuts = self._view.keyboard_shortcuts
             shortcuts.update(self.keyboard_shortcuts)
@@ -231,9 +239,11 @@ class VispyViewModel(BaseClusterViewModel):
 #------------------------------------------------------------------------------
 
 class StatsViewModel(HTMLClusterViewModel):
+    """Display cluster statistics."""
     _static_path = op.join(op.dirname(op.realpath(__file__)), 'manual/static')
 
     def get_html(self, cluster_ids=None, up=None):
+        """Return the HTML table with the cluster statistics."""
         stats = self.store.items['statistics']
         names = stats.fields
         if cluster_ids is None:
@@ -264,12 +274,14 @@ class StatsViewModel(HTMLClusterViewModel):
 #------------------------------------------------------------------------------
 
 class WaveformViewModel(VispyViewModel):
+    """Waveforms."""
     _view_class = WaveformView
     _view_name = 'waveforms'
     _imported_params = ('scale_factor', 'box_scale', 'probe_scale',
                         'overlap', 'show_mean')
 
     def on_open(self):
+        """Initialize the view when the model is opened."""
         super(WaveformViewModel, self).on_open()
         # Waveforms.
         self.view.visual.channel_positions = self.model.probe.positions
@@ -299,11 +311,13 @@ class WaveformViewModel(VispyViewModel):
         return mean_waveforms, mean_masks
 
     def update_spike_clusters(self, spikes=None):
+        """Update the view's spike clusters."""
         super(WaveformViewModel, self).update_spike_clusters(spikes=spikes)
         self._view.mean.spike_clusters = np.sort(self.cluster_ids)
         self._view.mean.cluster_colors = self._view.visual.cluster_colors
 
     def on_select(self, clusters):
+        """Update the view when the selection changes."""
         # Get the spikes of the stored waveforms.
         n_clusters = len(clusters)
         waveforms = self._load_waveforms()
@@ -342,6 +356,7 @@ class WaveformViewModel(VispyViewModel):
         self.view.update()
 
     def on_close(self):
+        """Clear the view when the model is closed."""
         self.view.visual.channel_positions = []
         self.view.mean.channel_positions = []
         super(WaveformViewModel, self).on_close()
@@ -391,6 +406,7 @@ class WaveformViewModel(VispyViewModel):
         self.view.show_mean = value
 
     def exported_params(self, save_size_pos=True):
+        """Parameters to save automatically when the view is closed."""
         params = super(WaveformViewModel, self).exported_params(save_size_pos)
         params.update({
             'scale_factor': self.scale_factor,
@@ -403,6 +419,7 @@ class WaveformViewModel(VispyViewModel):
 
 
 class CorrelogramViewModel(VispyViewModel):
+    """Correlograms."""
     _view_class = CorrelogramView
     _view_name = 'correlograms'
     binsize = 20
@@ -433,6 +450,7 @@ class CorrelogramViewModel(VispyViewModel):
         self.select(self.cluster_ids)
 
     def on_select(self, clusters):
+        """Update the view when the selection changes."""
         super(CorrelogramViewModel, self).on_select(clusters)
         spikes = self.spike_ids
         self.view.cluster_ids = clusters
@@ -466,6 +484,7 @@ class CorrelogramViewModel(VispyViewModel):
 
     @property
     def normalization(self):
+        """Correlogram normalization: `equal` or `independent`."""
         return self._normalization
 
     @normalization.setter
@@ -475,6 +494,7 @@ class CorrelogramViewModel(VispyViewModel):
         self.view.update()
 
     def toggle_normalization(self):
+        """Change the correlogram normalization."""
         self.normalization = ('equal' if self._normalization == 'independent'
                               else 'independent')
 
@@ -483,6 +503,7 @@ class CorrelogramViewModel(VispyViewModel):
     }
 
     def on_key_press(self, event):
+        """Called when a key is pressed."""
         super(CorrelogramViewModel, self).on_key_press(event)
         if not event.modifiers:
             if event.key == 'N':
@@ -490,6 +511,7 @@ class CorrelogramViewModel(VispyViewModel):
 
 
 class TraceViewModel(VispyViewModel):
+    """Traces."""
     _view_class = TraceView
     _view_name = 'traces'
     _imported_params = ('scale_factor', 'channel_scale', 'interval_size')
@@ -605,6 +627,7 @@ class TraceViewModel(VispyViewModel):
     }
 
     def on_key_press(self, event):
+        """Called when a key is pressed."""
         super(TraceViewModel, self).on_key_press(event)
         key = event.key
         if 'Control' in event.modifiers:
@@ -619,6 +642,7 @@ class TraceViewModel(VispyViewModel):
                 self.move_right(1)
 
     def on_open(self):
+        """Initialize the view when the model is opened."""
         super(TraceViewModel, self).on_open()
         self.view.visual.n_samples_per_spike = self.model.n_samples_waveforms
         self.view.visual.sample_rate = self.model.sample_rate
@@ -629,6 +653,7 @@ class TraceViewModel(VispyViewModel):
         self.select([])
 
     def on_select(self, clusters):
+        """Update the view when the selection changes."""
         # Get the spikes in the selected clusters.
         spikes = self.spike_ids
         n_clusters = len(clusters)
@@ -653,6 +678,7 @@ class TraceViewModel(VispyViewModel):
         self.interval = sample - half_size, sample + half_size
 
     def exported_params(self, save_size_pos=True):
+        """Parameters to save automatically when the view is closed."""
         params = super(TraceViewModel, self).exported_params(save_size_pos)
         params.update({
             'scale_factor': self.scale_factor,
@@ -666,6 +692,7 @@ class TraceViewModel(VispyViewModel):
 #------------------------------------------------------------------------------
 
 class BaseFeatureViewModel(VispyViewModel):
+    """Features."""
     _view_class = FeatureView
     _view_name = 'base_features'
     _imported_params = ('scale_factor', 'n_spikes_max_bg', 'marker_size')
@@ -684,6 +711,7 @@ class BaseFeatureViewModel(VispyViewModel):
 
     @property
     def lasso(self):
+        """The spike lasso visual."""
         return self.view.lasso
 
     def spikes_in_lasso(self):
@@ -701,7 +729,7 @@ class BaseFeatureViewModel(VispyViewModel):
 
     @property
     def marker_size(self):
-        """Marker size."""
+        """Marker size, in pixels."""
         return self.view.marker_size
 
     @marker_size.setter
@@ -710,7 +738,12 @@ class BaseFeatureViewModel(VispyViewModel):
 
     @property
     def dimensions_matrix(self):
-        """The matrix of displayed dimensions."""
+        """The matrix of displayed dimensions.
+
+        * `matrix[i, j]` is a pair of *dimensions*.
+        * *dimension* is either `'time'` or `(channel_idx, feature_idx)`.
+
+        """
         return self._view.dimensions_matrix
 
     @dimensions_matrix.setter
@@ -736,6 +769,7 @@ class BaseFeatureViewModel(VispyViewModel):
         self.view.update()
 
     def on_open(self):
+        """Initialize the view when the model is opened."""
         # Get background features.
         # TODO OPTIM: precompute this once for all and store in the cluster
         # store. But might be unnecessary.
@@ -755,6 +789,7 @@ class BaseFeatureViewModel(VispyViewModel):
         self._set_dimensions_after_open()
 
     def on_select(self, clusters):
+        """Update the view when the selection changes."""
         super(BaseFeatureViewModel, self).on_select(clusters)
         spikes = self.spike_ids
 
@@ -782,6 +817,7 @@ class BaseFeatureViewModel(VispyViewModel):
         self._set_dimensions_after_select()
 
     def exported_params(self, save_size_pos=True):
+        """Parameters to save automatically when the view is closed."""
         params = super(BaseFeatureViewModel,
                        self).exported_params(save_size_pos)
         zoom = self._view._pz.zoom
@@ -793,6 +829,7 @@ class BaseFeatureViewModel(VispyViewModel):
 
 
 class MultiFeatureViewModel(BaseFeatureViewModel):
+    """Features grid"""
     _view_name = 'features_grid'
 
     def __init__(self, **kwargs):
@@ -817,7 +854,7 @@ class MultiFeatureViewModel(BaseFeatureViewModel):
     def default_dimension_selector(self, cluster_ids):
         """Return the channels with the largest mean features.
 
-        The first cluster is used currently.
+        Only the first cluster is used currently.
 
         """
         if cluster_ids is None or not len(cluster_ids):
@@ -832,6 +869,7 @@ class MultiFeatureViewModel(BaseFeatureViewModel):
 
     @property
     def default_dimensions(self):
+        """List of dimensions currently displayed."""
         dimension_selector = (self._dimension_selector or
                               self.default_dimension_selector)
         channels = dimension_selector(self.cluster_ids)
@@ -853,17 +891,36 @@ class MultiFeatureViewModel(BaseFeatureViewModel):
 
 
 class SingleFeatureViewModel(BaseFeatureViewModel):
+    """Feature view with a single subplot."""
     _view_name = 'features'
 
     def _set_dimensions_after_select(self):
         self.view.dimensions_matrix = self.view.dimensions_matrix
         self.view.update()
 
-    def set_dimension(self, dim):
+    def set_auto_dimension(self, dim):
+        """Set a dimension on one axis and select the other automatically.
+
+        Parameters
+        ----------
+
+        dim : str or tuple
+            This is either `'time'` or `(channel_idx, feature_idx)`.
+
+        """
         matrix = self._matrix_from_dimensions([dim])
         self.view.dimensions_matrix = matrix
 
     def set_dimensions(self, dim_x, dim_y):
+        """Set the dimensions of both axes.
+
+        Parameters
+        ----------
+
+        dim_x and dim_y : str or tuple
+            This is either `'time'` or `(channel_idx, feature_idx)`.
+
+        """
         matrix = self.view.dimensions_matrix
         matrix[0, 0] = (dim_x, dim_y)
         self.view.dimensions_matrix = matrix

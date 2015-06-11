@@ -164,7 +164,7 @@ class ClusterManualGUI(BaseGUI):
             def on_channel_click(e):
                 channel = e.channel_idx
                 feature = 0 if e.button == 1 else 1
-                features.set_dimension((channel, feature))
+                features.set_auto_dimension((channel, feature))
 
         # Enlarge feature subplot.
         @self.connect_views('features_grid', 'features')
