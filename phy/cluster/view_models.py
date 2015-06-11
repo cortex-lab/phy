@@ -929,7 +929,7 @@ class SingleFeatureViewModel(BaseFeatureViewModel):
         matrix = self._matrix_from_dimensions([dim])
         self.view.dimensions_matrix = matrix
 
-    def set_dimensions(self, dim_x, dim_y):
+    def set_dimensions(self, dim_x=None, dim_y=None):
         """Set the dimensions of both axes.
 
         Parameters
@@ -940,5 +940,9 @@ class SingleFeatureViewModel(BaseFeatureViewModel):
 
         """
         matrix = self.view.dimensions_matrix
+        if dim_x is None:
+            dim_x = matrix[0, 0][0]
+        if dim_y is None:
+            dim_y = matrix[0, 0][1]
         matrix[0, 0] = (dim_x, dim_y)
         self.view.dimensions_matrix = matrix

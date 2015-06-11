@@ -216,6 +216,7 @@ class ClusterManualGUI(BaseGUI):
                        'toggle_correlogram_normalization',
                        'toggle_waveforms_mean',
                        'toggle_waveforms_overlap',
+                       'show_features_time',
                        ]:
             self._add_gui_shortcut(action)
 
@@ -407,6 +408,10 @@ class ClusterManualGUI(BaseGUI):
     def toggle_waveforms_overlap(self):
         for vm in self.get_views('waveforms'):
             vm.overlap = not(vm.overlap)
+
+    def show_features_time(self):
+        for vm in self.get_views('features'):
+            vm.set_dimensions(dim_x='time')
 
     # Selection
     # ---------------------------------------------------------------------
