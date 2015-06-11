@@ -55,6 +55,7 @@ cluster_manual_shortcuts = {
     'redo': ('ctrl+shift+z', 'ctrl+y'),
     'close': 'ctrl+q',
     'show_shortcuts': 'ctrl+h',
+    'show_view_shortcuts': 'h',
     'reset_wizard': 'ctrl+w',
     'next': 'space',
     'previous': 'shift+space',
