@@ -89,3 +89,4 @@ def test_script_run():
 
         cmd = 'phy cluster-auto {} --num_starting_clusters=10'
         _call(cmd.format(kwik_path))
+        # TODO: test

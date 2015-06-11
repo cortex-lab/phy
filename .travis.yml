@@ -24,6 +24,8 @@ install:
   - conda install pip numpy matplotlib scipy h5py pyqt pyzmq ipython requests pytest pip flake8 coverage cython
   - pip install klustakwik2
   - pip install six vispy coveralls responses python-coveralls pytest-cov
+  # Make sure the script is available.
+  - pip install -e .
 before_script:
     - export DISPLAY=:99.0
     - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render
