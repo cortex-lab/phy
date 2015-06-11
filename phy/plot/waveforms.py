@@ -377,8 +377,6 @@ class WaveformView(BaseSpikeCanvas):
         'probe_height_increase': ('shift+up', 'shift+alt+wheel up'),
         'probe_height_decrease': ('shift+down', 'shift+alt+wheel down'),
         'select_channel': ('ctrl+left click', 'ctrl+right click'),
-        'toggle_mean_waveforms': 'm',
-        'toggle_overlap': 'o',
     }
 
     def on_key_press(self, event):
@@ -415,11 +413,6 @@ class WaveformView(BaseSpikeCanvas):
                 self.probe_scale = (u, v / coeff)
             elif key == 'Up':
                 self.probe_scale = (u, v * coeff)
-
-        if not event.modifiers and key == 'm':
-            self.show_mean = not(self.show_mean)
-        if not event.modifiers and key == 'o':
-            self.overlap = not(self.overlap)
 
     def on_key_release(self, event):
         self._key_pressed = None

@@ -50,12 +50,10 @@ features_grid_n_spikes_max_bg = features_n_spikes_max_bg
 
 cluster_manual_shortcuts = {
     'reset_gui': 'alt+r',
-    'save': 'ctrl+s',
-    'undo': 'ctrl+z',
-    'redo': ('ctrl+shift+z', 'ctrl+y'),
-    'close': 'ctrl+q',
     'show_shortcuts': 'ctrl+h',
-    'show_view_shortcuts': 'h',
+    'save': 'ctrl+s',
+    'close': 'ctrl+q',
+    # Wizard actions.
     'reset_wizard': 'ctrl+w',
     'next': 'space',
     'previous': 'shift+space',
@@ -64,8 +62,11 @@ cluster_manual_shortcuts = {
     'last': 'end',
     'pin': 'return',
     'unpin': 'backspace',
+    # Clustering actions.
     'merge': 'g',
     'split': 'k',
+    'undo': 'ctrl+z',
+    'redo': ('ctrl+shift+z', 'ctrl+y'),
     'move_best_to_noise': 'alt+n',
     'move_best_to_mua': 'alt+m',
     'move_best_to_good': 'alt+g',
@@ -75,7 +76,11 @@ cluster_manual_shortcuts = {
     'move_both_to_noise': 'ctrl+alt+n',
     'move_both_to_mua': 'ctrl+alt+m',
     'move_both_to_good': 'ctrl+alt+g',
+    # Views.
+    'show_view_shortcuts': 'h',
     'toggle_correlogram_normalization': 'n',
+    'toggle_waveforms_overlap': 'o',
+    'toggle_waveforms_mean': 'm',
 }
 
 

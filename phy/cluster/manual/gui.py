@@ -214,6 +214,8 @@ class ClusterManualGUI(BaseGUI):
                        'redo',
                        # Views.
                        'toggle_correlogram_normalization',
+                       'toggle_waveforms_mean',
+                       'toggle_waveforms_overlap',
                        ]:
             self._add_gui_shortcut(action)
 
@@ -397,6 +399,14 @@ class ClusterManualGUI(BaseGUI):
     def toggle_correlogram_normalization(self):
         for vm in self.get_views('correlograms'):
             vm.toggle_normalization()
+
+    def toggle_waveforms_mean(self):
+        for vm in self.get_views('waveforms'):
+            vm.show_mean = not(vm.show_mean)
+
+    def toggle_waveforms_overlap(self):
+        for vm in self.get_views('waveforms'):
+            vm.overlap = not(vm.overlap)
 
     # Selection
     # ---------------------------------------------------------------------
