@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 from subprocess import call
+import time
 
 import numpy as np
 from pytest import raises
@@ -93,6 +94,7 @@ def test_script_run():
         cmd = ('phy cluster-auto {} --num_starting_clusters=10 '
                '--clustering=auto')
         _call(cmd.format(kwik_path))
+        time.sleep(.25)
 
         session = Session(kwik_path)
         session.change_clustering('auto')
