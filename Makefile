@@ -37,11 +37,14 @@ test-quick: lint
 apidoc:
 	python tools/api.py
 
+build:
+	python setup.py sdist --formats=zip
+
 upload:
-	python setup.py sdist upload
+	python setup.py sdist --formats=zip upload
 
-test-docker:
-	docker build -t phy-stable docker/stable && docker run --rm phy-stable /root/miniconda/bin/py.test /root/miniconda/lib/python3.4/site-packages/phy/ -m "not long"
+# test-docker:
+# 	docker build -t phy-stable docker/stable && docker run --rm phy-stable /root/miniconda/bin/py.test /root/miniconda/lib/python3.4/site-packages/phy/ -m "not long"
 
-release: clean
-	make test-quick && make upload && make test-docker
+# release-test: clean
+	# make test-quick && make upload && make test-docker
