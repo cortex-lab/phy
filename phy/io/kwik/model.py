@@ -162,6 +162,12 @@ def list_kwik(folders):
     return ret
 
 
+def _open_h5_if_exists(kwik_path, file_type, mode=None):
+    basename, ext = op.splitext(kwik_path)
+    path = '{basename}.{ext}'.format(basename=basename, ext=file_type)
+    return open_h5(path, mode=mode) if op.exists(path) else None
+
+
 _COLOR_MAP = np.array([[1., 1., 1.],
                        [1., 0., 0.],
                        [0.5, 0.763, 1.],
@@ -231,14 +237,6 @@ def cluster_group_id(name_or_id):
     else:
         assert _is_integer(name_or_id)
         return name_or_id
-
-
-def _kwik_filenames(kwik_path):
-    """Return the filenames of the different Kwik files for a given
-    experiment."""
-    basename, ext = op.splitext(kwik_path)
-    return {ext: '{basename}.{ext}'.format(basename=basename, ext=ext)
-            for ext in _KWIK_EXTENSIONS}
 
 
 class SpikeLoader(object):
@@ -341,10 +339,6 @@ class KwikModel(BaseModel):
 
     # Loading and saving
     # -------------------------------------------------------------------------
-
-    def _open_h5_if_exists(self, file_type, mode=None):
-        path = self._filenames[file_type]
-        return open_h5(path, mode=mode) if op.exists(path) else None
 
     def _open_kwik_if_needed(self, mode=None):
         if not self._kwik.is_open():
@@ -609,11 +603,8 @@ class KwikModel(BaseModel):
         self.kwik_path = kwik_path
         self.name = op.splitext(op.basename(kwik_path))[0]
 
-        # Open the files if they exist.
-        self._filenames = _kwik_filenames(kwik_path)
-
         # Open the KWIK file.
-        self._kwik = self._open_h5_if_exists('kwik')
+        self._kwik = _open_h5_if_exists(kwik_path, 'kwik')
         if self._kwik is None:
             raise IOError("File `{0}` doesn't exist.".format(kwik_path))
         if not self._kwik.is_open():
@@ -621,11 +612,11 @@ class KwikModel(BaseModel):
         self._check_kwik_version()
 
         # Open the KWX and KWD files.
-        self._kwx = self._open_h5_if_exists('kwx')
+        self._kwx = _open_h5_if_exists(kwik_path, 'kwx')
         if self._kwx is None:
             warn("The `.kwx` file hasn't been found. "
                  "Features and masks won't be available.")
-        self._kwd = self._open_h5_if_exists('raw.kwd')
+        self._kwd = _open_h5_if_exists(kwik_path, 'raw.kwd')
         if self._kwd is None:
             warn("The `.raw.kwd` file hasn't been found. "
                  "Traces and waveforms won't be available.")

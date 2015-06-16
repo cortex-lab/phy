@@ -17,7 +17,7 @@ from ..mock import (artificial_spike_samples,
                     artificial_masks,
                     artificial_traces)
 from ..h5 import open_h5
-from .model import _kwik_filenames, _create_clustering
+from .model import _create_clustering
 
 
 #------------------------------------------------------------------------------
@@ -30,9 +30,8 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
                      with_kwx=True, with_kwd=True):
     """Create a test kwik file."""
     filename = op.join(dir_path, '_test.kwik')
-    filenames = _kwik_filenames(filename)
-    kwx_filename = filenames['kwx']
-    kwd_filename = filenames['raw.kwd']
+    kwx_filename = op.join(dir_path, '_test.kwx')
+    kwd_filename = op.join(dir_path, '_test.raw.kwd')
 
     # Create the kwik file.
     with open_h5(filename, 'w') as f:
