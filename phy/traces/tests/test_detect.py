@@ -228,10 +228,30 @@ def test_flood_fill():
             [0, 0, 0, 1],
             [0, 0, 0, 0],
             ]
+
+    # Weak - weak
     comps = [[(1, 1), (1, 2)],
              [(3, 2), (4, 2)],
              [(4, 3)],
              [(6, 3)],
              ]
     cc = ff(weak, weak)
+    _assert_components_equal(cc, comps)
+
+    # Weak and strong
+    strong = [[0, 0, 0, 0],
+              [0, 0, 0, 0],
+              [0, 0, 0, 0],
+              [0, 0, 1, 0],
+              [0, 0, 0, 1],
+              [0, 0, 0, 0],
+              [0, 0, 0, 1],
+              [0, 0, 0, 0],
+              ]
+
+    comps = [[(3, 2), (4, 2)],
+             [(4, 3)],
+             [(6, 3)],
+             ]
+    cc = ff(weak, strong)
     _assert_components_equal(cc, comps)
