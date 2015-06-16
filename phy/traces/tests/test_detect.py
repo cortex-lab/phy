@@ -69,10 +69,14 @@ def _test_components(chunk=None, components=None, **kwargs):
                  [0, 1, 0, 1, 1],
                  ]
 
+    if components is None:
+        components = []
+
     if not isinstance(chunk, np.ndarray):
         chunk = np.array(chunk)
     strong_crossings = kwargs.pop('strong_crossings', None)
-    if strong_crossings is not None and not isinstance(strong_crossings, np.ndarray):
+    if (strong_crossings is not None and
+            not isinstance(strong_crossings, np.ndarray)):
         strong_crossings = np.array(strong_crossings)
 
     comp = connected_components(chunk,
@@ -88,154 +92,109 @@ def test_components():
     # 1 time step, 1 element
     _test_components([[0, 0, 0, 0, 0]],  [])
 
-    _test_components([[1, 0, 0, 0, 0]],  [[(0, 0)]])
+    _test_components([[1, 0, 0, 0, 0]], [[(0, 0)]])
 
-    _test_components([
-            [0, 1, 0, 0, 0],
-        ],  [[(0, 1)]])
+    _test_components([[0, 1, 0, 0, 0]], [[(0, 1)]])
 
-    _test_components([
-            [0, 0, 0, 1, 0],
-        ],  [[(0, 3)]])
+    _test_components([[0, 0, 0, 1, 0]], [[(0, 3)]])
 
-    _test_components([
-            [0, 0, 0, 0, 1],
-        ],  [[(0, 4)]])
+    _test_components([[0, 0, 0, 0, 1]], [[(0, 4)]])
 
     # 1 time step, 2 elements
-    _test_components([
-            [1, 1, 0, 0, 0],
-        ],  [[(0, 0), (0, 1)]])
+    _test_components([[1, 1, 0, 0, 0]], [[(0, 0), (0, 1)]])
 
-    _test_components([
-            [1, 0, 1, 0, 0],
-        ],  [[(0, 0)], [(0, 2)]])
+    _test_components([[1, 0, 1, 0, 0]], [[(0, 0)], [(0, 2)]])
 
-    _test_components([
-            [1, 0, 0, 0, 1],
-        ],  [[(0, 0)], [(0, 4)]])
+    _test_components([[1, 0, 0, 0, 1]], [[(0, 0)], [(0, 4)]])
 
-    _test_components([
-            [0, 1, 0, 1, 0],
-        ],  [[(0, 1)], [(0, 3)]])
+    _test_components([[0, 1, 0, 1, 0]], [[(0, 1)], [(0, 3)]])
 
     # 1 time step, 3 elements
-    _test_components([
-            [1, 1, 1, 0, 0],
-        ],  [[(0, 0), (0, 1), (0, 2)]])
+    _test_components([[1, 1, 1, 0, 0]], [[(0, 0), (0, 1), (0, 2)]])
 
-    _test_components([
-            [1, 1, 0, 1, 0],
-        ],  [[(0, 0), (0, 1)], [(0, 3)]])
+    _test_components([[1, 1, 0, 1, 0]], [[(0, 0), (0, 1)], [(0, 3)]])
 
-    _test_components([
-            [1, 0, 1, 1, 0],
-        ],  [[(0, 0)], [(0, 2), (0, 3)]])
+    _test_components([[1, 0, 1, 1, 0]], [[(0, 0)], [(0, 2), (0, 3)]])
 
-    _test_components([
-            [0, 1, 1, 1, 0],
-        ],  [[(0, 1), (0, 2), (0, 3)]])
+    _test_components([[0, 1, 1, 1, 0]], [[(0, 1), (0, 2), (0, 3)]])
 
-    _test_components([
-            [0, 1, 1, 0, 1],
-        ],  [[(0, 1), (0, 2)], [(0, 4)]])
-
+    _test_components([[0, 1, 1, 0, 1]], [[(0, 1), (0, 2)], [(0, 4)]])
 
     # 5 time steps, varying join_size
     _test_components([
-            [0, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0],
-            [1, 0, 1, 1, 0],
-            [1, 0, 0, 1, 0],
-            [0, 1, 0, 1, 1],
-        ],  [[(1, 2)],
-             [(2, 0)], [(2, 2), (2, 3)],
-             [(3, 0)], [(3, 3)],
-             [(4, 1)], [(4, 3), (4, 4)],
-             ])
+        [0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0],
+        [1, 0, 1, 1, 0],
+        [1, 0, 0, 1, 0],
+        [0, 1, 0, 1, 1],
+    ],  [[(1, 2)],
+         [(2, 0)],
+         [(2, 2), (2, 3)],
+         [(3, 0)],
+         [(3, 3)],
+         [(4, 1)],
+         [(4, 3), (4, 4)],
+         ])
 
     _test_components([
-            [0, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0],
-            [1, 0, 1, 1, 0],
-            [1, 0, 0, 1, 0],
-            [0, 1, 0, 1, 1],
-        ],  [[(1, 2), (2, 2), (2, 3), (3, 3), (4, 3), (4, 4)],
-             [(2, 0), (3, 0), (4, 1)],
-             ],
-        join_size=1
-        )
+        [0, 0, 0, 0, 0],
+        [0, 0, 1, 0, 0],
+        [1, 0, 1, 1, 0],
+        [1, 0, 0, 1, 0],
+        [0, 1, 0, 1, 1],
+    ],  [[(1, 2), (2, 2), (2, 3), (3, 3), (4, 3), (4, 4)],
+         [(2, 0), (3, 0), (4, 1)]], join_size=1)
 
-    _test_components(None,
-            [[(1, 2), (2, 2), (2, 3), (3, 3), (4, 3), (4, 4),
-              (2, 0), (3, 0), (4, 1)],
-             ],
-        join_size=2
-        )
+    _test_components(
+        components=[[(1, 2), (2, 2), (2, 3), (3, 3), (4, 3), (4, 4),
+                     (2, 0), (3, 0), (4, 1)]], join_size=2)
 
     # 5 time steps, strong != weak
-    _test_components(None,
-            [],
-        join_size=0,
-        strong_crossings=[
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-        ]
-        )
+    _test_components(join_size=0,
+                     strong_crossings=[
+                         [0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0]])
 
-    _test_components(None,
-            [[(1, 2)],
-             ],
-        join_size=0,
-        strong_crossings=[
-            [0, 0, 0, 0, 0],
-            [0, 0, 1, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-        ]
-        )
+    _test_components(components=[[(1, 2)]],
+                     join_size=0,
+                     strong_crossings=[
+                         [0, 0, 0, 0, 0],
+                         [0, 0, 1, 0, 0],
+                         [0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0],
+                         [0, 0, 0, 0, 0]])
 
-    _test_components(None,
-            [[(1, 2), (2, 2), (2, 3), (3, 3), (4, 3), (4, 4)],
-             ],
+    _test_components(
+        components=[[(1, 2), (2, 2), (2, 3), (3, 3), (4, 3), (4, 4)]],
         join_size=1,
         strong_crossings=[
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 1],
-        ]
-        )
+            [0, 0, 0, 0, 1]])
 
-    _test_components(None,
-            [[(1, 2), (2, 2), (2, 3), (3, 3), (4, 3), (4, 4),
-              (2, 0), (3, 0), (4, 1)],
-             ],
+    _test_components(
+        components=[[(1, 2), (2, 2), (2, 3), (3, 3), (4, 3), (4, 4),
+                     (2, 0), (3, 0), (4, 1)]],
         join_size=2,
         strong_crossings=[
             [0, 0, 0, 0, 0],
             [0, 0, 1, 0, 0],
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
-            [0, 0, 0, 0, 0],
-        ]
-        )
+            [0, 0, 0, 0, 0]])
 
-    _test_components(None,
-            [[(1, 2), (2, 2), (2, 3), (3, 3), (4, 3), (4, 4),
-              (2, 0), (3, 0), (4, 1)],
-             ],
+    _test_components(
+        components=[[(1, 2), (2, 2), (2, 3), (3, 3), (4, 3), (4, 4),
+                     (2, 0), (3, 0), (4, 1)]],
         join_size=2,
         strong_crossings=[
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
-            [0, 1, 0, 0, 0],
-        ]
-        )
+            [0, 1, 0, 0, 0]])
