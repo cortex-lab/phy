@@ -41,3 +41,8 @@ def test_thresholder():
                                           })
     ae(thresholder(data, 'weak'), np.abs(data) > weak)
     ae(thresholder(data, threshold='strong'), np.abs(data) > strong)
+
+    # Multiple thresholds.
+    t = thresholder(data, ('weak', 'strong'))
+    ae(t['weak'], np.abs(data) > weak)
+    ae(t['strong'], np.abs(data) > strong)

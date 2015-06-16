@@ -48,6 +48,10 @@ class Thresholder(object):
             return np.abs(data)
 
     def __call__(self, data, threshold=None):
+        # Accept dictionary of thresholds.
+        if isinstance(threshold, (list, tuple)):
+            return {name: self(data, threshold=name)
+                    for name in threshold}
         # Use the only threshold by default (if there is only one).
         if threshold is None:
             assert len(self._thresholds) == 1
