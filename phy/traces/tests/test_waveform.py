@@ -20,7 +20,7 @@ from ..filter import bandpass_filter, apply_filter
 # Tests extracter
 #------------------------------------------------------------------------------
 
-def test_extract():
+def test_extract_simple():
     weak = 1.
     strong = 2.
     nc = 4
@@ -95,6 +95,18 @@ def test_extract():
     assert s_f == s
     ae(masks_f, masks)
     ae(wave_f, wave_a)
+
+    # Tests with a different order.
+    we = WaveformExtracter(extract_before=3,
+                           extract_after=5,
+                           thresholds={'weak': weak,
+                                       'strong': strong},
+                           channels_per_group={0: [1, 0, 3]},
+                           )
+    s_f_o, wave_f_o, masks_f_o = we(component, data=data, data_t=data)
+    assert s_f == s_f_o
+    assert np.allclose(wave_f[:, [1, 0, 3]], wave_f_o)
+    ae(masks_f_o, [1., 0.5, 0.])
 
 
 #------------------------------------------------------------------------------
