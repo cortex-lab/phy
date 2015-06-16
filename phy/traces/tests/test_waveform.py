@@ -25,7 +25,8 @@ def test_extract():
     strong = 2.
     nc = 4
     ns = 20
-    cpg = {0: list(range(nc))}
+    channels = list(range(nc))
+    cpg = {0: channels}
     graph = {0: [1, 2], 1: [0, 2], 2: [0, 1], 3: []}
 
     data = np.random.uniform(size=(ns, nc), low=0., high=1.)
@@ -65,8 +66,8 @@ def test_extract():
     assert we._normalize(strong) == 1
     ae(we._normalize([(weak + strong) / 2.]), [.5])
 
-    # _wave()
-    wave = we._wave(data, comp)
+    # _comp_wave()
+    wave = we._comp_wave(data, comp)
     assert wave.shape == (3 + 5 + 1, nc)
     ae(wave[3:6, :], [[0.5, 1.5, 0., 0.],
                       [1.5, 2.5, 0., 0.],
@@ -79,6 +80,11 @@ def test_extract():
     # spike_sample_aligned()
     s = we.spike_sample_aligned(wave, comp)
     assert 11 <= s < 12
+
+    # extract()
+    wave_e = we.extract(data, s, channels=channels)
+    assert wave_e.shape[1] == wave.shape[1]
+    ae(wave[3:6, :2], wave_e[3:6, :2])
 
 
 #------------------------------------------------------------------------------

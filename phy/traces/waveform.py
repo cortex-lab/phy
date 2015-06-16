@@ -72,8 +72,6 @@ class WaveformExtracter(object):
         s_max = min(s_max, n_samples)
         assert s_min < s_max
 
-
-
         return Bunch(comp_s=comp_s,
                      comp_ch=comp_ch,
                      s_min=s_min,
@@ -87,7 +85,7 @@ class WaveformExtracter(object):
         ts = self._thresholds['strong']
         return np.clip((x - tw) / (ts - tw), 0, 1)
 
-    def _wave(self, data_t, comp):
+    def _comp_wave(self, data_t, comp):
         comp_s, comp_ch = comp.comp_s, comp.comp_ch
         s_min, s_max = comp.s_min, comp.s_max
         nc = data_t.shape[1]
@@ -158,7 +156,7 @@ class WaveformExtracter(object):
                                )
         channels = comp.channels
 
-        wave = self._wave(data_t, comp)
+        wave = self._comp_wave(data_t, comp)
         masks = self.masks(data_t, wave, comp)
         s_aligned = self.spike_sample_aligned(wave, comp)
 
