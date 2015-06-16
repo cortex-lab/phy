@@ -7,10 +7,9 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from numpy.testing import assert_array_equal as ae
 
 from ...io.mock import artificial_waveforms
-from ..pca import PCA, _compute_pcs, _project_pcs
+from ..pca import PCA, _compute_pcs
 
 
 #------------------------------------------------------------------------------
