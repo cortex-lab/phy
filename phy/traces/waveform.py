@@ -159,6 +159,10 @@ class WaveformExtractor(object):
         waveform_unaligned = self.extract(data, s_aligned, channels=channels)
         waveform_aligned = self.align(waveform_unaligned, s_aligned)
 
+        assert waveform_aligned.ndim == 2
+        assert masks.ndim == 1
+        assert waveform_aligned.shape[1] == masks.shape[0]
+
         return s_aligned, waveform_aligned, masks
 
 
