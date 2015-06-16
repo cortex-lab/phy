@@ -8,6 +8,7 @@
 
 import numpy as np
 
+from ..utils.array import _as_array
 from ..ext.six import string_types
 from ..ext.six.moves import range, zip
 
@@ -117,6 +118,10 @@ def connected_components(weak_crossings=None,
 
     if probe_adjacency_list is None:
         probe_adjacency_list = {}
+
+    # Make sure the values are sets.
+    probe_adjacency_list = {c: set(cs)
+                            for c, cs in probe_adjacency_list.items()}
 
     if strong_crossings is None:
         strong_crossings = weak_crossings
@@ -237,14 +242,32 @@ def connected_components(weak_crossings=None,
 
 
 class FloodFillDetector(object):
+    """Detect spikes in weak and strong threshold crossings.
+
+    Usage
+    -----
+
+    ```python
+    det = FloodFillDetector(...)
+    components = det(weak_crossings, strong_crossings)
+    ```
+
+    `components` is a list of `(n, 2)` int arrays with the sample and channel
+    for every sample in the component.
+
+    """
     def __init__(self, probe_adjacency_list=None, join_size=None):
         self._adjacency_list = probe_adjacency_list
         self._join_size = join_size
 
     def __call__(self, weak_crossings=None, strong_crossings=None):
+        weak_crossings = _as_array(weak_crossings, np.bool)
+        strong_crossings = _as_array(strong_crossings, np.bool)
+
         cc = connected_components(weak_crossings=weak_crossings,
                                   strong_crossings=strong_crossings,
                                   probe_adjacency_list=self._adjacency_list,
                                   join_size=self._join_size,
                                   )
         # cc is a list of list of pairs (sample, channel)
+        return [np.array(c) for c in cc]

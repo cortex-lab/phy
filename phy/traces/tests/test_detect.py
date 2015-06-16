@@ -10,7 +10,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
-from ..detect import Thresholder, connected_components
+from ..detect import Thresholder, connected_components, FloodFillDetector
 from ...io.mock import artificial_traces
 
 
@@ -52,6 +52,19 @@ def test_thresholder():
 # Test connected components
 #------------------------------------------------------------------------------
 
+def _as_set(c):
+    if isinstance(c, np.ndarray):
+        c = c.tolist()
+    c = [tuple(_) for _ in c]
+    return set(c)
+
+
+def _assert_components_equal(cc1, cc2):
+    assert len(cc1) == len(cc2)
+    for c1, c2 in zip(cc1, cc2):
+        assert _as_set(c1) == _as_set(c2)
+
+
 def _test_components(chunk=None, components=None, **kwargs):
 
     def _clip(x, m, M):
@@ -83,9 +96,7 @@ def _test_components(chunk=None, components=None, **kwargs):
                                 probe_adjacency_list=probe_adjacency_list,
                                 strong_crossings=strong_crossings,
                                 **kwargs)
-    assert len(comp) == len(components), (len(comp), len(components))
-    for c1, c2 in zip(comp, components):
-        assert set(c1) == set(c2)
+    _assert_components_equal(comp, components)
 
 
 def test_components():
@@ -198,3 +209,29 @@ def test_components():
             [0, 0, 0, 0, 0],
             [0, 0, 0, 0, 0],
             [0, 1, 0, 0, 0]])
+
+
+def test_flood_fill():
+
+    graph = {0: [1, 2], 1: [0, 2], 2: [0, 1], 3: []}
+
+    ff = FloodFillDetector(probe_adjacency_list=graph,
+                           join_size=1,
+                           )
+
+    weak = [[0, 0, 0, 0],
+            [0, 1, 1, 0],
+            [0, 0, 0, 0],
+            [0, 0, 1, 0],
+            [0, 0, 1, 1],
+            [0, 0, 0, 0],
+            [0, 0, 0, 1],
+            [0, 0, 0, 0],
+            ]
+    comps = [[(1, 1), (1, 2)],
+             [(3, 2), (4, 2)],
+             [(4, 3)],
+             [(6, 3)],
+             ]
+    cc = ff(weak, weak)
+    _assert_components_equal(cc, comps)
