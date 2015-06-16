@@ -61,7 +61,7 @@ class WaveformExtracter(object):
                               for channels in channels_per_group.values()
                               for i in channels}
 
-    def _component(self, component, n_samples=None):
+    def _component(self, component, data=None, n_samples=None):
         comp_s = component[:, 0]  # shape: (component_size,)
         comp_ch = component[:, 1]  # shape: (component_size,)
         channels = self._dep_channels[comp_ch[0]]
@@ -71,6 +71,8 @@ class WaveformExtracter(object):
         s_min = max(s_min, 0)
         s_max = min(s_max, n_samples)
         assert s_min < s_max
+
+
 
         return Bunch(comp_s=comp_s,
                      comp_ch=comp_ch,
@@ -85,23 +87,28 @@ class WaveformExtracter(object):
         ts = self._thresholds['strong']
         return np.clip((x - tw) / (ts - tw), 0, 1)
 
-    def masks(self, data_t, comp):
-        nc = data_t.shape[1]
-        channels = comp.channels
+    def _wave(self, data_t, comp):
         comp_s, comp_ch = comp.comp_s, comp.comp_ch
         s_min, s_max = comp.s_min, comp.s_max
+        nc = data_t.shape[1]
+        # Data on weak threshold crossings. shape: (some_length, nc)
+        wave = np.zeros((s_max - s_min, nc), dtype=data_t.dtype)
+        # The sample where the peak is reached, on each channel.
+        wave[comp_s - s_min, comp_ch] = data_t[comp_s, comp_ch]
+        return wave
+
+    def masks(self, data_t, wave, comp):
+        nc = data_t.shape[1]
+        channels = comp.channels
+        comp_ch = comp.comp_ch
+        s_min = comp.s_min
 
         # Binary mask. shape: (nc,)
         masks_bin = np.zeros(nc, dtype=np.bool)
         masks_bin[np.unique(comp_ch)] = 1
 
-        # Data on weak threshold crossings. shape: (some_length, nc)
-        comp = np.zeros((s_max - s_min, nc), dtype=data_t.dtype)
-        # The sample where the peak is reached, on each channel.
-        comp[comp_s - s_min, comp_ch] = data_t[comp_s, comp_ch]
-
         # Find the peaks (relative to the start of the chunk). shape: (nc,)
-        peaks = np.argmax(comp, axis=0) + s_min
+        peaks = np.argmax(wave, axis=0) + s_min
         # Peak values on each channel. shape: (nc,)
         peaks_values = data_t[peaks, np.arange(0, nc)] * masks_bin
 
@@ -111,14 +118,14 @@ class WaveformExtracter(object):
         masks_float = masks_float[channels]
         return masks_float
 
-    def spike_sample_aligned(self, data_t, comp):
+    def spike_sample_aligned(self, wave, comp):
         s_min, s_max = comp.s_min, comp.s_max
         # Compute the fractional peak.
-        data_t_n = self._normalize(data_t)
-        data_t_n_p = np.power(data_t_n, self._weight_power)
+        wave_n = self._normalize(wave)
+        wave_n_p = np.power(wave_n, self._weight_power)
         u = np.arange(s_max - s_min)[:, np.newaxis]
         # Spike aligned time relative to the start of the chunk.
-        s_aligned = np.sum(data_t_n_p * u) / np.sum(data_t_n_p) + s_min
+        s_aligned = np.sum(wave_n_p * u) / np.sum(wave_n_p) + s_min
         return s_aligned
 
     def extract(self, data, s_aligned, channels=None):
@@ -145,12 +152,15 @@ class WaveformExtracter(object):
 
     def __call__(self, component=None, data=None, data_t=None):
         assert data.shape == data_t.shape
-        comp = self._component(component, n_samples=data_t.shape[0])
+        comp = self._component(component,
+                               data=data,
+                               n_samples=data_t.shape[0],
+                               )
         channels = comp.channels
 
-        masks = self.masks(data_t, comp)
-
-        s_aligned = self.spike_sample_aligned(data_t, comp)
+        wave = self._wave(data_t, comp)
+        masks = self.masks(data_t, wave, comp)
+        s_aligned = self.spike_sample_aligned(wave, comp)
 
         waveform_unaligned = self.extract(data, s_aligned, channels=channels)
         waveform_aligned = self.align(waveform_unaligned, s_aligned)

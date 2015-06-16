@@ -65,9 +65,15 @@ def test_extract():
     assert we._normalize(strong) == 1
     ae(we._normalize([(weak + strong) / 2.]), [.5])
 
-    # Masks.
-    masks = we.masks(data, comp)
+    wave = we._wave(data, comp)
+
+    # masks()
+    masks = we.masks(data, wave, comp)
     ae(masks, [.5, 1., 0, 0])
+
+    # spike_sample_aligned()
+    s = we.spike_sample_aligned(wave, comp)
+    assert 11 <= s < 12
 
 
 #------------------------------------------------------------------------------
