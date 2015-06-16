@@ -80,6 +80,7 @@ class WaveformExtracter(object):
                      )
 
     def _normalize(self, x):
+        x = _as_array(x)
         tw = self._thresholds['weak']
         ts = self._thresholds['strong']
         return np.clip((x - tw) / (ts - tw), 0, 1)
