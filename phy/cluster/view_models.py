@@ -468,7 +468,7 @@ class CorrelogramViewModel(VispyViewModel):
                             )
         self._ccgs = _symmetrize_correlograms(ccgs)
         # Normalize the CCGs.
-        self.view.visual.correlograms = self._normalize(self._ccgs)
+        self.view.correlograms = self._normalize(self._ccgs)
 
         # Take the cluster order into account.
         self.view.visual.cluster_order = clusters
