@@ -12,12 +12,12 @@ import numpy.random as npr
 from pytest import raises
 
 from ...io.mock import artificial_traces
-from ..waveform import _slice, WaveformLoader, WaveformExtracter
+from ..waveform import _slice, WaveformLoader, WaveformExtractor
 from ..filter import bandpass_filter, apply_filter
 
 
 #------------------------------------------------------------------------------
-# Tests extracter
+# Tests extractor
 #------------------------------------------------------------------------------
 
 def test_extract_simple():
@@ -47,7 +47,7 @@ def test_extract_simple():
                           [12, 1],
                           ])
 
-    we = WaveformExtracter(extract_before=3,
+    we = WaveformExtractor(extract_before=3,
                            extract_after=5,
                            thresholds={'weak': weak,
                                        'strong': strong},
@@ -97,7 +97,7 @@ def test_extract_simple():
     ae(wave_f, wave_a)
 
     # Tests with a different order.
-    we = WaveformExtracter(extract_before=3,
+    we = WaveformExtractor(extract_before=3,
                            extract_after=5,
                            thresholds={'weak': weak,
                                        'strong': strong},

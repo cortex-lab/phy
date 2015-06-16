@@ -15,7 +15,7 @@ from ..utils.logging import warn
 
 
 #------------------------------------------------------------------------------
-# Waveform extracter from a connected component
+# Waveform extractor from a connected component
 #------------------------------------------------------------------------------
 
 def _get_padded(data, start, end):
@@ -38,7 +38,7 @@ def _get_padded(data, start, end):
         return data[start:end]
 
 
-class WaveformExtracter(object):
+class WaveformExtractor(object):
     """Extract waveforms after data filtering and spike detection."""
     def __init__(self,
                  extract_before=None,
