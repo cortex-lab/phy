@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from ...io.mock import artificial_waveforms
+from ...io.mock import artificial_waveforms, artificial_masks
 from ..pca import PCA, _compute_pcs
 
 
@@ -21,9 +21,10 @@ def test_pca():
     n_samples = 40
     n_channels = 12
     waveforms = artificial_waveforms(n_spikes, n_samples, n_channels)
+    masks = artificial_masks(n_spikes, n_channels)
 
     pca = PCA(n_pcs=3)
-    pcs = pca.fit(waveforms)
+    pcs = pca.fit(waveforms, masks)
     assert pcs.shape == (3, n_samples, n_channels)
     fet = pca.transform(waveforms)
     assert fet.shape == (n_spikes, n_channels, 3)
