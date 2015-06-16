@@ -84,10 +84,7 @@ def connected_components(weak_crossings=None,
                          strong_crossings=None,
                          probe_adjacency_list=None,
                          join_size=None):
-    """Return a list of pairs `(samp, chan)` of the connected components in
-    the 2D array `weak_crossings`, where a pair is adjacent if the samples are
-    within `join_size` of each other, and the channels are adjacent in
-    `probe_adjacency_list`, the channel graph.
+    """Find all connected components in binary arrays of threshold crossings.
 
     Parameters
     ----------
@@ -101,6 +98,20 @@ def connected_components(weak_crossings=None,
     join_size : int
         The number of samples defining the tolerance in time for
         finding connected components
+
+    Returns
+    -------
+
+    A list of lists of pairs `(samp, chan)` of the connected components in
+    the 2D array `weak_crossings`, where a pair is adjacent if the samples are
+    within `join_size` of each other, and the channels are adjacent in
+    `probe_adjacency_list`, the channel graph.
+
+    Note
+    ----
+
+    The channel mapping assumes that column #i in the data array is channel #i
+    in the probe adjacency graph.
 
     """
 
@@ -226,5 +237,14 @@ def connected_components(weak_crossings=None,
 
 
 class FloodFillDetector(object):
-    def __init__(self):
-        pass
+    def __init__(self, probe_adjacency_list=None, join_size=None):
+        self._adjacency_list = probe_adjacency_list
+        self._join_size = join_size
+
+    def __call__(self, weak_crossings=None, strong_crossings=None):
+        cc = connected_components(weak_crossings=weak_crossings,
+                                  strong_crossings=strong_crossings,
+                                  probe_adjacency_list=self._adjacency_list,
+                                  join_size=self._join_size,
+                                  )
+        # cc is a list of list of pairs (sample, channel)
