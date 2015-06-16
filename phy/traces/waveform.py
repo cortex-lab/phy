@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Load waveforms from traces."""
+"""Waveform extraction."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -14,7 +14,21 @@ from ..utils.logging import warn
 
 
 #------------------------------------------------------------------------------
-# Waveform loader from traces
+# Waveform extracter from a connected component
+#------------------------------------------------------------------------------
+
+class WaveformExtracter(object):
+    def __init__(self,
+                 extract_before=None,
+                 extract_after=None,
+                 weight_power=None,
+                 thresholds=None,
+                 ):
+        pass
+
+
+#------------------------------------------------------------------------------
+# Waveform loader from traces (used in the manual sorting GUI)
 #------------------------------------------------------------------------------
 
 def _before_after(n_samples):
