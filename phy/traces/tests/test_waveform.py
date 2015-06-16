@@ -12,12 +12,54 @@ import numpy.random as npr
 from pytest import raises
 
 from ...io.mock import artificial_traces
-from ..waveform import _slice, WaveformLoader
+from ..waveform import _slice, WaveformLoader, WaveformExtracter
 from ..filter import bandpass_filter, apply_filter
 
 
 #------------------------------------------------------------------------------
-# Tests
+# Tests extracter
+#------------------------------------------------------------------------------
+
+def test_extract():
+    weak = 1.
+    strong = 2.
+    nc = 4
+    ns = 20
+    cpg = {0: list(range(nc))}
+    graph = {0: [1, 2], 1: [0, 2], 2: [0, 1], 3: []}
+
+    data = np.random.uniform(size=(ns, nc), low=0., high=1.)
+
+    data[10, 0] = 1.5
+    data[11, 0] = 2.5
+    data[12, 0] = 1.5
+
+    data[10, 1] = 2.5
+    data[11, 1] = 3.5
+    data[12, 1] = 2.5
+
+    component = np.array([[10, 0],
+                          [10, 1],
+                          [11, 0],
+                          [11, 1],
+                          [12, 0],
+                          [12, 1],
+                          ])
+
+    we = WaveformExtracter(extract_before=3,
+                           extract_after=5,
+                           thresholds={'weak': weak,
+                                       'strong': strong},
+                           channels_per_group=cpg,
+                           )
+
+    comp = we._component(component)
+    ae(comp.comp_s, [10, 10, 11, 11, 12, 12])
+    ae(comp.comp_ch, [0, 1, 0, 1, 0, 1])
+
+
+#------------------------------------------------------------------------------
+# Tests loader
 #------------------------------------------------------------------------------
 
 def test_slice():

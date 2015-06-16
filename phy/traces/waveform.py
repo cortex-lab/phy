@@ -18,16 +18,6 @@ from ..utils.logging import warn
 # Waveform extracter from a connected component
 #------------------------------------------------------------------------------
 
-_Component = Bunch(comp_s=None,
-                   comp_ch=None,
-                   s_min=None,
-                   s_max=None,
-                   channels=None,
-                   ns=None,
-                   nc=None,
-                   )
-
-
 def _get_padded(data, start, end):
     """Return `data[start:end]` filling in with zeros outside array bounds
 
@@ -81,14 +71,14 @@ class WaveformExtracter(object):
         s_min = max(s_min, 0)
         s_max = min(s_max, ns)
 
-        return _Component(comp_s=comp_s,
-                          comp_ch=comp_ch,
-                          s_min=s_min,
-                          s_max=s_max,
-                          channels=channels,
-                          nc=nc,
-                          ns=ns,
-                          )
+        return Bunch(comp_s=comp_s,
+                     comp_ch=comp_ch,
+                     s_min=s_min,
+                     s_max=s_max,
+                     channels=channels,
+                     nc=nc,
+                     ns=ns,
+                     )
 
     def _normalize(self, x):
         tw = self._thresholds['weak']
