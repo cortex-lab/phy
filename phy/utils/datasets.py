@@ -22,7 +22,10 @@ from .logging import info
 # Utility functions
 #------------------------------------------------------------------------------
 
-_BASE_URL = 'http://phy.cortexlab.net/data/'
+_BASE_URL = {
+    'cortexlab': 'http://phy.cortexlab.net/data/',
+    'github': 'https://raw.githubusercontent.com/kwikteam/phy-data/master/',
+}
 
 
 def md5(path, blocksize=2 ** 20):
@@ -65,16 +68,28 @@ def _download(url):
     return get(url).text
 
 
-def download_test_data(name, output_dir=None):
-    """Download a test dataset."""
+def download_test_data(name, output_dir=None, base='cortexlab'):
+    """Download a test dataset.
+
+    Parameters
+    ----------
+
+    name : str
+        Name of the test dataset to download.
+    output_dir : str
+        The directory where to save the file.
+    base : str
+        The id of the base URL. Can be `'cortexlab'` or `'github'`.
+
+    """
     if output_dir is None:
         output_dir = name
     output_dir = op.realpath(output_dir)
     if not op.exists(output_dir):
         os.mkdir(output_dir)
     for ext in ('.kwik', '.kwx', '.raw.kwd'):
-        url = _BASE_URL + name + ext
+        url = _BASE_URL[base] + name + ext
         output = op.join(output_dir, name + ext)
-        url_checksum = _BASE_URL + name + ext + '.md5'
+        url_checksum = _BASE_URL[base] + name + ext + '.md5'
         checksum = _download(url_checksum).split(' ')[0]
         download_file(url, output=output, checksum=checksum)

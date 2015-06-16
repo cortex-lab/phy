@@ -91,7 +91,7 @@ def test_download_invalid_checksum():
 @responses.activate
 def test_download_test_data():
     name = 'test'
-    url = _BASE_URL + name
+    url = _BASE_URL['cortexlab'] + name
     for ext in ('.kwik', '.kwx', '.raw.kwd'):
         _add_mock_response(url + ext, _DATA.tostring())
         _add_mock_response(url + ext + '.md5', _CHECKSUM)
