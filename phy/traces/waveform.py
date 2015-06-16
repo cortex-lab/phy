@@ -43,6 +43,7 @@ class InterpolationError(Exception):
 
 
 class WaveformExtracter(object):
+    """Extract waveforms after data filtering and spike detection."""
     def __init__(self,
                  extract_before=None,
                  extract_after=None,
@@ -64,7 +65,6 @@ class WaveformExtracter(object):
         comp_s = component[:, 0]  # shape: (component_size,)
         comp_ch = component[:, 1]  # shape: (component_size,)
         channels = self._dep_channels[comp_ch[0]]
-        # ns, nc = component.shape
 
         # Get the temporal window around the waveform.
         s_min, s_max = (comp_s.min() - 3), (comp_s.max() + 4)
@@ -86,7 +86,7 @@ class WaveformExtracter(object):
         return np.clip((x - tw) / (ts - tw), 0, 1)
 
     def masks(self, data_t, comp):
-        nc = data_t.shape[0]
+        nc = data_t.shape[1]
         channels = comp.channels
         comp_s, comp_ch = comp.comp_s, comp.comp_ch
         s_min, s_max = comp.s_min, comp.s_max

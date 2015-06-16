@@ -30,13 +30,13 @@ def test_extract():
 
     data = np.random.uniform(size=(ns, nc), low=0., high=1.)
 
-    data[10, 0] = 1.5
-    data[11, 0] = 2.5
-    data[12, 0] = 1.5
+    data[10, 0] = 0.5
+    data[11, 0] = 1.5
+    data[12, 0] = 1.0
 
-    data[10, 1] = 2.5
-    data[11, 1] = 3.5
-    data[12, 1] = 2.5
+    data[10, 1] = 1.5
+    data[11, 1] = 2.5
+    data[12, 1] = 2.0
 
     component = np.array([[10, 0],
                           [10, 1],
@@ -60,9 +60,14 @@ def test_extract():
     assert (comp.s_min, comp.s_max) == (10 - 3, 12 + 4)
     ae(comp.channels, range(nc))
 
+    # _normalize()
     assert we._normalize(weak) == 0
     assert we._normalize(strong) == 1
     ae(we._normalize([(weak + strong) / 2.]), [.5])
+
+    # Masks.
+    masks = we.masks(data, comp)
+    ae(masks, [.5, 1., 0, 0])
 
 
 #------------------------------------------------------------------------------
