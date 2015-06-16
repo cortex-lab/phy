@@ -33,3 +33,11 @@ def test_thresholder():
     thresholder = Thresholder(mode='negative',
                               thresholds={'weak': weak})
     ae(thresholder(data), data < -weak)
+
+    # Both and strong+weak.
+    thresholder = Thresholder(mode='both',
+                              thresholds={'weak': weak,
+                                          'strong': strong,
+                                          })
+    ae(thresholder(data, 'weak'), np.abs(data) > weak)
+    ae(thresholder(data, threshold='strong'), np.abs(data) > strong)
