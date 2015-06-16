@@ -30,10 +30,10 @@ def test_compute_threshold():
     threshold = compute_threshold(data, std_factor=1.)
     assert threshold.shape == (2,)
     assert threshold[0] > 0
-    assert threshold[1] > 0
+    assert threshold[0] == threshold[1]
 
     threshold = compute_threshold(data, std_factor=[1., 2.])
-    assert len(threshold) == 2
+    assert threshold.shape == (2,)
     assert threshold[1] == 2 * threshold[0]
 
     # Multiple threshold.
