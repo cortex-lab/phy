@@ -60,24 +60,23 @@ class WaveformExtracter(object):
                               for channels in channels_per_group.values()
                               for i in channels}
 
-    def _component(self, component):
+    def _component(self, component, n_samples=None):
         comp_s = component[:, 0]  # shape: (component_size,)
         comp_ch = component[:, 1]  # shape: (component_size,)
         channels = self._dep_channels[comp_ch[0]]
-        ns, nc = component.shape
+        # ns, nc = component.shape
 
         # Get the temporal window around the waveform.
-        s_min, s_max = np.amin(comp_s) - 3, np.amax(comp_s) + 4
+        s_min, s_max = (comp_s.min() - 3), (comp_s.max() + 4)
         s_min = max(s_min, 0)
-        s_max = min(s_max, ns)
+        s_max = min(s_max, n_samples)
+        assert s_min < s_max
 
         return Bunch(comp_s=comp_s,
                      comp_ch=comp_ch,
                      s_min=s_min,
                      s_max=s_max,
                      channels=channels,
-                     nc=nc,
-                     ns=ns,
                      )
 
     def _normalize(self, x):
@@ -86,7 +85,7 @@ class WaveformExtracter(object):
         return np.clip((x - tw) / (ts - tw), 0, 1)
 
     def masks(self, data_t, comp):
-        nc = comp.nc
+        nc = data_t.shape[0]
         channels = comp.channels
         comp_s, comp_ch = comp.comp_s, comp.comp_ch
         s_min, s_max = comp.s_min, comp.s_max
@@ -144,7 +143,8 @@ class WaveformExtracter(object):
         return f(new_s)
 
     def __call__(self, component=None, data=None, data_t=None):
-        comp = self._component(component)
+        assert data.shape == data_t.shape
+        comp = self._component(component, n_samples=data_t.shape[0])
         channels = comp.channels
 
         masks = self.masks(data_t, comp)

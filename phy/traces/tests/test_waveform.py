@@ -53,9 +53,11 @@ def test_extract():
                            channels_per_group=cpg,
                            )
 
-    comp = we._component(component)
+    comp = we._component(component, n_samples=ns)
     ae(comp.comp_s, [10, 10, 11, 11, 12, 12])
     ae(comp.comp_ch, [0, 1, 0, 1, 0, 1])
+    assert (comp.s_min, comp.s_max) == (10 - 3, 12 + 4)
+    ae(comp.channels, range(nc))
 
 
 #------------------------------------------------------------------------------
