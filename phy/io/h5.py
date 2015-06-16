@@ -163,7 +163,12 @@ class File(object):
         _check_hdf5_path(self._h5py_file, path)
         attrs = self._h5py_file[path].attrs
         if attr_name in attrs:
-            return attrs[attr_name]
+            try:
+                return attrs[attr_name]
+            except TypeError:
+                warn("Unable to read attribute `{}` at `{}`.".format(
+                     attr_name, path))
+                return
         else:
             raise KeyError("The attribute '{0:s}'".format(attr_name) +
                            " doesn't exist.")
