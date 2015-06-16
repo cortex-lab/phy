@@ -38,10 +38,6 @@ def _get_padded(data, start, end):
         return data[start:end]
 
 
-class InterpolationError(Exception):
-    pass
-
-
 class WaveformExtracter(object):
     """Extract waveforms after data filtering and spike detection."""
     def __init__(self,
@@ -144,8 +140,8 @@ class WaveformExtracter(object):
             f = interp1d(old_s, waveform, bounds_error=True,
                          kind='cubic', axis=0)
         except ValueError:
-            raise InterpolationError("Interpolation error at time "
-                                     "{0:d}".format(s))
+            warn("Interpolation error at time {0:d}".format(s))
+            return waveform
         return f(new_s)
 
     def __call__(self, component=None, data=None, data_t=None):

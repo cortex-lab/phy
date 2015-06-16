@@ -27,7 +27,7 @@ def test_extract():
     ns = 20
     channels = list(range(nc))
     cpg = {0: channels}
-    graph = {0: [1, 2], 1: [0, 2], 2: [0, 1], 3: []}
+    # graph = {0: [1, 2], 1: [0, 2], 2: [0, 1], 3: []}
 
     data = np.random.uniform(size=(ns, nc), low=0., high=1.)
 
@@ -85,6 +85,10 @@ def test_extract():
     wave_e = we.extract(data, s, channels=channels)
     assert wave_e.shape[1] == wave.shape[1]
     ae(wave[3:6, :2], wave_e[3:6, :2])
+
+    # align()
+    wave_a = we.align(wave_e, s)
+    assert wave_a.shape == (3 + 5, nc)
 
 
 #------------------------------------------------------------------------------
