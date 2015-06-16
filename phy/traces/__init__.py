@@ -5,4 +5,4 @@
 
 from .detect import Thresholder, FloodFillDetector
 from .filter import Filter
-from .loader import WaveformLoader
+from .waveform import WaveformLoader

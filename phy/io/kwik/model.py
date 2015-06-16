@@ -15,7 +15,7 @@ import numpy as np
 from ...ext import six
 from ..base import BaseModel, ClusterMetadata
 from ..h5 import open_h5, File
-from ...traces.loader import WaveformLoader
+from ...traces.waveform import WaveformLoader
 from ...traces.filter import bandpass_filter, apply_filter
 from ...electrode.mea import MEA
 from ...utils.logging import debug, warn

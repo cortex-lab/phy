@@ -13,7 +13,7 @@ import numpy.random as npr
 from pytest import raises
 
 from ...io.mock import artificial_traces
-from ..loader import _slice, WaveformLoader
+from ..waveform import _slice, WaveformLoader
 from ..filter import bandpass_filter, apply_filter
 
 
