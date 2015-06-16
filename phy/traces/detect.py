@@ -184,8 +184,8 @@ def connected_components(weak_crossings=None,
                         # join_size of the current point.
                         # TODO: is this the right behaviour? If a component can
                         # have a width bigger than join_size I think it isn't!
-                        samps_chans = samps_chans[i_s - samps_chans[:, 0]
-                                                  <= join_size]
+                        samps_chans = samps_chans[i_s - samps_chans[:, 0] <=
+                                                  join_size]
 
                         # Relabel the adjacent samp,chan points with current
                         # label.
