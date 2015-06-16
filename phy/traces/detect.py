@@ -41,7 +41,7 @@ class Thresholder(object):
         self._mode = mode
         self._thresholds = thresholds
 
-    def _transform(self, data):
+    def transform(self, data):
         if self._mode == 'positive':
             return data
         elif self._mode == 'negative':
@@ -49,7 +49,7 @@ class Thresholder(object):
         elif self._mode == 'both':
             return np.abs(data)
 
-    def __call__(self, data, threshold=None):
+    def detect(self, data, threshold=None):
         # Accept dictionary of thresholds.
         if isinstance(threshold, (list, tuple)):
             return {name: self(data, threshold=name)
@@ -63,10 +63,13 @@ class Thresholder(object):
             assert threshold in self._thresholds
             threshold = self._thresholds[threshold]
         threshold = float(threshold)
-        # Transform the data according to the mode.
-        data_t = self._transform(data)
         # Threshold the data.
-        return data_t > threshold
+        return data > threshold
+
+    def __call__(self, data, threshold=None):
+        # Transform the data according to the mode.
+        data_t = self.transform(data)
+        return self.detect(data_t, threshold=threshold)
 
 
 # -----------------------------------------------------------------------------
