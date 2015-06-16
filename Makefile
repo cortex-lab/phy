@@ -27,6 +27,8 @@ lint:
 
 test: lint
 	py.test --cov-report term-missing --cov phy --ignore experimental -s
+
+coverage:
 	coverage --html
 
 test-quick: lint

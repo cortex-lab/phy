@@ -16,9 +16,10 @@ import re
 import numpy as np
 
 from ..utils._types import _as_int, _is_integer, _is_array_like
+from ..utils._misc import _load_pickle, _save_pickle
 from ..utils.array import PerClusterData, _spikes_in_clusters, _subset_spc
 from ..utils.event import ProgressReporter
-from ..utils.logging import debug, info
+from ..utils.logging import debug, info, warn
 from ..ext.six import string_types
 from ..ext.six.moves import cPickle
 
@@ -70,6 +71,12 @@ def _default_array(shape, value=0, n_spikes=0, dtype=np.float32):
     out = np.empty(shape, dtype=dtype)
     out.fill(value)
     return out
+
+
+def _assert_per_cluster_data_compatible(d_0, d_1):
+    n_0 = {k: len(v) for (k, v) in d_0.items()}
+    n_1 = {k: len(v) for (k, v) in d_1.items()}
+    assert n_0 == n_1
 
 
 #------------------------------------------------------------------------------
@@ -216,15 +223,17 @@ class DiskStore(object):
 
     def save_file(self, filename, data):
         path = op.realpath(op.join(self._directory, filename))
-        with open(path, 'wb') as f:
-            cPickle.dump(data, f)
+        _save_pickle(path, data)
 
     def load_file(self, filename):
         path = op.realpath(op.join(self._directory, filename))
         if not op.exists(path):
             return None
-        with open(path, 'rb') as f:
-            return cPickle.load(f)
+        try:
+            return _load_pickle(path)
+        except cPickle.UnpicklingError as e:
+            warn("Pickle error when loading `{}`: {}.".format(path, e))
+            return None
 
     @property
     def files(self):
@@ -428,7 +437,7 @@ class VariableSizeItem(StoreItem):
     def load_multi(self, clusters, name, spikes=None):
         """Load data for several clusters.
 
-        A subset of spikes caan also be specified.
+        A subset of spikes can also be specified.
 
         """
         if not len(clusters) or (spikes is not None and not len(spikes)):
@@ -436,6 +445,7 @@ class VariableSizeItem(StoreItem):
         arrays = {cluster: self.load(cluster, name)
                   for cluster in clusters}
         spc = _subset_spc(self._spikes_per_cluster, clusters)
+        _assert_per_cluster_data_compatible(spc, arrays)
         pcd = PerClusterData(spc=spc,
                              arrays=arrays,
                              )
@@ -498,7 +508,11 @@ class ClusterStore(object):
     def update_spikes_per_cluster(self, spikes_per_cluster):
         self._spikes_per_cluster = spikes_per_cluster
         for item in self._items.values():
-            item.spikes_per_cluster = spikes_per_cluster
+            try:
+                item.spikes_per_cluster = spikes_per_cluster
+            except AttributeError:
+                debug("Skipping set spikes_per_cluster on "
+                      "store item {}.".format(item.name))
 
     @property
     def cluster_ids(self):

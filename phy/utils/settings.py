@@ -9,8 +9,8 @@
 import os
 import os.path as op
 
-from ..ext.six.moves import cPickle
 from .logging import debug, warn
+from ._misc import _load_pickle, _save_pickle
 
 
 #------------------------------------------------------------------------------
@@ -25,21 +25,6 @@ def _load_python(path):
     store = {}
     exec(contents, {}, store)
     return store
-
-
-def _load_pickle(path):
-    path = op.realpath(op.expanduser(path))
-    assert op.exists(path)
-    with open(path, 'rb') as f:
-        store = cPickle.load(f)
-        assert isinstance(store, dict)
-        return store
-
-
-def _save_pickle(path, store):
-    path = op.realpath(op.expanduser(path))
-    with open(path, 'wb') as f:
-        cPickle.dump(store, f)
 
 
 #------------------------------------------------------------------------------
@@ -62,6 +47,9 @@ class BaseSettings(object):
     def __contains__(self, key):
         return key in self._store
 
+    def __repr__(self):
+        return self._store.__repr__()
+
     def keys(self):
         """List of settings keys."""
         return self._store.keys()
@@ -69,6 +57,8 @@ class BaseSettings(object):
     def _try_load_pickle(self, path):
         try:
             self._store.update(_load_pickle(path))
+            debug("Loaded internal settings file "
+                  "from `{}`.".format(path))
             return True
         except Exception as e:
             warn("Unable to read the internal settings. "
@@ -77,6 +67,8 @@ class BaseSettings(object):
     def _try_load_python(self, path):
         try:
             self._store.update(_load_python(path))
+            debug("Loaded internal settings file "
+                  "from `{}`.".format(path))
             return True
         except Exception as e:
             warn("Unable to read the settings file "
@@ -85,6 +77,7 @@ class BaseSettings(object):
 
     def load(self, path):
         """Load a settings Python file."""
+        path = op.realpath(path)
         if not op.exists(path):
             debug("Skipping non-existing settings file: {}.".format(path))
             return
@@ -98,13 +91,14 @@ class BaseSettings(object):
 
     def save(self, path):
         """Save the settings to a pickle file."""
+        path = op.realpath(path)
         try:
             _save_pickle(path, self._to_save)
             debug("Saved internal settings file "
-                  "at '{}'.".format(path))
+                  "to `{}`.".format(path))
         except Exception as e:
             warn("Unable to save the internal settings file "
-                 "at '{}':\n{}".format(path, str(e)))
+                 "from `{}`:\n{}".format(path, str(e)))
         self._to_save = {}
 
 
@@ -112,9 +106,9 @@ class Settings(object):
     """Manage default, user-wide, and experiment-wide settings."""
 
     def __init__(self, phy_user_dir=None, default_path=None):
-        assert phy_user_dir is not None
         self.phy_user_dir = phy_user_dir
-        _ensure_dir_exists(self.phy_user_dir)
+        if self.phy_user_dir:
+            _ensure_dir_exists(self.phy_user_dir)
 
         self._default_path = default_path
 
@@ -126,7 +120,10 @@ class Settings(object):
         if self._default_path:
             self._bs.load(self._default_path)
 
-        # load the user defaults.
+        if not self.phy_user_dir:
+            return
+
+        # Load the user defaults.
         self.user_settings_path = op.join(self.phy_user_dir,
                                           'user_settings.py')
         self._bs.load(self.user_settings_path)
@@ -138,6 +135,10 @@ class Settings(object):
 
     def on_open(self, path):
         """Initialize settings when loading an experiment."""
+        if path is None:
+            debug("Unable to initialize the settings for unspecified "
+                  "model path.")
+            return
         # Get the experiment settings path.
         path = op.realpath(op.expanduser(path))
         self.exp_path = path
@@ -171,6 +172,9 @@ class Settings(object):
 
     def __contains__(self, key):
         return key in self._bs
+
+    def __repr__(self):
+        return "<Settings {}>".format(self._bs.__repr__())
 
     def keys(self):
         """Return the list of settings keys."""

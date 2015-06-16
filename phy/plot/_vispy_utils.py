@@ -15,7 +15,7 @@ from vispy import app, gloo, config
 from vispy.util.event import Event
 from vispy.visuals import Visual
 
-from ..utils._types import _as_array
+from ..utils._types import _as_array, _as_list
 from ..utils.array import _unique, _in_polygon
 from ..utils.logging import debug
 from ._panzoom import PanZoom
@@ -63,6 +63,21 @@ def _enable_depth_mask():
                    blend=True,
                    blend_func=('src_alpha', 'one_minus_src_alpha'))
     gloo.set_clear_depth(1.0)
+
+
+def _wrap_vispy(f):
+    """Decorator for a function returning a VisPy canvas.
+
+    Add `show=True` parameter.
+
+    """
+    def wrapped(*args, **kwargs):
+        show = kwargs.pop('show', True)
+        canvas = f(*args, **kwargs)
+        if show:
+            canvas.show()
+        return canvas
+    return wrapped
 
 
 #------------------------------------------------------------------------------
@@ -145,6 +160,7 @@ class BaseSpikeVisual(_BakeVisual):
         self._spike_ids = None
         self._cluster_ids = None
         self._cluster_order = None
+        self._cluster_colors = None
         self._update_clusters_automatically = True
 
         if self._transparency:
@@ -267,7 +283,9 @@ class BaseSpikeVisual(_BakeVisual):
         else:
             u_cluster_color = self.cluster_colors.reshape((1,
                                                            self.n_clusters,
-                                                           -1))
+                                                           3))
+        assert u_cluster_color.ndim == 3
+        assert u_cluster_color.shape[2] == 3
         u_cluster_color = (u_cluster_color * 255).astype(np.uint8)
         self.program['u_cluster_color'] = gloo.Texture2D(u_cluster_color)
 
@@ -327,38 +345,60 @@ class AxisVisual(BoxVisual):
 
     def __init__(self, **kwargs):
         super(AxisVisual, self).__init__(**kwargs)
-        self._positions = (0., 0.)
+        self._xs = []
+        self._ys = []
+        self.program['u_color'] = (.2, .2, .2, 1.)
 
     def _bake_n_rows(self):
         self.program['n_rows'] = self._n_rows
 
     @property
-    def positions(self):
-        """A pair of (x, y) values for the two axes."""
-        return self._positions
+    def xs(self):
+        """A list of x coordinates."""
+        return self._xs
 
-    @positions.setter
-    def positions(self, value):
-        assert len(value) == 2
-        self._positions = value
+    @xs.setter
+    def xs(self, value):
+        self._xs = _as_list(value)
         self.set_to_bake('positions')
+
+    @property
+    def ys(self):
+        """A list of y coordinates."""
+        return self._ys
+
+    @ys.setter
+    def ys(self, value):
+        self._ys = _as_list(value)
+        self.set_to_bake('positions')
+
+    @property
+    def color(self):
+        return tuple(self.program['u_color'])
+
+    @color.setter
+    def color(self, value):
+        self.program['u_color'] = tuple(value)
 
     def _bake_positions(self):
         if not self._n_rows:
             return
-        position = np.empty((4 * self.n_boxes, 4), dtype=np.float32)
-        x, y = self._positions
+        nx = len(self._xs)
+        ny = len(self._ys)
+        n = nx + ny
+        position = np.empty((2 * n * self.n_boxes, 4), dtype=np.float32)
         c = 1.
-        arr = np.array([[x, -c],
-                        [x, +c],
-                        [-c, y],
-                        [+c, y]], dtype=np.float32)
+        arr = [[x, -c, x, +c] for x in self._xs]
+        arr += [[-c, y, +c, y] for y in self._ys]
+        arr = np.hstack(arr).astype(np.float32)
+        arr = arr.reshape((-1, 2))
         # Positions.
         position[:, :2] = np.tile(arr, (self.n_boxes, 1))
         # Index.
-        position[:, 2] = np.repeat(np.arange(self.n_boxes), 4)
+        position[:, 2] = np.repeat(np.arange(self.n_boxes), 2 * n)
         # Axes.
-        position[:, 3] = np.tile([0, 0, 1, 1], self.n_boxes)
+        position[:, 3] = np.tile(([0] * (2 * nx)) + ([1] * (2 * ny)),
+                                 self.n_boxes)
         self.program['a_position'] = position
 
 

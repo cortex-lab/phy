@@ -13,9 +13,15 @@ from vispy import gloo
 from vispy.gloo import Texture2D
 
 from ._panzoom import PanZoom
-from ._vispy_utils import BaseSpikeVisual, BaseSpikeCanvas, _enable_depth_mask
+from ._vispy_utils import (BaseSpikeVisual,
+                           BaseSpikeCanvas,
+                           _enable_depth_mask,
+                           _wrap_vispy,
+                           )
 from ..utils._types import _as_array
-from ..utils.array import _index_of, _normalize
+from ..utils._color import _selected_clusters_colors
+from ..utils.array import _index_of, _normalize, _unique
+from ..electrode.mea import linear_positions
 
 
 #------------------------------------------------------------------------------
@@ -34,6 +40,7 @@ class WaveformVisual(BaseSpikeVisual):
         self._waveforms = None
         self.n_channels, self.n_samples = None, None
         self._channel_order = None
+        self._channel_positions = None
 
         self.program['u_data_scale'] = (.05, .05)
         self.program['u_channel_scale'] = (1., 1.)
@@ -250,6 +257,59 @@ class WaveformView(BaseSpikeCanvas):
         self._pz.add(self.mean.program)
         self._pz.attach(self)
 
+    def set_data(self,
+                 waveforms=None,
+                 masks=None,
+                 spike_clusters=None,
+                 channel_positions=None,
+                 channel_order=None,
+                 colors=None,
+                 ):
+
+        if waveforms is not None:
+            assert isinstance(waveforms, np.ndarray)
+            if waveforms.ndim == 2:
+                waveforms = waveforms[None, ...]
+            assert waveforms.ndim == 3
+        else:
+            waveforms = self.visual.waveforms
+        n_spikes, n_samples, n_channels = waveforms.shape
+
+        if spike_clusters is None:
+            spike_clusters = np.zeros(n_spikes, dtype=np.int32)
+        cluster_ids = _unique(spike_clusters)
+        n_clusters = len(cluster_ids)
+
+        if masks is None:
+            masks = np.ones((n_spikes, n_channels), dtype=np.float32)
+
+        if colors is None:
+            colors = _selected_clusters_colors(n_clusters)
+
+        if channel_order is None:
+            channel_order = self.visual.channel_order
+        if channel_order is None:
+            channel_order = np.arange(n_channels)
+
+        if channel_positions is None:
+            channel_positions = self.visual.channel_positions
+        if channel_positions is None:
+            channel_positions = linear_positions(n_channels)
+
+        self.visual.waveforms = waveforms.astype(np.float32)
+
+        if masks is not None:
+            self.visual.masks = masks
+
+        self.visual.spike_clusters = spike_clusters
+        assert spike_clusters.shape == (n_spikes,)
+
+        self.visual.cluster_colors = colors
+        self.visual.channel_positions = channel_positions
+        self.visual.channel_order = channel_order
+
+        self.update()
+
     @property
     def box_scale(self):
         """Scale of the waveforms.
@@ -302,11 +362,11 @@ class WaveformView(BaseSpikeCanvas):
         self.update()
 
     keyboard_shortcuts = {
-        'waveform_scale_increase': ('ctrl+[+]',
+        'waveform_scale_increase': ('ctrl++',
                                     'ctrl+up',
                                     'shift+wheel up',
                                     ),
-        'waveform_scale_decrease': ('ctrl+[-]',
+        'waveform_scale_decrease': ('ctrl+-',
                                     'ctrl+down',
                                     'shift+wheel down',
                                     ),
@@ -316,9 +376,7 @@ class WaveformView(BaseSpikeCanvas):
         'probe_width_decrease': ('shift+left', 'ctrl+alt+wheel down'),
         'probe_height_increase': ('shift+up', 'shift+alt+wheel up'),
         'probe_height_decrease': ('shift+down', 'shift+alt+wheel down'),
-        'select_channel': '[number key]+[left click]',
-        'toggle_mean_waveforms': 'm',
-        'toggle_overlap': 'o',
+        'select_channel': ('ctrl+left click', 'ctrl+right click'),
     }
 
     def on_key_press(self, event):
@@ -356,11 +414,6 @@ class WaveformView(BaseSpikeCanvas):
             elif key == 'Up':
                 self.probe_scale = (u, v * coeff)
 
-        if not event.modifiers and key == 'm':
-            self.show_mean = not(self.show_mean)
-        if not event.modifiers and key == 'o':
-            self.overlap = not(self.overlap)
-
     def on_key_release(self, event):
         self._key_pressed = None
 
@@ -388,8 +441,7 @@ class WaveformView(BaseSpikeCanvas):
             self.probe_scale = (u, v * coeff)
 
     def on_mouse_press(self, e):
-        key = self._key_pressed
-        if not key:
+        if 'Control' not in e.modifiers:
             return
         # Normalise mouse position.
         position = self._pz._normalize(e.pos)
@@ -401,7 +453,6 @@ class WaveformView(BaseSpikeCanvas):
         channel_idx = self.visual.channel_hover(mouse_pos)
         self.emit("channel_click",
                   channel_idx=channel_idx,
-                  key=key,
                   button=e.button,
                   )
 
@@ -412,3 +463,14 @@ class WaveformView(BaseSpikeCanvas):
             self.mean.draw()
         else:
             self.visual.draw()
+
+
+#------------------------------------------------------------------------------
+# Plotting functions
+#------------------------------------------------------------------------------
+
+@_wrap_vispy
+def plot_waveforms(waveforms, **kwargs):
+    c = WaveformView()
+    c.set_data(waveforms, **kwargs)
+    return c

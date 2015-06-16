@@ -6,45 +6,14 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-import sys
-import contextlib
 from collections import defaultdict
 
-from ._misc import _is_interactive
-from .logging import info, warn
+from .qt import QtCore, QtGui
+from ..utils.event import EventEmitter
 
 
 # -----------------------------------------------------------------------------
-# PyQt import
-# -----------------------------------------------------------------------------
-
-_PYQT = False
-try:
-    from PyQt4 import QtCore, QtGui
-    from PyQt4.QtGui import QMainWindow
-    _PYQT = True
-except ImportError:
-    try:
-        from PyQt5 import QtCore, QtGui
-        from PyQt5.QtGui import QMainWindow
-        _PYQT = True
-    except ImportError:
-        pass
-
-
-def _check_qt():
-    if not _PYQT:
-        warn("PyQt is not available.")
-        return False
-    return True
-
-
-if not _check_qt():
-    QMainWindow = object  # noqa
-
-
-# -----------------------------------------------------------------------------
-# Utility functions
+# Qt utilities
 # -----------------------------------------------------------------------------
 
 def _title(widget):
@@ -60,138 +29,25 @@ def _widget(dock_widget):
         return widget
 
 
-def _prompt(parent, message, buttons=('yes', 'no'), title='Question'):
-    buttons = [(button, getattr(QtGui.QMessageBox, button.capitalize()))
-               for button in buttons]
-    arg_buttons = 0
-    for (_, button) in buttons:
-        arg_buttons |= button
-    reply = QtGui.QMessageBox.question(parent,
-                                       title,
-                                       message,
-                                       arg_buttons,
-                                       buttons[0][1],
-                                       )
-    for name, button in buttons:
-        if reply == button:
-            return name
-
-
-# -----------------------------------------------------------------------------
-# Qt app and event loop integration with IPython
-# -----------------------------------------------------------------------------
-
-_APP = None
-_APP_RUNNING = False
-
-
-def _close_qt_after(window, duration):
-    """Close a Qt window after a given duration."""
-    def callback():
-        window.close()
-    QtCore.QTimer.singleShot(int(1000 * duration), callback)
-
-
-def _try_enable_ipython_qt():
-    """Try to enable IPython Qt event loop integration.
-
-    Returns True in the following cases:
-
-    * python -i test.py
-    * ipython -i test.py
-    * ipython and %run test.py
-
-    Returns False in the following cases:
-
-    * python test.py
-    * ipython test.py
-
-    """
-    try:
-        from IPython import get_ipython
-        ip = get_ipython()
-    except ImportError:
-        return False
-    if not _is_interactive():
-        return False
-    if ip:
-        ip.enable_gui('qt')
-        global _APP_RUNNING
-        _APP_RUNNING = True
-        return True
-    return False
-
-
-def enable_qt():
-    if not _check_qt():
-        return
-    try:
-        from IPython import get_ipython
-        ip = get_ipython()
-        ip.enable_gui('qt')
-        global _APP_RUNNING
-        _APP_RUNNING = True
-        info("Qt event loop activated.")
-    except:
-        warn("Qt event loop not activated.")
-
-
-def start_qt_app():
-    """Start a Qt application if necessary.
-
-    If a new Qt application is created, this function returns it.
-    If no new application is created, the function returns None.
-
-    """
-    # Only start a Qt application if there is no
-    # IPython event loop integration.
-    if not _check_qt():
-        return
-    global _APP
-    if _try_enable_ipython_qt():
-        return
-    try:
-        from vispy import app
-        app.use_app("pyqt4")
-    except ImportError:
-        pass
-    if QtGui.QApplication.instance():
-        _APP = QtGui.QApplication.instance()
-        return
-    if _APP:
-        return
-    _APP = QtGui.QApplication(sys.argv)
-    return _APP
-
-
-def run_qt_app():
-    """Start the Qt application's event loop."""
-    global _APP_RUNNING
-    if not _check_qt():
-        return
-    if _APP is not None and not _APP_RUNNING:
-        _APP_RUNNING = True
-        _APP.exec_()
-    if not _is_interactive():
-        _APP_RUNNING = False
-
-
-@contextlib.contextmanager
-def qt_app():
-    """Context manager to ensure that a Qt app is running."""
-    if not _check_qt():
-        return
-    app = start_qt_app()
-    yield app
-    run_qt_app()
-
-
 # -----------------------------------------------------------------------------
 # Dock main window
 # -----------------------------------------------------------------------------
 
-class DockWindow(QMainWindow):
-    """A Qt main window holding docking Qt or VisPy widgets."""
+class DockWindow(QtGui.QMainWindow):
+    """A Qt main window holding docking Qt or VisPy widgets.
+
+    Events
+    ------
+
+    close_gui
+    show_gui
+
+    Note
+    ----
+
+    Use `connect_()`, not `connect()`, because of a name conflict with Qt.
+
+    """
     def __init__(self,
                  position=None,
                  size=None,
@@ -211,30 +67,26 @@ class DockWindow(QMainWindow):
                             QtGui.QMainWindow.AllowNestedDocks |
                             QtGui.QMainWindow.AnimatedDocks
                             )
-        self._on_show = None
-        self._on_close = None
+        # We can derive from EventEmitter because of a conflict with connect.
+        self._event = EventEmitter()
 
     # Events
     # -------------------------------------------------------------------------
 
-    def on_close(self, func):
-        """Register a callback function when the window is closed."""
-        self._on_close = func
+    def emit(self, *args, **kwargs):
+        self._event.emit(*args, **kwargs)
 
-    def on_show(self, func):
-        """Register a callback function when the window is shown."""
-        self._on_show = func
+    def connect_(self, *args, **kwargs):
+        self._event.connect(*args, **kwargs)
 
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
-        if self._on_close:
-            self._on_close()
+        self.emit('close_gui')
         super(DockWindow, self).closeEvent(e)
 
     def show(self):
         """Show the window."""
-        if self._on_show:
-            self._on_show()
+        self.emit('show_gui')
         super(DockWindow, self).show()
 
     # Actions
@@ -277,6 +129,7 @@ class DockWindow(QMainWindow):
                  closable=True,
                  floatable=True,
                  floating=None,
+                 # parent=None,  # object to pass in the raised events
                  **kwargs):
         """Add a widget to the main window."""
 
@@ -287,8 +140,24 @@ class DockWindow(QMainWindow):
         except ImportError:
             pass
 
+        class DockWidget(QtGui.QDockWidget):
+            def __init__(self, *args, **kwargs):
+                super(DockWidget, self).__init__(*args, **kwargs)
+                self._event = EventEmitter()
+
+            def emit(self, *args, **kwargs):
+                self._event.emit(*args, **kwargs)
+
+            def connect_(self, *args, **kwargs):
+                self._event.connect(*args, **kwargs)
+
+            def closeEvent(self, e):
+                """Qt slot when the window is closed."""
+                self.emit('close_widget')
+                super(DockWidget, self).closeEvent(e)
+
         # Create the dock widget.
-        dockwidget = QtGui.QDockWidget(self)
+        dockwidget = DockWidget(self)
         dockwidget.setObjectName(title)
         dockwidget.setWindowTitle(title)
         dockwidget.setWidget(view)
@@ -331,28 +200,13 @@ class DockWindow(QMainWindow):
                 child.height() >= 10
                 ]
 
-    def view_counts(self):
+    def view_count(self, is_visible=True):
         """Return the number of opened views."""
         views = self.list_views()
         counts = defaultdict(lambda: 0)
         for view in views:
             counts[_title(view)] += 1
         return dict(counts)
-
-    def connect_views(self, name_0, name_1):
-        """Decorator for a function that accepts any pair of views.
-
-        This is used to connect any view of type `name_0` to any other view
-        of type `name_1`.
-
-        """
-        def _make_func(func):
-            for widget_0 in self.list_views(name_0, is_visible=False):
-                for widget_1 in self.list_views(name_1, is_visible=False):
-                    view_0 = _widget(widget_0)
-                    view_1 = _widget(widget_1)
-                    func(view_0, view_1)
-        return _make_func
 
     # State
     # -------------------------------------------------------------------------
@@ -366,7 +220,7 @@ class DockWindow(QMainWindow):
         return {
             'geometry': self.saveGeometry(),
             'state': self.saveState(),
-            'view_counts': self.view_counts(),
+            'view_count': self.view_count(),
         }
 
     def restore_geometry_state(self, gs):
@@ -377,5 +231,7 @@ class DockWindow(QMainWindow):
         This function can be called in `on_show()`.
 
         """
-        self.restoreGeometry((gs['geometry']))
-        self.restoreState((gs['state']))
+        if gs.get('geometry', None):
+            self.restoreGeometry((gs['geometry']))
+        if gs.get('state', None):
+            self.restoreState((gs['state']))

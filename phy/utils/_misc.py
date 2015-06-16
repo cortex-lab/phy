@@ -8,10 +8,28 @@
 #------------------------------------------------------------------------------
 
 import sys
+import os.path as op
 from inspect import getargspec
 
 from ..ext.six import string_types
-from ..ext.six.moves import builtins
+from ..ext.six.moves import builtins, cPickle
+
+
+#------------------------------------------------------------------------------
+# Pickle utility functions
+#------------------------------------------------------------------------------
+
+def _load_pickle(path):
+    path = op.realpath(op.expanduser(path))
+    assert op.exists(path)
+    with open(path, 'rb') as f:
+        return cPickle.load(f)
+
+
+def _save_pickle(path, data):
+    path = op.realpath(op.expanduser(path))
+    with open(path, 'wb') as f:
+        cPickle.dump(data, f, protocol=2)
 
 
 #------------------------------------------------------------------------------
@@ -67,5 +85,5 @@ def _show_shortcuts(shortcuts, name=''):
         name = ' for ' + name
     print('Keyboard shortcuts' + name)
     for name in sorted(shortcuts):
-        print('{0:<24}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
+        print('{0:<40}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
     print()

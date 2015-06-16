@@ -13,7 +13,7 @@ import os.path as op
 
 import numpy as np
 
-from ...utils import Selector
+from ...utils.selector import Selector
 from ...utils.array import (_index_of,
                             _spikes_per_cluster,
                             _concatenate_per_cluster_arrays,
@@ -128,6 +128,8 @@ class FeatureMasks(VariableSizeItem):
         return mean_features
 
     def _store_means(self, cluster):
+        if not self.disk_store:
+            return
         self.disk_store.store(cluster,
                               mean_masks=self.mean_masks(cluster),
                               mean_features=self.mean_features(cluster),
@@ -177,7 +179,7 @@ class FeatureMasks(VariableSizeItem):
 
         if need_generate:
 
-            self._pr.value_max = self.n_chunks
+            self._pr.value_max = self.n_chunks + 1
 
             fm = self.model.features_masks
             assert fm.shape[0] == self.n_spikes
@@ -263,6 +265,8 @@ class FeatureMasks(VariableSizeItem):
         needs to be taken into account.
 
         """
+        if not self.disk_store:
+            return
         clusters = up.deleted
         spc = up.old_spikes_per_cluster
         # We load all masks and features of the merged clusters.
@@ -294,6 +298,8 @@ class FeatureMasks(VariableSizeItem):
         to form the new cluster files.
 
         """
+        if not self.disk_store:
+            return
         for name, shape in [('features',
                              (-1, self.n_channels, self.n_features)),
                             ('masks',
@@ -382,6 +388,13 @@ class Waveforms(VariableSizeItem):
                                           self._spikes_per_cluster)
         return self._spikes_per_cluster[cluster]
 
+    @property
+    def spikes_per_cluster(self):
+        """Spikes per cluster."""
+        # WARNING: this is read-only, because this item is responsible
+        # for the spike subselection.
+        return self._spikes_per_cluster
+
     def waveforms_and_mean(self, cluster):
         spikes = self._subset_spikes_cluster(cluster, force=True)
         waveforms = self.model.waveforms[spikes].astype(np.float32)
@@ -393,6 +406,8 @@ class Waveforms(VariableSizeItem):
 
     def store(self, cluster):
         """Store waveforms and mean waveforms."""
+        if not self.disk_store:
+            return
         # NOTE: make sure to erase old spikes for that cluster.
         # Typical case merge, undo, different merge.
         waveforms, mean_waveforms = self.waveforms_and_mean(cluster)
@@ -448,14 +463,6 @@ class Waveforms(VariableSizeItem):
 class ClusterStatistics(FixedSizeItem):
     """Manage cluster statistics."""
     name = 'statistics'
-    fields = ['mean_masks',
-              'mean_features',
-              'mean_waveforms',
-              'mean_probe_position',
-              'main_channels',
-              'n_unmasked_channels',
-              'n_spikes',
-              ]
 
     def __init__(self, *args, **kwargs):
         super(ClusterStatistics, self).__init__(*args, **kwargs)
@@ -470,7 +477,9 @@ class ClusterStatistics(FixedSizeItem):
             'mean_probe_position': (-1, 2),
             'main_channels': (-1, self.n_channels),
             'n_unmasked_channels': (-1,),
+            'n_spikes': (-1,),
         }
+        self.fields = list(self._shapes.keys())
 
     def add(self, name, func, shape):
         """Add a new statistics."""
@@ -621,5 +630,4 @@ def create_store(model,
                                 excerpt_size=waveforms_excerpt_size,
                                 )
     cluster_store.register_item(ClusterStatistics)
-
     return cluster_store

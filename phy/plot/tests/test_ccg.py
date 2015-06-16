@@ -10,8 +10,7 @@ from pytest import mark
 
 import numpy as np
 
-from ..ccg import plot_ccg
-from ..ccg import CorrelogramView
+from ..ccg import _plot_ccg_mpl, CorrelogramView, plot_correlograms
 from ...utils._color import _random_color
 from ...io.mock import artificial_correlograms
 from ...utils.testing import show_test
@@ -28,7 +27,14 @@ pytestmark = mark.long()
 def test_plot_ccg():
     n_bins = 51
     ccg = np.random.randint(size=n_bins, low=10, high=50)
-    plot_ccg(ccg, baseline=20, color='g')
+    _plot_ccg_mpl(ccg, baseline=20, color='g')
+
+
+def test_plot_correlograms():
+    n_bins = 51
+    ccg = np.random.uniform(size=(3, 3, n_bins))
+    c = plot_correlograms(ccg, lines=[-10, 0, 20], show=False)
+    show_test(c)
 
 
 #------------------------------------------------------------------------------
@@ -45,7 +51,7 @@ def _test_correlograms(n_clusters=None):
     c.visual.correlograms = correlograms
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])
-
+    c.lines = [-5, 0, 5]
     show_test(c)
 
 

@@ -51,7 +51,7 @@ def test_kwik_utility():
         assert _list_channel_groups(model._kwik.h5py_file) == [1]
         assert _list_recordings(model._kwik.h5py_file) == [0, 1]
         assert _list_clusterings(model._kwik.h5py_file, 1) == ['main',
-                                                               'automatic',
+                                                               'original',
                                                                ]
         assert _list_channels(model._kwik.h5py_file, 1) == channels
 
@@ -204,7 +204,7 @@ def test_kwik_save():
         ae(kwik.spike_clusters, sc_0)
 
         assert kwik.cluster_metadata.group(new_cluster) == 3
-        kwik.save(sc_1, cluster_groups)
+        kwik.save(sc_1, cluster_groups, {'test': (1, 2.)})
         ae(kwik.spike_clusters, sc_1)
         assert kwik.cluster_metadata.group(new_cluster) == 7
 
@@ -213,6 +213,7 @@ def test_kwik_save():
         kwik = KwikModel(filename)
         ae(kwik.spike_clusters, sc_1)
         assert kwik.cluster_metadata.group(new_cluster) == 7
+        ae(kwik.clustering_metadata['test'], [1, 2])
 
 
 def test_kwik_clusterings():
@@ -227,7 +228,7 @@ def test_kwik_clusterings():
                                     n_samples_traces=_N_SAMPLES_TRACES)
 
         kwik = KwikModel(filename)
-        assert kwik.clusterings == ['main', 'automatic']
+        assert kwik.clusterings == ['main', 'original']
 
         # The default clustering is 'main'.
         assert kwik.n_spikes == _N_SPIKES
@@ -236,7 +237,7 @@ def test_kwik_clusterings():
         ae(kwik.cluster_ids, np.arange(_N_CLUSTERS))
 
         # Change clustering.
-        kwik.clustering = 'automatic'
+        kwik.clustering = 'original'
         n_clu = kwik.n_clusters
         assert kwik.n_spikes == _N_SPIKES
         # Some clusters may be empty with a small number of spikes like here
@@ -258,23 +259,23 @@ def test_kwik_manage_clusterings():
 
         kwik = KwikModel(filename)
         spike_clusters = kwik.spike_clusters
-        assert kwik.clusterings == ['main', 'automatic']
+        assert kwik.clusterings == ['main', 'original']
 
         # Test renaming.
-        kwik.clustering = 'automatic'
+        kwik.clustering = 'original'
         with raises(ValueError):
             kwik.rename_clustering('a', 'b')
         with raises(ValueError):
-            kwik.rename_clustering('automatic', 'b')
+            kwik.rename_clustering('original', 'b')
         with raises(ValueError):
-            kwik.rename_clustering('main', 'automatic')
+            kwik.rename_clustering('main', 'original')
 
         kwik.clustering = 'main'
-        kwik.rename_clustering('automatic', 'original')
-        assert kwik.clusterings == ['main', 'original']
+        kwik.rename_clustering('original', 'original_2')
+        assert kwik.clusterings == ['main', 'original_2']
         with raises(ValueError):
-            kwik.clustering = 'automatic'
-        kwik.clustering = 'original'
+            kwik.clustering = 'original'
+        kwik.clustering = 'original_2'
         n_clu = kwik.n_clusters
         if (n_clu - 1) in kwik.cluster_groups:
             assert kwik.cluster_groups[n_clu - 1] == 3
@@ -286,17 +287,17 @@ def test_kwik_manage_clusterings():
         with raises(ValueError):
             kwik.copy_clustering('original', 'b')
         with raises(ValueError):
-            kwik.copy_clustering('main', 'original')
+            kwik.copy_clustering('main', 'original_2')
 
         kwik.clustering = 'main'
-        kwik.copy_clustering('original', 'automatic')
-        assert kwik.clusterings == ['main', 'automatic', 'original']
+        kwik.copy_clustering('original_2', 'original')
+        assert kwik.clusterings == ['main', 'original', 'original_2']
 
-        kwik.clustering = 'automatic'
+        kwik.clustering = 'original'
         cg = kwik.cluster_groups
         ci = kwik.cluster_ids
 
-        kwik.clustering = 'original'
+        kwik.clustering = 'original_2'
         assert kwik.cluster_groups == cg
         ae(kwik.cluster_ids, ci)
 
@@ -305,11 +306,11 @@ def test_kwik_manage_clusterings():
             kwik.delete_clustering('a')
             kwik.delete_clustering('original')
         kwik.clustering = 'main'
-        kwik.delete_clustering('original')
-        assert kwik.clusterings == ['main', 'automatic']
+        kwik.delete_clustering('original_2')
+        assert kwik.clusterings == ['main', 'original']
 
         # Test add.
-        sc = np.ones(_N_SPIKES, dtype=np.uint32)
+        sc = np.ones(_N_SPIKES, dtype=np.int32)
         sc[1] = sc[-2] = 3
         kwik.add_clustering('new', sc)
         ae(kwik.spike_clusters, spike_clusters)

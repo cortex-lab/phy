@@ -58,6 +58,10 @@ def _unique(x):
     """
     if len(x) == 0:
         return np.array([], dtype=np.int64)
+    # WARNING: only keep positive values.
+    # cluster=-1 means "unclustered".
+    x = _as_array(x)
+    x = x[x >= 0]
     bc = np.bincount(x)
     return np.nonzero(bc)[0]
 
@@ -108,10 +112,17 @@ def _index_of(arr, lookup):
     # Equivalent of np.digitize(arr, lookup) - 1, but much faster.
     # TODO: assertions to disable in production for performance reasons.
     m = (lookup.max() if len(lookup) else 0) + 1
-    tmp = np.zeros(m, dtype=np.int)
+    tmp = np.zeros(m + 1, dtype=np.int)
+    # Ensure that -1 values are kept.
+    tmp[-1] = -1
     if len(lookup):
         tmp[lookup] = np.arange(len(lookup))
     return tmp[arr]
+
+
+def index_of_small(arr, lookup):
+    """Faster on small arrays with large values."""
+    return np.searchsorted(lookup, arr)
 
 
 def _partial_shape(shape, trailing_index):

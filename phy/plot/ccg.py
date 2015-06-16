@@ -8,16 +8,18 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-
 from vispy import gloo
 
 from ._mpl_utils import _bottom_left_frame
 from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
                            BoxVisual,
-                           _tesselate_histogram)
+                           AxisVisual,
+                           _tesselate_histogram,
+                           _wrap_vispy)
 from ._panzoom import PanZoomGrid
-from ..utils._types import _as_array
+from ..utils._types import _as_array, _as_list
+from ..utils._color import _selected_clusters_colors
 
 
 #------------------------------------------------------------------------------
@@ -112,14 +114,17 @@ class CorrelogramView(BaseSpikeCanvas):
     """A VisPy canvas displaying correlograms."""
 
     _visual_class = CorrelogramVisual
+    _lines = []
 
     def _create_visuals(self):
         super(CorrelogramView, self)._create_visuals()
         self.boxes = BoxVisual()
+        self.axes = AxisVisual()
 
     def _create_pan_zoom(self):
         self._pz = PanZoomGrid()
         self._pz.add(self.visual.program)
+        self._pz.add(self.axes.program)
         self._pz.attach(self)
         self._pz.aspect = None
         self._pz.zmin = 1.
@@ -128,6 +133,31 @@ class CorrelogramView(BaseSpikeCanvas):
         self._pz.ymin = -1.
         self._pz.ymax = +1.
         self._pz.zoom_to_pointer = False
+
+    def set_data(self,
+                 correlograms=None,
+                 colors=None,
+                 lines=None):
+
+        if correlograms is not None:
+            correlograms = np.asarray(correlograms)
+        else:
+            correlograms = self.visual.correlograms
+        assert correlograms.ndim == 3
+        n_clusters = len(correlograms)
+        assert correlograms.shape[:2] == (n_clusters, n_clusters)
+
+        if colors is None:
+            colors = _selected_clusters_colors(n_clusters)
+
+        self.cluster_ids = np.arange(n_clusters)
+        self.visual.correlograms = correlograms
+        self.visual.cluster_colors = colors
+
+        if lines is not None:
+            self.lines = lines
+
+        self.update()
 
     @property
     def cluster_ids(self):
@@ -140,19 +170,65 @@ class CorrelogramView(BaseSpikeCanvas):
         self.boxes.n_rows = self.visual.n_clusters
         if self.visual.n_clusters >= 1:
             self._pz.n_rows = self.visual.n_clusters
+        self.axes.n_rows = self.visual.n_clusters
+
+    @property
+    def lines(self):
+        """List of x coordinates where to put vertical lines.
+
+        This is unit of samples.
+
+        """
+        return self._lines
+
+    @lines.setter
+    def lines(self, value):
+        self._lines = _as_list(value)
+        assert self.visual.n_samples > 0
+        c = 2. / (float(self.visual.n_samples))
+        self.axes.xs = np.array(self._lines) * c
+        self.axes.color = (.5, .5, .5, 1.)
+
+    @property
+    def lines_color(self):
+        return self.axes.color
+
+    @lines_color.setter
+    def lines_color(self, value):
+        self.axes.color = value
 
     def on_draw(self, event):
         """Draw the correlograms visual."""
         gloo.clear()
         self.visual.draw()
         self.boxes.draw()
+        if self._lines:
+            self.axes.draw()
 
 
 #------------------------------------------------------------------------------
 # CCG plotting
 #------------------------------------------------------------------------------
 
-def plot_ccg(ccg, baseline=None, bin=1., color=None, ax=None):
+@_wrap_vispy
+def plot_correlograms(correlograms, **kwargs):
+    """Plot an array of correlograms.
+
+    Parameters
+    ----------
+
+    correlograms : array
+        A `(n_clusters, n_clusters, n_bins)` array.
+    colors : array-like (optional)
+        A list of colors as RGB tuples.
+
+    """
+    c = CorrelogramView()
+    c.set_data(correlograms, **kwargs)
+    return c
+
+
+def _plot_ccg_mpl(ccg, baseline=None, bin=1., color=None, ax=None):
     """Plot a CCG with matplotlib and return an Axes instance."""
     import matplotlib.pyplot as plt
     if ax is None:

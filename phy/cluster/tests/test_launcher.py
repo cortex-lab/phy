@@ -29,3 +29,7 @@ def test_run():
 
         spike_clusters = run(model, num_starting_clusters=10)
         assert len(spike_clusters) == n_spikes
+
+        spike_clusters = run(model, num_starting_clusters=10,
+                             spike_ids=range(100))
+        assert len(spike_clusters) == 100

@@ -8,20 +8,20 @@
 
 from pytest import mark
 
-from ....utils.array import _spikes_per_cluster
-from ....utils.logging import set_level
-from ....utils.tempdir import TemporaryDirectory
-from ....utils.testing import (show_test_start,
-                               show_test_stop,
-                               show_test_run,
-                               )
-from ....io.kwik.mock import create_mock_kwik
-from ....io.kwik import KwikModel, create_store
-from ..kwik import (WaveformViewModel,
-                    FeatureViewModel,
-                    CorrelogramViewModel,
-                    TraceViewModel,
-                    )
+from ...utils.array import _spikes_per_cluster
+from ...utils.logging import set_level
+from ...utils.tempdir import TemporaryDirectory
+from ...utils.testing import (show_test_start,
+                              show_test_stop,
+                              show_test_run,
+                              )
+from ...io.kwik.mock import create_mock_kwik
+from ...io.kwik import KwikModel, create_store
+from ..view_models import (WaveformViewModel,
+                           MultiFeatureViewModel,
+                           CorrelogramViewModel,
+                           TraceViewModel,
+                           )
 
 
 # Skip these tests in "make test-quick".
@@ -82,7 +82,7 @@ def _test_empty(view_model_class, stop=True, **kwargs):
         return vm
 
 
-def _test_view_model(view_model_class, stop=True, use_store=True, **kwargs):
+def _test_view_model(view_model_class, stop=True, **kwargs):
 
     with TemporaryDirectory() as tempdir:
         # Create the test HDF5 file in the temporary directory.
@@ -95,17 +95,14 @@ def _test_view_model(view_model_class, stop=True, use_store=True, **kwargs):
         model = KwikModel(filename)
         spikes_per_cluster = _spikes_per_cluster(model.spike_ids,
                                                  model.spike_clusters)
-        if use_store:
-            store = create_store(model,
-                                 path=tempdir,
-                                 spikes_per_cluster=spikes_per_cluster,
-                                 features_masks_chunk_size=15,
-                                 waveforms_n_spikes_max=20,
-                                 waveforms_excerpt_size=5,
-                                 )
-            store.generate()
-        else:
-            store = None
+        store = create_store(model,
+                             path=tempdir,
+                             spikes_per_cluster=spikes_per_cluster,
+                             features_masks_chunk_size=15,
+                             waveforms_n_spikes_max=20,
+                             waveforms_excerpt_size=5,
+                             )
+        store.generate()
 
         vm = view_model_class(model=model, store=store, **kwargs)
         vm.on_open()
@@ -131,7 +128,7 @@ def _test_view_model(view_model_class, stop=True, use_store=True, **kwargs):
 #------------------------------------------------------------------------------
 
 def test_waveforms_full():
-    vm = _test_view_model(WaveformViewModel, stop=False, use_store=True)
+    vm = _test_view_model(WaveformViewModel, stop=False)
     vm.overlap = True
     show_test_run(vm.view, _N_FRAMES)
     vm.show_mean = True
@@ -148,15 +145,15 @@ def test_waveforms_empty():
 #------------------------------------------------------------------------------
 
 def test_features_empty():
-    _test_empty(FeatureViewModel)
+    _test_empty(MultiFeatureViewModel)
 
 
 def test_features_full():
-    _test_view_model(FeatureViewModel, marker_size=8, n_spikes_max=20)
+    _test_view_model(MultiFeatureViewModel, marker_size=8, n_spikes_max=20)
 
 
 def test_features_lasso():
-    vm = _test_view_model(FeatureViewModel,
+    vm = _test_view_model(MultiFeatureViewModel,
                           marker_size=8,
                           stop=False,
                           )

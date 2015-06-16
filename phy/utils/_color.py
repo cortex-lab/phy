@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
+
 from random import uniform
 from colorsys import hsv_to_rgb
 
@@ -34,3 +36,28 @@ def _random_bright_color():
     while not _is_bright(rgb):
         rgb = _random_color()
     return rgb
+
+
+#------------------------------------------------------------------------------
+# Default colormap
+#------------------------------------------------------------------------------
+
+# Default color map for the selected clusters.
+_COLORMAP = np.array([[102, 194, 165],
+                      [252, 141, 98],
+                      [141, 160, 203],
+                      [231, 138, 195],
+                      [166, 216, 84],
+                      [255, 217, 47],
+                      [229, 196, 148],
+                      ])
+
+
+def _selected_clusters_colors(n_clusters=None):
+    if n_clusters is None:
+        n_clusters = _COLORMAP.shape[0]
+    if n_clusters > _COLORMAP.shape[0]:
+        colors = np.tile(_COLORMAP, (1 + n_clusters // _COLORMAP.shape[0], 1))
+    else:
+        colors = _COLORMAP
+    return colors[:n_clusters, ...] / 255.

@@ -6,10 +6,11 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
 from operator import itemgetter
 
 from ...utils import _is_array_like
-from ._utils import History
+from ..view_models import HTMLClusterViewModel
 
 
 #------------------------------------------------------------------------------
@@ -67,25 +68,29 @@ def _next(items, current, filter=None):
         return current
 
 
+def _progress(value, maximum):
+    if maximum <= 1:
+        return 1
+    return int(100 * value / float(maximum - 1))
+
+
 #------------------------------------------------------------------------------
 # Wizard
 #------------------------------------------------------------------------------
 
 class Wizard(object):
     """Propose a selection of high-quality clusters and merge candidates."""
-    def __init__(self, cluster_groups):
-        self._similarity = None
-        self._quality = None
-        # cluster_groups is a dictionary or is converted to one.
-        if _is_array_like(cluster_groups):
-            # A group can be None (unsorted), `good`, or `ignored`.
-            cluster_groups = {clu: None for clu in cluster_groups}
-        self._cluster_groups = cluster_groups
+    def __init__(self, cluster_groups=None):
+        self.cluster_groups = cluster_groups
+        self.reset()
+
+    def reset(self):
         self._best_list = []  # This list is fixed (modulo clustering actions).
         self._match_list = []  # This list may often change.
+        self._similarity = None
+        self._quality = None
         self._best = None
         self._match = None
-        self._history = History((None, None))
 
     # Quality functions
     #--------------------------------------------------------------------------
@@ -161,6 +166,14 @@ class Wizard(object):
 
         """
         return self._cluster_groups
+
+    @cluster_groups.setter
+    def cluster_groups(self, cluster_groups):
+        # cluster_groups is a dictionary or is converted to one.
+        if _is_array_like(cluster_groups):
+            # A group can be None (unsorted), `good`, or `ignored`.
+            cluster_groups = {clu: None for clu in cluster_groups}
+        self._cluster_groups = cluster_groups
 
     # Core methods
     #--------------------------------------------------------------------------
@@ -239,7 +252,10 @@ class Wizard(object):
         elif m is None:
             return [b]
         else:
-            return [b, m]
+            if b == m:
+                return [b]
+            else:
+                return [b, m]
 
     @match.setter
     def match(self, value):
@@ -415,66 +431,11 @@ class Wizard(object):
         # Delete old clusters.
         self._delete(up.deleted)
 
-    def _select_history(self):
-        best, match = self._history.current_item
-        # Select the history best.
-        if best is not None and self._best_list:
-            # Ensure the current best cluster is valid.
-            if best in self._best_list:
-                self.best = best
-            else:
-                self.best = self._best_list[0]
-        # Select the history match.
-        if match is not None and self._match_list:
-            # Ensure the current match is valid.
-            self._set_match_list()
-            if match in self._match_list:
-                self.match = match
-            else:
-                self.match = self._match_list[0]
-
-    def _update_selection(self, up):
-        # New selection.
-        if up.history == 'undo':
-            # Two undo except for the last one.
-            if not self._history.is_last():
-                self._history.undo()
-            self._history.undo()
-            self._select_history()
-        elif up.history == 'redo':
-            # Two redo except for the first one.
-            if not self._history.is_first():
-                self._history.redo()
-            self._history.redo()
-            self._select_history()
-        elif up.description in ('merge', 'assign'):
-            self.pin(up.added[0])
-        elif up.description == 'metadata_group':
-            cluster = up.metadata_changed[0]
-            if cluster == self.best:
-                self.next_best()
-            elif cluster == self.match:
-                self.next_match()
-        self._check()
-
     def on_cluster(self, up):
         if self._has_finished:
             return
-        if not self._best_list or not self._match_list:
+        if self._best_list or self._match_list:
             self._update_state(up)
-            if self._best_list:
-                self._update_selection(up)
-            return
-        if up is None:
-            return
-        # Save current selection if not undo or redo.
-        if not up.history:
-            self._history.add((self.best, self.match))
-        self._update_state(up)
-        self._update_selection(up)
-        # Save current selection if not undo or redo.
-        if not up.history:
-            self._history.add((self.best, self.match))
 
     # Panel
     #--------------------------------------------------------------------------
@@ -505,7 +466,13 @@ class Wizard(object):
                     )
 
 
-def _progress(value, maximum):
-    if maximum <= 1:
-        return 1
-    return int(100 * value / float(maximum - 1))
+#------------------------------------------------------------------------------
+# Wizard view model
+#------------------------------------------------------------------------------
+
+class WizardViewModel(HTMLClusterViewModel):
+    _static_path = op.join(op.dirname(op.realpath(__file__)), 'static')
+    _html_filename = 'wizard.html'
+
+    def _format_dict(self, **kwargs):
+        return self._wizard.get_panel_params()

@@ -10,8 +10,8 @@ import numpy as np
 import numpy.random as nr
 
 from ..utils._color import _random_color
-from ..utils.array import _unique
-from .base_model import BaseModel, ClusterMetadata
+from ..utils.array import _unique, _spikes_per_cluster
+from .base import BaseModel, ClusterMetadata
 from ..electrode.mea import MEA, staggered_positions
 
 
@@ -95,6 +95,9 @@ class MockModel(BaseModel):
                                          self.n_channels)
         self._spike_clusters = artificial_spike_clusters(self.n_spikes,
                                                          self.n_clusters)
+        self._spike_ids = np.arange(self.n_spikes).astype(np.int64)
+        self._spikes_per_cluster = _spikes_per_cluster(self._spike_ids,
+                                                       self._spike_clusters)
         self._spike_samples = artificial_spike_samples(self.n_spikes, 30)
         assert self._spike_samples[-1] < self.n_samples_traces
         self._features = artificial_features(self.n_spikes, self.n_features)
@@ -130,6 +133,17 @@ class MockModel(BaseModel):
     @property
     def spike_clusters(self):
         return self._spike_clusters
+
+    @property
+    def spikes_per_cluster(self):
+        return self._spikes_per_cluster
+
+    def update_spikes_per_cluster(self, spc):
+        self._spikes_per_cluster = spc
+
+    @property
+    def spike_ids(self):
+        return self._spike_ids
 
     @property
     def cluster_ids(self):

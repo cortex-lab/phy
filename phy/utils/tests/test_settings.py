@@ -103,13 +103,13 @@ def test_settings_manager():
             # Set an experiment path.
             path = op.join(tmpdir_exp, 'myexperiment.dat')
             sm.on_open(path)
-            assert sm.exp_path == path
+            assert op.realpath(sm.exp_path) == op.realpath(path)
             assert sm.exp_name == 'myexperiment'
-            assert sm.exp_settings_dir == op.join(tmpdir_exp,
-                                                  'myexperiment.phy')
-            assert sm.exp_settings_path == op.join(tmpdir_exp,
-                                                   'myexperiment.phy/'
-                                                   'user_settings.py')
+            assert (op.realpath(sm.exp_settings_dir) ==
+                    op.realpath(op.join(tmpdir_exp, 'myexperiment.phy')))
+            assert (op.realpath(sm.exp_settings_path) ==
+                    op.realpath(op.join(tmpdir_exp, 'myexperiment.phy/'
+                                                    'user_settings.py')))
 
             # User settings.
             assert sm['a'] == 3

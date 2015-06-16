@@ -1,24 +1,10 @@
 # -*- coding: utf-8 -*-
 
-"""ClusterManualGUI CLI tool.
+"""phy main CLI tool.
 
 Usage:
 
-    phy cluster-manual /path/to/myfile.kwik [-i]
-
-Options:
-
-* `-i`: launch the GUI in interactive mode with an IPython terminal.
-  This gives you access to the underlying Python API for programmatic access.
-
-Once within IPython, you have access to the following variables:
-
-* `kwik_path`: the path to the Kwik file
-* `session`: the `Session` instance
-* `model`: the `KwikModel` instance
-* `gui`: the `ClusterManualGUI` instance
-
-Once the GUI is closed, quit IPython with `exit()`.
+    phy --help
 
 """
 
@@ -28,82 +14,127 @@ Once the GUI is closed, quit IPython with `exit()`.
 
 import sys
 import os.path as op
+import re
+import argparse
+from textwrap import dedent
+
+from ..ext.six import exec_
 
 
 #------------------------------------------------------------------------------
-# Utility functions
+# Main script
 #------------------------------------------------------------------------------
 
-def _pop(l, el, default=None):
-    if el in l:
-        l.remove(el)
-        return el
-    else:
-        return default
+class Parser(argparse.ArgumentParser):
+    def error(self, message):
+        sys.stderr.write(message + '\n\n')
+        self.print_help()
+        sys.exit(2)
 
 
-#------------------------------------------------------------------------------
-# Main function
-#------------------------------------------------------------------------------
+class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                      argparse.RawDescriptionHelpFormatter):
+    pass
 
-def main():
-    # TODO: use argparse
-    args = sys.argv
 
-    # Profiling.
-    profile = _pop(args, '-p', False)
-    profile_line = _pop(args, '-pl', False)
-    if profile or profile_line:
-        from phy.utils.testing import _enable_profiler, _profile
-        prof = _enable_profiler(profile_line)
-    else:
-        prof = None
+def _parse_extra(extra):
+    kwargs = {}
+    reg = re.compile(r'^--([^\=]+)=([^\=]+)$')
+    for e in extra:
+        r = reg.match(e)
+        if r:
+            key, value = r.group(1), r.group(2)
+            key = key.replace('-', '_')
+            try:
+                value = int(value)
+            except ValueError:
+                try:
+                    value = float(value)
+                except ValueError:
+                    pass
+            kwargs[key] = value
+    return kwargs
 
-    if '-h' in args or '--help' in args:
-        print(sys.modules[__name__].__doc__)
-        return 0
+
+def _parse_args(args):
+    desc = sys.modules['phy'].__doc__
+    epilog = dedent("""
+
+    examples:
+      phy -v                display the version of phy
+      phy describe my_file.kwik
+                            display information about a Kwik dataset
+      phy cluster-auto my_file.kwik --num-clusters-start=100
+                            run klustakwik on a dataset
+      phy cluster-manual my_file.kwik
+                            run the manual clustering GUI
+
+    """)
+    parser = Parser(description=desc, epilog=epilog,
+                    formatter_class=CustomFormatter,
+                    )
+
+    # Allowed subcommands.
+    commands = [
+        'cluster-auto',
+        'cluster-manual',
+        'describe',  # describe a dataset
+        # TODO:
+        # 'notebook',  # start a new analysis notebook
+        # 'detect-spikes',
+    ]
+
+    parser.add_argument('command',
+                        choices=commands,
+                        help='command to execute')
+
+    parser.add_argument('file',
+                        help='file to execute the command on')
 
     import phy
-    if '-v' in args or '--version' in args:
-        print("phy v{}".format(phy.__version__))
-        return 0
+    parser.add_argument('--version', '-v',
+                        action='version',
+                        version=phy.__version__,
+                        help='print the version of phy')
 
-    if _pop(args, '--debug', False):
-        phy.debug()
+    parser.add_argument('--debug', '-d',
+                        action='store_true',
+                        help='activate debug logging mode')
 
-    if len(args) <= 2 or args[1] != 'cluster-manual':
-        print("Only the `phy cluster-manual [-i] myfile.kwik` command "
-              "is currently supported.")
-        return 1
+    parser.add_argument('--profiler', '-p',
+                        action='store_true',
+                        help='activate the profiler')
 
-    args = args[2:]
-    # print("ClusterManualGUI")
-    interactive = _pop(args, '-i', False) or _pop(args, '--interactive', False)
+    parser.add_argument('--line-profiler', '-lp',
+                        dest='line_profiler',
+                        action='store_true',
+                        help='activate the line-profiler -- you need to '
+                        'decorate the functions to profile with `@profile` '
+                        'in the code')
 
-    if len(args) == 0:
-        print("Please specify a path to a `.kwik` file.")
-        return 1
+    parser.add_argument('--ipython', '-i', action='store_true',
+                        help='launch the script in an interactive '
+                        'IPython console')
 
-    kwik_path = args[0]
+    parser.add_argument('--clustering', '-c', default='main',
+                        help='name of the clustering to use')
 
-    if not prof:
-        run(kwik_path, interactive=interactive)
-    else:
-        _profile(prof, 'run(kwik_path, interactive=interactive)',
-                 globals(), locals())
+    parse, extra = parser.parse_known_args(args)
+    kwargs = _parse_extra(extra)
+    return parse, kwargs
 
 
-def run(kwik_path, interactive=False):
+def run_manual(kwik_path, clustering=None, interactive=False):
     import phy
-    from phy.cluster.manual import Session
-    from phy.utils import start_qt_app, run_qt_app
+    from phy.cluster import Session
+    from phy.gui import start_qt_app, run_qt_app
 
     if not op.exists(kwik_path):
         print("The file `{}` doesn't exist.".format(kwik_path))
         return 1
 
     print("\nLoading {}...".format(kwik_path))
-    session = Session(kwik_path)
+    session = Session(kwik_path, clustering=clustering)
     print("Data successfully loaded!\n")
     session.model.describe()
 
@@ -130,9 +161,65 @@ def run(kwik_path, interactive=False):
         run_qt_app()
 
 
+def run_auto(kwik_path, clustering=None, interactive=False, **kwargs):
+    from phy.cluster import Session
+
+    if not op.exists(kwik_path):
+        print("The file `{}` doesn't exist.".format(kwik_path))
+        return
+
+    session = Session(kwik_path, use_store=False)
+    session.cluster(clustering=clustering, **kwargs)
+    session.save()
+    session.close()
+
+
+def describe(kwik_path, clustering=None):
+    from phy.io.kwik import KwikModel
+
+    if not op.exists(kwik_path):
+        print("The file `{}` doesn't exist.".format(kwik_path))
+        return
+
+    model = KwikModel(kwik_path, clustering=clustering)
+    model.describe()
+    model.close()
+
+
+def main():
+
+    args, kwargs = _parse_args(sys.argv[1:])
+
+    if args.profiler or args.line_profiler:
+        from phy.utils.testing import _enable_profiler, _profile
+        prof = _enable_profiler(args.line_profiler)
+    else:
+        prof = None
+
+    import phy
+    if args.debug:
+        phy.debug()
+
+    if args.command == 'cluster-manual':
+        cmd = ('run_manual(args.file, clustering=args.clustering, '
+               'interactive=args.ipython)')
+    elif args.command == 'cluster-auto':
+        cmd = ('run_auto(args.file, clustering=args.clustering, '
+               'interactive=args.ipython, **kwargs)')
+    elif args.command == 'describe':
+        cmd = 'describe(args.file)'
+    else:
+        raise NotImplementedError()
+
+    if not prof:
+        exec_(cmd, globals(), locals())
+    else:
+        _profile(prof, cmd, globals(), locals())
+
+
 #------------------------------------------------------------------------------
 # Entry point
 #------------------------------------------------------------------------------
 
 if __name__ == '__main__':
-    exit(main())
+    main()

@@ -33,6 +33,8 @@ class TemporaryDirectory(object):
 
     """
     def __init__(self, suffix="", prefix="tmp", dir=None):
+        # The tmp dir can be specified in the PHY_TMP_DIR env variable.
+        dir = dir or _os.environ.get('PHY_TMP_DIR', None)
         self._closed = False
         self.name = None  # Handle mkdtemp raising an exception
         self.name = mkdtemp(suffix, prefix, dir)

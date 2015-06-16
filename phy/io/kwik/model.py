@@ -13,12 +13,12 @@ import os
 import numpy as np
 
 from ...ext import six
-from ..base_model import BaseModel, ClusterMetadata
+from ..base import BaseModel, ClusterMetadata
 from ..h5 import open_h5, File
 from ...waveform.loader import WaveformLoader
 from ...waveform.filter import bandpass_filter, apply_filter
 from ...electrode.mea import MEA
-from ...utils.logging import warn
+from ...utils.logging import debug, warn
 from ...utils.array import (PartialArray,
                             _concatenate_virtual_arrays,
                             _spikes_per_cluster,
@@ -128,7 +128,7 @@ def _create_clustering(f, name,
     assert not f.exists(path)
 
     # Save spike_clusters.
-    f.write(path, spike_clusters.astype(np.uint32))
+    f.write(path, spike_clusters.astype(np.int32))
 
     cluster_ids = _unique(spike_clusters)
 
@@ -278,7 +278,7 @@ class KwikModel(BaseModel):
         self._spike_clusters = None
         self._spikes_per_cluster = None
         self._metadata = None
-        self._clustering = 'main'
+        self._clustering = clustering or 'main'
         self._probe = None
         self._channels = []
         self._channel_order = None
@@ -287,6 +287,7 @@ class KwikModel(BaseModel):
         self._masks = None
         self._waveforms = None
         self._cluster_metadata = None
+        self._clustering_metadata = {}
         self._traces = None
         self._recording_offsets = None
         self._waveform_loader = None
@@ -296,6 +297,10 @@ class KwikModel(BaseModel):
         self.open(kwik_path,
                   channel_group=channel_group,
                   clustering=clustering)
+
+    @property
+    def path(self):
+        return self.kwik_path
 
     # Internal properties and methods
     # -------------------------------------------------------------------------
@@ -502,6 +507,27 @@ class KwikModel(BaseModel):
             self._kwik.write_attr(path, 'cluster_group', group)
             self._cluster_metadata.set_group([cluster], group)
 
+    def _load_clustering_metadata(self):
+        attrs = self._kwik.attrs(self._clustering_path)
+        metadata = {}
+        for attr in attrs:
+            try:
+                metadata[attr] = self._kwik.read_attr(self._clustering_path,
+                                                      attr)
+            except OSError:
+                debug("Error when reading `{}:{}`.".format(
+                      self._clustering_path, attr))
+        self._clustering_metadata = metadata
+
+    def _save_clustering_metadata(self, metadata):
+        if not metadata:
+            return
+        assert isinstance(metadata, dict)
+        for name, value in metadata.items():
+            path = self._clustering_path
+            self._kwik.write_attr(path, name, value)
+        self._clustering_metadata.update(metadata)
+
     def _load_traces(self):
         if self._kwd is not None:
             i = 0
@@ -579,6 +605,7 @@ class KwikModel(BaseModel):
             raise ValueError("No kwik_path specified.")
 
         # Open the file.
+        kwik_path = op.realpath(kwik_path)
         self.kwik_path = kwik_path
         self.name = op.splitext(op.basename(kwik_path))[0]
 
@@ -632,7 +659,7 @@ class KwikModel(BaseModel):
         # No need to keep the kwik file open.
         self._kwik.close()
 
-    def save(self, spike_clusters, cluster_groups):
+    def save(self, spike_clusters, cluster_groups, clustering_metadata=None):
         """Save the spike clusters and cluster groups in the Kwik file."""
 
         # REFACTOR: with() to open/close the file if needed
@@ -640,6 +667,7 @@ class KwikModel(BaseModel):
 
         self._save_spike_clusters(spike_clusters)
         self._save_cluster_groups(cluster_groups)
+        self._save_clustering_metadata(clustering_metadata)
 
         if to_close:
             self._kwik.close()
@@ -698,6 +726,7 @@ class KwikModel(BaseModel):
         self._create_cluster_metadata()
         self._load_spike_clusters()
         self._load_cluster_groups()
+        self._load_clustering_metadata()
         if _to_close:
             self._kwik.close()
 
@@ -752,6 +781,7 @@ class KwikModel(BaseModel):
         if name in self._clusterings:
             raise ValueError("The clustering '{0}' ".format(name) +
                              "already exists.")
+        assert len(spike_clusters) == self.n_spikes
 
         _to_close = self._open_kwik_if_needed(mode='a')
 
@@ -918,6 +948,12 @@ class KwikModel(BaseModel):
         self._clustering_changed(value)
 
     @property
+    def clustering_metadata(self):
+        """A dictionary of key-value metadata specific to the current
+        clustering."""
+        return self._clustering_metadata
+
+    @property
     def metadata(self):
         """A dictionary holding metadata about the experiment.
 
@@ -958,19 +994,6 @@ class KwikModel(BaseModel):
 
         """
         return self._spike_samples
-
-    @property
-    def spike_times(self):
-        """Spike times from the current channel_group.
-
-        This is a NumPy array containing `float64` values (in seconds).
-
-        The spike times of all recordings are concatenated. There is no gap
-        between consecutive recordings, currently.
-
-        """
-        sr = self.sample_rate
-        return self._spike_samples.astype(np.float64) / sr
 
     @property
     def sample_rate(self):
@@ -1061,6 +1084,9 @@ class KwikModel(BaseModel):
             self._spikes_per_cluster = \
                 _spikes_per_cluster(self.spike_ids, self._spike_clusters)
         return self._spikes_per_cluster
+
+    def update_spikes_per_cluster(self, spc):
+        self._spikes_per_cluster = spc
 
     @property
     def cluster_metadata(self):
