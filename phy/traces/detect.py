@@ -17,6 +17,41 @@ from ..ext.six.moves import range, zip
 # Thresholder
 #------------------------------------------------------------------------------
 
+def compute_threshold(arr, single_threshold=True, std_factor=None):
+    assert arr.ndim == 2
+    ns, nc = arr.shape
+
+    assert std_factor is not None
+    if isinstance(std_factor, (int, float)):
+        std_factor = (std_factor, std_factor)
+    assert isinstance(std_factor, (tuple, list))
+    assert len(std_factor) == 2
+    std_factor = np.array(std_factor)
+
+    if not single_threshold:
+        std_factor = std_factor[:, None]
+
+    # Get the median of all samples in all excerpts, on all channels.
+    if single_threshold:
+        median = np.median(np.abs(arr))
+    # Or independently for each channel.
+    else:
+        median = np.median(np.abs(arr), axis=0)
+
+    # Compute the threshold from the median.
+    std = median / .6745
+    threshold = std_factor * std
+    assert isinstance(threshold, np.ndarray)
+
+    if single_threshold:
+        assert threshold.ndim == 1
+        assert len(threshold) == 2
+    else:
+        assert threshold.ndim == 2
+        assert threshold.shape == (2, nc)
+    return threshold
+
+
 class Thresholder(object):
     """Threshold traces to detect spikes.
 

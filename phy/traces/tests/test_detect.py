@@ -8,14 +8,44 @@
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
+from numpy.testing import assert_allclose as ac
 
-from ..detect import Thresholder, connected_components, FloodFillDetector
+from ..detect import (compute_threshold,
+                      Thresholder,
+                      connected_components,
+                      FloodFillDetector,
+                      )
 from ...io.mock import artificial_traces
 
 
 #------------------------------------------------------------------------------
 # Test thresholder
 #------------------------------------------------------------------------------
+
+def test_compute_threshold():
+    n_samples, n_channels = 100, 10
+    data = artificial_traces(n_samples, n_channels)
+
+    # Single threshold.
+    threshold = compute_threshold(data, std_factor=1.)
+    assert threshold.shape == (2,)
+    assert threshold[0] > 0
+    assert threshold[1] > 0
+
+    threshold = compute_threshold(data, std_factor=[1., 2.])
+    assert len(threshold) == 2
+    assert threshold[1] == 2 * threshold[0]
+
+    # Multiple threshold.
+    threshold = compute_threshold(data, single_threshold=False, std_factor=2.)
+    assert threshold.shape == (2, n_channels)
+
+    threshold = compute_threshold(data,
+                                  single_threshold=False,
+                                  std_factor=(1., 2.))
+    assert threshold.shape == (2, n_channels)
+    ac(threshold[1], 2 * threshold[0])
+
 
 def test_thresholder():
     n_samples, n_channels = 100, 12
