@@ -10,7 +10,7 @@
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
-from ..filter import bandpass_filter, apply_filter
+from ..filter import bandpass_filter, apply_filter, Filter
 
 
 #------------------------------------------------------------------------------
@@ -29,11 +29,13 @@ def test_apply_filter():
 
     # Filter the signal.
     filter = bandpass_filter(low=low, high=high, order=4, rate=rate)
-    x_filtered = apply_filter(x, filter=filter)
-
-    # Check that the bandpass-filtered signal is weak.
-    k = int(2. / low * rate)
-    assert np.abs(x[k:-k]).max() >= .9
-    assert np.abs(x_filtered[k:-k]).max() <= .1
-
     ae(apply_filter([], filter=filter), [])
+
+    for x_filtered in (apply_filter(x, filter=filter),
+                       Filter(rate=rate, low=low, high=high, order=4)(x),
+                       ):
+
+        # Check that the bandpass-filtered signal is weak.
+        k = int(2. / low * rate)
+        assert np.abs(x[k:-k]).max() >= .9
+        assert np.abs(x_filtered[k:-k]).max() <= .1
