@@ -65,7 +65,12 @@ def test_extract():
     assert we._normalize(strong) == 1
     ae(we._normalize([(weak + strong) / 2.]), [.5])
 
+    # _wave()
     wave = we._wave(data, comp)
+    assert wave.shape == (3 + 5 + 1, nc)
+    ae(wave[3:6, :], [[0.5, 1.5, 0., 0.],
+                      [1.5, 2.5, 0., 0.],
+                      [1.0, 2.0, 0., 0.]])
 
     # masks()
     masks = we.masks(data, wave, comp)
