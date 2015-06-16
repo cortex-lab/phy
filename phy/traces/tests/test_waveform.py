@@ -90,6 +90,12 @@ def test_extract():
     wave_a = we.align(wave_e, s)
     assert wave_a.shape == (3 + 5, nc)
 
+    # Test final call.
+    s_f, wave_f, masks_f = we(component, data=data, data_t=data)
+    assert s_f == s
+    ae(masks_f, masks)
+    ae(wave_f, wave_a)
+
 
 #------------------------------------------------------------------------------
 # Tests loader
