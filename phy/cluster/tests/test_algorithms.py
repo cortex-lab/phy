@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
-"""Tests of clustering launcher."""
+"""Tests of clustering algorithms."""
 
 #------------------------------------------------------------------------------
 # Imports
 #------------------------------------------------------------------------------
 
 from ...utils.tempdir import TemporaryDirectory
-from ..launcher import run
+from ..algorithms import run
 from ...io.kwik import KwikModel
 from ...io.kwik.mock import create_mock_kwik
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Automatic clustering launcher."""
+"""Automatic clustering algorithms."""
 
 #------------------------------------------------------------------------------
 # Imports
