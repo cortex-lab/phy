@@ -25,9 +25,7 @@ def _compute_pcs(x, n_pcs=None, masks=None):
 
     if masks is not None:
         assert isinstance(masks, np.ndarray)
-        assert masks.ndim == 2
-        assert masks.shape[0] == x.shape[0]  # number of spikes
-        assert masks.shape[1] == x.shape[2]  # number of channels
+        assert masks.shape == (n_spikes, n_channels)
 
     # Compute regularization cov matrix.
     if masks is not None:
@@ -73,14 +71,6 @@ def _compute_pcs(x, n_pcs=None, masks=None):
         pcs_list.append(pcs[:n_pcs, ...])
 
     pcs = np.dstack(pcs_list)
-
-    # Return the concatenation of the PCs on all channels, along the 3d axis,
-    # except if there is only one element in the 3d axis. In this case
-    # we convert to a 2D array.
-    # assert pcs.ndim == 3
-    # if pcs.shape[2] == 1:
-    #     pcs = pcs[:, :, 0]
-    #     assert pcs.ndim == 2
     return pcs
 
 

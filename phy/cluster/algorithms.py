@@ -11,6 +11,7 @@ import numpy as np
 from ..utils.array import (PartialArray, get_excerpts,
                            chunk_bounds, data_chunk,
                            )
+from ..utils.logging import debug, info
 from ..io.kwik.sparse_kk2 import sparsify_features_masks
 from ..traces import (Filter, Thresholder, compute_threshold,
                       FloodFillDetector, WaveformExtractor, PCA,
@@ -49,7 +50,7 @@ class SpikeDetekt(object):
                       order=order,
                       )
 
-    def _create_thresholder(self, thresholds):
+    def _create_thresholder(self, thresholds=None):
         mode = self._kwargs['detect_spikes']
         return Thresholder(mode=mode, thresholds=thresholds)
 
@@ -116,9 +117,6 @@ class SpikeDetekt(object):
         Returns
         -------
 
-        traces_t : array
-            An `(n_samples, n_channels)` array with the transformed data
-            according to the detection mode.
         components : list
             A list of `(n, 2)` arrays with `sample, channel` pairs.
 
@@ -130,10 +128,10 @@ class SpikeDetekt(object):
         # Compute the threshold crossings.
         weak = thresholder.detect(traces_t, 'weak')
         strong = thresholder.detect(traces_t, 'strong')
-        return traces_t, self.detector(weak_crossings=weak,
-                                       strong_crossings=strong)
+        return self.detector(weak_crossings=weak,
+                             strong_crossings=strong)
 
-    def extract_spikes(self, components, traces_f, traces_t):
+    def extract_spikes(self, components, traces_f):
         """Extract spikes from connected components.
 
         Parameters
@@ -142,8 +140,6 @@ class SpikeDetekt(object):
             List of connected components.
         traces_f : array
             Filtered data.
-        traces_t : array
-            Transformed data.
 
         Returns
         -------
@@ -157,8 +153,11 @@ class SpikeDetekt(object):
 
         """
         n_spikes = len(components)
-        extractor = self._create_extractor()
+        # Transform the filtered data according to the detection mode.
+        thresholder = self._create_thresholder()
+        traces_t = thresholder.transform(traces_f)
         # Extract all waveforms.
+        extractor = self._create_extractor()
         samples, waveforms, masks = zip(*(extractor(component,
                                                     data=traces_f,
                                                     data_t=traces_t)
@@ -224,8 +223,6 @@ class SpikeDetekt(object):
     def run_serial(self, traces, interval=None):
         """Run SpikeDetekt on one core."""
         n_samples, n_channels = traces.shape
-        # TODO
-        # n_waveforms_max = self._kwargs['pca_nwaveforms_max']
 
         # Take a subset if necessary.
         if interval is not None:
@@ -236,24 +233,80 @@ class SpikeDetekt(object):
         assert 0 <= start < end <= n_samples
 
         # Find the weak and strong thresholds.
+        info("Finding the thresholds...")
         thresholds = self.find_thresholds(traces)
+        debug("Thresholds: {}.".format(thresholds))
 
-        # Loop over chunks.
+        # PASS 1: find the connected components and count the spikes
+        # ----------------------------------------------------------
+
+        # TODO OPTIM: save that on disk instead of in memory.
+        # Ditionary {chunk_start: components}.
+        chunk_components = {}
+        info("Pass 1: detect spikes...")
         for bounds, chunk, chunk_f in self.iter_chunks(traces):
+            s_start, s_end, keep_start, keep_end = bounds
 
             # Detect the connected components in the chunk.
-            chunk_t, components = self.detect(chunk_f, thresholds=thresholds)
+            components = self.detect(chunk_f, thresholds=thresholds)
+            chunk_components[s_start] = components
+
+        # Count the total number of spikes.
+        n_spikes_per_chunk = {key: len(val)
+                              for key, val in chunk_components.items()}
+        n_spikes_total = sum(n_spikes_per_chunk.values())
+        info("{} spikes detected in total.".format(n_spikes_total))
+
+        # PASS 2: extract the spikes and save some waveforms before PCA
+        # -------------------------------------------------------------
+
+        # Waveforms to keep for each chunk in order to compute the PCs.
+        chunk_waveforms = {}
+        n_waveforms_max = self._kwargs['pca_nwaveforms_max']
+        for bounds, chunk, chunk_f in self.iter_chunks(traces):
+            s_start, s_end, keep_start, keep_end = bounds
+
+            # Get the previously-computed component list.
+            components = chunk_components[s_start]
 
             # Extract the spikes from the chunk.
             spike_samples, waveforms, masks = self.extract_spikes(components,
                                                                   chunk_f,
-                                                                  chunk_t)
+                                                                  )
 
             # Remove spikes in the overlapping bands.
             idx = _keep_spikes(spike_samples, bounds[2:])
             spike_samples = spike_samples[idx]
             waveforms = waveforms[idx, ...]
             masks = masks[idx, ...]
+
+            # TODO: save spikes, masks, waveforms on disk
+
+            # Keep some waveforms in memory in order to compute PCA.
+            n_spikes_chunk = len(components)
+            # What fraction of all spikes are in that chunk?
+            p = n_spikes_chunk / float(n_spikes_total)
+            k = int(n_spikes_chunk / float(p * n_waveforms_max))
+            k = np.clip(k, 1, n_spikes_chunk)
+            w = waveforms[::k, ...]
+            m = masks[::k, ...]
+            chunk_waveforms[s_start] = w, m
+
+        # Compute the PCs.
+        waveforms_subset, masks_subset = zip(*chunk_waveforms.values())
+        waveforms_subset = np.array(waveforms_subset)
+        masks_subset = np.array(masks_subset)
+        assert (waveforms.shape[0], waveforms.shape[2]) == masks_subset.shape
+        pcs = self.waveform_pcs(waveforms_subset, masks_subset)
+
+        # PASS 3: compute the features
+        # ----------------------------
+
+        for bounds, chunk, chunk_f in self.iter_chunks(traces):
+            s_start, s_end, keep_start, keep_end = bounds
+            # TODO: load waveforms from disk
+            waveforms = None
+            self.features(waveforms, pcs)
 
 
 #------------------------------------------------------------------------------
