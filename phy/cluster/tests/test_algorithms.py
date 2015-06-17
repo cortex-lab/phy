@@ -16,6 +16,10 @@ from ...io.kwik.mock import create_mock_kwik
 # Tests
 #------------------------------------------------------------------------------
 
+def test_spike_detect():
+    pass
+
+
 def test_cluster():
     n_spikes = 100
     with TemporaryDirectory() as tempdir:

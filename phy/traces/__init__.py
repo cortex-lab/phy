@@ -3,6 +3,7 @@
 
 """Spike detection, waveform extraction."""
 
-from .detect import Thresholder, FloodFillDetector
+from .detect import Thresholder, FloodFillDetector, compute_threshold
 from .filter import Filter
-from .waveform import WaveformLoader
+from .pca import PCA
+from .waveform import WaveformLoader, WaveformExtractor
