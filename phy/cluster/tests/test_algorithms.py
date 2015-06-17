@@ -49,9 +49,12 @@ def test_spike_detect():
     assert 0 < thresholds['weak'] < thresholds['strong']
 
     # Spike detection.
+    traces_f[1000:1010, :3] *= 5
+    traces_f[2000:2010, [0, 2]] *= 5
+    traces_f[3000:3020, :] *= 5
     components = sd.detect(traces_f, thresholds)
     assert isinstance(components, list)
-    # TODO
+    print(len(components))
 
 
 def test_cluster():
