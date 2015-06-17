@@ -31,5 +31,5 @@ def test_cluster():
         assert len(spike_clusters) == n_spikes
 
         spike_clusters = cluster(model, num_starting_clusters=10,
-                             spike_ids=range(100))
+                                 spike_ids=range(100))
         assert len(spike_clusters) == 100
