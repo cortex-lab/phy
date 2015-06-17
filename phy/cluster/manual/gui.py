@@ -163,8 +163,23 @@ class ClusterManualGUI(BaseGUI):
             @waveforms.view.connect
             def on_channel_click(e):
                 channel = e.channel_idx
-                feature = 0 if e.button == 1 else 1
-                features.set_auto_dimension((channel, feature))
+                ax = 'x' if e.button == 1 else 'y'
+                ax_n = 0 if ax == 'x' else 1
+                feature = 0
+                # Find the current dimension in the view.
+                mat = features.dimensions_matrix
+                prev = mat[0, 0][ax_n]
+                if prev != 'time':
+                    prev_channel, prev_feature = prev
+                    # Scroll the feature if the channel is the same.
+                    if prev_channel == channel:
+                        feature = (prev_feature + 1) % features.n_features
+                    # Scroll the feature if it is the same than in the other
+                    # axis.
+                    other = mat[0, 0][1 - ax_n]
+                    if other != 'time' and other == (channel, feature):
+                        feature = (feature + 1) % features.n_features
+                features.set_dimensions(**{'dim_' + ax: (channel, feature)})
 
         # Enlarge feature subplot.
         @self.connect_views('features_grid', 'features')
