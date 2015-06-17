@@ -55,7 +55,7 @@ class KlustaKwik(object):
         return spike_clusters
 
 
-def run(model, algorithm='klustakwik', spike_ids=None, **kwargs):
+def cluster(model, algorithm='klustakwik', spike_ids=None, **kwargs):
     """Launch an automatic clustering algorithm on the model.
 
     Parameters
