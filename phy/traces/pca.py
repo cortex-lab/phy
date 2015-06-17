@@ -120,5 +120,9 @@ class PCA(object):
         self._pcs = _compute_pcs(waveforms, n_pcs=self._n_pcs, masks=masks)
         return self._pcs
 
-    def transform(self, waveforms):
+    def transform(self, waveforms, pcs=None):
+        if pcs is None:
+            pcs = self._pcs
+        # Need to call fit() if the pcs are None here.
+        assert pcs is not None
         return _project_pcs(waveforms, self._pcs)

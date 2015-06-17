@@ -50,7 +50,7 @@ class WaveformExtractor(object):
         self._extract_before = extract_before
         self._extract_after = extract_after
         self._weight_power = weight_power if weight_power is not None else 1.
-        self._thresholds = thresholds
+        self._thresholds = thresholds or {}
         self._channels_per_group = channels_per_group
         # mapping channel => channels in the shank
         self._dep_channels = {i: channels
@@ -143,6 +143,9 @@ class WaveformExtractor(object):
             warn("Interpolation error at time {0:d}".format(s))
             return waveform
         return f(new_s)
+
+    def set_thresholds(self, **kwargs):
+        self._thresholds.update(kwargs)
 
     def __call__(self, component=None, data=None, data_t=None):
         assert data.shape == data_t.shape

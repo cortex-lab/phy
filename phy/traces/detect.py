@@ -84,10 +84,10 @@ class Thresholder(object):
         elif self._mode == 'both':
             return np.abs(data)
 
-    def detect(self, data, threshold=None):
+    def detect(self, data_t, threshold=None):
         # Accept dictionary of thresholds.
         if isinstance(threshold, (list, tuple)):
-            return {name: self(data, threshold=name)
+            return {name: self(data_t, threshold=name)
                     for name in threshold}
         # Use the only threshold by default (if there is only one).
         if threshold is None:
@@ -99,7 +99,7 @@ class Thresholder(object):
             threshold = self._thresholds[threshold]
         threshold = float(threshold)
         # Threshold the data.
-        return data > threshold
+        return data_t > threshold
 
     def __call__(self, data, threshold=None):
         # Transform the data according to the mode.
