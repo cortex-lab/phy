@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
 from scipy import signal
 
 from ..utils._types import _as_array
@@ -42,3 +43,48 @@ class Filter(object):
 
     def __call__(self, data):
         return apply_filter(data, filter=self._filter)
+
+
+#------------------------------------------------------------------------------
+# Whitening
+#------------------------------------------------------------------------------
+
+class Whitening(object):
+    """Compute a whitening matrix and apply it to data.
+
+    Contributed by Pierre Yger.
+
+    """
+    def fit(self, x, fudge=1e-18):
+        """Compute the whitening matrix.
+
+        Parameters
+        ----------
+
+        x : array
+            An `(n_samples, n_channels)` array.
+
+        """
+        assert x.ndim == 2
+        ns, nc = x.shape
+        x_cov = np.cov(x, rowvar=0)
+        assert x_cov.shape == (nc, nc)
+        d, v = np.linalg.eigh(x_cov)
+        d = np.diag(1. / np.sqrt(d + fudge))
+        # This is equivalent, but seems much slower...
+        # w = np.einsum('il,lk,jk->ij', v, d, v)
+        w = np.dot(np.dot(v, d), v.T)
+        self._matrix = w
+        return w
+
+    def transform(self, x):
+        """Whiten some data.
+
+        Parameters
+        ----------
+
+        x : array
+            An `(n_samples, n_channels)` array.
+
+        """
+        return np.dot(x, self._matrix)
