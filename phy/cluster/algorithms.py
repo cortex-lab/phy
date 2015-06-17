@@ -86,7 +86,8 @@ class SpikeDetekt(object):
     # -------------------------------------------------------------------------
 
     def apply_filter(self, data):
-        return self.filter(data)
+        filter = self._create_filter()
+        return filter(data)
 
     def find_thresholds(self, traces):
         """Find weak and strong thresholds in filtered traces."""
@@ -128,8 +129,9 @@ class SpikeDetekt(object):
         # Compute the threshold crossings.
         weak = thresholder.detect(traces_t, 'weak')
         strong = thresholder.detect(traces_t, 'strong')
-        return self.detector(weak_crossings=weak,
-                             strong_crossings=strong)
+        detector = self._create_detector()
+        return detector(weak_crossings=weak,
+                        strong_crossings=strong)
 
     def extract_spikes(self, components, traces_f):
         """Extract spikes from connected components.
@@ -191,7 +193,8 @@ class SpikeDetekt(object):
             An `(n_features, n_samples, n_channels)` array.
 
         """
-        return self.pca.fit(waveforms, masks)
+        pca = self._create_pca()
+        return pca.fit(waveforms, masks)
 
     def features(self, waveforms, pcs):
         """Extract features from waveforms.
@@ -203,7 +206,8 @@ class SpikeDetekt(object):
             An `(n_spikes, n_channels, n_features)` array.
 
         """
-        return self.pca.transform(waveforms, pcs=pcs)
+        pca = self._create_pca()
+        return pca.transform(waveforms, pcs=pcs)
 
     # Main functions
     # -------------------------------------------------------------------------

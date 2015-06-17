@@ -6,10 +6,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 from ...utils.tempdir import TemporaryDirectory
-from ..algorithms import cluster
+from ...utils.settings import Settings
+from ..algorithms import cluster, SpikeDetekt
 from ...io.kwik import KwikModel
 from ...io.kwik.mock import create_mock_kwik
+from ...io.mock import artificial_traces
 
 
 #------------------------------------------------------------------------------
@@ -17,7 +21,21 @@ from ...io.kwik.mock import create_mock_kwik
 #------------------------------------------------------------------------------
 
 def test_spike_detect():
-    pass
+    sample_rate = 1000
+    n_samples = 10000
+    n_channels = 4
+    traces = artificial_traces(n_samples, n_channels)
+
+    # Load default settings.
+    curdir = op.dirname(op.realpath(__file__))
+    default_settings_path = op.join(curdir, '../default_settings.py')
+    settings = Settings(default_path=default_settings_path)
+    params = settings['spikedetekt_params'](sample_rate)
+    params['sample_rate'] = sample_rate
+
+    sd = SpikeDetekt(**params)
+    traces_f = sd.apply_filter(traces)
+    assert traces_f.shape == traces.shape
 
 
 def test_cluster():
