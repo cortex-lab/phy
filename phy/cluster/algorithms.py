@@ -11,6 +11,61 @@ from ..io.kwik.sparse_kk2 import sparsify_features_masks
 
 
 #------------------------------------------------------------------------------
+# Spike detection class
+#------------------------------------------------------------------------------
+
+class SpikeDetekt(object):
+    def __init__(self, **kwargs):
+        self._kwargs = kwargs
+        self.__dict__.update(kwargs)
+        self._traces = None
+        self._interval = None
+
+    def detect(self, traces, interval=None):
+        """
+
+        Return
+        ------
+
+        components : list
+            A list of `(n, 2)` arrays with `sample, channel` pairs.
+
+        """
+        pass
+
+    def extract_spikes(self, components):
+        """
+
+        Return
+        ------
+
+        spike_samples : array
+            An `(n_spikes,)` array with the spike samples.
+        waveforms : array
+            An `(n_spikes, n_samples, n_channels)` array.
+        masks : array
+            An `(n_spikes, n_channels)` array.
+
+        """
+        pass
+
+    def features(self, waveforms):
+        """
+
+        Return
+        ------
+
+        features : array
+            An `(n_spikes, n_channels, n_features)` array.
+
+        """
+        pass
+
+    def run(self, traces, interval=None):
+        pass
+
+
+#------------------------------------------------------------------------------
 # Clustering class
 #------------------------------------------------------------------------------
 
