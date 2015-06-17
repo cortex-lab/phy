@@ -18,8 +18,10 @@ from ..utils._types import _as_array
 
 def bandpass_filter(rate=None, low=None, high=None, order=None):
     """Butterworth bandpass filter."""
+    assert low < high
+    assert order >= 1
     return signal.butter(order,
-                         (low/(rate/2.), high/(rate/2.)),
+                         (low / (rate / 2.), high / (rate / 2.)),
                          'pass')
 
 

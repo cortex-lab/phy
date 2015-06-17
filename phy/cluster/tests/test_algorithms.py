@@ -8,6 +8,8 @@
 
 import os.path as op
 
+import numpy as np
+
 from ...utils.tempdir import TemporaryDirectory
 from ...utils.settings import Settings
 from ..algorithms import cluster, SpikeDetekt
@@ -21,7 +23,7 @@ from ...io.mock import artificial_traces
 #------------------------------------------------------------------------------
 
 def test_spike_detect():
-    sample_rate = 1000
+    sample_rate = 10000
     n_samples = 10000
     n_channels = 4
     traces = artificial_traces(n_samples, n_channels)
@@ -34,8 +36,15 @@ def test_spike_detect():
     params['sample_rate'] = sample_rate
 
     sd = SpikeDetekt(**params)
+
+    # Filter the data.
     traces_f = sd.apply_filter(traces)
     assert traces_f.shape == traces.shape
+    assert not np.any(np.isnan(traces_f))
+
+    # Thresholds.
+    weak, strong = sd.find_thresholds(traces)
+    assert 0 < weak < strong
 
 
 def test_cluster():
