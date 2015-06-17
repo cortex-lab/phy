@@ -14,8 +14,8 @@ import phy
 from ...gui.base import BaseGUI
 from ...gui.qt import _prompt
 from ..view_models import (WaveformViewModel,
-                           MultiFeatureViewModel,
-                           SingleFeatureViewModel,
+                           FeatureGridViewModel,
+                           FeatureViewModel,
                            CorrelogramViewModel,
                            TraceViewModel,
                            StatsViewModel,
@@ -89,8 +89,8 @@ class ClusterManualGUI(BaseGUI):
 
     _vm_classes = {
         'waveforms': WaveformViewModel,
-        'features': SingleFeatureViewModel,
-        'features_grid': MultiFeatureViewModel,
+        'features': FeatureViewModel,
+        'features_grid': FeatureGridViewModel,
         'correlograms': CorrelogramViewModel,
         'traces': TraceViewModel,
         'wizard': WizardViewModel,

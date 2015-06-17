@@ -858,13 +858,13 @@ class BaseFeatureViewModel(VispyViewModel):
         return params
 
 
-class MultiFeatureViewModel(BaseFeatureViewModel):
+class FeatureGridViewModel(BaseFeatureViewModel):
     """Features grid"""
     _view_name = 'features_grid'
 
     def __init__(self, **kwargs):
         self._dimension_selector = None
-        super(MultiFeatureViewModel, self).__init__(**kwargs)
+        super(FeatureGridViewModel, self).__init__(**kwargs)
 
     def set_dimension_selector(self, func):
         """Decorator for a function that selects the best projection.
@@ -920,7 +920,7 @@ class MultiFeatureViewModel(BaseFeatureViewModel):
     }
 
 
-class SingleFeatureViewModel(BaseFeatureViewModel):
+class FeatureViewModel(BaseFeatureViewModel):
     """Feature view with a single subplot."""
     _view_name = 'features'
 
