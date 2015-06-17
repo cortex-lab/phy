@@ -8,7 +8,9 @@
 
 import numpy as np
 
-from ..utils.array import PartialArray, get_excerpts
+from ..utils.array import (PartialArray, get_excerpts,
+                           chunk_bounds, data_chunk,
+                           )
 from ..io.kwik.sparse_kk2 import sparsify_features_masks
 from ..traces import (Filter, Thresholder, compute_threshold,
                       FloodFillDetector, WaveformExtractor, PCA,
@@ -19,13 +21,19 @@ from ..traces import (Filter, Thresholder, compute_threshold,
 # Spike detection class
 #------------------------------------------------------------------------------
 
+def _keep_spikes(samples, bounds):
+    """Only keep spikes within the bounds `bounds=(start, end)`."""
+    start, end = bounds
+    return (start <= samples) & (samples <= end)
+
+
+#------------------------------------------------------------------------------
+# Spike detection class
+#------------------------------------------------------------------------------
+
 class SpikeDetekt(object):
     def __init__(self, **kwargs):
         self._kwargs = kwargs
-
-        # Data chunks.
-        # chunk_size = self._kwargs['chunk_size']
-        # chunk_overlap = self._kwargs['chunk_overlap']
 
     # Processing objects creation
     # -------------------------------------------------------------------------
@@ -67,26 +75,30 @@ class SpikeDetekt(object):
         n_pcs = self._kwargs['nfeatures_per_channel']
         return PCA(n_pcs=n_pcs)
 
-    # Processing functions
+    # Misc functions
     # -------------------------------------------------------------------------
 
     def update_params(self, **kwargs):
         self._kwargs.update(kwargs)
 
+    # Processing functions
+    # -------------------------------------------------------------------------
+
     def apply_filter(self, data):
         return self.filter(data)
 
-    def find_thresholds(self, traces_f):
+    def find_thresholds(self, traces):
         """Find weak and strong thresholds in filtered traces."""
         n_excerpts = self._kwargs['nexcerpts']
         excerpt_size = self._kwargs['excerpt_size']
         single = self._kwargs['use_single_threshold']
         strong_f = self._kwargs['threshold_strong_std_factor']
         weak_f = self._kwargs['threshold_weak_std_factor']
-        excerpt = get_excerpts(traces_f,
+        excerpt = get_excerpts(traces,
                                n_excerpts=n_excerpts,
                                excerpt_size=excerpt_size)
-        return compute_threshold(excerpt,
+        excerpt_f = self.apply_filter(excerpt)
+        return compute_threshold(excerpt_f,
                                  single_threshold=single,
                                  std_factor=(weak_f, strong_f))
 
@@ -156,6 +168,12 @@ class SpikeDetekt(object):
         waveforms = np.array(waveforms, dtype=np.float32)
         masks = np.array(masks, dtype=np.float32)
 
+        # Reorder the spikes.
+        idx = np.argsort(samples)
+        samples = samples[idx]
+        waveforms = waveforms[idx, ...]
+        masks = masks[idx, ...]
+
         assert samples.shape == (n_spikes,)
         assert waveforms.ndim == 3
         assert waveforms.shape[0] == n_spikes
@@ -163,6 +181,18 @@ class SpikeDetekt(object):
         assert masks.shape == (n_spikes, n_channels)
 
         return samples, waveforms, masks
+
+    def waveform_pcs(self, waveforms, masks):
+        """Compute waveform principal components.
+
+        Returns
+        -------
+
+        pcs : array
+            An `(n_features, n_samples, n_channels)` array.
+
+        """
+        return self.pca.fit(waveforms, masks)
 
     def features(self, waveforms, pcs):
         """Extract features from waveforms.
@@ -174,15 +204,56 @@ class SpikeDetekt(object):
             An `(n_spikes, n_channels, n_features)` array.
 
         """
-        n_waveforms_max = self._kwargs['pca_nwaveforms_max']
+        return self.pca.transform(waveforms, pcs=pcs)
 
-    # Main function
+    # Main functions
     # -------------------------------------------------------------------------
 
-    def run(self, traces, interval=None):
+    def iter_chunks(self, traces):
+        n_samples, n_channels = traces.shape
 
-        # Filter the traces.
-        traces_f = self.apply_filter(traces)
+        chunk_size = self._kwargs['chunk_size']
+        overlap = self._kwargs['chunk_overlap']
+
+        for bounds in chunk_bounds(n_samples, chunk_size, overlap=overlap):
+            chunk = data_chunk(traces, bounds, with_overlap=True)
+            # Get the filtered chunk.
+            chunk_f = self.apply_filter(chunk)
+            yield bounds, chunk, chunk_f
+
+    def run_serial(self, traces, interval=None):
+        """Run SpikeDetekt on one core."""
+        n_samples, n_channels = traces.shape
+        # TODO
+        # n_waveforms_max = self._kwargs['pca_nwaveforms_max']
+
+        # Take a subset if necessary.
+        if interval is not None:
+            start, end = interval
+            traces = traces[start:end, ...]
+        else:
+            start, end = 0, n_samples
+        assert 0 <= start < end <= n_samples
+
+        # Find the weak and strong thresholds.
+        thresholds = self.find_thresholds(traces)
+
+        # Loop over chunks.
+        for bounds, chunk, chunk_f in self.iter_chunks(traces):
+
+            # Detect the connected components in the chunk.
+            chunk_t, components = self.detect(chunk_f, thresholds=thresholds)
+
+            # Extract the spikes from the chunk.
+            spike_samples, waveforms, masks = self.extract_spikes(components,
+                                                                  chunk_f,
+                                                                  chunk_t)
+
+            # Remove spikes in the overlapping bands.
+            idx = _keep_spikes(spike_samples, bounds[2:])
+            spike_samples = spike_samples[idx]
+            waveforms = waveforms[idx, ...]
+            masks = masks[idx, ...]
 
 
 #------------------------------------------------------------------------------
