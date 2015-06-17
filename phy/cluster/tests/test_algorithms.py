@@ -34,6 +34,8 @@ def test_spike_detect():
     settings = Settings(default_path=default_settings_path)
     params = settings['spikedetekt_params'](sample_rate)
     params['sample_rate'] = sample_rate
+    params['probe_adjacency_list'] = {0: [1, 2], 1: [0, 2], 2: [0, 1], 3: []}
+    params['probe_channels'] = {0: list(range(n_channels))}
 
     sd = SpikeDetekt(**params)
 
@@ -43,8 +45,13 @@ def test_spike_detect():
     assert not np.any(np.isnan(traces_f))
 
     # Thresholds.
-    weak, strong = sd.find_thresholds(traces)
-    assert 0 < weak < strong
+    thresholds = sd.find_thresholds(traces)
+    assert 0 < thresholds['weak'] < thresholds['strong']
+
+    # Spike detection.
+    components = sd.detect(traces_f, thresholds)
+    assert isinstance(components, list)
+    # TODO
 
 
 def test_cluster():

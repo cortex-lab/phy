@@ -100,9 +100,11 @@ class SpikeDetekt(object):
                                n_excerpts=n_excerpts,
                                excerpt_size=excerpt_size)
         excerpt_f = self.apply_filter(excerpt)
-        return compute_threshold(excerpt_f,
-                                 single_threshold=single,
-                                 std_factor=(weak_f, strong_f))
+        thresholds = compute_threshold(excerpt_f,
+                                       single_threshold=single,
+                                       std_factor=(weak_f, strong_f))
+        return {'weak': thresholds[0],
+                'strong': thresholds[1]}
 
     def detect(self, traces_f, thresholds=None):
         """Detect connected waveform components in filtered traces.
