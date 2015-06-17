@@ -1,9 +1,14 @@
+# -*- coding: utf-8 -*-
+
+"""Default settings for spike sorting."""
+
 
 # -----------------------------------------------------------------------------
 # Spike detection
 # -----------------------------------------------------------------------------
 
 def spikedetekt_params(sample_rate):
+
     assert sample_rate > 0
 
     return dict(
