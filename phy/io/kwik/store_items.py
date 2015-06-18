@@ -344,6 +344,10 @@ class FeatureMasks(VariableSizeItem):
 
     def on_cluster(self, up=None):
         super(FeatureMasks, self).on_cluster(up)
+        # No need to change anything in the store if this is an undo or
+        # a redo.
+        if up is None or up.history is not None:
+            return
         # Store the means of the new clusters.
         for cluster in up.added:
             self._store_means(cluster)
