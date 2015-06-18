@@ -165,7 +165,7 @@ class File(object):
         if attr_name in attrs:
             try:
                 return attrs[attr_name]
-            except TypeError:
+            except (TypeError, IOError):
                 warn("Unable to read attribute `{}` at `{}`.".format(
                      attr_name, path))
                 return
