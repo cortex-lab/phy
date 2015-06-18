@@ -344,7 +344,6 @@ class ClusterManualGUI(BaseGUI):
 
     def _wizard_select_after_clustering(self, up):
         if up.history != 'undo':
-            # Special case: split.
             if up.description == 'merge' or up.history == 'redo':
                 self.wizard.pin(up.added[0])
                 self._wizard_select()
@@ -355,6 +354,7 @@ class ClusterManualGUI(BaseGUI):
                 elif cluster == self.wizard.match:
                     self.wizard.next_match()
                 self._wizard_select()
+            # Special case: split.
             elif up.description == 'assign':
                 self.select(up.added)
         elif up.history == 'undo':
