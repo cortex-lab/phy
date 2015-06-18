@@ -44,11 +44,11 @@ def _random_bright_color():
 
 # Default color map for the selected clusters.
 _COLORMAP = np.array([[8, 146, 252],
-                      [255,  2,  2],
+                      [255, 2, 2],
                       [240, 253, 2],
                       [228, 31, 228],
-                      [2, 217,  2],
-                      [255, 147,  2],
+                      [2, 217, 2],
+                      [255, 147, 2],
                       ])
 
 
