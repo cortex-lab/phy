@@ -10,6 +10,7 @@ wiki
 
 *.py[cod]
 .coverage*
+*credentials
 
 # C extensions
 *.so

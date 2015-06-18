@@ -26,22 +26,25 @@ lint:
 	${FLAKE8} phy --exclude=phy/ext/*,default_settings.py --ignore=E226,E265,F811
 
 test: lint
-	py.test --cov-report term-missing --cov phy --ignore experimental -s
+	py.test --cov-report term-missing --cov phy -s
 
 coverage:
 	coverage --html
 
 test-quick: lint
-	py.test phy --ignore experimental -m "not long"
+	py.test phy -m "not long"
 
 apidoc:
 	python tools/api.py
 
+build:
+	python setup.py sdist --formats=zip
+
 upload:
-	python setup.py sdist upload
+	python setup.py sdist --formats=zip upload
 
-test-docker:
-	docker build -t phy-stable docker/stable && docker run --rm phy-stable /root/miniconda/bin/py.test /root/miniconda/lib/python3.4/site-packages/phy/ -m "not long"
+release-test:
+	python tools/release.py release_test
 
-release: clean
-	make test-quick && make upload && make test-docker
+release:
+	python tools/release.py release
