@@ -74,14 +74,19 @@ class DockWindow(QtGui.QMainWindow):
     # -------------------------------------------------------------------------
 
     def emit(self, *args, **kwargs):
-        self._event.emit(*args, **kwargs)
+        return self._event.emit(*args, **kwargs)
 
     def connect_(self, *args, **kwargs):
         self._event.connect(*args, **kwargs)
 
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
-        self.emit('close_gui')
+        res = self.emit('close_gui')
+        # Discard the close event if False is returned by one of the callback
+        # functions.
+        if False in res:
+            e.ignore()
+            return
         super(DockWindow, self).closeEvent(e)
 
     def show(self):
@@ -146,7 +151,7 @@ class DockWindow(QtGui.QMainWindow):
                 self._event = EventEmitter()
 
             def emit(self, *args, **kwargs):
-                self._event.emit(*args, **kwargs)
+                return self._event.emit(*args, **kwargs)
 
             def connect_(self, *args, **kwargs):
                 self._event.connect(*args, **kwargs)

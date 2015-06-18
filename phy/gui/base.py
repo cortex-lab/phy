@@ -50,7 +50,7 @@ class BaseViewModel(object):
         self.on_open()
 
     def emit(self, *args, **kwargs):
-        self._event.emit(*args, **kwargs)
+        return self._event.emit(*args, **kwargs)
 
     def connect(self, *args, **kwargs):
         self._event.connect(*args, **kwargs)
@@ -305,7 +305,6 @@ class BaseGUI(EventEmitter):
     add_view
     close_view
     reset_gui
-    close_gui
 
     """
 
@@ -522,7 +521,6 @@ class BaseGUI(EventEmitter):
 
     def close(self):
         """Close the GUI."""
-        self.emit('close_gui')
         self._dock.close()
 
     def exit(self):

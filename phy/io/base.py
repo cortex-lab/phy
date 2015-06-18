@@ -450,7 +450,7 @@ class BaseSession(EventEmitter):
         # Connect the 'open' event.
         self.connect(gui.on_open)
 
-        @gui.connect
+        @gui.main_window.connect_
         def on_close_gui():
             self.unconnect(gui.on_open)
             # Save the params of every view in the GUI.

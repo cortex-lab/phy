@@ -111,6 +111,13 @@ class ClusterManualGUI(BaseGUI):
         # so that the first cluster selection is already set for the views
         # when they're created.
         self.connect(self._connect_view, event='add_view')
+
+        @self.main_window.connect_
+        def on_close_gui():
+            # Return False if the close event should be discarded, so that
+            # the close Qt event is discarded.
+            return self._prompt_save()
+
         self.on_open()
         self.wizard.start()
         if self._cluster_ids is None:
@@ -380,8 +387,9 @@ class ClusterManualGUI(BaseGUI):
         # The session saves the model when this event is emitted.
         self.emit('request_save')
 
-    def close(self):
-        """Close the GUI."""
+    def _prompt_save(self):
+        """Display a prompt for saving and return whether the GUI should be
+        closed."""
         if (self.settings.get('prompt_save_on_exit', False) and
                 self._is_dirty):
             res = _prompt(self.main_window,
@@ -389,11 +397,12 @@ class ClusterManualGUI(BaseGUI):
                           ('save', 'cancel', 'close'))
             if res == 'save':
                 self.save()
+                return True
             elif res == 'cancel':
-                return
+                return False
             elif res == 'close':
-                pass
-        super(ClusterManualGUI, self).close()
+                return True
+        return True
 
     # General actions
     # ---------------------------------------------------------------------

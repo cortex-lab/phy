@@ -537,7 +537,7 @@ class BaseSpikeCanvas(app.Canvas):
         self.events.add(**{event: Event for event in self._events})
 
     def emit(self, name, **kwargs):
-        getattr(self.events, name)(**kwargs)
+        return getattr(self.events, name)(**kwargs)
 
     def on_draw(self, event):
         """Draw the main visual."""
