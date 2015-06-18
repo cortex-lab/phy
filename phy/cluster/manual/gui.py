@@ -291,6 +291,7 @@ class ClusterManualGUI(BaseGUI):
         self.wizard.cluster_groups = groups
 
         self.wizard.reset()
+
         # Set the similarity and quality functions for the wizard.
         @self.wizard.set_similarity_function
         def similarity(target, candidate):
