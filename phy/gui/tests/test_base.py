@@ -74,7 +74,12 @@ def test_base_view_model():
 
 @wrap_qt
 def test_html_view_model():
-    vm = HTMLViewModel(html='hello world!')
+
+    class MyHTMLViewModel(HTMLViewModel):
+        def get_html(self, **kwargs):
+            return 'hello world!'
+
+    vm = MyHTMLViewModel()
     vm.show()
     yield
     vm.close()
@@ -129,13 +134,16 @@ def test_widget_creator():
 def test_base_gui():
 
     class V1(HTMLViewModel):
-        _html = 'view 1'
+        def get_html(self, **kwargs):
+            return 'view 1'
 
     class V2(HTMLViewModel):
-        _html = 'view 2'
+        def get_html(self, **kwargs):
+            return 'view 2'
 
     class V3(HTMLViewModel):
-        _html = 'view 3'
+        def get_html(self, **kwargs):
+            return 'view 3'
 
     vm_classes = {'v1': V1, 'v2': V2, 'v3': V3}
 
@@ -186,10 +194,12 @@ def test_base_session():
     model = BaseModel()
 
     class V1(HTMLViewModel):
-        _html = 'view 1'
+        def get_html(self, **kwargs):
+            return 'view 1'
 
     class V2(HTMLViewModel):
-        _html = 'view 2'
+        def get_html(self, **kwargs):
+            return 'view 2'
 
     vm_classes = {'v1': V1, 'v2': V2}
 

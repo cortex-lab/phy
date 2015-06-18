@@ -13,7 +13,7 @@ import inspect
 from ..ext.six import string_types
 from ..utils._misc import _show_shortcuts
 from ..utils import debug, EventEmitter
-from ._utils import _wrap_html, _read
+from ._utils import _read
 from .dock import DockWindow
 
 
@@ -146,46 +146,26 @@ class HTMLViewModel(BaseViewModel):
     `get_html()` which returns HTML code.
 
     """
-    _static_path = None
-    _html_filename = None
-    _html = ''
-
-    def _format_dict(self, **kwargs):
-        """Return the dictionary of variables used to format the HTML.
-
-        May be overriden.
-
-        """
-        return {}
-
-    def _css_replacements(self):
-        return {}
 
     def _update(self, view, **kwargs):
         html = self.get_html(**kwargs)
-        params = self._format_dict(**kwargs)
-        html = html.format(**params)
-        html = _wrap_html(html=html,
-                          static_path=self._static_path,
-                          css_replacements=self._css_replacements(),
-                          )
-        view.setHtml(html)
+        css = self.get_css(**kwargs)
+        wrapped = _read('wrap_qt.html')
+        html_wrapped = wrapped.replace('%CSS%', css).replace('%HTML%', html)
+        view.setHtml(html_wrapped)
 
     def _create_view(self, **kwargs):
         from PyQt4.QtWebKit import QWebView
-        if 'html' in kwargs:
-            self._html = kwargs['html']
         view = QWebView()
-        if self._html:
-            self._update(view, **kwargs)
+        self._update(view, **kwargs)
         return view
 
     def get_html(self, **kwargs):
         """Return the non-formatted HTML contents of the view."""
-        if self._html:
-            return self._html
-        elif self._html_filename:
-            return _read(self._html_filename, static_path=self._static_path)
+        return ''
+
+    def get_css(self, **kwargs):
+        return ''
 
     def update(self, **kwargs):
         """Update the widget's HTML contents."""
