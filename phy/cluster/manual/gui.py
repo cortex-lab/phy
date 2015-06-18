@@ -112,8 +112,9 @@ class ClusterManualGUI(BaseGUI):
         # when they're created.
         self.connect(self._connect_view, event='add_view')
         self.on_open()
+        self.wizard.start()
         if self._cluster_ids is None:
-            self.start()
+            self._cluster_ids = self.wizard.selection
         super(ClusterManualGUI, self)._initialize_views()
 
     # View methods
@@ -288,8 +289,8 @@ class ClusterManualGUI(BaseGUI):
         groups = {cluster: _group(cluster)
                   for cluster in self.clustering.cluster_ids}
         self.wizard.cluster_groups = groups
-        self.wizard.reset()
 
+        self.wizard.reset()
         # Set the similarity and quality functions for the wizard.
         @self.wizard.set_similarity_function
         def similarity(target, candidate):
@@ -460,8 +461,6 @@ class ClusterManualGUI(BaseGUI):
     # ---------------------------------------------------------------------
 
     def _wizard_select(self):
-        if not self.wizard.has_started:
-            self.wizard.start()
         self.select(self.wizard.selection)
 
     def reset_wizard(self):

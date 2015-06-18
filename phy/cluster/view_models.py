@@ -21,6 +21,7 @@ from ..plot.features import FeatureView, _matrix_from_dimensions
 from ..plot.waveforms import WaveformView
 from ..plot.traces import TraceView
 from ..gui.base import BaseViewModel, HTMLViewModel
+from ..gui._utils import _read
 
 
 #------------------------------------------------------------------------------
@@ -102,28 +103,33 @@ class BaseClusterViewModel(BaseViewModel):
         May be overriden."""
 
 
+def _css_cluster_colors():
+    colors = _selected_clusters_colors()
+    # HACK: this is the maximum number of clusters that can be displayed
+    # in an HTML view. If this number is exceeded, cluster colors will be
+    # wrong for the extra clusters.
+    n = 32
+
+    def _color(i):
+        i = i % len(colors)
+        c = colors[i]
+        c = (255 * c).astype(np.int32)
+        return 'rgb({}, {}, {})'.format(*c)
+
+    return ''.join(""".cluster_{i} {{
+                          color: {color};
+                      }}\n""".format(i=i, color=_color(i))
+                   for i in range(n))
+
+
 class HTMLClusterViewModel(BaseClusterViewModel, HTMLViewModel):
     """HTML view model that displays per-cluster information."""
 
-    # To be overriden
-    #--------------------------------------------------------------------------
-
-    _static_path = None
-    _html_filename = None
-    _html = ''
-
-    def _css_replacements(self, **kwargs):
-        colors = _selected_clusters_colors()
-
-        def _get_color(c):
-            c = (255 * c).astype(np.int32)
-            return 'rgb({}, {}, {})'.format(*c)
-
-        return {'%CLUSTER_COLOR_{}%'.format(i): _get_color(colors[i])
-                for i in range(len(colors))}
-
-    # Callbacks
-    #--------------------------------------------------------------------------
+    def get_css(self, **kwargs):
+        # TODO: improve this
+        # Currently, child classes *must* append some CSS to this parent's
+        # method.
+        return _css_cluster_colors()
 
     def on_select(self, cluster_ids):
         """Update the view after a new selection has been made."""
@@ -240,7 +246,6 @@ class VispyViewModel(BaseClusterViewModel):
 
 class StatsViewModel(HTMLClusterViewModel):
     """Display cluster statistics."""
-    _static_path = op.join(op.dirname(op.realpath(__file__)), 'manual/static')
 
     def get_html(self, cluster_ids=None, up=None):
         """Return the HTML table with the cluster statistics."""
@@ -267,6 +272,14 @@ class StatsViewModel(HTMLClusterViewModel):
                         value=value, style='cluster_{}'.format(i))
             html += '</tr>'
         return '<div class="stats"><table>\n' + html + '</table></div>'
+
+    def get_css(self, cluster_ids=None, up=None):
+        css = super(StatsViewModel, self).get_css(cluster_ids=cluster_ids,
+                                                  up=up)
+        static_path = op.join(op.dirname(op.realpath(__file__)),
+                              'manual/static/')
+        css += _read('styles.css', static_path=static_path)
+        return css
 
 
 #------------------------------------------------------------------------------
