@@ -92,12 +92,16 @@ class EventEmitter(object):
         Any positional and keyword arguments can be passed here, and they will
         be fowarded to the callback functions.
 
+        Return the list of callback return results.
+
         """
+        res = []
         for callback in self._callbacks.get(event, []):
             # Only keep the kwargs that are part of the callback's arg spec.
             kwargs = {n: v for n, v in kwargs.items()
                       if n in getargspec(callback).args}
-            callback(*args, **kwargs)
+            res.append(callback(*args, **kwargs))
+        return res
 
 
 #------------------------------------------------------------------------------
