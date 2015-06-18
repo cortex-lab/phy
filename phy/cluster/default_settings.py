@@ -178,3 +178,10 @@ waveforms_scale_factor = .01
 features_scale_factor = .01
 features_grid_scale_factor = features_scale_factor
 traces_scale_factor = .01
+
+
+# -----------------------------------------------------------------------------
+# Misc settings
+# -----------------------------------------------------------------------------
+
+log_file_level = 'info'

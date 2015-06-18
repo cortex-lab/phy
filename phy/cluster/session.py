@@ -11,7 +11,7 @@ from __future__ import print_function
 import os.path as op
 import shutil
 
-from ..utils.logging import info, warn
+from ..utils.logging import info, warn, FileLogger, register
 from ..utils.settings import _ensure_dir_exists
 from ..io.base import BaseSession
 from ..io.kwik.model import KwikModel
@@ -97,7 +97,13 @@ class Session(BaseSession):
 
     def _create_model(self, path):
         model = KwikModel(path, clustering=self._clustering)
+        self._create_logger(path)
         return model
+
+    def _create_logger(self, path):
+        path = op.splitext(path)[0] + '.log'
+        level = self.settings.get('log_file_level', 'info')
+        register(FileLogger(filename=path, level=level))
 
     def _save_model(self):
         """Save the spike clusters and cluster groups to the Kwik file."""
