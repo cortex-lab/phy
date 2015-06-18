@@ -92,6 +92,10 @@ class Wizard(object):
         self._best = None
         self._match = None
 
+    @property
+    def has_started(self):
+        return len(self._best_list) > 0
+
     # Quality functions
     #--------------------------------------------------------------------------
 

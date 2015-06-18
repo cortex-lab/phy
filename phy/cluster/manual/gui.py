@@ -20,7 +20,7 @@ from ..view_models import (WaveformViewModel,
                            TraceViewModel,
                            StatsViewModel,
                            )
-from ...utils.logging import debug, info
+from ...utils.logging import debug, info, warn
 from ...io.kwik.model import cluster_group_id
 from ._history import GlobalHistory
 from ._utils import ClusterMetadataUpdater
@@ -97,10 +97,11 @@ class ClusterManualGUI(BaseGUI):
         'stats': StatsViewModel,
     }
 
-    def __init__(self, model=None, store=None, **kwargs):
+    def __init__(self, model=None, store=None, cluster_ids=None, **kwargs):
         self.store = store
         self.wizard = Wizard()
         self._is_dirty = False
+        self._cluster_ids = cluster_ids
         super(ClusterManualGUI, self).__init__(model=model,
                                                vm_classes=self._vm_classes,
                                                **kwargs)
@@ -111,7 +112,8 @@ class ClusterManualGUI(BaseGUI):
         # when they're created.
         self.connect(self._connect_view, event='add_view')
         self.on_open()
-        self.start()
+        if self._cluster_ids is None:
+            self.start()
         super(ClusterManualGUI, self)._initialize_views()
 
     # View methods
@@ -438,7 +440,13 @@ class ClusterManualGUI(BaseGUI):
         # Do not re-select an already-selected list of clusters.
         if cluster_ids == self._cluster_ids:
             return
-        assert set(cluster_ids) <= set(self.clustering.cluster_ids)
+        if not set(cluster_ids) <= set(self.clustering.cluster_ids):
+            n_selected = len(cluster_ids)
+            cluster_ids = [cl for cl in cluster_ids
+                           if cl in self.clustering.cluster_ids]
+            n_kept = len(cluster_ids)
+            warn("{} of the {} selected clusters do not exist.".format(
+                 n_selected - n_kept, n_selected))
         debug("Select clusters {0:s}.".format(str(cluster_ids)))
         self._cluster_ids = cluster_ids
         self.emit('select', cluster_ids)
@@ -452,6 +460,8 @@ class ClusterManualGUI(BaseGUI):
     # ---------------------------------------------------------------------
 
     def _wizard_select(self):
+        if not self.wizard.has_started:
+            self.wizard.start()
         self.select(self.wizard.selection)
 
     def reset_wizard(self):
