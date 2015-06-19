@@ -377,6 +377,8 @@ class FeatureView(BaseSpikeCanvas):
 
         x_dim = np.empty((n_rows, n_rows), dtype=object)
         y_dim = np.empty((n_rows, n_rows), dtype=object)
+        x_dim.fill('time')
+        y_dim.fill((0, 0))
 
         self.visual.n_rows = n_rows
         # NOTE: update the private variable because we don't want dimension

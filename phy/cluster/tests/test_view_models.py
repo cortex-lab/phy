@@ -37,7 +37,7 @@ _N_SPIKES = 200
 _N_CHANNELS = 28
 _N_FETS = 3
 _N_SAMPLES_TRACES = 10000
-_N_FRAMES = 50
+_N_FRAMES = 2
 
 
 def setup():
