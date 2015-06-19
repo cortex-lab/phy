@@ -113,6 +113,13 @@ def test_store_corruption():
         session.close()
 
 
+def test_session_one_cluster():
+    session = Session()
+    # The disk store is not created if there is only one cluster.
+    session.open(model=MockModel(n_clusters=1))
+    assert session.store.disk_store is None
+
+
 def test_session_store_features():
     """Check that the cluster store works for features and masks."""
 

@@ -154,7 +154,8 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def _create_cluster_store(self):
-        if not self._use_store:
+        # Do not create the store if there is only one cluster.
+        if self.model.n_clusters <= 1 or not self._use_store:
             # Just use a mock store.
             self.store = create_store(self.model,
                                       self.model.spikes_per_cluster,
