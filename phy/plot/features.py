@@ -408,6 +408,11 @@ class FeatureView(BaseSpikeCanvas):
         self._pz._ymin = ymin
         self._pz._ymax = ymax
 
+        for i in range(n_rows):
+            for j in range(n_rows):
+                self._pz._xmin[i, j] = -1.
+                self._pz._xmax[i, j] = +1.
+
     @property
     def x_dim(self):
         return self.visual.x_dim
