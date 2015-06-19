@@ -826,8 +826,8 @@ class BaseFeatureViewModel(VispyViewModel):
                                           spikes=slice(None, None, k))
             self.view.background.features = self._rescale_features(features_bg)
             # Time dimension.
-            spike_samples = self.model.spike_samples[::k]
-            self.view.background.spike_samples = spike_samples
+            t = self.model.spike_samples[::k]
+            self.view.background.add_extra_feature('time', t)
         # Default dimensions.
         self._set_dimensions_after_open()
 
@@ -851,7 +851,8 @@ class BaseFeatureViewModel(VispyViewModel):
 
         # Spikes.
         self.view.visual.spike_ids = spikes
-        self.view.visual.spike_samples = self.model.spike_samples[spikes]
+        t = self.model.spike_samples[spikes]
+        self.view.add_extra_feature('time', t)
 
         # Cluster display order.
         self.view.visual.cluster_order = clusters

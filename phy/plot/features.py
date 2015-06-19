@@ -91,6 +91,10 @@ class BaseFeatureVisual(BaseSpikeVisual):
         self._extra_features[name] = array
 
     @property
+    def extra_features(self):
+        return self._extra_features
+
+    @property
     def features(self):
         """Displayed features.
 
@@ -444,7 +448,8 @@ class FeatureView(BaseSpikeCanvas):
 
     def add_extra_feature(self, name, array):
         self.visual.add_extra_feature(name, array)
-        self.background.add_extra_feature(name, array)
+        if name not in self.background.extra_features:
+            self.background.add_extra_feature(name, array)
 
     @property
     def dimensions_matrix(self):
