@@ -17,7 +17,7 @@ from ..utils._color import _selected_clusters_colors
 from ..utils import _as_list
 from ..stats.ccg import correlograms, _symmetrize_correlograms
 from ..plot.ccg import CorrelogramView
-from ..plot.features import FeatureView, _matrix_from_dimensions
+from ..plot.features import FeatureView
 from ..plot.waveforms import WaveformView
 from ..plot.traces import TraceView
 from ..gui.base import BaseViewModel, HTMLViewModel
@@ -700,6 +700,40 @@ class TraceViewModel(VispyViewModel):
 #------------------------------------------------------------------------------
 # Feature view models
 #------------------------------------------------------------------------------
+
+def _alternative_dimension(dim, n_features=None, n_channels=None):
+    assert n_features >= 1
+    assert n_channels >= 1
+    if dim == 'time':
+        return (0, 0)
+    else:
+        channel, fet = dim
+        if n_features >= 2:
+            return (channel, (fet + 1) % n_features)
+        elif n_channels >= 2:
+            return ((channel + 1) % n_channels, fet)
+        else:
+            return (0, 0)
+
+
+def _matrix_from_dimensions(dimensions, n_features=None, n_channels=None):
+    n = len(dimensions)
+    matrix = np.empty((n, n), dtype=object)
+    for i in range(n):
+        for j in range(n):
+            dim_x, dim_y = dimensions[i], dimensions[j]
+            if dim_x == dim_y:
+                dim_y = _alternative_dimension(dim_x,
+                                               n_features=n_features,
+                                               n_channels=n_channels,
+                                               )
+                # For aesthetical reasons, put time on the x axis if it is
+                # the alternative dimension.
+                if dim_y == 'time':
+                    dim_x, dim_y = dim_y, dim_x
+            matrix[i, j] = (dim_x, dim_y)
+    return matrix
+
 
 class BaseFeatureViewModel(VispyViewModel):
     """Features."""

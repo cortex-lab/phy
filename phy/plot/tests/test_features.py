@@ -93,8 +93,10 @@ def test_plot_features():
     c = plot_features(features, spike_clusters=spike_clusters, show=False)
     show_test(c)
 
+    dimensions_matrix = np.empty((1, 1), dtype=object)
+    dimensions_matrix[0, 0] = ('time', (1, 0))
     c = plot_features(features,
                       extra_features={'time': spike_samples},
-                      dimensions=['time', (5, 0)],
+                      dimensions_matrix=dimensions_matrix,
                       show=False)
     show_test(c)

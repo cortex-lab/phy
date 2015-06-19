@@ -30,40 +30,6 @@ from ..utils._color import _selected_clusters_colors
 # Features visual
 #------------------------------------------------------------------------------
 
-def _alternative_dimension(dim, n_features=None, n_channels=None):
-    assert n_features >= 1
-    assert n_channels >= 1
-    if dim == 'time':
-        return (0, 0)
-    else:
-        channel, fet = dim
-        if n_features >= 2:
-            return (channel, (fet + 1) % n_features)
-        elif n_channels >= 2:
-            return ((channel + 1) % n_channels, fet)
-        else:
-            return (0, 0)
-
-
-def _matrix_from_dimensions(dimensions, n_features=None, n_channels=None):
-    n = len(dimensions)
-    matrix = np.empty((n, n), dtype=object)
-    for i in range(n):
-        for j in range(n):
-            dim_x, dim_y = dimensions[i], dimensions[j]
-            if dim_x == dim_y:
-                dim_y = _alternative_dimension(dim_x,
-                                               n_features=n_features,
-                                               n_channels=n_channels,
-                                               )
-                # For aesthetical reasons, put time on the x axis if it is
-                # the alternative dimension.
-                if dim_y == 'time':
-                    dim_x, dim_y = dim_y, dim_x
-            matrix[i, j] = (dim_x, dim_y)
-    return matrix
-
-
 class BaseFeatureVisual(BaseSpikeVisual):
     """Display a grid of multidimensional features."""
 
@@ -390,7 +356,7 @@ class FeatureView(BaseSpikeCanvas):
 
     def set_data(self,
                  features=None,
-                 dimensions=None,
+                 dimensions_matrix=None,
                  masks=None,
                  spike_clusters=None,
                  extra_features=None,
@@ -414,8 +380,9 @@ class FeatureView(BaseSpikeCanvas):
         if masks is None:
             masks = np.ones(features.shape[:2], dtype=np.float32)
 
-        if dimensions is None:
-            dimensions = [(0, 0)]
+        if dimensions_matrix is None:
+            dimensions_matrix = np.empty((1, 1), dtype=object)
+            dimensions_matrix[0, 0] = ('time', (0, 0))
 
         if colors is None:
             colors = _selected_clusters_colors(n_clusters)
@@ -426,6 +393,8 @@ class FeatureView(BaseSpikeCanvas):
             assert features.shape[1:] == background_features.shape[1:]
             self.background.features = background_features.astype(np.float32)
 
+        if not extra_features:
+            extra_features = {'time': np.linspace(0., 1., n_spikes)}
         for name, array in (extra_features or {}).items():
             self.add_extra_feature(name, array)
 
@@ -433,11 +402,7 @@ class FeatureView(BaseSpikeCanvas):
             self.visual.masks = masks
 
         if not len(self.dimensions_matrix):
-            matrix = _matrix_from_dimensions(dimensions,
-                                             n_features=n_features,
-                                             n_channels=n_channels,
-                                             )
-            self.dimensions_matrix = matrix
+            self.dimensions_matrix = dimensions_matrix
 
         self.visual.spike_clusters = spike_clusters
         assert spike_clusters.shape == (n_spikes,)
