@@ -42,7 +42,7 @@ def _alternative_dimension(dim, n_features=None, n_channels=None):
         elif n_channels >= 2:
             return ((channel + 1) % n_channels, fet)
         else:
-            return 'time'
+            return (0, 0)
 
 
 def _matrix_from_dimensions(dimensions, n_features=None, n_channels=None):
@@ -74,26 +74,21 @@ class BaseFeatureVisual(BaseSpikeVisual):
         super(BaseFeatureVisual, self).__init__(**kwargs)
 
         self._features = None
-        self._spike_samples = None
+        # Mapping {feature_name: array} where the array must have n_spikes
+        # element.
+        self._extra_features = {}
         self._dimensions_matrix = np.empty((0, 0), dtype=object)
         self.n_channels, self.n_features = None, None
         self.n_rows = None
 
         _enable_depth_mask()
 
-    # Data properties
-    # -------------------------------------------------------------------------
-
-    @property
-    def spike_samples(self):
-        """Time samples of the displayed spikes."""
-        return self._spike_samples
-
-    @spike_samples.setter
-    def spike_samples(self, value):
-        assert isinstance(value, np.ndarray)
-        assert value.shape == (self.n_spikes,)
-        self._spike_samples = value
+    def add_extra_feature(self, name, array):
+        assert isinstance(array, np.ndarray)
+        assert array.ndim == 1
+        if self.n_spikes:
+            assert array.shape == (self.n_spikes,)
+        self._extra_features[name] = array
 
     @property
     def features(self):
@@ -130,25 +125,23 @@ class BaseFeatureVisual(BaseSpikeVisual):
             assert 0 <= channel < self.n_channels
             assert 0 <= feature < self.n_features
         elif isinstance(dim, string_types):
-            assert dim == 'time'
+            assert dim in self._extra_features
         else:
             raise ValueError('{0} should be (channel, feature) '.format(dim) +
-                             'or "time".')
+                             'or one of the extra features.')
 
     def _get_feature_dim(self, data, dim):
         if isinstance(dim, (tuple, list)):
             channel, feature = dim
             return data[:, channel, feature]
-        elif dim == 'time':
-            t = self._spike_samples
-            # Default times.
-            if t is None:
-                t = np.arange(self.n_spikes)
-            # Normalize time feature.
-            m = float(t.max())
-            if m > 0:
-                t = (-1. + 2 * t / m) * .8
-            return t
+        elif isinstance(dim, string_types) and dim in self._extra_features:
+            x = self._extra_features[dim]
+            x = _as_array(x, np.float32)
+            # Normalize extra feature.
+            m, M = float(x.min()), float(x.max())
+            d = float(max(1., M - m))
+            x = (-1. + 2 * (x - m) / d) * .8
+            return x
 
     def project(self, data, box):
         """Project data to a subplot's two-dimensional subspace.
@@ -184,7 +177,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
         This is a matrix of pairs of items which can be:
 
         * tuple `(channel_id, feature_idx)`
-        * `'time'`
+        * an extra feature
 
         """
         return self._dimensions_matrix
@@ -267,7 +260,7 @@ class FeatureVisual(BaseFeatureVisual):
         if isinstance(dim, (tuple, list)):
             channel, feature = dim
             return self._masks[:, channel]
-        elif dim == 'time':
+        else:
             return np.ones(self.n_spikes)
 
     def _set_dimensions_to_bake(self, value):
@@ -396,7 +389,7 @@ class FeatureView(BaseSpikeCanvas):
                  dimensions=None,
                  masks=None,
                  spike_clusters=None,
-                 spike_samples=None,
+                 extra_features=None,
                  background_features=None,
                  colors=None,
                  ):
@@ -428,9 +421,9 @@ class FeatureView(BaseSpikeCanvas):
         if background_features is not None:
             assert features.shape[1:] == background_features.shape[1:]
             self.background.features = background_features.astype(np.float32)
-            if spike_samples is not None:
-                assert spike_samples.shape == (n_spikes,)
-                self.background.spike_samples = spike_samples
+
+        for name, array in (extra_features or {}).items():
+            self.add_extra_feature(name, array)
 
         if masks is not None:
             self.visual.masks = masks
@@ -444,12 +437,14 @@ class FeatureView(BaseSpikeCanvas):
 
         self.visual.spike_clusters = spike_clusters
         assert spike_clusters.shape == (n_spikes,)
-        if spike_samples is not None:
-            self.visual.spike_samples = spike_samples
 
         self.visual.cluster_colors = colors
 
         self.update()
+
+    def add_extra_feature(self, name, array):
+        self.visual.add_extra_feature(name, array)
+        self.background.add_extra_feature(name, array)
 
     @property
     def dimensions_matrix(self):
@@ -458,7 +453,7 @@ class FeatureView(BaseSpikeCanvas):
         This is a matrix of pairs of items which can be:
 
         * tuple `(channel_id, feature_idx)`
-        * `'time'`
+        * an extra feature
 
         """
         if len(self.background.dimensions_matrix):

@@ -42,13 +42,12 @@ def _test_features(n_spikes=None, n_clusters=None):
     # Useful to test depth.
     # masks[n_spikes//2:, ...] = 0
     c.visual.masks = masks
+    c.add_extra_feature('time', spike_samples)
     matrix = np.empty((2, 2), dtype=object)
     matrix[...] = [[('time', (0, 0)), ((1, 0), (1, 1))],
                    [((2, 1), (1, 0)), ((1, 0), 'time')]]
     c.dimensions_matrix = matrix
     c.visual.spike_clusters = spike_clusters
-    c.visual.spike_samples = spike_samples
-    c.background.spike_samples = spike_samples
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])
 
@@ -81,7 +80,6 @@ def test_plot_features():
     show_test(c)
 
     c = plot_features(features,
-                      spike_samples=spike_samples,
                       show=False)
     show_test(c)
 
@@ -95,7 +93,7 @@ def test_plot_features():
     show_test(c)
 
     c = plot_features(features,
-                      spike_samples=spike_samples,
+                      extra_features={'time': spike_samples},
                       dimensions=['time', (5, 0)],
                       show=False)
     show_test(c)
