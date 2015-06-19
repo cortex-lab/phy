@@ -701,38 +701,44 @@ class TraceViewModel(VispyViewModel):
 # Feature view models
 #------------------------------------------------------------------------------
 
-def _alternative_dimension(dim, n_features=None, n_channels=None):
-    assert n_features >= 1
-    assert n_channels >= 1
-    if dim == 'time':
-        return (0, 0)
-    else:
-        channel, fet = dim
-        if n_features >= 2:
-            return (channel, (fet + 1) % n_features)
-        elif n_channels >= 2:
-            return ((channel + 1) % n_channels, fet)
-        else:
-            return (0, 0)
+def _best_channels(cluster, model=None, store=None):
+    """Return the channels with the largest mean features."""
+    n_fet = model.n_features_per_channel
+    score = store.mean_features(cluster)
+    score = score.reshape((-1, n_fet)).mean(axis=1)
+    assert len(score) == len(model.channel_order)
+    channels = np.argsort(score)[::-1]
+    return channels
 
 
-def _matrix_from_dimensions(dimensions, n_features=None, n_channels=None):
-    n = len(dimensions)
-    matrix = np.empty((n, n), dtype=object)
-    for i in range(n):
-        for j in range(n):
-            dim_x, dim_y = dimensions[i], dimensions[j]
-            if dim_x == dim_y:
-                dim_y = _alternative_dimension(dim_x,
-                                               n_features=n_features,
-                                               n_channels=n_channels,
-                                               )
-                # For aesthetical reasons, put time on the x axis if it is
-                # the alternative dimension.
-                if dim_y == 'time':
-                    dim_x, dim_y = dim_y, dim_x
-            matrix[i, j] = (dim_x, dim_y)
-    return matrix
+def _dimensions(x_channels, y_channels):
+    """Default dimensions matrix."""
+    # time, depth     time,    (x, 0)     time,    (y, 0)     time, (z, 0)
+    # time, (x', 0)   (x', 0), (x, 0)     (x', 1), (y, 0)     (x', 2), (z, 0)
+    # time, (y', 0)   (y', 0), (x, 1)     (y', 1), (y, 1)     (y', 2), (z, 1)
+    # time, (z', 0)   (z', 0), (x, 2)     (z', 1), (y, 2)     (z', 2), (z, 2)
+
+    n = len(x_channels)
+    assert len(y_channels) == n
+    y_dims = {}
+    x_dims = {}
+    # TODO: depth
+    x_dims[0, 0] = 'time'
+    y_dims[0, 0] = 'time'
+
+    # Time in first column and first row.
+    for i in range(1, n + 1):
+        x_dims[0, i] = 'time'
+        y_dims[0, i] = (x_channels[i - 1], 0)
+        x_dims[i, 0] = 'time'
+        y_dims[i, 0] = (y_channels[i - 1], 0)
+
+    for i in range(1, n + 1):
+        for j in range(1, n + 1):
+            x_dims[i, j] = (x_channels[i - 1], j - 1)
+            y_dims[i, j] = (y_channels[j - 1], i - 1)
+
+    return x_dims, y_dims
 
 
 class BaseFeatureViewModel(VispyViewModel):
@@ -781,69 +787,28 @@ class BaseFeatureViewModel(VispyViewModel):
         self.view.marker_size = value
 
     @property
-    def dimensions_matrix(self):
-        """The matrix of displayed dimensions.
-
-        * `matrix[i, j]` is a pair of *dimensions* (one entry per subplot).
-        * *dimension* is either `'time'` or `(channel_idx, feature_idx)`.
-
-        This variable offers fine-grained selection of dimensions in all
-        subplots and all axes.
-
-        Use `dimensions` for a more user-friendly, but less powerful parameter.
-
-        """
-        return self._view.dimensions_matrix
-
-    @dimensions_matrix.setter
-    def dimensions_matrix(self, value):
-        self._view.dimensions_matrix = value
-
-    @property
-    def dimensions(self):
-        """The list of displayed dimensions.
-
-        * `dimensions[i]` is a *dimensions* (one entry per column).
-        * *dimension* is either `'time'` or `(channel_idx, feature_idx)`.
-
-        This variable offers user-friendly selection of dimensions in every
-        row/column, instead of in every subplot like `dimensions_matrix`.
-        The assumption is that subplot `(i, j)` shows
-        `(dimensions[i], dimensions[j])`, with some extra logic for
-        the diagonal and time dimensions.
-
-        Use `dimensions_matrix` for a less user-friendly, but more
-        powerful parameter.
-
-        """
-        return [self.dimensions_matrix[0, i][0]
-                for i in range(len(self.dimensions_matrix))]
-
-    @dimensions.setter
-    def dimensions(self, value):
-        self.dimensions_matrix = self._matrix_from_dimensions(value)
-
-    @property
     def n_features(self):
         return self.view.background.n_features
 
-    def _matrix_from_dimensions(self, dimensions):
-        n_features = self.view.background.n_features
-        n_channels = self.view.background.n_channels
-        return _matrix_from_dimensions(dimensions,
-                                       n_features=n_features,
-                                       n_channels=n_channels,
-                                       )
+    @property
+    def n_rows(self):
+        """Number of rows in the view.
 
-    def _set_dimensions_after_open(self):
-        matrix = self._matrix_from_dimensions(['time'])
-        self.view.update_dimensions_matrix(matrix)
-        self.view.update()
+        To be overriden.
 
-    def _set_dimensions_after_select(self):
-        # Update the dimensions.
-        self.view.dimensions_matrix = self.view.dimensions_matrix
-        self.view.update()
+        """
+        return 1
+
+    def dimensions(self, cluster_ids):
+        """Return the x and y dimensions most appropriate for the set of
+        selected clusters.
+
+        To be overriden.
+
+        TODO: make this customizable.
+
+        """
+        return {}, {}
 
     def on_open(self):
         """Initialize the view when the model is opened."""
@@ -859,11 +824,11 @@ class BaseFeatureViewModel(VispyViewModel):
             features_bg = self.store.load('features',
                                           spikes=slice(None, None, k))
             self.view.background.features = self._rescale_features(features_bg)
-            # Time dimension.
-            t = self.model.spike_samples[::k]
-            self.view.background.add_extra_feature('time', t)
-        # Default dimensions.
-        self._set_dimensions_after_open()
+        # Time dimension.
+        t = self.model.spike_samples[::k]
+        self.view.add_extra_feature('time', t)
+        # Number of rows: number of features + 1 for
+        self.view.init_grid(self.n_rows)
 
     def on_select(self, clusters):
         """Update the view when the selection changes."""
@@ -891,8 +856,10 @@ class BaseFeatureViewModel(VispyViewModel):
         # Cluster display order.
         self.view.visual.cluster_order = clusters
 
-        # Default dimensions.
-        self._set_dimensions_after_select()
+        # Set default dimensions.
+        x_dims, y_dims = self.dimensions(clusters)
+        self.view.set_x_dimensions(x_dims)
+        self.view.set_y_dimensions(y_dims)
 
     def exported_params(self, save_size_pos=True):
         """Parameters to save automatically when the view is closed."""
@@ -910,99 +877,58 @@ class FeatureGridViewModel(BaseFeatureViewModel):
     """Features grid"""
     _view_name = 'features_grid'
 
-    def __init__(self, **kwargs):
-        self._dimension_selector = None
-        super(FeatureGridViewModel, self).__init__(**kwargs)
-
-    def set_dimension_selector(self, func):
-        """Decorator for a function that selects the best projection.
-
-        The decorated function must have the following signature:
-
-        ```python
-        @view_model.set_dimension_selector
-        def choose(cluster_ids):
-            # ...
-            return channel_idxs  # a list with 3 relative channel indices
-        ```
-
-        """
-        self._dimension_selector = func
-
-    def default_dimension_selector(self, cluster_ids):
-        """Return the channels with the largest mean features.
-
-        Only the first cluster is used currently.
-
-        """
-        if cluster_ids is None or not len(cluster_ids):
-            return np.arange(len(self.model.channels[:3]))
-        n_fet = self.model.n_features_per_channel
-        score = self.store.mean_features(cluster_ids[0])
-        score = score.reshape((-1, n_fet)).mean(axis=1)
-        # Take the best 3 channels.
-        assert len(score) == len(self.model.channel_order)
-        channels = np.argsort(score)[::-1][:3]
-        return channels
-
-    @property
-    def default_dimensions(self):
-        """List of dimensions currently displayed."""
-        dimension_selector = (self._dimension_selector or
-                              self.default_dimension_selector)
-        channels = dimension_selector(self.cluster_ids)
-        return ['time'] + [(ch, 0) for ch in channels]
-
-    def _set_dimensions_after_open(self):
-        matrix = self._matrix_from_dimensions(self.default_dimensions)
-        self.view.update_dimensions_matrix(matrix)
-        self.view.update()
-
-    def _set_dimensions_after_select(self):
-        matrix = self._matrix_from_dimensions(self.default_dimensions)
-        self.view.dimensions_matrix = matrix
-        self.view.update()
-
     keyboard_shortcuts = {
         'enlarge_subplot': 'ctrl+click',
     }
+
+    @property
+    def n_rows(self):
+        return self.n_features + 1
+
+    def dimensions(self, cluster_ids):
+        """Return the x and y dimensions most appropriate for the set of
+        selected clusters.
+
+        TODO: make this customizable.
+
+        """
+        n = len(cluster_ids)
+        if not n:
+            return {}, {}
+        x_channels = _best_channels(cluster_ids[min(1, n - 1)],
+                                    model=self.model,
+                                    store=self.store,
+                                    )
+        y_channels = _best_channels(cluster_ids[0],
+                                    model=self.model,
+                                    store=self.store,
+                                    )
+        y_channels = y_channels[:self.n_rows - 1]
+        # For the x axis, remove the channels that already are in
+        # the y axis.
+        x_channels = [c for c in x_channels if c not in y_channels]
+        # Now, select the right number of channels in the x axis.
+        x_channels = x_channels[:self.n_rows - 1]
+        return _dimensions(x_channels, y_channels)
 
 
 class FeatureViewModel(BaseFeatureViewModel):
     """Feature view with a single subplot."""
     _view_name = 'features'
+    _x_dim = 'time'
+    _y_dim = (0, 0)
 
-    def _set_dimensions_after_select(self):
-        self.view.dimensions_matrix = self.view.dimensions_matrix
-        self.view.update()
+    @property
+    def n_rows(self):
+        return 1
 
-    def set_auto_dimension(self, dim):
-        """Set a dimension on one axis and select the other automatically.
+    def set_x_dimension(self, dim):
+        self._x_dim = dim
+        self.view.set_x_dimensions({(0, 0): dim})
 
-        Parameters
-        ----------
+    def set_y_dimension(self, dim):
+        self._y_dim = dim
+        self.view.set_y_dimensions({(0, 0): dim})
 
-        dim : str or tuple
-            This is either `'time'` or `(channel_idx, feature_idx)`.
-
-        """
-        matrix = self._matrix_from_dimensions([dim])
-        self.view.dimensions_matrix = matrix
-
-    def set_dimensions(self, dim_x=None, dim_y=None):
-        """Set the dimensions of both axes.
-
-        Parameters
-        ----------
-
-        dim_x and dim_y : str or tuple
-            This is either `'time'` or `(channel_idx, feature_idx)`.
-
-        """
-        matrix = self.view.dimensions_matrix
-        if dim_x is None:
-            dim_x = matrix[0, 0][0]
-        if dim_y is None:
-            dim_y = matrix[0, 0][1]
-        matrix[0, 0] = (dim_x, dim_y)
-        self.view.dimensions_matrix = matrix
+    def dimensions(self, cluster_ids):
+        return self._x_dim, self._y_dim
