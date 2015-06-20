@@ -815,7 +815,7 @@ class BaseFeatureViewModel(VispyViewModel):
         return {}, {}
 
     def set_dimension(self, axis, box, dim, smart=True):
-        """Set a (smart) dimension."""
+        """Set a dimension."""
         if smart:
             dim = self.view.smart_dimension(axis, box, dim)
         self.view.set_dimensions(axis, {box: dim})

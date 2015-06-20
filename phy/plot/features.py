@@ -54,7 +54,14 @@ class BaseFeatureVisual(BaseSpikeVisual):
         assert isinstance(array, np.ndarray)
         assert array.ndim == 1
         if self.n_spikes:
-            assert array.shape == (self.n_spikes,)
+            if array.shape != (self.n_spikes,):
+                msg = ("Unable to add the extra feature "
+                       "`{}`: ".format(name) +
+                       "there should be {} ".format(self.n_spikes) +
+                       "elements in the specified vector, not "
+                       "{}.".format(len(array)))
+                raise ValueError(msg)
+
         self._extra_features[name] = array
 
     @property
