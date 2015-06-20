@@ -45,10 +45,10 @@ def _test_features(n_spikes=None, n_clusters=None):
     c.visual.masks = masks
     c.add_extra_feature('time', spike_samples)
     c.add_extra_feature('test', np.sin(np.linspace(-10., 10., n_spikes)))
-    c.set_x_dimensions([['time', (1, 0)],
-                        [(2, 1), 'time']])
-    c.set_y_dimensions([[(0, 0), (1, 1)],
-                        [(1, 0), 'test']])
+    c.set_dimensions('x', [['time', (1, 0)],
+                           [(2, 1), 'time']])
+    c.set_dimensions('y', [[(0, 0), (1, 1)],
+                           [(1, 0), 'test']])
     c.visual.spike_clusters = spike_clusters
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])

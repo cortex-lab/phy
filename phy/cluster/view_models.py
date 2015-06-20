@@ -814,6 +814,12 @@ class BaseFeatureViewModel(VispyViewModel):
         """
         return {}, {}
 
+    def set_dimension(self, axis, box, dim, smart=True):
+        """Set a (smart) dimension."""
+        if smart:
+            dim = self.view.smart_dimension(axis, box, dim)
+        self.view.set_dimensions(axis, {box: dim})
+
     @property
     def x_dim(self):
         return self.view.x_dim
@@ -870,8 +876,8 @@ class BaseFeatureViewModel(VispyViewModel):
 
         # Set default dimensions.
         x_dim, y_dim = self.dimensions_for_clusters(clusters)
-        self.view.set_x_dimensions(x_dim)
-        self.view.set_y_dimensions(y_dim)
+        self.view.set_dimensions('x', x_dim)
+        self.view.set_dimensions('y', y_dim)
 
     def exported_params(self, save_size_pos=True):
         """Parameters to save automatically when the view is closed."""
@@ -942,13 +948,10 @@ class FeatureViewModel(BaseFeatureViewModel):
     def y_dim(self):
         return self._y_dim
 
-    def set_x_dimension(self, dim):
-        self._x_dim = dim
-        self.view.set_x_dimensions({(0, 0): dim})
-
-    def set_y_dimension(self, dim):
-        self._y_dim = dim
-        self.view.set_y_dimensions({(0, 0): dim})
+    def set_dimension(self, axis, dim, smart=True):
+        """Set a (smart) dimension."""
+        super(FeatureViewModel, self).set_dimension(axis, (0, 0), dim,
+                                                    smart=smart)
 
     def dimensions_for_clusters(self, cluster_ids):
         return self._x_dim, self._y_dim

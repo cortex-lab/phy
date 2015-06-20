@@ -432,15 +432,10 @@ class FeatureView(BaseSpikeCanvas):
         min[box] = -1.
         max[box] = +1.
 
-    def set_x_dimensions(self, dimensions):
+    def set_dimensions(self, axis, dimensions):
         for box, dim in _iter_dimensions(dimensions):
-            self._set_dimension('x', box, dim)
+            self._set_dimension(axis, box, dim)
         self. _update_dimensions()
-
-    def set_y_dimensions(self, dimensions):
-        for box, dim in _iter_dimensions(dimensions):
-            self._set_dimension('y', box, dim)
-        self._update_dimensions()
 
     def smart_dimension(self,
                         axis,
@@ -528,8 +523,8 @@ class FeatureView(BaseSpikeCanvas):
             extra_features = {'time': np.linspace(0., 1., n_spikes)}
         for name, array in (extra_features or {}).items():
             self.add_extra_feature(name, array)
-        self.set_x_dimensions(x_dimensions or {(0, 0): 'time'})
-        self.set_y_dimensions(y_dimensions or {(0, 0): (0, 0)})
+        self.set_dimensions('x', x_dimensions or {(0, 0): 'time'})
+        self.set_dimensions('y', y_dimensions or {(0, 0): (0, 0)})
 
         self.update()
 

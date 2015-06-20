@@ -172,26 +172,30 @@ class ClusterManualGUI(BaseGUI):
 
             @waveforms.view.connect
             def on_channel_click(e):
-                channel = e.channel_idx
-                ax = 'x' if e.button == 1 else 'y'
-                feature = 0
-                # Find the current dimension in the view.
-                prev = features.x_dim if ax == 'x' else features.y_dim
-                if prev != 'time':
-                    prev_channel, prev_feature = prev
-                    # Scroll the feature if the channel is the same.
-                    if prev_channel == channel:
-                        feature = (prev_feature + 1) % features.n_features
-                    # Scroll the feature if it is the same than in the other
-                    # axis.
-                    other = features.x_dim if ax == 'y' else features.y_dim
-                    if other != 'time' and other == (channel, feature):
-                        feature = (feature + 1) % features.n_features
-                if ax == 'x':
-                    features.set_x_dimension((channel, feature))
-                else:
-                    features.set_y_dimension((channel, feature))
+                # The box id is set when the features grid view is to be
+                # updated.
+                if e.box_idx is not None:
+                    return
+                dimension = (e.channel_idx, 0)
+                features.set_dimension(e.ax, dimension)
                 features.update()
+
+        # Select feature grid dimension from waveform view.
+        @self.connect_views('waveforms', 'features_grid')
+        def channel_click_grid(waveforms, features_grid):
+
+            @waveforms.view.connect
+            def on_channel_click(e):
+                # The box id is set when the features grid view is to be
+                # updated.
+                if e.box_idx is None:
+                    return
+                if not (1 <= e.box_idx <= features_grid.n_rows - 1):
+                    return
+                dimension = (e.channel_idx, 0)
+                box = (e.box_idx, e.box_idx)
+                features_grid.set_dimension(e.ax, box, dimension)
+                features_grid.update()
 
         # Enlarge feature subplot.
         @self.connect_views('features_grid', 'features')
@@ -199,8 +203,8 @@ class ClusterManualGUI(BaseGUI):
 
             @grid.view.connect
             def on_enlarge(e):
-                features.set_x_dimension(e.x_dim)
-                features.set_y_dimension(e.y_dim)
+                features.set_dimension('x', e.x_dim, smart=False)
+                features.set_dimension('y', e.y_dim, smart=False)
                 features.update()
 
     def _view_model_kwargs(self, name):
@@ -443,7 +447,7 @@ class ClusterManualGUI(BaseGUI):
 
     def show_features_time(self):
         for vm in self.get_views('features'):
-            vm.set_x_dimension('time')
+            vm.set_dimension('x', 'time')
 
     # Selection
     # ---------------------------------------------------------------------
