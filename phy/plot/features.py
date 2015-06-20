@@ -167,7 +167,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
         * an extra feature name (string)
 
         """
-        return self._x_dim
+        return self._y_dim
 
     @y_dim.setter
     def y_dim(self, value):
@@ -281,9 +281,9 @@ class FeatureVisual(BaseFeatureVisual):
                 pos = self.project(self._features, (i, j))
                 positions.append(pos)
 
-                # The mask depends on the `y` coordinate.
-                dim = self._y_dim[i, j]
-                mask = self._get_mask_dim(dim)
+                # The mask depends on both the `x` and `y` coordinates.
+                mask = np.maximum(self._get_mask_dim(self._x_dim[i, j]),
+                                  self._get_mask_dim(self._y_dim[i, j]))
                 masks.append(mask.astype(np.float32))
 
                 index = self.n_rows * i + j
@@ -543,6 +543,7 @@ class FeatureView(BaseSpikeCanvas):
         shift = e.modifiers == ('Shift',)
         if shift:
             if e.button == 1:
+                # Lasso.
                 n_rows = self.lasso.n_rows
 
                 box = self._pz._get_box(e.pos)
@@ -560,6 +561,7 @@ class FeatureView(BaseSpikeCanvas):
                 self.lasso.clear()
             self.update()
         elif control:
+            # Enlarge.
             box = self._pz._get_box(e.pos)
             self.emit('enlarge',
                       box=box,

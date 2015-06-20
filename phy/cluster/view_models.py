@@ -239,6 +239,10 @@ class VispyViewModel(BaseClusterViewModel):
             shortcuts.update(self.keyboard_shortcuts)
             _show_shortcuts(shortcuts, name=self.name)
 
+    def update(self):
+        """Update the view."""
+        self.view.update()
+
 
 #------------------------------------------------------------------------------
 # Stats panel

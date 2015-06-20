@@ -174,11 +174,9 @@ class ClusterManualGUI(BaseGUI):
             def on_channel_click(e):
                 channel = e.channel_idx
                 ax = 'x' if e.button == 1 else 'y'
-                ax_n = 0 if ax == 'x' else 1
                 feature = 0
                 # Find the current dimension in the view.
-                mat = features.dimensions_matrix
-                prev = mat[0, 0][ax_n]
+                prev = features.x_dim if ax == 'x' else features.y_dim
                 if prev != 'time':
                     prev_channel, prev_feature = prev
                     # Scroll the feature if the channel is the same.
@@ -186,10 +184,14 @@ class ClusterManualGUI(BaseGUI):
                         feature = (prev_feature + 1) % features.n_features
                     # Scroll the feature if it is the same than in the other
                     # axis.
-                    other = mat[0, 0][1 - ax_n]
+                    other = features.x_dim if ax == 'y' else features.y_dim
                     if other != 'time' and other == (channel, feature):
                         feature = (feature + 1) % features.n_features
-                features.set_dimensions(**{'dim_' + ax: (channel, feature)})
+                if ax == 'x':
+                    features.set_x_dimension((channel, feature))
+                else:
+                    features.set_y_dimension((channel, feature))
+                features.update()
 
         # Enlarge feature subplot.
         @self.connect_views('features_grid', 'features')
@@ -197,7 +199,9 @@ class ClusterManualGUI(BaseGUI):
 
             @grid.view.connect
             def on_enlarge(e):
-                features.set_dimensions(*e.dimensions)
+                features.set_x_dimension(e.x_dim)
+                features.set_y_dimension(e.y_dim)
+                features.update()
 
     def _view_model_kwargs(self, name):
         kwargs = {'model': self.model,
