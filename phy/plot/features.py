@@ -563,7 +563,8 @@ class FeatureView(BaseSpikeCanvas):
             box = self._pz._get_box(e.pos)
             self.emit('enlarge',
                       box=box,
-                      dimensions=self.dimensions_matrix[box],
+                      x_dim=self.x_dim[box],
+                      y_dim=self.y_dim[box],
                       )
 
     def on_key_press(self, event):
