@@ -257,35 +257,7 @@ class SpikeDetekt(object):
 
         return chunk_components
 
-    def run_serial(self, traces, interval=None):
-        """Run SpikeDetekt on one core."""
-        n_samples, n_channels = traces.shape
-
-        # Take a subset if necessary.
-        if interval is not None:
-            start, end = interval
-            traces = traces[start:end, ...]
-        else:
-            start, end = 0, n_samples
-        assert 0 <= start < end <= n_samples
-
-        # Find the weak and strong thresholds.
-        info("Finding the thresholds...")
-        thresholds = self.find_thresholds(traces)
-        debug("Thresholds: {}.".format(thresholds))
-
-        # Pass 1: find the connected components and count the spikes.
-        info("Detecting spikes...")
-        # Ditionary {chunk_start: components}.
-        chunk_components = self.detect_spikes(traces, thresholds)
-        n_spikes_per_chunk = {key: len(val)
-                              for key, val in chunk_components.items()}
-        n_spikes_total = sum(n_spikes_per_chunk.values())
-        info("{} spikes detected in total.".format(n_spikes_total))
-
-        # PASS 2: extract the spikes and save some waveforms before PCA
-        # -------------------------------------------------------------
-
+    def find_waveforms(self, traces, chunk_components, n_spikes_total):
         # Waveforms to keep for each chunk in order to compute the PCs.
         chunk_waveforms = {}
         n_waveforms_max = self._kwargs['pca_nwaveforms_max']
@@ -317,21 +289,58 @@ class SpikeDetekt(object):
             w = waveforms[::k, ...]
             m = masks[::k, ...]
             chunk_waveforms[s_start] = w, m
+        return chunk_waveforms
 
-        # Compute the PCs.
+    def find_pcs(self, chunk_waveforms):
         waveforms_subset, masks_subset = zip(*chunk_waveforms.values())
         waveforms_subset = np.array(waveforms_subset)
         masks_subset = np.array(masks_subset)
-        assert (waveforms.shape[0], waveforms.shape[2]) == masks_subset.shape
+        assert (waveforms_subset.shape[0],
+                waveforms_subset.shape[2]) == masks_subset.shape
         pcs = self.waveform_pcs(waveforms_subset, masks_subset)
+        return pcs
 
-        # PASS 3: compute the features
-        # ----------------------------
+    def run_serial(self, traces, interval=None):
+        """Run SpikeDetekt on one core."""
+        n_samples, n_channels = traces.shape
 
+        # Take a subset if necessary.
+        if interval is not None:
+            start, end = interval
+            traces = traces[start:end, ...]
+        else:
+            start, end = 0, n_samples
+        assert 0 <= start < end <= n_samples
+
+        # Find the weak and strong thresholds.
+        info("Finding the thresholds...")
+        thresholds = self.find_thresholds(traces)
+        debug("Thresholds: {}.".format(thresholds))
+
+        # Pass 1: find the connected components and count the spikes.
+        info("Detecting spikes...")
+        # Ditionary {chunk_start: components}.
+        chunk_components = self.detect_spikes(traces, thresholds)
+        n_spikes_per_chunk = {key: len(val)
+                              for key, val in chunk_components.items()}
+        n_spikes_total = sum(n_spikes_per_chunk.values())
+        info("{} spikes detected in total.".format(n_spikes_total))
+
+        # Pass 2: extract the spikes and save some waveforms before PCA.
+        chunk_waveforms = self.find_waveforms(traces,
+                                              chunk_components,
+                                              n_spikes_total,
+                                              )
+
+        # Compute the PCs.
+        pcs = self.find_pcs(chunk_waveforms)
+
+        # Pass 3: compute the features.
         for bounds, chunk, chunk_f in self.iter_chunks(traces):
             s_start, s_end, keep_start, keep_end = bounds
             # TODO: load waveforms from disk
-            waveforms = None
+            # memmap, load by chunk, refactor from store
+            # waveforms = self._load('waveforms', np.float32, ())
             self.features(waveforms, pcs)
 
 
