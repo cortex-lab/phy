@@ -61,7 +61,7 @@ class SpikeDetekt(object):
                                  join_size=join_size,
                                  )
 
-    def _create_extractor(self):
+    def _create_extractor(self, thresholds):
         before = self._kwargs['extract_s_before']
         after = self._kwargs['extract_s_after']
         weight_power = self._kwargs['weight_power']
@@ -70,6 +70,7 @@ class SpikeDetekt(object):
                                  extract_after=after,
                                  weight_power=weight_power,
                                  channels_per_group=probe_channels,
+                                 thresholds=thresholds,
                                  )
 
     def _create_pca(self):
@@ -135,7 +136,7 @@ class SpikeDetekt(object):
         return detector(weak_crossings=weak,
                         strong_crossings=strong)
 
-    def extract_spikes(self, components, traces_f):
+    def extract_spikes(self, components, traces_f, thresholds=None):
         """Extract spikes from connected components.
 
         Parameters
@@ -144,6 +145,8 @@ class SpikeDetekt(object):
             List of connected components.
         traces_f : array
             Filtered data.
+        thresholds : dict
+            The weak and strong thresholds.
 
         Returns
         -------
@@ -161,11 +164,12 @@ class SpikeDetekt(object):
         thresholder = self._create_thresholder()
         traces_t = thresholder.transform(traces_f)
         # Extract all waveforms.
-        extractor = self._create_extractor()
-        samples, waveforms, masks = zip(*(extractor(component,
+        extractor = self._create_extractor(thresholds)
+        samples, waveforms, masks = zip(*[extractor(component,
                                                     data=traces_f,
-                                                    data_t=traces_t)
-                                          for component in components))
+                                                    data_t=traces_t,
+                                                    )
+                                          for component in components])
         # Create the return arrays.
         samples = np.array(samples, dtype=np.uint64)
         waveforms = np.array(waveforms, dtype=np.float32)

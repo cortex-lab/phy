@@ -72,6 +72,8 @@ class Thresholder(object):
         assert mode in ('positive', 'negative', 'both')
         if isinstance(thresholds, (float, int)):
             thresholds = {'default': thresholds}
+        if thresholds is None:
+            thresholds = {}
         assert isinstance(thresholds, dict)
         self._mode = mode
         self._thresholds = thresholds

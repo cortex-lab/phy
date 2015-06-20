@@ -54,7 +54,19 @@ def test_spike_detect():
     traces_f[3000:3020, :] *= 5
     components = sd.detect(traces_f, thresholds)
     assert isinstance(components, list)
-    print(len(components))
+    n_spikes = len(components)
+    n_samples_waveforms = (params['extract_s_before'] +
+                           params['extract_s_after'])
+
+    samples, waveforms, masks = sd.extract_spikes(components,
+                                                  traces_f,
+                                                  thresholds=thresholds,
+                                                  )
+    assert samples.dtype == np.uint64
+    assert samples.shape == (n_spikes,)
+
+    assert waveforms.shape == (n_spikes, n_samples_waveforms, n_channels)
+    assert masks.shape == (n_spikes, n_channels)
 
 
 def test_cluster():
