@@ -37,7 +37,7 @@ def _test_waveforms(n_spikes=None, n_clusters=None):
     masks = artificial_masks(n_spikes, n_channels)
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
-    c = WaveformView()
+    c = WaveformView(keys='interactive')
     c.visual.waveforms = waveforms
     # Test depth.
     # masks[n_spikes//2:, ...] = 0

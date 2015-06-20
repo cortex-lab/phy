@@ -37,7 +37,7 @@ def _test_traces(n_samples=None):
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     spike_samples = np.linspace(50, n_samples - 50, n_spikes).astype(np.uint64)
 
-    c = TraceView()
+    c = TraceView(keys='interactive')
     c.visual.traces = traces
     c.visual.n_samples_per_spike = 20
     c.visual.spike_samples = spike_samples

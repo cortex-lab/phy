@@ -46,7 +46,7 @@ def _test_correlograms(n_clusters=None):
 
     correlograms = artificial_correlograms(n_clusters, n_samples)
 
-    c = CorrelogramView()
+    c = CorrelogramView(keys='interactive')
     c.cluster_ids = np.arange(n_clusters)
     c.visual.correlograms = correlograms
     c.visual.cluster_colors = np.array([_random_color()

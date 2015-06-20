@@ -36,7 +36,7 @@ def _test_features(n_spikes=None, n_clusters=None):
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     spike_samples = artificial_spike_samples(n_spikes).astype(np.float32)
 
-    c = FeatureView()
+    c = FeatureView(keys='interactive')
     c.init_grid(2)
     c.visual.features = features
     c.background.features = features * 2.
@@ -53,7 +53,7 @@ def _test_features(n_spikes=None, n_clusters=None):
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])
 
-    show_test(c)
+    show_test(c, 0)
 
 
 def test_features_empty():
