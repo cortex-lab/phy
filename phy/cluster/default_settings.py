@@ -157,6 +157,11 @@ def on_open(session):
     pass
 
 
+def on_view_open(view):
+    """You can customize a view when it is open."""
+    pass
+
+
 # Whether to ask the user if they want to save when the GUI is closed.
 prompt_save_on_exit = True
 
