@@ -115,4 +115,4 @@ class PCA(object):
             pcs = self._pcs
         # Need to call fit() if the pcs are None here.
         assert pcs is not None
-        return _project_pcs(waveforms, self._pcs)
+        return _project_pcs(waveforms, pcs)

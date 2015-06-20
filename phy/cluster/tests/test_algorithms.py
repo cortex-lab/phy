@@ -58,15 +58,30 @@ def test_spike_detect():
     n_samples_waveforms = (params['extract_s_before'] +
                            params['extract_s_after'])
 
+    # Spike extraction.
     samples, waveforms, masks = sd.extract_spikes(components,
                                                   traces_f,
                                                   thresholds=thresholds,
                                                   )
     assert samples.dtype == np.uint64
     assert samples.shape == (n_spikes,)
-
     assert waveforms.shape == (n_spikes, n_samples_waveforms, n_channels)
     assert masks.shape == (n_spikes, n_channels)
+    assert 0. <= masks.min() < masks.max() <= 1.
+    assert not np.any(np.isnan(samples))
+    assert not np.any(np.isnan(waveforms))
+    assert not np.any(np.isnan(masks))
+
+    # PCA.
+    pcs = sd.waveform_pcs(waveforms, masks)
+    n_pcs = params['nfeatures_per_channel']
+    assert pcs.shape == (n_pcs, n_samples_waveforms, n_channels)
+    assert not np.any(np.isnan(pcs))
+
+    # Features.
+    features = sd.features(waveforms, pcs)
+    assert features.shape == (n_spikes, n_channels, n_pcs)
+    assert not np.any(np.isnan(features))
 
 
 def test_cluster():
