@@ -376,7 +376,7 @@ class WaveformView(BaseSpikeCanvas):
         'probe_width_decrease': ('shift+left', 'ctrl+alt+wheel down'),
         'probe_height_increase': ('shift+up', 'shift+alt+wheel up'),
         'probe_height_decrease': ('shift+down', 'shift+alt+wheel down'),
-        'select_channel': ('ctrl+left click', 'ctrl+right click'),
+        'select_channel': ('ctrl+left click', 'ctrl+right click', 'num+click'),
     }
 
     def on_key_press(self, event):
@@ -454,6 +454,7 @@ class WaveformView(BaseSpikeCanvas):
         self.emit("channel_click",
                   channel_idx=channel_idx,
                   button=e.button,
+                  key=e.key,
                   )
 
     def on_draw(self, event):
@@ -471,6 +472,6 @@ class WaveformView(BaseSpikeCanvas):
 
 @_wrap_vispy
 def plot_waveforms(waveforms, **kwargs):
-    c = WaveformView()
+    c = WaveformView(keys='interactive')
     c.set_data(waveforms, **kwargs)
     return c

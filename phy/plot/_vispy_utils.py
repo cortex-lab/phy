@@ -73,7 +73,6 @@ def _wrap_vispy(f):
     """
     def wrapped(*args, **kwargs):
         show = kwargs.pop('show', True)
-        kwargs['interactive'] = True
         canvas = f(*args, **kwargs)
         if show:
             canvas.show()

@@ -297,6 +297,6 @@ class TraceView(BaseSpikeCanvas):
 
 @_wrap_vispy
 def plot_traces(traces, **kwargs):
-    c = TraceView()
+    c = TraceView(keys='interactive')
     c.set_data(traces, **kwargs)
     return c

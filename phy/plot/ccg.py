@@ -234,7 +234,7 @@ def plot_correlograms(correlograms, **kwargs):
         A list of colors as RGB tuples.
 
     """
-    c = CorrelogramView()
+    c = CorrelogramView(keys='interactive')
     c.set_data(correlograms, **kwargs)
     return c
 

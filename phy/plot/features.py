@@ -421,9 +421,7 @@ class FeatureView(BaseSpikeCanvas):
     def y_dim(self):
         return self.visual.y_dim
 
-    def _set_dim(self, axis, box, dim):
-        # matrix = self._x_dim if axis == 'x' else self._y_dim
-        # matrix[box] = dim
+    def _set_dimension(self, axis, box, dim):
         self.background.set_dimension(axis, box, dim)
         self.visual.set_dimension(axis, box, dim)
         if dim != 'time':
@@ -434,19 +432,47 @@ class FeatureView(BaseSpikeCanvas):
         min[box] = -1.
         max[box] = +1.
 
-    def _update_dimensions(self):
-        self.background._update_dimensions()
-        self.visual._update_dimensions()
-
     def set_x_dimensions(self, dimensions):
         for box, dim in _iter_dimensions(dimensions):
-            self._set_dim('x', box, dim)
+            self._set_dimension('x', box, dim)
         self. _update_dimensions()
 
     def set_y_dimensions(self, dimensions):
         for box, dim in _iter_dimensions(dimensions):
-            self._set_dim('y', box, dim)
+            self._set_dimension('y', box, dim)
         self._update_dimensions()
+
+    def smart_dimension(self,
+                        axis,
+                        box,
+                        dim,
+                        ):
+        """Smartify a dimension selection by ensuring x != y."""
+        if not isinstance(dim, tuple):
+            return dim
+        n_features = self.visual.n_features
+        # Find current dimensions.
+        mat = self.x_dim if axis == 'x' else self.y_dim
+        mat_other = self.x_dim if axis == 'y' else self.y_dim
+        prev_dim = mat[box]
+        prev_dim_other = mat_other[box]
+        # Select smart new dimension.
+        if prev_dim != 'time':
+            channel, feature = dim
+            prev_channel, prev_feature = prev_dim
+            # Scroll the feature if the channel is the same.
+            if prev_channel == channel:
+                feature = (prev_feature + 1) % n_features
+            # Scroll the feature if it is the same than in the other axis.
+            if (prev_dim_other != 'time' and
+                    prev_dim_other == (channel, feature)):
+                feature = (feature + 1) % n_features
+            dim = (channel, feature)
+        return dim
+
+    def _update_dimensions(self):
+        self.background._update_dimensions()
+        self.visual._update_dimensions()
 
     def set_data(self,
                  features=None,
@@ -585,6 +611,6 @@ class FeatureView(BaseSpikeCanvas):
 
 @_wrap_vispy
 def plot_features(features, **kwargs):
-    c = FeatureView()
+    c = FeatureView(keys='interactive')
     c.set_data(features, **kwargs)
     return c
