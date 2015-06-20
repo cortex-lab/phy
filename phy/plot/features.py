@@ -424,13 +424,15 @@ class FeatureView(BaseSpikeCanvas):
     def _set_dimension(self, axis, box, dim):
         self.background.set_dimension(axis, box, dim)
         self.visual.set_dimension(axis, box, dim)
-        if dim != 'time':
-            return
-        # NOTE: the private variables are the matrices.
         min = self._pz._xmin if axis == 'x' else self._pz._ymin
         max = self._pz._xmax if axis == 'x' else self._pz._ymax
-        min[box] = -1.
-        max[box] = +1.
+        if dim == 'time':
+            # NOTE: the private variables are the matrices.
+            min[box] = -1.
+            max[box] = +1.
+        else:
+            min[box] = None
+            max[box] = None
 
     def set_dimensions(self, axis, dimensions):
         for box, dim in _iter_dimensions(dimensions):
