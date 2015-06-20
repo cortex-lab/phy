@@ -439,7 +439,7 @@ class ClusterManualGUI(BaseGUI):
 
     def show_features_time(self):
         for vm in self.get_views('features'):
-            vm.set_dimensions(dim_x='time')
+            vm.set_x_dimension('time')
 
     # Selection
     # ---------------------------------------------------------------------

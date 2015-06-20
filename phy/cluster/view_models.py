@@ -799,7 +799,7 @@ class BaseFeatureViewModel(VispyViewModel):
         """
         return 1
 
-    def dimensions(self, cluster_ids):
+    def dimensions_for_clusters(self, cluster_ids):
         """Return the x and y dimensions most appropriate for the set of
         selected clusters.
 
@@ -857,7 +857,7 @@ class BaseFeatureViewModel(VispyViewModel):
         self.view.visual.cluster_order = clusters
 
         # Set default dimensions.
-        x_dims, y_dims = self.dimensions(clusters)
+        x_dims, y_dims = self.dimensions_for_clusters(clusters)
         self.view.set_x_dimensions(x_dims)
         self.view.set_y_dimensions(y_dims)
 
@@ -885,7 +885,7 @@ class FeatureGridViewModel(BaseFeatureViewModel):
     def n_rows(self):
         return self.n_features + 1
 
-    def dimensions(self, cluster_ids):
+    def dimensions_for_clusters(self, cluster_ids):
         """Return the x and y dimensions most appropriate for the set of
         selected clusters.
 
@@ -930,5 +930,5 @@ class FeatureViewModel(BaseFeatureViewModel):
         self._y_dim = dim
         self.view.set_y_dimensions({(0, 0): dim})
 
-    def dimensions(self, cluster_ids):
+    def dimensions_for_clusters(self, cluster_ids):
         return self._x_dim, self._y_dim
