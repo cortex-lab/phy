@@ -441,21 +441,22 @@ class WaveformView(BaseSpikeCanvas):
             self.probe_scale = (u, v * coeff)
 
     def on_mouse_press(self, e):
-        if 'Control' not in e.modifiers:
-            return
-        # Normalise mouse position.
-        position = self._pz._normalize(e.pos)
-        position[1] = -position[1]
-        zoom = self._pz._zoom_aspect()
-        pan = self._pz.pan
-        mouse_pos = ((position / zoom) - pan)
-        # Find the channel id.
-        channel_idx = self.visual.channel_hover(mouse_pos)
-        self.emit("channel_click",
-                  channel_idx=channel_idx,
-                  button=e.button,
-                  key=e.key,
-                  )
+        key = self._key_pressed
+        if 'Control' in e.modifiers or key in map(str, range(10)):
+            box_idx = int(key.name) if key in map(str, range(10)) else None
+            # Normalise mouse position.
+            position = self._pz._normalize(e.pos)
+            position[1] = -position[1]
+            zoom = self._pz._zoom_aspect()
+            pan = self._pz.pan
+            mouse_pos = ((position / zoom) - pan)
+            # Find the channel id.
+            channel_idx = self.visual.channel_hover(mouse_pos)
+            self.emit("channel_click",
+                      channel_idx=channel_idx,
+                      ax='x' if e.button == 1 else 'y',
+                      box_idx=box_idx,
+                      )
 
     def on_draw(self, event):
         """Draw the visual."""
