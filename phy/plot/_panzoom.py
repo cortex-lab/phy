@@ -735,7 +735,7 @@ class PanZoomGrid(PanZoom):
 
     keyboard_shortcuts = {
         'subplot_pan': ('left click and drag', 'arrows'),
-        'subplot_zoom': ('right click and drag', '+-'),
+        'subplot_zoom': ('right click and drag', '+ or -'),
         'global_reset': 'r',
     }
 

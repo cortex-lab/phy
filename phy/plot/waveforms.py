@@ -362,11 +362,11 @@ class WaveformView(BaseSpikeCanvas):
         self.update()
 
     keyboard_shortcuts = {
-        'waveform_scale_increase': ('ctrl++',
+        'waveform_scale_increase': ('ctrl+',
                                     'ctrl+up',
                                     'shift+wheel up',
                                     ),
-        'waveform_scale_decrease': ('ctrl+-',
+        'waveform_scale_decrease': ('ctrl-',
                                     'ctrl+down',
                                     'shift+wheel down',
                                     ),

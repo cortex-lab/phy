@@ -562,8 +562,8 @@ class FeatureView(BaseSpikeCanvas):
         self.boxes.draw()
 
     keyboard_shortcuts = {
-        'marker_size_increase': 'alt++',
-        'marker_size_decrease': 'alt+-',
+        'marker_size_increase': 'alt+',
+        'marker_size_decrease': 'alt-',
         'add_lasso_point': 'shift+left click',
         'clear_lasso': 'shift+right click',
     }

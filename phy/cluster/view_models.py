@@ -879,13 +879,28 @@ class BaseFeatureViewModel(VispyViewModel):
         self.view.set_dimensions('x', x_dim)
         self.view.set_dimensions('y', y_dim)
 
+    keyboard_shortcuts = {
+        'increase_scale': 'ctrl+',
+        'decrease_scale': 'ctrl-',
+    }
+
+    def on_key_press(self, event):
+        """Handle key press events."""
+        key = event.key
+        ctrl = 'Control' in event.modifiers
+        if ctrl and key in ('+', '-'):
+            k = 1.1 if key == '+' else .9
+            self.scale_factor *= k
+            self.view.visual.features *= k
+            self.view.background.features *= k
+            self.view.update()
+
     def exported_params(self, save_size_pos=True):
         """Parameters to save automatically when the view is closed."""
         params = super(BaseFeatureViewModel,
                        self).exported_params(save_size_pos)
-        zoom = self._view._pz.zoom
         params.update({
-            'scale_factor': zoom.mean() * self.scale_factor,
+            'scale_factor': self.scale_factor,
             'marker_size': self.marker_size,
         })
         return params
@@ -895,9 +910,9 @@ class FeatureGridViewModel(BaseFeatureViewModel):
     """Features grid"""
     _view_name = 'features_grid'
 
-    keyboard_shortcuts = {
+    keyboard_shortcuts = BaseFeatureViewModel.keyboard_shortcuts.update({
         'enlarge_subplot': 'ctrl+click',
-    }
+    })
 
     @property
     def n_rows(self):
