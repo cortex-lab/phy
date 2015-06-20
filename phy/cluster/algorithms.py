@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 import numpy as np
 
 from ..utils.array import (PartialArray, get_excerpts,
@@ -33,7 +35,8 @@ def _keep_spikes(samples, bounds):
 #------------------------------------------------------------------------------
 
 class SpikeDetekt(object):
-    def __init__(self, **kwargs):
+    def __init__(self, tempdir=None, **kwargs):
+        self._tempdir = tempdir
         self._kwargs = kwargs
 
     # Processing objects creation
@@ -218,6 +221,18 @@ class SpikeDetekt(object):
     # Main functions
     # -------------------------------------------------------------------------
 
+    def _save(self, name, array):
+        if self._tempdir is None:
+            raise ValueError("The temporary directory must be specified.")
+        path = op.join(self._tempdir, name)
+        array.tofile(path)
+
+    def _load(self, name, dtype, shape):
+        if self._tempdir is None:
+            raise ValueError("The temporary directory must be specified.")
+        path = op.join(self._tempdir, name)
+        return np.fromfile(path, dtype=dtype).reshape(shape)
+
     def iter_chunks(self, traces):
         n_samples, n_channels = traces.shape
 
@@ -229,6 +244,18 @@ class SpikeDetekt(object):
             # Get the filtered chunk.
             chunk_f = self.apply_filter(chunk)
             yield bounds, chunk, chunk_f
+
+    def find_spikes(self, traces, thresholds):
+        # TODO OPTIM: save that on disk instead of in memory.
+        chunk_components = {}
+        for bounds, chunk, chunk_f in self.iter_chunks(traces):
+            s_start, s_end, keep_start, keep_end = bounds
+
+            # Detect the connected components in the chunk.
+            components = self.detect(chunk_f, thresholds=thresholds)
+            chunk_components[s_start] = components
+
+        return chunk_components
 
     def run_serial(self, traces, interval=None):
         """Run SpikeDetekt on one core."""
@@ -247,21 +274,10 @@ class SpikeDetekt(object):
         thresholds = self.find_thresholds(traces)
         debug("Thresholds: {}.".format(thresholds))
 
-        # PASS 1: find the connected components and count the spikes
-        # ----------------------------------------------------------
-
-        # TODO OPTIM: save that on disk instead of in memory.
+        # Pass 1: find the connected components and count the spikes.
+        info("Detecting spikes...")
         # Ditionary {chunk_start: components}.
-        chunk_components = {}
-        info("Pass 1: detect spikes...")
-        for bounds, chunk, chunk_f in self.iter_chunks(traces):
-            s_start, s_end, keep_start, keep_end = bounds
-
-            # Detect the connected components in the chunk.
-            components = self.detect(chunk_f, thresholds=thresholds)
-            chunk_components[s_start] = components
-
-        # Count the total number of spikes.
+        chunk_components = self.detect_spikes(traces, thresholds)
         n_spikes_per_chunk = {key: len(val)
                               for key, val in chunk_components.items()}
         n_spikes_total = sum(n_spikes_per_chunk.values())
