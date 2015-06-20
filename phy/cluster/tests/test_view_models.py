@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
+
 from pytest import mark
 
 from ...utils.array import _spikes_per_cluster
@@ -37,7 +39,7 @@ _N_SPIKES = 200
 _N_CHANNELS = 28
 _N_FETS = 3
 _N_SAMPLES_TRACES = 10000
-_N_FRAMES = 2
+_N_FRAMES = int((float(os.environ.get('PHY_EVENT_LOOP_DELAY', 0)) * 60) or 2)
 
 
 def setup():
