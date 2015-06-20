@@ -73,6 +73,7 @@ def _wrap_vispy(f):
     """
     def wrapped(*args, **kwargs):
         show = kwargs.pop('show', True)
+        kwargs['interactive'] = True
         canvas = f(*args, **kwargs)
         if show:
             canvas.show()
@@ -519,7 +520,7 @@ class BaseSpikeCanvas(app.Canvas):
     keyboard_shortcuts = {}
 
     def __init__(self, **kwargs):
-        super(BaseSpikeCanvas, self).__init__(keys='interactive', **kwargs)
+        super(BaseSpikeCanvas, self).__init__(**kwargs)
         self._create_visuals()
         self._create_pan_zoom()
         self._add_events()
