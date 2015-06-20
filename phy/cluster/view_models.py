@@ -720,25 +720,25 @@ def _dimensions(x_channels, y_channels):
 
     n = len(x_channels)
     assert len(y_channels) == n
-    y_dims = {}
-    x_dims = {}
+    y_dim = {}
+    x_dim = {}
     # TODO: depth
-    x_dims[0, 0] = 'time'
-    y_dims[0, 0] = 'time'
+    x_dim[0, 0] = 'time'
+    y_dim[0, 0] = 'time'
 
     # Time in first column and first row.
     for i in range(1, n + 1):
-        x_dims[0, i] = 'time'
-        y_dims[0, i] = (x_channels[i - 1], 0)
-        x_dims[i, 0] = 'time'
-        y_dims[i, 0] = (y_channels[i - 1], 0)
+        x_dim[0, i] = 'time'
+        y_dim[0, i] = (x_channels[i - 1], 0)
+        x_dim[i, 0] = 'time'
+        y_dim[i, 0] = (y_channels[i - 1], 0)
 
     for i in range(1, n + 1):
         for j in range(1, n + 1):
-            x_dims[i, j] = (x_channels[i - 1], j - 1)
-            y_dims[i, j] = (y_channels[j - 1], i - 1)
+            x_dim[i, j] = (x_channels[i - 1], j - 1)
+            y_dim[i, j] = (y_channels[j - 1], i - 1)
 
-    return x_dims, y_dims
+    return x_dim, y_dim
 
 
 class BaseFeatureViewModel(VispyViewModel):
@@ -810,6 +810,14 @@ class BaseFeatureViewModel(VispyViewModel):
         """
         return {}, {}
 
+    @property
+    def x_dim(self):
+        return self.view.x_dim
+
+    @property
+    def y_dim(self):
+        return self.view.y_dim
+
     def on_open(self):
         """Initialize the view when the model is opened."""
         # Get background features.
@@ -857,9 +865,9 @@ class BaseFeatureViewModel(VispyViewModel):
         self.view.visual.cluster_order = clusters
 
         # Set default dimensions.
-        x_dims, y_dims = self.dimensions_for_clusters(clusters)
-        self.view.set_x_dimensions(x_dims)
-        self.view.set_y_dimensions(y_dims)
+        x_dim, y_dim = self.dimensions_for_clusters(clusters)
+        self.view.set_x_dimensions(x_dim)
+        self.view.set_y_dimensions(y_dim)
 
     def exported_params(self, save_size_pos=True):
         """Parameters to save automatically when the view is closed."""
@@ -921,6 +929,14 @@ class FeatureViewModel(BaseFeatureViewModel):
     @property
     def n_rows(self):
         return 1
+
+    @property
+    def x_dim(self):
+        return self._x_dim
+
+    @property
+    def y_dim(self):
+        return self._y_dim
 
     def set_x_dimension(self, dim):
         self._x_dim = dim
