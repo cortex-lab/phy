@@ -14,6 +14,7 @@ import numpy as np
 from ..utils.array import (PartialArray, get_excerpts,
                            chunk_bounds, data_chunk,
                            )
+from ..utils.event import EventEmitter
 from ..utils.logging import debug, info
 from ..io.kwik.sparse_kk2 import sparsify_features_masks
 from ..traces import (Filter, Thresholder, compute_threshold,
@@ -54,8 +55,9 @@ def _split_spikes(idx, groups, **arrs):
 # Spike detection class
 #------------------------------------------------------------------------------
 
-class SpikeDetekt(object):
+class SpikeDetekt(EventEmitter):
     def __init__(self, tempdir=None, **kwargs):
+        super(SpikeDetekt, self).__init__()
         self._tempdir = tempdir
         self._kwargs = kwargs
 
@@ -375,6 +377,7 @@ class SpikeDetekt(object):
         # Find the weak and strong thresholds.
         info("Finding the thresholds...")
         thresholds = self.find_thresholds(traces)
+        self.emit('find_thresholds', thresholds)
         debug("Thresholds: {}.".format(thresholds))
 
         # Pass 1: find the connected components and count the spikes.
@@ -385,6 +388,7 @@ class SpikeDetekt(object):
         for bounds in self.iter_chunks(n_samples, n_channels):
             chunk_data = data_chunk(traces, bounds, with_overlap=True)
             key, components = self.step_detect(bounds, chunk_data, thresholds)
+            self.emit('detect_spikes', key=key, n_spikes=len(components))
             chunk_components[key] = components
         n_spikes_per_chunk = {key: len(val)
                               for key, val in chunk_components.items()}
@@ -400,6 +404,7 @@ class SpikeDetekt(object):
             if len(components) == 0:
                 continue
             key, wm = self.step_extract(bounds, components, n_spikes_total)
+            self.emit('extract_spikes', key=key, n_spikes=len(components))
             # wm is a dict {channel_group: (waveforms, masks)}
             for group, wm_group in wm.items():
                 chunk_waveforms[group][key] = wm_group
@@ -408,14 +413,17 @@ class SpikeDetekt(object):
 
         # Compute the PCs.
         info("Performing PCA...")
-        pcs = {group: self.step_pca(chunk_waveforms[group])
-               for group in groups}
+        pcs = {}
+        for group in groups:
+            pcs[group] = self.step_pca(chunk_waveforms[group])
+            self.emit('compute_pca', group=group, pcs=pcs[group])
         info("Principal waveform components computed.")
 
         # Pass 3: compute the features.
         info("Computing the features of all spikes...")
         for bounds in self.iter_chunks(n_samples, n_channels):
             self.step_features(bounds, pcs)
+            self.emit('compute_features', key=bounds[2])
         info("All features computed and saved.")
 
         # TODO: return dictionary of memmapped data, to be saved in

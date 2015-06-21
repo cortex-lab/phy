@@ -102,7 +102,7 @@ def test_spike_detect_methods(spikedetekt):
     assert not np.any(np.isnan(features))
 
 
-def test_spike_detect_serial(spikedetekt):
+def test_spike_detect_serial_no_spikes(spikedetekt):
     sd, traces, params = spikedetekt
     sd.run_serial(traces)
 
