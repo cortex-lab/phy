@@ -68,7 +68,7 @@ def spikedetekt(request):
 
     traces = artificial_traces(n_samples, n_channels)
     traces[1000:1010, 1] *= 5
-    traces[2000:2010, 3] *= 10
+    traces[12000:12010, 3] *= 10
 
     # Load default settings.
     curdir = op.dirname(op.realpath(__file__))
@@ -137,10 +137,36 @@ def test_spike_detect_methods(spikedetekt):
     assert not np.any(np.isnan(features))
 
 
-def test_spike_detect_serial_no_spikes(spikedetekt):
+def test_spike_detect_serial(spikedetekt):
     sd, traces, params = spikedetekt
     out = sd.run_serial(traces)
-    print(out)
+
+    n_samples_waveforms = (params['extract_s_before'] +
+                           params['extract_s_after'])
+    n_features = params['nfeatures_per_channel']
+
+    n_spikes = out.n_spikes_total
+    assert out.n_spikes_total >= 0
+    assert sorted(out.n_spikes_per_group) == [0]
+    assert sorted(out.n_spikes_per_group_chunk[0]) == [0]
+
+    assert len(out.chunk_keys)
+
+    traces_f = np.vstack(out.traces_f)
+    assert traces_f.shape == (n_samples, n_channels)
+    assert traces_f.dtype == np.float32
+
+    waveforms = np.vstack(out.waveforms[0])
+    assert waveforms.dtype == np.float32
+    assert waveforms.shape == (n_spikes, n_samples_waveforms, n_channels)
+
+    features = np.vstack(out.features[0])
+    assert features.dtype == np.float32
+    assert features.shape == (n_spikes, n_channels, n_features)
+
+    masks = np.vstack(out.masks[0])
+    assert masks.dtype == np.float32
+    assert masks.shape == (n_spikes, n_channels)
 
 
 def test_cluster():
