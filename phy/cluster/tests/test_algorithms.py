@@ -77,7 +77,7 @@ def spikedetekt(request):
     params = settings['spikedetekt_params'](sample_rate)
     params['sample_rate'] = sample_rate
     params['probe_adjacency_list'] = {0: [1, 2], 1: [0, 2], 2: [0, 1], 3: []}
-    params['probe_channels'] = {0: list(range(n_channels))}
+    params['probe_channels'] = {0: [0, 1, 2], 1: [3]}
     sd = SpikeDetekt(tempdir=tmpdir.name, **params)
 
     def end():

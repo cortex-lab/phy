@@ -56,6 +56,26 @@ def _split_spikes(groups, idx=None, **arrs):
     return out
 
 
+class SpikeCounts(object):
+    def __init__(self, counts):
+        self._counts = counts
+        self._groups = sorted(counts)
+        if self._groups:
+            self._chunks = sorted(counts[self._groups[0]])
+        else:
+            self._chunks = []
+
+    def __call__(self, group=None, chunk=None):
+        if group is not None and chunk is not None:
+            return self._counts.get(group, {}).get(chunk, 0)
+        elif group is None and chunk is None:
+            return sum([self(chunk=c) for c in self._chunks])
+        elif group is not None:
+            return sum([self(chunk=c, group=group) for c in self._chunks])
+        elif chunk is not None:
+            return sum([self(chunk=chunk, group=g) for g in self._groups])
+
+
 #------------------------------------------------------------------------------
 # Spike detection class
 #------------------------------------------------------------------------------
@@ -298,7 +318,7 @@ class SpikeDetekt(EventEmitter):
                           n_samples=None,
                           n_channels=None,
                           groups=None,
-                          n_spikes_per_group_chunk=None,
+                          spike_counts=None,
                           ):
         _, _, keys, _ = zip(*list(self.iter_chunks(n_samples, n_channels)))
         out = {}
@@ -306,7 +326,7 @@ class SpikeDetekt(EventEmitter):
             out[group] = []
             n_channels_group = self._n_channels_per_group[group]
             for key in keys:
-                n_spikes = n_spikes_per_group_chunk.get(group, {}).get(key, 0)
+                n_spikes = spike_counts(group=group, chunk=key)
                 shape = {
                     'waveforms': (n_spikes,
                                   self._n_samples_waveforms,
@@ -334,45 +354,6 @@ class SpikeDetekt(EventEmitter):
         overlap = self._kwargs['chunk_overlap']
         for bounds in chunk_bounds(n_samples, chunk_size, overlap=overlap):
             yield bounds
-
-    def output_data(self,
-                    n_samples,
-                    n_channels,
-                    groups=None,
-                    n_spikes_per_group_chunk=None,
-                    ):
-        nspgc = n_spikes_per_group_chunk
-        n_samples_per_chunk = {bounds[2]: (bounds[3] - bounds[2])
-                               for bounds in self.iter_chunks(n_samples,
-                                                              n_channels)}
-        keys = sorted(n_samples_per_chunk.keys())
-        traces_f = [self._load('filtered', np.float32,
-                               shape=(n_samples_per_chunk[key], n_channels),
-                               key=key) for key in keys]
-
-        def _load(name):
-            return self._load_data_chunks(name, np.float32,
-                                          n_samples=n_samples,
-                                          n_channels=n_channels,
-                                          groups=groups,
-                                          n_spikes_per_group_chunk=nspgc,
-                                          )
-
-        n_spikes_per_group = {group: sum(nspgc.get(group, {}).values())
-                              for group in groups}
-        n_spikes_total = sum(n_spikes_per_group.values())
-
-        output = Bunch(n_chunks=len(keys),
-                       chunk_keys=keys,
-                       traces_f=traces_f,
-                       waveforms=_load('waveforms'),
-                       masks=_load('masks'),
-                       features=_load('features'),
-                       n_spikes_per_group_chunk=nspgc,
-                       n_spikes_per_group=n_spikes_per_group,
-                       n_spikes_total=n_spikes_total,
-                       )
-        return output
 
     # Main steps
     # -------------------------------------------------------------------------
@@ -410,7 +391,7 @@ class SpikeDetekt(EventEmitter):
 
         # Remove spikes in the overlapping bands.
         idx = _keep_spikes(spike_samples, (keep_start, keep_end))
-        n_spikes_chunk = len(idx)
+        n_spikes_chunk = idx.sum()
         # Split the data according to the channel groups.
         split = _split_spikes(groups,
                               idx=idx,
@@ -426,11 +407,15 @@ class SpikeDetekt(EventEmitter):
         # Keep some waveforms in memory in order to compute PCA.
         wm = {group: (split[group]['waveforms'], split[group]['masks'])
               for group in split.keys()}
+        # Number of counts per group in that chunk.
+        counts = {group: len(split[group]['waveforms'])
+                  for group in split.keys()}
+        assert sum(counts.values()) == n_spikes_chunk
         wm = {group: self._pca_subset(wm[group],
                                       n_spikes_chunk=n_spikes_chunk,
                                       n_spikes_total=n_spikes_total)
               for group in split.keys()}
-        return wm
+        return wm, counts
 
     def step_pca(self, chunk_waveforms):
         if not chunk_waveforms:
@@ -446,13 +431,13 @@ class SpikeDetekt(EventEmitter):
         pcs = self.waveform_pcs(waveforms_subset, masks_subset)
         return pcs
 
-    def step_features(self, bounds, pcs_per_group, n_spikes_per_group_chunk):
+    def step_features(self, bounds, pcs_per_group, spike_counts):
         s_start, s_end, keep_start, keep_end = bounds
         key = keep_start
         # Loop over the channel groups.
         for group, pcs in pcs_per_group.items():
             # Find the waveforms shape.
-            n_spikes = n_spikes_per_group_chunk.get(group, {}).get(key, 0)
+            n_spikes = spike_counts(group=group, chunk=key)
             n_channels = self._n_channels_per_group[group]
             shape = (n_spikes, self._n_samples_waveforms, n_channels)
             # Save the waveforms.
@@ -464,9 +449,47 @@ class SpikeDetekt(EventEmitter):
                 continue
             # Compute the features.
             features = self.features(waveforms, pcs)
-            assert features.dtype == np.float32
-            # Save the features.
-            self._save(features, 'features', key=key, group=group)
+            if features is not None:
+                assert features.dtype == np.float32
+                # Save the features.
+                self._save(features, 'features', key=key, group=group)
+
+    def output_data(self,
+                    n_samples,
+                    n_channels,
+                    groups=None,
+                    spike_counts=None,
+                    ):
+        n_samples_per_chunk = {bounds[2]: (bounds[3] - bounds[2])
+                               for bounds in self.iter_chunks(n_samples,
+                                                              n_channels)}
+        keys = sorted(n_samples_per_chunk.keys())
+        traces_f = [self._load('filtered', np.float32,
+                               shape=(n_samples_per_chunk[key], n_channels),
+                               key=key) for key in keys]
+
+        def _load(name):
+            return self._load_data_chunks(name, np.float32,
+                                          n_samples=n_samples,
+                                          n_channels=n_channels,
+                                          groups=groups,
+                                          spike_counts=spike_counts,
+                                          )
+
+        output = Bunch(n_chunks=len(keys),
+                       chunk_keys=keys,
+                       traces_f=traces_f,
+                       waveforms=_load('waveforms'),
+                       masks=_load('masks'),
+                       features=_load('features'),
+                       spike_counts=spike_counts,
+                       n_spikes_total=spike_counts(),
+                       n_spikes_per_group={spike_counts(group=group)
+                                           for group in groups},
+                       n_spikes_per_chunk={spike_counts(chunk=chunk)
+                                           for chunk in keys},
+                       )
+        return output
 
     def run_serial(self, traces, interval=None):
         """Run SpikeDetekt using one CPU."""
@@ -513,32 +536,31 @@ class SpikeDetekt(EventEmitter):
         info("Extracting all waveforms...")
         # This is a dict {group: {key: (waveforms, masks)}}.
         chunk_waveforms = defaultdict(dict)
+        # This is a dict {group: {key: n_spikes}}.
+        chunk_counts = defaultdict(dict)
         for bounds in self.iter_chunks(n_samples, n_channels):
             key = bounds[2]
             components = chunk_components[key]
             if len(components) == 0:
                 continue
             # This is a dict {group: (waveforms, masks)}.
-            wm = self.step_extract(bounds,
-                                   components,
-                                   n_spikes_total=n_spikes_total,
-                                   n_channels=n_channels,
-                                   thresholds=thresholds,
-                                   )
+            wm, counts = self.step_extract(bounds,
+                                           components,
+                                           n_spikes_total=n_spikes_total,
+                                           n_channels=n_channels,
+                                           thresholds=thresholds,
+                                           )
+            self.emit('extract_spikes', key=key, counts=counts)
+            debug("Extracted {} spikes from chunk {}.".format(
+                  sum(counts.values()), key))
+            # Reorganize the chunk waveforms subsets.
             for group, wm_group in wm.items():
                 n_spikes_chunk = len(wm_group[0])
                 assert len(wm_group[1]) == n_spikes_chunk
-                self.emit('extract_spikes', key=key, n_spikes=n_spikes_chunk)
-                debug("Extracted {} spikes from chunk {}, group {}.".format(
-                      n_spikes_chunk, key, group))
                 chunk_waveforms[group][key] = wm_group
-        n_spikes_per_group_chunk = {
-            group: {key: len(val)
-                    for key, val in chunk_waveforms[group].items()
-                    }
-            for group in chunk_waveforms.keys()
-        }
-        info("All waveforms extracted and saved.")
+                chunk_counts[group][key] = counts[group]
+        spike_counts = SpikeCounts(chunk_counts)
+        info("{} waveforms extracted and saved.".format(spike_counts()))
 
         # Compute the PCs.
         info("Performing PCA...")
@@ -551,14 +573,13 @@ class SpikeDetekt(EventEmitter):
         # Pass 3: compute the features.
         info("Computing the features of all spikes...")
         for bounds in self.iter_chunks(n_samples, n_channels):
-            self.step_features(bounds, pcs,
-                               n_spikes_per_group_chunk)
+            self.step_features(bounds, pcs, spike_counts)
             self.emit('compute_features', key=bounds[2])
         info("All features computed and saved.")
 
         # Return dictionary of memmapped data.
         return self.output_data(n_samples, n_channels,
-                                self._groups, n_spikes_per_group_chunk)
+                                self._groups, spike_counts)
 
 
 #------------------------------------------------------------------------------
