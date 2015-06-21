@@ -22,7 +22,7 @@ from ..algorithms import cluster, SpikeDetekt, _split_spikes, _concat
 
 
 #------------------------------------------------------------------------------
-# Tests
+# Fixtures
 #------------------------------------------------------------------------------
 
 def setup():
@@ -31,30 +31,6 @@ def setup():
 
 def teardown():
     set_level('info')
-
-
-def test_split_spikes():
-    groups = np.zeros(10, dtype=np.int)
-    groups[1::2] = 1
-
-    idx = np.ones(10, dtype=np.bool)
-    idx[0] = False
-    idx[-1] = False
-
-    a = np.random.rand(10, 2)
-    b = np.random.rand(10, 3, 2)
-
-    out = _split_spikes(groups, idx, a=a, b=b)
-
-    assert sorted(out) == [0, 1]
-    assert sorted(out[0]) == ['a', 'b']
-    assert sorted(out[1]) == ['a', 'b']
-
-    ae(out[0]['a'], a[1:-1][1::2])
-    ae(out[0]['b'], b[1:-1][1::2])
-
-    ae(out[1]['a'], a[1:-1][::2])
-    ae(out[1]['b'], b[1:-1][::2])
 
 
 sample_rate = 10000
@@ -106,6 +82,34 @@ def spikedetekt(request):
 @fixture
 def spikedetekt_one_group(request):
     return _spikedetekt(request, n_groups=1)
+
+
+#------------------------------------------------------------------------------
+# Tests spike detection
+#------------------------------------------------------------------------------
+
+def test_split_spikes():
+    groups = np.zeros(10, dtype=np.int)
+    groups[1::2] = 1
+
+    idx = np.ones(10, dtype=np.bool)
+    idx[0] = False
+    idx[-1] = False
+
+    a = np.random.rand(10, 2)
+    b = np.random.rand(10, 3, 2)
+
+    out = _split_spikes(groups, idx, a=a, b=b)
+
+    assert sorted(out) == [0, 1]
+    assert sorted(out[0]) == ['a', 'b']
+    assert sorted(out[1]) == ['a', 'b']
+
+    ae(out[0]['a'], a[1:-1][1::2])
+    ae(out[0]['b'], b[1:-1][1::2])
+
+    ae(out[1]['a'], a[1:-1][::2])
+    ae(out[1]['b'], b[1:-1][::2])
 
 
 def test_spike_detect_methods(spikedetekt_one_group):
@@ -196,6 +200,10 @@ def test_spike_detect_serial(spikedetekt):
         assert masks.dtype == np.float32
         assert masks.shape == (n_spikes_g, n_channels_g)
 
+
+#------------------------------------------------------------------------------
+# Tests clustering
+#------------------------------------------------------------------------------
 
 def test_cluster():
     n_spikes = 100
