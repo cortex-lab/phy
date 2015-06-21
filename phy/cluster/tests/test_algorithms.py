@@ -18,7 +18,7 @@ from ...utils.settings import Settings
 from ...io.kwik import KwikModel
 from ...io.kwik.mock import create_mock_kwik
 from ...io.mock import artificial_traces
-from ..algorithms import cluster, SpikeDetekt, _split_spikes
+from ..algorithms import cluster, SpikeDetekt, _split_spikes, _concat
 
 
 #------------------------------------------------------------------------------
@@ -62,8 +62,7 @@ n_samples = 25000
 n_channels = 4
 
 
-@fixture
-def spikedetekt(request):
+def _spikedetekt(request, n_groups=2):
     tmpdir = TemporaryDirectory()
 
     traces = artificial_traces(n_samples, n_channels)
@@ -76,8 +75,20 @@ def spikedetekt(request):
     settings = Settings(default_path=default_settings_path)
     params = settings['spikedetekt_params'](sample_rate)
     params['sample_rate'] = sample_rate
-    params['probe_adjacency_list'] = {0: [1, 2], 1: [0, 2], 2: [0, 1], 3: []}
-    params['probe_channels'] = {0: [0, 1, 2], 1: [3]}
+
+    if n_groups == 1:
+        params['probe_adjacency_list'] = {0: [1, 2],
+                                          1: [0, 2],
+                                          2: [0, 1],
+                                          3: []}
+        params['probe_channels'] = {0: [0, 1, 2, 3]}
+    elif n_groups == 2:
+        params['probe_adjacency_list'] = {0: [1, 2],
+                                          1: [0, 2],
+                                          2: [0, 1],
+                                          3: []}
+        params['probe_channels'] = {0: [0, 1, 2], 1: [3]}
+
     sd = SpikeDetekt(tempdir=tmpdir.name, **params)
 
     def end():
@@ -87,8 +98,18 @@ def spikedetekt(request):
     return sd, traces, params
 
 
-def test_spike_detect_methods(spikedetekt):
-    sd, traces, params = spikedetekt
+@fixture
+def spikedetekt(request):
+    return _spikedetekt(request)
+
+
+@fixture
+def spikedetekt_one_group(request):
+    return _spikedetekt(request, n_groups=1)
+
+
+def test_spike_detect_methods(spikedetekt_one_group):
+    sd, traces, params = spikedetekt_one_group
 
     # Filter the data.
     traces_f = sd.apply_filter(traces)
@@ -115,7 +136,10 @@ def test_spike_detect_methods(spikedetekt):
                                                           thresholds,
                                                           )
 
-    ae(groups, np.zeros(n_spikes))
+    waveforms = _concat(waveforms, np.float32)
+    masks = _concat(masks, np.float32)
+
+    assert np.all(np.in1d(groups, [0, 1]))
     assert samples.dtype == np.uint64
     assert samples.shape == (n_spikes,)
     assert waveforms.shape == (n_spikes, n_samples_waveforms, n_channels)

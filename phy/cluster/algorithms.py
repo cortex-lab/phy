@@ -56,7 +56,7 @@ def _split_spikes(groups, idx=None, **arrs):
         i = (groups == group)
         out[group] = {}
         for key, arr in arrs_bis.items():
-            out[group][key] = _concat(arr[i], dtypes[key])
+            out[group][key] = _concat(arr[i], dtypes.get(key, None))
     return out
 
 
