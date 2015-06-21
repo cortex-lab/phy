@@ -18,7 +18,7 @@ from ...utils.settings import Settings
 from ...io.kwik import KwikModel
 from ...io.kwik.mock import create_mock_kwik
 from ...io.mock import artificial_traces
-from ..algorithms import cluster, SpikeDetekt
+from ..algorithms import cluster, SpikeDetekt, _split_spikes
 
 
 #------------------------------------------------------------------------------
@@ -31,6 +31,30 @@ def setup():
 
 def teardown():
     set_level('info')
+
+
+def test_split_spikes():
+    groups = np.zeros(10, dtype=np.int)
+    groups[1::2] = 1
+
+    idx = np.ones(10, dtype=np.bool)
+    idx[0] = False
+    idx[-1] = False
+
+    a = np.random.rand(10, 2)
+    b = np.random.rand(10, 3, 2)
+
+    out = _split_spikes(groups, idx, a=a, b=b)
+
+    assert sorted(out) == [0, 1]
+    assert sorted(out[0]) == ['a', 'b']
+    assert sorted(out[1]) == ['a', 'b']
+
+    ae(out[0]['a'], a[1:-1][1::2])
+    ae(out[0]['b'], b[1:-1][1::2])
+
+    ae(out[1]['a'], a[1:-1][::2])
+    ae(out[1]['b'], b[1:-1][::2])
 
 
 sample_rate = 10000

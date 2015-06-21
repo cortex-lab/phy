@@ -13,7 +13,7 @@ import numpy as np
 
 from ..utils.array import (PartialArray, get_excerpts,
                            chunk_bounds, data_chunk,
-                           _load_ndarray,
+                           _load_ndarray, _as_array,
                            )
 from ..utils._types import Bunch
 from ..utils.event import EventEmitter
@@ -34,21 +34,24 @@ def _keep_spikes(samples, bounds):
     return (start <= samples) & (samples <= end)
 
 
-def _split_spikes(idx, groups, **arrs):
+def _split_spikes(groups, idx=None, **arrs):
     """Split spike data according to the channel group."""
-    n_spikes_chunk = len(idx)
-    # First, remove the overlapping bands.
-    groups = groups[idx]
-    for key, arr in arrs.items():
-        arr = arr[idx, ...]
-        assert len(arr) == n_spikes_chunk
+    groups = _as_array(groups)
+    if idx is not None:
+        n_spikes_chunk = np.sum(idx)
+        # First, remove the overlapping bands.
+        groups = groups[idx]
+        arrs_bis = arrs.copy()
+        for key, arr in arrs.items():
+            arrs_bis[key] = arr[idx, ...]
+            assert len(arrs_bis[key]) == n_spikes_chunk
     # Then, split along the group.
     groups_u = np.unique(groups)
     out = {}
     for group in groups_u:
         i = (groups == group)
         out[group] = {}
-        for key, arr in arrs.items():
+        for key, arr in arrs_bis.items():
             out[group][key] = arr[i, ...]
     return out
 
@@ -397,7 +400,8 @@ class SpikeDetekt(EventEmitter):
         idx = _keep_spikes(spike_samples, (keep_start, keep_end))
         n_spikes_chunk = len(idx)
         # Split the data according to the channel groups.
-        split = _split_spikes(idx, groups,
+        split = _split_spikes(groups,
+                              idx=idx,
                               spike_samples=spike_samples,
                               waveforms=waveforms,
                               masks=masks,
