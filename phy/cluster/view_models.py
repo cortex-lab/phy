@@ -441,7 +441,7 @@ class CorrelogramViewModel(VispyViewModel):
     _view_name = 'correlograms'
     binsize = 20
     winsize_bins = 41
-    _imported_params = ('binsize', 'winsize_bins', 'lines', '_normalization')
+    _imported_params = ('binsize', 'winsize_bins', 'lines', 'normalization')
     _normalization = 'equal'  # or 'independent'
     _ccgs = None
 
@@ -507,8 +507,9 @@ class CorrelogramViewModel(VispyViewModel):
     @normalization.setter
     def normalization(self, value):
         self._normalization = value
-        self.view.visual.correlograms = self._normalize(self._ccgs)
-        self.view.update()
+        if self._ccgs is not None:
+            self.view.visual.correlograms = self._normalize(self._ccgs)
+            self.view.update()
 
     @property
     def lines(self):
@@ -528,7 +529,7 @@ class CorrelogramViewModel(VispyViewModel):
         params = super(CorrelogramViewModel, self).exported_params(
             save_size_pos)
         params.update({
-            '_normalization': self._normalization,
+            'normalization': self.normalization,
         })
         return params
 
