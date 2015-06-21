@@ -525,8 +525,8 @@ class SpikeDetekt(EventEmitter):
         # Find the weak and strong thresholds.
         info("Finding the thresholds...")
         thresholds = self.find_thresholds(traces)
-        self.emit('find_thresholds', thresholds)
         debug("Thresholds: {}.".format(thresholds))
+        self.emit('find_thresholds', thresholds)
 
         # Pass 1: find the connected components and count the spikes.
         info("Detecting spikes...")
@@ -569,9 +569,9 @@ class SpikeDetekt(EventEmitter):
                                            n_channels=n_channels,
                                            thresholds=thresholds,
                                            )
-            self.emit('extract_spikes', key=key, counts=counts)
             debug("Extracted {} spikes from chunk {}.".format(
                   sum(counts.values()), key))
+            self.emit('extract_spikes', key=key, counts=counts)
             # Reorganize the chunk waveforms subsets.
             for group, wm_group in wm.items():
                 n_spikes_chunk = len(wm_group[0])
