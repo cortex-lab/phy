@@ -392,6 +392,8 @@ class SpikeDetekt(EventEmitter):
         # Remove spikes in the overlapping bands.
         idx = _keep_spikes(spike_samples, (keep_start, keep_end))
         n_spikes_chunk = idx.sum()
+        debug("In chunk {}, keep {} spikes out of {}.".format(
+              key, n_spikes_chunk, len(spike_samples)))
         # Split the data according to the channel groups.
         split = _split_spikes(groups,
                               idx=idx,
@@ -484,9 +486,9 @@ class SpikeDetekt(EventEmitter):
                        features=_load('features'),
                        spike_counts=spike_counts,
                        n_spikes_total=spike_counts(),
-                       n_spikes_per_group={spike_counts(group=group)
+                       n_spikes_per_group={group: spike_counts(group=group)
                                            for group in groups},
-                       n_spikes_per_chunk={spike_counts(chunk=chunk)
+                       n_spikes_per_chunk={chunk: spike_counts(chunk=chunk)
                                            for chunk in keys},
                        )
         return output

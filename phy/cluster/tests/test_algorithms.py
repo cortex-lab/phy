@@ -67,8 +67,8 @@ def spikedetekt(request):
     tmpdir = TemporaryDirectory()
 
     traces = artificial_traces(n_samples, n_channels)
-    traces[1000:1010, 1] *= 5
-    traces[12000:12010, 3] *= 10
+    traces[5000:5010, 1] *= 5
+    traces[15000:15010, 3] *= 5
 
     # Load default settings.
     curdir = op.dirname(op.realpath(__file__))
@@ -145,28 +145,32 @@ def test_spike_detect_serial(spikedetekt):
                            params['extract_s_after'])
     n_features = params['nfeatures_per_channel']
 
-    n_spikes = out.n_spikes_total
     assert out.n_spikes_total >= 0
-    assert sorted(out.n_spikes_per_group) == [0]
-    assert sorted(out.n_spikes_per_group_chunk[0]) == [0]
-
-    assert len(out.chunk_keys)
+    assert sum(out.n_spikes_per_group.values()) == out.n_spikes_total
+    assert len(out.chunk_keys) == 3
 
     traces_f = np.vstack(out.traces_f)
     assert traces_f.shape == (n_samples, n_channels)
     assert traces_f.dtype == np.float32
 
-    waveforms = np.vstack(out.waveforms[0])
-    assert waveforms.dtype == np.float32
-    assert waveforms.shape == (n_spikes, n_samples_waveforms, n_channels)
+    for group in [0, 1]:
+        # Number of channels in the group.
+        n_channels_g = (3, 1)[group]
+        n_spikes_g = out.n_spikes_per_group[group]
 
-    features = np.vstack(out.features[0])
-    assert features.dtype == np.float32
-    assert features.shape == (n_spikes, n_channels, n_features)
+        waveforms = np.vstack(out.waveforms[group])
+        assert waveforms.dtype == np.float32
+        assert waveforms.shape == (n_spikes_g,
+                                   n_samples_waveforms,
+                                   n_channels_g)
 
-    masks = np.vstack(out.masks[0])
-    assert masks.dtype == np.float32
-    assert masks.shape == (n_spikes, n_channels)
+        features = np.vstack(out.features[group])
+        assert features.dtype == np.float32
+        assert features.shape == (n_spikes_g, n_channels_g, n_features)
+
+        masks = np.vstack(out.masks[group])
+        assert masks.dtype == np.float32
+        assert masks.shape == (n_spikes_g, n_channels_g)
 
 
 def test_cluster():
