@@ -13,7 +13,9 @@ import numpy as np
 
 from ..utils.array import (PartialArray, get_excerpts,
                            chunk_bounds, data_chunk,
+                           _load_ndarray,
                            )
+from ..utils._types import Bunch
 from ..utils.event import EventEmitter
 from ..utils.logging import debug, info
 from ..io.kwik.sparse_kk2 import sparsify_features_masks
@@ -60,6 +62,11 @@ class SpikeDetekt(EventEmitter):
         super(SpikeDetekt, self).__init__()
         self._tempdir = tempdir
         self._kwargs = kwargs
+        self._n_channels_per_group = {
+            group: len(channels)
+            for group, channels in self._kwargs['probe_channels'].items()
+        }
+        self._n_features = self._kwargs['nfeatures_per_channel']
 
     # Processing objects creation
     # -------------------------------------------------------------------------
@@ -91,6 +98,7 @@ class SpikeDetekt(EventEmitter):
         after = self._kwargs['extract_s_after']
         weight_power = self._kwargs['weight_power']
         probe_channels = self._kwargs['probe_channels']
+        self._n_samples_waveforms = before + after
         return WaveformExtractor(extract_before=before,
                                  extract_after=after,
                                  weight_power=weight_power,
@@ -270,10 +278,12 @@ class SpikeDetekt(EventEmitter):
 
     def _load(self, name, dtype, shape=None, key=None, group=None):
         path = self._path(name, key=key, group=group)
-        out = np.fromfile(path, dtype=dtype)
-        if shape:
-            out = out.reshape(shape)
-        return out
+        with open(path, 'rb') as f:
+            return _load_ndarray(f, dtype=dtype, shape=shape)
+        # out = np.fromfile(path, dtype=dtype)
+        # if shape:
+        #     out = out.reshape(shape)
+        # return out
 
     def _pca_subset(self, waveforms, masks,
                     n_spikes_chunk=None, n_spikes_total=None):
@@ -289,6 +299,60 @@ class SpikeDetekt(EventEmitter):
         for bounds in chunk_bounds(n_samples, chunk_size, overlap=overlap):
             yield bounds
 
+    def _load_data_chunks(self, name, dtype,
+                          n_samples=None,
+                          n_channels=None,
+                          groups=None,
+                          n_spikes_per_group_chunk=None,
+                          ):
+        _, _, keys, _ = zip(*list(self.iter_chunks(n_samples, n_channels)))
+        out = {}
+        for group in groups:
+            out[group] = []
+            for key in keys:
+                n_spikes = n_spikes_per_group_chunk[group][key]
+                shape = {
+                    'waveforms': (n_spikes,
+                                  self._n_samples_waveforms,
+                                  n_channels),
+                    'masks': (n_spikes, n_channels),
+                    'features': (n_spikes, n_channels, self._n_features),
+                }[name]
+                w = self._load(name, dtype,
+                               shape=shape,
+                               key=key,
+                               group=group)
+                out[group].append(w)
+        return out
+
+    def output_data(self,
+                    n_samples,
+                    n_channels,
+                    groups=None,
+                    n_spikes_per_group_chunk=None,
+                    ):
+        _, _, keys, _ = zip(*list(self.iter_chunks(n_samples, n_channels)))
+        traces_f = [self._load('filtered', np.float32,
+                               shape=(n_samples, n_channels),
+                               key=key) for key in keys]
+
+        def _load(name):
+            nspgc = n_spikes_per_group_chunk
+            return self._load_data_chunks(name, np.float32,
+                                          n_samples=n_samples,
+                                          n_channels=n_channels,
+                                          groups=groups,
+                                          n_spikes_per_group_chunk=nspgc,
+                                          )
+
+        output = Bunch(chunk_keys=keys,
+                       traces_f=traces_f,
+                       waveforms=_load('waveforms'),
+                       masks=_load('masks'),
+                       features=_load('features'),
+                       )
+        return output
+
     def step_detect(self, bounds, chunk_data, thresholds):
         key = bounds[2]
         # Apply the filter.
@@ -300,7 +364,7 @@ class SpikeDetekt(EventEmitter):
         # Detect spikes in the filtered chunk.
         components = self.detect(data_f, thresholds=thresholds)
         # Return the list of components in the chunk.
-        return key, components
+        return components
 
     def step_extract(self, bounds, components, n_spikes_total):
         """Return the waveforms to keep for each chunk for PCA."""
@@ -335,7 +399,7 @@ class SpikeDetekt(EventEmitter):
                                       n_spikes_chunk=n_spikes_chunk,
                                       n_spikes_total=n_spikes_total)
               for group in split.keys()}
-        return key, wm
+        return wm
 
     def step_pca(self, chunk_waveforms):
         # Concatenate all waveforms subsets from all chunks.
@@ -348,13 +412,18 @@ class SpikeDetekt(EventEmitter):
         pcs = self.waveform_pcs(waveforms_subset, masks_subset)
         return pcs
 
-    def step_features(self, bounds, pcs_per_group):
+    def step_features(self, bounds, pcs_per_group, n_spikes_per_group_chunk):
         s_start, s_end, keep_start, keep_end = bounds
         key = keep_start
         # Loop over the channel groups.
         for group, pcs in pcs_per_group.items():
+            # Find the waveforms shape.
+            n_spikes = n_spikes_per_group_chunk[group][key]
+            n_channels = self._n_channels_per_group
+            shape = (n_spikes, self._n_samples_waveforms, n_channels)
             # Save the waveforms.
             waveforms = self._load('waveforms', np.float32,
+                                   shape=shape,
                                    key=key, group=group)
             # Compute the features.
             features = self.features(waveforms, pcs)
@@ -386,8 +455,9 @@ class SpikeDetekt(EventEmitter):
         # Every chunk has a unique key: the `keep_start` integer.
         chunk_components = {}
         for bounds in self.iter_chunks(n_samples, n_channels):
+            key = bounds[2]
             chunk_data = data_chunk(traces, bounds, with_overlap=True)
-            key, components = self.step_detect(bounds, chunk_data, thresholds)
+            components = self.step_detect(bounds, chunk_data, thresholds)
             self.emit('detect_spikes', key=key, n_spikes=len(components))
             chunk_components[key] = components
         n_spikes_per_chunk = {key: len(val)
@@ -399,15 +469,21 @@ class SpikeDetekt(EventEmitter):
         info("Extracting all waveforms...")
         chunk_waveforms = defaultdict(dict)
         for bounds in self.iter_chunks(n_samples, n_channels):
-            # The key is bounds[2].
-            components = chunk_components[bounds[2]]
+            key = bounds[2]
+            components = chunk_components[key]
             if len(components) == 0:
                 continue
-            key, wm = self.step_extract(bounds, components, n_spikes_total)
+            wm = self.step_extract(bounds, components, n_spikes_total)
             self.emit('extract_spikes', key=key, n_spikes=len(components))
             # wm is a dict {channel_group: (waveforms, masks)}
             for group, wm_group in wm.items():
                 chunk_waveforms[group][key] = wm_group
+        n_spikes_per_group_chunk = {
+            group: {key: len(val)
+                    for key, val in chunk_waveforms[group].items()
+                    }
+            for group in chunk_waveforms.keys()
+        }
         groups = sorted(chunk_waveforms.keys())
         info("All waveforms extracted and saved.")
 
@@ -422,12 +498,14 @@ class SpikeDetekt(EventEmitter):
         # Pass 3: compute the features.
         info("Computing the features of all spikes...")
         for bounds in self.iter_chunks(n_samples, n_channels):
-            self.step_features(bounds, pcs)
+            self.step_features(bounds, pcs,
+                               n_spikes_per_group_chunk)
             self.emit('compute_features', key=bounds[2])
         info("All features computed and saved.")
 
-        # TODO: return dictionary of memmapped data, to be saved in
-        # a Kwik file.
+        # Return dictionary of memmapped data.
+        return self.output_data(n_samples, n_channels,
+                                groups, n_spikes_per_group_chunk)
 
 
 #------------------------------------------------------------------------------
