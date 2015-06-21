@@ -7,12 +7,12 @@
 #------------------------------------------------------------------------------
 
 import os.path as op
+from collections import defaultdict
 
 import numpy as np
 
 from ..utils.array import (PartialArray, get_excerpts,
                            chunk_bounds, data_chunk,
-                           _load_ndarray,
                            )
 from ..utils.logging import debug, info
 from ..io.kwik.sparse_kk2 import sparsify_features_masks
@@ -29,6 +29,25 @@ def _keep_spikes(samples, bounds):
     """Only keep spikes within the bounds `bounds=(start, end)`."""
     start, end = bounds
     return (start <= samples) & (samples <= end)
+
+
+def _split_spikes(idx, groups, **arrs):
+    """Split spike data according to the channel group."""
+    n_spikes_chunk = len(idx)
+    # First, remove the overlapping bands.
+    groups = groups[idx]
+    for key, arr in arrs.items():
+        arr = arr[idx, ...]
+        assert len(arr) == n_spikes_chunk
+    # Then, split along the group.
+    groups_u = np.unique(groups)
+    out = {}
+    for group in groups_u:
+        i = (groups == group)
+        out[group] = {}
+        for key, arr in arr.items():
+            out[group][key] = arr[i, ...]
+    return out
 
 
 #------------------------------------------------------------------------------
@@ -92,7 +111,7 @@ class SpikeDetekt(object):
 
     def apply_filter(self, data):
         filter = self._create_filter()
-        return filter(data)
+        return filter(data).astype(np.float32)
 
     def find_thresholds(self, traces):
         """Find weak and strong thresholds in filtered traces."""
@@ -182,7 +201,7 @@ class SpikeDetekt(object):
 
         # Reorder the spikes.
         idx = np.argsort(samples)
-        groups = groups[idx]
+        groups = groups[idx].astype(np.int32)
         samples = samples[idx]
         waveforms = waveforms[idx, ...]
         masks = masks[idx, ...]
@@ -193,6 +212,11 @@ class SpikeDetekt(object):
         assert waveforms.shape[0] == n_spikes
         _, n_samples, n_channels = waveforms.shape
         assert masks.shape == (n_spikes, n_channels)
+
+        assert groups.dtype == np.int32
+        assert samples.dtype == np.uint64
+        assert waveforms.dtype == np.float32
+        assert masks.dtype == np.float32
 
         return groups, samples, waveforms, masks
 
@@ -225,83 +249,114 @@ class SpikeDetekt(object):
     # Main functions
     # -------------------------------------------------------------------------
 
-    def _save(self, name, array):
+    def _path(self, name, chunk=None, group=None):
         if self._tempdir is None:
             raise ValueError("The temporary directory must be specified.")
-        path = op.join(self._tempdir, name)
-        array.tofile(path)
+        assert chunk >= 0
+        if group is None:
+            path = op.join(self._tempdir, '{}-{}'.format(name, chunk))
+        else:
+            assert group >= 0
+            path = op.join(self._tempdir, '{}-{}.{}'.format(name,
+                           chunk, group))
+        return path
 
-    def _load(self, name, dtype, shape):
-        if self._tempdir is None:
-            raise ValueError("The temporary directory must be specified.")
-        path = op.join(self._tempdir, name)
-        return np.fromfile(path, dtype=dtype).reshape(shape)
+    def _save(self, array, name, key=None, group=None):
+        path = self._path(name, key=key, group=group)
+        return array.tofile(path)
 
-    def iter_chunks(self, traces):
-        n_samples, n_channels = traces.shape
+    def _load(self, name, dtype, shape=None, key=None, group=None):
+        path = self._path(name, key=key, group=group)
+        out = np.fromfile(path, dtype=dtype)
+        if shape:
+            out = out.reshape(shape)
+        return out
 
+    def _pca_subset(self, waveforms, masks,
+                    n_spikes_chunk=None, n_spikes_total=None):
+        n_waveforms_max = self._kwargs['pca_nwaveforms_max']
+        p = n_spikes_chunk / float(n_spikes_total)
+        k = int(n_spikes_chunk / float(p * n_waveforms_max))
+        k = np.clip(k, 1, n_spikes_chunk)
+        return (waveforms[::k, ...], masks[::k, ...])
+
+    def iter_chunks(self, n_samples, n_channels):
         chunk_size = self._kwargs['chunk_size']
         overlap = self._kwargs['chunk_overlap']
-
         for bounds in chunk_bounds(n_samples, chunk_size, overlap=overlap):
-            chunk = data_chunk(traces, bounds, with_overlap=True)
-            # Get the filtered chunk.
-            chunk_f = self.apply_filter(chunk)
-            yield bounds, chunk, chunk_f
+            yield bounds
 
-    def find_spikes(self, traces, thresholds):
-        # TODO OPTIM: save that on disk instead of in memory.
-        chunk_components = {}
-        for bounds, chunk, chunk_f in self.iter_chunks(traces):
-            s_start, s_end, keep_start, keep_end = bounds
+    def step_detect(self, bounds, chunk_data, thresholds):
+        key = bounds[2]
+        # Apply the filter.
+        data_f = self.apply_filter(chunk_data)
+        assert data_f.dtype == np.float32
+        assert data_f.shape == chunk_data.shape
+        # Save the filtered chunk.
+        self._save(data_f, 'filtered', key=key)
+        # Detect spikes in the filtered chunk.
+        components = self.detect(data_f, thresholds=thresholds)
+        # Return the list of components in the chunk.
+        return key, components
 
-            # Detect the connected components in the chunk.
-            components = self.detect(chunk_f, thresholds=thresholds)
-            chunk_components[s_start] = components
+    def step_extract(self, bounds, components, n_spikes_total):
+        """Return the waveforms to keep for each chunk for PCA."""
+        s_start, s_end, keep_start, keep_end = bounds
+        key = keep_start
+        n_samples = s_end - s_start
+        # Get the filtered chunk.
+        chunk_f = self._load('filtered', np.float32, (n_samples, -1), key=key)
+        # Extract the spikes from the chunk.
+        groups, spike_samples, waveforms, masks = self.extract_spikes(
+            components, chunk_f)
 
-        return chunk_components
+        # Remove spikes in the overlapping bands.
+        idx = _keep_spikes(spike_samples, (keep_start, keep_end))
+        n_spikes_chunk = len(idx)
+        # Split the data according to the channel groups.
+        split = _split_spikes(idx, groups,
+                              spike_samples=spike_samples,
+                              waveforms=waveforms,
+                              masks=masks,
+                              )
+        # Save the split arrays: spike samples, waveforms, masks.
+        for group, out in split.items():
+            for name, arr in out.items():
+                self._save(arr, name, key=key, group=group)
 
-    def find_waveforms(self, traces, chunk_components, n_spikes_total):
-        # Waveforms to keep for each chunk in order to compute the PCs.
-        chunk_waveforms = {}
-        n_waveforms_max = self._kwargs['pca_nwaveforms_max']
-        for bounds, chunk, chunk_f in self.iter_chunks(traces):
-            s_start, s_end, keep_start, keep_end = bounds
+        # Keep some waveforms in memory in order to compute PCA.
+        wm = {group: (split[group]['waveforms'], split[group]['masks'])
+              for group in split.keys()}
+        wm = {group: self._pca_subset(wm[group],
+                                      n_spikes_chunk=n_spikes_chunk,
+                                      n_spikes_total=n_spikes_total)
+              for group in split.keys()}
+        return key, wm
 
-            # Get the previously-computed component list.
-            components = chunk_components[s_start]
-
-            # Extract the spikes from the chunk.
-            groups, spike_samples, waveforms, masks = self.extract_spikes(
-                components, chunk_f)
-
-            # Remove spikes in the overlapping bands.
-            idx = _keep_spikes(spike_samples, bounds[2:])
-            spike_samples = spike_samples[idx]
-            waveforms = waveforms[idx, ...]
-            masks = masks[idx, ...]
-
-            # TODO: save spikes, masks, waveforms on disk
-
-            # Keep some waveforms in memory in order to compute PCA.
-            n_spikes_chunk = len(components)
-            # What fraction of all spikes are in that chunk?
-            p = n_spikes_chunk / float(n_spikes_total)
-            k = int(n_spikes_chunk / float(p * n_waveforms_max))
-            k = np.clip(k, 1, n_spikes_chunk)
-            w = waveforms[::k, ...]
-            m = masks[::k, ...]
-            chunk_waveforms[s_start] = w, m
-        return chunk_waveforms
-
-    def find_pcs(self, chunk_waveforms):
+    def step_pca(self, chunk_waveforms):
+        # Concatenate all waveforms subsets from all chunks.
         waveforms_subset, masks_subset = zip(*chunk_waveforms.values())
         waveforms_subset = np.array(waveforms_subset)
         masks_subset = np.array(masks_subset)
         assert (waveforms_subset.shape[0],
                 waveforms_subset.shape[2]) == masks_subset.shape
+        # Perform PCA and return the components.
         pcs = self.waveform_pcs(waveforms_subset, masks_subset)
         return pcs
+
+    def step_features(self, bounds, pcs_per_group):
+        s_start, s_end, keep_start, keep_end = bounds
+        key = keep_start
+        # Loop over the channel groups.
+        for group, pcs in pcs_per_group.items():
+            # Save the waveforms.
+            waveforms = self._load('waveforms', np.float32,
+                                   key=key, group=group)
+            # Compute the features.
+            features = self.features(waveforms, pcs)
+            assert features.dtype == np.float32
+            # Save the features.
+            self._save(features, 'features', key=key, group=group)
 
     def run_serial(self, traces, interval=None):
         """Run SpikeDetekt on one core."""
@@ -322,29 +377,40 @@ class SpikeDetekt(object):
 
         # Pass 1: find the connected components and count the spikes.
         info("Detecting spikes...")
-        # Ditionary {chunk_start: components}.
-        chunk_components = self.detect_spikes(traces, thresholds)
+        # TODO OPTIM: save that on disk instead of in memory.
+        # Dictionary {chunk_start: components}.
+        chunk_components = {}
+        for bounds in self.iter_chunks(n_samples, n_channels):
+            chunk_data = data_chunk(traces, bounds, with_overlap=True)
+            key, components = self.step_detect(bounds, chunk_data, thresholds)
+            chunk_components[key] = components
         n_spikes_per_chunk = {key: len(val)
                               for key, val in chunk_components.items()}
         n_spikes_total = sum(n_spikes_per_chunk.values())
         info("{} spikes detected in total.".format(n_spikes_total))
 
         # Pass 2: extract the spikes and save some waveforms before PCA.
-        chunk_waveforms = self.find_waveforms(traces,
-                                              chunk_components,
-                                              n_spikes_total,
-                                              )
+        info("Extracting all waveforms...")
+        chunk_waveforms = defaultdict(dict)
+        for bounds in self.iter_chunks(n_samples, n_channels):
+            key, wm = self.step_extract(bounds, components, n_spikes_total)
+            # wm = {channel_group: (waveforms, masks)}
+            for group, wm_group in wm.items():
+                chunk_waveforms[group][key] = wm_group
+        groups = sorted(chunk_waveforms.keys())
+        info("All waveforms extracted and saved.")
 
         # Compute the PCs.
-        pcs = self.find_pcs(chunk_waveforms)
+        info("Performing PCA...")
+        pcs = {group: self.step_pca(chunk_waveforms[group])
+               for group in groups}
+        info("Principal waveform components computed.")
 
         # Pass 3: compute the features.
-        for bounds, chunk, chunk_f in self.iter_chunks(traces):
-            s_start, s_end, keep_start, keep_end = bounds
-            # TODO: load waveforms from disk
-            # memmap, load by chunk, refactor from store
-            # waveforms = self._load('waveforms', np.float32, ())
-            self.features(waveforms, pcs)
+        info("Computing the features of all spikes...")
+        for bounds in self.iter_chunks(n_samples, n_channels):
+            self.step_features(bounds, pcs)
+        info("All features computed and saved.")
 
 
 #------------------------------------------------------------------------------
