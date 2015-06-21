@@ -56,11 +56,15 @@ class WaveformExtractor(object):
         self._dep_channels = {i: channels
                               for channels in channels_per_group.values()
                               for i in channels}
+        self._channel_groups = {i: g
+                                for g, channels in channels_per_group.items()
+                                for i in channels}
 
     def _component(self, component, data=None, n_samples=None):
         comp_s = component[:, 0]  # shape: (component_size,)
         comp_ch = component[:, 1]  # shape: (component_size,)
         channels = self._dep_channels[comp_ch[0]]
+        group = self._channel_groups[comp_ch[0]]
 
         # Get the temporal window around the waveform.
         s_min, s_max = (comp_s.min() - 3), (comp_s.max() + 4)
@@ -73,6 +77,7 @@ class WaveformExtractor(object):
                      s_min=s_min,
                      s_max=s_max,
                      channels=channels,
+                     group=group,
                      )
 
     def _normalize(self, x):
@@ -166,7 +171,7 @@ class WaveformExtractor(object):
         assert masks.ndim == 1
         assert waveform_aligned.shape[1] == masks.shape[0]
 
-        return s_aligned, waveform_aligned, masks
+        return comp.group, s_aligned, waveform_aligned, masks
 
 
 #------------------------------------------------------------------------------

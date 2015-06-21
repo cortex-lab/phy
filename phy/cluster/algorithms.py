@@ -12,6 +12,7 @@ import numpy as np
 
 from ..utils.array import (PartialArray, get_excerpts,
                            chunk_bounds, data_chunk,
+                           _load_ndarray,
                            )
 from ..utils.logging import debug, info
 from ..io.kwik.sparse_kk2 import sparsify_features_masks
@@ -168,29 +169,32 @@ class SpikeDetekt(object):
         traces_t = thresholder.transform(traces_f)
         # Extract all waveforms.
         extractor = self._create_extractor(thresholds)
-        samples, waveforms, masks = zip(*[extractor(component,
-                                                    data=traces_f,
-                                                    data_t=traces_t,
-                                                    )
-                                          for component in components])
+        groups, samples, waveforms, masks = zip(*[extractor(component,
+                                                            data=traces_f,
+                                                            data_t=traces_t,
+                                                            )
+                                                  for component in components])
         # Create the return arrays.
+        groups = np.array(groups)
         samples = np.array(samples, dtype=np.uint64)
         waveforms = np.array(waveforms, dtype=np.float32)
         masks = np.array(masks, dtype=np.float32)
 
         # Reorder the spikes.
         idx = np.argsort(samples)
+        groups = groups[idx]
         samples = samples[idx]
         waveforms = waveforms[idx, ...]
         masks = masks[idx, ...]
 
+        assert groups.shape == (n_spikes,)
         assert samples.shape == (n_spikes,)
         assert waveforms.ndim == 3
         assert waveforms.shape[0] == n_spikes
         _, n_samples, n_channels = waveforms.shape
         assert masks.shape == (n_spikes, n_channels)
 
-        return samples, waveforms, masks
+        return groups, samples, waveforms, masks
 
     def waveform_pcs(self, waveforms, masks):
         """Compute waveform principal components.
@@ -268,9 +272,8 @@ class SpikeDetekt(object):
             components = chunk_components[s_start]
 
             # Extract the spikes from the chunk.
-            spike_samples, waveforms, masks = self.extract_spikes(components,
-                                                                  chunk_f,
-                                                                  )
+            groups, spike_samples, waveforms, masks = self.extract_spikes(
+                components, chunk_f)
 
             # Remove spikes in the overlapping bands.
             idx = _keep_spikes(spike_samples, bounds[2:])

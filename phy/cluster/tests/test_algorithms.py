@@ -9,6 +9,7 @@
 import os.path as op
 
 import numpy as np
+from numpy.testing import assert_equal as ae
 
 from ...utils.tempdir import TemporaryDirectory
 from ...utils.settings import Settings
@@ -59,10 +60,12 @@ def test_spike_detect():
                            params['extract_s_after'])
 
     # Spike extraction.
-    samples, waveforms, masks = sd.extract_spikes(components,
-                                                  traces_f,
-                                                  thresholds=thresholds,
-                                                  )
+    groups, samples, waveforms, masks = sd.extract_spikes(components,
+                                                          traces_f,
+                                                          thresholds,
+                                                          )
+
+    ae(groups, np.zeros(n_spikes))
     assert samples.dtype == np.uint64
     assert samples.shape == (n_spikes,)
     assert waveforms.shape == (n_spikes, n_samples_waveforms, n_channels)
