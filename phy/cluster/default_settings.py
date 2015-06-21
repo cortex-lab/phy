@@ -30,7 +30,7 @@ def spikedetekt_params(sample_rate):
         detect_spikes='negative',
 
         # Connected components.
-        connected_component_join_size=int(.00005 * sample_rate),
+        connected_component_join_size=1,
 
         # Spike extractions.
         extract_s_before=10,
