@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 import numpy as np
 from pytest import raises
 
@@ -14,6 +16,7 @@ from ..array import (_unique,
                      _normalize,
                      _index_of,
                      _in_polygon,
+                     _load_ndarray,
                      _len_index,
                      _spikes_in_clusters,
                      _spikes_per_cluster,
@@ -32,6 +35,7 @@ from ..array import (_unique,
                      _concatenate_virtual_arrays,
                      )
 from ..testing import _assert_equal as ae
+from ..tempdir import TemporaryDirectory
 from ...io.mock import artificial_spike_clusters
 
 
@@ -297,6 +301,32 @@ def test_in_polygon():
                               (points[:, 1] < 1))[0]
     idx = np.nonzero(_in_polygon(points, polygon))[0]
     ae(idx, idx_expected)
+
+
+#------------------------------------------------------------------------------
+# Test I/O functions
+#------------------------------------------------------------------------------
+
+def _test_load_ndarray(memmap=None):
+    n, m = 10000, 100
+    dtype = np.float32
+    arr = np.random.randn(n, m).astype(dtype)
+    with TemporaryDirectory() as tmpdir:
+        path = op.join(tmpdir, 'test')
+        with open(path, 'wb') as f:
+            arr.tofile(f)
+        with open(path, 'rb') as f:
+            arr_m = _load_ndarray(f, dtype=dtype,
+                                  shape=(n, m), memmap=memmap)
+        ae(arr, arr_m)
+
+
+def test_load_ndarray_nomemmap():
+    _test_load_ndarray(False)
+
+
+def test_load_ndarray_memmap():
+    _test_load_ndarray(True)
 
 
 #------------------------------------------------------------------------------

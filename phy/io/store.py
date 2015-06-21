@@ -7,8 +7,6 @@
 #------------------------------------------------------------------------------
 
 from collections import OrderedDict
-from operator import mul
-from functools import reduce
 import os
 import os.path as op
 import re
@@ -17,7 +15,8 @@ import numpy as np
 
 from ..utils._types import _as_int, _is_integer, _is_array_like
 from ..utils._misc import _load_pickle, _save_pickle
-from ..utils.array import PerClusterData, _spikes_in_clusters, _subset_spc
+from ..utils.array import (PerClusterData, _spikes_in_clusters,
+                           _subset_spc, _load_ndarray)
 from ..utils.event import ProgressReporter
 from ..utils.logging import debug, info, warn
 from ..ext.six import string_types
@@ -36,30 +35,6 @@ def _directory_size(path):
             fp = os.path.join(dirpath, f)
             total_size += os.path.getsize(fp)
     return total_size
-
-
-def _prod(l):
-    return reduce(mul, l, 1)
-
-
-def _load_ndarray(f, dtype=None, shape=None, memmap=True):
-    if dtype is None:
-        return f
-    else:
-        if not memmap:
-            arr = np.fromfile(f, dtype=dtype)
-            if shape is not None:
-                arr = arr.reshape(shape)
-        else:
-            # memmap doesn't accept -1 in shapes.
-            if shape and shape[0] == -1:
-                n_bytes = os.fstat(f.fileno()).st_size
-                n_items = n_bytes // np.dtype(dtype).itemsize
-                n_rows = n_items // _prod(shape[1:])
-                shape = (n_rows,) + shape[1:]
-                assert _prod(shape) == n_items
-            arr = np.memmap(f, dtype=dtype, shape=shape, mode='r')
-        return arr
 
 
 def _file_cluster_id(path):

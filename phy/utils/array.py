@@ -6,7 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
 from math import floor
+from operator import mul
+from functools import reduce
 
 import numpy as np
 
@@ -240,6 +243,34 @@ def _in_polygon(points, polygon):
     assert polygon.ndim == 2
     path = Path(polygon, closed=True)
     return path.contains_points(points)
+
+
+# -----------------------------------------------------------------------------
+# I/O functions
+# -----------------------------------------------------------------------------
+
+def _prod(l):
+    return reduce(mul, l, 1)
+
+
+def _load_ndarray(f, dtype=None, shape=None, memmap=True):
+    if dtype is None:
+        return f
+    else:
+        if not memmap:
+            arr = np.fromfile(f, dtype=dtype)
+            if shape is not None:
+                arr = arr.reshape(shape)
+        else:
+            # memmap doesn't accept -1 in shapes.
+            if shape and shape[0] == -1:
+                n_bytes = os.fstat(f.fileno()).st_size
+                n_items = n_bytes // np.dtype(dtype).itemsize
+                n_rows = n_items // _prod(shape[1:])
+                shape = (n_rows,) + shape[1:]
+                assert _prod(shape) == n_items
+            arr = np.memmap(f, dtype=dtype, shape=shape, mode='r')
+        return arr
 
 
 # -----------------------------------------------------------------------------
