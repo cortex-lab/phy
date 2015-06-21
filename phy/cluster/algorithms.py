@@ -36,6 +36,10 @@ def _keep_spikes(samples, bounds):
 
 def _split_spikes(groups, idx=None, **arrs):
     """Split spike data according to the channel group."""
+    dtypes = {'spike_samples': np.uint64,
+              'waveforms': np.float32,
+              'masks': np.float32,
+              }
     groups = _as_array(groups)
     if idx is not None:
         n_spikes_chunk = np.sum(idx)
@@ -43,7 +47,7 @@ def _split_spikes(groups, idx=None, **arrs):
         groups = groups[idx]
         arrs_bis = arrs.copy()
         for key, arr in arrs.items():
-            arrs_bis[key] = arr[idx, ...]
+            arrs_bis[key] = arr[idx]
             assert len(arrs_bis[key]) == n_spikes_chunk
     # Then, split along the group.
     groups_u = np.unique(groups)
@@ -52,8 +56,18 @@ def _split_spikes(groups, idx=None, **arrs):
         i = (groups == group)
         out[group] = {}
         for key, arr in arrs_bis.items():
-            out[group][key] = arr[i, ...]
+            out[group][key] = _concat(arr[i], dtypes[key])
     return out
+
+
+def _array_list(arrs):
+    out = np.empty((len(arrs),), dtype=np.object)
+    out[:] = arrs
+    return out
+
+
+def _concat(arr, dtype=None):
+    return np.array([_[...] for _ in arr], dtype=dtype)
 
 
 class SpikeCounts(object):
@@ -228,30 +242,32 @@ class SpikeDetekt(EventEmitter):
                                                             data_t=traces_t,
                                                             )
                                                   for component in components])
+
         # Create the return arrays.
-        groups = np.array(groups)
+        groups = np.array(groups, dtype=np.int32)
+        assert groups.shape == (n_spikes,)
+        assert groups.dtype == np.int32
+
         samples = np.array(samples, dtype=np.uint64)
-        waveforms = np.array(waveforms, dtype=np.float32)
-        masks = np.array(masks, dtype=np.float32)
+        assert samples.shape == (n_spikes,)
+        assert samples.dtype == np.uint64
+
+        # These are lists of arrays of various shapes (because of various
+        # groups).
+        waveforms = _array_list(waveforms)
+        assert waveforms.shape == (n_spikes,)
+        assert waveforms.dtype == np.object
+
+        masks = _array_list(masks)
+        assert masks.dtype == np.object
+        assert masks.shape == (n_spikes,)
 
         # Reorder the spikes.
         idx = np.argsort(samples)
-        groups = groups[idx].astype(np.int32)
+        groups = groups[idx]
         samples = samples[idx]
-        waveforms = waveforms[idx, ...]
-        masks = masks[idx, ...]
-
-        assert groups.shape == (n_spikes,)
-        assert samples.shape == (n_spikes,)
-        assert waveforms.ndim == 3
-        assert waveforms.shape[0] == n_spikes
-        _, n_samples, n_channels = waveforms.shape
-        assert masks.shape == (n_spikes, n_channels)
-
-        assert groups.dtype == np.int32
-        assert samples.dtype == np.uint64
-        assert waveforms.dtype == np.float32
-        assert masks.dtype == np.float32
+        waveforms = waveforms[idx]
+        masks = masks[idx]
 
         return groups, samples, waveforms, masks
 
@@ -300,6 +316,7 @@ class SpikeDetekt(EventEmitter):
     def _save(self, array, name, key=None, group=None):
         path = self._path(name, key=key, group=group)
         dtype = array.dtype
+        assert dtype != np.object
         shape = array.shape
         debug("Save `{}` ({}, {}).".format(path, np.dtype(dtype).name, shape))
         return array.tofile(path)
