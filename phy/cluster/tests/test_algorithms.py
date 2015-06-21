@@ -104,6 +104,7 @@ def test_spike_detect_methods(spikedetekt):
 
 def test_spike_detect_serial(spikedetekt):
     sd, traces, params = spikedetekt
+    sd.run_serial(traces)
 
 
 def test_cluster():

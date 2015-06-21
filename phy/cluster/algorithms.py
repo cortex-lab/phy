@@ -183,6 +183,7 @@ class SpikeDetekt(object):
 
         """
         n_spikes = len(components)
+        assert n_spikes > 0
         # Transform the filtered data according to the detection mode.
         thresholder = self._create_thresholder()
         traces_t = thresholder.transform(traces_f)
@@ -301,6 +302,7 @@ class SpikeDetekt(object):
 
     def step_extract(self, bounds, components, n_spikes_total):
         """Return the waveforms to keep for each chunk for PCA."""
+        assert len(components) > 0
         s_start, s_end, keep_start, keep_end = bounds
         key = keep_start
         n_samples = s_end - s_start
@@ -393,6 +395,10 @@ class SpikeDetekt(object):
         info("Extracting all waveforms...")
         chunk_waveforms = defaultdict(dict)
         for bounds in self.iter_chunks(n_samples, n_channels):
+            # The key is bounds[2].
+            components = chunk_components[bounds[2]]
+            if len(components) == 0:
+                continue
             key, wm = self.step_extract(bounds, components, n_spikes_total)
             # wm is a dict {channel_group: (waveforms, masks)}
             for group, wm_group in wm.items():
