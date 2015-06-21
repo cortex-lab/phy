@@ -377,7 +377,7 @@ class PanZoom(object):
         self._do_zoom((dx, dx), (x0, y0))
 
     def _zoom_keyboard(self, key):
-        k = .01
+        k = .05
         if key == '-':
             k = -k
         self._do_zoom((k, k), (0, 0))
