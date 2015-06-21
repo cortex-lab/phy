@@ -25,7 +25,7 @@ from ...io.mock import artificial_traces
 #------------------------------------------------------------------------------
 
 sample_rate = 10000
-n_samples = 10000
+n_samples = 25000
 n_channels = 4
 
 
@@ -104,7 +104,8 @@ def test_spike_detect_methods(spikedetekt):
 
 def test_spike_detect_serial_no_spikes(spikedetekt):
     sd, traces, params = spikedetekt
-    sd.run_serial(traces)
+    out = sd.run_serial(traces)
+    print(out)
 
 
 def test_cluster():
