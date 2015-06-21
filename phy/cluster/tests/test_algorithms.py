@@ -10,6 +10,7 @@ import os.path as op
 
 import numpy as np
 from numpy.testing import assert_equal as ae
+from pytest import fixture
 
 from ...utils.tempdir import TemporaryDirectory
 from ...utils.settings import Settings
@@ -23,10 +24,15 @@ from ...io.mock import artificial_traces
 # Tests
 #------------------------------------------------------------------------------
 
-def test_spike_detect():
-    sample_rate = 10000
-    n_samples = 10000
-    n_channels = 4
+sample_rate = 10000
+n_samples = 10000
+n_channels = 4
+
+
+@fixture
+def spikedetekt(request):
+    tmpdir = TemporaryDirectory()
+
     traces = artificial_traces(n_samples, n_channels)
 
     # Load default settings.
@@ -37,8 +43,17 @@ def test_spike_detect():
     params['sample_rate'] = sample_rate
     params['probe_adjacency_list'] = {0: [1, 2], 1: [0, 2], 2: [0, 1], 3: []}
     params['probe_channels'] = {0: list(range(n_channels))}
+    sd = SpikeDetekt(tempdir=tmpdir.name, **params)
 
-    sd = SpikeDetekt(**params)
+    def end():
+        tmpdir.cleanup()
+    request.addfinalizer(end)
+
+    return sd, traces, params
+
+
+def test_spike_detect_methods(spikedetekt):
+    sd, traces, params = spikedetekt
 
     # Filter the data.
     traces_f = sd.apply_filter(traces)
@@ -85,6 +100,10 @@ def test_spike_detect():
     features = sd.features(waveforms, pcs)
     assert features.shape == (n_spikes, n_channels, n_pcs)
     assert not np.any(np.isnan(features))
+
+
+def test_spike_detect_serial(spikedetekt):
+    sd, traces, params = spikedetekt
 
 
 def test_cluster():

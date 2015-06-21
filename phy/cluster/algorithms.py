@@ -249,16 +249,16 @@ class SpikeDetekt(object):
     # Main functions
     # -------------------------------------------------------------------------
 
-    def _path(self, name, chunk=None, group=None):
+    def _path(self, name, key=None, group=None):
         if self._tempdir is None:
             raise ValueError("The temporary directory must be specified.")
-        assert chunk >= 0
+        assert key >= 0
         if group is None:
-            path = op.join(self._tempdir, '{}-{}'.format(name, chunk))
+            path = op.join(self._tempdir, '{}-{}'.format(name, key))
         else:
             assert group >= 0
             path = op.join(self._tempdir, '{}-{}.{}'.format(name,
-                           chunk, group))
+                           key, group))
         return path
 
     def _save(self, array, name, key=None, group=None):
@@ -359,7 +359,7 @@ class SpikeDetekt(object):
             self._save(features, 'features', key=key, group=group)
 
     def run_serial(self, traces, interval=None):
-        """Run SpikeDetekt on one core."""
+        """Run SpikeDetekt using one CPU."""
         n_samples, n_channels = traces.shape
 
         # Take a subset if necessary.
@@ -377,8 +377,8 @@ class SpikeDetekt(object):
 
         # Pass 1: find the connected components and count the spikes.
         info("Detecting spikes...")
-        # TODO OPTIM: save that on disk instead of in memory.
-        # Dictionary {chunk_start: components}.
+        # Dictionary {chunk_key: components}.
+        # Every chunk has a unique key: the `keep_start` integer.
         chunk_components = {}
         for bounds in self.iter_chunks(n_samples, n_channels):
             chunk_data = data_chunk(traces, bounds, with_overlap=True)
@@ -394,7 +394,7 @@ class SpikeDetekt(object):
         chunk_waveforms = defaultdict(dict)
         for bounds in self.iter_chunks(n_samples, n_channels):
             key, wm = self.step_extract(bounds, components, n_spikes_total)
-            # wm = {channel_group: (waveforms, masks)}
+            # wm is a dict {channel_group: (waveforms, masks)}
             for group, wm_group in wm.items():
                 chunk_waveforms[group][key] = wm_group
         groups = sorted(chunk_waveforms.keys())
@@ -411,6 +411,9 @@ class SpikeDetekt(object):
         for bounds in self.iter_chunks(n_samples, n_channels):
             self.step_features(bounds, pcs)
         info("All features computed and saved.")
+
+        # TODO: return dictionary of memmapped data, to be saved in
+        # a Kwik file.
 
 
 #------------------------------------------------------------------------------
