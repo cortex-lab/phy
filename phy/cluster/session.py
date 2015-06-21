@@ -17,7 +17,7 @@ from ..io.base import BaseSession
 from ..io.kwik.model import KwikModel
 from ..io.kwik.store_items import create_store
 from .manual.gui import ClusterManualGUI
-from .algorithms import KlustaKwik
+from .algorithms import KlustaKwik, SpikeDetekt
 
 
 #------------------------------------------------------------------------------
@@ -244,8 +244,49 @@ class Session(BaseSession):
 
         return decorator
 
-    # Automatic clustering
+    # Spike sorting
     # -------------------------------------------------------------------------
+
+    def detect_spikes(self, interval=None, algorithm='spikedetekt', **kwargs):
+        """Detect spikes in traces.
+
+        Parameters
+        ----------
+
+        interval : tuple (optional)
+            A tuple `(start, end)` (in seconds) where to detect spikes.
+        algorithm : str
+            The algorithm name. Only `spikedetekt` currently.
+        **kwargs : dictionary
+            Algorithm parameters.
+
+        Returns
+        -------
+
+        result : dict
+            A `{channel_group: tuple}` mapping, where the tuple is:
+
+            * `spike_times` : the spike times (in seconds).
+            * `masks`: the masks of the spikes `(n_spikes, n_channels)`.
+
+        """
+        sd_dir = op.join(self.settings.exp_settings_dir, 'spikedetekt')
+        _ensure_dir_exists(sd_dir)
+        if interval is not None:
+            (start_sec, end_sec) = interval
+            sr = self.model.sample_rate
+            interval_samples = (int(start_sec * sr),
+                                int(end_sec * sr))
+        else:
+            interval_samples = None
+        sd = SpikeDetekt(tempdir=sd_dir, **kwargs)
+        out = sd.run_serial(self.model.traces,
+                            interval_samples=interval_samples)
+        assert out
+        # TODO:
+        # * check if the spikes exist. if so, raise an exception (also,
+        #   "force" parameter)
+        # * put the data into the kwik files
 
     def cluster(self,
                 clustering=None,

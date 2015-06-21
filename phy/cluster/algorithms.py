@@ -510,13 +510,13 @@ class SpikeDetekt(EventEmitter):
                        )
         return output
 
-    def run_serial(self, traces, interval=None):
+    def run_serial(self, traces, interval_samples=None):
         """Run SpikeDetekt using one CPU."""
         n_samples, n_channels = traces.shape
 
         # Take a subset if necessary.
-        if interval is not None:
-            start, end = interval
+        if interval_samples is not None:
+            start, end = interval_samples
             traces = traces[start:end, ...]
         else:
             start, end = 0, n_samples
