@@ -28,6 +28,7 @@ def _compute_pcs(x, n_pcs=None, masks=None):
         assert masks.shape == (n_spikes, n_channels)
 
     # Compute regularization cov matrix.
+    cov_reg = np.eye(n_samples)
     if masks is not None:
         unmasked = masks > 0
         # The last dimension is now time. The second dimension is channel.
@@ -37,9 +38,10 @@ def _compute_pcs(x, n_pcs=None, masks=None):
         unmasked_all = x_swapped[unmasked, :]
         # Let's compute the regularization cov matrix of this beast.
         # shape: (n_samples, n_samples)
-        cov_reg = np.cov(unmasked_all, rowvar=0)
-    else:
-        cov_reg = np.eye(n_samples)
+        cov_reg_ = np.cov(unmasked_all, rowvar=0)
+        # Make sure the covariance matrix is valid.
+        if cov_reg_.ndim == 2:
+            cov_reg = cov_reg
     assert cov_reg.shape == (n_samples, n_samples)
 
     pcs_list = []
@@ -114,5 +116,5 @@ class PCA(object):
         if pcs is None:
             pcs = self._pcs
         # Need to call fit() if the pcs are None here.
-        assert pcs is not None
-        return _project_pcs(waveforms, pcs)
+        if pcs is not None:
+            return _project_pcs(waveforms, pcs)
