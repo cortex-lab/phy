@@ -12,17 +12,26 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 from pytest import fixture
 
+from ...utils.logging import set_level
 from ...utils.tempdir import TemporaryDirectory
 from ...utils.settings import Settings
-from ..algorithms import cluster, SpikeDetekt
 from ...io.kwik import KwikModel
 from ...io.kwik.mock import create_mock_kwik
 from ...io.mock import artificial_traces
+from ..algorithms import cluster, SpikeDetekt
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
+
+def setup():
+    set_level('debug')
+
+
+def teardown():
+    set_level('info')
+
 
 sample_rate = 10000
 n_samples = 25000
@@ -34,6 +43,8 @@ def spikedetekt(request):
     tmpdir = TemporaryDirectory()
 
     traces = artificial_traces(n_samples, n_channels)
+    traces[1000:1010, 1] *= 5
+    traces[2000:2010, 3] *= 10
 
     # Load default settings.
     curdir = op.dirname(op.realpath(__file__))

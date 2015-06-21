@@ -48,7 +48,7 @@ def _split_spikes(idx, groups, **arrs):
     for group in groups_u:
         i = (groups == group)
         out[group] = {}
-        for key, arr in arr.items():
+        for key, arr in arrs.items():
             out[group][key] = arr[i, ...]
     return out
 
@@ -265,19 +265,25 @@ class SpikeDetekt(EventEmitter):
             raise ValueError("The temporary directory must be specified.")
         assert key >= 0
         if group is None:
-            path = op.join(self._tempdir, '{}-{}'.format(name, key))
+            path = op.join(self._tempdir, '{:s}-{:d}'.format(name, key))
         else:
             assert group >= 0
-            path = op.join(self._tempdir, '{}-{}.{}'.format(name,
-                           key, group))
+            fn = '{chunk:d}.{name:s}.{group:d}'.format(
+                chunk=key, name=name, group=group)
+            path = op.join(self._tempdir, fn)
         return path
 
     def _save(self, array, name, key=None, group=None):
         path = self._path(name, key=key, group=group)
+        dtype = array.dtype
+        shape = array.shape
+        debug("Save `{}` ({}, {}).".format(path, np.dtype(dtype).name, shape))
         return array.tofile(path)
 
     def _load(self, name, dtype, shape=None, key=None, group=None):
         path = self._path(name, key=key, group=group)
+        assert op.exists(path)
+        debug("Load `{}` ({}, {}).".format(path, np.dtype(dtype).name, shape))
         with open(path, 'rb') as f:
             return _load_ndarray(f, dtype=dtype, shape=shape)
 
@@ -291,14 +297,15 @@ class SpikeDetekt(EventEmitter):
         out = {}
         for group in groups:
             out[group] = []
+            n_channels_group = self._n_channels_per_group[group]
             for key in keys:
                 n_spikes = n_spikes_per_group_chunk[group][key]
                 shape = {
                     'waveforms': (n_spikes,
                                   self._n_samples_waveforms,
-                                  n_channels),
-                    'masks': (n_spikes, n_channels),
-                    'features': (n_spikes, n_channels, self._n_features),
+                                  n_channels_group),
+                    'masks': (n_spikes, n_channels_group),
+                    'features': (n_spikes, n_channels_group, self._n_features),
                 }[name]
                 w = self._load(name, dtype,
                                shape=shape,
@@ -307,8 +314,8 @@ class SpikeDetekt(EventEmitter):
                 out[group].append(w)
         return out
 
-    def _pca_subset(self, waveforms, masks,
-                    n_spikes_chunk=None, n_spikes_total=None):
+    def _pca_subset(self, wm, n_spikes_chunk=None, n_spikes_total=None):
+        waveforms, masks = wm
         n_waveforms_max = self._kwargs['pca_nwaveforms_max']
         p = n_spikes_chunk / float(n_spikes_total)
         k = int(n_spikes_chunk / float(p * n_waveforms_max))
@@ -355,7 +362,8 @@ class SpikeDetekt(EventEmitter):
     # Main steps
     # -------------------------------------------------------------------------
 
-    def step_detect(self, bounds, chunk_data, chunk_data_keep, thresholds):
+    def step_detect(self, bounds, chunk_data, chunk_data_keep,
+                    thresholds=None):
         key = bounds[2]
         # Apply the filter.
         data_f = self.apply_filter(chunk_data)
@@ -371,6 +379,7 @@ class SpikeDetekt(EventEmitter):
     def step_extract(self, bounds, components,
                      n_spikes_total=None,
                      n_channels=None,
+                     thresholds=None,
                      ):
         """Return the waveforms to keep for each chunk for PCA."""
         assert len(components) > 0
@@ -382,7 +391,7 @@ class SpikeDetekt(EventEmitter):
                              shape=(n_samples, n_channels), key=key)
         # Extract the spikes from the chunk.
         groups, spike_samples, waveforms, masks = self.extract_spikes(
-            components, chunk_f)
+            components, chunk_f, thresholds=thresholds)
 
         # Remove spikes in the overlapping bands.
         idx = _keep_spikes(spike_samples, (keep_start, keep_end))
@@ -408,10 +417,11 @@ class SpikeDetekt(EventEmitter):
         return wm
 
     def step_pca(self, chunk_waveforms):
+        # This is a dict {key: (waveforms, masks)}.
         # Concatenate all waveforms subsets from all chunks.
         waveforms_subset, masks_subset = zip(*chunk_waveforms.values())
-        waveforms_subset = np.array(waveforms_subset)
-        masks_subset = np.array(masks_subset)
+        waveforms_subset = np.vstack(waveforms_subset)
+        masks_subset = np.vstack(masks_subset)
         assert (waveforms_subset.shape[0],
                 waveforms_subset.shape[2]) == masks_subset.shape
         # Perform PCA and return the components.
@@ -425,7 +435,7 @@ class SpikeDetekt(EventEmitter):
         for group, pcs in pcs_per_group.items():
             # Find the waveforms shape.
             n_spikes = n_spikes_per_group_chunk[group][key]
-            n_channels = self._n_channels_per_group
+            n_channels = self._n_channels_per_group[group]
             shape = (n_spikes, self._n_samples_waveforms, n_channels)
             # Save the waveforms.
             waveforms = self._load('waveforms', np.float32,
@@ -464,8 +474,11 @@ class SpikeDetekt(EventEmitter):
             key = bounds[2]
             chunk_data = data_chunk(traces, bounds, with_overlap=True)
             chunk_data_keep = data_chunk(traces, bounds, with_overlap=False)
-            components = self.step_detect(bounds, chunk_data,
-                                          chunk_data_keep, thresholds)
+            components = self.step_detect(bounds,
+                                          chunk_data,
+                                          chunk_data_keep,
+                                          thresholds=thresholds,
+                                          )
             self.emit('detect_spikes', key=key, n_spikes=len(components))
             chunk_components[key] = components
         n_spikes_per_chunk = {key: len(val)
@@ -475,18 +488,21 @@ class SpikeDetekt(EventEmitter):
 
         # Pass 2: extract the spikes and save some waveforms before PCA.
         info("Extracting all waveforms...")
+        # This is a dict {group: {key: (waveforms, masks)}}.
         chunk_waveforms = defaultdict(dict)
         for bounds in self.iter_chunks(n_samples, n_channels):
             key = bounds[2]
             components = chunk_components[key]
             if len(components) == 0:
                 continue
-            wm = self.step_extract(bounds, components,
+            # This is a dict {group: (waveforms, masks)}.
+            wm = self.step_extract(bounds,
+                                   components,
                                    n_spikes_total=n_spikes_total,
                                    n_channels=n_channels,
+                                   thresholds=thresholds,
                                    )
             self.emit('extract_spikes', key=key, n_spikes=len(components))
-            # wm is a dict {channel_group: (waveforms, masks)}
             for group, wm_group in wm.items():
                 chunk_waveforms[group][key] = wm_group
         n_spikes_per_group_chunk = {
