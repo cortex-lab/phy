@@ -46,7 +46,7 @@ def test_write_by_chunk():
                 offset += size
 
 
-def test_creator():
+def test_creator_simple():
     with TemporaryDirectory() as tempdir:
         basename = op.join(tempdir, 'my_file')
 
@@ -77,9 +77,22 @@ def test_creator():
 
         creator.add_spikes(group=0,
                            spike_samples=spike_samples,
-                           features=features,
-                           masks=masks,
+                           features=features.astype(np.float32),
+                           masks=masks.astype(np.float32),
                            )
+
+        # Test the spike samples.
+        with open_h5(creator.kwik_path, 'r') as f:
+            s = f.read('/channel_groups/0/spikes/time_samples')[...]
+            assert s.dtype == np.uint64
+            ac(s, spike_samples)
+
+        # Test the features and masks.
+        with open_h5(creator.kwx_path, 'r') as f:
+            fm = f.read('/channel_groups/0/features_masks')[...]
+            assert fm.dtype == np.float32
+            ac(fm[:, :, 0], features.reshape((-1, n_channels * n_features)))
+            ac(fm[:, ::n_features, 1], masks)
 
         # Spikes can only been added once.
         with raises(RuntimeError):
@@ -99,8 +112,9 @@ def test_creator_chunks():
         n_features = 3
 
         spike_samples = artificial_spike_samples(n_spikes)
-        features = artificial_features(n_spikes, n_channels, n_features)
-        masks = artificial_masks(n_spikes, n_channels)
+        features = artificial_features(n_spikes, n_channels,
+                                       n_features).astype(np.float32)
+        masks = artificial_masks(n_spikes, n_channels).astype(np.float32)
 
         def _split(arr):
             n = n_spikes // 10
@@ -111,3 +125,16 @@ def test_creator_chunks():
                            features=_split(features),
                            masks=_split(masks),
                            )
+
+        # Test the spike samples.
+        with open_h5(creator.kwik_path, 'r') as f:
+            s = f.read('/channel_groups/0/spikes/time_samples')[...]
+            assert s.dtype == np.uint64
+            ac(s, spike_samples)
+
+        # Test the features and masks.
+        with open_h5(creator.kwx_path, 'r') as f:
+            fm = f.read('/channel_groups/0/features_masks')[...]
+            assert fm.dtype == np.float32
+            ac(fm[:, :, 0], features.reshape((-1, n_channels * n_features)))
+            ac(fm[:, ::n_features, 1], masks)

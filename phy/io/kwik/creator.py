@@ -9,45 +9,56 @@
 import os.path as op
 
 import numpy as np
+from h5py import Dataset
 
 from ..h5 import open_h5
 from ...utils._types import _as_array
-from ...ext.six import string_types
+from ...ext.six import string_types, next
+from ...ext.six.moves import zip
 
 
 #------------------------------------------------------------------------------
 # Kwik creator
 #------------------------------------------------------------------------------
 
-def _write_by_chunk(dset, arrs, transform=None):
-    # One can specify a transform function to apply to every chunk before
-    # it is copied to the HDF5 dataset.
-    if transform is None:
-        transform = lambda _: _
-    assert dset is not None
-    assert isinstance(arrs, list)
-    if len(arrs) == 0:
+def _first(gen):
+    try:
+        return next(gen)
+    except StopIteration:
         return
-    # Check the consistency of all arrays.
-    dtype = arrs[0].dtype
-    shape = arrs[0].shape[1:]
-    n = arrs[0].shape[0]
-    for arr in arrs[1:]:
-        assert isinstance(arr, np.ndarray)
-        assert arr.dtype == dtype
-        assert arr.shape[1:] == shape
-        n += arr.shape[0]
-    # Check the consistency of the HDF5 array with the list of arrays.
-    assert dset.shape[0] == n
 
-    # Start the data copy.
-    offset = 0
+
+def _write_by_chunk(dset, arrs):
+    assert isinstance(dset, Dataset)
+    first = _first(arrs)
+    if first is None:
+        return
+    # Check the consistency of the first array with the dataset.
+    dtype = first.dtype
+    shape = first.shape[1:]
+    n = first.shape[0]
+    assert dset.dtype == dtype
+    assert dset.shape[1:] == shape[1:]
+
+    # Copy the first chunk.
+    dset[:n, ...] = first
+    # # Note: the first has already been iterated.
+    # for arr in arrs:
+    #     assert isinstance(arr, np.ndarray)
+    #     assert arr.dtype == dtype
+    #     assert arr.shape[1:] == shape
+    #     n += arr.shape[0]
+    # # Check the consistency of the HDF5 array with the list of arrays.
+    # assert dset.shape[0] == n
+
+    # Start the data copy *from the second array*.
+    offset = n
     for arr in arrs:
         n = arr.shape[0]
-        arr_t = transform(arr[...])
+        arr = arr[...]
         # Match the shape of the chunk array with the dset shape.
-        assert arr_t.shape == (n,) + dset.shape[1:]
-        dset[offset:offset + n, ...] = arr_t
+        assert arr.shape == (n,) + dset.shape[1:]
+        dset[offset:offset + n, ...] = arr
         offset += arr.shape[0]
     assert offset == dset.shape[0]
 
@@ -140,13 +151,13 @@ class KwikCreator(object):
                          shape=shape, dtype=np.float32)
 
             # Write the features either in one block, or chunk by chunk.
-            if isinstance(features, np.ndarray):
+            if (isinstance(features, np.ndarray) and
+                    isinstance(masks, np.ndarray)):
                 fm[:, :, 0] = transform_f(features)
-            elif isinstance(features, list):
-                _write_by_chunk(fm[..., 0], features, transform_f)
-
-            # Write the masks either in one block, or chunk by chunk.
-            if isinstance(masks, np.ndarray):
                 fm[:, :, 1] = transform_m(masks)
-            elif isinstance(masks, list):
-                _write_by_chunk(fm[..., 1], masks, transform_m)
+            elif (isinstance(features, list) and
+                    isinstance(masks, list)):
+                # Concatenate the features/masks chunks in a generator.
+                fm_arrs = (np.dstack((transform_f(f), transform_m(m)))
+                           for (f, m) in zip(features, masks))
+                _write_by_chunk(fm, fm_arrs)
