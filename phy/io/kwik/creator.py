@@ -206,16 +206,29 @@ class KwikCreator(object):
             # supported yet.
             self.add_recording(id=i,
                                start_sample=start_sample,
-                               sample_rate=sample_rate)
+                               sample_rate=sample_rate,
+                               raw_path=filename,
+                               )
             assert op.splitext(filename)[1] == '.dat'
             # Compute the offset for different recordings.
             start_sample += _dat_n_samples(filename,
                                            n_channels=n_channels,
                                            n_bits=n_bits)
 
-    def add_recordings_from_kwd(self, files):
-        # TODO
-        raise NotImplementedError()
+    def add_recordings_from_kwd(self, file):
+        assert file.endswith('.kwd')
+        start_sample = 0
+        with open_h5(file, 'r') as f:
+            recordings = f.children('/recordings')
+            for recording in recordings:
+                path = '/recordings/{}'.format(recording)
+                sample_rate = f.read_attr(path, 'sample_rate')
+                self.add_recording(id=int(recording),
+                                   start_sample=start_sample,
+                                   sample_rate=sample_rate,
+                                   raw_data=file,
+                                   )
+                start_sample += f.read(path + '/data').shape[0]
 
     def add_cluster_group(self,
                           group=None,
