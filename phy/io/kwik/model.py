@@ -83,11 +83,14 @@ def _list_clusterings(kwik, channel_group=None):
                            "the clusterings.")
     assert isinstance(channel_group, six.integer_types)
     path = '/channel_groups/{0:d}/clusters'.format(channel_group)
+    if path not in kwik:
+        return []
     clusterings = sorted(kwik[path].keys())
-    # Ensure 'main' exists and is the first.
-    assert 'main' in clusterings
-    clusterings.remove('main')
-    return ['main'] + clusterings
+    # Ensure 'main' is the first if it exists.
+    if 'main' in clusterings:
+        clusterings.remove('main')
+        clusterings = ['main'] + clusterings
+    return clusterings
 
 
 def _concatenate_spikes(spikes, recs, offsets):
@@ -347,7 +350,6 @@ class KwikModel(BaseModel):
                 try:
                     metadata[field] = self._kwik.read_attr(path, field)
                 except TypeError:
-                    # debug("Metadata field '{0:s}' not found.".format(field))
                     pass
         self._metadata = metadata
 
@@ -392,6 +394,9 @@ class KwikModel(BaseModel):
         nc = len(self.channel_order)
 
         if self._kwx is not None:
+            if path not in self._kwx:
+                debug("There are no features and masks in the `.kwx` file.")
+                return
             fm = self._kwx.read(path)
             self._features_masks = fm
             self._features = PartialArray(fm, 0)
@@ -405,6 +410,9 @@ class KwikModel(BaseModel):
         path = '{0:s}/time_samples'.format(self._spikes_path)
 
         # Concatenate the spike samples from consecutive recordings.
+        if path not in self._kwik:
+            debug("There are no spikes in the dataset.")
+            return
         _spikes = self._kwik.read(path)[:]
         self._spike_recordings = self._kwik.read(
             '{0:s}/recording'.format(self._spikes_path))[:]
@@ -654,6 +662,8 @@ class KwikModel(BaseModel):
 
     def _clustering_changed(self, value):
         """Called when the clustering changes."""
+        if value is None:
+            return
         if value not in self.clusterings:
             raise ValueError("The clustering {0} is invalid.".format(value))
         self._clustering = value
