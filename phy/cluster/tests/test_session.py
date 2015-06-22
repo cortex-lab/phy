@@ -393,7 +393,7 @@ def test_session_automatic(session, spike_ids):
     assert metadata['klustakwik_num_starting_clusters'] == 10
 
 
-def test_session_detect(session):
+def _test_session_detect(session):
     channels = range(n_channels)
     graph = [[i, i + 1] for i in (channels)]
     probe = {'channel_groups': {
@@ -408,5 +408,5 @@ def test_session_detect(session):
         kwik_path = op.join(tempdir, 'test.kwik')
         create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=sample_rate)
         session = Session(kwik_path)
-        out = session.detect_spikes()
+        out = session.detect_spikes(traces=traces)
         print(out)

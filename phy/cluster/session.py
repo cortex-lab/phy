@@ -247,12 +247,18 @@ class Session(BaseSession):
     # Spike sorting
     # -------------------------------------------------------------------------
 
-    def detect_spikes(self, interval=None, algorithm='spikedetekt', **kwargs):
+    def detect_spikes(self, traces=None,
+                      interval=None,
+                      algorithm='spikedetekt',
+                      **kwargs):
         """Detect spikes in traces.
 
         Parameters
         ----------
 
+        traces : array
+            An `(n_samples, n_channels)` array. If unspecified, the Kwik
+            file's raw data is used.
         interval : tuple (optional)
             A tuple `(start, end)` (in seconds) where to detect spikes.
         algorithm : str
@@ -282,8 +288,8 @@ class Session(BaseSession):
                                 int(end_sec * sr))
         else:
             interval_samples = None
-        # Spike detection parameters.
-        # params = self.settings['spikedetekt_params'](self.model.sample_rate)
+        # Find the raw traces.
+        traces = traces if traces is not None else self.model.traces
         # Take the parameters in the Kwik file, coming from the PRM file.
         params = self.model.metadata  # TODO: kk_params...
         params.update(kwargs)
@@ -292,8 +298,7 @@ class Session(BaseSession):
         params['probe_adjacency_list'] = self.model.probe.adjacency
         # Start the spike detection.
         sd = SpikeDetekt(tempdir=sd_dir, **params)
-        out = sd.run_serial(self.model.traces,
-                            interval_samples=interval_samples)
+        out = sd.run_serial(traces, interval_samples=interval_samples)
 
         # Add the spikes in the `.kwik` and `.kwx` files.
         for group in out.groups:
