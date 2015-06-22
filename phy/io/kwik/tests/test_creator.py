@@ -11,6 +11,7 @@ import os.path as op
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
+from pytest import raises
 
 from ....utils.tempdir import TemporaryDirectory
 from ...h5 import open_h5
@@ -65,7 +66,7 @@ def test_creator():
             assert f.read_attr('/application_data/spikedetekt', 'b') == 2.
             ae(f.read_attr('/application_data/spikedetekt', 'c'), [0, 1])
 
-        # Test add spikes.
+        # Test add spikes in one block.
         n_spikes = 100
         n_channels = 8
         n_features = 3
@@ -78,4 +79,35 @@ def test_creator():
                            spike_samples=spike_samples,
                            features=features,
                            masks=masks,
+                           )
+
+        # Spikes can only been added once.
+        with raises(RuntimeError):
+            creator.add_spikes(group=0, spike_samples=spike_samples)
+
+
+def test_creator_chunks():
+    with TemporaryDirectory() as tempdir:
+        basename = op.join(tempdir, 'my_file')
+
+        creator = KwikCreator(basename)
+        creator.create_empty()
+
+        # Test add spikes in one block.
+        n_spikes = 100
+        n_channels = 8
+        n_features = 3
+
+        spike_samples = artificial_spike_samples(n_spikes)
+        features = artificial_features(n_spikes, n_channels, n_features)
+        masks = artificial_masks(n_spikes, n_channels)
+
+        def _split(arr):
+            n = n_spikes // 10
+            return [arr[k:k + n, ...] for k in range(0, n_spikes, n)]
+
+        creator.add_spikes(group=0,
+                           spike_samples=spike_samples,
+                           features=_split(features),
+                           masks=_split(masks),
                            )

@@ -253,6 +253,9 @@ class File(object):
     # Context manager
     #--------------------------------------------------------------------------
 
+    def __contains__(self, path):
+        return path in self._h5py_file
+
     def __enter__(self):
         self.open()
         return self

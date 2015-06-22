@@ -24,7 +24,7 @@ def _write_by_chunk(dset, arrs, transform=None):
     # it is copied to the HDF5 dataset.
     if transform is None:
         transform = lambda _: _
-    assert dset
+    assert dset is not None
     assert isinstance(arrs, list)
     if len(arrs) == 0:
         return
@@ -38,13 +38,16 @@ def _write_by_chunk(dset, arrs, transform=None):
         assert arr.shape[1:] == shape
         n += arr.shape[0]
     # Check the consistency of the HDF5 array with the list of arrays.
-    assert dset.shape == (n,) + shape
+    assert dset.shape[0] == n
 
     # Start the data copy.
     offset = 0
     for arr in arrs:
         n = arr.shape[0]
-        dset[offset:offset + n, ...] = transform(arr[...])
+        arr_t = transform(arr[...])
+        # Match the shape of the chunk array with the dset shape.
+        assert arr_t.shape == (n,) + dset.shape[1:]
+        dset[offset:offset + n, ...] = arr_t
         offset += arr.shape[0]
     assert offset == dset.shape[0]
 
@@ -103,6 +106,10 @@ class KwikCreator(object):
 
         # Add spikes in the .kwik file.
         with open_h5(self.kwik_path, 'a') as f:
+            # This method can only be called once.
+            if '/channel_groups/{:d}/spikes/time_samples'.format(group) in f:
+                raise RuntimeError("Spikes have already been added to this "
+                                   "dataset.")
             f.write('/channel_groups/{:d}/spikes/time_samples'.format(group),
                     spike_samples)
             f.write('/channel_groups/{:d}/spikes/recording'.format(group),
