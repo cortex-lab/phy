@@ -138,3 +138,31 @@ def test_creator_chunks():
             assert fm.dtype == np.float32
             ac(fm[:, :, 0], features.reshape((-1, n_channels * n_features)))
             ac(fm[:, ::n_features, 1], masks)
+
+
+def test_creator_metadata():
+    with TemporaryDirectory() as tempdir:
+        basename = op.join(tempdir, 'my_file')
+
+        creator = KwikCreator(basename)
+
+        # Add recording.
+        creator.add_recording(0, start_sample=20000, sample_rate=10000)
+
+        with open_h5(creator.kwik_path, 'r') as f:
+            assert f.read_attr('/recordings/0', 'start_sample') == 20000
+            assert f.read_attr('/recordings/0', 'start_time') == 2.
+            assert f.read_attr('/recordings/0', 'sample_rate') == 10000
+
+        # Add probe.
+        channels = [0, 3, 1]
+        graph = [[0, 3], [1, 0]]
+        probe = {'channel_groups': {
+                 0: {'channels': channels,
+                     'graph': graph,
+                     'geometry': {0: (10, 10)},
+                     }}}
+        creator.set_probe(probe)
+
+        with open_h5(creator.kwik_path, 'r') as f:
+            ae(f.read_attr('/channel_groups/0', 'channel_order'), channels)

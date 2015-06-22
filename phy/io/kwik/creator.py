@@ -13,6 +13,7 @@ from h5py import Dataset
 
 from ..h5 import open_h5
 from ...utils._types import _as_array
+from ...utils.array import _unique
 from ...ext.six import string_types
 from ...ext.six.moves import zip
 
@@ -43,6 +44,13 @@ def _write_by_chunk(dset, arrs):
         offset += arr.shape[0]
     # Check that the copy is complete.
     assert offset == dset.shape[0]
+
+
+_DEFAULT_GROUPS = [(0, 'Noise'),
+                   (1, 'MUA'),
+                   (2, 'Good'),
+                   (3, 'Unsorted'),
+                   ]
 
 
 class KwikCreator(object):
@@ -143,3 +151,96 @@ class KwikCreator(object):
                 fm_arrs = [np.dstack((transform_f(fet), transform_m(m)))
                            for (fet, m) in zip(features, masks)]
                 _write_by_chunk(fm, fm_arrs)
+
+    def add_recording(self, id=None, start_sample=None, sample_rate=None):
+        path = '/recordings/{:d}'.format(id)
+        start_sample = int(start_sample)
+        sample_rate = float(sample_rate)
+
+        with open_h5(self.kwik_path, 'a') as f:
+            f.write_attr(path, 'name', 'recording_{:d}'.format(id))
+            f.write_attr(path, 'start_sample', start_sample)
+            f.write_attr(path, 'sample_rate', sample_rate)
+            f.write_attr(path, 'start_time', start_sample / sample_rate)
+
+    def set_probe(self, probe):
+        with open_h5(self.kwik_path, 'a') as f:
+            probe = probe['channel_groups']
+            for group, d in probe.items():
+                channels = d['channels']
+
+                # Write the channel order.
+                f.write_attr('/channel_groups/{:d}'.format(group),
+                             'channel_order', channels)
+
+                # Write the probe adjacency graph.
+                graph = d.get('graph', [])
+                graph = np.array(graph, dtype=np.int32)
+                f.write_attr('/channel_groups/{:d}'.format(group),
+                             'adjacency_graph', graph)
+
+                # Write the channel positions.
+                positions = d.get('geometry', {})
+                for channel in channels:
+                    # Get the channel position.
+                    if channel in positions:
+                        position = positions[channel]
+                    else:
+                        # Default position.
+                        position = (0, channel)
+                    path = '/channel_groups/{:d}/channels/{:d}'.format(
+                        group, channel)
+
+                    f.write_attr(path, 'name', str(channel))
+                    f.write_attr(path, 'position', position)
+
+    def create_cluster_group(self,
+                             group=None,
+                             id=None,
+                             name=None,
+                             clustering=None,
+                             ):
+        assert group >= 0
+        cg_path = ('/channel_groups/{0:d}/'
+                   'cluster_groups/{1:s}/{2:d}').format(group,
+                                                        clustering,
+                                                        id,
+                                                        )
+        with open_h5(self.kwik_path, 'a') as f:
+            f.write_attr(cg_path, 'name', name)
+
+    def create_clustering(self,
+                          group=None,
+                          name=None,
+                          spike_clusters=None,
+                          cluster_groups=None,
+                          ):
+        if cluster_groups is None:
+            cluster_groups = {}
+        path = '/channel_groups/{0:d}/spikes/clusters/{1:s}'.format(
+            group, name)
+
+        with open_h5(self.kwik_path, 'a') as f:
+            assert not f.exists(path)
+
+            # Save spike_clusters.
+            f.write(path, spike_clusters.astype(np.int32))
+            cluster_ids = _unique(spike_clusters)
+
+            # Create cluster metadata.
+            for cluster in cluster_ids:
+                cluster_path = '/channel_groups/{0:d}/clusters/{1:s}/{2:d}'. \
+                    format(group, name, cluster)
+                kv_path = cluster_path + '/application_data/klustaviewa'
+
+                # Default group: unsorted.
+                cluster_group = cluster_groups.get(cluster, 3)
+                f.write_attr(cluster_path, 'cluster_group', cluster_group)
+                f.write_attr(kv_path, 'color', np.random.randint(2, 10))
+
+            # Create cluster group metadata.
+            for group_id, cg_name in _DEFAULT_GROUPS:
+                self.create_cluster_group(f, group_id, cg_name,
+                                          clustering=name,
+                                          channel_group=group,
+                                          )
