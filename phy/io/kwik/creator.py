@@ -13,7 +13,9 @@ from h5py import Dataset
 
 from ..h5 import open_h5
 from ...utils._types import _as_array
+from ...utils._misc import _read_python
 from ...utils.array import _unique
+from ...utils.settings import Settings
 from ...ext.six import string_types
 from ...ext.six.moves import zip
 
@@ -245,3 +247,30 @@ class KwikCreator(object):
                                        clustering=name,
                                        group=group,
                                        )
+
+
+def create_kwik(prm_file=None, kwik_path=None, probe=None, **kwargs):
+    prm = _read_python(prm_file) if prm_file else {}
+    sample_rate = kwargs.get('sample_rate', prm.get('sample_rate'))
+    assert sample_rate > 0
+
+    # Default SpikeDetekt parameters.
+    curdir = op.dirname(op.realpath(__file__))
+    default_settings_path = op.join(curdir,
+                                    '../../cluster/default_settings.py')
+    settings = Settings(default_path=default_settings_path)
+    params = settings['spikedetekt_params'](sample_rate)
+    # Update with PRM and user parameters.
+    params.update(prm)
+    params.update(kwargs)
+
+    kwik_path = kwik_path or params['experiment_name'] + '.kwik'
+    probe = probe or _read_python(params['prb_file'])
+
+    # KwikCreator.
+    creator = KwikCreator(kwik_path)
+    creator.create_empty()
+    creator.set_probe(probe)
+    creator.set_metadata('/application_data/spikedetekt', **params)
+
+    return kwik_path

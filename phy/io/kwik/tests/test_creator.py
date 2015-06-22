@@ -15,7 +15,7 @@ from pytest import raises
 
 from ....utils.tempdir import TemporaryDirectory
 from ...h5 import open_h5
-from ..creator import KwikCreator, _write_by_chunk
+from ..creator import KwikCreator, _write_by_chunk, create_kwik
 from ..mock import (artificial_spike_samples,
                     artificial_features,
                     artificial_masks,
@@ -187,3 +187,18 @@ def test_creator_metadata():
                 path = '/channel_groups/0/clusters/main/{:d}'.format(cluster)
                 cg = f.read_attr(path, 'cluster_group')
                 assert cg == 3 if cluster != 3 else 1
+
+
+def test_create_kwik():
+
+    channels = [0, 3, 1]
+    graph = [[0, 3], [1, 0]]
+    probe = {'channel_groups': {
+             0: {'channels': channels,
+                 'graph': graph,
+                 'geometry': {0: (10, 10)},
+                 }}}
+
+    with TemporaryDirectory() as tempdir:
+        kwik_path = op.join(tempdir, 'test.kwik')
+        create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=20000)
