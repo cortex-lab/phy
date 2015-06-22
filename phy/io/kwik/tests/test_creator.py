@@ -166,3 +166,8 @@ def test_creator_metadata():
 
         with open_h5(creator.kwik_path, 'r') as f:
             ae(f.read_attr('/channel_groups/0', 'channel_order'), channels)
+            ae(f.read_attr('/channel_groups/0', 'adjacency_graph'), graph)
+            for channel in channels:
+                path = '/channel_groups/0/channels/{:d}'.format(channel)
+                position = (10, 10) if channel == 0 else (0, channel)
+                ae(f.read_attr(path, 'position'), position)
