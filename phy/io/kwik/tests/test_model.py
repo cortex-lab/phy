@@ -81,10 +81,16 @@ def test_kwik_empty():
     with TemporaryDirectory() as tempdir:
         kwik_path = op.join(tempdir, 'test.kwik')
         create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=sample_rate)
+
         model = KwikModel(kwik_path)
-        assert model.sample_rate == sample_rate
         ae(model.channels, sorted(channels))
         ae(model.channel_order, channels)
+
+        assert model.sample_rate == sample_rate
+        assert model.n_channels == 3
+        assert model.spike_samples is None
+        assert model.has_kwx()
+        assert not model.has_kwd()
 
 
 def test_kwik_open_full():
