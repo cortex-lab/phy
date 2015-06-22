@@ -9,7 +9,7 @@
 import h5py
 
 from ..ext.six import string_types
-from ..utils.logging import warn
+from ..utils.logging import debug, warn
 
 
 #------------------------------------------------------------------------------
@@ -175,8 +175,8 @@ class File(object):
             try:
                 return attrs[attr_name]
             except (TypeError, IOError):
-                warn("Unable to read attribute `{}` at `{}`.".format(
-                     attr_name, path))
+                debug("Unable to read attribute `{}` at `{}`.".format(
+                      attr_name, path))
                 return
         else:
             raise KeyError("The attribute '{0:s}'".format(attr_name) +
