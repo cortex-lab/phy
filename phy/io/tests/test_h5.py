@@ -89,6 +89,7 @@ def test_h5_read():
             assert f.groups() == ['mygroup']
             assert f.datasets() == ['ds1']
             assert f.attrs('/mygroup') == ['myattr']
+            assert f.attrs('/mygroup_nonexisting') == []
 
             # Check dataset ds1.
             ds1 = f.read('/ds1')[:]

@@ -199,7 +199,10 @@ class File(object):
 
     def attrs(self, path='/'):
         """Return the list of attributes at the given path."""
-        return sorted(self._h5py_file[path].attrs)
+        if path in self._h5py_file:
+            return sorted(self._h5py_file[path].attrs)
+        else:
+            return []
 
     def has_attr(self, path, attr_name):
         """Return whether an attribute exists at a given path."""
