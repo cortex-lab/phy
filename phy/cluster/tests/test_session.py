@@ -19,6 +19,7 @@ from ...utils.tempdir import TemporaryDirectory
 from ...utils.logging import set_level
 from ...io.mock import MockModel
 from ...io.kwik.mock import create_mock_kwik
+from ...io.kwik.creator import create_kwik
 
 
 # Skip these tests in "make test-quick".
@@ -390,3 +391,19 @@ def test_session_automatic(session, spike_ids):
     metadata = session.model.clustering_metadata
     assert 'klustakwik_version' in metadata
     assert metadata['klustakwik_num_starting_clusters'] == 10
+
+
+def test_session_detect(session):
+    channels = range(n_channels)
+    graph = [[i, i + 1] for i in (channels)]
+    probe = {'channel_groups': {
+             0: {'channels': channels,
+                 'graph': graph,
+                 }}}
+    sample_rate = 20000
+
+    with TemporaryDirectory() as tempdir:
+        kwik_path = op.join(tempdir, 'test.kwik')
+        create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=sample_rate)
+        session = Session(kwik_path)
+        assert session

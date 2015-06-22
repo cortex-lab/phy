@@ -402,6 +402,8 @@ def _spikes_in_clusters(spike_clusters, clusters):
 
 def _spikes_per_cluster(spike_ids, spike_clusters):
     """Return a dictionary {cluster: list_of_spikes}."""
+    if not len(spike_ids):
+        return {}
     rel_spikes = np.argsort(spike_clusters)
     abs_spikes = spike_ids[rel_spikes]
     spike_clusters = spike_clusters[rel_spikes]
