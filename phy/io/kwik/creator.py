@@ -181,7 +181,8 @@ class KwikCreator(object):
                            for (fet, m) in zip(features, masks)]
                 _write_by_chunk(fm, fm_arrs)
 
-    def add_recording(self, id=None, start_sample=None, sample_rate=None):
+    def add_recording(self, id=None, raw_path=None,
+                      start_sample=None, sample_rate=None):
         path = '/recordings/{:d}'.format(id)
         start_sample = int(start_sample)
         sample_rate = float(sample_rate)
@@ -191,6 +192,11 @@ class KwikCreator(object):
             f.write_attr(path, 'start_sample', start_sample)
             f.write_attr(path, 'sample_rate', sample_rate)
             f.write_attr(path, 'start_time', start_sample / sample_rate)
+            if raw_path:
+                if op.splitext(raw_path)[1] == '.kwd':
+                    f.write_attr(path + '/raw', 'hdf5_path', raw_path)
+                elif op.splitext(raw_path)[1] == '.dat':
+                    f.write_attr(path + '/raw', 'dat_path', raw_path)
 
     def add_recordings_from_dat(self, files, sample_rate=None,
                                 n_channels=None, n_bits=None):
