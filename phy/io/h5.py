@@ -128,11 +128,11 @@ class File(object):
                                   ).format(path))
 
         if array is not None:
-            group.create_dataset(dset_name, data=array)
+            return group.create_dataset(dset_name, data=array)
         else:
             assert dtype
             assert shape
-            group.create_dataset(dset_name, dtype=dtype, shape=shape)
+            return group.create_dataset(dset_name, dtype=dtype, shape=shape)
 
     # Copy and rename
     #--------------------------------------------------------------------------
