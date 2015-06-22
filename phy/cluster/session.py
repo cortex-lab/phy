@@ -289,7 +289,7 @@ class Session(BaseSession):
         params.update(kwargs)
         # Probe parameters required by SpikeDetekt.
         params['probe_channels'] = self.model.probe.channels_per_group
-        params['probe_adjacency_list'] = self.model.probe.adjacency_list
+        params['probe_adjacency_list'] = self.model.probe.adjacency
         # Start the spike detection.
         sd = SpikeDetekt(tempdir=sd_dir, **params)
         out = sd.run_serial(self.model.traces,

@@ -39,7 +39,7 @@ def _probe_positions(probe, group):
     """Return the positions of a probe channel group."""
     positions = probe['channel_groups'][group]['geometry']
     channels = _probe_channels(probe, group)
-    return [positions[channel] for channel in channels]
+    return np.array([positions[channel] for channel in channels])
 
 
 def _probe_channels(probe, group):
