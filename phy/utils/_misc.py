@@ -37,9 +37,12 @@ def _save_pickle(path, data):
 #------------------------------------------------------------------------------
 
 def _read_python(path):
+    path = op.realpath(op.expanduser(path))
+    assert op.exists(path)
     with open(path, 'r') as f:
         contents = f.read()
-    metadata = exec_(contents)
+    metadata = {}
+    exec_(contents, {}, metadata)
     metadata = {k.lower(): v for (k, v) in metadata.items()}
     return metadata
 
