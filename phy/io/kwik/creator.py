@@ -21,27 +21,27 @@ from ...ext.six.moves import zip
 # Kwik creator
 #------------------------------------------------------------------------------
 
-def _first(gen):
-    if isinstance(gen, list):
-        gen = (_ for _ in gen)
-    try:
-        return next(gen)
-    except StopIteration:
-        return
+# def _first(gen):
+#     if isinstance(gen, list):
+#         gen = (_ for _ in gen)
+#     try:
+#         return next(gen)
+#     except StopIteration:
+#         return
 
 
 def _write_by_chunk(dset, arrs):
     assert isinstance(dset, Dataset)
-    first = _first(arrs)
-    if first is None:
+    if not len(arrs):
         return
+    first = arrs[0]
     # Check the consistency of the first array with the dataset.
     dtype = first.dtype
     n = first.shape[0]
     assert dset.dtype == dtype
     assert dset.shape[1:] == first.shape[1:]
 
-    # Start the data copy *from the second array*.
+    # Start the data.
     offset = 0
     for arr in arrs:
         n = arr.shape[0]
@@ -124,7 +124,7 @@ class KwikCreator(object):
         # Find n_channels and n_features.
         if isinstance(features, np.ndarray):
             _, n_channels, n_features = features.shape
-        elif isinstance(features, list):
+        else:
             assert features
             _, n_channels, n_features = features[0].shape
 
@@ -141,14 +141,14 @@ class KwikCreator(object):
             fm = f.write('/channel_groups/{:d}/features_masks'.format(group),
                          shape=shape, dtype=np.float32)
 
-            # Write the features either in one block, or chunk by chunk.
+            # Write the features and masks in one block.
             if (isinstance(features, np.ndarray) and
                     isinstance(masks, np.ndarray)):
                 fm[:, :, 0] = transform_f(features)
                 fm[:, :, 1] = transform_m(masks)
-            elif (isinstance(features, list) and
-                    isinstance(masks, list)):
+            # Write the features and masks chunk by chunk.
+            else:
                 # Concatenate the features/masks chunks in a generator.
-                fm_arrs = (np.dstack((transform_f(f), transform_m(m)))
-                           for (f, m) in zip(features, masks))
+                fm_arrs = [np.dstack((transform_f(f), transform_m(m)))
+                           for (f, m) in zip(features, masks)]
                 _write_by_chunk(fm, fm_arrs)
