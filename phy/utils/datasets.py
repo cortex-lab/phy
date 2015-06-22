@@ -84,7 +84,9 @@ def download_test_data(name, output_dir=None, base='cortexlab'):
     """
     if output_dir is None:
         output_dir = name
-    output_dir = op.realpath(output_dir)
+    if not output_dir.endswith('/'):
+        output_dir = output_dir + '/'
+    output_dir = op.realpath(op.dirname(output_dir))
     if not op.exists(output_dir):
         os.mkdir(output_dir)
     for ext in ('.kwik', '.kwx', '.raw.kwd'):
