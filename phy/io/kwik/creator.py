@@ -12,6 +12,7 @@ import numpy as np
 from h5py import Dataset
 
 from ..h5 import open_h5
+from ..traces import _dat_n_samples
 from ...utils._types import _as_array
 from ...utils._misc import _read_python
 from ...utils.array import _unique
@@ -273,4 +274,21 @@ def create_kwik(prm_file=None, kwik_path=None, probe=None, **kwargs):
     creator.set_probe(probe)
     creator.set_metadata('/application_data/spikedetekt', **params)
 
+    # Add the recordings.
+    files = params.get('raw_data_files', [])
+    if isinstance(files, string_types):
+        files = [files]
+    start_sample = 0
+    for i, filename in enumerate(files):
+        # WARNING: different sample rates in recordings is not supported yet.
+        creator.add_recording(id=i,
+                              start_sample=start_sample,
+                              sample_rate=sample_rate)
+        if op.splitext(filename)[1] != '.dat':
+            raise NotImplementedError("Only `.dat` files are "
+                                      "currently supported.")
+        # Compute the offset for different recordings.
+        start_sample += _dat_n_samples(filename,
+                                       n_channels=params['n_channels'],
+                                       n_bits=params['n_bits'])
     return kwik_path

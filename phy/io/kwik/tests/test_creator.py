@@ -201,4 +201,7 @@ def test_create_kwik():
 
     with TemporaryDirectory() as tempdir:
         kwik_path = op.join(tempdir, 'test.kwik')
-        create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=20000)
+        create_kwik(kwik_path=kwik_path,
+                    probe=probe,
+                    sample_rate=20000,
+                    )
