@@ -25,6 +25,7 @@ from ...utils.array import (PartialArray,
                             _spikes_per_cluster,
                             _unique,
                             )
+from ...utils._misc import _read_python
 from ...utils._types import _is_integer, _as_array
 
 
@@ -343,17 +344,21 @@ class KwikModel(BaseModel):
 
     def _load_meta(self):
         """Load metadata from kwik file."""
-        metadata = {}
         # Automatically load all metadata from spikedetekt group.
         path = '/application_data/spikedetekt/'
-        metadata_fields = self._kwik.attrs(path)
-        for field in metadata_fields:
-            if field.islower() and not field.startswith('_'):
-                try:
-                    metadata[field] = self._kwik.read_attr(path, field)
-                except TypeError:
-                    pass
-        self._metadata = metadata
+        sample_rate = self._kwik.read_attr(path, 'sample_rate')
+        # Load default SpikeDetekt settings.
+        curdir = op.dirname(op.realpath(__file__))
+        default_settings_path = op.join(curdir,
+                                        '../../cluster/default_settings.py')
+        settings = _read_python(default_settings_path)
+        params = settings['spikedetekt_params'](sample_rate)
+        # Update the parameters from the Kwik file.
+        for key in params.keys():
+            if self._kwik.has_attr(path, key):
+                params[key] = self._kwik.read_attr(path, key)
+        params['sample_rate'] = sample_rate
+        self._metadata = params
 
     def _load_probe(self):
         # TODO: support multiple channel groups.
