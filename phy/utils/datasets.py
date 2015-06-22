@@ -77,12 +77,12 @@ def _download(url):
         raise RuntimeError("Unable to download `{}`.".format(url))
 
 
-def _download_test_data(name, phy_user_dir=None):
+def _download_test_data(name, phy_user_dir=None, force=False):
     phy_user_dir = phy_user_dir or _phy_user_dir()
     dir = op.join(phy_user_dir, 'test_data')
     _ensure_dir_exists(dir)
     path = op.join(dir, name)
-    if op.exists(path):
+    if not force and op.exists(path):
         return path
     url = _BASE_URL['github'] + 'test/' + name
     download_file(url, output=path)
