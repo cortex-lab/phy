@@ -91,6 +91,7 @@ def test_kwik_empty():
         assert model.spike_samples is None
         assert model.has_kwx()
         assert not model.has_kwd()
+        assert model.n_spikes == 0
 
 
 def test_kwik_open_full():

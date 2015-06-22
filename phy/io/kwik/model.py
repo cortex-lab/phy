@@ -967,7 +967,8 @@ class KwikModel(BaseModel):
     @property
     def n_spikes(self):
         """Number of spikes in the current channel group."""
-        return len(self._spike_samples)
+        return (len(self._spike_samples)
+                if self._spike_samples is not None else 0)
 
     @property
     def features(self):
