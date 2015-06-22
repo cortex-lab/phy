@@ -10,7 +10,7 @@ import os.path as op
 
 from numpy.testing import assert_array_equal as ae
 
-from ..traces import read_dat
+from ..traces import read_dat, _dat_n_samples
 from ..mock import artificial_traces
 from ...utils.tempdir import TemporaryDirectory
 
@@ -28,6 +28,8 @@ def test_read_dat():
     with TemporaryDirectory() as tmpdir:
         path = op.join(tmpdir, 'test')
         arr.tofile(path)
+        assert _dat_n_samples(path, n_bits=64,
+                              n_channels=n_channels) == n_samples
         data = read_dat(path, dtype=arr.dtype, shape=arr.shape)
 
     ae(arr, data)
