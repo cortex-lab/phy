@@ -17,7 +17,7 @@ from ...gui.qt import wrap_qt
 from ...utils.array import _spikes_in_clusters
 from ...utils.tempdir import TemporaryDirectory
 from ...utils.logging import set_level
-from ...io.mock import MockModel
+from ...io.mock import MockModel, artificial_traces
 from ...io.kwik.mock import create_mock_kwik
 from ...io.kwik.creator import create_kwik
 
@@ -401,9 +401,12 @@ def test_session_detect(session):
                  'graph': graph,
                  }}}
     sample_rate = 20000
+    traces = artificial_traces(n_samples_traces, n_channels)
+    assert traces is not None
 
     with TemporaryDirectory() as tempdir:
         kwik_path = op.join(tempdir, 'test.kwik')
         create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=sample_rate)
         session = Session(kwik_path)
-        assert session
+        out = session.detect_spikes()
+        print(out)

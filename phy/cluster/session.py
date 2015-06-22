@@ -287,6 +287,9 @@ class Session(BaseSession):
         # Take the parameters in the Kwik file, coming from the PRM file.
         params = self.model.metadata  # TODO: kk_params...
         params.update(kwargs)
+        # Probe parameters required by SpikeDetekt.
+        params['probe_channels'] = self.model.probe.channels_per_group
+        params['probe_adjacency_list'] = self.model.probe.adjacency_list
         # Start the spike detection.
         sd = SpikeDetekt(tempdir=sd_dir, **params)
         out = sd.run_serial(self.model.traces,
