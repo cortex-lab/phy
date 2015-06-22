@@ -13,22 +13,13 @@ from h5py import Dataset
 
 from ..h5 import open_h5
 from ...utils._types import _as_array
-from ...ext.six import string_types, next
+from ...ext.six import string_types
 from ...ext.six.moves import zip
 
 
 #------------------------------------------------------------------------------
 # Kwik creator
 #------------------------------------------------------------------------------
-
-# def _first(gen):
-#     if isinstance(gen, list):
-#         gen = (_ for _ in gen)
-#     try:
-#         return next(gen)
-#     except StopIteration:
-#         return
-
 
 def _write_by_chunk(dset, arrs):
     assert isinstance(dset, Dataset)
@@ -149,6 +140,6 @@ class KwikCreator(object):
             # Write the features and masks chunk by chunk.
             else:
                 # Concatenate the features/masks chunks in a generator.
-                fm_arrs = [np.dstack((transform_f(f), transform_m(m)))
-                           for (f, m) in zip(features, masks)]
+                fm_arrs = [np.dstack((transform_f(fet), transform_m(m)))
+                           for (fet, m) in zip(features, masks)]
                 _write_by_chunk(fm, fm_arrs)
