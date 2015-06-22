@@ -752,6 +752,8 @@ class VirtualMappedArray(object):
 def _concatenate_virtual_arrays(arrs):
     """Return a virtual concatenate of several NumPy arrays."""
     n = len(arrs)
-    if n == 1:
+    if n == 0:
+        return None
+    elif n == 1:
         return arrs[0]
     return ConcatenatedArrays(arrs)
