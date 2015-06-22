@@ -184,8 +184,6 @@ def _read_traces(kwik, kwd=None, n_bits=None, n_channels=None):
         if kwik.has_attr(path, 'hdf5_path'):
             if kwd is None:
                 return
-            hdf5_path = kwik.read_attr(path, 'hdf5_path')
-            assert kwd and op.realpath(kwd.filename) == op.realpath(hdf5_path)
             traces.append(kwd.read('/recordings/{}/data'.format(recording)))
         elif kwik.has_attr(path, 'dat_path'):
             assert n_bits > 0
