@@ -171,3 +171,19 @@ def test_creator_metadata():
                 path = '/channel_groups/0/channels/{:d}'.format(channel)
                 position = (10, 10) if channel == 0 else (0, channel)
                 ae(f.read_attr(path, 'position'), position)
+
+        # Add clustering.
+        creator.add_clustering(group=0,
+                               name='main',
+                               spike_clusters=np.arange(10),
+                               cluster_groups={3: 1},
+                               )
+
+        with open_h5(creator.kwik_path, 'r') as f:
+            sc = f.read('/channel_groups/0/spikes/clusters/main')
+            ae(sc, np.arange(10))
+
+            for cluster in range(10):
+                path = '/channel_groups/0/clusters/main/{:d}'.format(cluster)
+                cg = f.read_attr(path, 'cluster_group')
+                assert cg == 3 if cluster != 3 else 1
