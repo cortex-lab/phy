@@ -59,7 +59,7 @@ def _unique(x):
     It is only faster if len(x) >> len(unique(x)).
 
     """
-    if len(x) == 0:
+    if x is None or len(x) == 0:
         return np.array([], dtype=np.int64)
     # WARNING: only keep positive values.
     # cluster=-1 means "unclustered".

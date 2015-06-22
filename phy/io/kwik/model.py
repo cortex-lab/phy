@@ -823,6 +823,8 @@ class KwikModel(BaseModel):
     @property
     def duration(self):
         """Duration of the experiment (in seconds)."""
+        if self._traces is None:
+            return 0.
         return float(self.traces.shape[0]) / self.sample_rate
 
     @property
