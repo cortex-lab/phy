@@ -64,8 +64,6 @@ class KwikCreator(object):
             if basename.endswith('.kwik'):
                 basename, _ = op.splitext(basename)
             kwik_path = basename + '.kwik'
-        if op.exists(kwik_path):
-            raise ValueError("The file `{}` already exists.".format(kwik_path))
         self.kwik_path = kwik_path
         if basename is None:
             basename, _ = op.splitext(kwik_path)
@@ -75,8 +73,6 @@ class KwikCreator(object):
         if kwx_path is None:
             basename, _ = op.splitext(kwik_path)
             kwx_path = basename + '.kwx'
-        if op.exists(kwx_path):
-            raise ValueError("The file `{}` already exists.".format(kwx_path))
         self.kwx_path = kwx_path
 
     def create_empty(self):

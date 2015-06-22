@@ -270,8 +270,11 @@ class Session(BaseSession):
             * `masks`: the masks of the spikes `(n_spikes, n_channels)`.
 
         """
+        assert algorithm == 'spikedetekt'
+        # Create `.phy/spikedetekt/` directory for temporary files.
         sd_dir = op.join(self.settings.exp_settings_dir, 'spikedetekt')
         _ensure_dir_exists(sd_dir)
+        # Default interval.
         if interval is not None:
             (start_sec, end_sec) = interval
             sr = self.model.sample_rate
@@ -279,14 +282,26 @@ class Session(BaseSession):
                                 int(end_sec * sr))
         else:
             interval_samples = None
-        sd = SpikeDetekt(tempdir=sd_dir, **kwargs)
+        # Spike detection parameters.
+        # params = self.settings['spikedetekt_params'](self.model.sample_rate)
+        # Take the parameters in the Kwik file, coming from the PRM file.
+        params = self.model.metadata  # TODO: kk_params...
+        params.update(kwargs)
+        # Start the spike detection.
+        sd = SpikeDetekt(tempdir=sd_dir, **params)
         out = sd.run_serial(self.model.traces,
                             interval_samples=interval_samples)
-        assert out
-        # TODO:
-        # * check if the spikes exist. if so, raise an exception (also,
-        #   "force" parameter)
-        # * put the data into the kwik files
+
+        # Add the spikes in the `.kwik` and `.kwx` files.
+        for group in out.groups:
+            spike_samples = out.spike_samples[group]
+            self.model.creator.add_spikes(group=group,
+                                          spike_samples=spike_samples,
+                                          spike_recordings=None,  # TODO
+                                          masks=out.masks[group],
+                                          features=out.features[group],
+                                          )
+        self.emit('open')
 
     def cluster(self,
                 clustering=None,

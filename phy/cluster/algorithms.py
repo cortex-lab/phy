@@ -498,6 +498,7 @@ class SpikeDetekt(EventEmitter):
                                           )
 
         output = Bunch(n_chunks=len(keys),
+                       groups=groups,
                        chunk_keys=keys,
                        traces_f=traces_f,
                        spike_samples=_load('spike_samples'),

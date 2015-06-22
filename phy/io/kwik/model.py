@@ -12,6 +12,7 @@ import os
 
 import numpy as np
 
+from .creator import KwikCreator
 from ...ext import six
 from ..base import BaseModel, ClusterMetadata
 from ..h5 import open_h5, File
@@ -574,6 +575,9 @@ class KwikModel(BaseModel):
         if self._kwd is None:
             warn("The `.raw.kwd` file hasn't been found. "
                  "Traces and waveforms won't be available.")
+
+        # KwikCreator instance.
+        self.creator = KwikCreator(kwik_path=kwik_path)
 
         # Load the data.
         self._load_meta()
