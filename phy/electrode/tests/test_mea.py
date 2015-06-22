@@ -29,12 +29,25 @@ def test_probe():
                  'graph': [],
                  },
              }}
+    adjacency = {0: set([1, 3]),
+                 1: set([0]),
+                 3: set([0]),
+                 }
     assert _probe_channels(probe, 0) == [0, 3, 1]
     assert _probe_positions(probe, 0) == [(10, 10), (20, 30), (10, 20)]
-    assert _probe_adjacency_list(probe) == {0: set([1, 3]),
-                                            1: set([0]),
-                                            3: set([0]),
-                                            }
+    assert _probe_adjacency_list(probe) == adjacency
+
+    mea = MEA(probe=probe)
+    assert mea.positions is None
+    assert mea.channels is None
+    assert mea.n_channels == 0
+    assert mea.adjacency == adjacency
+    assert mea.channels_per_group == {0: [0, 3, 1], 1: [7]}
+
+    mea.change_channel_group(0)
+    ae(mea.positions, [(10, 10), (20, 30), (10, 20)])
+    assert mea.channels == [0, 3, 1]
+    assert mea.n_channels == 3
 
 
 def test_mea():

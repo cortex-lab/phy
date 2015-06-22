@@ -67,6 +67,12 @@ def _probe_adjacency_list(probe):
     return adjacency_list
 
 
+def _channels_per_group(probe):
+    groups = probe['channel_groups'].keys()
+    return {group: probe['channel_groups'][group]['channels']
+            for group in groups}
+
+
 #------------------------------------------------------------------------------
 # MEA class
 #------------------------------------------------------------------------------
@@ -95,6 +101,7 @@ class MEA(object):
         # This is a mapping {channel: list of neighbors}.
         if adjacency is None and probe is not None:
             adjacency = _probe_adjacency_list(probe)
+            self.channels_per_group = _channels_per_group(probe)
         self._adjacency = adjacency
 
     def _check_positions(self, positions):
