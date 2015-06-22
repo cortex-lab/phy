@@ -226,7 +226,23 @@ def test_spike_detect_real_data(spikedetekt):
         sd = SpikeDetekt(tempdir=tempdir, **params)
         out = sd.run_serial(traces)
 
-        assert out.n_spikes_total == 49
+        n_spikes = 49
+        assert out.n_spikes_total == n_spikes
+        spike_samples = out.spike_samples[0][0][...]
+        assert spike_samples.shape == (n_spikes,)
+
+        masks = out.masks[0][0][...]
+        assert masks.shape == (n_spikes, n_channels)
+
+        # Plot...
+        # from phy.gui import qt_app
+        # from phy.plot.traces import plot_traces
+        # with qt_app():
+        #     plot_traces(traces,
+        #                 spike_samples=spike_samples,
+        #                 masks=masks,
+        #                 n_samples_per_spike=20,
+        #                 )
 
 
 #------------------------------------------------------------------------------

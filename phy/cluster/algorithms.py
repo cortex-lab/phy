@@ -331,7 +331,7 @@ class SpikeDetekt(EventEmitter):
         with open(path, 'rb') as f:
             return _load_ndarray(f, dtype=dtype, shape=shape)
 
-    def _load_data_chunks(self, name, dtype,
+    def _load_data_chunks(self, name,
                           n_samples=None,
                           n_channels=None,
                           groups=None,
@@ -345,12 +345,14 @@ class SpikeDetekt(EventEmitter):
             for key in keys:
                 n_spikes = spike_counts(group=group, chunk=key)
                 shape = {
+                    'spike_samples': (n_spikes,),
                     'waveforms': (n_spikes,
                                   self._n_samples_waveforms,
                                   n_channels_group),
                     'masks': (n_spikes, n_channels_group),
                     'features': (n_spikes, n_channels_group, self._n_features),
                 }[name]
+                dtype = np.uint64 if name == 'spike_samples' else np.float32
                 w = self._load(name, dtype,
                                shape=shape,
                                key=key,
@@ -488,7 +490,7 @@ class SpikeDetekt(EventEmitter):
                                key=key) for key in keys]
 
         def _load(name):
-            return self._load_data_chunks(name, np.float32,
+            return self._load_data_chunks(name,
                                           n_samples=n_samples,
                                           n_channels=n_channels,
                                           groups=groups,
@@ -498,6 +500,7 @@ class SpikeDetekt(EventEmitter):
         output = Bunch(n_chunks=len(keys),
                        chunk_keys=keys,
                        traces_f=traces_f,
+                       spike_samples=_load('spike_samples'),
                        waveforms=_load('waveforms'),
                        masks=_load('masks'),
                        features=_load('features'),
