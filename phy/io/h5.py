@@ -90,7 +90,7 @@ class File(object):
         _check_hdf5_path(self._h5py_file, path)
         return self._h5py_file[path]
 
-    def write(self, path, array, overwrite=False):
+    def write(self, path, array=None, dtype=None, shape=None, overwrite=False):
         """Write a NumPy array in the file.
 
         Parameters
@@ -99,6 +99,10 @@ class File(object):
             Full HDF5 path to the dataset to create.
         array : ndarray
             Array to write in the file.
+        dtype : dtype
+            If `array` is None, the dtype of the array.
+        shape : tuple
+            If `array` is None, the shape of the array.
         overwrite : bool
             If False, raise an error if the dataset already exists. Defaults
             to False.
@@ -123,7 +127,12 @@ class File(object):
                 raise ValueError(("The dataset '{0:s}' already exists."
                                   ).format(path))
 
-        group.create_dataset(dset_name, data=array)
+        if array is not None:
+            group.create_dataset(dset_name, data=array)
+        else:
+            assert dtype
+            assert shape
+            group.create_dataset(dset_name, dtype=dtype, shape=shape)
 
     # Copy and rename
     #--------------------------------------------------------------------------
