@@ -17,6 +17,7 @@ except ImportError:
     get = None
 
 from .logging import info, warn
+from .settings import _phy_user_dir, _ensure_dir_exists
 
 
 #------------------------------------------------------------------------------
@@ -76,14 +77,26 @@ def _download(url):
         raise RuntimeError("Unable to download `{}`.".format(url))
 
 
-def download_test_data(name, output_dir=None, base='cortexlab'):
-    """Download a test dataset.
+def _download_test_data(name, phy_user_dir=None):
+    phy_user_dir = phy_user_dir or _phy_user_dir()
+    dir = op.join(phy_user_dir, 'test_data')
+    _ensure_dir_exists(dir)
+    path = op.join(dir, name)
+    if op.exists(path):
+        return path
+    url = _BASE_URL['github'] + 'test/' + name
+    download_file(url, output=path)
+    return path
+
+
+def download_sample_data(name, output_dir=None, base='cortexlab'):
+    """Download a sample dataset.
 
     Parameters
     ----------
 
     name : str
-        Name of the test dataset to download.
+        Name of the sample dataset to download.
     output_dir : str
         The directory where to save the file.
     base : str
@@ -98,7 +111,7 @@ def download_test_data(name, output_dir=None, base='cortexlab'):
     if not op.exists(output_dir):
         os.mkdir(output_dir)
     name, ext = op.splitext(name)
-    if ext is None:
+    if not ext:
         ext_list = ('.kwik', '.kwx', '.raw.kwd')
     else:
         ext_list = (ext,)
