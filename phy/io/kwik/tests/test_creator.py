@@ -9,7 +9,7 @@
 import os.path as op
 
 import numpy as np
-# from numpy.testing import assert_array_equal as ae
+from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
 
 from ....utils.tempdir import TemporaryDirectory
@@ -44,5 +44,17 @@ def test_write_by_chunk():
 def test_creator():
     with TemporaryDirectory() as tempdir:
         basename = op.join(tempdir, 'my_file')
+
         creator = KwikCreator(basename)
-        assert creator
+
+        creator.create_empty()
+        assert op.exists(basename + '.kwik')
+        assert op.exists(basename + '.kwx')
+
+        creator.set_metadata('/application_data/spikedetekt',
+                             a=1, b=2., c=[0, 1])
+
+        with open_h5(creator.kwik_path, 'r') as f:
+            assert f.read_attr('/application_data/spikedetekt', 'a') == 1
+            assert f.read_attr('/application_data/spikedetekt', 'b') == 2.
+            ae(f.read_attr('/application_data/spikedetekt', 'c'), [0, 1])

@@ -12,6 +12,7 @@ import numpy as np
 
 from ..h5 import open_h5
 from ...utils._types import _as_array
+from ...ext.six import string_types
 
 
 #------------------------------------------------------------------------------
@@ -76,7 +77,11 @@ class KwikCreator(object):
             f.write_attr('/', 'kwik_version', 2)
 
     def set_metadata(self, path, **kwargs):
-        pass
+        assert isinstance(path, string_types)
+        assert path
+        with open_h5(self.kwik_path, 'a') as f:
+            for key, value in kwargs.items():
+                f.write_attr(path, key, value)
 
     def add_spikes(self,
                    group=None,
