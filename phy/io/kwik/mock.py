@@ -74,10 +74,10 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
 
         f.write('/channel_groups/1/spikes/time_samples', spike_samples)
         f.write('/channel_groups/1/spikes/recording', spike_recordings)
-        f.write_attr('/channel_groups/1',
-                     'channel_order',
-                     np.arange(1, n_channels - 1)[::-1],
-                     )
+        f.write_attr('/channel_groups/1', 'channel_order',
+                     np.arange(1, n_channels - 1)[::-1])
+        graph = np.array([[1, 2], [2, 3]])
+        f.write_attr('/channel_groups/1', 'adjacency_graph', graph)
 
         # Create channels.
         positions = staggered_positions(n_channels)

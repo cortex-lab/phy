@@ -230,6 +230,7 @@ class KwikModel(BaseModel):
         self._probe = None
         self._channels = []
         self._channel_order = None
+        self._adjacency_graph = None
         self._features = None
         self._features_masks = None
         self._masks = None
@@ -374,9 +375,14 @@ class KwikModel(BaseModel):
     def _load_channels(self):
         self._channels = np.array(_list_channels(self._kwik.h5py_file,
                                                  self._channel_group))
+        # Load channel order from the HDF5 attribute.
         channel_order = self._kwik.read_attr(self._channel_groups_path,
                                              'channel_order')
         self._channel_order = np.array(channel_order)
+        # Load the adjacecny graph from the HDF5 attribute.
+        adjacency_graph = self._kwik.read_attr(self._channel_groups_path,
+                                               'adjacency_graph')
+        self._adjacency_graph = np.array(adjacency_graph)
 
     def _load_channel_groups(self, channel_group=None):
         self._channel_groups = _list_channel_groups(self._kwik.h5py_file)
@@ -861,6 +867,10 @@ class KwikModel(BaseModel):
 
         """
         return self._channel_order
+
+    @property
+    def adjacency_graph(self):
+        return self._adjacency_graph
 
     @property
     def n_channels(self):
