@@ -28,8 +28,8 @@ from ..mock import (artificial_spike_samples,
 
 def test_write_by_chunk():
     n = 5
-    arrs = [np.random.rand(i + 1, 3) for i in range(n)]
-    n_tot = n * (n + 1) // 2
+    arrs = [np.random.rand(i + 1, 3).astype(np.float32) for i in range(n)]
+    n_tot = sum(_.shape[0] for _ in arrs)
 
     with TemporaryDirectory() as tempdir:
         path = op.join(tempdir, 'test.h5')

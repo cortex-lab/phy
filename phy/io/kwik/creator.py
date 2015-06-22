@@ -22,6 +22,8 @@ from ...ext.six.moves import zip
 #------------------------------------------------------------------------------
 
 def _first(gen):
+    if isinstance(gen, list):
+        gen = (_ for _ in gen)
     try:
         return next(gen)
     except StopIteration:
@@ -35,24 +37,12 @@ def _write_by_chunk(dset, arrs):
         return
     # Check the consistency of the first array with the dataset.
     dtype = first.dtype
-    shape = first.shape[1:]
     n = first.shape[0]
     assert dset.dtype == dtype
-    assert dset.shape[1:] == shape[1:]
-
-    # Copy the first chunk.
-    dset[:n, ...] = first
-    # # Note: the first has already been iterated.
-    # for arr in arrs:
-    #     assert isinstance(arr, np.ndarray)
-    #     assert arr.dtype == dtype
-    #     assert arr.shape[1:] == shape
-    #     n += arr.shape[0]
-    # # Check the consistency of the HDF5 array with the list of arrays.
-    # assert dset.shape[0] == n
+    assert dset.shape[1:] == first.shape[1:]
 
     # Start the data copy *from the second array*.
-    offset = n
+    offset = 0
     for arr in arrs:
         n = arr.shape[0]
         arr = arr[...]
@@ -60,6 +50,7 @@ def _write_by_chunk(dset, arrs):
         assert arr.shape == (n,) + dset.shape[1:]
         dset[offset:offset + n, ...] = arr
         offset += arr.shape[0]
+    # Check that the copy is complete.
     assert offset == dset.shape[0]
 
 
