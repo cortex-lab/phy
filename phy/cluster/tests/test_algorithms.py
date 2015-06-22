@@ -12,6 +12,7 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 from pytest import fixture
 
+from ...utils._misc import _read_python
 from ...utils.datasets import _download_test_data
 from ...utils.logging import set_level
 from ...utils.tempdir import TemporaryDirectory
@@ -49,7 +50,7 @@ def _spikedetekt(request, n_groups=2):
     # Load default settings.
     curdir = op.dirname(op.realpath(__file__))
     default_settings_path = op.join(curdir, '../default_settings.py')
-    settings = Settings(default_path=default_settings_path)
+    settings = _read_python(default_settings_path)
     params = settings['spikedetekt_params'](sample_rate)
     params['sample_rate'] = sample_rate
 

@@ -16,7 +16,6 @@ from ..traces import _dat_n_samples
 from ...utils._types import _as_array
 from ...utils._misc import _read_python
 from ...utils.array import _unique
-from ...utils.settings import Settings
 from ...ext.six import string_types
 from ...ext.six.moves import zip
 
@@ -255,7 +254,7 @@ def create_kwik(prm_file=None, kwik_path=None, probe=None, **kwargs):
     curdir = op.dirname(op.realpath(__file__))
     default_settings_path = op.join(curdir,
                                     '../../cluster/default_settings.py')
-    settings = Settings(default_path=default_settings_path)
+    settings = _read_python(default_settings_path)
     params = settings['spikedetekt_params'](sample_rate)
     # Update with PRM and user parameters.
     params.update(prm)
