@@ -11,11 +11,12 @@ import os
 import os.path as op
 
 try:
+    import requests
     from requests import get
 except ImportError:
     get = None
 
-from .logging import info
+from .logging import info, warn
 
 
 #------------------------------------------------------------------------------
@@ -25,6 +26,7 @@ from .logging import info
 _BASE_URL = {
     'cortexlab': 'http://phy.cortexlab.net/data/',
     'github': 'https://raw.githubusercontent.com/kwikteam/phy-data/master/',
+    'local': 'http://localhost:8000/',
 }
 
 
@@ -49,7 +51,10 @@ def download_file(url, output=None, checksum=None):
         return
     if not get:
         raise ImportError("Please install the requests package.")
-    r = get(url, stream=True)
+    try:
+        r = get(url, stream=True)
+    except requests.exceptions.ConnectionError:
+        raise RuntimeError("Unable to download `{}`.".format(url))
     info("Downloading {0}...".format(url))
     with open(output, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
@@ -65,7 +70,10 @@ def download_file(url, output=None, checksum=None):
 def _download(url):
     if not get:
         raise ImportError("Please install the requests package.")
-    return get(url).text
+    try:
+        return get(url).text
+    except requests.exceptions.ConnectionError:
+        raise RuntimeError("Unable to download `{}`.".format(url))
 
 
 def download_test_data(name, output_dir=None, base='cortexlab'):
@@ -89,9 +97,28 @@ def download_test_data(name, output_dir=None, base='cortexlab'):
     output_dir = op.realpath(op.dirname(output_dir))
     if not op.exists(output_dir):
         os.mkdir(output_dir)
-    for ext in ('.kwik', '.kwx', '.raw.kwd'):
+    name, ext = op.splitext(name)
+    if ext is None:
+        ext_list = ('.kwik', '.kwx', '.raw.kwd')
+    else:
+        ext_list = (ext,)
+    outputs = []
+    for ext in ext_list:
         url = _BASE_URL[base] + name + ext
         output = op.join(output_dir, name + ext)
         url_checksum = _BASE_URL[base] + name + ext + '.md5'
-        checksum = _download(url_checksum).split(' ')[0]
-        download_file(url, output=output, checksum=checksum)
+        # Try to download the md5 hash.
+        try:
+            checksum = _download(url_checksum).split(' ')[0]
+        except RuntimeError:
+            warn("The md5 file could not be found at `{}`.".format(
+                 url_checksum))
+            checksum = None
+        # Try to download the requested file.
+        try:
+            download_file(url, output=output, checksum=checksum)
+        except RuntimeError:
+            warn("The data file could not be found at `{}`.".format(
+                 url))
+        outputs.append(output)
+    return outputs
