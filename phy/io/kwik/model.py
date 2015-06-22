@@ -528,8 +528,12 @@ class KwikModel(BaseModel):
                               n_channels=n_channels)
         if traces is None:
             return
-        self._recording_offsets = np.cumsum([trace.shape[0]
-                                             for trace in traces])
+        # Set the recordings offsets (no delay between consecutive recordings).
+        i = 0
+        self._recording_offsets = []
+        for trace in traces:
+            self._recording_offsets.append(i)
+            i += trace.shape[0]
         self._traces = _concatenate_virtual_arrays(traces)
 
     def has_kwx(self):
