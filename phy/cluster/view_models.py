@@ -896,6 +896,7 @@ class BaseFeatureViewModel(VispyViewModel):
 
     def on_key_press(self, event):
         """Handle key press events."""
+        super(BaseFeatureViewModel, self).on_key_press(event)
         key = event.key
         ctrl = 'Control' in event.modifiers
         if ctrl and key in ('+', '-'):
@@ -920,9 +921,11 @@ class FeatureGridViewModel(BaseFeatureViewModel):
     """Features grid"""
     _view_name = 'features_grid'
 
-    keyboard_shortcuts = BaseFeatureViewModel.keyboard_shortcuts.update({
+    keyboard_shortcuts = {
         'enlarge_subplot': 'ctrl+click',
-    })
+        'increase_scale': 'ctrl+',
+        'decrease_scale': 'ctrl-',
+    }
 
     @property
     def n_rows(self):
@@ -960,6 +963,11 @@ class FeatureViewModel(BaseFeatureViewModel):
     _view_name = 'features'
     _x_dim = 'time'
     _y_dim = (0, 0)
+
+    keyboard_shortcuts = {
+        'increase_scale': 'ctrl+',
+        'decrease_scale': 'ctrl-',
+    }
 
     @property
     def n_rows(self):
