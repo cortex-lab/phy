@@ -34,7 +34,7 @@ def test_probe():
                  3: set([0]),
                  }
     assert _probe_channels(probe, 0) == [0, 3, 1]
-    assert _probe_positions(probe, 0) == [(10, 10), (20, 30), (10, 20)]
+    ae(_probe_positions(probe, 0), [(10, 10), (20, 30), (10, 20)])
     assert _probe_adjacency_list(probe) == adjacency
 
     mea = MEA(probe=probe)
