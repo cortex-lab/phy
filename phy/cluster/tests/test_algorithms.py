@@ -12,6 +12,7 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 from pytest import fixture
 
+from ...utils.datasets import _download_test_data
 from ...utils.logging import set_level
 from ...utils.tempdir import TemporaryDirectory
 from ...utils.settings import Settings
@@ -199,6 +200,33 @@ def test_spike_detect_serial(spikedetekt):
         masks = np.vstack(out.masks[group])
         assert masks.dtype == np.float32
         assert masks.shape == (n_spikes_g, n_channels_g)
+
+
+def test_spike_detect_real_data(spikedetekt):
+    with TemporaryDirectory() as tempdir:
+
+        # Set the parameters.
+        curdir = op.dirname(op.realpath(__file__))
+        default_settings_path = op.join(curdir, '../default_settings.py')
+        settings = Settings(default_path=default_settings_path)
+        sample_rate = 20000
+        params = settings['spikedetekt_params'](sample_rate)
+        params['sample_rate'] = sample_rate
+        params['probe_adjacency_list'] = {0: [1, 2, 3],
+                                          1: [0, 2, 3],
+                                          2: [0, 1, 3],
+                                          3: [0, 1, 2]}
+        params['probe_channels'] = {0: [0, 1, 2, 3]}
+
+        # Load the traces.
+        path = _download_test_data('test.dat')
+        traces = np.fromfile(path, dtype=np.int16).reshape((20000, 4))
+
+        # Run the detection.
+        sd = SpikeDetekt(tempdir=tempdir, **params)
+        out = sd.run_serial(traces)
+
+        assert out.n_spikes_total == 49
 
 
 #------------------------------------------------------------------------------
