@@ -192,6 +192,25 @@ class KwikCreator(object):
             f.write_attr(path, 'sample_rate', sample_rate)
             f.write_attr(path, 'start_time', start_sample / sample_rate)
 
+    def add_recordings_from_dat(self, files, sample_rate=None,
+                                n_channels=None, n_bits=None):
+        start_sample = 0
+        for i, filename in enumerate(files):
+            # WARNING: different sample rates in recordings is not
+            # supported yet.
+            self.add_recording(id=i,
+                               start_sample=start_sample,
+                               sample_rate=sample_rate)
+            assert op.splitext(filename)[1] == '.dat'
+            # Compute the offset for different recordings.
+            start_sample += _dat_n_samples(filename,
+                                           n_channels=n_channels,
+                                           n_bits=n_bits)
+
+    def add_recordings_from_kwd(self, files):
+        # TODO
+        raise NotImplementedError()
+
     def add_cluster_group(self,
                           group=None,
                           id=None,
@@ -272,18 +291,14 @@ def create_kwik(prm_file=None, kwik_path=None, probe=None, **kwargs):
     # Add the recordings.
     files = params.get('raw_data_files', [])
     if isinstance(files, string_types):
-        files = [files]
-    start_sample = 0
-    for i, filename in enumerate(files):
-        # WARNING: different sample rates in recordings is not supported yet.
-        creator.add_recording(id=i,
-                              start_sample=start_sample,
-                              sample_rate=sample_rate)
-        if op.splitext(filename)[1] != '.dat':
-            raise NotImplementedError("Only `.dat` files are "
-                                      "currently supported.")
-        # Compute the offset for different recordings.
-        start_sample += _dat_n_samples(filename,
-                                       n_channels=params['n_channels'],
-                                       n_bits=params['n_bits'])
+        if files.endswith('.raw.kwd'):
+            creator.add_recordings_from_kwd(files)
+        else:
+            files = [files]
+    if isinstance(files, list) and len(files):
+        creator.add_recordings_from_dat(files,
+                                        sample_rate=sample_rate,
+                                        n_channels=params['n_channels'],
+                                        n_bits=params['n_bits'],
+                                        )
     return kwik_path
