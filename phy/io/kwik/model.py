@@ -16,6 +16,7 @@ from .creator import KwikCreator
 from ...ext import six
 from ..base import BaseModel, ClusterMetadata
 from ..h5 import open_h5, File
+from ..traces import read_dat, _dat_n_samples
 from ...traces.waveform import WaveformLoader
 from ...traces.filter import bandpass_filter, apply_filter
 from ...electrode.mea import MEA
@@ -173,6 +174,35 @@ def _open_h5_if_exists(kwik_path, file_type, mode=None):
     return open_h5(path, mode=mode) if op.exists(path) else None
 
 
+def _read_traces(kwik, kwd=None, n_bits=None, n_channels=None):
+    if '/recordings' not in kwik:
+        return
+    recordings = kwik.children('/recordings')
+    traces = []
+    for recording in recordings:
+        path = '/recordings/{}/raw'.format(recording)
+        if kwik.has_attr(path, 'hdf5_path'):
+            if kwd is None:
+                return
+            hdf5_path = kwik.read_attr(path, 'hdf5_path')
+            assert kwd and op.realpath(kwd.filename) == op.realpath(hdf5_path)
+            traces.append(kwd.read('/recordings/{}/data'.format(recording)))
+        elif kwik.has_attr(path, 'dat_path'):
+            assert n_bits > 0
+            assert n_channels
+            dat_path = kwik.read_attr(path, 'dat_path')
+            assert op.exists(dat_path)
+            dtype = {16: np.int16}[n_bits]
+            n_samples = _dat_n_samples(dat_path,
+                                       n_channels=n_channels,
+                                       n_bits=n_bits,
+                                       )
+            traces.append(read_dat(dat_path,
+                                   dtype=dtype,
+                                   shape=(n_samples, n_channels)))
+    return traces
+
+
 _DEFAULT_GROUPS = [(0, 'Noise'),
                    (1, 'MUA'),
                    (2, 'Good'),
@@ -324,7 +354,7 @@ class KwikModel(BaseModel):
                                                )
 
     def _update_waveform_loader(self):
-        if self._kwd is not None:
+        if self._traces is not None:
             self._waveform_loader.traces = self._traces
         else:
             self._waveform_loader.traces = np.zeros((0, self.n_channels),
@@ -492,25 +522,17 @@ class KwikModel(BaseModel):
         self._clustering_metadata.update(metadata)
 
     def _load_traces(self):
-        if self._kwd is not None:
-            i = 0
-            self._recording_offsets = []
-            traces = []
-            for rec in self._recordings:
-                path = '/recordings/{0:d}/data'.format(rec)
-                data = self._kwd.read(path)
-                traces.append(data)
-                # NOTE: there is no time gap between the recordings.
-                # If a gap were to be added, it should be also added in
-                # _concatenate_virtual_arrays() (which doesn't support it
-                # currently).
-                self._recording_offsets.append(i)
-                i += data.shape[0]
-            # # Create a new WaveformLoader if needed.
-            # if self._waveform_loader is None:
-            #     self._create_waveform_loader()
-            # Virtual concatenation of the arrays.
-            self._traces = _concatenate_virtual_arrays(traces)
+        n_channels = self._metadata.get('n_channels', None)
+        n_bits = self._metadata.get('nbits', None)
+        traces = _read_traces(self._kwik,
+                              kwd=self._kwd,
+                              n_bits=n_bits,
+                              n_channels=n_channels)
+        if traces is None:
+            return
+        self._recording_offsets = np.cumsum([trace.shape[0]
+                                             for trace in traces])
+        self._traces = _concatenate_virtual_arrays(traces)
 
     def has_kwx(self):
         """Returns whether the `.kwx` file is present.
@@ -519,14 +541,6 @@ class KwikModel(BaseModel):
 
         """
         return self._kwx is not None
-
-    def has_kwd(self):
-        """Returns whether the `.raw.kwd` file is present.
-
-        If not, the waveforms won't be available.
-
-        """
-        return self._kwd is not None
 
     def open(self, kwik_path, channel_group=None, clustering=None):
         """Open a Kwik dataset.
@@ -587,8 +601,8 @@ class KwikModel(BaseModel):
                  "Features and masks won't be available.")
         self._kwd = _open_h5_if_exists(kwik_path, 'raw.kwd')
         if self._kwd is None:
-            warn("The `.raw.kwd` file hasn't been found. "
-                 "Traces and waveforms won't be available.")
+            debug("The `.raw.kwd` file hasn't been found. "
+                  "Traces and waveforms won't be available.")
 
         # KwikCreator instance.
         self.creator = KwikCreator(kwik_path=kwik_path)

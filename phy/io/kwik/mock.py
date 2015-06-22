@@ -100,6 +100,9 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
         f.write_attr('/recordings/0', 'name', 'recording_0')
         f.write_attr('/recordings/1', 'name', 'recording_1')
 
+        f.write_attr('/recordings/0/raw', 'hdf5_path', kwd_filename)
+        f.write_attr('/recordings/1/raw', 'hdf5_path', kwd_filename)
+
     # Create the kwx file.
     if with_kwx:
         with open_h5(kwx_filename, 'w') as f:
