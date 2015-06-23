@@ -39,8 +39,10 @@ void main() {
     // Depth as a function of the mask and cluster index.
     float depth = depth_mask(a_box.x, a_data.y, n_clusters);
 
-    // The z coordinate is the depth: it depends on the mask.
     vec2 x_coeff = vec2(1. / max(n_clusters, 1.), 1.);
+    if (u_overlap > 0.5)
+        x_coeff.x = 1.;
+    // The z coordinate is the depth: it depends on the mask.
     gl_Position = vec4(pan_zoom(x_coeff * pos + box_pos), depth, 1.);
 
     // Compute the waveform color as a function of the cluster color
