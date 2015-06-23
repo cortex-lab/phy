@@ -23,6 +23,7 @@ _PYQT = False
 try:
     from PyQt4 import QtCore, QtGui, QtWebKit  # noqa
     from PyQt4.QtGui import QMainWindow
+    Qt = QtCore.Qt
     _PYQT = True
 except ImportError:
     try:
