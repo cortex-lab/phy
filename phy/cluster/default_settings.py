@@ -148,6 +148,16 @@ cluster_manual_config = [
 ]
 
 
+def _select_clusters(gui, args):
+    args = list(map(int, args.split(' ')))
+    gui.select(args)
+
+
+cluster_manual_snippets =  {
+    'c': _select_clusters,
+}
+
+
 def on_open(session):
     """You can update the session when a model is opened.
 

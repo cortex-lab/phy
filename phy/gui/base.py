@@ -12,7 +12,7 @@ import inspect
 
 from ..ext.six import string_types
 from ..utils._misc import _show_shortcuts
-from ..utils import debug, info, EventEmitter
+from ..utils import debug, info, warn, EventEmitter
 from ._utils import _read
 from .dock import DockWindow
 from .qt import Qt
@@ -466,7 +466,20 @@ class BaseGUI(EventEmitter):
         May be overriden.
 
         """
-        print(snippet)
+        assert snippet[0] == ':'
+        snippet = snippet[1:]
+        split = snippet.split(' ')
+        cmd = split[0]
+        snippet = snippet[len(cmd):].strip()
+        func = self._snippets.get(cmd, None)
+        if func is None:
+            info("The snippet `{}` could not be found.".format(cmd))
+            return
+        try:
+            func(self, snippet)
+        except Exception as e:
+            warn("Error when executing snippet `{}`: {}.".format(
+                 cmd, str(e)))
 
     def _on_keystroke(self, key, text):
         """Capture al keystrokes in snippet mode.
@@ -475,7 +488,7 @@ class BaseGUI(EventEmitter):
 
         """
         # Process keystrokes in snippet mode.
-        #
+        # Escape quits the snippet mode.
         if key == Qt.Key_Escape:
             self.disable_snippet_mode()
         # Backspace.
