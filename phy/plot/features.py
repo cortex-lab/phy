@@ -142,8 +142,8 @@ class BaseFeatureVisual(BaseSpikeVisual):
         dim_x = self._x_dim[i, j]
         dim_y = self._y_dim[i, j]
 
-        fet_x = self._get_feature_dim(self._features, dim_x)
-        fet_y = self._get_feature_dim(self._features, dim_y)
+        fet_x = self._get_feature_dim(data, dim_x)
+        fet_y = self._get_feature_dim(data, dim_y)
 
         return np.c_[fet_x, fet_y]
 

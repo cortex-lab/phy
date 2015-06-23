@@ -789,6 +789,7 @@ class BaseFeatureViewModel(VispyViewModel):
         points = self.view.visual.project(features, box)
         in_lasso = self.view.lasso.in_lasso(points)
         spike_ids = _spikes_in_clusters(self.model.spike_clusters, clusters)
+        assert features.shape[0] == len(spike_ids)
         return spike_ids[in_lasso]
 
     @property
