@@ -15,6 +15,7 @@ from ..utils._misc import _show_shortcuts
 from ..utils import debug, EventEmitter
 from ._utils import _read
 from .dock import DockWindow
+from .qt import Qt
 
 
 #------------------------------------------------------------------------------
@@ -311,7 +312,6 @@ class BaseGUI(EventEmitter):
     _default_shortcuts = {
         'close': 'ctrl+q',
         'enable_snippet_mode': ':',
-        'disable_snippet_mode': 'escape',
     }
 
     def __init__(self,
@@ -319,6 +319,7 @@ class BaseGUI(EventEmitter):
                  vm_classes=None,
                  state=None,
                  shortcuts=None,
+                 snippets=None,
                  config=None,
                  settings=None,
                  ):
@@ -328,6 +329,7 @@ class BaseGUI(EventEmitter):
             state = {}
         self.model = model
         self._shortcuts = shortcuts or {}
+        self._snippets = snippets or {}
         self._state = state
         if config is None:
             config = [(name, {}) for name in (vm_classes or {})]
@@ -337,7 +339,6 @@ class BaseGUI(EventEmitter):
         self._initialize_views()
         self._load_geometry_state(state)
         self._set_default_shortcuts()
-        # self._initialize_snippets()
         self._create_actions()
         self._set_default_view_connections()
 
@@ -391,6 +392,10 @@ class BaseGUI(EventEmitter):
 
         """
         pass
+
+    def _remove_actions(self):
+        for action in self._dock.actions():
+            self._dock.removeAction(action)
 
     def _view_model_kwargs(self, name):
         return {}
@@ -459,12 +464,18 @@ class BaseGUI(EventEmitter):
         May be overriden.
 
         """
+        # Process keystrokes in snippet mode.
+        # TODO
+        if key == Qt.Key_Escape:
+            self.disable_snippet_mode()
 
     def enable_snippet_mode(self):
+        self._remove_actions()
         self._dock.connect_(self._on_keystroke, event='keystroke')
 
     def disable_snippet_mode(self):
         self._dock.unconnect_(self._on_keystroke)
+        self._create_actions()
 
     #--------------------------------------------------------------------------
     # Public methods
