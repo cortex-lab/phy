@@ -30,7 +30,7 @@ def _widget(dock_widget):
 
 
 # -----------------------------------------------------------------------------
-# Dock main window
+# Qt windows
 # -----------------------------------------------------------------------------
 
 class DockWindow(QtGui.QMainWindow):
@@ -41,6 +41,7 @@ class DockWindow(QtGui.QMainWindow):
 
     close_gui
     show_gui
+    keystroke
 
     Note
     ----
@@ -73,6 +74,10 @@ class DockWindow(QtGui.QMainWindow):
         self._status_bar = QtGui.QStatusBar()
         self.setStatusBar(self._status_bar)
 
+    def keyReleaseEvent(self, e):
+        self.emit('keystroke', e.key())
+        return super(DockWindow, self).keyReleaseEvent(e)
+
     # Events
     # -------------------------------------------------------------------------
 
@@ -81,6 +86,9 @@ class DockWindow(QtGui.QMainWindow):
 
     def connect_(self, *args, **kwargs):
         self._event.connect(*args, **kwargs)
+
+    def unconnect_(self, *args, **kwargs):
+        self._event.unconnect(*args, **kwargs)
 
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
