@@ -1025,7 +1025,12 @@ class FeatureViewModel(BaseFeatureViewModel):
         return self._y_dim
 
     def set_dimension(self, axis, dim, smart=True):
-        """Set a (smart) dimension."""
+        """Set a (smart) dimension.
+
+        "smart" means that the dimension may be changed if it is the same
+        than the other dimension, to avoid x=y.
+
+        """
         super(FeatureViewModel, self).set_dimension(axis, (0, 0), dim,
                                                     smart=smart)
 
