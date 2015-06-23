@@ -393,14 +393,15 @@ def test_session_automatic(session, spike_ids):
     assert metadata['klustakwik_num_starting_clusters'] == 10
 
 
-def _test_session_detect(session):
+def test_session_detect(session):
     channels = range(n_channels)
-    graph = [[i, i + 1] for i in (channels)]
+    graph = [[i, i + 1] for i in range(n_channels - 1)]
     probe = {'channel_groups': {
              0: {'channels': channels,
                  'graph': graph,
                  }}}
-    sample_rate = 20000
+    sample_rate = 10000
+    n_samples_traces = 20000
     traces = artificial_traces(n_samples_traces, n_channels)
     assert traces is not None
 
