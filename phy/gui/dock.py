@@ -55,6 +55,7 @@ class DockWindow(QtGui.QMainWindow):
                  title=None,
                  ):
         super(DockWindow, self).__init__()
+        self._actions = {}
         if title is None:
             title = 'phy'
         self.setWindowTitle(title)
@@ -75,7 +76,7 @@ class DockWindow(QtGui.QMainWindow):
         self.setStatusBar(self._status_bar)
 
     def keyReleaseEvent(self, e):
-        self.emit('keystroke', e.key())
+        self.emit('keystroke', e.key(), e.text())
         return super(DockWindow, self).keyReleaseEvent(e)
 
     # Events
@@ -116,6 +117,8 @@ class DockWindow(QtGui.QMainWindow):
                    checked=False,
                    ):
         """Add an action with a keyboard shortcut."""
+        if name in self._actions:
+            return
         action = QtGui.QAction(name, self)
         action.triggered.connect(callback)
         action.setCheckable(checkable)
@@ -126,7 +129,18 @@ class DockWindow(QtGui.QMainWindow):
             for key in shortcut:
                 action.setShortcut(key)
         self.addAction(action)
+        self._actions[name] = action
         return action
+
+    def remove_action(self, name):
+        """Remove an action."""
+        self.removeAction(self._actions[name])
+        del self._actions[name]
+
+    def remove_actions(self):
+        names = sorted(self._actions.keys())
+        for name in names:
+            self.remove_action(name)
 
     def shortcut(self, name, key=None):
         """Decorator to add a global keyboard shortcut."""

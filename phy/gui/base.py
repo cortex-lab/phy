@@ -12,7 +12,7 @@ import inspect
 
 from ..ext.six import string_types
 from ..utils._misc import _show_shortcuts
-from ..utils import debug, EventEmitter
+from ..utils import debug, info, EventEmitter
 from ._utils import _read
 from .dock import DockWindow
 from .qt import Qt
@@ -328,12 +328,17 @@ class BaseGUI(EventEmitter):
         if state is None:
             state = {}
         self.model = model
-        self._shortcuts = shortcuts or {}
+        # Shortcuts.
+        s = self._default_shortcuts.copy()
+        s.update(shortcuts or {})
+        self._shortcuts = s
         self._snippets = snippets or {}
+        # GUI state and config.
         self._state = state
         if config is None:
             config = [(name, {}) for name in (vm_classes or {})]
         self._config = config
+        # Create the dock window.
         self._dock = DockWindow(title=self.title)
         self._view_creator = WidgetCreator(widget_classes=vm_classes)
         self._initialize_views()
@@ -341,12 +346,6 @@ class BaseGUI(EventEmitter):
         self._set_default_shortcuts()
         self._create_actions()
         self._set_default_view_connections()
-
-    def _set_default_shortcuts(self):
-        for name, shortcut in self._default_shortcuts.items():
-            if name not in self._shortcuts:
-                self._shortcuts[name] = shortcut
-                self._add_gui_shortcut(name)
 
     def _initialize_views(self):
         self._load_config(self._config,
@@ -393,10 +392,6 @@ class BaseGUI(EventEmitter):
         """
         pass
 
-    def _remove_actions(self):
-        for action in self._dock.actions():
-            self._dock.removeAction(action)
-
     def _view_model_kwargs(self, name):
         return {}
 
@@ -436,6 +431,13 @@ class BaseGUI(EventEmitter):
         if gui_state:
             self._dock.restore_geometry_state(gui_state)
 
+    def _remove_actions(self):
+        self._dock.remove_actions()
+
+    def _set_default_shortcuts(self):
+        for name, shortcut in self._default_shortcuts.items():
+            self._add_gui_shortcut(name)
+
     def _add_gui_shortcut(self, method_name):
         """Helper function to add a GUI action with a keyboard shortcut."""
         # Get the keyboard shortcut for this method.
@@ -458,24 +460,47 @@ class BaseGUI(EventEmitter):
     def status_message(self, value):
         self._dock.status_message = value
 
-    def _on_keystroke(self, key):
+    def _process_snippet(self, snippet):
+        """Processes a snippet.
+
+        May be overriden.
+
+        """
+        print(snippet)
+
+    def _on_keystroke(self, key, text):
         """Capture al keystrokes in snippet mode.
 
         May be overriden.
 
         """
         # Process keystrokes in snippet mode.
-        # TODO
+        #
         if key == Qt.Key_Escape:
             self.disable_snippet_mode()
+        # Backspace.
+        elif key == Qt.Key_Backspace:
+            self.status_message = self.status_message[:-1]
+        # Validate the snippet.
+        elif key in (Qt.Key_Return, Qt.Key_Enter):
+            self._process_snippet(self.status_message)
+            self.disable_snippet_mode()
+        # Writing the snippet.
+        elif Qt.Key_Space <= key <= Qt.Key_AsciiTilde:
+            self.status_message += text
 
     def enable_snippet_mode(self):
+        info("Snippet mode enabled.")
         self._remove_actions()
         self._dock.connect_(self._on_keystroke, event='keystroke')
 
     def disable_snippet_mode(self):
+        self.status_message = ''
         self._dock.unconnect_(self._on_keystroke)
+        # Reestablishes the shortcuts.
+        self._set_default_shortcuts()
         self._create_actions()
+        info("Snippet mode disabled.")
 
     #--------------------------------------------------------------------------
     # Public methods
