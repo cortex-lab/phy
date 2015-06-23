@@ -147,8 +147,8 @@ class ClusterManualGUI(BaseGUI):
     def _connect_view(self, view):
         """Connect a view to the GUI's events (select and cluster)."""
         @self.connect
-        def on_select(cluster_ids):
-            view.select(cluster_ids)
+        def on_select(cluster_ids, auto_update=True):
+            view.select(cluster_ids, auto_update=auto_update)
 
         @self.connect
         def on_cluster(up):
@@ -357,7 +357,7 @@ class ClusterManualGUI(BaseGUI):
         if up.history != 'undo':
             if up.description == 'merge' or up.history == 'redo':
                 self.wizard.pin(up.added[0])
-                self._wizard_select()
+                self._wizard_select(auto_update=(up.history is None))
             elif up.description == 'metadata_group':
                 cluster = up.metadata_changed[0]
                 if cluster == self.wizard.best:
@@ -367,14 +367,14 @@ class ClusterManualGUI(BaseGUI):
                 self._wizard_select()
             # Special case: split.
             elif up.description == 'assign':
-                self.select(up.added)
+                self.select(up.added, auto_update=False)
         elif up.history == 'undo':
             clusters = up.selection
             if len(clusters) >= 1:
                 self.wizard.best = clusters[0]
             if len(clusters) >= 2:
                 self.wizard.match = clusters[1]
-            self._wizard_select()
+            self._wizard_select(auto_update=False)
 
     # Open data
     # -------------------------------------------------------------------------
@@ -455,7 +455,7 @@ class ClusterManualGUI(BaseGUI):
     # Selection
     # ---------------------------------------------------------------------
 
-    def select(self, cluster_ids):
+    def select(self, cluster_ids, **kwargs):
         """Select clusters."""
         cluster_ids = list(cluster_ids)
         assert len(cluster_ids) == len(set(cluster_ids))
@@ -471,7 +471,7 @@ class ClusterManualGUI(BaseGUI):
                  n_selected - n_kept, n_selected))
         debug("Select clusters {0:s}.".format(str(cluster_ids)))
         self._cluster_ids = cluster_ids
-        self.emit('select', cluster_ids)
+        self.emit('select', cluster_ids, **kwargs)
 
     @property
     def selected_clusters(self):
@@ -481,8 +481,8 @@ class ClusterManualGUI(BaseGUI):
     # Wizard list
     # ---------------------------------------------------------------------
 
-    def _wizard_select(self):
-        self.select(self.wizard.selection)
+    def _wizard_select(self, **kwargs):
+        self.select(self.wizard.selection, **kwargs)
 
     def reset_wizard(self):
         """Restart the wizard."""

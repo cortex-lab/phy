@@ -83,16 +83,16 @@ class BaseClusterViewModel(BaseViewModel):
     # Public methods
     #--------------------------------------------------------------------------
 
-    def select(self, cluster_ids):
+    def select(self, cluster_ids, **kwargs):
         """Select a list of clusters."""
         cluster_ids = _as_list(cluster_ids)
         self._cluster_ids = cluster_ids
-        self.on_select(cluster_ids)
+        self.on_select(cluster_ids, **kwargs)
 
     # Callback methods
     #--------------------------------------------------------------------------
 
-    def on_select(self, cluster_ids):
+    def on_select(self, cluster_ids, **kwargs):
         """Update the view after a new selection has been made.
 
         Must be overriden."""
@@ -131,7 +131,7 @@ class HTMLClusterViewModel(BaseClusterViewModel, HTMLViewModel):
         # method.
         return _css_cluster_colors()
 
-    def on_select(self, cluster_ids):
+    def on_select(self, cluster_ids, **kwargs):
         """Update the view after a new selection has been made."""
         self.update(cluster_ids=cluster_ids)
 
@@ -213,12 +213,12 @@ class VispyViewModel(BaseClusterViewModel):
         visual.spike_clusters = spike_clusters
         visual.cluster_colors = _selected_clusters_colors(n_clusters)
 
-    def select(self, cluster_ids):
+    def select(self, cluster_ids, **kwargs):
         """Select a set of clusters."""
         self._selector.selected_clusters = cluster_ids
-        self.on_select(cluster_ids)
+        self.on_select(cluster_ids, **kwargs)
 
-    def on_select(self, cluster_ids):
+    def on_select(self, cluster_ids, **kwargs):
         """Update the view after a new selection has been made.
 
         Must be overriden.
@@ -333,7 +333,7 @@ class WaveformViewModel(VispyViewModel):
         self._view.mean.spike_clusters = np.sort(self.cluster_ids)
         self._view.mean.cluster_colors = self._view.visual.cluster_colors
 
-    def on_select(self, clusters):
+    def on_select(self, clusters, **kwargs):
         """Update the view when the selection changes."""
         # Get the spikes of the stored waveforms.
         n_clusters = len(clusters)
@@ -466,7 +466,7 @@ class CorrelogramViewModel(VispyViewModel):
 
         self.select(self.cluster_ids)
 
-    def on_select(self, clusters):
+    def on_select(self, clusters, **kwargs):
         """Update the view when the selection changes."""
         super(CorrelogramViewModel, self).on_select(clusters)
         spikes = self.spike_ids
@@ -676,7 +676,7 @@ class TraceViewModel(VispyViewModel):
             self.interval_size = .25
         self.select([])
 
-    def on_select(self, clusters):
+    def on_select(self, clusters, **kwargs):
         """Update the view when the selection changes."""
         # Get the spikes in the selected clusters.
         spikes = self.spike_ids
@@ -858,7 +858,7 @@ class BaseFeatureViewModel(VispyViewModel):
         # Number of rows: number of features + 1 for
         self.view.init_grid(self.n_rows)
 
-    def on_select(self, clusters):
+    def on_select(self, clusters, auto_update=True):
         """Update the view when the selection changes."""
         super(BaseFeatureViewModel, self).on_select(clusters)
         spikes = self.spike_ids
@@ -885,9 +885,10 @@ class BaseFeatureViewModel(VispyViewModel):
         self.view.visual.cluster_order = clusters
 
         # Set default dimensions.
-        x_dim, y_dim = self.dimensions_for_clusters(clusters)
-        self.view.set_dimensions('x', x_dim)
-        self.view.set_dimensions('y', y_dim)
+        if auto_update:
+            x_dim, y_dim = self.dimensions_for_clusters(clusters)
+            self.view.set_dimensions('x', x_dim)
+            self.view.set_dimensions('y', y_dim)
 
     keyboard_shortcuts = {
         'increase_scale': 'ctrl+',
