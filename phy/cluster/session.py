@@ -141,6 +141,11 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     @property
+    def n_spikes(self):
+        """Number of spikes in the current channel group."""
+        return self.model.n_spikes
+
+    @property
     def cluster_ids(self):
         """Array of all cluster ids used in the current clustering."""
         return self.model.cluster_ids
@@ -310,6 +315,9 @@ class Session(BaseSession):
                                           features=out.features[group],
                                           )
         self.emit('open')
+
+        if out.groups:
+            self.change_channel_group(out.groups[0])
 
     def cluster(self,
                 clustering=None,

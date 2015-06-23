@@ -143,6 +143,7 @@ class KwikCreator(object):
             spike_recordings = np.zeros(n_spikes, dtype=np.int32)
 
         # Add spikes in the .kwik file.
+        assert op.exists(self.kwik_path)
         with open_h5(self.kwik_path, 'a') as f:
             # This method can only be called once.
             if '/channel_groups/{:d}/spikes/time_samples'.format(group) in f:
@@ -173,6 +174,7 @@ class KwikCreator(object):
         def transform_m(m):
             return np.repeat(m, 3, axis=1)
 
+        assert op.exists(self.kwx_path)
         with open_h5(self.kwx_path, 'a') as f:
             fm = f.write('/channel_groups/{:d}/features_masks'.format(group),
                          shape=shape, dtype=np.float32)

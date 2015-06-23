@@ -401,7 +401,7 @@ def test_session_detect(session):
                  'graph': graph,
                  }}}
     sample_rate = 10000
-    n_samples_traces = 20000
+    n_samples_traces = 10000
     traces = artificial_traces(n_samples_traces, n_channels)
     assert traces is not None
 
@@ -409,5 +409,8 @@ def test_session_detect(session):
         kwik_path = op.join(tempdir, 'test.kwik')
         create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=sample_rate)
         session = Session(kwik_path)
-        out = session.detect_spikes(traces=traces)
-        print(out)
+        session.detect_spikes(traces=traces)
+        m = session.model
+        assert m.n_spikes >= 0
+        shape = (m.n_spikes, n_channels * m.n_features_per_channel)
+        assert m.features.shape == shape

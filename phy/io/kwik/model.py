@@ -437,8 +437,11 @@ class KwikModel(BaseModel):
         nc = len(self.channel_order)
 
         if self._kwx is not None:
+            self._kwx = _open_h5_if_exists(self.kwik_path, 'kwx')
             if path not in self._kwx:
                 debug("There are no features and masks in the `.kwx` file.")
+                # No need to keep the file open if it is empty.
+                self._kwx.close()
                 return
             fm = self._kwx.read(path)
             self._features_masks = fm
