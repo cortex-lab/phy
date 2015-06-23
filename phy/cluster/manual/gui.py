@@ -155,7 +155,8 @@ class ClusterManualGUI(BaseGUI):
             view.on_cluster(up)
 
         # Call the user callback function.
-        self.settings['on_view_open'](view)
+        if 'on_view_open' in self.settings:
+            self.settings['on_view_open'](view)
 
     def _connect_store(self):
         @self.connect
