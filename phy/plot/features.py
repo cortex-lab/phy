@@ -35,10 +35,9 @@ def _get_feature_dim(dim, features=None, extra_features=None):
         channel, feature = dim
         return features[:, channel, feature]
     elif isinstance(dim, string_types) and dim in extra_features:
-        x = extra_features[dim]
+        x, m, M = extra_features[dim]
         x = _as_array(x, np.float32)
         # Normalize extra feature.
-        m, M = float(x.min()), float(x.max())
         d = float(max(1., M - m))
         x = (-1. + 2 * (x - m) / d) * .8
         return x
@@ -64,7 +63,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
 
         _enable_depth_mask()
 
-    def add_extra_feature(self, name, array):
+    def add_extra_feature(self, name, array, array_min, array_max):
         assert isinstance(array, np.ndarray)
         assert array.ndim == 1
         if self.n_spikes:
@@ -76,7 +75,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
                        "{}.".format(len(array)))
                 raise ValueError(msg)
 
-        self._extra_features[name] = array
+        self._extra_features[name] = (array, array_min, array_max)
 
     @property
     def extra_features(self):
@@ -541,18 +540,19 @@ class FeatureView(BaseSpikeCanvas):
         # Dimensions.
         self.init_grid(n_rows)
         if not extra_features:
-            extra_features = {'time': np.linspace(0., 1., n_spikes)}
-        for name, array in (extra_features or {}).items():
-            self.add_extra_feature(name, array)
+            extra_features = {'time': (np.linspace(0., 1., n_spikes), 0., 1.)}
+        for name, (array, m, M) in (extra_features or {}).items():
+            self.add_extra_feature(name, array, m, M)
         self.set_dimensions('x', x_dimensions or {(0, 0): 'time'})
         self.set_dimensions('y', y_dimensions or {(0, 0): (0, 0)})
 
         self.update()
 
-    def add_extra_feature(self, name, array):
-        self.visual.add_extra_feature(name, array)
+    def add_extra_feature(self, name, array, array_min, array_max):
+        self.visual.add_extra_feature(name, array, array_min, array_max)
         if name not in self.background.extra_features:
-            self.background.add_extra_feature(name, array)
+            self.background.add_extra_feature(name, array,
+                                              array_min, array_max)
 
     @property
     def marker_size(self):
