@@ -48,6 +48,10 @@ def _write_by_chunk(dset, arrs):
     assert offset == dset.shape[0]
 
 
+def _concat(arrs):
+    return np.hstack([_[...] for _ in arrs])
+
+
 _DEFAULT_GROUPS = [(0, 'Noise'),
                    (1, 'MUA'),
                    (2, 'Good'),
@@ -75,10 +79,12 @@ class KwikCreator(object):
         self.kwx_path = kwx_path
 
     def create_empty(self):
+        assert not op.exists(self.kwik_path)
         with open_h5(self.kwik_path, 'w') as f:
             f.write_attr('/', 'kwik_version', 2)
             f.write_attr('/', 'name', self.basename)
 
+        assert not op.exists(self.kwx_path)
         with open_h5(self.kwx_path, 'w') as f:
             f.write_attr('/', 'kwik_version', 2)
 
@@ -129,6 +135,8 @@ class KwikCreator(object):
                    ):
         assert group >= 0
 
+        if isinstance(spike_samples, list):
+            spike_samples = _concat(spike_samples)
         spike_samples = _as_array(spike_samples, dtype=np.uint64)
         n_spikes = len(spike_samples)
         if spike_recordings is None:
