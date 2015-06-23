@@ -437,7 +437,7 @@ class BaseSession(EventEmitter):
 
         # Get the default GUI config.
         params = {p: self.settings.get('{}_{}'.format(name, p), None)
-                  for p in ('config', 'shortcuts', 'state')}
+                  for p in ('config', 'shortcuts', 'snippets', 'state')}
         params.update(kwargs)
 
         # Create the GUI.
