@@ -105,6 +105,9 @@ class SpikeDetekt(EventEmitter):
         }
         self._groups = sorted(self._n_channels_per_group)
         self._n_features = self._kwargs['nfeatures_per_channel']
+        before = self._kwargs['extract_s_before']
+        after = self._kwargs['extract_s_after']
+        self._n_samples_waveforms = before + after
 
     # Processing objects creation
     # -------------------------------------------------------------------------
@@ -136,7 +139,6 @@ class SpikeDetekt(EventEmitter):
         after = self._kwargs['extract_s_after']
         weight_power = self._kwargs['weight_power']
         probe_channels = self._kwargs['probe_channels']
-        self._n_samples_waveforms = before + after
         return WaveformExtractor(extract_before=before,
                                  extract_after=after,
                                  weight_power=weight_power,
