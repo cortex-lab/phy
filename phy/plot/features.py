@@ -30,6 +30,20 @@ from ..utils._color import _selected_clusters_colors
 # Features visual
 #------------------------------------------------------------------------------
 
+def _get_feature_dim(dim, features=None, extra_features=None):
+    if isinstance(dim, (tuple, list)):
+        channel, feature = dim
+        return features[:, channel, feature]
+    elif isinstance(dim, string_types) and dim in extra_features:
+        x = extra_features[dim]
+        x = _as_array(x, np.float32)
+        # Normalize extra feature.
+        m, M = float(x.min()), float(x.max())
+        d = float(max(1., M - m))
+        x = (-1. + 2 * (x - m) / d) * .8
+        return x
+
+
 class BaseFeatureVisual(BaseSpikeVisual):
     """Display a grid of multidimensional features."""
 
@@ -108,28 +122,15 @@ class BaseFeatureVisual(BaseSpikeVisual):
             raise ValueError('{0} should be (channel, feature) '.format(dim) +
                              'or one of the extra features.')
 
-    def _get_feature_dim(self, data, dim):
-        if isinstance(dim, (tuple, list)):
-            channel, feature = dim
-            return data[:, channel, feature]
-        elif isinstance(dim, string_types) and dim in self._extra_features:
-            x = self._extra_features[dim]
-            x = _as_array(x, np.float32)
-            # Normalize extra feature.
-            m, M = float(x.min()), float(x.max())
-            d = float(max(1., M - m))
-            x = (-1. + 2 * (x - m) / d) * .8
-            return x
-
-    def project(self, data, box):
+    def project(self, box, features=None, extra_features=None):
         """Project data to a subplot's two-dimensional subspace.
 
         Parameters
         ----------
-        data : array
-            The shape is `(n_points, n_channels, n_features)`.
         box : 2-tuple
             The `(row, col)` of the box.
+        data : array
+            The shape is `(n_points, n_channels, n_features)`.
 
         Notes
         -----
@@ -142,8 +143,14 @@ class BaseFeatureVisual(BaseSpikeVisual):
         dim_x = self._x_dim[i, j]
         dim_y = self._y_dim[i, j]
 
-        fet_x = self._get_feature_dim(data, dim_x)
-        fet_y = self._get_feature_dim(data, dim_y)
+        fet_x = _get_feature_dim(dim_x,
+                                 features=features,
+                                 extra_features=extra_features,
+                                 )
+        fet_y = _get_feature_dim(dim_y,
+                                 features=features,
+                                 extra_features=extra_features,
+                                 )
 
         return np.c_[fet_x, fet_y]
 
@@ -220,7 +227,10 @@ class BaseFeatureVisual(BaseSpikeVisual):
 
         for i in range(self.n_rows):
             for j in range(self.n_rows):
-                pos = self.project(self._features, (i, j))
+                pos = self.project((i, j),
+                                   features=self._features,
+                                   extra_features=self._extra_features,
+                                   )
                 positions.append(pos)
                 index = self.n_rows * i + j
                 boxes.append(index * np.ones(self.n_spikes, dtype=np.float32))
@@ -284,8 +294,10 @@ class FeatureVisual(BaseFeatureVisual):
 
         for i in range(self.n_rows):
             for j in range(self.n_rows):
-
-                pos = self.project(self._features, (i, j))
+                pos = self.project((i, j),
+                                   features=self._features,
+                                   extra_features=self._extra_features,
+                                   )
                 positions.append(pos)
 
                 # The mask depends on both the `x` and `y` coordinates.
