@@ -8,6 +8,7 @@
 
 import os.path as op
 
+import numpy as np
 from numpy.testing import assert_array_equal as ae
 
 from ..traces import read_dat, _dat_n_samples
@@ -28,7 +29,7 @@ def test_read_dat():
     with TemporaryDirectory() as tmpdir:
         path = op.join(tmpdir, 'test')
         arr.tofile(path)
-        assert _dat_n_samples(path, n_bits=64,
+        assert _dat_n_samples(path, dtype=np.float64,
                               n_channels=n_channels) == n_samples
         data = read_dat(path, dtype=arr.dtype, shape=arr.shape)
 

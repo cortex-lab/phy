@@ -209,7 +209,7 @@ class KwikCreator(object):
                     f.write_attr(path + '/raw', 'dat_path', raw_path)
 
     def add_recordings_from_dat(self, files, sample_rate=None,
-                                n_channels=None, n_bits=None):
+                                n_channels=None, dtype=None):
         start_sample = 0
         for i, filename in enumerate(files):
             # WARNING: different sample rates in recordings is not
@@ -223,7 +223,7 @@ class KwikCreator(object):
             # Compute the offset for different recordings.
             start_sample += _dat_n_samples(filename,
                                            n_channels=n_channels,
-                                           n_bits=n_bits)
+                                           dtype=dtype)
 
     def add_recordings_from_kwd(self, file):
         assert file.endswith('.kwd')
@@ -328,6 +328,6 @@ def create_kwik(prm_file=None, kwik_path=None, probe=None, **kwargs):
         creator.add_recordings_from_dat(files,
                                         sample_rate=sample_rate,
                                         n_channels=params['n_channels'],
-                                        n_bits=params['n_bits'],
+                                        dtype=params['dtype'],
                                         )
     return kwik_path

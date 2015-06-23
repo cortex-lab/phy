@@ -174,7 +174,7 @@ def _open_h5_if_exists(kwik_path, file_type, mode=None):
     return open_h5(path, mode=mode) if op.exists(path) else None
 
 
-def _read_traces(kwik, kwd=None, n_bits=None, n_channels=None):
+def _read_traces(kwik, kwd=None, dtype=None, n_channels=None):
     if '/recordings' not in kwik:
         return
     recordings = kwik.children('/recordings')
@@ -186,14 +186,13 @@ def _read_traces(kwik, kwd=None, n_bits=None, n_channels=None):
                 return
             traces.append(kwd.read('/recordings/{}/data'.format(recording)))
         elif kwik.has_attr(path, 'dat_path'):
-            assert n_bits > 0
+            assert dtype
             assert n_channels
             dat_path = kwik.read_attr(path, 'dat_path')
             assert op.exists(dat_path)
-            dtype = {16: np.int16}[n_bits]
             n_samples = _dat_n_samples(dat_path,
                                        n_channels=n_channels,
-                                       n_bits=n_bits,
+                                       dtype=dtype,
                                        )
             traces.append(read_dat(dat_path,
                                    dtype=dtype,
@@ -524,10 +523,10 @@ class KwikModel(BaseModel):
 
     def _load_traces(self):
         n_channels = self._metadata.get('n_channels', None)
-        n_bits = self._metadata.get('nbits', None)
+        dtype = self._metadata.get('dtype', None)
         traces = _read_traces(self._kwik,
                               kwd=self._kwd,
-                              n_bits=n_bits,
+                              dtype=dtype,
                               n_channels=n_channels)
         if traces is None:
             return
