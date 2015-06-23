@@ -186,7 +186,7 @@ def _read_traces(kwik, kwd=None, dtype=None, n_channels=None):
                 return
             traces.append(kwd.read('/recordings/{}/data'.format(recording)))
         elif kwik.has_attr(path, 'dat_path'):
-            assert dtype
+            assert dtype is not None
             assert n_channels
             dat_path = kwik.read_attr(path, 'dat_path')
             assert op.exists(dat_path)
@@ -205,6 +205,14 @@ _DEFAULT_GROUPS = [(0, 'Noise'),
                    (2, 'Good'),
                    (3, 'Unsorted'),
                    ]
+
+
+"""Metadata fields that must be provided when creating the Kwik file."""
+_mandatory_metadata_fields = ('dtype',
+                              'n_channels',
+                              'prb_file',
+                              'raw_data_files',
+                              )
 
 
 def cluster_group_id(name_or_id):
@@ -383,7 +391,11 @@ class KwikModel(BaseModel):
         for key in params.keys():
             if self._kwik.has_attr(path, key):
                 params[key] = self._kwik.read_attr(path, key)
+        # Mandatory data parameters that are not in the default settings.
         params['sample_rate'] = sample_rate
+        for key in _mandatory_metadata_fields:
+            if self._kwik.has_attr(path, key):
+                params[key] = self._kwik.read_attr(path, key)
         self._metadata = params
 
     def _load_probe(self):
@@ -524,6 +536,7 @@ class KwikModel(BaseModel):
     def _load_traces(self):
         n_channels = self._metadata.get('n_channels', None)
         dtype = self._metadata.get('dtype', None)
+        dtype = np.dtype(dtype) if dtype is not None else None
         traces = _read_traces(self._kwik,
                               kwd=self._kwd,
                               dtype=dtype,

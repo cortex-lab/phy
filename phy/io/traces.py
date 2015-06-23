@@ -21,7 +21,7 @@ def read_dat(filename, dtype=None, shape=None, offset=0):
 
 
 def _dat_n_samples(filename, dtype=None, n_channels=None):
-    assert dtype
+    assert dtype is not None
     item_size = np.dtype(dtype).itemsize
     n_samples = op.getsize(filename) // (item_size * n_channels)
     assert n_samples >= 0

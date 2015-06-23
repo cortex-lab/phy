@@ -325,9 +325,18 @@ def create_kwik(prm_file=None, kwik_path=None, probe=None, **kwargs):
         else:
             files = [files]
     if isinstance(files, list) and len(files):
+        # The dtype must be a string so that it can be serialized in HDF5.
+        assert 'dtype' in params and isinstance(params['dtype'], string_types)
+        print(params['dtype'])
+        dtype = np.dtype(params['dtype'])
+        assert dtype is not None
+        # nchannels (old syntax) or n_channels (new).
+        n_channels = params.get('n_channels', params.get('nchannels'))
+        # The number of channels in the .dat file *must* be specified.
+        assert n_channels > 0
         creator.add_recordings_from_dat(files,
                                         sample_rate=sample_rate,
-                                        n_channels=params['n_channels'],
-                                        dtype=params['dtype'],
+                                        n_channels=n_channels,
+                                        dtype=dtype,
                                         )
     return kwik_path
