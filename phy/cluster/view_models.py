@@ -10,7 +10,7 @@ import os.path as op
 
 import numpy as np
 
-from ..utils.array import _unique, _spikes_in_clusters
+from ..utils.array import _unique, _spikes_in_clusters, _as_array
 from ..utils.selector import Selector
 from ..utils._misc import _show_shortcuts
 from ..utils._color import _selected_clusters_colors
@@ -22,6 +22,7 @@ from ..plot.waveforms import WaveformView
 from ..plot.traces import TraceView
 from ..gui.base import BaseViewModel, HTMLViewModel
 from ..gui._utils import _read
+from ..ext.six import string_types
 
 
 #------------------------------------------------------------------------------
@@ -762,6 +763,10 @@ class BaseFeatureViewModel(VispyViewModel):
     _imported_params = ('scale_factor', 'n_spikes_max_bg', 'marker_size')
     n_spikes_max_bg = 10000
 
+    def __init__(self, *args, **kwargs):
+        self._extra_features = {}
+        super(BaseFeatureViewModel, self).__init__(*args, **kwargs)
+
     def _rescale_features(self, features):
         # WARNING: convert features to a 3D array
         # (n_spikes, n_channels, n_features)
@@ -785,15 +790,19 @@ class BaseFeatureViewModel(VispyViewModel):
         clusters = self.cluster_ids
         # Load *all* features from the selected clusters.
         features = self.store.load('features', clusters=clusters)
-        box = self.view.lasso.box
+        # Find the corresponding spike_ids.
+        spike_ids = _spikes_in_clusters(self.model.spike_clusters, clusters)
+        # Extract the extra features for all the spikes in the clusters.
+        extra_features = self._subset_extra_features(spike_ids)
         # Extract the two relevant dimensions.
-        points = self.view.visual.project(features, box)
+        points = self.view.visual.project(self.view.lasso.box,
+                                          features=features,
+                                          extra_features=extra_features,
+                                          )
         # Rescale the points.
         points = points * self.scale_factor
         # Find the points within the lasso.
         in_lasso = self.view.lasso.in_lasso(points)
-        # Find the corresponding spike_ids.
-        spike_ids = _spikes_in_clusters(self.model.spike_clusters, clusters)
         assert features.shape[0] == len(spike_ids)
         return spike_ids[in_lasso]
 
@@ -836,6 +845,25 @@ class BaseFeatureViewModel(VispyViewModel):
             dim = self.view.smart_dimension(axis, box, dim)
         self.view.set_dimensions(axis, {box: dim})
 
+    def add_extra_feature(self, name, array):
+        assert isinstance(name, string_types)
+        array = _as_array(array)
+        n_spikes = self.model.n_spikes
+        if array.shape != (n_spikes,):
+            raise ValueError("The extra feature needs to be a 1D vector with "
+                             "`n_spikes={}` values.".format(n_spikes))
+        self._extra_features[name] = array
+
+    def _subset_extra_features(self, spikes):
+        return {name: array[spikes]
+                for name, array in self._extra_features.items()}
+
+    def _add_extra_features_in_view(self, spikes):
+        """Add the extra features in the view, by selecting only the
+        displayed spikes."""
+        for name, sub_array in self._subset_extra_features(spikes).items():
+            self.view.add_extra_feature(name, sub_array)
+
     @property
     def x_dim(self):
         return self.view.x_dim
@@ -859,8 +887,8 @@ class BaseFeatureViewModel(VispyViewModel):
                                           spikes=slice(None, None, k))
             self.view.background.features = self._rescale_features(features_bg)
         # Time dimension.
-        t = self.model.spike_samples[::k]
-        self.view.add_extra_feature('time', t)
+        self.add_extra_feature('time', self.model.spike_samples)
+        self._add_extra_features_in_view(slice(None, None, k))
         # Number of rows: number of features + 1 for
         self.view.init_grid(self.n_rows)
 
@@ -884,8 +912,9 @@ class BaseFeatureViewModel(VispyViewModel):
 
         # Spikes.
         self.view.visual.spike_ids = spikes
-        t = self.model.spike_samples[spikes]
-        self.view.add_extra_feature('time', t)
+
+        # Extra features (including time).
+        self._add_extra_features_in_view(spikes)
 
         # Cluster display order.
         self.view.visual.cluster_order = clusters
