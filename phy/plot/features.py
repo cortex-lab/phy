@@ -145,7 +145,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
             if t is None:
                 t = np.arange(self.n_spikes)
             # Normalize time feature.
-            m = t.max()
+            m = float(t.max())
             if m > 0:
                 t = (-1. + 2 * t / m) * .8
             return t
