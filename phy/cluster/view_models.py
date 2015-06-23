@@ -863,7 +863,11 @@ class BaseFeatureViewModel(VispyViewModel):
         displayed spikes."""
         subset_extra = self._subset_extra_features(spikes)
         for name, (sub_array, m, M) in subset_extra.items():
-            self.view.add_extra_feature(name, sub_array, m, M)
+            # Make the extraction for the background spikes.
+            array, _, _ = self._extra_features[name]
+            sub_array_bg = array[self.view.background.spike_ids]
+            self.view.add_extra_feature(name, sub_array, m, M,
+                                        array_bg=sub_array_bg)
 
     @property
     def x_dim(self):
@@ -887,8 +891,10 @@ class BaseFeatureViewModel(VispyViewModel):
             features_bg = self.store.load('features',
                                           spikes=slice(None, None, k))
             self.view.background.features = self._rescale_features(features_bg)
-        # Time dimension.
+            self.view.background.spike_ids = self.model.spike_ids[::k]
+        # Register the time dimension.
         self.add_extra_feature('time', self.model.spike_samples)
+        # Add the subset extra features to the visuals.
         self._add_extra_features_in_view(slice(None, None, k))
         # Number of rows: number of features + 1 for
         self.view.init_grid(self.n_rows)
