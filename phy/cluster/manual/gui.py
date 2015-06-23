@@ -437,6 +437,7 @@ class ClusterManualGUI(BaseGUI):
     def show_features_time(self):
         for vm in self.get_views('features'):
             vm.set_dimension('x', 'time')
+            vm.update()
 
     # Selection
     # ---------------------------------------------------------------------
@@ -546,6 +547,9 @@ class ClusterManualGUI(BaseGUI):
             spikes = self._spikes_to_split()
             if spikes is None:
                 return
+        if not len(spikes):
+            info("No spikes to split.")
+            return
         _check_list_argument(spikes, 'spikes')
         info("Split {0:d} spikes.".format(len(spikes)))
         up = self.clustering.split(spikes)
