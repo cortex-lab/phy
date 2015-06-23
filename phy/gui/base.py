@@ -308,6 +308,12 @@ class BaseGUI(EventEmitter):
 
     """
 
+    _default_shortcuts = {
+        'close': 'ctrl+q',
+        'enable_snippet_mode': ':',
+        'disable_snippet_mode': 'escape',
+    }
+
     def __init__(self,
                  model=None,
                  vm_classes=None,
@@ -330,12 +336,16 @@ class BaseGUI(EventEmitter):
         self._view_creator = WidgetCreator(widget_classes=vm_classes)
         self._initialize_views()
         self._load_geometry_state(state)
-        # Default close shortcut.
-        if 'close' not in self._shortcuts:
-            self._shortcuts['close'] = 'ctrl+q'
-            self._add_gui_shortcut('close')
+        self._set_default_shortcuts()
+        # self._initialize_snippets()
         self._create_actions()
         self._set_default_view_connections()
+
+    def _set_default_shortcuts(self):
+        for name, shortcut in self._default_shortcuts.items():
+            if name not in self._shortcuts:
+                self._shortcuts[name] = shortcut
+                self._add_gui_shortcut(name)
 
     def _initialize_views(self):
         self._load_config(self._config,
@@ -432,7 +442,7 @@ class BaseGUI(EventEmitter):
                               )
 
     #--------------------------------------------------------------------------
-    # Public methods
+    # Snippet methods
     #--------------------------------------------------------------------------
 
     @property
@@ -442,6 +452,23 @@ class BaseGUI(EventEmitter):
     @status_message.setter
     def status_message(self, value):
         self._dock.status_message = value
+
+    def _on_keystroke(self, key):
+        """Capture al keystrokes in snippet mode.
+
+        May be overriden.
+
+        """
+
+    def enable_snippet_mode(self):
+        self._dock.connect_(self._on_keystroke, event='keystroke')
+
+    def disable_snippet_mode(self):
+        self._dock.unconnect_(self._on_keystroke)
+
+    #--------------------------------------------------------------------------
+    # Public methods
+    #--------------------------------------------------------------------------
 
     def show(self):
         """Show the GUI"""
