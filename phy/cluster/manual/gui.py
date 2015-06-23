@@ -354,27 +354,12 @@ class ClusterManualGUI(BaseGUI):
             self._wizard_select_after_clustering(up)
 
     def _wizard_select_after_clustering(self, up):
-        if up.history != 'undo':
-            if up.description == 'merge' or up.history == 'redo':
-                self.wizard.pin(up.added[0])
-                self._wizard_select(auto_update=(up.history is None))
-            elif up.description == 'metadata_group':
-                cluster = up.metadata_changed[0]
-                if cluster == self.wizard.best:
-                    self.wizard.next_best()
-                elif cluster == self.wizard.match:
-                    self.wizard.next_match()
-                self._wizard_select()
-            # Special case: split.
-            elif up.description == 'assign':
-                self.select(up.added, auto_update=False)
-        elif up.history == 'undo':
-            clusters = up.selection
-            if len(clusters) >= 1:
-                self.wizard.best = clusters[0]
-            if len(clusters) >= 2:
-                self.wizard.match = clusters[1]
-            self._wizard_select(auto_update=False)
+        # Make as few updates as possible in the views after clustering
+        # actions. This allows for better before/after comparisons.
+        if up.added:
+            self.select(up.added, auto_update=False)
+        elif up.selection:
+            self.select(up.selection, auto_update=False)
 
     # Open data
     # -------------------------------------------------------------------------

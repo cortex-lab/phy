@@ -137,7 +137,8 @@ cluster_manual_shortcuts = {
 
 
 cluster_manual_config = [
-    ('wizard', {'position': 'right'}),
+    # The wizard panel is less useful now that there's the stats panel.
+    # ('wizard', {'position': 'right'}),
     ('stats', {'position': 'right'}),
     ('features_grid', {'position': 'left'}),
     ('features', {'position': 'left'}),
