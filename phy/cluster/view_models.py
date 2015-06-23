@@ -792,18 +792,18 @@ class BaseFeatureViewModel(VispyViewModel):
         features = self.store.load('features', clusters=clusters)
         # Find the corresponding spike_ids.
         spike_ids = _spikes_in_clusters(self.model.spike_clusters, clusters)
+        assert features.shape[0] == len(spike_ids)
         # Extract the extra features for all the spikes in the clusters.
         extra_features = self._subset_extra_features(spike_ids)
+        # Rescale the features (and not the extra features!).
+        features = features * self.scale_factor
         # Extract the two relevant dimensions.
         points = self.view.visual.project(self.view.lasso.box,
                                           features=features,
                                           extra_features=extra_features,
                                           )
-        # Rescale the points.
-        points = points * self.scale_factor
         # Find the points within the lasso.
         in_lasso = self.view.lasso.in_lasso(points)
-        assert features.shape[0] == len(spike_ids)
         return spike_ids[in_lasso]
 
     @property
@@ -852,17 +852,18 @@ class BaseFeatureViewModel(VispyViewModel):
         if array.shape != (n_spikes,):
             raise ValueError("The extra feature needs to be a 1D vector with "
                              "`n_spikes={}` values.".format(n_spikes))
-        self._extra_features[name] = array
+        self._extra_features[name] = (array, array.min(), array.max())
 
     def _subset_extra_features(self, spikes):
-        return {name: array[spikes]
-                for name, array in self._extra_features.items()}
+        return {name: (array[spikes], m, M)
+                for name, (array, m, M) in self._extra_features.items()}
 
     def _add_extra_features_in_view(self, spikes):
         """Add the extra features in the view, by selecting only the
         displayed spikes."""
-        for name, sub_array in self._subset_extra_features(spikes).items():
-            self.view.add_extra_feature(name, sub_array)
+        subset_extra = self._subset_extra_features(spikes)
+        for name, (sub_array, m, M) in subset_extra.items():
+            self.view.add_extra_feature(name, sub_array, m, M)
 
     @property
     def x_dim(self):
