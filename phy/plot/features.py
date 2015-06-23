@@ -36,6 +36,7 @@ def _get_feature_dim(dim, features=None, extra_features=None):
         return features[:, channel, feature]
     elif isinstance(dim, string_types) and dim in extra_features:
         x, m, M = extra_features[dim]
+        m, M = (float(m), float(M))
         x = _as_array(x, np.float32)
         # Normalize extra feature.
         d = float(max(1., M - m))
@@ -128,8 +129,8 @@ class BaseFeatureVisual(BaseSpikeVisual):
         ----------
         box : 2-tuple
             The `(row, col)` of the box.
-        data : array
-            The shape is `(n_points, n_channels, n_features)`.
+        features : array
+        extra_features : dict
 
         Notes
         -----
@@ -150,7 +151,6 @@ class BaseFeatureVisual(BaseSpikeVisual):
                                  features=features,
                                  extra_features=extra_features,
                                  )
-
         return np.c_[fet_x, fet_y]
 
     @property
