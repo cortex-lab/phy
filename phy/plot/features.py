@@ -548,10 +548,14 @@ class FeatureView(BaseSpikeCanvas):
 
         self.update()
 
-    def add_extra_feature(self, name, array, array_min, array_max):
+    def add_extra_feature(self, name, array, array_min, array_max,
+                          array_bg=None):
         self.visual.add_extra_feature(name, array, array_min, array_max)
         if name not in self.background.extra_features:
-            self.background.add_extra_feature(name, array,
+            # Note: the background array has a different number of spikes.
+            if array_bg is None:
+                array_bg = array
+            self.background.add_extra_feature(name, array_bg,
                                               array_min, array_max)
 
     @property
