@@ -435,6 +435,14 @@ class BaseGUI(EventEmitter):
     # Public methods
     #--------------------------------------------------------------------------
 
+    @property
+    def status_message(self):
+        return self._dock.status_message
+
+    @status_message.setter
+    def status_message(self, value):
+        self._dock.status_message = value
+
     def show(self):
         """Show the GUI"""
         self._dock.show()

@@ -70,6 +70,9 @@ class DockWindow(QtGui.QMainWindow):
         # We can derive from EventEmitter because of a conflict with connect.
         self._event = EventEmitter()
 
+        self._status_bar = QtGui.QStatusBar()
+        self.setStatusBar(self._status_bar)
+
     # Events
     # -------------------------------------------------------------------------
 
@@ -212,6 +215,17 @@ class DockWindow(QtGui.QMainWindow):
         for view in views:
             counts[_title(view)] += 1
         return dict(counts)
+
+    # Status bar
+    # -------------------------------------------------------------------------
+
+    @property
+    def status_message(self):
+        return self._status_bar.currentMessage()
+
+    @status_message.setter
+    def status_message(self, value):
+        self._status_bar.showMessage(value)
 
     # State
     # -------------------------------------------------------------------------
