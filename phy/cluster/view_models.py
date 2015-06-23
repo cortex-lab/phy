@@ -783,11 +783,16 @@ class BaseFeatureViewModel(VispyViewModel):
         if not len(self.cluster_ids) or self.view.lasso.n_points <= 2:
             return
         clusters = self.cluster_ids
+        # Load *all* features from the selected clusters.
         features = self.store.load('features', clusters=clusters)
-        features = self._rescale_features(features)
         box = self.view.lasso.box
+        # Extract the two relevant dimensions.
         points = self.view.visual.project(features, box)
+        # Rescale the points.
+        points = points * self.scale_factor
+        # Find the points within the lasso.
         in_lasso = self.view.lasso.in_lasso(points)
+        # Find the corresponding spike_ids.
         spike_ids = _spikes_in_clusters(self.model.spike_clusters, clusters)
         assert features.shape[0] == len(spike_ids)
         return spike_ids[in_lasso]
