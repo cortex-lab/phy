@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
 import h5py
 
 from ..ext.six import string_types
@@ -188,6 +189,12 @@ class File(object):
         assert isinstance(attr_name, string_types)
         if value is None:
             value = ''
+        # Ensure lists of strings are converted to ASCII arrays.
+        if isinstance(value, list):
+            if not value:
+                value = None
+            if isinstance(value[0], string_types):
+                value = np.array(value, dtype='S')
         # If the parent group doesn't already exist, create it.
         if path not in self._h5py_file:
             self._h5py_file.create_group(path)

@@ -318,23 +318,22 @@ def create_kwik(prm_file=None, kwik_path=None, probe=None, **kwargs):
     creator.set_metadata('/application_data/spikedetekt', **params)
 
     # Add the recordings.
-    files = params.get('raw_data_files', [])
-    if isinstance(files, string_types):
-        if files.endswith('.raw.kwd'):
-            creator.add_recordings_from_kwd(files)
+    raw_data_files = params.get('raw_data_files', None)
+    if isinstance(raw_data_files, string_types):
+        if raw_data_files.endswith('.raw.kwd'):
+            creator.add_recordings_from_kwd(raw_data_files)
         else:
-            files = [files]
-    if isinstance(files, list) and len(files):
+            raw_data_files = [raw_data_files]
+    if isinstance(raw_data_files, list) and len(raw_data_files):
         # The dtype must be a string so that it can be serialized in HDF5.
         assert 'dtype' in params and isinstance(params['dtype'], string_types)
-        print(params['dtype'])
         dtype = np.dtype(params['dtype'])
         assert dtype is not None
         # nchannels (old syntax) or n_channels (new).
         n_channels = params.get('n_channels', params.get('nchannels'))
         # The number of channels in the .dat file *must* be specified.
         assert n_channels > 0
-        creator.add_recordings_from_dat(files,
+        creator.add_recordings_from_dat(raw_data_files,
                                         sample_rate=sample_rate,
                                         n_channels=n_channels,
                                         dtype=dtype,
