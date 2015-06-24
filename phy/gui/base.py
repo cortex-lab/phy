@@ -454,11 +454,27 @@ class BaseGUI(EventEmitter):
 
     @property
     def status_message(self):
+        """Message in the status bar."""
         return self._dock.status_message
 
     @status_message.setter
     def status_message(self, value):
         self._dock.status_message = value
+
+    _snippet_message_cursor = '\u200A\u258C'
+
+    @property
+    def _snippet_message(self):
+        """This is used to write a snippet message in the status bar.
+
+        A cursor is appended at the end.
+
+        """
+        return self.status_message[:-len(self._snippet_message_cursor)]
+
+    @_snippet_message.setter
+    def _snippet_message(self, value):
+        self.status_message = value + self._snippet_message_cursor
 
     def _process_snippet(self, snippet):
         """Processes a snippet.
@@ -489,18 +505,18 @@ class BaseGUI(EventEmitter):
         """
         # Process keystrokes in snippet mode.
         # Escape quits the snippet mode.
-        if key == Qt.Key_Escape:
+        if key in (Qt.Key_Escape, Qt.Key_Control):
             self.disable_snippet_mode()
         # Backspace.
         elif key == Qt.Key_Backspace:
-            self.status_message = self.status_message[:-1]
+            self._snippet_message = self._snippet_message[:-1]
         # Validate the snippet.
         elif key in (Qt.Key_Return, Qt.Key_Enter):
-            self._process_snippet(self.status_message)
+            self._process_snippet(self._snippet_message)
             self.disable_snippet_mode()
         # Writing the snippet.
         elif Qt.Key_Space <= key <= Qt.Key_AsciiTilde:
-            self.status_message += text
+            self._snippet_message += text
 
     def enable_snippet_mode(self):
         info("Snippet mode enabled.")
