@@ -72,7 +72,10 @@ class BaseSettings(object):
         """Load a settings Python file."""
         path = op.realpath(path)
         if not op.exists(path):
-            debug("Skipping non-existing settings file: {}.".format(path))
+            debug("Creating empty settings file: {}.".format(path))
+            with open(path, 'a') as f:
+                f.write("# Settings file. Refer to phy's documentation "
+                        "for more details.\n")
             return
         # Try pickle.
         if not op.splitext(path)[1]:
