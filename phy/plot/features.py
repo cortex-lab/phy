@@ -30,40 +30,6 @@ from ..utils._color import _selected_clusters_colors
 # Features visual
 #------------------------------------------------------------------------------
 
-def _alternative_dimension(dim, n_features=None, n_channels=None):
-    assert n_features >= 1
-    assert n_channels >= 1
-    if dim == 'time':
-        return (0, 0)
-    else:
-        channel, fet = dim
-        if n_features >= 2:
-            return (channel, (fet + 1) % n_features)
-        elif n_channels >= 2:
-            return ((channel + 1) % n_channels, fet)
-        else:
-            return 'time'
-
-
-def _matrix_from_dimensions(dimensions, n_features=None, n_channels=None):
-    n = len(dimensions)
-    matrix = np.empty((n, n), dtype=object)
-    for i in range(n):
-        for j in range(n):
-            dim_x, dim_y = dimensions[i], dimensions[j]
-            if dim_x == dim_y:
-                dim_y = _alternative_dimension(dim_x,
-                                               n_features=n_features,
-                                               n_channels=n_channels,
-                                               )
-                # For aesthetical reasons, put time on the x axis if it is
-                # the alternative dimension.
-                if dim_y == 'time':
-                    dim_x, dim_y = dim_y, dim_x
-            matrix[i, j] = (dim_x, dim_y)
-    return matrix
-
-
 class BaseFeatureVisual(BaseSpikeVisual):
     """Display a grid of multidimensional features."""
 
@@ -74,26 +40,33 @@ class BaseFeatureVisual(BaseSpikeVisual):
         super(BaseFeatureVisual, self).__init__(**kwargs)
 
         self._features = None
-        self._spike_samples = None
-        self._dimensions_matrix = np.empty((0, 0), dtype=object)
+        # Mapping {feature_name: array} where the array must have n_spikes
+        # element.
+        self._extra_features = {}
+        self._x_dim = np.empty((0, 0), dtype=object)
+        self._y_dim = np.empty((0, 0), dtype=object)
         self.n_channels, self.n_features = None, None
         self.n_rows = None
 
         _enable_depth_mask()
 
-    # Data properties
-    # -------------------------------------------------------------------------
+    def add_extra_feature(self, name, array):
+        assert isinstance(array, np.ndarray)
+        assert array.ndim == 1
+        if self.n_spikes:
+            if array.shape != (self.n_spikes,):
+                msg = ("Unable to add the extra feature "
+                       "`{}`: ".format(name) +
+                       "there should be {} ".format(self.n_spikes) +
+                       "elements in the specified vector, not "
+                       "{}.".format(len(array)))
+                raise ValueError(msg)
+
+        self._extra_features[name] = array
 
     @property
-    def spike_samples(self):
-        """Time samples of the displayed spikes."""
-        return self._spike_samples
-
-    @spike_samples.setter
-    def spike_samples(self, value):
-        assert isinstance(value, np.ndarray)
-        assert value.shape == (self.n_spikes,)
-        self._spike_samples = value
+    def extra_features(self):
+        return self._extra_features
 
     @property
     def features(self):
@@ -130,25 +103,23 @@ class BaseFeatureVisual(BaseSpikeVisual):
             assert 0 <= channel < self.n_channels
             assert 0 <= feature < self.n_features
         elif isinstance(dim, string_types):
-            assert dim == 'time'
-        else:
+            assert dim in self._extra_features
+        elif dim:
             raise ValueError('{0} should be (channel, feature) '.format(dim) +
-                             'or "time".')
+                             'or one of the extra features.')
 
     def _get_feature_dim(self, data, dim):
         if isinstance(dim, (tuple, list)):
             channel, feature = dim
             return data[:, channel, feature]
-        elif dim == 'time':
-            t = self._spike_samples
-            # Default times.
-            if t is None:
-                t = np.arange(self.n_spikes)
-            # Normalize time feature.
-            m = float(t.max())
-            if m > 0:
-                t = (-1. + 2 * t / m) * .8
-            return t
+        elif isinstance(dim, string_types) and dim in self._extra_features:
+            x = self._extra_features[dim]
+            x = _as_array(x, np.float32)
+            # Normalize extra feature.
+            m, M = float(x.min()), float(x.max())
+            d = float(max(1., M - m))
+            x = (-1. + 2 * (x - m) / d) * .8
+            return x
 
     def project(self, data, box):
         """Project data to a subplot's two-dimensional subspace.
@@ -168,43 +139,68 @@ class BaseFeatureVisual(BaseSpikeVisual):
 
         """
         i, j = box
-        dim_x, dim_y = self._dimensions_matrix[i, j]
+        dim_x = self._x_dim[i, j]
+        dim_y = self._y_dim[i, j]
 
         fet_x = self._get_feature_dim(self._features, dim_x)
         fet_y = self._get_feature_dim(self._features, dim_y)
 
-        # NOTE: we switch here because we want to plot
-        # dim_x (y) over dim_y (x) on box (i, j).
         return np.c_[fet_x, fet_y]
 
     @property
-    def dimensions_matrix(self):
-        """Displayed dimensions matrix.
+    def x_dim(self):
+        """Dimensions in the x axis of all subplots.
 
-        This is a matrix of pairs of items which can be:
+        This is a matrix of items which can be:
 
         * tuple `(channel_id, feature_idx)`
-        * `'time'`
+        * an extra feature name (string)
 
         """
-        return self._dimensions_matrix
+        return self._x_dim
 
-    @dimensions_matrix.setter
-    def dimensions_matrix(self, value):
-        self._set_dimensions_to_bake(value)
+    @x_dim.setter
+    def x_dim(self, value):
+        self._x_dim = value
+        self._update_dimensions()
 
-    def _set_dimensions_to_bake(self, value):
+    @property
+    def y_dim(self):
+        """Dimensions in the y axis of all subplots.
+
+        This is a matrix of items which can be:
+
+        * tuple `(channel_id, feature_idx)`
+        * an extra feature name (string)
+
+        """
+        return self._y_dim
+
+    @y_dim.setter
+    def y_dim(self, value):
+        self._y_dim = value
+        self._update_dimensions()
+
+    def _update_dimensions(self):
+        """Update the GPU data afte the dimensions have changed."""
+        self._check_dimension_matrix(self._x_dim)
+        self._check_dimension_matrix(self._y_dim)
+        self.set_to_bake('spikes',)
+
+    def _check_dimension_matrix(self, value):
         if not isinstance(value, np.ndarray):
             value = np.array(value, dtype=object)
         assert value.ndim == 2
         assert value.shape[0] == value.shape[1]
         assert value.dtype == object
         self.n_rows = len(value)
-        for (dim_x, dim_y) in value.flat:
-            self._check_dimension(dim_x)
-            self._check_dimension(dim_y)
-        self._dimensions_matrix = value
-        self.set_to_bake('spikes',)
+        for dim in value.flat:
+            self._check_dimension(dim)
+
+    def set_dimension(self, axis, box, dim):
+        matrix = self._x_dim if axis == 'x' else self._y_dim
+        matrix[box] = dim
+        self._update_dimensions()
 
     @property
     def n_boxes(self):
@@ -267,12 +263,12 @@ class FeatureVisual(BaseFeatureVisual):
         if isinstance(dim, (tuple, list)):
             channel, feature = dim
             return self._masks[:, channel]
-        elif dim == 'time':
+        else:
             return np.ones(self.n_spikes)
 
-    def _set_dimensions_to_bake(self, value):
-        super(FeatureVisual, self)._set_dimensions_to_bake(value)
-        self.set_to_bake('spikes', 'spikes_clusters', 'color')
+    def _update_dimensions(self):
+        super(FeatureVisual, self)._update_dimensions()
+        self.set_to_bake('spikes_clusters', 'color')
 
     # Data baking
     # -------------------------------------------------------------------------
@@ -292,9 +288,9 @@ class FeatureVisual(BaseFeatureVisual):
                 pos = self.project(self._features, (i, j))
                 positions.append(pos)
 
-                # The mask depends on the `y` coordinate.
-                dim = self._dimensions_matrix[i, j][1]
-                mask = self._get_mask_dim(dim)
+                # The mask depends on both the `x` and `y` coordinates.
+                mask = np.maximum(self._get_mask_dim(self._x_dim[i, j]),
+                                  self._get_mask_dim(self._y_dim[i, j]))
                 masks.append(mask.astype(np.float32))
 
                 index = self.n_rows * i + j
@@ -337,6 +333,23 @@ class FeatureVisual(BaseFeatureVisual):
         self.update()
 
 
+def _iter_dimensions(dimensions):
+    if isinstance(dimensions, dict):
+        for box, dim in dimensions.items():
+            yield (box, dim)
+    elif isinstance(dimensions, np.ndarray):
+        n_rows, n_cols = dimensions.shape
+        for i in range(n_rows):
+            for j in range(n_rows):
+                yield (i, j), dimensions[i, j]
+    elif isinstance(dimensions, list):
+        for i in range(len(dimensions)):
+            l = dimensions[i]
+            for j in range(len(l)):
+                dim = l[j]
+                yield (i, j), dim
+
+
 class FeatureView(BaseSpikeCanvas):
     """A VisPy canvas displaying features."""
     _visual_class = FeatureVisual
@@ -358,45 +371,121 @@ class FeatureView(BaseSpikeCanvas):
         self._pz.aspect = None
         self._pz.attach(self)
 
-    def _set_pan_constraints(self, matrix):
-        n = len(matrix)
-        xmin = np.empty((n, n))
-        xmax = np.empty((n, n))
-        ymin = np.empty((n, n))
-        ymax = np.empty((n, n))
-        gpza = np.empty((n, n), dtype=np.str)
-        gpza.fill('b')
+    def init_grid(self, n_rows):
+        """Initialize the view with a given number of rows.
+
+        Note
+        ----
+
+        This function *must* be called before setting the attributes.
+
+        """
+        assert n_rows >= 0
+
+        x_dim = np.empty((n_rows, n_rows), dtype=object)
+        y_dim = np.empty((n_rows, n_rows), dtype=object)
+        x_dim.fill('time')
+        y_dim.fill((0, 0))
+
+        self.visual.n_rows = n_rows
+        # NOTE: update the private variable because we don't want dimension
+        # checking at this point nor do we want to prepare the GPU data.
+        self.visual._x_dim = x_dim
+        self.visual._y_dim = y_dim
+
+        self.background.n_rows = n_rows
+        self.background._x_dim = x_dim
+        self.background._y_dim = y_dim
+
+        self.boxes.n_rows = n_rows
+        self.lasso.n_rows = n_rows
+        self.axes.n_rows = n_rows
+        self.axes.xs = [0]
+        self.axes.ys = [0]
+        self._pz.n_rows = n_rows
+
+        xmin = np.empty((n_rows, n_rows))
+        xmax = np.empty((n_rows, n_rows))
+        ymin = np.empty((n_rows, n_rows))
+        ymax = np.empty((n_rows, n_rows))
         for arr in (xmin, xmax, ymin, ymax):
             arr.fill(np.nan)
-        _index_set = False
-        for i in range(n):
-            for j in range(n):
-                dim_x, dim_y = matrix[i, j]
-                if dim_x == 'time':
-                    xmin[i, j] = -1.
-                    xmax[i, j] = +1.
-                    gpza[i, j] = 'x'
-                if dim_y == 'time':
-                    ymin[i, j] = -1.
-                    ymax[i, j] = +1.
-                    gpza[i, j] = 'y' if gpza[i, j] != 'x' else 'n'
-                else:
-                    # Set the current index to the first non-time axis.
-                    if not _index_set:
-                        self._pz._index = (i, i)
-                    _index_set = True
         self._pz._xmin = xmin
         self._pz._xmax = xmax
         self._pz._ymin = ymin
         self._pz._ymax = ymax
-        self._pz.global_pan_zoom_axis = gpza
+
+        for i in range(n_rows):
+            for j in range(n_rows):
+                self._pz._xmin[i, j] = -1.
+                self._pz._xmax[i, j] = +1.
+
+    @property
+    def x_dim(self):
+        return self.visual.x_dim
+
+    @property
+    def y_dim(self):
+        return self.visual.y_dim
+
+    def _set_dimension(self, axis, box, dim):
+        self.background.set_dimension(axis, box, dim)
+        self.visual.set_dimension(axis, box, dim)
+        min = self._pz._xmin if axis == 'x' else self._pz._ymin
+        max = self._pz._xmax if axis == 'x' else self._pz._ymax
+        if dim == 'time':
+            # NOTE: the private variables are the matrices.
+            min[box] = -1.
+            max[box] = +1.
+        else:
+            min[box] = None
+            max[box] = None
+
+    def set_dimensions(self, axis, dimensions):
+        for box, dim in _iter_dimensions(dimensions):
+            self._set_dimension(axis, box, dim)
+        self. _update_dimensions()
+
+    def smart_dimension(self,
+                        axis,
+                        box,
+                        dim,
+                        ):
+        """Smartify a dimension selection by ensuring x != y."""
+        if not isinstance(dim, tuple):
+            return dim
+        n_features = self.visual.n_features
+        # Find current dimensions.
+        mat = self.x_dim if axis == 'x' else self.y_dim
+        mat_other = self.x_dim if axis == 'y' else self.y_dim
+        prev_dim = mat[box]
+        prev_dim_other = mat_other[box]
+        # Select smart new dimension.
+        if prev_dim != 'time':
+            channel, feature = dim
+            prev_channel, prev_feature = prev_dim
+            # Scroll the feature if the channel is the same.
+            if prev_channel == channel:
+                feature = (prev_feature + 1) % n_features
+            # Scroll the feature if it is the same than in the other axis.
+            if (prev_dim_other != 'time' and
+                    prev_dim_other == (channel, feature)):
+                feature = (feature + 1) % n_features
+            dim = (channel, feature)
+        return dim
+
+    def _update_dimensions(self):
+        self.background._update_dimensions()
+        self.visual._update_dimensions()
 
     def set_data(self,
                  features=None,
-                 dimensions=None,
+                 n_rows=1,
+                 x_dimensions=None,
+                 y_dimensions=None,
                  masks=None,
                  spike_clusters=None,
-                 spike_samples=None,
+                 extra_features=None,
                  background_features=None,
                  colors=None,
                  ):
@@ -417,9 +506,6 @@ class FeatureView(BaseSpikeCanvas):
         if masks is None:
             masks = np.ones(features.shape[:2], dtype=np.float32)
 
-        if dimensions is None:
-            dimensions = [(0, 0)]
-
         if colors is None:
             colors = _selected_clusters_colors(n_clusters)
 
@@ -428,64 +514,33 @@ class FeatureView(BaseSpikeCanvas):
         if background_features is not None:
             assert features.shape[1:] == background_features.shape[1:]
             self.background.features = background_features.astype(np.float32)
-            if spike_samples is not None:
-                assert spike_samples.shape == (n_spikes,)
-                self.background.spike_samples = spike_samples
+        else:
+            self.background.n_channels = self.visual.n_channels
+            self.background.n_features = self.visual.n_features
 
         if masks is not None:
             self.visual.masks = masks
 
-        if not len(self.dimensions_matrix):
-            matrix = _matrix_from_dimensions(dimensions,
-                                             n_features=n_features,
-                                             n_channels=n_channels,
-                                             )
-            self.dimensions_matrix = matrix
-
         self.visual.spike_clusters = spike_clusters
         assert spike_clusters.shape == (n_spikes,)
-        if spike_samples is not None:
-            self.visual.spike_samples = spike_samples
 
         self.visual.cluster_colors = colors
 
+        # Dimensions.
+        self.init_grid(n_rows)
+        if not extra_features:
+            extra_features = {'time': np.linspace(0., 1., n_spikes)}
+        for name, array in (extra_features or {}).items():
+            self.add_extra_feature(name, array)
+        self.set_dimensions('x', x_dimensions or {(0, 0): 'time'})
+        self.set_dimensions('y', y_dimensions or {(0, 0): (0, 0)})
+
         self.update()
 
-    @property
-    def dimensions_matrix(self):
-        """Displayed dimensions matrix.
-
-        This is a matrix of pairs of items which can be:
-
-        * tuple `(channel_id, feature_idx)`
-        * `'time'`
-
-        """
-        if len(self.background.dimensions_matrix):
-            return self.background.dimensions_matrix
-        else:
-            return self.visual.dimensions_matrix
-
-    @dimensions_matrix.setter
-    def dimensions_matrix(self, value):
-        # WARNING: dimensions_matrix should be changed here, in the Canvas,
-        # and not in the visual. This is to make sure that the boxes are
-        # updated as well.
-        self.visual.dimensions_matrix = value
-        self.update_dimensions_matrix(value)
-
-    def update_dimensions_matrix(self, matrix):
-        n_rows = len(matrix)
-        if self.background.features is not None:
-            self.background.dimensions_matrix = matrix
-        self.boxes.n_rows = n_rows
-        self.lasso.n_rows = n_rows
-        self.axes.n_rows = n_rows
-        self.axes.xs = [0]
-        self.axes.ys = [0]
-        self._pz.n_rows = n_rows
-        self._set_pan_constraints(matrix)
-        self.update()
+    def add_extra_feature(self, name, array):
+        self.visual.add_extra_feature(name, array)
+        if name not in self.background.extra_features:
+            self.background.add_extra_feature(name, array)
 
     @property
     def marker_size(self):
@@ -507,8 +562,8 @@ class FeatureView(BaseSpikeCanvas):
         self.boxes.draw()
 
     keyboard_shortcuts = {
-        'marker_size_increase': 'alt++',
-        'marker_size_decrease': 'alt+-',
+        'marker_size_increase': 'alt+',
+        'marker_size_decrease': 'alt-',
         'add_lasso_point': 'shift+left click',
         'clear_lasso': 'shift+right click',
     }
@@ -518,6 +573,7 @@ class FeatureView(BaseSpikeCanvas):
         shift = e.modifiers == ('Shift',)
         if shift:
             if e.button == 1:
+                # Lasso.
                 n_rows = self.lasso.n_rows
 
                 box = self._pz._get_box(e.pos)
@@ -535,10 +591,12 @@ class FeatureView(BaseSpikeCanvas):
                 self.lasso.clear()
             self.update()
         elif control:
+            # Enlarge.
             box = self._pz._get_box(e.pos)
             self.emit('enlarge',
                       box=box,
-                      dimensions=self.dimensions_matrix[box],
+                      x_dim=self.x_dim[box],
+                      y_dim=self.y_dim[box],
                       )
 
     def on_key_press(self, event):
@@ -557,6 +615,6 @@ class FeatureView(BaseSpikeCanvas):
 
 @_wrap_vispy
 def plot_features(features, **kwargs):
-    c = FeatureView()
+    c = FeatureView(keys='interactive')
     c.set_data(features, **kwargs)
     return c

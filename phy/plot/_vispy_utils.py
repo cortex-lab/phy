@@ -519,7 +519,7 @@ class BaseSpikeCanvas(app.Canvas):
     keyboard_shortcuts = {}
 
     def __init__(self, **kwargs):
-        super(BaseSpikeCanvas, self).__init__(keys='interactive', **kwargs)
+        super(BaseSpikeCanvas, self).__init__(**kwargs)
         self._create_visuals()
         self._create_pan_zoom()
         self._add_events()
@@ -537,7 +537,7 @@ class BaseSpikeCanvas(app.Canvas):
         self.events.add(**{event: Event for event in self._events})
 
     def emit(self, name, **kwargs):
-        getattr(self.events, name)(**kwargs)
+        return getattr(self.events, name)(**kwargs)
 
     def on_draw(self, event):
         """Draw the main visual."""

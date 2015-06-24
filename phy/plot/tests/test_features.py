@@ -36,19 +36,20 @@ def _test_features(n_spikes=None, n_clusters=None):
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     spike_samples = artificial_spike_samples(n_spikes).astype(np.float32)
 
-    c = FeatureView()
+    c = FeatureView(keys='interactive')
+    c.init_grid(2)
     c.visual.features = features
     c.background.features = features * 2.
     # Useful to test depth.
     # masks[n_spikes//2:, ...] = 0
     c.visual.masks = masks
-    matrix = np.empty((2, 2), dtype=object)
-    matrix[...] = [[('time', (0, 0)), ((1, 0), (1, 1))],
-                   [((2, 1), (1, 0)), ((1, 0), 'time')]]
-    c.dimensions_matrix = matrix
+    c.add_extra_feature('time', spike_samples)
+    c.add_extra_feature('test', np.sin(np.linspace(-10., 10., n_spikes)))
+    c.set_dimensions('x', [['time', (1, 0)],
+                           [(2, 1), 'time']])
+    c.set_dimensions('y', [[(0, 0), (1, 1)],
+                           [(1, 0), 'test']])
     c.visual.spike_clusters = spike_clusters
-    c.visual.spike_samples = spike_samples
-    c.background.spike_samples = spike_samples
     c.visual.cluster_colors = np.array([_random_color()
                                         for _ in range(n_clusters)])
 
@@ -74,14 +75,15 @@ def test_plot_features():
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     # Unclustered spikes.
     spike_clusters[::3] = -1
-    spike_samples = artificial_spike_samples(n_spikes).astype(np.float32)
 
     c = plot_features(features[:, :1, :],
-                      show=False)
+                      show=False,
+                      x_dimensions=[['time']],
+                      y_dimensions=[[(0, 0)]],
+                      )
     show_test(c)
 
     c = plot_features(features,
-                      spike_samples=spike_samples,
                       show=False)
     show_test(c)
 
@@ -92,10 +94,4 @@ def test_plot_features():
     show_test(c)
 
     c = plot_features(features, spike_clusters=spike_clusters, show=False)
-    show_test(c)
-
-    c = plot_features(features,
-                      spike_samples=spike_samples,
-                      dimensions=['time', (5, 0)],
-                      show=False)
     show_test(c)

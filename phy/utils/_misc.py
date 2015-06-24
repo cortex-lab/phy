@@ -11,7 +11,7 @@ import sys
 import os.path as op
 from inspect import getargspec
 
-from ..ext.six import string_types
+from ..ext.six import string_types, exec_
 from ..ext.six.moves import builtins, cPickle
 
 
@@ -35,6 +35,17 @@ def _save_pickle(path, data):
 #------------------------------------------------------------------------------
 # Various Python utility functions
 #------------------------------------------------------------------------------
+
+def _read_python(path):
+    path = op.realpath(op.expanduser(path))
+    assert op.exists(path)
+    with open(path, 'r') as f:
+        contents = f.read()
+    metadata = {}
+    exec_(contents, {}, metadata)
+    metadata = {k.lower(): v for (k, v) in metadata.items()}
+    return metadata
+
 
 def _fun_arg_count(f):
     """Return the number of arguments of a function.

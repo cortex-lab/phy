@@ -1,3 +1,54 @@
+# -*- coding: utf-8 -*-
+
+"""Default settings for spike sorting."""
+
+
+# -----------------------------------------------------------------------------
+# Spike detection
+# -----------------------------------------------------------------------------
+
+def spikedetekt_params(sample_rate):
+
+    assert sample_rate > 0
+
+    return dict(
+        # Filter.
+        filter_low=500.,
+        filter_high=0.95 * .5 * sample_rate,
+        filter_butter_order=3,
+
+        # Data chunks.
+        chunk_size=int(1. * sample_rate),
+        chunk_overlap=int(.015 * sample_rate),
+
+        # Threshold.
+        nexcerpts=50,
+        excerpt_size=int(1. * sample_rate),
+        use_single_threshold=True,
+        threshold_strong_std_factor=4.5,
+        threshold_weak_std_factor=2.,
+        detect_spikes='negative',
+
+        # Connected components.
+        connected_component_join_size=1,
+
+        # Spike extractions.
+        extract_s_before=10,
+        extract_s_after=10,
+        weight_power=2,
+
+        # Features.
+        nfeatures_per_channel=3,
+        pca_nwaveforms_max=10000,
+    )
+
+
+# -----------------------------------------------------------------------------
+# KlustaKwik
+# -----------------------------------------------------------------------------
+
+klustakwik_params = {}
+
 
 # -----------------------------------------------------------------------------
 # Correlograms
@@ -106,6 +157,11 @@ def on_open(session):
     pass
 
 
+def on_view_open(view):
+    """You can customize a view when it is open."""
+    pass
+
+
 # Whether to ask the user if they want to save when the GUI is closed.
 prompt_save_on_exit = True
 
@@ -127,3 +183,10 @@ waveforms_scale_factor = .01
 features_scale_factor = .01
 features_grid_scale_factor = features_scale_factor
 traces_scale_factor = .01
+
+
+# -----------------------------------------------------------------------------
+# Misc settings
+# -----------------------------------------------------------------------------
+
+log_file_level = 'info'

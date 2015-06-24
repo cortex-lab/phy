@@ -11,6 +11,7 @@ from operator import itemgetter
 
 from ...utils import _is_array_like
 from ..view_models import HTMLClusterViewModel
+from ...gui._utils import _read
 
 
 #------------------------------------------------------------------------------
@@ -91,6 +92,10 @@ class Wizard(object):
         self._quality = None
         self._best = None
         self._match = None
+
+    @property
+    def has_started(self):
+        return len(self._best_list) > 0
 
     # Quality functions
     #--------------------------------------------------------------------------
@@ -471,8 +476,14 @@ class Wizard(object):
 #------------------------------------------------------------------------------
 
 class WizardViewModel(HTMLClusterViewModel):
-    _static_path = op.join(op.dirname(op.realpath(__file__)), 'static')
-    _html_filename = 'wizard.html'
+    def get_html(self, **kwargs):
+        static_path = op.join(op.dirname(op.realpath(__file__)), 'static')
+        params = self._wizard.get_panel_params()
+        html = _read('wizard.html', static_path=static_path)
+        return html.format(**params)
 
-    def _format_dict(self, **kwargs):
-        return self._wizard.get_panel_params()
+    def get_css(self, **kwargs):
+        css = super(WizardViewModel, self).get_css(**kwargs)
+        static_path = op.join(op.dirname(op.realpath(__file__)), 'static')
+        css += _read('styles.css', static_path=static_path)
+        return css

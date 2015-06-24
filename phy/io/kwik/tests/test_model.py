@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
@@ -20,6 +22,7 @@ from ..model import (KwikModel,
                      _concatenate_spikes,
                      )
 from ..mock import create_mock_kwik
+from ..creator import create_kwik
 
 
 #------------------------------------------------------------------------------
@@ -62,6 +65,34 @@ def test_concatenate_spikes():
     offsets = [0, 7, 100]
     concat = _concatenate_spikes(spikes, recs, offsets)
     ae(concat, [2, 3, 5, 7, 18, 101])
+
+
+def test_kwik_empty():
+
+    channels = [0, 3, 1]
+    graph = [[0, 3], [1, 0]]
+    probe = {'channel_groups': {
+             0: {'channels': channels,
+                 'graph': graph,
+                 'geometry': {0: (10, 10)},
+                 }}}
+    sample_rate = 20000
+
+    with TemporaryDirectory() as tempdir:
+        kwik_path = op.join(tempdir, 'test.kwik')
+        create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=sample_rate)
+
+        model = KwikModel(kwik_path)
+        ae(model.channels, sorted(channels))
+        ae(model.channel_order, channels)
+
+        assert model.sample_rate == sample_rate
+        assert model.n_channels == 3
+        assert model.spike_samples is None
+        assert model.has_kwx()
+        assert model.n_spikes == 0
+        assert model.n_clusters == 0
+        model.describe()
 
 
 def test_kwik_open_full():

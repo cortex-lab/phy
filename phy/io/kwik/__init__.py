@@ -8,4 +8,5 @@ from .store_items import (FeatureMasks,
                           ClusterStatistics,
                           create_store,
                           )
+from .creator import KwikCreator, create_kwik
 from .model import KwikModel

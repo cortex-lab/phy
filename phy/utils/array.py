@@ -6,7 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
 from math import floor
+from operator import mul
+from functools import reduce
 
 import numpy as np
 
@@ -56,7 +59,7 @@ def _unique(x):
     It is only faster if len(x) >> len(unique(x)).
 
     """
-    if len(x) == 0:
+    if x is None or len(x) == 0:
         return np.array([], dtype=np.int64)
     # WARNING: only keep positive values.
     # cluster=-1 means "unclustered".
@@ -243,6 +246,34 @@ def _in_polygon(points, polygon):
 
 
 # -----------------------------------------------------------------------------
+# I/O functions
+# -----------------------------------------------------------------------------
+
+def _prod(l):
+    return reduce(mul, l, 1)
+
+
+def _load_ndarray(f, dtype=None, shape=None, memmap=True):
+    if dtype is None:
+        return f
+    else:
+        if not memmap:
+            arr = np.fromfile(f, dtype=dtype)
+            if shape is not None:
+                arr = arr.reshape(shape)
+        else:
+            # memmap doesn't accept -1 in shapes.
+            if shape and shape[0] == -1:
+                n_bytes = os.fstat(f.fileno()).st_size
+                n_items = n_bytes // np.dtype(dtype).itemsize
+                n_rows = n_items // _prod(shape[1:])
+                shape = (n_rows,) + shape[1:]
+                assert _prod(shape) == n_items
+            arr = np.memmap(f, dtype=dtype, shape=shape, mode='r')
+        return arr
+
+
+# -----------------------------------------------------------------------------
 # Chunking functions
 # -----------------------------------------------------------------------------
 
@@ -371,6 +402,8 @@ def _spikes_in_clusters(spike_clusters, clusters):
 
 def _spikes_per_cluster(spike_ids, spike_clusters):
     """Return a dictionary {cluster: list_of_spikes}."""
+    if not len(spike_ids):
+        return {}
     rel_spikes = np.argsort(spike_clusters)
     abs_spikes = spike_ids[rel_spikes]
     spike_clusters = spike_clusters[rel_spikes]
@@ -719,6 +752,8 @@ class VirtualMappedArray(object):
 def _concatenate_virtual_arrays(arrs):
     """Return a virtual concatenate of several NumPy arrays."""
     n = len(arrs)
-    if n == 1:
+    if n == 0:
+        return None
+    elif n == 1:
         return arrs[0]
     return ConcatenatedArrays(arrs)

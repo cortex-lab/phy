@@ -17,8 +17,9 @@ from ...gui.qt import wrap_qt
 from ...utils.array import _spikes_in_clusters
 from ...utils.tempdir import TemporaryDirectory
 from ...utils.logging import set_level
-from ...io.mock import MockModel
+from ...io.mock import MockModel, artificial_traces
 from ...io.kwik.mock import create_mock_kwik
+from ...io.kwik.creator import create_kwik
 
 
 # Skip these tests in "make test-quick".
@@ -111,6 +112,13 @@ def test_store_corruption():
 
         session = Session(kwik_path)
         session.close()
+
+
+def test_session_one_cluster():
+    session = Session()
+    # The disk store is not created if there is only one cluster.
+    session.open(model=MockModel(n_clusters=1))
+    assert session.store.disk_store is None
 
 
 def test_session_store_features():
@@ -383,3 +391,26 @@ def test_session_automatic(session, spike_ids):
     metadata = session.model.clustering_metadata
     assert 'klustakwik_version' in metadata
     assert metadata['klustakwik_num_starting_clusters'] == 10
+
+
+def test_session_detect(session):
+    channels = range(n_channels)
+    graph = [[i, i + 1] for i in range(n_channels - 1)]
+    probe = {'channel_groups': {
+             0: {'channels': channels,
+                 'graph': graph,
+                 }}}
+    sample_rate = 10000
+    n_samples_traces = 10000
+    traces = artificial_traces(n_samples_traces, n_channels)
+    assert traces is not None
+
+    with TemporaryDirectory() as tempdir:
+        kwik_path = op.join(tempdir, 'test.kwik')
+        create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=sample_rate)
+        session = Session(kwik_path)
+        session.detect_spikes(traces=traces)
+        m = session.model
+        assert m.n_spikes >= 0
+        shape = (m.n_spikes, n_channels * m.n_features_per_channel)
+        assert m.features.shape == shape

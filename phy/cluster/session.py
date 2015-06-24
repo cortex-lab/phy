@@ -11,13 +11,13 @@ from __future__ import print_function
 import os.path as op
 import shutil
 
-from ..utils.logging import info, warn
+from ..utils.logging import info, warn, FileLogger, register
 from ..utils.settings import _ensure_dir_exists
 from ..io.base import BaseSession
 from ..io.kwik.model import KwikModel
 from ..io.kwik.store_items import create_store
 from .manual.gui import ClusterManualGUI
-from .launcher import KlustaKwik
+from .algorithms import KlustaKwik, SpikeDetekt
 
 
 #------------------------------------------------------------------------------
@@ -97,7 +97,13 @@ class Session(BaseSession):
 
     def _create_model(self, path):
         model = KwikModel(path, clustering=self._clustering)
+        self._create_logger(path)
         return model
+
+    def _create_logger(self, path):
+        path = op.splitext(path)[0] + '.log'
+        level = self.settings.get('log_file_level', 'info')
+        register(FileLogger(filename=path, level=level))
 
     def _save_model(self):
         """Save the spike clusters and cluster groups to the Kwik file."""
@@ -135,6 +141,11 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     @property
+    def n_spikes(self):
+        """Number of spikes in the current channel group."""
+        return self.model.n_spikes
+
+    @property
     def cluster_ids(self):
         """Array of all cluster ids used in the current clustering."""
         return self.model.cluster_ids
@@ -148,7 +159,8 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def _create_cluster_store(self):
-        if not self._use_store:
+        # Do not create the store if there is only one cluster.
+        if self.model.n_clusters <= 1 or not self._use_store:
             # Just use a mock store.
             self.store = create_store(self.model,
                                       self.model.spikes_per_cluster,
@@ -237,8 +249,75 @@ class Session(BaseSession):
 
         return decorator
 
-    # Automatic clustering
+    # Spike sorting
     # -------------------------------------------------------------------------
+
+    def detect_spikes(self, traces=None,
+                      interval=None,
+                      algorithm='spikedetekt',
+                      **kwargs):
+        """Detect spikes in traces.
+
+        Parameters
+        ----------
+
+        traces : array
+            An `(n_samples, n_channels)` array. If unspecified, the Kwik
+            file's raw data is used.
+        interval : tuple (optional)
+            A tuple `(start, end)` (in seconds) where to detect spikes.
+        algorithm : str
+            The algorithm name. Only `spikedetekt` currently.
+        **kwargs : dictionary
+            Algorithm parameters.
+
+        Returns
+        -------
+
+        result : dict
+            A `{channel_group: tuple}` mapping, where the tuple is:
+
+            * `spike_times` : the spike times (in seconds).
+            * `masks`: the masks of the spikes `(n_spikes, n_channels)`.
+
+        """
+        assert algorithm == 'spikedetekt'
+        # Create `.phy/spikedetekt/` directory for temporary files.
+        sd_dir = op.join(self.settings.exp_settings_dir, 'spikedetekt')
+        _ensure_dir_exists(sd_dir)
+        # Default interval.
+        if interval is not None:
+            (start_sec, end_sec) = interval
+            sr = self.model.sample_rate
+            interval_samples = (int(start_sec * sr),
+                                int(end_sec * sr))
+        else:
+            interval_samples = None
+        # Find the raw traces.
+        traces = traces if traces is not None else self.model.traces
+        # Take the parameters in the Kwik file, coming from the PRM file.
+        params = self.model.metadata  # TODO: kk_params...
+        params.update(kwargs)
+        # Probe parameters required by SpikeDetekt.
+        params['probe_channels'] = self.model.probe.channels_per_group
+        params['probe_adjacency_list'] = self.model.probe.adjacency
+        # Start the spike detection.
+        sd = SpikeDetekt(tempdir=sd_dir, **params)
+        out = sd.run_serial(traces, interval_samples=interval_samples)
+
+        # Add the spikes in the `.kwik` and `.kwx` files.
+        for group in out.groups:
+            spike_samples = out.spike_samples[group]
+            self.model.creator.add_spikes(group=group,
+                                          spike_samples=spike_samples,
+                                          spike_recordings=None,  # TODO
+                                          masks=out.masks[group],
+                                          features=out.features[group],
+                                          )
+        self.emit('open')
+
+        if out.groups:
+            self.change_channel_group(out.groups[0])
 
     def cluster(self,
                 clustering=None,

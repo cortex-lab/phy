@@ -379,10 +379,8 @@ class PanZoom(object):
     def _zoom_keyboard(self, key):
         k = .05
         if key == '-':
-            self.zoom *= (1. - k)
-        elif key == '+':
-            self.zoom *= (1. + k)
-        self._canvas.update()
+            k = -k
+        self._do_zoom((k, k), (0, 0))
 
     def _pan_keyboard(self, key):
         k = .1 / self.zoom
@@ -465,7 +463,6 @@ class PanZoomGrid(PanZoom):
 
     def __init__(self, *args, **kwargs):
         self._index = (0, 0)  # current index of the box being pan/zoom-ed
-        self._global_pan_zoom_axis = None
         self._n_rows = 1
         self._create_pan_and_zoom(pan=(0., 0.), zoom=(1., 1.))
         self._set_pan_zoom_coeffs()
@@ -709,28 +706,9 @@ class PanZoomGrid(PanZoom):
         for program in self._programs:
             program["u_pan_zoom"] = self._u_pan_zoom
 
-    @property
-    def global_pan_zoom_axis(self):
-        """Global pan zoom matrix.
-
-        This matrix indicates how each subplot reacts to global pan zoom
-        events.
-
-        Element `(i, j)` in this matrix is:
-
-        * `x` if only this axis is to be changed
-        * `y` if only this axis is to be changed
-        * `b` if both axes are to be changed
-        * `n` if no axis is to be changed
-
-        """
-        return self._global_pan_zoom_axis
-
-    @global_pan_zoom_axis.setter
-    def global_pan_zoom_axis(self, value):
-        self._global_pan_zoom_axis = value
-
-    def _global_pan_zoom(self, pan=None, zoom=None):
+    def _reset(self):
+        pan = (0., 0.)
+        zoom = (1., 1.)
 
         # Keep the current box index.
         index = self._index
@@ -743,42 +721,21 @@ class PanZoomGrid(PanZoom):
                 # Find out which axes to update.
                 if pan is not None:
                     p = list(pan)
-                    if self._global_pan_zoom_axis is not None:
-                        # Update just x, so keep the existing y.
-                        if self._global_pan_zoom_axis[i, j] == 'x':
-                            p[1] = self.pan[1]
-                        # Update just y, so keep the existing x.
-                        elif self._global_pan_zoom_axis[i, j] == 'y':
-                            p[0] = self.pan[0]
-                        # Do not update.
-                        elif self._global_pan_zoom_axis[i, j] == 'n':
-                            p = self.pan
                     self.pan = p
 
                 if zoom is not None:
                     z = list(zoom)
-                    if self._global_pan_zoom_axis is not None:
-                        if self._global_pan_zoom_axis[i, j] == 'x':
-                            z[1] = self.zoom[1]
-                        elif self._global_pan_zoom_axis[i, j] == 'y':
-                            z[0] = self.zoom[0]
-                        elif self._global_pan_zoom_axis[i, j] == 'n':
-                            z = self.zoom
                     self.zoom = z
 
         # Set back the box index.
         self._index = index
-
-    def _reset(self):
-        self._global_pan_zoom(pan=(0., 0.), zoom=(1., 1.))
 
     # Event callbacks
     # -------------------------------------------------------------------------
 
     keyboard_shortcuts = {
         'subplot_pan': ('left click and drag', 'arrows'),
-        'subplot_zoom': 'right click and drag',
-        'global_zoom': ('+/-', 'shift+wheel'),
+        'subplot_zoom': ('right click and drag', '+ or -'),
         'global_reset': 'r',
     }
 
@@ -807,16 +764,6 @@ class PanZoomGrid(PanZoom):
         self._set_current_box(event.pos)
         super(PanZoomGrid, self).on_mouse_wheel(event)
 
-        modifiers = event.modifiers
-        shift = 'Shift' in modifiers
-
-        # Global zoom.
-        if shift:
-            dx = np.sign(event.delta[1]) * self._wheel_coeff
-            self.zoom *= (1. + dx)
-            self._global_pan_zoom(zoom=self._zoom)
-            self._canvas.update()
-
     def on_key_press(self, event):
         """Key press event."""
         super(PanZoomGrid, self).on_key_press(event)
@@ -826,12 +773,6 @@ class PanZoomGrid(PanZoom):
         # Reset with 'R'.
         if key == 'R':
             self._reset()
-            self._canvas.update()
-
-        # Global zoom.
-        if key in self._pm and not event.modifiers:
-            self._zoom_keyboard(key)
-            self._global_pan_zoom(zoom=self._zoom)
             self._canvas.update()
 
     # Canvas methods

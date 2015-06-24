@@ -14,13 +14,13 @@ import phy
 from ...gui.base import BaseGUI
 from ...gui.qt import _prompt
 from ..view_models import (WaveformViewModel,
-                           MultiFeatureViewModel,
-                           SingleFeatureViewModel,
+                           FeatureGridViewModel,
+                           FeatureViewModel,
                            CorrelogramViewModel,
                            TraceViewModel,
                            StatsViewModel,
                            )
-from ...utils.logging import debug, info
+from ...utils.logging import debug, info, warn
 from ...io.kwik.model import cluster_group_id
 from ._history import GlobalHistory
 from ._utils import ClusterMetadataUpdater
@@ -89,18 +89,19 @@ class ClusterManualGUI(BaseGUI):
 
     _vm_classes = {
         'waveforms': WaveformViewModel,
-        'features': SingleFeatureViewModel,
-        'features_grid': MultiFeatureViewModel,
+        'features': FeatureViewModel,
+        'features_grid': FeatureGridViewModel,
         'correlograms': CorrelogramViewModel,
         'traces': TraceViewModel,
         'wizard': WizardViewModel,
         'stats': StatsViewModel,
     }
 
-    def __init__(self, model=None, store=None, **kwargs):
+    def __init__(self, model=None, store=None, cluster_ids=None, **kwargs):
         self.store = store
         self.wizard = Wizard()
         self._is_dirty = False
+        self._cluster_ids = cluster_ids
         super(ClusterManualGUI, self).__init__(model=model,
                                                vm_classes=self._vm_classes,
                                                **kwargs)
@@ -110,8 +111,17 @@ class ClusterManualGUI(BaseGUI):
         # so that the first cluster selection is already set for the views
         # when they're created.
         self.connect(self._connect_view, event='add_view')
+
+        @self.main_window.connect_
+        def on_close_gui():
+            # Return False if the close event should be discarded, so that
+            # the close Qt event is discarded.
+            return self._prompt_save()
+
         self.on_open()
-        self.start()
+        self.wizard.start()
+        if self._cluster_ids is None:
+            self._cluster_ids = self.wizard.selection
         super(ClusterManualGUI, self)._initialize_views()
 
     # View methods
@@ -144,6 +154,9 @@ class ClusterManualGUI(BaseGUI):
         def on_cluster(up):
             view.on_cluster(up)
 
+        # Call the user callback function.
+        self.settings['on_view_open'](view)
+
     def _connect_store(self):
         @self.connect
         def on_cluster(up=None):
@@ -162,9 +175,30 @@ class ClusterManualGUI(BaseGUI):
 
             @waveforms.view.connect
             def on_channel_click(e):
-                channel = e.channel_idx
-                feature = 0 if e.button == 1 else 1
-                features.set_auto_dimension((channel, feature))
+                # The box id is set when the features grid view is to be
+                # updated.
+                if e.box_idx is not None:
+                    return
+                dimension = (e.channel_idx, 0)
+                features.set_dimension(e.ax, dimension)
+                features.update()
+
+        # Select feature grid dimension from waveform view.
+        @self.connect_views('waveforms', 'features_grid')
+        def channel_click_grid(waveforms, features_grid):
+
+            @waveforms.view.connect
+            def on_channel_click(e):
+                # The box id is set when the features grid view is to be
+                # updated.
+                if e.box_idx is None:
+                    return
+                if not (1 <= e.box_idx <= features_grid.n_rows - 1):
+                    return
+                dimension = (e.channel_idx, 0)
+                box = (e.box_idx, e.box_idx)
+                features_grid.set_dimension(e.ax, box, dimension)
+                features_grid.update()
 
         # Enlarge feature subplot.
         @self.connect_views('features_grid', 'features')
@@ -172,7 +206,9 @@ class ClusterManualGUI(BaseGUI):
 
             @grid.view.connect
             def on_enlarge(e):
-                features.set_dimensions(*e.dimensions)
+                features.set_dimension('x', e.x_dim, smart=False)
+                features.set_dimension('y', e.y_dim, smart=False)
+                features.update()
 
     def _view_model_kwargs(self, name):
         kwargs = {'model': self.model,
@@ -271,6 +307,7 @@ class ClusterManualGUI(BaseGUI):
         groups = {cluster: _group(cluster)
                   for cluster in self.clustering.cluster_ids}
         self.wizard.cluster_groups = groups
+
         self.wizard.reset()
 
         # Set the similarity and quality functions for the wizard.
@@ -318,7 +355,6 @@ class ClusterManualGUI(BaseGUI):
 
     def _wizard_select_after_clustering(self, up):
         if up.history != 'undo':
-            # Special case: split.
             if up.description == 'merge' or up.history == 'redo':
                 self.wizard.pin(up.added[0])
                 self._wizard_select()
@@ -329,6 +365,7 @@ class ClusterManualGUI(BaseGUI):
                 elif cluster == self.wizard.match:
                     self.wizard.next_match()
                 self._wizard_select()
+            # Special case: split.
             elif up.description == 'assign':
                 self.select(up.added)
         elif up.history == 'undo':
@@ -361,8 +398,9 @@ class ClusterManualGUI(BaseGUI):
         # The session saves the model when this event is emitted.
         self.emit('request_save')
 
-    def close(self):
-        """Close the GUI."""
+    def _prompt_save(self):
+        """Display a prompt for saving and return whether the GUI should be
+        closed."""
         if (self.settings.get('prompt_save_on_exit', False) and
                 self._is_dirty):
             res = _prompt(self.main_window,
@@ -370,11 +408,12 @@ class ClusterManualGUI(BaseGUI):
                           ('save', 'cancel', 'close'))
             if res == 'save':
                 self.save()
+                return True
             elif res == 'cancel':
-                return
+                return False
             elif res == 'close':
-                pass
-        super(ClusterManualGUI, self).close()
+                return True
+        return True
 
     # General actions
     # ---------------------------------------------------------------------
@@ -411,7 +450,7 @@ class ClusterManualGUI(BaseGUI):
 
     def show_features_time(self):
         for vm in self.get_views('features'):
-            vm.set_dimensions(dim_x='time')
+            vm.set_dimension('x', 'time')
 
     # Selection
     # ---------------------------------------------------------------------
@@ -423,7 +462,13 @@ class ClusterManualGUI(BaseGUI):
         # Do not re-select an already-selected list of clusters.
         if cluster_ids == self._cluster_ids:
             return
-        assert set(cluster_ids) <= set(self.clustering.cluster_ids)
+        if not set(cluster_ids) <= set(self.clustering.cluster_ids):
+            n_selected = len(cluster_ids)
+            cluster_ids = [cl for cl in cluster_ids
+                           if cl in self.clustering.cluster_ids]
+            n_kept = len(cluster_ids)
+            warn("{} of the {} selected clusters do not exist.".format(
+                 n_selected - n_kept, n_selected))
         debug("Select clusters {0:s}.".format(str(cluster_ids)))
         self._cluster_ids = cluster_ids
         self.emit('select', cluster_ids)

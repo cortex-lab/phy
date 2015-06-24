@@ -13,7 +13,12 @@ from numpy.testing import assert_array_equal as ae
 import responses
 from pytest import raises
 
-from ..datasets import _download, download_file, download_test_data, _BASE_URL
+from ..datasets import (_download,
+                        _download_test_data,
+                        download_file,
+                        download_sample_data,
+                        _BASE_URL,
+                        )
 from ..tempdir import TemporaryDirectory
 
 
@@ -89,17 +94,30 @@ def test_download_invalid_checksum():
 
 
 @responses.activate
-def test_download_test_data():
-    name = 'test'
-    url = _BASE_URL + name
+def test_download_sample_data():
+    name = 'sample'
+    url = _BASE_URL['cortexlab'] + name
     for ext in ('.kwik', '.kwx', '.raw.kwd'):
         _add_mock_response(url + ext, _DATA.tostring())
         _add_mock_response(url + ext + '.md5', _CHECKSUM)
 
     with TemporaryDirectory() as tmpdir:
         output_dir = op.join(tmpdir, name)
-        download_test_data(name, output_dir)
+        download_sample_data(name, output_dir)
         for ext in ('.kwik', '.kwx', '.raw.kwd'):
             with open(op.join(output_dir, name + ext), 'rb') as f:
                 data = f.read()
             ae(np.fromstring(data, np.float32), _DATA)
+
+
+@responses.activate
+def test_dat_file():
+    data = np.random.randint(size=(20000, 4),
+                             low=-100, high=100).astype(np.int16)
+    _add_mock_response(_BASE_URL['github'] + 'test/test.dat',
+                       data.tostring())
+    with TemporaryDirectory() as tmpdir:
+        path = _download_test_data('test.dat', tmpdir)
+        with open(path, 'rb') as f:
+            arr = np.fromfile(f, dtype=np.int16).reshape((-1, 4))
+        assert arr.shape == (20000, 4)

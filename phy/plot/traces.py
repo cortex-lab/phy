@@ -223,6 +223,9 @@ class TraceView(BaseSpikeCanvas):
             assert traces.ndim == 2
         else:
             traces = self.visual.traces
+        # Detrend the traces.
+        traces = traces - traces.mean(axis=0)
+        traces /= traces.std()
         n_samples, n_channels = traces.shape
 
         if spike_samples is not None:
@@ -272,8 +275,8 @@ class TraceView(BaseSpikeCanvas):
         self.update()
 
     keyboard_shortcuts = {
-        'channel_scale_increase': 'ctrl++',
-        'channel_scale_decrease': 'ctrl+-',
+        'channel_scale_increase': 'ctrl+',
+        'channel_scale_decrease': 'ctrl-',
     }
 
     def on_key_press(self, event):
@@ -297,6 +300,6 @@ class TraceView(BaseSpikeCanvas):
 
 @_wrap_vispy
 def plot_traces(traces, **kwargs):
-    c = TraceView()
+    c = TraceView(keys='interactive')
     c.set_data(traces, **kwargs)
     return c

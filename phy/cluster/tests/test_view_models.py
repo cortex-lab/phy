@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
+
 from pytest import mark
 
 from ...utils.array import _spikes_per_cluster
@@ -18,7 +20,7 @@ from ...utils.testing import (show_test_start,
 from ...io.kwik.mock import create_mock_kwik
 from ...io.kwik import KwikModel, create_store
 from ..view_models import (WaveformViewModel,
-                           MultiFeatureViewModel,
+                           FeatureGridViewModel,
                            CorrelogramViewModel,
                            TraceViewModel,
                            )
@@ -35,9 +37,9 @@ pytestmark = mark.long()
 _N_CLUSTERS = 5
 _N_SPIKES = 200
 _N_CHANNELS = 28
-_N_FETS = 2
+_N_FETS = 3
 _N_SAMPLES_TRACES = 10000
-_N_FRAMES = 2
+_N_FRAMES = int((float(os.environ.get('PHY_EVENT_LOOP_DELAY', 0)) * 60) or 2)
 
 
 def setup():
@@ -145,15 +147,15 @@ def test_waveforms_empty():
 #------------------------------------------------------------------------------
 
 def test_features_empty():
-    _test_empty(MultiFeatureViewModel)
+    _test_empty(FeatureGridViewModel)
 
 
 def test_features_full():
-    _test_view_model(MultiFeatureViewModel, marker_size=8, n_spikes_max=20)
+    _test_view_model(FeatureGridViewModel, marker_size=8, n_spikes_max=20)
 
 
 def test_features_lasso():
-    vm = _test_view_model(MultiFeatureViewModel,
+    vm = _test_view_model(FeatureGridViewModel,
                           marker_size=8,
                           stop=False,
                           )

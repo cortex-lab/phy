@@ -36,7 +36,7 @@ class CorrelogramVisual(BaseSpikeVisual):
         super(CorrelogramVisual, self).__init__(**kwargs)
         self._correlograms = None
         self._cluster_ids = None
-        self.n_samples = None
+        self.n_bins = None
 
     # Data properties
     # -------------------------------------------------------------------------
@@ -58,9 +58,9 @@ class CorrelogramVisual(BaseSpikeVisual):
         if self._cluster_ids is None:
             self._cluster_ids = np.arange(value.shape[0])
         assert value.shape[:2] == (self.n_clusters, self.n_clusters)
-        self.n_samples = value.shape[2]
+        self.n_bins = value.shape[2]
         self._correlograms = value
-        self._empty = self.n_clusters == 0 or self.n_samples == 0
+        self._empty = self.n_clusters == 0 or self.n_bins == 0
         self.set_to_bake('correlograms', 'color')
 
     @property
@@ -81,7 +81,7 @@ class CorrelogramVisual(BaseSpikeVisual):
     # -------------------------------------------------------------------------
 
     def _bake_correlograms(self):
-        n_points = self.n_boxes * (5 * self.n_samples + 1)
+        n_points = self.n_boxes * (5 * self.n_bins + 1)
 
         # index increases from top to bottom, left to right
         # same as matrix indices (i, j) starting at 0
@@ -171,6 +171,18 @@ class CorrelogramView(BaseSpikeCanvas):
         if self.visual.n_clusters >= 1:
             self._pz.n_rows = self.visual.n_clusters
         self.axes.n_rows = self.visual.n_clusters
+        if self._lines:
+            self.lines = self.lines
+
+    @property
+    def correlograms(self):
+        return self.visual.correlograms
+
+    @correlograms.setter
+    def correlograms(self, value):
+        self.visual.correlograms = value
+        # Update the lines which depend on the number of bins.
+        self.lines = self.lines
 
     @property
     def lines(self):
@@ -184,8 +196,7 @@ class CorrelogramView(BaseSpikeCanvas):
     @lines.setter
     def lines(self, value):
         self._lines = _as_list(value)
-        assert self.visual.n_samples > 0
-        c = 2. / (float(self.visual.n_samples))
+        c = 2. / (float(max(1, self.visual.n_bins or 0)))
         self.axes.xs = np.array(self._lines) * c
         self.axes.color = (.5, .5, .5, 1.)
 
@@ -223,7 +234,7 @@ def plot_correlograms(correlograms, **kwargs):
         A list of colors as RGB tuples.
 
     """
-    c = CorrelogramView()
+    c = CorrelogramView(keys='interactive')
     c.set_data(correlograms, **kwargs)
     return c
 

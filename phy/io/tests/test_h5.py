@@ -89,6 +89,7 @@ def test_h5_read():
             assert f.groups() == ['mygroup']
             assert f.datasets() == ['ds1']
             assert f.attrs('/mygroup') == ['myattr']
+            assert f.attrs('/mygroup_nonexisting') == []
 
             # Check dataset ds1.
             ds1 = f.read('/ds1')[:]
@@ -120,6 +121,21 @@ def test_h5_read():
                 f.read('/nonexistinggroup/ds34')
 
         assert not f.is_open()
+
+
+def test_h5_append():
+    with TemporaryDirectory() as tempdir:
+        # Create the test HDF5 file in the temporary directory.
+        filename = _create_test_file(tempdir)
+
+        with open_h5(filename, 'a') as f:
+            f.write('/ds_empty', dtype=np.float32, shape=(10, 2))
+            arr = f.read('/ds_empty')
+            arr[:5, 0] = 1
+
+        with open_h5(filename, 'r') as f:
+            arr = f.read('/ds_empty')[...]
+            assert np.all(arr[:5, 0] == 1)
 
 
 def test_h5_write():

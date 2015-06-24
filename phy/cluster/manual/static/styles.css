@@ -15,11 +15,9 @@
 
 .control-panel .best {
     margin-right: 20px;
-    color: %CLUSTER_COLOR_0%;
 }
 
 .control-panel .match {
-    color: %CLUSTER_COLOR_1%;
 }
 
 .control-panel > div .id {
@@ -55,12 +53,4 @@
 
 .stats td {
     text-align: right;
-}
-
-.stats .cluster_0 {
-    color: %CLUSTER_COLOR_0%;
-}
-
-.stats .cluster_1 {
-    color: %CLUSTER_COLOR_1%;
 }

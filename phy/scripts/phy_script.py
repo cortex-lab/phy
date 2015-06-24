@@ -116,15 +116,19 @@ def _parse_args(args):
                         help='launch the script in an interactive '
                         'IPython console')
 
-    parser.add_argument('--clustering', '-c', default='main',
+    parser.add_argument('--clustering', default='main',
                         help='name of the clustering to use')
+
+    parser.add_argument('--cluster_ids', '-c',
+                        help='list of clusters to select initially')
 
     parse, extra = parser.parse_known_args(args)
     kwargs = _parse_extra(extra)
     return parse, kwargs
 
 
-def run_manual(kwik_path, clustering=None, interactive=False):
+def run_manual(kwik_path, clustering=None, interactive=False,
+               cluster_ids=None):
     import phy
     from phy.cluster import Session
     from phy.gui import start_qt_app, run_qt_app
@@ -134,12 +138,14 @@ def run_manual(kwik_path, clustering=None, interactive=False):
         return 1
 
     print("\nLoading {}...".format(kwik_path))
-    session = Session(kwik_path, clustering=clustering)
+    session = Session(kwik_path,
+                      clustering=clustering,
+                      )
     print("Data successfully loaded!\n")
     session.model.describe()
 
     start_qt_app()
-    gui = session.show_gui(show=False)
+    gui = session.show_gui(cluster_ids=cluster_ids, show=False)
 
     print("\nPress `ctrl+h` to see the list of keyboard shortcuts.\n")
 
@@ -200,9 +206,14 @@ def main():
     if args.debug:
         phy.debug()
 
+    if args.cluster_ids:
+        cluster_ids = list(map(int, args.cluster_ids.split(',')))
+    else:
+        cluster_ids = None
+
     if args.command == 'cluster-manual':
         cmd = ('run_manual(args.file, clustering=args.clustering, '
-               'interactive=args.ipython)')
+               'interactive=args.ipython, cluster_ids=cluster_ids)')
     elif args.command == 'cluster-auto':
         cmd = ('run_auto(args.file, clustering=args.clustering, '
                'interactive=args.ipython, **kwargs)')

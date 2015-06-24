@@ -16,7 +16,7 @@ import os.path as op
 from pkg_resources import get_distribution, DistributionNotFound
 
 from .utils.logging import _default_logger, set_level
-from .utils.datasets import download_test_data
+from .utils.datasets import download_sample_data
 from .gui.qt import enable_qt, qt_app
 
 

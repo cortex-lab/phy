@@ -6,10 +6,11 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
 import h5py
 
 from ..ext.six import string_types
-from ..utils.logging import warn
+from ..utils.logging import debug, warn
 
 
 #------------------------------------------------------------------------------
@@ -90,7 +91,7 @@ class File(object):
         _check_hdf5_path(self._h5py_file, path)
         return self._h5py_file[path]
 
-    def write(self, path, array, overwrite=False):
+    def write(self, path, array=None, dtype=None, shape=None, overwrite=False):
         """Write a NumPy array in the file.
 
         Parameters
@@ -99,6 +100,10 @@ class File(object):
             Full HDF5 path to the dataset to create.
         array : ndarray
             Array to write in the file.
+        dtype : dtype
+            If `array` is None, the dtype of the array.
+        shape : tuple
+            If `array` is None, the shape of the array.
         overwrite : bool
             If False, raise an error if the dataset already exists. Defaults
             to False.
@@ -123,7 +128,12 @@ class File(object):
                 raise ValueError(("The dataset '{0:s}' already exists."
                                   ).format(path))
 
-        group.create_dataset(dset_name, data=array)
+        if array is not None:
+            return group.create_dataset(dset_name, data=array)
+        else:
+            assert dtype
+            assert shape
+            return group.create_dataset(dset_name, dtype=dtype, shape=shape)
 
     # Copy and rename
     #--------------------------------------------------------------------------
@@ -166,8 +176,8 @@ class File(object):
             try:
                 return attrs[attr_name]
             except (TypeError, IOError):
-                warn("Unable to read attribute `{}` at `{}`.".format(
-                     attr_name, path))
+                debug("Unable to read attribute `{}` at `{}`.".format(
+                      attr_name, path))
                 return
         else:
             raise KeyError("The attribute '{0:s}'".format(attr_name) +
@@ -179,6 +189,12 @@ class File(object):
         assert isinstance(attr_name, string_types)
         if value is None:
             value = ''
+        # Ensure lists of strings are converted to ASCII arrays.
+        if isinstance(value, list):
+            if not value:
+                value = None
+            if isinstance(value[0], string_types):
+                value = np.array(value, dtype='S')
         # If the parent group doesn't already exist, create it.
         if path not in self._h5py_file:
             self._h5py_file.create_group(path)
@@ -190,7 +206,10 @@ class File(object):
 
     def attrs(self, path='/'):
         """Return the list of attributes at the given path."""
-        return sorted(self._h5py_file[path].attrs)
+        if path in self._h5py_file:
+            return sorted(self._h5py_file[path].attrs)
+        else:
+            return []
 
     def has_attr(self, path, attr_name):
         """Return whether an attribute exists at a given path."""
@@ -243,6 +262,9 @@ class File(object):
 
     # Context manager
     #--------------------------------------------------------------------------
+
+    def __contains__(self, path):
+        return path in self._h5py_file
 
     def __enter__(self):
         self.open()

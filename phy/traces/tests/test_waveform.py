@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 
 """Tests of waveform loader."""
@@ -13,12 +12,107 @@ import numpy.random as npr
 from pytest import raises
 
 from ...io.mock import artificial_traces
-from ..loader import _slice, WaveformLoader
+from ..waveform import _slice, WaveformLoader, WaveformExtractor
 from ..filter import bandpass_filter, apply_filter
 
 
 #------------------------------------------------------------------------------
-# Tests
+# Tests extractor
+#------------------------------------------------------------------------------
+
+def test_extract_simple():
+    weak = 1.
+    strong = 2.
+    nc = 4
+    ns = 20
+    channels = list(range(nc))
+    cpg = {0: channels}
+    # graph = {0: [1, 2], 1: [0, 2], 2: [0, 1], 3: []}
+
+    data = np.random.uniform(size=(ns, nc), low=0., high=1.)
+
+    data[10, 0] = 0.5
+    data[11, 0] = 1.5
+    data[12, 0] = 1.0
+
+    data[10, 1] = 1.5
+    data[11, 1] = 2.5
+    data[12, 1] = 2.0
+
+    component = np.array([[10, 0],
+                          [10, 1],
+                          [11, 0],
+                          [11, 1],
+                          [12, 0],
+                          [12, 1],
+                          ])
+
+    we = WaveformExtractor(extract_before=3,
+                           extract_after=5,
+                           thresholds={'weak': weak,
+                                       'strong': strong},
+                           channels_per_group=cpg,
+                           )
+
+    # _component()
+    comp = we._component(component, n_samples=ns)
+    ae(comp.comp_s, [10, 10, 11, 11, 12, 12])
+    ae(comp.comp_ch, [0, 1, 0, 1, 0, 1])
+    assert (comp.s_min, comp.s_max) == (10 - 3, 12 + 4)
+    ae(comp.channels, range(nc))
+
+    # _normalize()
+    assert we._normalize(weak) == 0
+    assert we._normalize(strong) == 1
+    ae(we._normalize([(weak + strong) / 2.]), [.5])
+
+    # _comp_wave()
+    wave = we._comp_wave(data, comp)
+    assert wave.shape == (3 + 5 + 1, nc)
+    ae(wave[3:6, :], [[0.5, 1.5, 0., 0.],
+                      [1.5, 2.5, 0., 0.],
+                      [1.0, 2.0, 0., 0.]])
+
+    # masks()
+    masks = we.masks(data, wave, comp)
+    ae(masks, [.5, 1., 0, 0])
+
+    # spike_sample_aligned()
+    s = we.spike_sample_aligned(wave, comp)
+    assert 11 <= s < 12
+
+    # extract()
+    wave_e = we.extract(data, s, channels=channels)
+    assert wave_e.shape[1] == wave.shape[1]
+    ae(wave[3:6, :2], wave_e[3:6, :2])
+
+    # align()
+    wave_a = we.align(wave_e, s)
+    assert wave_a.shape == (3 + 5, nc)
+
+    # Test final call.
+    groups, s_f, wave_f, masks_f = we(component, data=data, data_t=data)
+    assert s_f == s
+    assert np.all(groups == 0)
+    ae(masks_f, masks)
+    ae(wave_f, wave_a)
+
+    # Tests with a different order.
+    we = WaveformExtractor(extract_before=3,
+                           extract_after=5,
+                           thresholds={'weak': weak,
+                                       'strong': strong},
+                           channels_per_group={0: [1, 0, 3]},
+                           )
+    groups, s_f_o, wave_f_o, masks_f_o = we(component, data=data, data_t=data)
+    assert np.all(groups == 0)
+    assert s_f == s_f_o
+    assert np.allclose(wave_f[:, [1, 0, 3]], wave_f_o)
+    ae(masks_f_o, [1., 0.5, 0.])
+
+
+#------------------------------------------------------------------------------
+# Tests loader
 #------------------------------------------------------------------------------
 
 def test_slice():

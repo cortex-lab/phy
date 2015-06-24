@@ -3,7 +3,7 @@
 
 """Automatic and manual clustering facilities."""
 
-from .launcher import run
+from .algorithms import cluster
 from .session import Session
 from .view_models import (BaseClusterViewModel,
                           HTMLClusterViewModel,

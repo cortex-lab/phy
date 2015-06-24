@@ -10,21 +10,7 @@ import os
 import os.path as op
 
 from .logging import debug, warn
-from ._misc import _load_pickle, _save_pickle
-
-
-#------------------------------------------------------------------------------
-# Utility functions
-#------------------------------------------------------------------------------
-
-def _load_python(path):
-    path = op.realpath(op.expanduser(path))
-    assert op.exists(path)
-    with open(path, 'r') as f:
-        contents = f.read()
-    store = {}
-    exec(contents, {}, store)
-    return store
+from ._misc import _load_pickle, _save_pickle, _read_python
 
 
 #------------------------------------------------------------------------------
@@ -66,7 +52,7 @@ class BaseSettings(object):
 
     def _try_load_python(self, path):
         try:
-            self._store.update(_load_python(path))
+            self._store.update(_read_python(path))
             debug("Loaded internal settings file "
                   "from `{}`.".format(path))
             return True

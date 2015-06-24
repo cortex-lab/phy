@@ -362,11 +362,11 @@ class WaveformView(BaseSpikeCanvas):
         self.update()
 
     keyboard_shortcuts = {
-        'waveform_scale_increase': ('ctrl++',
+        'waveform_scale_increase': ('ctrl+',
                                     'ctrl+up',
                                     'shift+wheel up',
                                     ),
-        'waveform_scale_decrease': ('ctrl+-',
+        'waveform_scale_decrease': ('ctrl-',
                                     'ctrl+down',
                                     'shift+wheel down',
                                     ),
@@ -376,7 +376,7 @@ class WaveformView(BaseSpikeCanvas):
         'probe_width_decrease': ('shift+left', 'ctrl+alt+wheel down'),
         'probe_height_increase': ('shift+up', 'shift+alt+wheel up'),
         'probe_height_decrease': ('shift+down', 'shift+alt+wheel down'),
-        'select_channel': ('ctrl+left click', 'ctrl+right click'),
+        'select_channel': ('ctrl+left click', 'ctrl+right click', 'num+click'),
     }
 
     def on_key_press(self, event):
@@ -441,20 +441,22 @@ class WaveformView(BaseSpikeCanvas):
             self.probe_scale = (u, v * coeff)
 
     def on_mouse_press(self, e):
-        if 'Control' not in e.modifiers:
-            return
-        # Normalise mouse position.
-        position = self._pz._normalize(e.pos)
-        position[1] = -position[1]
-        zoom = self._pz._zoom_aspect()
-        pan = self._pz.pan
-        mouse_pos = ((position / zoom) - pan)
-        # Find the channel id.
-        channel_idx = self.visual.channel_hover(mouse_pos)
-        self.emit("channel_click",
-                  channel_idx=channel_idx,
-                  button=e.button,
-                  )
+        key = self._key_pressed
+        if 'Control' in e.modifiers or key in map(str, range(10)):
+            box_idx = int(key.name) if key in map(str, range(10)) else None
+            # Normalise mouse position.
+            position = self._pz._normalize(e.pos)
+            position[1] = -position[1]
+            zoom = self._pz._zoom_aspect()
+            pan = self._pz.pan
+            mouse_pos = ((position / zoom) - pan)
+            # Find the channel id.
+            channel_idx = self.visual.channel_hover(mouse_pos)
+            self.emit("channel_click",
+                      channel_idx=channel_idx,
+                      ax='x' if e.button == 1 else 'y',
+                      box_idx=box_idx,
+                      )
 
     def on_draw(self, event):
         """Draw the visual."""
@@ -471,6 +473,6 @@ class WaveformView(BaseSpikeCanvas):
 
 @_wrap_vispy
 def plot_waveforms(waveforms, **kwargs):
-    c = WaveformView()
+    c = WaveformView(keys='interactive')
     c.set_data(waveforms, **kwargs)
     return c

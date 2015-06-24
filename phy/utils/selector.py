@@ -40,7 +40,8 @@ class Selector(object):
                  ):
         self._spike_clusters = spike_clusters
         self._n_spikes_max = n_spikes_max
-        self._n_spikes = len(spike_clusters)
+        self._n_spikes = (len(spike_clusters)
+                          if spike_clusters is not None else 0)
         self._excerpt_size = excerpt_size
         self._selected_spikes = np.array([], dtype=np.int64)
         self._selected_clusters = None
