@@ -41,7 +41,12 @@ class BaseSettings(object):
         return self._store.keys()
 
     def _update(self, d):
-        self._store.update(d)
+        for k, v in d.items():
+            if isinstance(v, dict) and k in self._store:
+                # Update instead of overwrite settings dictionaries.
+                self._store[k].update(v)
+            else:
+                self._store[k] = v
 
     def _try_load_pickle(self, path):
         try:
