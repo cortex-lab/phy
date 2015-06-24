@@ -149,8 +149,13 @@ cluster_manual_config = [
 
 
 def _select_clusters(gui, args):
-    args = list(map(int, args.split(' ')))
-    gui.select(args)
+    # Range: '5-12'
+    if '-' in args:
+        clusters = range(*map(int, args.split('-')))
+    # List of ids: '5 6 9 12'
+    else:
+        clusters = list(map(int, args.split(' ')))
+    gui.select(clusters)
 
 
 cluster_manual_snippets = {
