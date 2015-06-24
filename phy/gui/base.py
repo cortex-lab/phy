@@ -509,6 +509,8 @@ class BaseGUI(EventEmitter):
             self.disable_snippet_mode()
         # Backspace.
         elif key == Qt.Key_Backspace:
+            if self._snippet_message == ':':
+                return
             self._snippet_message = self._snippet_message[:-1]
         # Validate the snippet.
         elif key in (Qt.Key_Return, Qt.Key_Enter):
@@ -519,7 +521,7 @@ class BaseGUI(EventEmitter):
             self._snippet_message += text
 
     def enable_snippet_mode(self):
-        info("Snippet mode enabled.")
+        info("Snippet mode enabled, press `escape` to leave this mode.")
         self._remove_actions()
         self._dock.connect_(self._on_keystroke, event='keystroke')
 
