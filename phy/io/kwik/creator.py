@@ -99,7 +99,8 @@ class KwikCreator(object):
         with open_h5(self.kwik_path, 'a') as f:
             probe = probe['channel_groups']
             for group, d in probe.items():
-                channels = d['channels']
+                group = int(group)
+                channels = np.array(list(d['channels']), dtype=np.int32)
 
                 # Write the channel order.
                 f.write_attr('/channel_groups/{:d}'.format(group),
@@ -114,6 +115,7 @@ class KwikCreator(object):
                 # Write the channel positions.
                 positions = d.get('geometry', {})
                 for channel in channels:
+                    channel = int(channel)
                     # Get the channel position.
                     if channel in positions:
                         position = positions[channel]
@@ -124,6 +126,8 @@ class KwikCreator(object):
                         group, channel)
 
                     f.write_attr(path, 'name', str(channel))
+
+                    position = np.array(position, dtype=np.float32)
                     f.write_attr(path, 'position', position)
 
     def add_spikes(self,
@@ -137,10 +141,11 @@ class KwikCreator(object):
 
         if isinstance(spike_samples, list):
             spike_samples = _concat(spike_samples)
-        spike_samples = _as_array(spike_samples, dtype=np.uint64)
+        spike_samples = _as_array(spike_samples, dtype=np.uint64).ravel()
         n_spikes = len(spike_samples)
         if spike_recordings is None:
             spike_recordings = np.zeros(n_spikes, dtype=np.int32)
+        spike_recordings = spike_recordings.ravel()
 
         # Add spikes in the .kwik file.
         assert op.exists(self.kwik_path)
@@ -154,6 +159,8 @@ class KwikCreator(object):
             f.write('/channel_groups/{:d}/spikes/recording'.format(group),
                     spike_recordings)
 
+        if masks is None and features is None:
+            return
         # Add features and masks in the .kwx file.
         assert masks is not None
         assert features is not None
@@ -270,19 +277,18 @@ class KwikCreator(object):
             assert not f.exists(path)
 
             # Save spike_clusters.
-            f.write(path, spike_clusters.astype(np.int32))
+            spike_clusters = spike_clusters.astype(np.int32).ravel()
+            f.write(path, spike_clusters)
             cluster_ids = _unique(spike_clusters)
 
             # Create cluster metadata.
             for cluster in cluster_ids:
                 cluster_path = '/channel_groups/{0:d}/clusters/{1:s}/{2:d}'. \
                     format(group, name, cluster)
-                kv_path = cluster_path + '/application_data/klustaviewa'
 
                 # Default group: unsorted.
                 cluster_group = cluster_groups.get(cluster, 3)
                 f.write_attr(cluster_path, 'cluster_group', cluster_group)
-                f.write_attr(kv_path, 'color', np.random.randint(2, 10))
 
             # Create cluster group metadata.
             for group_id, cg_name in _DEFAULT_GROUPS:
