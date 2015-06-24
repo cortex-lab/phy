@@ -153,7 +153,7 @@ def _select_clusters(gui, args):
     gui.select(args)
 
 
-cluster_manual_snippets =  {
+cluster_manual_snippets = {
     'c': _select_clusters,
 }
 
