@@ -40,9 +40,12 @@ class BaseSettings(object):
         """List of settings keys."""
         return self._store.keys()
 
+    def _update(self, d):
+        self._store.update(d)
+
     def _try_load_pickle(self, path):
         try:
-            self._store.update(_load_pickle(path))
+            self._update(_load_pickle(path))
             debug("Loaded internal settings file "
                   "from `{}`.".format(path))
             return True
@@ -52,14 +55,13 @@ class BaseSettings(object):
 
     def _try_load_python(self, path):
         try:
-            self._store.update(_read_python(path))
+            self._update(_read_python(path))
             debug("Loaded internal settings file "
                   "from `{}`.".format(path))
             return True
         except Exception as e:
             warn("Unable to read the settings file "
                  "'{0}':\n{1}".format(path, str(e)))
-            return {}
 
     def load(self, path):
         """Load a settings Python file."""
