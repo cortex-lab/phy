@@ -10,17 +10,34 @@
 
 import os
 import os.path as op
+import sys
 import re
 
-try:
-    from setuptools import setup
-except ImportError:
-    from distutils.core import setup
+from setuptools import setup, find_packages
+from setuptools.command.test import test as TestCommand
 
 
 #------------------------------------------------------------------------------
 # Setup
 #------------------------------------------------------------------------------
+
+class PyTest(TestCommand):
+    user_options = [('pytest-args=', 'a', "Arguments to pass to py.test")]
+
+    def initialize_options(self):
+        TestCommand.initialize_options(self)
+        self.pytest_args = []
+
+    def finalize_options(self):
+        TestCommand.finalize_options(self)
+        self.test_args = []
+        self.test_suite = True
+
+    def run_tests(self):
+        #import here, cause outside the eggs aren't loaded
+        import pytest
+        errno = pytest.main(self.pytest_args)
+        sys.exit(errno)
 
 
 def _package_tree(pkgroot):
@@ -41,20 +58,15 @@ with open(filename, 'r') as f:
     version = re.search(r"__version__ = '([^']+)'", f.read()).group(1)
 
 
-requirements = [
-]
-
-test_requirements = [
-]
-
 setup(
     name='phy',
     version=version,
-    description='Electrophysiological data analysis.',
+    license="BSD",
+    description='Electrophysiological data analysis package.',
     long_description=readme,
     author='Kwik Team',
     author_email='cyrille.rossant at gmail.com',
-    url='https://github.com/kwikteam/phy',
+    url='https://phy.cortexlab.net',
     packages=_package_tree('phy'),
     package_dir={'phy': 'phy'},
     package_data={
@@ -66,9 +78,7 @@ setup(
         ],
     },
     include_package_data=True,
-    install_requires=requirements,
-    license="BSD",
-    zip_safe=False,
+    # zip_safe=False,
     keywords='phy,data analysis,electrophysiology,neuroscience',
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -82,5 +92,5 @@ setup(
         'Programming Language :: Python :: 3.3',
         'Programming Language :: Python :: 3.4',
     ],
-    tests_require=test_requirements
+    cmdclass={'test': PyTest},
 )
