@@ -146,7 +146,7 @@ def test_spike_detect_methods(spikedetekt_one_group):
     masks = _concat(masks, np.float32)
 
     assert np.all(np.in1d(groups, [0, 1]))
-    assert samples.dtype == np.uint64
+    assert samples.dtype == np.float64
     assert samples.shape == (n_spikes,)
     assert waveforms.shape == (n_spikes, n_samples_waveforms, n_channels)
     assert masks.shape == (n_spikes, n_channels)

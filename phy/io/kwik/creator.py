@@ -141,7 +141,7 @@ class KwikCreator(object):
 
         if isinstance(spike_samples, list):
             spike_samples = _concat(spike_samples)
-        spike_samples = _as_array(spike_samples, dtype=np.uint64).ravel()
+        spike_samples = _as_array(spike_samples, dtype=np.float64).ravel()
         n_spikes = len(spike_samples)
         if spike_recordings is None:
             spike_recordings = np.zeros(n_spikes, dtype=np.int32)
@@ -154,8 +154,12 @@ class KwikCreator(object):
             if '/channel_groups/{:d}/spikes/time_samples'.format(group) in f:
                 raise RuntimeError("Spikes have already been added to this "
                                    "dataset.")
+            time_samples = spike_samples.astype(np.uint64)
+            frac = ((spike_samples - time_samples) * 255).astype(np.uint8)
             f.write('/channel_groups/{:d}/spikes/time_samples'.format(group),
-                    spike_samples)
+                    time_samples)
+            f.write('/channel_groups/{}/spikes/time_fractional'.format(group),
+                    frac)
             f.write('/channel_groups/{:d}/spikes/recording'.format(group),
                     spike_recordings)
 
