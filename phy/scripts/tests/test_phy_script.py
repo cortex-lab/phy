@@ -15,7 +15,7 @@ from pytest import raises, mark
 from ...utils.tempdir import TemporaryDirectory
 from ...io.kwik.mock import create_mock_kwik
 from ...cluster.session import Session
-from ..phy_script import _parse_args
+from ..phy_script import ParserCreator
 
 
 #------------------------------------------------------------------------------
@@ -41,19 +41,18 @@ def _parse(args):
 
 def test_script_parser():
 
+    p = ParserCreator()
+
     kwik_path = 'test'
 
-    for cmd in ('cluster-manual', 'cluster-auto'):
-        assert _parse([cmd, kwik_path]).command == cmd
-
-    args = _parse(['cluster-manual', '-i', '--debug', kwik_path])
+    args, _ = p.parse(['-i', '--debug', 'cluster-manual', kwik_path])
     assert args.command == 'cluster-manual'
     assert args.ipython
     assert args.debug
     assert not args.profiler
     assert not args.line_profiler
 
-    args = _parse(['cluster-auto', '-lp', kwik_path])
+    args, _ = p.parse(['-lp', 'cluster-auto', kwik_path])
     assert args.command == 'cluster-auto'
     assert not args.ipython
     assert not args.debug
@@ -61,12 +60,12 @@ def test_script_parser():
     assert args.line_profiler
 
     # Test extra arguments.
-    args, kwargs = _parse_args(['cluster-auto',
-                                kwik_path,
-                                '--aa=foo',
-                                '--b-b=1.5',
-                                '--c_c=2',
-                                ])
+    args, kwargs = p.parse(['cluster-auto',
+                            kwik_path,
+                            '--aa=foo',
+                            '--b-b=1.5',
+                            '--c_c=2',
+                            ])
     assert kwargs['aa'] == 'foo'
     assert kwargs['b_b'] == 1.5
     assert kwargs['c_c'] == 2

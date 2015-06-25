@@ -22,19 +22,19 @@ from ..ext.six import exec_
 
 
 #------------------------------------------------------------------------------
-# Main script
+# Parser utilities
 #------------------------------------------------------------------------------
+
+class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                      argparse.RawDescriptionHelpFormatter):
+    pass
+
 
 class Parser(argparse.ArgumentParser):
     def error(self, message):
         sys.stderr.write(message + '\n\n')
         self.print_help()
         sys.exit(2)
-
-
-class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
-                      argparse.RawDescriptionHelpFormatter):
-    pass
 
 
 def _parse_extra(extra):
@@ -56,79 +56,125 @@ def _parse_extra(extra):
     return kwargs
 
 
-def _parse_args(args):
-    desc = sys.modules['phy'].__doc__
-    epilog = dedent("""
+_examples = dedent("""
 
-    examples:
-      phy -v                display the version of phy
-      phy describe my_file.kwik
-                            display information about a Kwik dataset
-      phy cluster-auto my_file.kwik --num-clusters-start=100
-                            run klustakwik on a dataset
-      phy cluster-manual my_file.kwik
-                            run the manual clustering GUI
+examples:
+  phy -v                display the version of phy
+  phy describe my_file.kwik
+                        display information about a Kwik dataset
+  phy cluster-auto my_file.kwik --num-clusters-start=100
+                        run klustakwik on a dataset
+  phy cluster-manual my_file.kwik
+                        run the manual clustering GUI
 
-    """)
-    parser = Parser(description=desc, epilog=epilog,
-                    formatter_class=CustomFormatter,
-                    )
-
-    # Allowed subcommands.
-    commands = [
-        'cluster-auto',
-        'cluster-manual',
-        'describe',  # describe a dataset
-        # TODO:
-        # 'notebook',  # start a new analysis notebook
-        # 'detect-spikes',
-    ]
-
-    parser.add_argument('command',
-                        choices=commands,
-                        help='command to execute')
-
-    parser.add_argument('file',
-                        help='file to execute the command on')
-
-    import phy
-    parser.add_argument('--version', '-v',
-                        action='version',
-                        version=phy.__version__,
-                        help='print the version of phy')
-
-    parser.add_argument('--debug', '-d',
-                        action='store_true',
-                        help='activate debug logging mode')
-
-    parser.add_argument('--profiler', '-p',
-                        action='store_true',
-                        help='activate the profiler')
-
-    parser.add_argument('--line-profiler', '-lp',
-                        dest='line_profiler',
-                        action='store_true',
-                        help='activate the line-profiler -- you need to '
-                        'decorate the functions to profile with `@profile` '
-                        'in the code')
-
-    parser.add_argument('--ipython', '-i', action='store_true',
-                        help='launch the script in an interactive '
-                        'IPython console')
-
-    parser.add_argument('--clustering', default='main',
-                        help='name of the clustering to use')
-
-    parser.add_argument('--cluster_ids', '-c',
-                        help='list of clusters to select initially')
-
-    parse, extra = parser.parse_known_args(args)
-    kwargs = _parse_extra(extra)
-    return parse, kwargs
+""")
 
 
-def run_manual(kwik_path, clustering=None, interactive=False,
-               cluster_ids=None):
+#------------------------------------------------------------------------------
+# Parser creator
+#------------------------------------------------------------------------------
+
+class ParserCreator(object):
+    def __init__(self):
+        self.create_main()
+        self.create_describe()
+        self.create_manual()
+        self.create_auto()
+        self.create_detect()
+        self.create_notebook()
+
+    def create_main(self):
+        import phy
+
+        desc = sys.modules['phy'].__doc__
+        self._parser = Parser(description=desc,
+                              epilog=_examples,
+                              formatter_class=CustomFormatter,
+                              )
+
+        self._parser.add_argument('--version', '-v',
+                                  action='version',
+                                  version=phy.__version__,
+                                  help='print the version of phy')
+
+        self._parser.add_argument('--debug', '-d',
+                                  action='store_true',
+                                  help='activate debug logging mode')
+
+        self._parser.add_argument('--profiler', '-p',
+                                  action='store_true',
+                                  help='activate the profiler')
+
+        self._parser.add_argument('--line-profiler', '-lp',
+                                  dest='line_profiler',
+                                  action='store_true',
+                                  help='activate the line-profiler -- you '
+                                       'need to decorate the functions '
+                                       'to profile with `@profile` '
+                                       'in the code')
+
+        self._parser.add_argument('--ipython', '-i', action='store_true',
+                                  help='launch the script in an interactive '
+                                  'IPython console')
+
+        self._subparsers = self._parser.add_subparsers(help='sub-command help',
+                                                       dest='command',
+                                                       )
+
+    def create_describe(self):
+        p = self._subparsers.add_parser('describe', help='describe a dataset')
+        p.add_argument('file', help='path to a `.kwik` file')
+
+    def create_manual(self):
+        p = self._subparsers.add_parser('cluster-manual',
+                                        help='launch the manual clustering '
+                                             'GUI on a `.kwik` file')
+        p.add_argument('file', help='path to a `.kwik` file')
+        p.add_argument('--clustering', default='main',
+                       help='name of the clustering to use')
+        p.add_argument('--cluster_ids', '-c',
+                       help='list of clusters to select initially')
+
+    def create_auto(self):
+        p = self._subparsers.add_parser('cluster-auto',
+                                        help='launch the automatic clustering '
+                                             'algorithm on a `.kwik` file')
+        p.add_argument('file', help='path to a `.kwik` file')
+
+    def create_detect(self):
+        p = self._subparsers.add_parser('detect-spikes',
+                                        help='launch the spike detection '
+                                             'algorithm on a `.prm` file')
+        p.add_argument('file', help='path to a `.prm` file')
+
+    def create_notebook(self):
+        # TODO
+        pass
+
+    def parse(self, args):
+        parse, extra = self._parser.parse_known_args(args)
+        kwargs = _parse_extra(extra)
+        return parse, kwargs
+
+
+#------------------------------------------------------------------------------
+# Main functions
+#------------------------------------------------------------------------------
+
+def describe(kwik_path, clustering=None):
+    from phy.io.kwik import KwikModel
+
+    if not op.exists(kwik_path):
+        print("The file `{}` doesn't exist.".format(kwik_path))
+        return
+
+    model = KwikModel(kwik_path, clustering=clustering)
+    model.describe()
+    model.close()
+
+
+def cluster_manual(kwik_path, clustering=None, interactive=False,
+                   cluster_ids=None):
     import phy
     from phy.cluster import Session
     from phy.gui import start_qt_app, run_qt_app
@@ -167,7 +213,7 @@ def run_manual(kwik_path, clustering=None, interactive=False,
         run_qt_app()
 
 
-def run_auto(kwik_path, clustering=None, interactive=False, **kwargs):
+def cluster_auto(kwik_path, clustering=None, interactive=False, **kwargs):
     from phy.cluster import Session
 
     if not op.exists(kwik_path):
@@ -180,21 +226,23 @@ def run_auto(kwik_path, clustering=None, interactive=False, **kwargs):
     session.close()
 
 
-def describe(kwik_path, clustering=None):
-    from phy.io.kwik import KwikModel
+def detect(kwik_path, clustering=None, interactive=False, **kwargs):
+    from phy.cluster import Session
 
     if not op.exists(kwik_path):
         print("The file `{}` doesn't exist.".format(kwik_path))
         return
 
-    model = KwikModel(kwik_path, clustering=clustering)
-    model.describe()
-    model.close()
+    session = Session(kwik_path, use_store=False)
+    session.cluster(clustering=clustering, **kwargs)
+    session.save()
+    session.close()
 
 
 def main():
 
-    args, kwargs = _parse_args(sys.argv[1:])
+    p = ParserCreator()
+    args, kwargs = p.parse(sys.argv[1:])
 
     if args.profiler or args.line_profiler:
         from phy.utils.testing import _enable_profiler, _profile
@@ -212,10 +260,10 @@ def main():
         cluster_ids = None
 
     if args.command == 'cluster-manual':
-        cmd = ('run_manual(args.file, clustering=args.clustering, '
+        cmd = ('cluster_manual(args.file, clustering=args.clustering, '
                'interactive=args.ipython, cluster_ids=cluster_ids)')
     elif args.command == 'cluster-auto':
-        cmd = ('run_auto(args.file, clustering=args.clustering, '
+        cmd = ('cluster_auto(args.file, clustering=args.clustering, '
                'interactive=args.ipython, **kwargs)')
     elif args.command == 'describe':
         cmd = 'describe(args.file)'
