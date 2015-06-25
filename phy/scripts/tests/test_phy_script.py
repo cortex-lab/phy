@@ -10,7 +10,7 @@ from subprocess import call
 import time
 
 import numpy as np
-from pytest import raises, mark
+from pytest import mark
 
 from ...utils.tempdir import TemporaryDirectory
 from ...io.kwik.mock import create_mock_kwik
@@ -71,8 +71,7 @@ def test_script_run():
                                      n_features_per_channel=n_fets,
                                      n_samples_traces=n_samples_traces)
 
-        with raises(RuntimeError):
-            _call('phy')
+        _call('phy')
 
         _call('phy -v')
         _call('phy -h')

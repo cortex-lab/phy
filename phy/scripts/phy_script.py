@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 """phy main CLI tool.
 
@@ -42,6 +43,8 @@ examples:
   phy -v                display the version of phy
   phy describe my_file.kwik
                         display information about a Kwik dataset
+  phy detect-spikes my_params.prm
+                        run spike detection on a parameters file
   phy cluster-auto my_file.kwik --num-clusters-start=100
                         run klustakwik on a dataset
   phy cluster-manual my_file.kwik
@@ -58,10 +61,18 @@ class ParserCreator(object):
     def __init__(self):
         self.create_main()
         self.create_describe()
-        self.create_manual()
-        self.create_auto()
         self.create_detect()
+        self.create_auto()
+        self.create_manual()
         self.create_notebook()
+
+    @property
+    def parser(self):
+        return self._parser
+
+    def _add_sub_parser(self, name, desc):
+        p = self._subparsers.add_parser(name, help=desc, description=desc)
+        return p
 
     def create_main(self):
         import phy
@@ -71,6 +82,7 @@ class ParserCreator(object):
                               epilog=_examples,
                               formatter_class=CustomFormatter,
                               )
+        self._parser.set_defaults(func=None)
 
         self._parser.add_argument('--version', '-v',
                                   action='version',
@@ -97,19 +109,21 @@ class ParserCreator(object):
                                   help='launch the script in an interactive '
                                   'IPython console')
 
-        self._subparsers = self._parser.add_subparsers(help='sub-command help',
-                                                       dest='command',
+        self._subparsers = self._parser.add_subparsers(dest='command',
+                                                       title='subcommand',
                                                        )
 
     def create_describe(self):
-        p = self._subparsers.add_parser('describe', help='describe a dataset')
+        desc = 'describe a `.kwik` file'
+        p = self._add_sub_parser('describe', desc)
         p.add_argument('file', help='path to a `.kwik` file')
+        p.add_argument('--clustering', default='main',
+                       help='name of the clustering to use')
         p.set_defaults(func=describe)
 
     def create_manual(self):
-        p = self._subparsers.add_parser('cluster-manual',
-                                        help='launch the manual clustering '
-                                             'GUI on a `.kwik` file')
+        desc = 'launch the manual clustering GUI on a `.kwik` file'
+        p = self._add_sub_parser('cluster-manual', desc)
         p.add_argument('file', help='path to a `.kwik` file')
         p.add_argument('--clustering', default='main',
                        help='name of the clustering to use')
@@ -118,19 +132,19 @@ class ParserCreator(object):
         p.set_defaults(func=cluster_manual)
 
     def create_auto(self):
-        p = self._subparsers.add_parser('cluster-auto',
-                                        help='launch the automatic clustering '
-                                             'algorithm on a `.kwik` file')
+        desc = 'launch the automatic clustering algorithm on a `.kwik` file'
+        p = self._add_sub_parser('cluster-auto', desc)
         p.add_argument('file', help='path to a `.kwik` file')
+        p.add_argument('--clustering', default='main',
+                       help='name of the clustering to use')
         p.add_argument('--num_starting_clusters', type=int,
                        help='initial number of clusters',
                        )
         p.set_defaults(func=cluster_auto)
 
     def create_detect(self):
-        p = self._subparsers.add_parser('detect-spikes',
-                                        help='launch the spike detection '
-                                             'algorithm on a `.prm` file')
+        desc = 'launch the spike detection algorithm on a `.prm` file'
+        p = self._add_sub_parser('detect-spikes', desc)
         p.add_argument('file', help='path to a `.prm` file')
         p.set_defaults(func=detect_spikes)
 
@@ -178,7 +192,7 @@ def cluster_manual(args):
 def cluster_auto(args):
     session = _create_session(args, use_store=False)
     ns = dict(session=session,
-              clustering=args.clusterings,
+              clustering=args.clustering,
               n_s_clusters=args.num_starting_clusters,
               )
     cmd = ('session.cluster(clustering=clustering, '
@@ -210,11 +224,16 @@ def main():
     if args.debug:
         phy.debug()
 
-    cmd, ns = args.func(args)
+    func = args.func
+    if func is None:
+        p.parser.print_help()
+        return
+
+    cmd, ns = func(args)
     ns.update(phy=phy, model=ns['session'].model, path=args.file)
 
     # Interactive mode with IPython.
-    if args.interactive:
+    if args.ipython:
         print("\nStarting IPython...")
         from IPython import start_ipython
         args_ipy = ["-i", "-c='{}'".format(cmd)]
