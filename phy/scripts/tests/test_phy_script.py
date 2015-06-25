@@ -69,19 +69,16 @@ def test_script_run():
                                      n_spikes=n_spikes,
                                      n_channels=n_channels,
                                      n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
-
-        _call('phy')
+                                     n_samples_traces=n_samples_traces,
+                                     add_original=False,
+                                     )
 
         _call('phy -v')
         _call('phy -h')
         _call('phy describe ' + kwik_path)
 
         cmd = ('phy cluster-auto {} --num-starting-clusters=10 '
-               '--clustering=auto')
+               '--clustering=original')
         _call(cmd.format(kwik_path))
-        time.sleep(.5)
 
-        session = Session(kwik_path)
-        session.change_clustering('auto')
-        assert np.all(session.model.spike_clusters == 0)
+        _call('phy describe {} --clustering=original'.format(kwik_path))
