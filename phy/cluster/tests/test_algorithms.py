@@ -21,7 +21,8 @@ from ...electrode.mea import load_probe
 from ...io.kwik import KwikModel
 from ...io.kwik.mock import create_mock_kwik
 from ...io.mock import artificial_traces
-from ..algorithms import cluster, SpikeDetekt, _split_spikes, _concat
+from ..algorithms import (cluster, SpikeDetekt, _split_spikes,
+                          _concat, SpikeCounts)
 
 
 #------------------------------------------------------------------------------
@@ -90,6 +91,22 @@ def spikedetekt_one_group(request):
 #------------------------------------------------------------------------------
 # Tests spike detection
 #------------------------------------------------------------------------------
+
+def test_spike_counts():
+    c = {0: {10: 100, 20: 200},
+         2: {10: 1, 30: 300},
+         }
+    sc = SpikeCounts(c)
+    assert sc() == 600
+
+    assert sc(group=0) == 300
+    assert sc(group=1) == 0
+    assert sc(group=2) == 30
+
+    assert sc(chunk=10) == 101
+    assert sc(group=20) == 200
+    assert sc(group=30) == 300
+
 
 def test_split_spikes():
     groups = np.zeros(10, dtype=np.int)

@@ -73,6 +73,7 @@ def _concat(arr, dtype=None):
 
 
 class SpikeCounts(object):
+    """Count spikes in chunks and channel groups."""
     def __init__(self, counts):
         self._counts = counts
         self._groups = sorted(counts)
@@ -80,6 +81,10 @@ class SpikeCounts(object):
             self._chunks = sorted(counts[self._groups[0]])
         else:
             self._chunks = []
+
+    @property
+    def counts(self):
+        return self._counts
 
     def __call__(self, group=None, chunk=None):
         if group is not None and chunk is not None:
@@ -618,6 +623,9 @@ class SpikeDetekt(EventEmitter):
                 chunk_counts[group][key] = counts[group]
         spike_counts = SpikeCounts(chunk_counts)
         info("{} waveforms extracted and saved.".format(spike_counts()))
+
+        print(chunk_counts)
+        print(spike_counts.counts)
 
         # Compute the PCs.
         info("Performing PCA...")
