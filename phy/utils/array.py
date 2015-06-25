@@ -255,20 +255,25 @@ def _prod(l):
 
 class LazyMemmap(object):
     """A memmapped array that only opens the file handle when required."""
-    def __init__(self, path, dtype=None, shape=None, mode=None):
+    def __init__(self, path, dtype=None, shape=None, mode='r'):
         assert isinstance(path, string_types)
+        assert dtype
         self._path = path
         self._f = None
         self.mode = mode
         self.dtype = dtype
         self.shape = shape
+        self.ndim = len(shape) if shape else None
 
     def _open_file_if_needed(self):
         if self._f is None:
             self._f = np.memmap(self._path,
                                 dtype=self.dtype,
                                 shape=self.shape,
-                                mode='r')
+                                mode=self.mode,
+                                )
+            self.shape = self._f.shape
+            self.ndim = self._f.ndim
 
     def __getitem__(self, item):
         self._open_file_if_needed()
@@ -307,7 +312,7 @@ def _load_ndarray(f_or_path, dtype=None, shape=None, memmap=True, lazy=True):
                 n_rows = n_items // _prod(shape[1:])
                 shape = (n_rows,) + shape[1:]
                 assert _prod(shape) == n_items
-            arr = _memmap(f_or_path, dtype=dtype, shape=shape)
+            arr = _memmap(f_or_path, dtype=dtype, shape=shape, lazy=lazy)
         return arr
 
 
