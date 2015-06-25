@@ -61,6 +61,7 @@ class ParserCreator(object):
     def __init__(self):
         self.create_main()
         self.create_describe()
+        self.create_traces()
         self.create_detect()
         self.create_auto()
         self.create_manual()
@@ -121,13 +122,27 @@ class ParserCreator(object):
                        help='name of the clustering to use')
         p.set_defaults(func=describe)
 
+    def create_traces(self):
+        desc = 'show the traces of a raw data file'
+        p = self._add_sub_parser('traces', desc)
+        p.add_argument('file', help='path to a `.kwd` or `.dat` file')
+        p.add_argument('--n-channels', '-n',
+                       help='number of channels in the recording '
+                       '(only required when using a flat binary file)')
+        p.add_argument('--dtype',
+                       help='NumPy data type '
+                       '(only required when using a flat binary file)',
+                       default='int16',
+                       )
+        p.set_defaults(func=traces)
+
     def create_manual(self):
         desc = 'launch the manual clustering GUI on a `.kwik` file'
         p = self._add_sub_parser('cluster-manual', desc)
         p.add_argument('file', help='path to a `.kwik` file')
         p.add_argument('--clustering', default='main',
                        help='name of the clustering to use')
-        p.add_argument('--cluster_ids', '-c',
+        p.add_argument('--cluster-ids', '-c',
                        help='list of clusters to select initially')
         p.set_defaults(func=cluster_manual)
 
@@ -137,7 +152,7 @@ class ParserCreator(object):
         p.add_argument('file', help='path to a `.kwik` file')
         p.add_argument('--clustering', default='main',
                        help='name of the clustering to use')
-        p.add_argument('--num_starting_clusters', type=int,
+        p.add_argument('--num-starting-clusters', type=int,
                        help='initial number of clusters',
                        )
         p.set_defaults(func=cluster_auto)
@@ -177,6 +192,32 @@ def describe(args):
     return 'session.model.describe()', dict(session=session)
 
 
+def traces(args):
+    from phy.plot.traces import TraceView
+    from phy.io.h5 import open_h5
+    from phy.io.traces import read_kwd, read_dat
+    path = args.file
+    if path.endswith('.kwd'):
+        f = open_h5(args.file)
+        traces = read_kwd(f)
+    elif path.endswith(('.dat', '.bin')):
+        traces = read_dat(path, dtype=args.dtype, n_channels=args.n_channels)
+
+    from phy.gui import start_qt_app
+    from vispy.app import use_app
+
+    start_qt_app()
+    use_app('pyqt4')
+
+    c = TraceView(keys='interactive')
+    c.visual.traces = traces
+
+    return 'c.show()', dict(f=f, c=c,
+                            traces=traces,
+                            requires_vispy=True,
+                            )
+
+
 def cluster_manual(args):
     session = _create_session(args, clustering=args.clustering)
     cluster_ids = (list(map(int, args.cluster_ids.split(',')))
@@ -187,6 +228,7 @@ def cluster_manual(args):
 
     from phy.gui import start_qt_app
     start_qt_app()
+
     gui = session.show_gui(cluster_ids=cluster_ids, show=False)
     print("\nPress `ctrl+h` to see the list of keyboard shortcuts.\n")
     return 'gui.show()', dict(session=session, gui=gui, requires_qt=True)
@@ -234,24 +276,37 @@ def main():
 
     cmd, ns = func(args)
     requires_qt = ns.pop('requires_qt', False)
-    ns.update(phy=phy, model=ns['session'].model, path=args.file)
+    requires_vispy = ns.pop('requires_vispy', False)
+
+    # Default variables in namespace.
+    ns.update(phy=phy, path=args.file)
+    if 'session' in ns:
+        ns['model'] = ns['session'].model
 
     # Interactive mode with IPython.
     if args.ipython:
         print("\nStarting IPython...")
         from IPython import start_ipython
         args_ipy = ["-i", "-c='{}'".format(cmd)]
-        if requires_qt:
+        if requires_qt or requires_vispy:
+            # Activate Qt event loop integration with Qt.
             args_ipy += ["--gui=qt"]
         start_ipython(args_ipy, user_ns=ns)
     else:
+        if not prof:
+            exec_(cmd, {}, ns)
+        else:
+            _profile(prof, cmd, {}, ns)
+
         if requires_qt:
+            # Launch the Qt app.
             from phy.gui import run_qt_app
-            if not prof:
-                exec_(cmd, {}, ns)
-            else:
-                _profile(prof, cmd, {}, ns)
             run_qt_app()
+        elif requires_vispy:
+            # Launch the VisPy Qt app.
+            from vispy.app import run
+            # use_app('pyqt4')
+            run()
 
 
 #------------------------------------------------------------------------------
