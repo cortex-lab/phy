@@ -231,8 +231,13 @@ def test_spike_detect_real_data(spikedetekt):
         spike_samples = out.spike_samples[0][0][...]
         assert spike_samples.shape == (n_spikes,)
 
+        # TODO: load all masks.
         masks = out.masks[0][0][...]
         assert masks.shape == (n_spikes, n_channels)
+
+        # There should not be any spike with only masked channels.
+        assert np.all(masks.max(axis=1) > 0)
+        print(masks.max(axis=1))
 
         # # Plot...
         # from phy.gui import qt_app
