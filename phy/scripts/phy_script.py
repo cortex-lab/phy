@@ -18,6 +18,8 @@ import os.path as op
 import argparse
 from textwrap import dedent
 
+import numpy as np
+
 from ..ext.six import exec_
 
 
@@ -61,8 +63,7 @@ class ParserCreator(object):
     def __init__(self):
         self.create_main()
         self.create_describe()
-        # TODO: doesn't work yet, fix segmentation fault with Qt
-        # self.create_traces()
+        self.create_traces()
         self.create_detect()
         self.create_auto()
         self.create_manual()
@@ -197,6 +198,7 @@ def describe(args):
 
 
 def traces(args):
+    from vispy.app import run
     from phy.plot.traces import TraceView
     from phy.io.h5 import open_h5
     from phy.io.traces import read_kwd, read_dat
@@ -206,15 +208,20 @@ def traces(args):
         f = open_h5(args.file)
         traces = read_kwd(f)
     elif path.endswith(('.dat', '.bin')):
-        traces = read_dat(path, dtype=args.dtype, n_channels=args.n_channels)
+        if not args.n_channels:
+            raise ValueError("Please specify `--n-channels`.")
+        if not args.dtype:
+            raise ValueError("Please specify `--dtype`.")
+        n_channels = int(args.n_channels)
+        dtype = np.dtype(args.dtype)
+        traces = read_dat(path, dtype=dtype, n_channels=n_channels)
 
     c = TraceView(keys='interactive')
     c.visual.traces = traces
+    c.show()
+    run()
 
-    return 'c.show()', dict(f=f, c=c,
-                            traces=traces,
-                            requires_vispy=True,
-                            )
+    return None, None
 
 
 def cluster_manual(args):
@@ -281,6 +288,8 @@ def main():
         return
 
     cmd, ns = func(args)
+    if not cmd:
+        return
     requires_qt = ns.pop('requires_qt', False)
     requires_vispy = ns.pop('requires_vispy', False)
 
