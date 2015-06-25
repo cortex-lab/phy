@@ -10,7 +10,7 @@ import os.path as op
 
 import numpy as np
 
-from ..utils.array import _unique, _spikes_in_clusters
+from ..utils.array import _unique, _spikes_in_clusters, _as_array
 from ..utils.selector import Selector
 from ..utils._misc import _show_shortcuts
 from ..utils._color import _selected_clusters_colors
@@ -22,6 +22,7 @@ from ..plot.waveforms import WaveformView
 from ..plot.traces import TraceView
 from ..gui.base import BaseViewModel, HTMLViewModel
 from ..gui._utils import _read
+from ..ext.six import string_types
 
 
 #------------------------------------------------------------------------------
@@ -83,16 +84,16 @@ class BaseClusterViewModel(BaseViewModel):
     # Public methods
     #--------------------------------------------------------------------------
 
-    def select(self, cluster_ids):
+    def select(self, cluster_ids, **kwargs):
         """Select a list of clusters."""
         cluster_ids = _as_list(cluster_ids)
         self._cluster_ids = cluster_ids
-        self.on_select(cluster_ids)
+        self.on_select(cluster_ids, **kwargs)
 
     # Callback methods
     #--------------------------------------------------------------------------
 
-    def on_select(self, cluster_ids):
+    def on_select(self, cluster_ids, **kwargs):
         """Update the view after a new selection has been made.
 
         Must be overriden."""
@@ -131,7 +132,7 @@ class HTMLClusterViewModel(BaseClusterViewModel, HTMLViewModel):
         # method.
         return _css_cluster_colors()
 
-    def on_select(self, cluster_ids):
+    def on_select(self, cluster_ids, **kwargs):
         """Update the view after a new selection has been made."""
         self.update(cluster_ids=cluster_ids)
 
@@ -213,12 +214,12 @@ class VispyViewModel(BaseClusterViewModel):
         visual.spike_clusters = spike_clusters
         visual.cluster_colors = _selected_clusters_colors(n_clusters)
 
-    def select(self, cluster_ids):
+    def select(self, cluster_ids, **kwargs):
         """Select a set of clusters."""
         self._selector.selected_clusters = cluster_ids
-        self.on_select(cluster_ids)
+        self.on_select(cluster_ids, **kwargs)
 
-    def on_select(self, cluster_ids):
+    def on_select(self, cluster_ids, **kwargs):
         """Update the view after a new selection has been made.
 
         Must be overriden.
@@ -333,7 +334,7 @@ class WaveformViewModel(VispyViewModel):
         self._view.mean.spike_clusters = np.sort(self.cluster_ids)
         self._view.mean.cluster_colors = self._view.visual.cluster_colors
 
-    def on_select(self, clusters):
+    def on_select(self, clusters, **kwargs):
         """Update the view when the selection changes."""
         # Get the spikes of the stored waveforms.
         n_clusters = len(clusters)
@@ -466,7 +467,7 @@ class CorrelogramViewModel(VispyViewModel):
 
         self.select(self.cluster_ids)
 
-    def on_select(self, clusters):
+    def on_select(self, clusters, **kwargs):
         """Update the view when the selection changes."""
         super(CorrelogramViewModel, self).on_select(clusters)
         spikes = self.spike_ids
@@ -676,7 +677,7 @@ class TraceViewModel(VispyViewModel):
             self.interval_size = .25
         self.select([])
 
-    def on_select(self, clusters):
+    def on_select(self, clusters, **kwargs):
         """Update the view when the selection changes."""
         # Get the spikes in the selected clusters.
         spikes = self.spike_ids
@@ -762,6 +763,10 @@ class BaseFeatureViewModel(VispyViewModel):
     _imported_params = ('scale_factor', 'n_spikes_max_bg', 'marker_size')
     n_spikes_max_bg = 10000
 
+    def __init__(self, *args, **kwargs):
+        self._extra_features = {}
+        super(BaseFeatureViewModel, self).__init__(*args, **kwargs)
+
     def _rescale_features(self, features):
         # WARNING: convert features to a 3D array
         # (n_spikes, n_channels, n_features)
@@ -783,12 +788,22 @@ class BaseFeatureViewModel(VispyViewModel):
         if not len(self.cluster_ids) or self.view.lasso.n_points <= 2:
             return
         clusters = self.cluster_ids
+        # Load *all* features from the selected clusters.
         features = self.store.load('features', clusters=clusters)
-        features = self._rescale_features(features)
-        box = self.view.lasso.box
-        points = self.view.visual.project(features, box)
-        in_lasso = self.view.lasso.in_lasso(points)
+        # Find the corresponding spike_ids.
         spike_ids = _spikes_in_clusters(self.model.spike_clusters, clusters)
+        assert features.shape[0] == len(spike_ids)
+        # Extract the extra features for all the spikes in the clusters.
+        extra_features = self._subset_extra_features(spike_ids)
+        # Rescale the features (and not the extra features!).
+        features = features * self.scale_factor
+        # Extract the two relevant dimensions.
+        points = self.view.visual.project(self.view.lasso.box,
+                                          features=features,
+                                          extra_features=extra_features,
+                                          )
+        # Find the points within the lasso.
+        in_lasso = self.view.lasso.in_lasso(points)
         return spike_ids[in_lasso]
 
     @property
@@ -830,6 +845,30 @@ class BaseFeatureViewModel(VispyViewModel):
             dim = self.view.smart_dimension(axis, box, dim)
         self.view.set_dimensions(axis, {box: dim})
 
+    def add_extra_feature(self, name, array):
+        assert isinstance(name, string_types)
+        array = _as_array(array)
+        n_spikes = self.model.n_spikes
+        if array.shape != (n_spikes,):
+            raise ValueError("The extra feature needs to be a 1D vector with "
+                             "`n_spikes={}` values.".format(n_spikes))
+        self._extra_features[name] = (array, array.min(), array.max())
+
+    def _subset_extra_features(self, spikes):
+        return {name: (array[spikes], m, M)
+                for name, (array, m, M) in self._extra_features.items()}
+
+    def _add_extra_features_in_view(self, spikes):
+        """Add the extra features in the view, by selecting only the
+        displayed spikes."""
+        subset_extra = self._subset_extra_features(spikes)
+        for name, (sub_array, m, M) in subset_extra.items():
+            # Make the extraction for the background spikes.
+            array, _, _ = self._extra_features[name]
+            sub_array_bg = array[self.view.background.spike_ids]
+            self.view.add_extra_feature(name, sub_array, m, M,
+                                        array_bg=sub_array_bg)
+
     @property
     def x_dim(self):
         return self.view.x_dim
@@ -852,13 +891,15 @@ class BaseFeatureViewModel(VispyViewModel):
             features_bg = self.store.load('features',
                                           spikes=slice(None, None, k))
             self.view.background.features = self._rescale_features(features_bg)
-        # Time dimension.
-        t = self.model.spike_samples[::k]
-        self.view.add_extra_feature('time', t)
+            self.view.background.spike_ids = self.model.spike_ids[::k]
+        # Register the time dimension.
+        self.add_extra_feature('time', self.model.spike_samples)
+        # Add the subset extra features to the visuals.
+        self._add_extra_features_in_view(slice(None, None, k))
         # Number of rows: number of features + 1 for
         self.view.init_grid(self.n_rows)
 
-    def on_select(self, clusters):
+    def on_select(self, clusters, auto_update=True):
         """Update the view when the selection changes."""
         super(BaseFeatureViewModel, self).on_select(clusters)
         spikes = self.spike_ids
@@ -878,16 +919,18 @@ class BaseFeatureViewModel(VispyViewModel):
 
         # Spikes.
         self.view.visual.spike_ids = spikes
-        t = self.model.spike_samples[spikes]
-        self.view.add_extra_feature('time', t)
+
+        # Extra features (including time).
+        self._add_extra_features_in_view(spikes)
 
         # Cluster display order.
         self.view.visual.cluster_order = clusters
 
         # Set default dimensions.
-        x_dim, y_dim = self.dimensions_for_clusters(clusters)
-        self.view.set_dimensions('x', x_dim)
-        self.view.set_dimensions('y', y_dim)
+        if auto_update:
+            x_dim, y_dim = self.dimensions_for_clusters(clusters)
+            self.view.set_dimensions('x', x_dim)
+            self.view.set_dimensions('y', y_dim)
 
     keyboard_shortcuts = {
         'increase_scale': 'ctrl+',
@@ -982,7 +1025,12 @@ class FeatureViewModel(BaseFeatureViewModel):
         return self._y_dim
 
     def set_dimension(self, axis, dim, smart=True):
-        """Set a (smart) dimension."""
+        """Set a (smart) dimension.
+
+        "smart" means that the dimension may be changed if it is the same
+        than the other dimension, to avoid x=y.
+
+        """
         super(FeatureViewModel, self).set_dimension(axis, (0, 0), dim,
                                                     smart=smart)
 

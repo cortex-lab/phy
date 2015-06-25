@@ -147,15 +147,16 @@ class ClusterManualGUI(BaseGUI):
     def _connect_view(self, view):
         """Connect a view to the GUI's events (select and cluster)."""
         @self.connect
-        def on_select(cluster_ids):
-            view.select(cluster_ids)
+        def on_select(cluster_ids, auto_update=True):
+            view.select(cluster_ids, auto_update=auto_update)
 
         @self.connect
         def on_cluster(up):
             view.on_cluster(up)
 
         # Call the user callback function.
-        self.settings['on_view_open'](view)
+        if 'on_view_open' in self.settings:
+            self.settings['on_view_open'](view)
 
     def _connect_store(self):
         @self.connect
@@ -354,27 +355,12 @@ class ClusterManualGUI(BaseGUI):
             self._wizard_select_after_clustering(up)
 
     def _wizard_select_after_clustering(self, up):
-        if up.history != 'undo':
-            if up.description == 'merge' or up.history == 'redo':
-                self.wizard.pin(up.added[0])
-                self._wizard_select()
-            elif up.description == 'metadata_group':
-                cluster = up.metadata_changed[0]
-                if cluster == self.wizard.best:
-                    self.wizard.next_best()
-                elif cluster == self.wizard.match:
-                    self.wizard.next_match()
-                self._wizard_select()
-            # Special case: split.
-            elif up.description == 'assign':
-                self.select(up.added)
-        elif up.history == 'undo':
-            clusters = up.selection
-            if len(clusters) >= 1:
-                self.wizard.best = clusters[0]
-            if len(clusters) >= 2:
-                self.wizard.match = clusters[1]
-            self._wizard_select()
+        # Make as few updates as possible in the views after clustering
+        # actions. This allows for better before/after comparisons.
+        if up.added:
+            self.select(up.added, auto_update=False)
+        elif up.selection:
+            self.select(up.selection, auto_update=False)
 
     # Open data
     # -------------------------------------------------------------------------
@@ -451,11 +437,12 @@ class ClusterManualGUI(BaseGUI):
     def show_features_time(self):
         for vm in self.get_views('features'):
             vm.set_dimension('x', 'time')
+            vm.update()
 
     # Selection
     # ---------------------------------------------------------------------
 
-    def select(self, cluster_ids):
+    def select(self, cluster_ids, **kwargs):
         """Select clusters."""
         cluster_ids = list(cluster_ids)
         assert len(cluster_ids) == len(set(cluster_ids))
@@ -469,9 +456,12 @@ class ClusterManualGUI(BaseGUI):
             n_kept = len(cluster_ids)
             warn("{} of the {} selected clusters do not exist.".format(
                  n_selected - n_kept, n_selected))
+        if len(cluster_ids) >= 14:
+            warn("You cannot select more than 14 clusters in the GUI.")
+            return
         debug("Select clusters {0:s}.".format(str(cluster_ids)))
         self._cluster_ids = cluster_ids
-        self.emit('select', cluster_ids)
+        self.emit('select', cluster_ids, **kwargs)
 
     @property
     def selected_clusters(self):
@@ -481,8 +471,8 @@ class ClusterManualGUI(BaseGUI):
     # Wizard list
     # ---------------------------------------------------------------------
 
-    def _wizard_select(self):
-        self.select(self.wizard.selection)
+    def _wizard_select(self, **kwargs):
+        self.select(self.wizard.selection, **kwargs)
 
     def reset_wizard(self):
         """Restart the wizard."""
@@ -560,6 +550,9 @@ class ClusterManualGUI(BaseGUI):
             spikes = self._spikes_to_split()
             if spikes is None:
                 return
+        if not len(spikes):
+            info("No spikes to split.")
+            return
         _check_list_argument(spikes, 'spikes')
         info("Split {0:d} spikes.".format(len(spikes)))
         up = self.clustering.split(spikes)

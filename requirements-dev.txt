@@ -1,0 +1,7 @@
+pytest
+flake8
+coverage
+coveralls
+responses
+python-coveralls
+pytest-cov

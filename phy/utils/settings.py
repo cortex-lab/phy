@@ -40,9 +40,17 @@ class BaseSettings(object):
         """List of settings keys."""
         return self._store.keys()
 
+    def _update(self, d):
+        for k, v in d.items():
+            if isinstance(v, dict) and k in self._store:
+                # Update instead of overwrite settings dictionaries.
+                self._store[k].update(v)
+            else:
+                self._store[k] = v
+
     def _try_load_pickle(self, path):
         try:
-            self._store.update(_load_pickle(path))
+            self._update(_load_pickle(path))
             debug("Loaded internal settings file "
                   "from `{}`.".format(path))
             return True
@@ -52,20 +60,22 @@ class BaseSettings(object):
 
     def _try_load_python(self, path):
         try:
-            self._store.update(_read_python(path))
+            self._update(_read_python(path))
             debug("Loaded internal settings file "
                   "from `{}`.".format(path))
             return True
         except Exception as e:
             warn("Unable to read the settings file "
                  "'{0}':\n{1}".format(path, str(e)))
-            return {}
 
     def load(self, path):
         """Load a settings Python file."""
         path = op.realpath(path)
         if not op.exists(path):
-            debug("Skipping non-existing settings file: {}.".format(path))
+            debug("Creating empty settings file: {}.".format(path))
+            with open(path, 'a') as f:
+                f.write("# Settings file. Refer to phy's documentation "
+                        "for more details.\n")
             return
         # Try pickle.
         if not op.splitext(path)[1]:

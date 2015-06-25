@@ -180,8 +180,8 @@ class File(object):
                       attr_name, path))
                 return
         else:
-            raise KeyError("The attribute '{0:s}'".format(attr_name) +
-                           " doesn't exist.")
+            raise KeyError("The attribute '{0:s}' ".format(attr_name) +
+                           "at `{}` doesn't exist.".format(path))
 
     def write_attr(self, path, attr_name, value):
         """Write an attribute of an HDF5 group."""
@@ -200,6 +200,8 @@ class File(object):
             self._h5py_file.create_group(path)
         try:
             self._h5py_file[path].attrs[attr_name] = value
+            # debug("Write `{}={}` at `{}`.".format(attr_name,
+            #                                       str(value), path))
         except TypeError:
             warn("Unable to write attribute `{}={}` at `{}`.".format(
                  attr_name, value, path))

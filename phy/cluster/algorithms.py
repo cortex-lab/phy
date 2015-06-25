@@ -36,7 +36,7 @@ def _keep_spikes(samples, bounds):
 
 def _split_spikes(groups, idx=None, **arrs):
     """Split spike data according to the channel group."""
-    dtypes = {'spike_samples': np.uint64,
+    dtypes = {'spike_samples': np.float64,
               'waveforms': np.float32,
               'masks': np.float32,
               }
@@ -250,9 +250,9 @@ class SpikeDetekt(EventEmitter):
         assert groups.shape == (n_spikes,)
         assert groups.dtype == np.int32
 
-        samples = np.array(samples, dtype=np.uint64)
+        samples = np.array(samples, dtype=np.float64)
         assert samples.shape == (n_spikes,)
-        assert samples.dtype == np.uint64
+        assert samples.dtype == np.float64
 
         # These are lists of arrays of various shapes (because of various
         # groups).
@@ -354,7 +354,7 @@ class SpikeDetekt(EventEmitter):
                     'masks': (n_spikes, n_channels_group),
                     'features': (n_spikes, n_channels_group, self._n_features),
                 }[name]
-                dtype = np.uint64 if name == 'spike_samples' else np.float32
+                dtype = np.float64 if name == 'spike_samples' else np.float32
                 w = self._load(name, dtype,
                                shape=shape,
                                key=key,

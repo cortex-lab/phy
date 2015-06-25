@@ -378,7 +378,9 @@ def regular_subset(spikes=None, n_spikes_max=None):
     step = int(np.clip(1. / n_spikes_max * len(spikes),
                        1, len(spikes)))
     # Random shift.
-    start = np.random.randint(low=0, high=step)
+    # start = np.random.randint(low=0, high=step)
+    # Note: randomly-changing selections are confusing...
+    start = 0
     my_spikes = spikes[start::step][:n_spikes_max]
     assert len(my_spikes) <= len(spikes)
     assert len(my_spikes) <= n_spikes_max

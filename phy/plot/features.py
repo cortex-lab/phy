@@ -30,6 +30,20 @@ from ..utils._color import _selected_clusters_colors
 # Features visual
 #------------------------------------------------------------------------------
 
+def _get_feature_dim(dim, features=None, extra_features=None):
+    if isinstance(dim, (tuple, list)):
+        channel, feature = dim
+        return features[:, channel, feature]
+    elif isinstance(dim, string_types) and dim in extra_features:
+        x, m, M = extra_features[dim]
+        m, M = (float(m), float(M))
+        x = _as_array(x, np.float32)
+        # Normalize extra feature.
+        d = float(max(1., M - m))
+        x = (-1. + 2 * (x - m) / d) * .8
+        return x
+
+
 class BaseFeatureVisual(BaseSpikeVisual):
     """Display a grid of multidimensional features."""
 
@@ -50,7 +64,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
 
         _enable_depth_mask()
 
-    def add_extra_feature(self, name, array):
+    def add_extra_feature(self, name, array, array_min, array_max):
         assert isinstance(array, np.ndarray)
         assert array.ndim == 1
         if self.n_spikes:
@@ -62,7 +76,7 @@ class BaseFeatureVisual(BaseSpikeVisual):
                        "{}.".format(len(array)))
                 raise ValueError(msg)
 
-        self._extra_features[name] = array
+        self._extra_features[name] = (array, array_min, array_max)
 
     @property
     def extra_features(self):
@@ -108,28 +122,15 @@ class BaseFeatureVisual(BaseSpikeVisual):
             raise ValueError('{0} should be (channel, feature) '.format(dim) +
                              'or one of the extra features.')
 
-    def _get_feature_dim(self, data, dim):
-        if isinstance(dim, (tuple, list)):
-            channel, feature = dim
-            return data[:, channel, feature]
-        elif isinstance(dim, string_types) and dim in self._extra_features:
-            x = self._extra_features[dim]
-            x = _as_array(x, np.float32)
-            # Normalize extra feature.
-            m, M = float(x.min()), float(x.max())
-            d = float(max(1., M - m))
-            x = (-1. + 2 * (x - m) / d) * .8
-            return x
-
-    def project(self, data, box):
+    def project(self, box, features=None, extra_features=None):
         """Project data to a subplot's two-dimensional subspace.
 
         Parameters
         ----------
-        data : array
-            The shape is `(n_points, n_channels, n_features)`.
         box : 2-tuple
             The `(row, col)` of the box.
+        features : array
+        extra_features : dict
 
         Notes
         -----
@@ -142,9 +143,14 @@ class BaseFeatureVisual(BaseSpikeVisual):
         dim_x = self._x_dim[i, j]
         dim_y = self._y_dim[i, j]
 
-        fet_x = self._get_feature_dim(self._features, dim_x)
-        fet_y = self._get_feature_dim(self._features, dim_y)
-
+        fet_x = _get_feature_dim(dim_x,
+                                 features=features,
+                                 extra_features=extra_features,
+                                 )
+        fet_y = _get_feature_dim(dim_y,
+                                 features=features,
+                                 extra_features=extra_features,
+                                 )
         return np.c_[fet_x, fet_y]
 
     @property
@@ -220,7 +226,10 @@ class BaseFeatureVisual(BaseSpikeVisual):
 
         for i in range(self.n_rows):
             for j in range(self.n_rows):
-                pos = self.project(self._features, (i, j))
+                pos = self.project((i, j),
+                                   features=self._features,
+                                   extra_features=self._extra_features,
+                                   )
                 positions.append(pos)
                 index = self.n_rows * i + j
                 boxes.append(index * np.ones(self.n_spikes, dtype=np.float32))
@@ -284,8 +293,10 @@ class FeatureVisual(BaseFeatureVisual):
 
         for i in range(self.n_rows):
             for j in range(self.n_rows):
-
-                pos = self.project(self._features, (i, j))
+                pos = self.project((i, j),
+                                   features=self._features,
+                                   extra_features=self._extra_features,
+                                   )
                 positions.append(pos)
 
                 # The mask depends on both the `x` and `y` coordinates.
@@ -529,18 +540,22 @@ class FeatureView(BaseSpikeCanvas):
         # Dimensions.
         self.init_grid(n_rows)
         if not extra_features:
-            extra_features = {'time': np.linspace(0., 1., n_spikes)}
-        for name, array in (extra_features or {}).items():
-            self.add_extra_feature(name, array)
+            extra_features = {'time': (np.linspace(0., 1., n_spikes), 0., 1.)}
+        for name, (array, m, M) in (extra_features or {}).items():
+            self.add_extra_feature(name, array, m, M)
         self.set_dimensions('x', x_dimensions or {(0, 0): 'time'})
         self.set_dimensions('y', y_dimensions or {(0, 0): (0, 0)})
 
         self.update()
 
-    def add_extra_feature(self, name, array):
-        self.visual.add_extra_feature(name, array)
-        if name not in self.background.extra_features:
-            self.background.add_extra_feature(name, array)
+    def add_extra_feature(self, name, array, array_min, array_max,
+                          array_bg=None):
+        self.visual.add_extra_feature(name, array, array_min, array_max)
+        # Note: the background array has a different number of spikes.
+        if array_bg is None:
+            array_bg = array
+        self.background.add_extra_feature(name, array_bg,
+                                          array_min, array_max)
 
     @property
     def marker_size(self):

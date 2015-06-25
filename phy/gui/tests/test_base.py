@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-1
+from __future__ import print_function
 
 """Tests of base classes."""
 
@@ -16,6 +17,7 @@ from ..base import (BaseViewModel,
                     BaseGUI,
                     )
 from ..qt import (QtGui,
+                  Qt,
                   wrap_qt,
                   _set_qt_widget_position_size,
                   )
@@ -155,11 +157,19 @@ def test_base_gui():
 
     shortcuts = {'test': 't'}
 
+    _message = []
+
+    def _snippet(gui, args):
+        _message.append(args)
+
+    snippets = {'hello': _snippet}
+
     class TestGUI(BaseGUI):
         def __init__(self):
             super(TestGUI, self).__init__(vm_classes=vm_classes,
                                           config=config,
                                           shortcuts=shortcuts,
+                                          snippets=snippets,
                                           )
 
         def _create_actions(self):
@@ -173,6 +183,26 @@ def test_base_gui():
     gui.show()
     yield
 
+    # Test snippet mode.
+    gui.enable_snippet_mode()
+
+    def _keystroke(char=None, code=None):
+        """Simulate a keystroke."""
+        if char == ' ':
+            code = Qt.Key_Space
+        elif char == ':':
+            code = Qt.Key_Colon
+        elif code is None:
+            code = getattr(Qt, 'Key_{}'.format(char.upper()))
+        gui._on_keystroke(code, char or '')
+
+    for c in ':hello world':
+        _keystroke(c)
+    assert gui.status_message == ':hello world' + gui._snippet_message_cursor
+    _keystroke(code=Qt.Key_Return)
+    assert _message == ['world']
+
+    # Test views.
     v2 = gui.get_views('v2')
     assert len(v2) == 2
     v2[1].close()

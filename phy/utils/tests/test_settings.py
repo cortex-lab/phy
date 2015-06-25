@@ -36,7 +36,7 @@ def test_user_settings():
         path = op.join(tmpdir, 'test.py')
 
         # Create a simple settings file.
-        contents = '''a = 4\nb = 5\n'''
+        contents = '''a = 4\nb = 5\nd = {'k1': 2, 'k2': 3}\n'''
         with open(path, 'w') as f:
             f.write(contents)
 
@@ -51,6 +51,12 @@ def test_user_settings():
         assert s['a'] == 4
         assert s['b'] == 5
         assert s['c'] == 6
+        assert s['d'] == {'k1': 2, 'k2': 3}
+
+        s = BaseSettings()
+        s['d'] = {'k2': 30, 'k3': 40}
+        s.load(path=path)
+        assert s['d'] == {'k1': 2, 'k2': 3, 'k3': 40}
 
 
 def test_internal_settings():

@@ -137,7 +137,8 @@ cluster_manual_shortcuts = {
 
 
 cluster_manual_config = [
-    ('wizard', {'position': 'right'}),
+    # The wizard panel is less useful now that there's the stats panel.
+    # ('wizard', {'position': 'right'}),
     ('stats', {'position': 'right'}),
     ('features_grid', {'position': 'left'}),
     ('features', {'position': 'left'}),
@@ -145,6 +146,24 @@ cluster_manual_config = [
     ('waveforms', {'position': 'right'}),
     ('traces', {'position': 'right'}),
 ]
+
+
+def _select_clusters(gui, args):
+    # Range: '5-12'
+    if '-' in args:
+        m, M = map(int, args.split('-'))
+        # The second one should be included.
+        M += 1
+        clusters = list(range(m, M))
+    # List of ids: '5 6 9 12'
+    else:
+        clusters = list(map(int, args.split(' ')))
+    gui.select(clusters)
+
+
+cluster_manual_snippets = {
+    'c': _select_clusters,
+}
 
 
 def on_open(session):

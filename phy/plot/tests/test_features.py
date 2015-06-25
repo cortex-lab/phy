@@ -39,12 +39,17 @@ def _test_features(n_spikes=None, n_clusters=None):
     c = FeatureView(keys='interactive')
     c.init_grid(2)
     c.visual.features = features
-    c.background.features = features * 2.
+    c.background.features = features[::2] * 2.
     # Useful to test depth.
     # masks[n_spikes//2:, ...] = 0
     c.visual.masks = masks
-    c.add_extra_feature('time', spike_samples)
-    c.add_extra_feature('test', np.sin(np.linspace(-10., 10., n_spikes)))
+    M = spike_samples.max() if len(spike_samples) else 1
+    c.add_extra_feature('time', spike_samples, 0, M,
+                        array_bg=spike_samples[::2])
+    c.add_extra_feature('test',
+                        np.sin(np.linspace(-10., 10., n_spikes)),
+                        -1., 1.,
+                        array_bg=spike_samples[::2])
     c.set_dimensions('x', [['time', (1, 0)],
                            [(2, 1), 'time']])
     c.set_dimensions('y', [[(0, 0), (1, 1)],
