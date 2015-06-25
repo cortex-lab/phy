@@ -13,7 +13,7 @@ from functools import reduce
 
 import numpy as np
 
-from ..ext.six import integer_types
+from ..ext.six import integer_types, string_types
 from .logging import warn
 from ._types import _as_tuple, _as_array
 
@@ -253,23 +253,50 @@ def _prod(l):
     return reduce(mul, l, 1)
 
 
-def _load_ndarray(f, dtype=None, shape=None, memmap=True):
+class LazyMemmap(object):
+    """A memmapped array that only opens the file handle when required."""
+    def __init__(self, path, dtype=None, shape=None, mode=None):
+        assert isinstance(path, string_types)
+        self._path = path
+        self._f = None
+        self.mode = mode
+        self.dtype = dtype
+        self.shape = shape
+
+    def __getitem__(self, item):
+        if self._f is None:
+            self._f = np.memmap(self._path,
+                                dtype=self.dtype,
+                                shape=self.shape,
+                                mode='r')
+        return self._f[item]
+
+
+def _memmap(f_or_path, dtype=None, shape=None, lazy=True):
+    if not lazy:
+        return np.memmap(f_or_path, dtype=dtype, shape=shape, mode='r')
+    else:
+        return LazyMemmap(f_or_path, dtype=dtype, shape=shape, mode='r')
+
+
+def _load_ndarray(f_or_path, dtype=None, shape=None, memmap=True, lazy=True):
     if dtype is None:
-        return f
+        return f_or_path
     else:
         if not memmap:
-            arr = np.fromfile(f, dtype=dtype)
+            arr = np.fromfile(f_or_path, dtype=dtype)
             if shape is not None:
                 arr = arr.reshape(shape)
         else:
-            # memmap doesn't accept -1 in shapes.
+            # memmap doesn't accept -1 in shapes, but we can compute
+            # the missing dimension from the file size.
             if shape and shape[0] == -1:
-                n_bytes = os.fstat(f.fileno()).st_size
+                n_bytes = os.fstat(f_or_path.fileno()).st_size
                 n_items = n_bytes // np.dtype(dtype).itemsize
                 n_rows = n_items // _prod(shape[1:])
                 shape = (n_rows,) + shape[1:]
                 assert _prod(shape) == n_items
-            arr = np.memmap(f, dtype=dtype, shape=shape, mode='r')
+            arr = _memmap(f_or_path, dtype=dtype, shape=shape)
         return arr
 
 

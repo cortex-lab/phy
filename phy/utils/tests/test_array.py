@@ -7,9 +7,10 @@
 #------------------------------------------------------------------------------
 
 import os.path as op
+from itertools import product
 
 import numpy as np
-from pytest import raises
+from pytest import raises, mark
 
 from .._types import _as_array, _as_tuple
 from ..array import (_unique,
@@ -307,7 +308,8 @@ def test_in_polygon():
 # Test I/O functions
 #------------------------------------------------------------------------------
 
-def _test_load_ndarray(memmap=None):
+@mark.parametrize('memmap,lazy', product([False, True], [False, True]))
+def test_load_ndarray(memmap, lazy):
     n, m = 10000, 100
     dtype = np.float32
     arr = np.random.randn(n, m).astype(dtype)
@@ -315,18 +317,13 @@ def _test_load_ndarray(memmap=None):
         path = op.join(tmpdir, 'test')
         with open(path, 'wb') as f:
             arr.tofile(f)
-        with open(path, 'rb') as f:
-            arr_m = _load_ndarray(f, dtype=dtype,
-                                  shape=(n, m), memmap=memmap)
-        ae(arr, arr_m)
-
-
-def test_load_ndarray_nomemmap():
-    _test_load_ndarray(False)
-
-
-def test_load_ndarray_memmap():
-    _test_load_ndarray(True)
+        arr_m = _load_ndarray(path,
+                              dtype=dtype,
+                              shape=(n, m),
+                              memmap=memmap,
+                              lazy=lazy,
+                              )
+        ae(arr, arr_m[...])
 
 
 #------------------------------------------------------------------------------
