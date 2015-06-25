@@ -7,14 +7,11 @@
 #------------------------------------------------------------------------------
 
 from subprocess import call
-import time
 
-import numpy as np
 from pytest import mark
 
 from ...utils.tempdir import TemporaryDirectory
 from ...io.kwik.mock import create_mock_kwik
-from ...cluster.session import Session
 from ..phy_script import ParserCreator
 
 
