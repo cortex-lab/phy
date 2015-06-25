@@ -137,6 +137,14 @@ class ParserCreator(object):
                        )
         p.set_defaults(func=traces)
 
+    def create_detect(self):
+        desc = 'launch the spike detection algorithm on a `.prm` file'
+        p = self._add_sub_parser('detect-spikes', desc)
+        p.add_argument('file', help='path to a `.prm` file')
+        p.add_argument('kwik-path', help='filename of the `.kwik` file '
+                       'to create (by default, `"experiment_name".kwik`)')
+        p.set_defaults(func=detect_spikes)
+
     def create_manual(self):
         desc = 'launch the manual clustering GUI on a `.kwik` file'
         p = self._add_sub_parser('cluster-manual', desc)
@@ -157,12 +165,6 @@ class ParserCreator(object):
                        help='initial number of clusters',
                        )
         p.set_defaults(func=cluster_auto)
-
-    def create_detect(self):
-        desc = 'launch the spike detection algorithm on a `.prm` file'
-        p = self._add_sub_parser('detect-spikes', desc)
-        p.add_argument('file', help='path to a `.prm` file')
-        p.set_defaults(func=detect_spikes)
 
     def create_notebook(self):
         # TODO
@@ -242,7 +244,12 @@ def cluster_auto(args):
 
 
 def detect_spikes(args):
-    session = _create_session(args, use_store=False)
+    from phy.io import create_kwik
+
+    assert args.file.endswith('.prm')
+    kwik_path = args.kwik_path
+    kwik_path = create_kwik(args.file, kwik_path=kwik_path)
+    session = _create_session(kwik_path, use_store=False)
     return 'session.detect()', dict(session=session)
 
 
