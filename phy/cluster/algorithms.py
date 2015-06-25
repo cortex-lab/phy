@@ -626,9 +626,6 @@ class SpikeDetekt(EventEmitter):
         spike_counts = SpikeCounts(chunk_counts)
         info("{} waveforms extracted and saved.".format(spike_counts()))
 
-        print(chunk_counts)
-        print(spike_counts.counts)
-
         # Compute the PCs.
         info("Performing PCA...")
         pcs = {}

@@ -264,7 +264,7 @@ def test_spike_detect_real_data(spikedetekt):
 
         # Plot...
         from phy.plot.traces import plot_traces
-        c = plot_traces(traces,
+        c = plot_traces(traces[:30000, :],
                         spike_samples=spike_samples,
                         masks=masks,
                         n_samples_per_spike=n_samples_w,
