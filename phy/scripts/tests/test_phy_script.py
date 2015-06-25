@@ -35,40 +35,27 @@ def _call(cmd):
         raise RuntimeError()
 
 
-def _parse(args):
-    return _parse_args(args)[0]
-
-
 def test_script_parser():
 
     p = ParserCreator()
 
     kwik_path = 'test'
 
-    args, _ = p.parse(['-i', '--debug', 'cluster-manual', kwik_path])
+    args = p.parse(['-i', '--debug', 'cluster-manual', kwik_path])
     assert args.command == 'cluster-manual'
     assert args.ipython
     assert args.debug
     assert not args.profiler
     assert not args.line_profiler
 
-    args, _ = p.parse(['-lp', 'cluster-auto', kwik_path])
+    args = p.parse(['-lp', 'cluster-auto', kwik_path,
+                    '--num_starting_clusters', '10'])
     assert args.command == 'cluster-auto'
     assert not args.ipython
     assert not args.debug
     assert not args.profiler
     assert args.line_profiler
-
-    # Test extra arguments.
-    args, kwargs = p.parse(['cluster-auto',
-                            kwik_path,
-                            '--aa=foo',
-                            '--b-b=1.5',
-                            '--c_c=2',
-                            ])
-    assert kwargs['aa'] == 'foo'
-    assert kwargs['b_b'] == 1.5
-    assert kwargs['c_c'] == 2
+    assert args.num_starting_clusters == 10
 
 
 @mark.long

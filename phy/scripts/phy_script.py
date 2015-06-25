@@ -14,7 +14,6 @@ Usage:
 
 import sys
 import os.path as op
-import re
 import argparse
 from textwrap import dedent
 
@@ -35,25 +34,6 @@ class Parser(argparse.ArgumentParser):
         sys.stderr.write(message + '\n\n')
         self.print_help()
         sys.exit(2)
-
-
-def _parse_extra(extra):
-    kwargs = {}
-    reg = re.compile(r'^--([^\=]+)=([^\=]+)$')
-    for e in extra:
-        r = reg.match(e)
-        if r:
-            key, value = r.group(1), r.group(2)
-            key = key.replace('-', '_')
-            try:
-                value = int(value)
-            except ValueError:
-                try:
-                    value = float(value)
-                except ValueError:
-                    pass
-            kwargs[key] = value
-    return kwargs
 
 
 _examples = dedent("""
@@ -124,6 +104,7 @@ class ParserCreator(object):
     def create_describe(self):
         p = self._subparsers.add_parser('describe', help='describe a dataset')
         p.add_argument('file', help='path to a `.kwik` file')
+        p.set_defaults(func=describe)
 
     def create_manual(self):
         p = self._subparsers.add_parser('cluster-manual',
@@ -134,115 +115,90 @@ class ParserCreator(object):
                        help='name of the clustering to use')
         p.add_argument('--cluster_ids', '-c',
                        help='list of clusters to select initially')
+        p.set_defaults(func=cluster_manual)
 
     def create_auto(self):
         p = self._subparsers.add_parser('cluster-auto',
                                         help='launch the automatic clustering '
                                              'algorithm on a `.kwik` file')
         p.add_argument('file', help='path to a `.kwik` file')
+        p.add_argument('--num_starting_clusters', type=int,
+                       help='initial number of clusters',
+                       )
+        p.set_defaults(func=cluster_auto)
 
     def create_detect(self):
         p = self._subparsers.add_parser('detect-spikes',
                                         help='launch the spike detection '
                                              'algorithm on a `.prm` file')
         p.add_argument('file', help='path to a `.prm` file')
+        p.set_defaults(func=detect_spikes)
 
     def create_notebook(self):
         # TODO
         pass
 
     def parse(self, args):
-        parse, extra = self._parser.parse_known_args(args)
-        kwargs = _parse_extra(extra)
-        return parse, kwargs
+        return self._parser.parse_args(args)
+
+
+#------------------------------------------------------------------------------
+# Subcommand functions
+#------------------------------------------------------------------------------
+
+def _create_session(args, **kwargs):
+    kwik_path = args.file
+    from phy.cluster import Session
+
+    if not op.exists(kwik_path):
+        print("The file `{}` doesn't exist.".format(kwik_path))
+        return
+
+    session = Session(kwik_path, **kwargs)
+    return session
+
+
+def describe(args):
+    session = _create_session(args, clustering=args.clustering)
+    return 'session.model.describe()', dict(session=session)
+
+
+def cluster_manual(args):
+    session = _create_session(args, clustering=args.clustering)
+    cluster_ids = list(map(int, args.cluster_ids.split(',')))
+
+    session = _create_session(args)
+    session.model.describe()
+
+    gui = session.show_gui(cluster_ids=cluster_ids, show=False)
+    print("\nPress `ctrl+h` to see the list of keyboard shortcuts.\n")
+    return 'gui.show()', dict(session=session, gui=gui, requires_qt=True)
+
+
+def cluster_auto(args):
+    session = _create_session(args, use_store=False)
+    ns = dict(session=session,
+              clustering=args.clusterings,
+              n_s_clusters=args.num_starting_clusters,
+              )
+    cmd = ('session.cluster(clustering=clustering, '
+           'num_starting_clusters=n_s_clusters)')
+    return (cmd, ns)
+
+
+def detect_spikes(args):
+    session = _create_session(args, use_store=False)
+    return 'session.detect()', dict(session=session)
 
 
 #------------------------------------------------------------------------------
 # Main functions
 #------------------------------------------------------------------------------
 
-def describe(kwik_path, clustering=None):
-    from phy.io.kwik import KwikModel
-
-    if not op.exists(kwik_path):
-        print("The file `{}` doesn't exist.".format(kwik_path))
-        return
-
-    model = KwikModel(kwik_path, clustering=clustering)
-    model.describe()
-    model.close()
-
-
-def cluster_manual(kwik_path, clustering=None, interactive=False,
-                   cluster_ids=None):
-    import phy
-    from phy.cluster import Session
-    from phy.gui import start_qt_app, run_qt_app
-
-    if not op.exists(kwik_path):
-        print("The file `{}` doesn't exist.".format(kwik_path))
-        return 1
-
-    print("\nLoading {}...".format(kwik_path))
-    session = Session(kwik_path,
-                      clustering=clustering,
-                      )
-    print("Data successfully loaded!\n")
-    session.model.describe()
-
-    start_qt_app()
-    gui = session.show_gui(cluster_ids=cluster_ids, show=False)
-
-    print("\nPress `ctrl+h` to see the list of keyboard shortcuts.\n")
-
-    # Interactive mode with IPython.
-    if interactive:
-        print("\nStarting IPython...")
-        from IPython import start_ipython
-
-        # Namespace.
-        ns = {'phy': phy,
-              'session': session,
-              'model': session.model,
-              'kwik_path': kwik_path,
-              'gui': gui,
-              }
-        start_ipython(["--gui=qt", "-i", "-c='gui.show()'"], user_ns=ns)
-    else:
-        gui.show()
-        run_qt_app()
-
-
-def cluster_auto(kwik_path, clustering=None, interactive=False, **kwargs):
-    from phy.cluster import Session
-
-    if not op.exists(kwik_path):
-        print("The file `{}` doesn't exist.".format(kwik_path))
-        return
-
-    session = Session(kwik_path, use_store=False)
-    session.cluster(clustering=clustering, **kwargs)
-    session.save()
-    session.close()
-
-
-def detect(kwik_path, clustering=None, interactive=False, **kwargs):
-    from phy.cluster import Session
-
-    if not op.exists(kwik_path):
-        print("The file `{}` doesn't exist.".format(kwik_path))
-        return
-
-    session = Session(kwik_path, use_store=False)
-    session.cluster(clustering=clustering, **kwargs)
-    session.save()
-    session.close()
-
-
 def main():
 
     p = ParserCreator()
-    args, kwargs = p.parse(sys.argv[1:])
+    args = p.parse(sys.argv[1:])
 
     if args.profiler or args.line_profiler:
         from phy.utils.testing import _enable_profiler, _profile
@@ -254,26 +210,22 @@ def main():
     if args.debug:
         phy.debug()
 
-    if args.cluster_ids:
-        cluster_ids = list(map(int, args.cluster_ids.split(',')))
-    else:
-        cluster_ids = None
+    cmd, ns = args.func(args)
+    ns.update(phy=phy, model=ns['session'].model, path=args.file)
 
-    if args.command == 'cluster-manual':
-        cmd = ('cluster_manual(args.file, clustering=args.clustering, '
-               'interactive=args.ipython, cluster_ids=cluster_ids)')
-    elif args.command == 'cluster-auto':
-        cmd = ('cluster_auto(args.file, clustering=args.clustering, '
-               'interactive=args.ipython, **kwargs)')
-    elif args.command == 'describe':
-        cmd = 'describe(args.file)'
+    # Interactive mode with IPython.
+    if args.interactive:
+        print("\nStarting IPython...")
+        from IPython import start_ipython
+        args_ipy = ["-i", "-c='{}'".format(cmd)]
+        if ns.pop('requires_qt', False):
+            args_ipy += ["--gui=qt"]
+        start_ipython(args_ipy, user_ns=ns)
     else:
-        raise NotImplementedError()
-
-    if not prof:
-        exec_(cmd, globals(), locals())
-    else:
-        _profile(prof, cmd, globals(), locals())
+        if not prof:
+            exec_(cmd, {}, ns)
+        else:
+            _profile(prof, cmd, {}, ns)
 
 
 #------------------------------------------------------------------------------
