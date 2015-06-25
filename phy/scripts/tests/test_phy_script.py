@@ -45,8 +45,7 @@ def test_script_parser():
     assert not args.profiler
     assert not args.line_profiler
 
-    args = p.parse(['cluster-auto', kwik_path,
-                    '--num-starting-clusters', '10', '-lp'])
+    args = p.parse(['cluster-auto', kwik_path, '10', '-lp'])
     assert args.command == 'cluster-auto'
     assert not args.ipython
     assert not args.debug
@@ -74,8 +73,7 @@ def test_script_run():
         _call('phy -h')
         _call('phy describe ' + kwik_path)
 
-        cmd = ('phy cluster-auto {} --num-starting-clusters=10 '
-               '--clustering=original')
+        cmd = ('phy cluster-auto {} 10 --clustering=original')
         _call(cmd.format(kwik_path))
 
         _call('phy describe {} --clustering=original'.format(kwik_path))

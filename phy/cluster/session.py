@@ -11,6 +11,8 @@ from __future__ import print_function
 import os.path as op
 import shutil
 
+import numpy as np
+
 from ..utils.logging import info, warn, FileLogger, register
 from ..utils.settings import _ensure_dir_exists
 from ..io.base import BaseSession
@@ -344,7 +346,7 @@ class Session(BaseSession):
 
         """
         if clustering is None:
-            clustering = 'original'
+            clustering = 'main'
         # Make sure the clustering name does not exist already.
         if clustering in self.model.clusterings:
             old = clustering
@@ -362,10 +364,17 @@ class Session(BaseSession):
         # Run KK.
         sc = kk.cluster(model=self.model, spike_ids=spike_ids)
         # Save the results in the Kwik file.
-        spike_clusters = self.model.spike_clusters.copy()
+        if self.model.spike_clusters is None:
+            spike_clusters = np.zeros(len(sc), dtype=np.int32)
+        else:
+            spike_clusters = self.model.spike_clusters.copy()
         spike_clusters[spike_ids] = sc
         # Add a new clustering and switch to it.
         self.model.add_clustering(clustering, spike_clusters)
+        # Copy the main clustering to original (only if this is the very
+        # first run of the clustering algorithm).
+        if clustering == 'main':
+            self.model.copy_clustering('main', 'original')
         self.change_clustering(clustering)
         # Set the new clustering metadata.
         params = kk.params

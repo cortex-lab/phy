@@ -163,11 +163,12 @@ class ParserCreator(object):
         desc = 'launch the automatic clustering algorithm on a `.kwik` file'
         p = self._add_sub_parser('cluster-auto', desc)
         p.add_argument('file', help='path to a `.kwik` file')
-        p.add_argument('--clustering', default='main',
-                       help='name of the clustering to use')
-        p.add_argument('--num-starting-clusters', type=int,
+        p.add_argument('num_starting_clusters', type=int,
+                       # dest='num_starting_clusters',
                        help='initial number of clusters',
                        )
+        p.add_argument('--clustering', default='main',
+                       help='name of the clustering to use')
         p.set_defaults(func=cluster_auto)
 
     def create_notebook(self):
@@ -182,21 +183,28 @@ class ParserCreator(object):
 # Subcommand functions
 #------------------------------------------------------------------------------
 
-def _create_session(args, **kwargs):
+def _get_kwik_path(args):
     kwik_path = args.file
-    from phy.cluster import Session
 
     if not op.exists(kwik_path):
         print("The file `{}` doesn't exist.".format(kwik_path))
         return
 
+    return kwik_path
+
+
+def _create_session(args, **kwargs):
+    from phy.cluster import Session
+    kwik_path = _get_kwik_path(args)
     session = Session(kwik_path, **kwargs)
     return session
 
 
 def describe(args):
-    session = _create_session(args, clustering=args.clustering)
-    return 'session.model.describe()', dict(session=session)
+    from phy.io.kwik import KwikModel
+    path = _get_kwik_path(args)
+    model = KwikModel(path, clustering=args.clustering)
+    return 'model.describe()', dict(model=model)
 
 
 def traces(args):

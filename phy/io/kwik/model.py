@@ -1083,8 +1083,11 @@ class KwikModel(BaseModel):
     def spikes_per_cluster(self):
         """Spikes per cluster from the current channel group and clustering."""
         if self._spikes_per_cluster is None:
-            self._spikes_per_cluster = \
-                _spikes_per_cluster(self.spike_ids, self._spike_clusters)
+            if self._spike_clusters is None:
+                self._spikes_per_cluster = {0: self.spike_ids}
+            else:
+                self._spikes_per_cluster = \
+                    _spikes_per_cluster(self.spike_ids, self._spike_clusters)
         return self._spikes_per_cluster
 
     def update_spikes_per_cluster(self, spc):
