@@ -138,7 +138,7 @@ class ClusterManualGUI(BaseGUI):
                     "{clustering} clustering) "
                     "- {name} - phy {version}")
         return template.format(name=name,
-                               version=phy.__version__,
+                               version=phy.__version_git__,
                                filename=filename,
                                channel_group=channel_group,
                                clustering=clustering,
