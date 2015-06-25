@@ -129,6 +129,8 @@ class ParserCreator(object):
         desc = 'show the traces of a raw data file'
         p = self._add_sub_parser('traces', desc)
         p.add_argument('file', help='path to a `.kwd` or `.dat` file')
+        p.add_argument('interval', help='interval in number '
+                       'of samples',)
         p.add_argument('--n-channels', '-n',
                        help='number of channels in the recording '
                        '(only required when using a flat binary file)')
@@ -216,8 +218,10 @@ def traces(args):
         dtype = np.dtype(args.dtype)
         traces = read_dat(path, dtype=dtype, n_channels=n_channels)
 
+    start, end = map(int, args.interval.split('-'))
+
     c = TraceView(keys='interactive')
-    c.visual.traces = traces
+    c.visual.traces = .01 * traces[start:end, ...]
     c.show()
     run()
 
