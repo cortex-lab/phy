@@ -17,6 +17,7 @@ from ...utils.datasets import _download_test_data
 from ...utils.logging import set_level
 from ...utils.tempdir import TemporaryDirectory
 from ...utils.settings import Settings
+from ...electrode.mea import load_probe
 from ...io.kwik import KwikModel
 from ...io.kwik.mock import create_mock_kwik
 from ...io.mock import artificial_traces
@@ -213,29 +214,27 @@ def test_spike_detect_real_data(spikedetekt):
         sample_rate = 20000
         params = settings['spikedetekt_params'](sample_rate)
         params['sample_rate'] = sample_rate
-        params['probe_adjacency_list'] = {0: [1, 2, 3],
-                                          1: [0, 2, 3],
-                                          2: [0, 1, 3],
-                                          3: [0, 1, 2]}
-        params['probe_channels'] = {0: [0, 1, 2, 3]}
+        n_channels = 32
+        probe = load_probe('1x32_buzsaki')
 
         # Load the traces.
-        path = _download_test_data('test.dat')
-        traces = np.fromfile(path, dtype=np.int16).reshape((20000, 4))
+        path = _download_test_data('test-32ch-10s.dat')
+        traces = np.fromfile(path, dtype=np.int16).reshape((200000, 32))
 
         # Run the detection.
-        sd = SpikeDetekt(tempdir=tempdir, **params)
+        sd = SpikeDetekt(tempdir=tempdir, probe=probe, **params)
         out = sd.run_serial(traces)
 
-        n_spikes = 49
-        assert out.n_spikes_total == n_spikes
+        # n_spikes = 49
+        # assert out.n_spikes_total == n_spikes
+        n_spikes = out.n_spikes_total
         spike_samples = out.spike_samples[0][0][...]
         assert spike_samples.shape == (n_spikes,)
 
         masks = out.masks[0][0][...]
         assert masks.shape == (n_spikes, n_channels)
 
-        # Plot...
+        # # Plot...
         # from phy.gui import qt_app
         # from phy.plot.traces import plot_traces
         # with qt_app():

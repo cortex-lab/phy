@@ -314,7 +314,6 @@ class Session(BaseSession):
                                           masks=out.masks[group],
                                           features=out.features[group],
                                           )
-        self.save()
         self.emit('open')
 
         if out.groups:

@@ -18,7 +18,7 @@ from ..utils.array import (PartialArray, get_excerpts,
 from ..utils._types import Bunch
 from ..utils.event import EventEmitter
 from ..utils.logging import debug, info
-from ..electrode.mea import _probe_all_channels, _probe_adjacency_list
+from ..electrode.mea import _channels_per_group, _probe_adjacency_list
 from ..io.kwik.sparse_kk2 import sparsify_features_masks
 from ..traces import (Filter, Thresholder, compute_threshold,
                       FloodFillDetector, WaveformExtractor, PCA,
@@ -101,7 +101,7 @@ class SpikeDetekt(EventEmitter):
         self._tempdir = tempdir
         # Load a probe.
         if probe is not None:
-            kwargs['probe_channels'] = _probe_all_channels(probe)
+            kwargs['probe_channels'] = _channels_per_group(probe)
             kwargs['probe_adjacency_list'] = _probe_adjacency_list(probe)
         self._kwargs = kwargs
         self._n_channels_per_group = {
