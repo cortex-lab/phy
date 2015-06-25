@@ -13,6 +13,7 @@ import numpy as np
 from ..utils.array import _unique, _spikes_in_clusters, _as_array
 from ..utils.selector import Selector
 from ..utils._misc import _show_shortcuts
+from ..utils._types import _is_integer
 from ..utils._color import _selected_clusters_colors
 from ..utils import _as_list
 from ..stats.ccg import correlograms, _symmetrize_correlograms
@@ -273,6 +274,10 @@ class StatsViewModel(HTMLClusterViewModel):
             html += '<td>{name}</td>'.format(name=name)
             for i, cluster in enumerate(cluster_ids):
                 value = getattr(self.store, name)(cluster)
+                if _is_integer(value):
+                    value = '{:d}'.format(value)
+                else:
+                    value = '{:.3f}'.format(value)
                 html += '<td class="{style}">{value}</td>'.format(
                         value=value, style='cluster_{}'.format(i))
             html += '</tr>'

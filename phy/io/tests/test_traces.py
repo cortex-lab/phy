@@ -39,7 +39,6 @@ def test_read_dat():
         ae(arr, data)
 
 
-
 def test_read_kwd():
     n_samples = 100
     n_channels = 10
