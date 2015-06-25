@@ -44,6 +44,8 @@ def _atleast_nd(arr, ndim):
 
 def _mean(arr, shape):
     if arr is not None:
+        # Make sure (possibly lazy) memmapped arrays are fully loaded.
+        arr = arr[...]
         assert isinstance(arr, np.ndarray)
         if arr.shape[0]:
             return arr.mean(axis=0)
@@ -590,7 +592,7 @@ class ClusterStatistics(FixedSizeItem):
     def load(self, cluster, name):
         """Return a cluster statistic."""
         if cluster in self.memory_store:
-            return self.memory_store.load(cluster, name)
+            return self.memory_store.load(cluster, name)[...]
         else:
             # If the item hadn't been stored, compute it here by calling
             # the corresponding method.

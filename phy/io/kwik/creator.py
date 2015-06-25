@@ -25,16 +25,8 @@ from ...ext.six.moves import zip
 #------------------------------------------------------------------------------
 
 def _write_by_chunk(dset, arrs):
+    # Note: arrs should be a generator for performance reasons.
     assert isinstance(dset, Dataset)
-    if not len(arrs):
-        return
-    first = arrs[0]
-    # Check the consistency of the first array with the dataset.
-    dtype = first.dtype
-    n = first.shape[0]
-    assert dset.dtype == dtype
-    assert dset.shape[1:] == first.shape[1:]
-
     # Start the data.
     offset = 0
     for arr in arrs:
@@ -180,10 +172,10 @@ class KwikCreator(object):
         shape = (n_spikes, n_channels * n_features, 2)
 
         def transform_f(f):
-            return f.reshape((-1, n_channels * n_features))
+            return f[...].reshape((-1, n_channels * n_features))
 
         def transform_m(m):
-            return np.repeat(m, 3, axis=1)
+            return np.repeat(m[...], 3, axis=1)
 
         assert op.exists(self.kwx_path)
         with open_h5(self.kwx_path, 'a') as f:
@@ -197,9 +189,9 @@ class KwikCreator(object):
                 fm[:, :, 1] = transform_m(masks)
             # Write the features and masks chunk by chunk.
             else:
-                # Concatenate the features/masks chunks in a generator.
-                fm_arrs = [np.dstack((transform_f(fet), transform_m(m)))
-                           for (fet, m) in zip(features, masks)]
+                # Concatenate the features/masks chunks.
+                fm_arrs = (np.dstack((transform_f(fet), transform_m(m)))
+                           for (fet, m) in zip(features, masks))
                 _write_by_chunk(fm, fm_arrs)
 
     def add_recording(self, id=None, raw_path=None,

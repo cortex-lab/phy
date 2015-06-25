@@ -295,6 +295,14 @@ def _memmap(f_or_path, dtype=None, shape=None, lazy=True):
         return LazyMemmap(f_or_path, dtype=dtype, shape=shape, mode='r')
 
 
+def _file_size(f_or_path):
+    if isinstance(f_or_path, string_types):
+        with open(f_or_path, 'rb') as f:
+            return _file_size(f)
+    else:
+        return os.fstat(f_or_path.fileno()).st_size
+
+
 def _load_ndarray(f_or_path, dtype=None, shape=None, memmap=True, lazy=True):
     if dtype is None:
         return f_or_path
@@ -307,7 +315,7 @@ def _load_ndarray(f_or_path, dtype=None, shape=None, memmap=True, lazy=True):
             # memmap doesn't accept -1 in shapes, but we can compute
             # the missing dimension from the file size.
             if shape and shape[0] == -1:
-                n_bytes = os.fstat(f_or_path.fileno()).st_size
+                n_bytes = _file_size(f_or_path)
                 n_items = n_bytes // np.dtype(dtype).itemsize
                 n_rows = n_items // _prod(shape[1:])
                 shape = (n_rows,) + shape[1:]
