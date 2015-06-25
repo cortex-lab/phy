@@ -114,10 +114,11 @@ def test_download_sample_data():
 def test_dat_file():
     data = np.random.randint(size=(20000, 4),
                              low=-100, high=100).astype(np.int16)
-    _add_mock_response(_BASE_URL['github'] + 'test/test.dat',
+    fn = 'test-4ch-1s.dat'
+    _add_mock_response(_BASE_URL['github'] + 'test/' + fn,
                        data.tostring())
     with TemporaryDirectory() as tmpdir:
-        path = _download_test_data('test.dat', tmpdir)
+        path = _download_test_data(fn, tmpdir)
         with open(path, 'rb') as f:
             arr = np.fromfile(f, dtype=np.int16).reshape((-1, 4))
         assert arr.shape == (20000, 4)
