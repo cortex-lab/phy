@@ -68,7 +68,8 @@ def _array_list(arrs):
 
 
 def _concat(arr, dtype=None):
-    return np.array([_[...] for _ in arr], dtype=dtype)
+    out = np.array([_[...] for _ in arr], dtype=dtype)
+    return out
 
 
 class SpikeCounts(object):
@@ -348,7 +349,18 @@ class SpikeDetekt(EventEmitter):
         for group in groups:
             out[group] = []
             n_channels_group = self._n_channels_per_group[group]
-            for key in keys:
+            # for key in keys:
+            for bounds in self.iter_chunks(n_samples, n_channels):
+                s_start, s_end, keep_start, keep_end = bounds
+
+                # Chunk key.
+                key = keep_start
+                assert key in keys
+
+                # The offset is added to the spike samples (relative to the
+                # start of the chunk, including the overlapping band).
+                offset = s_start
+
                 n_spikes = spike_counts(group=group, chunk=key)
                 shape = {
                     'spike_samples': (n_spikes,),
@@ -365,6 +377,10 @@ class SpikeDetekt(EventEmitter):
                                group=group,
                                lazy=True,
                                )
+                # Add the chunk offset to the spike samples, which were
+                # relative to the start of the chunk.
+                if name == 'spike_samples':
+                    w = w[...] + offset
                 out[group].append(w)
         return out
 
@@ -419,7 +435,10 @@ class SpikeDetekt(EventEmitter):
             components, chunk_f, thresholds=thresholds)
 
         # Remove spikes in the overlapping bands.
-        idx = _keep_spikes(spike_samples, (keep_start, keep_end))
+        # WANRING: add keep_start to spike_samples, because spike_samples
+        # is relative to the start of the chunk.
+        idx = _keep_spikes(spike_samples[...] + keep_start,
+                           (keep_start, keep_end))
         n_spikes_chunk = idx.sum()
         debug("In chunk {}, keep {} spikes out of {}.".format(
               key, n_spikes_chunk, len(spike_samples)))
@@ -532,9 +551,14 @@ class SpikeDetekt(EventEmitter):
         if interval_samples is not None:
             start, end = interval_samples
             traces = traces[start:end, ...]
+            n_samples = traces.shape[0]
         else:
             start, end = 0, n_samples
         assert 0 <= start < end <= n_samples
+        if start > 0:
+            raise NotImplementedError("Need to add `start` to the "
+                                      "spike samples")
+        # TODO: add start to the spike samples...
 
         # Find the weak and strong thresholds.
         info("Finding the thresholds...")
@@ -556,8 +580,8 @@ class SpikeDetekt(EventEmitter):
                                           chunk_data_keep,
                                           thresholds=thresholds,
                                           )
-            debug("Detected {} spikes in chunk {}.".format(
-                  len(components), key))
+            info("Detected {} spikes in chunk {}.".format(
+                 len(components), key))
             self.emit('detect_spikes', key=key, n_spikes=len(components))
             chunk_components[key] = components
         n_spikes_per_chunk = {key: len(val)
@@ -583,8 +607,8 @@ class SpikeDetekt(EventEmitter):
                                            n_channels=n_channels,
                                            thresholds=thresholds,
                                            )
-            debug("Extracted {} spikes from chunk {}.".format(
-                  sum(counts.values()), key))
+            info("Extracted {} spikes from chunk {}.".format(
+                 sum(counts.values()), key))
             self.emit('extract_spikes', key=key, counts=counts)
             # Reorganize the chunk waveforms subsets.
             for group, wm_group in wm.items():

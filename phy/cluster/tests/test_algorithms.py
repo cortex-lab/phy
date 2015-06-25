@@ -16,6 +16,7 @@ from ...utils._misc import _read_python
 from ...utils.datasets import _download_test_data
 from ...utils.logging import set_level
 from ...utils.tempdir import TemporaryDirectory
+from ...utils.testing import show_test
 from ...electrode.mea import load_probe
 from ...io.kwik import KwikModel
 from ...io.kwik.mock import create_mock_kwik
@@ -28,7 +29,7 @@ from ..algorithms import cluster, SpikeDetekt, _split_spikes, _concat
 #------------------------------------------------------------------------------
 
 def setup():
-    set_level('debug')
+    set_level('info')
 
 
 def teardown():
@@ -214,8 +215,10 @@ def test_spike_detect_real_data(spikedetekt):
         sample_rate = 20000
         params = settings['spikedetekt_params'](sample_rate)
         params['sample_rate'] = sample_rate
+
         n_channels = 32
         npc = params['nfeatures_per_channel']
+        n_samples_w = params['extract_s_before'] + params['extract_s_after']
         probe = load_probe('1x32_buzsaki')
 
         # Load the traces.
@@ -224,11 +227,12 @@ def test_spike_detect_real_data(spikedetekt):
 
         # Run the detection.
         sd = SpikeDetekt(tempdir=tempdir, probe=probe, **params)
-        out = sd.run_serial(traces, interval_samples=(0, 40000))
+        out = sd.run_serial(traces, interval_samples=(0, 30000))
 
-        # n_spikes = 49
-        # assert out.n_spikes_total == n_spikes
         n_spikes = out.n_spikes_total
+
+        def _concat(arrs):
+            return np.concatenate(arrs)
 
         spike_samples = _concat(out.spike_samples[0])
         masks = _concat(out.masks[0])
@@ -240,17 +244,15 @@ def test_spike_detect_real_data(spikedetekt):
 
         # There should not be any spike with only masked channels.
         assert np.all(masks.max(axis=1) > 0)
-        print(masks.max(axis=1))
 
-        # # Plot...
-        # from phy.gui import qt_app
-        # from phy.plot.traces import plot_traces
-        # with qt_app():
-        #     plot_traces(traces,
-        #                 spike_samples=spike_samples,
-        #                 masks=masks,
-        #                 n_samples_per_spike=20,
-        #                 )
+        # Plot...
+        from phy.plot.traces import plot_traces
+        c = plot_traces(traces,
+                        spike_samples=spike_samples,
+                        masks=masks,
+                        n_samples_per_spike=n_samples_w,
+                        show=False)
+        show_test(c)
 
 
 #------------------------------------------------------------------------------
