@@ -61,7 +61,8 @@ class ParserCreator(object):
     def __init__(self):
         self.create_main()
         self.create_describe()
-        self.create_traces()
+        # TODO: doesn't work yet, fix segmentation fault with Qt
+        # self.create_traces()
         self.create_detect()
         self.create_auto()
         self.create_manual()
@@ -196,18 +197,13 @@ def traces(args):
     from phy.plot.traces import TraceView
     from phy.io.h5 import open_h5
     from phy.io.traces import read_kwd, read_dat
+
     path = args.file
     if path.endswith('.kwd'):
         f = open_h5(args.file)
         traces = read_kwd(f)
     elif path.endswith(('.dat', '.bin')):
         traces = read_dat(path, dtype=args.dtype, n_channels=args.n_channels)
-
-    from phy.gui import start_qt_app
-    from vispy.app import use_app
-
-    start_qt_app()
-    use_app('pyqt4')
 
     c = TraceView(keys='interactive')
     c.visual.traces = traces
@@ -304,8 +300,8 @@ def main():
             run_qt_app()
         elif requires_vispy:
             # Launch the VisPy Qt app.
-            from vispy.app import run
-            # use_app('pyqt4')
+            from vispy.app import use_app, run
+            use_app('pyqt4')
             run()
 
 
