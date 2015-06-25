@@ -13,7 +13,7 @@ import os.path as op
 import sys
 import re
 
-from setuptools import setup, find_packages
+from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
 
@@ -70,7 +70,7 @@ setup(
     packages=_package_tree('phy'),
     package_dir={'phy': 'phy'},
     package_data={
-        'phy': ['*.vert', '*.frag', '*.glsl', '*.html', '*.css'],
+        'phy': ['*.vert', '*.frag', '*.glsl', '*.html', '*.css', '*.prb'],
     },
     entry_points={
         'console_scripts': [
