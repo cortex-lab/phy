@@ -16,7 +16,6 @@ from ...utils._misc import _read_python
 from ...utils.datasets import _download_test_data
 from ...utils.logging import set_level
 from ...utils.tempdir import TemporaryDirectory
-from ...utils.settings import Settings
 from ...electrode.mea import load_probe
 from ...io.kwik import KwikModel
 from ...io.kwik.mock import create_mock_kwik
@@ -211,11 +210,12 @@ def test_spike_detect_real_data(spikedetekt):
         # Set the parameters.
         curdir = op.dirname(op.realpath(__file__))
         default_settings_path = op.join(curdir, '../default_settings.py')
-        settings = Settings(default_path=default_settings_path)
+        settings = _read_python(default_settings_path)
         sample_rate = 20000
         params = settings['spikedetekt_params'](sample_rate)
         params['sample_rate'] = sample_rate
         n_channels = 32
+        npc = params['nfeatures_per_channel']
         probe = load_probe('1x32_buzsaki')
 
         # Load the traces.
@@ -224,17 +224,19 @@ def test_spike_detect_real_data(spikedetekt):
 
         # Run the detection.
         sd = SpikeDetekt(tempdir=tempdir, probe=probe, **params)
-        out = sd.run_serial(traces)
+        out = sd.run_serial(traces, interval_samples=(0, 40000))
 
         # n_spikes = 49
         # assert out.n_spikes_total == n_spikes
         n_spikes = out.n_spikes_total
-        spike_samples = out.spike_samples[0][0][...]
-        assert spike_samples.shape == (n_spikes,)
 
-        # TODO: load all masks.
-        masks = out.masks[0][0][...]
+        spike_samples = _concat(out.spike_samples[0])
+        masks = _concat(out.masks[0])
+        features = _concat(out.features[0])
+
+        assert spike_samples.shape == (n_spikes,)
         assert masks.shape == (n_spikes, n_channels)
+        assert features.shape == (n_spikes, n_channels, npc)
 
         # There should not be any spike with only masked channels.
         assert np.all(masks.max(axis=1) > 0)
