@@ -501,7 +501,9 @@ class ClusterManualGUI(BaseGUI):
 
     def pin(self):
         """Pin the current best cluster."""
-        self.wizard.pin()
+        cluster = (self.selected_clusters[0]
+                   if len(self.selected_clusters) else None)
+        self.wizard.pin(cluster)
         self._wizard_select()
 
     def unpin(self):
