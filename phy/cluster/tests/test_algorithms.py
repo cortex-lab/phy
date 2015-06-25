@@ -10,7 +10,7 @@ import os.path as op
 
 import numpy as np
 from numpy.testing import assert_equal as ae
-from pytest import fixture
+from pytest import fixture, mark
 
 from ...utils._misc import _read_python
 from ...utils.datasets import _download_test_data
@@ -204,6 +204,7 @@ def test_spike_detect_serial(spikedetekt):
         assert masks.shape == (n_spikes_g, n_channels_g)
 
 
+@mark.long
 def test_spike_detect_real_data(spikedetekt):
     with TemporaryDirectory() as tempdir:
 

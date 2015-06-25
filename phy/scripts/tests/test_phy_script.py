@@ -41,15 +41,15 @@ def test_script_parser():
 
     kwik_path = 'test'
 
-    args = p.parse(['-i', '--debug', 'cluster-manual', kwik_path])
+    args = p.parse(['cluster-manual', kwik_path, '-i', '--debug'])
     assert args.command == 'cluster-manual'
     assert args.ipython
     assert args.debug
     assert not args.profiler
     assert not args.line_profiler
 
-    args = p.parse(['-lp', 'cluster-auto', kwik_path,
-                    '--num-starting-clusters', '10'])
+    args = p.parse(['cluster-auto', kwik_path,
+                    '--num-starting-clusters', '10', '-lp'])
     assert args.command == 'cluster-auto'
     assert not args.ipython
     assert not args.debug

@@ -182,7 +182,7 @@ class DiskStore(object):
             return None
         else:
             return _load_ndarray(self._cluster_path(cluster, key),
-                                 dtype=dtype, shape=shape)
+                                 dtype=dtype, shape=shape, lazy=False)
 
     def load(self, cluster, keys, dtype=None, shape=None):
         """Load cluster-related data. Return a file handle, to be used
