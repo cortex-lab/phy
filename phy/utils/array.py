@@ -263,13 +263,24 @@ class LazyMemmap(object):
         self.dtype = dtype
         self.shape = shape
 
-    def __getitem__(self, item):
+    def _open_file_if_needed(self):
         if self._f is None:
             self._f = np.memmap(self._path,
                                 dtype=self.dtype,
                                 shape=self.shape,
                                 mode='r')
+
+    def __getitem__(self, item):
+        self._open_file_if_needed()
         return self._f[item]
+
+    def __len__(self):
+        self._open_file_if_needed()
+        return len(self._f)
+
+    def __del__(self):
+        if self._f is not None:
+            del self._f
 
 
 def _memmap(f_or_path, dtype=None, shape=None, lazy=True):
