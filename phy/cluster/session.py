@@ -252,10 +252,10 @@ class Session(BaseSession):
     # Spike sorting
     # -------------------------------------------------------------------------
 
-    def detect_spikes(self, traces=None,
-                      interval=None,
-                      algorithm='spikedetekt',
-                      **kwargs):
+    def detect(self, traces=None,
+               interval=None,
+               algorithm='spikedetekt',
+               **kwargs):
         """Detect spikes in traces.
 
         Parameters

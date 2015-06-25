@@ -409,7 +409,7 @@ def test_session_detect(session):
         kwik_path = op.join(tempdir, 'test.kwik')
         create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=sample_rate)
         session = Session(kwik_path)
-        session.detect_spikes(traces=traces)
+        session.detect(traces=traces)
         m = session.model
         assert m.n_spikes >= 0
         shape = (m.n_spikes, n_channels * m.n_features_per_channel)

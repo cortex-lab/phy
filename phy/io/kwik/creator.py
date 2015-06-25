@@ -236,18 +236,20 @@ class KwikCreator(object):
                                            n_channels=n_channels,
                                            dtype=dtype)
 
-    def add_recordings_from_kwd(self, file):
+    def add_recordings_from_kwd(self, file, sample_rate=None):
         assert file.endswith('.kwd')
         start_sample = 0
         with open_h5(file, 'r') as f:
             recordings = f.children('/recordings')
             for recording in recordings:
                 path = '/recordings/{}'.format(recording)
-                sample_rate = f.read_attr(path, 'sample_rate')
+                if f.has_attr(path, 'sample_rate'):
+                    sample_rate = f.read_attr(path, 'sample_rate')
+                assert sample_rate > 0
                 self.add_recording(id=int(recording),
                                    start_sample=start_sample,
                                    sample_rate=sample_rate,
-                                   raw_data=file,
+                                   raw_path=file,
                                    )
                 start_sample += f.read(path + '/data').shape[0]
 
@@ -331,7 +333,9 @@ def create_kwik(prm_file=None, kwik_path=None, probe=None, **kwargs):
     raw_data_files = params.get('raw_data_files', None)
     if isinstance(raw_data_files, string_types):
         if raw_data_files.endswith('.raw.kwd'):
-            creator.add_recordings_from_kwd(raw_data_files)
+            creator.add_recordings_from_kwd(raw_data_files,
+                                            sample_rate=sample_rate,
+                                            )
         else:
             raw_data_files = [raw_data_files]
     if isinstance(raw_data_files, list) and len(raw_data_files):

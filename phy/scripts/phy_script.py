@@ -43,7 +43,7 @@ examples:
   phy -v                display the version of phy
   phy describe my_file.kwik
                         display information about a Kwik dataset
-  phy detect-spikes my_params.prm
+  phy detect my_params.prm
                         run spike detection on a parameters file
   phy cluster-auto my_file.kwik --num-clusters-start=100
                         run klustakwik on a dataset
@@ -139,11 +139,11 @@ class ParserCreator(object):
 
     def create_detect(self):
         desc = 'launch the spike detection algorithm on a `.prm` file'
-        p = self._add_sub_parser('detect-spikes', desc)
+        p = self._add_sub_parser('detect', desc)
         p.add_argument('file', help='path to a `.prm` file')
-        p.add_argument('kwik-path', help='filename of the `.kwik` file '
+        p.add_argument('--kwik-path', help='filename of the `.kwik` file '
                        'to create (by default, `"experiment_name".kwik`)')
-        p.set_defaults(func=detect_spikes)
+        p.set_defaults(func=detect)
 
     def create_manual(self):
         desc = 'launch the manual clustering GUI on a `.kwik` file'
@@ -243,13 +243,15 @@ def cluster_auto(args):
     return (cmd, ns)
 
 
-def detect_spikes(args):
+def detect(args):
     from phy.io import create_kwik
 
     assert args.file.endswith('.prm')
     kwik_path = args.kwik_path
     kwik_path = create_kwik(args.file, kwik_path=kwik_path)
-    session = _create_session(kwik_path, use_store=False)
+    # Create the session with the newly-created .kwik file.
+    args.file = kwik_path
+    session = _create_session(args, use_store=False)
     return 'session.detect()', dict(session=session)
 
 
