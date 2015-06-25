@@ -97,15 +97,15 @@ def test_spike_counts():
          2: {10: 1, 30: 300},
          }
     sc = SpikeCounts(c)
-    assert sc() == 600
+    assert sc() == 601
 
     assert sc(group=0) == 300
     assert sc(group=1) == 0
-    assert sc(group=2) == 30
+    assert sc(group=2) == 301
 
     assert sc(chunk=10) == 101
-    assert sc(group=20) == 200
-    assert sc(group=30) == 300
+    assert sc(chunk=20) == 200
+    assert sc(chunk=30) == 300
 
 
 def test_split_spikes():

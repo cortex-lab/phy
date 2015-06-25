@@ -77,24 +77,26 @@ class SpikeCounts(object):
     def __init__(self, counts):
         self._counts = counts
         self._groups = sorted(counts)
-        if self._groups:
-            self._chunks = sorted(counts[self._groups[0]])
-        else:
-            self._chunks = []
 
     @property
     def counts(self):
         return self._counts
 
+    def per_group(self, group):
+        return sum(self._counts.get(group, {}).values())
+
+    def per_chunk(self, chunk):
+        return sum(self._counts[group].get(chunk, 0) for group in self._groups)
+
     def __call__(self, group=None, chunk=None):
         if group is not None and chunk is not None:
             return self._counts.get(group, {}).get(chunk, 0)
-        elif group is None and chunk is None:
-            return sum([self(chunk=c) for c in self._chunks])
         elif group is not None:
-            return sum([self(chunk=c, group=group) for c in self._chunks])
+            return self.per_group(group)
         elif chunk is not None:
-            return sum([self(chunk=chunk, group=g) for g in self._groups])
+            return self.per_chunk(chunk)
+        elif group is None and chunk is None:
+            return sum(self.per_group(group) for group in self._groups)
 
 
 #------------------------------------------------------------------------------
