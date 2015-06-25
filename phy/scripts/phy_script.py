@@ -179,11 +179,14 @@ def describe(args):
 
 def cluster_manual(args):
     session = _create_session(args, clustering=args.clustering)
-    cluster_ids = list(map(int, args.cluster_ids.split(',')))
+    cluster_ids = (list(map(int, args.cluster_ids.split(',')))
+                   if args.cluster_ids else None)
 
     session = _create_session(args)
     session.model.describe()
 
+    from phy.gui import start_qt_app
+    start_qt_app()
     gui = session.show_gui(cluster_ids=cluster_ids, show=False)
     print("\nPress `ctrl+h` to see the list of keyboard shortcuts.\n")
     return 'gui.show()', dict(session=session, gui=gui, requires_qt=True)
@@ -230,6 +233,7 @@ def main():
         return
 
     cmd, ns = func(args)
+    requires_qt = ns.pop('requires_qt', False)
     ns.update(phy=phy, model=ns['session'].model, path=args.file)
 
     # Interactive mode with IPython.
@@ -237,14 +241,17 @@ def main():
         print("\nStarting IPython...")
         from IPython import start_ipython
         args_ipy = ["-i", "-c='{}'".format(cmd)]
-        if ns.pop('requires_qt', False):
+        if requires_qt:
             args_ipy += ["--gui=qt"]
         start_ipython(args_ipy, user_ns=ns)
     else:
-        if not prof:
-            exec_(cmd, {}, ns)
-        else:
-            _profile(prof, cmd, {}, ns)
+        if requires_qt:
+            from phy.gui import run_qt_app
+            if not prof:
+                exec_(cmd, {}, ns)
+            else:
+                _profile(prof, cmd, {}, ns)
+            run_qt_app()
 
 
 #------------------------------------------------------------------------------
