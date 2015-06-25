@@ -34,8 +34,10 @@ def test_read_dat():
         assert _dat_n_samples(path, dtype=np.float64,
                               n_channels=n_channels) == n_samples
         data = read_dat(path, dtype=arr.dtype, shape=arr.shape)
+        ae(arr, data)
+        data = read_dat(path, dtype=arr.dtype, n_channels=n_channels)
+        ae(arr, data)
 
-    ae(arr, data)
 
 
 def test_read_kwd():

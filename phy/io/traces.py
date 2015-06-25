@@ -33,7 +33,12 @@ def read_kwd(kwd_handle):
     return _concatenate_virtual_arrays(traces)
 
 
-def read_dat(filename, dtype=None, shape=None, offset=0):
+def read_dat(filename, dtype=None, shape=None, offset=0, n_channels=None):
+    if shape is None:
+        assert n_channels > 0
+        n_samples = _dat_n_samples(filename, dtype=dtype,
+                                   n_channels=n_channels)
+        shape = (n_samples, n_channels)
     return np.memmap(filename, dtype=dtype, shape=shape,
                      mode='r', offset=offset)
 
