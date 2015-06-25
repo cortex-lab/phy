@@ -328,15 +328,14 @@ class SpikeDetekt(EventEmitter):
         debug("Save `{}` ({}, {}).".format(path, np.dtype(dtype).name, shape))
         return array.tofile(path)
 
-    def _load(self, name, dtype, shape=None, key=None, group=None):
+    def _load(self, name, dtype, shape=None, key=None, group=None, lazy=True):
         path = self._path(name, key=key, group=group)
         # Handle the case where the file does not exist or is empty.
         if not op.exists(path) or shape[0] == 0:
             assert shape is not None
             return np.zeros(shape, dtype=dtype)
         debug("Load `{}` ({}, {}).".format(path, np.dtype(dtype).name, shape))
-        with open(path, 'rb') as f:
-            return _load_ndarray(f, dtype=dtype, shape=shape)
+        return _load_ndarray(path, dtype=dtype, shape=shape, lazy=lazy)
 
     def _load_data_chunks(self, name,
                           n_samples=None,
@@ -363,7 +362,9 @@ class SpikeDetekt(EventEmitter):
                 w = self._load(name, dtype,
                                shape=shape,
                                key=key,
-                               group=group)
+                               group=group,
+                               lazy=True,
+                               )
                 out[group].append(w)
         return out
 
@@ -410,7 +411,9 @@ class SpikeDetekt(EventEmitter):
         n_samples = s_end - s_start
         # Get the filtered chunk.
         chunk_f = self._load('filtered', np.float32,
-                             shape=(n_samples, n_channels), key=key)
+                             shape=(n_samples, n_channels), key=key,
+                             lazy=False,
+                             )
         # Extract the spikes from the chunk.
         groups, spike_samples, waveforms, masks = self.extract_spikes(
             components, chunk_f, thresholds=thresholds)
