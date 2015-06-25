@@ -10,10 +10,28 @@ import os.path as op
 
 import numpy as np
 
+from ..utils.array import _concatenate_virtual_arrays
+
 
 #------------------------------------------------------------------------------
 # Raw data readers
 #------------------------------------------------------------------------------
+
+def read_kwd(kwd_handle):
+    """Read all traces in a  `.kwd` file.
+
+    The output is a memory-mapped file.
+
+    """
+    f = kwd_handle
+    if '/recordings' not in f:
+        return
+    recordings = f.children('/recordings')
+    traces = []
+    for recording in recordings:
+        traces.append(f.read('/recordings/{}/data'.format(recording)))
+    return _concatenate_virtual_arrays(traces)
+
 
 def read_dat(filename, dtype=None, shape=None, offset=0):
     return np.memmap(filename, dtype=dtype, shape=shape,
