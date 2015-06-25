@@ -8,7 +8,9 @@
 #------------------------------------------------------------------------------
 
 import sys
+import os
 import os.path as op
+import subprocess
 from inspect import getargspec
 
 from ..ext.six import string_types, exec_
@@ -98,3 +100,17 @@ def _show_shortcuts(shortcuts, name=''):
     for name in sorted(shortcuts):
         print('{0:<40}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
     print()
+
+def _git_version():
+    curdir = os.getcwd()
+    filedir, _ = op.split(__file__)
+    os.chdir(filedir)
+    try:
+        fnull = open(os.devnull, 'w')
+        version = 'git-'+subprocess.check_output(['git', 'describe', '--abbrev=8', '--dirty',
+                                                       '--always', '--tags'], stderr=fnull).strip().decode('ascii')
+        return version
+    except:
+        return False
+    finally:
+        os.chdir(curdir)
