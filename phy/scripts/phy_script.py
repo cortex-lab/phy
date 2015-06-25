@@ -74,7 +74,29 @@ class ParserCreator(object):
 
     def _add_sub_parser(self, name, desc):
         p = self._subparsers.add_parser(name, help=desc, description=desc)
+        self._add_options(p)
         return p
+
+    def _add_options(self, parser):
+        parser.add_argument('--debug', '-d',
+                            action='store_true',
+                            help='activate debug logging mode')
+
+        parser.add_argument('--profiler', '-p',
+                            action='store_true',
+                            help='activate the profiler')
+
+        parser.add_argument('--line-profiler', '-lp',
+                            dest='line_profiler',
+                            action='store_true',
+                            help='activate the line-profiler -- you '
+                                 'need to decorate the functions '
+                                 'to profile with `@profile` '
+                                 'in the code')
+
+        parser.add_argument('--ipython', '-i', action='store_true',
+                            help='launch the script in an interactive '
+                            'IPython console')
 
     def create_main(self):
         import phy
@@ -85,32 +107,11 @@ class ParserCreator(object):
                               formatter_class=CustomFormatter,
                               )
         self._parser.set_defaults(func=None)
-
         self._parser.add_argument('--version', '-v',
                                   action='version',
                                   version=phy.__version__,
                                   help='print the version of phy')
-
-        self._parser.add_argument('--debug', '-d',
-                                  action='store_true',
-                                  help='activate debug logging mode')
-
-        self._parser.add_argument('--profiler', '-p',
-                                  action='store_true',
-                                  help='activate the profiler')
-
-        self._parser.add_argument('--line-profiler', '-lp',
-                                  dest='line_profiler',
-                                  action='store_true',
-                                  help='activate the line-profiler -- you '
-                                       'need to decorate the functions '
-                                       'to profile with `@profile` '
-                                       'in the code')
-
-        self._parser.add_argument('--ipython', '-i', action='store_true',
-                                  help='launch the script in an interactive '
-                                  'IPython console')
-
+        self._add_options(self._parser)
         self._subparsers = self._parser.add_subparsers(dest='command',
                                                        title='subcommand',
                                                        )
