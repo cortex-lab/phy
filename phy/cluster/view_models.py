@@ -10,6 +10,7 @@ import os.path as op
 
 import numpy as np
 
+from ..io.kwik.model import _DEFAULT_GROUPS
 from ..utils.array import _unique, _spikes_in_clusters, _as_array
 from ..utils.selector import Selector
 from ..utils._misc import _show_shortcuts
@@ -263,17 +264,26 @@ class StatsViewModel(HTMLClusterViewModel):
         _arrays = {name: isinstance(getattr(self.store, name)(cluster_ids[0]),
                    np.ndarray) for name in names}
         names = sorted([name for name in _arrays if not _arrays[name]])
+        # Add the cluster group as a first statistic.
+        names = ['cluster_group'] + names
         # Generate the table.
         html = '<tr><th></th>'
         for i, cluster in enumerate(cluster_ids):
             html += '<th class="{style}">{cluster}</th>'.format(
                     cluster=cluster, style='cluster_{}'.format(i))
         html += '</tr>'
+        cluster_groups = self.model.cluster_groups
+        group_names = dict(_DEFAULT_GROUPS)
         for name in names:
             html += '<tr>'
             html += '<td>{name}</td>'.format(name=name)
             for i, cluster in enumerate(cluster_ids):
-                value = getattr(self.store, name)(cluster)
+                if name == 'cluster_group':
+                    # Get the cluster group.
+                    group_id = cluster_groups.get(cluster, -1)
+                    value = group_names.get(group_id, 'unknown')
+                else:
+                    value = getattr(self.store, name)(cluster)
                 if _is_float(value):
                     value = '{:.3f}'.format(value)
                 elif _is_integer(value):
