@@ -16,7 +16,7 @@ from ..utils.array import (PartialArray, get_excerpts,
                            _load_ndarray, _as_array,
                            )
 from ..utils._types import Bunch
-from ..utils.event import EventEmitter
+from ..utils.event import EventEmitter, ProgressReporter
 from ..utils.logging import debug, info
 from ..electrode.mea import _channels_per_group, _probe_adjacency_list
 from ..io.kwik.sparse_kk2 import sparsify_features_masks
@@ -102,6 +102,18 @@ class SpikeCounts(object):
 #------------------------------------------------------------------------------
 # Spike detection class
 #------------------------------------------------------------------------------
+
+# Progress reporting messages.
+_detect_prg = ("Detecting spikes: {progress:.2f}%. "
+               "{n_spikes:d} spikes detected in chunk "
+               "{chunk_idx:d}/{n_chunks:d}.")
+_detect_cpl = "Spike detection complete: {n_spikes} spikes detected."
+
+_extract_prg = ("Extracting spikes: {progress:.2f}%. "
+                "{n_spikes:d} spikes extracted in chunk "
+                "{chunk_idx:d}/{n_chunks:d}.")
+_extract_cpl = "Spike extraction complete: {n_spikes} spikes extracted."
+
 
 class SpikeDetekt(EventEmitter):
     def __init__(self, tempdir=None, probe=None, **kwargs):
@@ -351,13 +363,13 @@ class SpikeDetekt(EventEmitter):
                           groups=None,
                           spike_counts=None,
                           ):
-        _, _, keys, _ = zip(*list(self.iter_chunks(n_samples, n_channels)))
+        _, _, keys, _ = zip(*list(self.iter_chunks(n_samples)))
         out = {}
         for group in groups:
             out[group] = []
             n_channels_group = self._n_channels_per_group[group]
             # for key in keys:
-            for bounds in self.iter_chunks(n_samples, n_channels):
+            for bounds in self.iter_chunks(n_samples):
                 s_start, s_end, keep_start, keep_end = bounds
 
                 # Chunk key.
@@ -399,11 +411,14 @@ class SpikeDetekt(EventEmitter):
         k = np.clip(k, 1, n_spikes_chunk)
         return (waveforms[::k, ...], masks[::k, ...])
 
-    def iter_chunks(self, n_samples, n_channels):
+    def iter_chunks(self, n_samples):
         chunk_size = self._kwargs['chunk_size']
         overlap = self._kwargs['chunk_overlap']
         for bounds in chunk_bounds(n_samples, chunk_size, overlap=overlap):
             yield bounds
+
+    def n_chunks(self, n_samples):
+        return len(list(self.iter_chunks(n_samples)))
 
     # Main steps
     # -------------------------------------------------------------------------
@@ -518,8 +533,7 @@ class SpikeDetekt(EventEmitter):
                     spike_counts=None,
                     ):
         n_samples_per_chunk = {bounds[2]: (bounds[3] - bounds[2])
-                               for bounds in self.iter_chunks(n_samples,
-                                                              n_channels)}
+                               for bounds in self.iter_chunks(n_samples)}
         keys = sorted(n_samples_per_chunk.keys())
         traces_f = [self._load('filtered', np.float32,
                                shape=(n_samples_per_chunk[key], n_channels),
@@ -573,12 +587,23 @@ class SpikeDetekt(EventEmitter):
         debug("Thresholds: {}.".format(thresholds))
         self.emit('find_thresholds', thresholds)
 
+        # Find the number of chunks.
+        n_chunks = self.n_chunks(n_samples)
+
+        # Create the progress reporter.
+        pr = ProgressReporter()
+
         # Pass 1: find the connected components and count the spikes.
-        info("Detecting spikes...")
+
+        # Reset the progress reporter.
+        pr.set_progress_message(_detect_prg)
+        pr.set_complete_message(_detect_cpl)
+        pr.value_max = n_chunks
+
         # Dictionary {chunk_key: components}.
         # Every chunk has a unique key: the `keep_start` integer.
         chunk_components = {}
-        for bounds in self.iter_chunks(n_samples, n_channels):
+        for chunk_idx, bounds in enumerate(self.iter_chunks(n_samples)):
             key = bounds[2]
             chunk_data = data_chunk(traces, bounds, with_overlap=True)
             chunk_data_keep = data_chunk(traces, bounds, with_overlap=False)
@@ -587,22 +612,30 @@ class SpikeDetekt(EventEmitter):
                                           chunk_data_keep,
                                           thresholds=thresholds,
                                           )
-            info("Detected {} spikes in chunk {}.".format(
-                 len(components), key))
             self.emit('detect_spikes', key=key, n_spikes=len(components))
+
+            # Report progress.
+            pr.increment(n_spikes=len(components),
+                         chunk_idx=chunk_idx + 1,
+                         n_chunks=n_chunks,
+                         )
+
             chunk_components[key] = components
         n_spikes_per_chunk = {key: len(val)
                               for key, val in chunk_components.items()}
         n_spikes_total = sum(n_spikes_per_chunk.values())
-        info("{} spikes detected in total.".format(n_spikes_total))
 
         # Pass 2: extract the spikes and save some waveforms before PCA.
-        info("Extracting all waveforms...")
+
+        # Reset the progress reporter.
+        pr.set_progress_message(_extract_prg)
+        pr.set_complete_message(_extract_cpl)
+
         # This is a dict {group: {key: (waveforms, masks)}}.
         chunk_waveforms = defaultdict(dict)
         # This is a dict {group: {key: n_spikes}}.
         chunk_counts = defaultdict(dict)
-        for bounds in self.iter_chunks(n_samples, n_channels):
+        for bounds in self.iter_chunks(n_samples):
             key = bounds[2]
             components = chunk_components[key]
             if len(components) == 0:
@@ -614,9 +647,14 @@ class SpikeDetekt(EventEmitter):
                                            n_channels=n_channels,
                                            thresholds=thresholds,
                                            )
-            info("Extracted {} spikes from chunk {}.".format(
-                 sum(counts.values()), key))
+
+            # Report progress.
+            pr.increment(n_spikes=sum(counts.values()),
+                         chunk_idx=chunk_idx,
+                         n_chunks=n_chunks,
+                         )
             self.emit('extract_spikes', key=key, counts=counts)
+
             # Reorganize the chunk waveforms subsets.
             for group, wm_group in wm.items():
                 n_spikes_chunk = len(wm_group[0])
@@ -636,7 +674,7 @@ class SpikeDetekt(EventEmitter):
 
         # Pass 3: compute the features.
         info("Computing the features of all spikes...")
-        for bounds in self.iter_chunks(n_samples, n_channels):
+        for bounds in self.iter_chunks(n_samples):
             self.step_features(bounds, pcs, spike_counts)
             self.emit('compute_features', key=bounds[2])
         info("All features computed and saved.")
