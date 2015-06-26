@@ -10,6 +10,7 @@ import os
 from math import floor
 from operator import mul
 from functools import reduce
+import math
 
 import numpy as np
 
@@ -426,8 +427,9 @@ def regular_subset(spikes=None, n_spikes_max=None):
     # Nothing to do if the selection already satisfies n_spikes_max.
     if n_spikes_max is None or len(spikes) <= n_spikes_max:
         return spikes
-    step = int(np.clip(1. / n_spikes_max * len(spikes),
-                       1, len(spikes)))
+    step = math.ceil(np.clip(1. / n_spikes_max * len(spikes),
+                             1, len(spikes)))
+    step = int(step)
     # Random shift.
     # start = np.random.randint(low=0, high=step)
     # Note: randomly-changing selections are confusing...
