@@ -130,8 +130,9 @@ def download_sample_data(name, output_dir=None, base='cortexlab'):
         # Try to download the requested file.
         try:
             download_file(url, output=output, checksum=checksum)
+            outputs.append(output)
         except RuntimeError:
             warn("The data file could not be found at `{}`.".format(
                  url))
-        outputs.append(output)
-    return outputs
+    if outputs:
+        return outputs
