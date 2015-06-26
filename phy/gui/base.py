@@ -455,11 +455,11 @@ class BaseGUI(EventEmitter):
     @property
     def status_message(self):
         """Message in the status bar."""
-        return self._dock.status_message
+        return str(self._dock.status_message)
 
     @status_message.setter
     def status_message(self, value):
-        self._dock.status_message = value
+        self._dock.status_message = str(value)
 
     _snippet_message_cursor = '\u200A\u258C'
 
