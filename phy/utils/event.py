@@ -193,6 +193,9 @@ class ProgressReporter(EventEmitter):
     def increment(self, **kwargs):
         self._set_value(self._value + 1, **kwargs)
 
+    def reset(self):
+        self._value = 0
+
     @property
     def value(self):
         """Current value (integer)."""
