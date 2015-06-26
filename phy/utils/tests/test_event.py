@@ -89,12 +89,14 @@ def test_progress_reporter():
 def test_progress_message():
     """Test messages with the progress reporter."""
     pr = ProgressReporter()
-    pr.set_progress_message("The progress is {progress}.")
-    pr.set_complete_message("Finished.")
+    pr.set_progress_message("The progress is {progress}. ({hello})")
+    pr.set_complete_message("Finished {hello}.")
 
     pr.value_max = 10
     pr.value = 0
     print()
     pr.value = 5
+    print()
+    pr.increment(hello='hello world')
     print()
     pr.value = 10
