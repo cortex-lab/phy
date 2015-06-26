@@ -40,6 +40,10 @@ def _is_integer(x):
     return isinstance(x, integer_types + (np.generic,))
 
 
+def _is_float(x):
+    return isinstance(x, (float, np.float32, np.float64))
+
+
 def _as_int(x):
     if isinstance(x, integer_types):
         return x
