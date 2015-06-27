@@ -264,6 +264,16 @@ class BaseModel(object):
         raise NotImplementedError()
 
     @property
+    def cluster_groups(self):
+        """Groups of all clusters in the current channel group and clustering.
+
+        This is a regular Python dictionary.
+
+        """
+        return {cluster: self.cluster_metadata.group(cluster)
+                for cluster in self.cluster_ids}
+
+    @property
     def features(self):
         """Features from the current channel_group (may be memory-mapped).
 
