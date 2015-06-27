@@ -147,7 +147,7 @@ def test_session_store_features():
 
 
 @wrap_qt
-def test_session_clustering(session):
+def test_session_gui_clustering(session):
 
     cs = session.store
     spike_clusters = session.model.spike_clusters.copy()
@@ -255,7 +255,7 @@ def test_session_clustering(session):
 
 
 @wrap_qt
-def test_session_multiple_clusterings(session):
+def test_session_gui_multiple_clusterings(session):
 
     gui = session.show_gui()
     yield
@@ -324,7 +324,7 @@ def test_session_kwik(session):
 
 
 @wrap_qt
-def test_session_statistics(session):
+def test_session_gui_statistics(session):
     """Test registration of new statistic."""
 
     gui = session.show_gui()
@@ -365,14 +365,14 @@ def test_session_statistics(session):
 
 
 @mark.parametrize('spike_ids', [None, np.arange(20)])
-def test_session_automatic(session, spike_ids):
+def test_session_auto(session, spike_ids):
     set_level('info')
-    clustering = 'clustering_test'
-    sc = session.cluster(clustering=clustering,
-                         num_starting_clusters=10,
+    sc = session.cluster(num_starting_clusters=10,
                          spike_ids=spike_ids,
+                         clustering='test',
                          )
-    assert session.model.clustering == clustering
+    assert session.model.clustering == 'test'
+    assert session.model.clusterings == ['main', 'original', 'test']
 
     # Re-open the dataset and check that the clustering has been saved.
     session = _start_manual_clustering(kwik_path=session.model.path,
@@ -384,7 +384,7 @@ def test_session_automatic(session, spike_ids):
 
     assert 'klustakwik_version' not in session.model.clustering_metadata
 
-    session.change_clustering(clustering)
+    session.change_clustering('test')
     assert len(session.model.spike_clusters) == n_spikes
     assert np.all(session.model.spike_clusters[spike_ids] == sc)
 
