@@ -154,6 +154,16 @@ class MockModel(BaseModel):
         return self._cluster_metadata
 
     @property
+    def cluster_groups(self):
+        """Groups of all clusters in the current channel group and clustering.
+
+        This is a regular Python dictionary.
+
+        """
+        return {cluster: self._cluster_metadata.group(cluster)
+                for cluster in self.cluster_ids}
+
+    @property
     def features(self):
         return self._features
 

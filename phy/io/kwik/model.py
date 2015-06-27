@@ -1120,16 +1120,6 @@ class KwikModel(BaseModel):
         return np.arange(self.n_spikes, dtype=np.int32)
 
     @property
-    def cluster_groups(self):
-        """Groups of all clusters in the current channel group and clustering.
-
-        This is a regular Python dictionary.
-
-        """
-        return {cluster: self._cluster_metadata.group(cluster)
-                for cluster in self.cluster_ids}
-
-    @property
     def n_clusters(self):
         """Number of clusters in the current channel group and clustering."""
         return len(self.cluster_ids)
