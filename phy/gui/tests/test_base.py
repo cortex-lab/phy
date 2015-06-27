@@ -235,7 +235,7 @@ def test_base_session():
               ('v2', {'position': 'bottom'}),
               ]
 
-    shortcuts = {'test': 't', 'close': 'ctrl+q'}
+    shortcuts = {'test': 't', 'exit': 'ctrl+q'}
 
     class TestGUI(BaseGUI):
         def __init__(self, **kwargs):
@@ -245,7 +245,7 @@ def test_base_session():
 
         def _create_actions(self):
             self._add_gui_shortcut('test')
-            self._add_gui_shortcut('close')
+            self._add_gui_shortcut('exit')
 
         def test(self):
             self.show_shortcuts()

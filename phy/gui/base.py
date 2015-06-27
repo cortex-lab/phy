@@ -310,7 +310,7 @@ class BaseGUI(EventEmitter):
     """
 
     _default_shortcuts = {
-        'close': 'ctrl+q',
+        'exit': 'ctrl+q',
         'enable_snippet_mode': ':',
     }
 
@@ -443,14 +443,12 @@ class BaseGUI(EventEmitter):
         # Get the keyboard shortcut for this method.
         shortcut = self._shortcuts.get(method_name, None)
 
-        def _make_func():
-            def callback():
-                return getattr(self, method_name)
-            return callback
+        def callback():
+            return getattr(self, method_name)()
 
         # Bind the shortcut to the method.
         self._dock.add_action(method_name,
-                              _make_func(),
+                              callback,
                               shortcut=shortcut,
                               )
 

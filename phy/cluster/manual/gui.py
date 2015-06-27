@@ -233,7 +233,7 @@ class ClusterManualGUI(BaseGUI):
     def _create_actions(self):
         for action in ['reset_gui',
                        'save',
-                       'close',
+                       'exit',
                        'show_shortcuts',
                        'select',
                        # Wizard.
