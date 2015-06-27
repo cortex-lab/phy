@@ -17,6 +17,7 @@ from ..base import (BaseViewModel,
                     BaseGUI,
                     )
 from ..qt import (QtGui,
+                  QtCore,
                   Qt,
                   wrap_qt,
                   _set_qt_widget_position_size,
@@ -186,20 +187,16 @@ def test_base_gui():
     # Test snippet mode.
     gui.enable_snippet_mode()
 
-    def _keystroke(char=None, code=None):
+    def _keystroke(char=None):
         """Simulate a keystroke."""
-        if char == ' ':
-            code = Qt.Key_Space
-        elif char == ':':
-            code = Qt.Key_Colon
-        elif code is None:
-            code = getattr(Qt, 'Key_{}'.format(char.upper()))
-        gui._on_keystroke(code, char or '')
+        i = gui._snippet_action_name(char)
+        getattr(gui.main_window, 'snippet_{}'.format(i))()
 
-    for c in ':hello world':
+    gui.enable_snippet_mode()
+    for c in 'hello world':
         _keystroke(c)
     assert gui.status_message == ':hello world' + gui._snippet_message_cursor
-    _keystroke(code=Qt.Key_Return)
+    gui.main_window.snippet_activate()
     assert _message == ['world']
 
     # Test views.

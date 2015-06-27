@@ -442,9 +442,15 @@ class BaseGUI(EventEmitter):
         """Helper function to add a GUI action with a keyboard shortcut."""
         # Get the keyboard shortcut for this method.
         shortcut = self._shortcuts.get(method_name, None)
+
+        def _make_func():
+            def callback():
+                return getattr(self, method_name)
+            return callback
+
         # Bind the shortcut to the method.
         self._dock.add_action(method_name,
-                              lambda: getattr(self, method_name)(),
+                              _make_func(),
                               shortcut=shortcut,
                               )
 
@@ -476,12 +482,13 @@ class BaseGUI(EventEmitter):
     def _snippet_message(self, value):
         self.status_message = value + self._snippet_message_cursor
 
-    def _process_snippet(self, snippet):
+    def _process_snippet(self):
         """Processes a snippet.
 
         May be overriden.
 
         """
+        snippet = self._snippet_message
         assert snippet[0] == ':'
         snippet = snippet[1:]
         split = snippet.split(' ')
@@ -497,38 +504,57 @@ class BaseGUI(EventEmitter):
             warn("Error when executing snippet `{}`: {}.".format(
                  cmd, str(e)))
 
-    def _on_keystroke(self, key, text):
-        """Capture al keystrokes in snippet mode.
+    def _snippet_action_name(self, char):
+        return self._snippet_chars.index(char)
 
-        May be overriden.
+    _snippet_chars = 'abcdefghijklmnopqrstuvwxyz0123456789 ._,+*-=:()'
 
-        """
-        # Process keystrokes in snippet mode.
-        # Escape quits the snippet mode.
-        if key in (Qt.Key_Escape, Qt.Key_Control):
-            self.disable_snippet_mode()
-        # Backspace.
-        elif key == Qt.Key_Backspace:
+    def _create_snippet_actions(self):
+        # One action per allowed character.
+        for i, char in enumerate(self._snippet_chars):
+
+            def _make_func(char):
+                def callback():
+                    self._snippet_message += char
+                return callback
+
+            self._dock.add_action('snippet_{}'.format(i),
+                                  shortcut=char,
+                                  callback=_make_func(char),
+                                  )
+
+        def backspace():
             if self._snippet_message == ':':
                 return
             self._snippet_message = self._snippet_message[:-1]
-        # Validate the snippet.
-        elif key in (Qt.Key_Return, Qt.Key_Enter):
-            self._process_snippet(self._snippet_message)
+
+        def enter():
+            self._process_snippet()
             self.disable_snippet_mode()
-        # Writing the snippet.
-        elif Qt.Key_Space <= key <= Qt.Key_AsciiTilde:
-            self._snippet_message += text
+
+        self._dock.add_action('snippet_backspace',
+                              shortcut='backspace',
+                              callback=backspace,
+                              )
+        self._dock.add_action('snippet_activate',
+                              shortcut=('enter', 'return'),
+                              callback=enter,
+                              )
+        self._dock.add_action('snippet_disable',
+                              shortcut='escape',
+                              callback=self.disable_snippet_mode,
+                              )
 
     def enable_snippet_mode(self):
         info("Snippet mode enabled, press `escape` to leave this mode.")
         self._remove_actions()
-        self._dock.connect_(self._on_keystroke, event='keystroke')
+        self._create_snippet_actions()
+        self._snippet_message = ':'
 
     def disable_snippet_mode(self):
         self.status_message = ''
-        self._dock.unconnect_(self._on_keystroke)
         # Reestablishes the shortcuts.
+        self._remove_actions()
         self._set_default_shortcuts()
         self._create_actions()
         info("Snippet mode disabled.")
