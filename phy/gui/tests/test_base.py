@@ -17,8 +17,6 @@ from ..base import (BaseViewModel,
                     BaseGUI,
                     )
 from ..qt import (QtGui,
-                  QtCore,
-                  Qt,
                   wrap_qt,
                   _set_qt_widget_position_size,
                   )
