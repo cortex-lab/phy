@@ -130,12 +130,15 @@ class DockWindow(QtGui.QMainWindow):
                 action.setShortcut(key)
         self.addAction(action)
         self._actions[name] = action
+        if callback:
+            setattr(self, name, callback)
         return action
 
     def remove_action(self, name):
         """Remove an action."""
         self.removeAction(self._actions[name])
         del self._actions[name]
+        delattr(self, name)
 
     def remove_actions(self):
         names = sorted(self._actions.keys())
@@ -146,7 +149,6 @@ class DockWindow(QtGui.QMainWindow):
         """Decorator to add a global keyboard shortcut."""
         def wrap(func):
             self.add_action(name, shortcut=key, callback=func)
-            setattr(self, name, func)
         return wrap
 
     # Views
