@@ -329,6 +329,9 @@ class WaveformLoader(object):
         # TODO: int16
         shape = (n_spikes, self.n_samples_waveforms,
                  self.n_channels_waveforms)
+        # No traces: return null arrays.
+        if self.n_samples_trace == 0:
+            return np.zeros(shape, dtype=self.dtype)
         waveforms = np.empty(shape, dtype=self.dtype)
         # Load all spikes.
         for i, time in enumerate(spikes):
