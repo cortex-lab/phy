@@ -119,9 +119,9 @@ _progress_messages = {
                 ("Spike extraction complete: {n_spikes_total:d} spikes "
                  "extracted.")),
 
-    'pca':     (("Performing PCA: {progress:.2f}%.",
+    'pca': (("Performing PCA: {progress:.2f}%.",
 
-                 "Principal waveform components computed.")),
+             "Principal waveform components computed.")),
 
     'features': ("Computing the features: {progress:.2f}%. "
                  "chunk {chunk_idx:d}/{n_chunks:d}.",
