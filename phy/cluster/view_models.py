@@ -457,8 +457,8 @@ class CorrelogramViewModel(VispyViewModel):
     """Correlograms."""
     _view_class = CorrelogramView
     _view_name = 'correlograms'
-    binsize = 20
-    winsize_bins = 41
+    binsize = 20  # in number of samples
+    winsize_bins = 41  # in number of bins
     _imported_params = ('binsize', 'winsize_bins', 'lines', 'normalization')
     _normalization = 'equal'  # or 'independent'
     _ccgs = None
@@ -474,12 +474,19 @@ class CorrelogramViewModel(VispyViewModel):
             Half window size.
 
         """
-        sr = self.model.sample_rate
+        sr = float(self.model.sample_rate)
 
-        bin = np.clip(bin * .001, .001, 1e6)
-        self.binsize = int(sr * bin)
+        # Default values.
+        if bin is None:
+            bin = 1000. * self.binsize / sr  # in ms
+        if half_width is None:
+            half_width = 1000. * (float((self.winsize_bins // 2) *
+                                  self.binsize / sr))
 
-        half_width = np.clip(half_width * .001, .001, 1e6)
+        bin = np.clip(bin, .1, 1e3)  # in ms
+        self.binsize = int(sr * bin * .001)  # in s
+
+        half_width = np.clip(half_width, .1, 1e3)  # in ms
         self.winsize_bins = 2 * int(half_width / bin) + 1
 
         self.select(self.cluster_ids)
