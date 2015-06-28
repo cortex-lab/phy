@@ -27,6 +27,9 @@ class EventEmitter(object):
     """
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self._callbacks = defaultdict(list)
 
     def _get_on_name(self, func):
@@ -193,8 +196,11 @@ class ProgressReporter(EventEmitter):
     def increment(self, **kwargs):
         self._set_value(self._value + 1, **kwargs)
 
-    def reset(self):
+    def reset(self, value_max=None):
+        super(ProgressReporter, self).reset()
         self._value = 0
+        if value_max is not None:
+            self._value_max = value_max
 
     @property
     def value(self):
@@ -220,10 +226,9 @@ class ProgressReporter(EventEmitter):
         """Return wheter the task has completed."""
         return self._value >= self._value_max
 
-    def set_complete(self):
+    def set_complete(self, **kwargs):
         """Set the task as complete."""
-        # self.value = self.value_max
-        self._set_value(self.value_max)
+        self._set_value(self.value_max, **kwargs)
 
     @property
     def progress(self):
