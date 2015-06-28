@@ -479,13 +479,12 @@ class BaseGUI(EventEmitter):
     def _snippet_message(self, value):
         self.status_message = value + self._snippet_message_cursor
 
-    def _process_snippet(self):
+    def process_snippet(self, snippet):
         """Processes a snippet.
 
         May be overriden.
 
         """
-        snippet = self._snippet_message
         assert snippet[0] == ':'
         snippet = snippet[1:]
         split = snippet.split(' ')
@@ -496,6 +495,7 @@ class BaseGUI(EventEmitter):
             info("The snippet `{}` could not be found.".format(cmd))
             return
         try:
+            info("Processing snippet `{}`.".format(cmd))
             func(self, snippet)
         except Exception as e:
             warn("Error when executing snippet `{}`: {}.".format(
@@ -526,7 +526,7 @@ class BaseGUI(EventEmitter):
             self._snippet_message = self._snippet_message[:-1]
 
         def enter():
-            self._process_snippet()
+            self.process_snippet(self._snippet_message)
             self.disable_snippet_mode()
 
         self._dock.add_action('snippet_backspace',
