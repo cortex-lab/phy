@@ -244,7 +244,7 @@ def test_spike_detect_real_data(spikedetekt):
 
         # Run the detection.
         sd = SpikeDetekt(tempdir=tempdir, probe=probe, **params)
-        out = sd.run_serial(traces, interval_samples=(0, 30000))
+        out = sd.run_serial(traces, interval_samples=(0, 50000))
 
         n_spikes = out.n_spikes_total
 

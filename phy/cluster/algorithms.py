@@ -108,11 +108,25 @@ _progress_messages = {
     'detect': (("Detecting spikes: {progress:.2f}%. "
                 "{n_spikes:d} spikes detected in chunk "
                 "{chunk_idx:d}/{n_chunks:d}."),
-               ("Spike detection complete: {n_spikes} spikes detected.")),
+
+               ("Spike detection complete: {n_spikes_total:d} spikes "
+                "detected.")),
+
     'extract': (("Extracting spikes: {progress:.2f}%. "
                  "{n_spikes:d} spikes extracted in chunk "
                  "{chunk_idx:d}/{n_chunks:d}."),
-                ("Spike extraction complete: {n_spikes} spikes extracted.")),
+
+                ("Spike extraction complete: {n_spikes_total:d} spikes "
+                 "extracted.")),
+
+    'pca':     (("Performing PCA: {progress:.2f}%.",
+
+                 "Principal waveform components computed.")),
+
+    'features': ("Computing the features: {progress:.2f}%. "
+                 "chunk {chunk_idx:d}/{n_chunks:d}.",
+
+                 "All features computed and saved."),
 }
 
 
@@ -594,15 +608,13 @@ class SpikeDetekt(EventEmitter):
         # Create the progress reporter.
         pr = ProgressReporter()
 
-        def _set_messages(step):
+        def _set_progress_reporter(step, value_max):
+            pr.reset(value_max)
             pr.set_progress_message(_progress_messages[step][0])
             pr.set_complete_message(_progress_messages[step][1])
 
         # Pass 1: find the connected components and count the spikes.
-
-        # Reset the progress reporter.
-        _set_messages('detect')
-        pr.value_max = n_chunks
+        _set_progress_reporter('detect', n_chunks + 1)
 
         # Dictionary {chunk_key: components}.
         # Every chunk has a unique key: the `keep_start` integer.
@@ -628,11 +640,10 @@ class SpikeDetekt(EventEmitter):
         n_spikes_per_chunk = {key: len(val)
                               for key, val in chunk_components.items()}
         n_spikes_total = sum(n_spikes_per_chunk.values())
+        pr.set_complete(n_spikes_total=n_spikes_total)
 
         # Pass 2: extract the spikes and save some waveforms before PCA.
-
-        # Reset the progress reporter.
-        _set_messages('extract')
+        _set_progress_reporter('extract', n_chunks + 1)
 
         # This is a dict {group: {key: (waveforms, masks)}}.
         chunk_waveforms = defaultdict(dict)
@@ -665,22 +676,30 @@ class SpikeDetekt(EventEmitter):
                 chunk_waveforms[group][key] = wm_group
                 chunk_counts[group][key] = counts[group]
         spike_counts = SpikeCounts(chunk_counts)
-        info("{} waveforms extracted and saved.".format(spike_counts()))
+        pr.set_complete(n_spikes_total=spike_counts())
+        pr.set_complete(n_spikes_total=spike_counts())
 
         # Compute the PCs.
-        info("Performing PCA...")
+        _set_progress_reporter('pca', len(self._groups))
+
         pcs = {}
         for group in self._groups:
             pcs[group] = self.step_pca(chunk_waveforms[group])
+            # Report progress.
+            pr.increment(group=group,
+                         n_groups=len(self._groups),
+                         )
             self.emit('compute_pca', group=group, pcs=pcs[group])
-        info("Principal waveform components computed.")
 
         # Pass 3: compute the features.
-        info("Computing the features of all spikes...")
-        for bounds in self.iter_chunks(n_samples):
+        _set_progress_reporter('features', n_chunks)
+        for chunk_idx, bounds in enumerate(self.iter_chunks(n_samples)):
             self.step_features(bounds, pcs, spike_counts)
+            # Report progress.
+            pr.increment(chunk_idx=chunk_idx + 1,
+                         n_chunks=n_chunks,
+                         )
             self.emit('compute_features', key=bounds[2])
-        info("All features computed and saved.")
 
         # Return dictionary of memmapped data.
         return self.output_data(n_samples, n_channels,
