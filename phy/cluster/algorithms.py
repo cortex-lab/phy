@@ -104,15 +104,16 @@ class SpikeCounts(object):
 #------------------------------------------------------------------------------
 
 # Progress reporting messages.
-_detect_prg = ("Detecting spikes: {progress:.2f}%. "
-               "{n_spikes:d} spikes detected in chunk "
-               "{chunk_idx:d}/{n_chunks:d}.")
-_detect_cpl = "Spike detection complete: {n_spikes} spikes detected."
-
-_extract_prg = ("Extracting spikes: {progress:.2f}%. "
-                "{n_spikes:d} spikes extracted in chunk "
-                "{chunk_idx:d}/{n_chunks:d}.")
-_extract_cpl = "Spike extraction complete: {n_spikes} spikes extracted."
+_progress_messages = {
+    'detect': (("Detecting spikes: {progress:.2f}%. "
+                "{n_spikes:d} spikes detected in chunk "
+                "{chunk_idx:d}/{n_chunks:d}."),
+               ("Spike detection complete: {n_spikes} spikes detected.")),
+    'extract': (("Extracting spikes: {progress:.2f}%. "
+                 "{n_spikes:d} spikes extracted in chunk "
+                 "{chunk_idx:d}/{n_chunks:d}."),
+                ("Spike extraction complete: {n_spikes} spikes extracted.")),
+}
 
 
 class SpikeDetekt(EventEmitter):
@@ -593,11 +594,14 @@ class SpikeDetekt(EventEmitter):
         # Create the progress reporter.
         pr = ProgressReporter()
 
+        def _set_messages(step):
+            pr.set_progress_message(_progress_messages[step][0])
+            pr.set_complete_message(_progress_messages[step][1])
+
         # Pass 1: find the connected components and count the spikes.
 
         # Reset the progress reporter.
-        pr.set_progress_message(_detect_prg)
-        pr.set_complete_message(_detect_cpl)
+        _set_messages('detect')
         pr.value_max = n_chunks
 
         # Dictionary {chunk_key: components}.
@@ -628,8 +632,7 @@ class SpikeDetekt(EventEmitter):
         # Pass 2: extract the spikes and save some waveforms before PCA.
 
         # Reset the progress reporter.
-        pr.set_progress_message(_extract_prg)
-        pr.set_complete_message(_extract_cpl)
+        _set_messages('extract')
 
         # This is a dict {group: {key: (waveforms, masks)}}.
         chunk_waveforms = defaultdict(dict)

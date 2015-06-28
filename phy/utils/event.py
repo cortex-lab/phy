@@ -178,8 +178,8 @@ class ProgressReporter(EventEmitter):
         """Set a complete message."""
 
         @self.connect
-        def on_complete():
-            _default_on_complete(message)
+        def on_complete(**kwargs):
+            _default_on_complete(message, **kwargs)
 
     def _set_value(self, value, **kwargs):
         if value < self._value_max:
@@ -222,7 +222,8 @@ class ProgressReporter(EventEmitter):
 
     def set_complete(self):
         """Set the task as complete."""
-        self.value = self.value_max
+        # self.value = self.value_max
+        self._set_value(self.value_max)
 
     @property
     def progress(self):
