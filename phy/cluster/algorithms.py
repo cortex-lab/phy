@@ -32,6 +32,12 @@ from ..traces import (Filter, Thresholder, compute_threshold,
 # Spike detection class
 #------------------------------------------------------------------------------
 
+def _find_dead_channels(channels_per_group, n_channels):
+    all_channels = sorted([item for sublist in channels_per_group.values()
+                           for item in sublist])
+    return np.setdiff1d(np.arange(n_channels), all_channels)
+
+
 def _keep_spikes(samples, bounds):
     """Only keep spikes within the bounds `bounds=(start, end)`."""
     start, end = bounds
@@ -138,12 +144,10 @@ class SpikeDetekt(EventEmitter):
         super(SpikeDetekt, self).__init__()
         self._tempdir = tempdir
         self._dead_channels = None
-        self._all_channels = None
         # Load a probe.
         if probe is not None:
             kwargs['probe_channels'] = _channels_per_group(probe)
             kwargs['probe_adjacency_list'] = _probe_adjacency_list(probe)
-            self._all_channels = _probe_all_channels(probe)
         self._kwargs = kwargs
         self._n_channels_per_group = {
             group: len(channels)
@@ -201,13 +205,6 @@ class SpikeDetekt(EventEmitter):
 
     def update_params(self, **kwargs):
         self._kwargs.update(kwargs)
-
-    def _find_dead_channels(self, n_channels):
-        # Discard dead channels by forcing the threshold crossings to be 0.
-        # debug("Dead channels: {}.".format(_dead_channels))
-        if self._all_channels is None:
-            return None
-        return np.setdiff1d(np.arange(n_channels), self._all_channels)
 
     # Processing functions
     # -------------------------------------------------------------------------
@@ -470,13 +467,10 @@ class SpikeDetekt(EventEmitter):
         assert data_f.shape == chunk_data.shape
         # Save the filtered chunk.
         self._save(data_f, 'filtered', key=key)
-        # Find dead channels.
-        n_channels = data_f.shape[1]
-        dead_channels = self._find_dead_channels(n_channels)
         # Detect spikes in the filtered chunk.
         components = self.detect(data_f,
                                  thresholds=thresholds,
-                                 dead_channels=dead_channels
+                                 dead_channels=self._dead_channels
                                  )
         # Return the list of components in the chunk.
         return components
@@ -630,6 +624,12 @@ class SpikeDetekt(EventEmitter):
         thresholds = self.find_thresholds(traces)
         debug("Thresholds: {}.".format(thresholds))
         self.emit('find_thresholds', thresholds)
+
+        # Find dead channels.
+        probe_channels = self._kwargs['probe_channels']
+        self._dead_channels = _find_dead_channels(probe_channels,
+                                                  n_channels)
+        debug("Using dead channels: {}.".format(self._dead_channels))
 
         # Find the number of chunks.
         n_chunks = self.n_chunks(n_samples)
