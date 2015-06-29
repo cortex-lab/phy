@@ -179,7 +179,6 @@ class ParserCreator(object):
         p = self._add_sub_parser('cluster-auto', desc)
         p.add_argument('file', help='path to a `.kwik` file')
         p.add_argument('num_starting_clusters', type=int,
-                       # dest='num_starting_clusters',
                        help='initial number of clusters',
                        )
         p.add_argument('--clustering', default='main',
@@ -276,8 +275,22 @@ def cluster_auto(args):
 
 
 def spikesort(args):
-    detect(args)
-    cluster_auto(args)
+    from phy.io import create_kwik
+
+    assert args.file.endswith('.prm')
+    kwik_path = args.kwik_path
+    kwik_path = create_kwik(args.file, overwrite=args.overwrite,
+                            kwik_path=kwik_path)
+    # Create the session with the newly-created .kwik file.
+    args.file = kwik_path
+    session = _create_session(args, use_store=False)
+
+    ns = dict(session=session,
+              n_s_clusters=100,  # TODO: better handling of KK parameters
+              )
+    cmd = ('session.detect(); session.cluster('
+           'num_starting_clusters=n_s_clusters)')
+    return (cmd, ns)
 
 
 def cluster_manual(args):
