@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
 import os.path as op
 
 import numpy as np
@@ -14,6 +15,7 @@ from h5py import Dataset
 from ..h5 import open_h5
 from ..traces import _dat_n_samples
 from ...utils._types import _as_array
+from ...utils.logging import warn
 from ...utils._misc import _read_python
 from ...utils.array import _unique
 from ...ext.six import string_types
@@ -297,7 +299,8 @@ class KwikCreator(object):
                                        )
 
 
-def create_kwik(prm_file=None, kwik_path=None, probe=None, **kwargs):
+def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
+                probe=None, **kwargs):
     prm = _read_python(prm_file) if prm_file else {}
     sample_rate = kwargs.get('sample_rate', prm.get('sample_rate'))
     assert sample_rate > 0
@@ -312,14 +315,26 @@ def create_kwik(prm_file=None, kwik_path=None, probe=None, **kwargs):
     params.update(prm)
     params.update(kwargs)
 
+    # nchannels (old syntax) or n_channels (new).
+    n_channels = params.get('n_channels', params.get('nchannels'))
+    params['n_channels'] = n_channels
+
     kwik_path = kwik_path or params['experiment_name'] + '.kwik'
+    kwx_path = op.splitext(kwik_path)[0] + '.kwx'
+    if op.exists(kwik_path):
+        if overwrite:
+            os.remove(kwik_path)
+            os.remove(kwx_path)
+        else:
+            raise IOError("The `.kwik` file already exists. Please use "
+                          "the `--overwrite` option.")
+
     probe = probe or _read_python(params['prb_file'])
 
     # KwikCreator.
     creator = KwikCreator(kwik_path)
     creator.create_empty()
     creator.set_probe(probe)
-    creator.set_metadata('/application_data/spikedetekt', **params)
 
     # Add the recordings.
     raw_data_files = params.get('raw_data_files', None)
@@ -332,11 +347,16 @@ def create_kwik(prm_file=None, kwik_path=None, probe=None, **kwargs):
             raw_data_files = [raw_data_files]
     if isinstance(raw_data_files, list) and len(raw_data_files):
         # The dtype must be a string so that it can be serialized in HDF5.
+        if 'dtype' not in params and 'nbits' in params:
+            warn("The `nbits` parameter is deprecated and replaced by "
+                 "`dtype`. Using a default dtype of `int16`. Please update "
+                 "your `.prm` files!")
+            assert params['nbits'] == 16
+            params['dtype'] = 'int16'
         assert 'dtype' in params and isinstance(params['dtype'], string_types)
         dtype = np.dtype(params['dtype'])
         assert dtype is not None
-        # nchannels (old syntax) or n_channels (new).
-        n_channels = params.get('n_channels', params.get('nchannels'))
+
         # The number of channels in the .dat file *must* be specified.
         assert n_channels > 0
         creator.add_recordings_from_dat(raw_data_files,
@@ -344,4 +364,7 @@ def create_kwik(prm_file=None, kwik_path=None, probe=None, **kwargs):
                                         n_channels=n_channels,
                                         dtype=dtype,
                                         )
+
+    creator.set_metadata('/application_data/spikedetekt', **params)
+
     return kwik_path
