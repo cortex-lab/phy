@@ -797,7 +797,7 @@ class KwikModel(BaseModel):
             self._kwik.close()
 
     def _move_clustering(self, old_name, new_name, copy=None):
-        if old_name == self._clustering:
+        if not copy and old_name == self._clustering:
             raise ValueError("You cannot move the current clustering.")
         if new_name in self._clusterings:
             raise ValueError("The clustering '{0}' ".format(new_name) +
