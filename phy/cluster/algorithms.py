@@ -610,7 +610,8 @@ class SpikeDetekt(EventEmitter):
 
         def _set_progress_reporter(step, value_max):
             pr.reset(value_max)
-            pr.set_progress_message(_progress_messages[step][0])
+            pr.set_progress_message(_progress_messages[step][0],
+                                    line_break=True)
             pr.set_complete_message(_progress_messages[step][1])
 
         # Pass 1: find the connected components and count the spikes.
