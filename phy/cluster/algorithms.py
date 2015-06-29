@@ -20,7 +20,6 @@ from ..utils.event import EventEmitter, ProgressReporter
 from ..utils.logging import debug, info
 from ..electrode.mea import (_channels_per_group,
                              _probe_adjacency_list,
-                             _probe_all_channels,
                              )
 from ..io.kwik.sparse_kk2 import sparsify_features_masks
 from ..traces import (Filter, Thresholder, compute_threshold,
