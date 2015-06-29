@@ -51,7 +51,9 @@ def _default_array(shape, value=0, n_spikes=0, dtype=np.float32):
 def _assert_per_cluster_data_compatible(d_0, d_1):
     n_0 = {k: len(v) for (k, v) in d_0.items()}
     n_1 = {k: len(v) for (k, v) in d_1.items()}
-    assert n_0 == n_1
+    if n_0 != n_1:
+        raise IOError("Inconsistency in the cluster store: please remove "
+                      "`./<basename>.phy/cluster_store/`.")
 
 
 #------------------------------------------------------------------------------
