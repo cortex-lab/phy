@@ -13,7 +13,7 @@ import os.path as op
 import sys
 import re
 
-from setuptools import setup, find_packages
+from setuptools import setup
 from setuptools.command.test import test as TestCommand
 
 
@@ -26,7 +26,8 @@ class PyTest(TestCommand):
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
-        self.pytest_args = []
+        self.pytest_args = ['-s', '--cov-report', 'term-missing',
+                            '--cov', 'phy']
 
     def finalize_options(self):
         TestCommand.finalize_options(self)
@@ -70,7 +71,7 @@ setup(
     packages=_package_tree('phy'),
     package_dir={'phy': 'phy'},
     package_data={
-        'phy': ['*.vert', '*.frag', '*.glsl', '*.html', '*.css'],
+        'phy': ['*.vert', '*.frag', '*.glsl', '*.html', '*.css', '*.prb'],
     },
     entry_points={
         'console_scripts': [

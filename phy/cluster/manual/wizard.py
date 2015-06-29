@@ -435,6 +435,9 @@ class Wizard(object):
             self._add([clu], group, position)
         # Delete old clusters.
         self._delete(up.deleted)
+        # Select the last added cluster.
+        if self.best is not None and up.added:
+            self.best = up.added[-1]
 
     def on_cluster(self, up):
         if self._has_finished:

@@ -103,7 +103,7 @@ cluster_manual_shortcuts = {
     'reset_gui': 'alt+r',
     'show_shortcuts': 'ctrl+h',
     'save': 'ctrl+s',
-    'close': 'ctrl+q',
+    'exit': 'ctrl+q',
     # Wizard actions.
     'reset_wizard': 'ctrl+w',
     'next': 'space',

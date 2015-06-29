@@ -7,6 +7,7 @@ from __future__ import print_function
 # Imports
 #------------------------------------------------------------------------------
 
+import string
 import re
 from collections import defaultdict
 from functools import partial
@@ -26,6 +27,9 @@ class EventEmitter(object):
     """
 
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self._callbacks = defaultdict(list)
 
     def _get_on_name(self, func):
@@ -97,9 +101,12 @@ class EventEmitter(object):
         """
         res = []
         for callback in self._callbacks.get(event, []):
-            # Only keep the kwargs that are part of the callback's arg spec.
-            kwargs = {n: v for n, v in kwargs.items()
-                      if n in getargspec(callback).args}
+            argspec = getargspec(callback)
+            if not argspec.keywords:
+                # Only keep the kwargs that are part of the callback's
+                # arg spec, unless the callback accepts `**kwargs`.
+                kwargs = {n: v for n, v in kwargs.items()
+                          if n in argspec.args}
             res.append(callback(*args, **kwargs))
         return res
 
@@ -108,18 +115,39 @@ class EventEmitter(object):
 # Progress reporter
 #------------------------------------------------------------------------------
 
-def _default_on_progress(message, value, value_max):
+class PartialFormatter(string.Formatter):
+    """Prevent KeyError when a format parameter is absent."""
+    def get_field(self, field_name, args, kwargs):
+        try:
+            return super(PartialFormatter, self).get_field(field_name,
+                                                           args,
+                                                           kwargs)
+        except (KeyError, AttributeError):
+            return None, field_name
+
+    def format_field(self, value, spec):
+        if value is None:
+            return '?'
+        try:
+            return super(PartialFormatter, self).format_field(value, spec)
+        except ValueError:
+            return '?'
+
+
+def _default_on_progress(message, value, value_max, **kwargs):
     if value_max == 0:
         return
     if value < value_max:
         progress = 100 * value / float(value_max)
-        print(message.format(progress=progress), end='\r')
+        fmt = PartialFormatter()
+        print(fmt.format(message, progress=progress, **kwargs), end='\r')
 
 
-def _default_on_complete(message):
+def _default_on_complete(message, **kwargs):
     # Override the initializing message and clear the terminal
     # line.
-    print(message + '\033[K', end='\n')
+    fmt = PartialFormatter()
+    print(fmt.format(message + '\033[K', **kwargs), end='\n')
 
 
 class ProgressReporter(EventEmitter):
@@ -146,15 +174,33 @@ class ProgressReporter(EventEmitter):
         """
 
         @self.connect
-        def on_progress(value, value_max):
-            _default_on_progress(message, value, value_max)
+        def on_progress(value, value_max, **kwargs):
+            _default_on_progress(message, value, value_max, **kwargs)
 
     def set_complete_message(self, message):
         """Set a complete message."""
 
         @self.connect
-        def on_complete():
-            _default_on_complete(message)
+        def on_complete(**kwargs):
+            _default_on_complete(message, **kwargs)
+
+    def _set_value(self, value, **kwargs):
+        if value < self._value_max:
+            self._has_completed = False
+        self._value = value
+        self.emit('progress', self._value, self._value_max, **kwargs)
+        if not self._has_completed and self._value >= self._value_max:
+            self.emit('complete', **kwargs)
+            self._has_completed = True
+
+    def increment(self, **kwargs):
+        self._set_value(self._value + 1, **kwargs)
+
+    def reset(self, value_max=None):
+        super(ProgressReporter, self).reset()
+        self._value = 0
+        if value_max is not None:
+            self._value_max = value_max
 
     @property
     def value(self):
@@ -163,13 +209,7 @@ class ProgressReporter(EventEmitter):
 
     @value.setter
     def value(self, value):
-        if value < self._value_max:
-            self._has_completed = False
-        self._value = value
-        self.emit('progress', self._value, self._value_max)
-        if not self._has_completed and self._value >= self._value_max:
-            self.emit('complete')
-            self._has_completed = True
+        self._set_value(value)
 
     @property
     def value_max(self):
@@ -186,9 +226,9 @@ class ProgressReporter(EventEmitter):
         """Return wheter the task has completed."""
         return self._value >= self._value_max
 
-    def set_complete(self):
+    def set_complete(self, **kwargs):
         """Set the task as complete."""
-        self.value = self.value_max
+        self._set_value(self.value_max, **kwargs)
 
     @property
     def progress(self):

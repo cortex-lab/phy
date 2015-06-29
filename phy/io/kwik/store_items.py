@@ -44,6 +44,8 @@ def _atleast_nd(arr, ndim):
 
 def _mean(arr, shape):
     if arr is not None:
+        # Make sure (possibly lazy) memmapped arrays are fully loaded.
+        arr = arr[...]
         assert isinstance(arr, np.ndarray)
         if arr.shape[0]:
             return arr.mean(axis=0)

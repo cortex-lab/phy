@@ -11,7 +11,9 @@ from __future__ import print_function
 import os.path as op
 import shutil
 
-from ..utils.logging import info, warn, FileLogger, register
+import numpy as np
+
+from ..utils.logging import info, FileLogger, register
 from ..utils.settings import _ensure_dir_exists
 from ..io.base import BaseSession
 from ..io.kwik.model import KwikModel
@@ -252,10 +254,10 @@ class Session(BaseSession):
     # Spike sorting
     # -------------------------------------------------------------------------
 
-    def detect_spikes(self, traces=None,
-                      interval=None,
-                      algorithm='spikedetekt',
-                      **kwargs):
+    def detect(self, traces=None,
+               interval=None,
+               algorithm='spikedetekt',
+               **kwargs):
         """Detect spikes in traces.
 
         Parameters
@@ -344,28 +346,28 @@ class Session(BaseSession):
 
         """
         if clustering is None:
-            clustering = 'original'
+            clustering = 'main'
         # Make sure the clustering name does not exist already.
         if clustering in self.model.clusterings:
-            old = clustering
-            i = 0
-            while True:
-                new = '{}_{}'.format(clustering, i)
-                if new not in self.model.clusterings:
-                    break
-                i += 1
-            clustering = new
-            warn("The clustering `{}` already exists -- ".format(old) +
-                 "switching to `{}`.".format(new))
+            raise ValueError("The clustering `{}` ".format(clustering) +
+                             "already exists.")
         kk = KlustaKwik(**kwargs)
         info("Running {}...".format(algorithm))
         # Run KK.
         sc = kk.cluster(model=self.model, spike_ids=spike_ids)
+        info("The automatic clustering process has finished.")
         # Save the results in the Kwik file.
-        spike_clusters = self.model.spike_clusters.copy()
+        if self.model.spike_clusters is None:
+            spike_clusters = np.zeros(len(sc), dtype=np.int32)
+        else:
+            spike_clusters = self.model.spike_clusters.copy()
         spike_clusters[spike_ids] = sc
         # Add a new clustering and switch to it.
         self.model.add_clustering(clustering, spike_clusters)
+        # Copy the main clustering to original (only if this is the very
+        # first run of the clustering algorithm).
+        if clustering == 'main':
+            self.model.copy_clustering('main', 'original')
         self.change_clustering(clustering)
         # Set the new clustering metadata.
         params = kk.params
@@ -374,7 +376,6 @@ class Session(BaseSession):
                     for name, value in params.items()}
         self.model.clustering_metadata.update(metadata)
         self.save()
-        info("The automatic clustering has finished.")
         info("The clustering has been saved in the "
              "`{}` clustering in the `.kwik` file.".format(clustering))
         return sc

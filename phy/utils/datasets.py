@@ -56,6 +56,8 @@ def download_file(url, output=None, checksum=None):
         r = get(url, stream=True)
     except requests.exceptions.ConnectionError:
         raise RuntimeError("Unable to download `{}`.".format(url))
+    if r.status_code != 200:
+        r.raise_for_status()
     info("Downloading {0}...".format(url))
     with open(output, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
@@ -130,8 +132,9 @@ def download_sample_data(name, output_dir=None, base='cortexlab'):
         # Try to download the requested file.
         try:
             download_file(url, output=output, checksum=checksum)
+            outputs.append(output)
         except RuntimeError:
             warn("The data file could not be found at `{}`.".format(
                  url))
-        outputs.append(output)
-    return outputs
+    if outputs:
+        return outputs

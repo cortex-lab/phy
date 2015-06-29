@@ -16,8 +16,9 @@ from ..utils.array import (PartialArray, get_excerpts,
                            _load_ndarray, _as_array,
                            )
 from ..utils._types import Bunch
-from ..utils.event import EventEmitter
+from ..utils.event import EventEmitter, ProgressReporter
 from ..utils.logging import debug, info
+from ..electrode.mea import _channels_per_group, _probe_adjacency_list
 from ..io.kwik.sparse_kk2 import sparsify_features_masks
 from ..traces import (Filter, Thresholder, compute_threshold,
                       FloodFillDetector, WaveformExtractor, PCA,
@@ -67,37 +68,76 @@ def _array_list(arrs):
 
 
 def _concat(arr, dtype=None):
-    return np.array([_[...] for _ in arr], dtype=dtype)
+    out = np.array([_[...] for _ in arr], dtype=dtype)
+    return out
 
 
 class SpikeCounts(object):
+    """Count spikes in chunks and channel groups."""
     def __init__(self, counts):
         self._counts = counts
         self._groups = sorted(counts)
-        if self._groups:
-            self._chunks = sorted(counts[self._groups[0]])
-        else:
-            self._chunks = []
+
+    @property
+    def counts(self):
+        return self._counts
+
+    def per_group(self, group):
+        return sum(self._counts.get(group, {}).values())
+
+    def per_chunk(self, chunk):
+        return sum(self._counts[group].get(chunk, 0) for group in self._groups)
 
     def __call__(self, group=None, chunk=None):
         if group is not None and chunk is not None:
             return self._counts.get(group, {}).get(chunk, 0)
-        elif group is None and chunk is None:
-            return sum([self(chunk=c) for c in self._chunks])
         elif group is not None:
-            return sum([self(chunk=c, group=group) for c in self._chunks])
+            return self.per_group(group)
         elif chunk is not None:
-            return sum([self(chunk=chunk, group=g) for g in self._groups])
+            return self.per_chunk(chunk)
+        elif group is None and chunk is None:
+            return sum(self.per_group(group) for group in self._groups)
 
 
 #------------------------------------------------------------------------------
 # Spike detection class
 #------------------------------------------------------------------------------
 
+# Progress reporting messages.
+_progress_messages = {
+    'detect': (("Detecting spikes: {progress:.2f}%. "
+                "{n_spikes:d} spikes detected in chunk "
+                "{chunk_idx:d}/{n_chunks:d}."),
+
+               ("Spike detection complete: {n_spikes_total:d} spikes "
+                "detected.")),
+
+    'extract': (("Extracting spikes: {progress:.2f}%. "
+                 "{n_spikes:d} spikes extracted in chunk "
+                 "{chunk_idx:d}/{n_chunks:d}."),
+
+                ("Spike extraction complete: {n_spikes_total:d} spikes "
+                 "extracted.")),
+
+    'pca': (("Performing PCA: {progress:.2f}%.",
+
+             "Principal waveform components computed.")),
+
+    'features': ("Computing the features: {progress:.2f}%. "
+                 "chunk {chunk_idx:d}/{n_chunks:d}.",
+
+                 "All features computed and saved."),
+}
+
+
 class SpikeDetekt(EventEmitter):
-    def __init__(self, tempdir=None, **kwargs):
+    def __init__(self, tempdir=None, probe=None, **kwargs):
         super(SpikeDetekt, self).__init__()
         self._tempdir = tempdir
+        # Load a probe.
+        if probe is not None:
+            kwargs['probe_channels'] = _channels_per_group(probe)
+            kwargs['probe_adjacency_list'] = _probe_adjacency_list(probe)
         self._kwargs = kwargs
         self._n_channels_per_group = {
             group: len(channels)
@@ -323,15 +363,14 @@ class SpikeDetekt(EventEmitter):
         debug("Save `{}` ({}, {}).".format(path, np.dtype(dtype).name, shape))
         return array.tofile(path)
 
-    def _load(self, name, dtype, shape=None, key=None, group=None):
+    def _load(self, name, dtype, shape=None, key=None, group=None, lazy=True):
         path = self._path(name, key=key, group=group)
         # Handle the case where the file does not exist or is empty.
         if not op.exists(path) or shape[0] == 0:
             assert shape is not None
             return np.zeros(shape, dtype=dtype)
         debug("Load `{}` ({}, {}).".format(path, np.dtype(dtype).name, shape))
-        with open(path, 'rb') as f:
-            return _load_ndarray(f, dtype=dtype, shape=shape)
+        return _load_ndarray(path, dtype=dtype, shape=shape, lazy=lazy)
 
     def _load_data_chunks(self, name,
                           n_samples=None,
@@ -339,12 +378,23 @@ class SpikeDetekt(EventEmitter):
                           groups=None,
                           spike_counts=None,
                           ):
-        _, _, keys, _ = zip(*list(self.iter_chunks(n_samples, n_channels)))
+        _, _, keys, _ = zip(*list(self.iter_chunks(n_samples)))
         out = {}
         for group in groups:
             out[group] = []
             n_channels_group = self._n_channels_per_group[group]
-            for key in keys:
+            # for key in keys:
+            for bounds in self.iter_chunks(n_samples):
+                s_start, s_end, keep_start, keep_end = bounds
+
+                # Chunk key.
+                key = keep_start
+                assert key in keys
+
+                # The offset is added to the spike samples (relative to the
+                # start of the chunk, including the overlapping band).
+                offset = s_start
+
                 n_spikes = spike_counts(group=group, chunk=key)
                 shape = {
                     'spike_samples': (n_spikes,),
@@ -358,7 +408,13 @@ class SpikeDetekt(EventEmitter):
                 w = self._load(name, dtype,
                                shape=shape,
                                key=key,
-                               group=group)
+                               group=group,
+                               lazy=True,
+                               )
+                # Add the chunk offset to the spike samples, which were
+                # relative to the start of the chunk.
+                if name == 'spike_samples':
+                    w = w[...] + offset
                 out[group].append(w)
         return out
 
@@ -370,11 +426,14 @@ class SpikeDetekt(EventEmitter):
         k = np.clip(k, 1, n_spikes_chunk)
         return (waveforms[::k, ...], masks[::k, ...])
 
-    def iter_chunks(self, n_samples, n_channels):
+    def iter_chunks(self, n_samples):
         chunk_size = self._kwargs['chunk_size']
         overlap = self._kwargs['chunk_overlap']
         for bounds in chunk_bounds(n_samples, chunk_size, overlap=overlap):
             yield bounds
+
+    def n_chunks(self, n_samples):
+        return len(list(self.iter_chunks(n_samples)))
 
     # Main steps
     # -------------------------------------------------------------------------
@@ -405,13 +464,18 @@ class SpikeDetekt(EventEmitter):
         n_samples = s_end - s_start
         # Get the filtered chunk.
         chunk_f = self._load('filtered', np.float32,
-                             shape=(n_samples, n_channels), key=key)
+                             shape=(n_samples, n_channels), key=key,
+                             lazy=False,
+                             )
         # Extract the spikes from the chunk.
         groups, spike_samples, waveforms, masks = self.extract_spikes(
             components, chunk_f, thresholds=thresholds)
 
         # Remove spikes in the overlapping bands.
-        idx = _keep_spikes(spike_samples, (keep_start, keep_end))
+        # WANRING: add keep_start to spike_samples, because spike_samples
+        # is relative to the start of the chunk.
+        idx = _keep_spikes(spike_samples[...] + keep_start,
+                           (keep_start, keep_end))
         n_spikes_chunk = idx.sum()
         debug("In chunk {}, keep {} spikes out of {}.".format(
               key, n_spikes_chunk, len(spike_samples)))
@@ -484,8 +548,7 @@ class SpikeDetekt(EventEmitter):
                     spike_counts=None,
                     ):
         n_samples_per_chunk = {bounds[2]: (bounds[3] - bounds[2])
-                               for bounds in self.iter_chunks(n_samples,
-                                                              n_channels)}
+                               for bounds in self.iter_chunks(n_samples)}
         keys = sorted(n_samples_per_chunk.keys())
         traces_f = [self._load('filtered', np.float32,
                                shape=(n_samples_per_chunk[key], n_channels),
@@ -524,9 +587,14 @@ class SpikeDetekt(EventEmitter):
         if interval_samples is not None:
             start, end = interval_samples
             traces = traces[start:end, ...]
+            n_samples = traces.shape[0]
         else:
             start, end = 0, n_samples
         assert 0 <= start < end <= n_samples
+        if start > 0:
+            raise NotImplementedError("Need to add `start` to the "
+                                      "spike samples")
+        # TODO: add start to the spike samples...
 
         # Find the weak and strong thresholds.
         info("Finding the thresholds...")
@@ -534,12 +602,24 @@ class SpikeDetekt(EventEmitter):
         debug("Thresholds: {}.".format(thresholds))
         self.emit('find_thresholds', thresholds)
 
+        # Find the number of chunks.
+        n_chunks = self.n_chunks(n_samples)
+
+        # Create the progress reporter.
+        pr = ProgressReporter()
+
+        def _set_progress_reporter(step, value_max):
+            pr.reset(value_max)
+            pr.set_progress_message(_progress_messages[step][0])
+            pr.set_complete_message(_progress_messages[step][1])
+
         # Pass 1: find the connected components and count the spikes.
-        info("Detecting spikes...")
+        _set_progress_reporter('detect', n_chunks + 1)
+
         # Dictionary {chunk_key: components}.
         # Every chunk has a unique key: the `keep_start` integer.
         chunk_components = {}
-        for bounds in self.iter_chunks(n_samples, n_channels):
+        for chunk_idx, bounds in enumerate(self.iter_chunks(n_samples)):
             key = bounds[2]
             chunk_data = data_chunk(traces, bounds, with_overlap=True)
             chunk_data_keep = data_chunk(traces, bounds, with_overlap=False)
@@ -548,22 +628,28 @@ class SpikeDetekt(EventEmitter):
                                           chunk_data_keep,
                                           thresholds=thresholds,
                                           )
-            debug("Detected {} spikes in chunk {}.".format(
-                  len(components), key))
             self.emit('detect_spikes', key=key, n_spikes=len(components))
+
+            # Report progress.
+            pr.increment(n_spikes=len(components),
+                         chunk_idx=chunk_idx + 1,
+                         n_chunks=n_chunks,
+                         )
+
             chunk_components[key] = components
         n_spikes_per_chunk = {key: len(val)
                               for key, val in chunk_components.items()}
         n_spikes_total = sum(n_spikes_per_chunk.values())
-        info("{} spikes detected in total.".format(n_spikes_total))
+        pr.set_complete(n_spikes_total=n_spikes_total)
 
         # Pass 2: extract the spikes and save some waveforms before PCA.
-        info("Extracting all waveforms...")
+        _set_progress_reporter('extract', n_chunks + 1)
+
         # This is a dict {group: {key: (waveforms, masks)}}.
         chunk_waveforms = defaultdict(dict)
         # This is a dict {group: {key: n_spikes}}.
         chunk_counts = defaultdict(dict)
-        for bounds in self.iter_chunks(n_samples, n_channels):
+        for bounds in self.iter_chunks(n_samples):
             key = bounds[2]
             components = chunk_components[key]
             if len(components) == 0:
@@ -575,9 +661,14 @@ class SpikeDetekt(EventEmitter):
                                            n_channels=n_channels,
                                            thresholds=thresholds,
                                            )
-            debug("Extracted {} spikes from chunk {}.".format(
-                  sum(counts.values()), key))
+
+            # Report progress.
+            pr.increment(n_spikes=sum(counts.values()),
+                         chunk_idx=chunk_idx,
+                         n_chunks=n_chunks,
+                         )
             self.emit('extract_spikes', key=key, counts=counts)
+
             # Reorganize the chunk waveforms subsets.
             for group, wm_group in wm.items():
                 n_spikes_chunk = len(wm_group[0])
@@ -585,22 +676,30 @@ class SpikeDetekt(EventEmitter):
                 chunk_waveforms[group][key] = wm_group
                 chunk_counts[group][key] = counts[group]
         spike_counts = SpikeCounts(chunk_counts)
-        info("{} waveforms extracted and saved.".format(spike_counts()))
+        pr.set_complete(n_spikes_total=spike_counts())
+        pr.set_complete(n_spikes_total=spike_counts())
 
         # Compute the PCs.
-        info("Performing PCA...")
+        _set_progress_reporter('pca', len(self._groups))
+
         pcs = {}
         for group in self._groups:
             pcs[group] = self.step_pca(chunk_waveforms[group])
+            # Report progress.
+            pr.increment(group=group,
+                         n_groups=len(self._groups),
+                         )
             self.emit('compute_pca', group=group, pcs=pcs[group])
-        info("Principal waveform components computed.")
 
         # Pass 3: compute the features.
-        info("Computing the features of all spikes...")
-        for bounds in self.iter_chunks(n_samples, n_channels):
+        _set_progress_reporter('features', n_chunks)
+        for chunk_idx, bounds in enumerate(self.iter_chunks(n_samples)):
             self.step_features(bounds, pcs, spike_counts)
+            # Report progress.
+            pr.increment(chunk_idx=chunk_idx + 1,
+                         n_chunks=n_chunks,
+                         )
             self.emit('compute_features', key=bounds[2])
-        info("All features computed and saved.")
 
         # Return dictionary of memmapped data.
         return self.output_data(n_samples, n_channels,

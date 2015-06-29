@@ -472,7 +472,7 @@ class FeatureView(BaseSpikeCanvas):
         prev_dim = mat[box]
         prev_dim_other = mat_other[box]
         # Select smart new dimension.
-        if prev_dim != 'time':
+        if not isinstance(prev_dim, string_types):
             channel, feature = dim
             prev_channel, prev_feature = prev_dim
             # Scroll the feature if the channel is the same.

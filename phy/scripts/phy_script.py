@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from __future__ import print_function
 
 """phy main CLI tool.
 
@@ -14,16 +15,22 @@ Usage:
 
 import sys
 import os.path as op
-import re
 import argparse
 from textwrap import dedent
+
+import numpy as np
 
 from ..ext.six import exec_
 
 
 #------------------------------------------------------------------------------
-# Main script
+# Parser utilities
 #------------------------------------------------------------------------------
+
+class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
+                      argparse.RawDescriptionHelpFormatter):
+    pass
+
 
 class Parser(argparse.ArgumentParser):
     def error(self, message):
@@ -32,169 +39,250 @@ class Parser(argparse.ArgumentParser):
         sys.exit(2)
 
 
-class CustomFormatter(argparse.ArgumentDefaultsHelpFormatter,
-                      argparse.RawDescriptionHelpFormatter):
-    pass
+_examples = dedent("""
+
+examples:
+  phy -v                display the version of phy
+  phy describe my_file.kwik
+                        display information about a Kwik dataset
+  phy detect my_params.prm
+                        run spike detection on a parameters file
+  phy cluster-auto my_file.kwik --num-clusters-start=100
+                        run klustakwik on a dataset
+  phy cluster-manual my_file.kwik
+                        run the manual clustering GUI
+
+""")
 
 
-def _parse_extra(extra):
-    kwargs = {}
-    reg = re.compile(r'^--([^\=]+)=([^\=]+)$')
-    for e in extra:
-        r = reg.match(e)
-        if r:
-            key, value = r.group(1), r.group(2)
-            key = key.replace('-', '_')
-            try:
-                value = int(value)
-            except ValueError:
-                try:
-                    value = float(value)
-                except ValueError:
-                    pass
-            kwargs[key] = value
-    return kwargs
+#------------------------------------------------------------------------------
+# Parser creator
+#------------------------------------------------------------------------------
+
+class ParserCreator(object):
+    def __init__(self):
+        self.create_main()
+        self.create_describe()
+        self.create_traces()
+        self.create_detect()
+        self.create_auto()
+        self.create_manual()
+        self.create_notebook()
+
+    @property
+    def parser(self):
+        return self._parser
+
+    def _add_sub_parser(self, name, desc):
+        p = self._subparsers.add_parser(name, help=desc, description=desc)
+        self._add_options(p)
+        return p
+
+    def _add_options(self, parser):
+        parser.add_argument('--debug', '-d',
+                            action='store_true',
+                            help='activate debug logging mode')
+
+        parser.add_argument('--profiler', '-p',
+                            action='store_true',
+                            help='activate the profiler')
+
+        parser.add_argument('--line-profiler', '-lp',
+                            dest='line_profiler',
+                            action='store_true',
+                            help='activate the line-profiler -- you '
+                                 'need to decorate the functions '
+                                 'to profile with `@profile` '
+                                 'in the code')
+
+        parser.add_argument('--ipython', '-i', action='store_true',
+                            help='launch the script in an interactive '
+                            'IPython console')
+
+    def create_main(self):
+        import phy
+
+        desc = sys.modules['phy'].__doc__
+        self._parser = Parser(description=desc,
+                              epilog=_examples,
+                              formatter_class=CustomFormatter,
+                              )
+        self._parser.set_defaults(func=None)
+        self._parser.add_argument('--version', '-v',
+                                  action='version',
+                                  version=phy.__version__,
+                                  help='print the version of phy')
+        self._add_options(self._parser)
+        self._subparsers = self._parser.add_subparsers(dest='command',
+                                                       title='subcommand',
+                                                       )
+
+    def create_describe(self):
+        desc = 'describe a `.kwik` file'
+        p = self._add_sub_parser('describe', desc)
+        p.add_argument('file', help='path to a `.kwik` file')
+        p.add_argument('--clustering', default='main',
+                       help='name of the clustering to use')
+        p.set_defaults(func=describe)
+
+    def create_traces(self):
+        desc = 'show the traces of a raw data file'
+        p = self._add_sub_parser('traces', desc)
+        p.add_argument('file', help='path to a `.kwd` or `.dat` file')
+        p.add_argument('interval', help='interval in number '
+                       'of samples',)
+        p.add_argument('--n-channels', '-n',
+                       help='number of channels in the recording '
+                       '(only required when using a flat binary file)')
+        p.add_argument('--dtype',
+                       help='NumPy data type '
+                       '(only required when using a flat binary file)',
+                       default='int16',
+                       )
+        p.set_defaults(func=traces)
+
+    def create_detect(self):
+        desc = 'launch the spike detection algorithm on a `.prm` file'
+        p = self._add_sub_parser('detect', desc)
+        p.add_argument('file', help='path to a `.prm` file')
+        p.add_argument('--kwik-path', help='filename of the `.kwik` file '
+                       'to create (by default, `"experiment_name".kwik`)')
+        p.set_defaults(func=detect)
+
+    def create_manual(self):
+        desc = 'launch the manual clustering GUI on a `.kwik` file'
+        p = self._add_sub_parser('cluster-manual', desc)
+        p.add_argument('file', help='path to a `.kwik` file')
+        p.add_argument('--clustering', default='main',
+                       help='name of the clustering to use')
+        p.add_argument('--cluster-ids', '-c',
+                       help='list of clusters to select initially')
+        p.set_defaults(func=cluster_manual)
+
+    def create_auto(self):
+        desc = 'launch the automatic clustering algorithm on a `.kwik` file'
+        p = self._add_sub_parser('cluster-auto', desc)
+        p.add_argument('file', help='path to a `.kwik` file')
+        p.add_argument('num_starting_clusters', type=int,
+                       # dest='num_starting_clusters',
+                       help='initial number of clusters',
+                       )
+        p.add_argument('--clustering', default='main',
+                       help='name of the clustering to use')
+        p.set_defaults(func=cluster_auto)
+
+    def create_notebook(self):
+        # TODO
+        pass
+
+    def parse(self, args):
+        return self._parser.parse_args(args)
 
 
-def _parse_args(args):
-    desc = sys.modules['phy'].__doc__
-    epilog = dedent("""
+#------------------------------------------------------------------------------
+# Subcommand functions
+#------------------------------------------------------------------------------
 
-    examples:
-      phy -v                display the version of phy
-      phy describe my_file.kwik
-                            display information about a Kwik dataset
-      phy cluster-auto my_file.kwik --num-clusters-start=100
-                            run klustakwik on a dataset
-      phy cluster-manual my_file.kwik
-                            run the manual clustering GUI
-
-    """)
-    parser = Parser(description=desc, epilog=epilog,
-                    formatter_class=CustomFormatter,
-                    )
-
-    # Allowed subcommands.
-    commands = [
-        'cluster-auto',
-        'cluster-manual',
-        'describe',  # describe a dataset
-        # TODO:
-        # 'notebook',  # start a new analysis notebook
-        # 'detect-spikes',
-    ]
-
-    parser.add_argument('command',
-                        choices=commands,
-                        help='command to execute')
-
-    parser.add_argument('file',
-                        help='file to execute the command on')
-
-    import phy
-    parser.add_argument('--version', '-v',
-                        action='version',
-                        version=phy.__version__,
-                        help='print the version of phy')
-
-    parser.add_argument('--debug', '-d',
-                        action='store_true',
-                        help='activate debug logging mode')
-
-    parser.add_argument('--profiler', '-p',
-                        action='store_true',
-                        help='activate the profiler')
-
-    parser.add_argument('--line-profiler', '-lp',
-                        dest='line_profiler',
-                        action='store_true',
-                        help='activate the line-profiler -- you need to '
-                        'decorate the functions to profile with `@profile` '
-                        'in the code')
-
-    parser.add_argument('--ipython', '-i', action='store_true',
-                        help='launch the script in an interactive '
-                        'IPython console')
-
-    parser.add_argument('--clustering', default='main',
-                        help='name of the clustering to use')
-
-    parser.add_argument('--cluster_ids', '-c',
-                        help='list of clusters to select initially')
-
-    parse, extra = parser.parse_known_args(args)
-    kwargs = _parse_extra(extra)
-    return parse, kwargs
-
-
-def run_manual(kwik_path, clustering=None, interactive=False,
-               cluster_ids=None):
-    import phy
-    from phy.cluster import Session
-    from phy.gui import start_qt_app, run_qt_app
+def _get_kwik_path(args):
+    kwik_path = args.file
 
     if not op.exists(kwik_path):
         print("The file `{}` doesn't exist.".format(kwik_path))
-        return 1
+        return
 
-    print("\nLoading {}...".format(kwik_path))
-    session = Session(kwik_path,
-                      clustering=clustering,
-                      )
-    print("Data successfully loaded!\n")
+    return kwik_path
+
+
+def _create_session(args, **kwargs):
+    from phy.cluster import Session
+    kwik_path = _get_kwik_path(args)
+    session = Session(kwik_path, **kwargs)
+    return session
+
+
+def describe(args):
+    from phy.io.kwik import KwikModel
+    path = _get_kwik_path(args)
+    model = KwikModel(path, clustering=args.clustering)
+    return 'model.describe()', dict(model=model)
+
+
+def traces(args):
+    from vispy.app import run
+    from phy.plot.traces import TraceView
+    from phy.io.h5 import open_h5
+    from phy.io.traces import read_kwd, read_dat
+
+    path = args.file
+    if path.endswith('.kwd'):
+        f = open_h5(args.file)
+        traces = read_kwd(f)
+    elif path.endswith(('.dat', '.bin')):
+        if not args.n_channels:
+            raise ValueError("Please specify `--n-channels`.")
+        if not args.dtype:
+            raise ValueError("Please specify `--dtype`.")
+        n_channels = int(args.n_channels)
+        dtype = np.dtype(args.dtype)
+        traces = read_dat(path, dtype=dtype, n_channels=n_channels)
+
+    start, end = map(int, args.interval.split('-'))
+
+    c = TraceView(keys='interactive')
+    c.visual.traces = .01 * traces[start:end, ...]
+    c.show()
+    run()
+
+    return None, None
+
+
+def cluster_manual(args):
+    session = _create_session(args, clustering=args.clustering)
+    cluster_ids = (list(map(int, args.cluster_ids.split(',')))
+                   if args.cluster_ids else None)
+
+    session = _create_session(args)
     session.model.describe()
 
+    from phy.gui import start_qt_app
     start_qt_app()
+
     gui = session.show_gui(cluster_ids=cluster_ids, show=False)
-
     print("\nPress `ctrl+h` to see the list of keyboard shortcuts.\n")
-
-    # Interactive mode with IPython.
-    if interactive:
-        print("\nStarting IPython...")
-        from IPython import start_ipython
-
-        # Namespace.
-        ns = {'phy': phy,
-              'session': session,
-              'model': session.model,
-              'kwik_path': kwik_path,
-              'gui': gui,
-              }
-        start_ipython(["--gui=qt", "-i", "-c='gui.show()'"], user_ns=ns)
-    else:
-        gui.show()
-        run_qt_app()
+    return 'gui.show()', dict(session=session, gui=gui, requires_qt=True)
 
 
-def run_auto(kwik_path, clustering=None, interactive=False, **kwargs):
-    from phy.cluster import Session
-
-    if not op.exists(kwik_path):
-        print("The file `{}` doesn't exist.".format(kwik_path))
-        return
-
-    session = Session(kwik_path, use_store=False)
-    session.cluster(clustering=clustering, **kwargs)
-    session.save()
-    session.close()
+def cluster_auto(args):
+    session = _create_session(args, use_store=False)
+    ns = dict(session=session,
+              clustering=args.clustering,
+              n_s_clusters=args.num_starting_clusters,
+              )
+    cmd = ('session.cluster(clustering=clustering, '
+           'num_starting_clusters=n_s_clusters)')
+    return (cmd, ns)
 
 
-def describe(kwik_path, clustering=None):
-    from phy.io.kwik import KwikModel
+def detect(args):
+    from phy.io import create_kwik
 
-    if not op.exists(kwik_path):
-        print("The file `{}` doesn't exist.".format(kwik_path))
-        return
+    assert args.file.endswith('.prm')
+    kwik_path = args.kwik_path
+    kwik_path = create_kwik(args.file, kwik_path=kwik_path)
+    # Create the session with the newly-created .kwik file.
+    args.file = kwik_path
+    session = _create_session(args, use_store=False)
+    return 'session.detect()', dict(session=session)
 
-    model = KwikModel(kwik_path, clustering=clustering)
-    model.describe()
-    model.close()
 
+#------------------------------------------------------------------------------
+# Main functions
+#------------------------------------------------------------------------------
 
 def main():
 
-    args, kwargs = _parse_args(sys.argv[1:])
+    p = ParserCreator()
+    args = p.parse(sys.argv[1:])
 
     if args.profiler or args.line_profiler:
         from phy.utils.testing import _enable_profiler, _profile
@@ -206,26 +294,46 @@ def main():
     if args.debug:
         phy.debug()
 
-    if args.cluster_ids:
-        cluster_ids = list(map(int, args.cluster_ids.split(',')))
-    else:
-        cluster_ids = None
+    func = args.func
+    if func is None:
+        p.parser.print_help()
+        return
 
-    if args.command == 'cluster-manual':
-        cmd = ('run_manual(args.file, clustering=args.clustering, '
-               'interactive=args.ipython, cluster_ids=cluster_ids)')
-    elif args.command == 'cluster-auto':
-        cmd = ('run_auto(args.file, clustering=args.clustering, '
-               'interactive=args.ipython, **kwargs)')
-    elif args.command == 'describe':
-        cmd = 'describe(args.file)'
-    else:
-        raise NotImplementedError()
+    cmd, ns = func(args)
+    if not cmd:
+        return
+    requires_qt = ns.pop('requires_qt', False)
+    requires_vispy = ns.pop('requires_vispy', False)
 
-    if not prof:
-        exec_(cmd, globals(), locals())
+    # Default variables in namespace.
+    ns.update(phy=phy, path=args.file)
+    if 'session' in ns:
+        ns['model'] = ns['session'].model
+
+    # Interactive mode with IPython.
+    if args.ipython:
+        print("\nStarting IPython...")
+        from IPython import start_ipython
+        args_ipy = ["-i", "-c='{}'".format(cmd)]
+        if requires_qt or requires_vispy:
+            # Activate Qt event loop integration with Qt.
+            args_ipy += ["--gui=qt"]
+        start_ipython(args_ipy, user_ns=ns)
     else:
-        _profile(prof, cmd, globals(), locals())
+        if not prof:
+            exec_(cmd, {}, ns)
+        else:
+            _profile(prof, cmd, {}, ns)
+
+        if requires_qt:
+            # Launch the Qt app.
+            from phy.gui import run_qt_app
+            run_qt_app()
+        elif requires_vispy:
+            # Launch the VisPy Qt app.
+            from vispy.app import use_app, run
+            use_app('pyqt4')
+            run()
 
 
 #------------------------------------------------------------------------------

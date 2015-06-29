@@ -7,11 +7,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
+import os.path as op
 import itertools
 
 import numpy as np
 
 from ..utils._types import _as_array
+from ..utils._misc import _read_python
 
 
 #------------------------------------------------------------------------------
@@ -71,6 +74,22 @@ def _channels_per_group(probe):
     groups = probe['channel_groups'].keys()
     return {group: probe['channel_groups'][group]['channels']
             for group in groups}
+
+
+def load_probe(name):
+    """Load one of the built-in probes."""
+    curdir = op.realpath(op.dirname(__file__))
+    path = op.join(curdir, 'probes/{}.prb'.format(name))
+    if not op.exists(path):
+        raise IOError("The probe `{}` cannot be found.".format(name))
+    return _read_python(path)
+
+
+def list_probes():
+    """Return the list of built-in probes."""
+    curdir = op.realpath(op.dirname(__file__))
+    return [op.splitext(fn)[0] for fn in os.listdir(op.join(curdir, 'probes'))
+            if fn.endswith('.prb')]
 
 
 #------------------------------------------------------------------------------

@@ -27,7 +27,10 @@ from .model import _create_clustering
 def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
                      n_channels=None, n_features_per_channel=None,
                      n_samples_traces=None,
-                     with_kwx=True, with_kwd=True):
+                     with_kwx=True,
+                     with_kwd=True,
+                     add_original=True,
+                     ):
     """Create a test kwik file."""
     filename = op.join(dir_path, '_test.kwik')
     kwx_filename = op.join(dir_path, '_test.kwx')
@@ -87,9 +90,9 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
             f.write_attr(group, 'position', positions[channel])
 
         # Create spike clusters.
-        clusterings = [('main', n_clusters),
-                       ('original', n_clusters * 2),
-                       ]
+        clusterings = [('main', n_clusters)]
+        if add_original:
+            clusterings += [('original', n_clusters * 2)]
         for clustering, n_clusters_rec in clusterings:
             spike_clusters = artificial_spike_clusters(n_spikes,
                                                        n_clusters_rec)

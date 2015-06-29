@@ -10,10 +10,11 @@ import os
 from math import floor
 from operator import mul
 from functools import reduce
+import math
 
 import numpy as np
 
-from ..ext.six import integer_types
+from ..ext.six import integer_types, string_types
 from .logging import warn
 from ._types import _as_tuple, _as_array
 
@@ -253,23 +254,74 @@ def _prod(l):
     return reduce(mul, l, 1)
 
 
-def _load_ndarray(f, dtype=None, shape=None, memmap=True):
+class LazyMemmap(object):
+    """A memmapped array that only opens the file handle when required."""
+    def __init__(self, path, dtype=None, shape=None, mode='r'):
+        assert isinstance(path, string_types)
+        assert dtype
+        self._path = path
+        self._f = None
+        self.mode = mode
+        self.dtype = dtype
+        self.shape = shape
+        self.ndim = len(shape) if shape else None
+
+    def _open_file_if_needed(self):
+        if self._f is None:
+            self._f = np.memmap(self._path,
+                                dtype=self.dtype,
+                                shape=self.shape,
+                                mode=self.mode,
+                                )
+            self.shape = self._f.shape
+            self.ndim = self._f.ndim
+
+    def __getitem__(self, item):
+        self._open_file_if_needed()
+        return self._f[item]
+
+    def __len__(self):
+        self._open_file_if_needed()
+        return len(self._f)
+
+    def __del__(self):
+        if self._f is not None:
+            del self._f
+
+
+def _memmap(f_or_path, dtype=None, shape=None, lazy=True):
+    if not lazy:
+        return np.memmap(f_or_path, dtype=dtype, shape=shape, mode='r')
+    else:
+        return LazyMemmap(f_or_path, dtype=dtype, shape=shape, mode='r')
+
+
+def _file_size(f_or_path):
+    if isinstance(f_or_path, string_types):
+        with open(f_or_path, 'rb') as f:
+            return _file_size(f)
+    else:
+        return os.fstat(f_or_path.fileno()).st_size
+
+
+def _load_ndarray(f_or_path, dtype=None, shape=None, memmap=True, lazy=True):
     if dtype is None:
-        return f
+        return f_or_path
     else:
         if not memmap:
-            arr = np.fromfile(f, dtype=dtype)
+            arr = np.fromfile(f_or_path, dtype=dtype)
             if shape is not None:
                 arr = arr.reshape(shape)
         else:
-            # memmap doesn't accept -1 in shapes.
+            # memmap doesn't accept -1 in shapes, but we can compute
+            # the missing dimension from the file size.
             if shape and shape[0] == -1:
-                n_bytes = os.fstat(f.fileno()).st_size
+                n_bytes = _file_size(f_or_path)
                 n_items = n_bytes // np.dtype(dtype).itemsize
                 n_rows = n_items // _prod(shape[1:])
                 shape = (n_rows,) + shape[1:]
                 assert _prod(shape) == n_items
-            arr = np.memmap(f, dtype=dtype, shape=shape, mode='r')
+            arr = _memmap(f_or_path, dtype=dtype, shape=shape, lazy=lazy)
         return arr
 
 
@@ -375,8 +427,9 @@ def regular_subset(spikes=None, n_spikes_max=None):
     # Nothing to do if the selection already satisfies n_spikes_max.
     if n_spikes_max is None or len(spikes) <= n_spikes_max:
         return spikes
-    step = int(np.clip(1. / n_spikes_max * len(spikes),
-                       1, len(spikes)))
+    step = math.ceil(np.clip(1. / n_spikes_max * len(spikes),
+                             1, len(spikes)))
+    step = int(step)
     # Random shift.
     # start = np.random.randint(low=0, high=step)
     # Note: randomly-changing selections are confusing...

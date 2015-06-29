@@ -10,17 +10,19 @@ import os.path as op
 
 import numpy as np
 from numpy.testing import assert_equal as ae
-from pytest import fixture
+from pytest import fixture, mark
 
 from ...utils._misc import _read_python
 from ...utils.datasets import _download_test_data
 from ...utils.logging import set_level
 from ...utils.tempdir import TemporaryDirectory
-from ...utils.settings import Settings
+from ...utils.testing import show_test
+from ...electrode.mea import load_probe
 from ...io.kwik import KwikModel
 from ...io.kwik.mock import create_mock_kwik
 from ...io.mock import artificial_traces
-from ..algorithms import cluster, SpikeDetekt, _split_spikes, _concat
+from ..algorithms import (cluster, SpikeDetekt, _split_spikes,
+                          _concat, SpikeCounts)
 
 
 #------------------------------------------------------------------------------
@@ -28,7 +30,7 @@ from ..algorithms import cluster, SpikeDetekt, _split_spikes, _concat
 #------------------------------------------------------------------------------
 
 def setup():
-    set_level('debug')
+    set_level('info')
 
 
 def teardown():
@@ -89,6 +91,22 @@ def spikedetekt_one_group(request):
 #------------------------------------------------------------------------------
 # Tests spike detection
 #------------------------------------------------------------------------------
+
+def test_spike_counts():
+    c = {0: {10: 100, 20: 200},
+         2: {10: 1, 30: 300},
+         }
+    sc = SpikeCounts(c)
+    assert sc() == 601
+
+    assert sc(group=0) == 300
+    assert sc(group=1) == 0
+    assert sc(group=2) == 301
+
+    assert sc(chunk=10) == 101
+    assert sc(chunk=20) == 200
+    assert sc(chunk=30) == 300
+
 
 def test_split_spikes():
     groups = np.zeros(10, dtype=np.int)
@@ -203,47 +221,55 @@ def test_spike_detect_serial(spikedetekt):
         assert masks.shape == (n_spikes_g, n_channels_g)
 
 
+@mark.long
 def test_spike_detect_real_data(spikedetekt):
     with TemporaryDirectory() as tempdir:
 
         # Set the parameters.
         curdir = op.dirname(op.realpath(__file__))
         default_settings_path = op.join(curdir, '../default_settings.py')
-        settings = Settings(default_path=default_settings_path)
+        settings = _read_python(default_settings_path)
         sample_rate = 20000
         params = settings['spikedetekt_params'](sample_rate)
         params['sample_rate'] = sample_rate
-        params['probe_adjacency_list'] = {0: [1, 2, 3],
-                                          1: [0, 2, 3],
-                                          2: [0, 1, 3],
-                                          3: [0, 1, 2]}
-        params['probe_channels'] = {0: [0, 1, 2, 3]}
+
+        n_channels = 32
+        npc = params['nfeatures_per_channel']
+        n_samples_w = params['extract_s_before'] + params['extract_s_after']
+        probe = load_probe('1x32_buzsaki')
 
         # Load the traces.
-        path = _download_test_data('test.dat')
-        traces = np.fromfile(path, dtype=np.int16).reshape((20000, 4))
+        path = _download_test_data('test-32ch-10s.dat')
+        traces = np.fromfile(path, dtype=np.int16).reshape((200000, 32))
 
         # Run the detection.
-        sd = SpikeDetekt(tempdir=tempdir, **params)
-        out = sd.run_serial(traces)
+        sd = SpikeDetekt(tempdir=tempdir, probe=probe, **params)
+        out = sd.run_serial(traces, interval_samples=(0, 50000))
 
-        n_spikes = 49
-        assert out.n_spikes_total == n_spikes
-        spike_samples = out.spike_samples[0][0][...]
+        n_spikes = out.n_spikes_total
+
+        def _concat(arrs):
+            return np.concatenate(arrs)
+
+        spike_samples = _concat(out.spike_samples[0])
+        masks = _concat(out.masks[0])
+        features = _concat(out.features[0])
+
         assert spike_samples.shape == (n_spikes,)
-
-        masks = out.masks[0][0][...]
         assert masks.shape == (n_spikes, n_channels)
+        assert features.shape == (n_spikes, n_channels, npc)
+
+        # There should not be any spike with only masked channels.
+        assert np.all(masks.max(axis=1) > 0)
 
         # Plot...
-        # from phy.gui import qt_app
-        # from phy.plot.traces import plot_traces
-        # with qt_app():
-        #     plot_traces(traces,
-        #                 spike_samples=spike_samples,
-        #                 masks=masks,
-        #                 n_samples_per_spike=20,
-        #                 )
+        from phy.plot.traces import plot_traces
+        c = plot_traces(traces[:30000, :],
+                        spike_samples=spike_samples,
+                        masks=masks,
+                        n_samples_per_spike=n_samples_w,
+                        show=False)
+        show_test(c)
 
 
 #------------------------------------------------------------------------------

@@ -15,7 +15,6 @@ from ..utils._misc import _show_shortcuts
 from ..utils import debug, info, warn, EventEmitter
 from ._utils import _read
 from .dock import DockWindow
-from .qt import Qt
 
 
 #------------------------------------------------------------------------------
@@ -310,7 +309,7 @@ class BaseGUI(EventEmitter):
     """
 
     _default_shortcuts = {
-        'close': 'ctrl+q',
+        'exit': 'ctrl+q',
         'enable_snippet_mode': ':',
     }
 
@@ -442,9 +441,13 @@ class BaseGUI(EventEmitter):
         """Helper function to add a GUI action with a keyboard shortcut."""
         # Get the keyboard shortcut for this method.
         shortcut = self._shortcuts.get(method_name, None)
+
+        def callback():
+            return getattr(self, method_name)()
+
         # Bind the shortcut to the method.
         self._dock.add_action(method_name,
-                              lambda: getattr(self, method_name)(),
+                              callback,
                               shortcut=shortcut,
                               )
 
@@ -455,11 +458,11 @@ class BaseGUI(EventEmitter):
     @property
     def status_message(self):
         """Message in the status bar."""
-        return self._dock.status_message
+        return str(self._dock.status_message)
 
     @status_message.setter
     def status_message(self, value):
-        self._dock.status_message = value
+        self._dock.status_message = str(value)
 
     _snippet_message_cursor = '\u200A\u258C'
 
@@ -476,7 +479,7 @@ class BaseGUI(EventEmitter):
     def _snippet_message(self, value):
         self.status_message = value + self._snippet_message_cursor
 
-    def _process_snippet(self, snippet):
+    def process_snippet(self, snippet):
         """Processes a snippet.
 
         May be overriden.
@@ -492,43 +495,63 @@ class BaseGUI(EventEmitter):
             info("The snippet `{}` could not be found.".format(cmd))
             return
         try:
+            info("Processing snippet `{}`.".format(cmd))
             func(self, snippet)
         except Exception as e:
             warn("Error when executing snippet `{}`: {}.".format(
                  cmd, str(e)))
 
-    def _on_keystroke(self, key, text):
-        """Capture al keystrokes in snippet mode.
+    def _snippet_action_name(self, char):
+        return self._snippet_chars.index(char)
 
-        May be overriden.
+    _snippet_chars = 'abcdefghijklmnopqrstuvwxyz0123456789 ._,+*-=:()'
 
-        """
-        # Process keystrokes in snippet mode.
-        # Escape quits the snippet mode.
-        if key in (Qt.Key_Escape, Qt.Key_Control):
-            self.disable_snippet_mode()
-        # Backspace.
-        elif key == Qt.Key_Backspace:
+    def _create_snippet_actions(self):
+        # One action per allowed character.
+        for i, char in enumerate(self._snippet_chars):
+
+            def _make_func(char):
+                def callback():
+                    self._snippet_message += char
+                return callback
+
+            self._dock.add_action('snippet_{}'.format(i),
+                                  shortcut=char,
+                                  callback=_make_func(char),
+                                  )
+
+        def backspace():
             if self._snippet_message == ':':
                 return
             self._snippet_message = self._snippet_message[:-1]
-        # Validate the snippet.
-        elif key in (Qt.Key_Return, Qt.Key_Enter):
-            self._process_snippet(self._snippet_message)
+
+        def enter():
+            self.process_snippet(self._snippet_message)
             self.disable_snippet_mode()
-        # Writing the snippet.
-        elif Qt.Key_Space <= key <= Qt.Key_AsciiTilde:
-            self._snippet_message += text
+
+        self._dock.add_action('snippet_backspace',
+                              shortcut='backspace',
+                              callback=backspace,
+                              )
+        self._dock.add_action('snippet_activate',
+                              shortcut=('enter', 'return'),
+                              callback=enter,
+                              )
+        self._dock.add_action('snippet_disable',
+                              shortcut='escape',
+                              callback=self.disable_snippet_mode,
+                              )
 
     def enable_snippet_mode(self):
         info("Snippet mode enabled, press `escape` to leave this mode.")
         self._remove_actions()
-        self._dock.connect_(self._on_keystroke, event='keystroke')
+        self._create_snippet_actions()
+        self._snippet_message = ':'
 
     def disable_snippet_mode(self):
         self.status_message = ''
-        self._dock.unconnect_(self._on_keystroke)
         # Reestablishes the shortcuts.
+        self._remove_actions()
         self._set_default_shortcuts()
         self._create_actions()
         info("Snippet mode disabled.")

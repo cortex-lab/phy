@@ -12,6 +12,7 @@ from numpy.testing import assert_array_equal as ae
 
 from ..mea import (_probe_channels, _probe_positions, _probe_adjacency_list,
                    MEA, linear_positions, staggered_positions,
+                   load_probe, list_probes
                    )
 
 
@@ -87,3 +88,11 @@ def test_positions():
 
     probe = linear_positions(29)
     assert probe.shape == (29, 2)
+
+
+def test_library():
+    probe = load_probe('1x32_buzsaki')
+    assert probe
+    assert probe['channel_groups'][0]['channels'] == list(range(32))
+
+    assert '1x32_buzsaki' in list_probes()

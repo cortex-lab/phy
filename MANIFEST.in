@@ -2,6 +2,7 @@ include LICENSE
 include README.md
 
 recursive-include tests *
+recursive-include phy/electrode/probes *.prb
 recursive-include phy/plot/glsl *.vert *.frag *.glsl
 recursive-include phy/cluster/manual/static *.html *.css
 recursive-exclude * __pycache__

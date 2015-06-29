@@ -233,7 +233,7 @@ class ClusterManualGUI(BaseGUI):
     def _create_actions(self):
         for action in ['reset_gui',
                        'save',
-                       'close',
+                       'exit',
                        'show_shortcuts',
                        'select',
                        # Wizard.
@@ -359,6 +359,13 @@ class ClusterManualGUI(BaseGUI):
         # actions. This allows for better before/after comparisons.
         if up.added:
             self.select(up.added, auto_update=False)
+        elif up.description == 'metadata_group':
+            cluster = up.metadata_changed[0]
+            if cluster == self.wizard.best:
+                self.wizard.next_best()
+            elif cluster == self.wizard.match:
+                self.wizard.next_match()
+            self._wizard_select()
         elif up.selection:
             self.select(up.selection, auto_update=False)
 
@@ -501,7 +508,9 @@ class ClusterManualGUI(BaseGUI):
 
     def pin(self):
         """Pin the current best cluster."""
-        self.wizard.pin()
+        cluster = (self.selected_clusters[0]
+                   if len(self.selected_clusters) else None)
+        self.wizard.pin(cluster)
         self._wizard_select()
 
     def unpin(self):

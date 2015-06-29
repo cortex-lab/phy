@@ -7,15 +7,12 @@
 #------------------------------------------------------------------------------
 
 from subprocess import call
-import time
 
-import numpy as np
-from pytest import raises, mark
+from pytest import mark
 
 from ...utils.tempdir import TemporaryDirectory
 from ...io.kwik.mock import create_mock_kwik
-from ...cluster.session import Session
-from ..phy_script import _parse_args
+from ..phy_script import ParserCreator
 
 
 #------------------------------------------------------------------------------
@@ -35,41 +32,26 @@ def _call(cmd):
         raise RuntimeError()
 
 
-def _parse(args):
-    return _parse_args(args)[0]
-
-
 def test_script_parser():
+
+    p = ParserCreator()
 
     kwik_path = 'test'
 
-    for cmd in ('cluster-manual', 'cluster-auto'):
-        assert _parse([cmd, kwik_path]).command == cmd
-
-    args = _parse(['cluster-manual', '-i', '--debug', kwik_path])
+    args = p.parse(['cluster-manual', kwik_path, '-i', '--debug'])
     assert args.command == 'cluster-manual'
     assert args.ipython
     assert args.debug
     assert not args.profiler
     assert not args.line_profiler
 
-    args = _parse(['cluster-auto', '-lp', kwik_path])
+    args = p.parse(['cluster-auto', kwik_path, '10', '-lp'])
     assert args.command == 'cluster-auto'
     assert not args.ipython
     assert not args.debug
     assert not args.profiler
     assert args.line_profiler
-
-    # Test extra arguments.
-    args, kwargs = _parse_args(['cluster-auto',
-                                kwik_path,
-                                '--aa=foo',
-                                '--b-b=1.5',
-                                '--c_c=2',
-                                ])
-    assert kwargs['aa'] == 'foo'
-    assert kwargs['b_b'] == 1.5
-    assert kwargs['c_c'] == 2
+    assert args.num_starting_clusters == 10
 
 
 @mark.long
@@ -83,20 +65,15 @@ def test_script_run():
                                      n_spikes=n_spikes,
                                      n_channels=n_channels,
                                      n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
-
-        with raises(RuntimeError):
-            _call('phy')
+                                     n_samples_traces=n_samples_traces,
+                                     add_original=False,
+                                     )
 
         _call('phy -v')
         _call('phy -h')
         _call('phy describe ' + kwik_path)
 
-        cmd = ('phy cluster-auto {} --num_starting_clusters=10 '
-               '--clustering=auto')
+        cmd = ('phy cluster-auto {} 10 --clustering=original')
         _call(cmd.format(kwik_path))
-        time.sleep(.5)
 
-        session = Session(kwik_path)
-        session.change_clustering('auto')
-        assert np.all(session.model.spike_clusters == 0)
+        _call('phy describe {} --clustering=original'.format(kwik_path))
