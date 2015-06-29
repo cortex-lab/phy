@@ -152,6 +152,8 @@ class ParserCreator(object):
                        'to create (by default, `"experiment_name".kwik`)')
         p.add_argument('--overwrite', action='store_true', default=False,
                        help='overwrite the `.kwik` file ')
+        p.add_argument('--interval',
+                       help='detection interval in seconds (e.g. `0,10`)')
         p.set_defaults(func=spikesort)
 
     def create_detect(self):
@@ -255,7 +257,8 @@ def detect(args):
 
     assert args.file.endswith('.prm')
     kwik_path = args.kwik_path
-    kwik_path = create_kwik(args.file, overwrite=args.overwrite,
+    kwik_path = create_kwik(args.file,
+                            overwrite=args.overwrite,
                             kwik_path=kwik_path)
     # Create the session with the newly-created .kwik file.
     args.file = kwik_path
@@ -285,10 +288,15 @@ def spikesort(args):
     args.file = kwik_path
     session = _create_session(args, use_store=False)
 
+    interval = args.interval
+    if interval is not None:
+        interval = list(map(float, interval.split(',')))
+
     ns = dict(session=session,
+              interval=interval,
               n_s_clusters=100,  # TODO: better handling of KK parameters
               )
-    cmd = ('session.detect(); session.cluster('
+    cmd = ('session.detect(interval=interval); session.cluster('
            'num_starting_clusters=n_s_clusters)')
     return (cmd, ns)
 
