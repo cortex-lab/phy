@@ -18,7 +18,10 @@ from ..utils.array import (PartialArray, get_excerpts,
 from ..utils._types import Bunch
 from ..utils.event import EventEmitter, ProgressReporter
 from ..utils.logging import debug, info
-from ..electrode.mea import _channels_per_group, _probe_adjacency_list
+from ..electrode.mea import (_channels_per_group,
+                             _probe_adjacency_list,
+                             _probe_all_channels,
+                             )
 from ..io.kwik.sparse_kk2 import sparsify_features_masks
 from ..traces import (Filter, Thresholder, compute_threshold,
                       FloodFillDetector, WaveformExtractor, PCA,
@@ -134,10 +137,13 @@ class SpikeDetekt(EventEmitter):
     def __init__(self, tempdir=None, probe=None, **kwargs):
         super(SpikeDetekt, self).__init__()
         self._tempdir = tempdir
+        self._dead_channels = None
+        self._all_channels = None
         # Load a probe.
         if probe is not None:
             kwargs['probe_channels'] = _channels_per_group(probe)
             kwargs['probe_adjacency_list'] = _probe_adjacency_list(probe)
+            self._all_channels = _probe_all_channels(probe)
         self._kwargs = kwargs
         self._n_channels_per_group = {
             group: len(channels)
@@ -196,6 +202,13 @@ class SpikeDetekt(EventEmitter):
     def update_params(self, **kwargs):
         self._kwargs.update(kwargs)
 
+    def _find_dead_channels(self, n_channels):
+        # Discard dead channels by forcing the threshold crossings to be 0.
+        # debug("Dead channels: {}.".format(_dead_channels))
+        if self._all_channels is None:
+            return None
+        return np.setdiff1d(np.arange(n_channels), self._all_channels)
+
     # Processing functions
     # -------------------------------------------------------------------------
 
@@ -220,7 +233,7 @@ class SpikeDetekt(EventEmitter):
         return {'weak': thresholds[0],
                 'strong': thresholds[1]}
 
-    def detect(self, traces_f, thresholds=None):
+    def detect(self, traces_f, thresholds=None, dead_channels=None):
         """Detect connected waveform components in filtered traces.
 
         Parameters
@@ -230,6 +243,8 @@ class SpikeDetekt(EventEmitter):
             An `(n_samples, n_channels)` array with the filtered data.
         thresholds : dict
             The weak and strong thresholds.
+        dead_channels : array-like
+            Array of dead channels.
 
         Returns
         -------
@@ -245,6 +260,14 @@ class SpikeDetekt(EventEmitter):
         # Compute the threshold crossings.
         weak = thresholder.detect(traces_t, 'weak')
         strong = thresholder.detect(traces_t, 'strong')
+        # Force crossings to be False on dead channels.
+        if dead_channels is not None and len(dead_channels):
+            assert dead_channels.max() < traces_f.shape[1]
+            weak[:, dead_channels] = 0
+            strong[:, dead_channels] = 0
+        else:
+            debug("No dead channels specified.")
+        # Run the detection.
         detector = self._create_detector()
         return detector(weak_crossings=weak,
                         strong_crossings=strong)
@@ -447,8 +470,14 @@ class SpikeDetekt(EventEmitter):
         assert data_f.shape == chunk_data.shape
         # Save the filtered chunk.
         self._save(data_f, 'filtered', key=key)
+        # Find dead channels.
+        n_channels = data_f.shape[1]
+        dead_channels = self._find_dead_channels(n_channels)
         # Detect spikes in the filtered chunk.
-        components = self.detect(data_f, thresholds=thresholds)
+        components = self.detect(data_f,
+                                 thresholds=thresholds,
+                                 dead_channels=dead_channels
+                                 )
         # Return the list of components in the chunk.
         return components
 
