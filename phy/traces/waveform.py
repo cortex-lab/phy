@@ -63,7 +63,12 @@ class WaveformExtractor(object):
     def _component(self, component, data=None, n_samples=None):
         comp_s = component[:, 0]  # shape: (component_size,)
         comp_ch = component[:, 1]  # shape: (component_size,)
-        channels = self._dep_channels[comp_ch[0]]
+        channel = comp_ch[0]
+        if channel not in self._dep_channels:
+            raise RuntimeError("Channel `{}` appears to be dead and should "
+                               "have been excluded from the threshold "
+                               "crossings.".format(channel))
+        channels = self._dep_channels[channel]
         group = self._channel_groups[comp_ch[0]]
 
         # Get the temporal window around the waveform.
