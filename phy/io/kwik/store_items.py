@@ -51,6 +51,7 @@ def _mean(arr, shape):
             return arr.mean(axis=0)
     return np.zeros(shape, dtype=np.float32)
 
+	
 
 #------------------------------------------------------------------------------
 # Store items
@@ -530,9 +531,13 @@ class ClusterStatistics(FixedSizeItem):
 
     def mean_probe_position(self, cluster):
         mean_masks = self.load(cluster, 'mean_masks')
-        return np.sum(self.model.probe.positions[:, 1] *
-                      mean_masks) / np.sum(mean_masks)
-
+        if mean_masks is not None and mean_masks.shape[0]:
+            meanClusterPosition = np.sum(self.model.probe.positions * mean_masks[:, np.newaxis], axis=0) / max(1, np.sum(mean_masks))
+        else:
+            meanClusterPosition = np.zeros((2,), dtype=np.float32)
+            
+        return meanClusterPosition
+        
     def n_spikes(self, cluster):
         return len(self._spikes_per_cluster[cluster])
 
