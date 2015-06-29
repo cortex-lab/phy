@@ -532,8 +532,8 @@ class ClusterStatistics(FixedSizeItem):
         mean_masks = self.load(cluster, 'mean_masks')
         if mean_masks is not None and mean_masks.shape[0]:
             mean_cluster_position = (np.sum(self.model.probe.positions *
-                                     mean_masks[:, np.newaxis], axis=0)
-                                     / max(1, np.sum(mean_masks)))
+                                     mean_masks[:, np.newaxis], axis=0) /
+                                     max(1, np.sum(mean_masks)))
         else:
             mean_cluster_position = np.zeros((2,), dtype=np.float32)
 
