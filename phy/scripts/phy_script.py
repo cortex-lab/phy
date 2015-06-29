@@ -45,6 +45,8 @@ examples:
   phy -v                display the version of phy
   phy describe my_file.kwik
                         display information about a Kwik dataset
+  phy spikesort my_params.prm
+                        run the whole suite (spike detection and clustering)
   phy detect my_params.prm
                         run spike detection on a parameters file
   phy cluster-auto my_file.kwik --num-clusters-start=100
@@ -64,6 +66,7 @@ class ParserCreator(object):
         self.create_main()
         self.create_describe()
         self.create_traces()
+        self.create_spikesort()
         self.create_detect()
         self.create_auto()
         self.create_manual()
@@ -141,12 +144,24 @@ class ParserCreator(object):
                        )
         p.set_defaults(func=traces)
 
+    def create_spikesort(self):
+        desc = 'launch the whole spike sorting pipeline on a `.prm` file'
+        p = self._add_sub_parser('spikesort', desc)
+        p.add_argument('file', help='path to a `.prm` file')
+        p.add_argument('--kwik-path', help='filename of the `.kwik` file '
+                       'to create (by default, `"experiment_name".kwik`)')
+        p.add_argument('--overwrite', action='store_true', default=False,
+                       help='overwrite the `.kwik` file ')
+        p.set_defaults(func=spikesort)
+
     def create_detect(self):
         desc = 'launch the spike detection algorithm on a `.prm` file'
         p = self._add_sub_parser('detect', desc)
         p.add_argument('file', help='path to a `.prm` file')
         p.add_argument('--kwik-path', help='filename of the `.kwik` file '
                        'to create (by default, `"experiment_name".kwik`)')
+        p.add_argument('--overwrite', action='store_true', default=False,
+                       help='overwrite the `.kwik` file ')
         p.set_defaults(func=detect)
 
     def create_manual(self):
@@ -236,6 +251,35 @@ def traces(args):
     return None, None
 
 
+def detect(args):
+    from phy.io import create_kwik
+
+    assert args.file.endswith('.prm')
+    kwik_path = args.kwik_path
+    kwik_path = create_kwik(args.file, overwrite=args.overwrite,
+                            kwik_path=kwik_path)
+    # Create the session with the newly-created .kwik file.
+    args.file = kwik_path
+    session = _create_session(args, use_store=False)
+    return 'session.detect()', dict(session=session)
+
+
+def cluster_auto(args):
+    session = _create_session(args, use_store=False)
+    ns = dict(session=session,
+              clustering=args.clustering,
+              n_s_clusters=args.num_starting_clusters,
+              )
+    cmd = ('session.cluster(clustering=clustering, '
+           'num_starting_clusters=n_s_clusters)')
+    return (cmd, ns)
+
+
+def spikesort(args):
+    detect(args)
+    cluster_auto(args)
+
+
 def cluster_manual(args):
     session = _create_session(args, clustering=args.clustering)
     cluster_ids = (list(map(int, args.cluster_ids.split(',')))
@@ -250,29 +294,6 @@ def cluster_manual(args):
     gui = session.show_gui(cluster_ids=cluster_ids, show=False)
     print("\nPress `ctrl+h` to see the list of keyboard shortcuts.\n")
     return 'gui.show()', dict(session=session, gui=gui, requires_qt=True)
-
-
-def cluster_auto(args):
-    session = _create_session(args, use_store=False)
-    ns = dict(session=session,
-              clustering=args.clustering,
-              n_s_clusters=args.num_starting_clusters,
-              )
-    cmd = ('session.cluster(clustering=clustering, '
-           'num_starting_clusters=n_s_clusters)')
-    return (cmd, ns)
-
-
-def detect(args):
-    from phy.io import create_kwik
-
-    assert args.file.endswith('.prm')
-    kwik_path = args.kwik_path
-    kwik_path = create_kwik(args.file, kwik_path=kwik_path)
-    # Create the session with the newly-created .kwik file.
-    args.file = kwik_path
-    session = _create_session(args, use_store=False)
-    return 'session.detect()', dict(session=session)
 
 
 #------------------------------------------------------------------------------
