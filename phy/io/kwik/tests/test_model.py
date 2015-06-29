@@ -327,6 +327,12 @@ def test_kwik_manage_clusterings():
         with raises(ValueError):
             kwik.copy_clustering('main', 'original_2')
 
+        # You cannot move the current clustering, but you can copy it.
+        with raises(ValueError):
+            kwik.rename_clustering('original_2', 'original_2_copy')
+        kwik.copy_clustering('original_2', 'original_2_copy')
+        kwik.delete_clustering('original_2_copy')
+
         kwik.clustering = 'main'
         kwik.copy_clustering('original_2', 'original')
         assert kwik.clusterings == ['main', 'original', 'original_2']
