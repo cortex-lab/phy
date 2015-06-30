@@ -40,7 +40,7 @@ def test_console_logger():
 def test_file_logger():
     logfile = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                            'log.txt')
-    l = FileLogger(logfile, fmt='', level=logging.DEBUG, print_caller=False)
+    l = FileLogger(logfile, fmt='', level='debug')
     l.debug("test file 1")
     l.debug("test file 2")
     l.info("test file info")
@@ -59,7 +59,7 @@ def test_register():
     l = StringLogger(fmt='')
     register(l)
 
-    set_level(logging.INFO)
+    set_level('info')
     debug("test D1")
     info("test I1")
     warn("test W1")
