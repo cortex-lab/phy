@@ -13,7 +13,7 @@ import shutil
 
 import numpy as np
 
-from ..utils.logging import info, FileLogger, unregister, register
+from ..utils.logging import debug, info, FileLogger, unregister, register
 from ..utils.settings import _ensure_dir_exists
 from ..io.base import BaseSession
 from ..io.kwik.model import KwikModel
@@ -312,6 +312,8 @@ class Session(BaseSession):
         params['probe_channels'] = self.model.probe.channels_per_group
         params['probe_adjacency_list'] = self.model.probe.adjacency
         # Start the spike detection.
+        debug("Running SpikeDetekt with the following parameters: "
+              "{}.".format(params))
         sd = SpikeDetekt(tempdir=sd_dir, **params)
         out = sd.run_serial(traces, interval_samples=interval_samples)
 
@@ -359,6 +361,16 @@ class Session(BaseSession):
         if clustering in self.model.clusterings:
             raise ValueError("The clustering `{}` ".format(clustering) +
                              "already exists.")
+        # Take KK2's default parameters.
+        from klustakwik2.default_parameters import default_parameters
+        params = default_parameters.copy()
+        # Update the ones passed to the function.
+        params.update(kwargs)
+        # Update the PRM ones, by filtering them.
+        params.update({k: v for k, v in self.model.metadata.items()
+                       if k in default_parameters})
+
+        # Instantiate the KlustaKwik instance.
         kk = KlustaKwik(**kwargs)
         info("Running {}...".format(algorithm))
         # Run KK.
