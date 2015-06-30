@@ -7,6 +7,14 @@
 # Spike detection
 # -----------------------------------------------------------------------------
 
+traces = {
+    'raw_data_files': [],
+    'n_channels': None,
+    'dtype': None,
+    'sample_rate': None,
+}
+
+
 spikedetekt = {
     'filter_low': 500.,
     'filter_high_factor': 0.95 * .5,  # will be multiplied by the sample rate
@@ -35,6 +43,11 @@ spikedetekt = {
     # Features.
     'n_features_per_channel': 3,
     'pca_n_waveforms_max': 10000,
+}
+
+
+# NOTE: the default parameters are in klustakwik2's repository.
+klustakwik2 = {
 }
 
 

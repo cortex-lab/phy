@@ -539,7 +539,7 @@ class KwikModel(BaseModel):
     def _load_traces(self):
         n_channels = self._metadata.get('n_channels', None)
         dtype = self._metadata.get('dtype', None)
-        dtype = np.dtype(dtype) if dtype is not None else None
+        dtype = np.dtype(dtype) if dtype else None
         traces = _read_traces(self._kwik,
                               kwd=self._kwd,
                               dtype=dtype,

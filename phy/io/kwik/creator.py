@@ -302,7 +302,15 @@ class KwikCreator(object):
 def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
                 probe=None, **kwargs):
     prm = _read_python(prm_file) if prm_file else {}
-    sample_rate = kwargs.get('sample_rate', prm.get('sample_rate'))
+
+    if prm:
+        assert 'spikedetekt' in prm
+        assert 'traces' in prm
+        sample_rate = prm['traces']['sample_rate']
+
+    if 'sample_rate' in kwargs:
+        sample_rate = kwargs['sample_rate']
+
     assert sample_rate > 0
 
     # Default SpikeDetekt parameters.
@@ -311,8 +319,11 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
                                     '../../cluster/default_settings.py')
     settings = _read_python(default_settings_path)
     params = settings['spikedetekt']
+    params.update(settings['traces'])
     # Update with PRM and user parameters.
-    params.update(prm)
+    if prm:
+        params.update(prm['spikedetekt'])
+        params.update(prm['traces'])
     params.update(kwargs)
 
     kwik_path = kwik_path or params['experiment_name'] + '.kwik'
