@@ -360,6 +360,10 @@ class ClusterManualGUI(BaseGUI):
         if up.added:
             self.select(up.added, auto_update=False)
         elif up.description == 'metadata_group':
+            # Select the last selected clusters after undo/redo.
+            if up.history and up.selection:
+                self.select(up.selection, auto_update=False)
+                return
             cluster = up.metadata_changed[0]
             if cluster == self.wizard.best:
                 self.wizard.next_best()
