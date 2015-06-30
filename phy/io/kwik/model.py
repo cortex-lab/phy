@@ -390,6 +390,7 @@ class KwikModel(BaseModel):
                                         '../../cluster/default_settings.py')
         settings = _read_python(default_settings_path)
         params = settings['spikedetekt']
+        params.update(settings['traces'])
         # Update the parameters from the Kwik file.
         for key in params.keys():
             if self._kwik.has_attr(path, key):

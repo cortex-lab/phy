@@ -306,7 +306,7 @@ class Session(BaseSession):
         # Find the raw traces.
         traces = traces if traces is not None else self.model.traces
         # Take the parameters in the Kwik file, coming from the PRM file.
-        params = self.model.metadata  # TODO: kk_params...
+        params = self.model.metadata
         params.update(kwargs)
         # Probe parameters required by SpikeDetekt.
         params['probe_channels'] = self.model.probe.channels_per_group
