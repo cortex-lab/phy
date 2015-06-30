@@ -5,7 +5,6 @@
 # -----------------------------------------------------------------------------
 
 import os
-import logging
 
 from ..logging import (StringLogger, ConsoleLogger, debug, info, warn,
                        FileLogger, register, unregister,
