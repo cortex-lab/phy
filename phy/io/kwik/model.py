@@ -345,9 +345,12 @@ class KwikModel(BaseModel):
         n_samples = (self._metadata['extract_s_before'],
                      self._metadata['extract_s_after'])
         order = self._metadata['filter_butter_order']
-        b_filter = bandpass_filter(rate=self._metadata['sample_rate'],
-                                   low=self._metadata['filter_low'],
-                                   high=self._metadata['filter_high'],
+        rate = self._metadata['sample_rate']
+        low = self._metadata['filter_low']
+        high = self._metadata['filter_high_factor'] * rate
+        b_filter = bandpass_filter(rate=rate,
+                                   low=low,
+                                   high=high,
                                    order=order)
 
         def filter(x):
@@ -386,7 +389,7 @@ class KwikModel(BaseModel):
         default_settings_path = op.join(curdir,
                                         '../../cluster/default_settings.py')
         settings = _read_python(default_settings_path)
-        params = settings['spikedetekt_params'](sample_rate)
+        params = settings['spikedetekt']
         # Update the parameters from the Kwik file.
         for key in params.keys():
             if self._kwik.has_attr(path, key):
@@ -444,7 +447,8 @@ class KwikModel(BaseModel):
         # Load features masks.
         path = '{0:s}/features_masks'.format(self._channel_groups_path)
 
-        nfpc = self._metadata['nfeatures_per_channel']
+        nfpc = self._metadata['n_features_per_channel']
+        print(nfpc)
         nc = len(self.channel_order)
 
         if self._kwx is not None:
@@ -883,7 +887,7 @@ class KwikModel(BaseModel):
     @property
     def n_features_per_channel(self):
         """Number of features per channel (generally 3)."""
-        return self._metadata['nfeatures_per_channel']
+        return self._metadata['n_features_per_channel']
 
     @property
     def channels(self):

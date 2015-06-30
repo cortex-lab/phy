@@ -53,7 +53,7 @@ def _spikedetekt(request, n_groups=2):
     curdir = op.dirname(op.realpath(__file__))
     default_settings_path = op.join(curdir, '../default_settings.py')
     settings = _read_python(default_settings_path)
-    params = settings['spikedetekt_params'](sample_rate)
+    params = settings['spikedetekt']
     params['sample_rate'] = sample_rate
 
     if n_groups == 1:
@@ -175,7 +175,7 @@ def test_spike_detect_methods(spikedetekt_one_group):
 
     # PCA.
     pcs = sd.waveform_pcs(waveforms, masks)
-    n_pcs = params['nfeatures_per_channel']
+    n_pcs = params['n_features_per_channel']
     assert pcs.shape == (n_pcs, n_samples_waveforms, n_channels)
     assert not np.any(np.isnan(pcs))
 
@@ -191,7 +191,7 @@ def test_spike_detect_serial(spikedetekt):
 
     n_samples_waveforms = (params['extract_s_before'] +
                            params['extract_s_after'])
-    n_features = params['nfeatures_per_channel']
+    n_features = params['n_features_per_channel']
 
     assert out.n_spikes_total >= 0
     assert sum(out.n_spikes_per_group.values()) == out.n_spikes_total
@@ -226,11 +226,11 @@ def test_spike_detect_real_data(spikedetekt):
         default_settings_path = op.join(curdir, '../default_settings.py')
         settings = _read_python(default_settings_path)
         sample_rate = 20000
-        params = settings['spikedetekt_params'](sample_rate)
+        params = settings['spikedetekt']
         params['sample_rate'] = sample_rate
 
         n_channels = 32
-        npc = params['nfeatures_per_channel']
+        npc = params['n_features_per_channel']
         n_samples_w = params['extract_s_before'] + params['extract_s_after']
         probe = load_probe('1x32_buzsaki')
 

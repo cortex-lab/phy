@@ -310,14 +310,10 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
     default_settings_path = op.join(curdir,
                                     '../../cluster/default_settings.py')
     settings = _read_python(default_settings_path)
-    params = settings['spikedetekt_params'](sample_rate)
+    params = settings['spikedetekt']
     # Update with PRM and user parameters.
     params.update(prm)
     params.update(kwargs)
-
-    # nchannels (old syntax) or n_channels (new).
-    n_channels = params.get('n_channels', params.get('nchannels'))
-    params['n_channels'] = n_channels
 
     kwik_path = kwik_path or params['experiment_name'] + '.kwik'
     kwx_path = op.splitext(kwik_path)[0] + '.kwx'
@@ -347,17 +343,16 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
             raw_data_files = [raw_data_files]
     if isinstance(raw_data_files, list) and len(raw_data_files):
         # The dtype must be a string so that it can be serialized in HDF5.
-        if 'dtype' not in params and 'nbits' in params:
-            warn("The `nbits` parameter is deprecated and replaced by "
-                 "`dtype`. Using a default dtype of `int16`. Please update "
-                 "your `.prm` files!")
-            assert params['nbits'] == 16
+        if 'dtype' not in params:
+            warn("The `dtype` parameter is mandatory. Using a default value "
+                 "of `int16` for now. Please update your `.prm` file.")
             params['dtype'] = 'int16'
         assert 'dtype' in params and isinstance(params['dtype'], string_types)
         dtype = np.dtype(params['dtype'])
         assert dtype is not None
 
         # The number of channels in the .dat file *must* be specified.
+        n_channels = params['n_channels']
         assert n_channels > 0
         creator.add_recordings_from_dat(raw_data_files,
                                         sample_rate=sample_rate,

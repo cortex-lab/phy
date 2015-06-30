@@ -47,13 +47,13 @@ def create_mock_kwik(dir_path, n_clusters=None, n_spikes=None,
 
         # Filter parameters.
         _write_metadata('filter_low', 500.)
-        _write_metadata('filter_high', 0.95 * .5 * 20000.)
+        _write_metadata('filter_high_factor', 0.95 * .5)
         _write_metadata('filter_butter_order', 3)
 
         _write_metadata('extract_s_before', 15)
         _write_metadata('extract_s_after', 25)
 
-        _write_metadata('nfeatures_per_channel', n_features_per_channel)
+        _write_metadata('n_features_per_channel', n_features_per_channel)
 
         # Create spike times.
         spike_samples = artificial_spike_samples(n_spikes).astype(np.int64)

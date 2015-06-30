@@ -153,7 +153,7 @@ class SpikeDetekt(EventEmitter):
             for group, channels in self._kwargs['probe_channels'].items()
         }
         self._groups = sorted(self._n_channels_per_group)
-        self._n_features = self._kwargs['nfeatures_per_channel']
+        self._n_features = self._kwargs['n_features_per_channel']
         before = self._kwargs['extract_s_before']
         after = self._kwargs['extract_s_after']
         self._n_samples_waveforms = before + after
@@ -164,7 +164,7 @@ class SpikeDetekt(EventEmitter):
     def _create_filter(self):
         rate = self._kwargs['sample_rate']
         low = self._kwargs['filter_low']
-        high = self._kwargs['filter_high']
+        high = self._kwargs['filter_high_factor'] * rate
         order = self._kwargs['filter_butter_order']
         return Filter(rate=rate,
                       low=low,
@@ -196,7 +196,7 @@ class SpikeDetekt(EventEmitter):
                                  )
 
     def _create_pca(self):
-        n_pcs = self._kwargs['nfeatures_per_channel']
+        n_pcs = self._kwargs['n_features_per_channel']
         return PCA(n_pcs=n_pcs)
 
     # Misc functions
@@ -214,8 +214,9 @@ class SpikeDetekt(EventEmitter):
 
     def find_thresholds(self, traces):
         """Find weak and strong thresholds in filtered traces."""
-        n_excerpts = self._kwargs['nexcerpts']
-        excerpt_size = self._kwargs['excerpt_size']
+        rate = self._kwargs['sample_rate']
+        n_excerpts = self._kwargs['n_excerpts']
+        excerpt_size = int(self._kwargs['excerpt_size_seconds'] * rate)
         single = self._kwargs['use_single_threshold']
         strong_f = self._kwargs['threshold_strong_std_factor']
         weak_f = self._kwargs['threshold_weak_std_factor']
@@ -439,15 +440,16 @@ class SpikeDetekt(EventEmitter):
 
     def _pca_subset(self, wm, n_spikes_chunk=None, n_spikes_total=None):
         waveforms, masks = wm
-        n_waveforms_max = self._kwargs['pca_nwaveforms_max']
+        n_waveforms_max = self._kwargs['pca_n_waveforms_max']
         p = n_spikes_chunk / float(n_spikes_total)
         k = int(n_spikes_chunk / float(p * n_waveforms_max))
         k = np.clip(k, 1, n_spikes_chunk)
         return (waveforms[::k, ...], masks[::k, ...])
 
     def iter_chunks(self, n_samples):
-        chunk_size = self._kwargs['chunk_size']
-        overlap = self._kwargs['chunk_overlap']
+        rate = self._kwargs['sample_rate']
+        chunk_size = int(self._kwargs['chunk_size_seconds'] * rate)
+        overlap = int(self._kwargs['chunk_overlap_seconds'] * rate)
         for bounds in chunk_bounds(n_samples, chunk_size, overlap=overlap):
             yield bounds
 
