@@ -310,7 +310,6 @@ def cluster_manual(args):
     cluster_ids = (list(map(int, args.cluster_ids.split(',')))
                    if args.cluster_ids else None)
 
-    session = _create_session(args)
     session.model.describe()
 
     from phy.gui import start_qt_app

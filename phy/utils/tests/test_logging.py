@@ -31,7 +31,7 @@ def test_console_logger():
     l.info("test 1")
     l.info("test 2")
 
-    l = ConsoleLogger()
+    l = ConsoleLogger(level='debug')
     l.info("test 1")
     l.info("test 2")
 

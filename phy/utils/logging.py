@@ -58,7 +58,7 @@ class Formatter(logging.Formatter):
         # Only keep the first character in the level name.
         record.levelname = record.levelname[0]
         # Add caller information.
-        record.__dict__['caller'] = _get_caller(-13)
+        record.__dict__['caller'] = _get_caller(-14)
         return super(Formatter, self).format(record)
 
 

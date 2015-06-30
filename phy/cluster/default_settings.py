@@ -208,4 +208,5 @@ traces_scale_factor = .01
 # Misc settings
 # -----------------------------------------------------------------------------
 
-log_file_level = 'info'
+# Logging level in the log file.
+log_file_level = 'debug'

@@ -13,7 +13,7 @@ import shutil
 
 import numpy as np
 
-from ..utils.logging import info, FileLogger, register
+from ..utils.logging import info, FileLogger, unregister, register
 from ..utils.settings import _ensure_dir_exists
 from ..io.base import BaseSession
 from ..io.kwik.model import KwikModel
@@ -70,6 +70,7 @@ class Session(BaseSession):
                  ):
         self._clustering = clustering
         self._use_store = use_store
+        self._file_logger = None
         curdir = op.dirname(op.realpath(__file__))
         settings_path = op.join(curdir, 'default_settings.py')
         if kwik_path:
@@ -104,8 +105,10 @@ class Session(BaseSession):
 
     def _create_logger(self, path):
         path = op.splitext(path)[0] + '.log'
-        level = self.settings.get('log_file_level', 'info')
-        register(FileLogger(filename=path, level=level))
+        level = self.settings['log_file_level']
+        if not self._file_logger:
+            self._file_logger = FileLogger(filename=path, level=level)
+            register(self._file_logger)
 
     def _save_model(self):
         """Save the spike clusters and cluster groups to the Kwik file."""
@@ -210,6 +213,11 @@ class Session(BaseSession):
 
     def on_open(self):
         self._create_cluster_store()
+
+    def on_close(self):
+        if self._file_logger:
+            unregister(self._file_logger)
+            self._file_logger = None
 
     def register_statistic(self, func=None, shape=(-1,)):
         """Decorator registering a custom cluster statistic.
