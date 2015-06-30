@@ -448,7 +448,6 @@ class KwikModel(BaseModel):
         path = '{0:s}/features_masks'.format(self._channel_groups_path)
 
         nfpc = self._metadata['n_features_per_channel']
-        print(nfpc)
         nc = len(self.channel_order)
 
         if self._kwx is not None:
