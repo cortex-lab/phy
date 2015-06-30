@@ -86,6 +86,11 @@ class ParserCreator(object):
                             action='store_true',
                             help='activate debug logging mode')
 
+        parser.add_argument('--hide-traceback',
+                            action='store_true',
+                            help='hide the traceback for cleaner error '
+                                 'messages')
+
         parser.add_argument('--profiler', '-p',
                             action='store_true',
                             help='activate the profiler')
@@ -203,8 +208,7 @@ def _get_kwik_path(args):
     kwik_path = args.file
 
     if not op.exists(kwik_path):
-        print("The file `{}` doesn't exist.".format(kwik_path))
-        return
+        raise IOError("The file `{}` doesn't exist.".format(kwik_path))
 
     return kwik_path
 
@@ -335,6 +339,13 @@ def main():
     import phy
     if args.debug:
         phy.debug()
+
+    if args.hide_traceback:
+        # Hide the traceback.
+        def exception_handler(exception_type, exception, traceback):
+            print("{}: {}".format(exception_type.__name__, exception))
+
+        sys.excepthook = exception_handler
 
     func = args.func
     if func is None:
