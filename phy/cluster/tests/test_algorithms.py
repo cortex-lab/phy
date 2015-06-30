@@ -197,10 +197,6 @@ def test_spike_detect_serial(spikedetekt):
     assert sum(out.n_spikes_per_group.values()) == out.n_spikes_total
     assert len(out.chunk_keys) == 3
 
-    traces_f = np.vstack(out.traces_f)
-    assert traces_f.shape == (n_samples, n_channels)
-    assert traces_f.dtype == np.float32
-
     for group in [0, 1]:
         # Number of channels in the group.
         n_channels_g = (3, 1)[group]

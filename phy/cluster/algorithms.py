@@ -569,12 +569,9 @@ class SpikeDetekt(EventEmitter):
                     groups=None,
                     spike_counts=None,
                     ):
-        n_samples_per_chunk = {bounds[2]: (bounds[3] - bounds[2])
+        n_samples_per_chunk = {bounds[2]: (bounds[1] - bounds[0])
                                for bounds in self.iter_chunks(n_samples)}
         keys = sorted(n_samples_per_chunk.keys())
-        traces_f = [self._load('filtered', np.float32,
-                               shape=(n_samples_per_chunk[key], n_channels),
-                               key=key) for key in keys]
 
         def _load(name):
             return self._load_data_chunks(name,
@@ -587,7 +584,6 @@ class SpikeDetekt(EventEmitter):
         output = Bunch(n_chunks=len(keys),
                        groups=groups,
                        chunk_keys=keys,
-                       traces_f=traces_f,
                        spike_samples=_load('spike_samples'),
                        waveforms=_load('waveforms'),
                        masks=_load('masks'),
@@ -678,7 +674,7 @@ class SpikeDetekt(EventEmitter):
         chunk_waveforms = defaultdict(dict)
         # This is a dict {group: {key: n_spikes}}.
         chunk_counts = defaultdict(dict)
-        for bounds in self.iter_chunks(n_samples):
+        for chunk_idx, bounds in enumerate(self.iter_chunks(n_samples)):
             key = bounds[2]
             components = chunk_components[key]
             if len(components) == 0:
@@ -693,7 +689,7 @@ class SpikeDetekt(EventEmitter):
 
             # Report progress.
             pr.increment(n_spikes=sum(counts.values()),
-                         chunk_idx=chunk_idx,
+                         chunk_idx=chunk_idx + 1,
                          n_chunks=n_chunks,
                          )
             self.emit('extract_spikes', key=key, counts=counts)
