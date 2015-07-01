@@ -16,13 +16,8 @@ from ..ext.six import iteritems, string_types
 # Utility functions
 # -----------------------------------------------------------------------------
 
-def _get_log_format(debug=False):
-    """Default logging format."""
-    return '%(asctime)s  %(message)s'
-
-
-def _get_caller():
-    tb = traceback.extract_stack()[-6]
+def _get_caller(up):
+    tb = traceback.extract_stack()[up]
     module = os.path.splitext(os.path.basename(tb[0]))[0]
     line = str(tb[1])
     caller = "{0:s}:{1:s}".format(module, line)
@@ -49,19 +44,42 @@ class StringStream(object):
 
 
 # -----------------------------------------------------------------------------
-# Logging classes
+# Custom formatter
+# -----------------------------------------------------------------------------
+
+_LONG_FORMAT = ('%(asctime)s  [%(levelname)s]  %(caller)s %(message)s',
+                '%Y-%m-%d %H:%M:%S')
+_SHORT_FORMAT = ('%(asctime)s [%(levelname)s] %(message)s',
+                 '%H:%M:%S')
+
+
+class Formatter(logging.Formatter):
+    def format(self, record):
+        # Only keep the first character in the level name.
+        record.levelname = record.levelname[0]
+        # Add caller information.
+        record.__dict__['caller'] = _get_caller(-14)
+        return super(Formatter, self).format(record)
+
+
+# -----------------------------------------------------------------------------
+# Logger classes
 # -----------------------------------------------------------------------------
 
 class Logger(object):
     """Save logging information to a stream."""
-    def __init__(self, fmt=None, stream=None, level=None, name=None,
-                 print_caller=True, handler=None):
+    def __init__(self,
+                 fmt=None,
+                 stream=None,
+                 level=None,
+                 name=None,
+                 handler=None,
+                 ):
         if stream is None:
             stream = sys.stdout
         if name is None:
             name = self.__class__.__name__
         self.name = name
-        self.print_caller = print_caller
         if handler is None:
             self.stream = stream
             self.handler = logging.StreamHandler(self.stream)
@@ -78,36 +96,33 @@ class Logger(object):
             level = self.level or logging.INFO
         if isinstance(level, string_types):
             level = getattr(logging, level.upper())
-        if fmt is None:
-            fmt = self.fmt or _get_log_format(level == logging.DEBUG)
+        fmt = fmt or self.fmt
         # Create the Logger object.
         self._logger = logging.getLogger(self.name)
         # Create the formatter.
-        formatter = logging.Formatter(fmt, datefmt='%Y-%m-%d %H:%M:%S')
+        if fmt is None:
+            fmt, datefmt = (_LONG_FORMAT if level == logging.DEBUG
+                            else _SHORT_FORMAT)
+        else:
+            datefmt = None
+        formatter = Formatter(fmt=fmt, datefmt=datefmt)
         self.handler.setFormatter(formatter)
         # Configure the logger.
         self._logger.setLevel(level)
         self._logger.propagate = False
         self._logger.addHandler(self.handler)
 
-    def get_message(self, msg):
-        msg = str(msg)
-        if self.print_caller:
-            return _get_caller() + msg
-        else:
-            return msg
-
     def close(self):
         pass
 
     def debug(self, msg):
-        self._logger.debug(self.get_message(msg))
+        self._logger.debug(msg)
 
     def info(self, msg):
-        self._logger.info(self.get_message(msg))
+        self._logger.info(msg)
 
     def warn(self, msg):
-        self._logger.warn(self.get_message(msg))
+        self._logger.warn(msg)
 
 
 class StringLogger(Logger):

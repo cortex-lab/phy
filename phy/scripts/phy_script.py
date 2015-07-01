@@ -45,6 +45,8 @@ examples:
   phy -v                display the version of phy
   phy describe my_file.kwik
                         display information about a Kwik dataset
+  phy spikesort my_params.prm
+                        run the whole suite (spike detection and clustering)
   phy detect my_params.prm
                         run spike detection on a parameters file
   phy cluster-auto my_file.kwik --num-clusters-start=100
@@ -64,6 +66,7 @@ class ParserCreator(object):
         self.create_main()
         self.create_describe()
         self.create_traces()
+        self.create_spikesort()
         self.create_detect()
         self.create_auto()
         self.create_manual()
@@ -82,6 +85,11 @@ class ParserCreator(object):
         parser.add_argument('--debug', '-d',
                             action='store_true',
                             help='activate debug logging mode')
+
+        parser.add_argument('--hide-traceback',
+                            action='store_true',
+                            help='hide the traceback for cleaner error '
+                                 'messages')
 
         parser.add_argument('--profiler', '-p',
                             action='store_true',
@@ -141,12 +149,26 @@ class ParserCreator(object):
                        )
         p.set_defaults(func=traces)
 
+    def create_spikesort(self):
+        desc = 'launch the whole spike sorting pipeline on a `.prm` file'
+        p = self._add_sub_parser('spikesort', desc)
+        p.add_argument('file', help='path to a `.prm` file')
+        p.add_argument('--kwik-path', help='filename of the `.kwik` file '
+                       'to create (by default, `"experiment_name".kwik`)')
+        p.add_argument('--overwrite', action='store_true', default=False,
+                       help='overwrite the `.kwik` file ')
+        p.add_argument('--interval',
+                       help='detection interval in seconds (e.g. `0,10`)')
+        p.set_defaults(func=spikesort)
+
     def create_detect(self):
         desc = 'launch the spike detection algorithm on a `.prm` file'
         p = self._add_sub_parser('detect', desc)
         p.add_argument('file', help='path to a `.prm` file')
         p.add_argument('--kwik-path', help='filename of the `.kwik` file '
                        'to create (by default, `"experiment_name".kwik`)')
+        p.add_argument('--overwrite', action='store_true', default=False,
+                       help='overwrite the `.kwik` file ')
         p.set_defaults(func=detect)
 
     def create_manual(self):
@@ -163,10 +185,6 @@ class ParserCreator(object):
         desc = 'launch the automatic clustering algorithm on a `.kwik` file'
         p = self._add_sub_parser('cluster-auto', desc)
         p.add_argument('file', help='path to a `.kwik` file')
-        p.add_argument('num_starting_clusters', type=int,
-                       # dest='num_starting_clusters',
-                       help='initial number of clusters',
-                       )
         p.add_argument('--clustering', default='main',
                        help='name of the clustering to use')
         p.set_defaults(func=cluster_auto)
@@ -187,8 +205,7 @@ def _get_kwik_path(args):
     kwik_path = args.file
 
     if not op.exists(kwik_path):
-        print("The file `{}` doesn't exist.".format(kwik_path))
-        return
+        raise IOError("The file `{}` doesn't exist.".format(kwik_path))
 
     return kwik_path
 
@@ -236,12 +253,58 @@ def traces(args):
     return None, None
 
 
+def detect(args):
+    from phy.io import create_kwik
+
+    assert args.file.endswith('.prm')
+    kwik_path = args.kwik_path
+    kwik_path = create_kwik(args.file,
+                            overwrite=args.overwrite,
+                            kwik_path=kwik_path)
+    # Create the session with the newly-created .kwik file.
+    args.file = kwik_path
+    session = _create_session(args, use_store=False)
+    return 'session.detect()', dict(session=session)
+
+
+def cluster_auto(args):
+    session = _create_session(args, use_store=False)
+    ns = dict(session=session,
+              clustering=args.clustering,
+              )
+    # TODO: support KK2 parameters here.
+    cmd = ('session.cluster(clustering=clustering)')
+    return (cmd, ns)
+
+
+def spikesort(args):
+    from phy.io import create_kwik
+
+    assert args.file.endswith('.prm')
+    kwik_path = args.kwik_path
+    kwik_path = create_kwik(args.file, overwrite=args.overwrite,
+                            kwik_path=kwik_path)
+    # Create the session with the newly-created .kwik file.
+    args.file = kwik_path
+    session = _create_session(args, use_store=False)
+
+    interval = args.interval
+    if interval is not None:
+        interval = list(map(float, interval.split(',')))
+
+    ns = dict(session=session,
+              interval=interval,
+              n_s_clusters=100,  # TODO: better handling of KK parameters
+              )
+    cmd = ('session.detect(interval=interval); session.cluster();')
+    return (cmd, ns)
+
+
 def cluster_manual(args):
     session = _create_session(args, clustering=args.clustering)
     cluster_ids = (list(map(int, args.cluster_ids.split(',')))
                    if args.cluster_ids else None)
 
-    session = _create_session(args)
     session.model.describe()
 
     from phy.gui import start_qt_app
@@ -250,29 +313,6 @@ def cluster_manual(args):
     gui = session.show_gui(cluster_ids=cluster_ids, show=False)
     print("\nPress `ctrl+h` to see the list of keyboard shortcuts.\n")
     return 'gui.show()', dict(session=session, gui=gui, requires_qt=True)
-
-
-def cluster_auto(args):
-    session = _create_session(args, use_store=False)
-    ns = dict(session=session,
-              clustering=args.clustering,
-              n_s_clusters=args.num_starting_clusters,
-              )
-    cmd = ('session.cluster(clustering=clustering, '
-           'num_starting_clusters=n_s_clusters)')
-    return (cmd, ns)
-
-
-def detect(args):
-    from phy.io import create_kwik
-
-    assert args.file.endswith('.prm')
-    kwik_path = args.kwik_path
-    kwik_path = create_kwik(args.file, kwik_path=kwik_path)
-    # Create the session with the newly-created .kwik file.
-    args.file = kwik_path
-    session = _create_session(args, use_store=False)
-    return 'session.detect()', dict(session=session)
 
 
 #------------------------------------------------------------------------------
@@ -293,6 +333,13 @@ def main():
     import phy
     if args.debug:
         phy.debug()
+
+    if args.hide_traceback:
+        # Hide the traceback.
+        def exception_handler(exception_type, exception, traceback):
+            print("{}: {}".format(exception_type.__name__, exception))
+
+        sys.excepthook = exception_handler
 
     func = args.func
     if func is None:

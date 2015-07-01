@@ -18,7 +18,9 @@ from ..utils.array import (PartialArray, get_excerpts,
 from ..utils._types import Bunch
 from ..utils.event import EventEmitter, ProgressReporter
 from ..utils.logging import debug, info
-from ..electrode.mea import _channels_per_group, _probe_adjacency_list
+from ..electrode.mea import (_channels_per_group,
+                             _probe_adjacency_list,
+                             )
 from ..io.kwik.sparse_kk2 import sparsify_features_masks
 from ..traces import (Filter, Thresholder, compute_threshold,
                       FloodFillDetector, WaveformExtractor, PCA,
@@ -28,6 +30,12 @@ from ..traces import (Filter, Thresholder, compute_threshold,
 #------------------------------------------------------------------------------
 # Spike detection class
 #------------------------------------------------------------------------------
+
+def _find_dead_channels(channels_per_group, n_channels):
+    all_channels = sorted([item for sublist in channels_per_group.values()
+                           for item in sublist])
+    return np.setdiff1d(np.arange(n_channels), all_channels)
+
 
 def _keep_spikes(samples, bounds):
     """Only keep spikes within the bounds `bounds=(start, end)`."""
@@ -134,6 +142,7 @@ class SpikeDetekt(EventEmitter):
     def __init__(self, tempdir=None, probe=None, **kwargs):
         super(SpikeDetekt, self).__init__()
         self._tempdir = tempdir
+        self._dead_channels = None
         # Load a probe.
         if probe is not None:
             kwargs['probe_channels'] = _channels_per_group(probe)
@@ -144,7 +153,7 @@ class SpikeDetekt(EventEmitter):
             for group, channels in self._kwargs['probe_channels'].items()
         }
         self._groups = sorted(self._n_channels_per_group)
-        self._n_features = self._kwargs['nfeatures_per_channel']
+        self._n_features = self._kwargs['n_features_per_channel']
         before = self._kwargs['extract_s_before']
         after = self._kwargs['extract_s_after']
         self._n_samples_waveforms = before + after
@@ -155,7 +164,7 @@ class SpikeDetekt(EventEmitter):
     def _create_filter(self):
         rate = self._kwargs['sample_rate']
         low = self._kwargs['filter_low']
-        high = self._kwargs['filter_high']
+        high = self._kwargs['filter_high_factor'] * rate
         order = self._kwargs['filter_butter_order']
         return Filter(rate=rate,
                       low=low,
@@ -187,7 +196,7 @@ class SpikeDetekt(EventEmitter):
                                  )
 
     def _create_pca(self):
-        n_pcs = self._kwargs['nfeatures_per_channel']
+        n_pcs = self._kwargs['n_features_per_channel']
         return PCA(n_pcs=n_pcs)
 
     # Misc functions
@@ -205,8 +214,9 @@ class SpikeDetekt(EventEmitter):
 
     def find_thresholds(self, traces):
         """Find weak and strong thresholds in filtered traces."""
-        n_excerpts = self._kwargs['nexcerpts']
-        excerpt_size = self._kwargs['excerpt_size']
+        rate = self._kwargs['sample_rate']
+        n_excerpts = self._kwargs['n_excerpts']
+        excerpt_size = int(self._kwargs['excerpt_size_seconds'] * rate)
         single = self._kwargs['use_single_threshold']
         strong_f = self._kwargs['threshold_strong_std_factor']
         weak_f = self._kwargs['threshold_weak_std_factor']
@@ -220,7 +230,7 @@ class SpikeDetekt(EventEmitter):
         return {'weak': thresholds[0],
                 'strong': thresholds[1]}
 
-    def detect(self, traces_f, thresholds=None):
+    def detect(self, traces_f, thresholds=None, dead_channels=None):
         """Detect connected waveform components in filtered traces.
 
         Parameters
@@ -230,6 +240,8 @@ class SpikeDetekt(EventEmitter):
             An `(n_samples, n_channels)` array with the filtered data.
         thresholds : dict
             The weak and strong thresholds.
+        dead_channels : array-like
+            Array of dead channels.
 
         Returns
         -------
@@ -245,6 +257,14 @@ class SpikeDetekt(EventEmitter):
         # Compute the threshold crossings.
         weak = thresholder.detect(traces_t, 'weak')
         strong = thresholder.detect(traces_t, 'strong')
+        # Force crossings to be False on dead channels.
+        if dead_channels is not None and len(dead_channels):
+            assert dead_channels.max() < traces_f.shape[1]
+            weak[:, dead_channels] = 0
+            strong[:, dead_channels] = 0
+        else:
+            debug("No dead channels specified.")
+        # Run the detection.
         detector = self._create_detector()
         return detector(weak_crossings=weak,
                         strong_crossings=strong)
@@ -420,15 +440,16 @@ class SpikeDetekt(EventEmitter):
 
     def _pca_subset(self, wm, n_spikes_chunk=None, n_spikes_total=None):
         waveforms, masks = wm
-        n_waveforms_max = self._kwargs['pca_nwaveforms_max']
+        n_waveforms_max = self._kwargs['pca_n_waveforms_max']
         p = n_spikes_chunk / float(n_spikes_total)
         k = int(n_spikes_chunk / float(p * n_waveforms_max))
         k = np.clip(k, 1, n_spikes_chunk)
         return (waveforms[::k, ...], masks[::k, ...])
 
     def iter_chunks(self, n_samples):
-        chunk_size = self._kwargs['chunk_size']
-        overlap = self._kwargs['chunk_overlap']
+        rate = self._kwargs['sample_rate']
+        chunk_size = int(self._kwargs['chunk_size_seconds'] * rate)
+        overlap = int(self._kwargs['chunk_overlap_seconds'] * rate)
         for bounds in chunk_bounds(n_samples, chunk_size, overlap=overlap):
             yield bounds
 
@@ -448,7 +469,10 @@ class SpikeDetekt(EventEmitter):
         # Save the filtered chunk.
         self._save(data_f, 'filtered', key=key)
         # Detect spikes in the filtered chunk.
-        components = self.detect(data_f, thresholds=thresholds)
+        components = self.detect(data_f,
+                                 thresholds=thresholds,
+                                 dead_channels=self._dead_channels
+                                 )
         # Return the list of components in the chunk.
         return components
 
@@ -547,12 +571,9 @@ class SpikeDetekt(EventEmitter):
                     groups=None,
                     spike_counts=None,
                     ):
-        n_samples_per_chunk = {bounds[2]: (bounds[3] - bounds[2])
+        n_samples_per_chunk = {bounds[2]: (bounds[1] - bounds[0])
                                for bounds in self.iter_chunks(n_samples)}
         keys = sorted(n_samples_per_chunk.keys())
-        traces_f = [self._load('filtered', np.float32,
-                               shape=(n_samples_per_chunk[key], n_channels),
-                               key=key) for key in keys]
 
         def _load(name):
             return self._load_data_chunks(name,
@@ -565,7 +586,6 @@ class SpikeDetekt(EventEmitter):
         output = Bunch(n_chunks=len(keys),
                        groups=groups,
                        chunk_keys=keys,
-                       traces_f=traces_f,
                        spike_samples=_load('spike_samples'),
                        waveforms=_load('waveforms'),
                        masks=_load('masks'),
@@ -602,6 +622,12 @@ class SpikeDetekt(EventEmitter):
         debug("Thresholds: {}.".format(thresholds))
         self.emit('find_thresholds', thresholds)
 
+        # Find dead channels.
+        probe_channels = self._kwargs['probe_channels']
+        self._dead_channels = _find_dead_channels(probe_channels,
+                                                  n_channels)
+        debug("Using dead channels: {}.".format(self._dead_channels))
+
         # Find the number of chunks.
         n_chunks = self.n_chunks(n_samples)
 
@@ -610,7 +636,8 @@ class SpikeDetekt(EventEmitter):
 
         def _set_progress_reporter(step, value_max):
             pr.reset(value_max)
-            pr.set_progress_message(_progress_messages[step][0])
+            pr.set_progress_message(_progress_messages[step][0],
+                                    line_break=True)
             pr.set_complete_message(_progress_messages[step][1])
 
         # Pass 1: find the connected components and count the spikes.
@@ -649,7 +676,7 @@ class SpikeDetekt(EventEmitter):
         chunk_waveforms = defaultdict(dict)
         # This is a dict {group: {key: n_spikes}}.
         chunk_counts = defaultdict(dict)
-        for bounds in self.iter_chunks(n_samples):
+        for chunk_idx, bounds in enumerate(self.iter_chunks(n_samples)):
             key = bounds[2]
             components = chunk_components[key]
             if len(components) == 0:
@@ -664,7 +691,7 @@ class SpikeDetekt(EventEmitter):
 
             # Report progress.
             pr.increment(n_spikes=sum(counts.values()),
-                         chunk_idx=chunk_idx,
+                         chunk_idx=chunk_idx + 1,
                          n_chunks=n_chunks,
                          )
             self.emit('extract_spikes', key=key, counts=counts)
@@ -713,7 +740,6 @@ class SpikeDetekt(EventEmitter):
 class KlustaKwik(object):
     """KlustaKwik automatic clustering algorithm."""
     def __init__(self, **kwargs):
-        assert 'num_starting_clusters' in kwargs
         self._kwargs = kwargs
         self.__dict__.update(kwargs)
         # Set the version.
@@ -742,11 +768,9 @@ class KlustaKwik(object):
         data = data.to_sparse_data()
         # Run KK.
         from klustakwik2 import KK
-        num_starting_clusters = self._kwargs.pop('num_starting_clusters', 100)
         kk = KK(data, **self._kwargs)
         self.params = kk.all_params
-        self.params['num_starting_clusters'] = num_starting_clusters
-        kk.cluster_mask_starts(num_starting_clusters)
+        kk.cluster_mask_starts()
         spike_clusters = kk.clusters
         return spike_clusters
 

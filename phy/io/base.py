@@ -369,6 +369,7 @@ class BaseSession(EventEmitter):
         self._gui_creator = WidgetCreator(widget_classes=gui_classes)
 
         self.connect(self.on_open)
+        self.connect(self.on_close)
         self._pre_open()
         if model or path:
             self.open(path, model=model)
@@ -406,6 +407,9 @@ class BaseSession(EventEmitter):
         pass
 
     def on_open(self):
+        pass
+
+    def on_close(self):
         pass
 
     # File-related actions

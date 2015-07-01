@@ -99,7 +99,7 @@ def test_store_corruption():
                                      n_features_per_channel=n_fets,
                                      n_samples_traces=n_samples_traces)
 
-        session = Session(kwik_path)
+        session = Session(kwik_path, phy_user_dir=tmpdir)
         store_path = session.store.path
         session.close()
 
@@ -110,15 +110,16 @@ def test_store_corruption():
         with open(fn, 'wb') as f:
             f.write(contents[1:-1])
 
-        session = Session(kwik_path)
+        session = Session(kwik_path, phy_user_dir=tmpdir)
         session.close()
 
 
 def test_session_one_cluster():
-    session = Session()
-    # The disk store is not created if there is only one cluster.
-    session.open(model=MockModel(n_clusters=1))
-    assert session.store.disk_store is None
+    with TemporaryDirectory() as tmpdir:
+        session = Session(phy_user_dir=tmpdir)
+        # The disk store is not created if there is only one cluster.
+        session.open(model=MockModel(n_clusters=1))
+        assert session.store.disk_store is None
 
 
 def test_session_store_features():
@@ -408,7 +409,7 @@ def test_session_detect(session):
     with TemporaryDirectory() as tempdir:
         kwik_path = op.join(tempdir, 'test.kwik')
         create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=sample_rate)
-        session = Session(kwik_path)
+        session = Session(kwik_path, phy_user_dir=tempdir)
         session.detect(traces=traces)
         m = session.model
         assert m.n_spikes >= 0

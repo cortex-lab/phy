@@ -304,7 +304,7 @@ def _file_size(f_or_path):
         return os.fstat(f_or_path.fileno()).st_size
 
 
-def _load_ndarray(f_or_path, dtype=None, shape=None, memmap=True, lazy=True):
+def _load_ndarray(f_or_path, dtype=None, shape=None, memmap=False, lazy=False):
     if dtype is None:
         return f_or_path
     else:

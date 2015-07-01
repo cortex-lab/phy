@@ -193,7 +193,7 @@ class File(object):
         if isinstance(value, list):
             if not value:
                 value = None
-            if isinstance(value[0], string_types):
+            if value and isinstance(value[0], string_types):
                 value = np.array(value, dtype='S')
         # If the parent group doesn't already exist, create it.
         if path not in self._h5py_file:

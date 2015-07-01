@@ -7,47 +7,48 @@
 # Spike detection
 # -----------------------------------------------------------------------------
 
-def spikedetekt_params(sample_rate):
-
-    assert sample_rate > 0
-
-    return dict(
-        # Filter.
-        filter_low=500.,
-        filter_high=0.95 * .5 * sample_rate,
-        filter_butter_order=3,
-
-        # Data chunks.
-        chunk_size=int(1. * sample_rate),
-        chunk_overlap=int(.015 * sample_rate),
-
-        # Threshold.
-        nexcerpts=50,
-        excerpt_size=int(1. * sample_rate),
-        use_single_threshold=True,
-        threshold_strong_std_factor=4.5,
-        threshold_weak_std_factor=2.,
-        detect_spikes='negative',
-
-        # Connected components.
-        connected_component_join_size=1,
-
-        # Spike extractions.
-        extract_s_before=10,
-        extract_s_after=10,
-        weight_power=2,
-
-        # Features.
-        nfeatures_per_channel=3,
-        pca_nwaveforms_max=10000,
-    )
+traces = {
+    'raw_data_files': [],
+    'n_channels': None,
+    'dtype': None,
+    'sample_rate': None,
+}
 
 
-# -----------------------------------------------------------------------------
-# KlustaKwik
-# -----------------------------------------------------------------------------
+spikedetekt = {
+    'filter_low': 500.,
+    'filter_high_factor': 0.95 * .5,  # will be multiplied by the sample rate
+    'filter_butter_order': 3,
 
-klustakwik_params = {}
+    # Data chunks.
+    'chunk_size_seconds': 1.,
+    'chunk_overlap_seconds': .015,
+
+    # Threshold.
+    'n_excerpts': 50,
+    'excerpt_size_seconds': 1.,
+    'use_single_threshold': True,
+    'threshold_strong_std_factor': 4.5,
+    'threshold_weak_std_factor': 2.,
+    'detect_spikes': 'negative',
+
+    # Connected components.
+    'connected_component_join_size': 1,
+
+    # Spike extractions.
+    'extract_s_before': 10,
+    'extract_s_after': 10,
+    'weight_power': 2,
+
+    # Features.
+    'n_features_per_channel': 3,
+    'pca_n_waveforms_max': 10000,
+}
+
+
+# NOTE: the default parameters are in klustakwik2's repository.
+klustakwik2 = {
+}
 
 
 # -----------------------------------------------------------------------------
@@ -208,4 +209,5 @@ traces_scale_factor = .01
 # Misc settings
 # -----------------------------------------------------------------------------
 
-log_file_level = 'info'
+# Logging level in the log file.
+log_file_level = 'debug'

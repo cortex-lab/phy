@@ -134,20 +134,20 @@ class PartialFormatter(string.Formatter):
             return '?'
 
 
-def _default_on_progress(message, value, value_max, **kwargs):
+def _default_on_progress(message, value, value_max, end='\r', **kwargs):
     if value_max == 0:
         return
     if value < value_max:
         progress = 100 * value / float(value_max)
         fmt = PartialFormatter()
-        print(fmt.format(message, progress=progress, **kwargs), end='\r')
+        print(fmt.format(message, progress=progress, **kwargs), end=end)
 
 
-def _default_on_complete(message, **kwargs):
+def _default_on_complete(message, end='\n', **kwargs):
     # Override the initializing message and clear the terminal
     # line.
     fmt = PartialFormatter()
-    print(fmt.format(message + '\033[K', **kwargs), end='\n')
+    print(fmt.format(message + '\033[K', **kwargs), end=end)
 
 
 class ProgressReporter(EventEmitter):
@@ -166,16 +166,18 @@ class ProgressReporter(EventEmitter):
         self._value_max = 0
         self._has_completed = False
 
-    def set_progress_message(self, message):
+    def set_progress_message(self, message, line_break=False):
         """Set a progress message.
 
         The string needs to contain `{progress}`.
 
         """
 
+        end = '\r' if not line_break else None
+
         @self.connect
         def on_progress(value, value_max, **kwargs):
-            _default_on_progress(message, value, value_max, **kwargs)
+            _default_on_progress(message, value, value_max, end=end, **kwargs)
 
     def set_complete_message(self, message):
         """Set a complete message."""
