@@ -185,9 +185,6 @@ class ParserCreator(object):
         desc = 'launch the automatic clustering algorithm on a `.kwik` file'
         p = self._add_sub_parser('cluster-auto', desc)
         p.add_argument('file', help='path to a `.kwik` file')
-        p.add_argument('num_starting_clusters', type=int,
-                       help='initial number of clusters',
-                       )
         p.add_argument('--clustering', default='main',
                        help='name of the clustering to use')
         p.set_defaults(func=cluster_auto)
@@ -274,10 +271,9 @@ def cluster_auto(args):
     session = _create_session(args, use_store=False)
     ns = dict(session=session,
               clustering=args.clustering,
-              n_s_clusters=args.num_starting_clusters,
               )
-    cmd = ('session.cluster(clustering=clustering, '
-           'num_starting_clusters=n_s_clusters)')
+    # TODO: support KK2 parameters here.
+    cmd = ('session.cluster(clustering=clustering)')
     return (cmd, ns)
 
 
@@ -300,8 +296,7 @@ def spikesort(args):
               interval=interval,
               n_s_clusters=100,  # TODO: better handling of KK parameters
               )
-    cmd = ('session.detect(interval=interval); session.cluster('
-           'num_starting_clusters=n_s_clusters)')
+    cmd = ('session.detect(interval=interval); session.cluster();')
     return (cmd, ns)
 
 
