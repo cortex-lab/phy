@@ -21,7 +21,6 @@ def test_git_version():
     v = _git_version()
 
     # If this test file is tracked by git, then _git_version() should succeed
-
     filedir, _ = op.split(__file__)
     try:
         fnull = open(os.devnull, 'w')
