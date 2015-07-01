@@ -740,7 +740,6 @@ class SpikeDetekt(EventEmitter):
 class KlustaKwik(object):
     """KlustaKwik automatic clustering algorithm."""
     def __init__(self, **kwargs):
-        assert 'num_starting_clusters' in kwargs
         self._kwargs = kwargs
         self.__dict__.update(kwargs)
         # Set the version.
@@ -769,11 +768,9 @@ class KlustaKwik(object):
         data = data.to_sparse_data()
         # Run KK.
         from klustakwik2 import KK
-        num_starting_clusters = self._kwargs.pop('num_starting_clusters', 100)
         kk = KK(data, **self._kwargs)
         self.params = kk.all_params
-        self.params['num_starting_clusters'] = num_starting_clusters
-        kk.cluster_mask_starts(num_starting_clusters)
+        kk.cluster_mask_starts()
         spike_clusters = kk.clusters
         return spike_clusters
 
