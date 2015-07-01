@@ -30,4 +30,4 @@ def test_git_version():
         assert type(v) == str, "git_version failed to return"
         assert v[:5] == "git-v", "Git version does not begin in git-v"
     except (OSError, WindowsError, subprocess.CalledProcessError):
-        assert v == False
+        assert v is False
