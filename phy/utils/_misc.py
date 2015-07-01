@@ -101,14 +101,17 @@ def _show_shortcuts(shortcuts, name=''):
         print('{0:<40}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
     print()
 
+
 def _git_version():
     curdir = os.getcwd()
     filedir, _ = op.split(__file__)
     os.chdir(filedir)
     try:
         fnull = open(os.devnull, 'w')
-        version = 'git-'+subprocess.check_output(['git', 'describe', '--abbrev=8', '--dirty',
-                                                       '--always', '--tags'], stderr=fnull).strip().decode('ascii')
+        version = ('git-' + subprocess.check_output(
+                   ['git', 'describe', '--abbrev=8', '--dirty',
+                    '--always', '--tags'],
+                   stderr=fnull).strip().decode('ascii'))
         return version
     except:
         return False
