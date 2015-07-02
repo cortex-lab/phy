@@ -106,10 +106,10 @@ def _git_version():
     filedir, _ = op.split(__file__)
     try:
         fnull = open(os.devnull, 'w')
-        version = ('git-' + subprocess.check_output(
+        version = ('-git-' + subprocess.check_output(
                    ['git', '-C', filedir, 'describe', '--abbrev=8', '--dirty',
                     '--always', '--tags'],
                    stderr=fnull).strip().decode('ascii'))
         return version
     except (OSError, subprocess.CalledProcessError):
-        return False
+        return ""

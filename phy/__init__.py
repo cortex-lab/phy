@@ -28,7 +28,7 @@ from .gui.qt import enable_qt, qt_app
 __author__ = 'Kwik team'
 __email__ = 'cyrille.rossant at gmail.com'
 __version__ = '0.2.0.dev0'
-__version_git__ = _git_version() or __version__
+__version_git__ = __version__ + _git_version()
 
 
 __all__ = ['debug', 'set_level']

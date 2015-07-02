@@ -26,7 +26,7 @@ def test_git_version():
         fnull = open(os.devnull, 'w')
         subprocess.check_output(['git', '-C', filedir, 'status'],
                                 stderr=fnull)
-        assert type(v) == str, "git_version failed to return"
-        assert v[:5] == "git-v", "Git version does not begin in git-v"
+        assert v is not "", "git_version failed to return"
+        assert v[:6] == "-git-v", "Git version does not begin in -git-v"
     except (OSError, subprocess.CalledProcessError):
-        assert v is False
+        assert v == ""
