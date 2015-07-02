@@ -4,6 +4,8 @@ python:
   - "2.7"
   - "3.3"
   - "3.4"
+before_install:
+  - pip install codecov
 install:
   - if [[ "$TRAVIS_PYTHON_VERSION" == "2.7" ]]; then
       wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-x86_64.sh -O miniconda.sh;
@@ -32,4 +34,4 @@ before_script:
 script:
   - make test
 after_success:
-  - coveralls
+  - codecov
