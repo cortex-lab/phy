@@ -189,7 +189,12 @@ def _read_traces(kwik, kwd=None, dtype=None, n_channels=None):
             assert dtype is not None
             assert n_channels
             dat_path = kwik.read_attr(path, 'dat_path')
-            assert op.exists(dat_path)
+            # Fallback to relative path if needed (#488).
+            if not op.exists(dat_path):
+                rel_path = op.basename(dat_path)
+                debug("`{}` doesn't exist, fallback to `{}`.".format(dat_path,
+                                                                     rel_path))
+                dat_path = rel_path
             n_samples = _dat_n_samples(dat_path,
                                        n_channels=n_channels,
                                        dtype=dtype,
