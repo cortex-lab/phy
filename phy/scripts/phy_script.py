@@ -118,7 +118,7 @@ class ParserCreator(object):
         self._parser.set_defaults(func=None)
         self._parser.add_argument('--version', '-v',
                                   action='version',
-                                  version=phy.__version__,
+                                  version=phy.__version_git__,
                                   help='print the version of phy')
         self._add_options(self._parser)
         self._subparsers = self._parser.add_subparsers(dest='command',
