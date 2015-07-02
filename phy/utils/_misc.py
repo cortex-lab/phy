@@ -103,13 +103,17 @@ def _show_shortcuts(shortcuts, name=''):
 
 
 def _git_version():
+    curdir = os.getcwd()
     filedir, _ = op.split(__file__)
+    os.chdir(filedir)
     try:
         fnull = open(os.devnull, 'w')
         version = ('-git-' + subprocess.check_output(
-                   ['git', '-C', filedir, 'describe', '--abbrev=8', '--dirty',
+                   ['git', 'describe', '--abbrev=8', '--dirty',
                     '--always', '--tags'],
                    stderr=fnull).strip().decode('ascii'))
         return version
     except (OSError, subprocess.CalledProcessError):
         return ""
+    finally:
+        os.chdir(curdir)
