@@ -782,6 +782,9 @@ class ConcatenatedArrays(object):
         # Apply the rest of the index.
         return _fill_index(np.concatenate(l, axis=0), item)
 
+    def __len__(self):
+        return self.shape[0]
+
 
 class VirtualMappedArray(object):
     """A virtual mapped array that yields null arrays to any selection."""
