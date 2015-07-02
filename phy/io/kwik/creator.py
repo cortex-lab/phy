@@ -338,7 +338,13 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
             raise IOError("The `.kwik` file already exists. Please use "
                           "the `--overwrite` option.")
 
-    probe = probe or _read_python(params['prb_file'])
+    # Ensure the probe file exists if it is required.
+    if probe is None:
+        if not op.exists(params['prb_file']):
+            raise IOError("The probe file `{}` cannot be found.".format(
+                          params['prb_file']))
+        probe = _read_python(params['prb_file'])
+    assert probe
 
     # KwikCreator.
     creator = KwikCreator(kwik_path)
