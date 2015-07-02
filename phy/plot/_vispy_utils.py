@@ -8,6 +8,7 @@
 #------------------------------------------------------------------------------
 
 import os.path as op
+from functools import wraps
 
 import numpy as np
 
@@ -71,6 +72,7 @@ def _wrap_vispy(f):
     Add `show=True` parameter.
 
     """
+    @wraps(f)
     def wrapped(*args, **kwargs):
         show = kwargs.pop('show', True)
         canvas = f(*args, **kwargs)
