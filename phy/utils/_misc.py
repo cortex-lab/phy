@@ -111,5 +111,5 @@ def _git_version():
                     '--always', '--tags'],
                    stderr=fnull).strip().decode('ascii'))
         return version
-    except (OSError, WindowsError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError):
         return False
