@@ -192,6 +192,8 @@ def _read_traces(kwik, kwd=None, dtype=None, n_channels=None):
             # Fallback to relative path if needed (#488).
             if not op.exists(dat_path):
                 rel_path = op.basename(dat_path)
+                rel_path = op.join(op.dirname(op.realpath(kwik.filename)),
+                                   rel_path)
                 debug("`{}` doesn't exist, fallback to `{}`.".format(dat_path,
                                                                      rel_path))
                 dat_path = rel_path
