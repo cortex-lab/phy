@@ -145,7 +145,7 @@ def load_h5(f, path):
     """Load a sparse array from an HDF5 file."""
     # Sparse array.
     if f.has_attr(path, 'sparse_type'):
-        if f.read_attr(path, 'sparse_type') == 'csr':
+        if f.read_attr(path, 'sparse_type') in ('csr', b'csr'):
             return SparseCSR.load_h5(f, path)
         else:
             raise NotImplementedError("Only SparseCSR arrays are implemented "
