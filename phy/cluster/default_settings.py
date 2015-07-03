@@ -27,7 +27,7 @@ spikedetekt = {
     # Threshold.
     'n_excerpts': 50,
     'excerpt_size_seconds': 1.,
-    'use_single_threshold': 0,
+    'use_single_threshold': True,
     'threshold_strong_std_factor': 4.5,
     'threshold_weak_std_factor': 2.,
     'detect_spikes': 'negative',

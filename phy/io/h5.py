@@ -198,6 +198,9 @@ class File(object):
         # Use string arrays instead of vlen arrays (crash in h5py 2.5.0 win64).
         if isinstance(value, string_types):
             value = np.array(value, dtype='S')
+        # Idem: fix crash with boolean attributes on win64.
+        if isinstance(value, bool):
+            value = int(bool)
         # If the parent group doesn't already exist, create it.
         if path not in self._h5py_file:
             self._h5py_file.create_group(path)
