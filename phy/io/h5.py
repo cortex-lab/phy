@@ -198,7 +198,7 @@ class File(object):
             if not value:
                 value = None
             if value and isinstance(value[0], string_types):
-                value = np.array([value], dtype='S')
+                value = np.array(value, dtype='S')
         # Use string arrays instead of vlen arrays (crash in h5py 2.5.0 win64).
         if isinstance(value, string_types):
             value = np.array([value], dtype='S')
