@@ -195,6 +195,9 @@ class File(object):
                 value = None
             if value and isinstance(value[0], string_types):
                 value = np.array(value, dtype='S')
+        # Use string arrays instead of vlen arrays (crash in h5py 2.5.0 win64).
+        if isinstance(value, string_types):
+            value = np.array(value, dtype='S')
         # If the parent group doesn't already exist, create it.
         if path not in self._h5py_file:
             self._h5py_file.create_group(path)
