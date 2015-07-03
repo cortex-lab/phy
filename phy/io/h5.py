@@ -200,7 +200,7 @@ class File(object):
             value = np.array(value, dtype='S')
         # Idem: fix crash with boolean attributes on win64.
         if isinstance(value, bool):
-            value = int(bool)
+            value = int(value)
         # If the parent group doesn't already exist, create it.
         if path not in self._h5py_file:
             self._h5py_file.create_group(path)
