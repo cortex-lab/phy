@@ -217,7 +217,7 @@ class SpikeDetekt(EventEmitter):
         rate = self._kwargs['sample_rate']
         n_excerpts = self._kwargs['n_excerpts']
         excerpt_size = int(self._kwargs['excerpt_size_seconds'] * rate)
-        single = self._kwargs['use_single_threshold']
+        single = bool(self._kwargs['use_single_threshold'])
         strong_f = self._kwargs['threshold_strong_std_factor']
         weak_f = self._kwargs['threshold_weak_std_factor']
         excerpt = get_excerpts(traces,
