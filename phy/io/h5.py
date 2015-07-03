@@ -174,7 +174,11 @@ class File(object):
         attrs = self._h5py_file[path].attrs
         if attr_name in attrs:
             try:
-                return attrs[attr_name]
+                out = attrs[attr_name]
+                if isinstance(out, np.ndarray) and out.dtype.kind == 'S':
+                    if len(out) == 1:
+                        out = out[0].decode('UTF-8')
+                return out
             except (TypeError, IOError):
                 debug("Unable to read attribute `{}` at `{}`.".format(
                       attr_name, path))
@@ -194,10 +198,10 @@ class File(object):
             if not value:
                 value = None
             if value and isinstance(value[0], string_types):
-                value = np.array(value, dtype='S')
+                value = np.array([value], dtype='S')
         # Use string arrays instead of vlen arrays (crash in h5py 2.5.0 win64).
         if isinstance(value, string_types):
-            value = np.array(value, dtype='S')
+            value = np.array([value], dtype='S')
         # Idem: fix crash with boolean attributes on win64.
         if isinstance(value, bool):
             value = int(value)
