@@ -69,21 +69,22 @@ class BaseSettings(object):
                  "'{0}':\n{1}".format(path, str(e)))
 
     def load(self, path):
-        """Load a settings Python file."""
+        """Load a settings file."""
         path = op.realpath(path)
+        has_ext = op.splitext(path)[1] != ''
         if not op.exists(path):
             debug("Creating empty settings file: {}.".format(path))
-            with open(path, 'a') as f:
-                f.write("# Settings file. Refer to phy's documentation "
-                        "for more details.\n")
+            # Extension => Python, so we can write a comment.
+            if has_ext:
+                with open(path, 'a') as f:
+                    f.write("# Settings file. Refer to phy's documentation "
+                            "for more details.\n")
             return
-        # Try JSON.
-        if not op.splitext(path)[1]:
-            if not self._try_load_json(path):
-                self._try_load_python(path)
-        # Try Python.
-        else:
-            self._try_load_python(path)
+        # Try JSON first, then Python.
+        if not has_ext:
+            if self._try_load_json(path):
+                return
+        self._try_load_python(path)
 
     def save(self, path):
         """Save the settings to a JSON file."""

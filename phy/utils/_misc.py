@@ -97,8 +97,11 @@ def _load_json(path):
     path = op.realpath(op.expanduser(path))
     assert op.exists(path)
     with open(path, 'r') as f:
-        out = json.load(f, object_hook=_json_custom_hook)
-        return _intify_keys(out)
+        contents = f.read()
+    if not contents:
+        return {}
+    out = json.loads(contents, object_hook=_json_custom_hook)
+    return _intify_keys(out)
 
 
 def _save_json(path, data):
