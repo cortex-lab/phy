@@ -48,7 +48,7 @@ def _encode_qbytearray(arr):
 
 
 def _decode_qbytearray(encoded):
-    from .qt import QtCore
+    from phy.gui.qt import QtCore
     return QtCore.QByteArray.fromBase64(encoded)
 
 
@@ -112,7 +112,7 @@ def _save_json(path, data):
     data = _stringify_keys(data)
     path = op.realpath(op.expanduser(path))
     with open(path, 'w') as f:
-        json.dump(data, f, cls=_CustomEncoder)
+        json.dump(data, f, cls=_CustomEncoder, indent=2)
 
 
 #------------------------------------------------------------------------------
