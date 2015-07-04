@@ -264,6 +264,7 @@ class WaveformView(BaseSpikeCanvas):
                  channel_positions=None,
                  channel_order=None,
                  colors=None,
+                 **kwargs
                  ):
 
         if waveforms is not None:
@@ -309,6 +310,10 @@ class WaveformView(BaseSpikeCanvas):
         self.visual.channel_positions = channel_positions
         self.visual.channel_order = channel_order
 
+        # Extra parameters.
+        for k, v in kwargs.items():
+            setattr(self, k, v)
+
         self.update()
 
     @property
@@ -339,6 +344,17 @@ class WaveformView(BaseSpikeCanvas):
     def probe_scale(self, value):
         self.visual.probe_scale = value
         self.mean.probe_scale = value
+        self.update()
+
+    @property
+    def alpha(self):
+        """Opacity."""
+        return self.visual.alpha
+
+    @alpha.setter
+    def alpha(self, value):
+        self.visual.alpha = value
+        self.mean.alpha = value
         self.update()
 
     @property
