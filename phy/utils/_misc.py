@@ -17,6 +17,7 @@ from inspect import getargspec
 
 import numpy as np
 
+from ._types import _is_integer
 from ..ext.six import string_types, exec_
 from ..ext.six.moves import builtins, cPickle
 
@@ -69,6 +70,16 @@ def _intify_keys(d):
     return out
 
 
+def _stringify_keys(d):
+    assert isinstance(d, dict)
+    out = {}
+    for k, v in d.items():
+        if _is_integer(k):
+            k = str(k)
+        out[k] = v
+    return out
+
+
 def _load_json(path):
     path = op.realpath(op.expanduser(path))
     assert op.exists(path)
@@ -79,7 +90,7 @@ def _load_json(path):
 
 def _save_json(path, data):
     assert isinstance(data, dict)
-    data = _intify_keys(data)
+    data = _stringify_keys(data)
     path = op.realpath(op.expanduser(path))
     with open(path, 'w') as f:
         json.dump(data, f, cls=_NumpyEncoder)
