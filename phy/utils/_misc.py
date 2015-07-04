@@ -7,9 +7,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import sys
-import os
+import json
 import os.path as op
+import os
+import sys
 import subprocess
 from inspect import getargspec
 
@@ -32,6 +33,23 @@ def _save_pickle(path, data):
     path = op.realpath(op.expanduser(path))
     with open(path, 'wb') as f:
         cPickle.dump(data, f, protocol=2)
+
+
+#------------------------------------------------------------------------------
+# Pickle utility functions
+#------------------------------------------------------------------------------
+
+def _load_json(path):
+    path = op.realpath(op.expanduser(path))
+    assert op.exists(path)
+    with open(path, 'r') as f:
+        return json.load(f)
+
+
+def _save_json(path, data):
+    path = op.realpath(op.expanduser(path))
+    with open(path, 'w') as f:
+        json.dump(data, f)
 
 
 #------------------------------------------------------------------------------

@@ -10,12 +10,22 @@ import os
 import os.path as op
 import subprocess
 
-from .._misc import _git_version
+from .._misc import _git_version, _load_json, _save_json
+from ..tempdir import TemporaryDirectory
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
+
+def test_json():
+    with TemporaryDirectory() as tmpdir:
+        path = op.join(tmpdir, 'test')
+        d = {'a': 1, 'b': 'bb'}
+        _save_json(path, d)
+        d_bis = _load_json(path)
+        assert d == d_bis
+
 
 def test_git_version():
     v = _git_version()
