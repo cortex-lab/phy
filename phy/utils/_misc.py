@@ -44,12 +44,16 @@ def _save_pickle(path, data):
 #------------------------------------------------------------------------------
 
 def _encode_qbytearray(arr):
-    return str(arr.toBase64())
+    b = arr.toBase64().data()
+    data_b64 = base64.b64encode(b).decode('utf8')
+    return data_b64
 
 
-def _decode_qbytearray(encoded):
+def _decode_qbytearray(data_b64):
     from phy.gui.qt import QtCore
-    return QtCore.QByteArray.fromBase64(encoded)
+    encoded = base64.b64decode(data_b64)
+    out = QtCore.QByteArray.fromBase64(encoded)
+    return out
 
 
 class _CustomEncoder(json.JSONEncoder):
