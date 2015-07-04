@@ -7,12 +7,15 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import base64
 import json
 import os.path as op
 import os
 import sys
 import subprocess
 from inspect import getargspec
+
+import numpy as np
 
 from ..ext.six import string_types, exec_
 from ..ext.six.moves import builtins, cPickle
@@ -36,20 +39,37 @@ def _save_pickle(path, data):
 
 
 #------------------------------------------------------------------------------
-# Pickle utility functions
+# JSON utility functions
 #------------------------------------------------------------------------------
+
+class _NumpyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            data_b64 = base64.b64encode(obj.data).decode('utf8')
+            return dict(__ndarray__=data_b64,
+                        dtype=str(obj.dtype),
+                        shape=obj.shape)
+        return super(_NumpyEncoder, self).default(obj)
+
+
+def _json_numpy_obj_hook(d):
+    if isinstance(d, dict) and '__ndarray__' in d:
+        data = base64.b64decode(d['__ndarray__'])
+        return np.frombuffer(data, d['dtype']).reshape(d['shape'])
+    return d
+
 
 def _load_json(path):
     path = op.realpath(op.expanduser(path))
     assert op.exists(path)
     with open(path, 'r') as f:
-        return json.load(f)
+        return json.load(f, object_hook=_json_numpy_obj_hook)
 
 
 def _save_json(path, data):
     path = op.realpath(op.expanduser(path))
     with open(path, 'w') as f:
-        json.dump(data, f)
+        json.dump(data, f, cls=_NumpyEncoder)
 
 
 #------------------------------------------------------------------------------
