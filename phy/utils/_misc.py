@@ -43,20 +43,33 @@ def _save_pickle(path, data):
 # JSON utility functions
 #------------------------------------------------------------------------------
 
-class _NumpyEncoder(json.JSONEncoder):
+def _encode_qbytearray(arr):
+    return str(arr.toBase64())
+
+
+def _decode_qbytearray(encoded):
+    from .qt import QtCore
+    return QtCore.QByteArray.fromBase64(encoded)
+
+
+class _CustomEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
             data_b64 = base64.b64encode(obj.data).decode('utf8')
             return dict(__ndarray__=data_b64,
                         dtype=str(obj.dtype),
                         shape=obj.shape)
-        return super(_NumpyEncoder, self).default(obj)
+        elif obj.__class__.__name__ == 'QByteArray':
+            return {'__qbytearray__': _encode_qbytearray(obj)}
+        return super(_CustomEncoder, self).default(obj)
 
 
-def _json_numpy_obj_hook(d):
+def _json_custom_hook(d):
     if isinstance(d, dict) and '__ndarray__' in d:
         data = base64.b64decode(d['__ndarray__'])
         return np.frombuffer(data, d['dtype']).reshape(d['shape'])
+    elif isinstance(d, dict) and '__qbytearray__' in d:
+        return _decode_qbytearray(d['__qbytearray__'])
     return d
 
 
@@ -84,7 +97,7 @@ def _load_json(path):
     path = op.realpath(op.expanduser(path))
     assert op.exists(path)
     with open(path, 'r') as f:
-        out = json.load(f, object_hook=_json_numpy_obj_hook)
+        out = json.load(f, object_hook=_json_custom_hook)
         return _intify_keys(out)
 
 
@@ -93,7 +106,7 @@ def _save_json(path, data):
     data = _stringify_keys(data)
     path = op.realpath(op.expanduser(path))
     with open(path, 'w') as f:
-        json.dump(data, f, cls=_NumpyEncoder)
+        json.dump(data, f, cls=_CustomEncoder)
 
 
 #------------------------------------------------------------------------------
