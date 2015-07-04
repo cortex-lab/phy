@@ -95,7 +95,8 @@ def _stringify_keys(d):
 
 def _load_json(path):
     path = op.realpath(op.expanduser(path))
-    assert op.exists(path)
+    if not op.exists(path):
+        raise IOError("The JSON file `{}` doesn't exist.".format(path))
     with open(path, 'r') as f:
         contents = f.read()
     if not contents:

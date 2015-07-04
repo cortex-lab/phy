@@ -12,6 +12,7 @@ import subprocess
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
+from pytest import raises
 
 from .._misc import _git_version, _load_json, _save_json
 from ..tempdir import TemporaryDirectory
@@ -29,6 +30,12 @@ def test_json_simple():
         _save_json(path, d)
         d_bis = _load_json(path)
         assert d == d_bis
+
+        with open(path, 'w') as f:
+            f.write('')
+        assert _load_json(path) == {}
+        with raises(IOError):
+            _load_json(path + '_bis')
 
 
 def test_json_numpy():
