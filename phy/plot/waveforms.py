@@ -277,6 +277,7 @@ class WaveformView(BaseSpikeCanvas):
 
         if spike_clusters is None:
             spike_clusters = np.zeros(n_spikes, dtype=np.int32)
+        spike_clusters = _as_array(spike_clusters)
         cluster_ids = _unique(spike_clusters)
         n_clusters = len(cluster_ids)
 
