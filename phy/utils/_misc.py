@@ -59,14 +59,27 @@ def _json_numpy_obj_hook(d):
     return d
 
 
+def _intify_keys(d):
+    assert isinstance(d, dict)
+    out = {}
+    for k, v in d.items():
+        if isinstance(k, string_types) and k.isdigit():
+            k = int(k)
+        out[k] = v
+    return out
+
+
 def _load_json(path):
     path = op.realpath(op.expanduser(path))
     assert op.exists(path)
     with open(path, 'r') as f:
-        return json.load(f, object_hook=_json_numpy_obj_hook)
+        out = json.load(f, object_hook=_json_numpy_obj_hook)
+        return _intify_keys(out)
 
 
 def _save_json(path, data):
+    assert isinstance(data, dict)
+    data = _intify_keys(data)
     path = op.realpath(op.expanduser(path))
     with open(path, 'w') as f:
         json.dump(data, f, cls=_NumpyEncoder)

@@ -14,7 +14,7 @@ import re
 import numpy as np
 
 from ..utils._types import _as_int, _is_integer, _is_array_like
-from ..utils._misc import _load_pickle, _save_pickle
+from ..utils._misc import _load_json, _save_json
 from ..utils.array import (PerClusterData, _spikes_in_clusters,
                            _subset_spc, _load_ndarray)
 from ..utils.event import ProgressReporter
@@ -200,14 +200,14 @@ class DiskStore(object):
 
     def save_file(self, filename, data):
         path = op.realpath(op.join(self._directory, filename))
-        _save_pickle(path, data)
+        _save_json(path, data)
 
     def load_file(self, filename):
         path = op.realpath(op.join(self._directory, filename))
         if not op.exists(path):
             return None
         try:
-            return _load_pickle(path)
+            return _load_json(path)
         except cPickle.UnpicklingError as e:
             warn("Pickle error when loading `{}`: {}.".format(path, e))
             return None

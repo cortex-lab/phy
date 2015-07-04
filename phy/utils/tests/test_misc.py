@@ -22,7 +22,7 @@ from ..tempdir import TemporaryDirectory
 #------------------------------------------------------------------------------
 
 def test_json_simple():
-    d = {'a': 1, 'b': 'bb'}
+    d = {'a': 1, 'b': 'bb', 3: '33'}
 
     with TemporaryDirectory() as tmpdir:
         path = op.join(tmpdir, 'test')
