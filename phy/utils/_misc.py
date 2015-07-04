@@ -61,6 +61,8 @@ class _CustomEncoder(json.JSONEncoder):
                         shape=obj.shape)
         elif obj.__class__.__name__ == 'QByteArray':
             return {'__qbytearray__': _encode_qbytearray(obj)}
+        elif isinstance(obj, np.generic):
+            return np.asscalar(obj)
         return super(_CustomEncoder, self).default(obj)
 
 

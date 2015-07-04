@@ -40,16 +40,20 @@ def test_json_simple():
 
 def test_json_numpy():
     arr = np.arange(10).reshape((2, 5)).astype(np.float32)
-    d = {'a': arr}
+    d = {'a': arr, 'b': arr.ravel()[0]}
 
     with TemporaryDirectory() as tmpdir:
         path = op.join(tmpdir, 'test')
         _save_json(path, d)
+
         d_bis = _load_json(path)
         arr_bis = d_bis['a']
+
         assert arr_bis.dtype == arr.dtype
         assert arr_bis.shape == arr.shape
         ae(arr_bis, arr)
+
+        assert d['b'] == d_bis['b']
 
 
 def test_git_version():
