@@ -10,6 +10,9 @@ import os
 import os.path as op
 import subprocess
 
+import numpy as np
+from numpy.testing import assert_array_equal as ae
+
 from .._misc import _git_version, _load_json, _save_json
 from ..tempdir import TemporaryDirectory
 
@@ -18,13 +21,24 @@ from ..tempdir import TemporaryDirectory
 # Tests
 #------------------------------------------------------------------------------
 
-def test_json():
+def test_json_simple():
+    d = {'a': 1, 'b': 'bb'}
+
     with TemporaryDirectory() as tmpdir:
         path = op.join(tmpdir, 'test')
-        d = {'a': 1, 'b': 'bb'}
         _save_json(path, d)
         d_bis = _load_json(path)
         assert d == d_bis
+
+
+def test_json_numpy():
+    arr = np.arange(10).astype(np.float32)
+    d = {'a': arr}
+    with TemporaryDirectory() as tmpdir:
+        path = op.join(tmpdir, 'test')
+        _save_json(path, d)
+        d_bis = _load_json(path)
+        ae(d_bis['a'], d['a'])
 
 
 def test_git_version():
