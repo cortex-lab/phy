@@ -370,25 +370,48 @@ class Session(BaseSession):
         params.update({k: v for k, v in self.model.metadata.items()
                        if k in default_parameters})
 
+        # Original spike_clusters array.
+        if self.model.spike_clusters is None:
+            n_spikes = (len(spike_ids) if spike_ids is not None
+                        else self.model.n_spikes)
+            spike_clusters_orig = np.zeros(n_spikes, dtype=np.int32)
+        else:
+            spike_clusters_orig = self.model.spike_clusters.copy()
+
         # Instantiate the KlustaKwik instance.
         kk = KlustaKwik(**kwargs)
+
+        # Save the current clustering in the Kwik file.
+        @kk.connect
+        def on_iter(sc):
+            # Update the original spike clusters.
+            spike_clusters = spike_clusters_orig.copy()
+            spike_clusters[spike_ids] = sc
+
+            # Replace the kk2_current clustering.
+            if 'kk2_current' in self.model.clusterings:
+                self.model.delete_clustering('kk2_current')
+            self.model.add_clustering('kk2_current', spike_clusters)
+            info("Updated `kk2_current` clustering in the `.kwik` file.")
+
         info("Running {}...".format(algorithm))
         # Run KK.
         sc = kk.cluster(model=self.model, spike_ids=spike_ids)
         info("The automatic clustering process has finished.")
+
         # Save the results in the Kwik file.
-        if self.model.spike_clusters is None:
-            spike_clusters = np.zeros(len(sc), dtype=np.int32)
-        else:
-            spike_clusters = self.model.spike_clusters.copy()
+        spike_clusters = spike_clusters_orig.copy()
         spike_clusters[spike_ids] = sc
+
         # Add a new clustering and switch to it.
         self.model.add_clustering(clustering, spike_clusters)
+
         # Copy the main clustering to original (only if this is the very
         # first run of the clustering algorithm).
         if clustering == 'main':
             self.model.copy_clustering('main', 'original')
         self.change_clustering(clustering)
+
         # Set the new clustering metadata.
         params = kk.params
         params['version'] = kk.version

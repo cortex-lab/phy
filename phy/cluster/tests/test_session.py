@@ -373,7 +373,8 @@ def test_session_auto(session, spike_ids):
                          clustering='test',
                          )
     assert session.model.clustering == 'test'
-    assert session.model.clusterings == ['main', 'original', 'test']
+    assert session.model.clusterings == ['main', 'kk2_current',
+                                         'original', 'test']
 
     # Re-open the dataset and check that the clustering has been saved.
     session = _start_manual_clustering(kwik_path=session.model.path,
@@ -385,10 +386,13 @@ def test_session_auto(session, spike_ids):
 
     assert 'klustakwik_version' not in session.model.clustering_metadata
 
-    session.change_clustering('test')
-    assert len(session.model.spike_clusters) == n_spikes
-    assert np.all(session.model.spike_clusters[spike_ids] == sc)
+    for clustering in ('test', 'kk2_current'):
+        session.change_clustering(clustering)
+        assert len(session.model.spike_clusters) == n_spikes
+        assert np.all(session.model.spike_clusters[spike_ids] == sc)
 
+    # Test clustering metadata.
+    session.change_clustering('test')
     metadata = session.model.clustering_metadata
     assert 'klustakwik_version' in metadata
     assert metadata['klustakwik_num_starting_clusters'] == 10
