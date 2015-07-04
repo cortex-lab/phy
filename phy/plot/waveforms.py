@@ -115,7 +115,7 @@ class WaveformVisual(BaseSpikeVisual):
 
     @box_scale.setter
     def box_scale(self, value):
-        assert isinstance(value, tuple) and len(value) == 2
+        assert len(value) == 2
         self.program['u_data_scale'] = value
 
     @property
@@ -129,7 +129,7 @@ class WaveformVisual(BaseSpikeVisual):
 
     @probe_scale.setter
     def probe_scale(self, value):
-        assert isinstance(value, tuple) and len(value) == 2
+        assert len(value) == 2
         self.program['u_channel_scale'] = value
 
     @property
