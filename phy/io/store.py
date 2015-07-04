@@ -20,7 +20,6 @@ from ..utils.array import (PerClusterData, _spikes_in_clusters,
 from ..utils.event import ProgressReporter
 from ..utils.logging import debug, info, warn
 from ..ext.six import string_types
-from ..ext.six.moves import cPickle
 
 
 #------------------------------------------------------------------------------
@@ -208,8 +207,8 @@ class DiskStore(object):
             return None
         try:
             return _load_json(path)
-        except cPickle.UnpicklingError as e:
-            warn("Pickle error when loading `{}`: {}.".format(path, e))
+        except ValueError as e:
+            warn("Error when loading `{}`: {}.".format(path, e))
             return None
 
     @property
