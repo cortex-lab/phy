@@ -357,3 +357,20 @@ class WaveformLoader(object):
         if self._scale_factor is not None:
             waveforms *= self._scale_factor
         return waveforms
+
+
+class SpikeLoader(object):
+    """Translate selection with spike ids into selection with
+    absolute times."""
+    def __init__(self, waveforms, spike_samples):
+        self._spike_samples = spike_samples
+        # waveforms is a WaveformLoader instance
+        self._waveforms = waveforms
+        self.dtype = waveforms.dtype
+        self.shape = (len(spike_samples),
+                      waveforms.n_samples_waveforms,
+                      waveforms.n_channels_waveforms)
+
+    def __getitem__(self, item):
+        times = self._spike_samples[item]
+        return self._waveforms[times]

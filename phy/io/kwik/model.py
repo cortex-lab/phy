@@ -17,7 +17,7 @@ from ...ext import six
 from ..base import BaseModel, ClusterMetadata
 from ..h5 import open_h5, File
 from ..traces import read_dat, _dat_n_samples
-from ...traces.waveform import WaveformLoader
+from ...traces.waveform import WaveformLoader, SpikeLoader
 from ...traces.filter import bandpass_filter, apply_filter
 from ...electrode.mea import MEA
 from ...utils.logging import debug, warn
@@ -230,23 +230,6 @@ def cluster_group_id(name_or_id):
     else:
         assert _is_integer(name_or_id)
         return name_or_id
-
-
-class SpikeLoader(object):
-    """Translate selection with spike ids into selection with
-    absolute times."""
-    def __init__(self, waveforms, spike_samples):
-        self._spike_samples = spike_samples
-        # waveforms is a WaveformLoader instance
-        self._waveforms = waveforms
-        self.dtype = waveforms.dtype
-        self.shape = (len(spike_samples),
-                      waveforms.n_samples_waveforms,
-                      waveforms.n_channels_waveforms)
-
-    def __getitem__(self, item):
-        times = self._spike_samples[item]
-        return self._waveforms[times]
 
 
 #------------------------------------------------------------------------------
