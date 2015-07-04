@@ -244,7 +244,9 @@ class KwikModel(BaseModel):
 
     def __init__(self, kwik_path=None,
                  channel_group=None,
-                 clustering=None):
+                 clustering=None,
+                 waveform_filter=True,
+                 ):
         super(KwikModel, self).__init__()
 
         # Initialize fields.
@@ -265,6 +267,7 @@ class KwikModel(BaseModel):
         self._traces = None
         self._recording_offsets = None
         self._waveform_loader = None
+        self._waveform_filter = waveform_filter
 
         # Open the experiment.
         self.kwik_path = kwik_path
@@ -343,8 +346,11 @@ class KwikModel(BaseModel):
                                    high=high,
                                    order=order)
 
-        def filter(x):
-            return apply_filter(x, b_filter)
+        if self._waveform_filter:
+            def filter(x):
+                return apply_filter(x, b_filter)
+        else:
+            filter = None
 
         self._waveform_loader = WaveformLoader(n_samples=n_samples,
                                                filter=filter,
