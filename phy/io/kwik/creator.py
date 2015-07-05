@@ -360,7 +360,7 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
             raw_data_files = [raw_data_files]
     if isinstance(raw_data_files, list) and len(raw_data_files):
         # The dtype must be a string so that it can be serialized in HDF5.
-        if 'dtype' not in params:
+        if not params.get('dtype', None):
             warn("The `dtype` parameter is mandatory. Using a default value "
                  "of `int16` for now. Please update your `.prm` file.")
             params['dtype'] = 'int16'
