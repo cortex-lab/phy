@@ -12,6 +12,7 @@ import os.path as op
 import numpy as np
 from h5py import Dataset
 
+from ...electrode.mea import load_probe
 from ..h5 import open_h5
 from ..traces import _dat_n_samples
 from ...utils._types import _as_array
@@ -340,10 +341,7 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
 
     # Ensure the probe file exists if it is required.
     if probe is None:
-        if not op.exists(params['prb_file']):
-            raise IOError("The probe file `{}` cannot be found.".format(
-                          params['prb_file']))
-        probe = _read_python(params['prb_file'])
+        probe = load_probe(params['prb_file'])
     assert probe
 
     # KwikCreator.
@@ -362,7 +360,7 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
             raw_data_files = [raw_data_files]
     if isinstance(raw_data_files, list) and len(raw_data_files):
         # The dtype must be a string so that it can be serialized in HDF5.
-        if 'dtype' not in params:
+        if not params.get('dtype', None):
             warn("The `dtype` parameter is mandatory. Using a default value "
                  "of `int16` for now. Please update your `.prm` file.")
             params['dtype'] = 'int16'
