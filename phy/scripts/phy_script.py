@@ -224,6 +224,14 @@ def describe(args):
     return 'model.describe()', dict(model=model)
 
 
+def download(args):
+    from phy import download_sample_data
+    download_sample_data(args.file,
+                         output_dir=args.output_dir,
+                         base=args.base,
+                         )
+
+
 def traces(args):
     from vispy.app import run
     from phy.plot.traces import TraceView
