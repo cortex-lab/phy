@@ -1,11 +1,7 @@
 # -*- coding: utf-8 -*-
 # flake8: noqa
 
-"""
-phy is an open source electrophysiological data analysis package in Python
-for neuronal recordings made with high-density multielectrode arrays
-containing up to thousands of channels.
-"""
+"""Spike sorting and ephys data analysis for 1000 channels and beyond."""
 
 
 #------------------------------------------------------------------------------
