@@ -107,6 +107,9 @@ class ParserCreator(object):
                             help='launch the script in an interactive '
                             'IPython console')
 
+        parser.add_argument('--pdb', action='store_true',
+                            help='activate the Python debugger')
+
     def create_main(self):
         import phy
 
@@ -282,7 +285,8 @@ def spikesort(args):
 
     assert args.file.endswith('.prm')
     kwik_path = args.kwik_path
-    kwik_path = create_kwik(args.file, overwrite=args.overwrite,
+    kwik_path = create_kwik(args.file,
+                            overwrite=args.overwrite,
                             kwik_path=kwik_path)
     # Create the session with the newly-created .kwik file.
     args.file = kwik_path
@@ -334,12 +338,20 @@ def main():
     if args.debug:
         phy.debug()
 
+    # Hide the traceback.
     if args.hide_traceback:
-        # Hide the traceback.
         def exception_handler(exception_type, exception, traceback):
             print("{}: {}".format(exception_type.__name__, exception))
 
         sys.excepthook = exception_handler
+
+    # Activate IPython debugger.
+    if args.pdb:
+        from IPython.core import ultratb
+        sys.excepthook = ultratb.FormattedTB(mode='Verbose',
+                                             color_scheme='Linux',
+                                             call_pdb=1,
+                                             )
 
     func = args.func
     if func is None:
