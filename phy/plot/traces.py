@@ -121,7 +121,7 @@ class TraceVisual(BaseSpikeVisual):
     @property
     def channel_scale(self):
         """Vertical scaling of the traces."""
-        return self.program['u_scale']
+        return np.asscalar(self.program['u_scale'])
 
     @channel_scale.setter
     def channel_scale(self, value):

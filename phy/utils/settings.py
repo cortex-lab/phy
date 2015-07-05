@@ -10,7 +10,7 @@ import os
 import os.path as op
 
 from .logging import debug, warn
-from ._misc import _load_pickle, _save_pickle, _read_python
+from ._misc import _load_json, _save_json, _read_python
 
 
 #------------------------------------------------------------------------------
@@ -48,9 +48,9 @@ class BaseSettings(object):
             else:
                 self._store[k] = v
 
-    def _try_load_pickle(self, path):
+    def _try_load_json(self, path):
         try:
-            self._update(_load_pickle(path))
+            self._update(_load_json(path))
             debug("Loaded internal settings file "
                   "from `{}`.".format(path))
             return True
@@ -69,27 +69,28 @@ class BaseSettings(object):
                  "'{0}':\n{1}".format(path, str(e)))
 
     def load(self, path):
-        """Load a settings Python file."""
+        """Load a settings file."""
         path = op.realpath(path)
+        has_ext = op.splitext(path)[1] != ''
         if not op.exists(path):
             debug("Creating empty settings file: {}.".format(path))
-            with open(path, 'a') as f:
-                f.write("# Settings file. Refer to phy's documentation "
-                        "for more details.\n")
+            # Extension => Python, so we can write a comment.
+            if has_ext:
+                with open(path, 'a') as f:
+                    f.write("# Settings file. Refer to phy's documentation "
+                            "for more details.\n")
             return
-        # Try pickle.
-        if not op.splitext(path)[1]:
-            if not self._try_load_pickle(path):
-                self._try_load_python(path)
-        # Try Python.
-        else:
-            self._try_load_python(path)
+        # Try JSON first, then Python.
+        if not has_ext:
+            if self._try_load_json(path):
+                return
+        self._try_load_python(path)
 
     def save(self, path):
-        """Save the settings to a pickle file."""
+        """Save the settings to a JSON file."""
         path = op.realpath(path)
         try:
-            _save_pickle(path, self._to_save)
+            _save_json(path, self._to_save)
             debug("Saved internal settings file "
                   "to `{}`.".format(path))
         except Exception as e:

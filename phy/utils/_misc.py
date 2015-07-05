@@ -7,12 +7,17 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import sys
-import os
+import base64
+import json
 import os.path as op
+import os
+import sys
 import subprocess
 from inspect import getargspec
 
+import numpy as np
+
+from ._types import _is_integer
 from ..ext.six import string_types, exec_
 from ..ext.six.moves import builtins, cPickle
 
@@ -32,6 +37,86 @@ def _save_pickle(path, data):
     path = op.realpath(op.expanduser(path))
     with open(path, 'wb') as f:
         cPickle.dump(data, f, protocol=2)
+
+
+#------------------------------------------------------------------------------
+# JSON utility functions
+#------------------------------------------------------------------------------
+
+def _encode_qbytearray(arr):
+    b = arr.toBase64().data()
+    data_b64 = base64.b64encode(b).decode('utf8')
+    return data_b64
+
+
+def _decode_qbytearray(data_b64):
+    from phy.gui.qt import QtCore
+    encoded = base64.b64decode(data_b64)
+    out = QtCore.QByteArray.fromBase64(encoded)
+    return out
+
+
+class _CustomEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            data_b64 = base64.b64encode(obj.data).decode('utf8')
+            return dict(__ndarray__=data_b64,
+                        dtype=str(obj.dtype),
+                        shape=obj.shape)
+        elif obj.__class__.__name__ == 'QByteArray':
+            return {'__qbytearray__': _encode_qbytearray(obj)}
+        elif isinstance(obj, np.generic):
+            return np.asscalar(obj)
+        return super(_CustomEncoder, self).default(obj)
+
+
+def _json_custom_hook(d):
+    if isinstance(d, dict) and '__ndarray__' in d:
+        data = base64.b64decode(d['__ndarray__'])
+        return np.frombuffer(data, d['dtype']).reshape(d['shape'])
+    elif isinstance(d, dict) and '__qbytearray__' in d:
+        return _decode_qbytearray(d['__qbytearray__'])
+    return d
+
+
+def _intify_keys(d):
+    assert isinstance(d, dict)
+    out = {}
+    for k, v in d.items():
+        if isinstance(k, string_types) and k.isdigit():
+            k = int(k)
+        out[k] = v
+    return out
+
+
+def _stringify_keys(d):
+    assert isinstance(d, dict)
+    out = {}
+    for k, v in d.items():
+        if _is_integer(k):
+            k = str(k)
+        out[k] = v
+    return out
+
+
+def _load_json(path):
+    path = op.realpath(op.expanduser(path))
+    if not op.exists(path):
+        raise IOError("The JSON file `{}` doesn't exist.".format(path))
+    with open(path, 'r') as f:
+        contents = f.read()
+    if not contents:
+        return {}
+    out = json.loads(contents, object_hook=_json_custom_hook)
+    return _intify_keys(out)
+
+
+def _save_json(path, data):
+    assert isinstance(data, dict)
+    data = _stringify_keys(data)
+    path = op.realpath(op.expanduser(path))
+    with open(path, 'w') as f:
+        json.dump(data, f, cls=_CustomEncoder, indent=2)
 
 
 #------------------------------------------------------------------------------
