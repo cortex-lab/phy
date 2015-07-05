@@ -25,7 +25,7 @@ from .settings import _phy_user_dir, _ensure_dir_exists
 #------------------------------------------------------------------------------
 
 _BASE_URL = {
-    'cortexlab': 'http://phy.cortexlab.net/data/',
+    'cortexlab': 'http://phy.cortexlab.net/data/samples/',
     'github': 'https://raw.githubusercontent.com/kwikteam/phy-data/master/',
     'local': 'http://localhost:8000/',
 }
