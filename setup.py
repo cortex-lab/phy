@@ -63,7 +63,8 @@ setup(
     name='phy',
     version=version,
     license="BSD",
-    description='Electrophysiological data analysis package.',
+    description='Spike sorting and ephys data analysis '
+                'for 1000 channels and beyond',
     long_description=readme,
     author='Kwik Team',
     author_email='cyrille.rossant at gmail.com',
