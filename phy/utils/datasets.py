@@ -109,7 +109,7 @@ def download_sample_data(name, output_dir=None, base='cortexlab'):
 
     """
     if output_dir is None:
-        output_dir = name
+        output_dir = '.'
     if not output_dir.endswith('/'):
         output_dir = output_dir + '/'
     output_dir = op.realpath(op.dirname(output_dir))
