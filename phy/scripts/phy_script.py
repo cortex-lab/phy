@@ -43,6 +43,8 @@ _examples = dedent("""
 
 examples:
   phy -v                display the version of phy
+  phy download hybrid_120sec.dat -o data/
+                        download a sample raw data file in `data/`
   phy describe my_file.kwik
                         display information about a Kwik dataset
   phy spikesort my_params.prm
@@ -64,8 +66,9 @@ examples:
 class ParserCreator(object):
     def __init__(self):
         self.create_main()
-        self.create_describe()
+        self.create_download()
         self.create_traces()
+        self.create_describe()
         self.create_spikesort()
         self.create_detect()
         self.create_auto()
@@ -124,6 +127,18 @@ class ParserCreator(object):
         self._subparsers = self._parser.add_subparsers(dest='command',
                                                        title='subcommand',
                                                        )
+
+    def create_download(self):
+        desc = 'download a sample dataset'
+        p = self._add_sub_parser('download', desc)
+        p.add_argument('file', help='dataset filename')
+        p.add_argument('--output-dir', '-o', help='output directory')
+        p.add_argument('--base',
+                       default='cortexlab',
+                       choices=('cortexlab', 'github'),
+                       help='data repository name: `cortexlab` or `github`',
+                       )
+        p.set_defaults(func=download)
 
     def create_describe(self):
         desc = 'describe a `.kwik` file'
@@ -354,7 +369,10 @@ def main():
         p.parser.print_help()
         return
 
-    cmd, ns = func(args)
+    out = func(args)
+    if not out:
+        return
+    cmd, ns = out
     if not cmd:
         return
     requires_qt = ns.pop('requires_qt', False)

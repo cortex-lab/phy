@@ -16,7 +16,7 @@ try:
 except ImportError:
     get = None
 
-from .logging import info, warn
+from .logging import debug, info, warn
 from .settings import _phy_user_dir, _ensure_dir_exists
 
 
@@ -25,7 +25,7 @@ from .settings import _phy_user_dir, _ensure_dir_exists
 #------------------------------------------------------------------------------
 
 _BASE_URL = {
-    'cortexlab': 'http://phy.cortexlab.net/data/',
+    'cortexlab': 'http://phy.cortexlab.net/data/samples/',
     'github': 'https://raw.githubusercontent.com/kwikteam/phy-data/master/',
     'local': 'http://localhost:8000/',
 }
@@ -54,9 +54,12 @@ def download_file(url, output=None, checksum=None):
         raise ImportError("Please install the requests package.")
     try:
         r = get(url, stream=True)
-    except requests.exceptions.ConnectionError:
+    except (requests.exceptions.ConnectionError,
+            requests.exceptions.HTTPError,
+            ):
         raise RuntimeError("Unable to download `{}`.".format(url))
     if r.status_code != 200:
+        warn("Error while downloading `{}`.".format(url))
         r.raise_for_status()
     info("Downloading {0}...".format(url))
     with open(output, 'wb') as f:
@@ -125,16 +128,18 @@ def download_sample_data(name, output_dir=None, base='cortexlab'):
         # Try to download the md5 hash.
         try:
             checksum = _download(url_checksum).split(' ')[0]
-        except RuntimeError:
+        except RuntimeError as e:
             warn("The md5 file could not be found at `{}`.".format(
                  url_checksum))
+            debug(e)
             checksum = None
         # Try to download the requested file.
         try:
             download_file(url, output=output, checksum=checksum)
             outputs.append(output)
-        except RuntimeError:
+        except RuntimeError as e:
             warn("The data file could not be found at `{}`.".format(
                  url))
+            debug(e)
     if outputs:
         return outputs
