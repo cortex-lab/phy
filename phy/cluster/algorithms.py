@@ -737,9 +737,10 @@ class SpikeDetekt(EventEmitter):
 # Clustering class
 #------------------------------------------------------------------------------
 
-class KlustaKwik(object):
+class KlustaKwik(EventEmitter):
     """KlustaKwik automatic clustering algorithm."""
     def __init__(self, **kwargs):
+        super(KlustaKwik, self).__init__()
         self._kwargs = kwargs
         self.__dict__.update(kwargs)
         # Set the version.
@@ -769,6 +770,11 @@ class KlustaKwik(object):
         # Run KK.
         from klustakwik2 import KK
         kk = KK(data, **self._kwargs)
+
+        @kk.register_callback
+        def f(_):
+            self.emit('iter', kk.clusters)
+
         self.params = kk.all_params
         kk.cluster_mask_starts()
         spike_clusters = kk.clusters
