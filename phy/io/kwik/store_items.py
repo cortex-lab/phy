@@ -98,7 +98,7 @@ class FeatureMasks(VariableSizeItem):
         tmp = chunk_features_masks[idx, :]
 
         # NOTE: channel order has already been taken into account
-        # by SpikeDetekt2 when saving the features and wavforms.
+        # by SpikeDetekt2 when saving the features and masks.
         # All we need to know here is the number of channels
         # in channel_order, there is no need to reorder.
 
