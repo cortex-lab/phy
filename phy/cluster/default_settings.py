@@ -178,6 +178,7 @@ def on_open(session):
 
 
 def on_gui_open(session, gui):
+    """You can customize a GUI when it is open."""
     pass
 
 
