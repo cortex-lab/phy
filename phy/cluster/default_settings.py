@@ -78,10 +78,6 @@ correlograms_excerpt_size = 100000
 # Maximum number of spikes to display in the waveform view.
 waveforms_n_spikes_max = 100
 
-# Load contiguous chunks of waveforms (contiguous I/O is faster).
-# Higher value = faster loading of waveforms.
-waveforms_excerpt_size = 20
-
 # Maximum number of spikes to display in the feature view.
 features_n_spikes_max = 2500
 

@@ -401,26 +401,40 @@ class Waveforms(VariableSizeItem):
         # for the spike subselection.
         return self._spikes_per_cluster
 
-    def waveforms_and_mean(self, cluster):
+    def mean_waveforms(self, cluster):
         spikes = self._subset_spikes_cluster(cluster, force=True)
         waveforms = self.model.waveforms[spikes].astype(np.float32)
         mean_waveforms = _mean(waveforms, (self.n_samples, self.n_channels))
-        return waveforms, mean_waveforms
+        return mean_waveforms
 
-    def mean_waveforms(self, cluster):
-        return self.waveforms_and_mean(cluster)[1]
-
-    def store(self, cluster):
-        """Store waveforms and mean waveforms."""
+    def store_all(self, mode=None):
         if not self.disk_store:
             return
-        # NOTE: make sure to erase old spikes for that cluster.
-        # Typical case merge, undo, different merge.
-        waveforms, mean_waveforms = self.waveforms_and_mean(cluster)
-        self.disk_store.store(cluster,
-                              waveforms=waveforms,
-                              mean_waveforms=mean_waveforms,
-                              )
+
+        clusters_to_generate = self.to_generate(mode=mode)
+        need_generate = len(clusters_to_generate) > 0
+
+        if need_generate:
+            spc = {cluster: self._subset_spikes_cluster(cluster, force=True)
+                   for cluster in clusters_to_generate}
+
+            # All spikes to fetch and save in the store.
+            spike_ids = _concatenate_per_cluster_arrays(spc, spc)
+
+            # Load all waveforms en-bloc.
+            waveforms = self.model.waveforms[spike_ids].astype(np.float32)
+
+            for cluster in clusters_to_generate:
+                idx = _index_of(spc[cluster], spike_ids)
+                # Subselect the waveforms for the current cluster.
+                w = waveforms[idx]
+                # Compute the mean waveforms for the current cluster.
+                mean_waveforms = _mean(w,
+                                       (self.n_samples, self.n_channels))
+                self.disk_store.store(cluster,
+                                      waveforms=w,
+                                      mean_waveforms=mean_waveforms,
+                                      )
 
     def is_consistent(self, cluster, spikes):
         """Return whether the waveforms and spikes match."""
@@ -434,7 +448,7 @@ class Waveforms(VariableSizeItem):
         return True
 
     def load(self, cluster, name='waveforms'):
-        """Load features or masks for a cluster.
+        """Load waveforms for a cluster.
 
         This uses the cluster store if possible, otherwise it falls back
         to the model (much slower).
@@ -456,7 +470,7 @@ class Waveforms(VariableSizeItem):
         return self.load_spikes(spikes, name)
 
     def load_spikes(self, spikes, name):
-        """Load features or masks for an array of spikes."""
+        """Load waveforms for an array of spikes."""
         assert name == 'waveforms'
         data = getattr(self.model, name)
         shape = self._shapes[name]
