@@ -335,7 +335,6 @@ class Session(BaseSession):
                 clustering=None,
                 algorithm='klustakwik',
                 spike_ids=None,
-                save_kk2_iter=True,
                 **kwargs):
         """Run an automatic clustering algorithm on all or some of the spikes.
 
@@ -383,18 +382,17 @@ class Session(BaseSession):
         kk = KlustaKwik(**kwargs)
 
         # Save the current clustering in the Kwik file.
-        if save_kk2_iter:
-            @kk.connect
-            def on_iter(sc):
-                # Update the original spike clusters.
-                spike_clusters = spike_clusters_orig.copy()
-                spike_clusters[spike_ids] = sc
+        @kk.connect
+        def on_iter(sc):
+            # Update the original spike clusters.
+            spike_clusters = spike_clusters_orig.copy()
+            spike_clusters[spike_ids] = sc
 
-                # Replace the kk2_current clustering.
-                if 'kk2_current' in self.model.clusterings:
-                    self.model.delete_clustering('kk2_current')
-                self.model.add_clustering('kk2_current', spike_clusters)
-                info("Updated `kk2_current` clustering in the `.kwik` file.")
+            # Replace the kk2_current clustering.
+            if 'kk2_current' in self.model.clusterings:
+                self.model.delete_clustering('kk2_current')
+            self.model.add_clustering('kk2_current', spike_clusters)
+            info("Updated `kk2_current` clustering in the `.kwik` file.")
 
         info("Running {}...".format(algorithm))
         # Run KK.

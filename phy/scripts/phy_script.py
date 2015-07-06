@@ -299,7 +299,7 @@ def cluster_auto(args):
     ns = dict(session=session,
               clustering=args.clustering,
               )
-    cmd = ('session.cluster(clustering=clustering, save_kk2_iter=False)')
+    cmd = ('session.cluster(clustering=clustering)')
     return (cmd, ns)
 
 
