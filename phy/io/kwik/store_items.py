@@ -432,6 +432,8 @@ class Waveforms(VariableSizeItem):
 
             # Load waveforms chunk by chunk for I/O contiguity.
             n_chunks = len(spike_ids) // self.chunk_size + 1
+            self._pr.value_max = n_chunks + 1
+
             for i in range(n_chunks):
                 a, b = i * self.chunk_size, (i + 1) * self.chunk_size
                 spk = spike_ids[a:b]
@@ -458,6 +460,8 @@ class Waveforms(VariableSizeItem):
                                           waveforms=w,
                                           append=True
                                           )
+
+                self._pr.increment()
 
             # Store mean waveforms on disk.
             self._pr.value = 0
