@@ -55,6 +55,7 @@ def _spikedetekt(request, n_groups=2):
     settings = _read_python(default_settings_path)
     params = settings['spikedetekt']
     params['sample_rate'] = sample_rate
+    params['use_single_threshold'] = False
 
     if n_groups == 1:
         params['probe_adjacency_list'] = {0: [1, 2],
@@ -142,7 +143,8 @@ def test_spike_detect_methods(spikedetekt_one_group):
 
     # Thresholds.
     thresholds = sd.find_thresholds(traces)
-    assert 0 < thresholds['weak'] < thresholds['strong']
+    assert np.all(0 < thresholds['weak'])
+    assert np.all(thresholds['weak'] < thresholds['strong'])
 
     # Spike detection.
     traces_f[1000:1010, :3] *= 5
