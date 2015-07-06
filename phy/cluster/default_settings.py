@@ -78,6 +78,9 @@ correlograms_excerpt_size = 100000
 # Maximum number of spikes to display in the waveform view.
 waveforms_n_spikes_max = 100
 
+# Load regularly-spaced waveforms.
+waveforms_excerpt_size = None
+
 # Maximum number of spikes to display in the feature view.
 features_n_spikes_max = 2500
 

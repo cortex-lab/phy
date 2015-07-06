@@ -363,12 +363,15 @@ class Waveforms(VariableSizeItem):
     def __init__(self, *args, **kwargs):
         self.n_spikes_max = kwargs.pop('n_spikes_max')
         self.excerpt_size = kwargs.pop('excerpt_size')
+        # Size of the chunk used when reading waveforms from the raw data.
+        self.chunk_size = kwargs.pop('chunk_size')
 
         super(Waveforms, self).__init__(*args, **kwargs)
 
         self.n_channels = len(self.model.channel_order)
         self.n_spikes = self.model.n_spikes
         self.n_samples = self.model.n_samples_waveforms
+        self.n_chunks = self.n_spikes // self.chunk_size + 1
         self._shapes['waveforms'] = (-1, self.n_samples, self.n_channels)
         self._selector = Selector(self.model.spike_clusters,
                                   n_spikes_max=self.n_spikes_max,
