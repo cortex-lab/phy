@@ -378,6 +378,10 @@ class Session(BaseSession):
         else:
             spike_clusters_orig = self.model.spike_clusters.copy()
 
+        # HACK: there needs to be one clustering.
+        if not self.model.clusterings:
+            self.model.add_clustering('empty', spike_clusters_orig)
+
         # Instantiate the KlustaKwik instance.
         kk = KlustaKwik(**kwargs)
 
