@@ -370,6 +370,13 @@ class BaseSession(EventEmitter):
 
         self.connect(self.on_open)
         self.connect(self.on_close)
+
+        # Custom `on_open()` callback function.
+        if 'on_open' in self.settings:
+            @self.connect
+            def on_open():
+                self.settings['on_open'](self)
+
         self._pre_open()
         if model or path:
             self.open(path, model=model)
@@ -487,6 +494,10 @@ class BaseSession(EventEmitter):
         @gui.connect
         def on_reset_gui():
             gui._save_state = False
+
+        # Custom `on_gui_open()` callback.
+        if 'on_gui_open' in self.settings:
+            self.settings['on_gui_open'](self, gui)
 
         if show:
             gui.show()

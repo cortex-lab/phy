@@ -177,7 +177,11 @@ def on_open(session):
     pass
 
 
-def on_view_open(view):
+def on_gui_open(session, gui):
+    pass
+
+
+def on_view_open(gui, view):
     """You can customize a view when it is open."""
     pass
 

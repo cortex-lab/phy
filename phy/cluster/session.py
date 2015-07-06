@@ -85,11 +85,6 @@ class Session(BaseSession):
                                       gui_classes=self._gui_classes,
                                       )
 
-    def _pre_open(self):
-        @self.connect
-        def on_open():
-            self.settings['on_open'](self)
-
     def _backup_kwik(self, kwik_path):
         """Save a copy of the Kwik file before opening it."""
         if kwik_path is None:
