@@ -43,6 +43,12 @@ spikedetekt = {
     # Features.
     'n_features_per_channel': 3,
     'pca_n_waveforms_max': 10000,
+
+    # Waveform filtering in GUI.
+    'waveform_filter': None,
+    'waveform_dc_offset': None,
+    'waveform_scale_factor': None,
+
 }
 
 
