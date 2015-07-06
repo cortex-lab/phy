@@ -76,6 +76,13 @@ def test_thresholder():
     ae(t['weak'], np.abs(data) > weak)
     ae(t['strong'], np.abs(data) > strong)
 
+    # Array threshold.
+    thre = np.linspace(weak - .05, strong + .05, n_channels)
+    thresholder = Thresholder(mode='positive', thresholds=thre)
+    t = thresholder(data)
+    assert t.shape == data.shape
+    ae(t, data > thre)
+
 
 #------------------------------------------------------------------------------
 # Test connected components

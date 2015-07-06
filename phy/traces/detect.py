@@ -70,7 +70,7 @@ class Thresholder(object):
                  thresholds=None,
                  ):
         assert mode in ('positive', 'negative', 'both')
-        if isinstance(thresholds, (float, int)):
+        if isinstance(thresholds, (float, int, np.ndarray)):
             thresholds = {'default': thresholds}
         if thresholds is None:
             thresholds = {}
@@ -99,7 +99,7 @@ class Thresholder(object):
         if isinstance(threshold, string_types):
             assert threshold in self._thresholds
             threshold = self._thresholds[threshold]
-        threshold = float(threshold)
+        # threshold = float(threshold)
         # Threshold the data.
         return data_t > threshold
 
