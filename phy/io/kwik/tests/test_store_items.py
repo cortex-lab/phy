@@ -52,6 +52,7 @@ def test_kwik_store():
                           path=tempdir,
                           spikes_per_cluster=spc,
                           features_masks_chunk_size=15,
+                          waveforms_chunk_size=15,
                           waveforms_n_spikes_max=5,
                           waveforms_excerpt_size=2,
                           )
