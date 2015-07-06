@@ -411,10 +411,26 @@ class Waveforms(VariableSizeItem):
                               mean_waveforms=self.mean_waveforms(cluster),
                               )
 
+    def waveforms_and_mean(self, cluster):
+        spikes = self._subset_spikes_cluster(cluster, force=True)
+        waveforms = self.model.waveforms[spikes].astype(np.float32)
+        mean_waveforms = _mean(waveforms, (self.n_samples, self.n_channels))
+        return waveforms, mean_waveforms
+
     def mean_waveforms(self, cluster):
-        waveforms = self.cluster_store.waveforms(cluster)
-        mean_waveforms = _mean(waveforms, (self.n_channels,))
-        return mean_waveforms
+        return self.waveforms_and_mean(cluster)[1]
+
+    def store(self, cluster):
+        """Store waveforms and mean waveforms."""
+        if not self.disk_store:
+            return
+        # NOTE: make sure to erase old spikes for that cluster.
+        # Typical case merge, undo, different merge.
+        waveforms, mean_waveforms = self.waveforms_and_mean(cluster)
+        self.disk_store.store(cluster,
+                              waveforms=waveforms,
+                              mean_waveforms=mean_waveforms,
+                              )
 
     def store_all(self, mode=None):
         if not self.disk_store:
