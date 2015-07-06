@@ -51,8 +51,8 @@ examples:
                         run the whole suite (spike detection and clustering)
   phy detect my_params.prm
                         run spike detection on a parameters file
-  phy cluster-auto my_params.prm
-                        run klustakwik on a dataset
+  phy cluster-auto my_file.kwik
+                        run klustakwik on a dataset (after spike detection)
   phy cluster-manual my_file.kwik
                         run the manual clustering GUI
 
@@ -299,7 +299,7 @@ def cluster_auto(args):
     ns = dict(session=session,
               clustering=args.clustering,
               )
-    cmd = ('session.cluster(clustering=clustering)')
+    cmd = ('session.cluster(clustering=clustering, save_kk2_iter=False)')
     return (cmd, ns)
 
 
