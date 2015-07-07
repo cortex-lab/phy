@@ -23,7 +23,7 @@ clean-pyc:
 	find . -name '__pycache__' -exec rm -fr {} +
 
 lint:
-	${FLAKE8} phy --exclude=phy/ext/* --ignore=E226,E265,F811
+	python setup.py flake8
 
 test: lint
 	python setup.py test
