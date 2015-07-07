@@ -3,4 +3,4 @@
 
 """Electrodes."""
 
-from .mea import MEA
+from .mea import MEA, load_probe

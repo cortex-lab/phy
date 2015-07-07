@@ -67,10 +67,12 @@ class Session(BaseSession):
                  model=None,
                  use_store=True,
                  phy_user_dir=None,
+                 waveform_filter=True,
                  ):
         self._clustering = clustering
         self._use_store = use_store
         self._file_logger = None
+        self._waveform_filter = waveform_filter
         curdir = op.dirname(op.realpath(__file__))
         settings_path = op.join(curdir, 'default_settings.py')
         if kwik_path:
@@ -83,11 +85,6 @@ class Session(BaseSession):
                                       gui_classes=self._gui_classes,
                                       )
 
-    def _pre_open(self):
-        @self.connect
-        def on_open():
-            self.settings['on_open'](self)
-
     def _backup_kwik(self, kwik_path):
         """Save a copy of the Kwik file before opening it."""
         if kwik_path is None:
@@ -99,7 +96,10 @@ class Session(BaseSession):
             shutil.copyfile(kwik_path, backup_kwik_path)
 
     def _create_model(self, path):
-        model = KwikModel(path, clustering=self._clustering)
+        model = KwikModel(path,
+                          clustering=self._clustering,
+                          waveform_filter=self._waveform_filter,
+                          )
         self._create_logger(path)
         return model
 

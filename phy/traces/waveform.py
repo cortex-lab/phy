@@ -219,9 +219,16 @@ def _slice(index, n_samples, margin=None):
 class WaveformLoader(object):
     """Load waveforms from filtered or unfiltered traces."""
 
-    def __init__(self, traces=None, offset=0, filter=None,
-                 n_samples=None, filter_margin=0,
-                 channels=None, scale_factor=None):
+    def __init__(self,
+                 traces=None,
+                 offset=0,
+                 filter=None,
+                 filter_margin=0,
+                 n_samples=None,
+                 channels=None,
+                 scale_factor=None,
+                 dc_offset=None,
+                 ):
         # A (possibly memmapped) array-like structure with traces.
         if traces is not None:
             self.traces = traces
@@ -230,6 +237,7 @@ class WaveformLoader(object):
         self.dtype = np.float32
         # Scale factor for the loaded waveforms.
         self._scale_factor = scale_factor
+        self._dc_offset = dc_offset
         # Offset of the traces: time (in samples) of the first trace sample.
         self._offset = int(offset)
         # List of channels to use when loading the waveforms.
@@ -344,6 +352,25 @@ class WaveformLoader(object):
                 waveforms[i, ...] = self._load_at(time)
             except ValueError as e:
                 warn("Error while loading waveform: {0}".format(str(e)))
+        if self._dc_offset is not None:
+            waveforms -= self._dc_offset
         if self._scale_factor is not None:
             waveforms *= self._scale_factor
         return waveforms
+
+
+class SpikeLoader(object):
+    """Translate selection with spike ids into selection with
+    absolute times."""
+    def __init__(self, waveforms, spike_samples):
+        self._spike_samples = spike_samples
+        # waveforms is a WaveformLoader instance
+        self._waveforms = waveforms
+        self.dtype = waveforms.dtype
+        self.shape = (len(spike_samples),
+                      waveforms.n_samples_waveforms,
+                      waveforms.n_channels_waveforms)
+
+    def __getitem__(self, item):
+        times = self._spike_samples[item]
+        return self._waveforms[times]

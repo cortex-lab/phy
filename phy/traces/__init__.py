@@ -6,4 +6,4 @@
 from .detect import Thresholder, FloodFillDetector, compute_threshold
 from .filter import Filter
 from .pca import PCA
-from .waveform import WaveformLoader, WaveformExtractor
+from .waveform import WaveformLoader, WaveformExtractor, SpikeLoader

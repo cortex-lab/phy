@@ -78,8 +78,13 @@ def _channels_per_group(probe):
 
 def load_probe(name):
     """Load one of the built-in probes."""
-    curdir = op.realpath(op.dirname(__file__))
-    path = op.join(curdir, 'probes/{}.prb'.format(name))
+    if op.exists(name):
+        # The argument can be either a path to a PRB file.
+        path = name
+    else:
+        # Or the name of a built-in probe.
+        curdir = op.realpath(op.dirname(__file__))
+        path = op.join(curdir, 'probes/{}.prb'.format(name))
     if not op.exists(path):
         raise IOError("The probe `{}` cannot be found.".format(name))
     return _read_python(path)

@@ -17,7 +17,7 @@ from ...ext import six
 from ..base import BaseModel, ClusterMetadata
 from ..h5 import open_h5, File
 from ..traces import read_dat, _dat_n_samples
-from ...traces.waveform import WaveformLoader
+from ...traces.waveform import WaveformLoader, SpikeLoader
 from ...traces.filter import bandpass_filter, apply_filter
 from ...electrode.mea import MEA
 from ...utils.logging import debug, warn
@@ -232,23 +232,6 @@ def cluster_group_id(name_or_id):
         return name_or_id
 
 
-class SpikeLoader(object):
-    """Translate selection with spike ids into selection with
-    absolute times."""
-    def __init__(self, waveforms, spike_samples):
-        self._spike_samples = spike_samples
-        # waveforms is a WaveformLoader instance
-        self._waveforms = waveforms
-        self.dtype = waveforms.dtype
-        self.shape = (len(spike_samples),
-                      waveforms.n_samples_waveforms,
-                      waveforms.n_channels_waveforms)
-
-    def __getitem__(self, item):
-        times = self._spike_samples[item]
-        return self._waveforms[times]
-
-
 #------------------------------------------------------------------------------
 # KwikModel class
 #------------------------------------------------------------------------------
@@ -261,7 +244,9 @@ class KwikModel(BaseModel):
 
     def __init__(self, kwik_path=None,
                  channel_group=None,
-                 clustering=None):
+                 clustering=None,
+                 waveform_filter=True,
+                 ):
         super(KwikModel, self).__init__()
 
         # Initialize fields.
@@ -282,6 +267,7 @@ class KwikModel(BaseModel):
         self._traces = None
         self._recording_offsets = None
         self._waveform_loader = None
+        self._waveform_filter = waveform_filter
 
         # Open the experiment.
         self.kwik_path = kwik_path
@@ -360,12 +346,25 @@ class KwikModel(BaseModel):
                                    high=high,
                                    order=order)
 
-        def filter(x):
-            return apply_filter(x, b_filter)
+        if self._metadata.get('waveform_filter', True):
+            debug("Enable waveform filter.")
 
+            def filter(x):
+                return apply_filter(x, b_filter)
+
+            filter_margin = order * 3
+        else:
+            debug("Disable waveform filter.")
+            filter = None
+            filter_margin = 0
+
+        dc_offset = self._metadata.get('waveform_dc_offset', None)
+        scale_factor = self._metadata.get('waveform_scale_factor', None)
         self._waveform_loader = WaveformLoader(n_samples=n_samples,
                                                filter=filter,
-                                               filter_margin=order * 3,
+                                               filter_margin=filter_margin,
+                                               dc_offset=dc_offset,
+                                               scale_factor=scale_factor,
                                                )
 
     def _update_waveform_loader(self):

@@ -606,6 +606,10 @@ class BaseGUI(EventEmitter):
         def on_close_view(e=None):
             dw.close()
 
+        # Call the user callback function.
+        if 'on_view_open' in self.settings:
+            self.settings['on_view_open'](self, item)
+
         self.emit('add_view', item)
 
     def get_views(self, *names):

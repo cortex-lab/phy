@@ -205,6 +205,9 @@ class ParserCreator(object):
                        help='name of the clustering to use')
         p.add_argument('--cluster-ids', '-c',
                        help='list of clusters to select initially')
+        p.add_argument('--no-store', action='store_true', default=False,
+                       help='do not create the store (faster loading time, '
+                            'slower GUI)')
         p.set_defaults(func=cluster_manual)
 
     def create_notebook(self):
@@ -329,7 +332,10 @@ def spikesort(args):
 
 
 def cluster_manual(args):
-    session = _create_session(args, clustering=args.clustering)
+    session = _create_session(args,
+                              clustering=args.clustering,
+                              use_store=not(args.no_store),
+                              )
     cluster_ids = (list(map(int, args.cluster_ids.split(',')))
                    if args.cluster_ids else None)
 

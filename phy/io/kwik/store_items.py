@@ -98,7 +98,7 @@ class FeatureMasks(VariableSizeItem):
         tmp = chunk_features_masks[idx, :]
 
         # NOTE: channel order has already been taken into account
-        # by SpikeDetekt2 when saving the features and wavforms.
+        # by SpikeDetekt2 when saving the features and masks.
         # All we need to know here is the number of channels
         # in channel_order, there is no need to reorder.
 
@@ -216,7 +216,7 @@ class FeatureMasks(VariableSizeItem):
                 # Update the progress reporter.
                 self._pr.value += 1
 
-            # Store mean features and waveforms on disk.
+            # Store mean features and masks on disk.
             self._pr.value = 0
             self._pr.value_max = len(clusters_to_generate)
             for cluster in clusters_to_generate:
@@ -363,12 +363,15 @@ class Waveforms(VariableSizeItem):
     def __init__(self, *args, **kwargs):
         self.n_spikes_max = kwargs.pop('n_spikes_max')
         self.excerpt_size = kwargs.pop('excerpt_size')
+        # Size of the chunk used when reading waveforms from the raw data.
+        self.chunk_size = kwargs.pop('chunk_size')
 
         super(Waveforms, self).__init__(*args, **kwargs)
 
         self.n_channels = len(self.model.channel_order)
-        self.n_spikes = self.model.n_spikes
         self.n_samples = self.model.n_samples_waveforms
+        self.n_spikes = self.model.n_spikes
+
         self._shapes['waveforms'] = (-1, self.n_samples, self.n_channels)
         self._selector = Selector(self.model.spike_clusters,
                                   n_spikes_max=self.n_spikes_max,
@@ -401,6 +404,13 @@ class Waveforms(VariableSizeItem):
         # for the spike subselection.
         return self._spikes_per_cluster
 
+    def _store_mean(self, cluster):
+        if not self.disk_store:
+            return
+        self.disk_store.store(cluster,
+                              mean_waveforms=self.mean_waveforms(cluster),
+                              )
+
     def waveforms_and_mean(self, cluster):
         spikes = self._subset_spikes_cluster(cluster, force=True)
         waveforms = self.model.waveforms[spikes].astype(np.float32)
@@ -422,6 +432,60 @@ class Waveforms(VariableSizeItem):
                               mean_waveforms=mean_waveforms,
                               )
 
+    def store_all(self, mode=None):
+        if not self.disk_store:
+            return
+
+        clusters_to_generate = self.to_generate(mode=mode)
+        need_generate = len(clusters_to_generate) > 0
+
+        if need_generate:
+            spc = {cluster: self._subset_spikes_cluster(cluster, force=True)
+                   for cluster in clusters_to_generate}
+
+            # All spikes to fetch and save in the store.
+            spike_ids = _concatenate_per_cluster_arrays(spc, spc)
+
+            # Load waveforms chunk by chunk for I/O contiguity.
+            n_chunks = len(spike_ids) // self.chunk_size + 1
+            self._pr.value_max = n_chunks + 1
+
+            for i in range(n_chunks):
+                a, b = i * self.chunk_size, (i + 1) * self.chunk_size
+                spk = spike_ids[a:b]
+
+                # Load a chunk of waveforms.
+                chunk_waveforms = self.model.waveforms[spk]
+                assert isinstance(chunk_waveforms, np.ndarray)
+                if chunk_waveforms.shape[0] == 0:
+                    break
+
+                chunk_spike_clusters = self.model.spike_clusters[spk]
+
+                # Split the spikes.
+                chunk_spc = _spikes_per_cluster(spk, chunk_spike_clusters)
+
+                # Go through the clusters appearing in the chunk and that
+                # need to be re-generated.
+                clusters = (set(chunk_spc.keys()).
+                            intersection(set(clusters_to_generate)))
+                for cluster in sorted(clusters):
+                    i = _index_of(chunk_spc[cluster], spk)
+                    w = chunk_waveforms[i].astype(np.float32)
+                    self.disk_store.store(cluster,
+                                          waveforms=w,
+                                          append=True
+                                          )
+
+                self._pr.increment()
+
+            # Store mean waveforms on disk.
+            self._pr.value = 0
+            self._pr.value_max = len(clusters_to_generate)
+            for cluster in clusters_to_generate:
+                self._store_mean(cluster)
+                self._pr.value += 1
+
     def is_consistent(self, cluster, spikes):
         """Return whether the waveforms and spikes match."""
         path_w = self.disk_store._cluster_path(cluster, 'waveforms')
@@ -434,7 +498,7 @@ class Waveforms(VariableSizeItem):
         return True
 
     def load(self, cluster, name='waveforms'):
-        """Load features or masks for a cluster.
+        """Load waveforms for a cluster.
 
         This uses the cluster store if possible, otherwise it falls back
         to the model (much slower).
@@ -456,7 +520,7 @@ class Waveforms(VariableSizeItem):
         return self.load_spikes(spikes, name)
 
     def load_spikes(self, spikes, name):
-        """Load features or masks for an array of spikes."""
+        """Load waveforms for an array of spikes."""
         assert name == 'waveforms'
         data = getattr(self.model, name)
         shape = self._shapes[name]
@@ -623,6 +687,7 @@ def create_store(model,
                  features_masks_chunk_size=100000,
                  waveforms_n_spikes_max=None,
                  waveforms_excerpt_size=None,
+                 waveforms_chunk_size=1000,
                  ):
     """Create a cluster store for a model."""
     assert spikes_per_cluster is not None
@@ -640,6 +705,7 @@ def create_store(model,
     cluster_store.register_item(Waveforms,
                                 n_spikes_max=waveforms_n_spikes_max,
                                 excerpt_size=waveforms_excerpt_size,
+                                chunk_size=waveforms_chunk_size,
                                 )
     cluster_store.register_item(ClusterStatistics)
     return cluster_store

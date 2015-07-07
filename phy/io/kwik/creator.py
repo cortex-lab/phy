@@ -8,6 +8,8 @@
 
 import os
 import os.path as op
+import itertools
+import types
 
 import numpy as np
 from h5py import Dataset
@@ -19,7 +21,7 @@ from ...utils._types import _as_array
 from ...utils.logging import warn
 from ...utils._misc import _read_python
 from ...utils.array import _unique
-from ...ext.six import string_types
+from ...ext.six import string_types, next
 from ...ext.six.moves import zip
 
 
@@ -169,7 +171,15 @@ class KwikCreator(object):
             _, n_channels, n_features = features.shape
         else:
             assert features
-            _, n_channels, n_features = features[0].shape
+            # Ensure we have a generator.
+            if isinstance(features, list):
+                features = (_ for _ in features)
+            assert isinstance(features, types.GeneratorType)
+            # Extract the first item in the generator.
+            features_first = next(features)
+            _, n_channels, n_features = features_first.shape
+            # NOTE: this is equivalent to resetting the generator.
+            features = itertools.chain((features_first,), features)
 
         # Determine the shape of the features_masks array.
         shape = (n_spikes, n_channels * n_features, 2)

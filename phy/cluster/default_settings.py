@@ -43,6 +43,12 @@ spikedetekt = {
     # Features.
     'n_features_per_channel': 3,
     'pca_n_waveforms_max': 10000,
+
+    # Waveform filtering in GUI.
+    'waveform_filter': None,
+    'waveform_dc_offset': None,
+    'waveform_scale_factor': None,
+
 }
 
 
@@ -78,9 +84,8 @@ correlograms_excerpt_size = 100000
 # Maximum number of spikes to display in the waveform view.
 waveforms_n_spikes_max = 100
 
-# Load contiguous chunks of waveforms (contiguous I/O is faster).
-# Higher value = faster loading of waveforms.
-waveforms_excerpt_size = 20
+# Load regularly-spaced waveforms.
+waveforms_excerpt_size = None
 
 # Maximum number of spikes to display in the feature view.
 features_n_spikes_max = 2500
@@ -177,7 +182,12 @@ def on_open(session):
     pass
 
 
-def on_view_open(view):
+def on_gui_open(session, gui):
+    """You can customize a GUI when it is open."""
+    pass
+
+
+def on_view_open(gui, view):
     """You can customize a view when it is open."""
     pass
 
