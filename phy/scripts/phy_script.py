@@ -51,8 +51,8 @@ examples:
                         run the whole suite (spike detection and clustering)
   phy detect my_params.prm
                         run spike detection on a parameters file
-  phy cluster-auto my_file.kwik --num-clusters-start=100
-                        run klustakwik on a dataset
+  phy cluster-auto my_file.kwik
+                        run klustakwik on a dataset (after spike detection)
   phy cluster-manual my_file.kwik
                         run the manual clustering GUI
 
@@ -189,6 +189,14 @@ class ParserCreator(object):
                        help='overwrite the `.kwik` file ')
         p.set_defaults(func=detect)
 
+    def create_auto(self):
+        desc = 'launch the automatic clustering algorithm on a `.kwik` file'
+        p = self._add_sub_parser('cluster-auto', desc)
+        p.add_argument('file', help='path to a `.kwik` file')
+        p.add_argument('--clustering', default='main',
+                       help='name of the clustering to use')
+        p.set_defaults(func=cluster_auto)
+
     def create_manual(self):
         desc = 'launch the manual clustering GUI on a `.kwik` file'
         p = self._add_sub_parser('cluster-manual', desc)
@@ -198,14 +206,6 @@ class ParserCreator(object):
         p.add_argument('--cluster-ids', '-c',
                        help='list of clusters to select initially')
         p.set_defaults(func=cluster_manual)
-
-    def create_auto(self):
-        desc = 'launch the automatic clustering algorithm on a `.kwik` file'
-        p = self._add_sub_parser('cluster-auto', desc)
-        p.add_argument('file', help='path to a `.kwik` file')
-        p.add_argument('--clustering', default='main',
-                       help='name of the clustering to use')
-        p.set_defaults(func=cluster_auto)
 
     def create_notebook(self):
         # TODO
@@ -294,11 +294,11 @@ def detect(args):
 
 
 def cluster_auto(args):
+    assert args.file.endswith('.kwik')
     session = _create_session(args, use_store=False)
     ns = dict(session=session,
               clustering=args.clustering,
               )
-    # TODO: support KK2 parameters here.
     cmd = ('session.cluster(clustering=clustering)')
     return (cmd, ns)
 
@@ -310,7 +310,8 @@ def spikesort(args):
     kwik_path = args.kwik_path
     kwik_path = create_kwik(args.file,
                             overwrite=args.overwrite,
-                            kwik_path=kwik_path)
+                            kwik_path=kwik_path,
+                            )
     # Create the session with the newly-created .kwik file.
     args.file = kwik_path
     session = _create_session(args, use_store=False)

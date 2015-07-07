@@ -364,11 +364,11 @@ class Session(BaseSession):
         # Take KK2's default parameters.
         from klustakwik2.default_parameters import default_parameters
         params = default_parameters.copy()
-        # Update the ones passed to the function.
-        params.update(kwargs)
         # Update the PRM ones, by filtering them.
         params.update({k: v for k, v in self.model.metadata.items()
                        if k in default_parameters})
+        # Update the ones passed to the function.
+        params.update(kwargs)
 
         # Original spike_clusters array.
         if self.model.spike_clusters is None:
