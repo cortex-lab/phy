@@ -1,5 +1,3 @@
-FLAKE8 ?= flake8
-
 help:
 	@echo "clean - remove all build, test, coverage and Python artifacts"
 	@echo "clean-build - remove build artifacts"
@@ -23,7 +21,7 @@ clean-pyc:
 	find . -name '__pycache__' -exec rm -fr {} +
 
 lint:
-	${FLAKE8} phy --exclude=phy/ext/* --ignore=E226,E265,F811
+	python setup.py flake8
 
 test: lint
 	python setup.py test
