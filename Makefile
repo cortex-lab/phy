@@ -1,5 +1,3 @@
-FLAKE8 ?= flake8
-
 help:
 	@echo "clean - remove all build, test, coverage and Python artifacts"
 	@echo "clean-build - remove build artifacts"
