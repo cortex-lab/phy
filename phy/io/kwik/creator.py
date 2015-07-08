@@ -267,7 +267,7 @@ class KwikCreator(object):
                 elif op.splitext(raw_path)[1] == '.dat':
                     f.write_attr(path + '/raw', 'dat_path', raw_path)
 
-    def add_recordings_from_dat(self, files, sample_rate=None,
+    def _add_recordings_from_dat(self, files, sample_rate=None,
                                 n_channels=None, dtype=None):
         start_sample = 0
         for i, filename in enumerate(files):
@@ -284,7 +284,7 @@ class KwikCreator(object):
                                            n_channels=n_channels,
                                            dtype=dtype)
 
-    def add_recordings_from_kwd(self, file, sample_rate=None):
+    def _add_recordings_from_kwd(self, file, sample_rate=None):
         assert file.endswith('.kwd')
         start_sample = 0
         with open_h5(file, 'r') as f:
@@ -406,7 +406,7 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
     raw_data_files = params.get('raw_data_files', None)
     if isinstance(raw_data_files, string_types):
         if raw_data_files.endswith('.raw.kwd'):
-            creator.add_recordings_from_kwd(raw_data_files,
+            creator._add_recordings_from_kwd(raw_data_files,
                                             sample_rate=sample_rate,
                                             )
         else:
@@ -424,7 +424,7 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
         # The number of channels in the .dat file *must* be specified.
         n_channels = params['n_channels']
         assert n_channels > 0
-        creator.add_recordings_from_dat(raw_data_files,
+        creator._add_recordings_from_dat(raw_data_files,
                                         sample_rate=sample_rate,
                                         n_channels=n_channels,
                                         dtype=dtype,
