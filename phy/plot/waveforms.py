@@ -490,6 +490,21 @@ class WaveformView(BaseSpikeCanvas):
 
 @_wrap_vispy
 def plot_waveforms(waveforms, **kwargs):
+    """Plot waveforms.
+
+    Parameters
+    ----------
+
+    waveforms : ndarray
+        The waveforms to plot. A `(n_spikes, n_samples, n_channels)` array.
+    spike_clusters : ndarray (optional)
+        A `(n_spikes,)` int array with the spike clusters.
+    masks : ndarray (optional)
+        A `(n_spikes, n_channels)` float array with the spike masks.
+    channel_positions : ndarray
+        A `(n_channels, 2)` array with the channel positions.
+
+    """
     c = WaveformView(keys='interactive')
     c.set_data(waveforms, **kwargs)
     return c
