@@ -109,10 +109,30 @@ class PCA(object):
         self._pcs = None
 
     def fit(self, waveforms, masks=None):
+        """Compute the PCs of waveforms.
+
+        Parameters
+        ----------
+
+        waveforms : ndarray
+            Shape: `(n_spikes, n_samples, n_channels)`
+        masks : ndarray
+            Shape: `(n_spikes, n_channels)`
+
+        """
         self._pcs = _compute_pcs(waveforms, n_pcs=self._n_pcs, masks=masks)
         return self._pcs
 
     def transform(self, waveforms, pcs=None):
+        """Project waveforms on the PCs.
+
+        Parameters
+        ----------
+
+        waveforms : ndarray
+            Shape: `(n_spikes, n_samples, n_channels)`
+
+        """
         if pcs is None:
             pcs = self._pcs
         # Need to call fit() if the pcs are None here.
