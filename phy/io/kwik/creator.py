@@ -307,6 +307,21 @@ class KwikCreator(object):
                           name=None,
                           clustering=None,
                           ):
+        """Add a cluster group.
+
+        Parameters
+        ----------
+
+        group : int
+            The channel group.
+        id : int
+            The cluster group id.
+        name : str
+            The cluster group name.
+        clustering : str
+            The name of the clustering.
+
+        """
         assert group >= 0
         cg_path = ('/channel_groups/{0:d}/'
                    'cluster_groups/{1:s}/{2:d}').format(group,
@@ -322,6 +337,21 @@ class KwikCreator(object):
                        spike_clusters=None,
                        cluster_groups=None,
                        ):
+        """Add a clustering.
+
+        Parameters
+        ----------
+
+        group : int
+            The channel group.
+        name : str
+            The clustering name.
+        spike_clusters : ndarray
+            The spike clusters assignements. This is `(n_spikes,)` array.
+        cluster_groups : dict
+            The cluster group of every cluster.
+
+        """
         if cluster_groups is None:
             cluster_groups = {}
         path = '/channel_groups/{0:d}/spikes/clusters/{1:s}'.format(
@@ -355,6 +385,7 @@ class KwikCreator(object):
 
 def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
                 probe=None, **kwargs):
+    """Create a new Kwik dataset from a PRM file."""
     prm = _read_python(prm_file) if prm_file else {}
 
     if prm:
@@ -407,8 +438,8 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
     if isinstance(raw_data_files, string_types):
         if raw_data_files.endswith('.raw.kwd'):
             creator._add_recordings_from_kwd(raw_data_files,
-                                            sample_rate=sample_rate,
-                                            )
+                                             sample_rate=sample_rate,
+                                             )
         else:
             raw_data_files = [raw_data_files]
     if isinstance(raw_data_files, list) and len(raw_data_files):
@@ -425,10 +456,10 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
         n_channels = params['n_channels']
         assert n_channels > 0
         creator._add_recordings_from_dat(raw_data_files,
-                                        sample_rate=sample_rate,
-                                        n_channels=n_channels,
-                                        dtype=dtype,
-                                        )
+                                         sample_rate=sample_rate,
+                                         n_channels=n_channels,
+                                         dtype=dtype,
+                                         )
 
     creator.set_metadata('/application_data/spikedetekt', **params)
 
