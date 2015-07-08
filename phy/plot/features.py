@@ -630,6 +630,30 @@ class FeatureView(BaseSpikeCanvas):
 
 @_wrap_vispy
 def plot_features(features, **kwargs):
+    """Plot features.
+
+    Parameters
+    ----------
+
+    features : ndarray
+        The features to plot. A `(n_spikes, n_channels, n_features)` array.
+    spike_clusters : ndarray (optional)
+        A `(n_spikes,)` int array with the spike clusters.
+    masks : ndarray (optional)
+        A `(n_spikes, n_channels)` float array with the spike masks.
+    n_rows : int
+        Number of rows (= number of columns) in the grid view.
+    x_dimensions : list
+        List of dimensions for the x axis.
+    y_dimensions : list
+        List of dimensions for the yœ axis.
+    extra_features : dict
+        A dictionary `{feature_name: array}` where `array` has
+        `n_spikes` elements.
+    background_features : ndarray
+        The background features. A `(n_spikes, n_channels, n_features)` array.
+
+    """
     c = FeatureView(keys='interactive')
     c.set_data(features, **kwargs)
     return c
