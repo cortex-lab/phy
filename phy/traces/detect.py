@@ -315,11 +315,21 @@ def connected_components(weak_crossings=None,
 class FloodFillDetector(object):
     """Detect spikes in weak and strong threshold crossings.
 
-    Usage
-    -----
+    Parameters
+    ----------
+
+    probe_adjacency_list : dict
+        A dict `{channel: [neighbors]}`.
+    join_size : int
+        The number of samples defining the tolerance in time for
+        finding connected components
+
+    Example
+    -------
 
     ```python
-    det = FloodFillDetector(...)
+    det = FloodFillDetector(probe_adjacency_list=...,
+                            join_size=...)
     components = det(weak_crossings, strong_crossings)
     ```
 
