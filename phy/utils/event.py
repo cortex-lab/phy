@@ -24,12 +24,30 @@ class EventEmitter(object):
     Derive from this class to emit events and let other classes know
     of occurrences of actions and events.
 
+    Example
+    -------
+
+    ```python
+    class MyClass(EventEmitter):
+        def f(self):
+            self.emit('my_event', 1, key=2)
+
+    o = MyClass()
+
+    # The following function will be called when `o.f()` is called.
+    @o.connect
+    def on_my_event(arg, key=None):
+        print(arg, key)
+
+    ```
+
     """
 
     def __init__(self):
         self.reset()
 
     def reset(self):
+        """Remove all registered callbacks."""
         self._callbacks = defaultdict(list)
 
     def _get_on_name(self, func):
@@ -153,6 +171,22 @@ def _default_on_complete(message, end='\n', **kwargs):
 class ProgressReporter(EventEmitter):
     """A class that reports progress done.
 
+    Example
+    -------
+
+    ```python
+    pr = ProgressReporter()
+    pr.set_progress_message("Progress: {progress}%...")
+    pr.set_complete_message("Completed!")
+    pr.value_max = 10
+
+    for i in range(10):
+        pr.value += 1  # or pr.increment()
+    ```
+
+    You can also add custom keyword arguments in `pr.increment()`: these
+    will be replaced in the message string.
+
     Emits
     -----
 
@@ -196,9 +230,16 @@ class ProgressReporter(EventEmitter):
             self._has_completed = True
 
     def increment(self, **kwargs):
+        """Equivalent to `self.value += 1`.
+
+        Custom keywoard arguments can also be passed to be processed in the
+        progress message format string.
+
+        """
         self._set_value(self._value + 1, **kwargs)
 
     def reset(self, value_max=None):
+        """Reset the value to 0 and the value max to a given value."""
         super(ProgressReporter, self).reset()
         self._value = 0
         if value_max is not None:
@@ -215,7 +256,7 @@ class ProgressReporter(EventEmitter):
 
     @property
     def value_max(self):
-        """Maximum value."""
+        """Maximum value (integer)."""
         return self._value_max
 
     @value_max.setter
@@ -225,7 +266,7 @@ class ProgressReporter(EventEmitter):
         self._value_max = value_max
 
     def is_complete(self):
-        """Return wheter the task has completed."""
+        """Return whether the task has completed."""
         return self._value >= self._value_max
 
     def set_complete(self, **kwargs):
@@ -234,5 +275,5 @@ class ProgressReporter(EventEmitter):
 
     @property
     def progress(self):
-        """Return the current progress."""
+        """Return the current progress as a float value in `[0, 1]`."""
         return self._value / float(self._value_max)

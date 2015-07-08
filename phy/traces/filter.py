@@ -35,7 +35,19 @@ def apply_filter(x, filter=None):
 
 
 class Filter(object):
-    """Bandpass filter."""
+    """Multichannel bandpass filter.
+
+    The filter is applied on every column of a 2D array.
+
+    Example
+    -------
+
+    ```python
+    fil = Filter(rate=20000., low=5000., high=15000., order=4)
+    traces_f = fil(traces)
+    ```
+
+    """
     def __init__(self, rate=None, low=None, high=None, order=None):
         self._filter = bandpass_filter(rate=rate,
                                        low=low,

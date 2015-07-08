@@ -124,11 +124,13 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def open(self, kwik_path=None, model=None):
+        """Open a `.kwik` file."""
         self._backup_kwik(kwik_path)
         return super(Session, self).open(model=model, path=kwik_path)
 
     @property
     def kwik_path(self):
+        """Path to the `.kwik` file."""
         return self.model.path
 
     @property
@@ -431,6 +433,7 @@ class Session(BaseSession):
     # -------------------------------------------------------------------------
 
     def show_gui(self, **kwargs):
+        """Show a GUI."""
         gui = super(Session, self).show_gui(store=self.store,
                                             **kwargs)
 

@@ -230,6 +230,9 @@ def plot_correlograms(correlograms, **kwargs):
 
     correlograms : array
         A `(n_clusters, n_clusters, n_bins)` array.
+    lines :  ndarray
+        Array of x coordinates where to put vertical lines (in number of
+        samples).
     colors : array-like (optional)
         A list of colors as RGB tuples.
 

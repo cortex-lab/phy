@@ -50,9 +50,11 @@ class BaseViewModel(object):
         self.on_open()
 
     def emit(self, *args, **kwargs):
+        """Emit an event."""
         return self._event.emit(*args, **kwargs)
 
     def connect(self, *args, **kwargs):
+        """Connect a callback function."""
         self._event.connect(*args, **kwargs)
 
     # Methods to override
@@ -112,20 +114,24 @@ class BaseViewModel(object):
 
     @property
     def model(self):
+        """The model."""
         return self._model
 
     @property
     def name(self):
+        """The view model's name."""
         return self._view_name
 
     @property
     def view(self):
+        """The underlying view."""
         return self._view
 
     # Public methods
     #--------------------------------------------------------------------------
 
     def close(self):
+        """Close the view."""
         self._view.close()
         self.emit('close_view')
 
@@ -165,6 +171,7 @@ class HTMLViewModel(BaseViewModel):
         return ''
 
     def get_css(self, **kwargs):
+        """Return the view's CSS styles."""
         return ''
 
     def update(self, **kwargs):
@@ -210,6 +217,7 @@ class WidgetCreator(EventEmitter):
 
     @property
     def widget_classes(self):
+        """The registered widget classes that can be created."""
         return self._widget_classes
 
     def _widget_name(self, widget):
@@ -252,6 +260,7 @@ class WidgetCreator(EventEmitter):
         return widget
 
     def remove(self, widget):
+        """Remove a widget."""
         if widget in self._widgets:
             debug("Remove widget {}.".format(widget))
             self._widgets.remove(widget)
@@ -627,9 +636,11 @@ class BaseGUI(EventEmitter):
 
     @property
     def views(self):
+        """List of all open views."""
         return self.get_views()
 
     def view_count(self):
+        """Number of views of each type."""
         return {name: len(self.get_views(name))
                 for name in self._view_creator.widget_classes.keys()}
 

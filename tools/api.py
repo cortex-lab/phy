@@ -313,11 +313,15 @@ def generate_api_doc(package, subpackages, path=None):
 if __name__ == '__main__':
 
     package = 'phy'
-    subpackages = ['cluster.manual',
+    subpackages = [
+                   'cluster',
+                   'cluster.manual',
                    'electrode',
+                   'gui',
                    'io',
                    'plot',
                    'stats',
+                   'traces',
                    'utils',
                    ]
 

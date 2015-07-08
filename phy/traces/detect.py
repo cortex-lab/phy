@@ -18,6 +18,27 @@ from ..ext.six.moves import range, zip
 #------------------------------------------------------------------------------
 
 def compute_threshold(arr, single_threshold=True, std_factor=None):
+    """Compute the threshold(s) of filtered traces.
+
+    Parameters
+    ----------
+
+    arr : ndarray
+        Filtered traces, shape `(n_samples, n_channels)`.
+    single_threshold : bool
+        Whether there should be a unique threshold for all channels, or
+        one threshold per channel.
+    std_factor : float or 2-tuple
+        The threshold in unit of signal std. Two values can be specified
+        for multiple thresholds (weak and strong).
+
+    Returns
+    -------
+
+    thresholds : ndarray
+        A `(2,)` or `(2, n_channels)` array with the thresholds.
+
+    """
     assert arr.ndim == 2
     ns, nc = arr.shape
 
@@ -64,6 +85,14 @@ class Thresholder(object):
         A `{str: float}` mapping for multiple thresholds (e.g. `weak`
         and `strong`).
 
+    Example
+    -------
+
+    ```python
+    thres = Thresholder('positive', thresholds=(.1, .2))
+    crossings = thres(traces)
+    ```
+
     """
     def __init__(self,
                  mode=None,
@@ -79,6 +108,7 @@ class Thresholder(object):
         self._thresholds = thresholds
 
     def transform(self, data):
+        """Return `data`, `-data`, or `abs(data)` depending on the mode."""
         if self._mode == 'positive':
             return data
         elif self._mode == 'negative':
@@ -87,6 +117,7 @@ class Thresholder(object):
             return np.abs(data)
 
     def detect(self, data_t, threshold=None):
+        """Perform the thresholding operation."""
         # Accept dictionary of thresholds.
         if isinstance(threshold, (list, tuple)):
             return {name: self(data_t, threshold=name)
@@ -284,11 +315,21 @@ def connected_components(weak_crossings=None,
 class FloodFillDetector(object):
     """Detect spikes in weak and strong threshold crossings.
 
-    Usage
-    -----
+    Parameters
+    ----------
+
+    probe_adjacency_list : dict
+        A dict `{channel: [neighbors]}`.
+    join_size : int
+        The number of samples defining the tolerance in time for
+        finding connected components
+
+    Example
+    -------
 
     ```python
-    det = FloodFillDetector(...)
+    det = FloodFillDetector(probe_adjacency_list=...,
+                            join_size=...)
     components = det(weak_crossings, strong_crossings)
     ```
 

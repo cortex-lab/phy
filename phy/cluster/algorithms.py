@@ -139,6 +139,20 @@ _progress_messages = {
 
 
 class SpikeDetekt(EventEmitter):
+    """Spike detection class.
+
+    Parameters
+    ----------
+
+    tempdir : str
+        Path to the temporary directory used by the algorithm. It should be
+        on a SSD for best performance.
+    probe : dict
+        The probe dictionary.
+    **kwargs : dict
+        Spike detection parameters.
+
+    """
     def __init__(self, tempdir=None, probe=None, **kwargs):
         super(SpikeDetekt, self).__init__()
         self._tempdir = tempdir
@@ -209,6 +223,7 @@ class SpikeDetekt(EventEmitter):
     # -------------------------------------------------------------------------
 
     def apply_filter(self, data):
+        """Filter the traces."""
         filter = self._create_filter()
         return filter(data).astype(np.float32)
 
@@ -447,6 +462,12 @@ class SpikeDetekt(EventEmitter):
         return (waveforms[::k, ...], masks[::k, ...])
 
     def iter_chunks(self, n_samples):
+        """Iterate over chunks.
+
+        Yield tuples `(s_start, s_end, keep_start, keep_end)`, in number
+        of samples.
+
+        """
         rate = self._kwargs['sample_rate']
         chunk_size = int(self._kwargs['chunk_size_seconds'] * rate)
         overlap = int(self._kwargs['chunk_overlap_seconds'] * rate)
@@ -454,6 +475,7 @@ class SpikeDetekt(EventEmitter):
             yield bounds
 
     def n_chunks(self, n_samples):
+        """Number of chunks."""
         return len(list(self.iter_chunks(n_samples)))
 
     # Main steps
@@ -461,6 +483,7 @@ class SpikeDetekt(EventEmitter):
 
     def step_detect(self, bounds, chunk_data, chunk_data_keep,
                     thresholds=None):
+        """Detection step."""
         key = bounds[2]
         # Apply the filter.
         data_f = self.apply_filter(chunk_data)
@@ -481,7 +504,11 @@ class SpikeDetekt(EventEmitter):
                      n_channels=None,
                      thresholds=None,
                      ):
-        """Return the waveforms to keep for each chunk for PCA."""
+        """Extraction step.
+
+        Return the waveforms to keep for each chunk for PCA.
+
+        """
         assert len(components) > 0
         s_start, s_end, keep_start, keep_end = bounds
         key = keep_start
@@ -529,6 +556,11 @@ class SpikeDetekt(EventEmitter):
         return wm, counts
 
     def step_pca(self, chunk_waveforms):
+        """PCA step.
+
+        Return the PCs.
+
+        """
         if not chunk_waveforms:
             return
         # This is a dict {key: (waveforms, masks)}.
@@ -543,6 +575,7 @@ class SpikeDetekt(EventEmitter):
         return pcs
 
     def step_features(self, bounds, pcs_per_group, spike_counts):
+        """Feature step."""
         s_start, s_end, keep_start, keep_end = bounds
         key = keep_start
         # Loop over the channel groups.
@@ -571,6 +604,7 @@ class SpikeDetekt(EventEmitter):
                     groups=None,
                     spike_counts=None,
                     ):
+        """Bunch of values to be returned by the algorithm."""
         n_samples_per_chunk = {bounds[2]: (bounds[1] - bounds[0])
                                for bounds in self.iter_chunks(n_samples)}
         keys = sorted(n_samples_per_chunk.keys())
@@ -753,6 +787,14 @@ class KlustaKwik(EventEmitter):
                 features=None,
                 masks=None,
                 ):
+        """Run the clustering algorithm on the model, or on any features
+        and masks.
+
+        Return the `spike_clusters` assignements.
+
+        Emit the `iter` event at every KlustaKwik iteration.
+
+        """
         # Get the features and masks.
         if model is not None:
             if features is None:

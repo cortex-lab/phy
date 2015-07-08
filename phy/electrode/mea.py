@@ -112,7 +112,8 @@ class MEA(object):
 
     """
 
-    def __init__(self, channels=None,
+    def __init__(self,
+                 channels=None,
                  positions=None,
                  adjacency=None,
                  probe=None,
@@ -143,7 +144,7 @@ class MEA(object):
 
     @property
     def positions(self):
-        """Channel positions."""
+        """Channel positions in the current channel group."""
         return self._positions
 
     @positions.setter
@@ -153,17 +154,17 @@ class MEA(object):
 
     @property
     def channels(self):
-        """Channel ids."""
+        """Channel ids in the current channel group."""
         return self._channels
 
     @property
     def n_channels(self):
-        """Number of channels."""
+        """Number of channels in the current channel group."""
         return len(self._channels) if self._channels is not None else 0
 
     @property
     def adjacency(self):
-        """Adjacency graph."""
+        """Adjacency graph in the current channel group."""
         return self._adjacency
 
     @adjacency.setter
@@ -171,6 +172,7 @@ class MEA(object):
         self._adjacency = value
 
     def change_channel_group(self, group):
+        """Change the current channel group."""
         assert self._probe is not None
         self._channels = _probe_channels(self._probe, group)
         self._positions = _probe_positions(self._probe, group)

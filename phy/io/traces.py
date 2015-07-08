@@ -34,6 +34,27 @@ def read_kwd(kwd_handle):
 
 
 def read_dat(filename, dtype=None, shape=None, offset=0, n_channels=None):
+    """Read traces from a flat binary `.dat` file.
+
+    The output is a memory-mapped file.
+
+    Parameters
+    ----------
+
+    filename : str
+        The path to the `.dat` file.
+    dtype : dtype
+        The NumPy dtype.
+    offset : 0
+        The header size.
+    n_channels : int
+        The number of channels in the data.
+    shape : tuple (optional)
+        The array shape. Typically `(n_samples, n_channels)`. The shape is
+        automatically computed from the file size if the number of channels
+        and dtype are specified.
+
+    """
     if shape is None:
         assert n_channels > 0
         n_samples = _dat_n_samples(filename, dtype=dtype,

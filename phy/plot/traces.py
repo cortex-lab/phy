@@ -300,6 +300,23 @@ class TraceView(BaseSpikeCanvas):
 
 @_wrap_vispy
 def plot_traces(traces, **kwargs):
+    """Plot traces.
+
+    Parameters
+    ----------
+
+    traces : ndarray
+        The traces to plot. A `(n_samples, n_channels)` array.
+    spike_samples : ndarray (optional)
+        A `(n_spikes,)` int array with the spike times in number of samples.
+    spike_clusters : ndarray (optional)
+        A `(n_spikes,)` int array with the spike clusters.
+    masks : ndarray (optional)
+        A `(n_spikes, n_channels)` float array with the spike masks.
+    n_samples_per_spike : int
+        Waveform size in number of samples.
+
+    """
     c = TraceView(keys='interactive')
     c.set_data(traces, **kwargs)
     return c

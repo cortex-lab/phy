@@ -142,6 +142,7 @@ class DockWindow(QtGui.QMainWindow):
         delattr(self, name)
 
     def remove_actions(self):
+        """Remove all actions."""
         names = sorted(self._actions.keys())
         for name in names:
             self.remove_action(name)
@@ -246,6 +247,7 @@ class DockWindow(QtGui.QMainWindow):
 
     @property
     def status_message(self):
+        """The message in the status bar."""
         return u(self._status_bar.currentMessage())
 
     @status_message.setter
