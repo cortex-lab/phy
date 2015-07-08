@@ -666,4 +666,3 @@ class BaseGUI(EventEmitter):
     def exit(self):
         """Close the GUI."""
         self.close()
--
