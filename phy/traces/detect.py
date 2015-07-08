@@ -18,6 +18,27 @@ from ..ext.six.moves import range, zip
 #------------------------------------------------------------------------------
 
 def compute_threshold(arr, single_threshold=True, std_factor=None):
+    """Compute the threshold(s) of filtered traces.
+
+    Parameters
+    ----------
+
+    arr : ndarray
+        Filtered traces, shape `(n_samples, n_channels)`.
+    single_threshold : bool
+        Whether there should be a unique threshold for all channels, or
+        one threshold per channel.
+    std_factor : float or 2-tuple
+        The threshold in unit of signal std. Two values can be specified
+        for multiple thresholds (weak and strong).
+
+    Returns
+    -------
+
+    thresholds : ndarray
+        A `(2,)` or `(2, n_channels)` array with the thresholds.
+
+    """
     assert arr.ndim == 2
     ns, nc = arr.shape
 
