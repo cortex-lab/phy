@@ -197,8 +197,7 @@ def show_test_stop(canvas):
 
 
 def show_colored_canvas(color, n_frames=5):
-    """Show an emty VisPy canvas with a given background color for a fraction
-    of second."""
+    """Show a transient VisPy canvas with a uniform background color."""
     from vispy import app, gloo
     c = app.Canvas()
 
