@@ -388,6 +388,7 @@ class ClusterManualGUI(BaseGUI):
             self._is_dirty = True
 
     def save(self):
+        """Save the changes."""
         # The session saves the model when this event is emitted.
         self.emit('request_save')
 
@@ -430,18 +431,22 @@ class ClusterManualGUI(BaseGUI):
     # ---------------------------------------------------------------------
 
     def toggle_correlogram_normalization(self):
+        """Toggle CCG normalization in the correlograms views."""
         for vm in self.get_views('correlograms'):
             vm.toggle_normalization()
 
     def toggle_waveforms_mean(self):
+        """Toggle mean mode in the waveform views."""
         for vm in self.get_views('waveforms'):
             vm.show_mean = not(vm.show_mean)
 
     def toggle_waveforms_overlap(self):
+        """Toggle cluster overlap in the waveform views."""
         for vm in self.get_views('waveforms'):
             vm.overlap = not(vm.overlap)
 
     def show_features_time(self):
+        """Set the x dimension to time in all feature views."""
         for vm in self.get_views('features'):
             vm.set_dimension('x', 'time')
             vm.update()
