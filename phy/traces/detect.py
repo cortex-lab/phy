@@ -85,6 +85,14 @@ class Thresholder(object):
         A `{str: float}` mapping for multiple thresholds (e.g. `weak`
         and `strong`).
 
+    Example
+    -------
+
+    ```python
+    thres = Thresholder('positive', thresholds=(.1, .2))
+    crossings = thres(traces)
+    ```
+
     """
     def __init__(self,
                  mode=None,
@@ -100,6 +108,7 @@ class Thresholder(object):
         self._thresholds = thresholds
 
     def transform(self, data):
+        """Return `data`, `-data`, or `abs(data)` depending on the mode."""
         if self._mode == 'positive':
             return data
         elif self._mode == 'negative':
@@ -108,6 +117,7 @@ class Thresholder(object):
             return np.abs(data)
 
     def detect(self, data_t, threshold=None):
+        """Perform the thresholding operation."""
         # Accept dictionary of thresholds.
         if isinstance(threshold, (list, tuple)):
             return {name: self(data_t, threshold=name)
