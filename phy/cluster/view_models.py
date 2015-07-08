@@ -841,6 +841,7 @@ class BaseFeatureViewModel(VispyViewModel):
 
     @property
     def n_features(self):
+        """Number of features."""
         return self.view.background.n_features
 
     @property
@@ -864,12 +865,38 @@ class BaseFeatureViewModel(VispyViewModel):
         return {}, {}
 
     def set_dimension(self, axis, box, dim, smart=True):
-        """Set a dimension."""
+        """Set a dimension.
+
+        Parameters
+        ----------
+
+        axis : str
+            `'x'` or `'y'`
+        box : tuple
+            A `(i, j)` pair.
+        dim : str or tuple
+            A feature name, or a tuple `(channel_id, feature_id)`.
+        smart : bool
+            Whether to ensure the two axes in the subplot are different,
+            to avoid a useless `x=y` diagonal situation.
+
+        """
         if smart:
             dim = self.view.smart_dimension(axis, box, dim)
         self.view.set_dimensions(axis, {box: dim})
 
     def add_extra_feature(self, name, array):
+        """Add an extra feature.
+
+        Parameters
+        ----------
+
+        name : str
+            The feature's name.
+        array : ndarray
+            A `(n_spikes,)` array with the feature's value for every spike.
+
+        """
         assert isinstance(name, string_types)
         array = _as_array(array)
         n_spikes = self.model.n_spikes
@@ -895,10 +922,12 @@ class BaseFeatureViewModel(VispyViewModel):
 
     @property
     def x_dim(self):
+        """List of x dimensions in every row/column."""
         return self.view.x_dim
 
     @property
     def y_dim(self):
+        """List of y dimensions in every row/column."""
         return self.view.y_dim
 
     def on_open(self):
@@ -996,6 +1025,7 @@ class FeatureGridViewModel(BaseFeatureViewModel):
 
     @property
     def n_rows(self):
+        """Number of rows in the grid view."""
         return self.n_features + 1
 
     def dimensions_for_clusters(self, cluster_ids):
@@ -1038,14 +1068,17 @@ class FeatureViewModel(BaseFeatureViewModel):
 
     @property
     def n_rows(self):
+        """Number of rows."""
         return 1
 
     @property
     def x_dim(self):
+        """x dimension."""
         return self._x_dim
 
     @property
     def y_dim(self):
+        """y dimension."""
         return self._y_dim
 
     def set_dimension(self, axis, dim, smart=True):
@@ -1059,4 +1092,5 @@ class FeatureViewModel(BaseFeatureViewModel):
                                                     smart=smart)
 
     def dimensions_for_clusters(self, cluster_ids):
+        """Current dimensions."""
         return self._x_dim, self._y_dim
