@@ -59,7 +59,8 @@ def _decode_qbytearray(data_b64):
 class _CustomEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, np.ndarray):
-            data_b64 = base64.b64encode(obj.data).decode('utf8')
+            obj_contiguous = np.ascontiguousarray(obj)
+            data_b64 = base64.b64encode(obj_contiguous.data).decode('utf8')
             return dict(__ndarray__=data_b64,
                         dtype=str(obj.dtype),
                         shape=obj.shape)
