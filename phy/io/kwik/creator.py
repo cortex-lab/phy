@@ -57,6 +57,7 @@ _DEFAULT_GROUPS = [(0, 'Noise'),
 
 
 class KwikCreator(object):
+    """Create and modify a `.kwik` file."""
     def __init__(self, basename=None, kwik_path=None, kwx_path=None):
         # Find the .kwik filename.
         if kwik_path is None:
@@ -76,6 +77,7 @@ class KwikCreator(object):
         self.kwx_path = kwx_path
 
     def create_empty(self):
+        """Create empty `.kwik` and `.kwx` files."""
         assert not op.exists(self.kwik_path)
         with open_h5(self.kwik_path, 'w') as f:
             f.write_attr('/', 'kwik_version', 2)
@@ -86,6 +88,7 @@ class KwikCreator(object):
             f.write_attr('/', 'kwik_version', 2)
 
     def set_metadata(self, path, **kwargs):
+        """Set metadata fields in a HDF5 path."""
         assert isinstance(path, string_types)
         assert path
         with open_h5(self.kwik_path, 'a') as f:
@@ -93,6 +96,7 @@ class KwikCreator(object):
                 f.write_attr(path, key, value)
 
     def set_probe(self, probe):
+        """Save a probe dictionary in the file."""
         with open_h5(self.kwik_path, 'a') as f:
             probe = probe['channel_groups']
             for group, d in probe.items():
@@ -134,6 +138,30 @@ class KwikCreator(object):
                    masks=None,
                    features=None,
                    ):
+        """Add spikes in the file.
+
+        Parameters
+        ----------
+
+        group : int
+            Channel group.
+        spike_samples : ndarray
+            The spike times in number of samples.
+        spike_recordings : ndarray (optional)
+            The recording indices of every spike.
+        masks : ndarray or list of ndarrays
+            The masks.
+        features : ndarray or list of ndarrays
+            The features.
+
+        Note
+        ----
+
+        The features and masks can be passed as lists or generators of
+        (memmapped) data chunks in order to avoid loading the entire arrays
+        in RAM.
+
+        """
         assert group >= 0
 
         if isinstance(spike_samples, list):
@@ -209,6 +237,21 @@ class KwikCreator(object):
 
     def add_recording(self, id=None, raw_path=None,
                       start_sample=None, sample_rate=None):
+        """Add a recording.
+
+        Parameters
+        ----------
+
+        id : int
+            The recording id (0, 1, 2, etc.).
+        raw_path : str
+            Path to the file containing the raw data.
+        start_sample : int
+            The offset of the recording, in number of samples.
+        sample_rate : float
+            The sample rate of the recording
+
+        """
         path = '/recordings/{:d}'.format(id)
         start_sample = int(start_sample)
         sample_rate = float(sample_rate)
