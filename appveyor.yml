@@ -14,9 +14,9 @@ install:
   - "SET PATH=%HOMEPATH%\\miniconda3;%HOMEPATH%\\miniconda3\\Scripts;%PATH%"
 
   # We want to use the git version of phy, so let's uninstall the pip version
-  - pip uninstall phy
-  - pip install -r requirements-dev.txt
-
+  - "pip uninstall phy"
+  - "pip install -r requirements-dev.txt"
+  - "python setup.py develop"
 build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
