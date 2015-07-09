@@ -11,6 +11,7 @@ environment:
 install:
   # Install app from latest script
   - "powershell iex ((new-object net.webclient).DownloadString('http://phy.cortexlab.net/install/latest.ps1'))"
+  - "SET PATH=%HOMEPATH%\\miniconda3;%HOMEPATH%\\miniconda3\\Scripts;%PATH%"
 
   # We want to use the git version of phy, so let's uninstall the pip version
   - pip uninstall phy
