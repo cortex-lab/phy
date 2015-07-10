@@ -21,4 +21,4 @@ build: false  # Not a C# project, build stuff at the test step instead.
 
 test_script:
   # Run the project tests
-  - "python make test"
+  - "python setup.py test"
