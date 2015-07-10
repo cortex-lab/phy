@@ -45,7 +45,7 @@ spikedetekt = {
     'pca_n_waveforms_max': 10000,
 
     # Waveform filtering in GUI.
-    'waveform_filter': None,
+    'waveform_filter': True,
     'waveform_dc_offset': None,
     'waveform_scale_factor': None,
 
