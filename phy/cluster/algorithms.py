@@ -816,7 +816,7 @@ class KlustaKwik(EventEmitter):
         @kk.register_callback
         def f(_):
             # Skip split iterations.
-            if kk.name != '':
+            if _.name != '':
                 return
             self.emit('iter', kk.clusters)
 
