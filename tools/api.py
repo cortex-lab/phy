@@ -185,7 +185,7 @@ def _concat(header, docstring):
 def _function_header(subpackage, func):
     """Generate the docstring of a function."""
     args = inspect.formatargspec(*inspect.getfullargspec(func))
-    return "`{name}{args}`".format(name=_full_name(subpackage, func),
+    return "{name}{args}".format(name=_full_name(subpackage, func),
                                    args=args,
                                    )
 
@@ -203,7 +203,7 @@ def _doc_method(klass, func):
     if argspec.args and argspec.args[0] == 'self':
         del argspec.args[0]
     args = inspect.formatargspec(*argspec)
-    header = "`{klass}.{name}{args}`".format(klass=klass.__name__,
+    header = "{klass}.{name}{args}".format(klass=klass.__name__,
                                              name=_name(func),
                                              args=args,
                                              )
@@ -213,7 +213,7 @@ def _doc_method(klass, func):
 
 def _doc_property(klass, prop):
     """Generate the docstring of a property."""
-    header = "`{klass}.{name}`".format(klass=klass.__name__,
+    header = "{klass}.{name}".format(klass=klass.__name__,
                                        name=_name(prop),
                                        )
     docstring = _doc(prop)
