@@ -21,8 +21,8 @@ from ...utils._types import _as_array
 from ...utils.logging import warn
 from ...utils._misc import _read_python
 from ...utils.array import _unique
-from ...ext.six import string_types, next
-from ...ext.six.moves import zip
+from six import string_types, next
+from six.moves import zip
 
 
 #------------------------------------------------------------------------------

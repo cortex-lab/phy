@@ -20,7 +20,7 @@ from textwrap import dedent
 
 import numpy as np
 
-from ..ext.six import exec_
+from six import exec_
 
 
 #------------------------------------------------------------------------------

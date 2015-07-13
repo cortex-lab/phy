@@ -9,7 +9,7 @@
 import numpy as np
 import h5py
 
-from ..ext.six import string_types
+from six import string_types
 from ..utils.logging import debug, warn
 
 

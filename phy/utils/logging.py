@@ -9,7 +9,7 @@ import sys
 import logging
 import traceback
 
-from ..ext.six import iteritems, string_types
+from six import iteritems, string_types
 
 
 # -----------------------------------------------------------------------------

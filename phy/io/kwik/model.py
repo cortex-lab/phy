@@ -13,7 +13,7 @@ import os
 import numpy as np
 
 from .creator import KwikCreator
-from ...ext import six
+import six
 from ..base import BaseModel, ClusterMetadata
 from ..h5 import open_h5, File
 from ..traces import read_dat, _dat_n_samples

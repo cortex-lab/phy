@@ -18,8 +18,8 @@ from inspect import getargspec
 import numpy as np
 
 from ._types import _is_integer
-from ..ext.six import string_types, exec_
-from ..ext.six.moves import builtins, cPickle
+from six import string_types, exec_
+from six.moves import builtins, cPickle
 
 
 #------------------------------------------------------------------------------

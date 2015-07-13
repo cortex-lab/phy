@@ -20,7 +20,7 @@ from ._vispy_utils import (BaseSpikeVisual,
                            _wrap_vispy,
                            )
 from ._panzoom import PanZoomGrid
-from ..ext.six import string_types
+from six import string_types
 from ..utils._types import _as_array, _is_integer
 from ..utils.array import _index_of, _unique
 from ..utils._color import _selected_clusters_colors

@@ -9,7 +9,7 @@
 
 import numpy as np
 
-from ..ext.six import string_types, integer_types
+from six import string_types, integer_types
 
 
 #------------------------------------------------------------------------------
