@@ -24,7 +24,7 @@ from ..plot.waveforms import WaveformView
 from ..plot.traces import TraceView
 from ..gui.base import BaseViewModel, HTMLViewModel
 from ..gui._utils import _read
-from ..ext.six import string_types
+from six import string_types
 
 
 #------------------------------------------------------------------------------

@@ -19,7 +19,7 @@ from ..utils.array import (PerClusterData, _spikes_in_clusters,
                            _subset_spc, _load_ndarray)
 from ..utils.event import ProgressReporter
 from ..utils.logging import debug, info, warn
-from ..ext.six import string_types
+from six import string_types
 
 
 #------------------------------------------------------------------------------

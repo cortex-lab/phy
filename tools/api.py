@@ -12,7 +12,7 @@ import os.path as op
 import re
 import sys
 
-from phy.ext.six import string_types
+from six import string_types
 
 
 #------------------------------------------------------------------------------

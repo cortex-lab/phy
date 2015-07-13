@@ -17,8 +17,8 @@ import functools
 from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
 
-from ..ext.six import StringIO
-from ..ext.six.moves import builtins
+from six import StringIO
+from six.moves import builtins
 from ._types import _is_array_like
 from .logging import info
 from .settings import _ensure_dir_exists

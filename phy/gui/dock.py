@@ -10,7 +10,7 @@ from collections import defaultdict
 
 from .qt import QtCore, QtGui
 from ..utils.event import EventEmitter
-from ..ext.six import u
+from six import u
 
 
 # -----------------------------------------------------------------------------

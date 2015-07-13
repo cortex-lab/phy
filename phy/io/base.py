@@ -11,7 +11,7 @@ from collections import defaultdict
 
 import numpy as np
 
-from ..ext import six
+import six
 from ..utils import debug, EventEmitter
 from ..utils._types import _as_list, _is_list
 from ..utils.settings import (Settings,

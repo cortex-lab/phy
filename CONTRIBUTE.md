@@ -10,7 +10,7 @@ On your development computer:
 * Use a special `phy` conda environment based on the latest Python 3.x (3.4 at the time of writing).
 * Have another `phy2` clone environment based on Python 2.7.
 * phy only supports Python 2.7, and Python 3.4+.
-* Use `phy.ext.six` for writing compatible code (see [the documentation here](http://pythonhosted.org/six/))
+* Use `six` for writing compatible code (see [the documentation here](http://pythonhosted.org/six/))
 * You need the following dependencies for development (not required for using phy): pytest, pip, flake8, coverage, coveralls.
 * For IPython, use the IPython git `master` branch (or version 3.0 when it will be released in early 2015).
 

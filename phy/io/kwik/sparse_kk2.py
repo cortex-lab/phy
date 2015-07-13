@@ -9,7 +9,7 @@
 import numpy as np
 
 from ...utils.array import chunk_bounds
-from ...ext import six
+import six
 
 
 #------------------------------------------------------------------------------
