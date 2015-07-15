@@ -8,7 +8,7 @@
 
 from pytest import yield_fixture
 
-from .utils.tempdir import TemporaryDirectory
+from phy.utils.tempdir import TemporaryDirectory
 
 
 #------------------------------------------------------------------------------
