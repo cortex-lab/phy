@@ -10,7 +10,6 @@ from subprocess import call
 
 from pytest import mark
 
-from ...utils.tempdir import TemporaryDirectory
 from ...io.kwik.mock import create_mock_kwik
 from ..phy_script import ParserCreator
 
@@ -54,25 +53,23 @@ def test_script_parser():
 
 
 @mark.long
-def test_script_run():
+def test_script_run(tempdir):
 
-    with TemporaryDirectory() as tempdir:
+    # Create the test HDF5 file in the temporary directory.
+    kwik_path = create_mock_kwik(tempdir,
+                                 n_clusters=n_clusters,
+                                 n_spikes=n_spikes,
+                                 n_channels=n_channels,
+                                 n_features_per_channel=n_fets,
+                                 n_samples_traces=n_samples_traces,
+                                 add_original=False,
+                                 )
 
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tempdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces,
-                                     add_original=False,
-                                     )
+    _call('phy -v')
+    _call('phy -h')
+    _call('phy describe ' + kwik_path)
 
-        _call('phy -v')
-        _call('phy -h')
-        _call('phy describe ' + kwik_path)
+    cmd = ('phy cluster-auto {} --clustering=original')
+    _call(cmd.format(kwik_path))
 
-        cmd = ('phy cluster-auto {} --clustering=original')
-        _call(cmd.format(kwik_path))
-
-        _call('phy describe {} --clustering=original'.format(kwik_path))
+    _call('phy describe {} --clustering=original'.format(kwik_path))

@@ -19,7 +19,6 @@ from ..datasets import (_download,
                         download_sample_data,
                         _BASE_URL,
                         )
-from ..tempdir import TemporaryDirectory
 
 
 #------------------------------------------------------------------------------
@@ -56,11 +55,10 @@ def teardown():
 #------------------------------------------------------------------------------
 
 @responses.activate
-def test_download_error():
-    with TemporaryDirectory() as tempdir:
-        path = op.join(tempdir, 'test')
-        with raises(Exception):
-            download_file(_URL + '_notfound', path)
+def test_download_error(tempdir):
+    path = op.join(tempdir, 'test')
+    with raises(Exception):
+        download_file(_URL + '_notfound', path)
 
 
 @responses.activate
@@ -68,57 +66,55 @@ def test_download_checksum():
     assert _download(_URL + '.md5') == _CHECKSUM
 
 
-def _test_download_file(checksum=None):
-    with TemporaryDirectory() as tempdir:
-        path = op.join(tempdir, 'test.kwik')
-        download_file(_URL, path, checksum=checksum)
-        with open(path, 'rb') as f:
-            data = f.read()
-        ae(np.fromstring(data, np.float32), _DATA)
+def _test_download_file(tempdir, checksum=None):
+    path = op.join(tempdir, 'test.kwik')
+    download_file(_URL, path, checksum=checksum)
+    with open(path, 'rb') as f:
+        data = f.read()
+    ae(np.fromstring(data, np.float32), _DATA)
 
 
 @responses.activate
-def test_download_no_checksum():
-    _test_download_file(checksum=None)
+def test_download_no_checksum(tempdir):
+    _test_download_file(tempdir, checksum=None)
 
 
 @responses.activate
-def test_download_valid_checksum():
-    _test_download_file(checksum=_CHECKSUM)
+def test_download_valid_checksum(tempdir):
+    _test_download_file(tempdir, checksum=_CHECKSUM)
 
 
 @responses.activate
-def test_download_invalid_checksum():
+def test_download_invalid_checksum(tempdir):
     with raises(RuntimeError):
-        _test_download_file(checksum=_CHECKSUM[:-1])
+        _test_download_file(tempdir, checksum=_CHECKSUM[:-1])
 
 
 @responses.activate
-def test_download_sample_data():
+def test_download_sample_data(tempdir):
     name = 'sample'
     url = _BASE_URL['cortexlab'] + name
     for ext in ('.kwik', '.kwx', '.raw.kwd'):
         _add_mock_response(url + ext, _DATA.tostring())
         _add_mock_response(url + ext + '.md5', _CHECKSUM)
 
-    with TemporaryDirectory() as tempdir:
-        output_dir = op.join(tempdir, name)
-        download_sample_data(name, output_dir)
-        for ext in ('.kwik', '.kwx', '.raw.kwd'):
-            with open(op.join(output_dir, name + ext), 'rb') as f:
-                data = f.read()
-            ae(np.fromstring(data, np.float32), _DATA)
+    output_dir = op.join(tempdir, name)
+    download_sample_data(name, output_dir)
+    for ext in ('.kwik', '.kwx', '.raw.kwd'):
+        with open(op.join(output_dir, name + ext), 'rb') as f:
+            data = f.read()
+        ae(np.fromstring(data, np.float32), _DATA)
 
 
 @responses.activate
-def test_dat_file():
+def test_dat_file(tempdir):
     data = np.random.randint(size=(20000, 4),
                              low=-100, high=100).astype(np.int16)
     fn = 'test-4ch-1s.dat'
     _add_mock_response(_BASE_URL['github'] + 'test/' + fn,
                        data.tostring())
-    with TemporaryDirectory() as tempdir:
-        path = _download_test_data(fn, tempdir)
-        with open(path, 'rb') as f:
-            arr = np.fromfile(f, dtype=np.int16).reshape((-1, 4))
-        assert arr.shape == (20000, 4)
+
+    path = _download_test_data(fn, tempdir)
+    with open(path, 'rb') as f:
+        arr = np.fromfile(f, dtype=np.int16).reshape((-1, 4))
+    assert arr.shape == (20000, 4)
