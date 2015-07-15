@@ -56,10 +56,10 @@ def test_script_parser():
 @mark.long
 def test_script_run():
 
-    with TemporaryDirectory() as tmpdir:
+    with TemporaryDirectory() as tempdir:
 
         # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tmpdir,
+        kwik_path = create_mock_kwik(tempdir,
                                      n_clusters=n_clusters,
                                      n_spikes=n_spikes,
                                      n_channels=n_channels,

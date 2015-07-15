@@ -63,10 +63,10 @@ def _start_manual_clustering(kwik_path=None,
 
 @fixture
 def session(request):
-    tmpdir = TemporaryDirectory()
+    tempdir = TemporaryDirectory()
 
     # Create the test HDF5 file in the temporary directory.
-    kwik_path = create_mock_kwik(tmpdir.name,
+    kwik_path = create_mock_kwik(tempdir.name,
                                  n_clusters=n_clusters,
                                  n_spikes=n_spikes,
                                  n_channels=n_channels,
@@ -74,12 +74,12 @@ def session(request):
                                  n_samples_traces=n_samples_traces)
 
     session = _start_manual_clustering(kwik_path=kwik_path,
-                                       tempdir=tmpdir.name)
-    session.tempdir = tmpdir.name
+                                       tempdir=tempdir.name)
+    session.tempdir = tempdir.name
 
     def end():
         session.close()
-        tmpdir.cleanup()
+        tempdir.cleanup()
     request.addfinalizer(end)
 
     return session
@@ -90,16 +90,16 @@ def session(request):
 #------------------------------------------------------------------------------
 
 def test_store_corruption():
-    with TemporaryDirectory() as tmpdir:
+    with TemporaryDirectory() as tempdir:
         # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tmpdir,
+        kwik_path = create_mock_kwik(tempdir,
                                      n_clusters=n_clusters,
                                      n_spikes=n_spikes,
                                      n_channels=n_channels,
                                      n_features_per_channel=n_fets,
                                      n_samples_traces=n_samples_traces)
 
-        session = Session(kwik_path, phy_user_dir=tmpdir)
+        session = Session(kwik_path, phy_user_dir=tempdir)
         store_path = session.store.path
         session.close()
 
@@ -110,13 +110,13 @@ def test_store_corruption():
         with open(fn, 'wb') as f:
             f.write(contents[1:-1])
 
-        session = Session(kwik_path, phy_user_dir=tmpdir)
+        session = Session(kwik_path, phy_user_dir=tempdir)
         session.close()
 
 
 def test_session_one_cluster():
-    with TemporaryDirectory() as tmpdir:
-        session = Session(phy_user_dir=tmpdir)
+    with TemporaryDirectory() as tempdir:
+        session = Session(phy_user_dir=tempdir)
         # The disk store is not created if there is only one cluster.
         session.open(model=MockModel(n_clusters=1))
         assert session.store.disk_store is None

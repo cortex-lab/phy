@@ -23,7 +23,7 @@ class TemporaryDirectory(object):
     behavior as mkdtemp but can be used as a context manager.  For
     example:
 
-        with TemporaryDirectory() as tmpdir:
+        with TemporaryDirectory() as tempdir:
             ...
 
     Upon exiting the context, the directory and everything contained

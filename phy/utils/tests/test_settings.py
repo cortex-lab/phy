@@ -32,8 +32,8 @@ def test_base_settings():
 
 
 def test_user_settings():
-    with TemporaryDirectory() as tmpdir:
-        path = op.join(tmpdir, 'test.py')
+    with TemporaryDirectory() as tempdir:
+        path = op.join(tempdir, 'test.py')
 
         # Create a simple settings file.
         contents = '''a = 4\nb = 5\nd = {'k1': 2, 'k2': 3}\n'''
@@ -60,8 +60,8 @@ def test_user_settings():
 
 
 def test_internal_settings():
-    with TemporaryDirectory() as tmpdir:
-        path = op.join(tmpdir, 'test')
+    with TemporaryDirectory() as tempdir:
+        path = op.join(tempdir, 'test')
 
         s = BaseSettings()
 
@@ -85,15 +85,15 @@ def test_internal_settings():
 
 
 def test_settings_manager():
-    with TemporaryDirectory() as tmpdir:
-        with TemporaryDirectory() as tmpdir_exp:
-            sm = Settings(tmpdir)
+    with TemporaryDirectory() as tempdir:
+        with TemporaryDirectory() as tempdir_exp:
+            sm = Settings(tempdir)
 
             # Check paths.
-            assert sm.phy_user_dir == tmpdir
-            assert sm.internal_settings_path == op.join(tmpdir,
+            assert sm.phy_user_dir == tempdir
+            assert sm.internal_settings_path == op.join(tempdir,
                                                         'internal_settings')
-            assert sm.user_settings_path == op.join(tmpdir, 'user_settings.py')
+            assert sm.user_settings_path == op.join(tempdir, 'user_settings.py')
 
             # User settings.
             with raises(KeyError):
@@ -107,14 +107,14 @@ def test_settings_manager():
             assert sm['c'] == 5
 
             # Set an experiment path.
-            path = op.join(tmpdir_exp, 'myexperiment.dat')
+            path = op.join(tempdir_exp, 'myexperiment.dat')
             sm.on_open(path)
             assert op.realpath(sm.exp_path) == op.realpath(path)
             assert sm.exp_name == 'myexperiment'
             assert (op.realpath(sm.exp_settings_dir) ==
-                    op.realpath(op.join(tmpdir_exp, 'myexperiment.phy')))
+                    op.realpath(op.join(tempdir_exp, 'myexperiment.phy')))
             assert (op.realpath(sm.exp_settings_path) ==
-                    op.realpath(op.join(tmpdir_exp, 'myexperiment.phy/'
+                    op.realpath(op.join(tempdir_exp, 'myexperiment.phy/'
                                                     'user_settings.py')))
 
             # User settings.
@@ -128,7 +128,7 @@ def test_settings_manager():
 
             # Check persistence.
             sm.save()
-            sm = Settings(tmpdir)
+            sm = Settings(tempdir)
             sm.on_open(path)
             assert sm['c'] == 50
             assert 'a' not in sm

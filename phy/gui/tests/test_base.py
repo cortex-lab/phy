@@ -251,16 +251,16 @@ def test_base_session():
 
     gui_classes = {'gui': TestGUI}
 
-    with TemporaryDirectory() as tmpdir:
+    with TemporaryDirectory() as tempdir:
 
-        default_settings_path = op.join(tmpdir, 'default_settings.py')
+        default_settings_path = op.join(tempdir, 'default_settings.py')
 
         with open(default_settings_path, 'w') as f:
             f.write("gui_config = {}\n".format(str(config)) +
                     "gui_shortcuts = {}".format(str(shortcuts)))
 
         session = BaseSession(model=model,
-                              phy_user_dir=tmpdir,
+                              phy_user_dir=tempdir,
                               default_settings_path=default_settings_path,
                               vm_classes=vm_classes,
                               gui_classes=gui_classes,

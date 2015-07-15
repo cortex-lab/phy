@@ -25,8 +25,8 @@ from ..tempdir import TemporaryDirectory
 def test_json_simple():
     d = {'a': 1, 'b': 'bb', 3: '33'}
 
-    with TemporaryDirectory() as tmpdir:
-        path = op.join(tmpdir, 'test')
+    with TemporaryDirectory() as tempdir:
+        path = op.join(tempdir, 'test')
         _save_json(path, d)
         d_bis = _load_json(path)
         assert d == d_bis
@@ -42,8 +42,8 @@ def test_json_numpy():
     arr = np.arange(10).reshape((2, 5)).astype(np.float32)
     d = {'a': arr, 'b': arr.ravel()[0]}
 
-    with TemporaryDirectory() as tmpdir:
-        path = op.join(tmpdir, 'test')
+    with TemporaryDirectory() as tempdir:
+        path = op.join(tempdir, 'test')
         _save_json(path, d)
 
         d_bis = _load_json(path)

@@ -57,8 +57,8 @@ def teardown():
 
 @responses.activate
 def test_download_error():
-    with TemporaryDirectory() as tmpdir:
-        path = op.join(tmpdir, 'test')
+    with TemporaryDirectory() as tempdir:
+        path = op.join(tempdir, 'test')
         with raises(Exception):
             download_file(_URL + '_notfound', path)
 
@@ -69,8 +69,8 @@ def test_download_checksum():
 
 
 def _test_download_file(checksum=None):
-    with TemporaryDirectory() as tmpdir:
-        path = op.join(tmpdir, 'test.kwik')
+    with TemporaryDirectory() as tempdir:
+        path = op.join(tempdir, 'test.kwik')
         download_file(_URL, path, checksum=checksum)
         with open(path, 'rb') as f:
             data = f.read()
@@ -101,8 +101,8 @@ def test_download_sample_data():
         _add_mock_response(url + ext, _DATA.tostring())
         _add_mock_response(url + ext + '.md5', _CHECKSUM)
 
-    with TemporaryDirectory() as tmpdir:
-        output_dir = op.join(tmpdir, name)
+    with TemporaryDirectory() as tempdir:
+        output_dir = op.join(tempdir, name)
         download_sample_data(name, output_dir)
         for ext in ('.kwik', '.kwx', '.raw.kwd'):
             with open(op.join(output_dir, name + ext), 'rb') as f:
@@ -117,8 +117,8 @@ def test_dat_file():
     fn = 'test-4ch-1s.dat'
     _add_mock_response(_BASE_URL['github'] + 'test/' + fn,
                        data.tostring())
-    with TemporaryDirectory() as tmpdir:
-        path = _download_test_data(fn, tmpdir)
+    with TemporaryDirectory() as tempdir:
+        path = _download_test_data(fn, tempdir)
         with open(path, 'rb') as f:
             arr = np.fromfile(f, dtype=np.int16).reshape((-1, 4))
         assert arr.shape == (20000, 4)

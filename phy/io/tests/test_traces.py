@@ -28,8 +28,8 @@ def test_read_dat():
 
     arr = artificial_traces(n_samples, n_channels)
 
-    with TemporaryDirectory() as tmpdir:
-        path = op.join(tmpdir, 'test')
+    with TemporaryDirectory() as tempdir:
+        path = op.join(tempdir, 'test')
         arr.tofile(path)
         assert _dat_n_samples(path, dtype=np.float64,
                               n_channels=n_channels) == n_samples
@@ -45,8 +45,8 @@ def test_read_kwd():
 
     arr = artificial_traces(n_samples, n_channels)
 
-    with TemporaryDirectory() as tmpdir:
-        path = op.join(tmpdir, 'test')
+    with TemporaryDirectory() as tempdir:
+        path = op.join(tempdir, 'test')
 
         with open_h5(path, 'w') as f:
             f.write('/recordings/0/data',

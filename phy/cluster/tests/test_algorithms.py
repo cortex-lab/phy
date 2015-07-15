@@ -43,7 +43,7 @@ n_channels = 4
 
 
 def _spikedetekt(request, n_groups=2):
-    tmpdir = TemporaryDirectory()
+    tempdir = TemporaryDirectory()
 
     traces = artificial_traces(n_samples, n_channels)
     traces[5000:5010, 1] *= 5
@@ -70,10 +70,10 @@ def _spikedetekt(request, n_groups=2):
                                           3: []}
         params['probe_channels'] = {0: [0, 1, 2], 1: [3]}
 
-    sd = SpikeDetekt(tempdir=tmpdir.name, **params)
+    sd = SpikeDetekt(tempdir=tempdir.name, **params)
 
     def end():
-        tmpdir.cleanup()
+        tempdir.cleanup()
     request.addfinalizer(end)
 
     return sd, traces, params
