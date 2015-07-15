@@ -8,7 +8,7 @@
 
 from subprocess import call
 
-from ...io.kwik.mock import create_mock_kwik
+from phy.io.kwik.mock import create_mock_kwik
 
 
 #------------------------------------------------------------------------------
