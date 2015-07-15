@@ -15,7 +15,6 @@ from pytest import fixture, mark
 from ...utils._misc import _read_python
 from ...utils.datasets import _download_test_data
 from ...utils.logging import set_level
-from ...utils.tempdir import TemporaryDirectory
 from ...utils.testing import show_test
 from ...electrode.mea import load_probe
 from ...io.kwik import KwikModel
@@ -42,9 +41,7 @@ n_samples = 25000
 n_channels = 4
 
 
-def _spikedetekt(request, n_groups=2):
-    tempdir = TemporaryDirectory()
-
+def _spikedetekt(tempdir, n_groups=2):
     traces = artificial_traces(n_samples, n_channels)
     traces[5000:5010, 1] *= 5
     traces[15000:15010, 3] *= 5
@@ -70,23 +67,19 @@ def _spikedetekt(request, n_groups=2):
                                           3: []}
         params['probe_channels'] = {0: [0, 1, 2], 1: [3]}
 
-    sd = SpikeDetekt(tempdir=tempdir.name, **params)
-
-    def end():
-        tempdir.cleanup()
-    request.addfinalizer(end)
+    sd = SpikeDetekt(tempdir=tempdir, **params)
 
     return sd, traces, params
 
 
 @fixture
-def spikedetekt(request):
-    return _spikedetekt(request)
+def spikedetekt(tempdir):
+    return _spikedetekt(tempdir)
 
 
 @fixture
-def spikedetekt_one_group(request):
-    return _spikedetekt(request, n_groups=1)
+def spikedetekt_one_group(tempdir):
+    return _spikedetekt(tempdir, n_groups=1)
 
 
 #------------------------------------------------------------------------------
@@ -220,74 +213,71 @@ def test_spike_detect_serial(spikedetekt):
 
 
 @mark.long
-def test_spike_detect_real_data(spikedetekt):
-    with TemporaryDirectory() as tempdir:
+def test_spike_detect_real_data(tempdir, spikedetekt):
+    # Set the parameters.
+    curdir = op.dirname(op.realpath(__file__))
+    default_settings_path = op.join(curdir, '../default_settings.py')
+    settings = _read_python(default_settings_path)
+    sample_rate = 20000
+    params = settings['spikedetekt']
+    params['sample_rate'] = sample_rate
 
-        # Set the parameters.
-        curdir = op.dirname(op.realpath(__file__))
-        default_settings_path = op.join(curdir, '../default_settings.py')
-        settings = _read_python(default_settings_path)
-        sample_rate = 20000
-        params = settings['spikedetekt']
-        params['sample_rate'] = sample_rate
+    n_channels = 32
+    npc = params['n_features_per_channel']
+    n_samples_w = params['extract_s_before'] + params['extract_s_after']
+    probe = load_probe('1x32_buzsaki')
 
-        n_channels = 32
-        npc = params['n_features_per_channel']
-        n_samples_w = params['extract_s_before'] + params['extract_s_after']
-        probe = load_probe('1x32_buzsaki')
+    # Load the traces.
+    path = _download_test_data('test-32ch-10s.dat')
+    traces = np.fromfile(path, dtype=np.int16).reshape((200000, 32))
 
-        # Load the traces.
-        path = _download_test_data('test-32ch-10s.dat')
-        traces = np.fromfile(path, dtype=np.int16).reshape((200000, 32))
+    # Run the detection.
+    sd = SpikeDetekt(tempdir=tempdir, probe=probe, **params)
+    out = sd.run_serial(traces, interval_samples=(0, 50000))
 
-        # Run the detection.
-        sd = SpikeDetekt(tempdir=tempdir, probe=probe, **params)
-        out = sd.run_serial(traces, interval_samples=(0, 50000))
+    n_spikes = out.n_spikes_total
 
-        n_spikes = out.n_spikes_total
+    def _concat(arrs):
+        return np.concatenate(arrs)
 
-        def _concat(arrs):
-            return np.concatenate(arrs)
+    spike_samples = _concat(out.spike_samples[0])
+    masks = _concat(out.masks[0])
+    features = _concat(out.features[0])
 
-        spike_samples = _concat(out.spike_samples[0])
-        masks = _concat(out.masks[0])
-        features = _concat(out.features[0])
+    assert spike_samples.shape == (n_spikes,)
+    assert masks.shape == (n_spikes, n_channels)
+    assert features.shape == (n_spikes, n_channels, npc)
 
-        assert spike_samples.shape == (n_spikes,)
-        assert masks.shape == (n_spikes, n_channels)
-        assert features.shape == (n_spikes, n_channels, npc)
+    # There should not be any spike with only masked channels.
+    assert np.all(masks.max(axis=1) > 0)
 
-        # There should not be any spike with only masked channels.
-        assert np.all(masks.max(axis=1) > 0)
-
-        # Plot...
-        from phy.plot.traces import plot_traces
-        c = plot_traces(traces[:30000, :],
-                        spike_samples=spike_samples,
-                        masks=masks,
-                        n_samples_per_spike=n_samples_w,
-                        show=False)
-        show_test(c)
+    # Plot...
+    from phy.plot.traces import plot_traces
+    c = plot_traces(traces[:30000, :],
+                    spike_samples=spike_samples,
+                    masks=masks,
+                    n_samples_per_spike=n_samples_w,
+                    show=False)
+    show_test(c)
 
 
 #------------------------------------------------------------------------------
 # Tests clustering
 #------------------------------------------------------------------------------
 
-def test_cluster():
+def test_cluster(tempdir):
     n_spikes = 100
-    with TemporaryDirectory() as tempdir:
-        filename = create_mock_kwik(tempdir,
-                                    n_clusters=1,
-                                    n_spikes=n_spikes,
-                                    n_channels=8,
-                                    n_features_per_channel=3,
-                                    n_samples_traces=5000)
-        model = KwikModel(filename)
+    filename = create_mock_kwik(tempdir,
+                                n_clusters=1,
+                                n_spikes=n_spikes,
+                                n_channels=8,
+                                n_features_per_channel=3,
+                                n_samples_traces=5000)
+    model = KwikModel(filename)
 
-        spike_clusters = cluster(model, num_starting_clusters=10)
-        assert len(spike_clusters) == n_spikes
+    spike_clusters = cluster(model, num_starting_clusters=10)
+    assert len(spike_clusters) == n_spikes
 
-        spike_clusters = cluster(model, num_starting_clusters=10,
-                                 spike_ids=range(100))
-        assert len(spike_clusters) == 100
+    spike_clusters = cluster(model, num_starting_clusters=10,
+                             spike_ids=range(100))
+    assert len(spike_clusters) == 100
