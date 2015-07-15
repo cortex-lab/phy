@@ -46,7 +46,8 @@ def _spikedetekt(tempdir, n_groups=2):
 
     # Load default settings.
     curdir = op.dirname(op.realpath(__file__))
-    default_settings_path = op.join(curdir, '../default_settings.py')
+    default_settings_path = op.join(curdir,
+                                    '../../cluster/default_settings.py')
     settings = _read_python(default_settings_path)
     params = settings['spikedetekt']
     params['sample_rate'] = sample_rate
@@ -214,7 +215,8 @@ def test_spike_detect_serial(spikedetekt):
 def test_spike_detect_real_data(tempdir, spikedetekt):
     # Set the parameters.
     curdir = op.dirname(op.realpath(__file__))
-    default_settings_path = op.join(curdir, '../default_settings.py')
+    default_settings_path = op.join(curdir,
+                                    '../../cluster/default_settings.py')
     settings = _read_python(default_settings_path)
     sample_rate = 20000
     params = settings['spikedetekt']
