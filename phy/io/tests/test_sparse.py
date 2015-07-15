@@ -13,7 +13,6 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 
 from ..sparse import csr_matrix, SparseCSR, load_h5, save_h5
-from ...utils.tempdir import TemporaryDirectory
 from ..h5 import open_h5
 
 
@@ -104,21 +103,20 @@ def test_sparse_csr_check():
     ae(sparse._spikes_ptr, spikes_ptr)
 
 
-def test_sparse_hdf5():
+def test_sparse_hdf5(tempdir):
     """Test the checks performed when creating a sparse matrix."""
     shape, data, channels, spikes_ptr = _sparse_matrix_example()
     sparse = csr_matrix(shape=shape, data=data, channels=channels,
                         spikes_ptr=spikes_ptr)
     dense = _dense_matrix_example()
 
-    with TemporaryDirectory() as tempdir:
-        with open_h5(op.join(tempdir, 'test.h5'), 'w') as f:
-            path_sparse = '/my_sparse_array'
-            save_h5(f, path_sparse, sparse)
-            sparse_bis = load_h5(f, path_sparse)
-            assert sparse == sparse_bis
+    with open_h5(op.join(tempdir, 'test.h5'), 'w') as f:
+        path_sparse = '/my_sparse_array'
+        save_h5(f, path_sparse, sparse)
+        sparse_bis = load_h5(f, path_sparse)
+        assert sparse == sparse_bis
 
-            path_dense = '/my_dense_array'
-            save_h5(f, path_dense, dense)
-            dense_bis = load_h5(f, path_dense)
-            ae(dense, dense_bis)
+        path_dense = '/my_dense_array'
+        save_h5(f, path_dense, dense)
+        dense_bis = load_h5(f, path_dense)
+        ae(dense, dense_bis)

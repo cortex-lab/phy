@@ -22,7 +22,6 @@ from ..qt import (QtGui,
                   )
 from ...utils.event import EventEmitter
 from ...utils.logging import set_level
-from ...utils.tempdir import TemporaryDirectory
 from ...io.base import BaseModel, BaseSession
 
 
@@ -214,7 +213,7 @@ def test_base_gui():
     yield
 
 
-def test_base_session():
+def test_base_session(tempdir):
 
     model = BaseModel()
 
@@ -251,55 +250,53 @@ def test_base_session():
 
     gui_classes = {'gui': TestGUI}
 
-    with TemporaryDirectory() as tmpdir:
+    default_settings_path = op.join(tempdir, 'default_settings.py')
 
-        default_settings_path = op.join(tmpdir, 'default_settings.py')
+    with open(default_settings_path, 'w') as f:
+        f.write("gui_config = {}\n".format(str(config)) +
+                "gui_shortcuts = {}".format(str(shortcuts)))
 
-        with open(default_settings_path, 'w') as f:
-            f.write("gui_config = {}\n".format(str(config)) +
-                    "gui_shortcuts = {}".format(str(shortcuts)))
+    session = BaseSession(model=model,
+                          phy_user_dir=tempdir,
+                          default_settings_path=default_settings_path,
+                          vm_classes=vm_classes,
+                          gui_classes=gui_classes,
+                          )
 
-        session = BaseSession(model=model,
-                              phy_user_dir=tmpdir,
-                              default_settings_path=default_settings_path,
-                              vm_classes=vm_classes,
-                              gui_classes=gui_classes,
-                              )
+    # Need to wrap here because of the temporary directory.
+    @wrap_qt
+    def test():
 
-        # Need to wrap here because of the temporary directory.
-        @wrap_qt
-        def test():
+        # New GUI.
+        gui = session.show_gui('gui')
+        yield gui
 
-            # New GUI.
-            gui = session.show_gui('gui')
-            yield gui
+        # Remove a v2 view.
+        v2 = gui.get_views('v2')
+        assert len(v2) == 2
+        v2[0].close()
+        yield
+        gui.close()
 
-            # Remove a v2 view.
-            v2 = gui.get_views('v2')
-            assert len(v2) == 2
-            v2[0].close()
-            yield
-            gui.close()
+        # Reopen and check that the v2 is gone.
+        gui = session.show_gui('gui')
+        v2 = gui.get_views('v2')
+        assert len(v2) == 1
+        yield gui
+        # gui.close()
 
-            # Reopen and check that the v2 is gone.
-            gui = session.show_gui('gui')
-            v2 = gui.get_views('v2')
-            assert len(v2) == 1
-            yield gui
-            # gui.close()
+        gui.reset_gui()
+        v2 = gui.get_views('v2')
+        assert len(v2) == 2
+        yield
+        gui.close()
 
-            gui.reset_gui()
-            v2 = gui.get_views('v2')
-            assert len(v2) == 2
-            yield
-            gui.close()
+        gui = session.show_gui('gui')
+        yield gui
 
-            gui = session.show_gui('gui')
-            yield gui
+        v2 = gui.get_views('v2')
+        assert len(v2) == 2
+        gui.close()
+        yield gui
 
-            v2 = gui.get_views('v2')
-            assert len(v2) == 2
-            gui.close()
-            yield gui
-
-        test()
+    test()

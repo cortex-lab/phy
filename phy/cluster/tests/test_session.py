@@ -10,12 +10,11 @@ import os.path as op
 
 import numpy as np
 from numpy.testing import assert_allclose as ac
-from pytest import raises, fixture, mark
+from pytest import raises, yield_fixture, mark
 
 from ..session import Session
 from ...gui.qt import wrap_qt
 from ...utils.array import _spikes_in_clusters
-from ...utils.tempdir import TemporaryDirectory
 from ...utils.logging import set_level
 from ...io.mock import MockModel, artificial_traces
 from ...io.kwik.mock import create_mock_kwik
@@ -61,12 +60,10 @@ def _start_manual_clustering(kwik_path=None,
     return session
 
 
-@fixture
-def session(request):
-    tmpdir = TemporaryDirectory()
-
+@yield_fixture
+def session(tempdir):
     # Create the test HDF5 file in the temporary directory.
-    kwik_path = create_mock_kwik(tmpdir.name,
+    kwik_path = create_mock_kwik(tempdir,
                                  n_clusters=n_clusters,
                                  n_spikes=n_spikes,
                                  n_channels=n_channels,
@@ -74,77 +71,71 @@ def session(request):
                                  n_samples_traces=n_samples_traces)
 
     session = _start_manual_clustering(kwik_path=kwik_path,
-                                       tempdir=tmpdir.name)
-    session.tempdir = tmpdir.name
+                                       tempdir=tempdir)
+    session.tempdir = tempdir
 
-    def end():
-        session.close()
-        tmpdir.cleanup()
-    request.addfinalizer(end)
+    yield session
 
-    return session
+    session.close()
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
 
-def test_store_corruption():
-    with TemporaryDirectory() as tmpdir:
-        # Create the test HDF5 file in the temporary directory.
-        kwik_path = create_mock_kwik(tmpdir,
-                                     n_clusters=n_clusters,
-                                     n_spikes=n_spikes,
-                                     n_channels=n_channels,
-                                     n_features_per_channel=n_fets,
-                                     n_samples_traces=n_samples_traces)
+def test_store_corruption(tempdir):
+    # Create the test HDF5 file in the temporary directory.
+    kwik_path = create_mock_kwik(tempdir,
+                                 n_clusters=n_clusters,
+                                 n_spikes=n_spikes,
+                                 n_channels=n_channels,
+                                 n_features_per_channel=n_fets,
+                                 n_samples_traces=n_samples_traces)
 
-        session = Session(kwik_path, phy_user_dir=tmpdir)
-        store_path = session.store.path
-        session.close()
+    session = Session(kwik_path, phy_user_dir=tempdir)
+    store_path = session.store.path
+    session.close()
 
-        # Corrupt a file in the store.
-        fn = op.join(store_path, 'waveforms_spikes')
-        with open(fn, 'rb') as f:
-            contents = f.read()
-        with open(fn, 'wb') as f:
-            f.write(contents[1:-1])
+    # Corrupt a file in the store.
+    fn = op.join(store_path, 'waveforms_spikes')
+    with open(fn, 'rb') as f:
+        contents = f.read()
+    with open(fn, 'wb') as f:
+        f.write(contents[1:-1])
 
-        session = Session(kwik_path, phy_user_dir=tmpdir)
-        session.close()
-
-
-def test_session_one_cluster():
-    with TemporaryDirectory() as tmpdir:
-        session = Session(phy_user_dir=tmpdir)
-        # The disk store is not created if there is only one cluster.
-        session.open(model=MockModel(n_clusters=1))
-        assert session.store.disk_store is None
+    session = Session(kwik_path, phy_user_dir=tempdir)
+    session.close()
 
 
-def test_session_store_features():
+def test_session_one_cluster(tempdir):
+    session = Session(phy_user_dir=tempdir)
+    # The disk store is not created if there is only one cluster.
+    session.open(model=MockModel(n_clusters=1))
+    assert session.store.disk_store is None
+
+
+def test_session_store_features(tempdir):
     """Check that the cluster store works for features and masks."""
 
-    with TemporaryDirectory() as tempdir:
-        model = MockModel(n_spikes=50, n_clusters=3)
-        s0 = np.nonzero(model.spike_clusters == 0)[0]
-        s1 = np.nonzero(model.spike_clusters == 1)[0]
+    model = MockModel(n_spikes=50, n_clusters=3)
+    s0 = np.nonzero(model.spike_clusters == 0)[0]
+    s1 = np.nonzero(model.spike_clusters == 1)[0]
 
-        session = _start_manual_clustering(model=model,
-                                           tempdir=tempdir,
-                                           chunk_size=4,
-                                           )
+    session = _start_manual_clustering(model=model,
+                                       tempdir=tempdir,
+                                       chunk_size=4,
+                                       )
 
-        f = session.store.features(0)
-        m = session.store.masks(1)
-        w = session.store.waveforms(1)
+    f = session.store.features(0)
+    m = session.store.masks(1)
+    w = session.store.waveforms(1)
 
-        assert f.shape == (len(s0), 28, 2)
-        assert m.shape == (len(s1), 28,)
-        assert w.shape == (len(s1), model.n_samples_waveforms, 28,)
+    assert f.shape == (len(s0), 28, 2)
+    assert m.shape == (len(s1), 28,)
+    assert w.shape == (len(s1), model.n_samples_waveforms, 28,)
 
-        ac(f, model.features[s0].reshape((f.shape[0], -1, 2)), 1e-3)
-        ac(m, model.masks[s1], 1e-3)
+    ac(f, model.features[s0].reshape((f.shape[0], -1, 2)), 1e-3)
+    ac(m, model.masks[s1], 1e-3)
 
 
 @wrap_qt
@@ -398,7 +389,7 @@ def test_session_auto(session, spike_ids):
     assert metadata['klustakwik_num_starting_clusters'] == 10
 
 
-def test_session_detect(session):
+def test_session_detect(tempdir):
     channels = range(n_channels)
     graph = [[i, i + 1] for i in range(n_channels - 1)]
     probe = {'channel_groups': {
@@ -410,12 +401,11 @@ def test_session_detect(session):
     traces = artificial_traces(n_samples_traces, n_channels)
     assert traces is not None
 
-    with TemporaryDirectory() as tempdir:
-        kwik_path = op.join(tempdir, 'test.kwik')
-        create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=sample_rate)
-        session = Session(kwik_path, phy_user_dir=tempdir)
-        session.detect(traces=traces)
-        m = session.model
-        assert m.n_spikes >= 0
-        shape = (m.n_spikes, n_channels * m.n_features_per_channel)
-        assert m.features.shape == shape
+    kwik_path = op.join(tempdir, 'test.kwik')
+    create_kwik(kwik_path=kwik_path, probe=probe, sample_rate=sample_rate)
+    session = Session(kwik_path, phy_user_dir=tempdir)
+    session.detect(traces=traces)
+    m = session.model
+    assert m.n_spikes >= 0
+    shape = (m.n_spikes, n_channels * m.n_features_per_channel)
+    assert m.features.shape == shape
