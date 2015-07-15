@@ -36,7 +36,6 @@ from ..array import (_unique,
                      _concatenate_virtual_arrays,
                      )
 from ..testing import _assert_equal as ae
-from ..tempdir import TemporaryDirectory
 from ...io.mock import artificial_spike_clusters
 
 
@@ -309,21 +308,20 @@ def test_in_polygon():
 #------------------------------------------------------------------------------
 
 @mark.parametrize('memmap,lazy', product([False, True], [False, True]))
-def test_load_ndarray(memmap, lazy):
+def test_load_ndarray(tempdir, memmap, lazy):
     n, m = 10000, 100
     dtype = np.float32
     arr = np.random.randn(n, m).astype(dtype)
-    with TemporaryDirectory() as tmpdir:
-        path = op.join(tmpdir, 'test')
-        with open(path, 'wb') as f:
-            arr.tofile(f)
-        arr_m = _load_ndarray(path,
-                              dtype=dtype,
-                              shape=(n, m),
-                              memmap=memmap,
-                              lazy=lazy,
-                              )
-        ae(arr, arr_m[...])
+    path = op.join(tempdir, 'test')
+    with open(path, 'wb') as f:
+        arr.tofile(f)
+    arr_m = _load_ndarray(path,
+                          dtype=dtype,
+                          shape=(n, m),
+                          memmap=memmap,
+                          lazy=lazy,
+                          )
+    ae(arr, arr_m[...])
 
 
 #------------------------------------------------------------------------------
