@@ -12,7 +12,6 @@ from pytest import mark
 
 from ...utils.array import _spikes_per_cluster
 from ...utils.logging import set_level
-from ...utils.tempdir import TemporaryDirectory
 from ...utils.testing import (show_test_start,
                               show_test_stop,
                               show_test_run,
@@ -46,91 +45,89 @@ def setup():
     set_level('info')
 
 
-def _test_empty(view_model_class, stop=True, **kwargs):
-    with TemporaryDirectory() as tempdir:
-        # Create the test HDF5 file in the temporary directory.
-        filename = create_mock_kwik(tempdir,
-                                    n_clusters=1,
-                                    n_spikes=1,
-                                    n_channels=_N_CHANNELS,
-                                    n_features_per_channel=_N_FETS,
-                                    n_samples_traces=_N_SAMPLES_TRACES)
-        model = KwikModel(filename)
-        spikes_per_cluster = _spikes_per_cluster(model.spike_ids,
-                                                 model.spike_clusters)
-        store = create_store(model,
-                             path=tempdir,
-                             spikes_per_cluster=spikes_per_cluster,
-                             features_masks_chunk_size=10,
-                             waveforms_n_spikes_max=10,
-                             waveforms_excerpt_size=5,
-                             )
-        store.generate()
+def _test_empty(tempdir, view_model_class, stop=True, **kwargs):
+    # Create the test HDF5 file in the temporary directory.
+    filename = create_mock_kwik(tempdir,
+                                n_clusters=1,
+                                n_spikes=1,
+                                n_channels=_N_CHANNELS,
+                                n_features_per_channel=_N_FETS,
+                                n_samples_traces=_N_SAMPLES_TRACES)
+    model = KwikModel(filename)
+    spikes_per_cluster = _spikes_per_cluster(model.spike_ids,
+                                             model.spike_clusters)
+    store = create_store(model,
+                         path=tempdir,
+                         spikes_per_cluster=spikes_per_cluster,
+                         features_masks_chunk_size=10,
+                         waveforms_n_spikes_max=10,
+                         waveforms_excerpt_size=5,
+                         )
+    store.generate()
 
-        vm = view_model_class(model=model, store=store, **kwargs)
-        vm.on_open()
+    vm = view_model_class(model=model, store=store, **kwargs)
+    vm.on_open()
 
-        # Show the view.
-        show_test_start(vm.view)
-        show_test_run(vm.view, _N_FRAMES)
-        vm.select([0])
-        show_test_run(vm.view, _N_FRAMES)
-        vm.select([])
-        show_test_run(vm.view, _N_FRAMES)
+    # Show the view.
+    show_test_start(vm.view)
+    show_test_run(vm.view, _N_FRAMES)
+    vm.select([0])
+    show_test_run(vm.view, _N_FRAMES)
+    vm.select([])
+    show_test_run(vm.view, _N_FRAMES)
 
-        if stop:
-            show_test_stop(vm.view)
+    if stop:
+        show_test_stop(vm.view)
 
-        return vm
+    return vm
 
 
-def _test_view_model(view_model_class, stop=True, **kwargs):
+def _test_view_model(tempdir, view_model_class, stop=True, **kwargs):
 
-    with TemporaryDirectory() as tempdir:
-        # Create the test HDF5 file in the temporary directory.
-        filename = create_mock_kwik(tempdir,
-                                    n_clusters=_N_CLUSTERS,
-                                    n_spikes=_N_SPIKES,
-                                    n_channels=_N_CHANNELS,
-                                    n_features_per_channel=_N_FETS,
-                                    n_samples_traces=_N_SAMPLES_TRACES)
-        model = KwikModel(filename)
-        spikes_per_cluster = _spikes_per_cluster(model.spike_ids,
-                                                 model.spike_clusters)
-        store = create_store(model,
-                             path=tempdir,
-                             spikes_per_cluster=spikes_per_cluster,
-                             features_masks_chunk_size=15,
-                             waveforms_n_spikes_max=20,
-                             waveforms_excerpt_size=5,
-                             )
-        store.generate()
+    # Create the test HDF5 file in the temporary directory.
+    filename = create_mock_kwik(tempdir,
+                                n_clusters=_N_CLUSTERS,
+                                n_spikes=_N_SPIKES,
+                                n_channels=_N_CHANNELS,
+                                n_features_per_channel=_N_FETS,
+                                n_samples_traces=_N_SAMPLES_TRACES)
+    model = KwikModel(filename)
+    spikes_per_cluster = _spikes_per_cluster(model.spike_ids,
+                                             model.spike_clusters)
+    store = create_store(model,
+                         path=tempdir,
+                         spikes_per_cluster=spikes_per_cluster,
+                         features_masks_chunk_size=15,
+                         waveforms_n_spikes_max=20,
+                         waveforms_excerpt_size=5,
+                         )
+    store.generate()
 
-        vm = view_model_class(model=model, store=store, **kwargs)
-        vm.on_open()
-        show_test_start(vm.view)
+    vm = view_model_class(model=model, store=store, **kwargs)
+    vm.on_open()
+    show_test_start(vm.view)
 
-        vm.select([2])
-        show_test_run(vm.view, _N_FRAMES)
+    vm.select([2])
+    show_test_run(vm.view, _N_FRAMES)
 
-        vm.select([2, 3])
-        show_test_run(vm.view, _N_FRAMES)
+    vm.select([2, 3])
+    show_test_run(vm.view, _N_FRAMES)
 
-        vm.select([3, 2])
-        show_test_run(vm.view, _N_FRAMES)
+    vm.select([3, 2])
+    show_test_run(vm.view, _N_FRAMES)
 
-        if stop:
-            show_test_stop(vm.view)
+    if stop:
+        show_test_stop(vm.view)
 
-        return vm
+    return vm
 
 
 #------------------------------------------------------------------------------
 # Waveforms
 #------------------------------------------------------------------------------
 
-def test_waveforms_full():
-    vm = _test_view_model(WaveformViewModel, stop=False)
+def test_waveforms_full(tempdir):
+    vm = _test_view_model(tempdir, WaveformViewModel, stop=False)
     vm.overlap = True
     show_test_run(vm.view, _N_FRAMES)
     vm.show_mean = True
@@ -138,24 +135,26 @@ def test_waveforms_full():
     show_test_stop(vm.view)
 
 
-def test_waveforms_empty():
-    _test_empty(WaveformViewModel)
+def test_waveforms_empty(tempdir):
+    _test_empty(tempdir, WaveformViewModel)
 
 
 #------------------------------------------------------------------------------
 # Features
 #------------------------------------------------------------------------------
 
-def test_features_empty():
-    _test_empty(FeatureGridViewModel)
+def test_features_empty(tempdir):
+    _test_empty(tempdir, FeatureGridViewModel)
 
 
-def test_features_full():
-    _test_view_model(FeatureGridViewModel, marker_size=8, n_spikes_max=20)
+def test_features_full(tempdir):
+    _test_view_model(tempdir, FeatureGridViewModel,
+                     marker_size=8, n_spikes_max=20)
 
 
-def test_features_lasso():
-    vm = _test_view_model(FeatureGridViewModel,
+def test_features_lasso(tempdir):
+    vm = _test_view_model(tempdir,
+                          FeatureGridViewModel,
                           marker_size=8,
                           stop=False,
                           )
@@ -182,8 +181,9 @@ def test_features_lasso():
 # Correlograms
 #------------------------------------------------------------------------------
 
-def test_ccg_empty():
-    _test_empty(CorrelogramViewModel,
+def test_ccg_empty(tempdir):
+    _test_empty(tempdir,
+                CorrelogramViewModel,
                 binsize=20,
                 winsize_bins=51,
                 n_excerpts=100,
@@ -191,8 +191,9 @@ def test_ccg_empty():
                 )
 
 
-def test_ccg_simple():
-    _test_view_model(CorrelogramViewModel,
+def test_ccg_simple(tempdir):
+    _test_view_model(tempdir,
+                     CorrelogramViewModel,
                      binsize=10,
                      winsize_bins=61,
                      n_excerpts=80,
@@ -200,8 +201,9 @@ def test_ccg_simple():
                      )
 
 
-def test_ccg_full():
-    vm = _test_view_model(CorrelogramViewModel,
+def test_ccg_full(tempdir):
+    vm = _test_view_model(tempdir,
+                          CorrelogramViewModel,
                           binsize=20,
                           winsize_bins=51,
                           n_excerpts=100,
@@ -218,16 +220,16 @@ def test_ccg_full():
 # Traces
 #------------------------------------------------------------------------------
 
-def test_traces_empty():
-    _test_empty(TraceViewModel)
+def test_traces_empty(tempdir):
+    _test_empty(tempdir, TraceViewModel)
 
 
-def test_traces_simple():
-    _test_view_model(TraceViewModel)
+def test_traces_simple(tempdir):
+    _test_view_model(tempdir, TraceViewModel)
 
 
-def test_traces_full():
-    vm = _test_view_model(TraceViewModel, stop=False)
+def test_traces_full(tempdir):
+    vm = _test_view_model(tempdir, TraceViewModel, stop=False)
     vm.move_right()
     show_test_run(vm.view, _N_FRAMES)
     vm.move_left()
