@@ -19,3 +19,9 @@ from .utils.tempdir import TemporaryDirectory
 def tempdir():
     with TemporaryDirectory() as tempdir:
         yield tempdir
+
+
+@yield_fixture
+def tempdir_bis():
+    with TemporaryDirectory() as tempdir:
+        yield tempdir
