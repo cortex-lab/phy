@@ -18,8 +18,8 @@ from ..utils.settings import _ensure_dir_exists
 from ..io.base import BaseSession
 from ..io.kwik.model import KwikModel
 from ..io.kwik.store_items import create_store
-from .manual.gui import ClusterManualGUI
-from .algorithms.klustakwik import KlustaKwik
+from ..cluster.manual.gui import ClusterManualGUI
+from ..cluster.algorithms.klustakwik import KlustaKwik
 
 
 #------------------------------------------------------------------------------

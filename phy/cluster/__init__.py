@@ -3,7 +3,6 @@
 
 """Automatic and manual clustering facilities."""
 
-from .session import Session
 from .view_models import (BaseClusterViewModel,
                           HTMLClusterViewModel,
                           StatsViewModel,
