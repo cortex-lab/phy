@@ -17,10 +17,11 @@ from h5py import Dataset
 from ...electrode.mea import load_probe
 from ..h5 import open_h5
 from ..traces import _dat_n_samples
-from ...utils._types import _as_array
-from ...utils.logging import warn
 from ...utils._misc import _read_python
+from ...utils._types import _as_array
 from ...utils.array import _unique
+from ...utils.logging import warn
+from ...utils.settings import _load_default_settings
 from six import string_types, next
 from six.moves import zip
 
@@ -399,10 +400,7 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
     assert sample_rate > 0
 
     # Default SpikeDetekt parameters.
-    curdir = op.dirname(op.realpath(__file__))
-    default_settings_path = op.join(curdir,
-                                    '../../cluster/default_settings.py')
-    settings = _read_python(default_settings_path)
+    settings = _load_default_settings()
     params = settings['spikedetekt']
     params.update(settings['traces'])
     # Update with PRM and user parameters.

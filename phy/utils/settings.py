@@ -34,8 +34,8 @@ def _recursive_dirs():
     for root, dirs, files in os.walk(phy_root):
         root = op.realpath(root)
         root = op.relpath(root, phy_root)
-        if ('.' in root or '_' in root or 'tests' in root
-                or 'static' in root or 'glsl' in root):
+        if ('.' in root or '_' in root or 'tests' in root or
+                'static' in root or 'glsl' in root):
             continue
         yield op.realpath(op.join(phy_root, root))
 

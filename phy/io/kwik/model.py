@@ -26,7 +26,7 @@ from ...utils.array import (PartialArray,
                             _spikes_per_cluster,
                             _unique,
                             )
-from ...utils._misc import _read_python
+from ...utils.settings import _load_default_settings
 from ...utils._types import _is_integer, _as_array
 
 
@@ -391,10 +391,7 @@ class KwikModel(BaseModel):
         path = '/application_data/spikedetekt/'
         sample_rate = self._kwik.read_attr(path, 'sample_rate')
         # Load default SpikeDetekt settings.
-        curdir = op.dirname(op.realpath(__file__))
-        default_settings_path = op.join(curdir,
-                                        '../../cluster/default_settings.py')
-        settings = _read_python(default_settings_path)
+        settings = _load_default_settings()
         params = settings['spikedetekt']
         params.update(settings['traces'])
         # Update the parameters from the Kwik file.
