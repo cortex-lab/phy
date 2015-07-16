@@ -93,9 +93,8 @@ class BaseSettings(object):
             debug("Loaded internal settings file "
                   "from `{}`.".format(path))
             return True
-        except Exception as e:
-            warn("Unable to read the internal settings. "
-                 "You may want to delete '{0}'.\n{1}".format(path, str(e)))
+        except Exception:
+            return False
 
     def _try_load_python(self, path):
         try:
@@ -103,9 +102,8 @@ class BaseSettings(object):
             debug("Loaded internal settings file "
                   "from `{}`.".format(path))
             return True
-        except Exception as e:
-            warn("Unable to read the settings file "
-                 "'{0}':\n{1}".format(path, str(e)))
+        except Exception:
+            return False
 
     def load(self, path):
         """Load a settings file."""
@@ -118,7 +116,9 @@ class BaseSettings(object):
         if not has_ext:
             if self._try_load_json(path):
                 return
-        self._try_load_python(path)
+        if not self._try_load_python(path):
+            warn("Unable to read '{}'. ".format(path) +
+                 "Please try to delete this file.")
 
     def save(self, path):
         """Save the settings to a JSON file."""
@@ -148,7 +148,8 @@ class Settings(object):
         # Load phy's defaults.
         if self._default_paths:
             for path in self._default_paths:
-                self._bs.load(path)
+                if op.exists(path):
+                    self._bs.load(path)
 
         if not self.phy_user_dir:
             return
