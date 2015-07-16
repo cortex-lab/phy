@@ -14,7 +14,7 @@ from numpy.testing import assert_allclose as ac
 from numpy.testing import assert_array_equal as ae
 
 from ..gui import ClusterManualGUI
-from ....utils.settings import Settings
+from ....utils.settings import _load_default_settings
 from ....utils.logging import set_level
 from ....utils.array import _spikes_in_clusters
 from ....gui.qt import wrap_qt
@@ -204,9 +204,7 @@ def test_gui_history():
 @wrap_qt
 @mark.long
 def test_gui_gui():
-    curdir = op.dirname(op.realpath(__file__))
-    default_settings_path = op.join(curdir, '../../default_settings.py')
-    settings = Settings(default_path=default_settings_path)
+    settings = _load_default_settings()
     config = settings['cluster_manual_config']
     shortcuts = settings['cluster_manual_shortcuts']
 
