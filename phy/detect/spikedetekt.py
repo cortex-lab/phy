@@ -528,6 +528,40 @@ class SpikeDetekt(EventEmitter):
     # Main loop
     # -------------------------------------------------------------------------
 
+    def step_detect(self, pr=None, traces=None, thresholds=None):
+        n_samples, n_channels = traces.shape
+        n_chunks = self.n_chunks(n_samples)
+
+        # Pass 1: find the connected components and count the spikes.
+        pr.start_step('detect', n_chunks + 1)
+
+        # Dictionary {chunk_key: components}.
+        # Every chunk has a unique key: the `keep_start` integer.
+        n_spikes_total = 0
+        for chunk in self.iter_chunks(n_samples):
+            chunk_data = data_chunk(traces, chunk.bounds, with_overlap=True)
+
+            # Apply the filter.
+            data_f = self.apply_filter(chunk_data)
+            assert data_f.dtype == np.float32
+            assert data_f.shape == chunk_data.shape
+
+            # Save the filtered chunk.
+            self._save(data_f, 'filtered', key=chunk.key)
+
+            # Detect spikes in the filtered chunk.
+            components = self.detect(data_f, thresholds=thresholds,
+                                     dead_channels=self._dead_channels)
+            self._save(components, 'components', key=chunk.key)
+
+            # Report progress.
+            n_spikes_chunk = len(components)
+            pr.increment(n_spikes=n_spikes_chunk)
+            n_spikes_total += n_spikes_chunk
+
+        pr.set_complete(n_spikes_total=n_spikes_total)
+        return n_spikes_total
+
     def run_serial(self, traces, interval_samples=None):
         """Run SpikeDetekt using one CPU."""
         n_samples, n_channels = traces.shape
@@ -556,43 +590,16 @@ class SpikeDetekt(EventEmitter):
         n_chunks = self.n_chunks(n_samples)
         pr = SpikeDetektProgress(n_chunks=n_chunks)
 
-        # Pass 1: find the connected components and count the spikes.
-        pr.start_step('detect', n_chunks + 1)
-
-        # Dictionary {chunk_key: components}.
-        # Every chunk has a unique key: the `keep_start` integer.
-        n_spikes_total = 0
-        for chunk in self.iter_chunks(n_samples):
-            chunk_data = data_chunk(traces, chunk.bounds, with_overlap=True)
-
-            # Apply the filter.
-            data_f = self.apply_filter(chunk_data)
-            assert data_f.dtype == np.float32
-            assert data_f.shape == chunk_data.shape
-
-            # Save the filtered chunk.
-            self._save(data_f, 'filtered', key=chunk.key)
-
-            # Detect spikes in the filtered chunk.
-            components = self.detect(data_f,
-                                     thresholds=thresholds,
-                                     dead_channels=self._dead_channels
-                                     )
-            self._save(components, 'components', key=chunk.key)
-
-            # Report progress.
-            n_spikes_chunk = len(components)
-            pr.increment(n_spikes=n_spikes_chunk)
-            n_spikes_total += n_spikes_chunk
-
-        pr.set_complete(n_spikes_total=n_spikes_total)
+        #######################################################################
+        # Spike detection.
+        n_spikes_total = self.step_detect(pr=pr, traces=traces,
+                                          thresholds=thresholds)
+        k = int(n_spikes_total / float(self._kwargs['pca_n_waveforms_max']))
 
         #######################################################################
         # Excerpt waveforms.
-
         waveforms_subset = {group: [] for group in self._groups}
         masks_subset = {group: [] for group in self._groups}
-        n_waveforms_max = self._kwargs['pca_n_waveforms_max']
         for chunk in self.iter_chunks(n_samples):
 
             # Extract a few components.
@@ -601,7 +608,6 @@ class SpikeDetekt(EventEmitter):
             if components is None:
                 continue
 
-            k = int(n_spikes_total / float(n_waveforms_max))
             k = np.clip(k, 1, len(components))
             components = components[::k]
 
