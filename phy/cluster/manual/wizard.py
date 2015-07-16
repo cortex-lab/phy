@@ -10,7 +10,7 @@ import os.path as op
 from operator import itemgetter
 
 from ...utils import _is_array_like
-from ..view_models import HTMLClusterViewModel
+from .view_models import HTMLClusterViewModel
 from ...gui._utils import _read
 
 

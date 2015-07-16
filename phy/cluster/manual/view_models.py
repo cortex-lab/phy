@@ -9,22 +9,22 @@
 import os.path as op
 
 import numpy as np
-
-from ..io.kwik.model import _DEFAULT_GROUPS
-from ..utils.array import _unique, _spikes_in_clusters, _as_array
-from ..utils.selector import Selector
-from ..utils._misc import _show_shortcuts
-from ..utils._types import _is_integer, _is_float
-from ..utils._color import _selected_clusters_colors
-from ..utils import _as_list
-from ..stats.ccg import correlograms, _symmetrize_correlograms
-from ..plot.ccg import CorrelogramView
-from ..plot.features import FeatureView
-from ..plot.waveforms import WaveformView
-from ..plot.traces import TraceView
-from ..gui.base import BaseViewModel, HTMLViewModel
-from ..gui._utils import _read
 from six import string_types
+
+from ...io.kwik.model import _DEFAULT_GROUPS
+from ...utils.array import _unique, _spikes_in_clusters, _as_array
+from ...utils.selector import Selector
+from ...utils._misc import _show_shortcuts
+from ...utils._types import _is_integer, _is_float
+from ...utils._color import _selected_clusters_colors
+from ...utils import _as_list
+from ...stats.ccg import correlograms, _symmetrize_correlograms
+from ...plot.ccg import CorrelogramView
+from ...plot.features import FeatureView
+from ...plot.waveforms import WaveformView
+from ...plot.traces import TraceView
+from ...gui.base import BaseViewModel, HTMLViewModel
+from ...gui._utils import _read
 
 
 #------------------------------------------------------------------------------
