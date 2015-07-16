@@ -12,8 +12,9 @@ from collections import defaultdict
 import numpy as np
 
 from ..utils.array import (get_excerpts,
-                           chunk_bounds, data_chunk,
-                           _load_ndarray, _as_array,
+                           chunk_bounds,
+                           data_chunk,
+                           _as_array,
                            )
 from ..utils._types import Bunch
 from ..utils.event import EventEmitter, ProgressReporter
@@ -382,7 +383,7 @@ class SpikeDetekt(EventEmitter):
             raise ValueError("The temporary directory must be specified.")
         assert key >= 0
         assert group is None or group >= 0
-        path = '{group}/{name}/{chunk}'.format(
+        path = '{group}/{name}/{chunk}.npy'.format(
             chunk=key, name=name, group=group if group is not None else 'all')
         path = op.realpath(op.join(self._tempdir, path))
         _ensure_dir_exists(op.dirname(path))
@@ -392,15 +393,12 @@ class SpikeDetekt(EventEmitter):
         path = self._path(name, key=key, group=group)
         dtype = array.dtype
         assert dtype != np.object
-        return array.tofile(path)
+        np.save(path, array)
 
-    def _load(self, name, dtype, shape=None, key=None, group=None, lazy=True):
+    def _load(self, name, key=None, group=None):
         path = self._path(name, key=key, group=group)
-        # Handle the case where the file does not exist or is empty.
-        if not op.exists(path) or shape[0] == 0:
-            assert shape is not None
-            return np.zeros(shape, dtype=dtype)
-        return _load_ndarray(path, dtype=dtype, shape=shape, lazy=lazy)
+        assert op.exists(path)
+        return np.load(path)
 
     def _pca_subset(self, wm, n_spikes_chunk=None, n_spikes_total=None):
         waveforms, masks = wm
@@ -461,12 +459,8 @@ class SpikeDetekt(EventEmitter):
         assert len(components) > 0
         s_start, s_end, keep_start, keep_end = bounds
         key = keep_start
-        n_samples = s_end - s_start
         # Get the filtered chunk.
-        chunk_f = self._load('filtered', np.float32,
-                             shape=(n_samples, n_channels), key=key,
-                             lazy=False,
-                             )
+        chunk_f = self._load('filtered', key=key)
         # Extract the spikes from the chunk.
         groups, spike_samples, waveforms, masks = self.extract_spikes(
             components, chunk_f, thresholds=thresholds)
@@ -529,14 +523,8 @@ class SpikeDetekt(EventEmitter):
         key = keep_start
         # Loop over the channel groups.
         for group, pcs in pcs_per_group.items():
-            # Find the waveforms shape.
-            n_spikes = spike_counts(group=group, chunk=key)
-            n_channels = self._n_channels_per_group[group]
-            shape = (n_spikes, self._n_samples_waveforms, n_channels)
             # Save the waveforms.
-            waveforms = self._load('waveforms', np.float32,
-                                   shape=shape,
-                                   key=key, group=group)
+            waveforms = self._load('waveforms', key=key, group=group)
             # No spikes in the chunk.
             if waveforms is None:
                 continue
@@ -557,7 +545,6 @@ class SpikeDetekt(EventEmitter):
         out = {}
         for group in groups:
             out[group] = []
-            n_channels_group = self._n_channels_per_group[group]
             # for key in keys:
             for bounds in self.iter_chunks(n_samples):
                 s_start, s_end, keep_start, keep_end = bounds
@@ -570,22 +557,7 @@ class SpikeDetekt(EventEmitter):
                 # start of the chunk, including the overlapping band).
                 offset = s_start
 
-                n_spikes = spike_counts(group=group, chunk=key)
-                shape = {
-                    'spike_samples': (n_spikes,),
-                    'waveforms': (n_spikes,
-                                  self._n_samples_waveforms,
-                                  n_channels_group),
-                    'masks': (n_spikes, n_channels_group),
-                    'features': (n_spikes, n_channels_group, self._n_features),
-                }[name]
-                dtype = np.float64 if name == 'spike_samples' else np.float32
-                w = self._load(name, dtype,
-                               shape=shape,
-                               key=key,
-                               group=group,
-                               lazy=True,
-                               )
+                w = self._load(name, key=key, group=group)
                 # Add the chunk offset to the spike samples, which were
                 # relative to the start of the chunk.
                 if name == 'spike_samples':
