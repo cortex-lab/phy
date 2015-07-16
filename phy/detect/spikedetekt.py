@@ -18,6 +18,7 @@ from ..utils.array import (get_excerpts,
 from ..utils._types import Bunch
 from ..utils.event import EventEmitter, ProgressReporter
 from ..utils.logging import debug, info
+from ..utils.settings import _ensure_dir_exists
 from ..electrode.mea import (_channels_per_group,
                              _probe_adjacency_list,
                              )
@@ -380,21 +381,17 @@ class SpikeDetekt(EventEmitter):
         if self._tempdir is None:
             raise ValueError("The temporary directory must be specified.")
         assert key >= 0
-        if group is None:
-            path = op.join(self._tempdir, '{:s}-{:d}'.format(name, key))
-        else:
-            assert group >= 0
-            fn = '{chunk:d}.{name:s}.{group:d}'.format(
-                chunk=key, name=name, group=group)
-            path = op.join(self._tempdir, fn)
+        assert group is None or group >= 0
+        path = '{group}/{name}/{chunk}'.format(
+            chunk=key, name=name, group=group if group is not None else 'all')
+        path = op.realpath(op.join(self._tempdir, path))
+        _ensure_dir_exists(op.dirname(path))
         return path
 
     def _save(self, array, name, key=None, group=None):
         path = self._path(name, key=key, group=group)
         dtype = array.dtype
         assert dtype != np.object
-        shape = array.shape
-        debug("Save `{}` ({}, {}).".format(path, np.dtype(dtype).name, shape))
         return array.tofile(path)
 
     def _load(self, name, dtype, shape=None, key=None, group=None, lazy=True):
@@ -403,7 +400,6 @@ class SpikeDetekt(EventEmitter):
         if not op.exists(path) or shape[0] == 0:
             assert shape is not None
             return np.zeros(shape, dtype=dtype)
-        debug("Load `{}` ({}, {}).".format(path, np.dtype(dtype).name, shape))
         return _load_ndarray(path, dtype=dtype, shape=shape, lazy=lazy)
 
     def _load_data_chunks(self, name,
