@@ -17,6 +17,41 @@ from ._misc import _load_json, _save_json, _read_python
 # Settings
 #------------------------------------------------------------------------------
 
+def _create_empty_settings(path):
+    """Create an empty Python file if the path doesn't exist."""
+    # If the file exists of if it is an internal settings file, skip.
+    if op.exists(path) or op.splitext(path)[1] == '':
+        return
+    debug("Creating empty settings file: {}.".format(path))
+    with open(path, 'a') as f:
+        f.write("# Settings file. Refer to phy's documentation "
+                "for more details.\n")
+
+
+def _recursive_dirs():
+    """Yield all subdirectories paths in phy's package."""
+    phy_root = op.join(op.realpath(op.dirname(__file__)), '../')
+    for root, dirs, files in os.walk(phy_root):
+        root = op.realpath(root)
+        root = op.relpath(root, phy_root)
+        if ('.' in root or '_' in root or 'tests' in root
+                or 'static' in root or 'glsl' in root):
+            continue
+        yield op.realpath(op.join(phy_root, root))
+
+
+def _load_default_settings(paths=None):
+    """Load all default settings in phy's package."""
+    if paths is None:
+        paths = [op.join(dir, 'default_settings.py')
+                 for dir in _recursive_dirs()]
+    settings = BaseSettings()
+    for path in paths:
+        if op.exists(path):
+            settings.load(path)
+    return settings
+
+
 class BaseSettings(object):
     """Store key-value pairs."""
     def __init__(self):
@@ -71,16 +106,11 @@ class BaseSettings(object):
     def load(self, path):
         """Load a settings file."""
         path = op.realpath(path)
-        has_ext = op.splitext(path)[1] != ''
         if not op.exists(path):
-            debug("Creating empty settings file: {}.".format(path))
-            # Extension => Python, so we can write a comment.
-            if has_ext:
-                with open(path, 'a') as f:
-                    f.write("# Settings file. Refer to phy's documentation "
-                            "for more details.\n")
+            debug("Settings file `{}` doesn't exist.".format(path))
             return
         # Try JSON first, then Python.
+        has_ext = op.splitext(path)[1] != ''
         if not has_ext:
             if self._try_load_json(path):
                 return
@@ -123,6 +153,10 @@ class Settings(object):
         # Load the user defaults.
         self.user_settings_path = op.join(self.phy_user_dir,
                                           'user_settings.py')
+
+        # Create empty settings path if necessary.
+        _create_empty_settings(self.user_settings_path)
+
         self._bs.load(self.user_settings_path)
 
         # Load the user's internal settings.
@@ -142,9 +176,13 @@ class Settings(object):
         self.exp_name = op.splitext(op.basename(path))[0]
         self.exp_dir = op.dirname(path)
         self.exp_settings_dir = op.join(self.exp_dir, self.exp_name + '.phy')
+
         self.exp_settings_path = op.join(self.exp_settings_dir,
                                          'user_settings.py')
         _ensure_dir_exists(self.exp_settings_dir)
+
+        # Create empty settings path if necessary.
+        _create_empty_settings(self.exp_settings_path)
 
         # Load experiment-wide settings.
         self._load_user_settings()

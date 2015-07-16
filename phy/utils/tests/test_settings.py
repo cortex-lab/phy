@@ -12,12 +12,35 @@ from pytest import raises
 
 from ..settings import (BaseSettings,
                         Settings,
+                        _load_default_settings,
+                        _recursive_dirs,
                         )
 
 
 #------------------------------------------------------------------------------
 # Test settings
 #------------------------------------------------------------------------------
+
+def test_recursive_dirs():
+    dirs = list(_recursive_dirs())
+    assert len(dirs) >= 5
+    root = op.join(op.realpath(op.dirname(__file__)), '../../')
+    for dir in dirs:
+        dir = op.relpath(dir, root)
+        assert '.' not in dir
+        assert '_' not in dir
+
+
+def test_load_default_settings():
+    settings = _load_default_settings()
+    keys = settings.keys()
+    assert 'log_file_level' in keys
+    assert 'on_open' in keys
+    assert 'spikedetekt' in keys
+    assert 'klustakwik2' in keys
+    assert 'traces' in keys
+    assert 'cluster_manual_config' in keys
+
 
 def test_base_settings():
     s = BaseSettings()
