@@ -326,11 +326,11 @@ def test_load_ndarray(tempdir, memmap, lazy):
     ae(arr, arr_m[...])
 
 
-def test_load_save_arrays(tempdir):
+@mark.parametrize('n', [20, 0])
+def test_load_save_arrays(tempdir, n):
     path = op.join(tempdir, 'test.npy')
     # Random arrays.
     arrays = []
-    n = 20
     for i in range(n):
         size = np.random.randint(low=3, high=50)
         assert size > 0

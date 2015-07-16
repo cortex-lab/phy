@@ -336,6 +336,8 @@ def _save_arrays(path, arrays):
     assert path.endswith('.npy')
     path = op.splitext(path)[0]
     offsets = np.cumsum([arr.shape[0] for arr in arrays])
+    if not len(arrays):
+        return
     concat = np.concatenate(arrays, axis=0)
     np.save(path + '.npy', concat)
     np.save(path + '.offsets.npy', offsets)
@@ -343,6 +345,8 @@ def _save_arrays(path, arrays):
 
 def _load_arrays(path):
     assert path.endswith('.npy')
+    if not op.exists(path):
+        return []
     path = op.splitext(path)[0]
     concat = np.load(path + '.npy')
     offsets = np.load(path + '.offsets.npy')
