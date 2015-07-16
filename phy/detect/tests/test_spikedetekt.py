@@ -6,22 +6,18 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
-
 import numpy as np
 from numpy.testing import assert_equal as ae
 from pytest import fixture, mark
 
-from ...utils._misc import _read_python
 from ...utils.datasets import _download_test_data
 from ...utils.logging import set_level
+from ...utils.settings import _load_default_settings
 from ...utils.testing import show_test
 from ...electrode.mea import load_probe
-from ...io.kwik import KwikModel
-from ...io.kwik.mock import create_mock_kwik
 from ...io.mock import artificial_traces
-from ..algorithms import (cluster, SpikeDetekt, _split_spikes,
-                          _concat, SpikeCounts)
+from ..spikedetekt import (SpikeDetekt, _split_spikes,
+                           _concat, SpikeCounts)
 
 
 #------------------------------------------------------------------------------
@@ -47,9 +43,7 @@ def _spikedetekt(tempdir, n_groups=2):
     traces[15000:15010, 3] *= 5
 
     # Load default settings.
-    curdir = op.dirname(op.realpath(__file__))
-    default_settings_path = op.join(curdir, '../default_settings.py')
-    settings = _read_python(default_settings_path)
+    settings = _load_default_settings()
     params = settings['spikedetekt']
     params['sample_rate'] = sample_rate
     params['use_single_threshold'] = False
@@ -215,9 +209,7 @@ def test_spike_detect_serial(spikedetekt):
 @mark.long
 def test_spike_detect_real_data(tempdir, spikedetekt):
     # Set the parameters.
-    curdir = op.dirname(op.realpath(__file__))
-    default_settings_path = op.join(curdir, '../default_settings.py')
-    settings = _read_python(default_settings_path)
+    settings = _load_default_settings()
     sample_rate = 20000
     params = settings['spikedetekt']
     params['sample_rate'] = sample_rate
@@ -259,25 +251,3 @@ def test_spike_detect_real_data(tempdir, spikedetekt):
                     n_samples_per_spike=n_samples_w,
                     show=False)
     show_test(c)
-
-
-#------------------------------------------------------------------------------
-# Tests clustering
-#------------------------------------------------------------------------------
-
-def test_cluster(tempdir):
-    n_spikes = 100
-    filename = create_mock_kwik(tempdir,
-                                n_clusters=1,
-                                n_spikes=n_spikes,
-                                n_channels=8,
-                                n_features_per_channel=3,
-                                n_samples_traces=5000)
-    model = KwikModel(filename)
-
-    spike_clusters = cluster(model, num_starting_clusters=10)
-    assert len(spike_clusters) == n_spikes
-
-    spike_clusters = cluster(model, num_starting_clusters=10,
-                             spike_ids=range(100))
-    assert len(spike_clusters) == 100

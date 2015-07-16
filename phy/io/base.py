@@ -350,7 +350,7 @@ class BaseSession(EventEmitter):
                  model=None,
                  path=None,
                  phy_user_dir=None,
-                 default_settings_path=None,
+                 default_settings_paths=None,
                  vm_classes=None,
                  gui_classes=None,
                  ):
@@ -362,7 +362,7 @@ class BaseSession(EventEmitter):
         _ensure_dir_exists(phy_user_dir)
         self.phy_user_dir = phy_user_dir
 
-        self._create_settings(default_settings_path)
+        self._create_settings(default_settings_paths)
 
         if gui_classes is None:
             gui_classes = self.settings['gui_classes']
@@ -381,9 +381,9 @@ class BaseSession(EventEmitter):
         if model or path:
             self.open(path, model=model)
 
-    def _create_settings(self, default_settings_path):
+    def _create_settings(self, default_settings_paths):
         self.settings = Settings(phy_user_dir=self.phy_user_dir,
-                                 default_path=default_settings_path,
+                                 default_paths=default_settings_paths,
                                  )
 
         @self.connect

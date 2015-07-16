@@ -1,60 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Default settings for spike sorting."""
-
-
-# -----------------------------------------------------------------------------
-# Spike detection
-# -----------------------------------------------------------------------------
-
-traces = {
-    'raw_data_files': [],
-    'n_channels': None,
-    'dtype': None,
-    'sample_rate': None,
-}
-
-
-spikedetekt = {
-    'filter_low': 500.,
-    'filter_high_factor': 0.95 * .5,  # will be multiplied by the sample rate
-    'filter_butter_order': 3,
-
-    # Data chunks.
-    'chunk_size_seconds': 1.,
-    'chunk_overlap_seconds': .015,
-
-    # Threshold.
-    'n_excerpts': 50,
-    'excerpt_size_seconds': 1.,
-    'use_single_threshold': True,
-    'threshold_strong_std_factor': 4.5,
-    'threshold_weak_std_factor': 2.,
-    'detect_spikes': 'negative',
-
-    # Connected components.
-    'connected_component_join_size': 1,
-
-    # Spike extractions.
-    'extract_s_before': 10,
-    'extract_s_after': 10,
-    'weight_power': 2,
-
-    # Features.
-    'n_features_per_channel': 3,
-    'pca_n_waveforms_max': 10000,
-
-    # Waveform filtering in GUI.
-    'waveform_filter': True,
-    'waveform_dc_offset': None,
-    'waveform_scale_factor': None,
-
-}
-
-
-# NOTE: the default parameters are in klustakwik2's repository.
-klustakwik2 = {
-}
+"""Default settings for manual sorting."""
 
 
 # -----------------------------------------------------------------------------
@@ -172,37 +118,8 @@ cluster_manual_snippets = {
 }
 
 
-def on_open(session):
-    """You can update the session when a model is opened.
-
-    For example, you can register custom statistics with
-    `session.register_statistic`.
-
-    """
-    pass
-
-
-def on_gui_open(session, gui):
-    """You can customize a GUI when it is open."""
-    pass
-
-
-def on_view_open(gui, view):
-    """You can customize a view when it is open."""
-    pass
-
-
 # Whether to ask the user if they want to save when the GUI is closed.
 prompt_save_on_exit = True
-
-
-# -----------------------------------------------------------------------------
-# Store settings
-# -----------------------------------------------------------------------------
-
-# Number of spikes to load at once from the features_masks array
-# during the cluster store generation.
-features_masks_chunk_size = 100000
 
 
 # -----------------------------------------------------------------------------
@@ -213,11 +130,3 @@ waveforms_scale_factor = .01
 features_scale_factor = .01
 features_grid_scale_factor = features_scale_factor
 traces_scale_factor = .01
-
-
-# -----------------------------------------------------------------------------
-# Misc settings
-# -----------------------------------------------------------------------------
-
-# Logging level in the log file.
-log_file_level = 'debug'

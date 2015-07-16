@@ -16,10 +16,10 @@ import subprocess
 from inspect import getargspec
 
 import numpy as np
-
-from ._types import _is_integer
 from six import string_types, exec_
 from six.moves import builtins, cPickle
+
+from ._types import _is_integer
 
 
 #------------------------------------------------------------------------------

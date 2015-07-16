@@ -8,9 +8,10 @@
 
 from collections import defaultdict
 
+from six import u
+
 from .qt import QtCore, QtGui
 from ..utils.event import EventEmitter
-from six import u
 
 
 # -----------------------------------------------------------------------------

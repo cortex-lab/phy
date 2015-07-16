@@ -10,14 +10,14 @@ import os
 
 from pytest import mark
 
-from ...utils.array import _spikes_per_cluster
-from ...utils.logging import set_level
-from ...utils.testing import (show_test_start,
+from ....utils.array import _spikes_per_cluster
+from ....utils.logging import set_level
+from ....utils.testing import (show_test_start,
                               show_test_stop,
                               show_test_run,
                               )
-from ...io.kwik.mock import create_mock_kwik
-from ...io.kwik import KwikModel, create_store
+from ....io.kwik.mock import create_mock_kwik
+from ....io.kwik import KwikModel, create_store
 from ..view_models import (WaveformViewModel,
                            FeatureGridViewModel,
                            CorrelogramViewModel,

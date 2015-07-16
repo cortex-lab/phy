@@ -18,8 +18,9 @@ from ..utils.settings import _ensure_dir_exists
 from ..io.base import BaseSession
 from ..io.kwik.model import KwikModel
 from ..io.kwik.store_items import create_store
-from .manual.gui import ClusterManualGUI
-from .algorithms import KlustaKwik, SpikeDetekt
+from ..cluster.manual.gui import ClusterManualGUI
+from ..cluster.algorithms.klustakwik import KlustaKwik
+from ..detect.spikedetekt import SpikeDetekt
 
 
 #------------------------------------------------------------------------------
@@ -73,14 +74,11 @@ class Session(BaseSession):
         self._use_store = use_store
         self._file_logger = None
         self._waveform_filter = waveform_filter
-        curdir = op.dirname(op.realpath(__file__))
-        settings_path = op.join(curdir, 'default_settings.py')
         if kwik_path:
             kwik_path = op.realpath(kwik_path)
         super(Session, self).__init__(model=model,
                                       path=kwik_path,
                                       phy_user_dir=phy_user_dir,
-                                      default_settings_path=settings_path,
                                       vm_classes=self._vm_classes,
                                       gui_classes=self._gui_classes,
                                       )

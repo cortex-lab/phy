@@ -13,13 +13,13 @@ import numpy as np
 import phy
 from ...gui.base import BaseGUI
 from ...gui.qt import _prompt
-from ..view_models import (WaveformViewModel,
-                           FeatureGridViewModel,
-                           FeatureViewModel,
-                           CorrelogramViewModel,
-                           TraceViewModel,
-                           StatsViewModel,
-                           )
+from .view_models import (WaveformViewModel,
+                          FeatureGridViewModel,
+                          FeatureViewModel,
+                          CorrelogramViewModel,
+                          TraceViewModel,
+                          StatsViewModel,
+                          )
 from ...utils.logging import debug, info, warn
 from ...io.kwik.model import cluster_group_id
 from ._history import GlobalHistory
@@ -391,6 +391,7 @@ class ClusterManualGUI(BaseGUI):
         """Save the changes."""
         # The session saves the model when this event is emitted.
         self.emit('request_save')
+        self._is_dirty = False
 
     def _prompt_save(self):
         """Display a prompt for saving and return whether the GUI should be

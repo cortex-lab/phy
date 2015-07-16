@@ -258,7 +258,7 @@ def test_base_session(tempdir):
 
     session = BaseSession(model=model,
                           phy_user_dir=tempdir,
-                          default_settings_path=default_settings_path,
+                          default_settings_paths=[default_settings_path],
                           vm_classes=vm_classes,
                           gui_classes=gui_classes,
                           )

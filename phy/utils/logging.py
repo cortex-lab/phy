@@ -1,27 +1,17 @@
 from __future__ import absolute_import
+
 """Logger utility classes and functions."""
+
 
 # -----------------------------------------------------------------------------
 # Imports
 # -----------------------------------------------------------------------------
-import os
+
+import os.path as op
 import sys
 import logging
-import traceback
 
 from six import iteritems, string_types
-
-
-# -----------------------------------------------------------------------------
-# Utility functions
-# -----------------------------------------------------------------------------
-
-def _get_caller(up):
-    tb = traceback.extract_stack()[up]
-    module = os.path.splitext(os.path.basename(tb[0]))[0]
-    line = str(tb[1])
-    caller = "{0:s}:{1:s}".format(module, line)
-    return caller.ljust(24)
 
 
 # -----------------------------------------------------------------------------
@@ -47,7 +37,8 @@ class StringStream(object):
 # Custom formatter
 # -----------------------------------------------------------------------------
 
-_LONG_FORMAT = ('%(asctime)s  [%(levelname)s]  %(caller)s %(message)s',
+_LONG_FORMAT = ('%(asctime)s  [%(levelname)s]  '
+                '%(caller)s %(message)s',
                 '%Y-%m-%d %H:%M:%S')
 _SHORT_FORMAT = ('%(asctime)s [%(levelname)s] %(message)s',
                  '%H:%M:%S')
@@ -57,8 +48,8 @@ class Formatter(logging.Formatter):
     def format(self, record):
         # Only keep the first character in the level name.
         record.levelname = record.levelname[0]
-        # Add caller information.
-        record.__dict__['caller'] = _get_caller(-14)
+        filename = op.splitext(op.basename(record.pathname))[0]
+        record.caller = '{:s}:{:d}'.format(filename, record.lineno).ljust(16)
         return super(Formatter, self).format(record)
 
 

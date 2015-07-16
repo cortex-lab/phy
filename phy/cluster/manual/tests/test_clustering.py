@@ -9,8 +9,8 @@
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
-
 from six import itervalues
+
 from ....io.mock import artificial_spike_clusters
 from ....utils.array import (_spikes_in_clusters,
                              _flatten_spikes_per_cluster,
