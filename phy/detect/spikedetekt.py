@@ -557,7 +557,7 @@ class SpikeDetekt(EventEmitter):
         pr = SpikeDetektProgress(n_chunks=n_chunks)
 
         # Pass 1: find the connected components and count the spikes.
-        pr.start_step('detect', n_chunks)
+        pr.start_step('detect', n_chunks + 1)
 
         # Dictionary {chunk_key: components}.
         # Every chunk has a unique key: the `keep_start` integer.
@@ -620,7 +620,7 @@ class SpikeDetekt(EventEmitter):
 
         #######################################################################
         # Compute the PCs.
-        pr.start_step('pca', len(self._groups))
+        pr.start_step('pca', len(self._groups) + 1)
         pcs = {}
         for group in self._groups:
             # Concatenate all waveforms subsets from all chunks.
@@ -630,11 +630,11 @@ class SpikeDetekt(EventEmitter):
             # Perform PCA and return the components.
             pcs[group] = self.waveform_pcs(w, m)
             pr.increment()
+        pr.set_complete()
 
         #######################################################################
         # Compute all features.
-
-        pr.start_step('extract', n_chunks)
+        pr.start_step('extract', n_chunks + 1)
 
         # This is a dict {group: {key: n_spikes}}.
         chunk_counts = defaultdict(dict)
