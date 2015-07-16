@@ -239,6 +239,8 @@ class SpikeDetekt(EventEmitter):
         single = bool(self._kwargs['use_single_threshold'])
         strong_f = self._kwargs['threshold_strong_std_factor']
         weak_f = self._kwargs['threshold_weak_std_factor']
+
+        info("Finding the thresholds...")
         excerpt = get_excerpts(traces,
                                n_excerpts=n_excerpts,
                                excerpt_size=excerpt_size)
@@ -246,6 +248,7 @@ class SpikeDetekt(EventEmitter):
         thresholds = compute_threshold(excerpt_f,
                                        single_threshold=single,
                                        std_factor=(weak_f, strong_f))
+        debug("Thresholds: {}.".format(thresholds))
         return {'weak': thresholds[0],
                 'strong': thresholds[1]}
 
@@ -418,13 +421,8 @@ class SpikeDetekt(EventEmitter):
         else:
             os.remove(path)
 
-    def _pca_subset(self, wm, n_spikes_chunk=None, n_spikes_total=None):
-        waveforms, masks = wm
-        n_waveforms_max = self._kwargs['pca_n_waveforms_max']
-        p = n_spikes_chunk / float(n_spikes_total)
-        k = int(n_spikes_chunk / float(p * n_waveforms_max))
-        k = np.clip(k, 1, n_spikes_chunk)
-        return (waveforms[::k, ...], masks[::k, ...])
+    # Chunking
+    # -------------------------------------------------------------------------
 
     def iter_chunks(self, n_samples):
         """Iterate over chunks.
@@ -443,113 +441,8 @@ class SpikeDetekt(EventEmitter):
         """Number of chunks."""
         return len(list(self.iter_chunks(n_samples)))
 
-    # Main steps
+    # Output data
     # -------------------------------------------------------------------------
-
-    def step_detect(self, bounds, chunk_data, chunk_data_keep,
-                    thresholds=None):
-        """Detection step."""
-        key = bounds[2]
-        # Apply the filter.
-        data_f = self.apply_filter(chunk_data)
-        assert data_f.dtype == np.float32
-        assert data_f.shape == chunk_data.shape
-        # Save the filtered chunk.
-        self._save(data_f, 'filtered', key=key)
-        # Detect spikes in the filtered chunk.
-        components = self.detect(data_f,
-                                 thresholds=thresholds,
-                                 dead_channels=self._dead_channels
-                                 )
-        self._save(components, 'components', key=key)
-        # Return the list of components in the chunk.
-        return components
-
-    def step_extract(self, bounds, components,
-                     n_spikes_total=None,
-                     n_channels=None,
-                     thresholds=None,
-                     ):
-        """Extraction step.
-
-        Return the waveforms to keep for each chunk for PCA.
-
-        """
-        assert len(components) > 0
-        s_start, s_end, keep_start, keep_end = bounds
-        key = keep_start
-        # Get the filtered chunk.
-        chunk_f = self._load('filtered', key=key)
-        # Extract the spikes from the chunk.
-        groups, spike_samples, waveforms, masks = self.extract_spikes(
-            components, chunk_f, thresholds=thresholds)
-
-        # Remove spikes in the overlapping bands.
-        # WANRING: add keep_start to spike_samples, because spike_samples
-        # is relative to the start of the chunk.
-        idx = _keep_spikes(spike_samples[...] + keep_start,
-                           (keep_start, keep_end))
-        n_spikes_chunk = idx.sum()
-        debug("In chunk {}, keep {} spikes out of {}.".format(
-              key, n_spikes_chunk, len(spike_samples)))
-
-        # Split the data according to the channel groups.
-        split = _split_spikes(groups,
-                              idx=idx,
-                              spike_samples=spike_samples,
-                              waveforms=waveforms,
-                              masks=masks,
-                              )
-        # Save the split arrays: spike samples, waveforms, masks.
-        for group, out in split.items():
-            for name, arr in out.items():
-                self._save(arr, name, key=key, group=group)
-
-        # Keep some waveforms in memory in order to compute PCA.
-        wm = {group: (split[group]['waveforms'], split[group]['masks'])
-              for group in split.keys()}
-        # Number of counts per group in that chunk.
-        counts = {group: len(split[group]['waveforms'])
-                  for group in split.keys()}
-        assert sum(counts.values()) == n_spikes_chunk
-        wm = {group: self._pca_subset(wm[group],
-                                      n_spikes_chunk=n_spikes_chunk,
-                                      n_spikes_total=n_spikes_total)
-              for group in split.keys()}
-        return wm, counts
-
-    def step_pca(self, waveforms_subset, masks_subset):
-        """PCA step.
-
-        Return the PCs.
-
-        """
-        # Concatenate all waveforms subsets from all chunks.
-        waveforms_subset = np.vstack(waveforms_subset)
-        masks_subset = np.vstack(masks_subset)
-        assert (waveforms_subset.shape[0],
-                waveforms_subset.shape[2]) == masks_subset.shape
-        # Perform PCA and return the components.
-        pcs = self.waveform_pcs(waveforms_subset, masks_subset)
-        return pcs
-
-    def step_features(self, bounds, pcs_per_group, spike_counts):
-        """Feature step."""
-        s_start, s_end, keep_start, keep_end = bounds
-        key = keep_start
-        # Loop over the channel groups.
-        for group, pcs in pcs_per_group.items():
-            # Save the waveforms.
-            waveforms = self._load('waveforms', key=key, group=group)
-            # No spikes in the chunk.
-            if waveforms is None:
-                continue
-            # Compute the features.
-            features = self.features(waveforms, pcs)
-            if features is not None:
-                assert features.dtype == np.float32
-                # Save the features.
-                self._save(features, 'features', key=key, group=group)
 
     def _load_data_chunks(self, name,
                           n_samples=None,
@@ -616,6 +509,9 @@ class SpikeDetekt(EventEmitter):
                        )
         return output
 
+    # Main loop
+    # -------------------------------------------------------------------------
+
     def run_serial(self, traces, interval_samples=None):
         """Run SpikeDetekt using one CPU."""
         n_samples, n_channels = traces.shape
@@ -634,9 +530,7 @@ class SpikeDetekt(EventEmitter):
         # TODO: add start to the spike samples...
 
         # Find the weak and strong thresholds.
-        info("Finding the thresholds...")
         thresholds = self.find_thresholds(traces)
-        debug("Thresholds: {}.".format(thresholds))
         self.emit('find_thresholds', thresholds)
 
         # Find dead channels.
@@ -662,27 +556,35 @@ class SpikeDetekt(EventEmitter):
 
         # Dictionary {chunk_key: components}.
         # Every chunk has a unique key: the `keep_start` integer.
-        n_spikes_per_chunk = {}
+        n_spikes_total = 0
         for chunk_idx, bounds in enumerate(self.iter_chunks(n_samples)):
             key = bounds[2]
             chunk_data = data_chunk(traces, bounds, with_overlap=True)
-            chunk_data_keep = data_chunk(traces, bounds, with_overlap=False)
-            components = self.step_detect(bounds,
-                                          chunk_data,
-                                          chunk_data_keep,
-                                          thresholds=thresholds,
-                                          )
+
+            # Apply the filter.
+            data_f = self.apply_filter(chunk_data)
+            assert data_f.dtype == np.float32
+            assert data_f.shape == chunk_data.shape
+
+            # Save the filtered chunk.
+            self._save(data_f, 'filtered', key=key)
+
+            # Detect spikes in the filtered chunk.
+            components = self.detect(data_f,
+                                     thresholds=thresholds,
+                                     dead_channels=self._dead_channels
+                                     )
+            self._save(components, 'components', key=key)
+
             self.emit('detect_spikes', key=key, n_spikes=len(components))
 
             # Report progress.
-            pr.increment(n_spikes=len(components),
+            n_spikes_chunk = len(components)
+            pr.increment(n_spikes=n_spikes_chunk,
                          chunk_idx=chunk_idx + 1,
-                         n_chunks=n_chunks,
-                         )
+                         n_chunks=n_chunks)
+            n_spikes_total += n_spikes_chunk
 
-            n_spikes_per_chunk[key] = len(components)
-
-        n_spikes_total = sum(n_spikes_per_chunk.values())
         pr.set_complete(n_spikes_total=n_spikes_total)
 
         #######################################################################
@@ -694,14 +596,13 @@ class SpikeDetekt(EventEmitter):
             s_start, s_end, keep_start, keep_end = bounds
             key = keep_start
 
-            n_spikes_chunk = n_spikes_per_chunk[key]
-
             # Extract a few components.
-            k = int(n_spikes_total / float(n_waveforms_max))
-            k = np.clip(k, 1, n_spikes_chunk)
             components = self._load('components', key, multiple_arrays=True)
             if components is None:
                 continue
+
+            k = int(n_spikes_total / float(n_waveforms_max))
+            k = np.clip(k, 1, len(components))
             components = components[::k]
 
             # Get the filtered chunk.
@@ -730,9 +631,14 @@ class SpikeDetekt(EventEmitter):
                 masks_subset[group].append(out['masks'])
 
         # Compute the PCs.
-        pcs = {group: self.step_pca(waveforms_subset[group],
-                                    masks_subset[group])
-               for group in self._groups}
+        pcs = {}
+        for group in self._groups:
+            # Concatenate all waveforms subsets from all chunks.
+            w = np.vstack(waveforms_subset[group])
+            m = np.vstack(masks_subset[group])
+            assert (w.shape[0], w.shape[2]) == m.shape
+            # Perform PCA and return the components.
+            pcs[group] = self.waveform_pcs(w, m)
 
         #######################################################################
         # Compute all features.
