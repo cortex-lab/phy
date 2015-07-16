@@ -296,7 +296,7 @@ def detect(args):
 
 
 def cluster_auto(args):
-    assert args.file.endswith('.kwik')
+    assert args.file.endswith('.prm')
     session = _create_session(args, use_store=False)
     ns = dict(session=session,
               clustering=args.clustering,
