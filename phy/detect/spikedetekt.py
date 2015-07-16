@@ -443,6 +443,7 @@ class SpikeDetekt(EventEmitter):
                                  thresholds=thresholds,
                                  dead_channels=self._dead_channels
                                  )
+        self._save(components, 'components', key=key)
         # Return the list of components in the chunk.
         return components
 
@@ -646,7 +647,7 @@ class SpikeDetekt(EventEmitter):
 
         # Dictionary {chunk_key: components}.
         # Every chunk has a unique key: the `keep_start` integer.
-        chunk_components = {}
+        n_spikes_per_chunk = {}
         for chunk_idx, bounds in enumerate(self.iter_chunks(n_samples)):
             key = bounds[2]
             chunk_data = data_chunk(traces, bounds, with_overlap=True)
@@ -664,9 +665,8 @@ class SpikeDetekt(EventEmitter):
                          n_chunks=n_chunks,
                          )
 
-            chunk_components[key] = components
-        n_spikes_per_chunk = {key: len(val)
-                              for key, val in chunk_components.items()}
+            n_spikes_per_chunk[key] = len(components)
+
         n_spikes_total = sum(n_spikes_per_chunk.values())
         pr.set_complete(n_spikes_total=n_spikes_total)
 
@@ -679,7 +679,7 @@ class SpikeDetekt(EventEmitter):
         chunk_counts = defaultdict(dict)
         for chunk_idx, bounds in enumerate(self.iter_chunks(n_samples)):
             key = bounds[2]
-            components = chunk_components[key]
+            components = self._load('components', key=key)
             if len(components) == 0:
                 continue
             # This is a dict {group: (waveforms, masks)}.
