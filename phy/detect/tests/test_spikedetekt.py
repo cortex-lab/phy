@@ -250,4 +250,4 @@ def test_spike_detect_real_data(tempdir, spikedetekt):
                     masks=masks,
                     n_samples_per_spike=n_samples_w,
                     show=False)
-    show_test(c)
+    show_test(c, 0)
