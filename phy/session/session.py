@@ -20,7 +20,7 @@ from ..io.kwik.model import KwikModel
 from ..io.kwik.store_items import create_store
 from ..cluster.manual.gui import ClusterManualGUI
 from ..cluster.algorithms.klustakwik import KlustaKwik
-from ..cluster.detect import SpikeDetekt
+from ..detect import SpikeDetekt
 
 
 #------------------------------------------------------------------------------
