@@ -90,8 +90,8 @@ class BaseSettings(object):
     def _try_load_json(self, path):
         try:
             self._update(_load_json(path))
-            debug("Loaded internal settings file "
-                  "from `{}`.".format(path))
+            # debug("Loaded internal settings file "
+            #       "from `{}`.".format(path))
             return True
         except Exception:
             return False
@@ -99,8 +99,8 @@ class BaseSettings(object):
     def _try_load_python(self, path):
         try:
             self._update(_read_python(path))
-            debug("Loaded internal settings file "
-                  "from `{}`.".format(path))
+            # debug("Loaded internal settings file "
+            #       "from `{}`.".format(path))
             return True
         except Exception:
             return False
