@@ -15,6 +15,8 @@ from ..utils.array import (get_excerpts,
                            chunk_bounds,
                            data_chunk,
                            _as_array,
+                           _save_arrays,
+                           _load_arrays,
                            )
 from ..utils._types import Bunch
 from ..utils.event import EventEmitter, ProgressReporter
@@ -391,14 +393,20 @@ class SpikeDetekt(EventEmitter):
 
     def _save(self, array, name, key=None, group=None):
         path = self._path(name, key=key, group=group)
-        dtype = array.dtype
-        assert dtype != np.object
-        np.save(path, array)
+        if isinstance(array, list):
+            _save_arrays(path, array)
+        else:
+            dtype = array.dtype
+            assert dtype != np.object
+            np.save(path, array)
 
-    def _load(self, name, key=None, group=None):
+    def _load(self, name, key=None, group=None, multiple_arrays=False):
         path = self._path(name, key=key, group=group)
-        assert op.exists(path)
-        return np.load(path)
+        if multiple_arrays:
+            return _load_arrays(path)
+        else:
+            assert op.exists(path)
+            return np.load(path)
 
     def _pca_subset(self, wm, n_spikes_chunk=None, n_spikes_total=None):
         waveforms, masks = wm
@@ -679,7 +687,8 @@ class SpikeDetekt(EventEmitter):
         chunk_counts = defaultdict(dict)
         for chunk_idx, bounds in enumerate(self.iter_chunks(n_samples)):
             key = bounds[2]
-            components = self._load('components', key=key)
+            components = self._load('components', key=key,
+                                    multiple_arrays=True)
             if len(components) == 0:
                 continue
             # This is a dict {group: (waveforms, masks)}.
