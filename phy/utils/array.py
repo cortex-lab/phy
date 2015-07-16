@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import os
+import os.path as op
 from math import floor
 from operator import mul
 from functools import reduce
@@ -323,6 +324,29 @@ def _load_ndarray(f_or_path, dtype=None, shape=None, memmap=False, lazy=False):
                 assert _prod(shape) == n_items
             arr = _memmap(f_or_path, dtype=dtype, shape=shape, lazy=lazy)
         return arr
+
+
+def _save_arrays(path, arrays):
+    """Save multiple arrays in a single file by concatenating them along
+    the first axis.
+
+    A second array is stored with the offsets.
+
+    """
+    assert path.endswith('.npy')
+    path = op.splitext(path)[0]
+    offsets = np.cumsum([arr.shape[0] for arr in arrays])
+    concat = np.concatenate(arrays, axis=0)
+    np.save(path + '.npy', concat)
+    np.save(path + '.offsets.npy', offsets)
+
+
+def _load_arrays(path):
+    assert path.endswith('.npy')
+    path = op.splitext(path)[0]
+    concat = np.load(path + '.npy')
+    offsets = np.load(path + '.offsets.npy')
+    return np.split(concat, offsets[:-1], axis=0)
 
 
 # -----------------------------------------------------------------------------
