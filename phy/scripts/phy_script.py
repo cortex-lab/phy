@@ -231,7 +231,7 @@ def _get_kwik_path(args):
 
 
 def _create_session(args, **kwargs):
-    from phy.cluster import Session
+    from phy.session import Session
     kwik_path = _get_kwik_path(args)
     session = Session(kwik_path, **kwargs)
     return session

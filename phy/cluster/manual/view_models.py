@@ -299,7 +299,7 @@ class StatsViewModel(HTMLClusterViewModel):
         css = super(StatsViewModel, self).get_css(cluster_ids=cluster_ids,
                                                   up=up)
         static_path = op.join(op.dirname(op.realpath(__file__)),
-                              'manual/static/')
+                              'static/')
         css += _read('styles.css', static_path=static_path)
         return css
 
