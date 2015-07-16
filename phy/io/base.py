@@ -383,7 +383,7 @@ class BaseSession(EventEmitter):
 
     def _create_settings(self, default_settings_paths):
         self.settings = Settings(phy_user_dir=self.phy_user_dir,
-                                 default_path=default_settings_paths,
+                                 default_paths=default_settings_paths,
                                  )
 
         @self.connect
