@@ -158,6 +158,8 @@ def _default_on_progress(message, value, value_max, end='\r', **kwargs):
     if value < value_max:
         progress = 100 * value / float(value_max)
         fmt = PartialFormatter()
+        kwargs['value'] = value
+        kwargs['value_max'] = value_max
         print(fmt.format(message, progress=progress, **kwargs), end=end)
 
 
