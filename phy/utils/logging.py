@@ -1,9 +1,12 @@
 from __future__ import absolute_import
+
 """Logger utility classes and functions."""
+
 
 # -----------------------------------------------------------------------------
 # Imports
 # -----------------------------------------------------------------------------
+
 import os
 import sys
 import logging

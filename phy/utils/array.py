@@ -13,8 +13,8 @@ from functools import reduce
 import math
 
 import numpy as np
-
 from six import integer_types, string_types
+
 from .logging import warn
 from ._types import _as_tuple, _as_array
 

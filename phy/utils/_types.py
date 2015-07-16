@@ -8,7 +8,6 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-
 from six import string_types, integer_types
 
 

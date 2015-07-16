@@ -11,6 +11,7 @@ from collections import Counter
 import inspect
 
 from six import string_types
+
 from ..utils._misc import _show_shortcuts
 from ..utils import debug, info, warn, EventEmitter
 from ._utils import _read

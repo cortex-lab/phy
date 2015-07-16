@@ -13,6 +13,8 @@ import types
 
 import numpy as np
 from h5py import Dataset
+from six import string_types, next
+from six.moves import zip
 
 from ...electrode.mea import load_probe
 from ..h5 import open_h5
@@ -22,8 +24,6 @@ from ...utils._types import _as_array
 from ...utils.array import _unique
 from ...utils.logging import warn
 from ...utils.settings import _load_default_settings
-from six import string_types, next
-from six.moves import zip
 
 
 #------------------------------------------------------------------------------

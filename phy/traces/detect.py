@@ -7,10 +7,10 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-
-from ..utils.array import _as_array
 from six import string_types
 from six.moves import range, zip
+
+from ..utils.array import _as_array
 
 
 #------------------------------------------------------------------------------

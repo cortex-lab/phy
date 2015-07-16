@@ -19,7 +19,6 @@ import argparse
 from textwrap import dedent
 
 import numpy as np
-
 from six import exec_
 
 

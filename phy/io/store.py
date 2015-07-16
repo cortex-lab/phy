@@ -12,6 +12,7 @@ import os.path as op
 import re
 
 import numpy as np
+from six import string_types
 
 from ..utils._types import _as_int, _is_integer, _is_array_like
 from ..utils._misc import _load_json, _save_json
@@ -19,7 +20,6 @@ from ..utils.array import (PerClusterData, _spikes_in_clusters,
                            _subset_spc, _load_ndarray)
 from ..utils.event import ProgressReporter
 from ..utils.logging import debug, info, warn
-from six import string_types
 
 
 #------------------------------------------------------------------------------
