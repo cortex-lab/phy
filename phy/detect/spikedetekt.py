@@ -402,52 +402,6 @@ class SpikeDetekt(EventEmitter):
             return np.zeros(shape, dtype=dtype)
         return _load_ndarray(path, dtype=dtype, shape=shape, lazy=lazy)
 
-    def _load_data_chunks(self, name,
-                          n_samples=None,
-                          n_channels=None,
-                          groups=None,
-                          spike_counts=None,
-                          ):
-        _, _, keys, _ = zip(*list(self.iter_chunks(n_samples)))
-        out = {}
-        for group in groups:
-            out[group] = []
-            n_channels_group = self._n_channels_per_group[group]
-            # for key in keys:
-            for bounds in self.iter_chunks(n_samples):
-                s_start, s_end, keep_start, keep_end = bounds
-
-                # Chunk key.
-                key = keep_start
-                assert key in keys
-
-                # The offset is added to the spike samples (relative to the
-                # start of the chunk, including the overlapping band).
-                offset = s_start
-
-                n_spikes = spike_counts(group=group, chunk=key)
-                shape = {
-                    'spike_samples': (n_spikes,),
-                    'waveforms': (n_spikes,
-                                  self._n_samples_waveforms,
-                                  n_channels_group),
-                    'masks': (n_spikes, n_channels_group),
-                    'features': (n_spikes, n_channels_group, self._n_features),
-                }[name]
-                dtype = np.float64 if name == 'spike_samples' else np.float32
-                w = self._load(name, dtype,
-                               shape=shape,
-                               key=key,
-                               group=group,
-                               lazy=True,
-                               )
-                # Add the chunk offset to the spike samples, which were
-                # relative to the start of the chunk.
-                if name == 'spike_samples':
-                    w = w[...] + offset
-                out[group].append(w)
-        return out
-
     def _pca_subset(self, wm, n_spikes_chunk=None, n_spikes_total=None):
         waveforms, masks = wm
         n_waveforms_max = self._kwargs['pca_n_waveforms_max']
@@ -592,6 +546,52 @@ class SpikeDetekt(EventEmitter):
                 assert features.dtype == np.float32
                 # Save the features.
                 self._save(features, 'features', key=key, group=group)
+
+    def _load_data_chunks(self, name,
+                          n_samples=None,
+                          n_channels=None,
+                          groups=None,
+                          spike_counts=None,
+                          ):
+        _, _, keys, _ = zip(*list(self.iter_chunks(n_samples)))
+        out = {}
+        for group in groups:
+            out[group] = []
+            n_channels_group = self._n_channels_per_group[group]
+            # for key in keys:
+            for bounds in self.iter_chunks(n_samples):
+                s_start, s_end, keep_start, keep_end = bounds
+
+                # Chunk key.
+                key = keep_start
+                assert key in keys
+
+                # The offset is added to the spike samples (relative to the
+                # start of the chunk, including the overlapping band).
+                offset = s_start
+
+                n_spikes = spike_counts(group=group, chunk=key)
+                shape = {
+                    'spike_samples': (n_spikes,),
+                    'waveforms': (n_spikes,
+                                  self._n_samples_waveforms,
+                                  n_channels_group),
+                    'masks': (n_spikes, n_channels_group),
+                    'features': (n_spikes, n_channels_group, self._n_features),
+                }[name]
+                dtype = np.float64 if name == 'spike_samples' else np.float32
+                w = self._load(name, dtype,
+                               shape=shape,
+                               key=key,
+                               group=group,
+                               lazy=True,
+                               )
+                # Add the chunk offset to the spike samples, which were
+                # relative to the start of the chunk.
+                if name == 'spike_samples':
+                    w = w[...] + offset
+                out[group].append(w)
+        return out
 
     def output_data(self,
                     n_samples,
