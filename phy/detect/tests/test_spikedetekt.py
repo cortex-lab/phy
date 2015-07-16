@@ -6,15 +6,13 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
-
 import numpy as np
 from numpy.testing import assert_equal as ae
 from pytest import fixture, mark
 
-from ...utils._misc import _read_python
 from ...utils.datasets import _download_test_data
 from ...utils.logging import set_level
+from ...utils.settings import _load_default_settings
 from ...utils.testing import show_test
 from ...electrode.mea import load_probe
 from ...io.mock import artificial_traces
@@ -45,10 +43,7 @@ def _spikedetekt(tempdir, n_groups=2):
     traces[15000:15010, 3] *= 5
 
     # Load default settings.
-    curdir = op.dirname(op.realpath(__file__))
-    default_settings_path = op.join(curdir,
-                                    '../../cluster/default_settings.py')
-    settings = _read_python(default_settings_path)
+    settings = _load_default_settings()
     params = settings['spikedetekt']
     params['sample_rate'] = sample_rate
     params['use_single_threshold'] = False
@@ -214,10 +209,7 @@ def test_spike_detect_serial(spikedetekt):
 @mark.long
 def test_spike_detect_real_data(tempdir, spikedetekt):
     # Set the parameters.
-    curdir = op.dirname(op.realpath(__file__))
-    default_settings_path = op.join(curdir,
-                                    '../../cluster/default_settings.py')
-    settings = _read_python(default_settings_path)
+    settings = _load_default_settings()
     sample_rate = 20000
     params = settings['spikedetekt']
     params['sample_rate'] = sample_rate
