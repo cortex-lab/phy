@@ -155,7 +155,7 @@ class PartialFormatter(string.Formatter):
 def _default_on_progress(message, value, value_max, end='\r', **kwargs):
     if value_max == 0:
         return
-    if value < value_max:
+    if value <= value_max:
         progress = 100 * value / float(value_max)
         fmt = PartialFormatter()
         kwargs['value'] = value
@@ -213,7 +213,8 @@ class ProgressReporter(EventEmitter):
 
         @self.connect
         def on_progress(value, value_max, **kwargs):
-            _default_on_progress(message, value, value_max, end=end, **kwargs)
+            kwargs['end'] = None if value == value_max else end
+            _default_on_progress(message, value, value_max, **kwargs)
 
     def set_complete_message(self, message):
         """Set a complete message."""
