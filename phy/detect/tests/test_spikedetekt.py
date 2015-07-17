@@ -140,7 +140,6 @@ def test_spike_detect_real_data(tempdir, raw_dataset):
                      **params)
     traces = raw_dataset.traces
     n_samples = raw_dataset.n_samples
-    n_channels = raw_dataset.n_channels
     npc = params['n_features_per_channel']
     n_samples_w = params['extract_s_before'] + params['extract_s_after']
 
@@ -148,7 +147,8 @@ def test_spike_detect_real_data(tempdir, raw_dataset):
     out = sd.run_serial(traces, interval_samples=(0, n_samples))
 
     n_spikes = out.n_spikes_total
-    n_channels = len(probe['channel_groups'][0]['channels'])
+    channels = probe['channel_groups'][0]['channels']
+    n_channels = len(channels)
 
     spike_samples = _concatenate(out.spike_samples[0])
     masks = _concatenate(out.masks[0], (n_channels,))
@@ -164,7 +164,7 @@ def test_spike_detect_real_data(tempdir, raw_dataset):
 
     # Plot...
     from phy.plot.traces import plot_traces
-    c = plot_traces(traces[:30000],
+    c = plot_traces(traces[:30000, channels],
                     spike_samples=spike_samples,
                     masks=masks,
                     n_samples_per_spike=n_samples_w,

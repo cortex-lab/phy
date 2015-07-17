@@ -251,7 +251,10 @@ def _concatenate(arrs, shape=()):
     arrs = [_as_array(arr) for arr in arrs if arr is not None]
     if not arrs:
         return np.zeros((0,) + shape)
-    return np.concatenate(arrs, axis=0)
+    out = np.concatenate(arrs, axis=0)
+    if shape:
+        out = out.reshape((-1,) + shape)
+    return out
 
 
 # -----------------------------------------------------------------------------
