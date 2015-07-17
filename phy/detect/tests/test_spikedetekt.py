@@ -139,20 +139,20 @@ def test_spike_detect_methods(spikedetekt_one_group):
     traces_f[3000:3020, :] *= 5
     components = sd.detect(traces_f, thresholds)
     assert isinstance(components, list)
-    n_spikes = len(components)
+    # n_spikes = len(components)
     n_samples_waveforms = (params['extract_s_before'] +
                            params['extract_s_after'])
 
     # Spike extraction.
-    groups, samples, waveforms, masks = sd.extract_spikes(components,
-                                                          traces_f,
-                                                          thresholds,
-                                                          )
+    split = sd.extract_spikes(components, traces_f, thresholds,
+                              keep_bounds=(0, n_samples))
 
-    waveforms = _concat(waveforms, np.float32)
-    masks = _concat(masks, np.float32)
+    samples = _concat(split[0]['spike_samples'], np.float64)
+    waveforms = _concat(split[0]['waveforms'], np.float32)
+    masks = _concat(split[0]['masks'], np.float32)
 
-    assert np.all(np.in1d(groups, [0, 1]))
+    n_spikes = len(samples)
+
     assert samples.dtype == np.float64
     assert samples.shape == (n_spikes,)
     assert waveforms.shape == (n_spikes, n_samples_waveforms, n_channels)
@@ -178,8 +178,6 @@ def test_spike_detect_serial(spikedetekt):
     sd, traces, params = spikedetekt
     out = sd.run_serial(traces)
 
-    n_samples_waveforms = (params['extract_s_before'] +
-                           params['extract_s_after'])
     n_features = params['n_features_per_channel']
 
     assert out.n_spikes_total >= 0
@@ -190,12 +188,6 @@ def test_spike_detect_serial(spikedetekt):
         # Number of channels in the group.
         n_channels_g = (3, 1)[group]
         n_spikes_g = out.n_spikes_per_group[group]
-
-        waveforms = np.vstack(out.waveforms[group])
-        assert waveforms.dtype == np.float32
-        assert waveforms.shape == (n_spikes_g,
-                                   n_samples_waveforms,
-                                   n_channels_g)
 
         features = np.vstack(out.features[group])
         assert features.dtype == np.float32

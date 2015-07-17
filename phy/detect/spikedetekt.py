@@ -323,6 +323,8 @@ class SpikeDetekt(EventEmitter):
                        thresholds=None, keep_bounds=None):
         """Extract spikes from connected components.
 
+        Returns a split object.
+
         Parameters
         ----------
         components : list
@@ -333,16 +335,6 @@ class SpikeDetekt(EventEmitter):
             The weak and strong thresholds.
         keep_bounds : tuple
             (keep_start, keep_end).
-
-        Returns
-        -------
-
-        # spike_samples : array
-        #     An `(n_spikes,)` array with the spike samples.
-        # waveforms : array
-        #     An `(n_spikes, n_samples, n_channels)` array.
-        # masks : array
-        #     An `(n_spikes, n_channels)` array.
 
         """
         n_spikes = len(components)
