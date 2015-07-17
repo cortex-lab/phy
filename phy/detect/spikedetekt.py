@@ -566,6 +566,52 @@ class SpikeDetekt(EventEmitter):
 
         return n_spikes_total
 
+    def step_excerpt(self, pr=None, n_samples=None,
+                     n_spikes_total=None, thresholds=None):
+        k = int(n_spikes_total / float(self._kwargs['pca_n_waveforms_max']))
+        w_subset = defaultdict(list)
+        m_subset = defaultdict(list)
+        for chunk, split in self._iter_spikes(n_samples, step_spikes=k,
+                                              thresholds=thresholds):
+            for group, out in split.items():
+                w_subset[group].append(out['waveforms'])
+                m_subset[group].append(out['masks'])
+        for group in self._groups:
+            w_subset[group] = np.concatenate(w_subset[group])
+            m_subset[group] = np.concatenate(m_subset[group])
+        return w_subset, m_subset
+
+    def step_pcs(self, pr=None, w_subset=None, m_subset=None):
+        pr.start_step('pca', len(self._groups))
+        pcs = {}
+        for group in self._groups:
+            # Perform PCA and return the components.
+            pcs[group] = self.waveform_pcs(w_subset[group],
+                                           m_subset[group])
+            pr.increment()
+        return pcs
+
+    def step_features(self, pr=None, n_samples=None,
+                      pcs=None, thresholds=None):
+        pr.start_step('extract', self.n_chunks(n_samples))
+        chunk_counts = defaultdict(dict)  # {group: {key: n_spikes}}.
+        n_spikes_total = 0
+        for chunk, split in self._iter_spikes(n_samples,
+                                              thresholds=thresholds):
+            # split: {group: {'spike_samples': ..., 'waveforms':, 'masks':}}
+            for group, out in split.items():
+                out['features'] = self.features(out['waveforms'], pcs[group])
+                n_spikes_chunk = len(out['spike_samples'])
+                n_spikes_total += n_spikes_chunk
+                chunk_counts[group][chunk.key] = n_spikes_chunk
+
+                # Save the arrays.
+                for name in ('spike_samples', 'features', 'masks'):
+                    assert out[name].shape[0] == n_spikes_chunk
+                    self._save(out[name], name, key=chunk.key, group=group)
+            pr.increment(n_spikes_total=n_spikes_total)
+        return chunk_counts
+
     def _iter_spikes(self, n_samples, step_spikes=1, thresholds=None):
         """Iterate over extracted spikes (possibly subset).
 
@@ -621,55 +667,22 @@ class SpikeDetekt(EventEmitter):
         n_chunks = self.n_chunks(n_samples)
         pr = SpikeDetektProgress(n_chunks=n_chunks)
 
-        #######################################################################
         # Spike detection.
         n_spikes_total = self.step_detect(pr=pr, traces=traces,
                                           thresholds=thresholds)
-        k = int(n_spikes_total / float(self._kwargs['pca_n_waveforms_max']))
 
-        #######################################################################
         # Excerpt waveforms.
-        waveforms_subset = defaultdict(list)
-        masks_subset = defaultdict(list)
-        for chunk, split in self._iter_spikes(n_samples, step_spikes=k,
-                                              thresholds=thresholds):
-            for group, out in split.items():
-                waveforms_subset[group].append(out['waveforms'])
-                masks_subset[group].append(out['masks'])
-        for group in self._groups:
-            waveforms_subset[group] = np.concatenate(waveforms_subset[group])
-            masks_subset[group] = np.concatenate(masks_subset[group])
+        w_subset, m_subset = self.step_excerpt(pr=pr,
+                                               n_samples=n_samples,
+                                               n_spikes_total=n_spikes_total,
+                                               thresholds=thresholds)
 
-        #######################################################################
         # Compute the PCs.
-        pr.start_step('pca', len(self._groups))
-        pcs = {}
-        for group in self._groups:
-            # Perform PCA and return the components.
-            pcs[group] = self.waveform_pcs(waveforms_subset[group],
-                                           masks_subset[group])
-            pr.increment()
+        pcs = self.step_pcs(pr=pr, w_subset=w_subset, m_subset=m_subset)
 
-        #######################################################################
         # Compute all features.
-        pr.start_step('extract', n_chunks)
-        chunk_counts = defaultdict(dict)  # {group: {key: n_spikes}}.
-        n_spikes_total = 0
-        for chunk, split in self._iter_spikes(n_samples,
-                                              thresholds=thresholds):
-            # split: {group: {'spike_samples': ..., 'waveforms':, 'masks':}}
-            for group, out in split.items():
-                out['features'] = self.features(out['waveforms'], pcs[group])
-                n_spikes_chunk = len(out['spike_samples'])
-                n_spikes_total += n_spikes_chunk
-                chunk_counts[group][chunk.key] = n_spikes_chunk
-
-                # Save the arrays.
-                for name in ('spike_samples', 'features', 'masks'):
-                    assert out[name].shape[0] == n_spikes_chunk
-                    self._save(out[name], name, key=chunk.key, group=group)
-
-            pr.increment(n_spikes_total=n_spikes_total)
+        chunk_counts = self.step_features(pr=pr, n_samples=n_samples,
+                                          pcs=pcs, thresholds=thresholds)
 
         spike_counts = SpikeCounts(chunk_counts)
         return self.output_data(n_samples, n_channels,
