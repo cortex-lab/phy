@@ -76,6 +76,8 @@ def test_creator_simple(tempdir):
                        spike_samples=spike_samples,
                        features=features.astype(np.float32),
                        masks=masks.astype(np.float32),
+                       n_channels=n_channels,
+                       n_features=n_features,
                        )
 
     # Test the spike samples.
@@ -93,7 +95,10 @@ def test_creator_simple(tempdir):
 
     # Spikes can only been added once.
     with raises(RuntimeError):
-        creator.add_spikes(group=0, spike_samples=spike_samples)
+        creator.add_spikes(group=0,
+                           spike_samples=spike_samples,
+                           n_channels=n_channels,
+                           n_features=n_features)
 
 
 def test_creator_chunks(tempdir):
@@ -120,6 +125,8 @@ def test_creator_chunks(tempdir):
                        spike_samples=spike_samples,
                        features=_split(features),
                        masks=_split(masks),
+                       n_channels=n_channels,
+                       n_features=n_features,
                        )
 
     # Test the spike samples.
