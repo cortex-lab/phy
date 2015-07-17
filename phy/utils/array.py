@@ -247,15 +247,11 @@ def _in_polygon(points, polygon):
     return path.contains_points(points)
 
 
-def _concatenate(arrs):  # , shape=()):
+def _concatenate(arrs):
     arrs = [_as_array(arr) for arr in arrs if arr is not None]
     if not arrs:
-        # return np.zeros((0,) + shape)
         return
-    out = np.concatenate(arrs, axis=0)
-    # if shape:
-        # out = out.reshape((-1,) + shape)
-    return out
+    return np.concatenate(arrs, axis=0)
 
 
 # -----------------------------------------------------------------------------
