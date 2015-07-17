@@ -492,30 +492,6 @@ class SpikeDetekt(EventEmitter):
     # Output data
     # -------------------------------------------------------------------------
 
-    def _load_data_chunks(self, name,
-                          n_samples=None,
-                          n_channels=None,
-                          groups=None,
-                          spike_counts=None,
-                          ):
-        # keys = [bunch.key for bunch in self.iter_chunks(n_samples)]
-        out = {}
-        for group in groups:
-            out[group] = []
-            # for key in keys:
-            for chunk in self.iter_chunks(n_samples):
-                # The offset is added to the spike samples (relative to the
-                # start of the chunk, including the overlapping band).
-                offset = chunk.s_start
-
-                w = self._load(name, key=chunk.key, group=group)
-                # Add the chunk offset to the spike samples, which were
-                # relative to the start of the chunk.
-                if name == 'spike_samples':
-                    w = w[...] + offset
-                out[group].append(w)
-        return out
-
     def output_data(self,
                     n_samples,
                     n_channels,
@@ -528,18 +504,22 @@ class SpikeDetekt(EventEmitter):
         keys = sorted(n_samples_per_chunk.keys())
 
         def _load(name):
-            return self._load_data_chunks(name,
-                                          n_samples=n_samples,
-                                          n_channels=n_channels,
-                                          groups=groups,
-                                          spike_counts=spike_counts,
-                                          )
+            out = {}
+            for group in groups:
+                out[group] = []
+                for chunk in self.iter_chunks(n_samples):
+                    w = self._load(name, key=chunk.key, group=group)
+                    # Add the chunk offset to the spike samples, which were
+                    # relative to the start of the chunk.
+                    if name == 'spike_samples':
+                        w += chunk.s_start
+                    out[group].append(w)
+            return out
 
         output = Bunch(n_chunks=len(keys),
                        groups=groups,
                        chunk_keys=keys,
                        spike_samples=_load('spike_samples'),
-                       # waveforms=_load('waveforms'),
                        masks=_load('masks'),
                        features=_load('features'),
                        spike_counts=spike_counts,
