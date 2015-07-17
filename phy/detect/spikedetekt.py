@@ -127,6 +127,11 @@ class SpikeDetektProgress(ProgressReporter):
                    "Spike detection complete: {n_spikes_total:d} " +
                    "spikes detected."),
 
+        'excerpt': ("Extracting waveforms subset for PCs: " +
+                    "{progress:.2f}%. " + _spikes_message,
+                    "Waveform subset extraction complete: " +
+                    "{n_spikes_total} spikes."),
+
         'pca': ("Performing PCA: {progress:.2f}%.",
                 "Principal waveform components computed."),
 
@@ -532,6 +537,33 @@ class SpikeDetekt(EventEmitter):
     # Main loop
     # -------------------------------------------------------------------------
 
+    def _iter_spikes(self, n_samples, step_spikes=1, thresholds=None):
+        """Iterate over extracted spikes (possibly subset).
+
+        Yield a split dictionary `{group: {'waveforms': ..., ...}}`.
+
+        """
+        for chunk in self.iter_chunks(n_samples):
+
+            # Extract a few components.
+            components = self._load('components', chunk.key,
+                                    multiple_arrays=True)
+            if components is None:
+                continue
+
+            k = np.clip(step_spikes, 1, len(components))
+            components = components[::k]
+
+            # Get the filtered chunk.
+            chunk_f = self._load('filtered', key=chunk.key)
+
+            # Extract the spikes from the chunk.
+            split = self.extract_spikes(components, chunk_f,
+                                        keep_bounds=chunk.keep_bounds,
+                                        thresholds=thresholds)
+
+            yield chunk, split
+
     def step_detect(self, pr=None, traces=None, thresholds=None):
         n_samples, n_channels = traces.shape
         n_chunks = self.n_chunks(n_samples)
@@ -568,14 +600,22 @@ class SpikeDetekt(EventEmitter):
 
     def step_excerpt(self, pr=None, n_samples=None,
                      n_spikes_total=None, thresholds=None):
+        pr.start_step('excerpt', self.n_chunks(n_samples))
+
         k = int(n_spikes_total / float(self._kwargs['pca_n_waveforms_max']))
         w_subset = defaultdict(list)
         m_subset = defaultdict(list)
+        n_spikes_total = 0
         for chunk, split in self._iter_spikes(n_samples, step_spikes=k,
                                               thresholds=thresholds):
             for group, out in split.items():
                 w_subset[group].append(out['waveforms'])
                 m_subset[group].append(out['masks'])
+                n_spikes_chunk = len(out['waveforms'])
+                assert len(out['masks']) == n_spikes_chunk
+                n_spikes_total += n_spikes_chunk
+            pr.increment(n_spikes=n_spikes_chunk,
+                         n_spikes_total=n_spikes_total)
         for group in self._groups:
             w_subset[group] = np.concatenate(w_subset[group])
             m_subset[group] = np.concatenate(m_subset[group])
@@ -611,33 +651,6 @@ class SpikeDetekt(EventEmitter):
                     self._save(out[name], name, key=chunk.key, group=group)
             pr.increment(n_spikes_total=n_spikes_total)
         return chunk_counts
-
-    def _iter_spikes(self, n_samples, step_spikes=1, thresholds=None):
-        """Iterate over extracted spikes (possibly subset).
-
-        Yield a split dictionary `{group: {'waveforms': ..., ...}}`.
-
-        """
-        for chunk in self.iter_chunks(n_samples):
-
-            # Extract a few components.
-            components = self._load('components', chunk.key,
-                                    multiple_arrays=True)
-            if components is None:
-                continue
-
-            k = np.clip(step_spikes, 1, len(components))
-            components = components[::k]
-
-            # Get the filtered chunk.
-            chunk_f = self._load('filtered', key=chunk.key)
-
-            # Extract the spikes from the chunk.
-            split = self.extract_spikes(components, chunk_f,
-                                        keep_bounds=chunk.keep_bounds,
-                                        thresholds=thresholds)
-
-            yield chunk, split
 
     def run_serial(self, traces, interval_samples=None):
         """Run SpikeDetekt using one CPU."""
