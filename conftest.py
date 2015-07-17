@@ -41,6 +41,7 @@ def raw_dataset(request):
     if data_type == 'real':
         path = _download_test_data('test-32ch-10s.dat')
         traces = np.fromfile(path, dtype=np.int16).reshape((200000, 32))
+        traces = traces[:45000]
         n_samples, n_channels = traces.shape
         params['use_single_threshold'] = False
         probe = load_probe('1x32_buzsaki')

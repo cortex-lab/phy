@@ -444,23 +444,20 @@ class SpikeDetekt(EventEmitter):
         else:
             dtype = array.dtype
             assert dtype != np.object
+            debug("Save {} ({}).".format(path, array.shape))
             np.save(path, array)
 
     def _load(self, name, key=None, group=None, multiple_arrays=False):
         path = self._path(name, key=key, group=group)
         if not op.exists(path):
-            # nc = self._n_channels_per_group.get(group, 0)
-            # npc = self._n_features
-            # if name == 'features':
-            #     return np.zeros((0, nc, npc), np.float32)
-            # elif name == 'masks':
-            #     return np.zeros((0, nc), np.float32)
-            # return np.array([])
             return
         if multiple_arrays:
-            return _load_arrays(path)
+            out = _load_arrays(path)
         else:
-            return np.load(path)
+            out = np.load(path)
+        debug("Load {} ({}).".format(path, out.shape
+              if isinstance(out, np.ndarray) else len(out)))
+        return out
 
     def _delete(self, name, key=None, group=None, multiple_arrays=False):
         path = self._path(name, key=key, group=group)
@@ -497,42 +494,37 @@ class SpikeDetekt(EventEmitter):
     # Output data
     # -------------------------------------------------------------------------
 
-    def output_data(self,
-                    n_samples,
-                    n_channels,
-                    groups=None,
-                    spike_counts=None,
-                    ):
+    def _iter_split(self, name, group=None, n_samples=None):
+        for chunk in self.iter_chunks(n_samples):
+            key = chunk.key
+            arr = self._load(name, key=key, group=group)
+            if name == 'spike_samples' and arr is not None:
+                arr = arr + chunk.s_start
+            yield arr
+
+    def output_data(self, n_samples, n_channels, spike_counts=None):
         """Bunch of values to be returned by the algorithm."""
-        n_samples_per_chunk = {chunk.key: (chunk.s_end - chunk.s_start)
-                               for chunk in self.iter_chunks(n_samples)}
-        keys = sorted(n_samples_per_chunk.keys())
-
-        def _add_offset(chunk, group):
-            samples = self._load('spike_samples', key=chunk.key, group=group)
-            if samples is None:
-                return np.array([])
-            return samples + chunk.s_start
-
-        spike_samples = {group: (_add_offset(chunk, group)
-                                 for chunk in self.iter_chunks(n_samples))
-                         for group in groups}
 
         def _load(name):
-            return {group: (self._load(name, key=chunk.key, group=group)
-                            for chunk in self.iter_chunks(n_samples))
-                    for group in groups}
+            out = {}
+            for group in self._groups:
+                out[group] = self._iter_split(name, group=group,
+                                              n_samples=n_samples)
+            return out
+
+        # All chunk keys.
+        keys = sorted(chunk.key for chunk in self.iter_chunks(n_samples))
 
         output = Bunch(n_chunks=len(keys),
-                       groups=groups,
+                       groups=self._groups,
                        chunk_keys=keys,
-                       spike_samples=spike_samples,
+                       spike_samples=_load('spike_samples'),
                        masks=_load('masks'),
                        features=_load('features'),
                        spike_counts=spike_counts,
                        n_spikes_total=spike_counts(),
                        n_spikes_per_group={group: spike_counts(group=group)
-                                           for group in groups},
+                                           for group in self._groups},
                        n_spikes_per_chunk={chunk: spike_counts(chunk=chunk)
                                            for chunk in keys},
                        )
@@ -553,13 +545,11 @@ class SpikeDetekt(EventEmitter):
             components = self._load('components', chunk.key,
                                     multiple_arrays=True)
             if components is None or not len(components):
+                yield chunk, {}
                 continue
 
             k = np.clip(step_spikes, 1, len(components))
             components = components[::k]
-            # if not len(components):
-            #     yield chunk, {}
-            #     continue
 
             # Get the filtered chunk.
             chunk_f = self._load('filtered', key=chunk.key)
@@ -696,5 +686,4 @@ class SpikeDetekt(EventEmitter):
                                           pcs=pcs, thresholds=thresholds)
 
         spike_counts = SpikeCounts(chunk_counts)
-        return self.output_data(n_samples, n_channels,
-                                self._groups, spike_counts)
+        return self.output_data(n_samples, n_channels, spike_counts)

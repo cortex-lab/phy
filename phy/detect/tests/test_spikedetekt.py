@@ -11,9 +11,7 @@ from numpy.testing import assert_equal as ae
 from pytest import mark
 
 from ...utils.logging import set_level
-from ...utils.settings import _load_default_settings
 from ...utils.testing import show_test
-from ...electrode.mea import load_probe
 from ..spikedetekt import (SpikeDetekt, _split_spikes,
                            _concat, _concatenate, SpikeCounts)
 
@@ -21,6 +19,10 @@ from ..spikedetekt import (SpikeDetekt, _split_spikes,
 #------------------------------------------------------------------------------
 # Tests spike detection
 #------------------------------------------------------------------------------
+
+# def setup():
+#     set_level('debug')
+
 
 def test_spike_counts():
     c = {0: {10: 100, 20: 200},
