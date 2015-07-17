@@ -230,7 +230,7 @@ def test_spike_detect_real_data(tempdir, spikedetekt):
     n_spikes = out.n_spikes_total
 
     def _concat(arrs):
-        return np.concatenate(arrs)
+        return np.concatenate(list(arrs))
 
     spike_samples = _concat(out.spike_samples[0])
     masks = _concat(out.masks[0])

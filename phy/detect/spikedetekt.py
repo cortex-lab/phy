@@ -503,23 +503,21 @@ class SpikeDetekt(EventEmitter):
                                for chunk in self.iter_chunks(n_samples)}
         keys = sorted(n_samples_per_chunk.keys())
 
+        spike_samples = {group: (self._load('spike_samples',
+                                            key=chunk.key,
+                                            group=group) + chunk.s_start
+                                 for chunk in self.iter_chunks(n_samples))
+                         for group in groups}
+
         def _load(name):
-            out = {}
-            for group in groups:
-                out[group] = []
-                for chunk in self.iter_chunks(n_samples):
-                    w = self._load(name, key=chunk.key, group=group)
-                    # Add the chunk offset to the spike samples, which were
-                    # relative to the start of the chunk.
-                    if name == 'spike_samples':
-                        w += chunk.s_start
-                    out[group].append(w)
-            return out
+            return {group: (self._load(name, key=chunk.key, group=group)
+                            for chunk in self.iter_chunks(n_samples))
+                    for group in groups}
 
         output = Bunch(n_chunks=len(keys),
                        groups=groups,
                        chunk_keys=keys,
-                       spike_samples=_load('spike_samples'),
+                       spike_samples=spike_samples,
                        masks=_load('masks'),
                        features=_load('features'),
                        spike_counts=spike_counts,
