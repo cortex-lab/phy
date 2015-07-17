@@ -13,6 +13,7 @@ import shutil
 
 import numpy as np
 
+from ..utils.array import _concatenate
 from ..utils.logging import debug, info, FileLogger, unregister, register
 from ..utils.settings import _ensure_dir_exists
 from ..io.base import BaseSession
@@ -319,7 +320,7 @@ class Session(BaseSession):
 
         # Add the spikes in the `.kwik` and `.kwx` files.
         for group in out.groups:
-            spike_samples = out.spike_samples[group]
+            spike_samples = _concatenate(out.spike_samples[group])
             self.model.creator.add_spikes(group=group,
                                           spike_samples=spike_samples,
                                           spike_recordings=None,  # TODO
