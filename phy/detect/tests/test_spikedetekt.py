@@ -34,10 +34,9 @@ def teardown():
 
 sample_rate = 10000
 n_samples = 35000
-n_channels = 4
 
 
-def _traces(type):
+def _traces(type, n_channels):
     if type == 'artificial':
         traces = artificial_traces(n_samples, n_channels)
     elif type == 'null':

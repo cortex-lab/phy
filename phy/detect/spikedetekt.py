@@ -404,7 +404,7 @@ class SpikeDetekt(EventEmitter):
         """
         pca = self._create_pca()
         if not waveforms.shape[0]:
-            return
+            return waveforms
         assert (waveforms.shape[0], waveforms.shape[2]) == masks.shape
         return pca.fit(waveforms, masks)
 
@@ -449,7 +449,13 @@ class SpikeDetekt(EventEmitter):
     def _load(self, name, key=None, group=None, multiple_arrays=False):
         path = self._path(name, key=key, group=group)
         if not op.exists(path):
-            return
+            nc = self._n_channels_per_group.get(group, 0)
+            npc = self._n_features
+            if name == 'features':
+                return np.zeros((0, nc, npc), np.float32)
+            elif name == 'masks':
+                return np.zeros((0, nc), np.float32)
+            return np.array([])
         if multiple_arrays:
             return _load_arrays(path)
         else:
@@ -504,7 +510,7 @@ class SpikeDetekt(EventEmitter):
         def _add_offset(chunk, group):
             samples = self._load('spike_samples', key=chunk.key, group=group)
             if samples is None:
-                return samples
+                return np.array([])
             return samples + chunk.s_start
 
         spike_samples = {group: (_add_offset(chunk, group)
@@ -545,14 +551,14 @@ class SpikeDetekt(EventEmitter):
             # Extract a few components.
             components = self._load('components', chunk.key,
                                     multiple_arrays=True)
-            if components is None:
+            if components is None or not len(components):
                 continue
 
             k = np.clip(step_spikes, 1, len(components))
             components = components[::k]
-            if not len(components):
-                yield chunk, {}
-                continue
+            # if not len(components):
+            #     yield chunk, {}
+            #     continue
 
             # Get the filtered chunk.
             chunk_f = self._load('filtered', key=chunk.key)
