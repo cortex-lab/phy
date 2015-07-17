@@ -565,6 +565,11 @@ class SpikeDetekt(EventEmitter):
         return n_spikes_total
 
     def _iter_spikes(self, n_samples, step_spikes=1, thresholds=None):
+        """Iterate over extracted spikes (possibly subset).
+
+        Yield a split dictionary `{group: {'waveforms': ..., ...}}`.
+
+        """
         for chunk in self.iter_chunks(n_samples):
 
             # Extract a few components.
@@ -657,7 +662,8 @@ class SpikeDetekt(EventEmitter):
                 waveforms = out['waveforms']
                 masks = out['masks']
                 spike_samples = out['spike_samples']
-                n_spikes_total += len(spike_samples)
+                n_spikes_chunk = len(spike_samples)
+                n_spikes_total += n_spikes_chunk
 
                 features = self.features(waveforms, pcs[group])
                 assert features.dtype == np.float32
