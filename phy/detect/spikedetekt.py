@@ -399,7 +399,9 @@ class SpikeDetekt(EventEmitter):
 
         """
         pca = self._create_pca()
-        return pca.transform(waveforms, pcs=pcs)
+        out = pca.transform(waveforms, pcs=pcs)
+        assert out.dtype == np.float32
+        return out
 
     # Internal functions
     # -------------------------------------------------------------------------
@@ -651,35 +653,22 @@ class SpikeDetekt(EventEmitter):
         #######################################################################
         # Compute all features.
         pr.start_step('extract', n_chunks)
-
-        # This is a dict {group: {key: n_spikes}}.
-        chunk_counts = defaultdict(dict)
+        chunk_counts = defaultdict(dict)  # {group: {key: n_spikes}}.
         n_spikes_total = 0
         for chunk, split in self._iter_spikes(n_samples,
                                               thresholds=thresholds):
             # split: {group: {'spike_samples': ..., 'waveforms':, 'masks':}}
             for group, out in split.items():
-                waveforms = out['waveforms']
-                masks = out['masks']
-                spike_samples = out['spike_samples']
-                n_spikes_chunk = len(spike_samples)
+                out['features'] = self.features(out['waveforms'], pcs[group])
+                n_spikes_chunk = len(out['spike_samples'])
                 n_spikes_total += n_spikes_chunk
+                chunk_counts[group][chunk.key] = n_spikes_chunk
 
-                features = self.features(waveforms, pcs[group])
-                assert features.dtype == np.float32
+                # Save the arrays.
+                for name in ('spike_samples', 'features', 'masks'):
+                    assert out[name].shape[0] == n_spikes_chunk
+                    self._save(out[name], name, key=chunk.key, group=group)
 
-                assert (waveforms.shape[0] ==
-                        features.shape[0] ==
-                        masks.shape[0] ==
-                        spike_samples.shape[0])
-
-                # Save.
-                self._save(features, 'features', key=chunk.key, group=group)
-                self._save(masks, 'masks', key=chunk.key, group=group)
-                self._save(spike_samples, 'spike_samples',
-                           key=chunk.key, group=group)
-
-                chunk_counts[group][chunk.key] = len(spike_samples)
             pr.increment(n_spikes_total=n_spikes_total)
 
         spike_counts = SpikeCounts(chunk_counts)
