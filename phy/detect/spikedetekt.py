@@ -338,7 +338,9 @@ class SpikeDetekt(EventEmitter):
 
         """
         n_spikes = len(components)
-        assert n_spikes > 0
+        if n_spikes == 0:
+            return {}
+
         # Transform the filtered data according to the detection mode.
         thresholder = self._create_thresholder()
         traces_t = thresholder.transform(traces_f)
@@ -540,6 +542,9 @@ class SpikeDetekt(EventEmitter):
 
             k = np.clip(step_spikes, 1, len(components))
             components = components[::k]
+            if not len(components):
+                yield chunk, {}
+                continue
 
             # Get the filtered chunk.
             chunk_f = self._load('filtered', key=chunk.key)
@@ -595,12 +600,14 @@ class SpikeDetekt(EventEmitter):
         n_spikes_total = 0
         for chunk, split in self._iter_spikes(n_samples, step_spikes=k,
                                               thresholds=thresholds):
+            n_spikes_chunk = 0
             for group, out in split.items():
                 w_subset[group].append(out['waveforms'])
                 m_subset[group].append(out['masks'])
-                n_spikes_chunk = len(out['waveforms'])
-                assert len(out['masks']) == n_spikes_chunk
-                n_spikes_total += n_spikes_chunk
+                assert len(out['masks']) == len(out['waveforms'])
+                n_spikes_chunk += len(out['masks'])
+
+            n_spikes_total += n_spikes_chunk
             pr.increment(n_spikes=n_spikes_chunk,
                          n_spikes_total=n_spikes_total)
         for group in self._groups:

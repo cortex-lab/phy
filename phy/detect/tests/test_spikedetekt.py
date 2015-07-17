@@ -150,6 +150,8 @@ def test_spike_detect_methods(spikedetekt_one_group):
     split = sd.extract_spikes(components, traces_f, thresholds,
                               keep_bounds=(0, n_samples))
 
+    if not split:
+        return
     samples = _concat(split[0]['spike_samples'], np.float64)
     waveforms = _concat(split[0]['waveforms'], np.float32)
     masks = _concat(split[0]['masks'], np.float32)
