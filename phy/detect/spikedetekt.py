@@ -51,6 +51,7 @@ def _keep_spikes(samples, bounds):
 
 def _split_spikes(groups, idx=None, **arrs):
     """Split spike data according to the channel group."""
+    # split: {group: {'spike_samples': ..., 'waveforms':, 'masks':}}
     dtypes = {'spike_samples': np.float64,
               'waveforms': np.float32,
               'masks': np.float32,
@@ -384,6 +385,7 @@ class SpikeDetekt(EventEmitter):
 
         """
         pca = self._create_pca()
+        assert (waveforms.shape[0], waveforms.shape[2]) == masks.shape
         return pca.fit(waveforms, masks)
 
     def features(self, waveforms, pcs):
@@ -562,6 +564,28 @@ class SpikeDetekt(EventEmitter):
 
         return n_spikes_total
 
+    def _iter_spikes(self, n_samples, step_spikes=1, thresholds=None):
+        for chunk in self.iter_chunks(n_samples):
+
+            # Extract a few components.
+            components = self._load('components', chunk.key,
+                                    multiple_arrays=True)
+            if components is None:
+                continue
+
+            k = np.clip(step_spikes, 1, len(components))
+            components = components[::k]
+
+            # Get the filtered chunk.
+            chunk_f = self._load('filtered', key=chunk.key)
+
+            # Extract the spikes from the chunk.
+            split = self.extract_spikes(components, chunk_f,
+                                        keep_bounds=chunk.keep_bounds,
+                                        thresholds=thresholds)
+
+            yield chunk, split
+
     def run_serial(self, traces, interval_samples=None):
         """Run SpikeDetekt using one CPU."""
         n_samples, n_channels = traces.shape
@@ -598,74 +622,44 @@ class SpikeDetekt(EventEmitter):
 
         #######################################################################
         # Excerpt waveforms.
-        waveforms_subset = {group: [] for group in self._groups}
-        masks_subset = {group: [] for group in self._groups}
-        for chunk in self.iter_chunks(n_samples):
-
-            # Extract a few components.
-            components = self._load('components', chunk.key,
-                                    multiple_arrays=True)
-            if components is None:
-                continue
-
-            k = np.clip(k, 1, len(components))
-            components = components[::k]
-
-            # Get the filtered chunk.
-            chunk_f = self._load('filtered', key=chunk.key)
-
-            # Extract the spikes from the chunk.
-            split = self.extract_spikes(components, chunk_f,
-                                        keep_bounds=chunk.keep_bounds,
-                                        thresholds=thresholds)
-
-            # split: {group: {'spike_samples': ..., 'waveforms':, 'masks':}}
+        waveforms_subset = defaultdict(list)
+        masks_subset = defaultdict(list)
+        for chunk, split in self._iter_spikes(n_samples, step_spikes=k,
+                                              thresholds=thresholds):
             for group, out in split.items():
                 waveforms_subset[group].append(out['waveforms'])
                 masks_subset[group].append(out['masks'])
+        for group in self._groups:
+            waveforms_subset[group] = np.concatenate(waveforms_subset[group])
+            masks_subset[group] = np.concatenate(masks_subset[group])
 
         #######################################################################
         # Compute the PCs.
-        pr.start_step('pca', len(self._groups) + 1)
+        pr.start_step('pca', len(self._groups))
         pcs = {}
         for group in self._groups:
-            # Concatenate all waveforms subsets from all chunks.
-            w = np.vstack(waveforms_subset[group])
-            m = np.vstack(masks_subset[group])
-            assert (w.shape[0], w.shape[2]) == m.shape
             # Perform PCA and return the components.
-            pcs[group] = self.waveform_pcs(w, m)
+            pcs[group] = self.waveform_pcs(waveforms_subset[group],
+                                           masks_subset[group])
             pr.increment()
-        pr.set_complete()
 
         #######################################################################
         # Compute all features.
-        pr.start_step('extract', n_chunks + 1)
+        pr.start_step('extract', n_chunks)
 
         # This is a dict {group: {key: n_spikes}}.
         chunk_counts = defaultdict(dict)
-
-        for chunk in self.iter_chunks(n_samples):
-            components = self._load('components', chunk.key,
-                                    multiple_arrays=True)
-
-            # Get the filtered chunk.
-            chunk_f = self._load('filtered', key=chunk.key)
-
-            # Extract the spikes from the chunk.
-            split = self.extract_spikes(components, chunk_f,
-                                        keep_bounds=chunk.keep_bounds,
-                                        thresholds=thresholds)
-            pr.increment()
-
+        n_spikes_total = 0
+        for chunk, split in self._iter_spikes(n_samples,
+                                              thresholds=thresholds):
             # split: {group: {'spike_samples': ..., 'waveforms':, 'masks':}}
             for group, out in split.items():
                 waveforms = out['waveforms']
                 masks = out['masks']
                 spike_samples = out['spike_samples']
+                n_spikes_total += len(spike_samples)
 
                 features = self.features(waveforms, pcs[group])
-                # if features is not None:
                 assert features.dtype == np.float32
 
                 assert (waveforms.shape[0] ==
@@ -680,10 +674,8 @@ class SpikeDetekt(EventEmitter):
                            key=chunk.key, group=group)
 
                 chunk_counts[group][chunk.key] = len(spike_samples)
+            pr.increment(n_spikes_total=n_spikes_total)
 
         spike_counts = SpikeCounts(chunk_counts)
-        pr.set_complete(n_spikes_total=spike_counts())
-
-        # Return dictionary of memmapped data.
         return self.output_data(n_samples, n_channels,
                                 self._groups, spike_counts)
