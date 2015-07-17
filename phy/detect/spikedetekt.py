@@ -533,7 +533,7 @@ class SpikeDetekt(EventEmitter):
         n_chunks = self.n_chunks(n_samples)
 
         # Pass 1: find the connected components and count the spikes.
-        pr.start_step('detect', n_chunks + 1)
+        pr.start_step('detect', n_chunks)
 
         # Dictionary {chunk_key: components}.
         # Every chunk has a unique key: the `keep_start` integer.
@@ -556,10 +556,10 @@ class SpikeDetekt(EventEmitter):
 
             # Report progress.
             n_spikes_chunk = len(components)
-            pr.increment(n_spikes=n_spikes_chunk)
             n_spikes_total += n_spikes_chunk
+            pr.increment(n_spikes=n_spikes_chunk,
+                         n_spikes_total=n_spikes_total)
 
-        pr.set_complete(n_spikes_total=n_spikes_total)
         return n_spikes_total
 
     def run_serial(self, traces, interval_samples=None):
