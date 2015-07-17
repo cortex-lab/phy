@@ -403,8 +403,8 @@ class SpikeDetekt(EventEmitter):
 
         """
         pca = self._create_pca()
-        if not waveforms.shape[0]:
-            return waveforms
+        if waveforms is None or not len(waveforms):
+            return
         assert (waveforms.shape[0], waveforms.shape[2]) == masks.shape
         return pca.fit(waveforms, masks)
 
@@ -449,13 +449,14 @@ class SpikeDetekt(EventEmitter):
     def _load(self, name, key=None, group=None, multiple_arrays=False):
         path = self._path(name, key=key, group=group)
         if not op.exists(path):
-            nc = self._n_channels_per_group.get(group, 0)
-            npc = self._n_features
-            if name == 'features':
-                return np.zeros((0, nc, npc), np.float32)
-            elif name == 'masks':
-                return np.zeros((0, nc), np.float32)
-            return np.array([])
+            # nc = self._n_channels_per_group.get(group, 0)
+            # npc = self._n_features
+            # if name == 'features':
+            #     return np.zeros((0, nc, npc), np.float32)
+            # elif name == 'masks':
+            #     return np.zeros((0, nc), np.float32)
+            # return np.array([])
+            return
         if multiple_arrays:
             return _load_arrays(path)
         else:
@@ -625,13 +626,8 @@ class SpikeDetekt(EventEmitter):
             pr.increment(n_spikes=n_spikes_chunk,
                          n_spikes_total=n_spikes_total)
         for group in self._groups:
-            n_channels = self._n_channels_per_group[group]
-
-            shape_w = (self._n_samples_waveforms, n_channels)
-            w_subset[group] = _concatenate(w_subset[group], shape_w)
-
-            shape_m = (n_channels,)
-            m_subset[group] = _concatenate(m_subset[group], shape_m)
+            w_subset[group] = _concatenate(w_subset[group])
+            m_subset[group] = _concatenate(m_subset[group])
 
         return w_subset, m_subset
 

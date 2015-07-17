@@ -146,20 +146,20 @@ def test_spike_detect_real_data(tempdir, raw_dataset):
     # Run the detection.
     out = sd.run_serial(traces, interval_samples=(0, n_samples))
 
-    n_spikes = out.n_spikes_total
     channels = probe['channel_groups'][0]['channels']
     n_channels = len(channels)
 
     spike_samples = _concatenate(out.spike_samples[0])
-    masks = _concatenate(out.masks[0], (n_channels,))
-    features = _concatenate(out.features[0], (n_channels, npc))
+    masks = _concatenate(out.masks[0])
+    features = _concatenate(out.features[0])
+    n_spikes = out.n_spikes_per_group[0]
 
-    assert spike_samples.shape == (n_spikes,)
-    assert masks.shape == (n_spikes, n_channels)
-    assert features.shape == (n_spikes, n_channels, npc)
-
-    # There should not be any spike with only masked channels.
     if n_spikes:
+        assert spike_samples.shape == (n_spikes,)
+        assert masks.shape == (n_spikes, n_channels)
+        assert features.shape == (n_spikes, n_channels, npc)
+
+        # There should not be any spike with only masked channels.
         assert np.all(masks.max(axis=1) > 0)
 
     # Plot...
