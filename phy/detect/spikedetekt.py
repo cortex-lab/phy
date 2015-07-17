@@ -87,6 +87,23 @@ def _concat(arr, dtype=None):
     return out
 
 
+def _cut_traces(traces, interval_samples):
+    n_samples, n_channels = traces.shape
+    # Take a subset if necessary.
+    if interval_samples is not None:
+        start, end = interval_samples
+        traces = traces[start:end, ...]
+        n_samples = traces.shape[0]
+    else:
+        start, end = 0, n_samples
+    assert 0 <= start < end <= n_samples
+    if start > 0:
+        # TODO: add offset to the spike samples...
+        raise NotImplementedError("Need to add `start` to the "
+                                  "spike samples")
+    return traces, start
+
+
 class SpikeCounts(object):
     """Count spikes in chunks and channel groups."""
     def __init__(self, counts):
@@ -654,20 +671,8 @@ class SpikeDetekt(EventEmitter):
 
     def run_serial(self, traces, interval_samples=None):
         """Run SpikeDetekt using one CPU."""
+        traces, offset = _cut_traces(traces, interval_samples)
         n_samples, n_channels = traces.shape
-
-        # Take a subset if necessary.
-        if interval_samples is not None:
-            start, end = interval_samples
-            traces = traces[start:end, ...]
-            n_samples = traces.shape[0]
-        else:
-            start, end = 0, n_samples
-        assert 0 <= start < end <= n_samples
-        if start > 0:
-            raise NotImplementedError("Need to add `start` to the "
-                                      "spike samples")
-        # TODO: add start to the spike samples...
 
         # Find the weak and strong thresholds.
         thresholds = self.find_thresholds(traces)
