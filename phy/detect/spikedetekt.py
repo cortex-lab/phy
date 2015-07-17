@@ -18,6 +18,7 @@ from ..utils.array import (get_excerpts,
                            _as_array,
                            _save_arrays,
                            _load_arrays,
+                           _concatenate,
                            )
 from ..utils._types import Bunch
 from ..utils.event import EventEmitter, ProgressReporter
@@ -85,13 +86,6 @@ def _array_list(arrs):
 def _concat(arr, dtype=None):
     out = np.array([_[...] for _ in arr], dtype=dtype)
     return out
-
-
-def _concatenate(arrs, shape):
-    arrs = [arr for arr in arrs if arr is not None]
-    if not arrs:
-        return np.zeros((0,) + shape)
-    return np.concatenate(arrs, axis=0)
 
 
 def _cut_traces(traces, interval_samples):

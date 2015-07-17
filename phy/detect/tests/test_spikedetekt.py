@@ -17,7 +17,7 @@ from ...utils.testing import show_test
 from ...electrode.mea import load_probe
 from ...io.mock import artificial_traces
 from ..spikedetekt import (SpikeDetekt, _split_spikes,
-                           _concat, SpikeCounts)
+                           _concat, _concatenate, SpikeCounts)
 
 
 #------------------------------------------------------------------------------
@@ -211,15 +211,9 @@ def test_spike_detect_real_data(tempdir, type):
 
     n_spikes = out.n_spikes_total
 
-    def _concat(arrs, shape=()):
-        arrs = [arr for arr in arrs if arr is not None]
-        if not arrs:
-            return np.zeros((0,) + shape)
-        return np.concatenate(arrs)
-
-    spike_samples = _concat(out.spike_samples[0])
-    masks = _concat(out.masks[0], (n_channels,))
-    features = _concat(out.features[0], (n_channels, npc))
+    spike_samples = _concatenate(out.spike_samples[0])
+    masks = _concatenate(out.masks[0], (n_channels,))
+    features = _concatenate(out.features[0], (n_channels, npc))
 
     assert spike_samples.shape == (n_spikes,)
     assert masks.shape == (n_spikes, n_channels)
