@@ -20,8 +20,8 @@ from ..spikedetekt import (SpikeDetekt, _split_spikes,
 # Tests spike detection
 #------------------------------------------------------------------------------
 
-# def setup():
-#     set_level('debug')
+def setup():
+    set_level('info')
 
 
 def test_spike_counts():
