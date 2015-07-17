@@ -174,30 +174,6 @@ def test_spike_detect_methods(spikedetekt_one_group):
     assert not np.any(np.isnan(features))
 
 
-def test_spike_detect_serial(spikedetekt):
-    sd, traces, params = spikedetekt
-    out = sd.run_serial(traces)
-
-    n_features = params['n_features_per_channel']
-
-    assert out.n_spikes_total >= 0
-    assert sum(out.n_spikes_per_group.values()) == out.n_spikes_total
-    assert len(out.chunk_keys) == 3
-
-    for group in [0, 1]:
-        # Number of channels in the group.
-        n_channels_g = (3, 1)[group]
-        n_spikes_g = out.n_spikes_per_group[group]
-
-        features = np.vstack(out.features[group])
-        assert features.dtype == np.float32
-        assert features.shape == (n_spikes_g, n_channels_g, n_features)
-
-        masks = np.vstack(out.masks[group])
-        assert masks.dtype == np.float32
-        assert masks.shape == (n_spikes_g, n_channels_g)
-
-
 @mark.long
 def test_spike_detect_real_data(tempdir, spikedetekt):
     # Set the parameters.
