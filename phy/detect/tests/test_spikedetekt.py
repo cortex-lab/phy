@@ -8,82 +8,14 @@
 
 import numpy as np
 from numpy.testing import assert_equal as ae
-from pytest import fixture, mark
+from pytest import mark
 
-from ...utils.datasets import _download_test_data
 from ...utils.logging import set_level
 from ...utils.settings import _load_default_settings
 from ...utils.testing import show_test
 from ...electrode.mea import load_probe
-from ...io.mock import artificial_traces
 from ..spikedetekt import (SpikeDetekt, _split_spikes,
                            _concat, _concatenate, SpikeCounts)
-
-
-#------------------------------------------------------------------------------
-# Fixtures
-#------------------------------------------------------------------------------
-
-def setup():
-    set_level('info')
-
-
-def teardown():
-    set_level('info')
-
-
-sample_rate = 10000
-n_samples = 35000
-
-
-def _traces(type, n_channels):
-    if type == 'artificial':
-        traces = artificial_traces(n_samples, n_channels)
-    elif type == 'null':
-        traces = np.zeros((n_samples, n_channels))
-    elif type == 'real':
-        path = _download_test_data('test-32ch-10s.dat')
-        traces = np.fromfile(path, dtype=np.int16).reshape((200000, 32))
-    return traces
-
-
-def _spikedetekt(tempdir, n_groups=2, type=None):
-    traces = _traces(type)
-    traces[5000:5010, 1] *= 5
-    traces[15000:15010, 3] *= 5
-
-    # Load default settings.
-    settings = _load_default_settings()
-    params = settings['spikedetekt']
-    params['sample_rate'] = sample_rate
-    params['use_single_threshold'] = False
-
-    if n_groups == 1:
-        params['probe_adjacency_list'] = {0: [1, 2],
-                                          1: [0, 2],
-                                          2: [0, 1],
-                                          3: []}
-        params['probe_channels'] = {0: [0, 1, 2, 3]}
-    elif n_groups == 2:
-        params['probe_adjacency_list'] = {0: [1, 2],
-                                          1: [0, 2],
-                                          2: [0, 1],
-                                          3: []}
-        params['probe_channels'] = {0: [0, 1, 2], 1: [3]}
-
-    sd = SpikeDetekt(tempdir=tempdir, **params)
-
-    return sd, traces, params
-
-
-@fixture(params=['artificial', 'null'])
-def spikedetekt(request, tempdir):
-    return _spikedetekt(tempdir, type=request.param)
-
-
-@fixture(params=['artificial', 'null'])
-def spikedetekt_one_group(request, tempdir):
-    return _spikedetekt(tempdir, n_groups=1, type=request.param)
 
 
 #------------------------------------------------------------------------------
@@ -130,8 +62,17 @@ def test_split_spikes():
     ae(out[1]['b'], b[1:-1][::2])
 
 
-def test_spike_detect_methods(spikedetekt_one_group):
-    sd, traces, params = spikedetekt_one_group
+def test_spike_detect_methods(tempdir, raw_dataset):
+    params = raw_dataset.params
+    probe = raw_dataset.probe
+    sample_rate = raw_dataset.sample_rate
+    sd = SpikeDetekt(tempdir=tempdir,
+                     probe=raw_dataset.probe,
+                     sample_rate=sample_rate,
+                     **params)
+    traces = raw_dataset.traces
+    n_samples = raw_dataset.n_samples
+    n_channels = raw_dataset.n_channels
 
     # Filter the data.
     traces_f = sd.apply_filter(traces)
@@ -164,6 +105,7 @@ def test_spike_detect_methods(spikedetekt_one_group):
     masks = _concat(split[0]['masks'], np.float32)
 
     n_spikes = len(samples)
+    n_channels = len(probe['channel_groups'][0]['channels'])
 
     assert samples.dtype == np.float64
     assert samples.shape == (n_spikes,)
@@ -186,29 +128,27 @@ def test_spike_detect_methods(spikedetekt_one_group):
     assert not np.any(np.isnan(features))
 
 
-@mark.parametrize('type', ['null', 'real'])
 @mark.long
-def test_spike_detect_real_data(tempdir, type):
-    # Set the parameters.
-    settings = _load_default_settings()
-    sample_rate = 20000
-    params = settings['spikedetekt']
-    params['sample_rate'] = sample_rate
+def test_spike_detect_real_data(tempdir, raw_dataset):
 
+    params = raw_dataset.params
+    probe = raw_dataset.probe
+    sample_rate = raw_dataset.sample_rate
+    sd = SpikeDetekt(tempdir=tempdir,
+                     probe=probe,
+                     sample_rate=sample_rate,
+                     **params)
+    traces = raw_dataset.traces
+    n_samples = raw_dataset.n_samples
+    n_channels = raw_dataset.n_channels
     npc = params['n_features_per_channel']
     n_samples_w = params['extract_s_before'] + params['extract_s_after']
-    probe = load_probe('1x32_buzsaki')
-
-    # Load the traces.
-    traces = _traces(type)
-    traces = traces[:45000]
-    n_samples, n_channels = traces.shape
 
     # Run the detection.
-    sd = SpikeDetekt(tempdir=tempdir, probe=probe, **params)
     out = sd.run_serial(traces, interval_samples=(0, n_samples))
 
     n_spikes = out.n_spikes_total
+    n_channels = len(probe['channel_groups'][0]['channels'])
 
     spike_samples = _concatenate(out.spike_samples[0])
     masks = _concatenate(out.masks[0], (n_channels,))
