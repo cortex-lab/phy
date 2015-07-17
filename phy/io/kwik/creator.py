@@ -223,7 +223,7 @@ class KwikCreator(object):
                 # Concatenate the features/masks chunks.
                 fm_arrs = (np.dstack((transform_f(fet), transform_m(m)))
                            for (fet, m) in zip(features, masks)
-                           if (fet, m) is not (None, None))
+                           if fet is not None and m is not None)
                 _write_by_chunk(fm, fm_arrs)
 
     def add_recording(self, id=None, raw_path=None,
