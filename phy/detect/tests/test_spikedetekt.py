@@ -37,8 +37,11 @@ n_samples = 25000
 n_channels = 4
 
 
-def _spikedetekt(tempdir, n_groups=2):
-    traces = artificial_traces(n_samples, n_channels)
+def _spikedetekt(tempdir, n_groups=2, type=None):
+    if type == 'artificial':
+        traces = artificial_traces(n_samples, n_channels)
+    elif type == 'null':
+        traces = np.zeros((n_samples, n_channels))
     traces[5000:5010, 1] *= 5
     traces[15000:15010, 3] *= 5
 
@@ -66,14 +69,14 @@ def _spikedetekt(tempdir, n_groups=2):
     return sd, traces, params
 
 
-@fixture
-def spikedetekt(tempdir):
-    return _spikedetekt(tempdir)
+@fixture(params=['artificial', 'null'])
+def spikedetekt(request, tempdir):
+    return _spikedetekt(tempdir, type=request.param)
 
 
-@fixture
-def spikedetekt_one_group(tempdir):
-    return _spikedetekt(tempdir, n_groups=1)
+@fixture(params=['artificial', 'null'])
+def spikedetekt_one_group(request, tempdir):
+    return _spikedetekt(tempdir, n_groups=1, type=request.param)
 
 
 #------------------------------------------------------------------------------
@@ -130,8 +133,8 @@ def test_spike_detect_methods(spikedetekt_one_group):
 
     # Thresholds.
     thresholds = sd.find_thresholds(traces)
-    assert np.all(0 < thresholds['weak'])
-    assert np.all(thresholds['weak'] < thresholds['strong'])
+    assert np.all(0 <= thresholds['weak'])
+    assert np.all(thresholds['weak'] <= thresholds['strong'])
 
     # Spike detection.
     traces_f[1000:1010, :3] *= 5
