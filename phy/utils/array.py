@@ -247,6 +247,13 @@ def _in_polygon(points, polygon):
     return path.contains_points(points)
 
 
+def _concatenate(arrs, shape=()):
+    arrs = [_as_array(arr) for arr in arrs if arr is not None]
+    if not arrs:
+        return np.zeros((0,) + shape)
+    return np.concatenate(arrs, axis=0)
+
+
 # -----------------------------------------------------------------------------
 # I/O functions
 # -----------------------------------------------------------------------------
