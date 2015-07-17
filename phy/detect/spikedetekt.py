@@ -87,16 +87,24 @@ def _concat(arr, dtype=None):
     return out
 
 
+def _concatenate(arrs, shape):
+    arrs = [arr for arr in arrs if arr is not None]
+    if not arrs:
+        return np.zeros((0,) + shape)
+    return np.concatenate(arrs, axis=0)
+
+
 def _cut_traces(traces, interval_samples):
     n_samples, n_channels = traces.shape
     # Take a subset if necessary.
     if interval_samples is not None:
         start, end = interval_samples
+        assert start <= end
         traces = traces[start:end, ...]
         n_samples = traces.shape[0]
     else:
         start, end = 0, n_samples
-    assert 0 <= start < end <= n_samples
+    assert 0 <= start < n_samples
     if start > 0:
         # TODO: add offset to the spike samples...
         raise NotImplementedError("Need to add `start` to the "
@@ -401,6 +409,8 @@ class SpikeDetekt(EventEmitter):
 
         """
         pca = self._create_pca()
+        if not waveforms.shape[0]:
+            return
         assert (waveforms.shape[0], waveforms.shape[2]) == masks.shape
         return pca.fit(waveforms, masks)
 
@@ -497,9 +507,13 @@ class SpikeDetekt(EventEmitter):
                                for chunk in self.iter_chunks(n_samples)}
         keys = sorted(n_samples_per_chunk.keys())
 
-        spike_samples = {group: (self._load('spike_samples',
-                                            key=chunk.key,
-                                            group=group) + chunk.s_start
+        def _add_offset(chunk, group):
+            samples = self._load('spike_samples', key=chunk.key, group=group)
+            if samples is None:
+                return samples
+            return samples + chunk.s_start
+
+        spike_samples = {group: (_add_offset(chunk, group)
                                  for chunk in self.iter_chunks(n_samples))
                          for group in groups}
 
@@ -611,8 +625,14 @@ class SpikeDetekt(EventEmitter):
             pr.increment(n_spikes=n_spikes_chunk,
                          n_spikes_total=n_spikes_total)
         for group in self._groups:
-            w_subset[group] = np.concatenate(w_subset[group])
-            m_subset[group] = np.concatenate(m_subset[group])
+            n_channels = self._n_channels_per_group[group]
+
+            shape_w = (self._n_samples_waveforms, n_channels)
+            w_subset[group] = _concatenate(w_subset[group], shape_w)
+
+            shape_m = (n_channels,)
+            m_subset[group] = _concatenate(m_subset[group], shape_m)
+
         return w_subset, m_subset
 
     def step_pcs(self, pr=None, w_subset=None, m_subset=None):

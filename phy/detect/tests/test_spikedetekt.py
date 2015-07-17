@@ -33,15 +33,23 @@ def teardown():
 
 
 sample_rate = 10000
-n_samples = 25000
+n_samples = 35000
 n_channels = 4
 
 
-def _spikedetekt(tempdir, n_groups=2, type=None):
+def _traces(type):
     if type == 'artificial':
         traces = artificial_traces(n_samples, n_channels)
     elif type == 'null':
         traces = np.zeros((n_samples, n_channels))
+    elif type == 'real':
+        path = _download_test_data('test-32ch-10s.dat')
+        traces = np.fromfile(path, dtype=np.int16).reshape((200000, 32))
+    return traces
+
+
+def _spikedetekt(tempdir, n_groups=2, type=None):
+    traces = _traces(type)
     traces[5000:5010, 1] *= 5
     traces[15000:15010, 3] *= 5
 
@@ -179,46 +187,51 @@ def test_spike_detect_methods(spikedetekt_one_group):
     assert not np.any(np.isnan(features))
 
 
+@mark.parametrize('type', ['null', 'real'])
 @mark.long
-def test_spike_detect_real_data(tempdir, spikedetekt):
+def test_spike_detect_real_data(tempdir, type):
     # Set the parameters.
     settings = _load_default_settings()
     sample_rate = 20000
     params = settings['spikedetekt']
     params['sample_rate'] = sample_rate
 
-    n_channels = 32
     npc = params['n_features_per_channel']
     n_samples_w = params['extract_s_before'] + params['extract_s_after']
     probe = load_probe('1x32_buzsaki')
 
     # Load the traces.
-    path = _download_test_data('test-32ch-10s.dat')
-    traces = np.fromfile(path, dtype=np.int16).reshape((200000, 32))
+    traces = _traces(type)
+    traces = traces[:45000]
+    n_samples, n_channels = traces.shape
 
     # Run the detection.
     sd = SpikeDetekt(tempdir=tempdir, probe=probe, **params)
-    out = sd.run_serial(traces, interval_samples=(0, 50000))
+    out = sd.run_serial(traces, interval_samples=(0, n_samples))
 
     n_spikes = out.n_spikes_total
 
-    def _concat(arrs):
-        return np.concatenate(list(arrs))
+    def _concat(arrs, shape=()):
+        arrs = [arr for arr in arrs if arr is not None]
+        if not arrs:
+            return np.zeros((0,) + shape)
+        return np.concatenate(arrs)
 
     spike_samples = _concat(out.spike_samples[0])
-    masks = _concat(out.masks[0])
-    features = _concat(out.features[0])
+    masks = _concat(out.masks[0], (n_channels,))
+    features = _concat(out.features[0], (n_channels, npc))
 
     assert spike_samples.shape == (n_spikes,)
     assert masks.shape == (n_spikes, n_channels)
     assert features.shape == (n_spikes, n_channels, npc)
 
     # There should not be any spike with only masked channels.
-    assert np.all(masks.max(axis=1) > 0)
+    if n_spikes:
+        assert np.all(masks.max(axis=1) > 0)
 
     # Plot...
     from phy.plot.traces import plot_traces
-    c = plot_traces(traces[:30000, :],
+    c = plot_traces(traces[:30000],
                     spike_samples=spike_samples,
                     masks=masks,
                     n_samples_per_spike=n_samples_w,
