@@ -143,6 +143,15 @@ def test_creator_chunks(tempdir):
         ac(fm[:, ::n_features, 1], masks)
 
 
+def test_creator_add_no_spikes(tempdir):
+    basename = op.join(tempdir, 'my_file')
+
+    creator = KwikCreator(basename)
+    creator.create_empty()
+
+    creator.add_spikes(group=0, n_channels=4, n_features=2)
+
+
 def test_creator_metadata(tempdir):
     basename = op.join(tempdir, 'my_file')
 

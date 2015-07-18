@@ -167,6 +167,8 @@ class KwikCreator(object):
         assert n_channels >= 0
         assert n_features >= 0
 
+        if spike_samples is None:
+            return
         if isinstance(spike_samples, list):
             spike_samples = _concat(spike_samples)
         spike_samples = _as_array(spike_samples, dtype=np.float64).ravel()
