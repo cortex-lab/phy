@@ -12,8 +12,7 @@ from pytest import mark
 
 from ...utils.logging import set_level
 from ...utils.testing import show_test
-from ..spikedetekt import (SpikeDetekt, _split_spikes,
-                           _concat, _concatenate, SpikeCounts)
+from ..spikedetekt import (SpikeDetekt, _split_spikes, _concat, _concatenate)
 
 
 #------------------------------------------------------------------------------
@@ -22,22 +21,6 @@ from ..spikedetekt import (SpikeDetekt, _split_spikes,
 
 def setup():
     set_level('info')
-
-
-def test_spike_counts():
-    c = {0: {10: 100, 20: 200},
-         2: {10: 1, 30: 300},
-         }
-    sc = SpikeCounts(c)
-    assert sc() == 601
-
-    assert sc(group=0) == 300
-    assert sc(group=1) == 0
-    assert sc(group=2) == 301
-
-    assert sc(chunk=10) == 101
-    assert sc(chunk=20) == 200
-    assert sc(chunk=30) == 300
 
 
 def test_split_spikes():

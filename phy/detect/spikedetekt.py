@@ -6,8 +6,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os
-import os.path as op
 from collections import defaultdict
 
 import numpy as np
@@ -16,20 +14,18 @@ from ..utils.array import (get_excerpts,
                            chunk_bounds,
                            data_chunk,
                            _as_array,
-                           _save_arrays,
-                           _load_arrays,
                            _concatenate,
                            )
 from ..utils._types import Bunch
 from ..utils.event import EventEmitter, ProgressReporter
 from ..utils.logging import debug, info
-from ..utils.settings import _ensure_dir_exists
 from ..electrode.mea import (_channels_per_group,
                              _probe_adjacency_list,
                              )
 from ..traces import (Filter, Thresholder, compute_threshold,
                       FloodFillDetector, WaveformExtractor, PCA,
                       )
+from .store import SpikeDetektStore
 
 
 #------------------------------------------------------------------------------
@@ -104,33 +100,6 @@ def _cut_traces(traces, interval_samples):
         raise NotImplementedError("Need to add `start` to the "
                                   "spike samples")
     return traces, start
-
-
-class SpikeCounts(object):
-    """Count spikes in chunks and channel groups."""
-    def __init__(self, counts):
-        self._counts = counts
-        self._groups = sorted(counts)
-
-    @property
-    def counts(self):
-        return self._counts
-
-    def per_group(self, group):
-        return sum(self._counts.get(group, {}).values())
-
-    def per_chunk(self, chunk):
-        return sum(self._counts[group].get(chunk, 0) for group in self._groups)
-
-    def __call__(self, group=None, chunk=None):
-        if group is not None and chunk is not None:
-            return self._counts.get(group, {}).get(chunk, 0)
-        elif group is not None:
-            return self.per_group(group)
-        elif chunk is not None:
-            return self.per_chunk(chunk)
-        elif group is None and chunk is None:
-            return sum(self.per_group(group) for group in self._groups)
 
 
 #------------------------------------------------------------------------------
@@ -423,50 +392,6 @@ class SpikeDetekt(EventEmitter):
         assert out.dtype == np.float32
         return out
 
-    # Internal functions
-    # -------------------------------------------------------------------------
-
-    def _path(self, name, key=None, group=None):
-        if self._tempdir is None:
-            raise ValueError("The temporary directory must be specified.")
-        assert key >= 0
-        assert group is None or group >= 0
-        path = '{group}/{name}/{chunk}.npy'.format(
-            chunk=key, name=name, group=group if group is not None else 'all')
-        path = op.realpath(op.join(self._tempdir, path))
-        _ensure_dir_exists(op.dirname(path))
-        return path
-
-    def _save(self, array, name, key=None, group=None):
-        path = self._path(name, key=key, group=group)
-        if isinstance(array, list):
-            _save_arrays(path, array)
-        else:
-            dtype = array.dtype
-            assert dtype != np.object
-            debug("Save {} ({}).".format(path, array.shape))
-            np.save(path, array)
-
-    def _load(self, name, key=None, group=None, multiple_arrays=False):
-        path = self._path(name, key=key, group=group)
-        if not op.exists(path):
-            return
-        if multiple_arrays:
-            out = _load_arrays(path)
-        else:
-            out = np.load(path)
-        debug("Load {} ({}).".format(path, out.shape
-              if isinstance(out, np.ndarray) else len(out)))
-        return out
-
-    def _delete(self, name, key=None, group=None, multiple_arrays=False):
-        path = self._path(name, key=key, group=group)
-        if multiple_arrays:
-            os.remove(path)
-            os.remove(op.splitext(path)[0] + '.offsets.npy')
-        else:
-            os.remove(path)
-
     # Chunking
     # -------------------------------------------------------------------------
 
@@ -491,42 +416,28 @@ class SpikeDetekt(EventEmitter):
         """Number of chunks."""
         return len(list(self.iter_chunks(n_samples)))
 
+    def chunk_keys(self, n_samples):
+        return [chunk.key for chunk in self.iter_chunks(n_samples)]
+
     # Output data
     # -------------------------------------------------------------------------
 
-    def _iter_split(self, name, group=None, n_samples=None):
-        for chunk in self.iter_chunks(n_samples):
-            key = chunk.key
-            arr = self._load(name, key=key, group=group)
-            if name == 'spike_samples' and arr is not None:
-                arr = arr + chunk.s_start
-            yield arr
-
-    def output_data(self, n_samples, n_channels, spike_counts=None):
+    def output_data(self):
         """Bunch of values to be returned by the algorithm."""
-
-        def _load(name):
-            out = {}
-            for group in self._groups:
-                out[group] = self._iter_split(name, group=group,
-                                              n_samples=n_samples)
-            return out
-
-        # All chunk keys.
-        keys = sorted(chunk.key for chunk in self.iter_chunks(n_samples))
-
-        output = Bunch(n_chunks=len(keys),
-                       groups=self._groups,
-                       chunk_keys=keys,
-                       spike_samples=_load('spike_samples'),
-                       masks=_load('masks'),
-                       features=_load('features'),
-                       spike_counts=spike_counts,
-                       n_spikes_total=spike_counts(),
-                       n_spikes_per_group={group: spike_counts(group=group)
+        sc = self._store.spike_counts
+        chunk_keys = self._store.chunk_keys
+        output = Bunch(groups=self._groups,
+                       n_chunks=len(chunk_keys),
+                       chunk_keys=chunk_keys,
+                       spike_samples=self._store.spike_samples(),
+                       masks=self._store.masks(),
+                       features=self._store.features(),
+                       spike_counts=sc,
+                       n_spikes_total=sc(),
+                       n_spikes_per_group={group: sc(group=group)
                                            for group in self._groups},
-                       n_spikes_per_chunk={chunk: spike_counts(chunk=chunk)
-                                           for chunk in keys},
+                       n_spikes_per_chunk={chunk_key: sc(chunk_key=chunk_key)
+                                           for chunk_key in chunk_keys},
                        )
         return output
 
@@ -542,8 +453,8 @@ class SpikeDetekt(EventEmitter):
         for chunk in self.iter_chunks(n_samples):
 
             # Extract a few components.
-            components = self._load('components', chunk.key,
-                                    multiple_arrays=True)
+            components = self._store.load(name='components',
+                                          chunk_key=chunk.key)
             if components is None or not len(components):
                 yield chunk, {}
                 continue
@@ -552,7 +463,8 @@ class SpikeDetekt(EventEmitter):
             components = components[::k]
 
             # Get the filtered chunk.
-            chunk_f = self._load('filtered', key=chunk.key)
+            chunk_f = self._store.load(name='filtered',
+                                       chunk_key=chunk.key)
 
             # Extract the spikes from the chunk.
             split = self.extract_spikes(components, chunk_f,
@@ -561,12 +473,12 @@ class SpikeDetekt(EventEmitter):
 
             yield chunk, split
 
-    def step_detect(self, pr=None, traces=None, thresholds=None):
+    def step_detect(self, traces=None, thresholds=None):
         n_samples, n_channels = traces.shape
         n_chunks = self.n_chunks(n_samples)
 
         # Pass 1: find the connected components and count the spikes.
-        pr.start_step('detect', n_chunks)
+        self._pr.start_step('detect', n_chunks)
 
         # Dictionary {chunk_key: components}.
         # Every chunk has a unique key: the `keep_start` integer.
@@ -580,24 +492,26 @@ class SpikeDetekt(EventEmitter):
             assert data_f.shape == chunk_data.shape
 
             # Save the filtered chunk.
-            self._save(data_f, 'filtered', key=chunk.key)
+            self._store.store(name='filtered', chunk_key=chunk.key,
+                              data=data_f)
 
             # Detect spikes in the filtered chunk.
             components = self.detect(data_f, thresholds=thresholds,
                                      dead_channels=self._dead_channels)
-            self._save(components, 'components', key=chunk.key)
+            self._store.store(name='components', chunk_key=chunk.key,
+                              data=components)
 
             # Report progress.
             n_spikes_chunk = len(components)
             n_spikes_total += n_spikes_chunk
-            pr.increment(n_spikes=n_spikes_chunk,
-                         n_spikes_total=n_spikes_total)
+            self._pr.increment(n_spikes=n_spikes_chunk,
+                               n_spikes_total=n_spikes_total)
 
         return n_spikes_total
 
-    def step_excerpt(self, pr=None, n_samples=None,
+    def step_excerpt(self, n_samples=None,
                      n_spikes_total=None, thresholds=None):
-        pr.start_step('excerpt', self.n_chunks(n_samples))
+        self._pr.start_step('excerpt', self.n_chunks(n_samples))
 
         k = int(n_spikes_total / float(self._kwargs['pca_n_waveforms_max']))
         w_subset = defaultdict(list)
@@ -613,49 +527,56 @@ class SpikeDetekt(EventEmitter):
                 n_spikes_chunk += len(out['masks'])
 
             n_spikes_total += n_spikes_chunk
-            pr.increment(n_spikes=n_spikes_chunk,
-                         n_spikes_total=n_spikes_total)
+            self._pr.increment(n_spikes=n_spikes_chunk,
+                               n_spikes_total=n_spikes_total)
         for group in self._groups:
             w_subset[group] = _concatenate(w_subset[group])
             m_subset[group] = _concatenate(m_subset[group])
 
         return w_subset, m_subset
 
-    def step_pcs(self, pr=None, w_subset=None, m_subset=None):
-        pr.start_step('pca', len(self._groups))
+    def step_pcs(self, w_subset=None, m_subset=None):
+        self._pr.start_step('pca', len(self._groups))
         pcs = {}
         for group in self._groups:
             # Perform PCA and return the components.
             pcs[group] = self.waveform_pcs(w_subset[group],
                                            m_subset[group])
-            pr.increment()
+            self._pr.increment()
         return pcs
 
-    def step_features(self, pr=None, n_samples=None,
+    def step_features(self, n_samples=None,
                       pcs=None, thresholds=None):
-        pr.start_step('extract', self.n_chunks(n_samples))
-        chunk_counts = defaultdict(dict)  # {group: {key: n_spikes}}.
+        self._pr.start_step('extract', self.n_chunks(n_samples))
+        # chunk_counts = defaultdict(dict)  # {group: {key: n_spikes}}.
         n_spikes_total = 0
         for chunk, split in self._iter_spikes(n_samples,
                                               thresholds=thresholds):
             # split: {group: {'spike_samples': ..., 'waveforms':, 'masks':}}
             for group, out in split.items():
                 out['features'] = self.features(out['waveforms'], pcs[group])
-                n_spikes_chunk = len(out['spike_samples'])
-                n_spikes_total += n_spikes_chunk
-                chunk_counts[group][chunk.key] = n_spikes_chunk
-
-                # Save the arrays.
-                for name in ('spike_samples', 'features', 'masks'):
-                    assert out[name].shape[0] == n_spikes_chunk
-                    self._save(out[name], name, key=chunk.key, group=group)
-            pr.increment(n_spikes_total=n_spikes_total)
-        return chunk_counts
+                self._store.append(group=group,
+                                   chunk_key=chunk.key,
+                                   spike_samples=out['spike_samples'],
+                                   features=out['features'],
+                                   masks=out['masks'],
+                                   spike_offset=chunk.s_start,
+                                   )
+            n_spikes_total = self._store.spike_counts()
+            self._pr.increment(n_spikes_total=n_spikes_total)
 
     def run_serial(self, traces, interval_samples=None):
         """Run SpikeDetekt using one CPU."""
         traces, offset = _cut_traces(traces, interval_samples)
         n_samples, n_channels = traces.shape
+
+        # Initialize the main loop.
+        chunk_keys = self.chunk_keys(n_samples)
+        n_chunks = len(chunk_keys)
+        self._pr = SpikeDetektProgress(n_chunks=n_chunks)
+        self._store = SpikeDetektStore(self._tempdir,
+                                       groups=self._groups,
+                                       chunk_keys=chunk_keys)
 
         # Find the weak and strong thresholds.
         thresholds = self.find_thresholds(traces)
@@ -664,26 +585,19 @@ class SpikeDetekt(EventEmitter):
         probe_channels = self._kwargs['probe_channels']
         self._dead_channels = _find_dead_channels(probe_channels, n_channels)
 
-        # Create the progress reporter.
-        n_chunks = self.n_chunks(n_samples)
-        pr = SpikeDetektProgress(n_chunks=n_chunks)
-
         # Spike detection.
-        n_spikes_total = self.step_detect(pr=pr, traces=traces,
+        n_spikes_total = self.step_detect(traces=traces,
                                           thresholds=thresholds)
 
         # Excerpt waveforms.
-        w_subset, m_subset = self.step_excerpt(pr=pr,
-                                               n_samples=n_samples,
+        w_subset, m_subset = self.step_excerpt(n_samples=n_samples,
                                                n_spikes_total=n_spikes_total,
                                                thresholds=thresholds)
 
         # Compute the PCs.
-        pcs = self.step_pcs(pr=pr, w_subset=w_subset, m_subset=m_subset)
+        pcs = self.step_pcs(w_subset=w_subset, m_subset=m_subset)
 
         # Compute all features.
-        chunk_counts = self.step_features(pr=pr, n_samples=n_samples,
-                                          pcs=pcs, thresholds=thresholds)
+        self.step_features(n_samples=n_samples, pcs=pcs, thresholds=thresholds)
 
-        spike_counts = SpikeCounts(chunk_counts)
-        return self.output_data(n_samples, n_channels, spike_counts)
+        return self.output_data()
