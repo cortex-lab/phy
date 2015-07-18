@@ -8,12 +8,10 @@
 
 import os
 import os.path as op
-import itertools
-import types
 
 import numpy as np
 from h5py import Dataset
-from six import string_types, next
+from six import string_types
 from six.moves import zip
 
 from ...electrode.mea import load_probe
