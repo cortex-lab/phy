@@ -6,8 +6,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
-
 from pytest import mark
 import numpy as np
 from numpy.testing import assert_allclose as ac
@@ -17,7 +15,6 @@ from ..gui import ClusterManualGUI
 from ....utils.settings import _load_default_settings
 from ....utils.logging import set_level
 from ....utils.array import _spikes_in_clusters
-from ....gui.qt import wrap_qt
 from ....io.mock import MockModel
 from ....io.kwik.store_items import create_store
 
@@ -45,12 +42,11 @@ def _start_manual_clustering(config='none', shortcuts=None):
     return gui
 
 
-@wrap_qt
-def test_gui_clustering():
+def test_gui_clustering(qtbot):
 
     gui = _start_manual_clustering()
     gui.show()
-    yield
+    qtbot.addWidget(gui.main_window)
 
     cs = gui.store
     spike_clusters = gui.model.spike_clusters.copy()
@@ -132,12 +128,11 @@ def test_gui_clustering():
     gui.close()
 
 
-@wrap_qt
-def test_gui_wizard():
+def test_gui_wizard(qtbot):
     gui = _start_manual_clustering()
     n = gui.n_clusters
+    qtbot.addWidget(gui.main_window)
     gui.show()
-    yield
 
     clusters = np.arange(gui.n_clusters)
     best_clusters = gui.wizard.best_clusters()
@@ -159,13 +154,12 @@ def test_gui_wizard():
     gui.close()
 
 
-@wrap_qt
 @mark.long
-def test_gui_history():
+def test_gui_history(qtbot):
 
     gui = _start_manual_clustering()
+    qtbot.addWidget(gui.main_window)
     gui.show()
-    yield
 
     gui.wizard.start()
 
@@ -201,9 +195,8 @@ def test_gui_history():
     gui.close()
 
 
-@wrap_qt
 @mark.long
-def test_gui_gui():
+def test_gui_gui(qtbot):
     settings = _load_default_settings()
     config = settings['cluster_manual_config']
     shortcuts = settings['cluster_manual_shortcuts']
@@ -211,7 +204,6 @@ def test_gui_gui():
     gui = _start_manual_clustering(config=config,
                                    shortcuts=shortcuts,
                                    )
+    qtbot.addWidget(gui.main_window)
     gui.show()
-    yield
-
     gui.close()
