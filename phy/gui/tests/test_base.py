@@ -204,7 +204,7 @@ def test_base_gui(qtbot):
     gui.close()
 
 
-def test_base_session(qtbot, tempdir):
+def test_base_session(tempdir, qtbot):
 
     phy_dir = op.join(tempdir, 'test.phy')
 
