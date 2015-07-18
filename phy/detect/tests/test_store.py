@@ -11,7 +11,7 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 
 from ...utils.logging import set_level
-from ..store import SpikeCounts, ArrayStore
+from ..store import SpikeCounts, ArrayStore, SpikeDetektStore
 
 
 #------------------------------------------------------------------------------
@@ -76,3 +76,34 @@ def test_array_store(tempdir):
 
     store.delete(b=2)
     store.delete(a=1, b=2)
+
+
+def test_spikedetekt_store(tempdir):
+    groups = [0, 2]
+    chunk_keys = [10, 20, 30]
+
+    n_channels = 4
+    npc = 2
+
+    _keys = [(0, 10), (0, 20), (2, 10), (2, 30)]
+    _counts = [100, 200, 1, 300]
+
+    # Generate random spike samples, features, and masks.
+    s = {k: np.arange(c) for k, c in zip(_keys, _counts)}
+    f = {k: np.random.rand(c, n_channels, npc)
+         for k, c in zip(_keys, _counts)}
+    m = {k: np.random.rand(c, n_channels)
+         for k, c in zip(_keys, _counts)}
+
+    store = SpikeDetektStore(tempdir, groups=groups, chunk_keys=chunk_keys)
+    for group, chunk_key in _keys:
+        spike_samples = s.get((group, chunk_key), None)
+        features = f.get((group, chunk_key), None)
+        masks = m.get((group, chunk_key), None)
+
+        store.append(group=group, chunk_key=chunk_key,
+                     spike_samples=spike_samples,
+                     features=features,
+                     masks=masks,
+                     spike_offset=chunk_key,
+                     )

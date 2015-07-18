@@ -137,16 +137,17 @@ class SpikeDetektStore(ArrayStore):
 
     """
     def __init__(self, root_dir, groups=None, chunk_keys=None):
+        super(SpikeDetektStore, self).__init__(root_dir)
         self._groups = groups
         self._chunk_keys = chunk_keys
         self._spike_counts = SpikeCounts(groups=groups, chunk_keys=chunk_keys)
 
-    def _path(self, name=None, chunk_key=None, group=None):
+    def _rel_path(self, name=None, chunk_key=None, group=None):
         assert chunk_key >= 0
         assert group is None or group >= 0
         assert isinstance(name, string_types)
         group = group if group is not None else 'all'
-        return 'group_{group}/{name}/chunk_{chunk:12d}.npy'.format(
+        return 'group_{group}/{name}/chunk_{chunk:d}.npy'.format(
             chunk=chunk_key, name=name, group=group)
 
     @property
@@ -157,14 +158,20 @@ class SpikeDetektStore(ArrayStore):
     def chunk_keys(self):
         return self._chunk_keys
 
+    def _iter(self, group=None, name=None):
+        for chunk_key in self.chunk_keys:
+            yield self.load(group=group, chunk_key=chunk_key, name=name)
+
     def spike_samples(self, group):
-        pass
+        return self.concatenate(self._iter(group=group, name='spike_samples'))
 
     def features(self, group):
         """Yield chunk features."""
+        return self._iter(group=group, name='features')
 
     def masks(self, group):
         """Yield chunk masks."""
+        return self._iter(group=group, name='masks')
 
     @property
     def spike_counts(self):
