@@ -22,8 +22,44 @@ from ..utils.array import (get_excerpts,
                            _load_arrays,
                            _concatenate,
                            )
-from ..utils.logging import debug, info
+from ..utils.logging import debug
 from ..utils.settings import _ensure_dir_exists
+
+
+#------------------------------------------------------------------------------
+# Spike counts
+#------------------------------------------------------------------------------
+
+class SpikeCounts(object):
+    """Count spikes in chunks and channel groups."""
+    def __init__(self, counts=None, groups=None, chunk_keys=None):
+        self._groups = groups
+        self._chunk_keys = chunk_keys
+        self._counts = counts or defaultdict(lambda: defaultdict(int))
+
+    def append(self, group=None, chunk_key=None, count=None):
+        self._counts[group][chunk_key] += count
+
+    @property
+    def counts(self):
+        return self._counts
+
+    def per_group(self, group):
+        return sum(self._counts.get(group, {}).values())
+
+    def per_chunk(self, chunk_key):
+        return sum(self._counts[group].get(chunk_key, 0)
+                   for group in self._groups)
+
+    def __call__(self, group=None, chunk_key=None):
+        if group is not None and chunk_key is not None:
+            return self._counts.get(group, {}).get(chunk_key, 0)
+        elif group is not None:
+            return self.per_group(group)
+        elif chunk_key is not None:
+            return self.per_chunk(chunk_key)
+        elif group is None and chunk_key is None:
+            return sum(self.per_group(group) for group in self._groups)
 
 
 #------------------------------------------------------------------------------
@@ -102,21 +138,26 @@ class SpikeDetektStore(ArrayStore):
     * masks
 
     """
+    def __init__(self, root_dir, groups=None, chunk_keys=None):
+        self._groups = groups
+        self._chunk_keys = chunk_keys
+        self._spike_counts = spike_counts
 
-    def _path(self, name=None, key=None, group=None):
-        assert key >= 0
+    def _path(self, name=None, chunk_key=None, group=None):
+        assert chunk_key >= 0
         assert group is None or group >= 0
         assert isinstance(name, string_types)
+        group = group if group is not None else 'all'
         return 'group_{group}/{name}/chunk_{chunk:12d}.npy'.format(
-            chunk=key, name=name, group=group if group is not None else 'all')
+            chunk=chunk_key, name=name, group=group)
 
     @property
     def groups(self):
-        pass
+        return self._groups
 
     @property
     def chunk_keys(self):
-        pass
+        return self._chunk_keys
 
     def spike_samples(self, group):
         pass
@@ -127,8 +168,9 @@ class SpikeDetektStore(ArrayStore):
     def masks(self, group):
         """Yield chunk masks."""
 
-    def spike_counts(self, group=None, chunk_key=None):
-        pass
+    @property
+    def spike_counts(self):
+        return self._spike_counts
 
     def concatenate(self, arrays):
         pass

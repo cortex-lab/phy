@@ -6,11 +6,12 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from pytest import yield_fixture
 import numpy as np
 from numpy.testing import assert_equal as ae
 
 from ...utils.logging import set_level
-from ..store import ArrayStore
+from ..store import SpikeCounts, ArrayStore
 
 
 #------------------------------------------------------------------------------
@@ -19,6 +20,36 @@ from ..store import ArrayStore
 
 def setup():
     set_level('debug')
+
+
+@yield_fixture(params=['from_dict', 'append'])
+def spike_counts(request):
+    groups = [0, 2]
+    chunk_keys = [10, 20, 30]
+    if request.param == 'from_dict':
+        c = {0: {10: 100, 20: 200},
+             2: {10: 1, 30: 300},
+             }
+        sc = SpikeCounts(c, groups=groups, chunk_keys=chunk_keys)
+    elif request.param == 'append':
+        sc = SpikeCounts(groups=groups, chunk_keys=chunk_keys)
+        sc.append(group=0, chunk_key=10, count=100)
+        sc.append(group=0, chunk_key=20, count=200)
+        sc.append(group=2, chunk_key=10, count=1)
+        sc.append(group=2, chunk_key=30, count=300)
+    yield sc
+
+
+def test_spike_counts(spike_counts):
+    assert spike_counts() == 601
+
+    assert spike_counts(group=0) == 300
+    assert spike_counts(group=1) == 0
+    assert spike_counts(group=2) == 301
+
+    assert spike_counts(chunk_key=10) == 101
+    assert spike_counts(chunk_key=20) == 200
+    assert spike_counts(chunk_key=30) == 300
 
 
 class TestArrayStore(ArrayStore):
