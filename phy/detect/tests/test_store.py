@@ -73,3 +73,6 @@ def test_array_store(tempdir):
     ae(store.load(b=3), None)
     ae(store.load(a=1)[0], np.arange(3))
     ae(store.load(a=1)[1], np.arange(3, 8))
+
+    store.delete(b=2)
+    store.delete(a=1, b=2)

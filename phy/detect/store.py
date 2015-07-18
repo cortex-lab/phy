@@ -118,12 +118,10 @@ class ArrayStore(object):
 
     def delete(self, **kwargs):
         path = self._path(**kwargs)
-        # os.remove(path)
-        print("remove", path)
+        os.remove(path)
         offsets_path = self._offsets_path(path)
         if op.exists(offsets_path):
-            # os.remove(offsets_path)
-            print("remove", offsets_path)
+            os.remove(offsets_path)
             debug("Deleted `{}`.".format(offsets_path))
         debug("Deleted `{}`.".format(path))
 
@@ -141,7 +139,7 @@ class SpikeDetektStore(ArrayStore):
     def __init__(self, root_dir, groups=None, chunk_keys=None):
         self._groups = groups
         self._chunk_keys = chunk_keys
-        self._spike_counts = spike_counts
+        self._spike_counts = SpikeCounts(groups=groups, chunk_keys=chunk_keys)
 
     def _path(self, name=None, chunk_key=None, group=None):
         assert chunk_key >= 0
@@ -172,5 +170,23 @@ class SpikeDetektStore(ArrayStore):
     def spike_counts(self):
         return self._spike_counts
 
+    def append(self, group=None, chunk_key=None,
+               spike_samples=None, features=None, masks=None,
+               spike_offset=0):
+        if spike_samples is None or len(spike_samples) == 0:
+            return
+        n = len(spike_samples)
+        assert features.shape[0] == n
+        assert masks.shape[0] == n
+        spike_samples = spike_samples + spike_offset
+
+        self.store(group=group, chunk_key=chunk_key,
+                   name='features', data=features)
+        self.store(group=group, chunk_key=chunk_key,
+                   name='masks', data=masks)
+        self.store(group=group, chunk_key=chunk_key,
+                   name='spike_samples', data=spike_samples)
+        self._spike_counts.append(group=group, chunk_key=chunk_key, count=n)
+
     def concatenate(self, arrays):
-        pass
+        return _concatenate(arrays)
