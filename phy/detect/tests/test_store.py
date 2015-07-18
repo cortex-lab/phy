@@ -129,4 +129,5 @@ def test_spikedetekt_store(tempdir):
                 else:
                     assert data is None
 
-        store.spike_counts
+    # Test spike counts.
+    test_spike_counts(store.spike_counts)
