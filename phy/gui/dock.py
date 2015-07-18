@@ -8,8 +8,6 @@
 
 from collections import defaultdict
 
-from six import u
-
 from .qt import QtCore, QtGui
 from ..utils.event import EventEmitter
 
@@ -249,11 +247,11 @@ class DockWindow(QtGui.QMainWindow):
     @property
     def status_message(self):
         """The message in the status bar."""
-        return u(self._status_bar.currentMessage())
+        return u"{}".format(self._status_bar.currentMessage())
 
     @status_message.setter
     def status_message(self, value):
-        self._status_bar.showMessage(u(value))
+        self._status_bar.showMessage(u"{}".format(value))
 
     # State
     # -------------------------------------------------------------------------

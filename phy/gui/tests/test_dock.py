@@ -65,6 +65,14 @@ def test_dock_1(qtbot):
     gui.close()
 
 
+def test_dock_status_message(qtbot):
+    gui = DockWindow()
+    qtbot.addWidget(gui)
+    assert gui.status_message == ''
+    gui.status_message = ':hello world!'
+    assert gui.status_message == ':hello world!'
+
+
 def test_dock_state(qtbot):
     _gs = None
     gui = DockWindow()
