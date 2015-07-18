@@ -97,7 +97,7 @@ class ArrayStore(object):
                 return
             assert dtype != np.object
             np.save(path, data)
-        debug("Store {}.".format(path))
+        # debug("Store {}.".format(path))
 
     def load(self, **kwargs):
         path = self._path(**kwargs)
@@ -105,7 +105,7 @@ class ArrayStore(object):
             debug("File `{}` doesn't exist.".format(path))
             return
         # Multiple arrays:
-        debug("Load {}.".format(path))
+        # debug("Load {}.".format(path))
         if self._contains_multiple_arrays(path):
             return _load_arrays(path)
         else:
@@ -113,7 +113,8 @@ class ArrayStore(object):
 
     def delete(self, **kwargs):
         path = self._path(**kwargs)
-        os.remove(path)
+        if op.exists(path):
+            os.remove(path)
         offsets_path = self._offsets_path(path)
         if op.exists(offsets_path):
             os.remove(offsets_path)
@@ -198,3 +199,10 @@ class SpikeDetektStore(ArrayStore):
 
     def concatenate(self, arrays):
         return _concatenate(arrays)
+
+    def delete(self, name):
+        """Delete all files for a given data name."""
+        for group in self._groups:
+            for chunk_key in self._chunk_keys:
+                super(SpikeDetektStore, self).delete(name=name, group=group,
+                                                     chunk_key=chunk_key)
