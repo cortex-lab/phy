@@ -385,6 +385,6 @@ def test_session_detect(tempdir):
     session = Session(kwik_path, phy_user_dir=tempdir)
     session.detect(traces=traces)
     m = session.model
-    assert m.n_spikes >= 0
-    shape = (m.n_spikes, n_channels * m.n_features_per_channel)
-    assert m.features.shape == shape
+    if m.n_spikes > 0:
+        shape = (m.n_spikes, n_channels * m.n_features_per_channel)
+        assert m.features.shape == shape
