@@ -4,3 +4,4 @@ coverage
 coveralls
 responses
 pytest-cov
+pytest-qt

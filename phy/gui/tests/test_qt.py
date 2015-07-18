@@ -33,34 +33,33 @@ def teardown():
     set_level('info')
 
 
-@wrap_qt
-def test_wrap():
+def test_wrap(qtbot):
 
     view = QtWebKit.QWebView()
+
+    def _assert(text):
+        html = view.page().mainFrame().toHtml()
+        assert html == '<html><head></head><body>' + text + '</body></html>'
+
     _set_qt_widget_position_size(view, size=(100, 100))
     view.setHtml("hello")
+    qtbot.addWidget(view)
+    qtbot.waitForWindowShown(view)
     view.show()
-    yield
+    _assert('hello')
 
     view.setHtml("world")
-    yield
-
-    view.setHtml("!")
-    yield
-
-    # Close a view and open a new one.
+    _assert('world')
     view.close()
 
     view = QtWebKit.QWebView()
     _set_qt_widget_position_size(view, size=(100, 100))
     view.show()
-    yield
+    qtbot.addWidget(view)
 
     view.setHtml("finished")
-    yield
-
+    _assert('finished')
     view.close()
-    yield
 
 
 @mark.skipif()
