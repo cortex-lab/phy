@@ -10,7 +10,6 @@ from pytest import mark
 
 from ..qt import (QtWebKit, QtGui,
                   qt_app,
-                  wrap_qt,
                   _set_qt_widget_position_size,
                   _prompt,
                   )

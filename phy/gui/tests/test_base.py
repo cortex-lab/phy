@@ -17,7 +17,6 @@ from ..base import (BaseViewModel,
                     BaseGUI,
                     )
 from ..qt import (QtGui,
-                  wrap_qt,
                   _set_qt_widget_position_size,
                   )
 from ...utils.event import EventEmitter
@@ -41,8 +40,7 @@ def teardown():
     set_level('info')
 
 
-@wrap_qt
-def test_base_view_model():
+def test_base_view_model(qtbot):
     class MyViewModel(BaseViewModel):
         _view_name = 'main_window'
         _imported_params = ('text',)
@@ -60,8 +58,8 @@ def test_base_view_model():
     text = 'hello'
 
     vm = MyViewModel(text=text, size=size)
+    qtbot.addWidget(vm.view)
     vm.show()
-    yield
 
     assert vm.view.windowTitle() == text
     assert vm.text == text
@@ -69,11 +67,9 @@ def test_base_view_model():
     assert (vm.view.width(), vm.view.height()) == size
 
     vm.close()
-    yield
 
 
-@wrap_qt
-def test_html_view_model():
+def test_html_view_model(qtbot):
 
     class MyHTMLViewModel(HTMLViewModel):
         def get_html(self, **kwargs):
@@ -81,7 +77,7 @@ def test_html_view_model():
 
     vm = MyHTMLViewModel()
     vm.show()
-    yield
+    qtbot.addWidget(vm.view)
     vm.close()
 
 
@@ -130,8 +126,7 @@ def test_widget_creator():
         assert not wc.get('my_widget')
 
 
-@wrap_qt
-def test_base_gui():
+def test_base_gui(qtbot):
 
     class V1(HTMLViewModel):
         def get_html(self, **kwargs):
@@ -178,8 +173,8 @@ def test_base_gui():
             self.reset_gui()
 
     gui = TestGUI()
+    qtbot.addWidget(gui.main_window)
     gui.show()
-    yield
 
     # Test snippet mode.
     gui.enable_snippet_mode()
@@ -200,20 +195,16 @@ def test_base_gui():
     v2 = gui.get_views('v2')
     assert len(v2) == 2
     v2[1].close()
-    yield
 
     v3 = gui.get_views('v3')
     v3[0].close()
-    yield
 
     gui.reset_gui()
-    yield
 
     gui.close()
-    yield
 
 
-def test_base_session(tempdir):
+def test_base_session(qtbot, tempdir):
 
     model = BaseModel()
 
@@ -263,40 +254,30 @@ def test_base_session(tempdir):
                           gui_classes=gui_classes,
                           )
 
-    # Need to wrap here because of the temporary directory.
-    @wrap_qt
-    def test():
+    # New GUI.
+    gui = session.show_gui('gui')
+    qtbot.addWidget(gui.main_window)
 
-        # New GUI.
-        gui = session.show_gui('gui')
-        yield gui
+    # Remove a v2 view.
+    v2 = gui.get_views('v2')
+    assert len(v2) == 2
+    v2[0].close()
+    gui.close()
 
-        # Remove a v2 view.
-        v2 = gui.get_views('v2')
-        assert len(v2) == 2
-        v2[0].close()
-        yield
-        gui.close()
+    # Reopen and check that the v2 is gone.
+    gui = session.show_gui('gui')
+    qtbot.addWidget(gui.main_window)
+    v2 = gui.get_views('v2')
+    assert len(v2) == 1
 
-        # Reopen and check that the v2 is gone.
-        gui = session.show_gui('gui')
-        v2 = gui.get_views('v2')
-        assert len(v2) == 1
-        yield gui
-        # gui.close()
+    gui.reset_gui()
+    v2 = gui.get_views('v2')
+    assert len(v2) == 2
+    gui.close()
 
-        gui.reset_gui()
-        v2 = gui.get_views('v2')
-        assert len(v2) == 2
-        yield
-        gui.close()
+    gui = session.show_gui('gui')
+    qtbot.addWidget(gui.main_window)
 
-        gui = session.show_gui('gui')
-        yield gui
-
-        v2 = gui.get_views('v2')
-        assert len(v2) == 2
-        gui.close()
-        yield gui
-
-    test()
+    v2 = gui.get_views('v2')
+    assert len(v2) == 2
+    gui.close()
