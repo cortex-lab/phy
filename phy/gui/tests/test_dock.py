@@ -10,7 +10,6 @@ from pytest import mark
 
 from vispy import app
 
-from ..qt import wrap_qt
 from ..dock import DockWindow
 from ...utils._color import _random_color
 from ...utils.logging import set_level
