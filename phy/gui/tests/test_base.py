@@ -206,6 +206,8 @@ def test_base_gui(qtbot):
 
 def test_base_session(qtbot, tempdir):
 
+    phy_dir = op.join(tempdir, 'test.phy')
+
     model = BaseModel()
 
     class V1(HTMLViewModel):
@@ -248,7 +250,7 @@ def test_base_session(qtbot, tempdir):
                 "gui_shortcuts = {}".format(str(shortcuts)))
 
     session = BaseSession(model=model,
-                          phy_user_dir=tempdir,
+                          phy_user_dir=phy_dir,
                           default_settings_paths=[default_settings_path],
                           vm_classes=vm_classes,
                           gui_classes=gui_classes,
@@ -257,6 +259,7 @@ def test_base_session(qtbot, tempdir):
     # New GUI.
     gui = session.show_gui('gui')
     qtbot.addWidget(gui.main_window)
+    qtbot.waitForWindowShown(gui.main_window)
 
     # Remove a v2 view.
     v2 = gui.get_views('v2')
@@ -267,6 +270,8 @@ def test_base_session(qtbot, tempdir):
     # Reopen and check that the v2 is gone.
     gui = session.show_gui('gui')
     qtbot.addWidget(gui.main_window)
+    qtbot.waitForWindowShown(gui.main_window)
+
     v2 = gui.get_views('v2')
     assert len(v2) == 1
 
@@ -277,6 +282,7 @@ def test_base_session(qtbot, tempdir):
 
     gui = session.show_gui('gui')
     qtbot.addWidget(gui.main_window)
+    qtbot.waitForWindowShown(gui.main_window)
 
     v2 = gui.get_views('v2')
     assert len(v2) == 2
