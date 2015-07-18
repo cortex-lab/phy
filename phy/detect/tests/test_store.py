@@ -96,6 +96,8 @@ def test_spikedetekt_store(tempdir):
          for k, c in zip(_keys, _counts)}
 
     store = SpikeDetektStore(tempdir, groups=groups, chunk_keys=chunk_keys)
+
+    # Save data.
     for group, chunk_key in _keys:
         spike_samples = s.get((group, chunk_key), None)
         features = f.get((group, chunk_key), None)
@@ -107,3 +109,24 @@ def test_spikedetekt_store(tempdir):
                      masks=masks,
                      spike_offset=chunk_key,
                      )
+
+    # Load data.
+    for group in groups:
+        # Check spike samples.
+        ae(store.spike_samples(group),
+           np.hstack([s[key] + key[1] for key in _keys if key[0] == group]))
+
+        # Check features and masks.
+        for name in ('features', 'masks'):
+            # Actual data.
+            data_dict = f if name == 'features' else m
+            # Stored data (generator).
+            data_gen = getattr(store, name)(group)
+            # Go through all chunks.
+            for chunk_key, data in zip(chunk_keys, data_gen):
+                if (group, chunk_key) in _keys:
+                    ae(data_dict[group, chunk_key], data)
+                else:
+                    assert data is None
+
+        store.spike_counts
