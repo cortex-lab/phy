@@ -247,11 +247,11 @@ class DockWindow(QtGui.QMainWindow):
     @property
     def status_message(self):
         """The message in the status bar."""
-        return u"{}".format(self._status_bar.currentMessage())
+        return self._status_bar.currentMessage()
 
     @status_message.setter
     def status_message(self, value):
-        self._status_bar.showMessage(u"{}".format(value))
+        self._status_bar.showMessage(value)
 
     # State
     # -------------------------------------------------------------------------
