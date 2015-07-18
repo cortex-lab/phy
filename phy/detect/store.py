@@ -157,15 +157,21 @@ class SpikeDetektStore(ArrayStore):
         for chunk_key in self.chunk_keys:
             yield self.load(group=group, chunk_key=chunk_key, name=name)
 
-    def spike_samples(self, group):
+    def spike_samples(self, group=None):
+        if group is None:
+            return {group: self.spike_samples(group) for group in self._groups}
         return self.concatenate(self._iter(group=group, name='spike_samples'))
 
-    def features(self, group):
+    def features(self, group=None):
         """Yield chunk features."""
+        if group is None:
+            return {group: self.features(group) for group in self._groups}
         return self._iter(group=group, name='features')
 
-    def masks(self, group):
+    def masks(self, group=None):
         """Yield chunk masks."""
+        if group is None:
+            return {group: self.masks(group) for group in self._groups}
         return self._iter(group=group, name='masks')
 
     @property
