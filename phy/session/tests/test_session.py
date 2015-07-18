@@ -13,7 +13,6 @@ from numpy.testing import assert_allclose as ac
 from pytest import raises, yield_fixture, mark
 
 from ..session import Session
-from ...gui.qt import wrap_qt
 from ...utils.array import _spikes_in_clusters
 from ...utils.logging import set_level
 from ...io.mock import MockModel, artificial_traces
@@ -138,8 +137,7 @@ def test_session_store_features(tempdir):
     ac(m, model.masks[s1], 1e-3)
 
 
-@wrap_qt
-def test_session_gui_clustering(session):
+def test_session_gui_clustering(qtbot, session):
 
     cs = session.store
     spike_clusters = session.model.spike_clusters.copy()
@@ -164,43 +162,37 @@ def test_session_gui_clustering(session):
     _check_arrays(2)
 
     gui = session.show_gui()
-    yield
+    qtbot.addWidget(gui.main_window)
 
     # Merge two clusters.
     clusters = [0, 2]
     gui.merge(clusters)  # Create cluster 5.
     _check_arrays(5, clusters)
-    yield
 
     # Split some spikes.
     spikes = [2, 3, 5, 7, 11, 13]
     # clusters = np.unique(spike_clusters[spikes])
     gui.split(spikes)  # Create cluster 6 and more.
     _check_arrays(6, spikes=spikes)
-    yield
 
     # Undo.
     gui.undo()
     _check_arrays(5, clusters)
-    yield
 
     # Undo.
     gui.undo()
     _check_arrays(0)
     _check_arrays(2)
-    yield
 
     # Redo.
     gui.redo()
     _check_arrays(5, clusters)
-    yield
 
     # Split some spikes.
     spikes = [5, 7, 11, 13, 17, 19]
     # clusters = np.unique(spike_clusters[spikes])
     gui.split(spikes)  # Create cluster 6 and more.
     _check_arrays(6, spikes=spikes)
-    yield
 
     # Test merge-undo-different-merge combo.
     spc = gui.clustering.spikes_per_cluster.copy()
@@ -215,13 +207,11 @@ def test_session_gui_clustering(session):
     clusters = gui.cluster_ids[1:5]
     up = gui.merge(clusters)
     _check_arrays(up.added[0], spikes=up.spike_ids)
-    yield
 
     # Move a cluster to a group.
     cluster = gui.cluster_ids[0]
     gui.move([cluster], 2)
     assert len(gui.store.mean_probe_position(cluster)) == 2
-    yield
 
     # Save.
     spike_clusters_new = gui.model.spike_clusters.copy()
@@ -229,7 +219,6 @@ def test_session_gui_clustering(session):
     assert not np.all(spike_clusters_new == spike_clusters)
     ac(session.model.spike_clusters, gui.clustering.spike_clusters)
     session.save()
-    yield
 
     # Re-open the file and check that the spike clusters and
     # cluster groups have correctly been saved.
@@ -241,16 +230,14 @@ def test_session_gui_clustering(session):
     clusters = gui.clustering.cluster_ids
     groups = session.model.cluster_groups
     assert groups[cluster] == 2
-    yield
 
     gui.close()
 
 
-@wrap_qt
-def test_session_gui_multiple_clusterings(session):
+def test_session_gui_multiple_clusterings(qtbot, session):
 
     gui = session.show_gui()
-    yield
+    qtbot.addWidget(gui.main_window)
 
     assert session.model.n_spikes == n_spikes
     assert session.model.n_clusters == n_clusters
@@ -262,7 +249,6 @@ def test_session_gui_multiple_clusterings(session):
     with raises(ValueError):
         session.change_clustering('automat')
     session.change_clustering('original')
-    yield
 
     n_clusters_2 = session.model.n_clusters
     assert session.model.n_spikes == n_spikes
@@ -274,12 +260,10 @@ def test_session_gui_multiple_clusterings(session):
     # Merge the clusters and save, for the current clustering.
     gui.clustering.merge(gui.clustering.cluster_ids)
     session.save()
-    yield
 
     # Re-open the session.
     session = _start_manual_clustering(kwik_path=session.model.path,
                                        tempdir=session.tempdir)
-    yield
 
     # The default clustering is the main one: nothing should have
     # changed here.
@@ -289,7 +273,6 @@ def test_session_gui_multiple_clusterings(session):
     assert session.model.n_spikes == n_spikes
     assert session.model.n_clusters == 1
     assert session.model.cluster_ids == n_clusters_2
-    yield
 
     gui.close()
 
@@ -315,12 +298,11 @@ def test_session_kwik(session):
         assert cs.main_channels(cluster).shape == (n_unmasked_channels,)
 
 
-@wrap_qt
-def test_session_gui_statistics(session):
+def test_session_gui_statistics(qtbot, session):
     """Test registration of new statistic."""
 
     gui = session.show_gui()
-    yield
+    qtbot.addWidget(gui.main_window)
 
     @session.register_statistic
     def n_spikes_2(cluster):
@@ -343,15 +325,12 @@ def test_session_gui_statistics(session):
     gui.merge(clusters)
     _check()
     assert gui.cluster_ids == [max(clusters) + 1]
-    yield
 
     gui.undo()
     _check()
-    yield
 
     gui.merge(gui.cluster_ids[::2])
     _check()
-    yield
 
     gui.close()
 
