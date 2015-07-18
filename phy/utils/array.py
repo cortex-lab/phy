@@ -248,6 +248,8 @@ def _in_polygon(points, polygon):
 
 
 def _concatenate(arrs):
+    if arrs is None:
+        return
     arrs = [_as_array(arr) for arr in arrs if arr is not None]
     if not arrs:
         return
