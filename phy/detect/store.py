@@ -13,12 +13,7 @@ from collections import defaultdict
 import numpy as np
 from six import string_types
 
-from ..utils._types import Bunch
-from ..utils.array import (get_excerpts,
-                           chunk_bounds,
-                           data_chunk,
-                           _as_array,
-                           _save_arrays,
+from ..utils.array import (_save_arrays,
                            _load_arrays,
                            _concatenate,
                            )
