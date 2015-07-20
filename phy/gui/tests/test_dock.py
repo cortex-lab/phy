@@ -10,7 +10,6 @@ from pytest import mark
 
 from vispy import app
 
-from ..qt import wrap_qt
 from ..dock import DockWindow
 from ...utils._color import _random_color
 from ...utils.logging import set_level
@@ -49,10 +48,10 @@ def _create_canvas():
     return c
 
 
-@wrap_qt
-def test_dock_1():
+def test_dock_1(qtbot):
 
     gui = DockWindow()
+    qtbot.addWidget(gui)
 
     @gui.shortcut('quit', 'ctrl+q')
     def quit():
@@ -61,17 +60,23 @@ def test_dock_1():
     gui.add_view(_create_canvas(), 'view1')
     gui.add_view(_create_canvas(), 'view2')
     gui.show()
-    yield
 
     assert len(gui.list_views('view')) == 2
     gui.close()
-    yield
 
 
-@wrap_qt
-def test_dock_state():
+def test_dock_status_message(qtbot):
+    gui = DockWindow()
+    qtbot.addWidget(gui)
+    assert gui.status_message == ''
+    gui.status_message = ':hello world!'
+    assert gui.status_message == ':hello world!'
+
+
+def test_dock_state(qtbot):
     _gs = None
     gui = DockWindow()
+    qtbot.addWidget(gui)
 
     @gui.shortcut('press', 'ctrl+g')
     def press():
@@ -87,7 +92,6 @@ def test_dock_state():
         _gs = gui.save_geometry_state()
 
     gui.show()
-    yield
 
     assert len(gui.list_views('view')) == 3
     assert gui.view_count() == {
@@ -110,7 +114,4 @@ def test_dock_state():
         gui.restore_geometry_state(_gs)
 
     gui.show()
-    yield
-
     gui.close()
-    yield

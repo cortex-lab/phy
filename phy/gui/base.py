@@ -10,7 +10,7 @@
 from collections import Counter
 import inspect
 
-from six import string_types
+from six import string_types, PY3
 
 from ..utils._misc import _show_shortcuts
 from ..utils import debug, info, warn, EventEmitter
@@ -474,7 +474,8 @@ class BaseGUI(EventEmitter):
     def status_message(self, value):
         self._dock.status_message = str(value)
 
-    _snippet_message_cursor = '\u200A\u258C'
+    # HACK: Unicode characters do not appear to work on Python 2
+    _snippet_message_cursor = '\u200A\u258C' if PY3 else ''
 
     @property
     def _snippet_message(self):
@@ -483,7 +484,9 @@ class BaseGUI(EventEmitter):
         A cursor is appended at the end.
 
         """
-        return self.status_message[:-len(self._snippet_message_cursor)]
+        n = len(self.status_message)
+        n_cur = len(self._snippet_message_cursor)
+        return self.status_message[:n - n_cur]
 
     @_snippet_message.setter
     def _snippet_message(self, value):

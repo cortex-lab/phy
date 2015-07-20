@@ -129,7 +129,7 @@ class BaseSettings(object):
                   "to `{}`.".format(path))
         except Exception as e:
             warn("Unable to save the internal settings file "
-                 "from `{}`:\n{}".format(path, str(e)))
+                 "to `{}`:\n{}".format(path, str(e)))
         self._to_save = {}
 
 
