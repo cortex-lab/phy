@@ -186,6 +186,8 @@ class ParserCreator(object):
                        'to create (by default, `"experiment_name".kwik`)')
         p.add_argument('--overwrite', action='store_true', default=False,
                        help='overwrite the `.kwik` file ')
+        p.add_argument('--interval',
+                       help='detection interval in seconds (e.g. `0,10`)')
         p.set_defaults(func=detect)
 
     def create_auto(self):
@@ -293,10 +295,16 @@ def detect(args):
     kwik_path = create_kwik(args.file,
                             overwrite=args.overwrite,
                             kwik_path=kwik_path)
+
+    interval = args.interval
+    if interval is not None:
+        interval = list(map(float, interval.split(',')))
+
     # Create the session with the newly-created .kwik file.
     args.file = kwik_path
     session = _create_session(args, use_store=False)
-    return 'session.detect()', dict(session=session)
+    return ('session.detect(interval=interval)',
+            dict(session=session, interval=interval))
 
 
 def cluster_auto(args):
