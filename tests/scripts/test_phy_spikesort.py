@@ -13,5 +13,11 @@ from phy.scripts import main
 # Tests
 #------------------------------------------------------------------------------
 
-def test_quick_start(tempdir):
+def test_version():
     main('-v')
+
+
+def test_quick_start(chdir_tempdir):
+    import os
+    print(os.getcwd())
+    main('download hybrid_10sec.dat')
