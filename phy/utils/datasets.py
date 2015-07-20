@@ -10,8 +10,9 @@ import hashlib
 import os
 import os.path as op
 
-from .logging import info, warn
+from .logging import debug, info, warn
 from .settings import _phy_user_dir, _ensure_dir_exists
+from .event import ProgressReporter
 
 
 #------------------------------------------------------------------------------
@@ -25,12 +26,34 @@ _BASE_URL = {
 }
 
 
+def _remote_file_size(path):
+    import requests
+    try:
+        response = requests.head(path)
+        return int(response.headers.get('content-length', 0))
+    except Exception as e:
+        debug("Unable to get the file size from `{}`: {}.".format(path, e))
+    return 0
+
+
 def _save_stream(r, path):
+    size = _remote_file_size(r.url)
+    pr = ProgressReporter()
+    pr.value_max = size or 1
+    pr.set_progress_message('Downloading `' + path + '`: {progress:.1f}%.')
+    pr.set_complete_message('Download complete.')
+    downloaded = 0
     with open(path, 'wb') as f:
-        for chunk in r.iter_content(chunk_size=1024):
+        for i, chunk in enumerate(r.iter_content(chunk_size=1024)):
             if chunk:
                 f.write(chunk)
                 f.flush()
+                downloaded += len(chunk)
+                if i % 100 == 0:
+                    pr.value = downloaded
+    if size:
+        assert size == downloaded
+    pr.set_complete()
 
 
 def _download(url, stream=None):
@@ -114,7 +137,7 @@ def download_file(url, output_path=None):
     if op.exists(output_path):
         info("The file {} already exists: skipping.".format(output_path))
         return
-    info("Downloading {0}...".format(url))
+    # info("Downloading {0}...".format(url))
     r = _download(url, stream=True)
     _save_stream(r, output_path)
     _check_md5_of_url(output_path, url)
@@ -151,8 +174,8 @@ def download_sample_data(filename, output_dir=None, base='cortexlab'):
     output_dir = _validate_output_dir(output_dir)
     url = _BASE_URL[base] + filename
     output_path = op.join(output_dir, filename)
-    try:
-        download_file(url, output_path=output_path)
-    except Exception as e:
-        warn("An error occurred while downloading `{}` to `{}`: {}".format(
-             url, output_path, str(e)))
+    # try:
+    download_file(url, output_path=output_path)
+    # except Exception as e:
+    #     warn("An error occurred while downloading `{}` to `{}`: {}".format(
+    #          url, output_path, str(e)))

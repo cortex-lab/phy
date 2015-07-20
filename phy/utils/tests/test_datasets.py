@@ -132,14 +132,14 @@ def test_download_file(tempdir, mock_urls):
 
 @responses.activate
 def test_download_sample_data(tempdir):
-    name = 'sample.kwik'
+    name = 'hybrid_10sec.dat'
     url = _BASE_URL['cortexlab'] + name
+
     _add_mock_response(url, _DATA.tostring())
     _add_mock_response(url + '.md5', _CHECKSUM)
 
-    output_dir = op.join(tempdir, name)
-    download_sample_data(name, output_dir)
-    with open(op.join(output_dir, name), 'rb') as f:
+    download_sample_data(name, tempdir)
+    with open(op.join(tempdir, name), 'rb') as f:
         data = f.read()
     ae(np.fromstring(data, np.float32), _DATA)
 
