@@ -20,12 +20,16 @@ from ..datasets import (download_file,
                         _check_md5_of_url,
                         _BASE_URL,
                         )
-from ..logging import register, StringLogger
+from ..logging import register, StringLogger, set_level
 
 
 #------------------------------------------------------------------------------
 # Fixtures
 #------------------------------------------------------------------------------
+
+def setup():
+    set_level('debug')
+
 
 # Test URL and data
 _URL = 'http://test/data'

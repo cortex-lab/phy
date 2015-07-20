@@ -144,8 +144,11 @@ def download_file(url, output_path=None):
     r = _download(url, stream=True)
     _save_stream(r, output_path)
     if _check_md5_of_url(output_path, url) is False:
-        raise RuntimeError("The checksum of the downloaded file "
-                           "doesn't match the provided checksum.")
+        debug("The checksum doesn't match: retrying the download.")
+        _save_stream(r, output_path)
+        if _check_md5_of_url(output_path, url) is False:
+            raise RuntimeError("The checksum of the downloaded file "
+                               "doesn't match the provided checksum.")
     return output_path
 
 
