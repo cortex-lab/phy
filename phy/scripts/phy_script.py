@@ -363,6 +363,8 @@ def main(args=None):
     elif isinstance(args, string_types):
         args = args.split(' ')
     args = p.parse(args)
+    if args is None:
+        return
 
     if args.profiler or args.line_profiler:
         from phy.utils.testing import _enable_profiler, _profile
