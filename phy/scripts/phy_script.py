@@ -214,7 +214,11 @@ class ParserCreator(object):
         pass
 
     def parse(self, args):
-        return self._parser.parse_args(args)
+        try:
+            return self._parser.parse_args(args)
+        except SystemExit as e:
+            if e.code != 0:
+                raise e
 
 
 #------------------------------------------------------------------------------
@@ -358,7 +362,7 @@ def main(args=None):
         args = sys.argv[1:]
     elif isinstance(args, string_types):
         args = args.split(' ')
-    args or p.parse(args)
+    args = p.parse(args)
 
     if args.profiler or args.line_profiler:
         from phy.utils.testing import _enable_profiler, _profile

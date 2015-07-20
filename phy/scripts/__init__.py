@@ -8,4 +8,4 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from phy_script import main
+from .phy_script import main
