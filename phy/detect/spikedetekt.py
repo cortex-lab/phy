@@ -552,6 +552,9 @@ class SpikeDetekt(EventEmitter):
         n_spikes_total = 0
         for chunk, split in self._iter_spikes(n_samples,
                                               thresholds=thresholds):
+            # Delete filtered and components cache files.
+            self._store.delete(name='filtered', chunk_key=chunk.key)
+            self._store.delete(name='components', chunk_key=chunk.key)
             # split: {group: {'spike_samples': ..., 'waveforms':, 'masks':}}
             for group, out in split.items():
                 out['features'] = self.features(out['waveforms'], pcs[group])
@@ -562,9 +565,6 @@ class SpikeDetekt(EventEmitter):
                                    masks=out['masks'],
                                    spike_offset=chunk.s_start,
                                    )
-                # Delete filtered and components cache files.
-                self._store.delete('filtered')
-                self._store.delete('components')
             n_spikes_total = self._store.spike_counts()
             self._pr.increment(n_spikes_total=n_spikes_total)
 

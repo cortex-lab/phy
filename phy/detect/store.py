@@ -115,11 +115,11 @@ class ArrayStore(object):
         path = self._path(**kwargs)
         if op.exists(path):
             os.remove(path)
+            debug("Deleted `{}`.".format(path))
         offsets_path = self._offsets_path(path)
         if op.exists(offsets_path):
             os.remove(offsets_path)
             debug("Deleted `{}`.".format(offsets_path))
-        debug("Deleted `{}`.".format(path))
 
 
 class SpikeDetektStore(ArrayStore):
@@ -200,7 +200,7 @@ class SpikeDetektStore(ArrayStore):
     def concatenate(self, arrays):
         return _concatenate(arrays)
 
-    def delete(self, name):
+    def delete_all(self, name):
         """Delete all files for a given data name."""
         for group in self._groups:
             for chunk_key in self._chunk_keys:
