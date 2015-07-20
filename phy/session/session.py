@@ -388,7 +388,7 @@ class Session(BaseSession):
             self.model.add_clustering('empty', spike_clusters_orig)
 
         # Instantiate the KlustaKwik instance.
-        kk = KlustaKwik(**kwargs)
+        kk = KlustaKwik(**params)
 
         # Save the current clustering in the Kwik file.
         @kk.connect
