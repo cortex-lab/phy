@@ -398,6 +398,7 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
         params['experiment_name'] = prm['experiment_name']
         params['prb_file'] = prm['prb_file']
         params.update(prm['spikedetekt'])
+        params.update(prm['klustakwik2'])
         params.update(prm['traces'])
     params.update(kwargs)
 
