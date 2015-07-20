@@ -115,11 +115,11 @@ class ArrayStore(object):
         path = self._path(**kwargs)
         if op.exists(path):
             os.remove(path)
-            debug("Deleted `{}`.".format(path))
+            # debug("Deleted `{}`.".format(path))
         offsets_path = self._offsets_path(path)
         if op.exists(offsets_path):
             os.remove(offsets_path)
-            debug("Deleted `{}`.".format(offsets_path))
+            # debug("Deleted `{}`.".format(offsets_path))
 
 
 class SpikeDetektStore(ArrayStore):

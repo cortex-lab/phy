@@ -123,7 +123,7 @@ class SpikeDetektProgress(ProgressReporter):
         'pca': ("Performing PCA: {progress:.2f}%.",
                 "Principal waveform components computed."),
 
-        'extract': ("Extracting spikes: {progress:.2f}%. ",
+        'extract': ("Extracting spikes: {progress:.2f}%. " + _spikes_message,
                     "Spike extraction complete: {n_spikes_total:d} " +
                     "spikes extracted."),
 
@@ -546,7 +546,7 @@ class SpikeDetekt(EventEmitter):
         return pcs
 
     def step_extract(self, n_samples=None,
-                      pcs=None, thresholds=None):
+                     pcs=None, thresholds=None):
         self._pr.start_step('extract', self.n_chunks(n_samples))
         # chunk_counts = defaultdict(dict)  # {group: {key: n_spikes}}.
         n_spikes_total = 0
@@ -566,7 +566,9 @@ class SpikeDetekt(EventEmitter):
                                    spike_offset=chunk.s_start,
                                    )
             n_spikes_total = self._store.spike_counts()
-            self._pr.increment(n_spikes_total=n_spikes_total)
+            n_spikes_chunk = self._store.spike_counts(chunk_key=chunk.key)
+            self._pr.increment(n_spikes_total=n_spikes_total,
+                               n_spikes=n_spikes_chunk)
 
     def run_serial(self, traces, interval_samples=None):
         """Run SpikeDetekt using one CPU."""
