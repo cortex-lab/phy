@@ -545,7 +545,7 @@ class SpikeDetekt(EventEmitter):
             self._pr.increment()
         return pcs
 
-    def step_features(self, n_samples=None,
+    def step_extract(self, n_samples=None,
                       pcs=None, thresholds=None):
         self._pr.start_step('extract', self.n_chunks(n_samples))
         # chunk_counts = defaultdict(dict)  # {group: {key: n_spikes}}.
@@ -601,6 +601,6 @@ class SpikeDetekt(EventEmitter):
         pcs = self.step_pcs(w_subset=w_subset, m_subset=m_subset)
 
         # Compute all features.
-        self.step_features(n_samples=n_samples, pcs=pcs, thresholds=thresholds)
+        self.step_extract(n_samples=n_samples, pcs=pcs, thresholds=thresholds)
 
         return self.output_data()
