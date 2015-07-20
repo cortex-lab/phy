@@ -6,16 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from subprocess import call
-
-from phy.io.kwik.mock import create_mock_kwik
+from phy.scripts import main
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
-
-def _call(cmd):
-    ret = call(cmd.split(' '))
-    if ret != 0:
-        raise RuntimeError()
