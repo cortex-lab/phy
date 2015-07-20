@@ -392,6 +392,15 @@ class KwikModel(BaseModel):
         params = {}
         for attr in self._kwik.attrs(path):
             params[attr] = self._kwik.read_attr(path, attr)
+        # Make sure all params are there.
+        default_params = {}
+        settings = _load_default_settings()
+        default_params.update(settings['traces'])
+        default_params.update(settings['spikedetekt'])
+        default_params.update(settings['klustakwik2'])
+        for name, default_value in default_params.items():
+            if name not in params:
+                params[name] = default_value
         self._metadata = params
 
     def _load_probe(self):
