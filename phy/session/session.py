@@ -13,6 +13,7 @@ import shutil
 
 import numpy as np
 
+from ..utils.array import _concatenate
 from ..utils.logging import debug, info, FileLogger, unregister, register
 from ..utils.settings import _ensure_dir_exists
 from ..io.base import BaseSession
@@ -316,15 +317,19 @@ class Session(BaseSession):
               "{}.".format(params))
         sd = SpikeDetekt(tempdir=sd_dir, **params)
         out = sd.run_serial(traces, interval_samples=interval_samples)
+        n_features = params['n_features_per_channel']
 
         # Add the spikes in the `.kwik` and `.kwx` files.
         for group in out.groups:
-            spike_samples = out.spike_samples[group]
+            spike_samples = _concatenate(out.spike_samples[group])
+            n_channels = sd._n_channels_per_group[group]
             self.model.creator.add_spikes(group=group,
                                           spike_samples=spike_samples,
                                           spike_recordings=None,  # TODO
                                           masks=out.masks[group],
                                           features=out.features[group],
+                                          n_channels=n_channels,
+                                          n_features=n_features,
                                           )
         self.emit('open')
 
@@ -383,7 +388,7 @@ class Session(BaseSession):
             self.model.add_clustering('empty', spike_clusters_orig)
 
         # Instantiate the KlustaKwik instance.
-        kk = KlustaKwik(**kwargs)
+        kk = KlustaKwik(**params)
 
         # Save the current clustering in the Kwik file.
         @kk.connect

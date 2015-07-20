@@ -175,8 +175,10 @@ def test_edges():
 
     assert loader._load_at(0).shape == (n_samples, n_channels)
     assert loader._load_at(5).shape == (n_samples, n_channels)
-    assert loader._load_at(n_samples_trace-5).shape == (n_samples, n_channels)
-    assert loader._load_at(n_samples_trace-1).shape == (n_samples, n_channels)
+    assert loader._load_at(n_samples_trace - 5).shape == (n_samples,
+                                                          n_channels)
+    assert loader._load_at(n_samples_trace - 1).shape == (n_samples,
+                                                          n_channels)
 
 
 def test_loader_channels():

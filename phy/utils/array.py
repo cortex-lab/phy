@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import os
+import os.path as op
 from math import floor
 from operator import mul
 from functools import reduce
@@ -246,6 +247,15 @@ def _in_polygon(points, polygon):
     return path.contains_points(points)
 
 
+def _concatenate(arrs):
+    if arrs is None:
+        return
+    arrs = [_as_array(arr) for arr in arrs if arr is not None]
+    if not arrs:
+        return
+    return np.concatenate(arrs, axis=0)
+
+
 # -----------------------------------------------------------------------------
 # I/O functions
 # -----------------------------------------------------------------------------
@@ -323,6 +333,33 @@ def _load_ndarray(f_or_path, dtype=None, shape=None, memmap=False, lazy=False):
                 assert _prod(shape) == n_items
             arr = _memmap(f_or_path, dtype=dtype, shape=shape, lazy=lazy)
         return arr
+
+
+def _save_arrays(path, arrays):
+    """Save multiple arrays in a single file by concatenating them along
+    the first axis.
+
+    A second array is stored with the offsets.
+
+    """
+    assert path.endswith('.npy')
+    path = op.splitext(path)[0]
+    offsets = np.cumsum([arr.shape[0] for arr in arrays])
+    if not len(arrays):
+        return
+    concat = np.concatenate(arrays, axis=0)
+    np.save(path + '.npy', concat)
+    np.save(path + '.offsets.npy', offsets)
+
+
+def _load_arrays(path):
+    assert path.endswith('.npy')
+    if not op.exists(path):
+        return []
+    path = op.splitext(path)[0]
+    concat = np.load(path + '.npy')
+    offsets = np.load(path + '.offsets.npy')
+    return np.split(concat, offsets[:-1], axis=0)
 
 
 # -----------------------------------------------------------------------------
@@ -470,7 +507,7 @@ def _spikes_per_cluster(spike_ids, spike_clusters):
     idx = np.nonzero(diff > 0)[0]
     clusters = spike_clusters[idx]
 
-    spikes_in_clusters = {clusters[i]: np.sort(abs_spikes[idx[i]:idx[i+1]])
+    spikes_in_clusters = {clusters[i]: np.sort(abs_spikes[idx[i]:idx[i + 1]])
                           for i in range(len(clusters) - 1)}
     spikes_in_clusters[clusters[-1]] = np.sort(abs_spikes[idx[-1]:])
 

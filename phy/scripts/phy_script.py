@@ -19,7 +19,7 @@ import argparse
 from textwrap import dedent
 
 import numpy as np
-from six import exec_
+from six import exec_, string_types
 
 
 #------------------------------------------------------------------------------
@@ -186,6 +186,8 @@ class ParserCreator(object):
                        'to create (by default, `"experiment_name".kwik`)')
         p.add_argument('--overwrite', action='store_true', default=False,
                        help='overwrite the `.kwik` file ')
+        p.add_argument('--interval',
+                       help='detection interval in seconds (e.g. `0,10`)')
         p.set_defaults(func=detect)
 
     def create_auto(self):
@@ -214,7 +216,11 @@ class ParserCreator(object):
         pass
 
     def parse(self, args):
-        return self._parser.parse_args(args)
+        try:
+            return self._parser.parse_args(args)
+        except SystemExit as e:
+            if e.code != 0:
+                raise e
 
 
 #------------------------------------------------------------------------------
@@ -289,10 +295,16 @@ def detect(args):
     kwik_path = create_kwik(args.file,
                             overwrite=args.overwrite,
                             kwik_path=kwik_path)
+
+    interval = args.interval
+    if interval is not None:
+        interval = list(map(float, interval.split(',')))
+
     # Create the session with the newly-created .kwik file.
     args.file = kwik_path
     session = _create_session(args, use_store=False)
-    return 'session.detect()', dict(session=session)
+    return ('session.detect(interval=interval)',
+            dict(session=session, interval=interval))
 
 
 def cluster_auto(args):
@@ -352,10 +364,15 @@ def cluster_manual(args):
 # Main functions
 #------------------------------------------------------------------------------
 
-def main():
-
+def main(args=None):
     p = ParserCreator()
-    args = p.parse(sys.argv[1:])
+    if args is None:
+        args = sys.argv[1:]
+    elif isinstance(args, string_types):
+        args = args.split(' ')
+    args = p.parse(args)
+    if args is None:
+        return
 
     if args.profiler or args.line_profiler:
         from phy.utils.testing import _enable_profiler, _profile

@@ -225,7 +225,9 @@ class TraceView(BaseSpikeCanvas):
             traces = self.visual.traces
         # Detrend the traces.
         traces = traces - traces.mean(axis=0)
-        traces /= traces.std()
+        s = traces.std()
+        if s > 0:
+            traces /= s
         n_samples, n_channels = traces.shape
 
         if spike_samples is not None:

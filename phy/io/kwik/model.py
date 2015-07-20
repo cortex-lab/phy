@@ -389,20 +389,18 @@ class KwikModel(BaseModel):
         """Load metadata from kwik file."""
         # Automatically load all metadata from spikedetekt group.
         path = '/application_data/spikedetekt/'
-        sample_rate = self._kwik.read_attr(path, 'sample_rate')
-        # Load default SpikeDetekt settings.
+        params = {}
+        for attr in self._kwik.attrs(path):
+            params[attr] = self._kwik.read_attr(path, attr)
+        # Make sure all params are there.
+        default_params = {}
         settings = _load_default_settings()
-        params = settings['spikedetekt']
-        params.update(settings['traces'])
-        # Update the parameters from the Kwik file.
-        for key in params.keys():
-            if self._kwik.has_attr(path, key):
-                params[key] = self._kwik.read_attr(path, key)
-        # Mandatory data parameters that are not in the default settings.
-        params['sample_rate'] = sample_rate
-        for key in _mandatory_metadata_fields:
-            if self._kwik.has_attr(path, key):
-                params[key] = self._kwik.read_attr(path, key)
+        default_params.update(settings['traces'])
+        default_params.update(settings['spikedetekt'])
+        default_params.update(settings['klustakwik2'])
+        for name, default_value in default_params.items():
+            if name not in params:
+                params[name] = default_value
         self._metadata = params
 
     def _load_probe(self):

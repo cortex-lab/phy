@@ -34,6 +34,8 @@ from ..array import (_unique,
                      _range_from_slice,
                      _pad,
                      _concatenate_virtual_arrays,
+                     _load_arrays,
+                     _save_arrays,
                      )
 from ..testing import _assert_equal as ae
 from ...io.mock import artificial_spike_clusters
@@ -322,6 +324,27 @@ def test_load_ndarray(tempdir, memmap, lazy):
                           lazy=lazy,
                           )
     ae(arr, arr_m[...])
+
+
+@mark.parametrize('n', [20, 0])
+def test_load_save_arrays(tempdir, n):
+    path = op.join(tempdir, 'test.npy')
+    # Random arrays.
+    arrays = []
+    for i in range(n):
+        size = np.random.randint(low=3, high=50)
+        assert size > 0
+        arr = np.random.rand(size, 3).astype(np.float32)
+        arrays.append(arr)
+    _save_arrays(path, arrays)
+
+    arrays_loaded = _load_arrays(path)
+
+    assert len(arrays) == len(arrays_loaded)
+    for arr, arr_loaded in zip(arrays, arrays_loaded):
+        assert arr.shape == arr_loaded.shape
+        assert arr.dtype == arr_loaded.dtype
+        ae(arr, arr_loaded)
 
 
 #------------------------------------------------------------------------------

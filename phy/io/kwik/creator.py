@@ -8,12 +8,10 @@
 
 import os
 import os.path as op
-import itertools
-import types
 
 import numpy as np
 from h5py import Dataset
-from six import string_types, next
+from six import string_types
 from six.moves import zip
 
 from ...electrode.mea import load_probe
@@ -138,6 +136,8 @@ class KwikCreator(object):
                    spike_recordings=None,
                    masks=None,
                    features=None,
+                   n_channels=None,
+                   n_features=None,
                    ):
         """Add spikes in the file.
 
@@ -164,7 +164,11 @@ class KwikCreator(object):
 
         """
         assert group >= 0
+        assert n_channels >= 0
+        assert n_features >= 0
 
+        if spike_samples is None:
+            return
         if isinstance(spike_samples, list):
             spike_samples = _concat(spike_samples)
         spike_samples = _as_array(spike_samples, dtype=np.float64).ravel()
@@ -195,21 +199,6 @@ class KwikCreator(object):
         assert masks is not None
         assert features is not None
 
-        # Find n_channels and n_features.
-        if isinstance(features, np.ndarray):
-            _, n_channels, n_features = features.shape
-        else:
-            assert features
-            # Ensure we have a generator.
-            if isinstance(features, list):
-                features = (_ for _ in features)
-            assert isinstance(features, types.GeneratorType)
-            # Extract the first item in the generator.
-            features_first = next(features)
-            _, n_channels, n_features = features_first.shape
-            # NOTE: this is equivalent to resetting the generator.
-            features = itertools.chain((features_first,), features)
-
         # Determine the shape of the features_masks array.
         shape = (n_spikes, n_channels * n_features, 2)
 
@@ -233,7 +222,8 @@ class KwikCreator(object):
             else:
                 # Concatenate the features/masks chunks.
                 fm_arrs = (np.dstack((transform_f(fet), transform_m(m)))
-                           for (fet, m) in zip(features, masks))
+                           for (fet, m) in zip(features, masks)
+                           if fet is not None and m is not None)
                 _write_by_chunk(fm, fm_arrs)
 
     def add_recording(self, id=None, raw_path=None,
@@ -269,7 +259,7 @@ class KwikCreator(object):
                     f.write_attr(path + '/raw', 'dat_path', raw_path)
 
     def _add_recordings_from_dat(self, files, sample_rate=None,
-                                n_channels=None, dtype=None):
+                                 n_channels=None, dtype=None):
         start_sample = 0
         for i, filename in enumerate(files):
             # WARNING: different sample rates in recordings is not
@@ -408,6 +398,7 @@ def create_kwik(prm_file=None, kwik_path=None, overwrite=False,
         params['experiment_name'] = prm['experiment_name']
         params['prb_file'] = prm['prb_file']
         params.update(prm['spikedetekt'])
+        params.update(prm['klustakwik2'])
         params.update(prm['traces'])
     params.update(kwargs)
 
