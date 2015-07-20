@@ -21,4 +21,4 @@ def test_quick_start(chdir_tempdir):
     main('download hybrid_10sec.dat')
     main('download hybrid_10sec.prm')
     main('spikesort hybrid_10sec.prm')
-    main('cluster-manual hybrid_10sec.kwik')
+    # main('cluster-manual hybrid_10sec.kwik')
