@@ -18,6 +18,7 @@ def test_version():
 
 
 def test_quick_start(chdir_tempdir):
-    import os
-    print(os.getcwd())
     main('download hybrid_10sec.dat')
+    main('download hybrid_10sec.prm')
+    main('spikesort hybrid_10sec.prm')
+    main('cluster-manual hybrid_10sec.kwik')
