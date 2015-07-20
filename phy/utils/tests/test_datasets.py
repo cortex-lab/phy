@@ -20,6 +20,7 @@ from ..datasets import (download_file,
                         _check_md5_of_url,
                         _BASE_URL,
                         )
+from ..logging import register, StringLogger
 
 
 #------------------------------------------------------------------------------
@@ -76,6 +77,17 @@ def mock_urls(request):
     responses.reset()
 
 
+def _dl(path):
+    download_file(_URL, path)
+    with open(path, 'rb') as f:
+        data = f.read()
+    return data
+
+
+def _check(data):
+    ae(np.fromstring(data, np.float32), _DATA)
+
+
 #------------------------------------------------------------------------------
 # Test utility functions
 #------------------------------------------------------------------------------
@@ -99,19 +111,33 @@ def test_download_not_found(tempdir):
 
 
 @responses.activate
+def test_download_already_exists_invalid(tempdir, mock_url):
+    logger = StringLogger(level='debug')
+    register(logger)
+    path = op.join(tempdir, 'test')
+    # Create empty file.
+    open(path, 'a').close()
+    _check(_dl(path))
+    assert 'redownload' in str(logger)
+
+
+@responses.activate
+def test_download_already_exists_valid(tempdir, mock_url):
+    logger = StringLogger(level='debug')
+    register(logger)
+    path = op.join(tempdir, 'test')
+    # Create valid file.
+    with open(path, 'ab') as f:
+        f.write(_DATA.tostring())
+    _check(_dl(path))
+    assert 'skip' in str(logger)
+
+
+@responses.activate
 def test_download_file(tempdir, mock_urls):
     path = op.join(tempdir, 'test')
     param, url_data, url_checksum = mock_urls
     data_here, data_valid, checksum_here, checksum_valid = param
-
-    def _dl():
-        download_file(_URL, path)
-        with open(path, 'rb') as f:
-            data = f.read()
-        return data
-
-    def _check(data):
-        ae(np.fromstring(data, np.float32), _DATA)
 
     assert_succeeds = (data_here and data_valid and
                        ((checksum_here == checksum_valid) or
@@ -121,10 +147,10 @@ def test_download_file(tempdir, mock_urls):
                          (not(data_valid) and not(checksum_here))))
 
     if download_succeeds:
-        data = _dl()
+        data = _dl(path)
     else:
         with raises(Exception):
-            data = _dl()
+            data = _dl(path)
 
     if assert_succeeds:
         _check(data)

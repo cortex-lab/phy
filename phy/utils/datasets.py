@@ -95,9 +95,7 @@ def _check_md5_of_url(output_path, url):
         checksum = None
     finally:
         if checksum:
-            if not _check_md5(output_path, checksum):
-                raise RuntimeError("The checksum of the downloaded file "
-                                   "doesn't match the provided checksum.")
+            return _check_md5(output_path, checksum)
 
 
 def _validate_output_dir(output_dir):
@@ -135,12 +133,19 @@ def download_file(url, output_path=None):
     if output_path is None:
         output_path = url.split('/')[-1]
     if op.exists(output_path):
-        info("The file {} already exists: skipping.".format(output_path))
-        return
-    # info("Downloading {0}...".format(url))
+        checked = _check_md5_of_url(output_path, url)
+        if checked is False:
+            debug("The file `{}` already exists ".format(output_path) +
+                  "but is invalid: redownloading.")
+        elif checked is True:
+            debug("The file `{}` already exists: ".format(output_path) +
+                  "skipping.")
+            return
     r = _download(url, stream=True)
     _save_stream(r, output_path)
-    _check_md5_of_url(output_path, url)
+    if _check_md5_of_url(output_path, url) is False:
+        raise RuntimeError("The checksum of the downloaded file "
+                           "doesn't match the provided checksum.")
     return output_path
 
 
@@ -174,8 +179,8 @@ def download_sample_data(filename, output_dir=None, base='cortexlab'):
     output_dir = _validate_output_dir(output_dir)
     url = _BASE_URL[base] + filename
     output_path = op.join(output_dir, filename)
-    # try:
-    download_file(url, output_path=output_path)
-    # except Exception as e:
-    #     warn("An error occurred while downloading `{}` to `{}`: {}".format(
-    #          url, output_path, str(e)))
+    try:
+        download_file(url, output_path=output_path)
+    except Exception as e:
+        warn("An error occurred while downloading `{}` to `{}`: {}".format(
+             url, output_path, str(e)))
