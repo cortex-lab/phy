@@ -6,8 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
+
 import numpy as np
-from pytest import mark, yield_fixture
+from pytest import yield_fixture
 
 from phy.electrode.mea import load_probe
 from phy.io.mock import artificial_traces
@@ -25,6 +27,15 @@ from phy.utils.datasets import _download_test_data
 def tempdir():
     with TemporaryDirectory() as tempdir:
         yield tempdir
+
+
+@yield_fixture
+def chdir_tempdir():
+    curdir = os.getcwd()
+    with TemporaryDirectory() as tempdir:
+        os.chdir(tempdir)
+        yield tempdir
+    os.chdir(curdir)
 
 
 @yield_fixture
