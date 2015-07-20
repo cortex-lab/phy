@@ -10,8 +10,6 @@ import os
 import sys
 import contextlib
 
-from six import wraps
-
 from ..utils._misc import _is_interactive
 from ..utils.logging import info, warn
 

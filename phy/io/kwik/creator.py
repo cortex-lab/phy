@@ -259,7 +259,7 @@ class KwikCreator(object):
                     f.write_attr(path + '/raw', 'dat_path', raw_path)
 
     def _add_recordings_from_dat(self, files, sample_rate=None,
-                                n_channels=None, dtype=None):
+                                 n_channels=None, dtype=None):
         start_sample = 0
         for i, filename in enumerate(files):
             # WARNING: different sample rates in recordings is not

@@ -21,7 +21,7 @@ clean-pyc:
 	find . -name '__pycache__' -exec rm -fr {} +
 
 lint:
-	python setup.py flake8
+	flake8 phy
 
 test: lint
 	python setup.py test

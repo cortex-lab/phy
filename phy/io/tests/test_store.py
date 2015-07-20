@@ -210,7 +210,7 @@ def test_cluster_store_multi():
 
         def store(self, cluster):
             spikes = self.spikes_per_cluster[cluster]
-            self.memory_store.store(cluster, d=len(spikes), m=len(spikes)**2)
+            self.memory_store.store(cluster, d=len(spikes), m=len(spikes) ** 2)
 
         def load(self, cluster, name):
             return self.memory_store.load(cluster, name)

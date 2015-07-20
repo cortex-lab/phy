@@ -28,7 +28,7 @@ def _increment(arr, indices):
 
 def _diff_shifted(arr, steps=1):
     arr = _as_array(arr)
-    return arr[steps:] - arr[:len(arr)-steps]
+    return arr[steps:] - arr[:len(arr) - steps]
 
 
 def _create_correlograms_array(n_clusters, winsize_bins):
