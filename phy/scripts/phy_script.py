@@ -19,7 +19,7 @@ import argparse
 from textwrap import dedent
 
 import numpy as np
-from six import exec_
+from six import exec_, string_types
 
 
 #------------------------------------------------------------------------------
@@ -352,10 +352,13 @@ def cluster_manual(args):
 # Main functions
 #------------------------------------------------------------------------------
 
-def main():
-
+def main(args=None):
     p = ParserCreator()
-    args = p.parse(sys.argv[1:])
+    if args is None:
+        args = sys.argv[1:]
+    elif isinstance(args, string_types):
+        args = args.split(' ')
+    args or p.parse(args)
 
     if args.profiler or args.line_profiler:
         from phy.utils.testing import _enable_profiler, _profile
