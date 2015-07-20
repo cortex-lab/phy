@@ -61,7 +61,7 @@ def download_file(url, output=None, checksum=None):
     if r.status_code != 200:
         warn("Error while downloading `{}`.".format(url))
         r.raise_for_status()
-    info("Downloading {0}...".format(url))
+    info("Downloading `{}` to `{}`...".format(url, output))
     with open(output, 'wb') as f:
         for chunk in r.iter_content(chunk_size=1024):
             if chunk:
