@@ -7,16 +7,18 @@
 #------------------------------------------------------------------------------
 
 import os.path as op
+from itertools import product
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 import responses
-from pytest import raises
+from pytest import raises, yield_fixture
 
 from ..datasets import (_download,
-                        _download_test_data,
                         download_file,
+                        download_test_data,
                         download_sample_data,
+                        _check_md5_of_url,
                         _BASE_URL,
                         )
 
@@ -41,12 +43,46 @@ def _add_mock_response(url, body, file_type='binary'):
                   )
 
 
-def setup():
-    _add_mock_response(_URL, _DATA.tostring())
-    _add_mock_response(_URL + '.md5', _CHECKSUM)
+@yield_fixture
+def mock_url():
+    data = _DATA.tostring()
+    checksum = _CHECKSUM
+    url_data = _URL
+    url_checksum = _URL + '.md5'
+
+    _add_mock_response(url_data, data)
+    _add_mock_response(url_checksum, checksum)
+
+    yield
+
+    responses.reset()
 
 
-def teardown():
+@yield_fixture(params=product((True, False), repeat=4))
+def mock_urls(request):
+    data = _DATA.tostring()
+    checksum = _CHECKSUM
+    url_data = _URL
+    url_checksum = _URL + '.md5'
+
+    if not request.param[0]:
+        # Data URL is corrupted.
+        url_data = url_data[:-1]
+    if not request.param[1]:
+        # Data is corrupted.
+        data = data[:-1]
+    if not request.param[2]:
+        # Checksum URL is corrupted.
+        url_checksum = url_checksum[:-1]
+    if not request.param[3]:
+        # Checksum is corrupted.
+        checksum = checksum[:-1]
+
+    _add_mock_response(url_data, data)
+    _add_mock_response(url_checksum, checksum)
+
+    yield request.param, url_data, url_checksum
+
     responses.reset()
 
 
@@ -55,7 +91,18 @@ def teardown():
 #------------------------------------------------------------------------------
 
 @responses.activate
-def test_download_error(tempdir):
+def test_check_md5_of_url(tempdir, mock_url):
+    output_path = op.join(tempdir, 'data')
+    download_file(_URL, output_path)
+    _check_md5_of_url(output_path, _URL)
+
+
+#------------------------------------------------------------------------------
+# Test download functions
+#------------------------------------------------------------------------------
+
+@responses.activate
+def test_download_not_found(tempdir):
     path = op.join(tempdir, 'test')
     with raises(Exception):
         download_file(_URL + '_notfound', path)
@@ -66,28 +113,36 @@ def test_download_checksum():
     assert _download(_URL + '.md5') == _CHECKSUM
 
 
-def _test_download_file(tempdir, checksum=None):
+@responses.activate
+def test_download_file(tempdir, mock_urls):
     path = op.join(tempdir, 'test.kwik')
-    download_file(_URL, path, checksum=checksum)
-    with open(path, 'rb') as f:
-        data = f.read()
-    ae(np.fromstring(data, np.float32), _DATA)
+    param, url_data, url_checksum = mock_urls
+    data_here, data_valid, checksum_here, checksum_valid = param
 
+    def _dl():
+        download_file(url_data, path, checksum=_CHECKSUM)
+        with open(path, 'rb') as f:
+            data = f.read()
+        return data
 
-@responses.activate
-def test_download_no_checksum(tempdir):
-    _test_download_file(tempdir, checksum=None)
+    def _check(data):
+        ae(np.fromstring(data, np.float32), _DATA)
 
+    assert_succeeds = (data_here and data_valid and
+                       ((checksum_here == checksum_valid) or
+                        (not(checksum_here) and checksum_valid)))
 
-@responses.activate
-def test_download_valid_checksum(tempdir):
-    _test_download_file(tempdir, checksum=_CHECKSUM)
+    download_succeeds = (assert_succeeds or (data_here and
+                         (not(data_valid) and not(checksum_here))))
 
+    if download_succeeds:
+        data = _dl()
+    else:
+        with raises(Exception):
+            data = _dl()
 
-@responses.activate
-def test_download_invalid_checksum(tempdir):
-    with raises(RuntimeError):
-        _test_download_file(tempdir, checksum=_CHECKSUM[:-1])
+    if assert_succeeds:
+        _check(data)
 
 
 @responses.activate
