@@ -10,7 +10,7 @@ import hashlib
 import os
 import os.path as op
 
-from .logging import debug, info, warn
+from .logging import info, warn
 from .settings import _phy_user_dir, _ensure_dir_exists
 
 
@@ -85,6 +85,7 @@ def _validate_output_dir(output_dir):
     output_dir = op.realpath(op.dirname(output_dir))
     if not op.exists(output_dir):
         os.mkdir(output_dir)
+    return output_dir
 
 
 def download_file(url, output_path=None):
@@ -148,7 +149,6 @@ def download_sample_data(filename, output_dir=None, base='cortexlab'):
 
     """
     output_dir = _validate_output_dir(output_dir)
-    filename, ext = op.splitext(filename)
     url = _BASE_URL[base] + filename
     output_path = op.join(output_dir, filename)
     try:

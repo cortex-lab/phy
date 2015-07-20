@@ -18,6 +18,7 @@ from ..datasets import (download_file,
                         download_test_data,
                         download_sample_data,
                         _check_md5_of_url,
+                        _BASE_URL,
                         )
 
 
@@ -129,29 +130,33 @@ def test_download_file(tempdir, mock_urls):
         _check(data)
 
 
-# @responses.activate
-# def test_download_sample_data(tempdir):
-#     name = 'sample'
-#     url = _BASE_URL['cortexlab'] + name
-#     _add_mock_response(url + ext, _DATA.tostring())
-#     _add_mock_response(url + ext + '.md5', _CHECKSUM)
+@responses.activate
+def test_download_sample_data(tempdir):
+    name = 'sample.kwik'
+    url = _BASE_URL['cortexlab'] + name
+    _add_mock_response(url, _DATA.tostring())
+    _add_mock_response(url + '.md5', _CHECKSUM)
 
-#     output_dir = op.join(tempdir, name)
-#     download_sample_data(name, output_dir)
-#     with open(op.join(output_dir, name + ext), 'rb') as f:
-#         data = f.read()
-#     ae(np.fromstring(data, np.float32), _DATA)
+    output_dir = op.join(tempdir, name)
+    download_sample_data(name, output_dir)
+    with open(op.join(output_dir, name), 'rb') as f:
+        data = f.read()
+    ae(np.fromstring(data, np.float32), _DATA)
+
+    responses.reset()
 
 
-# @responses.activate
-# def test_dat_file(tempdir):
-#     data = np.random.randint(size=(20000, 4),
-#                              low=-100, high=100).astype(np.int16)
-#     fn = 'test-4ch-1s.dat'
-#     _add_mock_response(_BASE_URL['github'] + 'test/' + fn,
-#                        data.tostring())
+@responses.activate
+def test_dat_file(tempdir):
+    data = np.random.randint(size=(20000, 4),
+                             low=-100, high=100).astype(np.int16)
+    fn = 'test-4ch-1s.dat'
+    _add_mock_response(_BASE_URL['github'] + 'test/' + fn,
+                       data.tostring())
 
-#     path = _download_test_data(fn, tempdir)
-#     with open(path, 'rb') as f:
-#         arr = np.fromfile(f, dtype=np.int16).reshape((-1, 4))
-#     assert arr.shape == (20000, 4)
+    path = download_test_data(fn, tempdir)
+    with open(path, 'rb') as f:
+        arr = np.fromfile(f, dtype=np.int16).reshape((-1, 4))
+    assert arr.shape == (20000, 4)
+
+    responses.reset()
