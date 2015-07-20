@@ -14,12 +14,10 @@ from numpy.testing import assert_array_equal as ae
 import responses
 from pytest import raises, yield_fixture
 
-from ..datasets import (_download,
-                        download_file,
+from ..datasets import (download_file,
                         download_test_data,
                         download_sample_data,
                         _check_md5_of_url,
-                        _BASE_URL,
                         )
 
 
@@ -45,16 +43,9 @@ def _add_mock_response(url, body, file_type='binary'):
 
 @yield_fixture
 def mock_url():
-    data = _DATA.tostring()
-    checksum = _CHECKSUM
-    url_data = _URL
-    url_checksum = _URL + '.md5'
-
-    _add_mock_response(url_data, data)
-    _add_mock_response(url_checksum, checksum)
-
+    _add_mock_response(_URL, _DATA.tostring())
+    _add_mock_response(_URL + '.md5', _CHECKSUM)
     yield
-
     responses.reset()
 
 
@@ -80,9 +71,7 @@ def mock_urls(request):
 
     _add_mock_response(url_data, data)
     _add_mock_response(url_checksum, checksum)
-
     yield request.param, url_data, url_checksum
-
     responses.reset()
 
 
@@ -109,18 +98,13 @@ def test_download_not_found(tempdir):
 
 
 @responses.activate
-def test_download_checksum():
-    assert _download(_URL + '.md5') == _CHECKSUM
-
-
-@responses.activate
 def test_download_file(tempdir, mock_urls):
-    path = op.join(tempdir, 'test.kwik')
+    path = op.join(tempdir, 'test')
     param, url_data, url_checksum = mock_urls
     data_here, data_valid, checksum_here, checksum_valid = param
 
     def _dl():
-        download_file(url_data, path, checksum=_CHECKSUM)
+        download_file(_URL, path)
         with open(path, 'rb') as f:
             data = f.read()
         return data
@@ -145,31 +129,29 @@ def test_download_file(tempdir, mock_urls):
         _check(data)
 
 
-@responses.activate
-def test_download_sample_data(tempdir):
-    name = 'sample'
-    url = _BASE_URL['cortexlab'] + name
-    for ext in ('.kwik', '.kwx', '.raw.kwd'):
-        _add_mock_response(url + ext, _DATA.tostring())
-        _add_mock_response(url + ext + '.md5', _CHECKSUM)
+# @responses.activate
+# def test_download_sample_data(tempdir):
+#     name = 'sample'
+#     url = _BASE_URL['cortexlab'] + name
+#     _add_mock_response(url + ext, _DATA.tostring())
+#     _add_mock_response(url + ext + '.md5', _CHECKSUM)
 
-    output_dir = op.join(tempdir, name)
-    download_sample_data(name, output_dir)
-    for ext in ('.kwik', '.kwx', '.raw.kwd'):
-        with open(op.join(output_dir, name + ext), 'rb') as f:
-            data = f.read()
-        ae(np.fromstring(data, np.float32), _DATA)
+#     output_dir = op.join(tempdir, name)
+#     download_sample_data(name, output_dir)
+#     with open(op.join(output_dir, name + ext), 'rb') as f:
+#         data = f.read()
+#     ae(np.fromstring(data, np.float32), _DATA)
 
 
-@responses.activate
-def test_dat_file(tempdir):
-    data = np.random.randint(size=(20000, 4),
-                             low=-100, high=100).astype(np.int16)
-    fn = 'test-4ch-1s.dat'
-    _add_mock_response(_BASE_URL['github'] + 'test/' + fn,
-                       data.tostring())
+# @responses.activate
+# def test_dat_file(tempdir):
+#     data = np.random.randint(size=(20000, 4),
+#                              low=-100, high=100).astype(np.int16)
+#     fn = 'test-4ch-1s.dat'
+#     _add_mock_response(_BASE_URL['github'] + 'test/' + fn,
+#                        data.tostring())
 
-    path = _download_test_data(fn, tempdir)
-    with open(path, 'rb') as f:
-        arr = np.fromfile(f, dtype=np.int16).reshape((-1, 4))
-    assert arr.shape == (20000, 4)
+#     path = _download_test_data(fn, tempdir)
+#     with open(path, 'rb') as f:
+#         arr = np.fromfile(f, dtype=np.int16).reshape((-1, 4))
+#     assert arr.shape == (20000, 4)
