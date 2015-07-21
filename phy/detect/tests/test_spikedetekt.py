@@ -10,7 +10,6 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 from pytest import mark
 
-from ...utils.datasets import download_test_data
 from ...utils.logging import set_level
 from ...utils.testing import show_test
 from ..spikedetekt import (SpikeDetekt, _split_spikes, _concat, _concatenate)
@@ -128,10 +127,6 @@ def test_spike_detect_real_data(tempdir, raw_dataset):
     n_samples = raw_dataset.n_samples
     npc = params['n_features_per_channel']
     n_samples_w = params['extract_s_before'] + params['extract_s_after']
-
-    # Load the traces.
-    path = download_test_data('test-32ch-10s.dat')
-    traces = np.fromfile(path, dtype=np.int16).reshape((200000, 32))
 
     # Run the detection.
     out = sd.run_serial(traces, interval_samples=(0, n_samples))
