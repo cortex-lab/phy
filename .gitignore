@@ -7,6 +7,7 @@ wiki
 .idea
 .ipynb_checkpoints
 .*fuse*
+*.orig
 .eggs
 
 *.py[cod]
