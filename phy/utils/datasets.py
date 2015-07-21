@@ -10,7 +10,7 @@ import hashlib
 import os
 import os.path as op
 
-from .logging import debug, info, warn
+from .logging import debug, warn
 from .settings import _phy_user_dir, _ensure_dir_exists
 from .event import ProgressReporter
 
