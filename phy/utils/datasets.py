@@ -31,8 +31,9 @@ def _remote_file_size(path):
     try:
         response = requests.head(path)
         return int(response.headers.get('content-length', 0))
-    except Exception as e:
-        debug("Unable to get the file size from `{}`: {}.".format(path, e))
+    except Exception:
+        # Unable to get the file size: no progress report.
+        pass
     return 0
 
 
@@ -90,7 +91,7 @@ def _check_md5(path, checksum):
 
 def _check_md5_of_url(output_path, url):
     try:
-        checksum = download_text_file(url + '.md5')
+        checksum = download_text_file(url + '.md5').split(' ')[0]
     except Exception:
         checksum = None
     finally:
@@ -145,6 +146,7 @@ def download_file(url, output_path=None):
     _save_stream(r, output_path)
     if _check_md5_of_url(output_path, url) is False:
         debug("The checksum doesn't match: retrying the download.")
+        r = _download(url, stream=True)
         _save_stream(r, output_path)
         if _check_md5_of_url(output_path, url) is False:
             raise RuntimeError("The checksum of the downloaded file "

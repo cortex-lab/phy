@@ -50,7 +50,7 @@ def _add_mock_response(url, body, file_type='binary'):
 @yield_fixture
 def mock_url():
     _add_mock_response(_URL, _DATA.tostring())
-    _add_mock_response(_URL + '.md5', _CHECKSUM)
+    _add_mock_response(_URL + '.md5', _CHECKSUM + '  ' + op.basename(_URL))
     yield
     responses.reset()
 
@@ -100,7 +100,7 @@ def _check(data):
 def test_check_md5_of_url(tempdir, mock_url):
     output_path = op.join(tempdir, 'data')
     download_file(_URL, output_path)
-    _check_md5_of_url(output_path, _URL)
+    assert _check_md5_of_url(output_path, _URL)
 
 
 #------------------------------------------------------------------------------

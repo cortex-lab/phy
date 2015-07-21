@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from ..phy_script import ParserCreator
+from ..phy_script import ParserCreator, main
 
 
 #------------------------------------------------------------------------------
@@ -36,3 +36,7 @@ def test_parse_cluster_auto():
     assert not args.debug
     assert not args.profiler
     assert args.line_profiler
+
+
+def test_download(chdir_tempdir):
+    main('download hybrid_10sec.prm')
