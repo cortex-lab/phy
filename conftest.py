@@ -16,7 +16,7 @@ from phy.io.mock import artificial_traces
 from phy.utils._types import Bunch
 from phy.utils.tempdir import TemporaryDirectory
 from phy.utils.settings import _load_default_settings
-from phy.utils.datasets import _download_test_data
+from phy.utils.datasets import download_test_data
 
 
 #------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ def raw_dataset(request):
     params = _load_default_settings()['spikedetekt']
     data_type = request.param
     if data_type == 'real':
-        path = _download_test_data('test-32ch-10s.dat')
+        path = download_test_data('test-32ch-10s.dat')
         traces = np.fromfile(path, dtype=np.int16).reshape((200000, 32))
         traces = traces[:45000]
         n_samples, n_channels = traces.shape
