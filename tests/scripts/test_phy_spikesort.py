@@ -21,4 +21,12 @@ def test_quick_start(chdir_tempdir):
     main('download hybrid_10sec.dat')
     main('download hybrid_10sec.prm')
     main('spikesort hybrid_10sec.prm')
+    # TODO: implement auto-close
     # main('cluster-manual hybrid_10sec.kwik')
+
+
+# def test_traces(chdir_tempdir):
+    # TODO: implement auto-close
+    # main('download hybrid_10sec.dat')
+    # main('traces --n-channels=32 --dtype=int16 '
+    #      '--sample-rate=20000 --interval=0,3 hybrid_10sec.dat')

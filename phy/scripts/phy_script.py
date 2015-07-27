@@ -154,8 +154,8 @@ class ParserCreator(object):
         desc = 'show the traces of a raw data file'
         p = self._add_sub_parser('traces', desc)
         p.add_argument('file', help='path to a `.kwd` or `.dat` file')
-        p.add_argument('interval', help='interval in number '
-                       'of samples',)
+        p.add_argument('--interval',
+                       help='detection interval in seconds (e.g. `0,10`)')
         p.add_argument('--n-channels', '-n',
                        help='number of channels in the recording '
                        '(only required when using a flat binary file)')
@@ -164,6 +164,9 @@ class ParserCreator(object):
                        '(only required when using a flat binary file)',
                        default='int16',
                        )
+        p.add_argument('--sample-rate', '-s',
+                       help='sample rate in Hz '
+                       '(only required when using a flat binary file)')
         p.set_defaults(func=traces)
 
     def create_spikesort(self):
@@ -273,11 +276,16 @@ def traces(args):
             raise ValueError("Please specify `--n-channels`.")
         if not args.dtype:
             raise ValueError("Please specify `--dtype`.")
+        if not args.sample_rate:
+            raise ValueError("Please specify `--sample-rate`.")
         n_channels = int(args.n_channels)
         dtype = np.dtype(args.dtype)
         traces = read_dat(path, dtype=dtype, n_channels=n_channels)
 
-    start, end = map(int, args.interval.split('-'))
+    start, end = map(int, args.interval.split(','))
+    sample_rate = float(args.sample_rate)
+    start = int(sample_rate * start)
+    end = int(sample_rate * end)
 
     c = TraceView(keys='interactive')
     c.visual.traces = .01 * traces[start:end, ...]
