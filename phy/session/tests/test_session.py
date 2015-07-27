@@ -6,10 +6,12 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
 import os.path as op
 
 import numpy as np
 from numpy.testing import assert_allclose as ac
+from numpy.testing import assert_equal as ae
 from pytest import raises, yield_fixture, mark
 
 from ..session import Session
@@ -343,7 +345,7 @@ def test_session_auto(session, spike_ids):
                          clustering='test',
                          )
     assert session.model.clustering == 'test'
-    assert session.model.clusterings == ['main', 'kk2_current',
+    assert session.model.clusterings == ['main',
                                          'original', 'test']
 
     # Re-open the dataset and check that the clustering has been saved.
@@ -355,8 +357,17 @@ def test_session_auto(session, spike_ids):
     assert not np.all(session.model.spike_clusters[spike_ids] == sc)
 
     assert 'klustakwik_version' not in session.model.clustering_metadata
+    kk_dir = op.join(session.settings.exp_settings_dir, 'klustakwik2')
 
-    for clustering in ('test', 'kk2_current'):
+    # Check temporary files with latest clustering.
+    files = os.listdir(kk_dir)
+    assert 'spike_clusters.txt' in files
+    if len(files) >= 2:
+        assert 'spike_clusters.txt~' in files
+    sc_txt = np.loadtxt(op.join(kk_dir, 'spike_clusters.txt'))
+    ae(sc, sc_txt[spike_ids])
+
+    for clustering in ('test',):
         session.change_clustering(clustering)
         assert len(session.model.spike_clusters) == n_spikes
         assert np.all(session.model.spike_clusters[spike_ids] == sc)
