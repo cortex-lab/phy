@@ -367,10 +367,6 @@ class Session(BaseSession):
         """
         if clustering is None:
             clustering = 'main'
-        # Make sure the clustering name does not exist already.
-        if clustering in self.model.clusterings:
-            raise ValueError("The clustering `{}` ".format(clustering) +
-                             "already exists.")
 
         kk2_dir = op.join(self.settings.exp_settings_dir, 'klustakwik2')
         _ensure_dir_exists(kk2_dir)
@@ -393,7 +389,7 @@ class Session(BaseSession):
             spike_clusters_orig = self.model.spike_clusters.copy()
 
         # HACK: there needs to be one clustering.
-        if not self.model.clusterings:
+        if 'empty' not in self.model.clusterings:
             self.model.add_clustering('empty', spike_clusters_orig)
 
         # Instantiate the KlustaKwik instance.
