@@ -316,8 +316,15 @@ def detect(args):
 
 
 def cluster_auto(args):
+    from phy.utils._misc import _read_python
+    from phy.session import Session
+
     assert args.file.endswith('.prm')
-    session = _create_session(args, use_store=False)
+
+    params = _read_python(args.file)
+    kwik_path = params['experiment_name'] + '.kwik'
+    session = Session(kwik_path)
+
     ns = dict(session=session,
               clustering=args.clustering,
               )
