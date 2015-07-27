@@ -196,7 +196,10 @@ def _read_traces(kwik, kwd=None, dtype=None, n_channels=None):
                                    rel_path)
                 debug("`{}` doesn't exist, fallback to `{}`.".format(dat_path,
                                                                      rel_path))
-                dat_path = rel_path
+                if op.exists(op.realpath(rel_path)):
+                    dat_path = rel_path
+                else:
+                    return
             n_samples = _dat_n_samples(dat_path,
                                        n_channels=n_channels,
                                        dtype=dtype,
