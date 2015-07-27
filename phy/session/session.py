@@ -322,6 +322,7 @@ class Session(BaseSession):
         # Add the spikes in the `.kwik` and `.kwx` files.
         for group in out.groups:
             spike_samples = _concatenate(out.spike_samples[group])
+            n_spikes = len(spike_samples) if spike_samples is not None else 0
             n_channels = sd._n_channels_per_group[group]
             self.model.creator.add_spikes(group=group,
                                           spike_samples=spike_samples,
@@ -331,6 +332,10 @@ class Session(BaseSession):
                                           n_channels=n_channels,
                                           n_features=n_features,
                                           )
+            sc = np.zeros(n_spikes, dtype=np.int32)
+            self.model.creator.add_clustering(group=group,
+                                              name='main',
+                                              spike_clusters=sc)
         self.emit('open')
 
         if out.groups:
@@ -413,6 +418,9 @@ class Session(BaseSession):
         spike_clusters[spike_ids] = sc
 
         # Add a new clustering and switch to it.
+        if clustering in self.model.clusterings:
+            self.change_clustering('empty')
+            self.model.delete_clustering(clustering)
         self.model.add_clustering(clustering, spike_clusters)
 
         # Copy the main clustering to original (only if this is the very
