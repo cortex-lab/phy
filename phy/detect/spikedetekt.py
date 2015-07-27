@@ -98,7 +98,7 @@ def _cut_traces(traces, interval_samples):
     if start > 0:
         # TODO: add offset to the spike samples...
         raise NotImplementedError("Need to add `start` to the "
-                                 "spike samples")
+                                  "spike samples")
     return traces, start
 
 
