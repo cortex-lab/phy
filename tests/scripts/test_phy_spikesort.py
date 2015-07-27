@@ -17,6 +17,13 @@ def test_version():
     main('-v')
 
 
+def test_cluster_auto_prm(chdir_tempdir):
+    main('download hybrid_10sec.dat')
+    main('download hybrid_10sec.prm')
+    main('detect hybrid_10sec.prm')
+    main('cluster-auto hybrid_10sec.prm')
+
+
 def test_quick_start(chdir_tempdir):
     main('download hybrid_10sec.dat')
     main('download hybrid_10sec.prm')
