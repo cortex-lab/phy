@@ -3,6 +3,7 @@ doc
 docker
 experimental
 htmlcov
+format
 wiki
 .idea
 .ipynb_checkpoints
