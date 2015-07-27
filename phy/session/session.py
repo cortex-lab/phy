@@ -438,6 +438,7 @@ class Session(BaseSession):
         self.save()
         info("The clustering has been saved in the "
              "`{}` clustering in the `.kwik` file.".format(clustering))
+        self.model.delete_clustering('empty')
         return sc
 
     # GUI
