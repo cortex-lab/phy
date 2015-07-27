@@ -61,7 +61,7 @@ def _download(url, stream=None):
     from requests import get
     r = get(url, stream=stream)
     if r.status_code != 200:
-        warn("Error while downloading `{}`.".format(url))
+        debug("Error while downloading `{}`.".format(url))
         r.raise_for_status()
     return r
 
