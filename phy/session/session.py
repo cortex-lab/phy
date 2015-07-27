@@ -366,6 +366,10 @@ class Session(BaseSession):
         if clustering in self.model.clusterings:
             raise ValueError("The clustering `{}` ".format(clustering) +
                              "already exists.")
+
+        kk2_dir = op.join(self.settings.exp_settings_dir, 'klustakwik2')
+        _ensure_dir_exists(kk2_dir)
+
         # Take KK2's default parameters.
         from klustakwik2.default_parameters import default_parameters
         params = default_parameters.copy()
@@ -396,12 +400,12 @@ class Session(BaseSession):
             # Update the original spike clusters.
             spike_clusters = spike_clusters_orig.copy()
             spike_clusters[spike_ids] = sc
-
-            # Replace the kk2_current clustering.
-            if 'kk2_current' in self.model.clusterings:
-                self.model.delete_clustering('kk2_current')
-            self.model.add_clustering('kk2_current', spike_clusters)
-            info("Updated `kk2_current` clustering in the `.kwik` file.")
+            # Save to a text file.
+            path = op.join(kk2_dir, 'spike_clusters.txt')
+            # Backup.
+            if op.exists(path):
+                shutil.copy(path, path + '~')
+            np.savetxt(path, spike_clusters, fmt='%d')
 
         info("Running {}...".format(algorithm))
         # Run KK.
