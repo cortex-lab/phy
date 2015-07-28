@@ -360,8 +360,11 @@ def spikesort(args):
 
 
 def cluster_manual(args):
+    channel_group = (int(args.channel_group)
+                     if args.channel_group is not None else None)
     session = _create_session(args,
                               clustering=args.clustering,
+                              channel_group=channel_group,
                               use_store=not(args.no_store),
                               )
     cluster_ids = (list(map(int, args.cluster_ids.split(',')))
