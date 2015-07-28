@@ -624,6 +624,8 @@ class TraceViewModel(VispyViewModel):
 
     @interval.setter
     def interval(self, value):
+        if self.model.traces is None:
+            return
         if not isinstance(value, tuple) or len(value) != 2:
             raise ValueError("The interval should be a (start, end) tuple.")
         # Restrict the interval to the boundaries of the traces.
