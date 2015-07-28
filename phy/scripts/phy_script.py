@@ -207,6 +207,8 @@ class ParserCreator(object):
         p.add_argument('file', help='path to a `.kwik` file')
         p.add_argument('--clustering', default='main',
                        help='name of the clustering to use')
+        p.add_argument('--channel-group', default=None,
+                       help='channel group to manually cluster')
         p.add_argument('--cluster-ids', '-c',
                        help='list of clusters to select initially')
         p.add_argument('--no-store', action='store_true', default=False,
