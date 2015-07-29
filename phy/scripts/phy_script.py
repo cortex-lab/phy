@@ -207,6 +207,8 @@ class ParserCreator(object):
         p.add_argument('file', help='path to a `.kwik` file')
         p.add_argument('--clustering', default='main',
                        help='name of the clustering to use')
+        p.add_argument('--channel-group', default=None,
+                       help='channel group to manually cluster')
         p.add_argument('--cluster-ids', '-c',
                        help='list of clusters to select initially')
         p.add_argument('--no-store', action='store_true', default=False,
@@ -358,8 +360,11 @@ def spikesort(args):
 
 
 def cluster_manual(args):
+    channel_group = (int(args.channel_group)
+                     if args.channel_group is not None else None)
     session = _create_session(args,
                               clustering=args.clustering,
+                              channel_group=channel_group,
                               use_store=not(args.no_store),
                               )
     cluster_ids = (list(map(int, args.cluster_ids.split(',')))

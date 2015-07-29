@@ -66,12 +66,14 @@ class Session(BaseSession):
     def __init__(self,
                  kwik_path=None,
                  clustering=None,
+                 channel_group=None,
                  model=None,
                  use_store=True,
                  phy_user_dir=None,
                  waveform_filter=True,
                  ):
         self._clustering = clustering
+        self._channel_group = channel_group
         self._use_store = use_store
         self._file_logger = None
         self._waveform_filter = waveform_filter
@@ -97,6 +99,7 @@ class Session(BaseSession):
     def _create_model(self, path):
         model = KwikModel(path,
                           clustering=self._clustering,
+                          channel_group=self._channel_group,
                           waveform_filter=self._waveform_filter,
                           )
         self._create_logger(path)
