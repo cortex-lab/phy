@@ -30,7 +30,13 @@ coverage:
 	coverage --html
 
 test-quick: lint
-	py.test phy -m "not long"
+	python setup.py test -a "-m \"not long\"" -d phy
+
+unit-tests: lint
+	python setup.py test -a "" -d phy
+
+integration-tests: lint
+	python setup.py test -a "" -d tests
 
 apidoc:
 	python tools/api.py
