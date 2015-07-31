@@ -94,7 +94,7 @@ def _cut_traces(traces, interval_samples):
         n_samples = traces.shape[0]
     else:
         start, end = 0, n_samples
-    assert 0 <= start < n_samples
+    assert 0 <= start < end
     if start > 0:
         # TODO: add offset to the spike samples...
         raise NotImplementedError("Need to add `start` to the "
