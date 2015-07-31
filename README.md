@@ -1,7 +1,7 @@
 # phy project
 
 [![Build Status](https://img.shields.io/travis/kwikteam/phy.svg)](https://travis-ci.org/kwikteam/phy)
-[![Build Status](https://img.shields.io/appveyor/ci/rossant/phy.svg)](https://ci.appveyor.com/project/rossant/phy/)
+[![Build Status](https://img.shields.io/appveyor/ci/kwikteam/phy.svg)](https://ci.appveyor.com/project/kwikteam/phy/)
 [![codecov.io](https://img.shields.io/codecov/c/github/kwikteam/phy.svg)](http://codecov.io/github/kwikteam/phy?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/phy/badge/?version=latest)](https://readthedocs.org/projects/phy/?badge=latest)
 [![PyPI release](https://img.shields.io/pypi/v/phy.svg)](https://pypi.python.org/pypi/phy)
