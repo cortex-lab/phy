@@ -128,6 +128,25 @@ def test_gui_clustering(qtbot):
     gui.close()
 
 
+def test_gui_move_wizard(qtbot):
+    gui = _start_manual_clustering()
+    n = gui.n_clusters
+    qtbot.addWidget(gui.main_window)
+    gui.show()
+
+    gui.next()
+    gui.pin()
+    gui.next()
+    best = gui.wizard.best
+    assert gui.selected_clusters[0] == best
+    match = gui.selected_clusters[1]
+    gui.move([gui.wizard.match], 'mua')
+    assert gui.selected_clusters[0] == best
+    assert gui.selected_clusters[1] != match
+
+    gui.close()
+
+
 def test_gui_wizard(qtbot):
     gui = _start_manual_clustering()
     n = gui.n_clusters
