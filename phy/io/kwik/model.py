@@ -570,8 +570,20 @@ class KwikModel(BaseModel):
     def open(self, kwik_path, channel_group=None, clustering=None):
         """Open a Kwik dataset.
 
-        The `.kwik`, `.kwx`, and `.raw.kwd` must be in the same folder with the
+        The `.kwik` and `.kwx` must be in the same folder with the
         same basename.
+
+        The files containing the traces (`.raw.kwd` or `.dat` / `.bin`) are
+        determined according to the following logic:
+
+        - Is there a path specified in to a file which exists in [KWIK]/recordings/[X]/raw?
+        If so, open it.
+        - If this file does not exist, does a file exist with the same name in the current
+        directory? If so, open it.
+        - If such a file does not exist, or no filename is specified in the [KWIK], then
+        is there a `.dat`, `.bin, or .`raw.kwd` with the experiment basename in the current
+        directory? If so, open it.
+        - If not, return with a warning.
 
         Notes
         -----
@@ -584,8 +596,8 @@ class KwikModel(BaseModel):
 
         The `.kwx` and `.raw.kwd` files stay open in read-only mode as long
         as `model.close()` is not called. This is because there might be
-        read accesses to `features_masks` (`.kwx`) and waveforms (`.raw.kwd`)
-        while the dataset is opened.
+        read accesses to `features_masks` (`.kwx`) and waveforms (`.raw.kwd`
+        or `.dat` / `.bin`) while the dataset is opened.
 
         Parameters
         ----------
@@ -626,8 +638,7 @@ class KwikModel(BaseModel):
                  "Features and masks won't be available.")
         self._kwd = _open_h5_if_exists(kwik_path, 'raw.kwd')
         if self._kwd is None:
-            debug("The `.raw.kwd` file hasn't been found. "
-                  "Traces and waveforms won't be available.")
+            debug("No `.raw.kwd` file has been found.")
 
         # KwikCreator instance.
         self.creator = KwikCreator(kwik_path=kwik_path)
