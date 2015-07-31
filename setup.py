@@ -22,13 +22,11 @@ from setuptools.command.test import test as TestCommand
 #------------------------------------------------------------------------------
 
 class PyTest(TestCommand):
-    user_options = [('pytest-args=', 'a', "String of arguments to pass to py.test"),
-                    ('directories=', 'd', "Directories to test")]
+    user_options = [('pytest-args=', 'a', "String of arguments to pass to py.test")]
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
-        self.pytest_args = '--cov-report term-missing --cov=phy'
-        self.directories = 'phy tests'
+        self.pytest_args = '--cov-report term-missing --cov=phy phy tests'
 
     def finalize_options(self):
         TestCommand.finalize_options(self)
@@ -38,7 +36,7 @@ class PyTest(TestCommand):
     def run_tests(self):
         #import here, cause outside the eggs aren't loaded
         import pytest
-        pytest_string = '-s ' + self.pytest_args + ' ' + self.directories
+        pytest_string = '-s ' + self.pytest_args
         print("Running: py.test " + pytest_string)
         errno = pytest.main(pytest_string)
         sys.exit(errno)
