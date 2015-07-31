@@ -63,6 +63,7 @@ def read_dat(filename, dtype=None, shape=None, offset=0, n_channels=None):
     return np.memmap(filename, dtype=dtype, shape=shape,
                      mode='r', offset=offset)
 
+
 def _dat_to_traces(dat_path, n_channels, dtype):
     assert dtype is not None
     assert n_channels is not None
@@ -73,6 +74,7 @@ def _dat_to_traces(dat_path, n_channels, dtype):
     return read_dat(dat_path,
                     dtype=dtype,
                     shape=(n_samples, n_channels))
+
 
 def _dat_n_samples(filename, dtype=None, n_channels=None):
     assert dtype is not None

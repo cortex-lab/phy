@@ -184,12 +184,14 @@ def _read_traces(kwik, kwik_path, dtype=None, n_channels=None):
         # [KWIK]/recordings/[X]/raw? If so, open it.
         path = '/recordings/{}/raw'.format(recording)
         if kwik.has_attr(path, 'hdf5_path'):
-            kwd_path = kwik.read_attr(path, 'hdf5_path')
+            kwd_path = kwik.read_attr(path, 'hdf5_path')[:-8]
             kwd = _open_h5_if_exists(kwd_path, 'raw.kwd')
             if kwd is None:
-                debug("{} not found, trying same basename in KWIK dir".format(kwd_path))
+                debug("{} not found, trying same basename in KWIK dir"
+                      .format(kwd_path))
             else:
-                traces.append(kwd.read('/recordings/{}/data'.format(recording)))
+                traces.append(kwd.read('/recordings/{}/data'
+                              .format(recording)))
                 continue
         # Is there a path specified to a .dat file which exists?
         elif kwik.has_attr(path, 'dat_path'):
@@ -197,37 +199,45 @@ def _read_traces(kwik, kwik_path, dtype=None, n_channels=None):
             assert n_channels
             dat_path = kwik.read_attr(path, 'dat_path')
             if not op.exists(dat_path):
-                debug("{} not found, trying same basename in KWIK dir".format(dat_path))
+                debug("{} not found, trying same basename in KWIK dir"
+                      .format(dat_path))
             else:
-                traces.append(_dat_to_traces(dat_path, dtype, n_channels))
+                traces.append(_dat_to_traces(dat_path, dtype=dtype,
+                                             n_channels=n_channels))
                 continue
-        
-        # Does a file exist with the same name in the current directory? If so, open it.
+
+        # Does a file exist with the same name in the current directory?
+        # If so, open it.
         if kwd_path is not None:
             rel_path = str(op.basename(kwd_path))
-            rel_path = op.join(op.dirname(op.realpath(kwik.filename)), rel_path)
+            rel_path = op.join(op.dirname(op.realpath(kwik.filename)),
+                               rel_path)
             kwd = _open_h5_if_exists(rel_path, 'raw.kwd')
             if kwd is None:
-                debug("{} not found, trying experiment basename in KWIK dir".format(kwd_path))
+                debug("{} not found, trying experiment basename in KWIK dir"
+                      .format(rel_path))
             else:
-                traces.append(kwd.read('/recordings/{}/data'.format(recording)))
+                traces.append(kwd.read('/recordings/{}/data'
+                              .format(recording)))
                 continue
         elif dat_path is not None:
             rel_path = op.basename(dat_path)
-            rel_path = op.join(op.dirname(op.realpath(kwik.filename)), rel_path)
+            rel_path = op.join(op.dirname(op.realpath(kwik.filename)),
+                               rel_path)
             if not op.exists(dat_path):
-                debug("{} not found, trying experiment basename in KWIK dir".format(dat_path))
+                debug("{} not found, trying experiment basename in KWIK dir"
+                      .format(rel_path))
             else:
-                traces.append(_dat_to_traces(dat_path, dtype, n_channels))
+                traces.append(_dat_to_traces(dat_path, dtype=dtype,
+                                             n_channels=n_channels))
                 continue
-        
-        # Finally, is there a `raw.kwd` with the experiment basename in the current
-        # directory? If so, open it.
 
+        # Finally, is there a `raw.kwd` with the experiment basename in the
+        # current directory? If so, open it.
         kwd = _open_h5_if_exists(kwik_path, '.raw.kwd')
         if kwd is None:
-            warn("Could not find any data source for traces (raw.kwd or .dat or .bin). "
-                 "Waveforms and traces will not be available.")
+            warn("Could not find any data source for traces (raw.kwd or "
+                 ".dat or .bin.) Waveforms and traces will not be available.")
         else:
             traces.append(kwd.read('/recordings/{}/data'.format(recording)))
 
@@ -600,13 +610,13 @@ class KwikModel(BaseModel):
         The files containing the traces (`.raw.kwd` or `.dat` / `.bin`) are
         determined according to the following logic:
 
-        - Is there a path specified in to a file which exists in [KWIK]/recordings/[X]/raw?
-        If so, open it.
-        - If this file does not exist, does a file exist with the same name in the current
-        directory? If so, open it.
-        - If such a file does not exist, or no filename is specified in the [KWIK], then
-        is there a `.dat`, `.bin, or .`raw.kwd` with the experiment basename in the current
-        directory? If so, open it.
+        - Is there a path specified to a file which exists in
+        [KWIK]/recordings/[X]/raw? If so, open it.
+        - If this file does not exist, does a file exist with the same name
+        in the current directory? If so, open it.
+        - If such a file does not exist, or no filename is specified in
+        the [KWIK], then is there a `raw.kwd` with the experiment basename
+        in the current directory? If so, open it.
         - If not, return with a warning.
 
         Notes
@@ -641,6 +651,9 @@ class KwikModel(BaseModel):
 
         if kwik_path is None:
             raise ValueError("No kwik_path specified.")
+
+        if not kwik_path.endswith('.kwik'):
+            raise ValueError("File does not end in .kwik")
 
         # Open the file.
         kwik_path = op.realpath(kwik_path)
@@ -945,7 +958,7 @@ class KwikModel(BaseModel):
         The channel order is the same than the one from the PRB file.
         This order was used when generating the features and masks
         in SpikeDetekt2. The same order is used in phy when loading the
-        waveforms from the `.raw.kwd` file.
+        waveforms from the traces file(s).
 
         """
         return self._channel_order
@@ -1016,9 +1029,10 @@ class KwikModel(BaseModel):
 
     @property
     def traces(self):
-        """Raw traces as found in the `.raw.kwd` file.
+        """Raw traces as found in the traces file(s).
 
-        This object is memory-mapped to the HDF5 file.
+        This object is memory-mapped to the HDF5 file, or `.dat` / `.bin` file,
+        or both.
 
         """
         return self._traces
@@ -1100,7 +1114,7 @@ class KwikModel(BaseModel):
     def waveforms(self):
         """High-passed filtered waveforms from the current channel group.
 
-        This is a virtual array mapped to the `.raw.kwd` file. Filtering is
+        This is a virtual array mapped to the traces file(s). Filtering is
         done on the fly.
 
         The shape is `(n_spikes, n_samples, n_channels)`.
@@ -1168,9 +1182,7 @@ class KwikModel(BaseModel):
     # -------------------------------------------------------------------------
 
     def close(self):
-        """Close the `.kwik`, `.kwx`, and `.raw.kwd` files if they are open."""
+        """Close the `.kwik` and `.kwx` files if they are open."""
         if self._kwx is not None:
             self._kwx.close()
-        if self._kwd is not None:
-            self._kwd.close()
         self._kwik.close()
