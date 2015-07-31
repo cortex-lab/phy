@@ -130,7 +130,6 @@ def test_gui_clustering(qtbot):
 
 def test_gui_move_wizard(qtbot):
     gui = _start_manual_clustering()
-    n = gui.n_clusters
     qtbot.addWidget(gui.main_window)
     gui.show()
 
