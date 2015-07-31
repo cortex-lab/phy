@@ -469,7 +469,7 @@ class ClusterManualGUI(BaseGUI):
             warn("{} of the {} selected clusters do not exist.".format(
                  n_selected - n_kept, n_selected))
         if len(cluster_ids) >= 14:
-            warn("You cannot select more than 14 clusters in the GUI.")
+            warn("You cannot select more than 13 clusters in the GUI.")
             return
         debug("Select clusters {0:s}.".format(str(cluster_ids)))
         self._cluster_ids = cluster_ids
