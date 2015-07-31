@@ -426,7 +426,8 @@ class Wizard(object):
             self._cluster_groups[cluster] = group
             # Reorder the best list, so that the clusters moved in different
             # groups go to their right place in the best list.
-            if self._best is not None and self._best_list:
+            if (self._best is not None and self._best_list and
+                    cluster == self._best):
                 # Find the next best after the cluster has been moved.
                 next_best = _next(self._best_list, self._best)
                 # Reorder the list.
