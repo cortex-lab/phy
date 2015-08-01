@@ -306,7 +306,9 @@ class WaveformView(BaseSpikeCanvas):
         self.visual.spike_clusters = spike_clusters
         assert spike_clusters.shape == (n_spikes,)
 
-        self.visual.cluster_colors = colors
+        if len(colors):
+            self.visual.cluster_colors = colors
+
         self.visual.channel_positions = channel_positions
         self.visual.channel_order = channel_order
 
