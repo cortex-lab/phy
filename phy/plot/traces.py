@@ -262,7 +262,8 @@ class TraceView(BaseSpikeCanvas):
             assert spike_clusters.shape == (n_spikes,)
             self.visual.spike_clusters = spike_clusters
 
-        self.visual.cluster_colors = colors
+        if len(colors):
+            self.visual.cluster_colors = colors
 
         self.update()
 

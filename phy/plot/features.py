@@ -534,7 +534,8 @@ class FeatureView(BaseSpikeCanvas):
         self.visual.spike_clusters = spike_clusters
         assert spike_clusters.shape == (n_spikes,)
 
-        self.visual.cluster_colors = colors
+        if len(colors):
+            self.visual.cluster_colors = colors
 
         # Dimensions.
         self.init_grid(n_rows)

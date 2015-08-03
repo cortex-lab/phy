@@ -152,7 +152,9 @@ class CorrelogramView(BaseSpikeCanvas):
 
         self.cluster_ids = np.arange(n_clusters)
         self.visual.correlograms = correlograms
-        self.visual.cluster_colors = colors
+
+        if len(colors):
+            self.visual.cluster_colors = colors
 
         if lines is not None:
             self.lines = lines
