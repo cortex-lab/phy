@@ -199,6 +199,8 @@ class ParserCreator(object):
         p.add_argument('file', help='path to a `.kwik` file')
         p.add_argument('--clustering', default='main',
                        help='name of the clustering to use')
+        p.add_argument('--channel-group', default=None,
+                       help='channel group to manually cluster')
         p.set_defaults(func=cluster_auto)
 
     def create_manual(self):
@@ -323,14 +325,20 @@ def cluster_auto(args):
 
     assert args.file.endswith('.prm')
 
+    channel_group = (int(args.channel_group)
+                     if args.channel_group is not None else None)
+
     params = _read_python(args.file)
     kwik_path = params['experiment_name'] + '.kwik'
     session = Session(kwik_path)
 
     ns = dict(session=session,
               clustering=args.clustering,
+              channel_group=channel_group,
               )
-    cmd = ('session.cluster(clustering=clustering)')
+    cmd = ('session.cluster('
+           'clustering=clustering, '
+           'channel_group=channel_group)')
     return (cmd, ns)
 
 
