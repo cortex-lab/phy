@@ -200,7 +200,7 @@ class ParserCreator(object):
         p.add_argument('--clustering', default='main',
                        help='name of the clustering to use')
         p.add_argument('--channel-group', default=None,
-                       help='channel group to manually cluster')
+                       help='channel group to cluster')
         p.set_defaults(func=cluster_auto)
 
     def create_manual(self):
