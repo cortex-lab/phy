@@ -144,6 +144,9 @@ class _BakeVisual(object):
         if not self._empty:
             self.program.draw(self._gl_draw_mode)
 
+    def update(self):
+        self.draw()
+
 
 class BaseSpikeVisual(_BakeVisual):
     """Base class for a VisPy visual showing spike data.
