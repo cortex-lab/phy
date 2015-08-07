@@ -174,7 +174,7 @@ def _open_h5_if_exists(kwik_path, file_type, mode=None):
     return open_h5(path, mode=mode) if op.exists(path) else None
 
 
-def _read_traces(kwik, kwik_path, dtype=None, n_channels=None):
+def _read_traces(kwik, dtype=None, n_channels=None):
     kwd_path = None
     dat_path = None
     if '/recordings' not in kwik:
@@ -245,7 +245,7 @@ def _read_traces(kwik, kwik_path, dtype=None, n_channels=None):
 
         # Finally, is there a `raw.kwd` with the experiment basename in the
         # current directory? If so, open it.
-        kwd = _open_h5_if_exists(kwik_path, '.raw.kwd')
+        kwd = _open_h5_if_exists(kwik.filename, '.raw.kwd')
         if kwd is None:
             warn("Could not find any data source for traces (raw.kwd or "
                  ".dat or .bin.) Waveforms and traces will not be available.")
@@ -591,7 +591,6 @@ class KwikModel(BaseModel):
         dtype = self._metadata.get('dtype', None)
         dtype = np.dtype(dtype) if dtype else None
         traces = _read_traces(self._kwik,
-                              self.kwik_path,
                               dtype=dtype,
                               n_channels=n_channels)
         if not traces:
