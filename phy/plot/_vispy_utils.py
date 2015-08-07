@@ -14,7 +14,6 @@ import numpy as np
 
 from vispy import app, gloo, config
 from vispy.util.event import Event
-from vispy.visuals import Visual
 
 from ..utils._types import _as_array, _as_list
 from ..utils.array import _unique, _in_polygon
@@ -86,7 +85,7 @@ def _wrap_vispy(f):
 # Base spike visual
 #------------------------------------------------------------------------------
 
-class _BakeVisual(Visual):
+class _BakeVisual(object):
     _shader_name = ''
     _gl_draw_mode = ''
 
@@ -144,6 +143,9 @@ class _BakeVisual(Visual):
         self._bake()
         if not self._empty:
             self.program.draw(self._gl_draw_mode)
+
+    def update(self):
+        self.draw()
 
 
 class BaseSpikeVisual(_BakeVisual):
