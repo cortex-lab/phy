@@ -175,6 +175,8 @@ def _open_h5_if_exists(kwik_path, file_type, mode=None):
 
 
 def _read_traces(kwik, kwik_path, dtype=None, n_channels=None):
+    kwd_path = None
+    dat_path = None
     if '/recordings' not in kwik:
         return
     recordings = kwik.children('/recordings')
@@ -190,6 +192,8 @@ def _read_traces(kwik, kwik_path, dtype=None, n_channels=None):
                 debug("{} not found, trying same basename in KWIK dir"
                       .format(kwd_path))
             else:
+                debug("Loading traces: {}"
+                      .format(kwd_path))
                 traces.append(kwd.read('/recordings/{}/data'
                               .format(recording)))
                 continue
@@ -202,6 +206,8 @@ def _read_traces(kwik, kwik_path, dtype=None, n_channels=None):
                 debug("{} not found, trying same basename in KWIK dir"
                       .format(dat_path))
             else:
+                debug("Loading traces: {}"
+                      .format(dat_path))
                 traces.append(_dat_to_traces(dat_path, dtype=dtype,
                                              n_channels=n_channels))
                 continue
@@ -217,6 +223,8 @@ def _read_traces(kwik, kwik_path, dtype=None, n_channels=None):
                 debug("{} not found, trying experiment basename in KWIK dir"
                       .format(rel_path))
             else:
+                debug("Loading traces: {}"
+                      .format(rel_path))
                 traces.append(kwd.read('/recordings/{}/data'
                               .format(recording)))
                 continue
@@ -224,11 +232,14 @@ def _read_traces(kwik, kwik_path, dtype=None, n_channels=None):
             rel_path = op.basename(dat_path)
             rel_path = op.join(op.dirname(op.realpath(kwik.filename)),
                                rel_path)
-            if not op.exists(dat_path):
+            print('rel_path', rel_path)
+            if not op.exists(rel_path):
                 debug("{} not found, trying experiment basename in KWIK dir"
                       .format(rel_path))
             else:
-                traces.append(_dat_to_traces(dat_path, dtype=dtype,
+                debug("Loading traces: {}"
+                      .format(rel_path))
+                traces.append(_dat_to_traces(rel_path, dtype=dtype,
                                              n_channels=n_channels))
                 continue
 
@@ -628,10 +639,11 @@ class KwikModel(BaseModel):
 
         The `.kwik` file is temporarily opened in append mode when saving.
 
-        The `.kwx` and `.raw.kwd` files stay open in read-only mode as long
-        as `model.close()` is not called. This is because there might be
-        read accesses to `features_masks` (`.kwx`) and waveforms (`.raw.kwd`
-        or `.dat` / `.bin`) while the dataset is opened.
+        The `.kwx` and `.raw.kwd` or `.dat` / `.bin` files stay open in
+        read-only mode as long as `model.close()` is not called. This is
+        because there might be read accesses to `features_masks` (`.kwx`)
+        and waveforms (`.raw.kwd` or `.dat` / `.bin`) while the dataset is
+        opened.
 
         Parameters
         ----------
