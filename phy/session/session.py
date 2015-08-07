@@ -348,6 +348,7 @@ class Session(BaseSession):
                 clustering=None,
                 algorithm='klustakwik',
                 spike_ids=None,
+                channel_group=None,
                 **kwargs):
         """Run an automatic clustering algorithm on all or some of the spikes.
 
@@ -370,6 +371,8 @@ class Session(BaseSession):
         """
         if clustering is None:
             clustering = 'main'
+        if channel_group is not None:
+            self.change_channel_group(channel_group)
 
         kk2_dir = op.join(self.settings.exp_settings_dir, 'klustakwik2')
         _ensure_dir_exists(kk2_dir)
