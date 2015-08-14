@@ -232,7 +232,6 @@ def _read_traces(kwik, dtype=None, n_channels=None):
             rel_path = op.basename(dat_path)
             rel_path = op.join(op.dirname(op.realpath(kwik.filename)),
                                rel_path)
-            print('rel_path', rel_path)
             if not op.exists(rel_path):
                 debug("{} not found, trying experiment basename in KWIK dir"
                       .format(rel_path))
@@ -245,11 +244,12 @@ def _read_traces(kwik, dtype=None, n_channels=None):
 
         # Finally, is there a `raw.kwd` with the experiment basename in the
         # current directory? If so, open it.
-        kwd = _open_h5_if_exists(kwik.filename, '.raw.kwd')
+        kwd = _open_h5_if_exists(kwik.filename, 'raw.kwd')
         if kwd is None:
             warn("Could not find any data source for traces (raw.kwd or "
                  ".dat or .bin.) Waveforms and traces will not be available.")
         else:
+            debug("Successfully loaded basename.raw.kwd in same directory")
             traces.append(kwd.read('/recordings/{}/data'.format(recording)))
 
     return traces
