@@ -178,7 +178,7 @@ def _read_traces(kwik, dtype=None, n_channels=None):
     kwd_path = None
     dat_path = None
     if '/recordings' not in kwik:
-        return
+        return (None, None)
     recordings = kwik.children('/recordings')
     traces = []
     opened_files = []
@@ -1209,8 +1209,14 @@ class KwikModel(BaseModel):
     def close(self):
         """Close the `.kwik` and `.kwx` files if they are open, and cleanup
         handles to all raw data files"""
+
+        debug("Closing files")
         if self._kwx is not None:
             self._kwx.close()
         for f in self._opened_files:
-            f.close()
+            # upside-down if statement to avoid false positive lint error
+            if not (isinstance(f, np.ndarray)):
+                f.close()
+            else:
+                del f
         self._kwik.close()
