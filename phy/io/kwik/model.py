@@ -181,6 +181,7 @@ def _read_traces(kwik, dtype=None, n_channels=None):
         return
     recordings = kwik.children('/recordings')
     traces = []
+    opened_files = []
     for recording in recordings:
         # Is there a path specified to a .raw.kwd file which exists in
         # [KWIK]/recordings/[X]/raw? If so, open it.
@@ -196,6 +197,7 @@ def _read_traces(kwik, dtype=None, n_channels=None):
                       .format(kwd_path))
                 traces.append(kwd.read('/recordings/{}/data'
                               .format(recording)))
+                opened_files.append(kwd)
                 continue
         # Is there a path specified to a .dat file which exists?
         elif kwik.has_attr(path, 'dat_path'):
@@ -208,8 +210,10 @@ def _read_traces(kwik, dtype=None, n_channels=None):
             else:
                 debug("Loading traces: {}"
                       .format(dat_path))
-                traces.append(_dat_to_traces(dat_path, dtype=dtype,
-                                             n_channels=n_channels))
+                dat = _dat_to_traces(dat_path, dtype=dtype,
+                                     n_channels=n_channels)
+                traces.append(dat)
+                opened_files.append(dat)
                 continue
 
         # Does a file exist with the same name in the current directory?
@@ -227,6 +231,7 @@ def _read_traces(kwik, dtype=None, n_channels=None):
                       .format(rel_path))
                 traces.append(kwd.read('/recordings/{}/data'
                               .format(recording)))
+                opened_files.append(kwd)
                 continue
         elif dat_path is not None:
             rel_path = op.basename(dat_path)
@@ -238,8 +243,10 @@ def _read_traces(kwik, dtype=None, n_channels=None):
             else:
                 debug("Loading traces: {}"
                       .format(rel_path))
-                traces.append(_dat_to_traces(rel_path, dtype=dtype,
-                                             n_channels=n_channels))
+                dat = _dat_to_traces(rel_path, dtype=dtype,
+                                     n_channels=n_channels)
+                traces.append(dat)
+                opened_files.append(dat)
                 continue
 
         # Finally, is there a `raw.kwd` with the experiment basename in the
@@ -251,8 +258,9 @@ def _read_traces(kwik, dtype=None, n_channels=None):
         else:
             debug("Successfully loaded basename.raw.kwd in same directory")
             traces.append(kwd.read('/recordings/{}/data'.format(recording)))
+            opened_files.append(kwd)
 
-    return traces
+    return traces, opened_files
 
 
 _DEFAULT_GROUPS = [(0, 'Noise'),
@@ -316,6 +324,7 @@ class KwikModel(BaseModel):
         self._recording_offsets = None
         self._waveform_loader = None
         self._waveform_filter = waveform_filter
+        self._opened_files = []
 
         # Open the experiment.
         self.kwik_path = kwik_path
@@ -590,11 +599,16 @@ class KwikModel(BaseModel):
         n_channels = self._metadata.get('n_channels', None)
         dtype = self._metadata.get('dtype', None)
         dtype = np.dtype(dtype) if dtype else None
-        traces = _read_traces(self._kwik,
-                              dtype=dtype,
-                              n_channels=n_channels)
+        traces, opened_files = _read_traces(self._kwik,
+                                            dtype=dtype,
+                                            n_channels=n_channels)
+
         if not traces:
             return
+
+        # Update the list of opened files for cleanup.
+        self._opened_files.extend(opened_files)
+
         # Set the recordings offsets (no delay between consecutive recordings).
         i = 0
         self._recording_offsets = []
@@ -1193,7 +1207,10 @@ class KwikModel(BaseModel):
     # -------------------------------------------------------------------------
 
     def close(self):
-        """Close the `.kwik` and `.kwx` files if they are open."""
+        """Close the `.kwik` and `.kwx` files if they are open, and cleanup
+        handles to all raw data files"""
         if self._kwx is not None:
             self._kwx.close()
+        for f in self._opened_files:
+            f.close()
         self._kwik.close()
