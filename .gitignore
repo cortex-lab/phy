@@ -10,6 +10,7 @@ wiki
 .*fuse*
 *.orig
 .eggs
+__pycache__
 
 *.py[cod]
 .coverage*
