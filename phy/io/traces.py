@@ -64,6 +64,18 @@ def read_dat(filename, dtype=None, shape=None, offset=0, n_channels=None):
                      mode='r', offset=offset)
 
 
+def _dat_to_traces(dat_path, n_channels, dtype):
+    assert dtype is not None
+    assert n_channels is not None
+    n_samples = _dat_n_samples(dat_path,
+                               n_channels=n_channels,
+                               dtype=dtype,
+                               )
+    return read_dat(dat_path,
+                    dtype=dtype,
+                    shape=(n_samples, n_channels))
+
+
 def _dat_n_samples(filename, dtype=None, n_channels=None):
     assert dtype is not None
     item_size = np.dtype(dtype).itemsize
