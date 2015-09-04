@@ -14,6 +14,7 @@ from h5py import Dataset
 from six import string_types
 from six.moves import zip
 
+import phy
 from ...electrode.mea import load_probe
 from ..h5 import open_h5
 from ..traces import _dat_n_samples
@@ -81,10 +82,14 @@ class KwikCreator(object):
         with open_h5(self.kwik_path, 'w') as f:
             f.write_attr('/', 'kwik_version', 2)
             f.write_attr('/', 'name', self.basename)
+            f.write_attr('/', 'creator_version', 'phy '
+                         + phy.__version_git__)
 
         assert not op.exists(self.kwx_path)
         with open_h5(self.kwx_path, 'w') as f:
             f.write_attr('/', 'kwik_version', 2)
+            f.write_attr('/', 'creator_version', 'phy '
+                         + phy.__version_git__)
 
     def set_metadata(self, path, **kwargs):
         """Set metadata fields in a HDF5 path."""
