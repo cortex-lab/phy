@@ -120,7 +120,6 @@ class ParserCreator(object):
                               epilog=_examples,
                               formatter_class=CustomFormatter,
                               )
-        self._parser.set_defaults(func=None)
         self._parser.add_argument('--version', '-v',
                                   action='version',
                                   version=phy.__version_git__,
@@ -427,7 +426,7 @@ def main(args=None):
                                              call_pdb=1,
                                              )
 
-    func = args.func
+    func = getattr(args, 'func', None)
     if func is None:
         p.parser.print_help()
         return
