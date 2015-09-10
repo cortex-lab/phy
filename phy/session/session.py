@@ -19,7 +19,12 @@ from ..utils.settings import _ensure_dir_exists
 from ..io.base import BaseSession
 from ..io.kwik.model import KwikModel
 from ..io.kwik.store_items import create_store
-from ..cluster.manual.gui import ClusterManualGUI
+# HACK: avoid Qt import
+try:
+    from ..cluster.manual.gui import ClusterManualGUI
+except ImportError:
+    class ClusterManualGUI(object):
+        _vm_classes = {}
 from ..cluster.algorithms.klustakwik import KlustaKwik
 from ..detect.spikedetekt import SpikeDetekt
 
