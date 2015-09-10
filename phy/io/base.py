@@ -18,7 +18,6 @@ from ..utils.settings import (Settings,
                               _ensure_dir_exists,
                               _phy_user_dir,
                               )
-from ..gui.base import WidgetCreator
 
 
 #------------------------------------------------------------------------------
@@ -366,7 +365,13 @@ class BaseSession(EventEmitter):
 
         if gui_classes is None:
             gui_classes = self.settings['gui_classes']
-        self._gui_creator = WidgetCreator(widget_classes=gui_classes)
+
+        # HACK: avoid Qt import here
+        try:
+            from ..gui.base import WidgetCreator
+            self._gui_creator = WidgetCreator(widget_classes=gui_classes)
+        except ImportError:
+            self._gui_creator = None
 
         self.connect(self.on_open)
         self.connect(self.on_close)
