@@ -1,4 +1,7 @@
-pytest
+# Need development version of pytest for py35 compat
+# https://github.com/pytest-dev/pytest/issues/744
+git+https://github.com/pytest-dev/pytest.git
+
 flake8
 coverage
 coveralls
