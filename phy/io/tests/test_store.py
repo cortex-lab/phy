@@ -16,6 +16,7 @@ from numpy.testing import assert_allclose as ac
 from ...utils._types import Bunch
 from ...utils.array import _spikes_per_cluster
 from ..store import (MemoryStore,
+                     BaseStore,
                      DiskStore,
                      ClusterStore,
                      VariableSizeItem,
@@ -55,6 +56,28 @@ def test_memory_store():
     assert ms.load(3) == {}
     assert ms.load(3, ['key']) == {'key': None}
     assert ms.cluster_ids == []
+
+
+def test_base_store(tempdir):
+    store = BaseStore(tempdir)
+
+    store._save('11.npy', np.arange(11))
+    store._save('12.npy', np.arange(12))
+    store._save('2.npy', np.arange(2))
+    store._save('3.npy', None)
+    store._save('1.npy', [np.arange(3), np.arange(3, 8)])
+
+    ae(store._open('01.npy'), None)
+    ae(store._open('11.npy'), np.arange(11))
+    ae(store._open('12.npy'), np.arange(12))
+    ae(store._open('2.npy'), np.arange(2))
+    ae(store._open('3.npy'), None)
+    ae(store._open('1.npy')[0], np.arange(3))
+    ae(store._open('1.npy')[1], np.arange(3, 8))
+
+    store._delete_file('2.npy')
+    store._delete_file('12.npy')
+    ae(store._open('2.npy'), None)
 
 
 def test_disk_store(tempdir):

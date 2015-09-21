@@ -17,9 +17,12 @@ from six import string_types
 from ..utils._types import _as_int, _is_integer, _is_array_like
 from ..utils._misc import _load_json, _save_json
 from ..utils.array import (PerClusterData, _spikes_in_clusters,
-                           _subset_spc, _load_ndarray)
+                           _subset_spc, _load_ndarray,
+                           _save_arrays, _load_arrays,
+                           )
 from ..utils.event import ProgressReporter
 from ..utils.logging import debug, info, warn
+from ..utils.settings import _ensure_dir_exists
 
 
 #------------------------------------------------------------------------------
@@ -53,6 +56,65 @@ def _assert_per_cluster_data_compatible(d_0, d_1):
     if n_0 != n_1:
         raise IOError("Inconsistency in the cluster store: please remove "
                       "`./<basename>.phy/cluster_store/`.")
+
+
+#------------------------------------------------------------------------------
+# Base store
+#------------------------------------------------------------------------------
+
+class BaseStore(object):
+    def __init__(self, root_dir):
+        self._root_dir = op.realpath(root_dir)
+        _ensure_dir_exists(self._root_dir)
+
+    def _location(self, filename):
+        return op.join(self._root_dir, filename)
+
+    def _offsets_path(self, path):
+        assert path.endswith('.npy')
+        return op.splitext(path)[0] + '.offsets.npy'
+
+    def _contains_multiple_arrays(self, path):
+        return op.exists(path) and op.exists(self._offsets_path(path))
+
+    def _save(self, filename, data):
+        """Save an array or list of arrays."""
+        path = self._location(filename)
+        dir_path = op.dirname(path)
+        if not op.exists(dir_path):
+            os.makedirs(dir_path)
+        if isinstance(data, list):
+            if not data:
+                return
+            _save_arrays(path, data)
+        elif isinstance(data, np.ndarray):
+            dtype = data.dtype
+            if not data.size:
+                return
+            assert dtype != np.object
+            np.save(path, data)
+
+    def _open(self, filename):
+        path = self._location(filename)
+        if not op.exists(path):
+            debug("File `{}` doesn't exist.".format(path))
+            return
+        # Multiple arrays:
+        if self._contains_multiple_arrays(path):
+            return _load_arrays(path)
+        else:
+            return np.load(path)
+
+    def _delete_file(self, filename):
+        path = self._location(filename)
+        if op.exists(path):
+            os.remove(path)
+        offsets_path = self._offsets_path(path)
+        if op.exists(offsets_path):
+            os.remove(offsets_path)
+
+    def describe(self):
+        raise NotImplementedError()
 
 
 #------------------------------------------------------------------------------
