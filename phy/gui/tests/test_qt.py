@@ -13,7 +13,6 @@ from ..qt import (QtWebKit, QtGui,
                   _set_qt_widget_position_size,
                   _prompt,
                   )
-from ...utils.logging import set_level
 
 
 # Skip these tests in "make test-quick".
@@ -23,14 +22,6 @@ pytestmark = mark.long
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
-
-def setup():
-    set_level('debug')
-
-
-def teardown():
-    set_level('info')
-
 
 def test_wrap(qtbot):
 

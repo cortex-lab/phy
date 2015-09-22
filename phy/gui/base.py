@@ -9,13 +9,16 @@
 
 from collections import Counter
 import inspect
+import logging
 
 from six import string_types, PY3
 
 from ..utils._misc import _show_shortcuts
-from ..utils import debug, info, warn, EventEmitter
+from ..utils import EventEmitter
 from ._utils import _read
 from .dock import DockWindow
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -263,10 +266,10 @@ class WidgetCreator(EventEmitter):
     def remove(self, widget):
         """Remove a widget."""
         if widget in self._widgets:
-            debug("Remove widget {}.".format(widget))
+            logger.debug("Remove widget %s.", widget)
             self._widgets.remove(widget)
         else:
-            debug("Unable to remove widget {}.".format(widget))
+            logger.debug("Unable to remove widget %s.", widget)
 
 
 #------------------------------------------------------------------------------
@@ -428,7 +431,7 @@ class BaseGUI(EventEmitter):
             # Add the right number of views of each type.
             if current_count.get(name, 0) >= requested_count.get(name, 0):
                 continue
-            debug("Adding {} view in GUI.".format(name))
+            logger.debug("Adding %s view in GUI.", name)
             # GUI-specific keyword arguments position, size, maximized
             self.add_view(name, **kwargs)
             if name not in current_count:
@@ -505,14 +508,14 @@ class BaseGUI(EventEmitter):
         snippet = snippet[len(cmd):].strip()
         func = self._snippets.get(cmd, None)
         if func is None:
-            info("The snippet `{}` could not be found.".format(cmd))
+            logger.info("The snippet `%s` could not be found.", cmd)
             return
         try:
-            info("Processing snippet `{}`.".format(cmd))
+            logger.info("Processing snippet `%s`.", cmd)
             func(self, snippet)
         except Exception as e:
-            warn("Error when executing snippet `{}`: {}.".format(
-                 cmd, str(e)))
+            logger.warn("Error when executing snippet `%s`: %s.",
+                        cmd, str(e))
 
     def _snippet_action_name(self, char):
         return self._snippet_chars.index(char)
@@ -556,7 +559,7 @@ class BaseGUI(EventEmitter):
                               )
 
     def enable_snippet_mode(self):
-        info("Snippet mode enabled, press `escape` to leave this mode.")
+        logger.info("Snippet mode enabled, press `escape` to leave this mode.")
         self._remove_actions()
         self._create_snippet_actions()
         self._snippet_message = ':'
@@ -567,7 +570,7 @@ class BaseGUI(EventEmitter):
         self._remove_actions()
         self._set_default_shortcuts()
         self._create_actions()
-        info("Snippet mode disabled.")
+        logger.info("Snippet mode disabled.")
 
     #--------------------------------------------------------------------------
     # Public methods
@@ -593,7 +596,6 @@ class BaseGUI(EventEmitter):
             # View model parameters from settings.
             vm_class = self._view_creator._widget_classes[name]
             kwargs.update(vm_class.get_params(self.settings))
-            # debug("Create {} with {}.".format(name, kwargs))
             item = self._view_creator.add(item, **kwargs)
             # Set the view name if necessary.
             if not item._view_name:
