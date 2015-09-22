@@ -11,9 +11,10 @@ import os.path as op
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
+from pytest import raises
 
 from ..h5 import open_h5
-from ..traces import read_dat, _dat_n_samples, read_kwd
+from ..traces import read_dat, _dat_n_samples, read_kwd, read_ns5
 from ..mock import artificial_traces
 
 
@@ -52,6 +53,10 @@ def test_read_kwd(tempdir):
                 arr[n_samples // 2:, ...].astype(np.float32))
 
     with open_h5(path, 'r') as f:
-        data = read_kwd(f)[:]
+        data = read_kwd(f)[...]
+        ac(arr, data)
 
-    ac(arr, data)
+
+def test_read_ns5():
+    with raises(NotImplementedError):
+        read_ns5('')
