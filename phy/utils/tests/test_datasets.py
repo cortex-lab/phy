@@ -50,7 +50,7 @@ def _add_mock_response(url, body, file_type='binary'):
 def mock_url():
     _add_mock_response(_URL, _DATA.tostring())
     _add_mock_response(_URL + '.md5', _CHECKSUM + '  ' + op.basename(_URL))
-    yield
+    yield _URL
     responses.reset()
 
 
@@ -81,6 +81,7 @@ def mock_urls(request):
 
 
 def _dl(path):
+    assert path
     download_file(_URL, path)
     with open(path, 'rb') as f:
         data = f.read()
@@ -170,6 +171,9 @@ def test_download_sample_data(tempdir):
         data = f.read()
     ae(np.fromstring(data, np.float32), _DATA)
 
+    # Warning.
+    download_sample_data(name + '_', tempdir)
+
     responses.reset()
 
 
@@ -185,5 +189,7 @@ def test_dat_file(tempdir):
     with open(path, 'rb') as f:
         arr = np.fromfile(f, dtype=np.int16).reshape((-1, 4))
     assert arr.shape == (20000, 4)
+
+    assert download_test_data(fn, tempdir) == path
 
     responses.reset()

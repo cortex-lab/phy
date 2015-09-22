@@ -112,7 +112,7 @@ def _validate_output_dir(output_dir):
     return output_dir
 
 
-def download_file(url, output_path=None):
+def download_file(url, output_path):
     """Download a binary file from an URL.
 
     The checksum will be downloaded from `URL + .md5`. If this download
@@ -123,18 +123,12 @@ def download_file(url, output_path=None):
 
     url : str
         The file's URL.
-    output_path : str or None
+    output_path : str
         The path where the file is to be saved.
 
-    Returns
-    -------
-
-    output_path : str
-        The path where the file was downloaded.
-
     """
-    if output_path is None:
-        output_path = url.split('/')[-1]
+    output_path = op.realpath(output_path)
+    assert output_path is not None
     if op.exists(output_path):
         checked = _check_md5_of_url(output_path, url)
         if checked is False:
@@ -143,7 +137,7 @@ def download_file(url, output_path=None):
         elif checked is True:
             logger.debug("The file `%s` already exists: skipping.",
                          output_path)
-            return
+            return output_path
     r = _download(url, stream=True)
     _save_stream(r, output_path)
     if _check_md5_of_url(output_path, url) is False:
@@ -153,7 +147,7 @@ def download_file(url, output_path=None):
         if _check_md5_of_url(output_path, url) is False:
             raise RuntimeError("The checksum of the downloaded file "
                                "doesn't match the provided checksum.")
-    return output_path
+    return
 
 
 def download_test_data(name, phy_user_dir=None, force=False):
