@@ -17,26 +17,9 @@ from inspect import getargspec
 
 import numpy as np
 from six import string_types, exec_
-from six.moves import builtins, cPickle
+from six.moves import builtins
 
 from ._types import _is_integer
-
-
-#------------------------------------------------------------------------------
-# Pickle utility functions
-#------------------------------------------------------------------------------
-
-def _load_pickle(path):
-    path = op.realpath(op.expanduser(path))
-    assert op.exists(path)
-    with open(path, 'rb') as f:
-        return cPickle.load(f)
-
-
-def _save_pickle(path, data):
-    path = op.realpath(op.expanduser(path))
-    with open(path, 'wb') as f:
-        cPickle.dump(data, f, protocol=2)
 
 
 #------------------------------------------------------------------------------
