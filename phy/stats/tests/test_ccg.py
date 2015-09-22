@@ -78,7 +78,8 @@ def test_ccg_0():
     c_expected[0, 1, 0] = 0  # This is a peculiarity of the algorithm.
 
     c = correlograms(spike_samples, spike_clusters,
-                     binsize=binsize, winsize_bins=winsize_bins)
+                     binsize=binsize, winsize_bins=winsize_bins,
+                     cluster_order=[0, 1])
 
     ae(c, c_expected)
 
