@@ -30,7 +30,7 @@ _BASE_URL = {
 
 def _remote_file_size(path):
     import requests
-    try:
+    try:  # pragma: no cover
         response = requests.head(path)
         return int(response.headers.get('content-length', 0))
     except Exception:
@@ -54,15 +54,14 @@ def _save_stream(r, path):
                 downloaded += len(chunk)
                 if i % 100 == 0:
                     pr.value = downloaded
-    if size:
-        assert size == downloaded
+    assert ((size == downloaded) if size else True)
     pr.set_complete()
 
 
 def _download(url, stream=None):
     from requests import get
     r = get(url, stream=stream)
-    if r.status_code != 200:
+    if r.status_code != 200:  # pragma: no cover
         logger.debug("Error while downloading %s.", url)
         r.raise_for_status()
     return r
@@ -86,9 +85,7 @@ def _md5(path, blocksize=2 ** 20):
 
 
 def _check_md5(path, checksum):
-    if checksum is None:
-        return
-    return _md5(path) == checksum
+    return (_md5(path) == checksum) if checksum else None
 
 
 def _check_md5_of_url(output_path, url):
@@ -108,7 +105,7 @@ def _validate_output_dir(output_dir):
         output_dir = output_dir + '/'
     output_dir = op.realpath(op.dirname(output_dir))
     if not op.exists(output_dir):
-        os.mkdir(output_dir)
+        os.makedirs(output_dir)
     return output_dir
 
 
