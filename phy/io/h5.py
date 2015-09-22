@@ -6,11 +6,13 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import logging
+
 import numpy as np
 import h5py
 from six import string_types
 
-from ..utils.logging import debug, warn
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -180,8 +182,8 @@ class File(object):
                         out = out[0].decode('UTF-8')
                 return out
             except (TypeError, IOError):
-                debug("Unable to read attribute `{}` at `{}`.".format(
-                      attr_name, path))
+                logger.debug("Unable to read attribute `%s` at `%s`.",
+                             attr_name, path)
                 return
         else:
             raise KeyError("The attribute '{0:s}' ".format(attr_name) +
@@ -210,11 +212,9 @@ class File(object):
             self._h5py_file.create_group(path)
         try:
             self._h5py_file[path].attrs[attr_name] = value
-            # debug("Write `{}={}` at `{}`.".format(attr_name,
-            #                                       str(value), path))
         except TypeError:
-            warn("Unable to write attribute `{}={}` at `{}`.".format(
-                 attr_name, value, path))
+            logger.warn("Unable to write attribute `%s=%s` at `%s`.",
+                        attr_name, value, path)
 
     def attrs(self, path='/'):
         """Return the list of attributes at the given path."""

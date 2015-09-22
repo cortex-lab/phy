@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import logging
 import os.path as op
 from itertools import product
 
@@ -13,23 +14,22 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 import responses
 from pytest import raises, yield_fixture
+from six import StringIO
 
+from phy import string_handler
 from ..datasets import (download_file,
                         download_test_data,
                         download_sample_data,
                         _check_md5_of_url,
                         _BASE_URL,
                         )
-from ..logging import register, StringLogger, set_level
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
 # Fixtures
 #------------------------------------------------------------------------------
-
-def setup():
-    set_level('debug')
-
 
 # Test URL and data
 _URL = 'http://test/data'
@@ -116,25 +116,23 @@ def test_download_not_found(tempdir):
 
 @responses.activate
 def test_download_already_exists_invalid(tempdir, mock_url):
-    logger = StringLogger(level='debug')
-    register(logger)
+    buffer = string_handler()
     path = op.join(tempdir, 'test')
     # Create empty file.
     open(path, 'a').close()
     _check(_dl(path))
-    assert 'redownload' in str(logger)
+    assert 'redownload' in buffer.getvalue()
 
 
 @responses.activate
 def test_download_already_exists_valid(tempdir, mock_url):
-    logger = StringLogger(level='debug')
-    register(logger)
+    buffer = string_handler()
     path = op.join(tempdir, 'test')
     # Create valid file.
     with open(path, 'ab') as f:
         f.write(_DATA.tostring())
     _check(_dl(path))
-    assert 'skip' in str(logger)
+    assert 'skip' in buffer.getvalue()
 
 
 @responses.activate

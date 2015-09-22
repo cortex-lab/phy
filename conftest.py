@@ -6,16 +6,22 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import logging
 import os
 
 from pytest import yield_fixture
 
+from phy import add_default_handler
 from phy.utils.tempdir import TemporaryDirectory
 
 
 #------------------------------------------------------------------------------
 # Common fixtures
 #------------------------------------------------------------------------------
+
+logging.getLogger().setLevel(logging.DEBUG)
+add_default_handler('DEBUG')
+
 
 @yield_fixture
 def tempdir():

@@ -6,13 +6,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from contextlib import contextmanager
+from cProfile import Profile
+import functools
+import logging
+import os.path as op
 import sys
 import time
-from contextlib import contextmanager
 from timeit import default_timer
-from cProfile import Profile
-import os.path as op
-import functools
 
 from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
@@ -20,8 +21,9 @@ from six import StringIO
 from six.moves import builtins
 
 from ._types import _is_array_like
-from .logging import info
 from .settings import _ensure_dir_exists
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -67,7 +69,7 @@ def benchmark(name='', repeats=1):
     start = default_timer()
     yield
     duration = (default_timer() - start) * 1000.
-    info("{} took {:.6f}ms.".format(name, duration / repeats))
+    logger.info("%s took %.6fms.", name, duration / repeats)
 
 
 class ContextualProfile(Profile):

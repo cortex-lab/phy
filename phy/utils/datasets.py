@@ -7,12 +7,14 @@
 #------------------------------------------------------------------------------
 
 import hashlib
+import logging
 import os
 import os.path as op
 
-from .logging import debug, warn
 from .settings import _phy_user_dir, _ensure_dir_exists
 from .event import ProgressReporter
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -61,7 +63,7 @@ def _download(url, stream=None):
     from requests import get
     r = get(url, stream=stream)
     if r.status_code != 200:
-        debug("Error while downloading `{}`.".format(url))
+        logger.debug("Error while downloading %s.", url)
         r.raise_for_status()
     return r
 
@@ -136,16 +138,16 @@ def download_file(url, output_path=None):
     if op.exists(output_path):
         checked = _check_md5_of_url(output_path, url)
         if checked is False:
-            debug("The file `{}` already exists ".format(output_path) +
-                  "but is invalid: redownloading.")
+            logger.debug("The file `%s` already exists "
+                         "but is invalid: redownloading.", output_path)
         elif checked is True:
-            debug("The file `{}` already exists: ".format(output_path) +
-                  "skipping.")
+            logger.debug("The file `%s` already exists: skipping.",
+                         output_path)
             return
     r = _download(url, stream=True)
     _save_stream(r, output_path)
     if _check_md5_of_url(output_path, url) is False:
-        debug("The checksum doesn't match: retrying the download.")
+        logger.debug("The checksum doesn't match: retrying the download.")
         r = _download(url, stream=True)
         _save_stream(r, output_path)
         if _check_md5_of_url(output_path, url) is False:
@@ -187,5 +189,5 @@ def download_sample_data(filename, output_dir=None, base='cortexlab'):
     try:
         download_file(url, output_path=output_path)
     except Exception as e:
-        warn("An error occurred while downloading `{}` to `{}`: {}".format(
-             url, output_path, str(e)))
+        logger.warn("An error occurred while downloading `%s` to `%s`: %s",
+                    url, output_path, str(e))
