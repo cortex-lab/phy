@@ -8,18 +8,35 @@
 
 import os.path as op
 
-from pytest import raises
+from pytest import raises, yield_fixture, mark
 
 from ..settings import (BaseSettings,
                         Settings,
                         _load_default_settings,
                         _recursive_dirs,
+                        _phy_user_dir,
                         )
+
+
+#------------------------------------------------------------------------------
+# Fixtures
+#------------------------------------------------------------------------------
+
+@yield_fixture(params=['py', 'json'])
+def settings(request):
+    if request.param == 'py':
+        yield ('py', '''a = 4\nb = 5\nd = {'k1': 2, 'k2': '3'}''')
+    elif request.param == 'json':
+        yield ('json', '''{"a": 4, "b": 5, "d": {"k1": 2, "k2": "3"}}''')
 
 
 #------------------------------------------------------------------------------
 # Test settings
 #------------------------------------------------------------------------------
+
+def test_phy_user_dir():
+    assert op.exists(_phy_user_dir())
+
 
 def test_recursive_dirs():
     dirs = list(_recursive_dirs())
@@ -53,13 +70,11 @@ def test_base_settings():
     assert s['a'] == 3
 
 
-def test_user_settings(tempdir):
-    path = op.join(tempdir, 'test.py')
-
-    # Create a simple settings file.
-    contents = '''a = 4\nb = 5\nd = {'k1': 2, 'k2': 3}\n'''
+def test_base_settings_file(tempdir, settings):
+    ext, settings = settings
+    path = op.join(tempdir, 'test.' + ext)
     with open(path, 'w') as f:
-        f.write(contents)
+        f.write(settings)
 
     s = BaseSettings()
 
@@ -67,21 +82,35 @@ def test_user_settings(tempdir):
     s['c'] = 6
     assert s['a'] == 3
 
-    # Now, set the settings file.
+    s.load(path=None)
+
+    # Now, load the settings file.
     s.load(path=path)
     assert s['a'] == 4
     assert s['b'] == 5
     assert s['c'] == 6
-    assert s['d'] == {'k1': 2, 'k2': 3}
+    assert s['d'] == {'k1': 2, 'k2': '3'}
 
     s = BaseSettings()
     s['d'] = {'k2': 30, 'k3': 40}
     s.load(path=path)
-    assert s['d'] == {'k1': 2, 'k2': 3, 'k3': 40}
+    assert s['d'] == {'k1': 2, 'k2': '3', 'k3': 40}
+
+
+def test_base_settings_invalid(tempdir, settings):
+    ext, settings = settings
+    settings = settings[:-2]
+    path = op.join(tempdir, 'test.' + ext)
+    with open(path, 'w') as f:
+        f.write(settings)
+
+    s = BaseSettings()
+    s.load(path)
+    assert 'a' not in s
 
 
 def test_internal_settings(tempdir):
-    path = op.join(tempdir, 'test')
+    path = op.join(tempdir, 'test.json')
 
     s = BaseSettings()
 
@@ -104,6 +133,10 @@ def test_internal_settings(tempdir):
     assert s['c'] == 6
 
 
+def test_settings_nodir():
+    Settings()
+
+
 def test_settings_manager(tempdir, tempdir_bis):
     tempdir_exp = tempdir_bis
     sm = Settings(tempdir)
@@ -111,15 +144,17 @@ def test_settings_manager(tempdir, tempdir_bis):
     # Check paths.
     assert sm.phy_user_dir == tempdir
     assert sm.internal_settings_path == op.join(tempdir,
-                                                'internal_settings')
+                                                'internal_settings.json')
     assert sm.user_settings_path == op.join(tempdir, 'user_settings.py')
 
     # User settings.
     with raises(KeyError):
         sm['a']
+    assert sm.get('a', None) is None
     # Artificially populate the user settings.
     sm._bs._store['a'] = 3
     assert sm['a'] == 3
+    assert sm.get('a') == 3
 
     # Internal settings.
     sm['c'] = 5
@@ -151,3 +186,6 @@ def test_settings_manager(tempdir, tempdir_bis):
     sm.on_open(path)
     assert sm['c'] == 50
     assert 'a' not in sm
+
+    assert len(sm.keys()) >= 10
+    assert str(sm).startswith('<Settings')
