@@ -25,7 +25,7 @@ def read_kwd(kwd_handle):
 
     f = kwd_handle
 
-    if '/recordings' not in f:
+    if '/recordings' not in f:  # pragma: no cover
         return
     recordings = f.children('/recordings')
 
@@ -40,6 +40,14 @@ def read_kwd(kwd_handle):
               (_read(0).shape[1],)
               )
     return dask.array.Array(dsk, 'data', chunks)
+
+
+def _dat_n_samples(filename, dtype=None, n_channels=None):
+    assert dtype is not None
+    item_size = np.dtype(dtype).itemsize
+    n_samples = op.getsize(filename) // (item_size * n_channels)
+    assert n_samples >= 0
+    return n_samples
 
 
 def read_dat(filename, dtype=None, shape=None, offset=0, n_channels=None):
@@ -71,26 +79,6 @@ def read_dat(filename, dtype=None, shape=None, offset=0, n_channels=None):
         shape = (n_samples, n_channels)
     return np.memmap(filename, dtype=dtype, shape=shape,
                      mode='r', offset=offset)
-
-
-def _dat_to_traces(dat_path, n_channels, dtype):
-    assert dtype is not None
-    assert n_channels is not None
-    n_samples = _dat_n_samples(dat_path,
-                               n_channels=n_channels,
-                               dtype=dtype,
-                               )
-    return read_dat(dat_path,
-                    dtype=dtype,
-                    shape=(n_samples, n_channels))
-
-
-def _dat_n_samples(filename, dtype=None, n_channels=None):
-    assert dtype is not None
-    item_size = np.dtype(dtype).itemsize
-    n_samples = op.getsize(filename) // (item_size * n_channels)
-    assert n_samples >= 0
-    return n_samples
 
 
 def read_ns5(filename):

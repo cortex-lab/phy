@@ -14,6 +14,8 @@ from ..mock import (artificial_waveforms,
                     artificial_spike_clusters,
                     artificial_features,
                     artificial_masks,
+                    artificial_spike_samples,
+                    artificial_correlograms,
                     )
 
 
@@ -54,6 +56,14 @@ def _test_artificial(n_spikes=None, n_clusters=None):
     # Masks.
     masks = artificial_masks(n_spikes, n_channels)
     assert masks.shape == (n_spikes, n_channels)
+
+    # Spikes.
+    spikes = artificial_spike_samples(n_spikes)
+    assert spikes.shape == (n_spikes,)
+
+    # CCG.
+    ccg = artificial_correlograms(n_clusters, 10)
+    assert ccg.shape == (n_clusters, n_clusters, 10)
 
 
 def test_artificial():
