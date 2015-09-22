@@ -59,6 +59,18 @@ class Filter(object):
         return apply_filter(data, filter=self._filter)
 
 
+def _filter_and_margin(**kwargs):
+
+    b_filter = bandpass_filter(**kwargs)
+
+    def filter(x):
+        return apply_filter(x, b_filter)
+
+    filter_margin = kwargs['order'] * 3
+
+    return filter, filter_margin
+
+
 #------------------------------------------------------------------------------
 # Whitening
 #------------------------------------------------------------------------------
