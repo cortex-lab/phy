@@ -10,6 +10,8 @@ import logging
 import os
 import os.path as op
 
+from six import string_types
+
 from ._misc import _load_json, _save_json, _read_python
 
 logger = logging.getLogger(__name__)
@@ -89,43 +91,34 @@ class BaseSettings(object):
             else:
                 self._store[k] = v
 
-    def _try_load_json(self, path):
-        try:
-            self._update(_load_json(path))
-            return True
-        except Exception:
-            return False
-
-    def _try_load_python(self, path):
-        try:
-            self._update(_read_python(path))
-            return True
-        except Exception:
-            return False
-
     def load(self, path):
         """Load a settings file."""
+        if not isinstance(path, string_types):
+            logger.warn("The settings file `%s` is invalid.", path)
+            return
         path = op.realpath(path)
         if not op.exists(path):
-            logger.debug("Settings file `{}` doesn't exist.".format(path))
+            logger.debug("The settings file `%s` doesn't exist.", path)
             return
-        # Try JSON first, then Python.
-        has_ext = op.splitext(path)[1] != ''
-        if not has_ext:
-            if self._try_load_json(path):
-                return
-        if not self._try_load_python(path):
-            logger.warn("Unable to read '%s'. "
-                        "Please try to delete this file.", path)
+        try:
+            if op.splitext(path)[1] == '.py':
+                self._update(_read_python(path))
+            elif op.splitext(path)[1] == '.json':
+                self._update(_load_json(path))
+            else:
+                logger.warn("The settings file %s must have the extension "
+                            "'.py' or '.json'.", path)
+        except Exception as e:
+            logger.warn("Unable to read %s. "
+                        "Please try to delete this file. %s", path, str(e))
 
     def save(self, path):
         """Save the settings to a JSON file."""
         path = op.realpath(path)
         try:
             _save_json(path, self._to_save)
-            logger.debug("Saved internal settings file "
-                         "to `%s`.", path)
-        except Exception as e:
+            logger.debug("Saved internal settings file to `%s`.", path)
+        except Exception as e:  # pragma: no cover
             logger.warn("Unable to save the internal settings file "
                         "to `%s`:\n%s", path, str(e))
         self._to_save = {}
@@ -163,15 +156,12 @@ class Settings(object):
 
         # Load the user's internal settings.
         self.internal_settings_path = op.join(self.phy_user_dir,
-                                              'internal_settings')
+                                              'internal_settings.json')
         self._bs.load(self.internal_settings_path)
 
     def on_open(self, path):
         """Initialize settings when loading an experiment."""
-        if path is None:
-            logger.debug("Unable to initialize the settings for unspecified "
-                         "model path.")
-            return
+        assert path is not None
         # Get the experiment settings path.
         path = op.realpath(op.expanduser(path))
         self.exp_path = path
