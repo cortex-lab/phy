@@ -13,7 +13,6 @@ import os.path as op
 import os
 import sys
 import subprocess
-from inspect import getargspec
 
 import numpy as np
 from six import string_types, exec_
@@ -118,23 +117,7 @@ def _read_python(path):
     return metadata
 
 
-def _fun_arg_count(f):
-    """Return the number of arguments of a function.
-
-    WARNING: with methods, only works if the first argument is named 'self'.
-
-    """
-    args = getargspec(f).args
-    if args and args[0] == 'self':
-        args = args[1:]
-    return len(args)
-
-
-def _is_in_ipython():
-    return '__IPYTHON__' in dir(builtins)
-
-
-def _is_interactive():
+def _is_interactive():  # pragma: no cover
     """Determine whether the user has requested interactive mode."""
     # The Python interpreter sets sys.flags correctly, so use them!
     if sys.flags.interactive:
@@ -154,23 +137,6 @@ def _is_interactive():
         return False
 
 
-def _show_shortcut(shortcut):
-    if isinstance(shortcut, string_types):
-        return shortcut
-    elif isinstance(shortcut, tuple):
-        return ', '.join(shortcut)
-
-
-def _show_shortcuts(shortcuts, name=''):
-    print()
-    if name:
-        name = ' for ' + name
-    print('Keyboard shortcuts' + name)
-    for name in sorted(shortcuts):
-        print('{0:<40}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
-    print()
-
-
 def _git_version():
     curdir = os.getcwd()
     filedir, _ = op.split(__file__)
@@ -182,7 +148,7 @@ def _git_version():
                     '--always', '--tags'],
                    stderr=fnull).strip().decode('ascii'))
         return version
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError):  # pragma: no cover
         return ""
     finally:
         os.chdir(curdir)

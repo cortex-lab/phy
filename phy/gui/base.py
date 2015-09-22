@@ -13,7 +13,6 @@ import logging
 
 from six import string_types, PY3
 
-from ..utils._misc import _show_shortcuts
 from ..utils import EventEmitter
 from ._utils import _read
 from .dock import DockWindow
@@ -289,6 +288,23 @@ def _assert_counters_equal(c_0, c_1):
     c_0 = {(k, v) for (k, v) in c_0.items() if v > 0}
     c_1 = {(k, v) for (k, v) in c_1.items() if v > 0}
     assert c_0 == c_1
+
+
+def _show_shortcut(shortcut):
+    if isinstance(shortcut, string_types):
+        return shortcut
+    elif isinstance(shortcut, tuple):
+        return ', '.join(shortcut)
+
+
+def _show_shortcuts(shortcuts, name=''):
+    print()
+    if name:
+        name = ' for ' + name
+    print('Keyboard shortcuts' + name)
+    for name in sorted(shortcuts):
+        print('{0:<40}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
+    print()
 
 
 class BaseGUI(EventEmitter):
