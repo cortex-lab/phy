@@ -6,18 +6,20 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os
-import os.path as op
+from functools import reduce
+import logging
+import math
 from math import floor
 from operator import mul
-from functools import reduce
-import math
+import os
+import os.path as op
 
 import numpy as np
 from six import integer_types, string_types
 
-from .logging import warn
 from ._types import _as_tuple, _as_array
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -811,8 +813,8 @@ class ConcatenatedArrays(object):
         # Concatenate all chunks.
         l = [chunk_start]
         if rec_stop - rec_start >= 2:
-            warn("Loading a full virtual array: this might be slow "
-                 "and something might be wrong.")
+            logger.warn("Loading a full virtual array: this might be slow "
+                        "and something might be wrong.")
             l += [self.arrs[r][...] for r in range(rec_start + 1,
                                                    rec_stop)]
         l += [chunk_stop]
