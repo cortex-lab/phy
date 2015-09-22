@@ -25,7 +25,7 @@ def _edges_to_adjacency_list(edges):
     """Convert a list of edges into an adjacency list."""
     adj = {}
     for i, j in edges:
-        if i in adj:
+        if i in adj:  # pragma: no cover
             ni = adj[i]
         else:
             ni = adj[i] = set()
@@ -120,8 +120,7 @@ class MEA(object):
                  ):
         self._probe = probe
         self._channels = channels
-        if positions is not None:
-            assert self.n_channels == positions.shape[0]
+        self._check_positions(positions)
         self._positions = positions
         # This is a mapping {channel: list of neighbors}.
         if adjacency is None and probe is not None:
@@ -133,8 +132,6 @@ class MEA(object):
         if positions is None:
             return
         positions = _as_array(positions)
-        if self.n_channels is None:
-            self.n_channels = positions.shape[0]
         if positions.shape[0] != self.n_channels:
             raise ValueError("'positions' "
                              "(shape {0:s})".format(str(positions.shape)) +
@@ -146,11 +143,6 @@ class MEA(object):
     def positions(self):
         """Channel positions in the current channel group."""
         return self._positions
-
-    @positions.setter
-    def positions(self, value):
-        self._check_positions(value)
-        self._positions = value
 
     @property
     def channels(self):
@@ -166,10 +158,6 @@ class MEA(object):
     def adjacency(self):
         """Adjacency graph in the current channel group."""
         return self._adjacency
-
-    @adjacency.setter
-    def adjacency(self, value):
-        self._adjacency = value
 
     def change_channel_group(self, group):
         """Change the current channel group."""

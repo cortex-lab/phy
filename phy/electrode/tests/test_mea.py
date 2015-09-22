@@ -6,11 +6,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 from pytest import raises
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
-from ..mea import (_probe_channels, _probe_positions, _probe_adjacency_list,
+from ..mea import (_probe_channels, _probe_all_channels,
+                   _probe_positions, _probe_adjacency_list,
                    MEA, linear_positions, staggered_positions,
                    load_probe, list_probes
                    )
@@ -57,8 +60,7 @@ def test_mea():
     channels = np.arange(n_channels)
     positions = np.random.randn(n_channels, 2)
 
-    mea = MEA(channels)
-    mea.positions = positions
+    mea = MEA(channels, positions=positions)
     ae(mea.positions, positions)
     assert mea.adjacency is None
 
@@ -68,17 +70,11 @@ def test_mea():
     mea = MEA(channels, positions=positions)
     assert mea.n_channels == n_channels
 
-    with raises(AssertionError):
+    with raises(ValueError):
         MEA(channels=np.arange(n_channels + 1), positions=positions)
 
-    with raises(AssertionError):
-        MEA(channels=channels, positions=positions[:-1, :])
-
-    mea = MEA(channels=channels)
-    assert mea.n_channels == n_channels
-    mea.positions = positions
     with raises(ValueError):
-        mea.positions = positions[:-1, :]
+        MEA(channels=channels, positions=positions[:-1, :])
 
 
 def test_positions():
@@ -90,9 +86,18 @@ def test_positions():
     assert probe.shape == (29, 2)
 
 
-def test_library():
+def test_library(tempdir):
     probe = load_probe('1x32_buzsaki')
     assert probe
     assert probe['channel_groups'][0]['channels'] == list(range(32))
+    assert _probe_all_channels(probe) == list(range(32))
 
     assert '1x32_buzsaki' in list_probes()
+
+    path = op.join(tempdir, 'test.prb')
+    with raises(IOError):
+        load_probe(path)
+
+    with open(path, 'w') as f:
+        f.write('')
+    load_probe(path)
