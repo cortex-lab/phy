@@ -6,11 +6,13 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from copy import deepcopy
 import os.path as op
 import time
 
 import numpy as np
 from pytest import mark
+from six.moves import builtins
 from vispy.app import Canvas
 
 from ..testing import (benchmark, captured_output, show_test,
@@ -31,19 +33,14 @@ def test_captured_output():
 
 def test_assert_equal():
     d = {'a': {'b': np.random.rand(5), 3: 'c'}, 'b': 2.}
-    _assert_equal(d, d.copy())
+    d_bis = deepcopy(d)
+    d_bis['a']['b'] = d_bis['a']['b'] + 1e-8
+    _assert_equal(d, d_bis)
 
 
 def test_benchmark():
     with benchmark():
         time.sleep(.002)
-
-
-@mark.parametrize('line_by_line', [False, True])
-def test_profile(chdir_tempdir, line_by_line):
-    prof = _enable_profiler(line_by_line=line_by_line)
-    _profile(prof, 'import time; time.sleep(.001)', {}, {})
-    assert op.exists(op.join(chdir_tempdir, '.profile', 'stats.txt'))
 
 
 def test_canvas():
@@ -53,3 +50,11 @@ def test_canvas():
 
 def test_show_colored_canvas():
     show_colored_canvas((.6, 0, .8))
+
+
+@mark.parametrize('line_by_line', [False, True])
+def test_profile(chdir_tempdir, line_by_line):
+    # Remove the profile from the builtins.
+    prof = _enable_profiler(line_by_line=line_by_line)
+    _profile(prof, 'import time; time.sleep(.001)', {}, {})
+    assert op.exists(op.join(chdir_tempdir, '.profile', 'stats.txt'))

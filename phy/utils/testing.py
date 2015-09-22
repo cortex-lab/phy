@@ -72,7 +72,7 @@ def benchmark(name='', repeats=1):
     logger.info("%s took %.6fms.", name, duration / repeats)
 
 
-class ContextualProfile(Profile):
+class ContextualProfile(Profile):  # pragma: no cover
     def __init__(self, *args, **kwds):
         super(ContextualProfile, self).__init__(*args, **kwds)
         self.enable_count = 0
@@ -118,7 +118,7 @@ class ContextualProfile(Profile):
         self.disable_by_count()
 
 
-def _enable_profiler(line_by_line=False):
+def _enable_profiler(line_by_line=False):  # pragma: no cover
     if 'profile' in builtins.__dict__:
         return builtins.__dict__['profile']
     if line_by_line:
@@ -138,13 +138,13 @@ def _profile(prof, statement, glob, loc):
     # Capture stdout.
     old_stdout = sys.stdout
     sys.stdout = output = StringIO()
-    try:
+    try:  # pragma: no cover
         from line_profiler import LineProfiler
         if isinstance(prof, LineProfiler):
             prof.print_stats()
         else:
             prof.print_stats('cumulative')
-    except ImportError:
+    except ImportError:  # pragma: no cover
         prof.print_stats('cumulative')
     sys.stdout = old_stdout
     stats = output.getvalue()
@@ -162,7 +162,7 @@ def show_test(canvas):
     """Show a VisPy canvas for a fraction of second."""
     with canvas:
         # Interactive mode for tests.
-        if 'PYTEST_INTERACT' in os.environ:
+        if 'PYTEST_INTERACT' in os.environ:  # pragma: no cover
             while not canvas._closed:
                 canvas.update()
                 canvas.app.process_events()
