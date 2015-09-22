@@ -6,13 +6,16 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
 import time
 
 import numpy as np
+from pytest import mark
 from vispy.app import Canvas
 
 from ..testing import (benchmark, captured_output, show_test,
-                       _assert_equal,
+                       _assert_equal, _enable_profiler, _profile,
+                       show_colored_canvas,
                        )
 
 
@@ -36,7 +39,17 @@ def test_benchmark():
         time.sleep(.002)
 
 
+@mark.parametrize('line_by_line', [False, True])
+def test_profile(chdir_tempdir, line_by_line):
+    prof = _enable_profiler(line_by_line=line_by_line)
+    _profile(prof, 'import time; time.sleep(.001)', {}, {})
+    assert op.exists(op.join(chdir_tempdir, '.profile', 'stats.txt'))
+
+
 def test_canvas():
     c = Canvas(keys='interactive')
-    with benchmark():
-        show_test(c)
+    show_test(c)
+
+
+def test_show_colored_canvas():
+    show_colored_canvas((.6, 0, .8))
