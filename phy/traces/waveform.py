@@ -227,17 +227,17 @@ class WaveformLoader(object):
                  offset=0,
                  filter=None,
                  filter_margin=0,
-                 n_samples=None,
+                 n_samples_waveforms=None,
                  channels=None,
                  scale_factor=None,
                  dc_offset=None,
+                 dtype=None,
                  ):
-        # A (possibly memmapped) array-like structure with traces.
         if traces is not None:
             self.traces = traces
         else:
             self._traces = None
-        self.dtype = np.float32
+        self.dtype = dtype or traces.dtype
         # Scale factor for the loaded waveforms.
         self._scale_factor = scale_factor
         self._dc_offset = dc_offset
@@ -245,20 +245,32 @@ class WaveformLoader(object):
         self._offset = int(offset)
         # List of channels to use when loading the waveforms.
         self._channels = channels
-        # A filter function that takes a (n_samples, n_channels) array as
-        # input.
+        # A filter function that takes a (n_samples_waveforms, n_channels)
+        # array as input.
         self._filter = filter
         # Number of samples to return, can be an int or a
         # tuple (before, after).
-        if n_samples is None:
-            raise ValueError("'n_samples' must be specified.")
-        self.n_samples_before_after = _before_after(n_samples)
+        if n_samples_waveforms is None:
+            raise ValueError("'n_samples_waveforms' must be specified.")
+        self.n_samples_before_after = _before_after(n_samples_waveforms)
         self.n_samples_waveforms = sum(self.n_samples_before_after)
         # Number of additional samples to use for filtering.
         self._filter_margin = _before_after(filter_margin)
         # Number of samples in the extracted raw data chunk.
         self._n_samples_extract = (self.n_samples_waveforms +
                                    sum(self._filter_margin))
+
+    @property
+    def offset(self):
+        return self._offset
+
+    @property
+    def dc_offset(self):
+        return self._dc_offset
+
+    @property
+    def scale_factor(self):
+        return self._scale_factor
 
     @property
     def traces(self):
@@ -306,30 +318,13 @@ class WaveformLoader(object):
         elif slice_extract.stop >= ns - 1:
             extract = _pad(extract, self._n_samples_extract, 'right')
 
-        assert extract.shape[0] == self._n_samples_extract
-
-        # Filter the waveforms.
-        # TODO: do the filtering in a vectorized way for higher performance.
-        if self._filter is not None:
-            waveforms = self._filter(extract)
-        else:
-            waveforms = extract
-
-        # Remove the margin.
-        margin_before, margin_after = self._filter_margin
-        if margin_after > 0:
-            assert margin_before >= 0
-            waveforms = waveforms[margin_before:-margin_after, :]
-
         # Make a subselection with the specified channels.
         if self._channels is not None:
-            out = waveforms[..., self._channels]
-        else:
-            out = waveforms
+            extract = extract[..., self._channels]
 
-        assert out.shape == (self.n_samples_waveforms,
-                             self.n_channels_waveforms)
-        return out
+        assert extract.shape == (self._n_samples_extract,
+                                 self.n_channels_waveforms)
+        return extract
 
     def __getitem__(self, item):
         """Load waveforms."""
@@ -338,27 +333,46 @@ class WaveformLoader(object):
                                       "implemented yet.")
         if not hasattr(item, '__len__'):
             item = [item]
+
         # Ensure a list of time samples are being requested.
         spikes = _as_array(item)
         n_spikes = len(spikes)
+
         # Initialize the array.
         # TODO: int16
-        shape = (n_spikes, self.n_samples_waveforms,
-                 self.n_channels_waveforms)
+        shape = (n_spikes, self._n_samples_extract, self.n_channels_waveforms)
+
         # No traces: return null arrays.
         if self.n_samples_trace == 0:
             return np.zeros(shape, dtype=self.dtype)
-        waveforms = np.empty(shape, dtype=self.dtype)
+        waveforms = np.zeros(shape, dtype=self.dtype)
+
         # Load all spikes.
         for i, time in enumerate(spikes):
             try:
                 waveforms[i, ...] = self._load_at(time)
             except ValueError as e:
                 logger.warn("Error while loading waveform: %s", str(e))
+
+        # Filter the waveforms.
+        if self._filter is not None:
+            waveforms = self._filter(waveforms, axis=1)
+
+        # Remove the margin.
+        margin_before, margin_after = self._filter_margin
+        if margin_after > 0:
+            assert margin_before >= 0
+            waveforms = waveforms[:, margin_before:-margin_after, :]
+
+        # Transform.
         if self._dc_offset:
             waveforms -= self._dc_offset
         if self._scale_factor:
             waveforms *= self._scale_factor
+
+        assert waveforms.shape == (n_spikes, self.n_samples_waveforms,
+                                   self.n_channels_waveforms)
+
         return waveforms
 
 
