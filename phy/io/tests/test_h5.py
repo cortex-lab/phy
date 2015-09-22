@@ -105,8 +105,6 @@ def test_h5_read(tempdir):
         assert f.has_attr('/mygroup', 'myattr')
         assert not f.has_attr('/mygroup', 'myattr_bis')
         assert not f.has_attr('/mygroup_bis', 'myattr_bis')
-        value = f.read_attr('/mygroup', 'myattr')
-        assert value == 123
 
         # Check that errors are raised when the paths are invalid.
         with raises(Exception):
@@ -167,30 +165,6 @@ def test_h5_write(tempdir):
         # Write a new array in a nonexistent group.
         f.write('/ds3/ds4/ds5', temp_array)
         ae(f.read('/ds3/ds4/ds5'), temp_array)
-
-        # Write an existing attribute.
-        f.write_attr('/ds1', 'myattr', 456)
-
-        with raises(KeyError):
-            f.read_attr('/ds1', 'nonexistingattr')
-
-        assert f.read_attr('/ds1', 'myattr') == 456
-
-        # Write a new attribute in a dataset.
-        f.write_attr('/ds1', 'mynewattr', 789)
-        assert f.read_attr('/ds1', 'mynewattr') == 789
-
-        # Write a new attribute in a group.
-        f.write_attr('/mygroup', 'mynewattr', 890)
-        assert f.read_attr('/mygroup', 'mynewattr') == 890
-
-        # Write a new attribute in a nonexisting group.
-        f.write_attr('/nonexistinggroup', 'mynewattr', 2)
-        assert f.read_attr('/nonexistinggroup', 'mynewattr') == 2
-
-        # Write a new attribute two levels into a nonexisting group.
-        f.write_attr('/nonexistinggroup2/group3', 'mynewattr', 2)
-        assert f.read_attr('/nonexistinggroup2/group3', 'mynewattr') == 2
 
 
 def test_h5_describe(tempdir):

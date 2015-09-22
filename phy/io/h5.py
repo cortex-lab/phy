@@ -75,8 +75,7 @@ class File(object):
         return self._h5py_file is not None
 
     def open(self, mode=None):
-        if mode is not None:
-            self.mode = mode
+        self.mode = mode if mode is not None else None
         if not self.is_open():
             self._h5py_file = h5py.File(self.filename, self.mode)
 
@@ -140,7 +139,7 @@ class File(object):
     # Copy and rename
     #--------------------------------------------------------------------------
 
-    def _check_move_copy(self, path, new_path):
+    def _check_move_copy(self, path, new_path):  # pragma: no cover
         if not self.exists(path):
             raise ValueError("'{0}' doesn't exist.".format(path))
         if self.exists(new_path):
@@ -166,55 +165,6 @@ class File(object):
         path, name = _split_hdf5_path(path)
         parent = self.read(path)
         del parent[name]
-
-    # Attributes
-    #--------------------------------------------------------------------------
-
-    def read_attr(self, path, attr_name):
-        """Read an attribute of an HDF5 group."""
-        _check_hdf5_path(self._h5py_file, path)
-        attrs = self._h5py_file[path].attrs
-        if attr_name in attrs:
-            try:
-                out = attrs[attr_name]
-                if isinstance(out, np.ndarray) and out.dtype.kind == 'S':
-                    if len(out) == 1:
-                        out = out[0].decode('UTF-8')
-                return out
-            except (TypeError, IOError):
-                logger.debug("Unable to read attribute `%s` at `%s`.",
-                             attr_name, path)
-                return
-        else:
-            raise KeyError("The attribute '{0:s}' ".format(attr_name) +
-                           "at `{}` doesn't exist.".format(path))
-
-    def write_attr(self, path, attr_name, value):
-        """Write an attribute of an HDF5 group."""
-        assert isinstance(path, string_types)
-        assert isinstance(attr_name, string_types)
-        if value is None:
-            value = ''
-        # Ensure lists of strings are converted to ASCII arrays.
-        if isinstance(value, list):
-            if not value:
-                value = None
-            if value and isinstance(value[0], string_types):
-                value = np.array(value, dtype='S')
-        # Use string arrays instead of vlen arrays (crash in h5py 2.5.0 win64).
-        if isinstance(value, string_types):
-            value = np.array([value], dtype='S')
-        # Idem: fix crash with boolean attributes on win64.
-        if isinstance(value, bool):
-            value = int(value)
-        # If the parent group doesn't already exist, create it.
-        if path not in self._h5py_file:
-            self._h5py_file.create_group(path)
-        try:
-            self._h5py_file[path].attrs[attr_name] = value
-        except TypeError:
-            logger.warn("Unable to write attribute `%s=%s` at `%s`.",
-                        attr_name, value, path)
 
     def attrs(self, path='/'):
         """Return the list of attributes at the given path."""
