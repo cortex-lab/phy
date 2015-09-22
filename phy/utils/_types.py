@@ -43,17 +43,14 @@ def _is_float(x):
     return isinstance(x, (float, np.float32, np.float64))
 
 
-def _as_int(x):
-    if isinstance(x, integer_types):
-        return x
-    x = np.asscalar(x)
-    return x
-
-
 def _as_list(obj):
     """Ensure an object is a list."""
-    if isinstance(obj, string_types):
+    if obj is None:
+        return None
+    elif isinstance(obj, string_types):
         return [obj]
+    elif isinstance(obj, tuple):
+        return list(obj)
     elif not hasattr(obj, '__len__'):
         return [obj]
     else:
@@ -70,6 +67,8 @@ def _as_array(arr, dtype=None):
     Avoid a copy if possible.
 
     """
+    if arr is None:
+        return None
     if isinstance(arr, np.ndarray) and dtype is None:
         return arr
     if isinstance(arr, integer_types + (float,)):
@@ -88,8 +87,6 @@ def _as_tuple(item):
     """Ensure an item is a tuple."""
     if item is None:
         return None
-    # elif hasattr(item, '__len__'):
-    #     return tuple(item)
     elif not isinstance(item, tuple):
         return (item,)
     else:
