@@ -10,8 +10,6 @@ import os.path as op
 
 import numpy as np
 
-from ..utils.array import _concatenate_virtual_arrays
-
 
 #------------------------------------------------------------------------------
 # Raw data readers
@@ -23,14 +21,23 @@ def read_kwd(kwd_handle):
     The output is a memory-mapped file.
 
     """
+    import dask
+
     f = kwd_handle
     if '/recordings' not in f:
         return
     recordings = f.children('/recordings')
-    traces = []
-    for recording in recordings:
-        traces.append(f.read('/recordings/{}/data'.format(recording)))
-    return _concatenate_virtual_arrays(traces)
+
+    def _read(idx):
+        return f.read('/recordings/{}/data'.format(recordings[idx]))
+
+    dsk = {('data', idx): (_read, idx) for idx in range(len(recordings))}
+
+    chunks = (tuple(_read(idx).shape[0] for idx in range(len(recordings))),
+              tuple(_read(idx).shape[1] for idx in range(len(recordings))),
+              )
+
+    return dask.Array(dsk, 'data', chunks)
 
 
 def read_dat(filename, dtype=None, shape=None, offset=0, n_channels=None):

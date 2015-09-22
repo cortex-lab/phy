@@ -27,13 +27,9 @@ from ..array import (_unique,
                      excerpts,
                      data_chunk,
                      get_excerpts,
-                     PartialArray,
-                     VirtualMappedArray,
                      PerClusterData,
-                     _partial_shape,
                      _range_from_slice,
                      _pad,
-                     _concatenate_virtual_arrays,
                      _load_arrays,
                      _save_arrays,
                      )
@@ -195,31 +191,6 @@ def test_len_index():
         _check[start::3, 10]
 
 
-def test_virtual_mapped_array():
-    shape = (10, 2)
-    dtype = np.float32
-    arr = VirtualMappedArray(shape, dtype, 1)
-    arr_actual = np.ones(shape, dtype=dtype)
-
-    class _Check(object):
-        def __getitem__(self, item):
-            ae(arr[item], arr_actual[item])
-
-    _check = _Check()
-
-    for start in (0, 1, 2):
-        _check[start]
-        _check[start:1]
-        _check[start:2]
-        _check[start:3]
-        _check[start:3:2]
-        _check[start:5]
-        _check[start:5:2]
-        _check[start:]
-        _check[start::2]
-        _check[start::3]
-
-
 def test_as_array():
     ae(_as_array(3), [3])
     ae(_as_array([3]), [3])
@@ -228,60 +199,6 @@ def test_as_array():
 
     with raises(ValueError):
         _as_array(map)
-
-
-def test_concatenate_virtual_arrays():
-    arr1 = np.random.rand(5, 2)
-    arr2 = np.random.rand(4, 2)
-
-    def _concat(*arrs):
-        return np.concatenate(arrs, axis=0)
-
-    # Single array.
-    concat = _concatenate_virtual_arrays([arr1])
-    ae(concat[:], arr1)
-    ae(concat[1:], arr1[1:])
-    ae(concat[:3], arr1[:3])
-    ae(concat[1:4], arr1[1:4])
-
-    # Two arrays.
-    concat = _concatenate_virtual_arrays([arr1, arr2])
-    # First array.
-    ae(concat[1:], _concat(arr1[1:], arr2))
-    ae(concat[:3], arr1[:3])
-    ae(concat[1:4], arr1[1:4])
-    # Second array.
-    ae(concat[5:], arr2)
-    ae(concat[6:], arr2[1:])
-    ae(concat[5:8], arr2[:3])
-    ae(concat[7:9], arr2[2:])
-    ae(concat[7:12], arr2[2:])
-    ae(concat[5:-1], arr2[:-1])
-    # Both arrays.
-    ae(concat[:], _concat(arr1, arr2))
-    ae(concat[1:], _concat(arr1[1:], arr2))
-    ae(concat[:-1], _concat(arr1, arr2[:-1]))
-    ae(concat[:9], _concat(arr1, arr2))
-    ae(concat[:10], _concat(arr1, arr2))
-    ae(concat[:8], _concat(arr1, arr2[:-1]))
-    ae(concat[1:7], _concat(arr1[1:], arr2[:-2]))
-    ae(concat[4:7], _concat(arr1[4:], arr2[:-2]))
-
-    # Check second axis.
-    for idx in (slice(None, None, None),
-                0,
-                1,
-                [0],
-                [1],
-                [0, 1],
-                [1, 0],
-                ):
-        # First array.
-        ae(concat[1:4, idx], arr1[1:4, idx])
-        # Second array.
-        ae(concat[6:, idx], arr2[1:, idx])
-        # Both arrays.
-        ae(concat[1:7, idx], _concat(arr1[1:, idx], arr2[:-2, idx]))
 
 
 def test_in_polygon():
@@ -533,68 +450,3 @@ def test_per_cluster_data():
     # From dicts.
     pcd = PerClusterData(spc=spc, arrays=arrays)
     _check(pcd)
-
-
-#------------------------------------------------------------------------------
-# Test PartialArray
-#------------------------------------------------------------------------------
-
-def test_partial_shape():
-
-    _partial_shape(None, ())
-    _partial_shape((), None)
-    _partial_shape((), ())
-    _partial_shape(None, None)
-
-    assert _partial_shape((5, 3), 1) == (5,)
-    assert _partial_shape((5, 3), (1,)) == (5,)
-    assert _partial_shape((5, 10, 2), 1) == (5, 10)
-    with raises(ValueError):
-        _partial_shape((5, 10, 2), (1, 2))
-    assert _partial_shape((5, 10, 3), (1, 2)) == (5,)
-    assert _partial_shape((5, 10, 3), (slice(None, None, None), 2)) == (5, 10)
-    assert _partial_shape((5, 10, 3), (slice(1, None, None), 2)) == (5, 9)
-    assert _partial_shape((5, 10, 3), (slice(1, 5, None), 2)) == (5, 4)
-    assert _partial_shape((5, 10, 3), (slice(4, None, 3), 2)) == (5, 2)
-
-
-def test_partial_array():
-    # 2D array.
-    arr = np.random.rand(5, 2)
-
-    ae(PartialArray(arr)[:], arr)
-
-    pa = PartialArray(arr, 1)
-    assert pa.shape == (5,)
-    ae(pa[0], arr[0, 1])
-    ae(pa[0:2], arr[0:2, 1])
-    ae(pa[[1, 2]], arr[[1, 2], 1])
-    with raises(ValueError):
-        pa[[1, 2], 0]
-
-    # 3D array.
-    arr = np.random.rand(5, 3, 2)
-
-    pa = PartialArray(arr, (2, 1))
-    assert pa.shape == (5,)
-    ae(pa[0], arr[0, 2, 1])
-    ae(pa[0:2], arr[0:2, 2, 1])
-    ae(pa[[1, 2]], arr[[1, 2], 2, 1])
-    with raises(ValueError):
-        pa[[1, 2], 0]
-
-    pa = PartialArray(arr, (1,))
-    assert pa.shape == (5, 3)
-    ae(pa[0, 2], arr[0, 2, 1])
-    ae(pa[0:2, 1], arr[0:2, 1, 1])
-    ae(pa[[1, 2], 0], arr[[1, 2], 0, 1])
-    ae(pa[[1, 2]], arr[[1, 2], :, 1])
-
-    # Slice and 3D.
-    arr = np.random.rand(5, 10, 2)
-
-    pa = PartialArray(arr, (slice(1, None, 3), 1))
-    assert pa.shape == (5, 3)
-    ae(pa[0], arr[0, 1::3, 1])
-    ae(pa[0:2], arr[0:2, 1::3, 1])
-    ae(pa[[1, 2]], arr[[1, 2], 1::3, 1])
