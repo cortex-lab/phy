@@ -7,8 +7,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
 from functools import wraps
+import logging
+import os.path as op
 
 import numpy as np
 
@@ -17,8 +18,9 @@ from vispy.util.event import Event
 
 from ..utils._types import _as_array, _as_list
 from ..utils.array import _unique, _in_polygon
-from ..utils.logging import debug
 from ._panzoom import PanZoom
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -447,13 +449,13 @@ class LassoVisual(_BakeVisual):
         """Add a new point."""
         self._points.append((xy))
         self._update_points()
-        debug("Add lasso point.")
+        logger.debug("Add lasso point.")
 
     def clear(self):
         """Remove all points."""
         self._points = []
         self._update_points()
-        debug("Clear lasso.")
+        logger.debug("Clear lasso.")
 
     def in_lasso(self, points):
         """Find points within the lasso.
