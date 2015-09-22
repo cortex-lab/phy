@@ -6,17 +6,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from itertools import product
-
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-import numpy.random as npr
 from pytest import raises, yield_fixture
 
 from phy.io.mock import artificial_traces, artificial_spike_samples
 from phy.utils import Bunch
 from ..waveform import (_slice, WaveformLoader, WaveformExtractor,
-                        SpikeLoader,
+                        SpikeLoader, _get_padded,
                         )
 from ..filter import bandpass_filter, apply_filter
 
@@ -113,6 +110,16 @@ def test_extract_simple():
     assert s_f == s_f_o
     assert np.allclose(wave_f[:, [1, 0, 3]], wave_f_o)
     ae(masks_f_o, [1., 0.5, 0.])
+
+
+def test_get_padded():
+    arr = np.array([1, 2, 3])[:, np.newaxis]
+
+    with raises(RuntimeError):
+        ae(_get_padded(arr, -2, 5).ravel(), [1, 2, 3, 0, 0])
+    ae(_get_padded(arr, 1, 2).ravel(), [2])
+    ae(_get_padded(arr, 0, 5).ravel(), [1, 2, 3, 0, 0])
+    ae(_get_padded(arr, -2, 3).ravel(), [0, 0, 1, 2, 3])
 
 
 #------------------------------------------------------------------------------
