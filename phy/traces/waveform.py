@@ -6,12 +6,15 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import logging
+
 import numpy as np
 from scipy.interpolate import interp1d
 
 from ..utils._types import _as_array, Bunch
 from ..utils.array import _pad
-from ..utils.logging import warn
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -150,7 +153,7 @@ class WaveformExtractor(object):
             f = interp1d(old_s, waveform, bounds_error=True,
                          kind='cubic', axis=0)
         except ValueError:
-            warn("Interpolation error at time {0:d}".format(s))
+            logger.warn("Interpolation error at time %d", s)
             return waveform
         return f(new_s)
 
