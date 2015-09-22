@@ -24,8 +24,29 @@ from .._misc import (_git_version, _load_json, _save_json,
 # Tests
 #------------------------------------------------------------------------------
 
+def test_qbytearray(tempdir):
+
+    from phy.gui.qt import QtCore
+    arr = QtCore.QByteArray()
+    arr.append('1')
+    arr.append('2')
+    arr.append('3')
+
+    encoded = _encode_qbytearray(arr)
+    assert isinstance(encoded, string_types)
+    decoded = _decode_qbytearray(encoded)
+    assert arr == decoded
+
+    # Test JSON serialization of QByteArray.
+    d = {'arr': arr}
+    path = op.join(tempdir, 'test')
+    _save_json(path, d)
+    d_bis = _load_json(path)
+    assert d == d_bis
+
+
 def test_json_simple(tempdir):
-    d = {'a': 1, 'b': 'bb', 3: '33'}
+    d = {'a': 1, 'b': 'bb', 3: '33', 'mock': {'mock': True}}
 
     path = op.join(tempdir, 'test')
     _save_json(path, d)
@@ -54,20 +75,6 @@ def test_json_numpy(tempdir):
     ae(arr_bis, arr)
 
     assert d['b'] == d_bis['b']
-
-
-def test_qbytearray():
-
-    from phy.gui.qt import QtCore
-    arr = QtCore.QByteArray()
-    arr.append('1')
-    arr.append('2')
-    arr.append('3')
-
-    encoded = _encode_qbytearray(arr)
-    assert isinstance(encoded, string_types)
-    decoded = _decode_qbytearray(encoded)
-    assert arr == decoded
 
 
 def test_git_version():

@@ -51,7 +51,7 @@ class _CustomEncoder(json.JSONEncoder):
             return {'__qbytearray__': _encode_qbytearray(obj)}
         elif isinstance(obj, np.generic):
             return np.asscalar(obj)
-        return super(_CustomEncoder, self).default(obj)
+        return super(_CustomEncoder, self).default(obj)  # pragma: no cover
 
 
 def _json_custom_hook(d):
