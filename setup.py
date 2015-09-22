@@ -22,11 +22,12 @@ from setuptools.command.test import test as TestCommand
 #------------------------------------------------------------------------------
 
 class PyTest(TestCommand):
-    user_options = [('pytest-args=', 'a', "String of arguments to pass to py.test")]
+    user_options = [('pytest-args=', 'a',
+                     "String of arguments to pass to py.test")]
 
     def initialize_options(self):
         TestCommand.initialize_options(self)
-        self.pytest_args = '--cov-report term-missing --cov=phy phy tests'
+        self.pytest_args = '--cov-report term-missing --cov=phy phy'
 
     def finalize_options(self):
         TestCommand.finalize_options(self)

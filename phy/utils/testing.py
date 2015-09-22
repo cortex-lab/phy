@@ -10,6 +10,7 @@ from contextlib import contextmanager
 from cProfile import Profile
 import functools
 import logging
+import os
 import os.path as op
 import sys
 import time
@@ -162,7 +163,7 @@ def show_test(canvas):
     """Show a VisPy canvas for a fraction of second."""
     with canvas:
         # Interactive mode for tests.
-        if '-i' in sys.argv:
+        if 'PYTEST_INTERACT' in os.environ:
             while not canvas._closed:
                 canvas.update()
                 canvas.app.process_events()
