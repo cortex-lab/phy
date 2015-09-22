@@ -21,23 +21,25 @@ def read_kwd(kwd_handle):
     The output is a memory-mapped file.
 
     """
-    import dask
+    import dask.array
 
     f = kwd_handle
+
     if '/recordings' not in f:
         return
     recordings = f.children('/recordings')
 
     def _read(idx):
+        # The file needs to be open.
+        assert f.is_open()
         return f.read('/recordings/{}/data'.format(recordings[idx]))
 
-    dsk = {('data', idx): (_read, idx) for idx in range(len(recordings))}
+    dsk = {('data', idx, 0): (_read, idx) for idx in range(len(recordings))}
 
     chunks = (tuple(_read(idx).shape[0] for idx in range(len(recordings))),
-              tuple(_read(idx).shape[1] for idx in range(len(recordings))),
+              (_read(0).shape[1],)
               )
-
-    return dask.Array(dsk, 'data', chunks)
+    return dask.array.Array(dsk, 'data', chunks)
 
 
 def read_dat(filename, dtype=None, shape=None, offset=0, n_channels=None):
