@@ -354,7 +354,7 @@ class WaveformLoader(object):
             try:
                 waveforms[i, ...] = self._load_at(time)
             except ValueError as e:
-                warn("Error while loading waveform: {0}".format(str(e)))
+                logger.warn("Error while loading waveform: %s", str(e))
         if self._dc_offset:
             waveforms -= self._dc_offset
         if self._scale_factor:

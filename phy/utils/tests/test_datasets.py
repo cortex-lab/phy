@@ -14,7 +14,6 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 import responses
 from pytest import raises, yield_fixture
-from six import StringIO
 
 from phy import string_handler
 from ..datasets import (download_file,
