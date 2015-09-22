@@ -52,10 +52,9 @@ def _assert_equal(d_0, d_1):
             ac(d_0, d_1)
     # Compare dicts recursively.
     elif isinstance(d_0, dict):
-        assert sorted(d_0) == sorted(d_1)
-        for (k_0, k_1) in zip(sorted(d_0), sorted(d_1)):
-            assert k_0 == k_1
-            _assert_equal(d_0[k_0], d_1[k_1])
+        assert set(d_0) == set(d_1)
+        for k_0 in d_0:
+            _assert_equal(d_0[k_0], d_1[k_0])
     else:
         # General comparison.
         assert d_0 == d_1
