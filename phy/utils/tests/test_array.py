@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 import os.path as op
-from itertools import product
 
 import numpy as np
 from pytest import raises, mark
@@ -17,8 +16,6 @@ from ..array import (_unique,
                      _normalize,
                      _index_of,
                      _in_polygon,
-                     _load_ndarray,
-                     _len_index,
                      _spikes_in_clusters,
                      _spikes_per_cluster,
                      _flatten_spikes_per_cluster,
@@ -163,34 +160,6 @@ def test_index_of():
     ae(_index_of(arr, lookup), [1, 2, 2, 1, 1, 0, 2])
 
 
-def test_len_index():
-    arr = np.arange(10)
-
-    class _Check(object):
-        def __getitem__(self, item):
-            if isinstance(item, tuple):
-                item, max_len = item
-            else:
-                max_len = None
-            assert _len_index(item, max_len) == (len(arr[item])
-                                                 if hasattr(arr[item],
-                                                            '__len__') else 1)
-
-    _check = _Check()
-
-    for start in (0, 1, 2):
-        _check[start]
-        _check[start:1]
-        _check[start:2]
-        _check[start:3]
-        _check[start:3:2]
-        _check[start:5]
-        _check[start:5:2]
-        _check[start:, 10]
-        _check[start::2, 10]
-        _check[start::3, 10]
-
-
 def test_as_array():
     ae(_as_array(3), [3])
     ae(_as_array([3]), [3])
@@ -215,23 +184,6 @@ def test_in_polygon():
 #------------------------------------------------------------------------------
 # Test I/O functions
 #------------------------------------------------------------------------------
-
-@mark.parametrize('memmap,lazy', product([False, True], [False, True]))
-def test_load_ndarray(tempdir, memmap, lazy):
-    n, m = 10000, 100
-    dtype = np.float32
-    arr = np.random.randn(n, m).astype(dtype)
-    path = op.join(tempdir, 'test')
-    with open(path, 'wb') as f:
-        arr.tofile(f)
-    arr_m = _load_ndarray(path,
-                          dtype=dtype,
-                          shape=(n, m),
-                          memmap=memmap,
-                          lazy=lazy,
-                          )
-    ae(arr, arr_m[...])
-
 
 @mark.parametrize('n', [20, 0])
 def test_load_save_arrays(tempdir, n):
@@ -315,6 +267,10 @@ def test_get_excerpts():
 
     data = np.random.rand(10, 2)
     subdata = get_excerpts(data, n_excerpts=10, excerpt_size=5)
+    ae(subdata, data)
+
+    data = np.random.rand(10, 2)
+    subdata = get_excerpts(data, n_excerpts=1, excerpt_size=10)
     ae(subdata, data)
 
 
