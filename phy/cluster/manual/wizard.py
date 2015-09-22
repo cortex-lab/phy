@@ -6,12 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
 from operator import itemgetter
 
 from ...utils import _is_array_like
-from .view_models import HTMLClusterViewModel
-from ...gui._utils import _read
 
 
 #------------------------------------------------------------------------------
@@ -482,21 +479,3 @@ class Wizard(object):
                     best_group=self._group(self.best) or 'unsorted',
                     match_group=self._group(self.match) or 'unsorted',
                     )
-
-
-#------------------------------------------------------------------------------
-# Wizard view model
-#------------------------------------------------------------------------------
-
-class WizardViewModel(HTMLClusterViewModel):
-    def get_html(self, **kwargs):
-        static_path = op.join(op.dirname(op.realpath(__file__)), 'static')
-        params = self._wizard.get_panel_params()
-        html = _read('wizard.html', static_path=static_path)
-        return html.format(**params)
-
-    def get_css(self, **kwargs):
-        css = super(WizardViewModel, self).get_css(**kwargs)
-        static_path = op.join(op.dirname(op.realpath(__file__)), 'static')
-        css += _read('styles.css', static_path=static_path)
-        return css
