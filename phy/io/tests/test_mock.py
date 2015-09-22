@@ -16,7 +16,7 @@ from ..mock import (artificial_waveforms,
                     artificial_spike_clusters,
                     artificial_features,
                     artificial_masks,
-                    MockModel)
+                    )
 
 
 #------------------------------------------------------------------------------
@@ -61,19 +61,3 @@ def _test_artificial(n_spikes=None, n_clusters=None):
 def test_artificial():
     _test_artificial(n_spikes=100, n_clusters=10)
     _test_artificial(n_spikes=0, n_clusters=0)
-
-
-def test_mock_model():
-    model = MockModel()
-
-    assert model.metadata['description'] == 'A mock model.'
-    assert model.traces.ndim == 2
-    assert model.spike_samples.ndim == 1
-    assert model.spike_clusters.ndim == 1
-    assert model.features.ndim == 2
-    assert model.masks.ndim == 2
-    assert model.waveforms.ndim == 3
-
-    assert isinstance(model.probe, MEA)
-    with raises(NotImplementedError):
-        model.save()
