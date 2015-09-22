@@ -88,5 +88,5 @@ def test_git_version():
                                 stderr=fnull)
         assert v is not "", "git_version failed to return"
         assert v[:6] == "-git-v", "Git version does not begin in -git-v"
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError):  # pragma: no cover
         assert v == ""
