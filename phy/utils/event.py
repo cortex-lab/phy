@@ -153,7 +153,7 @@ class PartialFormatter(string.Formatter):
 
 
 def _default_on_progress(message, value, value_max, end='\r', **kwargs):
-    if value_max == 0:
+    if value_max == 0:  # pragma: no cover
         return
     if value <= value_max:
         progress = 100 * value / float(value_max)
