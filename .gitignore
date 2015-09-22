@@ -10,6 +10,7 @@ wiki
 .*fuse*
 *.orig
 .eggs
+.profile
 __pycache__
 _old
 *.py[cod]
