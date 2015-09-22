@@ -58,7 +58,7 @@ def _compute_pcs(x, n_pcs=None, masks=None):
         # Don't compute the cov matrix if there are no unmasked spikes
         # on that channel.
         alpha = 1. / n_spikes
-        if x_channel.shape[0] <= 1:
+        if x_channel.shape[0] <= 1:  # pragma: no cover
             cov = alpha * cov_reg
         else:
             cov_channel = np.cov(x_channel, rowvar=0)
