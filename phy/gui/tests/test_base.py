@@ -7,8 +7,6 @@ from __future__ import print_function
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
-
 from pytest import raises, mark
 
 from ..base import (BaseViewModel,
@@ -20,8 +18,6 @@ from ..qt import (QtGui,
                   _set_qt_widget_position_size,
                   )
 from ...utils.event import EventEmitter
-from ...utils.logging import set_level
-from ...io.base import BaseModel, BaseSession
 
 
 # Skip these tests in "make test-quick".
@@ -31,14 +27,6 @@ pytestmark = mark.long()
 #------------------------------------------------------------------------------
 # Base tests
 #------------------------------------------------------------------------------
-
-def setup():
-    set_level('debug')
-
-
-def teardown():
-    set_level('info')
-
 
 def test_base_view_model(qtbot):
     class MyViewModel(BaseViewModel):
@@ -201,89 +189,4 @@ def test_base_gui(qtbot):
 
     gui.reset_gui()
 
-    gui.close()
-
-
-def test_base_session(tempdir, qtbot):
-
-    phy_dir = op.join(tempdir, 'test.phy')
-
-    model = BaseModel()
-
-    class V1(HTMLViewModel):
-        def get_html(self, **kwargs):
-            return 'view 1'
-
-    class V2(HTMLViewModel):
-        def get_html(self, **kwargs):
-            return 'view 2'
-
-    vm_classes = {'v1': V1, 'v2': V2}
-
-    config = [('v1', {'position': 'right'}),
-              ('v2', {'position': 'left'}),
-              ('v2', {'position': 'bottom'}),
-              ]
-
-    shortcuts = {'test': 't', 'exit': 'ctrl+q'}
-
-    class TestGUI(BaseGUI):
-        def __init__(self, **kwargs):
-            super(TestGUI, self).__init__(vm_classes=vm_classes,
-                                          **kwargs)
-            self.on_open()
-
-        def _create_actions(self):
-            self._add_gui_shortcut('test')
-            self._add_gui_shortcut('exit')
-
-        def test(self):
-            self.show_shortcuts()
-            self.reset_gui()
-
-    gui_classes = {'gui': TestGUI}
-
-    default_settings_path = op.join(tempdir, 'default_settings.py')
-
-    with open(default_settings_path, 'w') as f:
-        f.write("gui_config = {}\n".format(str(config)) +
-                "gui_shortcuts = {}".format(str(shortcuts)))
-
-    session = BaseSession(model=model,
-                          phy_user_dir=phy_dir,
-                          default_settings_paths=[default_settings_path],
-                          vm_classes=vm_classes,
-                          gui_classes=gui_classes,
-                          )
-
-    # New GUI.
-    gui = session.show_gui('gui')
-    qtbot.addWidget(gui.main_window)
-    qtbot.waitForWindowShown(gui.main_window)
-
-    # Remove a v2 view.
-    v2 = gui.get_views('v2')
-    assert len(v2) == 2
-    v2[0].close()
-    gui.close()
-
-    # Reopen and check that the v2 is gone.
-    gui = session.show_gui('gui')
-    qtbot.addWidget(gui.main_window)
-    qtbot.waitForWindowShown(gui.main_window)
-
-    v2 = gui.get_views('v2')
-    assert len(v2) == 1
-
-    gui.reset_gui()
-    v2 = gui.get_views('v2')
-    assert len(v2) == 2
-    gui.close()
-
-    gui = session.show_gui('gui')
-    qtbot.addWidget(gui.main_window)
-    qtbot.waitForWindowShown(gui.main_window)
-
-    v2 = gui.get_views('v2')
-    assert len(v2) == 2
     gui.close()

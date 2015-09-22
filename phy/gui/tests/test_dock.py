@@ -12,7 +12,6 @@ from vispy import app
 
 from ..dock import DockWindow
 from ...utils._color import _random_color
-from ...utils.logging import set_level
 
 
 # Skip these tests in "make test-quick".
@@ -22,14 +21,6 @@ pytestmark = mark.long
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
-
-def setup():
-    set_level('debug')
-
-
-def teardown():
-    set_level('info')
-
 
 def _create_canvas():
     """Create a VisPy canvas with a color background."""

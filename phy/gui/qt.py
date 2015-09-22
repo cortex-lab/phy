@@ -6,12 +6,14 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+import contextlib
+import logging
 import os
 import sys
-import contextlib
 
 from ..utils._misc import _is_interactive
-from ..utils.logging import info, warn
+
+logger = logging.getLogger(__name__)
 
 
 # -----------------------------------------------------------------------------
@@ -35,7 +37,7 @@ except ImportError:
 
 def _check_qt():
     if not _PYQT:
-        warn("PyQt is not available.")
+        logger.warn("PyQt is not available.")
         return False
     return True
 
@@ -119,9 +121,9 @@ def enable_qt():
         ip.enable_gui('qt')
         global _APP_RUNNING
         _APP_RUNNING = True
-        info("Qt event loop activated.")
+        logger.info("Qt event loop activated.")
     except:
-        warn("Qt event loop not activated.")
+        logger.warn("Qt event loop not activated.")
 
 
 # -----------------------------------------------------------------------------
