@@ -12,7 +12,7 @@ from itertools import product
 import numpy as np
 from pytest import raises, mark
 
-from .._types import _as_array, _as_tuple
+from .._types import _as_array
 from ..array import (_unique,
                      _normalize,
                      _index_of,
@@ -165,16 +165,6 @@ def test_index_of():
     arr = [36, 42, 42, 36, 36, 2, 42]
     lookup = _unique(arr)
     ae(_index_of(arr, lookup), [1, 2, 2, 1, 1, 0, 2])
-
-
-def test_as_tuple():
-    assert _as_tuple(3) == (3,)
-    assert _as_tuple((3,)) == (3,)
-    assert _as_tuple(None) is None
-    assert _as_tuple((None,)) == (None,)
-    assert _as_tuple((3, 4)) == (3, 4)
-    assert _as_tuple([3]) == ([3], )
-    assert _as_tuple([3, 4]) == ([3, 4], )
 
 
 def test_len_index():
