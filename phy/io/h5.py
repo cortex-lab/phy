@@ -8,9 +8,7 @@
 
 import logging
 
-import numpy as np
 import h5py
-from six import string_types
 
 logger = logging.getLogger(__name__)
 

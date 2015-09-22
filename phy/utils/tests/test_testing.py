@@ -12,7 +12,6 @@ import time
 
 import numpy as np
 from pytest import mark
-from six.moves import builtins
 from vispy.app import Canvas
 
 from ..testing import (benchmark, captured_output, show_test,
