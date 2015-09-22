@@ -21,6 +21,7 @@ from ..datasets import (download_file,
                         download_sample_data,
                         _check_md5_of_url,
                         _BASE_URL,
+                        _validate_output_dir,
                         )
 
 logger = logging.getLogger(__name__)
@@ -95,6 +96,12 @@ def _check(data):
 #------------------------------------------------------------------------------
 # Test utility functions
 #------------------------------------------------------------------------------
+
+def test_validate_output_dir(chdir_tempdir):
+    _validate_output_dir(None)
+    _validate_output_dir(op.join(chdir_tempdir, 'a/b/c'))
+    assert op.exists(op.join(chdir_tempdir, 'a/b/c/'))
+
 
 @responses.activate
 def test_check_md5_of_url(tempdir, mock_url):
