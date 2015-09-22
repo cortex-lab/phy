@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from random import uniform
+from numpy.random import uniform
 from colorsys import hsv_to_rgb
 
 

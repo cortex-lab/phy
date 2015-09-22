@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import logging
+import numpy as np
 import os
 
 from pytest import yield_fixture
@@ -21,6 +22,9 @@ from phy.utils.tempdir import TemporaryDirectory
 
 logging.getLogger().setLevel(logging.DEBUG)
 add_default_handler('DEBUG')
+
+# Fix the random seed in the tests.
+np.random.seed(2015)
 
 
 @yield_fixture
