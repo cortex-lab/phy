@@ -27,7 +27,7 @@ def _get_padded(data, start, end):
     Assumes that either `start<0` or `end>len(data)` but not both.
 
     """
-    if start < 0 and end >= data.shape[0]:
+    if start < 0 and end > data.shape[0]:
         raise RuntimeError()
     if start < 0:
         start_zeros = np.zeros((-start, data.shape[1]),
@@ -67,7 +67,7 @@ class WaveformExtractor(object):
         comp_s = component[:, 0]  # shape: (component_size,)
         comp_ch = component[:, 1]  # shape: (component_size,)
         channel = comp_ch[0]
-        if channel not in self._dep_channels:
+        if channel not in self._dep_channels:  # pragma: no cover
             raise RuntimeError("Channel `{}` appears to be dead and should "
                                "have been excluded from the threshold "
                                "crossings.".format(channel))
@@ -152,7 +152,7 @@ class WaveformExtractor(object):
         try:
             f = interp1d(old_s, waveform, bounds_error=True,
                          kind='cubic', axis=0)
-        except ValueError:
+        except ValueError:  # pragma: no cover
             logger.warn("Interpolation error at time %d", s)
             return waveform
         return f(new_s)
