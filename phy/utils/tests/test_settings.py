@@ -8,7 +8,7 @@
 
 import os.path as op
 
-from pytest import raises, yield_fixture, mark
+from pytest import raises, yield_fixture
 
 from ..settings import (BaseSettings,
                         Settings,
