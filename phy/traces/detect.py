@@ -101,8 +101,7 @@ class Thresholder(object):
         assert mode in ('positive', 'negative', 'both')
         if isinstance(thresholds, (float, int, np.ndarray)):
             thresholds = {'default': thresholds}
-        if thresholds is None:
-            thresholds = {}
+        thresholds = thresholds if thresholds is not None else {}
         assert isinstance(thresholds, dict)
         self._mode = mode
         self._thresholds = thresholds
@@ -144,14 +143,6 @@ class Thresholder(object):
 # Connected components
 # -----------------------------------------------------------------------------
 
-def _to_tuples(x):
-    return ((i, j) for (i, j) in x)
-
-
-def _to_list(x):
-    return [(i, j) for (i, j) in x]
-
-
 def connected_components(weak_crossings=None,
                          strong_crossings=None,
                          probe_adjacency_list=None,
@@ -187,8 +178,7 @@ def connected_components(weak_crossings=None,
 
     """
 
-    if probe_adjacency_list is None:
-        probe_adjacency_list = {}
+    probe_adjacency_list = probe_adjacency_list or {}
 
     # Make sure the values are sets.
     probe_adjacency_list = {c: set(cs)
@@ -242,7 +232,7 @@ def connected_components(weak_crossings=None,
         for j_s in range(i_s - join_size, i_s + 1):
             # Allow us to leave out a channel from the graph to exclude bad
             # channels
-            if i_ch not in mgraph:
+            if i_ch not in mgraph:  # pragma: no cover
                 continue
             for j_ch in mgraph[i_ch]:
                 # Label of the adjacent element.
