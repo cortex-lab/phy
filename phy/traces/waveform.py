@@ -237,7 +237,7 @@ class WaveformLoader(object):
             self.traces = traces
         else:
             self._traces = None
-        self.dtype = dtype or traces.dtype
+        self.dtype = dtype or (traces.dtype if traces is not None else None)
         # Scale factor for the loaded waveforms.
         self._scale_factor = scale_factor
         self._dc_offset = dc_offset
@@ -351,7 +351,7 @@ class WaveformLoader(object):
         for i, time in enumerate(spikes):
             try:
                 waveforms[i, ...] = self._load_at(time)
-            except ValueError as e:
+            except ValueError as e:  # pragma: no cover
                 logger.warn("Error while loading waveform: %s", str(e))
 
         # Filter the waveforms.

@@ -54,10 +54,9 @@ def test_extract_simple():
 
     we = WaveformExtractor(extract_before=3,
                            extract_after=5,
-                           thresholds={'weak': weak,
-                                       'strong': strong},
                            channels_per_group=cpg,
                            )
+    we.set_thresholds(weak=weak, strong=strong)
 
     # _component()
     comp = we._component(component, n_samples=ns)
@@ -128,7 +127,7 @@ def test_slice():
 # Tests loader
 #------------------------------------------------------------------------------
 
-@yield_fixture(params=[(None, None), (-1, 0)])
+@yield_fixture(params=[(None, None), (-1, 2)])
 def waveform_loader(request):
     scale_factor, dc_offset = request.param
 
@@ -157,16 +156,26 @@ def waveform_loader(request):
     yield b
 
 
+def test_loader_edge_case():
+    wl = WaveformLoader(n_samples_waveforms=3)
+    wl.traces = np.random.rand(0, 2)
+    wl[0]
+
+
 def test_loader_simple(waveform_loader):
     b = waveform_loader
     spike_samples = b.spike_samples
     loader = b.loader
     traces = loader.traces
-    dc_offset = loader.dc_offset or 0.
+    dc_offset = loader.dc_offset or 0
     scale_factor = loader.scale_factor or 1
     n_samples_traces, n_channels = traces.shape
     n_samples_waveforms = b.n_samples_waveforms
     h = n_samples_waveforms // 2
+
+    assert loader.offset == 0
+    assert loader.dc_offset in (dc_offset, None)
+    assert loader.scale_factor in (scale_factor, None)
 
     def _transform(arr):
         return (arr - dc_offset) * scale_factor
