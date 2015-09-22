@@ -70,6 +70,14 @@ def test_base_settings():
     assert s['a'] == 3
 
 
+def test_base_settings_wrong_extension(tempdir):
+    path = op.join(tempdir, 'test')
+    with open(path, 'w'):
+        pass
+    s = BaseSettings()
+    s.load(path=path)
+
+
 def test_base_settings_file(tempdir, settings):
     ext, settings = settings
     path = op.join(tempdir, 'test.' + ext)
@@ -82,6 +90,7 @@ def test_base_settings_file(tempdir, settings):
     s['c'] = 6
     assert s['a'] == 3
 
+    # Warning: wrong path.
     s.load(path=None)
 
     # Now, load the settings file.
