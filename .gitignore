@@ -11,7 +11,7 @@ wiki
 *.orig
 .eggs
 __pycache__
-
+_old
 *.py[cod]
 .coverage*
 *credentials
