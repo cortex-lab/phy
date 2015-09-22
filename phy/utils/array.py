@@ -6,18 +6,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from functools import reduce
 import logging
 import math
 from math import floor
-from operator import mul
-import os
 import os.path as op
 
 import numpy as np
-from six import integer_types, string_types
 
-from ._types import _as_tuple, _as_array
+from ._types import _as_array
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +114,8 @@ def _index_of(arr, lookup):
     """
     # Equivalent of np.digitize(arr, lookup) - 1, but much faster.
     # TODO: assertions to disable in production for performance reasons.
+    # TODO: np.searchsorted(lookup, arr) is faster on small arrays with large
+    # values
     m = (lookup.max() if len(lookup) else 0) + 1
     tmp = np.zeros(m + 1, dtype=np.int)
     # Ensure that -1 values are kept.
@@ -125,29 +123,6 @@ def _index_of(arr, lookup):
     if len(lookup):
         tmp[lookup] = np.arange(len(lookup))
     return tmp[arr]
-
-
-def index_of_small(arr, lookup):
-    """Faster on small arrays with large values."""
-    return np.searchsorted(lookup, arr)
-
-
-def _partial_shape(shape, trailing_index):
-    """Return the shape of a partial array."""
-    if shape is None:
-        shape = ()
-    if trailing_index is None:
-        trailing_index = ()
-    trailing_index = _as_tuple(trailing_index)
-    # Length of the selection items for the partial array.
-    len_item = len(shape) - len(trailing_index)
-    # Array for the trailing dimensions.
-    _arr = np.empty(shape=shape[len_item:])
-    try:
-        trailing_arr = _arr[trailing_index]
-    except IndexError:
-        raise ValueError("The partial shape index is invalid.")
-    return shape[:len_item] + trailing_arr.shape
 
 
 def _pad(arr, n, dir='right'):
@@ -189,55 +164,6 @@ def _pad(arr, n, dir='right'):
         return out
 
 
-def _start_stop(item):
-    """Find the start and stop indices of a __getitem__ item.
-
-    This is used only by ConcatenatedArrays.
-
-    Only two cases are supported currently:
-
-    * Single integer.
-    * Contiguous slice in the first dimension only.
-
-    """
-    if isinstance(item, tuple):
-        item = item[0]
-    if isinstance(item, slice):
-        # Slice.
-        if item.step not in (None, 1):
-            return NotImplementedError()
-        return item.start, item.stop
-    elif isinstance(item, (list, np.ndarray)):
-        # List or array of indices.
-        return np.min(item), np.max(item)
-    else:
-        # Integer.
-        return item, item + 1
-
-
-def _len_index(item, max_len=0):
-    """Return the expected length of the output of __getitem__(item)."""
-    if isinstance(item, (list, np.ndarray)):
-        return len(item)
-    elif isinstance(item, slice):
-        stop = item.stop or max_len
-        start = item.start or 0
-        step = item.step or 1
-        start = np.clip(start, 0, stop)
-        assert 0 <= start <= stop
-        return 1 + ((stop - 1 - start) // step)
-    else:
-        return 1
-
-
-def _fill_index(arr, item):
-    if isinstance(item, tuple):
-        item = (slice(None, None, None),) + item[1:]
-        return arr[item]
-    else:
-        return arr
-
-
 def _in_polygon(points, polygon):
     """Return the points that are inside a polygon."""
     from matplotlib.path import Path
@@ -249,93 +175,9 @@ def _in_polygon(points, polygon):
     return path.contains_points(points)
 
 
-def _concatenate(arrs):
-    if arrs is None:
-        return
-    arrs = [_as_array(arr) for arr in arrs if arr is not None]
-    if not arrs:
-        return
-    return np.concatenate(arrs, axis=0)
-
-
 # -----------------------------------------------------------------------------
 # I/O functions
 # -----------------------------------------------------------------------------
-
-def _prod(l):
-    return reduce(mul, l, 1)
-
-
-class LazyMemmap(object):
-    """A memmapped array that only opens the file handle when required."""
-    def __init__(self, path, dtype=None, shape=None, mode='r'):
-        assert isinstance(path, string_types)
-        assert dtype
-        self._path = path
-        self._f = None
-        self.mode = mode
-        self.dtype = dtype
-        self.shape = shape
-        self.ndim = len(shape) if shape else None
-
-    def _open_file_if_needed(self):
-        if self._f is None:
-            self._f = np.memmap(self._path,
-                                dtype=self.dtype,
-                                shape=self.shape,
-                                mode=self.mode,
-                                )
-            self.shape = self._f.shape
-            self.ndim = self._f.ndim
-
-    def __getitem__(self, item):
-        self._open_file_if_needed()
-        return self._f[item]
-
-    def __len__(self):
-        self._open_file_if_needed()
-        return len(self._f)
-
-    def __del__(self):
-        if self._f is not None:
-            del self._f
-
-
-def _memmap(f_or_path, dtype=None, shape=None, lazy=True):
-    if not lazy:
-        return np.memmap(f_or_path, dtype=dtype, shape=shape, mode='r')
-    else:
-        return LazyMemmap(f_or_path, dtype=dtype, shape=shape, mode='r')
-
-
-def _file_size(f_or_path):
-    if isinstance(f_or_path, string_types):
-        with open(f_or_path, 'rb') as f:
-            return _file_size(f)
-    else:
-        return os.fstat(f_or_path.fileno()).st_size
-
-
-def _load_ndarray(f_or_path, dtype=None, shape=None, memmap=False, lazy=False):
-    if dtype is None:
-        return f_or_path
-    else:
-        if not memmap:
-            arr = np.fromfile(f_or_path, dtype=dtype)
-            if shape is not None:
-                arr = arr.reshape(shape)
-        else:
-            # memmap doesn't accept -1 in shapes, but we can compute
-            # the missing dimension from the file size.
-            if shape and shape[0] == -1:
-                n_bytes = _file_size(f_or_path)
-                n_items = n_bytes // np.dtype(dtype).itemsize
-                n_rows = n_items // _prod(shape[1:])
-                shape = (n_rows,) + shape[1:]
-                assert _prod(shape) == n_items
-            arr = _memmap(f_or_path, dtype=dtype, shape=shape, lazy=lazy)
-        return arr
-
 
 def _save_arrays(path, arrays):
     """Save multiple arrays in a single file by concatenating them along
