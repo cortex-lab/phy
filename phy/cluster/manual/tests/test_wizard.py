@@ -235,4 +235,4 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
 
     # Redo.
     clustering.redo()
-    # _check_best_match(8, 7)
+    _check_best_match(8, 7)
