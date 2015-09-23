@@ -456,7 +456,9 @@ class Wizard(object):
         # actions. This allows for better before/after comparisons.
         if up.added:
             self.selection = up.added
-        elif up.description == 'metadata_group':
+        if up.description == 'merge':
+            self.pin(up.added[0])
+        if up.description == 'metadata_group':
             cluster = up.metadata_changed[0]
             if cluster == self.best:
                 self.next_best()
