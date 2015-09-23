@@ -114,6 +114,9 @@ def test_clustering_split():
     # Instantiate a Clustering instance.
     clustering = Clustering(spike_clusters)
     ae(clustering.spike_clusters, spike_clusters)
+    n_spikes = len(spike_clusters)
+    assert clustering.n_spikes == n_spikes
+    ae(clustering.spike_ids, np.arange(n_spikes))
 
     splits = [[0],
               [1],
@@ -359,6 +362,11 @@ def test_clustering_assign():
     my_spikes_2 = np.unique(np.random.randint(low=0, high=n_spikes, size=10))
     my_spikes_3 = np.unique(np.random.randint(low=0, high=n_spikes, size=1000))
     my_spikes_4 = np.arange(n_spikes - 5)
+
+    # Edge cases.
+    clustering.assign([])
+    with raises(ValueError):
+        clustering.merge([], 1)
 
     # Checkpoint 1.
     info = clustering.split(my_spikes_1)
