@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 from pytest import yield_fixture
+from numpy.testing import assert_array_equal as ae
 
 from ..clustering import Clustering
 from .._utils import ClusterMetadata, ClusterMetadataUpdater
@@ -221,18 +222,62 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
 
     _check_best_match(2, 3)
 
+    ################################
+
     # Save the selection before the merge in the undo stack.
     clustering.merge([2, 3])
     assert wizard.best_list == [8, 7, 5]
     _check_best_match(8, 7)
 
-    # Undo.
+    # Undo merge.
     clustering.undo()
     _check_best_match(2, 3)
 
     wizard.selection = [1, 5, 7, 8]
     _check_best_match(5, 7)
 
-    # Redo.
+    # Redo merge.
     clustering.redo()
     _check_best_match(8, 7)
+
+    ################################
+
+    # Split.
+    ae(clustering.spike_clusters, [8, 8, 5, 7])
+    clustering.split([1, 2])
+    ae(clustering.spike_clusters, [10, 9, 9, 7])
+    _check_best_match(9, 10)
+
+    # Undo split.
+    up = clustering.undo()
+    _check_best_match(8, 7)
+    assert up.description == 'assign'
+    assert up.history == 'undo'
+
+    # Redo split.
+    up = clustering.redo()
+    _check_best_match(9, 10)
+    assert up.description == 'assign'
+    assert up.history == 'redo'
+
+    ################################
+
+    # Split (=merge).
+    ae(clustering.spike_clusters, [10, 9, 9, 7])
+    up = clustering.split([1, 2])
+    ae(clustering.spike_clusters, [10, 11, 11, 7])
+    _check_best_match(11, 7)
+    assert up.description == 'merge'
+    assert up.history is None
+
+    # Undo split (=merge).
+    up = clustering.undo()
+    _check_best_match(9, 10)
+    assert up.description == 'merge'
+    assert up.history == 'undo'
+
+    # Redo split (=merge).
+    up = clustering.redo()
+    _check_best_match(11, 7)
+    assert up.description == 'merge'
+    assert up.history == 'redo'
