@@ -191,8 +191,9 @@ class ClusterMetadataUpdater(EventEmitter):
         self._cluster_metadata = cluster_metadata
         # Keep a deep copy of the original structure for the undo stack.
         self._data_base = deepcopy(cluster_metadata.data)
-        # The stack contains (clusters, field, value, update_info) tuples.
-        self._undo_stack = History((None, None, None, None))
+        # The stack contains (clusters, field, value, update_info, undo_state)
+        # tuples.
+        self._undo_stack = History((None, None, None, None, None))
 
         for field, func in self._cluster_metadata._fields.items():
 
@@ -211,14 +212,17 @@ class ClusterMetadataUpdater(EventEmitter):
             setattr(self, 'set_{0:s}'.format(field), _make_set(field))
 
     def _set(self, clusters, field, value, add_to_stack=True):
+
         self._cluster_metadata._set(clusters, field, value)
         clusters = _as_list(clusters)
         up = UpdateInfo(description='metadata_' + field,
                         metadata_changed=clusters,
                         metadata_value=value,
                         )
+        undo_state = self.emit('request_undo_state', up)
+
         if add_to_stack:
-            self._undo_stack.add((clusters, field, value, up))
+            self._undo_stack.add((clusters, field, value, up, undo_state))
 
         self.emit('cluster', up)
         return up
@@ -241,13 +245,14 @@ class ClusterMetadataUpdater(EventEmitter):
         if args is None:
             return
         self._cluster_metadata._data = deepcopy(self._data_base)
-        for clusters, field, value, _ in self._undo_stack:
+        for clusters, field, value, up, undo_state in self._undo_stack:
             if clusters is not None:
                 self._set(clusters, field, value, add_to_stack=False)
         # Return the UpdateInfo instance of the undo action.
-        info = args[-1]
-        info.history = 'undo'
-        return info
+        up, undo_state = args[-2:]
+        up.history = 'undo'
+        up.undo_state = undo_state
+        return up
 
     def redo(self):
         """Redo the next metadata change.
@@ -260,8 +265,8 @@ class ClusterMetadataUpdater(EventEmitter):
         args = self._undo_stack.forward()
         if args is None:
             return
-        clusters, field, value, info = args
+        clusters, field, value, up, undo_state = args
         self._set(clusters, field, value, add_to_stack=False)
         # Return the UpdateInfo instance of the redo action.
-        info.history = 'redo'
-        return info
+        up.history = 'redo'
+        return up
