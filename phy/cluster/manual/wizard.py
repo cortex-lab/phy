@@ -179,6 +179,9 @@ class Wizard(object):
     # Core methods
     #--------------------------------------------------------------------------
 
+    def cluster_status(self, cluster):
+        return self._cluster_status(cluster)
+
     def best_clusters(self, n_max=None, quality=None):
         """Return the list of best clusters sorted by decreasing quality.
 
