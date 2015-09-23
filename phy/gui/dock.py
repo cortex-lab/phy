@@ -20,15 +20,6 @@ def _title(widget):
     return str(widget.windowTitle()).lower()
 
 
-def _widget(dock_widget):
-    """Return a Qt or VisPy widget from a dock widget."""
-    widget = dock_widget.widget()
-    if hasattr(widget, '_vispy_canvas'):
-        return widget._vispy_canvas
-    else:
-        return widget
-
-
 # -----------------------------------------------------------------------------
 # Qt windows
 # -----------------------------------------------------------------------------
@@ -96,7 +87,7 @@ class DockWindow(QtGui.QMainWindow):
         res = self.emit('close_gui')
         # Discard the close event if False is returned by one of the callback
         # functions.
-        if False in res:
+        if False in res:  # pragma: no cover
             e.ignore()
             return
         super(DockWindow, self).closeEvent(e)

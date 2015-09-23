@@ -37,8 +37,16 @@ def _create_canvas():
 
 def test_dock_1(qtbot):
 
-    gui = DockWindow()
+    gui = DockWindow(position=(200, 100), size=(100, 100))
     qtbot.addWidget(gui)
+
+    # Increase coverage.
+    @gui.connect_
+    def on_show_gui():
+        pass
+    gui.unconnect_(on_show_gui)
+    qtbot.keyPress(gui, Qt.Key_Control)
+    qtbot.keyRelease(gui, Qt.Key_Control)
 
     gui.add_action('test', lambda: None)
     # Adding an action twice has no effect.
