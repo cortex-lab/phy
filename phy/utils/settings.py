@@ -103,8 +103,10 @@ class BaseSettings(object):
         try:
             if op.splitext(path)[1] == '.py':
                 self._update(_read_python(path))
+                logger.debug("Read settings file %s.", path)
             elif op.splitext(path)[1] == '.json':
                 self._update(_load_json(path))
+                logger.debug("Read settings file %s.", path)
             else:
                 logger.warn("The settings file %s must have the extension "
                             "'.py' or '.json'.", path)

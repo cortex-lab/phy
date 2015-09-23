@@ -85,16 +85,16 @@ def test_extend_assignment():
     for to in (123, 0, 1, 2, 3):
         clusters_rel = [123] * len(spike_ids)
         new_spike_ids, new_cluster_ids = _extend_assignment(spike_ids,
-                                                             spike_clusters,
-                                                             clusters_rel)
+                                                            spike_clusters,
+                                                            clusters_rel)
         ae(new_spike_ids, [0, 2, 6])
         ae(new_cluster_ids, [10, 10, 11])
 
     # Second case: we assign the spikes to different clusters.
     clusters_rel = [0, 1]
     new_spike_ids, new_cluster_ids = _extend_assignment(spike_ids,
-                                                         spike_clusters,
-                                                         clusters_rel)
+                                                        spike_clusters,
+                                                        clusters_rel)
     ae(new_spike_ids, [0, 2, 6])
     ae(new_cluster_ids, [10, 11, 12])
 

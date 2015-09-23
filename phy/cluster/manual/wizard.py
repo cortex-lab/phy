@@ -45,7 +45,7 @@ def _find_first(items, filter=None):
 
 def _previous(items, current, filter=None):
     if current not in items:
-        logger.debug("%d is not in %s.", current, items)
+        logger.debug("%s is not in %s.", current, items)
         return
     i = items.index(current)
     if i == 0:

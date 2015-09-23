@@ -4,3 +4,4 @@ source = phy
 omit =
     */phy/ext/*
     */phy/utils/tempdir.py
+    */default_settings.py
