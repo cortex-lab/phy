@@ -32,11 +32,6 @@ def _create_canvas():
     def on_draw(e):
         c.context.clear(c.color)
 
-    @c.connect
-    def on_key_press(e):
-        c.color = _random_color()
-        c.update()
-
     return c
 
 
@@ -45,13 +40,10 @@ def test_dock_1(qtbot):
     gui = DockWindow()
     qtbot.addWidget(gui)
 
-    @gui.shortcut('quit', 'ctrl+q')
-    def quit():
-        gui.close()
-
     gui.add_view(_create_canvas(), 'view1')
     gui.add_view(_create_canvas(), 'view2')
     gui.show()
+    qtbot.waitForWindowShown(gui)
 
     assert len(gui.list_views('view')) == 2
     gui.close()
