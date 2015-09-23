@@ -250,14 +250,14 @@ class Wizard(object):
         """Return the current best/match cluster selection."""
         b, m = self.best, self.match
         if b is None:
-            return []
+            return ()
         elif m is None:
-            return [b]
+            return (b,)
         else:
             if b == m:
-                return [b]
+                return (b,)
             else:
-                return [b, m]
+                return (b, m)
 
     @match.setter
     def match(self, value):
