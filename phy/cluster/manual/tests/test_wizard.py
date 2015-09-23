@@ -239,6 +239,9 @@ def test_wizard_update_group(wizard, clustering, cluster_metadata):
     cluster_metadata.undo()
     _check_best_match(5, 2)
 
+    cluster_metadata.redo()
+    _check_best_match(5, 7)
+
 
 def test_wizard_update_clustering(wizard, clustering, cluster_metadata):
     # 2: none, 3: none, 5: ignored, 7: good
