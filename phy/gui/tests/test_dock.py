@@ -65,7 +65,7 @@ def test_dock_status_message(qtbot):
 
 
 def test_dock_state(qtbot):
-    _gs = None
+    _gs = []
     gui = DockWindow()
     qtbot.addWidget(gui)
 
@@ -79,8 +79,7 @@ def test_dock_state(qtbot):
 
     @gui.connect_
     def on_close_gui():
-        global _gs
-        _gs = gui.save_geometry_state()
+        _gs.append(gui.save_geometry_state())
 
     gui.show()
 
@@ -100,9 +99,16 @@ def test_dock_state(qtbot):
     gui.add_view(_create_canvas(), 'view2')
 
     @gui.connect_
-    def on_show():
-        print(_gs)
-        gui.restore_geometry_state(_gs)
+    def on_show_gui():
+        gui.restore_geometry_state(_gs[0])
 
+    qtbot.addWidget(gui)
     gui.show()
+
+    assert len(gui.list_views('view')) == 3
+    assert gui.view_count() == {
+        'view1': 1,
+        'view2': 2,
+    }
+
     gui.close()
