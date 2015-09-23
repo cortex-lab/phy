@@ -44,9 +44,9 @@ class EventEmitter(object):
     """
 
     def __init__(self):
-        self.reset()
+        self._reset()
 
-    def reset(self):
+    def _reset(self):
         """Remove all registered callbacks."""
         self._callbacks = defaultdict(list)
 
@@ -243,7 +243,6 @@ class ProgressReporter(EventEmitter):
 
     def reset(self, value_max=None):
         """Reset the value to 0 and the value max to a given value."""
-        super(ProgressReporter, self).reset()
         self._value = 0
         if value_max is not None:
             self._value_max = value_max
