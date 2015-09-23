@@ -164,6 +164,8 @@ def test_base_gui(qtbot):
     qtbot.addWidget(gui.main_window)
     gui.show()
 
+    gui.test()
+
     # Test snippet mode.
     gui.enable_snippet_mode()
 
