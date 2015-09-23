@@ -50,21 +50,32 @@ if not _check_qt():
 # Utility functions
 # -----------------------------------------------------------------------------
 
-def _prompt(parent, message, buttons=('yes', 'no'), title='Question'):
-    buttons = [(button, getattr(QtGui.QMessageBox, button.capitalize()))
-               for button in buttons]
+def _button_enum_from_name(name):
+    return getattr(QtGui.QMessageBox, name.capitalize())
+
+
+def _button_name_from_enum(enum):
+    names = dir(QtGui.QMessageBox)
+    for name in names:
+        if getattr(QtGui.QMessageBox, name) == enum:
+            return name.lower()
+
+
+def _prompt(message, buttons=('yes', 'no'), title='Question'):
+    buttons = [(button, _button_enum_from_name(button)) for button in buttons]
     arg_buttons = 0
     for (_, button) in buttons:
         arg_buttons |= button
-    reply = QtGui.QMessageBox.question(parent,
-                                       title,
-                                       message,
-                                       arg_buttons,
-                                       buttons[0][1],
-                                       )
-    for name, button in buttons:
-        if reply == button:
-            return name
+    box = QtGui.QMessageBox()
+    box.setWindowTitle(title)
+    box.setText(message)
+    box.setStandardButtons(arg_buttons)
+    box.setDefaultButton(buttons[0][1])
+    return box
+
+
+def _show_box(box):  # pragma: no cover
+    return _button_name_from_enum(box.exec_())
 
 
 def _set_qt_widget_position_size(widget, position=None, size=None):
