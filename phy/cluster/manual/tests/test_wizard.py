@@ -206,7 +206,7 @@ def test_wizard_nav(wizard):
 
 
 def test_wizard_update(wizard, clustering, cluster_metadata):
-    # 2: none, 3: none, 5: unknown, 7: good
+    # 2: none, 3: none, 5: ignored, 7: good
     wizard.attach(clustering, cluster_metadata)
 
     wizard.start()
@@ -224,21 +224,29 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
 
     ################################
 
-    # Save the selection before the merge in the undo stack.
+    assert wizard.cluster_status(2) is None
+    assert wizard.cluster_status(3) is None
     clustering.merge([2, 3])
-    assert wizard.best_list == [8, 7, 5]
     _check_best_match(8, 7)
+    assert wizard.best_list == [8, 7, 5]
+    assert wizard.cluster_status(8) is None
+    assert wizard.cluster_status(7) == 'good'
 
     # Undo merge.
     clustering.undo()
     _check_best_match(2, 3)
+    assert wizard.cluster_status(2) is None
+    assert wizard.cluster_status(3) is None
 
+    # Make a selection.
     wizard.selection = [1, 5, 7, 8]
     _check_best_match(5, 7)
 
     # Redo merge.
     clustering.redo()
     _check_best_match(8, 7)
+    assert wizard.cluster_status(8) is None
+    assert wizard.cluster_status(7) == 'good'
 
     ################################
 
@@ -247,6 +255,8 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
     clustering.split([1, 2])
     ae(clustering.spike_clusters, [10, 9, 9, 7])
     _check_best_match(9, 10)
+    assert wizard.cluster_status(10) is None
+    assert wizard.cluster_status(9) is None
 
     # Undo split.
     up = clustering.undo()
@@ -269,6 +279,7 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
     _check_best_match(11, 7)
     assert up.description == 'merge'
     assert up.history is None
+    assert wizard.cluster_status(11) is None
 
     # Undo split (=merge).
     up = clustering.undo()
