@@ -29,7 +29,7 @@ def _create_canvas():
     c.color = _random_color()
 
     @c.connect
-    def on_draw(e):
+    def on_draw(e):  # pragma: no cover
         c.context.clear(c.color)
 
     return c
@@ -40,10 +40,14 @@ def test_dock_1(qtbot):
     gui = DockWindow()
     qtbot.addWidget(gui)
 
-    gui.add_view(_create_canvas(), 'view1')
+    gui.add_action('test', lambda: None)
+    # Adding an action twice has no effect.
+    gui.add_action('test', lambda: None)
+
+    gui.add_view(_create_canvas(), 'view1', floating=True)
     gui.add_view(_create_canvas(), 'view2')
     gui.show()
-    qtbot.waitForWindowShown(gui)
+    # qtbot.waitForWindowShown(gui)
 
     assert len(gui.list_views('view')) == 2
     gui.close()
