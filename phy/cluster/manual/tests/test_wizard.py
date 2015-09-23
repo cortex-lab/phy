@@ -8,6 +8,7 @@
 
 from pytest import raises, yield_fixture
 
+from ..clustering import Clustering
 from ..wizard import (_previous,
                       _next,
                       Wizard,
@@ -25,11 +26,7 @@ def wizard():
 
     @wizard.set_quality_function
     def quality(cluster):
-        return {2: .2,
-                3: .3,
-                5: .5,
-                7: .7,
-                }[cluster]
+        return cluster * .1
 
     @wizard.set_similarity_function
     def similarity(cluster, other):
@@ -44,10 +41,9 @@ def test_utils():
     def func(x):
         return x in (2, 5)
 
-    with raises(RuntimeError):
-        _previous(l, 1, func)
-    with raises(RuntimeError):
-        _previous(l, 15, func)
+    # Error: log and do nothing.
+    _previous(l, 1, func)
+    _previous(l, 15, func)
 
     assert _previous(l, 2, func) == 2
     assert _previous(l, 3, func) == 2
@@ -55,10 +51,9 @@ def test_utils():
     assert _previous(l, 7, func) == 5
     assert _previous(l, 11, func) == 5
 
-    with raises(RuntimeError):
-        _next(l, 1, func)
-    with raises(RuntimeError):
-        _next(l, 15, func)
+    # Error: log and do nothing.
+    _next(l, 1, func)
+    _next(l, 15, func)
 
     assert _next(l, 2, func) == 5
     assert _next(l, 3, func) == 5
@@ -104,6 +99,10 @@ def test_wizard_nav(wizard):
 
     # Loop over the best clusters.
     wizard.start()
+
+    assert wizard.n_clusters == 4
+    assert wizard.best_list == [3, 2, 7, 5]
+
     assert wizard.best == 3
     assert wizard.match is None
 
@@ -138,6 +137,7 @@ def test_wizard_nav(wizard):
     wizard.pin()
     assert wizard.best == 3
     assert wizard.match == 2
+    assert wizard.match_list == [2, 7, 5]
 
     wizard.next()
     assert wizard.best == 3
@@ -164,6 +164,24 @@ def test_wizard_nav(wizard):
     assert wizard.best == 3
     assert wizard.match is None
 
+    assert wizard.n_processed == 2
+
 
 def test_wizard_update(wizard):
-    pass
+    # 2: none, 3: none, 5: unknown, 7: good
+    wizard.start()
+    clustering = Clustering([2, 3, 5, 7])
+
+    assert wizard.best_list == [3, 2, 7, 5]
+    wizard.next()
+    wizard.pin()
+    assert wizard.selection == (2, 3)
+
+    wizard.on_cluster(clustering.merge([2, 3]))
+    assert wizard.best_list == [8, 7, 5]
+    assert wizard.selection == (8, 7)
+
+    wizard.on_cluster(clustering.undo())
+    print(wizard.selection)
+    print(wizard.best_list)
+    print(wizard.match_list)

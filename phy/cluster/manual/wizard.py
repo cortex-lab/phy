@@ -6,9 +6,12 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import logging
 from operator import itemgetter
 
 from ...utils import _is_array_like
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -42,7 +45,8 @@ def _find_first(items, filter=None):
 
 def _previous(items, current, filter=None):
     if current not in items:
-        raise RuntimeError("{0} is not in {1}.".format(current, items))
+        logger.debug("%d is not in %s.", current, items)
+        return
     i = items.index(current)
     if i == 0:
         return current
@@ -56,7 +60,8 @@ def _next(items, current, filter=None):
     if not items:
         return current
     if current not in items:
-        raise RuntimeError("{0} is not in {1}.".format(current, items))
+        logger.debug("%d is not in %s.", current, items)
+        return
     i = items.index(current)
     if i == len(items) - 1:
         return current
@@ -310,9 +315,10 @@ class Wizard(object):
         """Select the previous best in cluster."""
         if self._has_finished:
             return
-        self.best = _previous(self._best_list,
-                              self._best,
-                              )
+        if self._best_list:
+            self.best = _previous(self._best_list,
+                                  self._best,
+                                  )
         if self.match is not None:
             self._set_match_list()
 
@@ -321,16 +327,17 @@ class Wizard(object):
         # Handle the case where we arrive at the end of the match list.
         if self.match is not None and len(self._match_list) <= 1:
             self.next_best()
-        else:
+        elif self._match_list:
             self.match = _next(self._match_list,
                                self._match,
                                )
 
     def previous_match(self):
         """Select the previous match."""
-        self.match = _previous(self._match_list,
-                               self._match,
-                               )
+        if self._match_list:
+            self.match = _previous(self._match_list,
+                                   self._match,
+                                   )
 
     def next(self):
         """Next cluster proposition."""
@@ -444,38 +451,10 @@ class Wizard(object):
         self._delete(up.deleted)
         # Select the last added cluster.
         if self.best is not None and up.added:
-            self.best = up.added[-1]
+            self.pin(up.added[-1])
 
     def on_cluster(self, up):
         if self._has_finished:
             return
         if self._best_list or self._match_list:
             self._update_state(up)
-
-    # Panel
-    #--------------------------------------------------------------------------
-
-    @property
-    def _best_progress(self):
-        """Progress in the best clusters."""
-        value = (self.best_list.index(self.best)
-                 if self.best in self.best_list else 0)
-        maximum = len(self.best_list)
-        return _progress(value, maximum)
-
-    @property
-    def _match_progress(self):
-        """Progress in the processed clusters."""
-        value = self.n_processed
-        maximum = self.n_clusters
-        return _progress(value, maximum)
-
-    def get_panel_params(self):
-        """Return the parameters for the HTML panel."""
-        return dict(best=self.best if self.best is not None else '',
-                    match=self.match if self.match is not None else '',
-                    best_progress=self._best_progress,
-                    match_progress=self._match_progress,
-                    best_group=self._group(self.best) or 'unsorted',
-                    match_group=self._group(self.match) or 'unsorted',
-                    )
