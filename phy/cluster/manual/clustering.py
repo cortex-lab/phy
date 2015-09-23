@@ -154,7 +154,7 @@ class Clustering(object):
     """
 
     def __init__(self, spike_clusters):
-        self._undo_stack = History(base_item=(None, None))
+        self._undo_stack = History(base_item=(None, None, None))
         # Spike -> cluster mapping.
         self._spike_clusters = _as_array(spike_clusters)
         self._n_spikes = len(self._spike_clusters)
@@ -225,7 +225,7 @@ class Clustering(object):
     # Actions
     #--------------------------------------------------------------------------
 
-    def merge(self, cluster_ids, to=None):
+    def merge(self, cluster_ids, to=None, extra=None):
         """Merge several clusters to a new cluster.
 
         Parameters
@@ -235,6 +235,8 @@ class Clustering(object):
             List of clusters to merge.
         to : integer or None
             The id of the new cluster. By default, this is `new_cluster_id()`.
+        extra : object
+            An object to store in the undo stack.
 
         Returns
         -------
@@ -288,7 +290,7 @@ class Clustering(object):
         self.spike_clusters[spike_ids] = to
 
         # Add to stack.
-        self._undo_stack.add((spike_ids, [to]))
+        self._undo_stack.add((spike_ids, [to], extra))
 
         return up
 
@@ -331,7 +333,7 @@ class Clustering(object):
 
         return up
 
-    def assign(self, spike_ids, spike_clusters_rel=0):
+    def assign(self, spike_ids, spike_clusters_rel=0, extra=None):
         """Make new spike cluster assignements.
 
         Parameters
@@ -342,6 +344,8 @@ class Clustering(object):
         spike_clusters_rel : array-like
             Relative cluster ids of the spikes in `spike_ids`. This
             must have the same size as `spike_ids`.
+        extra : object
+            An object to store in the undo stack.
 
         Returns
         -------
@@ -401,7 +405,7 @@ class Clustering(object):
         up = self._do_assign(spike_ids, cluster_ids)
 
         # Add the assignement to the undo stack.
-        self._undo_stack.add((spike_ids, cluster_ids))
+        self._undo_stack.add((spike_ids, cluster_ids, extra))
 
         return up
 
@@ -441,13 +445,13 @@ class Clustering(object):
         up : UpdateInfo instance of the changes done by this operation.
 
         """
-        self._undo_stack.back()
+        _, _, extra = self._undo_stack.back()
 
         # Retrieve the initial spike_cluster structure.
         spike_clusters_new = self._spike_clusters_base.copy()
 
         # Loop over the history (except the last item because we undo).
-        for spike_ids, cluster_ids in self._undo_stack:
+        for spike_ids, cluster_ids, _ in self._undo_stack:
             # We update the spike clusters accordingly.
             if spike_ids is not None:
                 spike_clusters_new[spike_ids] = cluster_ids
@@ -460,6 +464,8 @@ class Clustering(object):
         up = self._do_assign(changed,
                              clusters_changed)
         up.history = 'undo'
+        # Add the extra object from the undone object.
+        up.extra = extra
         return up
 
     def redo(self):
@@ -477,7 +483,11 @@ class Clustering(object):
             # No redo has been performed: abort.
             return
 
-        spike_ids, cluster_ids = item
+        # NOTE: the extra object of the redone action may not be useful,
+        # for example when it represents data associated to the state
+        # *before* the action. What might be more useful would be the
+        # extra object of the next item in the list (if it exists).
+        spike_ids, cluster_ids, extra = item
         assert spike_ids is not None
 
         # We apply the new assignement.
