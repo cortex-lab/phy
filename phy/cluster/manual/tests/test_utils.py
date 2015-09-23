@@ -129,7 +129,7 @@ def test_metadata_descendants():
             return 3
         s = list(set(ascendant_values) - set([None, 3]))
         # Return the default value if all ascendant values are the default.
-        if not s:
+        if not s:  # pragma: no cover
             return 3
         # Otherwise, return good (2) if it is present, or the largest value
         # among those present.
