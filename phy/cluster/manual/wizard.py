@@ -308,37 +308,28 @@ class Wizard(EventEmitter):
 
     def next_best(self):
         """Select the next best cluster."""
-        self.best = _next(self._best_list,
-                          self._best,
-                          )
-        if self.match is not None:
+        boo_match = self.match is not None
+        self.best = _next(self._best_list, self._best)
+        if boo_match:
             self._set_match_list()
 
     def previous_best(self):
         """Select the previous best in cluster."""
+        boo_match = self.match is not None
         if self._best_list:
-            self.best = _previous(self._best_list,
-                                  self._best,
-                                  )
-        if self.match is not None:
+            self.best = _previous(self._best_list, self._best)
+        if boo_match:
             self._set_match_list()
 
     def next_match(self):
         """Select the next match."""
-        # Handle the case where we arrive at the end of the match list.
-        if self.match is not None and len(self._match_list) <= 1:
-            self.next_best()
-        elif self._match_list:
-            self.match = _next(self._match_list,
-                               self._match,
-                               )
+        if self._match_list:
+            self.match = _next(self._match_list, self._match)
 
     def previous_match(self):
         """Select the previous match."""
         if self._match_list:
-            self.match = _previous(self._match_list,
-                                   self._match,
-                                   )
+            self.match = _previous(self._match_list, self._match)
 
     def next(self):
         """Next cluster proposition."""
@@ -356,16 +347,16 @@ class Wizard(EventEmitter):
 
     def first(self):
         """First match or first best."""
-        if self.match is None:
+        if self.match is None and self._best_list:
             self.best = self._best_list[0]
-        else:
+        elif self._match_list:
             self.match = self._match_list[0]
 
     def last(self):
         """Last match or last best."""
-        if self.match is None:
+        if self.match is None and self._best_list:
             self.best = self._best_list[-1]
-        else:
+        elif self.match_list:
             self.match = self._match_list[-1]
 
     # Control

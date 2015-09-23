@@ -213,6 +213,28 @@ def test_wizard_nav(wizard):
     assert wizard.n_processed == 2
 
 
+def test_wizard_update_simple(wizard, clustering, cluster_metadata):
+    # 2: none, 3: none, 5: ignored, 7: good
+    wizard.attach(clustering, cluster_metadata)
+
+    wizard.first()
+    wizard.last()
+
+    wizard.start()
+
+    wizard.first()
+    wizard.last()
+
+    wizard.pin()
+
+    wizard.first()
+    wizard.last()
+
+    wizard.pin()
+    wizard.previous_best()
+    wizard.next_best()
+
+
 def test_wizard_update_group(wizard, clustering, cluster_metadata):
     wizard.attach(clustering, cluster_metadata)
 
