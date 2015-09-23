@@ -220,6 +220,14 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
             return None
         raise NotImplementedError()  # pragma: no cover
 
+    @clustering.connect
+    def on_request_undo_state(up):
+        return {'selection': wizard.selection}
+
+    @clustering.connect
+    def on_cluster(up):
+        wizard.on_cluster(up)
+
     wizard.start()
 
     assert wizard.best_list == [3, 2, 7, 5]
@@ -228,11 +236,12 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
     assert wizard.selection == (2, 3)
 
     print(wizard.selection)
-    wizard.on_cluster(clustering.merge([2, 3]))
+    # Save the selection before the merge in the undo stack.
+    clustering.merge([2, 3])
     assert wizard.best_list == [8, 7, 5]
     assert wizard.selection == (8, 7)
 
-    wizard.on_cluster(clustering.undo())
+    clustering.undo()
     print(wizard.selection)
     # print(wizard.best_list)
     # print(wizard.match_list)
