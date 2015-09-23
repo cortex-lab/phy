@@ -162,11 +162,18 @@ class ClusterMetadata(object):
         """Update metadata of some clusters given the metadata of their
         ascendants."""
         fields = self.fields
-        for old, new in descendants:
-            for field in fields:
-                old_val = self._data[old].get(field, None)
-                new_val = self._data[new].get(field, None)
-                if old_val is not None and new_val is None:
+        for field in fields:
+            # For each new cluster, a set of metadata values of their
+            # ascendants.
+            candidates = defaultdict(set)
+            for old, new in descendants:
+                candidates[new].add(old)
+            for new, vals in candidates.items():
+                # Ask the field the value of the new cluster,
+                # as a function of the values of its ascendants. This is
+                # encoded in the specified default function.
+                new_val = self._fields[field](new, list(vals))
+                if new_val is not None:
                     self._set_one(new, field, new_val)
 
 
