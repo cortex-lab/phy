@@ -210,23 +210,29 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
 
     wizard.start()
 
+    def _check_best_match(b, m):
+        assert wizard.selection == [b, m]
+        assert wizard.best == b
+        assert wizard.match == m
+
     assert wizard.best_list == [3, 2, 7, 5]
     wizard.next()
     wizard.pin()
 
-    assert wizard.selection == [2, 3]
-    assert wizard.best == 2
-    assert wizard.match == 3
+    _check_best_match(2, 3)
 
     # Save the selection before the merge in the undo stack.
     clustering.merge([2, 3])
     assert wizard.best_list == [8, 7, 5]
-    assert wizard.selection == [8, 7]
+    _check_best_match(8, 7)
 
     # Undo.
     clustering.undo()
-    assert wizard.selection == [2, 3]
-    assert wizard.best == 2
-    assert wizard.match == 3
-    # print(wizard.best_list)
-    # print(wizard.match_list)
+    _check_best_match(2, 3)
+
+    wizard.selection = [1, 5, 7, 8]
+    _check_best_match(5, 7)
+
+    # Redo.
+    clustering.redo()
+    # _check_best_match(8, 7)
