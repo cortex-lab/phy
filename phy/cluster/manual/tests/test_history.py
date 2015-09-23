@@ -26,6 +26,9 @@ def test_history():
     item1 = np.ones(4)
     item2 = 2 * np.ones(5)
 
+    assert not history.is_first()
+    assert history.is_last()
+
     history.add(item0)
     _assert_current(item0)
 
