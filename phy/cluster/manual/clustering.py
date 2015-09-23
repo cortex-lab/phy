@@ -265,6 +265,30 @@ class Clustering(EventEmitter):
         self._spike_clusters[spike_ids] = new_spike_clusters
         return up
 
+    def _do_merge(self, spike_ids, cluster_ids, to):
+
+        # Create the UpdateInfo instance here.
+        descendants = [(cluster, to) for cluster in cluster_ids]
+        old_spc = {k: self._spikes_per_cluster[k] for k in cluster_ids}
+        new_spc = {to: spike_ids}
+        up = UpdateInfo(description='merge',
+                        spike_ids=spike_ids,
+                        added=[to],
+                        deleted=cluster_ids,
+                        descendants=descendants,
+                        old_spikes_per_cluster=old_spc,
+                        new_spikes_per_cluster=new_spc,
+                        )
+
+        # Update the spikes_per_cluster structure directly.
+        self._spikes_per_cluster[to] = spike_ids
+        for cluster in cluster_ids:
+            del self._spikes_per_cluster[cluster]
+
+        # Assign the clusters.
+        self.spike_clusters[spike_ids] = to
+        return up
+
     def merge(self, cluster_ids, to=None):
         """Merge several clusters to a new cluster.
 
@@ -306,27 +330,8 @@ class Clustering(EventEmitter):
         # Find all spikes in the specified clusters.
         spike_ids = _spikes_in_clusters(self.spike_clusters, cluster_ids)
 
-        # Create the UpdateInfo instance here.
-        descendants = [(cluster, to) for cluster in cluster_ids]
-        old_spc = {k: self._spikes_per_cluster[k] for k in cluster_ids}
-        new_spc = {to: spike_ids}
-        up = UpdateInfo(description='merge',
-                        spike_ids=spike_ids,
-                        added=[to],
-                        deleted=cluster_ids,
-                        descendants=descendants,
-                        old_spikes_per_cluster=old_spc,
-                        new_spikes_per_cluster=new_spc,
-                        )
+        up = self._do_merge(spike_ids, cluster_ids, to)
         undo_state = self.emit('request_undo_state', up)
-
-        # Update the spikes_per_cluster structure directly.
-        self._spikes_per_cluster[to] = spike_ids
-        for cluster in cluster_ids:
-            del self._spikes_per_cluster[cluster]
-
-        # Assign the clusters.
-        self.spike_clusters[spike_ids] = to
 
         # Add to stack.
         self._undo_stack.add((spike_ids, [to], undo_state))
