@@ -245,6 +245,10 @@ def test_clustering_merge():
     def _assert_spikes(clusters):
         ae(info.spike_ids, _spikes_in_clusters(spike_clusters, clusters))
 
+    @clustering.connect
+    def on_request_undo_state(up):
+        return 'hello'
+
     # Checkpoint 0.
     _checkpoint()
     _assert_is_checkpoint(0)
@@ -258,7 +262,7 @@ def test_clustering_merge():
     _assert_is_checkpoint(1)
 
     # Checkpoint 2.
-    info = clustering.merge([2, 3], 12, undo_state='hello')
+    info = clustering.merge([2, 3], 12)
     _checkpoint()
     _assert_spikes([12])
     assert info.added == [12]
@@ -272,7 +276,7 @@ def test_clustering_merge():
     assert info.added == [2, 3]
     assert info.deleted == [12]
     assert info.history == 'undo'
-    assert info.undo_state == 'hello'
+    assert info.undo_state == ['hello']
     _assert_is_checkpoint(1)
 
     # Redo.
@@ -357,6 +361,10 @@ def test_clustering_assign():
     def _assert_is_checkpoint(index):
         ae(clustering.spike_clusters, checkpoints[index])
 
+    @clustering.connect
+    def on_request_undo_state(up):
+        return 'hello'
+
     # Checkpoint 0.
     _checkpoint()
     _assert_is_checkpoint(0)
@@ -387,12 +395,14 @@ def test_clustering_assign():
     # Checkpoint 3.
     info = clustering.assign(my_spikes_3)
     assert info.history is None
+    assert info.undo_state is None
     _checkpoint()
     _assert_is_checkpoint(3)
 
     # Undo checkpoint 3.
     info = clustering.undo()
     assert info.history == 'undo'
+    assert info.undo_state == ['hello']
     _checkpoint()
     _assert_is_checkpoint(2)
 

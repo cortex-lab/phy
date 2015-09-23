@@ -227,7 +227,45 @@ class Clustering(EventEmitter):
     # Actions
     #--------------------------------------------------------------------------
 
-    def merge(self, cluster_ids, to=None, undo_state=None):
+    def _update_all_spikes_per_cluster(self):
+        self._spikes_per_cluster = _spikes_per_cluster(self._spike_ids,
+                                                       self._spike_clusters)
+
+    def _do_assign(self, spike_ids, new_spike_clusters):
+        """Make spike-cluster assignements after the spike selection has
+        been extended to full clusters."""
+
+        # Ensure spike_clusters has the right shape.
+        spike_ids = _as_array(spike_ids)
+        if len(new_spike_clusters) == 1 and len(spike_ids) > 1:
+            new_spike_clusters = (np.ones(len(spike_ids), dtype=np.int64) *
+                                  new_spike_clusters[0])
+        old_spike_clusters = self._spike_clusters[spike_ids]
+
+        assert len(spike_ids) == len(old_spike_clusters)
+        assert len(new_spike_clusters) == len(spike_ids)
+
+        # Update the spikes per cluster structure.
+        clusters = _unique(old_spike_clusters)
+        old_spikes_per_cluster = {cluster: self._spikes_per_cluster[cluster]
+                                  for cluster in clusters}
+        new_spikes_per_cluster = _spikes_per_cluster(spike_ids,
+                                                     new_spike_clusters)
+        self._spikes_per_cluster.update(new_spikes_per_cluster)
+        # All old clusters are deleted.
+        for cluster in clusters:
+            del self._spikes_per_cluster[cluster]
+
+        # We return the UpdateInfo structure.
+        up = _assign_update_info(spike_ids,
+                                 old_spike_clusters, old_spikes_per_cluster,
+                                 new_spike_clusters, new_spikes_per_cluster)
+
+        # We make the assignements.
+        self._spike_clusters[spike_ids] = new_spike_clusters
+        return up
+
+    def merge(self, cluster_ids, to=None):
         """Merge several clusters to a new cluster.
 
         Parameters
@@ -237,9 +275,6 @@ class Clustering(EventEmitter):
             List of clusters to merge.
         to : integer or None
             The id of the new cluster. By default, this is `new_cluster_id()`.
-        undo_state : object
-            An object to store in the undo stack with this action. It will be
-            returned when that action is undone.
 
         Returns
         -------
@@ -283,6 +318,7 @@ class Clustering(EventEmitter):
                         old_spikes_per_cluster=old_spc,
                         new_spikes_per_cluster=new_spc,
                         )
+        undo_state = self.emit('request_undo_state', up)
 
         # Update the spikes_per_cluster structure directly.
         self._spikes_per_cluster[to] = spike_ids
@@ -296,51 +332,9 @@ class Clustering(EventEmitter):
         self._undo_stack.add((spike_ids, [to], undo_state))
 
         self.emit('cluster', up)
-
         return up
 
-    def _update_all_spikes_per_cluster(self):
-        self._spikes_per_cluster = _spikes_per_cluster(self._spike_ids,
-                                                       self._spike_clusters)
-
-    def _do_assign(self, spike_ids, new_spike_clusters):
-        """Make spike-cluster assignements after the spike selection has
-        been extended to full clusters."""
-
-        # Ensure spike_clusters has the right shape.
-        spike_ids = _as_array(spike_ids)
-        if len(new_spike_clusters) == 1 and len(spike_ids) > 1:
-            new_spike_clusters = (np.ones(len(spike_ids), dtype=np.int64) *
-                                  new_spike_clusters[0])
-        old_spike_clusters = self._spike_clusters[spike_ids]
-
-        assert len(spike_ids) == len(old_spike_clusters)
-        assert len(new_spike_clusters) == len(spike_ids)
-
-        # Update the spikes per cluster structure.
-        clusters = _unique(old_spike_clusters)
-        old_spikes_per_cluster = {cluster: self._spikes_per_cluster[cluster]
-                                  for cluster in clusters}
-        new_spikes_per_cluster = _spikes_per_cluster(spike_ids,
-                                                     new_spike_clusters)
-        self._spikes_per_cluster.update(new_spikes_per_cluster)
-        # All old clusters are deleted.
-        for cluster in clusters:
-            del self._spikes_per_cluster[cluster]
-
-        # We return the UpdateInfo structure.
-        up = _assign_update_info(spike_ids,
-                                 old_spike_clusters, old_spikes_per_cluster,
-                                 new_spike_clusters, new_spikes_per_cluster)
-
-        # We make the assignements.
-        self._spike_clusters[spike_ids] = new_spike_clusters
-
-        self.emit('cluster', up)
-
-        return up
-
-    def assign(self, spike_ids, spike_clusters_rel=0, undo_state=None):
+    def assign(self, spike_ids, spike_clusters_rel=0):
         """Make new spike cluster assignements.
 
         Parameters
@@ -351,9 +345,6 @@ class Clustering(EventEmitter):
         spike_clusters_rel : array-like
             Relative cluster ids of the spikes in `spike_ids`. This
             must have the same size as `spike_ids`.
-        undo_state : object
-            An object to store in the undo stack with this action. It will be
-            returned when that action is undone.
 
         Returns
         -------
@@ -411,13 +402,15 @@ class Clustering(EventEmitter):
                                                      spike_clusters_rel)
 
         up = self._do_assign(spike_ids, cluster_ids)
+        undo_state = self.emit('request_undo_state', up)
 
         # Add the assignement to the undo stack.
         self._undo_stack.add((spike_ids, cluster_ids, undo_state))
 
+        self.emit('cluster', up)
         return up
 
-    def split(self, spike_ids, undo_state=None):
+    def split(self, spike_ids):
         """Split a number of spikes into a new cluster.
 
         This is equivalent to an `assign()` to a single new cluster.
@@ -427,9 +420,6 @@ class Clustering(EventEmitter):
 
         spike_ids : array-like
             Array of spike ids to merge.
-        undo_state : object
-            An object to store in the undo stack with this action. It will be
-            returned when that action is undone.
 
         Returns
         -------
@@ -445,7 +435,7 @@ class Clustering(EventEmitter):
 
         """
         # self.assign() accepts relative numbers as second argument.
-        return self.assign(spike_ids, 0, undo_state=undo_state)
+        return self.assign(spike_ids, 0)
 
     def undo(self):
         """Undo the last cluster assignement operation.
@@ -476,6 +466,8 @@ class Clustering(EventEmitter):
         up.history = 'undo'
         # Add the undo_state object from the undone object.
         up.undo_state = undo_state
+
+        self.emit('cluster', up)
         return up
 
     def redo(self):
@@ -500,7 +492,9 @@ class Clustering(EventEmitter):
         spike_ids, cluster_ids, undo_state = item
         assert spike_ids is not None
 
-        # We apply the new assignement.
+        # We apply the new assignment.
         up = self._do_assign(spike_ids, cluster_ids)
         up.history = 'redo'
+
+        self.emit('cluster', up)
         return up
