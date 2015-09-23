@@ -8,7 +8,9 @@
 
 import logging
 
-from .._utils import ClusterMetadata, ClusterMetadataUpdater, UpdateInfo
+from .._utils import (ClusterMetadata, ClusterMetadataUpdater, UpdateInfo,
+                      _update_cluster_selection,
+                      )
 
 logger = logging.getLogger(__name__)
 
@@ -31,6 +33,9 @@ def test_metadata_history():
     @base_meta.default
     def color(cluster):
         return 0
+
+    assert base_meta.group(2) == 2
+    assert base_meta.group([4, 2]) == [5, 2]
 
     meta = ClusterMetadataUpdater(base_meta)
 
@@ -107,8 +112,17 @@ def test_metadata_history():
     assert info is None
 
 
+def test_update_cluster_selection():
+    clusters = [1, 2, 3]
+    up = UpdateInfo(deleted=[2], added=[4, 0])
+    assert _update_cluster_selection(clusters, up) == [1, 3, 4, 0]
+
+
 def test_update_info():
+    logger.debug(UpdateInfo())
+    logger.debug(UpdateInfo(description='hello'))
     logger.debug(UpdateInfo(deleted=range(5), added=[5], description='merge'))
     logger.debug(UpdateInfo(deleted=range(5), added=[5], description='assign'))
     logger.debug(UpdateInfo(deleted=range(5), added=[5],
                             description='assign', history='undo'))
+    logger.debug(UpdateInfo(metadata_changed=[2, 3], description='metadata'))
