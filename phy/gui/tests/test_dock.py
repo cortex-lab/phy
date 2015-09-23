@@ -51,6 +51,7 @@ def test_dock_1(qtbot):
     gui.add_action('test', lambda: None)
     # Adding an action twice has no effect.
     gui.add_action('test', lambda: None)
+    gui.remove_actions()
 
     view = gui.add_view(_create_canvas(), 'view1', floating=True)
     gui.add_view(_create_canvas(), 'view2')
