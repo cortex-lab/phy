@@ -112,6 +112,45 @@ def test_metadata_history():
     assert info is None
 
 
+def test_metadata_descendants():
+    """Test ClusterMetadataUpdater history."""
+
+    data = {0: {'group': 0},
+            1: {'group': 1},
+            2: {'group': 2},
+            3: {'group': 3},
+            }
+
+    meta = ClusterMetadata(data=data)
+
+    @meta.default
+    def group(cluster, ascendant_values=None):
+        if not ascendant_values:
+            return 3
+        s = list(set(ascendant_values) - set([None, 3]))
+        # Return the default value if all ascendant values are the default.
+        if not s:
+            return 3
+        # Otherwise, return good (2) if it is present, or the largest value
+        # among those present.
+        return max(s)
+
+    meta.set_from_descendants([])
+    assert meta.group(4) == 3
+
+    meta.set_from_descendants([(0, 4)])
+    assert meta.group(4) == 0
+
+    meta.set_from_descendants([(1, 4)])
+    assert meta.group(4) == 1
+
+    meta.set_from_descendants([(1, 5), (2, 5)])
+    assert meta.group(5) == 2
+
+    meta.set_from_descendants([(2, 6), (3, 6), (10, 10)])
+    assert meta.group(6) == 2
+
+
 def test_update_cluster_selection():
     clusters = [1, 2, 3]
     up = UpdateInfo(deleted=[2], added=[4, 0])
