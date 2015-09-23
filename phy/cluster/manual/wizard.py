@@ -9,6 +9,8 @@
 import logging
 from operator import itemgetter
 
+from phy.utils import EventEmitter
+
 logger = logging.getLogger(__name__)
 
 
@@ -79,9 +81,10 @@ def _progress(value, maximum):
 # Wizard
 #------------------------------------------------------------------------------
 
-class Wizard(object):
+class Wizard(EventEmitter):
     """Propose a selection of high-quality clusters and merge candidates."""
     def __init__(self):
+        super(Wizard, self).__init__()
         self._similarity = None
         self._quality = None
         self._get_cluster_ids = None
@@ -240,8 +243,7 @@ class Wizard(object):
     @best.setter
     def best(self, value):
         assert value in self._best_list
-        self._best = value
-        self._selection = [value]
+        self.selection = [value]
 
     @property
     def match(self):
@@ -252,11 +254,10 @@ class Wizard(object):
     def match(self, value):
         if value is not None:
             assert value in self._match_list
-        self._match = value
         if len(self._selection) == 1:
-            self._selection += [value]
+            self.selection = self.selection + [value]
         elif len(self._selection) == 2:
-            self._selection[1] = value
+            self.selection = [self.selection[0], value]
 
     @property
     def selection(self):
@@ -270,10 +271,13 @@ class Wizard(object):
         clusters = self.cluster_ids
         value = [cluster for cluster in value if cluster in clusters]
         self._selection = value
+        if len(self._selection) == 1:
+            self._match = None
         if len(self._selection) >= 1:
             self._best = self._selection[0]
         if len(self._selection) >= 2:
             self._match = self._selection[1]
+        self.emit('select', self._selection)
 
     @property
     def best_list(self):
@@ -464,7 +468,11 @@ class Wizard(object):
         if up.description == 'metadata_group':
             cluster = up.metadata_changed[0]
             if cluster == self.best:
+                # Pin the next best if there was a match before.
+                match_before = self.match is not None
                 self.next_best()
+                if match_before:
+                    self.pin()
             elif cluster == self.match:
                 self.next_match()
 
@@ -485,7 +493,6 @@ class Wizard(object):
             elif group == 2:
                 return 'good'
 
-        @clustering.connect
         def on_request_undo_state(up):
             return {'selection': self.selection}
 
@@ -501,6 +508,9 @@ class Wizard(object):
             # Make a new selection.
             if self._best is not None or self._match is not None:
                 self._select_after_update(up)
+
+        clustering.connect(on_request_undo_state)
+        cluster_metadata.connect(on_request_undo_state)
 
         clustering.connect(on_cluster)
         cluster_metadata.connect(on_cluster)

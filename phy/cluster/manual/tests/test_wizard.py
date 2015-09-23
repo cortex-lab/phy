@@ -229,6 +229,15 @@ def test_wizard_update_group(wizard, clustering, cluster_metadata):
     # Ignore the currently-pinned cluster.
     cluster_metadata.set_group(3, 0)
     _check_best_match(5, 2)
+    # 2: none, 3: ignored, 5: ignored, 7: good
+
+    # Ignore the current match and move to next.
+    cluster_metadata.set_group(2, 1)
+    _check_best_match(5, 7)
+    # 2: ignored, 3: ignored, 5: ignored, 7: good
+
+    cluster_metadata.undo()
+    _check_best_match(5, 2)
 
 
 def test_wizard_update_clustering(wizard, clustering, cluster_metadata):

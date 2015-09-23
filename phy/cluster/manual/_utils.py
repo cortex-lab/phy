@@ -223,8 +223,8 @@ class ClusterMetadataUpdater(EventEmitter):
 
         if add_to_stack:
             self._undo_stack.add((clusters, field, value, up, undo_state))
+            self.emit('cluster', up)
 
-        self.emit('cluster', up)
         return up
 
     def set_from_descendants(self, descendants):
@@ -248,10 +248,13 @@ class ClusterMetadataUpdater(EventEmitter):
         for clusters, field, value, up, undo_state in self._undo_stack:
             if clusters is not None:
                 self._set(clusters, field, value, add_to_stack=False)
+
         # Return the UpdateInfo instance of the undo action.
         up, undo_state = args[-2:]
         up.history = 'undo'
         up.undo_state = undo_state
+
+        self.emit('cluster', up)
         return up
 
     def redo(self):
@@ -267,6 +270,9 @@ class ClusterMetadataUpdater(EventEmitter):
             return
         clusters, field, value, up, undo_state = args
         self._set(clusters, field, value, add_to_stack=False)
+
         # Return the UpdateInfo instance of the redo action.
         up.history = 'redo'
+
+        self.emit('cluster', up)
         return up
