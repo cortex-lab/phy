@@ -6,9 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import raises, yield_fixture
+from pytest import yield_fixture
 
 from ..clustering import Clustering
+from .._utils import ClusterMetadata, ClusterMetadataUpdater
 from ..wizard import (_previous,
                       _next,
                       Wizard,
@@ -16,13 +17,20 @@ from ..wizard import (_previous,
 
 
 #------------------------------------------------------------------------------
-# Test wizard
+# Fixtures
 #------------------------------------------------------------------------------
 
 @yield_fixture
 def wizard():
-    groups = {2: None, 3: None, 5: 'ignored', 7: 'good'}
-    wizard = Wizard(groups)
+
+    def get_cluster_ids():
+        return [2, 3, 5, 7]
+
+    wizard = Wizard(get_cluster_ids)
+
+    @wizard.set_status_function
+    def cluster_status(cluster):
+        return {2: None, 3: None, 5: 'ignored', 7: 'good'}.get(cluster, None)
 
     @wizard.set_quality_function
     def quality(cluster):
@@ -34,6 +42,33 @@ def wizard():
 
     yield wizard
 
+
+@yield_fixture
+def cluster_metadata():
+    data = {2: {'group': 3},
+            3: {'group': 3},
+            5: {'group': 1},
+            7: {'group': 2},
+            }
+
+    base_meta = ClusterMetadata(data=data)
+
+    @base_meta.default
+    def group(cluster):
+        return 3
+
+    meta = ClusterMetadataUpdater(base_meta)
+    yield meta
+
+
+@yield_fixture
+def clustering():
+    yield Clustering([2, 3, 5, 7])
+
+
+#------------------------------------------------------------------------------
+# Test wizard
+#------------------------------------------------------------------------------
 
 def test_utils():
     l = [2, 3, 5, 7, 11]
@@ -64,7 +99,7 @@ def test_utils():
 
 def test_wizard_core():
 
-    wizard = Wizard([2, 3, 5])
+    wizard = Wizard(lambda: [2, 3, 5])
 
     @wizard.set_quality_function
     def quality(cluster):
@@ -167,21 +202,37 @@ def test_wizard_nav(wizard):
     assert wizard.n_processed == 2
 
 
-def test_wizard_update(wizard):
+def test_wizard_update(wizard, clustering, cluster_metadata):
     # 2: none, 3: none, 5: unknown, 7: good
+
+    # The wizard gets the cluster ids from the Clustering instance
+    # and the status from ClusterMetadataUpdater.
+    wizard._get_cluster_ids = lambda: clustering.cluster_ids
+
+    @wizard.set_status_function
+    def status(cluster):
+        group = cluster_metadata.group(cluster)
+        if group <= 1:
+            return 'ignored'
+        elif group == 2:
+            return 'good'
+        elif group == 3:
+            return None
+        raise NotImplementedError()  # pragma: no cover
+
     wizard.start()
-    clustering = Clustering([2, 3, 5, 7])
 
     assert wizard.best_list == [3, 2, 7, 5]
     wizard.next()
     wizard.pin()
     assert wizard.selection == (2, 3)
 
+    print(wizard.selection)
     wizard.on_cluster(clustering.merge([2, 3]))
     assert wizard.best_list == [8, 7, 5]
     assert wizard.selection == (8, 7)
 
     wizard.on_cluster(clustering.undo())
     print(wizard.selection)
-    print(wizard.best_list)
-    print(wizard.match_list)
+    # print(wizard.best_list)
+    # print(wizard.match_list)
