@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import raises
+from pytest import raises, yield_fixture
 
 from ..wizard import (_previous,
                       _next,
@@ -17,6 +17,26 @@ from ..wizard import (_previous,
 #------------------------------------------------------------------------------
 # Test wizard
 #------------------------------------------------------------------------------
+
+@yield_fixture
+def wizard():
+    groups = {2: None, 3: None, 5: 'ignored', 7: 'good'}
+    wizard = Wizard(groups)
+
+    @wizard.set_quality_function
+    def quality(cluster):
+        return {2: .2,
+                3: .3,
+                5: .5,
+                7: .7,
+                }[cluster]
+
+    @wizard.set_similarity_function
+    def similarity(cluster, other):
+        return 1. + quality(cluster) - quality(other)
+
+    yield wizard
+
 
 def test_utils():
     l = [2, 3, 5, 7, 11]
@@ -80,22 +100,7 @@ def test_wizard_core():
     assert wizard.most_similar_clusters(n_max=1) == [5]
 
 
-def test_wizard_nav():
-
-    groups = {2: None, 3: None, 5: 'ignored', 7: 'good'}
-    wizard = Wizard(groups)
-
-    @wizard.set_quality_function
-    def quality(cluster):
-        return {2: .2,
-                3: .3,
-                5: .5,
-                7: .7,
-                }[cluster]
-
-    @wizard.set_similarity_function
-    def similarity(cluster, other):
-        return 1. + quality(cluster) - quality(other)
+def test_wizard_nav(wizard):
 
     # Loop over the best clusters.
     wizard.start()
@@ -150,6 +155,15 @@ def test_wizard_nav():
     assert wizard.best == 3
     assert wizard.match == 2
 
+    wizard.first()
+    assert wizard.selection == (3, 2)
+    wizard.last()
+    assert wizard.selection == (3, 5)
+
     wizard.unpin()
     assert wizard.best == 3
     assert wizard.match is None
+
+
+def test_wizard_update(wizard):
+    pass
