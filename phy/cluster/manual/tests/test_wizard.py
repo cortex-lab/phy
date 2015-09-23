@@ -213,15 +213,20 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
     assert wizard.best_list == [3, 2, 7, 5]
     wizard.next()
     wizard.pin()
-    assert wizard.selection == [2, 3]
 
-    print(wizard.selection)
+    assert wizard.selection == [2, 3]
+    assert wizard.best == 2
+    assert wizard.match == 3
+
     # Save the selection before the merge in the undo stack.
     clustering.merge([2, 3])
     assert wizard.best_list == [8, 7, 5]
     assert wizard.selection == [8, 7]
 
+    # Undo.
     clustering.undo()
-    print(wizard.selection)
+    assert wizard.selection == [2, 3]
+    assert wizard.best == 2
+    assert wizard.match == 3
     # print(wizard.best_list)
     # print(wizard.match_list)
