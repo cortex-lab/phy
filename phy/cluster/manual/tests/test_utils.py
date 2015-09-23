@@ -141,6 +141,8 @@ def test_metadata_descendants():
     meta.set_from_descendants([(0, 4)])
     assert meta.group(4) == 0
 
+    # Reset to default.
+    meta.set_group(4, 3)
     meta.set_from_descendants([(1, 4)])
     assert meta.group(4) == 1
 
@@ -149,6 +151,11 @@ def test_metadata_descendants():
 
     meta.set_from_descendants([(2, 6), (3, 6), (10, 10)])
     assert meta.group(6) == 2
+
+    # If the value of the new cluster is non-default, it should not
+    # be changed by set_from_descendants.
+    meta.set_from_descendants([(3, 2)])
+    assert meta.group(2) == 2
 
 
 def test_update_cluster_selection():

@@ -169,6 +169,13 @@ class ClusterMetadata(object):
             for old, new in descendants:
                 candidates[new].add(old)
             for new, vals in candidates.items():
+
+                # Skip that new cluster if its value is already non-default.
+                current_val = self._get_one(new, field)
+                default_val = self._fields[field](new)
+                if current_val != default_val:
+                    continue
+
                 # Ask the field the value of the new cluster,
                 # as a function of the values of its ascendants. This is
                 # encoded in the specified default function.
