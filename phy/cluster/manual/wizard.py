@@ -490,7 +490,6 @@ class Wizard(object):
         def on_request_undo_state(up):
             return {'selection': self.selection}
 
-        @clustering.connect
         def on_cluster(up):
             if self._has_finished:
                 return
@@ -498,3 +497,6 @@ class Wizard(object):
                 self._update_state(up)
             if self._best is not None or self._match is not None:
                 self._select_after_update(up)
+
+        clustering.connect(on_cluster)
+        cluster_metadata.connect(on_cluster)
