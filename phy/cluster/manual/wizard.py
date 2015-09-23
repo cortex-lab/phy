@@ -9,8 +9,6 @@
 import logging
 from operator import itemgetter
 
-from ...utils import _is_array_like
-
 logger = logging.getLogger(__name__)
 
 
@@ -83,15 +81,16 @@ def _progress(value, maximum):
 
 class Wizard(object):
     """Propose a selection of high-quality clusters and merge candidates."""
-    def __init__(self, cluster_groups=None):
-        self.cluster_groups = cluster_groups
+    def __init__(self, get_cluster_ids):
+        self._get_cluster_ids = get_cluster_ids
+        self._similarity = None
+        self._quality = None
+        self._cluster_status = lambda cluster: None
         self.reset()
 
     def reset(self):
         self._best_list = []  # This list is fixed (modulo clustering actions).
         self._match_list = []  # This list may often change.
-        self._similarity = None
-        self._quality = None
         self._best = None
         self._match = None
 
@@ -99,8 +98,18 @@ class Wizard(object):
     def has_started(self):
         return len(self._best_list) > 0
 
-    # Quality functions
+    # Quality and status functions
     #--------------------------------------------------------------------------
+
+    def set_status_function(self, func):
+        """Register a function returning the status of a cluster: None,
+        'ignored', or 'good'.
+
+        Can be used as a decorator.
+
+        """
+        self._cluster_status = func
+        return func
 
     def set_similarity_function(self, func):
         """Register a function returning the similarity between two clusters.
@@ -123,17 +132,14 @@ class Wizard(object):
     # Internal methods
     #--------------------------------------------------------------------------
 
-    def _group(self, cluster):
-        return self._cluster_groups.get(cluster, None)
-
-    def _in_groups(self, items, groups):
+    def _with_status(self, items, status):
         """Filter out ignored clusters or pairs of clusters."""
-        if not isinstance(groups, (list, tuple)):
-            groups = [groups]
-        return [item for item in items if self._group(item) in groups]
+        if not isinstance(status, (list, tuple)):
+            status = [status]
+        return [item for item in items if self._cluster_status(item) in status]
 
     def _is_not_ignored(self, cluster):
-        return self._in_groups([cluster], (None, 'good'))
+        return self._with_status([cluster], (None, 'good'))
 
     def _check(self):
         clusters = set(self.cluster_ids)
@@ -147,15 +153,15 @@ class Wizard(object):
             assert self.best != self.match
 
     def _sort(self, items, mix_good_unsorted=False):
-        """Sort clusters according to their groups:
+        """Sort clusters according to their status:
         unsorted, good, and ignored."""
         if mix_good_unsorted:
-            return (self._in_groups(items, (None, 'good')) +
-                    self._in_groups(items, 'ignored'))
+            return (self._with_status(items, (None, 'good')) +
+                    self._with_status(items, 'ignored'))
         else:
-            return (self._in_groups(items, None) +
-                    self._in_groups(items, 'good') +
-                    self._in_groups(items, 'ignored'))
+            return (self._with_status(items, None) +
+                    self._with_status(items, 'good') +
+                    self._with_status(items, 'ignored'))
 
     # Properties
     #--------------------------------------------------------------------------
@@ -163,24 +169,7 @@ class Wizard(object):
     @property
     def cluster_ids(self):
         """Array of cluster ids in the current clustering."""
-        return sorted(self._cluster_groups)
-
-    @property
-    def cluster_groups(self):
-        """Dictionary with the groups of each cluster.
-
-        The groups are: `None` (corresponds to unsorted), `good`, or `ignored`.
-
-        """
-        return self._cluster_groups
-
-    @cluster_groups.setter
-    def cluster_groups(self, cluster_groups):
-        # cluster_groups is a dictionary or is converted to one.
-        if _is_array_like(cluster_groups):
-            # A group can be None (unsorted), `good`, or `ignored`.
-            cluster_groups = {clu: None for clu in cluster_groups}
-        self._cluster_groups = cluster_groups
+        return sorted(self._get_cluster_ids())
 
     # Core methods
     #--------------------------------------------------------------------------
@@ -284,10 +273,10 @@ class Wizard(object):
     def n_processed(self):
         """Numbered of processed clusters so far.
 
-        A cluster is considered processed if its group is not `None`.
+        A cluster is considered processed if its status is not `None`.
 
         """
-        return len(self._in_groups(self._best_list, ('good', 'ignored')))
+        return len(self._with_status(self._best_list, ('good', 'ignored')))
 
     @property
     def n_clusters(self):
@@ -397,8 +386,6 @@ class Wizard(object):
 
     def _delete(self, clusters):
         for clu in clusters:
-            if clu in self._cluster_groups:
-                del self._cluster_groups[clu]
             if clu in self._best_list:
                 self._best_list.remove(clu)
             if clu in self._match_list:
@@ -408,12 +395,10 @@ class Wizard(object):
             if clu == self._match:
                 self._match = None
 
-    def _add(self, clusters, group, position=None):
+    def _add(self, clusters, position=None):
         for clu in clusters:
-            assert clu not in self._cluster_groups
             assert clu not in self._best_list
             assert clu not in self._match_list
-            self._cluster_groups[clu] = group
             if self.best is not None:
                 if position is not None:
                     self._best_list.insert(position, clu)
@@ -423,13 +408,11 @@ class Wizard(object):
                 self._match_list.append(clu)
 
     def _update_state(self, up):
-        # Update the cluster group.
+        # Update the cluster status.
         if up.description == 'metadata_group':
             cluster = up.metadata_changed[0]
-            group = up.metadata_value
-            self._cluster_groups[cluster] = group
             # Reorder the best list, so that the clusters moved in different
-            # groups go to their right place in the best list.
+            # status go to their right place in the best list.
             if (self._best is not None and self._best_list and
                     cluster == self._best):
                 # Find the next best after the cluster has been moved.
@@ -443,10 +426,9 @@ class Wizard(object):
             # Add the child at the parent's position.
             parents = [x for (x, y) in up.descendants if y == clu]
             parent = parents[0]
-            group = self._group(parent)
             position = (self._best_list.index(parent)
                         if self._best_list else None)
-            self._add([clu], group, position)
+            self._add([clu], position)
         # Delete old clusters.
         self._delete(up.deleted)
         # Select the last added cluster.
