@@ -382,8 +382,7 @@ class Wizard(object):
             return
         if cluster is None:
             cluster = self.best
-        if self.match is not None and self.best == cluster:
-            return
+        logger.debug("Pin %d.", cluster)
         self.best = cluster
         self._set_match_list(cluster)
         self._check()
@@ -391,6 +390,7 @@ class Wizard(object):
     def unpin(self):
         """Unpin the current cluster."""
         if self.match is not None:
+            logger.debug("Unpin.")
             self.match = None
             self._match_list = []
 
