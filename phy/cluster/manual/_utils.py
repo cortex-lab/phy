@@ -120,13 +120,9 @@ class ClusterMetadata(object):
             elif field in self._fields:
                 # Call the default field function.
                 return self._fields[field](cluster)
-            else:
-                return None
         else:
             if field in self._fields:
                 return self._fields[field](cluster)
-            else:
-                return None
 
     def _get(self, clusters, field):
         if _is_list(clusters):
