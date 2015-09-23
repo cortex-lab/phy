@@ -66,10 +66,6 @@ class DockWindow(QtGui.QMainWindow):
         self._status_bar = QtGui.QStatusBar()
         self.setStatusBar(self._status_bar)
 
-    def keyReleaseEvent(self, e):
-        self.emit('keystroke', e.key(), e.text())
-        return super(DockWindow, self).keyReleaseEvent(e)
-
     # Events
     # -------------------------------------------------------------------------
 
