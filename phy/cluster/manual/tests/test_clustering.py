@@ -351,9 +351,6 @@ def test_clustering_assign():
     def _assert_is_checkpoint(index):
         ae(clustering.spike_clusters, checkpoints[index])
 
-    def _assert_spikes(spikes):
-        ae(info.spike_ids, spikes)
-
     # Checkpoint 0.
     _checkpoint()
     _assert_is_checkpoint(0)
