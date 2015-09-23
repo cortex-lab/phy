@@ -214,8 +214,8 @@ def test_wizard_nav(wizard):
 
 
 def test_wizard_update_group(wizard, clustering, cluster_metadata):
-    # 2: none, 3: none, 5: ignored, 7: good
     wizard.attach(clustering, cluster_metadata)
+
     wizard.start()
 
     def _check_best_match(b, m):

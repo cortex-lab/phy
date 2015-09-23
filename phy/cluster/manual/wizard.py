@@ -306,14 +306,8 @@ class Wizard(EventEmitter):
     # Navigation
     #--------------------------------------------------------------------------
 
-    @property
-    def _has_finished(self):
-        return self.best is not None and len(self._best_list) <= 1
-
     def next_best(self):
         """Select the next best cluster."""
-        if self._has_finished:
-            return
         self.best = _next(self._best_list,
                           self._best,
                           )
@@ -322,8 +316,6 @@ class Wizard(EventEmitter):
 
     def previous_best(self):
         """Select the previous best in cluster."""
-        if self._has_finished:
-            return
         if self._best_list:
             self.best = _previous(self._best_list,
                                   self._best,
@@ -385,8 +377,6 @@ class Wizard(EventEmitter):
 
     def pin(self, cluster=None):
         """Pin the current best cluster and set the list of closest matches."""
-        if self._has_finished:
-            return
         if cluster is None:
             cluster = self.best
         logger.debug("Pin %d.", cluster)
@@ -422,7 +412,7 @@ class Wizard(EventEmitter):
             if self.best is not None:
                 if position is not None:
                     self._best_list.insert(position, clu)
-                else:
+                else:  # pragma: no cover
                     self._best_list.append(clu)
             if self.match is not None:
                 self._match_list.append(clu)
@@ -486,7 +476,7 @@ class Wizard(EventEmitter):
         @self.set_status_function
         def status(cluster):
             group = cluster_metadata.group(cluster)
-            if group is None:
+            if group is None:  # pragma: no cover
                 return None
             if group <= 1:
                 return 'ignored'
@@ -497,8 +487,6 @@ class Wizard(EventEmitter):
             return {'selection': self.selection}
 
         def on_cluster(up):
-            if self._has_finished:
-                return
             # Set the cluster metadata of new clusters.
             if up.added:
                 cluster_metadata.set_from_descendants(up.descendants)
