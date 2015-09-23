@@ -170,7 +170,7 @@ class DockWindow(QtGui.QMainWindow):
             from vispy.app import Canvas
             if isinstance(view, Canvas):
                 view = view.native
-        except ImportError:
+        except ImportError:  # pragma: no cover
             pass
 
         class DockWidget(QtGui.QDockWidget):
