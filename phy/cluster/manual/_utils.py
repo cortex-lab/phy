@@ -112,6 +112,10 @@ class ClusterMetadata(object):
     def data(self):
         return self._data
 
+    @property
+    def fields(self):
+        return sorted(self._fields)
+
     def _get_one(self, cluster, field):
         """Return the field value for a cluster, or the default value if it
         doesn't exist."""
@@ -154,6 +158,17 @@ class ClusterMetadata(object):
                 lambda clusters, value: self._set(clusters, field, value))
         return func
 
+    def set_from_descendants(self, descendants):
+        """Update metadata of some clusters given the metadata of their
+        ascendants."""
+        fields = self.fields
+        for old, new in descendants:
+            for field in fields:
+                old_val = self._data[old].get(field, None)
+                new_val = self._data[new].get(field, None)
+                if old_val is not None and new_val is None:
+                    self._set_one(new, field, new_val)
+
 
 class ClusterMetadataUpdater(EventEmitter):
     """Handle cluster metadata changes."""
@@ -193,6 +208,11 @@ class ClusterMetadataUpdater(EventEmitter):
 
         self.emit('cluster', up)
         return up
+
+    def set_from_descendants(self, descendants):
+        """Update metadata of some clusters given the metadata of their
+        ascendants."""
+        self._cluster_metadata.set_from_descendants(descendants)
 
     def undo(self):
         """Undo the last metadata change.
