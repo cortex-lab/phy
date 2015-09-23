@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 from ..qt import (QtCore, QtGui, QtWebKit,
-                  _set_qt_widget_position_size,
                   _button_name_from_enum,
                   _button_enum_from_name,
                   _prompt,
@@ -26,7 +25,7 @@ def test_wrap(qtbot):
         html = view.page().mainFrame().toHtml()
         assert html == '<html><head></head><body>' + text + '</body></html>'
 
-    _set_qt_widget_position_size(view, size=(100, 100))
+    view.resize(100, 100)
     view.setHtml("hello")
     qtbot.addWidget(view)
     qtbot.waitForWindowShown(view)
@@ -38,7 +37,7 @@ def test_wrap(qtbot):
     view.close()
 
     view = QtWebKit.QWebView()
-    _set_qt_widget_position_size(view, size=(100, 100))
+    view.resize(100, 100)
     view.show()
     qtbot.addWidget(view)
 

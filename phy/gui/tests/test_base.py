@@ -15,7 +15,6 @@ from ..base import (BaseViewModel,
                     BaseGUI,
                     )
 from ..qt import (QtGui,
-                  _set_qt_widget_position_size,
                   )
 from ...utils.event import EventEmitter
 
@@ -36,16 +35,16 @@ def test_base_view_model(qtbot):
         def _create_view(self, text='', position=None, size=None):
             view = QtGui.QMainWindow()
             view.setWindowTitle(text)
-            _set_qt_widget_position_size(view,
-                                         position=position,
-                                         size=size,
-                                         )
+            if size:
+                view.resize(*size)
+            if position:
+                view.move(*position)
             return view
 
     size = (400, 100)
     text = 'hello'
 
-    vm = MyViewModel(text=text, size=size)
+    vm = MyViewModel(text=text, size=size, position=(100, 100))
     qtbot.addWidget(vm.view)
     vm.show()
 
