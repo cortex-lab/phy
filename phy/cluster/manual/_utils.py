@@ -48,7 +48,8 @@ class UpdateInfo(Bunch):
             metadata_value=None,  # new metadata value
             old_spikes_per_cluster={},  # only for the affected clusters
             new_spikes_per_cluster={},  # only for the affected clusters
-            extra=None,  # extra object
+            undo_state=None,  # returned during an undo: it contains
+                              # information about the undone action
         )
         d.update(kwargs)
         super(UpdateInfo, self).__init__(d)

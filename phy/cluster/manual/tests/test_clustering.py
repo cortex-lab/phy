@@ -258,12 +258,13 @@ def test_clustering_merge():
     _assert_is_checkpoint(1)
 
     # Checkpoint 2.
-    info = clustering.merge([2, 3], 12)
+    info = clustering.merge([2, 3], 12, undo_state='hello')
     _checkpoint()
     _assert_spikes([12])
     assert info.added == [12]
     assert info.deleted == [2, 3]
     assert info.history is None
+    assert info.undo_state is None  # undo_state is only returned when undoing.
     _assert_is_checkpoint(2)
 
     # Undo once.
@@ -271,6 +272,7 @@ def test_clustering_merge():
     assert info.added == [2, 3]
     assert info.deleted == [12]
     assert info.history == 'undo'
+    assert info.undo_state == 'hello'
     _assert_is_checkpoint(1)
 
     # Redo.
@@ -279,6 +281,7 @@ def test_clustering_merge():
     assert info.added == [12]
     assert info.deleted == [2, 3]
     assert info.history == 'redo'
+    assert info.undo_state is None
     _assert_is_checkpoint(2)
 
     # No redo.
