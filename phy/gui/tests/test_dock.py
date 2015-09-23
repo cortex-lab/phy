@@ -52,12 +52,24 @@ def test_dock_1(qtbot):
     # Adding an action twice has no effect.
     gui.add_action('test', lambda: None)
 
-    gui.add_view(_create_canvas(), 'view1', floating=True)
+    view = gui.add_view(_create_canvas(), 'view1', floating=True)
     gui.add_view(_create_canvas(), 'view2')
+    view.setFloating(False)
     gui.show()
     # qtbot.waitForWindowShown(gui)
 
     assert len(gui.list_views('view')) == 2
+
+    # Check that the close_widget event is fired when the dock widget is
+    # closed.
+    _close = []
+
+    @view.connect_
+    def on_close_widget():
+        _close.append(0)
+    view.close()
+    assert _close == [0]
+
     gui.close()
 
 
