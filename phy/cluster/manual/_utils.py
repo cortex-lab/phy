@@ -10,7 +10,7 @@ from copy import deepcopy
 from collections import defaultdict
 
 from ._history import History
-from phy.utils import Bunch, _as_list, _is_list
+from phy.utils import Bunch, _as_list, _is_list, EventEmitter
 
 
 #------------------------------------------------------------------------------
@@ -155,9 +155,10 @@ class ClusterMetadata(object):
         return func
 
 
-class ClusterMetadataUpdater(object):
+class ClusterMetadataUpdater(EventEmitter):
     """Handle cluster metadata changes."""
     def __init__(self, cluster_metadata):
+        super(ClusterMetadataUpdater, self).__init__()
         self._cluster_metadata = cluster_metadata
         # Keep a deep copy of the original structure for the undo stack.
         self._data_base = deepcopy(cluster_metadata.data)
@@ -183,13 +184,15 @@ class ClusterMetadataUpdater(object):
     def _set(self, clusters, field, value, add_to_stack=True):
         self._cluster_metadata._set(clusters, field, value)
         clusters = _as_list(clusters)
-        info = UpdateInfo(description='metadata_' + field,
-                          metadata_changed=clusters,
-                          metadata_value=value,
-                          )
+        up = UpdateInfo(description='metadata_' + field,
+                        metadata_changed=clusters,
+                        metadata_value=value,
+                        )
         if add_to_stack:
-            self._undo_stack.add((clusters, field, value, info))
-        return info
+            self._undo_stack.add((clusters, field, value, up))
+
+        self.emit('cluster', up)
+        return up
 
     def undo(self):
         """Undo the last metadata change.
