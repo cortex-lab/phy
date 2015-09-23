@@ -71,12 +71,6 @@ def _next(items, current, filter=None):
         return current
 
 
-def _progress(value, maximum):
-    if maximum <= 1:
-        return 1
-    return int(100 * value / float(maximum - 1))
-
-
 #------------------------------------------------------------------------------
 # Wizard
 #------------------------------------------------------------------------------
@@ -97,10 +91,6 @@ class Wizard(EventEmitter):
         self._match_list = []  # This list may often change.
         self._best = None
         self._match = None
-
-    @property
-    def has_started(self):
-        return len(self._best_list) > 0
 
     # Quality and status functions
     #--------------------------------------------------------------------------
@@ -145,9 +135,6 @@ class Wizard(EventEmitter):
         if not isinstance(status, (list, tuple)):
             status = [status]
         return [item for item in items if self._cluster_status(item) in status]
-
-    def _is_not_ignored(self, cluster):
-        return self._with_status([cluster], (None, 'good'))
 
     def _check(self):
         clusters = set(self.cluster_ids)
