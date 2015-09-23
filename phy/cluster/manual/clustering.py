@@ -246,14 +246,14 @@ class Clustering(EventEmitter):
         assert len(new_spike_clusters) == len(spike_ids)
 
         # Update the spikes per cluster structure.
-        clusters = _unique(old_spike_clusters)
+        old_clusters = _unique(old_spike_clusters)
         old_spikes_per_cluster = {cluster: self._spikes_per_cluster[cluster]
-                                  for cluster in clusters}
+                                  for cluster in old_clusters}
         new_spikes_per_cluster = _spikes_per_cluster(spike_ids,
                                                      new_spike_clusters)
         self._spikes_per_cluster.update(new_spikes_per_cluster)
         # All old clusters are deleted.
-        for cluster in clusters:
+        for cluster in old_clusters:
             del self._spikes_per_cluster[cluster]
 
         # We return the UpdateInfo structure.
@@ -403,8 +403,8 @@ class Clustering(EventEmitter):
         # belong to clusters affected by the operation, will be assigned
         # to brand new clusters.
         spike_ids, cluster_ids = _extend_assignment(spike_ids,
-                                                     self._spike_clusters,
-                                                     spike_clusters_rel)
+                                                    self._spike_clusters,
+                                                    spike_clusters_rel)
 
         up = self._do_assign(spike_ids, cluster_ids)
         undo_state = self.emit('request_undo_state', up)
