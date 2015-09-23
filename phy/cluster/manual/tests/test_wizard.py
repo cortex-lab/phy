@@ -213,10 +213,27 @@ def test_wizard_nav(wizard):
     assert wizard.n_processed == 2
 
 
-def test_wizard_update(wizard, clustering, cluster_metadata):
+def test_wizard_update_group(wizard, clustering, cluster_metadata):
     # 2: none, 3: none, 5: ignored, 7: good
     wizard.attach(clustering, cluster_metadata)
+    wizard.start()
 
+    def _check_best_match(b, m):
+        assert wizard.selection == [b, m]
+        assert wizard.best == b
+        assert wizard.match == m
+
+    wizard.pin()
+    _check_best_match(3, 2)
+
+    # Ignore the currently-pinned cluster.
+    cluster_metadata.set_group(3, 0)
+    _check_best_match(5, 2)
+
+
+def test_wizard_update_clustering(wizard, clustering, cluster_metadata):
+    # 2: none, 3: none, 5: ignored, 7: good
+    wizard.attach(clustering, cluster_metadata)
     wizard.start()
 
     def _check_best_match(b, m):
