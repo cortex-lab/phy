@@ -56,8 +56,16 @@ def cluster_metadata():
     base_meta = ClusterMetadata(data=data)
 
     @base_meta.default
-    def group(cluster):
-        return 3
+    def group(cluster, ascendant_values=None):
+        if not ascendant_values:
+            return 3
+        s = list(set(ascendant_values) - set([None, 3]))
+        # Return the default value if all ascendant values are the default.
+        if not s:
+            return 3
+        # Otherwise, return good (2) if it is present, or the largest value
+        # among those present.
+        return max(s)
 
     meta = ClusterMetadataUpdater(base_meta)
     yield meta
@@ -228,10 +236,10 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
 
     assert wizard.cluster_status(2) == 'good'
     assert wizard.cluster_status(3) is None
-    clustering.merge([2, 3])
+    clustering.merge([2, 3])  # => 8
     _check_best_match(8, 7)
     assert wizard.best_list == [8, 7, 5]
-    assert wizard.cluster_status(8) is None
+    assert wizard.cluster_status(8) == 'good'
     assert wizard.cluster_status(7) == 'good'
 
     # Undo merge.
@@ -247,14 +255,14 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
     # Redo merge.
     clustering.redo()
     _check_best_match(8, 7)
-    assert wizard.cluster_status(8) is None
+    assert wizard.cluster_status(8) == 'good'
     assert wizard.cluster_status(7) == 'good'
 
     ################################
 
     # Split.
     ae(clustering.spike_clusters, [8, 8, 5, 7])
-    clustering.split([1, 2])
+    clustering.split([1, 2])  # ==> 9, 10
     ae(clustering.spike_clusters, [10, 9, 9, 7])
     _check_best_match(9, 10)
     assert wizard.cluster_status(10) is None
@@ -275,6 +283,7 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
     _check_best_match(9, 10)
     assert up.description == 'assign'
     assert up.history == 'redo'
+    assert wizard.cluster_status(9) == 'ignored'
 
     ################################
 

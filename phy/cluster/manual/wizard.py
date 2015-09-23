@@ -478,13 +478,12 @@ class Wizard(object):
         @self.set_status_function
         def status(cluster):
             group = cluster_metadata.group(cluster)
+            if group is None:
+                return None
             if group <= 1:
                 return 'ignored'
             elif group == 2:
                 return 'good'
-            elif group == 3:
-                return None
-            raise NotImplementedError()  # pragma: no cover
 
         @clustering.connect
         def on_request_undo_state(up):
@@ -493,8 +492,13 @@ class Wizard(object):
         def on_cluster(up):
             if self._has_finished:
                 return
+            # Set the cluster metadata of new clusters.
+            if up.added:
+                cluster_metadata.set_from_descendants(up.descendants)
+            # Update the wizard state.
             if self._best_list or self._match_list:
                 self._update_state(up)
+            # Make a new selection.
             if self._best is not None or self._match is not None:
                 self._select_after_update(up)
 
