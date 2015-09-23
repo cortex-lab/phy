@@ -221,10 +221,12 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
     wizard.pin()
 
     _check_best_match(2, 3)
+    cluster_metadata.set_group(2, 2)
+    wizard.selection = [2, 3]
 
     ################################
 
-    assert wizard.cluster_status(2) is None
+    assert wizard.cluster_status(2) == 'good'
     assert wizard.cluster_status(3) is None
     clustering.merge([2, 3])
     _check_best_match(8, 7)
@@ -235,7 +237,7 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
     # Undo merge.
     clustering.undo()
     _check_best_match(2, 3)
-    assert wizard.cluster_status(2) is None
+    assert wizard.cluster_status(2) == 'good'
     assert wizard.cluster_status(3) is None
 
     # Make a selection.
@@ -257,6 +259,10 @@ def test_wizard_update(wizard, clustering, cluster_metadata):
     _check_best_match(9, 10)
     assert wizard.cluster_status(10) is None
     assert wizard.cluster_status(9) is None
+
+    # Ignore a cluster.
+    cluster_metadata.set_group(9, 1)
+    assert wizard.cluster_status(9) == 'ignored'
 
     # Undo split.
     up = clustering.undo()
