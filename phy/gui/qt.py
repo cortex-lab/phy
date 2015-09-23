@@ -23,27 +23,21 @@ logger = logging.getLogger(__name__)
 _PYQT = False
 try:
     from PyQt4 import QtCore, QtGui, QtWebKit  # noqa
-    from PyQt4.QtGui import QMainWindow
     Qt = QtCore.Qt
     _PYQT = True
-except ImportError:
+except ImportError:  # pragma: no cover
     try:
         from PyQt5 import QtCore, QtGui, QtWebKit  # noqa
-        from PyQt5.QtGui import QMainWindow
         _PYQT = True
     except ImportError:
         pass
 
 
-def _check_qt():
+def _check_qt():  # pragma: no cover
     if not _PYQT:
         logger.warn("PyQt is not available.")
         return False
     return True
-
-
-if not _check_qt():
-    QMainWindow = object  # noqa
 
 
 # -----------------------------------------------------------------------------
@@ -74,15 +68,8 @@ def _prompt(message, buttons=('yes', 'no'), title='Question'):
     return box
 
 
-def _show_box(box):  # pragma: no cover
+def _show_box(box):  # pragma: no cover
     return _button_name_from_enum(box.exec_())
-
-
-def _set_qt_widget_position_size(widget, position=None, size=None):
-    if position is not None:
-        widget.moveTo(*position)
-    if size is not None:
-        widget.resize(*size)
 
 
 # -----------------------------------------------------------------------------
@@ -93,7 +80,7 @@ _APP = None
 _APP_RUNNING = False
 
 
-def _try_enable_ipython_qt():
+def _try_enable_ipython_qt():  # pragma: no cover
     """Try to enable IPython Qt event loop integration.
 
     Returns True in the following cases:
@@ -123,7 +110,7 @@ def _try_enable_ipython_qt():
     return False
 
 
-def enable_qt():
+def enable_qt():  # pragma: no cover
     if not _check_qt():
         return
     try:
@@ -141,7 +128,7 @@ def enable_qt():
 # Qt app
 # -----------------------------------------------------------------------------
 
-def start_qt_app():
+def start_qt_app():  # pragma: no cover
     """Start a Qt application if necessary.
 
     If a new Qt application is created, this function returns it.
@@ -169,7 +156,7 @@ def start_qt_app():
     return _APP
 
 
-def run_qt_app():
+def run_qt_app():  # pragma: no cover
     """Start the Qt application's event loop."""
     global _APP_RUNNING
     if not _check_qt():
@@ -181,32 +168,15 @@ def run_qt_app():
         _APP_RUNNING = False
 
 
-@contextlib.contextmanager
-def qt_app():
-    """Context manager to ensure that a Qt app is running."""
-    if not _check_qt():
-        return
-    app = start_qt_app()
-    yield app
-    run_qt_app()
-
-
 # -----------------------------------------------------------------------------
 # Testing utilities
 # -----------------------------------------------------------------------------
-
-def _close_qt_after(window, duration):
-    """Close a Qt window after a given duration."""
-    def callback():
-        window.close()
-    QtCore.QTimer.singleShot(int(1000 * duration), callback)
-
 
 _MAX_ITER = 100
 _DELAY = max(0, float(os.environ.get('PHY_EVENT_LOOP_DELAY', .1)))
 
 
-def _debug_trace():
+def _debug_trace():  # pragma: no cover
     """Set a tracepoint in the Python debugger that works with Qt."""
     from PyQt4.QtCore import pyqtRemoveInputHook
     from pdb import set_trace
