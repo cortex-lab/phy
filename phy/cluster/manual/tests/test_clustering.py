@@ -382,18 +382,21 @@ def test_clustering_assign():
     # Checkpoint 1.
     info = clustering.split(my_spikes_1)
     _checkpoint()
+    assert info.description == 'assign'
     assert 10 in info.added
     assert info.history is None
     _assert_is_checkpoint(1)
 
     # Checkpoint 2.
     info = clustering.split(my_spikes_2)
+    assert info.description == 'assign'
     assert info.history is None
     _checkpoint()
     _assert_is_checkpoint(2)
 
     # Checkpoint 3.
     info = clustering.assign(my_spikes_3)
+    assert info.description == 'assign'
     assert info.history is None
     assert info.undo_state is None
     _checkpoint()
@@ -401,6 +404,7 @@ def test_clustering_assign():
 
     # Undo checkpoint 3.
     info = clustering.undo()
+    assert info.description == 'assign'
     assert info.history == 'undo'
     assert info.undo_state == ['hello']
     _checkpoint()
@@ -408,6 +412,7 @@ def test_clustering_assign():
 
     # Checkpoint 4.
     info = clustering.assign(my_spikes_4)
+    assert info.description == 'assign'
     assert info.history is None
     _checkpoint(4)
     assert len(info.deleted) >= 2
