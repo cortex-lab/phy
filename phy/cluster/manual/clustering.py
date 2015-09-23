@@ -26,7 +26,7 @@ def _extend_spikes(spike_ids, spike_clusters):
     """Return all spikes belonging to the clusters containing the specified
     spikes."""
     # We find the spikes belonging to modified clusters.
-    # What are the old clusters that are modified by the assignement?
+    # What are the old clusters that are modified by the assignment?
     old_spike_clusters = spike_clusters[spike_ids]
     unique_clusters = _unique(old_spike_clusters)
     # Now we take all spikes from these clusters.
@@ -47,7 +47,7 @@ def _concatenate_spike_clusters(*pairs):
     return concat[:, 0].astype(np.int64), concat[:, 1].astype(np.int64)
 
 
-def _extend_assignement(spike_ids, old_spike_clusters, spike_clusters_rel):
+def _extend_assignment(spike_ids, old_spike_clusters, spike_clusters_rel):
     # 1. Add spikes that belong to modified clusters.
     # 2. Find new cluster ids for all changed clusters.
 
@@ -163,7 +163,7 @@ class Clustering(EventEmitter):
         self._spike_ids = np.arange(self._n_spikes).astype(np.int64)
         # Create the spikes per cluster structure.
         self._update_all_spikes_per_cluster()
-        # Keep a copy of the original spike clusters assignement.
+        # Keep a copy of the original spike clusters assignment.
         self._spike_clusters_base = self._spike_clusters.copy()
 
     def reset(self):
@@ -232,7 +232,7 @@ class Clustering(EventEmitter):
                                                        self._spike_clusters)
 
     def _do_assign(self, spike_ids, new_spike_clusters):
-        """Make spike-cluster assignements after the spike selection has
+        """Make spike-cluster assignments after the spike selection has
         been extended to full clusters."""
 
         # Ensure spike_clusters has the right shape.
@@ -261,7 +261,7 @@ class Clustering(EventEmitter):
                                  old_spike_clusters, old_spikes_per_cluster,
                                  new_spike_clusters, new_spikes_per_cluster)
 
-        # We make the assignements.
+        # We make the assignments.
         self._spike_clusters[spike_ids] = new_spike_clusters
         return up
 
@@ -335,7 +335,7 @@ class Clustering(EventEmitter):
         return up
 
     def assign(self, spike_ids, spike_clusters_rel=0):
-        """Make new spike cluster assignements.
+        """Make new spike cluster assignments.
 
         Parameters
         ----------
@@ -392,19 +392,19 @@ class Clustering(EventEmitter):
         assert spike_ids.min() >= 0
         assert spike_ids.max() < self._n_spikes
 
-        # Normalize the spike-cluster assignement such that
+        # Normalize the spike-cluster assignment such that
         # there are only new or dead clusters, not modified clusters.
         # This implies that spikes not explicitely selected, but that
         # belong to clusters affected by the operation, will be assigned
         # to brand new clusters.
-        spike_ids, cluster_ids = _extend_assignement(spike_ids,
+        spike_ids, cluster_ids = _extend_assignment(spike_ids,
                                                      self._spike_clusters,
                                                      spike_clusters_rel)
 
         up = self._do_assign(spike_ids, cluster_ids)
         undo_state = self.emit('request_undo_state', up)
 
-        # Add the assignement to the undo stack.
+        # Add the assignment to the undo stack.
         self._undo_stack.add((spike_ids, cluster_ids, undo_state))
 
         self.emit('cluster', up)
@@ -438,7 +438,7 @@ class Clustering(EventEmitter):
         return self.assign(spike_ids, 0)
 
     def undo(self):
-        """Undo the last cluster assignement operation.
+        """Undo the last cluster assignment operation.
 
         Returns
         -------
@@ -471,7 +471,7 @@ class Clustering(EventEmitter):
         return up
 
     def redo(self):
-        """Redo the last cluster assignement operation.
+        """Redo the last cluster assignment operation.
 
         Returns
         -------
@@ -479,7 +479,7 @@ class Clustering(EventEmitter):
         up : UpdateInfo instance of the changes done by this operation.
 
         """
-        # Go forward in the stack, and retrieve the new assignement.
+        # Go forward in the stack, and retrieve the new assignment.
         item = self._undo_stack.forward()
         if item is None:
             # No redo has been performed: abort.

@@ -98,7 +98,7 @@ class KlustaKwik(EventEmitter):
         """Run the clustering algorithm on the model, or on any features
         and masks.
 
-        Return the `spike_clusters` assignements.
+        Return the `spike_clusters` assignments.
 
         Emit the `iter` event at every KlustaKwik iteration.
 

@@ -17,12 +17,12 @@ from ....utils.array import (_spikes_in_clusters,
                              )
 from ..clustering import (_extend_spikes,
                           _concatenate_spike_clusters,
-                          _extend_assignement,
+                          _extend_assignment,
                           Clustering)
 
 
 #------------------------------------------------------------------------------
-# Test assignements
+# Test assignments
 #------------------------------------------------------------------------------
 
 def test_extend_spikes_simple():
@@ -72,7 +72,7 @@ def test_concatenate_spike_clusters():
     ae(clusters, np.arange(0, 60 + 1, 10))
 
 
-def test_extend_assignement():
+def test_extend_assignment():
     spike_clusters = np.array([3, 5, 2, 9, 5, 5, 2])
     spike_ids = np.array([0, 2])
 
@@ -84,7 +84,7 @@ def test_extend_assignement():
     # This should not depend on the index chosen.
     for to in (123, 0, 1, 2, 3):
         clusters_rel = [123] * len(spike_ids)
-        new_spike_ids, new_cluster_ids = _extend_assignement(spike_ids,
+        new_spike_ids, new_cluster_ids = _extend_assignment(spike_ids,
                                                              spike_clusters,
                                                              clusters_rel)
         ae(new_spike_ids, [0, 2, 6])
@@ -92,7 +92,7 @@ def test_extend_assignement():
 
     # Second case: we assign the spikes to different clusters.
     clusters_rel = [0, 1]
-    new_spike_ids, new_cluster_ids = _extend_assignement(spike_ids,
+    new_spike_ids, new_cluster_ids = _extend_assignment(spike_ids,
                                                          spike_clusters,
                                                          clusters_rel)
     ae(new_spike_ids, [0, 2, 6])
