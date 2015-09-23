@@ -26,7 +26,8 @@ def wizard():
     def get_cluster_ids():
         return [2, 3, 5, 7]
 
-    wizard = Wizard(get_cluster_ids)
+    wizard = Wizard()
+    wizard.set_cluster_ids_function(get_cluster_ids)
 
     @wizard.set_status_function
     def cluster_status(cluster):
@@ -99,7 +100,8 @@ def test_utils():
 
 def test_wizard_core():
 
-    wizard = Wizard(lambda: [2, 3, 5])
+    wizard = Wizard()
+    wizard.set_cluster_ids_function(lambda: [2, 3, 5])
 
     @wizard.set_quality_function
     def quality(cluster):
@@ -191,9 +193,9 @@ def test_wizard_nav(wizard):
     assert wizard.match == 2
 
     wizard.first()
-    assert wizard.selection == (3, 2)
+    assert wizard.selection == [3, 2]
     wizard.last()
-    assert wizard.selection == (3, 5)
+    assert wizard.selection == [3, 5]
 
     wizard.unpin()
     assert wizard.best == 3
@@ -204,42 +206,20 @@ def test_wizard_nav(wizard):
 
 def test_wizard_update(wizard, clustering, cluster_metadata):
     # 2: none, 3: none, 5: unknown, 7: good
-
-    # The wizard gets the cluster ids from the Clustering instance
-    # and the status from ClusterMetadataUpdater.
-    wizard._get_cluster_ids = lambda: clustering.cluster_ids
-
-    @wizard.set_status_function
-    def status(cluster):
-        group = cluster_metadata.group(cluster)
-        if group <= 1:
-            return 'ignored'
-        elif group == 2:
-            return 'good'
-        elif group == 3:
-            return None
-        raise NotImplementedError()  # pragma: no cover
-
-    @clustering.connect
-    def on_request_undo_state(up):
-        return {'selection': wizard.selection}
-
-    @clustering.connect
-    def on_cluster(up):
-        wizard.on_cluster(up)
+    wizard.attach(clustering, cluster_metadata)
 
     wizard.start()
 
     assert wizard.best_list == [3, 2, 7, 5]
     wizard.next()
     wizard.pin()
-    assert wizard.selection == (2, 3)
+    assert wizard.selection == [2, 3]
 
     print(wizard.selection)
     # Save the selection before the merge in the undo stack.
     clustering.merge([2, 3])
     assert wizard.best_list == [8, 7, 5]
-    assert wizard.selection == (8, 7)
+    assert wizard.selection == [8, 7]
 
     clustering.undo()
     print(wizard.selection)
