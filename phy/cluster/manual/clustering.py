@@ -247,6 +247,15 @@ class Clustering(EventEmitter):
 
         # Update the spikes per cluster structure.
         old_clusters = _unique(old_spike_clusters)
+
+        # NOTE: shortcut to a merge if this assignment is effectively a merge
+        # i.e. if all spikes are assigned to a single cluster.
+        # The fact that spike selection has been previously extended to
+        # whole clusters is critical here.
+        new_clusters = _unique(new_spike_clusters)
+        if len(new_clusters) == 1:
+            return self._do_merge(spike_ids, old_clusters, new_clusters[0])
+
         old_spikes_per_cluster = {cluster: self._spikes_per_cluster[cluster]
                                   for cluster in old_clusters}
         new_spikes_per_cluster = _spikes_per_cluster(spike_ids,
@@ -274,7 +283,7 @@ class Clustering(EventEmitter):
         up = UpdateInfo(description='merge',
                         spike_ids=spike_ids,
                         added=[to],
-                        deleted=cluster_ids,
+                        deleted=list(cluster_ids),
                         descendants=descendants,
                         old_spikes_per_cluster=old_spc,
                         new_spikes_per_cluster=new_spc,
