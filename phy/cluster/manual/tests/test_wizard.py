@@ -13,6 +13,7 @@ from ..clustering import Clustering
 from .._utils import ClusterMetadata, ClusterMetadataUpdater
 from ..wizard import (_previous,
                       _next,
+                      _find_first,
                       Wizard,
                       )
 
@@ -86,6 +87,10 @@ def test_utils():
     def func(x):
         return x in (2, 5)
 
+    _find_first([], None)
+
+    _previous([], None)
+    _previous([0, 1], 1, lambda x: x > 0)
     # Error: log and do nothing.
     _previous(l, 1, func)
     _previous(l, 15, func)
@@ -96,6 +101,7 @@ def test_utils():
     assert _previous(l, 7, func) == 5
     assert _previous(l, 11, func) == 5
 
+    _next([], None)
     # Error: log and do nothing.
     _next(l, 1, func)
     _next(l, 15, func)
