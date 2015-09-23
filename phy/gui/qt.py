@@ -6,7 +6,6 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-import contextlib
 import logging
 import os
 import sys

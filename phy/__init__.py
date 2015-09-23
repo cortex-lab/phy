@@ -72,7 +72,7 @@ if '--debug' in sys.argv:  # pragma: no cover
     logger.info("Activate DEBUG level.")
 
 
-def test():
+def test():  # pragma: no cover
     """Run the full testing suite of phy."""
     import pytest
     pytest.main()
