@@ -7,11 +7,14 @@
 # -----------------------------------------------------------------------------
 
 from collections import defaultdict
+import logging
 
-from six import string_types
+from six import string_types, PY3
 
 from .qt import QtCore, QtGui
 from ..utils.event import EventEmitter
+
+logger = logging.getLogger(__name__)
 
 
 # -----------------------------------------------------------------------------
@@ -37,6 +40,197 @@ def _show_shortcuts(shortcuts, name=''):
     for name in sorted(shortcuts):
         print('{0:<40}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
     print()
+
+
+# -----------------------------------------------------------------------------
+# Companion class
+# -----------------------------------------------------------------------------
+
+class Actions(EventEmitter):
+    """Handle GUI actions."""
+    def __init__(self):
+        super(Actions, self).__init__()
+        self._dock = None
+        self._actions = {}
+
+    def reset(self):
+        """Reset the actions.
+
+        All actions should be registered here, as follows:
+
+        ```python
+        @actions.connect
+        def on_reset():
+            actions.add(...)
+            actions.add(...)
+            ...
+        ```
+
+        """
+        self.remove_all()
+        self.emit('reset')
+
+    def attach(self, dock):
+        self._dock = dock
+
+        # Default exit action.
+        @self.shortcut('ctrl+q')
+        def exit():
+            dock.close()
+
+    def add(self, name, callback=None, shortcut=None,
+            checkable=False, checked=False):
+        """Add an action with a keyboard shortcut."""
+        if name in self._actions:
+            return
+        action = QtGui.QAction(name, self._dock)
+        action.triggered.connect(callback)
+        action.setCheckable(checkable)
+        action.setChecked(checked)
+        if shortcut:
+            if not isinstance(shortcut, (tuple, list)):
+                shortcut = [shortcut]
+            for key in shortcut:
+                action.setShortcut(key)
+        if self._dock:
+            self._dock.addAction(action)
+        self._actions[name] = action
+        if callback:
+            setattr(self, name, callback)
+        return action
+
+    def remove(self, name):
+        """Remove an action."""
+        if self._dock:
+            self._dock.removeAction(self._actions[name])
+        del self._actions[name]
+        delattr(self, name)
+
+    def remove_all(self):
+        """Remove all actions."""
+        names = sorted(self._actions.keys())
+        for name in names:
+            self.remove(name)
+
+    def shortcut(self, key=None, name=None):
+        """Decorator to add a global keyboard shortcut."""
+        def wrap(func):
+            self.add(name or func.__name__, shortcut=key, callback=func)
+        return wrap
+
+
+class Snippets(object):
+    # HACK: Unicode characters do not appear to work on Python 2
+    cursor = '\u200A\u258C' if PY3 else ''
+    _snippet_chars = 'abcdefghijklmnopqrstuvwxyz0123456789 ._,+*-=:()'
+
+    def __init__(self):
+        self._dock = None
+
+    def attach(self, dock, actions):
+        self._dock = dock
+        self._actions = actions
+
+        # Register snippet mode shortcut.
+        @actions.connect
+        def on_reset():
+            @actions.shortcut(':')
+            def enable_snippet_mode():
+                self.mode_on()
+
+    @property
+    def command(self):
+        """This is used to write a snippet message in the status bar.
+
+        A cursor is appended at the end.
+
+        """
+        n = len(self._dock.status_message)
+        n_cur = len(self.cursor)
+        return self._dock.status_message[:n - n_cur]
+
+    @command.setter
+    def command(self, value):
+        self._dock.status_message = value + self.cursor
+
+    def run(self, snippet):
+        """Executes a snippet.
+
+        May be overriden.
+
+        """
+        assert snippet[0] == ':'
+        snippet = snippet[1:]
+        split = snippet.split(' ')
+        cmd = split[0]
+        snippet = snippet[len(cmd):].strip()
+        func = self._snippets.get(cmd, None)
+        if func is None:
+            logger.info("The snippet `%s` could not be found.", cmd)
+            return
+        try:
+            logger.info("Processing snippet `%s`.", cmd)
+            func(self, snippet)
+        except Exception as e:
+            logger.warn("Error when executing snippet `%s`: %s.",
+                        cmd, str(e))
+
+    def _create_snippet_actions(self):
+        """Delete all existing actions, and add mock ones for snippet
+        keystrokes.
+
+        Used to enable snippet mode.
+
+        """
+        self._actions.remove_all()
+
+        # One action per allowed character.
+        for i, char in enumerate(self._snippet_chars):
+
+            def _make_func(char):
+                def callback():
+                    self.command += char
+                return callback
+
+            self._actions.add('snippet_{}'.format(i),
+                              shortcut=char,
+                              callback=_make_func(char),
+                              )
+
+        def backspace():
+            if self.command == ':':
+                return
+            self.command = self.command[:-1]
+
+        def enter():
+            self.run(self.command)
+            self.disable_snippet_mode()
+
+        self._actions.add('snippet_backspace',
+                          shortcut='backspace',
+                          callback=backspace,
+                          )
+        self._actions.add('snippet_activate',
+                          shortcut=('enter', 'return'),
+                          callback=enter,
+                          )
+        self._actions.add('snippet_disable',
+                          shortcut='escape',
+                          callback=self.disable_snippet_mode,
+                          )
+
+    def mode_on(self):
+        logger.info("Snippet mode enabled, press `escape` to leave this mode.")
+        # Remove all existing actions, and replace them by snippet keystroke
+        # actions.
+        self._create_snippet_actions()
+        self.command = ':'
+
+    def mode_off(self):
+        self._dock.status_message = ''
+        # Reestablishes the shortcuts.
+        self._actions.reset()
+        logger.info("Snippet mode disabled.")
 
 
 # -----------------------------------------------------------------------------
@@ -84,7 +278,6 @@ class DockWindow(QtGui.QMainWindow):
                  title=None,
                  ):
         super(DockWindow, self).__init__()
-        self._actions = {}
         if title is None:
             title = 'phy'
         self.setWindowTitle(title)
@@ -130,52 +323,6 @@ class DockWindow(QtGui.QMainWindow):
         """Show the window."""
         self.emit('show_gui')
         super(DockWindow, self).show()
-
-    # Actions
-    # -------------------------------------------------------------------------
-
-    def add_action(self,
-                   name,
-                   callback=None,
-                   shortcut=None,
-                   checkable=False,
-                   checked=False,
-                   ):
-        """Add an action with a keyboard shortcut."""
-        if name in self._actions:
-            return
-        action = QtGui.QAction(name, self)
-        action.triggered.connect(callback)
-        action.setCheckable(checkable)
-        action.setChecked(checked)
-        if shortcut:
-            if not isinstance(shortcut, (tuple, list)):
-                shortcut = [shortcut]
-            for key in shortcut:
-                action.setShortcut(key)
-        self.addAction(action)
-        self._actions[name] = action
-        if callback:
-            setattr(self, name, callback)
-        return action
-
-    def remove_action(self, name):
-        """Remove an action."""
-        self.removeAction(self._actions[name])
-        del self._actions[name]
-        delattr(self, name)
-
-    def remove_actions(self):
-        """Remove all actions."""
-        names = sorted(self._actions.keys())
-        for name in names:
-            self.remove_action(name)
-
-    def shortcut(self, key=None, name=None):
-        """Decorator to add a global keyboard shortcut."""
-        def wrap(func):
-            self.add_action(name or func.__name__, shortcut=key, callback=func)
-        return wrap
 
     # Views
     # -------------------------------------------------------------------------
@@ -256,11 +403,11 @@ class DockWindow(QtGui.QMainWindow):
     @property
     def status_message(self):
         """The message in the status bar."""
-        return self._status_bar.currentMessage()
+        return str(self._status_bar.currentMessage())
 
     @status_message.setter
     def status_message(self, value):
-        self._status_bar.showMessage(value)
+        self._status_bar.showMessage(str(value))
 
     # State
     # -------------------------------------------------------------------------
