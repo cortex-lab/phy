@@ -24,6 +24,24 @@ def _title(widget):
 # Qt windows
 # -----------------------------------------------------------------------------
 
+class DockWidget(QtGui.QDockWidget):
+    """A QDockWidget that can emit events."""
+    def __init__(self, *args, **kwargs):
+        super(DockWidget, self).__init__(*args, **kwargs)
+        self._event = EventEmitter()
+
+    def emit(self, *args, **kwargs):
+        return self._event.emit(*args, **kwargs)
+
+    def connect_(self, *args, **kwargs):
+        self._event.connect(*args, **kwargs)
+
+    def closeEvent(self, e):
+        """Qt slot when the window is closed."""
+        self.emit('close_widget')
+        super(DockWidget, self).closeEvent(e)
+
+
 class DockWindow(QtGui.QMainWindow):
     """A Qt main window holding docking Qt or VisPy widgets.
 
@@ -161,22 +179,6 @@ class DockWindow(QtGui.QMainWindow):
         except ImportError:  # pragma: no cover
             pass
 
-        class DockWidget(QtGui.QDockWidget):
-            def __init__(self, *args, **kwargs):
-                super(DockWidget, self).__init__(*args, **kwargs)
-                self._event = EventEmitter()
-
-            def emit(self, *args, **kwargs):
-                return self._event.emit(*args, **kwargs)
-
-            def connect_(self, *args, **kwargs):
-                self._event.connect(*args, **kwargs)
-
-            def closeEvent(self, e):
-                """Qt slot when the window is closed."""
-                self.emit('close_widget')
-                super(DockWidget, self).closeEvent(e)
-
         # Create the dock widget.
         dockwidget = DockWidget(self)
         dockwidget.setObjectName(title)
@@ -221,7 +223,7 @@ class DockWindow(QtGui.QMainWindow):
                 child.height() >= 10
                 ]
 
-    def view_count(self, is_visible=True):
+    def view_count(self):
         """Return the number of opened views."""
         views = self.list_views()
         counts = defaultdict(lambda: 0)
