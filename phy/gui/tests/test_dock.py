@@ -51,10 +51,10 @@ def snippets():
 
 
 #------------------------------------------------------------------------------
-# Tests
+# Test actions
 #------------------------------------------------------------------------------
 
-def test_utils():
+def test_shortcuts():
     shortcuts = {
         'test_1': 'ctrl+t',
         'test_2': ('ctrl+a', 'shift+b'),
@@ -85,6 +85,26 @@ def test_actions(actions):
 
     actions.remove_all()
 
+
+def test_actions_dock(qtbot, gui, actions):
+    actions.attach(gui)
+    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+
+    _press = []
+
+    @actions.shortcut('ctrl+g')
+    def press():
+        _press.append(0)
+
+    qtbot.keyPress(gui, Qt.Key_G, Qt.ControlModifier)
+    assert _press == [0]
+
+
+#------------------------------------------------------------------------------
+# Test snippets
+#------------------------------------------------------------------------------
 
 def test_snippets_parse():
     def _check(args, expected):
@@ -118,28 +138,17 @@ def test_snippets_parse():
 
 
 def test_snippets(snippets):
+    # TODO
     pass
 
 
-def test_actions_dock(qtbot, gui, actions):
-    actions.attach(gui)
-    qtbot.addWidget(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
-
-    _press = []
-
-    @actions.shortcut('ctrl+g')
-    def press():
-        _press.append(0)
-
-    qtbot.keyPress(gui, Qt.Key_G, Qt.ControlModifier)
-    assert _press == [0]
-
-
-def test_snippets_dock():
+def test_snippets_dock(qtbot, gui, snippets):
     pass
 
+
+#------------------------------------------------------------------------------
+# Test dock
+#------------------------------------------------------------------------------
 
 def test_dock_1(qtbot):
 
