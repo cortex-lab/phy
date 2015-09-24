@@ -115,7 +115,7 @@ class Actions(EventEmitter):
         def exit():
             dock.close()
 
-    def add(self, name, callback=None, shortcut=None,
+    def add(self, name, callback=None, shortcut=None, alias=None,
             checkable=False, checked=False):
         """Add an action with a keyboard shortcut."""
         # TODO: add menu_name option and create menu bar
@@ -134,6 +134,9 @@ class Actions(EventEmitter):
         # it can be shown in show_shortcuts(). I don't manage to recover
         # the key sequence string from a QAction using Qt.
         action._shortcut_string = shortcut or ''
+        # The alias is used in snippets. By default it is the character after &
+        action._alias = alias or (name[name.index('&') + 1]
+                                  if '&' in name else None)
         if self._dock:
             self._dock.addAction(action)
         self._actions[name] = action
@@ -141,17 +144,11 @@ class Actions(EventEmitter):
             setattr(self, name, callback)
         return action
 
-    def get_name_from_char(self, char):
-        """Return an action name from its defining character.
-
-        The symbol `&` needs to appear before that character in the action
-        name.
-
-        """
-        to_find = '&' + char
+    def from_alias(self, alias):
+        """Return an action name from its alias."""
         for name, action in self._actions.items():
-            if to_find in name:
-                return action
+            if action._alias == alias:
+                return name
 
     def remove(self, name):
         """Remove an action."""
@@ -270,10 +267,10 @@ class Snippets(object):
         assert snippet[0] == ':'
         snippet = snippet[1:]
         snippet_args = _parse_snippet(snippet)
-        character = snippet_args[0]
-        name = self._actions.get_name_from_char(character)
+        alias = snippet_args[0]
+        name = self._actions.from_alias(alias)
         if name is None:
-            logger.info("The snippet `%s` could not be found.", character)
+            logger.info("The snippet `%s` could not be found.", alias)
         func = getattr(self._actions, name)
         try:
             logger.info("Processing snippet `%s`.", snippet)
