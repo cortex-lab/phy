@@ -43,14 +43,17 @@ def captured_output():
 
 
 @contextmanager
-def captured_logging(logger):
+def captured_logging(name=None):
     buffer = StringIO()
+    logger = logging.getLogger(name)
     handlers = logger.handlers
     for handler in logger.handlers:
         logger.removeHandler(handler)
     handler = logging.StreamHandler(buffer)
+    handler.setLevel(logging.DEBUG)
     logger.addHandler(handler)
     yield buffer
+    buffer.flush()
     logger.removeHandler(handler)
     for handler in handlers:
         logger.addHandler(handler)
