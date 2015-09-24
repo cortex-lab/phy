@@ -80,17 +80,6 @@ class Actions(EventEmitter):
         def exit():
             dock.close()
 
-    @property
-    def shortcuts(self):
-        """A dictionary of action shortcuts."""
-        return {name: action._shortcut_string
-                for name, action in self._actions.items()}
-
-    def show_shortcuts(self):
-        """Print all shortcuts."""
-        _show_shortcuts(self.shortcuts,
-                        self._dock.title() if self._dock else None)
-
     def add(self, name, callback=None, shortcut=None,
             checkable=False, checked=False):
         """Add an action with a keyboard shortcut."""
@@ -128,6 +117,17 @@ class Actions(EventEmitter):
         names = sorted(self._actions.keys())
         for name in names:
             self.remove(name)
+
+    @property
+    def shortcuts(self):
+        """A dictionary of action shortcuts."""
+        return {name: action._shortcut_string
+                for name, action in self._actions.items()}
+
+    def show_shortcuts(self):
+        """Print all shortcuts."""
+        _show_shortcuts(self.shortcuts,
+                        self._dock.title() if self._dock else None)
 
     def shortcut(self, key=None, name=None):
         """Decorator to add a global keyboard shortcut."""
@@ -172,8 +172,47 @@ class Snippets(object):
     def command(self, value):
         self._dock.status_message = value + self.cursor
 
+    def _backspace(self):
+        """Erase the last character in the snippet command."""
+        if self.command == ':':
+            return
+        self.command = self.command[:-1]
+
+    def _enter(self):
+        """Disable the snippet mode and execute the command."""
+        command = self.command
+        self.disable_snippet_mode()
+        self.run(command)
+
+    def _create_snippet_actions(self):
+        """Delete all existing actions, and add mock ones for snippet
+        keystrokes.
+
+        Used to enable snippet mode.
+
+        """
+        self._actions.remove_all()
+
+        # One action per allowed character.
+        for i, char in enumerate(self._snippet_chars):
+
+            def _make_func(char):
+                def callback():
+                    self.command += char
+                return callback
+
+            self._actions.add('snippet_{}'.format(i), shortcut=char,
+                              callback=_make_func(char))
+
+        self._actions.add('snippet_backspace', shortcut='backspace',
+                          callback=self._backspace)
+        self._actions.add('snippet_activate', shortcut=('enter', 'return'),
+                          callback=self._enter)
+        self._actions.add('snippet_disable', shortcut='escape',
+                          callback=self.disable_snippet_mode)
+
     def run(self, snippet):
-        """Executes a snippet.
+        """Executes a snippet command.
 
         May be overriden.
 
@@ -193,50 +232,6 @@ class Snippets(object):
         except Exception as e:
             logger.warn("Error when executing snippet `%s`: %s.",
                         cmd, str(e))
-
-    def _create_snippet_actions(self):
-        """Delete all existing actions, and add mock ones for snippet
-        keystrokes.
-
-        Used to enable snippet mode.
-
-        """
-        self._actions.remove_all()
-
-        # One action per allowed character.
-        for i, char in enumerate(self._snippet_chars):
-
-            def _make_func(char):
-                def callback():
-                    self.command += char
-                return callback
-
-            self._actions.add('snippet_{}'.format(i),
-                              shortcut=char,
-                              callback=_make_func(char),
-                              )
-
-        def backspace():
-            if self.command == ':':
-                return
-            self.command = self.command[:-1]
-
-        def enter():
-            self.run(self.command)
-            self.disable_snippet_mode()
-
-        self._actions.add('snippet_backspace',
-                          shortcut='backspace',
-                          callback=backspace,
-                          )
-        self._actions.add('snippet_activate',
-                          shortcut=('enter', 'return'),
-                          callback=enter,
-                          )
-        self._actions.add('snippet_disable',
-                          shortcut='escape',
-                          callback=self.disable_snippet_mode,
-                          )
 
     def mode_on(self):
         logger.info("Snippet mode enabled, press `escape` to leave this mode.")
