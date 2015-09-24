@@ -176,7 +176,7 @@ class Actions(EventEmitter):
             assert name in self._actions
             action = self._actions[name]
         else:
-            name = action.name
+            name = action._name
         if not name.startswith('_'):
             logger.debug("Execute action `%s`.", name)
         return action._callback(*args)
@@ -310,9 +310,7 @@ class Snippets(object):
         snippet_args = _parse_snippet(snippet)
         alias = snippet_args[0]
         name = self._actions.get_name(alias)
-        if name is None:
-            logger.info("The snippet `%s` could not be found.", alias)
-            return
+        assert name
         func = getattr(self._actions, name)
         try:
             logger.info("Processing snippet `%s`.", snippet)

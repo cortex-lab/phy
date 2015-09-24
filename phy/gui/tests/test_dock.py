@@ -96,11 +96,18 @@ def test_actions_simple(actions):
     actions.run('t', 1)
     assert _res == [(1,)]
 
+    # Run an action instance.
+    actions.run(actions._actions['test'], 1)
+
     actions.remove_all()
 
 
 def test_actions_dock(qtbot, gui, actions):
     actions.attach(gui)
+
+    # Set the default actions.
+    actions.reset()
+
     qtbot.addWidget(gui)
     gui.show()
     qtbot.waitForWindowShown(gui)
@@ -113,6 +120,9 @@ def test_actions_dock(qtbot, gui, actions):
 
     qtbot.keyPress(gui, Qt.Key_G, Qt.ControlModifier)
     assert _press == [0]
+
+    # Quit the GUI.
+    qtbot.keyPress(gui, Qt.Key_Q, Qt.ControlModifier)
 
 
 #------------------------------------------------------------------------------
@@ -229,6 +239,7 @@ def test_snippets_actions(qtbot, actions, snippets):
 
     # Simulate keystrokes ':t3 hello<Enter>'
     snippets.mode_on()  # ':'
+    actions._snippet_backspace()
     _run('t3 hello')
     actions._snippet_activate()  # 'Enter'
     assert _actions[-1] == (3, ('hello',))
