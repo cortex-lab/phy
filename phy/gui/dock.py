@@ -43,6 +43,34 @@ def _show_shortcuts(shortcuts, name=None):
     print()
 
 
+def _parse_arg(s):
+    try:
+        return int(s)
+    except ValueError:
+        pass
+    try:
+        return float(s)
+    except ValueError:
+        pass
+    return s
+
+
+def _parse_list(s):
+    # Range: 'x-y'
+    if '-' in s:
+        m, M = map(_parse_arg, s.split('-'))
+        return tuple(range(m, M + 1))
+    # List of ids: 'x,y,z'
+    elif ',' in s:
+        return tuple(map(_parse_arg, s.split(',')))
+    else:
+        return _parse_arg(s)
+
+
+def _parse_snippet(s):
+    return list(map(_parse_list, s.split(' ')))
+
+
 # -----------------------------------------------------------------------------
 # Companion class
 # -----------------------------------------------------------------------------
