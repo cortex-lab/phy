@@ -4,4 +4,4 @@
 """GUI routines."""
 
 from .qt import start_qt_app, run_qt_app, enable_qt
-from .gui import DockWindow
+from .gui import GUI

@@ -9,7 +9,7 @@
 from pytest import mark, raises, yield_fixture
 
 from ..qt import Qt
-from ..gui import (DockWindow, _show_shortcuts, Actions, Snippets,
+from ..gui import (GUI, _show_shortcuts, Actions, Snippets,
                    _parse_snippet)
 from phy.utils._color import _random_color
 from phy.utils.testing import captured_output, captured_logging
@@ -37,7 +37,7 @@ def _create_canvas():
 
 @yield_fixture
 def gui():
-    yield DockWindow(position=(200, 100), size=(100, 100))
+    yield GUI(position=(200, 100), size=(100, 100))
 
 
 @yield_fixture
@@ -283,7 +283,7 @@ def test_snippets_dock(qtbot, gui, actions, snippets):
 
 def test_dock_1(qtbot):
 
-    gui = DockWindow(position=(200, 100), size=(100, 100))
+    gui = GUI(position=(200, 100), size=(100, 100))
     qtbot.addWidget(gui)
 
     # Increase coverage.
@@ -316,7 +316,7 @@ def test_dock_1(qtbot):
 
 
 def test_dock_status_message(qtbot):
-    gui = DockWindow()
+    gui = GUI()
     qtbot.addWidget(gui)
     assert gui.status_message == ''
     gui.status_message = ':hello world!'
@@ -325,7 +325,7 @@ def test_dock_status_message(qtbot):
 
 def test_dock_state(qtbot):
     _gs = []
-    gui = DockWindow(size=(100, 100))
+    gui = GUI(size=(100, 100))
     qtbot.addWidget(gui)
 
     gui.add_view(_create_canvas(), 'view1')
@@ -348,7 +348,7 @@ def test_dock_state(qtbot):
     gui.close()
 
     # Recreate the GUI with the saved state.
-    gui = DockWindow()
+    gui = GUI()
 
     gui.add_view(_create_canvas(), 'view1')
     gui.add_view(_create_canvas(), 'view2')
