@@ -27,12 +27,13 @@ def _title(widget):
 class DockWindow(QtGui.QMainWindow):
     """A Qt main window holding docking Qt or VisPy widgets.
 
+    `DockWindow` derives from `QMainWindow`.
+
     Events
     ------
 
     close_gui
     show_gui
-    keystroke
 
     Note
     ----
@@ -133,10 +134,10 @@ class DockWindow(QtGui.QMainWindow):
         for name in names:
             self.remove_action(name)
 
-    def shortcut(self, name, key=None):
+    def shortcut(self, key=None, name=None):
         """Decorator to add a global keyboard shortcut."""
         def wrap(func):
-            self.add_action(name, shortcut=key, callback=func)
+            self.add_action(name or func.__name__, shortcut=key, callback=func)
         return wrap
 
     # Views

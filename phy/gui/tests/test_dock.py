@@ -89,7 +89,7 @@ def test_dock_state(qtbot):
 
     _press = []
 
-    @gui.shortcut('press', 'ctrl+g')
+    @gui.shortcut('ctrl+g')
     def press():
         _press.append(0)
 
