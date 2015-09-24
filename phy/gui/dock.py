@@ -43,7 +43,12 @@ def _show_shortcuts(shortcuts, name=None):
     print()
 
 
+# -----------------------------------------------------------------------------
+# Snippet parsing utilities
+# -----------------------------------------------------------------------------
+
 def _parse_arg(s):
+    """Parse a number or string."""
     try:
         return int(s)
     except ValueError:
@@ -56,6 +61,7 @@ def _parse_arg(s):
 
 
 def _parse_list(s):
+    """Parse a comma-separated list of values (strings or numbers)."""
     # Range: 'x-y'
     if '-' in s:
         m, M = map(_parse_arg, s.split('-'))
@@ -68,6 +74,7 @@ def _parse_list(s):
 
 
 def _parse_snippet(s):
+    """Parse an entire snippet command."""
     return list(map(_parse_list, s.split(' ')))
 
 
@@ -133,6 +140,18 @@ class Actions(EventEmitter):
         if callback:
             setattr(self, name, callback)
         return action
+
+    def get_name_from_char(self, char):
+        """Return an action name from its defining character.
+
+        The symbol `&` needs to appear before that character in the action
+        name.
+
+        """
+        to_find = '&' + char
+        for name, action in self._actions.items():
+            if to_find in name:
+                return action
 
     def remove(self, name):
         """Remove an action."""
@@ -245,24 +264,22 @@ class Snippets(object):
     def run(self, snippet):
         """Executes a snippet command.
 
-        May be overriden.
+        May be overridden.
 
         """
         assert snippet[0] == ':'
         snippet = snippet[1:]
-        split = snippet.split(' ')
-        cmd = split[0]
-        snippet = snippet[len(cmd):].strip()
-        func = self._snippets.get(cmd, None)
-        if func is None:
-            logger.info("The snippet `%s` could not be found.", cmd)
-            return
+        snippet_args = _parse_snippet(snippet)
+        character = snippet_args[0]
+        name = self._actions.get_name_from_char(character)
+        if name is None:
+            logger.info("The snippet `%s` could not be found.", character)
+        func = getattr(self._actions, name)
         try:
-            logger.info("Processing snippet `%s`.", cmd)
-            func(self, snippet)
+            logger.info("Processing snippet `%s`.", snippet)
+            func(*snippet_args[1:])
         except Exception as e:
-            logger.warn("Error when executing snippet `%s`: %s.",
-                        cmd, str(e))
+            logger.warn("Error when executing snippet: %s.", str(e))
 
     def mode_on(self):
         logger.info("Snippet mode enabled, press `escape` to leave this mode.")
