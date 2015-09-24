@@ -107,7 +107,7 @@ class Actions(EventEmitter):
         self.emit('reset')
 
     def attach(self, gui):
-        """Attach a DockWindow."""
+        """Attach a GUI."""
         self._gui = gui
 
         # Register default actions.
@@ -358,10 +358,10 @@ class DockWidget(QtGui.QDockWidget):
         super(DockWidget, self).closeEvent(e)
 
 
-class DockWindow(QtGui.QMainWindow):
+class GUI(QtGui.QMainWindow):
     """A Qt main window holding docking Qt or VisPy widgets.
 
-    `DockWindow` derives from `QMainWindow`.
+    `GUI` derives from `QMainWindow`.
 
     Events
     ------
@@ -380,7 +380,7 @@ class DockWindow(QtGui.QMainWindow):
                  size=None,
                  title=None,
                  ):
-        super(DockWindow, self).__init__()
+        super(GUI, self).__init__()
         if title is None:
             title = 'phy'
         self.setWindowTitle(title)
@@ -420,12 +420,12 @@ class DockWindow(QtGui.QMainWindow):
         if False in res:  # pragma: no cover
             e.ignore()
             return
-        super(DockWindow, self).closeEvent(e)
+        super(GUI, self).closeEvent(e)
 
     def show(self):
         """Show the window."""
         self.emit('show_gui')
-        super(DockWindow, self).show()
+        super(GUI, self).show()
 
     # Views
     # -------------------------------------------------------------------------
