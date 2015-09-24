@@ -134,34 +134,49 @@ class Actions(EventEmitter):
                 shortcut = [shortcut]
             for key in shortcut:
                 action.setShortcut(key)
+
+        # Add some attributes to the QAction instance.
+        # The alias is used in snippets.
+        action._alias = alias
+        action._callback = callback
+        action._name = name
         # HACK: add the shortcut string to the QAction object so that
         # it can be shown in show_shortcuts(). I don't manage to recover
         # the key sequence string from a QAction using Qt.
         action._shortcut_string = shortcut or ''
-        # The alias is used in snippets.
-        action._alias = alias
-        action._callback = callback
+
+        # Register the action.
         if self._dock:
             self._dock.addAction(action)
         self._actions[name] = action
-        logger.debug("Add action `%s`, alias `%s`, shortcut %s.",
-                     name, alias, shortcut or '')
+
+        # Log the creation of the action.
+        if not name.startswith('_'):
+            logger.debug("Add action `%s`, alias `%s`, shortcut %s.",
+                         name, alias, shortcut or '')
+
         if callback:
             setattr(self, name, callback)
         return action
-
-    def run(self, action, *args):
-        """Run an action, specified by its name or object."""
-        if isinstance(action, string_types):
-            name = self.get_name(action)
-            action = self._actions[name]
-        return action._callback(*args)
 
     def get_name(self, alias_or_name):
         """Return an action name from its alias or name."""
         for name, action in self._actions.items():
             if alias_or_name in (action._alias, name):
                 return name
+        raise ValueError("Action `{}` doesn't exist.".format(alias_or_name))
+
+    def run(self, action, *args):
+        """Run an action, specified by its name or object."""
+        if isinstance(action, string_types):
+            name = self.get_name(action)
+            assert name in self._actions
+            action = self._actions[name]
+        else:
+            name = action.name
+        if not name.startswith('_'):
+            logger.debug("Execute action `%s`.", name)
+        return action._callback(*args)
 
     def remove(self, name):
         """Remove an action."""
@@ -202,7 +217,7 @@ class Snippets(object):
     # Allowed characters in snippet mode.
     # A Qt shortcut will be created for every character.
     _snippet_chars = ("abcdefghijklmnopqrstuvwxyz0123456789"
-                      " ,.;:?!_-+~=*/\\(){}[]")
+                      " ,.;?!_-+~=*/\(){}[]")
 
     def __init__(self):
         self._dock = None
@@ -243,12 +258,14 @@ class Snippets(object):
         """Erase the last character in the snippet command."""
         if self.command == ':':
             return
+        logger.debug("Snippet keystroke `Backspace`.")
         self.command = self.command[:-1]
 
     def _enter(self):
         """Disable the snippet mode and execute the command."""
         command = self.command
-        self.disable_snippet_mode()
+        logger.debug("Snippet keystroke `Enter`.")
+        self.mode_off()
         self.run(command)
 
     def _create_snippet_actions(self):
@@ -265,18 +282,19 @@ class Snippets(object):
 
             def _make_func(char):
                 def callback():
+                    logger.debug("Snippet keystroke `%s`.", char)
                     self.command += char
                 return callback
 
-            self._actions.add('snippet_{}'.format(i), shortcut=char,
+            self._actions.add('_snippet_{}'.format(i), shortcut=char,
                               callback=_make_func(char))
 
-        self._actions.add('snippet_backspace', shortcut='backspace',
+        self._actions.add('_snippet_backspace', shortcut='backspace',
                           callback=self._backspace)
-        self._actions.add('snippet_activate', shortcut=('enter', 'return'),
+        self._actions.add('_snippet_activate', shortcut=('enter', 'return'),
                           callback=self._enter)
-        self._actions.add('snippet_disable', shortcut='escape',
-                          callback=self.disable_snippet_mode)
+        self._actions.add('_snippet_disable', shortcut='escape',
+                          callback=self.mode_off)
 
     def run(self, snippet):
         """Executes a snippet command.
