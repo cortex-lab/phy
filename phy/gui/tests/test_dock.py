@@ -11,9 +11,9 @@ from pytest import mark
 from vispy import app
 
 from ..qt import Qt
-from ..dock import DockWindow
+from ..dock import DockWindow, _show_shortcuts
 from phy.utils._color import _random_color
-
+from phy.utils.testing import captured_output
 
 # Skip these tests in "make test-quick".
 pytestmark = mark.long
@@ -33,6 +33,16 @@ def _create_canvas():
         c.context.clear(c.color)
 
     return c
+
+
+def test_utils():
+    shortcuts = {
+        'test_1': 'ctrl+t',
+        'test_2': ('ctrl+a', 'shift+b'),
+    }
+    with captured_output() as (stdout, stderr):
+        _show_shortcuts(shortcuts, 'test')
+    assert 'ctrl+a, shift+b' in stdout.getvalue()
 
 
 def test_dock_1(qtbot):
