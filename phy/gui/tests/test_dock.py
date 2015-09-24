@@ -6,12 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import mark
-
-from vispy import app
+from pytest import mark, yield_fixture
 
 from ..qt import Qt
-from ..dock import DockWindow, _show_shortcuts
+from ..dock import DockWindow, _show_shortcuts, Actions, Snippets
 from phy.utils._color import _random_color
 from phy.utils.testing import captured_output
 
@@ -20,11 +18,12 @@ pytestmark = mark.long
 
 
 #------------------------------------------------------------------------------
-# Tests
+# Utilities and fixtures
 #------------------------------------------------------------------------------
 
 def _create_canvas():
     """Create a VisPy canvas with a color background."""
+    from vispy import app
     c = app.Canvas()
     c.color = _random_color()
 
@@ -35,6 +34,25 @@ def _create_canvas():
     return c
 
 
+@yield_fixture
+def gui():
+    yield DockWindow(position=(200, 100), size=(100, 100))
+
+
+@yield_fixture
+def actions():
+    yield Actions()
+
+
+@yield_fixture
+def snippets():
+    yield Snippets()
+
+
+#------------------------------------------------------------------------------
+# Tests
+#------------------------------------------------------------------------------
+
 def test_utils():
     shortcuts = {
         'test_1': 'ctrl+t',
@@ -43,6 +61,37 @@ def test_utils():
     with captured_output() as (stdout, stderr):
         _show_shortcuts(shortcuts, 'test')
     assert 'ctrl+a, shift+b' in stdout.getvalue()
+
+
+def test_actions(actions):
+    actions.add('test', lambda: None)
+    # Adding an action twice has no effect.
+    actions.add('test', lambda: None)
+    actions.remove_all()
+
+
+def test_snippets(snippets):
+    pass
+
+
+def test_actions_dock(qtbot, gui, actions):
+    actions.attach(gui)
+    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+
+    _press = []
+
+    @actions.shortcut('ctrl+g')
+    def press():
+        _press.append(0)
+
+    qtbot.keyPress(gui, Qt.Key_G, Qt.ControlModifier)
+    assert _press == [0]
+
+
+def test_snippets_dock():
+    pass
 
 
 def test_dock_1(qtbot):
@@ -57,11 +106,6 @@ def test_dock_1(qtbot):
     gui.unconnect_(on_show_gui)
     qtbot.keyPress(gui, Qt.Key_Control)
     qtbot.keyRelease(gui, Qt.Key_Control)
-
-    gui.add_action('test', lambda: None)
-    # Adding an action twice has no effect.
-    gui.add_action('test', lambda: None)
-    gui.remove_actions()
 
     view = gui.add_view(_create_canvas(), 'view1', floating=True)
     gui.add_view(_create_canvas(), 'view2')
@@ -97,12 +141,6 @@ def test_dock_state(qtbot):
     gui = DockWindow(size=(100, 100))
     qtbot.addWidget(gui)
 
-    _press = []
-
-    @gui.shortcut('ctrl+g')
-    def press():
-        _press.append(0)
-
     gui.add_view(_create_canvas(), 'view1')
     gui.add_view(_create_canvas(), 'view2')
     gui.add_view(_create_canvas(), 'view2')
@@ -113,9 +151,6 @@ def test_dock_state(qtbot):
 
     gui.show()
     qtbot.waitForWindowShown(gui)
-
-    qtbot.keyPress(gui, Qt.Key_G, Qt.ControlModifier)
-    assert _press == [0]
 
     assert len(gui.list_views('view')) == 3
     assert gui.view_count() == {
