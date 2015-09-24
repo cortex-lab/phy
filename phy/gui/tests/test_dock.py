@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import mark, yield_fixture
+from pytest import mark, raises, yield_fixture
 
 from ..qt import Qt
 from ..dock import (DockWindow, _show_shortcuts, Actions, Snippets,
@@ -64,8 +64,8 @@ def test_shortcuts():
     assert 'ctrl+a, shift+b' in stdout.getvalue()
 
 
-def test_actions(actions):
-    actions.add('test', lambda: None)
+def test_actions_simple(actions):
+    actions.add('tes&t', lambda: None)
     # Adding an action twice has no effect.
     actions.add('test', lambda: None)
 
@@ -81,7 +81,10 @@ def test_actions(actions):
     actions.show_my_shortcuts()
     assert 'show_my_shortcuts' in _captured[0]
     assert ': h' in _captured[0]
-    print(_captured[0])
+
+    assert actions.get_name('e') is None
+    assert actions.get_name('t') == 'test'
+    assert actions.get_name('test') == 'test'
 
     actions.remove_all()
 
@@ -137,12 +140,35 @@ def test_snippets_parse():
     _check('a b,c d,2 3-5', ['a', ('b', 'c'), ('d', 2), (3, 4, 5)])
 
 
-def test_snippets(snippets):
-    # TODO
-    pass
+def test_snippets_actions(actions, snippets):
+    snippets.attach(None, actions)
+
+    _actions = []
+
+    @actions.connect
+    def on_reset():
+        @actions.shortcut(name='my_test_1')
+        def test_1(*args):
+            _actions.append((1, args))
+
+        @actions.shortcut(name='my_&test_2')
+        def test_2(*args):
+            _actions.append((2, args))
+
+        @actions.shortcut(name='my_test_3', alias='t3')
+        def test_3(*args):
+            _actions.append((3, args))
+
+    assert snippets.command == ''
+
+    snippets.run(':my_test_1')
+    # assert _actions == [(1, ())]
+
+    with raises(AttributeError):
+        actions.snippet_m()
 
 
-def test_snippets_dock(qtbot, gui, snippets):
+def test_snippets_dock(qtbot, gui, actions, snippets):
     pass
 
 
