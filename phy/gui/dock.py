@@ -83,6 +83,7 @@ class Actions(EventEmitter):
     def add(self, name, callback=None, shortcut=None,
             checkable=False, checked=False):
         """Add an action with a keyboard shortcut."""
+        # TODO: add menu_name option and create menu bar
         if name in self._actions:
             return
         action = QtGui.QAction(name, self._dock)
@@ -141,7 +142,9 @@ class Snippets(object):
     cursor = '\u200A\u258C' if PY3 else ''
 
     # Allowed characters in snippet mode.
-    _snippet_chars = 'abcdefghijklmnopqrstuvwxyz0123456789 ._,+*-=:()'
+    # A Qt shortcut will be created for every character.
+    _snippet_chars = ("abcdefghijklmnopqrstuvwxyz0123456789"
+                      " ,.;:?!_-+~=*/\\(){}[]")
 
     def __init__(self):
         self._dock = None
