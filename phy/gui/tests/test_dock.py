@@ -88,7 +88,8 @@ def test_actions_simple(actions):
     assert 'show_my_shortcuts' in _captured[0]
     assert ': h' in _captured[0]
 
-    assert actions.get_name('e') is None
+    with raises(ValueError):
+        assert actions.get_name('e')
     assert actions.get_name('t') == 'test'
     assert actions.get_name('test') == 'test'
 
@@ -149,7 +150,7 @@ def test_snippets_parse():
     _check('a b,c d,2 3-5', ['a', ('b', 'c'), ('d', 2), (3, 4, 5)])
 
 
-def test_snippets_actions(actions, snippets):
+def test_snippets_actions(qtbot, actions, snippets):
     snippets.attach(None, actions)
 
     _actions = []
@@ -180,10 +181,22 @@ def test_snippets_actions(actions, snippets):
     snippets.run(':t 1.5 a 2-4 5,7')
     assert _actions[-1] == (2, (1.5, 'a', (2, 3, 4), (5, 7)))
 
-    # snippets.run('snippet_:')
+    def _run(cmd):
+        """Simulate keystrokes."""
+        for char in cmd:
+            i = snippets._snippet_chars.index(char)
+            actions.run('_snippet_{}'.format(i))
 
-    with raises(AttributeError):
-        actions.snippet_m()
+    # Need to activate the snippet mode first.
+    with raises(ValueError):
+        _run(':t3 hello')
+
+    # Simulate keystrokes ':t3 hello<Enter>'
+    snippets.mode_on()  # ':'
+    _run('t3 hello')
+    actions._snippet_activate()  # 'Enter'
+    assert _actions[-1] == (3, ('hello',))
+    snippets.mode_off()
 
 
 def test_snippets_dock(qtbot, gui, actions, snippets):
