@@ -33,9 +33,11 @@ def test_captured_output():
 
 def test_captured_logging():
     logger = logging.getLogger(__name__)
+    handlers = logger.handlers
     with captured_logging(logger) as buf:
         logger.debug('Hello world!')
     assert 'Hello world!' in buf.getvalue()
+    assert logger.handlers == handlers
 
 
 def test_assert_equal():
