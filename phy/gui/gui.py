@@ -86,7 +86,7 @@ class Actions(EventEmitter):
     """Handle GUI actions."""
     def __init__(self):
         super(Actions, self).__init__()
-        self._dock = None
+        self._gui = None
         self._actions = {}
 
     def reset(self):
@@ -106,9 +106,9 @@ class Actions(EventEmitter):
         self.remove_all()
         self.emit('reset')
 
-    def attach(self, dock):
+    def attach(self, gui):
         """Attach a DockWindow."""
-        self._dock = dock
+        self._gui = gui
 
         # Register default actions.
         @self.connect
@@ -116,7 +116,7 @@ class Actions(EventEmitter):
             # Default exit action.
             @self.shortcut('ctrl+q')
             def exit():
-                dock.close()
+                gui.close()
 
     def add(self, name, callback=None, shortcut=None, alias=None,
             checkable=False, checked=False):
@@ -128,7 +128,7 @@ class Actions(EventEmitter):
         name = name.replace('&', '')
         if name in self._actions:
             return
-        action = QtGui.QAction(name, self._dock)
+        action = QtGui.QAction(name, self._gui)
         action.triggered.connect(callback)
         action.setCheckable(checkable)
         action.setChecked(checked)
@@ -149,8 +149,8 @@ class Actions(EventEmitter):
         action._shortcut_string = shortcut or ''
 
         # Register the action.
-        if self._dock:
-            self._dock.addAction(action)
+        if self._gui:
+            self._gui.addAction(action)
         self._actions[name] = action
 
         # Log the creation of the action.
@@ -183,8 +183,8 @@ class Actions(EventEmitter):
 
     def remove(self, name):
         """Remove an action."""
-        if self._dock:
-            self._dock.removeAction(self._actions[name])
+        if self._gui:
+            self._gui.removeAction(self._actions[name])
         del self._actions[name]
         delattr(self, name)
 
@@ -203,7 +203,7 @@ class Actions(EventEmitter):
     def show_shortcuts(self):
         """Print all shortcuts."""
         _show_shortcuts(self.shortcuts,
-                        self._dock.title() if self._dock else None)
+                        self._gui.title() if self._gui else None)
 
     def shortcut(self, key=None, name=None, **kwargs):
         """Decorator to add a global keyboard shortcut."""
@@ -223,11 +223,11 @@ class Snippets(object):
                       " ,.;?!_-+~=*/\(){}[]")
 
     def __init__(self):
-        self._dock = None
-        self._cmd = ''  # only used when there is no dock attached
+        self._gui = None
+        self._cmd = ''  # only used when there is no gui attached
 
-    def attach(self, dock, actions):
-        self._dock = dock
+    def attach(self, gui, actions):
+        self._gui = gui
         self._actions = actions
 
         # Register snippet mode shortcut.
@@ -244,7 +244,7 @@ class Snippets(object):
         A cursor is appended at the end.
 
         """
-        msg = self._dock.status_message if self._dock else self._cmd
+        msg = self._gui.status_message if self._gui else self._cmd
         n = len(msg)
         n_cur = len(self.cursor)
         return msg[:n - n_cur]
@@ -252,10 +252,10 @@ class Snippets(object):
     @command.setter
     def command(self, value):
         value += self.cursor
-        if not self._dock:
+        if not self._gui:
             self._cmd = value
         else:
-            self._dock.status_message = value
+            self._gui.status_message = value
 
     def _backspace(self):
         """Erase the last character in the snippet command."""
@@ -329,8 +329,8 @@ class Snippets(object):
         self.command = ':'
 
     def mode_off(self):
-        if self._dock:
-            self._dock.status_message = ''
+        if self._gui:
+            self._gui.status_message = ''
         logger.info("Snippet mode disabled.")
         # Reestablishes the shortcuts.
         self._actions.reset()
@@ -448,13 +448,13 @@ class DockWindow(QtGui.QMainWindow):
         except ImportError:  # pragma: no cover
             pass
 
-        # Create the dock widget.
+        # Create the gui widget.
         dockwidget = DockWidget(self)
         dockwidget.setObjectName(title)
         dockwidget.setWindowTitle(title)
         dockwidget.setWidget(view)
 
-        # Set dock widget options.
+        # Set gui widget options.
         options = QtGui.QDockWidget.DockWidgetMovable
         if closable:
             options = options | QtGui.QDockWidget.DockWidgetClosable
@@ -530,7 +530,7 @@ class DockWindow(QtGui.QMainWindow):
     def restore_geometry_state(self, gs):
         """Restore the position of the main window and the docks.
 
-        The dock widgets need to be recreated first.
+        The gui widgets need to be recreated first.
 
         This function can be called in `on_show()`.
 
