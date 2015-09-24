@@ -65,9 +65,15 @@ def test_shortcuts():
 
 
 def test_actions_simple(actions):
-    actions.add('tes&t', lambda: None)
+
+    _res = []
+
+    def _action(*args):
+        _res.append(args)
+
+    actions.add('tes&t', _action)
     # Adding an action twice has no effect.
-    actions.add('test', lambda: None)
+    actions.add('test', _action)
 
     # Create a shortcut and display it.
     _captured = []
@@ -85,6 +91,9 @@ def test_actions_simple(actions):
     assert actions.get_name('e') is None
     assert actions.get_name('t') == 'test'
     assert actions.get_name('test') == 'test'
+
+    actions.run('t', 1)
+    assert _res == [(1,)]
 
     actions.remove_all()
 
@@ -159,10 +168,19 @@ def test_snippets_actions(actions, snippets):
         def test_3(*args):
             _actions.append((3, args))
 
+    actions.reset()
+
     assert snippets.command == ''
 
+    # Action 1.
     snippets.run(':my_test_1')
-    # assert _actions == [(1, ())]
+    assert _actions == [(1, ())]
+
+    # Action 2.
+    snippets.run(':t 1.5 a 2-4 5,7')
+    assert _actions[-1] == (2, (1.5, 'a', (2, 3, 4), (5, 7)))
+
+    # snippets.run('snippet_:')
 
     with raises(AttributeError):
         actions.snippet_m()

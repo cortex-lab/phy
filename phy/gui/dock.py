@@ -140,6 +140,7 @@ class Actions(EventEmitter):
         action._shortcut_string = shortcut or ''
         # The alias is used in snippets.
         action._alias = alias
+        action._callback = callback
         if self._dock:
             self._dock.addAction(action)
         self._actions[name] = action
@@ -148,6 +149,13 @@ class Actions(EventEmitter):
         if callback:
             setattr(self, name, callback)
         return action
+
+    def run(self, action, *args):
+        """Run an action, specified by its name or object."""
+        if isinstance(action, string_types):
+            name = self.get_name(action)
+            action = self._actions[name]
+        return action._callback(*args)
 
     def get_name(self, alias_or_name):
         """Return an action name from its alias or name."""
