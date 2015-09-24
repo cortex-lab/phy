@@ -28,11 +28,12 @@ def _title(widget):
 def _show_shortcut(shortcut):
     if isinstance(shortcut, string_types):
         return shortcut
-    elif isinstance(shortcut, tuple):
+    elif isinstance(shortcut, (tuple, list)):
         return ', '.join(shortcut)
 
 
-def _show_shortcuts(shortcuts, name=''):
+def _show_shortcuts(shortcuts, name=None):
+    name = name or ''
     print()
     if name:
         name = ' for ' + name
@@ -71,12 +72,24 @@ class Actions(EventEmitter):
         self.emit('reset')
 
     def attach(self, dock):
+        """Attach a DockWindow."""
         self._dock = dock
 
         # Default exit action.
         @self.shortcut('ctrl+q')
         def exit():
             dock.close()
+
+    @property
+    def shortcuts(self):
+        """A dictionary of action shortcuts."""
+        return {name: action._shortcut_string
+                for name, action in self._actions.items()}
+
+    def show_shortcuts(self):
+        """Print all shortcuts."""
+        _show_shortcuts(self.shortcuts,
+                        self._dock.title() if self._dock else None)
 
     def add(self, name, callback=None, shortcut=None,
             checkable=False, checked=False):
@@ -92,6 +105,10 @@ class Actions(EventEmitter):
                 shortcut = [shortcut]
             for key in shortcut:
                 action.setShortcut(key)
+        # HACK: add the shortcut string to the QAction object so that
+        # it can be shown in show_shortcuts(). I don't manage to recover
+        # the key sequence string from a QAction using Qt.
+        action._shortcut_string = shortcut or ''
         if self._dock:
             self._dock.addAction(action)
         self._actions[name] = action
@@ -122,6 +139,8 @@ class Actions(EventEmitter):
 class Snippets(object):
     # HACK: Unicode characters do not appear to work on Python 2
     cursor = '\u200A\u258C' if PY3 else ''
+
+    # Allowed characters in snippet mode.
     _snippet_chars = 'abcdefghijklmnopqrstuvwxyz0123456789 ._,+*-=:()'
 
     def __init__(self):
