@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 from copy import deepcopy
+import logging
 import os.path as op
 import time
 
@@ -14,7 +15,7 @@ import numpy as np
 from pytest import mark
 from vispy.app import Canvas
 
-from ..testing import (benchmark, captured_output, show_test,
+from ..testing import (benchmark, captured_output, captured_logging, show_test,
                        _assert_equal, _enable_profiler, _profile,
                        show_colored_canvas,
                        )
@@ -28,6 +29,13 @@ def test_captured_output():
     with captured_output() as (out, err):
         print('Hello world!')
     assert out.getvalue().strip() == 'Hello world!'
+
+
+def test_captured_logging():
+    logger = logging.getLogger(__name__)
+    with captured_logging(logger) as buf:
+        logger.debug('Hello world!')
+    assert 'Hello world!' in buf.getvalue()
 
 
 def test_assert_equal():
