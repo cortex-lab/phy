@@ -58,15 +58,6 @@ def add_default_handler(level='INFO'):
     logger.addHandler(handler)
 
 
-def string_handler(level='INFO'):
-    buffer = StringIO()
-    for handler in logger.handlers:
-        logger.removeHandler(handler)
-    handler = logging.StreamHandler(buffer)
-    logger.addHandler(handler)
-    return buffer
-
-
 if '--debug' in sys.argv:  # pragma: no cover
     add_default_handler('DEBUG')
     logger.info("Activate DEBUG level.")
