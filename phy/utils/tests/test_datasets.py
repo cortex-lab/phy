@@ -15,7 +15,6 @@ from numpy.testing import assert_array_equal as ae
 import responses
 from pytest import raises, yield_fixture
 
-from phy import string_handler
 from ..datasets import (download_file,
                         download_test_data,
                         download_sample_data,
@@ -23,6 +22,7 @@ from ..datasets import (download_file,
                         _BASE_URL,
                         _validate_output_dir,
                         )
+from ..testing import captured_logging
 
 logger = logging.getLogger(__name__)
 
@@ -123,23 +123,23 @@ def test_download_not_found(tempdir):
 
 @responses.activate
 def test_download_already_exists_invalid(tempdir, mock_url):
-    buffer = string_handler()
-    path = op.join(tempdir, 'test')
-    # Create empty file.
-    open(path, 'a').close()
-    _check(_dl(path))
-    assert 'redownload' in buffer.getvalue()
+    with captured_logging() as buf:
+        path = op.join(tempdir, 'test')
+        # Create empty file.
+        open(path, 'a').close()
+        _check(_dl(path))
+    assert 'redownload' in buf.getvalue()
 
 
 @responses.activate
 def test_download_already_exists_valid(tempdir, mock_url):
-    buffer = string_handler()
-    path = op.join(tempdir, 'test')
-    # Create valid file.
-    with open(path, 'ab') as f:
-        f.write(_DATA.tostring())
-    _check(_dl(path))
-    assert 'skip' in buffer.getvalue()
+    with captured_logging() as buf:
+        path = op.join(tempdir, 'test')
+        # Create valid file.
+        with open(path, 'ab') as f:
+            f.write(_DATA.tostring())
+        _check(_dl(path))
+    assert 'skip' in buf.getvalue()
 
 
 @responses.activate
