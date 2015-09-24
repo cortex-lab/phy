@@ -12,7 +12,7 @@ from ..qt import Qt
 from ..dock import (DockWindow, _show_shortcuts, Actions, Snippets,
                     _parse_snippet)
 from phy.utils._color import _random_color
-from phy.utils.testing import captured_output
+from phy.utils.testing import captured_output, captured_logging
 
 # Skip these tests in "make test-quick".
 pytestmark = mark.long
@@ -148,6 +148,41 @@ def test_snippets_parse():
     _check('2 3-5', [2, (3, 4, 5)])
 
     _check('a b,c d,2 3-5', ['a', ('b', 'c'), ('d', 2), (3, 4, 5)])
+
+
+def test_snippets_errors(qtbot, actions, snippets):
+
+    _actions = []
+
+    @actions.connect
+    def on_reset():
+        @actions.shortcut(name='my_test', alias='t')
+        def test(arg):
+            # Enforce single-character argument.
+            assert len(str(arg)) == 1
+            _actions.append(arg)
+
+    # Attach the GUI and register the actions.
+    snippets.attach(None, actions)
+    actions.reset()
+
+    with raises(ValueError):
+        snippets.run(':t1')
+
+    with captured_logging() as buf:
+        snippets.run(':t')
+    assert 'missing 1 required positional argument' in buf.getvalue()
+
+    with captured_logging() as buf:
+        snippets.run(':t 1 2')
+    assert 'takes 1 positional argument but 2 were given' in buf.getvalue()
+
+    with captured_logging() as buf:
+        snippets.run(':t aa')
+    assert 'assert 2 == 1' in buf.getvalue()
+
+    snippets.run(':t a')
+    assert _actions == ['a']
 
 
 def test_snippets_actions(qtbot, actions, snippets):
