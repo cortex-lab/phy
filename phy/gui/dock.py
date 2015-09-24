@@ -110,10 +110,13 @@ class Actions(EventEmitter):
         """Attach a DockWindow."""
         self._dock = dock
 
-        # Default exit action.
-        @self.shortcut('ctrl+q')
-        def exit():
-            dock.close()
+        # Register default actions.
+        @self.connect
+        def on_reset():
+            # Default exit action.
+            @self.shortcut('ctrl+q')
+            def exit():
+                dock.close()
 
     def add(self, name, callback=None, shortcut=None, alias=None,
             checkable=False, checked=False):
@@ -317,6 +320,9 @@ class Snippets(object):
         except Exception as e:
             logger.warn("Error when executing snippet: %s.", str(e))
 
+    def is_mode_on(self):
+        return self.command.startswith(':')
+
     def mode_on(self):
         logger.info("Snippet mode enabled, press `escape` to leave this mode.")
         # Remove all existing actions, and replace them by snippet keystroke
@@ -327,9 +333,9 @@ class Snippets(object):
     def mode_off(self):
         if self._dock:
             self._dock.status_message = ''
+        logger.info("Snippet mode disabled.")
         # Reestablishes the shortcuts.
         self._actions.reset()
-        logger.info("Snippet mode disabled.")
 
 
 # -----------------------------------------------------------------------------
