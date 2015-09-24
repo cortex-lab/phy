@@ -119,6 +119,10 @@ class Actions(EventEmitter):
             checkable=False, checked=False):
         """Add an action with a keyboard shortcut."""
         # TODO: add menu_name option and create menu bar
+        # Get the alias from the character after & if it exists.
+        if alias is None:
+            alias = name[name.index('&') + 1] if '&' in name else name
+        name = name.replace('&', '')
         if name in self._actions:
             return
         action = QtGui.QAction(name, self._dock)
@@ -134,20 +138,21 @@ class Actions(EventEmitter):
         # it can be shown in show_shortcuts(). I don't manage to recover
         # the key sequence string from a QAction using Qt.
         action._shortcut_string = shortcut or ''
-        # The alias is used in snippets. By default it is the character after &
-        action._alias = alias or (name[name.index('&') + 1]
-                                  if '&' in name else None)
+        # The alias is used in snippets.
+        action._alias = alias
         if self._dock:
             self._dock.addAction(action)
         self._actions[name] = action
+        logger.debug("Add action `%s`, alias `%s`, shortcut %s.",
+                     name, alias, shortcut or '')
         if callback:
             setattr(self, name, callback)
         return action
 
-    def from_alias(self, alias):
-        """Return an action name from its alias."""
+    def get_name(self, alias_or_name):
+        """Return an action name from its alias or name."""
         for name, action in self._actions.items():
-            if action._alias == alias:
+            if alias_or_name in (action._alias, name):
                 return name
 
     def remove(self, name):
@@ -174,10 +179,11 @@ class Actions(EventEmitter):
         _show_shortcuts(self.shortcuts,
                         self._dock.title() if self._dock else None)
 
-    def shortcut(self, key=None, name=None):
+    def shortcut(self, key=None, name=None, **kwargs):
         """Decorator to add a global keyboard shortcut."""
         def wrap(func):
-            self.add(name or func.__name__, shortcut=key, callback=func)
+            self.add(name or func.__name__, shortcut=key,
+                     callback=func, **kwargs)
         return wrap
 
 
@@ -192,6 +198,7 @@ class Snippets(object):
 
     def __init__(self):
         self._dock = None
+        self._cmd = ''  # only used when there is no dock attached
 
     def attach(self, dock, actions):
         self._dock = dock
@@ -211,13 +218,18 @@ class Snippets(object):
         A cursor is appended at the end.
 
         """
-        n = len(self._dock.status_message)
+        msg = self._dock.status_message if self._dock else self._cmd
+        n = len(msg)
         n_cur = len(self.cursor)
-        return self._dock.status_message[:n - n_cur]
+        return msg[:n - n_cur]
 
     @command.setter
     def command(self, value):
-        self._dock.status_message = value + self.cursor
+        value += self.cursor
+        if not self._dock:
+            self._cmd = value
+        else:
+            self._dock.status_message = value
 
     def _backspace(self):
         """Erase the last character in the snippet command."""
@@ -268,9 +280,10 @@ class Snippets(object):
         snippet = snippet[1:]
         snippet_args = _parse_snippet(snippet)
         alias = snippet_args[0]
-        name = self._actions.from_alias(alias)
+        name = self._actions.get_name(alias)
         if name is None:
             logger.info("The snippet `%s` could not be found.", alias)
+            return
         func = getattr(self._actions, name)
         try:
             logger.info("Processing snippet `%s`.", snippet)
@@ -286,7 +299,8 @@ class Snippets(object):
         self.command = ':'
 
     def mode_off(self):
-        self._dock.status_message = ''
+        if self._dock:
+            self._dock.status_message = ''
         # Reestablishes the shortcuts.
         self._actions.reset()
         logger.info("Snippet mode disabled.")
