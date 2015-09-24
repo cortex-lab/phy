@@ -8,6 +8,8 @@
 
 from collections import defaultdict
 
+from six import string_types
+
 from .qt import QtCore, QtGui
 from ..utils.event import EventEmitter
 
@@ -18,6 +20,23 @@ from ..utils.event import EventEmitter
 
 def _title(widget):
     return str(widget.windowTitle()).lower()
+
+
+def _show_shortcut(shortcut):
+    if isinstance(shortcut, string_types):
+        return shortcut
+    elif isinstance(shortcut, tuple):
+        return ', '.join(shortcut)
+
+
+def _show_shortcuts(shortcuts, name=''):
+    print()
+    if name:
+        name = ' for ' + name
+    print('Keyboard shortcuts' + name)
+    for name in sorted(shortcuts):
+        print('{0:<40}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
+    print()
 
 
 # -----------------------------------------------------------------------------
