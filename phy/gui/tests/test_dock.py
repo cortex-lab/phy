@@ -9,7 +9,8 @@
 from pytest import mark, yield_fixture
 
 from ..qt import Qt
-from ..dock import DockWindow, _show_shortcuts, Actions, Snippets
+from ..dock import (DockWindow, _show_shortcuts, Actions, Snippets,
+                    _parse_snippet)
 from phy.utils._color import _random_color
 from phy.utils.testing import captured_output
 
@@ -83,6 +84,37 @@ def test_actions(actions):
     print(_captured[0])
 
     actions.remove_all()
+
+
+def test_snippets_parse():
+    def _check(args, expected):
+        snippet = 'snip ' + args
+        assert _parse_snippet(snippet) == ['snip'] + expected
+
+    _check('a', ['a'])
+    _check('abc', ['abc'])
+    _check('a,b,c', [('a', 'b', 'c')])
+    _check('a b,c', ['a', ('b', 'c')])
+
+    _check('1', [1])
+    _check('10', [10])
+
+    _check('1.', [1.])
+    _check('10.', [10.])
+    _check('10.0', [10.0])
+
+    _check('0 1', [0, 1])
+    _check('0 1.', [0, 1.])
+    _check('0 1.0', [0, 1.])
+
+    _check('0,1', [(0, 1)])
+    _check('0,10.', [(0, 10.)])
+    _check('0. 1,10.', [0., (1, 10.)])
+
+    _check('2-7', [(2, 3, 4, 5, 6, 7)])
+    _check('2 3-5', [2, (3, 4, 5)])
+
+    _check('a b,c d,2 3-5', ['a', ('b', 'c'), ('d', 2), (3, 4, 5)])
 
 
 def test_snippets(snippets):
