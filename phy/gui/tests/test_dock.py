@@ -67,6 +67,21 @@ def test_actions(actions):
     actions.add('test', lambda: None)
     # Adding an action twice has no effect.
     actions.add('test', lambda: None)
+
+    # Create a shortcut and display it.
+    _captured = []
+
+    @actions.shortcut('h')
+    def show_my_shortcuts():
+        with captured_output() as (stdout, stderr):
+            actions.show_shortcuts()
+        _captured.append(stdout.getvalue())
+
+    actions.show_my_shortcuts()
+    assert 'show_my_shortcuts' in _captured[0]
+    assert ': h' in _captured[0]
+    print(_captured[0])
+
     actions.remove_all()
 
 
