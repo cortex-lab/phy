@@ -42,6 +42,20 @@ def captured_output():
         sys.stdout, sys.stderr = old_out, old_err
 
 
+@contextmanager
+def captured_logging(logger):
+    buffer = StringIO()
+    handlers = logger.handlers
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
+    handler = logging.StreamHandler(buffer)
+    logger.addHandler(handler)
+    yield buffer
+    logger.removeHandler(handler)
+    for handler in handlers:
+        logger.addHandler(handler)
+
+
 def _assert_equal(d_0, d_1):
     """Check that two objects are equal."""
     # Compare arrays.
