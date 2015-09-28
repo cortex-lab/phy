@@ -333,7 +333,12 @@ def test_select_spikes():
     with raises(AssertionError):
         select_spikes()
     spikes = [2, 3, 5, 7, 11]
-    sc = [2, 3, 3, 2, 2]
     spc = {2: [2, 7, 11], 3: [3, 5], 5: []}
     ae(select_spikes([], spikes_per_cluster=spc), [])
     ae(select_spikes([2, 3, 5], spikes_per_cluster=spc), spikes)
+    ae(select_spikes([2, 5], spikes_per_cluster=spc), spc[2])
+
+    ae(select_spikes([2, 3, 5], 0, spikes_per_cluster=spc), spikes)
+    ae(select_spikes([2, 3, 5], None, spikes_per_cluster=spc), spikes)
+    ae(select_spikes([2, 3, 5], 1, spikes_per_cluster=spc), [2, 3])
+    ae(select_spikes([2, 5], 2, spikes_per_cluster=spc), [2])
