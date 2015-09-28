@@ -69,14 +69,6 @@ def _unique(x):
     return np.nonzero(bc)[0]
 
 
-def _ensure_unique(func):
-    """Apply unique() to the output of a function."""
-    def wrapped(*args, **kwargs):
-        out = func(*args, **kwargs)
-        return _unique(out)
-    return wrapped
-
-
 def _normalize(arr, keep_ratio=False):
     """Normalize an array into [0, 1]."""
     (x_min, y_min), (x_max, y_max) = arr.min(axis=0), arr.max(axis=0)
@@ -302,20 +294,17 @@ def get_excerpts(data, n_excerpts=None, excerpt_size=None):
     return out
 
 
-def regular_subset(spikes=None, n_spikes_max=None):
+def regular_subset(spikes=None, n_spikes_max=None, offset=0):
     """Prune the current selection to get at most n_spikes_max spikes."""
     assert spikes is not None
     # Nothing to do if the selection already satisfies n_spikes_max.
-    if n_spikes_max is None or len(spikes) <= n_spikes_max:
+    if n_spikes_max is None or len(spikes) <= n_spikes_max:  # pragma: no cover
         return spikes
     step = math.ceil(np.clip(1. / n_spikes_max * len(spikes),
                              1, len(spikes)))
     step = int(step)
-    # Random shift.
-    # start = np.random.randint(low=0, high=step)
     # Note: randomly-changing selections are confusing...
-    start = 0
-    my_spikes = spikes[start::step][:n_spikes_max]
+    my_spikes = spikes[offset::step][:n_spikes_max]
     assert len(my_spikes) <= len(spikes)
     assert len(my_spikes) <= n_spikes_max
     return my_spikes
@@ -329,17 +318,13 @@ def _spikes_in_clusters(spike_clusters, clusters):
     """Return the ids of all spikes belonging to the specified clusters."""
     if len(spike_clusters) == 0 or len(clusters) == 0:
         return np.array([], dtype=np.int)
-    # spikes_per_cluster case.
-    if isinstance(spike_clusters, dict):
-        return np.sort(np.concatenate([spike_clusters[cluster]
-                                       for cluster in clusters]))
     return np.nonzero(np.in1d(spike_clusters, clusters))[0]
 
 
-def _spikes_per_cluster(spike_ids, spike_clusters):
+def _spikes_per_cluster(spike_clusters, spike_ids=None):
     """Return a dictionary {cluster: list_of_spikes}."""
-    if not len(spike_ids):
-        return {}
+    if spike_ids is None:
+        spike_ids = np.arange(len(spike_clusters))
     rel_spikes = np.argsort(spike_clusters)
     abs_spikes = spike_ids[rel_spikes]
     spike_clusters = spike_clusters[rel_spikes]
@@ -356,213 +341,3 @@ def _spikes_per_cluster(spike_ids, spike_clusters):
     spikes_in_clusters[clusters[-1]] = np.sort(abs_spikes[idx[-1]:])
 
     return spikes_in_clusters
-
-
-def _flatten_spikes_per_cluster(spikes_per_cluster):
-    """Convert a dictionary {cluster: list_of_spikes} to a
-    spike_clusters array."""
-    clusters = sorted(spikes_per_cluster)
-    clusters_arr = np.concatenate([(cluster *
-                                   np.ones(len(spikes_per_cluster[cluster])))
-                                   for cluster in clusters]).astype(np.int64)
-    spikes_arr = np.concatenate([spikes_per_cluster[cluster]
-                                 for cluster in clusters])
-    spike_clusters = np.vstack((spikes_arr, clusters_arr))
-    ind = np.argsort(spike_clusters[0, :])
-    return spike_clusters[1, ind]
-
-
-def _concatenate_per_cluster_arrays(spikes_per_cluster, arrays):
-    """Concatenate arrays from a {cluster: array} dictionary."""
-    assert set(arrays) <= set(spikes_per_cluster)
-    clusters = sorted(arrays)
-    # Check the sizes of the spikes per cluster and the arrays.
-    n_0 = [len(spikes_per_cluster[cluster]) for cluster in clusters]
-    n_1 = [len(arrays[cluster]) for cluster in clusters]
-    assert n_0 == n_1
-
-    # Concatenate all spikes to find the right insertion order.
-    if not len(clusters):
-        return np.array([])
-
-    spikes = np.concatenate([spikes_per_cluster[cluster]
-                             for cluster in clusters])
-    idx = np.argsort(spikes)
-    # NOTE: concatenate all arrays along the first axis, because we assume
-    # that the first axis represents the spikes.
-    arrays = np.concatenate([_as_array(arrays[cluster])
-                             for cluster in clusters])
-    return arrays[idx, ...]
-
-
-def _subset_spc(spc, clusters):
-    return {c: s for c, s in spc.items()
-            if c in clusters}
-
-
-class PerClusterData(object):
-    """Store data associated to every spike.
-
-    This class provides several data structures, with per-spike data and
-    per-cluster data. It also defines a `subset()` method that allows to
-    make a subset of the data using either spikes or clusters.
-
-    """
-    def __init__(self,
-                 spike_ids=None, array=None, spike_clusters=None,
-                 spc=None, arrays=None):
-        if (array is not None and spike_ids is not None):
-            # From array to per-cluster arrays.
-            self._spike_ids = _as_array(spike_ids)
-            self._array = _as_array(array)
-            self._spike_clusters = _as_array(spike_clusters)
-            self._check_array()
-            self._split()
-            self._check_dict()
-        elif (arrays is not None and spc is not None):
-            # From per-cluster arrays to array.
-            self._spc = spc
-            self._arrays = arrays
-            self._check_dict()
-            self._concatenate()
-            self._check_array()
-        else:
-            raise ValueError()
-
-    @property
-    def spike_ids(self):
-        """Sorted array of all spike ids."""
-        return self._spike_ids
-
-    @property
-    def spike_clusters(self):
-        """Array with the cluster id of every spike."""
-        return self._spike_clusters
-
-    @property
-    def array(self):
-        """Data array.
-
-        The first dimension of the array corresponds to the spikes in the
-        cluster.
-
-        """
-        return self._array
-
-    @property
-    def arrays(self):
-        """Dictionary of arrays `{cluster: array}`.
-
-        The first dimension of the arrays correspond to the spikes in the
-        cluster.
-
-        """
-        return self._arrays
-
-    @property
-    def spc(self):
-        """Spikes per cluster dictionary."""
-        return self._spc
-
-    @property
-    def cluster_ids(self):
-        """Sorted list of clusters."""
-        return self._cluster_ids
-
-    @property
-    def n_clusters(self):
-        return len(self._cluster_ids)
-
-    def _check_dict(self):
-        assert set(self._arrays) == set(self._spc)
-        clusters = sorted(self._arrays)
-        n_0 = [len(self._spc[cluster]) for cluster in clusters]
-        n_1 = [len(self._arrays[cluster]) for cluster in clusters]
-        assert n_0 == n_1
-
-    def _check_array(self):
-        assert len(self._array) == len(self._spike_ids)
-        assert len(self._spike_clusters) == len(self._spike_ids)
-
-    def _concatenate(self):
-        self._cluster_ids = sorted(self._spc)
-        n = len(self.cluster_ids)
-        if n == 0:
-            self._array = np.array([])
-            self._spike_clusters = np.array([], dtype=np.int32)
-            self._spike_ids = np.array([], dtype=np.int64)
-        elif n == 1:
-            c = self.cluster_ids[0]
-            self._array = _as_array(self._arrays[c])
-            self._spike_ids = self._spc[c]
-            self._spike_clusters = c * np.ones(len(self._spike_ids),
-                                               dtype=np.int32)
-        else:
-            # Concatenate all spikes to find the right insertion order.
-            spikes = np.concatenate([self._spc[cluster]
-                                     for cluster in self.cluster_ids])
-            idx = np.argsort(spikes)
-            self._spike_ids = np.sort(spikes)
-            # NOTE: concatenate all arrays along the first axis, because we
-            # assume that the first axis represents the spikes.
-            # TODO OPTIM: use ConcatenatedArray and implement custom indices.
-            # array = ConcatenatedArrays([_as_array(self._arrays[cluster])
-            #                             for cluster in self.cluster_ids])
-            array = np.concatenate([_as_array(self._arrays[cluster])
-                                    for cluster in self.cluster_ids])
-            self._array = array[idx]
-            self._spike_clusters = _flatten_spikes_per_cluster(self._spc)
-
-    def _split(self):
-        self._spc = _spikes_per_cluster(self._spike_ids,
-                                        self._spike_clusters)
-        self._cluster_ids = sorted(self._spc)
-        n = len(self.cluster_ids)
-        # Optimization for single cluster.
-        if n == 0:
-            self._arrays = {}
-        elif n == 1:
-            c = self._cluster_ids[0]
-            self._arrays = {c: self._array}
-        else:
-            self._arrays = {}
-            for cluster in sorted(self._cluster_ids):
-                spk = _as_array(self._spc[cluster])
-                spk_rel = _index_of(spk, self._spike_ids)
-                self._arrays[cluster] = self._array[spk_rel]
-
-    def subset(self, spike_ids=None, clusters=None, spc=None):
-        """Return a new PerClusterData instance with a subset of the data.
-
-        There are three ways to specify the subset:
-
-        * With a list of spikes
-        * With a list of clusters
-        * With a dictionary of `{cluster: some_spikes}`
-
-        """
-        if spike_ids is not None:
-            if np.array_equal(spike_ids, self._spike_ids):
-                return self
-            assert np.all(np.in1d(spike_ids, self._spike_ids))
-            spike_ids_s_rel = _index_of(spike_ids, self._spike_ids)
-            array_s = self._array[spike_ids_s_rel]
-            spike_clusters_s = self._spike_clusters[spike_ids_s_rel]
-            return PerClusterData(spike_ids=spike_ids,
-                                  array=array_s,
-                                  spike_clusters=spike_clusters_s,
-                                  )
-        elif clusters is not None:
-            assert set(clusters) <= set(self._cluster_ids)
-            spc_s = {clu: self._spc[clu] for clu in clusters}
-            arrays_s = {clu: self._arrays[clu] for clu in clusters}
-            return PerClusterData(spc=spc_s, arrays=arrays_s)
-        elif spc is not None:
-            clusters = sorted(spc)
-            assert set(clusters) <= set(self._cluster_ids)
-            arrays_s = {}
-            for cluster in clusters:
-                spk_rel = _index_of(_as_array(spc[cluster]),
-                                    _as_array(self._spc[cluster]))
-                arrays_s[cluster] = _as_array(self._arrays[cluster])[spk_rel]
-            return PerClusterData(spc=spc, arrays=arrays_s)

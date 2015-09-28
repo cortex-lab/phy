@@ -12,9 +12,7 @@ from pytest import raises
 from six import itervalues
 
 from ....io.mock import artificial_spike_clusters
-from ....utils.array import (_spikes_in_clusters,
-                             _flatten_spikes_per_cluster,
-                             )
+from ....utils.array import (_spikes_in_clusters,)
 from ..clustering import (_extend_spikes,
                           _concatenate_spike_clusters,
                           _extend_assignment,
@@ -102,6 +100,20 @@ def test_extend_assignment():
 #------------------------------------------------------------------------------
 # Test clustering
 #------------------------------------------------------------------------------
+
+def _flatten_spikes_per_cluster(spikes_per_cluster):
+    """Convert a dictionary {cluster: list_of_spikes} to a
+    spike_clusters array."""
+    clusters = sorted(spikes_per_cluster)
+    clusters_arr = np.concatenate([(cluster *
+                                   np.ones(len(spikes_per_cluster[cluster])))
+                                   for cluster in clusters]).astype(np.int64)
+    spikes_arr = np.concatenate([spikes_per_cluster[cluster]
+                                 for cluster in clusters])
+    spike_clusters = np.vstack((spikes_arr, clusters_arr))
+    ind = np.argsort(spike_clusters[0, :])
+    return spike_clusters[1, ind]
+
 
 def _check_spikes_per_cluster(clustering):
     ae(_flatten_spikes_per_cluster(clustering.spikes_per_cluster),
