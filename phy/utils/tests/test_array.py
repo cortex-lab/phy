@@ -18,6 +18,8 @@ from ..array import (_unique,
                      _in_polygon,
                      _spikes_in_clusters,
                      _spikes_per_cluster,
+                     _flatten_per_cluster,
+                     select_spikes,
                      chunk_bounds,
                      regular_subset,
                      excerpts,
@@ -319,3 +321,19 @@ def test_spikes_per_cluster():
     for i in range(10):
         ae(spikes_per_cluster[i], np.sort(spikes_per_cluster[i]))
         assert np.all(spike_clusters[spikes_per_cluster[i]] == i)
+
+
+def test_flatten_per_cluster():
+    spc = {2: [2, 7, 11], 3: [3, 5], 5: []}
+    arr = _flatten_per_cluster(spc)
+    ae(arr, [2, 3, 5, 7, 11])
+
+
+def test_select_spikes():
+    with raises(AssertionError):
+        select_spikes()
+    spikes = [2, 3, 5, 7, 11]
+    sc = [2, 3, 3, 2, 2]
+    spc = {2: [2, 7, 11], 3: [3, 5], 5: []}
+    ae(select_spikes([], spikes_per_cluster=spc), [])
+    ae(select_spikes([2, 3, 5], spikes_per_cluster=spc), spikes)
