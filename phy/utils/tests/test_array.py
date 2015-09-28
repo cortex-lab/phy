@@ -121,8 +121,8 @@ def test_unique():
     """Test _unique() function"""
     _unique([])
 
-    n_spikes = 1000
-    n_clusters = 10
+    n_spikes = 300
+    n_clusters = 3
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     ae(_unique(spike_clusters), np.arange(n_clusters))
 
@@ -292,6 +292,11 @@ def test_regular_subset():
 # Test chunked array
 #------------------------------------------------------------------------------
 
+def test_chunked_array_simple():
+    arr = ChunkedArray([[2, 3, 5]], sizes=(3,))
+    assert arr.chunks == ((3,),)
+
+
 def test_chunked_array_dask():
     from dask.array import from_array
     arr = np.arange(10)
@@ -311,8 +316,8 @@ def test_chunked_array_dask():
 def test_spikes_in_clusters():
     """Test _spikes_in_clusters()."""
 
-    n_spikes = 1000
-    n_clusters = 10
+    n_spikes = 100
+    n_clusters = 5
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
     ae(_spikes_in_clusters(spike_clusters, []), [])
@@ -321,7 +326,7 @@ def test_spikes_in_clusters():
         assert np.all(spike_clusters[_spikes_in_clusters(spike_clusters,
                                                          [i])] == i)
 
-    clusters = [1, 5, 9]
+    clusters = [1, 2, 3]
     assert np.all(np.in1d(spike_clusters[_spikes_in_clusters(spike_clusters,
                                                              clusters)],
                           clusters))
@@ -330,14 +335,14 @@ def test_spikes_in_clusters():
 def test_spikes_per_cluster():
     """Test _spikes_per_cluster()."""
 
-    n_spikes = 1000
-    n_clusters = 10
+    n_spikes = 100
+    n_clusters = 3
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
     spikes_per_cluster = _spikes_per_cluster(spike_clusters)
     assert list(spikes_per_cluster.keys()) == list(range(n_clusters))
 
-    for i in range(10):
+    for i in range(n_clusters):
         ae(spikes_per_cluster[i], np.sort(spikes_per_cluster[i]))
         assert np.all(spike_clusters[spikes_per_cluster[i]] == i)
 
