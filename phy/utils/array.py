@@ -299,12 +299,33 @@ def get_excerpts(data, n_excerpts=None, excerpt_size=None):
 # -----------------------------------------------------------------------------
 
 class ChunkedArray(object):
-    def __init__(self, getters=None):
+    def __init__(self, getters=None, sizes=None, dtype=None, shape=None):
         self._getters = getters
+        self._sizes = sizes
+        self._dtype = dtype
+        self._shape = shape
 
     @property
     def getters(self):
         return self._getters
+
+    @property
+    def dtype(self):
+        return self._dtype
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @property
+    def chunks(self):
+        assert self._sizes is not None
+        return (self._sizes,)
+
+    def rechunk(self):
+        da = to_dask_array(self)
+        rechunked = da.rechunk()
+        return from_dask_array(rechunked)
 
     def __repr__(self):
         return '<ChunkedArray {}>'.format(self._getters)
@@ -313,13 +334,14 @@ class ChunkedArray(object):
 def from_dask_array(da):
     from dask.core import flatten
     getters = [da.dask[k] for k in flatten(da._keys())]
-    return ChunkedArray(getters)
+    return ChunkedArray(getters, sizes=da.chunks[0],
+                        dtype=da.dtype, shape=da.shape)
 
 
-def to_dask_array(ca, chunks, dtype=None, shape=None):
+def to_dask_array(ca):
     from dask.array import Array
     dask = {(i, 0): ca.getters[i] for i in range(len(ca.getters))}
-    return Array(dask, 'arr', chunks, dtype=dtype, shape=shape)
+    return Array(dask, 'arr', ca.chunks, dtype=ca.dtype, shape=ca.shape)
 
 
 # -----------------------------------------------------------------------------

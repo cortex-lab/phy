@@ -298,7 +298,7 @@ def test_chunked_array():
     chunks = ((2, 3, 5),)
     da = from_array(arr, chunks)
     ca = from_dask_array(da)
-    da_bis = to_dask_array(ca, chunks)
+    da_bis = to_dask_array(ca)
     assert da.chunks == da_bis.chunks
 
 
