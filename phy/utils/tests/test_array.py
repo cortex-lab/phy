@@ -25,9 +25,6 @@ from ..array import (_unique,
                      excerpts,
                      data_chunk,
                      get_excerpts,
-                     ChunkedArray,
-                     from_dask_array,
-                     to_dask_array,
                      _range_from_slice,
                      _pad,
                      _load_arrays,
@@ -286,27 +283,6 @@ def test_regular_subset():
     ae(regular_subset(spikes, 100, offset=2), spikes)
     ae(regular_subset(spikes, 3), [2, 7, 17])
     ae(regular_subset(spikes, 3, offset=1), [3, 11])
-
-
-#------------------------------------------------------------------------------
-# Test chunked array
-#------------------------------------------------------------------------------
-
-def test_chunked_array_simple():
-    arr = ChunkedArray([[2, 3, 5]], sizes=(3,))
-    assert arr.chunks == ((3,),)
-
-
-def test_chunked_array_dask():
-    from dask.array import from_array
-    arr = np.arange(10)
-    chunks = ((2, 3, 5),)
-    da = from_array(arr, chunks)
-    ca = from_dask_array(da)
-    da_bis = to_dask_array(ca)
-    assert da.chunks == da_bis.chunks
-    assert da.dtype == da_bis.dtype
-    assert da.shape == da_bis.shape
 
 
 #------------------------------------------------------------------------------
