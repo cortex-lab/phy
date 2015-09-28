@@ -42,16 +42,12 @@ def test_probe():
     assert _probe_adjacency_list(probe) == adjacency
 
     mea = MEA(probe=probe)
-    assert mea.positions is None
-    assert mea.channels is None
-    assert mea.n_channels == 0
+
     assert mea.adjacency == adjacency
     assert mea.channels_per_group == {0: [0, 3, 1], 1: [7]}
-
-    mea.change_channel_group(0)
-    ae(mea.positions, [(10, 10), (20, 30), (10, 20)])
     assert mea.channels == [0, 3, 1]
     assert mea.n_channels == 3
+    ae(mea.positions, [(10, 10), (20, 30), (10, 20)])
 
 
 def test_mea():
@@ -87,12 +83,11 @@ def test_positions():
 
 
 def test_library(tempdir):
+    assert '1x32_buzsaki' in list_probes()
+
     probe = load_probe('1x32_buzsaki')
     assert probe
-    assert probe['channel_groups'][0]['channels'] == list(range(32))
-    assert _probe_all_channels(probe) == list(range(32))
-
-    assert '1x32_buzsaki' in list_probes()
+    assert probe.channels == list(range(32))
 
     path = op.join(tempdir, 'test.prb')
     with raises(IOError):
@@ -100,4 +95,5 @@ def test_library(tempdir):
 
     with open(path, 'w') as f:
         f.write('')
-    load_probe(path)
+    with raises(KeyError):
+        load_probe(path)

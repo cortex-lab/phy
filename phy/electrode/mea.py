@@ -87,7 +87,7 @@ def load_probe(name):
         path = op.join(curdir, 'probes/{}.prb'.format(name))
     if not op.exists(path):
         raise IOError("The probe `{}` cannot be found.".format(name))
-    return _read_python(path)
+    return MEA(probe=_read_python(path))
 
 
 def list_probes():
@@ -127,6 +127,10 @@ class MEA(object):
             adjacency = _probe_adjacency_list(probe)
             self.channels_per_group = _channels_per_group(probe)
         self._adjacency = adjacency
+        if probe:
+            # Select the first channel group.
+            cg = sorted(self._probe['channel_groups'].keys())[0]
+            self.change_channel_group(cg)
 
     def _check_positions(self, positions):
         if positions is None:
