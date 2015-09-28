@@ -362,6 +362,8 @@ def select_spikes(cluster_ids=None,
         selection = {}
         n_clusters = len(cluster_ids)
         for cluster in cluster_ids:
+            # Decrease the number of spikes per cluster when there
+            # are more clusters.
             n = max_n_spikes_per_cluster * exp(-.1 * (n_clusters - 1))
             n = int(np.clip(n, 1, n_clusters))
             spikes = spikes_per_cluster[cluster]
