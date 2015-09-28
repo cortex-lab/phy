@@ -295,6 +295,34 @@ def get_excerpts(data, n_excerpts=None, excerpt_size=None):
 
 
 # -----------------------------------------------------------------------------
+# Chunked array
+# -----------------------------------------------------------------------------
+
+class ChunkedArray(object):
+    def __init__(self, getters=None):
+        self._getters = getters
+
+    @property
+    def getters(self):
+        return self._getters
+
+    def __repr__(self):
+        return '<ChunkedArray {}>'.format(self._getters)
+
+
+def from_dask_array(da):
+    from dask.core import flatten
+    getters = [da.dask[k] for k in flatten(da._keys())]
+    return ChunkedArray(getters)
+
+
+def to_dask_array(ca, chunks, dtype=None, shape=None):
+    from dask.array import Array
+    dask = {(i, 0): ca.getters[i] for i in range(len(ca.getters))}
+    return Array(dask, 'arr', chunks, dtype=dtype, shape=shape)
+
+
+# -----------------------------------------------------------------------------
 # Spike clusters utility functions
 # -----------------------------------------------------------------------------
 
