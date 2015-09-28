@@ -8,12 +8,12 @@
 
 import logging
 import math
-from math import floor
+from math import floor, exp
 import os.path as op
 
 import numpy as np
 
-from ._types import _as_array
+from ._types import _as_array, _is_array_like
 
 logger = logging.getLogger(__name__)
 
@@ -294,22 +294,6 @@ def get_excerpts(data, n_excerpts=None, excerpt_size=None):
     return out
 
 
-def regular_subset(spikes=None, n_spikes_max=None, offset=0):
-    """Prune the current selection to get at most n_spikes_max spikes."""
-    assert spikes is not None
-    # Nothing to do if the selection already satisfies n_spikes_max.
-    if n_spikes_max is None or len(spikes) <= n_spikes_max:  # pragma: no cover
-        return spikes
-    step = math.ceil(np.clip(1. / n_spikes_max * len(spikes),
-                             1, len(spikes)))
-    step = int(step)
-    # Note: randomly-changing selections are confusing...
-    my_spikes = spikes[offset::step][:n_spikes_max]
-    assert len(my_spikes) <= len(spikes)
-    assert len(my_spikes) <= n_spikes_max
-    return my_spikes
-
-
 # -----------------------------------------------------------------------------
 # Spike clusters utility functions
 # -----------------------------------------------------------------------------
@@ -324,7 +308,7 @@ def _spikes_in_clusters(spike_clusters, clusters):
 def _spikes_per_cluster(spike_clusters, spike_ids=None):
     """Return a dictionary {cluster: list_of_spikes}."""
     if spike_ids is None:
-        spike_ids = np.arange(len(spike_clusters))
+        spike_ids = np.arange(len(spike_clusters)).astype(np.int64)
     rel_spikes = np.argsort(spike_clusters)
     abs_spikes = spike_ids[rel_spikes]
     spike_clusters = spike_clusters[rel_spikes]
@@ -341,3 +325,45 @@ def _spikes_per_cluster(spike_clusters, spike_ids=None):
     spikes_in_clusters[clusters[-1]] = np.sort(abs_spikes[idx[-1]:])
 
     return spikes_in_clusters
+
+
+def _flatten_per_cluster(per_cluster):
+    """Convert a dictionary {cluster: spikes} to a spikes array."""
+    return np.sort(np.concatenate(list(per_cluster.values()))).astype(np.int64)
+
+
+def regular_subset(spikes, n_spikes_max=None, offset=0):
+    """Prune the current selection to get at most n_spikes_max spikes."""
+    assert spikes is not None
+    # Nothing to do if the selection already satisfies n_spikes_max.
+    if n_spikes_max is None or len(spikes) <= n_spikes_max:  # pragma: no cover
+        return spikes
+    step = math.ceil(np.clip(1. / n_spikes_max * len(spikes),
+                             1, len(spikes)))
+    step = int(step)
+    # Note: randomly-changing selections are confusing...
+    my_spikes = spikes[offset::step][:n_spikes_max]
+    assert len(my_spikes) <= len(spikes)
+    assert len(my_spikes) <= n_spikes_max
+    return my_spikes
+
+
+def select_spikes(cluster_ids=None,
+                  max_n_spikes_per_cluster=None,
+                  spikes_per_cluster=None):
+    """Return a selection of spikes belonging to the specified clusters."""
+    assert _is_array_like(cluster_ids)
+    if not len(cluster_ids):
+        return np.array([], dtype=np.int64)
+    if max_n_spikes_per_cluster in (None, 0):
+        selection = {c: spikes_per_cluster[c] for c in cluster_ids}
+    else:
+        assert max_n_spikes_per_cluster > 0
+        selection = {}
+        n_clusters = len(cluster_ids)
+        for cluster in cluster_ids:
+            n = max_n_spikes_per_cluster * exp(-.1 * (n_clusters - 1))
+            n = int(np.clip(n, 1, n_clusters))
+            spikes = spikes_per_cluster[cluster]
+            selection[cluster] = regular_subset(spikes, n_spikes_max=n)
+    return _flatten_per_cluster(selection)
