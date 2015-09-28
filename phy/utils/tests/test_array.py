@@ -292,7 +292,7 @@ def test_regular_subset():
 # Test chunked array
 #------------------------------------------------------------------------------
 
-def test_chunked_array():
+def test_chunked_array_dask():
     from dask.array import from_array
     arr = np.arange(10)
     chunks = ((2, 3, 5),)
@@ -300,6 +300,8 @@ def test_chunked_array():
     ca = from_dask_array(da)
     da_bis = to_dask_array(ca)
     assert da.chunks == da_bis.chunks
+    assert da.dtype == da_bis.dtype
+    assert da.shape == da_bis.shape
 
 
 #------------------------------------------------------------------------------
