@@ -228,8 +228,8 @@ class Clustering(EventEmitter):
     #--------------------------------------------------------------------------
 
     def _update_all_spikes_per_cluster(self):
-        self._spikes_per_cluster = _spikes_per_cluster(self._spike_ids,
-                                                       self._spike_clusters)
+        self._spikes_per_cluster = _spikes_per_cluster(self._spike_clusters,
+                                                       self._spike_ids)
 
     def _do_assign(self, spike_ids, new_spike_clusters):
         """Make spike-cluster assignments after the spike selection has
@@ -258,8 +258,8 @@ class Clustering(EventEmitter):
 
         old_spikes_per_cluster = {cluster: self._spikes_per_cluster[cluster]
                                   for cluster in old_clusters}
-        new_spikes_per_cluster = _spikes_per_cluster(spike_ids,
-                                                     new_spike_clusters)
+        new_spikes_per_cluster = _spikes_per_cluster(new_spike_clusters,
+                                                     spike_ids)
         self._spikes_per_cluster.update(new_spikes_per_cluster)
         # All old clusters are deleted.
         for cluster in old_clusters:
