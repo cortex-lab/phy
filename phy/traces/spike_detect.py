@@ -60,6 +60,7 @@ class SpikeDetector(Configurable):
         if channel_mapping is None:
             channel_mapping = {c: c for c in probe.channels}
         self.channel_mapping = channel_mapping
+        self.adjacency = self.probe.adjacency
 
         # Array of channel idx to consider.
         self.channels = sorted(channel_mapping.keys())
@@ -112,7 +113,7 @@ class SpikeDetector(Configurable):
 
         # Run the detection.
         join_size = self.connected_component_join_size
-        detector = FloodFillDetector(probe_adjacency_list=self.probe.adjacency,
+        detector = FloodFillDetector(probe_adjacency_list=self.adjacency,
                                      join_size=join_size)
         return detector(weak_crossings=weak,
                         strong_crossings=strong)
@@ -137,14 +138,21 @@ class SpikeDetector(Configurable):
 
     def detect(self, traces):
         assert traces.ndim == 2
-        assert traces.shape[1] == self.n_channels
 
         # Only keep the selected channels (given shank, no dead channels, etc.)
         traces = self._select_channels(traces)
+        assert traces.shape[1] == self.n_channels
+
+        # Find the thresholds.
         self._thresholds = self.find_thresholds(traces)
 
+        # Apply the filter.
         filtered = self.filter(traces)
+
+        # Extract the spike components.
         components = self.extract_components(filtered)
+
+        # Extract the spikes, masks, waveforms.
         spike_samples, masks, waveforms = self.extract_spikes(filtered,
                                                               components)
         return spike_samples, masks
