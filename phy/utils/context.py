@@ -38,7 +38,7 @@ def write_array(path, arr):
 #------------------------------------------------------------------------------
 
 class Context(object):
-    def __init__(self, cache_dir, ipy_client=None):
+    def __init__(self, cache_dir, ipy_view=None):
         self.cache_dir = op.realpath(cache_dir)
         if not op.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
@@ -50,7 +50,15 @@ class Context(object):
             logger.warn("Joblib is not installed. "
                         "Install it with `conda install joblib`.")
             self._memory = None
-        self._ipy_client = ipy_client
+        self._ipy_view = ipy_view
+
+    @property
+    def ipy_view(self):
+        return self._ipy_view
+
+    @ipy_view.setter
+    def ipy_view(self, value):
+        self._ipy_view = value
 
     def _path(self, rel_path, *args, **kwargs):
         return op.join(self.cache_dir, rel_path.format(*args, **kwargs))
@@ -103,14 +111,11 @@ class Context(object):
         dask = {(name, i): chunk for i, chunk in enumerate(mapped)}
         return Array(dask, name, chunks, dtype=dtype, shape=shape)
 
-    def _map_serial(self, f, args):
-        return [f(arg) for arg in args]
-
-    def _map_ipy(self, f, args):
-        return self._ipy_client.map(f, args)
-
-    def map(self, f, args):
-        if self._ipy_client:
-            return self._map_ipy(f, args)
+    def map(self, f, args, sync=True):
+        if self._ipy_view:
+            if sync:
+                return self._ipy_view.map_sync(f, args)
+            else:
+                return self._ipy_view.map_async(f, args)
         else:
-            return self._map_serial(f, args)
+            return [f(arg) for arg in args]

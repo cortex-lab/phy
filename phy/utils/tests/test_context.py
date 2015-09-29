@@ -25,6 +25,38 @@ def context(tempdir):
     yield ctx
 
 
+@yield_fixture(scope='module')
+def ipy_client():
+
+    def iptest_stdstreams_fileno():
+        return os.open(os.devnull, os.O_WRONLY)
+
+    # OMG-THIS-IS-UGLY-HACK: monkey-patch this global object to avoid
+    # using the nose iptest extension (we're using pytest).
+    # See https://github.com/ipython/ipython/blob/master/IPython/testing/iptest.py#L317-L319  # noqa
+    from ipyparallel import Client
+    import ipyparallel.tests
+    ipyparallel.tests.nose.iptest_stdstreams_fileno = iptest_stdstreams_fileno
+
+    # Start two engines engine (one is launched by setup()).
+    ipyparallel.tests.setup()
+    ipyparallel.tests.add_engines(1)
+    yield Client(profile='iptest')
+    ipyparallel.tests.teardown()
+
+
+#------------------------------------------------------------------------------
+# ipyparallel tests
+#------------------------------------------------------------------------------
+
+def test_client_1(ipy_client):
+    assert ipy_client.ids == [0, 1]
+
+
+def test_client_2(ipy_client):
+    assert ipy_client[:].map_sync(lambda x: x * x, [1, 2, 3]) == [1, 4, 9]
+
+
 #------------------------------------------------------------------------------
 # Test context
 #------------------------------------------------------------------------------
@@ -57,33 +89,13 @@ def test_context_dask(context):
     ae(res.compute(), x ** 2)
 
 
-#------------------------------------------------------------------------------
-# ipyparallel tests
-#------------------------------------------------------------------------------
+def test_context_parallel_map(context, ipy_client):
+    view = ipy_client[:]
+    context.ipy_view = view
+    assert context.ipy_view == view
 
-@yield_fixture(scope='module')
-def ipy_client():
+    def square(x):
+        return x * x
 
-    def iptest_stdstreams_fileno():
-        return os.open(os.devnull, os.O_WRONLY)
-
-    # OMG-THIS-IS-UGLY-HACK: monkey-patch this global object to avoid
-    # using the nose iptest extension (we're using pytest).
-    # See https://github.com/ipython/ipython/blob/master/IPython/testing/iptest.py#L317-L319  # noqa
-    from ipyparallel import Client
-    import ipyparallel.tests
-    ipyparallel.tests.nose.iptest_stdstreams_fileno = iptest_stdstreams_fileno
-
-    # Start two engines engine (one is launched by setup()).
-    ipyparallel.tests.setup()
-    ipyparallel.tests.add_engines(1)
-    yield Client(profile='iptest')
-    ipyparallel.tests.teardown()
-
-
-def test_client_1(ipy_client):
-    assert ipy_client.ids == [0, 1]
-
-
-def test_client_2(ipy_client):
-    assert ipy_client[:].map_sync(lambda x: x * x, [1, 2, 3]) == [1, 4, 9]
+    assert context.map(square, [1, 2, 3]) == [1, 4, 9]
+    assert context.map(square, [1, 2, 3], sync=False).get() == [1, 4, 9]
