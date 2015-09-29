@@ -26,6 +26,7 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 class SpikeDetector(Configurable):
+    do_filter = Bool(True)
     filter_low = Float(500.)
     filter_butter_order = Int(3)
     chunk_size_seconds = Float(1)
@@ -107,10 +108,12 @@ class SpikeDetector(Configurable):
                                        std_factor=std_factor)
 
         thresholds = {'weak': thresholds[0], 'strong': thresholds[1]}
-        logger.info("Thresholds found: {}.".format(thresholds))
+        # logger.info("Thresholds found: {}.".format(thresholds))
         return thresholds
 
     def filter(self, traces):
+        if not self.do_filter:  # pragma: no cover
+            return traces
         f = Filter(rate=self.sample_rate,
                    low=self.filter_low,
                    high=0.95 * .5 * self.sample_rate,
