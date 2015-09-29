@@ -48,31 +48,15 @@ class WaveformExtractor(object):
                  extract_after=None,
                  weight_power=None,
                  thresholds=None,
-                 channels_per_group=None,
                  ):
         self._extract_before = extract_before
         self._extract_after = extract_after
         self._weight_power = weight_power if weight_power is not None else 1.
         self._thresholds = thresholds or {}
-        self._channels_per_group = channels_per_group
-        # mapping channel => channels in the shank
-        self._dep_channels = {i: channels
-                              for channels in channels_per_group.values()
-                              for i in channels}
-        self._channel_groups = {i: g
-                                for g, channels in channels_per_group.items()
-                                for i in channels}
 
     def _component(self, component, data=None, n_samples=None):
         comp_s = component[:, 0]  # shape: (component_size,)
         comp_ch = component[:, 1]  # shape: (component_size,)
-        channel = comp_ch[0]
-        if channel not in self._dep_channels:  # pragma: no cover
-            raise RuntimeError("Channel `{}` appears to be dead and should "
-                               "have been excluded from the threshold "
-                               "crossings.".format(channel))
-        channels = self._dep_channels[channel]
-        group = self._channel_groups[comp_ch[0]]
 
         # Get the temporal window around the waveform.
         s_min, s_max = (comp_s.min() - 3), (comp_s.max() + 4)
@@ -84,8 +68,6 @@ class WaveformExtractor(object):
                      comp_ch=comp_ch,
                      s_min=s_min,
                      s_max=s_max,
-                     channels=channels,
-                     group=group,
                      )
 
     def _normalize(self, x):
@@ -106,7 +88,6 @@ class WaveformExtractor(object):
 
     def masks(self, data_t, wave, comp):
         nc = data_t.shape[1]
-        channels = comp.channels
         comp_ch = comp.comp_ch
         s_min = comp.s_min
 
@@ -122,7 +103,6 @@ class WaveformExtractor(object):
         # Compute the float masks.
         masks_float = self._normalize(peaks_values)
         # Keep shank channels.
-        masks_float = masks_float[channels]
         return masks_float
 
     def spike_sample_aligned(self, wave, comp):
@@ -135,13 +115,13 @@ class WaveformExtractor(object):
         s_aligned = np.sum(wave_n_p * u) / np.sum(wave_n_p) + s_min
         return s_aligned
 
-    def extract(self, data, s_aligned, channels=None):
+    def extract(self, data, s_aligned):
         s = int(s_aligned)
         # Get block of given size around peak sample.
         waveform = _get_padded(data,
                                s - self._extract_before - 1,
                                s + self._extract_after + 2)
-        return waveform[:, channels]  # Keep shank channels.
+        return waveform
 
     def align(self, waveform, s_aligned):
         s = int(s_aligned)
@@ -166,20 +146,19 @@ class WaveformExtractor(object):
                                data=data,
                                n_samples=data_t.shape[0],
                                )
-        channels = comp.channels
 
         wave = self._comp_wave(data_t, comp)
         masks = self.masks(data_t, wave, comp)
         s_aligned = self.spike_sample_aligned(wave, comp)
 
-        waveform_unaligned = self.extract(data, s_aligned, channels=channels)
+        waveform_unaligned = self.extract(data, s_aligned)
         waveform_aligned = self.align(waveform_unaligned, s_aligned)
 
         assert waveform_aligned.ndim == 2
         assert masks.ndim == 1
         assert waveform_aligned.shape[1] == masks.shape[0]
 
-        return comp.group, s_aligned, waveform_aligned, masks
+        return s_aligned, waveform_aligned, masks
 
 
 #------------------------------------------------------------------------------

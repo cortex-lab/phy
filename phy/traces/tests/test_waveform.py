@@ -27,9 +27,6 @@ def test_extract_simple():
     strong = 2.
     nc = 4
     ns = 20
-    channels = list(range(nc))
-    cpg = {0: channels}
-    # graph = {0: [1, 2], 1: [0, 2], 2: [0, 1], 3: []}
 
     data = np.random.uniform(size=(ns, nc), low=0., high=1.)
 
@@ -51,7 +48,6 @@ def test_extract_simple():
 
     we = WaveformExtractor(extract_before=3,
                            extract_after=5,
-                           channels_per_group=cpg,
                            )
     we.set_thresholds(weak=weak, strong=strong)
 
@@ -60,7 +56,6 @@ def test_extract_simple():
     ae(comp.comp_s, [10, 10, 11, 11, 12, 12])
     ae(comp.comp_ch, [0, 1, 0, 1, 0, 1])
     assert (comp.s_min, comp.s_max) == (10 - 3, 12 + 4)
-    ae(comp.channels, range(nc))
 
     # _normalize()
     assert we._normalize(weak) == 0
@@ -83,7 +78,7 @@ def test_extract_simple():
     assert 11 <= s < 12
 
     # extract()
-    wave_e = we.extract(data, s, channels=channels)
+    wave_e = we.extract(data, s)
     assert wave_e.shape[1] == wave.shape[1]
     ae(wave[3:6, :2], wave_e[3:6, :2])
 
@@ -92,9 +87,8 @@ def test_extract_simple():
     assert wave_a.shape == (3 + 5, nc)
 
     # Test final call.
-    groups, s_f, wave_f, masks_f = we(component, data=data, data_t=data)
+    s_f, wave_f, masks_f = we(component, data=data, data_t=data)
     assert s_f == s
-    assert np.all(groups == 0)
     ae(masks_f, masks)
     ae(wave_f, wave_a)
 
@@ -103,13 +97,11 @@ def test_extract_simple():
                            extract_after=5,
                            thresholds={'weak': weak,
                                        'strong': strong},
-                           channels_per_group={0: [1, 0, 3]},
                            )
-    groups, s_f_o, wave_f_o, masks_f_o = we(component, data=data, data_t=data)
-    assert np.all(groups == 0)
+    s_f_o, wave_f_o, masks_f_o = we(component, data=data, data_t=data)
     assert s_f == s_f_o
-    assert np.allclose(wave_f[:, [1, 0, 3]], wave_f_o)
-    ae(masks_f_o, [1., 0.5, 0.])
+    assert np.allclose(wave_f, wave_f_o)
+    ae(masks_f_o, [0.5, 1., 0., 0.])
 
 
 def test_get_padded():
