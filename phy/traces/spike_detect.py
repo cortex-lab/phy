@@ -12,7 +12,7 @@ import numpy as np
 from traitlets.config.configurable import Configurable
 from traitlets import Int, Float, Unicode, Bool
 
-from phy.electrode import MEA
+from phy.electrode.mea import MEA, _adjacency_subset, _remap_adjacency
 from phy.utils.array import get_excerpts
 from .detect import FloodFillDetector, Thresholder, compute_threshold
 from .filter import Filter
@@ -57,18 +57,34 @@ class SpikeDetector(Configurable):
         assert sample_rate > 0
         self.sample_rate = sample_rate
 
+        # Channel mapping.
         if channel_mapping is None:
             channel_mapping = {c: c for c in probe.channels}
-        self.channel_mapping = channel_mapping
-        self.adjacency = self.probe.adjacency
+        # channel mappings is {trace_col: channel_id}.
+        # Trace columns and channel ids to keep.
+        self.trace_cols = sorted(channel_mapping.keys())
+        self.channel_ids = sorted(channel_mapping.values())
+        # The key is the col in traces, the val is the channel id.
+        adj = self.probe.adjacency  # Numbers are all channel ids.
+        # First, we subset the adjacency list with the kept channel ids.
+        adj = _adjacency_subset(adj, self.channel_ids)
+        # Then, we remap to convert from channel ids to trace columns.
+        # We need to inverse the mapping.
+        channel_mapping_inv = {v: c for (c, v) in channel_mapping.items()}
+        # Now, the adjacency list contains trace column numbers.
+        adj = _remap_adjacency(adj, channel_mapping_inv)
+        assert set(adj) <= set(self.trace_cols)
+        # Finally, we need to remap with relative column indices.
+        rel_mapping = {c: i for (i, c) in enumerate(self.trace_cols)}
+        adj = _remap_adjacency(adj, rel_mapping)
+        self._adjacency = adj
 
         # Array of channel idx to consider.
-        self.channels = sorted(channel_mapping.keys())
-        self.n_channels = len(self.channels)
+        self.n_channels = len(self.channel_ids)
         self.n_samples_waveforms = self.extract_s_before + self.extract_s_after
 
-    def _select_channels(self, traces):
-        return traces[:, self.channels]
+    def subset_traces(self, traces):
+        return traces[:, self.trace_cols]
 
     def find_thresholds(self, traces):
         """Find weak and strong thresholds in filtered traces."""
@@ -113,7 +129,7 @@ class SpikeDetector(Configurable):
 
         # Run the detection.
         join_size = self.connected_component_join_size
-        detector = FloodFillDetector(probe_adjacency_list=self.adjacency,
+        detector = FloodFillDetector(probe_adjacency_list=self._adjacency,
                                      join_size=join_size)
         return detector(weak_crossings=weak,
                         strong_crossings=strong)
@@ -140,7 +156,7 @@ class SpikeDetector(Configurable):
         assert traces.ndim == 2
 
         # Only keep the selected channels (given shank, no dead channels, etc.)
-        traces = self._select_channels(traces)
+        traces = self.subset_traces(traces)
         assert traces.shape[1] == self.n_channels
 
         # Find the thresholds.

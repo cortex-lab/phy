@@ -28,8 +28,8 @@ def test_detect():
     n_samples, n_channels = traces.shape
     sample_rate = 20000
     probe = load_probe('1x32_buzsaki')
-    # channel_mapping = {i: i for i in range(1, 21, 2)}
-    channel_mapping = None
+    channel_mapping = {i: i for i in range(1, 21, 2)}
+    # channel_mapping = None
 
     sd = SpikeDetector()
     sd.use_single_threshold = False
@@ -39,6 +39,8 @@ def test_detect():
 
     # from vispy.app import run
     # from phy.plot import plot_traces
-    # plot_traces(traces, spike_samples=spike_samples, masks=masks,
+    # plot_traces(sd.subset_traces(traces),
+    #             spike_samples=spike_samples,
+    #             masks=masks,
     #             n_samples_per_spike=40)
     # run()
