@@ -38,6 +38,13 @@ def _edges_to_adjacency_list(edges):
     return adj
 
 
+def _remap_adjacency(adjacency, mapping):
+    remapped = {}
+    for key, vals in adjacency.items():
+        remapped[mapping[key]] = [mapping[i] for i in vals]
+    return remapped
+
+
 def _probe_positions(probe, group):
     """Return the positions of a probe channel group."""
     positions = probe['channel_groups'][group]['geometry']
@@ -52,13 +59,6 @@ def _probe_channels(probe, group):
 
     """
     return probe['channel_groups'][group]['channels']
-
-
-def _probe_all_channels(probe):
-    """Return the list of channels in the probe."""
-    cgs = probe['channel_groups'].values()
-    cg_channels = [cg['channels'] for cg in cgs]
-    return sorted(set(itertools.chain(*cg_channels)))
 
 
 def _probe_adjacency_list(probe):

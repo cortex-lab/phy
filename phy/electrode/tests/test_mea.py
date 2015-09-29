@@ -12,7 +12,7 @@ from pytest import raises
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
-from ..mea import (_probe_channels, _probe_all_channels,
+from ..mea import (_probe_channels, _remap_adjacency,
                    _probe_positions, _probe_adjacency_list,
                    MEA, linear_positions, staggered_positions,
                    load_probe, list_probes
@@ -22,6 +22,15 @@ from ..mea import (_probe_channels, _probe_all_channels,
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
+
+def test_remap():
+    adjacency = {1: [2, 3, 7], 3: [5, 11]}
+    mapping = {1: 3, 2: 20, 3: 30, 5: 50, 7: 70, 11: 1}
+    remapped = _remap_adjacency(adjacency, mapping)
+    assert sorted(remapped.keys()) == [3, 30]
+    assert remapped[3] == [20, 30, 70]
+    assert remapped[30] == [50, 1]
+
 
 def test_probe():
     probe = {'channel_groups': {
