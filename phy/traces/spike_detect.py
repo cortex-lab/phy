@@ -42,6 +42,7 @@ class SpikeDetector(Configurable):
     weight_power = Float(2)
 
     def __init__(self, ctx=None):
+        self._thresholds = None
         super(SpikeDetector, self).__init__()
         if not ctx or not hasattr(ctx, 'cache'):
             return
@@ -50,12 +51,15 @@ class SpikeDetector(Configurable):
         self.extract_components = ctx.cache(self.extract_components)
         self.extract_spikes = ctx.cache(self.extract_spikes)
 
-    def set_metadata(self, probe, channel_mapping=None, sample_rate=None):
+    def set_metadata(self, probe, channel_mapping=None,
+                     sample_rate=None, thresholds=None):
         assert isinstance(probe, MEA)
         self.probe = probe
 
         assert sample_rate > 0
         self.sample_rate = sample_rate
+
+        self._thresholds = thresholds
 
         # Channel mapping.
         if channel_mapping is None:
@@ -107,8 +111,6 @@ class SpikeDetector(Configurable):
 
         thresholds = {'weak': thresholds[0], 'strong': thresholds[1]}
         logger.info("Thresholds found: {}.".format(thresholds))
-        self._thresholder = Thresholder(mode=self.detect_spikes,
-                                        thresholds=thresholds)
         return thresholds
 
     def filter(self, traces):
@@ -119,7 +121,13 @@ class SpikeDetector(Configurable):
                    )
         return f(traces).astype(np.float32)
 
-    def extract_components(self, filtered):
+    def extract_spikes(self, filtered, thresholds=None):
+        if thresholds is None:
+            thresholds = self._thresholds
+        assert thresholds is not None
+        self._thresholder = Thresholder(mode=self.detect_spikes,
+                                        thresholds=thresholds)
+
         # Transform the filtered data according to the detection mode.
         traces_t = self._thresholder.transform(filtered)
 
@@ -131,12 +139,8 @@ class SpikeDetector(Configurable):
         join_size = self.connected_component_join_size
         detector = FloodFillDetector(probe_adjacency_list=self._adjacency,
                                      join_size=join_size)
-        return detector(weak_crossings=weak,
-                        strong_crossings=strong)
-
-    def extract_spikes(self, filtered, components):
-        # Transform the filtered data according to the detection mode.
-        traces_t = self._thresholder.transform(filtered)
+        components = detector(weak_crossings=weak,
+                              strong_crossings=strong)
 
         # Extract all waveforms.
         extractor = WaveformExtractor(extract_before=self.extract_s_before,
@@ -165,10 +169,7 @@ class SpikeDetector(Configurable):
         # Apply the filter.
         filtered = self.filter(traces)
 
-        # Extract the spike components.
-        components = self.extract_components(filtered)
-
         # Extract the spikes, masks, waveforms.
-        spike_samples, masks, waveforms = self.extract_spikes(filtered,
-                                                              components)
+        spike_samples, masks, waveforms = self.extract_spikes(filtered
+                                                              )
         return spike_samples, masks
