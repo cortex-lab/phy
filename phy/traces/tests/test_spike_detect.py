@@ -36,7 +36,7 @@ def test_detect():
     sd.set_metadata(probe,
                     channel_mapping=channel_mapping,
                     sample_rate=sample_rate)
-    spike_samples, masks = sd.detect(traces)
+    spike_samples, masks, _ = sd.detect(traces)
 
     # from vispy.app import run
     # from phy.plot import plot_traces

@@ -48,8 +48,8 @@ class SpikeDetector(Configurable):
             return
         self.find_thresholds = ctx.cache(self.find_thresholds)
         self.filter = ctx.cache(self.filter)
-        self.extract_components = ctx.cache(self.extract_components)
         self.extract_spikes = ctx.cache(self.extract_spikes)
+        self.detect = ctx.cache(self.detect)
 
     def set_metadata(self, probe, channel_mapping=None,
                      sample_rate=None, thresholds=None):
@@ -121,15 +121,18 @@ class SpikeDetector(Configurable):
                    )
         return f(traces).astype(np.float32)
 
-    def extract_spikes(self, filtered, thresholds=None):
+    def extract_spikes(self, traces_subset, thresholds=None):
         if thresholds is None:
             thresholds = self._thresholds
         assert thresholds is not None
         self._thresholder = Thresholder(mode=self.detect_spikes,
                                         thresholds=thresholds)
 
+        # Filter the traces.
+        traces_f = self.filter(traces_subset)
+
         # Transform the filtered data according to the detection mode.
-        traces_t = self._thresholder.transform(filtered)
+        traces_t = self._thresholder.transform(traces_f)
 
         # Compute the threshold crossings.
         weak = self._thresholder.detect(traces_t, 'weak')
@@ -149,7 +152,7 @@ class SpikeDetector(Configurable):
                                       thresholds=self._thresholds,
                                       )
 
-        s, m, w = zip(*(extractor(component, data=filtered, data_t=traces_t)
+        s, m, w = zip(*(extractor(component, data=traces_f, data_t=traces_t)
                         for component in components))
         s = np.array(s, dtype=np.int64)
         m = np.array(m, dtype=np.float32)
@@ -157,19 +160,14 @@ class SpikeDetector(Configurable):
         return s, m, w
 
     def detect(self, traces):
-        assert traces.ndim == 2
 
         # Only keep the selected channels (given shank, no dead channels, etc.)
         traces = self.subset_traces(traces)
+        assert traces.ndim == 2
         assert traces.shape[1] == self.n_channels
 
         # Find the thresholds.
         self._thresholds = self.find_thresholds(traces)
 
-        # Apply the filter.
-        filtered = self.filter(traces)
-
         # Extract the spikes, masks, waveforms.
-        spike_samples, masks, waveforms = self.extract_spikes(filtered
-                                                              )
-        return spike_samples, masks
+        return self.extract_spikes(traces)
