@@ -99,3 +99,19 @@ def test_context_parallel_map(context, ipy_client):
 
     assert context.map(square, [1, 2, 3]) == [1, 4, 9]
     assert context.map(square, [1, 2, 3], sync=False).get() == [1, 4, 9]
+
+
+def test_context_parallel_dask(context, ipy_client):
+    from dask.array import from_array
+
+    context.ipy_view = ipy_client[:]
+
+    def square(x):
+        import os
+        print(os.getpid())
+        return x * x
+
+    x = np.arange(10)
+    da = from_array(x, chunks=(3,))
+    res = context.map_dask_array(square, da)
+    ae(res.compute(), x ** 2)
