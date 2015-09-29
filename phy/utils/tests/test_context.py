@@ -10,8 +10,7 @@ import os
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import fixture, yield_fixture, mark
-from ipyparallel.tests.clienttest import ClusterTestCase, add_engines
+from pytest import yield_fixture
 
 from ..context import Context, _iter_chunks_dask
 
@@ -82,5 +81,9 @@ def ipy_client():
     ipyparallel.tests.teardown()
 
 
-def test_client(ipy_client):
-    print(ipy_client.ids)
+def test_client_1(ipy_client):
+    assert ipy_client.ids == [0, 1]
+
+
+def test_client_2(ipy_client):
+    assert ipy_client[:].map_sync(lambda x: x * x, [1, 2, 3]) == [1, 4, 9]
