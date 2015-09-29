@@ -158,7 +158,7 @@ class WaveformExtractor(object):
         assert masks.ndim == 1
         assert waveform_aligned.shape[1] == masks.shape[0]
 
-        return s_aligned, waveform_aligned, masks
+        return s_aligned, masks, waveform_aligned
 
 
 #------------------------------------------------------------------------------
