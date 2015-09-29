@@ -42,7 +42,6 @@ class SpikeDetector(Configurable):
     weight_power = Float(2)
 
     def __init__(self, ctx=None):
-        self._thresholds = None
         super(SpikeDetector, self).__init__()
         if not ctx or not hasattr(ctx, 'cache'):
             return
@@ -52,14 +51,12 @@ class SpikeDetector(Configurable):
         self.detect = ctx.cache(self.detect)
 
     def set_metadata(self, probe, channel_mapping=None,
-                     sample_rate=None, thresholds=None):
+                     sample_rate=None):
         assert isinstance(probe, MEA)
         self.probe = probe
 
         assert sample_rate > 0
         self.sample_rate = sample_rate
-
-        self._thresholds = thresholds
 
         # Channel mapping.
         if channel_mapping is None:
@@ -122,8 +119,6 @@ class SpikeDetector(Configurable):
         return f(traces).astype(np.float32)
 
     def extract_spikes(self, traces_subset, thresholds=None):
-        if thresholds is None:
-            thresholds = self._thresholds
         assert thresholds is not None
         self._thresholder = Thresholder(mode=self.detect_spikes,
                                         thresholds=thresholds)
@@ -149,7 +144,7 @@ class SpikeDetector(Configurable):
         extractor = WaveformExtractor(extract_before=self.extract_s_before,
                                       extract_after=self.extract_s_after,
                                       weight_power=self.weight_power,
-                                      thresholds=self._thresholds,
+                                      thresholds=thresholds,
                                       )
 
         s, m, w = zip(*(extractor(component, data=traces_f, data_t=traces_t)
@@ -159,7 +154,7 @@ class SpikeDetector(Configurable):
         w = np.array(w, dtype=np.float32)
         return s, m, w
 
-    def detect(self, traces):
+    def detect(self, traces, thresholds=None):
 
         # Only keep the selected channels (given shank, no dead channels, etc.)
         traces = self.subset_traces(traces)
@@ -167,7 +162,8 @@ class SpikeDetector(Configurable):
         assert traces.shape[1] == self.n_channels
 
         # Find the thresholds.
-        self._thresholds = self.find_thresholds(traces)
+        if thresholds is None:
+            thresholds = self.find_thresholds(traces)
 
         # Extract the spikes, masks, waveforms.
-        return self.extract_spikes(traces)
+        return self.extract_spikes(traces, thresholds=thresholds)
