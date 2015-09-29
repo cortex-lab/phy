@@ -50,7 +50,9 @@ class Context(object):
             logger.warn("Joblib is not installed. "
                         "Install it with `conda install joblib`.")
             self._memory = None
-        self._ipy_view = ipy_view
+        self._ipy_view = None
+        if ipy_view:
+            self.ipy_view = ipy_view
 
     @property
     def ipy_view(self):
@@ -58,6 +60,8 @@ class Context(object):
 
     @ipy_view.setter
     def ipy_view(self, value):
+        # Dill is necessary because we need to serialize closures.
+        value.use_dill()
         self._ipy_view = value
 
     def _path(self, rel_path, *args, **kwargs):
