@@ -6,9 +6,19 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import logging
+
 import numpy as np
 from traitlets.config.configurable import Configurable
 from traitlets import Int, Float, Unicode, Bool
+
+from phy.electrode import MEA
+from phy.utils.array import get_excerpts
+from .detect import FloodFillDetector, Thresholder, compute_threshold
+from .filter import Filter
+from .waveform import WaveformExtractor
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -35,33 +45,106 @@ class SpikeDetector(Configurable):
         super(SpikeDetector, self).__init__()
         if not ctx or not hasattr(ctx, 'cache'):
             return
+        self.find_thresholds = ctx.cache(self.find_thresholds)
         self.filter = ctx.cache(self.filter)
         self.extract_components = ctx.cache(self.extract_components)
         self.extract_spikes = ctx.cache(self.extract_spikes)
 
-    def set_metadata(self, probe, channel_mapping=None):
+    def set_metadata(self, probe, channel_mapping=None, sample_rate=None):
+        assert isinstance(probe, MEA)
         self.probe = probe
+
+        assert sample_rate > 0
+        self.sample_rate = sample_rate
+
         if channel_mapping is None:
             channel_mapping = {c: c for c in probe.channels}
         self.channel_mapping = channel_mapping
-        self.channels = probe.channels
-        self.n_channels = probe.n_channels
 
-    def filter(self, raw_data):
-        pass
+        # Array of channel idx to consider.
+        self.channels = sorted(channel_mapping.keys())
+        self.n_channels = len(self.channels)
+        self.n_samples_waveforms = self.extract_s_before + self.extract_s_after
+
+    def _select_channels(self, traces):
+        return traces[:, self.channels]
+
+    def find_thresholds(self, traces):
+        """Find weak and strong thresholds in filtered traces."""
+        excerpt_size = int(self.excerpt_size_seconds * self.sample_rate)
+        single_threshold = self.use_single_threshold
+        std_factor = (self.threshold_weak_std_factor,
+                      self.threshold_strong_std_factor)
+
+        logger.info("Extracting some data for finding the thresholds...")
+        excerpt = get_excerpts(traces, n_excerpts=self.n_excerpts,
+                               excerpt_size=excerpt_size)
+
+        logger.info("Filtering the excerpts...")
+        excerpt_f = self.filter(excerpt)
+
+        logger.info("Computing the thresholds...")
+        thresholds = compute_threshold(excerpt_f,
+                                       single_threshold=single_threshold,
+                                       std_factor=std_factor)
+
+        thresholds = {'weak': thresholds[0], 'strong': thresholds[1]}
+        logger.info("Thresholds found: {}.".format(thresholds))
+        self._thresholder = Thresholder(mode=self.detect_spikes,
+                                        thresholds=thresholds)
+        return thresholds
+
+    def filter(self, traces):
+        f = Filter(rate=self.sample_rate,
+                   low=self.filter_low,
+                   high=0.95 * .5 * self.sample_rate,
+                   order=self.filter_butter_order,
+                   )
+        return f(traces).astype(np.float32)
 
     def extract_components(self, filtered):
-        pass
+        # Transform the filtered data according to the detection mode.
+        traces_t = self._thresholder.transform(filtered)
 
-    def extract_spikes(self, components):
-        return None, None, None
+        # Compute the threshold crossings.
+        weak = self._thresholder.detect(traces_t, 'weak')
+        strong = self._thresholder.detect(traces_t, 'strong')
 
-    def detect(self, raw_data, sample_rate=None):
-        assert sample_rate > 0
-        assert raw_data.ndim == 2
-        assert raw_data.shape[1] == self.n_channels
+        # Run the detection.
+        join_size = self.connected_component_join_size
+        detector = FloodFillDetector(probe_adjacency_list=self.probe.adjacency,
+                                     join_size=join_size)
+        return detector(weak_crossings=weak,
+                        strong_crossings=strong)
 
-        filtered = self.filter(raw_data)
+    def extract_spikes(self, filtered, components):
+        # Transform the filtered data according to the detection mode.
+        traces_t = self._thresholder.transform(filtered)
+
+        # Extract all waveforms.
+        extractor = WaveformExtractor(extract_before=self.extract_s_before,
+                                      extract_after=self.extract_s_after,
+                                      weight_power=self.weight_power,
+                                      thresholds=self._thresholds,
+                                      )
+
+        s, m, w = zip(*(extractor(component, data=filtered, data_t=traces_t)
+                        for component in components))
+        s = np.array(s, dtype=np.int64)
+        m = np.array(m, dtype=np.float32)
+        w = np.array(w, dtype=np.float32)
+        return s, m, w
+
+    def detect(self, traces):
+        assert traces.ndim == 2
+        assert traces.shape[1] == self.n_channels
+
+        # Only keep the selected channels (given shank, no dead channels, etc.)
+        traces = self._select_channels(traces)
+        self._thresholds = self.find_thresholds(traces)
+
+        filtered = self.filter(traces)
         components = self.extract_components(filtered)
-        spike_samples, masks, waveforms = self.extract_spikes(components)
+        spike_samples, masks, waveforms = self.extract_spikes(filtered,
+                                                              components)
         return spike_samples, masks

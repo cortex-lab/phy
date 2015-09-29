@@ -24,11 +24,14 @@ def test_detect():
 
     path = download_test_data('test-32ch-10s.dat')
     traces = np.fromfile(path, dtype=np.int16).reshape((200000, 32))
-    traces = traces[:45000]
+    traces = traces[:20000]
     n_samples, n_channels = traces.shape
     sample_rate = 20000
     probe = load_probe('1x32_buzsaki')
 
     sd = SpikeDetector()
-    sd.set_metadata(probe)
-    spike_samples, masks = sd.detect(traces, sample_rate=sample_rate)
+    sd.use_single_threshold = False
+    sd.set_metadata(probe, sample_rate=sample_rate)
+    spike_samples, masks = sd.detect(traces)
+    print(spike_samples)
+    print(masks)

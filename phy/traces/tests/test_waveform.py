@@ -87,7 +87,7 @@ def test_extract_simple():
     assert wave_a.shape == (3 + 5, nc)
 
     # Test final call.
-    s_f, wave_f, masks_f = we(component, data=data, data_t=data)
+    s_f, masks_f, wave_f = we(component, data=data, data_t=data)
     assert s_f == s
     ae(masks_f, masks)
     ae(wave_f, wave_a)
@@ -98,7 +98,7 @@ def test_extract_simple():
                            thresholds={'weak': weak,
                                        'strong': strong},
                            )
-    s_f_o, wave_f_o, masks_f_o = we(component, data=data, data_t=data)
+    s_f_o, masks_f_o, wave_f_o = we(component, data=data, data_t=data)
     assert s_f == s_f_o
     assert np.allclose(wave_f, wave_f_o)
     ae(masks_f_o, [0.5, 1., 0., 0.])
