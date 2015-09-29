@@ -56,7 +56,7 @@ class Context(object):
 
     def cache(self, f):
         if self._memory is None:  # pragma: no cover
-            logger.debug("Joblib is not installed, so skipping cacheing.")
+            logger.debug("Joblib is not installed: skipping cacheing.")
             return
         return self._memory.cache(f)
 
@@ -66,9 +66,8 @@ class Context(object):
             from dask.array import Array
             from dask.async import get_sync as get
         except ImportError:  # pragma: no cover
-            logger.warn("dask is not installed. "
-                        "Install it with `conda install dask`.")
-            return
+            raise Exception("dask is not installed. "
+                            "Install it with `conda install dask`.")
 
         assert isinstance(da, Array)
 
@@ -81,11 +80,12 @@ class Context(object):
 
         def wrapped(chk):
             (i, chunk) = chk
-            # # Load the array's chunk.
-            # arg = chunk[0](*chunk[1:])
+            # Load the array's chunk.
             arr = get(dask, chunk)
+
             # Execute the function on the chunk.
             res = f(arr)
+
             # Save the output in the cache.
             if not op.exists(self._path(name)):
                 os.makedirs(self._path(name))
