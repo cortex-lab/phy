@@ -12,11 +12,16 @@ import os.path as op
 
 import numpy as np
 from six.moves.cPickle import dump
+from six import string_types
 try:
+    from dask.array import Array
     from dask.async import get_sync as get
+    from dask.core import flatten
 except ImportError:  # pragma: no cover
     raise Exception("dask is not installed. "
                     "Install it with `conda install dask`.")
+
+from phy.utils import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +31,6 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 def _iter_chunks_dask(da):
-    from dask.core import flatten
     for chunk in flatten(da._keys()):
         yield chunk
 
@@ -38,6 +42,7 @@ def read_array(path):
 
 def write_array(path, arr):
     """Write an array to a .npy file."""
+    logger.debug("Write array to %s.", path)
     np.save(path, arr)
 
 
@@ -45,7 +50,7 @@ def write_array(path, arr):
 # Context
 #------------------------------------------------------------------------------
 
-def _mapped(i, chunk, dask, func, dirpath):
+def _mapped(i, chunk, dask, func, cache_dir, name):
     """Top-level function to map.
 
     This function needs to be a top-level function for ipyparallel to work.
@@ -55,16 +60,89 @@ def _mapped(i, chunk, dask, func, dirpath):
     arr = get(dask, chunk)
 
     # Execute the function on the chunk.
+    logger.debug("Run %s on chunk %d", name, i)
     res = func(arr)
 
-    # Save the output in the cache.
+    # Save the result, and return the information about what we saved.
+    return _save_stack_chunk(i, res, cache_dir, name)
+
+
+def _save_stack_chunk(i, arr, cache_dir, name):
+    """Save an output chunk array to a npy file, and return information about
+    it."""
+    # Handle the case where several output arrays are returned.
+    if isinstance(arr, tuple):
+        # The name is a tuple of names for the different arrays returned.
+        assert isinstance(name, tuple)
+        assert len(arr) == len(name)
+
+        return tuple(_save_stack_chunk(i, arr_, cache_dir, name_)
+                     for arr_, name_ in zip(arr, name))
+
+    assert isinstance(name, string_types)
+    assert isinstance(arr, np.ndarray)
+
+    dirpath = op.join(cache_dir, name)
+    path = op.join(dirpath, '{}.npy'.format(i))
+    write_array(path, arr)
+
+    # Return information about what we just saved.
+    return Bunch(dask_tuple=(read_array, path),
+                 shape=arr.shape,
+                 dtype=arr.dtype,
+                 name=name,
+                 dirpath=dirpath,
+                 )
+
+
+def _save_stack_info(outputs):
+    """Save the npy stack info, and return one or several dask arrays from
+    saved npy stacks.
+
+    The argument is a list of objects returned by `_save_stack_chunk()`.
+
+    """
+    # Handle the case where several arrays are returned, i.e. outputs is a list
+    # of tuples of Bunch objects.
+    assert len(outputs)
+    if isinstance(outputs[0], tuple):
+        return tuple(_save_stack_info(output) for output in zip(*outputs))
+
+    # Get metadata fields common to all chunks.
+    assert len(outputs)
+    assert isinstance(outputs[0], Bunch)
+    name = outputs[0].name
+    dirpath = outputs[0].dirpath
+    dtype = outputs[0].dtype
+    trail_shape = outputs[0].shape[1:]
+
+    # Ensure the consistency of all chunks metadata.
+    assert all(output.name == name for output in outputs)
+    assert all(output.dirpath == dirpath for output in outputs)
+    assert all(output.dtype == dtype for output in outputs)
+    assert all(output.shape[1:] == trail_shape for output in outputs)
+
+    # Compute the output dask array chunks and shape.
+    chunks = (tuple(output.shape[0] for output in outputs),)
+    n = sum(output.shape[0] for output in outputs)
+    shape = (n,) + trail_shape
+
+    # Save the info object for dask npy stack.
+    with open(op.join(dirpath, 'info'), 'wb') as f:
+        dump({'chunks': chunks, 'dtype': dtype, 'axis': 0}, f)
+
+    # Return the result as a dask array.
+    dask_tuples = tuple(output.dask_tuple for output in outputs)
+    dask = {(name, i): chunk for i, chunk in enumerate(dask_tuples)}
+    return Array(dask, name, chunks, dtype=dtype, shape=shape)
+
+
+def _ensure_cache_dirs_exist(cache_dir, name):
+    if isinstance(name, tuple):
+        return [_ensure_cache_dirs_exist(cache_dir, name_) for name_ in name]
+    dirpath = op.join(cache_dir, name)
     if not op.exists(dirpath):
         os.makedirs(dirpath)
-    path = op.join(dirpath, '{}.npy'.format(i))
-    write_array(path, res)
-
-    # Return a dask pair to load the result.
-    return (read_array, path)
 
 
 class Context(object):
@@ -111,8 +189,7 @@ class Context(object):
             return
         return self._memory.cache(f)
 
-    def map_dask_array(self, func, da, chunks=None, name=None,
-                       dtype=None, shape=None):
+    def map_dask_array(self, func, da, name=None):
         """Map a function on the chunks of a dask array, and return a
         new dask array.
 
@@ -123,36 +200,24 @@ class Context(object):
         name (the function's name by default). The result is a new dask array
         that reads data from the npy stack in the cache subdirectory.
 
-        The metadata of the output dask array need to be specified.
-
         """
-        try:
-            from dask.array import Array
-        except ImportError:  # pragma: no cover
-            raise Exception("dask is not installed. "
-                            "Install it with `conda install dask`.")
-
         assert isinstance(da, Array)
 
         name = name or func.__name__
         assert name != da.name
-        dtype = dtype or da.dtype
-        shape = shape or da.shape
-        chunks = chunks or da.chunks
         dask = da.dask
+
+        # Ensure the directories exist.
+        _ensure_cache_dirs_exist(self.cache_dir, name)
 
         args_0 = list(_iter_chunks_dask(da))
         n = len(args_0)
-        dirpath = op.join(self.cache_dir, name)
-        mapped = self.map(_mapped, range(n), args_0, [dask] * n,
-                          [func] * n, [dirpath] * n)
+        output = self.map(_mapped, range(n), args_0, [dask] * n,
+                          [func] * n, [self.cache_dir] * n, [name] * n)
 
-        with open(op.join(dirpath, 'info'), 'wb') as f:
-            dump({'chunks': chunks, 'dtype': dtype, 'axis': 0}, f)
-
-        # Return the result as a dask array.
-        dask = {(name, i): chunk for i, chunk in enumerate(mapped)}
-        return Array(dask, name, chunks, dtype=dtype, shape=shape)
+        # output contains information about the output arrays. We use this
+        # information to reconstruct the final dask array.
+        return _save_stack_info(output)
 
     def _map_serial(self, f, *args):
         return [f(*arg) for arg in zip(*args)]
