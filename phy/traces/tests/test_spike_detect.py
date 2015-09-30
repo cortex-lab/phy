@@ -10,6 +10,7 @@ import numpy as np
 from pytest import yield_fixture
 
 from phy.utils.datasets import download_test_data
+from phy.utils.tests.test_context import context, ipy_client
 from phy.electrode import load_probe
 from ..spike_detect import (SpikeDetector,
                             )
@@ -49,7 +50,7 @@ def spike_detector(request):
 # Test spike detection
 #------------------------------------------------------------------------------
 
-def _plot(sd, traces, spike_samples, masks):
+def _plot(sd, traces, spike_samples, masks):  # pragma: no cover
     from vispy.app import run
     from phy.plot import plot_traces
     plot_traces(sd.subset_traces(traces),
@@ -59,8 +60,9 @@ def _plot(sd, traces, spike_samples, masks):
     run()
 
 
-def test_detect(spike_detector, traces):
+def test_detect_simple(spike_detector, traces):
     sd = spike_detector
+
     spike_samples, masks, _ = sd.detect(traces)
 
     n_channels = sd.n_channels
@@ -74,3 +76,23 @@ def test_detect(spike_detector, traces):
     assert masks.shape == (n_spikes, n_channels)
 
     # _plot(sd, traces, spike_samples, masks)
+
+
+def test_detect_context(spike_detector, traces, context):
+    sd = spike_detector
+    sd.set_context(context)
+    # context.ipy_view = ipy_client[:]
+
+    from dask.array import from_array
+    traces_da = from_array(traces, chunks=(5000, traces.shape[1]))
+    spike_samples, masks, _ = sd.detect(traces_da)
+
+    n_channels = sd.n_channels
+    n_spikes = len(spike_samples)
+
+    assert spike_samples.dtype == np.int64
+    assert spike_samples.ndim == 1
+
+    assert masks.dtype == np.float32
+    assert masks.ndim == 2
+    assert masks.shape == (n_spikes, n_channels)
