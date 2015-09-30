@@ -13,6 +13,7 @@ import os.path as op
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import yield_fixture, mark
+from six.moves import cPickle
 
 from ..context import Context, _iter_chunks_dask, write_array, read_array
 
@@ -101,6 +102,16 @@ def test_context_cache(context):
     # The second time, the cache is used.
     ae(f(x), x2)
     assert len(_res) == 2
+
+
+def test_pickle_cache(tempdir, parallel_context):
+    """Make sure the Context is picklable."""
+    with open(op.join(tempdir, 'test.pkl'), 'wb') as f:
+        cPickle.dump(parallel_context, f)
+    with open(op.join(tempdir, 'test.pkl'), 'rb') as f:
+        ctx = cPickle.load(f)
+    assert isinstance(ctx, Context)
+    assert ctx.cache_dir == parallel_context.cache_dir
 
 
 #------------------------------------------------------------------------------
