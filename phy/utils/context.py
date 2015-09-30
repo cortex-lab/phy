@@ -115,6 +115,7 @@ def _save_stack_info(outputs):
     dirpath = outputs[0].dirpath
     dtype = outputs[0].dtype
     trail_shape = outputs[0].shape[1:]
+    trail_ndim = len(trail_shape)
 
     # Ensure the consistency of all chunks metadata.
     assert all(output.name == name for output in outputs)
@@ -133,7 +134,8 @@ def _save_stack_info(outputs):
 
     # Return the result as a dask array.
     dask_tuples = tuple(output.dask_tuple for output in outputs)
-    dask = {(name, i): chunk for i, chunk in enumerate(dask_tuples)}
+    dask = {((name, i) + (0,) * trail_ndim): chunk
+            for i, chunk in enumerate(dask_tuples)}
     return Array(dask, name, chunks, dtype=dtype, shape=shape)
 
 
