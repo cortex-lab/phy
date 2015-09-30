@@ -229,11 +229,30 @@ class SpikeDetector(Configurable):
         if not self.ctx:
             return self.extract_spikes(traces, thresholds=thresholds)
         else:
+            import dask.array as da
+
+            # Chunking parameters.
+            chunk_size = int(self.chunk_size_seconds * self.sample_rate)
             depth = int(self.chunk_overlap_seconds * self.sample_rate)
-            chunks = traces.chunks
-            traces = da.ghost.ghost(traces, depth={0: depth}, boundary={0: 0})
+            trace_chunks = (chunk_size, traces.shape[1])
+
+            # Chunk the data. traces is now a dask Array.
+            traces = da.from_array(traces, chunks=trace_chunks)
+            trace_chunks = traces.chunks
+
+            # Add overlapping band in traces.
+            traces = da.ghost.ghost(traces,
+                                    depth={0: depth}, boundary={0: 0})
+
             names = ('spike_samples', 'masks', 'waveforms')
             self._thresholds = thresholds
+
+            # Run the spike extraction procedure in parallel.
             s, m, w = self.ctx.map_dask_array(self.extract_spikes,
                                               traces, name=names)
-            return _concat_spikes(s, m, w, chunks=chunks, depth=depth)
+
+            # Return the concatenated spike samples, masks, waveforms, as
+            # dask arrays reading from the cached .npy files.
+            return _concat_spikes(s, m, w,
+                                  trace_chunks=trace_chunks,
+                                  depth=depth)
