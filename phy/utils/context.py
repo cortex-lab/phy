@@ -156,6 +156,10 @@ class Context(object):
         if not op.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
 
+        self._set_memory(cache_dir)
+        self.ipy_view = ipy_view if ipy_view else None
+
+    def _set_memory(self, cache_dir):
         # Try importing joblib.
         try:
             from joblib import Memory
@@ -165,8 +169,6 @@ class Context(object):
             logger.warn("Joblib is not installed. "
                         "Install it with `conda install joblib`.")
             self._memory = None
-
-        self.ipy_view = ipy_view if ipy_view else None
 
     @property
     def ipy_view(self):
@@ -258,3 +260,16 @@ class Context(object):
             return self._map_ipy(f, *args, sync=True)
         else:
             return self._map_serial(f, *args)
+
+    def __getstate__(self):
+        """Make sure that this class is picklable."""
+        state = self.__dict__.copy()
+        state['_memory'] = None
+        state['_ipy_view'] = None
+        return state
+
+    def __setstate__(self, state):
+        """Make sure that this class is picklable."""
+        self.__dict__ = state
+        # Recreate the joblib Memory instance.
+        self._set_memory(state['cache_dir'])
