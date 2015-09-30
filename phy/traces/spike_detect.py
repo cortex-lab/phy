@@ -256,3 +256,8 @@ class SpikeDetector(Configurable):
             return _concat_spikes(s, m, w,
                                   trace_chunks=trace_chunks,
                                   depth=depth)
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['ctx'] = None
+        return state

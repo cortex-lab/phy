@@ -156,10 +156,10 @@ def test_detect_simple(spike_detector, traces):
     # _plot(sd, traces, spike_samples, masks)
 
 
-def test_detect_context(spike_detector, traces, context):
+def test_detect_context(spike_detector, traces, context, ipy_client):
     sd = spike_detector
     sd.set_context(context)
-    # context.ipy_view = ipy_client[:]
+    context.ipy_view = ipy_client[:]
 
     spike_samples, masks, _ = sd.detect(traces)
 
