@@ -69,7 +69,7 @@ try:
     import dask.async
     from dask import set_options
     set_options(get=dask.async.get_sync)
-except ImportError:
+except ImportError:  # pragma: no cover
     logger.debug("dask is not available.")
 
 
