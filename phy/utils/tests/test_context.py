@@ -47,10 +47,12 @@ def context(tempdir):
     yield ctx
 
 
-@yield_fixture(scope='function')
-def parallel_context(tempdir, ipy_client):
+@yield_fixture(scope='function', params=[False, True])
+def parallel_context(tempdir, ipy_client, request):
+    """Parallel and non-parallel context."""
     ctx = Context('{}/cache/'.format(tempdir))
-    ctx.ipy_view = ipy_client[:]
+    if request.param:
+        ctx.ipy_view = ipy_client[:]
     yield ctx
 
 
@@ -105,22 +107,14 @@ def test_context_cache(context):
 # Test map
 #------------------------------------------------------------------------------
 
-def test_context_map(context):
-    def f3(x):
-        return x * x * x
-
-    args = range(10)
-    assert context.map(f3, args) == [x ** 3 for x in range(10)]
-    assert context.map_async(f3, args) == [x ** 3 for x in range(10)]
-
-
-def test_context_parallel_map(parallel_context):
+def test_context_map(parallel_context):
 
     def square(x):
         return x * x
 
     assert parallel_context.map(square, [1, 2, 3]) == [1, 4, 9]
-    assert parallel_context.map_async(square, [1, 2, 3]).get() == [1, 4, 9]
+    if parallel_context.ipy_view:
+        assert parallel_context.map_async(square, [1, 2, 3]).get() == [1, 4, 9]
 
 
 #------------------------------------------------------------------------------
@@ -135,8 +129,10 @@ def test_iter_chunks_dask():
     assert len(list(_iter_chunks_dask(da))) == 4
 
 
-def _test_context_dask(context, multiple_outputs):
+@mark.parametrize('multiple_outputs', [True, False])
+def test_context_dask(parallel_context, multiple_outputs):
     from dask.array import from_array, from_npy_stack
+    context = parallel_context
 
     if not multiple_outputs:
         def f4(x, onset):
@@ -167,13 +163,3 @@ def _test_context_dask(context, multiple_outputs):
 
         y = from_npy_stack(op.join(context.cache_dir, 'plus_one'))
         ae(y.compute(), x + 1)
-
-
-@mark.parametrize('multiple_outputs', [True, False])
-def test_context_dask_simple(context, multiple_outputs):
-    _test_context_dask(context, multiple_outputs)
-
-
-@mark.parametrize('multiple_outputs', [True, False])
-def test_context_dask_parallel(parallel_context, multiple_outputs):
-    _test_context_dask(parallel_context, multiple_outputs)

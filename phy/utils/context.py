@@ -245,7 +245,8 @@ class Context(object):
         if self._ipy_view:
             return self._map_ipy(f, *args, sync=False)
         else:
-            return self._map_serial(f, *args)
+            raise RuntimeError("Asynchronous execution requires an "
+                               "ipyparallel context.")
 
     def map(self, f, *args):
         """Map a function synchronously.
