@@ -139,26 +139,24 @@ def test_context_dask(context, ipy_client, is_parallel, multiple_outputs):
     else:
         def f4(x):
             return x * x * x * x, x + 1
-        name = ('f4', 'plus_one')
+        name = ('power_four', 'plus_one')
 
     x = np.arange(10)
     da = from_array(x, chunks=(3,))
     res = context.map_dask_array(f4, da, name=name)
 
-    if not multiple_outputs:
-        ae(res.compute(), x ** 4)
-    else:
-        ae(res[0].compute(), x ** 4)
-        ae(res[1].compute(), x + 1)
-
     # Check that we can load the dumped dask array from disk.
     # The location is in the context cache dir, in a subdirectory with the
     # name of the function by default.
     if not multiple_outputs:
+        ae(res.compute(), x ** 4)
+
         y = from_npy_stack(op.join(context.cache_dir, 'f4'))
         ae(y.compute(), x ** 4)
     else:
-        y = from_npy_stack(op.join(context.cache_dir, 'f4'))
+        ae(res[0].compute(), x ** 4)
+        ae(res[1].compute(), x + 1)
+        y = from_npy_stack(op.join(context.cache_dir, 'power_four'))
         ae(y.compute(), x ** 4)
 
         y = from_npy_stack(op.join(context.cache_dir, 'plus_one'))
