@@ -102,12 +102,12 @@ def test_context_cache(context):
 
 
 def test_context_map(context):
-    def f(x):
-        return x * x
+    def f3(x):
+        return x * x * x
 
     args = range(10)
-    assert context.map(f, args) == [x * x for x in range(10)]
-    assert context.map_async(f, args) == [x * x for x in range(10)]
+    assert context.map(f3, args) == [x ** 3 for x in range(10)]
+    assert context.map_async(f3, args) == [x ** 3 for x in range(10)]
 
 
 def test_context_parallel_map(context, ipy_client):
@@ -129,17 +129,17 @@ def test_context_dask(context, ipy_client, is_parallel):
     if is_parallel:
         context.ipy_view = ipy_client[:]
 
-    def square(x):
-        return x * x
+    def f4(x):
+        return x * x * x * x
 
     x = np.arange(10)
     da = from_array(x, chunks=(3,))
-    res = context.map_dask_array(square, da)
-    ae(res.compute(), x ** 2)
+    res = context.map_dask_array(f4, da)
+    ae(res.compute(), x ** 4)
 
     # Check that we can load the dumped dask array from disk.
     # The location is in the context cache dir, in a subdirectory with the
     # name of the function by default.
-    path = op.join(context.cache_dir, 'square')
+    path = op.join(context.cache_dir, 'f4')
     y = from_npy_stack(path)
-    ae(y.compute(), x ** 2)
+    ae(y.compute(), x ** 4)
