@@ -25,36 +25,52 @@ logger = logging.getLogger(__name__)
 # SpikeDetector
 #------------------------------------------------------------------------------
 
-def _concat_spikes(s, m, w, chunks=None, depth=None):
+def _spikes_to_keep(spikes, trace_chunks, depth):
+    """Find the indices of the spikes to keep given a chunked trace array."""
 
     # Find where to trim the spikes in the overlapping bands.
-    def find_bounds(x, block_id=None):
-        n = chunks[0][block_id[0]]
+    def _find_bounds(x, block_id=None):
+        n = trace_chunks[0][block_id[0]]
         i = np.searchsorted(x, depth)
         j = np.searchsorted(x, n + depth)
         return np.array([i, j])
 
     # Trim the arrays.
-    ij = s.map_blocks(find_bounds, chunks=(2,)).compute()
-    onsets = ij[::2]
-    offsets = ij[1::2]
+    ij = spikes.map_blocks(_find_bounds, chunks=(2,)).compute()
+    return ij[::2], ij[1::2]
 
-    def trim(x, block_id=None):
+
+def _trim_spikes(arr, indices):
+    onsets, offsets = indices
+
+    def _trim(x, block_id=None):
         i = block_id[0]
         on = onsets[i]
         off = offsets[i]
         return x[on:off, ...]
 
-    s = s.map_blocks(trim)
-    m = m.map_blocks(trim)
-    w = w.map_blocks(trim)
+    # Compute the trimmed chunks.
+    chunks = (tuple(offsets - onsets),) + arr.chunks[1:]
+    return arr.map_blocks(_trim, chunks=chunks)
+
+
+def _add_chunk_offset(arr, trace_chunks, depth):
 
     # Add the spike sample offsets.
-    def add_offset(x, block_id=None):
+    def _add_offset(x, block_id=None):
         i = block_id[0]
-        return x + sum(chunks[0][:i]) - depth
+        return x + sum(trace_chunks[0][:i]) - depth
 
-    s = s.map_blocks(add_offset)
+    return arr.map_blocks(_add_offset)
+
+
+def _concat_spikes(s, m, w, trace_chunks=None, depth=None):
+    indices = _spikes_to_keep(s, trace_chunks, depth)
+    s = _trim_spikes(s, indices)
+    m = _trim_spikes(m, indices)
+    w = _trim_spikes(w, indices)
+
+    s = _add_chunk_offset(s, trace_chunks, depth)
     return s, m, w
 
 
