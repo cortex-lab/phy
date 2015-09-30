@@ -25,6 +25,16 @@ logger = logging.getLogger(__name__)
 # SpikeDetector
 #------------------------------------------------------------------------------
 
+def _concat_spikes(s, m, w, chunks=None):
+    # TODO: overlap
+    def add_offset(x, block_id=None):
+        i = block_id[0]
+        return x + sum(chunks[0][:i])
+
+    s = s.map_blocks(add_offset)
+    return s, m, w
+
+
 class SpikeDetector(Configurable):
     do_filter = Bool(True)
     filter_low = Float(500.)
@@ -182,5 +192,6 @@ class SpikeDetector(Configurable):
         else:
             names = ('spike_samples', 'masks', 'waveforms')
             self._thresholds = thresholds
-            return self.ctx.map_dask_array(self.extract_spikes,
-                                           traces, name=names)
+            s, m, w = self.ctx.map_dask_array(self.extract_spikes,
+                                              traces, name=names)
+            return _concat_spikes(s, m, w, chunks=traces.chunks)
