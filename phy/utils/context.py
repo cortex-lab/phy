@@ -80,7 +80,7 @@ class Context(object):
         try:
             from joblib import Memory
             joblib_cachedir = self._path('joblib')
-            self._memory = Memory(cachedir=joblib_cachedir, verbose=0)
+            self._memory = Memory(cachedir=joblib_cachedir)
         except ImportError:  # pragma: no cover
             logger.warn("Joblib is not installed. "
                         "Install it with `conda install joblib`.")
