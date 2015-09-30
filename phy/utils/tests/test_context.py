@@ -19,7 +19,7 @@ from ..context import Context, _iter_chunks_dask
 # Fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture
+@yield_fixture(scope='function')
 def context(tempdir):
     ctx = Context('{}/cache/'.format(tempdir))
     yield ctx
@@ -67,6 +67,31 @@ def test_iter_chunks_dask():
     x = np.arange(10)
     da = from_array(x, chunks=(3,))
     assert len(list(_iter_chunks_dask(da))) == 4
+
+
+def test_context_cache(context):
+
+    _res = []
+
+    def f(x):
+        _res.append(x)
+        return x ** 2
+
+    x = np.arange(5)
+    x2 = x * x
+
+    ae(f(x), x2)
+    assert len(_res) == 1
+
+    f = context.cache(f)
+
+    # Run it a first time.
+    ae(f(x), x2)
+    assert len(_res) == 2
+
+    # The second time, the cache is used.
+    ae(f(x), x2)
+    assert len(_res) == 2
 
 
 def test_context_map(context):
