@@ -11,6 +11,7 @@ import os
 import os.path as op
 
 import numpy as np
+from six.moves.cPickle import dump
 try:
     from dask.async import get_sync as get
 except ImportError:  # pragma: no cover
@@ -42,7 +43,7 @@ def write_array(path, arr):
 # Context
 #------------------------------------------------------------------------------
 
-def _mapped(i, chunk, dask, func, cachedir, name):
+def _mapped(i, chunk, dask, func, dirpath):
     # Load the array's chunk.
     arr = get(dask, chunk)
 
@@ -50,7 +51,6 @@ def _mapped(i, chunk, dask, func, cachedir, name):
     res = func(arr)
 
     # Save the output in the cache.
-    dirpath = op.join(cachedir, name)
     if not op.exists(dirpath):
         os.makedirs(dirpath)
     path = op.join(dirpath, '{}.npy'.format(i))
@@ -112,11 +112,14 @@ class Context(object):
         chunks = chunks or da.chunks
         dask = da.dask
 
-        cachedir = self.cache_dir
         args_0 = list(_iter_chunks_dask(da))
         n = len(args_0)
+        dirpath = op.join(self.cache_dir, name)
         mapped = self.map(_mapped, range(n), args_0, [dask] * n,
-                          [func] * n, [cachedir] * n, [name] * n)
+                          [func] * n, [dirpath] * n)
+
+        with open(op.join(dirpath, 'info'), 'wb') as f:
+            dump({'chunks': chunks, 'dtype': dtype, 'axis': 0}, f)
 
         # Return the result as a dask array.
         dask = {(name, i): chunk for i, chunk in enumerate(mapped)}
