@@ -7,10 +7,11 @@
 #------------------------------------------------------------------------------
 
 import os
+import os.path as op
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import yield_fixture
+from pytest import yield_fixture, mark
 
 from ..context import Context, _iter_chunks_dask
 
@@ -103,18 +104,6 @@ def test_context_map(context):
     assert context.map_async(f, args) == [x * x for x in range(10)]
 
 
-def test_context_dask(context):
-    from dask.array import from_array
-
-    def square(x):
-        return x * x
-
-    x = np.arange(10)
-    da = from_array(x, chunks=(3,))
-    res = context.map_dask_array(square, da)
-    ae(res.compute(), x ** 2)
-
-
 def test_context_parallel_map(context, ipy_client):
     view = ipy_client[:]
     context.ipy_view = view
@@ -127,17 +116,24 @@ def test_context_parallel_map(context, ipy_client):
     assert context.map_async(square, [1, 2, 3]).get() == [1, 4, 9]
 
 
-def test_context_parallel_dask(context, ipy_client):
-    from dask.array import from_array
+@mark.parametrize('is_parallel', [True, False])
+def test_context_dask(context, ipy_client, is_parallel):
+    from dask.array import from_array, from_npy_stack
 
-    context.ipy_view = ipy_client[:]
+    if is_parallel:
+        context.ipy_view = ipy_client[:]
 
     def square(x):
-        import os
-        print(os.getpid())
         return x * x
 
     x = np.arange(10)
     da = from_array(x, chunks=(3,))
     res = context.map_dask_array(square, da)
     ae(res.compute(), x ** 2)
+
+    # Check that we can load the dumped dask array from disk.
+    # The location is in the context cache dir, in a subdirectory with the
+    # name of the function by default.
+    path = op.join(context.cache_dir, 'square')
+    y = from_npy_stack(path)
+    ae(y.compute(), x ** 2)
