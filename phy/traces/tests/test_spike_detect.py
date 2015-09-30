@@ -156,14 +156,12 @@ def test_detect_simple(spike_detector, traces):
     # _plot(sd, traces, spike_samples, masks)
 
 
-def atest_detect_context(spike_detector, traces, context):
+def test_detect_context(spike_detector, traces, context):
     sd = spike_detector
     sd.set_context(context)
     # context.ipy_view = ipy_client[:]
 
-    from dask.array import from_array
-    traces_da = from_array(traces, chunks=(5000, traces.shape[1]))
-    spike_samples, masks, _ = sd.detect(traces_da)
+    spike_samples, masks, _ = sd.detect(traces)
 
     n_channels = sd.n_channels
     n_spikes = len(spike_samples)
