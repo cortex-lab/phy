@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from itertools import product
 import os
 import os.path as op
 
@@ -122,24 +123,43 @@ def test_context_parallel_map(context, ipy_client):
     assert context.map_async(square, [1, 2, 3]).get() == [1, 4, 9]
 
 
-@mark.parametrize('is_parallel', [True, False])
-def test_context_dask(context, ipy_client, is_parallel):
+@mark.parametrize('is_parallel,multiple_outputs',
+                  product([True, False], repeat=2))
+def test_context_dask(context, ipy_client, is_parallel, multiple_outputs):
+
     from dask.array import from_array, from_npy_stack
 
     if is_parallel:
         context.ipy_view = ipy_client[:]
 
-    def f4(x):
-        return x * x * x * x
+    if not multiple_outputs:
+        def f4(x):
+            return x * x * x * x
+        name = None
+    else:
+        def f4(x):
+            return x * x * x * x, x + 1
+        name = ('f4', 'plus_one')
 
     x = np.arange(10)
     da = from_array(x, chunks=(3,))
-    res = context.map_dask_array(f4, da)
-    ae(res.compute(), x ** 4)
+    res = context.map_dask_array(f4, da, name=name)
+
+    if not multiple_outputs:
+        ae(res.compute(), x ** 4)
+    else:
+        ae(res[0].compute(), x ** 4)
+        ae(res[1].compute(), x + 1)
 
     # Check that we can load the dumped dask array from disk.
     # The location is in the context cache dir, in a subdirectory with the
     # name of the function by default.
-    path = op.join(context.cache_dir, 'f4')
-    y = from_npy_stack(path)
-    ae(y.compute(), x ** 4)
+    if not multiple_outputs:
+        y = from_npy_stack(op.join(context.cache_dir, 'f4'))
+        ae(y.compute(), x ** 4)
+    else:
+        y = from_npy_stack(op.join(context.cache_dir, 'f4'))
+        ae(y.compute(), x ** 4)
+
+        y = from_npy_stack(op.join(context.cache_dir, 'plus_one'))
+        ae(y.compute(), x + 1)
