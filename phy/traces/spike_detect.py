@@ -44,12 +44,16 @@ class SpikeDetector(Configurable):
 
     def __init__(self, ctx=None):
         super(SpikeDetector, self).__init__()
+        self.set_context(ctx)
+
+    def set_context(self, ctx):
+        self.ctx = ctx
         if not ctx or not hasattr(ctx, 'cache'):
             return
-        self.find_thresholds = ctx.cache(self.find_thresholds)
-        self.filter = ctx.cache(self.filter)
-        self.extract_spikes = ctx.cache(self.extract_spikes)
-        self.detect = ctx.cache(self.detect)
+        # self.find_thresholds = ctx.cache(self.find_thresholds)
+        # self.filter = ctx.cache(self.filter)
+        # self.extract_spikes = ctx.cache(self.extract_spikes)
+        # self.detect = ctx.cache(self.detect)
 
     def set_metadata(self, probe, channel_mapping=None,
                      sample_rate=None):
@@ -119,9 +123,11 @@ class SpikeDetector(Configurable):
                    high=0.95 * .5 * self.sample_rate,
                    order=self.filter_butter_order,
                    )
+        logger.info("Filtering %d samples...", traces.shape[0])
         return f(traces).astype(np.float32)
 
     def extract_spikes(self, traces_subset, thresholds=None):
+        thresholds = thresholds or self._thresholds
         assert thresholds is not None
         self._thresholder = Thresholder(mode=self.detect_spikes,
                                         thresholds=thresholds)
@@ -137,6 +143,7 @@ class SpikeDetector(Configurable):
         strong = self._thresholder.detect(traces_t, 'strong')
 
         # Run the detection.
+        logger.info("Detecting connected components...")
         join_size = self.connected_component_join_size
         detector = FloodFillDetector(probe_adjacency_list=self._adjacency,
                                      join_size=join_size)
@@ -150,6 +157,7 @@ class SpikeDetector(Configurable):
                                       thresholds=thresholds,
                                       )
 
+        logger.info("Extracting %d spikes...", len(components))
         s, m, w = zip(*(extractor(component, data=traces_f, data_t=traces_t)
                         for component in components))
         s = np.array(s, dtype=np.int64)
@@ -169,4 +177,10 @@ class SpikeDetector(Configurable):
             thresholds = self.find_thresholds(traces)
 
         # Extract the spikes, masks, waveforms.
-        return self.extract_spikes(traces, thresholds=thresholds)
+        if not self.ctx:
+            return self.extract_spikes(traces, thresholds=thresholds)
+        else:
+            names = ('spike_samples', 'masks', 'waveforms')
+            self._thresholds = thresholds
+            return self.ctx.map_dask_array(self.extract_spikes,
+                                           traces, name=names)

@@ -60,7 +60,7 @@ def _mapped(i, chunk, dask, func, cache_dir, name):
     arr = get(dask, chunk)
 
     # Execute the function on the chunk.
-    logger.debug("Run %s on chunk %d", name, i)
+    # logger.debug("Run %s on chunk %d", name, i)
     res = func(arr)
 
     # Save the result, and return the information about what we saved.
@@ -123,7 +123,7 @@ def _save_stack_info(outputs):
     assert all(output.shape[1:] == trail_shape for output in outputs)
 
     # Compute the output dask array chunks and shape.
-    chunks = (tuple(output.shape[0] for output in outputs),)
+    chunks = (tuple(output.shape[0] for output in outputs),) + trail_shape
     n = sum(output.shape[0] for output in outputs)
     shape = (n,) + trail_shape
 
