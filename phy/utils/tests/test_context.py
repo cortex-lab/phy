@@ -75,6 +75,7 @@ def test_context_map(context):
 
     args = range(10)
     assert context.map(f, args) == [x * x for x in range(10)]
+    assert context.map_async(f, args) == [x * x for x in range(10)]
 
 
 def test_context_dask(context):
