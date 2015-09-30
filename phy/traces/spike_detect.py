@@ -25,11 +25,34 @@ logger = logging.getLogger(__name__)
 # SpikeDetector
 #------------------------------------------------------------------------------
 
-def _concat_spikes(s, m, w, chunks=None):
-    # TODO: overlap
+def _concat_spikes(s, m, w, chunks=None, depth=None):
+
+    # Find where to trim the spikes in the overlapping bands.
+    def find_bounds(x, block_id=None):
+        n = chunks[0][block_id[0]]
+        i = np.searchsorted(x, depth)
+        j = np.searchsorted(x, n + depth)
+        return np.array([i, j])
+
+    # Trim the arrays.
+    ij = s.map_blocks(find_bounds, chunks=(2,)).compute()
+    onsets = ij[::2]
+    offsets = ij[1::2]
+
+    def trim(x, block_id=None):
+        i = block_id[0]
+        on = onsets[i]
+        off = offsets[i]
+        return x[on:off, ...]
+
+    s = s.map_blocks(trim)
+    m = m.map_blocks(trim)
+    w = w.map_blocks(trim)
+
+    # Add the spike sample offsets.
     def add_offset(x, block_id=None):
         i = block_id[0]
-        return x + sum(chunks[0][:i])
+        return x + sum(chunks[0][:i]) - depth
 
     s = s.map_blocks(add_offset)
     return s, m, w
@@ -190,8 +213,11 @@ class SpikeDetector(Configurable):
         if not self.ctx:
             return self.extract_spikes(traces, thresholds=thresholds)
         else:
+            depth = int(self.chunk_overlap_seconds * self.sample_rate)
+            chunks = traces.chunks
+            traces = da.ghost.ghost(traces, depth={0: depth}, boundary={0: 0})
             names = ('spike_samples', 'masks', 'waveforms')
             self._thresholds = thresholds
             s, m, w = self.ctx.map_dask_array(self.extract_spikes,
                                               traces, name=names)
-            return _concat_spikes(s, m, w, chunks=traces.chunks)
+            return _concat_spikes(s, m, w, chunks=chunks, depth=depth)

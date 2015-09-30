@@ -12,7 +12,7 @@ from pytest import yield_fixture
 from phy.utils.datasets import download_test_data
 from phy.utils.tests.test_context import context, ipy_client
 from phy.electrode import load_probe
-from ..spike_detect import (SpikeDetector,
+from ..spike_detect import (SpikeDetector, _concat_spikes,
                             )
 
 
@@ -60,6 +60,43 @@ def _plot(sd, traces, spike_samples, masks):  # pragma: no cover
     run()
 
 
+def test_detect_concat():
+    import dask.async
+    from dask import set_options
+    from dask.array import Array, from_array
+    set_options(get=dask.async.get_sync)
+
+    chunks = ((5, 5, 2), (3,))
+    depth = 2
+    # [ 0  1  2  3  4 | 5  6  7  8  9 | 10  11 ]
+    # [ 0     2  3               8  9          ]
+
+    # Traces
+    # [ *  *  0  1  2  3  4  *  * | *  *  5  6  7  8  9  *  *  | *  *  10  11 ]
+    # [ !        !        !               !              !                    ]
+    # Spikes
+
+    dask = {('s', 0): np.array([0, 3, 6]),
+            ('s', 1): np.array([2, 7]),
+            ('s', 2): np.array([]),
+            }
+    chunks_spikes = ((3, 2, 0),)
+    s = Array(dask, 's', chunks_spikes, shape=(5,), dtype=np.int32)
+    m = from_array(np.arange(5 * 3).reshape((5, 3)),
+                   chunks_spikes + (3,))
+    w = from_array(np.arange(5 * 3 * 2).reshape((5, 3, 2)),
+                   chunks_spikes + (3, 2))
+
+    sc, mc, wc = _concat_spikes(s, m, w, chunks=chunks, depth=depth)
+    sc = sc.compute()
+    mc = mc.compute()
+    wc = wc.compute()
+
+    print(sc)
+    print(mc)
+    print(wc)
+
+
 def test_detect_simple(spike_detector, traces):
     sd = spike_detector
 
@@ -96,3 +133,4 @@ def test_detect_context(spike_detector, traces, context):
     assert masks.dtype == np.float32
     assert masks.ndim == 2
     assert masks.shape == (n_spikes, n_channels)
+    # _plot(sd, traces, spike_samples.compute(), masks.compute())
