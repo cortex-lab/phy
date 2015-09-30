@@ -50,7 +50,7 @@ def write_array(path, arr):
 # Context
 #------------------------------------------------------------------------------
 
-def _mapped(i, chunk, dask, func, cache_dir, name):
+def _mapped(i, chunk, dask, func, args, cache_dir, name):
     """Top-level function to map.
 
     This function needs to be a top-level function for ipyparallel to work.
@@ -61,7 +61,7 @@ def _mapped(i, chunk, dask, func, cache_dir, name):
 
     # Execute the function on the chunk.
     # logger.debug("Run %s on chunk %d", name, i)
-    res = func(arr)
+    res = func(arr, *args)
 
     # Save the result, and return the information about what we saved.
     return _save_stack_chunk(i, res, cache_dir, name)
@@ -191,7 +191,7 @@ class Context(object):
             return
         return self._memory.cache(f)
 
-    def map_dask_array(self, func, da, name=None):
+    def map_dask_array(self, func, da, *args, **kwargs):
         """Map a function on the chunks of a dask array, and return a
         new dask array.
 
@@ -202,10 +202,14 @@ class Context(object):
         name (the function's name by default). The result is a new dask array
         that reads data from the npy stack in the cache subdirectory.
 
+        The mapped function can return several arrays as a tuple. In this case,
+        `name` must also be a tuple, and the output of this function is a
+        tuple of dask arrays.
+
         """
         assert isinstance(da, Array)
 
-        name = name or func.__name__
+        name = kwargs.get('name', None) or func.__name__
         assert name != da.name
         dask = da.dask
 
@@ -215,7 +219,8 @@ class Context(object):
         args_0 = list(_iter_chunks_dask(da))
         n = len(args_0)
         output = self.map(_mapped, range(n), args_0, [dask] * n,
-                          [func] * n, [self.cache_dir] * n, [name] * n)
+                          [func] * n, [args] * n,
+                          [self.cache_dir] * n, [name] * n)
 
         # output contains information about the output arrays. We use this
         # information to reconstruct the final dask array.
