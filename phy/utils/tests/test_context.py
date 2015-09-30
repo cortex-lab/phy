@@ -133,17 +133,17 @@ def test_context_dask(context, ipy_client, is_parallel, multiple_outputs):
         context.ipy_view = ipy_client[:]
 
     if not multiple_outputs:
-        def f4(x):
+        def f4(x, onset):
             return x * x * x * x
         name = None
     else:
-        def f4(x):
-            return x * x * x * x, x + 1
+        def f4(x, onset):
+            return x * x * x * x + onset, x + 1
         name = ('power_four', 'plus_one')
 
     x = np.arange(10)
     da = from_array(x, chunks=(3,))
-    res = context.map_dask_array(f4, da, name=name)
+    res = context.map_dask_array(f4, da, 0, name=name)
 
     # Check that we can load the dumped dask array from disk.
     # The location is in the context cache dir, in a subdirectory with the
