@@ -49,6 +49,16 @@ def spike_detector(request):
 # Test spike detection
 #------------------------------------------------------------------------------
 
+def _plot(sd, traces, spike_samples, masks):
+    from vispy.app import run
+    from phy.plot import plot_traces
+    plot_traces(sd.subset_traces(traces),
+                spike_samples=spike_samples,
+                masks=masks,
+                n_samples_per_spike=40)
+    run()
+
+
 def test_detect(spike_detector, traces):
     sd = spike_detector
     spike_samples, masks, _ = sd.detect(traces)
@@ -63,10 +73,4 @@ def test_detect(spike_detector, traces):
     assert masks.ndim == 2
     assert masks.shape == (n_spikes, n_channels)
 
-    # from vispy.app import run
-    # from phy.plot import plot_traces
-    # plot_traces(sd.subset_traces(traces),
-    #             spike_samples=spike_samples,
-    #             masks=masks,
-    #             n_samples_per_spike=40)
-    # run()
+    # _plot(sd, traces, spike_samples, masks)
