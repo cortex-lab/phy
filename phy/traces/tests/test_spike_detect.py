@@ -11,7 +11,8 @@ from numpy.testing import assert_array_equal as ae
 from pytest import yield_fixture
 
 from phy.utils.datasets import download_test_data
-from phy.utils.tests.test_context import context, ipy_client
+from phy.utils.tests.test_context import (ipy_client, context,  # noqa
+                                          parallel_context)
 from phy.electrode import load_probe
 from ..spike_detect import (SpikeDetector,
                             _spikes_to_keep,
@@ -156,10 +157,9 @@ def test_detect_simple(spike_detector, traces):
     # _plot(sd, traces, spike_samples, masks)
 
 
-def test_detect_context(spike_detector, traces, context, ipy_client):
+def test_detect_context(spike_detector, traces, parallel_context):  # noqa
     sd = spike_detector
-    sd.set_context(context)
-    context.ipy_view = ipy_client[:]
+    sd.set_context(parallel_context)
 
     spike_samples, masks, _ = sd.detect(traces)
 
