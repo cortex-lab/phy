@@ -11,6 +11,11 @@ import os
 import os.path as op
 
 import numpy as np
+try:
+    from dask.async import get_sync as get
+except ImportError:  # pragma: no cover
+    raise Exception("dask is not installed. "
+                    "Install it with `conda install dask`.")
 
 logger = logging.getLogger(__name__)
 
@@ -21,8 +26,8 @@ logger = logging.getLogger(__name__)
 
 def _iter_chunks_dask(da):
     from dask.core import flatten
-    for i, chunk in enumerate(flatten(da._keys())):
-        yield i, chunk
+    for chunk in flatten(da._keys()):
+        yield chunk
 
 
 def read_array(path):
@@ -36,6 +41,24 @@ def write_array(path, arr):
 #------------------------------------------------------------------------------
 # Context
 #------------------------------------------------------------------------------
+
+def _mapped(i, chunk, dask, func, cachedir, name):
+    # Load the array's chunk.
+    arr = get(dask, chunk)
+
+    # Execute the function on the chunk.
+    res = func(arr)
+
+    # Save the output in the cache.
+    dirpath = op.join(cachedir, name)
+    if not op.exists(dirpath):
+        os.makedirs(dirpath)
+    path = op.join(dirpath, '{}.npy'.format(i))
+    write_array(path, res)
+
+    # Return a dask pair to load the result.
+    return (read_array, path)
+
 
 class Context(object):
     def __init__(self, cache_dir, ipy_view=None):
@@ -73,53 +96,51 @@ class Context(object):
             return
         return self._memory.cache(f)
 
-    def map_dask_array(self, f, da, chunks=None, name=None,
+    def map_dask_array(self, func, da, chunks=None, name=None,
                        dtype=None, shape=None):
         try:
             from dask.array import Array
-            from dask.async import get_sync as get
         except ImportError:  # pragma: no cover
             raise Exception("dask is not installed. "
                             "Install it with `conda install dask`.")
 
         assert isinstance(da, Array)
 
-        name = name or f.__name__
+        name = name or func.__name__
         assert name != da.name
         dtype = dtype or da.dtype
         shape = shape or da.shape
         chunks = chunks or da.chunks
         dask = da.dask
 
-        def wrapped(chk):
-            (i, chunk) = chk
-            # Load the array's chunk.
-            arr = get(dask, chunk)
-
-            # Execute the function on the chunk.
-            res = f(arr)
-
-            # Save the output in the cache.
-            if not op.exists(self._path(name)):
-                os.makedirs(self._path(name))
-            path = self._path('{name:s}/{i:d}.npy', name=name, i=i)
-            write_array(path, res)
-
-            # Return a dask pair to load the result.
-            return (read_array, path)
-
-        # Map the wrapped function normally.
-        mapped = self.map(wrapped, _iter_chunks_dask(da))
+        cachedir = self.cache_dir
+        args_0 = list(_iter_chunks_dask(da))
+        n = len(args_0)
+        mapped = self.map(_mapped, range(n), args_0, [dask] * n,
+                          [func] * n, [cachedir] * n, [name] * n)
 
         # Return the result as a dask array.
         dask = {(name, i): chunk for i, chunk in enumerate(mapped)}
         return Array(dask, name, chunks, dtype=dtype, shape=shape)
 
-    def map(self, f, args, sync=True):
-        if self._ipy_view:
-            if sync:
-                return self._ipy_view.map_sync(f, args)
-            else:
-                return self._ipy_view.map_async(f, args)
+    def _map_serial(self, f, *args):
+        return [f(*arg) for arg in zip(*args)]
+
+    def _map_ipy(self, f, *args, **kwargs):
+        if kwargs.get('sync', True):
+            name = 'map_sync'
         else:
-            return [f(arg) for arg in args]
+            name = 'map_async'
+        return getattr(self._ipy_view, name)(f, *args)
+
+    def map_async(self, f, *args):
+        if self._ipy_view:
+            return self._map_ipy(f, *args, sync=False)
+        else:
+            return self._map_serial(f, *args)
+
+    def map(self, f, *args):
+        if self._ipy_view:
+            return self._map_ipy(f, *args, sync=True)
+        else:
+            return self._map_serial(f, *args)

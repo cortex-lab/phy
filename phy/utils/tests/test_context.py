@@ -98,7 +98,7 @@ def test_context_parallel_map(context, ipy_client):
         return x * x
 
     assert context.map(square, [1, 2, 3]) == [1, 4, 9]
-    assert context.map(square, [1, 2, 3], sync=False).get() == [1, 4, 9]
+    assert context.map_async(square, [1, 2, 3]).get() == [1, 4, 9]
 
 
 def test_context_parallel_dask(context, ipy_client):
