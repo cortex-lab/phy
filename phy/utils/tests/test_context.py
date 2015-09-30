@@ -21,12 +21,6 @@ from ..context import Context, _iter_chunks_dask, write_array, read_array
 # Fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture(scope='function')
-def context(tempdir):
-    ctx = Context('{}/cache/'.format(tempdir))
-    yield ctx
-
-
 @yield_fixture(scope='module')
 def ipy_client():
 
@@ -47,6 +41,19 @@ def ipy_client():
     ipyparallel.tests.teardown()
 
 
+@yield_fixture(scope='function')
+def context(tempdir):
+    ctx = Context('{}/cache/'.format(tempdir))
+    yield ctx
+
+
+@yield_fixture(scope='function')
+def parallel_context(tempdir, ipy_client):
+    ctx = Context('{}/cache/'.format(tempdir))
+    ctx.ipy_view = ipy_client[:]
+    yield ctx
+
+
 #------------------------------------------------------------------------------
 # ipyparallel tests
 #------------------------------------------------------------------------------
@@ -60,16 +67,8 @@ def test_client_2(ipy_client):
 
 
 #------------------------------------------------------------------------------
-# Test context
+# Test utils and cache
 #------------------------------------------------------------------------------
-
-def test_iter_chunks_dask():
-    from dask.array import from_array
-
-    x = np.arange(10)
-    da = from_array(x, chunks=(3,))
-    assert len(list(_iter_chunks_dask(da))) == 4
-
 
 def test_read_write(tempdir):
     x = np.arange(10)
@@ -102,6 +101,10 @@ def test_context_cache(context):
     assert len(_res) == 2
 
 
+#------------------------------------------------------------------------------
+# Test map
+#------------------------------------------------------------------------------
+
 def test_context_map(context):
     def f3(x):
         return x * x * x
@@ -111,26 +114,29 @@ def test_context_map(context):
     assert context.map_async(f3, args) == [x ** 3 for x in range(10)]
 
 
-def test_context_parallel_map(context, ipy_client):
-    view = ipy_client[:]
-    context.ipy_view = view
-    assert context.ipy_view == view
+def test_context_parallel_map(parallel_context):
 
     def square(x):
         return x * x
 
-    assert context.map(square, [1, 2, 3]) == [1, 4, 9]
-    assert context.map_async(square, [1, 2, 3]).get() == [1, 4, 9]
+    assert parallel_context.map(square, [1, 2, 3]) == [1, 4, 9]
+    assert parallel_context.map_async(square, [1, 2, 3]).get() == [1, 4, 9]
 
 
-@mark.parametrize('is_parallel,multiple_outputs',
-                  product([True, False], repeat=2))
-def test_context_dask(context, ipy_client, is_parallel, multiple_outputs):
+#------------------------------------------------------------------------------
+# Test context dask
+#------------------------------------------------------------------------------
 
+def test_iter_chunks_dask():
+    from dask.array import from_array
+
+    x = np.arange(10)
+    da = from_array(x, chunks=(3,))
+    assert len(list(_iter_chunks_dask(da))) == 4
+
+
+def _test_context_dask(context, multiple_outputs):
     from dask.array import from_array, from_npy_stack
-
-    if is_parallel:
-        context.ipy_view = ipy_client[:]
 
     if not multiple_outputs:
         def f4(x, onset):
@@ -161,3 +167,13 @@ def test_context_dask(context, ipy_client, is_parallel, multiple_outputs):
 
         y = from_npy_stack(op.join(context.cache_dir, 'plus_one'))
         ae(y.compute(), x + 1)
+
+
+@mark.parametrize('multiple_outputs', [True, False])
+def test_context_dask_simple(context, multiple_outputs):
+    _test_context_dask(context, multiple_outputs)
+
+
+@mark.parametrize('multiple_outputs', [True, False])
+def test_context_dask_parallel(parallel_context, multiple_outputs):
+    _test_context_dask(parallel_context, multiple_outputs)
