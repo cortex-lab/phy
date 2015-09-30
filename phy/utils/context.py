@@ -32,10 +32,12 @@ def _iter_chunks_dask(da):
 
 
 def read_array(path):
+    """Read a .npy array."""
     return np.load(path)
 
 
 def write_array(path, arr):
+    """Write an array to a .npy file."""
     np.save(path, arr)
 
 
@@ -44,6 +46,11 @@ def write_array(path, arr):
 #------------------------------------------------------------------------------
 
 def _mapped(i, chunk, dask, func, dirpath):
+    """Top-level function to map.
+
+    This function needs to be a top-level function for ipyparallel to work.
+
+    """
     # Load the array's chunk.
     arr = get(dask, chunk)
 
@@ -61,10 +68,15 @@ def _mapped(i, chunk, dask, func, dirpath):
 
 
 class Context(object):
+    """Handle function cacheing and parallel map with ipyparallel."""
     def __init__(self, cache_dir, ipy_view=None):
+
+        # Make sure the cache directory exists.
         self.cache_dir = op.realpath(cache_dir)
         if not op.exists(self.cache_dir):
             os.makedirs(self.cache_dir)
+
+        # Try importing joblib.
         try:
             from joblib import Memory
             joblib_cachedir = self._path('joblib')
@@ -73,10 +85,12 @@ class Context(object):
             logger.warn("Joblib is not installed. "
                         "Install it with `conda install joblib`.")
             self._memory = None
+
         self.ipy_view = ipy_view if ipy_view else None
 
     @property
     def ipy_view(self):
+        """ipyparallel view to parallel computing resources."""
         return self._ipy_view
 
     @ipy_view.setter
@@ -87,9 +101,11 @@ class Context(object):
             value.use_dill()
 
     def _path(self, rel_path, *args, **kwargs):
+        """Get the full path to a local cache resource."""
         return op.join(self.cache_dir, rel_path.format(*args, **kwargs))
 
     def cache(self, f):
+        """Cache a function using the context's cache directory."""
         if self._memory is None:  # pragma: no cover
             logger.debug("Joblib is not installed: skipping cacheing.")
             return
@@ -97,6 +113,19 @@ class Context(object):
 
     def map_dask_array(self, func, da, chunks=None, name=None,
                        dtype=None, shape=None):
+        """Map a function on the chunks of a dask array, and return a
+        new dask array.
+
+        This function works in parallel if an `ipy_view` has been set.
+
+        Every task loads one chunk, applies the function, and saves the
+        result into a `<i>.npy` file in a cache subdirectory with the specified
+        name (the function's name by default). The result is a new dask array
+        that reads data from the npy stack in the cache subdirectory.
+
+        The metadata of the output dask array need to be specified.
+
+        """
         try:
             from dask.array import Array
         except ImportError:  # pragma: no cover
@@ -136,12 +165,22 @@ class Context(object):
         return getattr(self._ipy_view, name)(f, *args)
 
     def map_async(self, f, *args):
+        """Map a function asynchronously.
+
+        Use the ipyparallel resources if available.
+
+        """
         if self._ipy_view:
             return self._map_ipy(f, *args, sync=False)
         else:
             return self._map_serial(f, *args)
 
     def map(self, f, *args):
+        """Map a function synchronously.
+
+        Use the ipyparallel resources if available.
+
+        """
         if self._ipy_view:
             return self._map_ipy(f, *args, sync=True)
         else:

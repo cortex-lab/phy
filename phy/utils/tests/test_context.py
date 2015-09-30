@@ -13,7 +13,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import yield_fixture, mark
 
-from ..context import Context, _iter_chunks_dask
+from ..context import Context, _iter_chunks_dask, write_array, read_array
 
 
 #------------------------------------------------------------------------------
@@ -68,6 +68,12 @@ def test_iter_chunks_dask():
     x = np.arange(10)
     da = from_array(x, chunks=(3,))
     assert len(list(_iter_chunks_dask(da))) == 4
+
+
+def test_read_write(tempdir):
+    x = np.arange(10)
+    write_array(op.join(tempdir, 'test.npy'), x)
+    ae(read_array(op.join(tempdir, 'test.npy')), x)
 
 
 def test_context_cache(context):
