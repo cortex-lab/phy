@@ -6,13 +6,12 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from itertools import product
 import os
 import os.path as op
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import yield_fixture, mark
+from pytest import yield_fixture, mark, raises
 from six.moves import cPickle
 
 from ..context import Context, _iter_chunks_dask, write_array, read_array
@@ -124,7 +123,10 @@ def test_context_map(parallel_context):
         return x * x
 
     assert parallel_context.map(square, [1, 2, 3]) == [1, 4, 9]
-    if parallel_context.ipy_view:
+    if not parallel_context.ipy_view:
+        with raises(RuntimeError):
+            parallel_context.map_async(square, [1, 2, 3])
+    else:
         assert parallel_context.map_async(square, [1, 2, 3]).get() == [1, 4, 9]
 
 
