@@ -21,7 +21,7 @@ from phy.utils.testing import captured_output, captured_logging
 pytestmark = mark.long
 
 # Skip some tests on OS X or on CI systems (Travis).
-skip = mark.skipif((platform == "darwin") or not(os.environ.get('CI', None)),
+skip = mark.skipif((platform == "darwin") or os.environ.get('CI', None),
                    reason="Some tests don't work on OS X because of a bug "
                           "with QTest (qtbot) keyboard events that don't "
                           "trigger QAction shortcuts. On CI these tests "
