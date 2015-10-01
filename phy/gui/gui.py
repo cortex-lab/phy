@@ -309,7 +309,11 @@ class Snippets(object):
         snippet = snippet[1:]
         snippet_args = _parse_snippet(snippet)
         alias = snippet_args[0]
-        name = self._actions.get_name(alias)
+        try:
+            name = self._actions.get_name(alias)
+        except ValueError:
+            logger.warn("The action %s could not be found.", alias)
+            return
         assert name
         func = getattr(self._actions, name)
         try:
