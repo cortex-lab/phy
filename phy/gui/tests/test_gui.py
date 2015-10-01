@@ -21,11 +21,14 @@ from phy.utils.testing import captured_output, captured_logging
 pytestmark = mark.long
 
 # Skip some tests on OS X or on CI systems (Travis).
-skip = mark.skipif((platform == "darwin") or os.environ.get('CI', None),
-                   reason="Some tests don't work on OS X because of a bug "
-                          "with QTest (qtbot) keyboard events that don't "
-                          "trigger QAction shortcuts. On CI these tests "
-                          "fail because the GUI is not displayed.")
+skip_mac = mark.skipif(platform == "darwin",
+                       reason="Some tests don't work on OS X because of a bug "
+                              "with QTest (qtbot) keyboard events that don't "
+                              "trigger QAction shortcuts. On CI these tests "
+                              "fail because the GUI is not displayed.")
+
+skip_ci = mark.skipif(os.environ.get('CI', None) is not None,
+                      reason="Some shortcut-related Qt tests fail on CI.")
 
 
 #------------------------------------------------------------------------------
@@ -112,7 +115,8 @@ def test_actions_simple(actions):
     actions.remove_all()
 
 
-@skip
+@skip_mac
+@skip_ci
 def test_actions_dock(qtbot, gui, actions):
     actions.attach(gui)
 
@@ -258,7 +262,8 @@ def test_snippets_actions(qtbot, actions, snippets):
     snippets.mode_off()
 
 
-@skip
+@skip_mac
+@skip_ci
 def test_snippets_dock(qtbot, gui, actions, snippets):
 
     qtbot.addWidget(gui)
