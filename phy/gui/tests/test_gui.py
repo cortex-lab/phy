@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from sys import platform
+
 from pytest import mark, raises, yield_fixture
 
 from ..qt import Qt
@@ -16,6 +18,12 @@ from phy.utils.testing import captured_output, captured_logging
 
 # Skip these tests in "make test-quick".
 pytestmark = mark.long
+
+# Skip some tests on OS X.
+skip_mac = mark.skipif(platform == "darwin",
+                       reason="Some tests don't work on OS X because of a bug "
+                              "with QTest (qtbot) keyboard events that don't "
+                              "trigger QAction shortcuts.")
 
 
 #------------------------------------------------------------------------------
@@ -102,6 +110,7 @@ def test_actions_simple(actions):
     actions.remove_all()
 
 
+@skip_mac
 def test_actions_dock(qtbot, gui, actions):
     actions.attach(gui)
 
@@ -176,8 +185,7 @@ def test_snippets_errors(qtbot, actions, snippets):
     snippets.attach(None, actions)
     actions.reset()
 
-    with raises(ValueError):
-        snippets.run(':t1')
+    snippets.run(':t1')
 
     with captured_logging() as buf:
         snippets.run(':t')
@@ -246,6 +254,7 @@ def test_snippets_actions(qtbot, actions, snippets):
     snippets.mode_off()
 
 
+@skip_mac
 def test_snippets_dock(qtbot, gui, actions, snippets):
 
     qtbot.addWidget(gui)
