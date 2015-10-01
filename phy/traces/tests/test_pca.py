@@ -7,7 +7,10 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from numpy.testing import assert_array_equal as ae
 
+from phy.io.tests.test_context import (ipy_client, context,  # noqa
+                                       parallel_context)
 from ...io.mock import artificial_waveforms, artificial_masks
 from ..pca import PCA, _compute_pcs, _project_pcs
 
@@ -54,7 +57,7 @@ def test_project_pcs():
     assert y1.shape == (n, nc, nf)
 
 
-class PCATest(object):
+class TestPCA(object):
     def setup(self):
         self.n_spikes = 100
         self.n_samples = 40
@@ -64,9 +67,29 @@ class PCATest(object):
                                               self.n_channels)
         self.masks = artificial_masks(self.n_spikes, self.n_channels)
 
-    def test_serial(self):
+    def _get_features(self):
         pca = PCA()
         pcs = pca.fit(self.waveforms, self.masks)
         assert pcs.shape == (3, self.n_samples, self.n_channels)
-        fet = pca.transform(self.waveforms)
+        return pca.transform(self.waveforms)
+
+    def test_serial(self):
+        fet = self._get_features()
         assert fet.shape == (self.n_spikes, self.n_channels, 3)
+
+    def test_parallel(self, parallel_context):
+
+        # Chunk the waveforms array.
+        from dask.array import from_array
+        chunks = (10, self.n_samples, self.n_channels)
+        waveforms = from_array(self.waveforms, chunks)
+
+        # Compute the PCs in parallel.
+        pca = PCA(parallel_context)
+        pcs = pca.fit(waveforms, self.masks)
+        assert pcs.shape == (3, self.n_samples, self.n_channels)
+        fet = pca.transform(waveforms)
+        assert fet.shape == (self.n_spikes, self.n_channels, 3)
+
+        # Check that the computed features are identical.
+        ae(fet, self._get_features())
