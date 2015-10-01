@@ -16,20 +16,6 @@ from ..pca import PCA, _compute_pcs, _project_pcs
 # Test PCA
 #------------------------------------------------------------------------------
 
-def test_pca():
-    n_spikes = 100
-    n_samples = 40
-    n_channels = 12
-    waveforms = artificial_waveforms(n_spikes, n_samples, n_channels)
-    masks = artificial_masks(n_spikes, n_channels)
-
-    pca = PCA()
-    pcs = pca.fit(waveforms, masks)
-    assert pcs.shape == (3, n_samples, n_channels)
-    fet = pca.transform(waveforms)
-    assert fet.shape == (n_spikes, n_channels, 3)
-
-
 def test_compute_pcs():
     """Test PCA on a 2D array."""
     # Horizontal ellipsoid.
@@ -66,3 +52,21 @@ def test_project_pcs():
 
     y1 = _project_pcs(arr, pcs)
     assert y1.shape == (n, nc, nf)
+
+
+class PCATest(object):
+    def setup(self):
+        self.n_spikes = 100
+        self.n_samples = 40
+        self.n_channels = 12
+        self.waveforms = artificial_waveforms(self.n_spikes,
+                                              self.n_samples,
+                                              self.n_channels)
+        self.masks = artificial_masks(self.n_spikes, self.n_channels)
+
+    def test_serial(self):
+        pca = PCA()
+        pcs = pca.fit(self.waveforms, self.masks)
+        assert pcs.shape == (3, self.n_samples, self.n_channels)
+        fet = pca.transform(self.waveforms)
+        assert fet.shape == (self.n_spikes, self.n_channels, 3)
