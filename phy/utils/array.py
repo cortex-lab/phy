@@ -13,7 +13,7 @@ import os.path as op
 
 import numpy as np
 
-from ._types import _as_array, _is_array_like
+from phy.utils._types import _as_array, _is_array_like
 
 logger = logging.getLogger(__name__)
 

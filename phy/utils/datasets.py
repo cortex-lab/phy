@@ -11,8 +11,8 @@ import logging
 import os
 import os.path as op
 
-from .settings import _phy_user_dir, _ensure_dir_exists
-from .event import ProgressReporter
+from phy.utils.event import ProgressReporter
+from phy.utils.settings import _phy_user_dir, _ensure_dir_exists
 
 logger = logging.getLogger(__name__)
 
