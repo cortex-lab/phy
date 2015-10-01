@@ -106,6 +106,9 @@ class SpikeDetector(Task):
         # Channel mapping.
         if channel_mapping is None:
             channel_mapping = {c: c for c in probe.channels}
+        # Remove channels mapped to None or a negative value: they are dead.
+        channel_mapping = {k: v for (k, v) in channel_mapping.items()
+                           if v is not None and v >= 0}
         # channel mappings is {trace_col: channel_id}.
         # Trace columns and channel ids to keep.
         self.trace_cols = sorted(channel_mapping.keys())
