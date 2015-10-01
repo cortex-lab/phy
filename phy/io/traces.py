@@ -15,31 +15,39 @@ import numpy as np
 # Raw data readers
 #------------------------------------------------------------------------------
 
-def read_kwd(kwd_handle):
-    """Read all traces in a  `.kwd` file.
+def _read_recording(filename, rec_name):
+    """Open a file and return a recording dataset.
 
-    The output is a memory-mapped file.
+    WARNING: the file is not closed when the function returns, so that the
+    memory-mapped array can still be accessed from disk.
 
     """
-    import dask.array
+    from h5py import File
+    f = File(filename, mode='r')
+    return f['/recordings/{}/data'.format(rec_name)]
 
-    f = kwd_handle
 
-    if '/recordings' not in f:  # pragma: no cover
-        return
-    recordings = f.children('/recordings')
+def read_kwd(filename):
+    """Read all traces in a `.kwd` file."""
+    from h5py import File
+    from dask.array import Array
 
-    def _read(idx):
-        # The file needs to be open.
-        assert f.is_open()
-        return f.read('/recordings/{}/data'.format(recordings[idx]))
+    with File(filename, mode='r') as f:
+        rec_names = sorted([name for name in f['/recordings']])
+        shapes = [f['/recordings/{}/data'.format(name)].shape
+                  for name in rec_names]
 
-    dsk = {('data', idx, 0): (_read, idx) for idx in range(len(recordings))}
+    # Create the dask graph for all recordings from the .kwdd file.
+    dask = {('data', idx, 0): (_read_recording, filename, rec_name)
+            for (idx, rec_name) in enumerate(rec_names)}
 
-    chunks = (tuple(_read(idx).shape[0] for idx in range(len(recordings))),
-              (_read(0).shape[1],)
-              )
-    return dask.array.Array(dsk, 'data', chunks)
+    # Make sure all recordings have the same number of channels.
+    n_cols = shapes[0][1]
+    assert all(shape[1] == n_cols for shape in shapes)
+
+    # Create the dask Array.
+    chunks = (tuple(shape[0] for shape in shapes), (n_cols,))
+    return Array(dask, 'data', chunks)
 
 
 def _dat_n_samples(filename, dtype=None, n_channels=None):
