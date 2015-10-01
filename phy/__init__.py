@@ -14,7 +14,7 @@ import sys
 
 from six import StringIO
 
-from .utils.datasets import download_sample_data
+from .io.datasets import download_file, download_sample_data
 from .utils._misc import _git_version
 
 

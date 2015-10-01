@@ -13,7 +13,7 @@ from traitlets.config.configurable import Configurable
 from traitlets import Int, Float, Unicode, Bool
 
 from phy.electrode.mea import MEA, _adjacency_subset, _remap_adjacency
-from phy.utils.array import get_excerpts
+from phy.io.array import get_excerpts
 from .detect import FloodFillDetector, Thresholder, compute_threshold
 from .filter import Filter
 from .waveform import WaveformExtractor

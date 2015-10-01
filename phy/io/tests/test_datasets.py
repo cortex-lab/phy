@@ -22,7 +22,7 @@ from ..datasets import (download_file,
                         _BASE_URL,
                         _validate_output_dir,
                         )
-from ..testing import captured_logging
+from phy.utils.testing import captured_logging
 
 logger = logging.getLogger(__name__)
 

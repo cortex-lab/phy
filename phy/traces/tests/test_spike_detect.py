@@ -10,9 +10,9 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import yield_fixture
 
-from phy.utils.datasets import download_test_data
-from phy.utils.tests.test_context import (ipy_client, context,  # noqa
-                                          parallel_context)
+from phy.io.datasets import download_test_data
+from phy.io.tests.test_context import (ipy_client, context,  # noqa
+                                       parallel_context)
 from phy.electrode import load_probe
 from ..spike_detect import (SpikeDetector,
                             _spikes_to_keep,

@@ -18,10 +18,10 @@ from ._vispy_utils import (BaseSpikeVisual,
                            _enable_depth_mask,
                            _wrap_vispy,
                            )
-from ..utils._types import _as_array
-from ..utils._color import _selected_clusters_colors
-from ..utils.array import _index_of, _normalize, _unique
-from ..electrode.mea import linear_positions
+from phy.utils._types import _as_array
+from phy.utils._color import _selected_clusters_colors
+from phy.io.array import _index_of, _normalize, _unique
+from phy.electrode.mea import linear_positions
 
 
 #------------------------------------------------------------------------------

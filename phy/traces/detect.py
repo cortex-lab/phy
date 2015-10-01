@@ -10,7 +10,7 @@ import numpy as np
 from six import string_types
 from six.moves import range, zip
 
-from ..utils.array import _as_array
+from phy.io.array import _as_array
 
 
 #------------------------------------------------------------------------------

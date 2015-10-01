@@ -15,9 +15,9 @@ from ._vispy_utils import (BaseSpikeVisual,
                            BaseSpikeCanvas,
                            _wrap_vispy,
                            )
-from ..utils._color import _selected_clusters_colors
-from ..utils._types import _as_array
-from ..utils.array import _index_of, _unique
+from phy.utils._color import _selected_clusters_colors
+from phy.utils._types import _as_array
+from phy.io.array import _index_of, _unique
 
 
 #------------------------------------------------------------------------------
