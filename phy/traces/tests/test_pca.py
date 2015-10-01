@@ -9,7 +9,7 @@
 import numpy as np
 
 from ...io.mock import artificial_waveforms, artificial_masks
-from ..pca import PCA, _compute_pcs
+from ..pca import PCA, _compute_pcs, _project_pcs
 
 
 #------------------------------------------------------------------------------
@@ -56,3 +56,13 @@ def test_compute_pcs_3d():
     assert np.linalg.norm(pcs[1, :, 0] - np.array([0., -1.])) < 1e-2
     assert np.linalg.norm(pcs[0, :, 1] - np.array([0, 1.])) < 1e-2
     assert np.linalg.norm(pcs[1, :, 1] - np.array([-1., 0.])) < 1e-2
+
+
+def test_project_pcs():
+    n, ns, nc = 1000, 50, 100
+    nf = 3
+    arr = np.random.randn(n, ns, nc)
+    pcs = np.random.randn(nf, ns, nc)
+
+    y1 = _project_pcs(arr, pcs)
+    assert y1.shape == (n, nc, nf)
