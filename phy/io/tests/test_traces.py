@@ -13,7 +13,6 @@ from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
 from pytest import raises
 
-from ..h5 import open_h5
 from ..traces import read_dat, _dat_n_samples, read_kwd, read_ns5
 from ..mock import artificial_traces
 
@@ -39,22 +38,24 @@ def test_read_dat(tempdir):
 
 
 def test_read_kwd(tempdir):
+    from h5py import File
+
     n_samples = 100
     n_channels = 10
-
     arr = artificial_traces(n_samples, n_channels)
+    path = op.join(tempdir, 'test.kwd')
 
-    path = op.join(tempdir, 'test')
+    with File(path, 'w') as f:
+        g0 = f.create_group('/recordings/0')
+        g1 = f.create_group('/recordings/1')
 
-    with open_h5(path, 'w') as f:
-        f.write('/recordings/0/data',
-                arr[:n_samples // 2, ...].astype(np.float32))
-        f.write('/recordings/1/data',
-                arr[n_samples // 2:, ...].astype(np.float32))
+        arr0 = arr[:n_samples // 2, ...]
+        arr1 = arr[n_samples // 2:, ...]
 
-    with open_h5(path, 'r') as f:
-        data = read_kwd(f)[...]
-        ac(arr, data)
+        g0.create_dataset('data', data=arr0)
+        g1.create_dataset('data', data=arr1)
+
+    ae(read_kwd(path)[...], arr)
 
 
 def test_read_ns5():
