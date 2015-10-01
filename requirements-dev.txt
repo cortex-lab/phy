@@ -8,3 +8,4 @@ coveralls
 responses
 pytest-cov
 pytest-qt
+nose
