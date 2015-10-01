@@ -10,6 +10,7 @@ import logging
 import os
 import os.path as op
 
+from traitlets.config.configurable import Configurable
 import numpy as np
 from six.moves.cPickle import dump
 from six import string_types
@@ -263,3 +264,16 @@ class Context(object):
         self.__dict__ = state
         # Recreate the joblib Memory instance.
         self._set_memory(state['cache_dir'])
+
+
+#------------------------------------------------------------------------------
+# Task
+#------------------------------------------------------------------------------
+
+class Task(Configurable):
+    def __init__(self, ctx=None):
+        super(Task, self).__init__()
+        self.set_context(ctx)
+
+    def set_context(self, ctx):
+        self.ctx = ctx
