@@ -9,7 +9,7 @@
 import os.path as op
 
 import numpy as np
-from pytest import raises, mark
+from pytest import raises
 
 from .._types import _as_array
 from ..array import (_unique,
@@ -27,8 +27,8 @@ from ..array import (_unique,
                      get_excerpts,
                      _range_from_slice,
                      _pad,
-                     _load_arrays,
-                     _save_arrays,
+                     read_array,
+                     write_array,
                      )
 from ..testing import _assert_equal as ae
 from ...io.mock import artificial_spike_clusters
@@ -182,28 +182,14 @@ def test_in_polygon():
 
 
 #------------------------------------------------------------------------------
-# Test I/O functions
+# Test read/save
 #------------------------------------------------------------------------------
 
-@mark.parametrize('n', [20, 0])
-def test_load_save_arrays(tempdir, n):
+def test_read_write(tempdir):
+    arr = np.arange(10).astype(np.float32)
     path = op.join(tempdir, 'test.npy')
-    # Random arrays.
-    arrays = []
-    for i in range(n):
-        size = np.random.randint(low=3, high=50)
-        assert size > 0
-        arr = np.random.rand(size, 3).astype(np.float32)
-        arrays.append(arr)
-    _save_arrays(path, arrays)
-
-    arrays_loaded = _load_arrays(path)
-
-    assert len(arrays) == len(arrays_loaded)
-    for arr, arr_loaded in zip(arrays, arrays_loaded):
-        assert arr.shape == arr_loaded.shape
-        assert arr.dtype == arr_loaded.dtype
-        ae(arr, arr_loaded)
+    write_array(path, arr)
+    ae(read_array(path), arr)
 
 
 #------------------------------------------------------------------------------

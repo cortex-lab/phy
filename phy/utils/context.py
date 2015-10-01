@@ -22,6 +22,7 @@ except ImportError:  # pragma: no cover
                     "Install it with `conda install dask`.")
 
 from phy.utils import Bunch
+from phy.utils.array import read_array, write_array
 
 logger = logging.getLogger(__name__)
 
@@ -33,17 +34,6 @@ logger = logging.getLogger(__name__)
 def _iter_chunks_dask(da):
     for chunk in flatten(da._keys()):
         yield chunk
-
-
-def read_array(path):
-    """Read a .npy array."""
-    return np.load(path)
-
-
-def write_array(path, arr):
-    """Write an array to a .npy file."""
-    logger.debug("Write array to %s.", path)
-    np.save(path, arr)
 
 
 #------------------------------------------------------------------------------
