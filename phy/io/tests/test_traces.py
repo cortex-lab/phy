@@ -10,7 +10,6 @@ import os.path as op
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from numpy.testing import assert_allclose as ac
 from pytest import raises
 
 from ..traces import read_dat, _dat_n_samples, read_kwd, read_ns5
