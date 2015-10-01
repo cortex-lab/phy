@@ -12,7 +12,6 @@ from pytest import raises, yield_fixture
 
 from ..settings import (BaseSettings,
                         Settings,
-                        _load_default_settings,
                         _recursive_dirs,
                         _phy_user_dir,
                         )
@@ -46,12 +45,6 @@ def test_recursive_dirs():
         dir = op.relpath(dir, root)
         assert '.' not in dir
         assert '_' not in dir
-
-
-def test_load_default_settings():
-    settings = _load_default_settings()
-    keys = settings.keys()
-    assert keys
 
 
 def test_base_settings():
@@ -191,5 +184,4 @@ def test_settings_manager(tempdir, tempdir_bis):
     assert sm['c'] == 50
     assert 'a' not in sm
 
-    assert len(sm.keys()) >= 10
     assert str(sm).startswith('<Settings')
