@@ -101,12 +101,6 @@ class SpikeDetector(Configurable):
 
     def set_context(self, ctx):
         self.ctx = ctx
-        if not ctx or not hasattr(ctx, 'cache'):
-            return
-        # self.find_thresholds = ctx.cache(self.find_thresholds)
-        # self.filter = ctx.cache(self.filter)
-        # self.extract_spikes = ctx.cache(self.extract_spikes)
-        # self.detect = ctx.cache(self.detect)
 
     def set_metadata(self, probe, channel_mapping=None,
                      sample_rate=None):
