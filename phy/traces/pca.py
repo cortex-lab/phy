@@ -7,9 +7,9 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from traitlets.config.configurable import Configurable
 from traitlets import Int
 
+from phy.io.context import Task
 from ..utils._types import _as_array
 
 
@@ -104,17 +104,9 @@ def _project_pcs(x, pcs):
     return x_proj
 
 
-class PCA(Configurable):
+class PCA(Task):
     """Apply PCA to waveforms."""
     n_features_per_channel = Int(3)
-
-    def __init__(self, ctx=None):
-        super(PCA, self).__init__()
-        self.set_context(ctx)
-        self._pcs = None
-
-    def set_context(self, ctx):
-        self.ctx = ctx
 
     def fit(self, waveforms, masks=None):
         """Compute the PCs of waveforms.
@@ -144,7 +136,6 @@ class PCA(Configurable):
             Shape: `(n_spikes, n_samples, n_channels)`
 
         """
-        if pcs is None:
-            pcs = self._pcs
+        pcs = self._pcs if pcs is None else pcs
         assert pcs is not None
         return _project_pcs(waveforms, pcs)

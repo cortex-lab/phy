@@ -9,11 +9,11 @@
 import logging
 
 import numpy as np
-from traitlets.config.configurable import Configurable
 from traitlets import Int, Float, Unicode, Bool
 
 from phy.electrode.mea import MEA, _adjacency_subset, _remap_adjacency
 from phy.io.array import get_excerpts
+from phy.io.context import Task
 from .detect import FloodFillDetector, Thresholder, compute_threshold
 from .filter import Filter
 from .waveform import WaveformExtractor
@@ -78,7 +78,7 @@ def _concat_spikes(s, m, w, trace_chunks=None, depth=None):
 # SpikeDetector
 #------------------------------------------------------------------------------
 
-class SpikeDetector(Configurable):
+class SpikeDetector(Task):
     do_filter = Bool(True)
     filter_low = Float(500.)
     filter_butter_order = Int(3)
@@ -94,13 +94,6 @@ class SpikeDetector(Configurable):
     extract_s_before = Int(10)
     extract_s_after = Int(10)
     weight_power = Float(2)
-
-    def __init__(self, ctx=None):
-        super(SpikeDetector, self).__init__()
-        self.set_context(ctx)
-
-    def set_context(self, ctx):
-        self.ctx = ctx
 
     def set_metadata(self, probe, channel_mapping=None,
                      sample_rate=None):
