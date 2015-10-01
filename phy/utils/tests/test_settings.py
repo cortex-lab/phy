@@ -185,3 +185,4 @@ def test_settings_manager(tempdir, tempdir_bis):
     assert 'a' not in sm
 
     assert str(sm).startswith('<Settings')
+    assert sm.keys()

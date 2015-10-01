@@ -77,7 +77,7 @@ class TestPCA(object):
         fet = self._get_features()
         assert fet.shape == (self.n_spikes, self.n_channels, 3)
 
-    def test_parallel(self, parallel_context):
+    def test_parallel(self, parallel_context):  # noqa
 
         # Chunk the waveforms array.
         from dask.array import from_array
