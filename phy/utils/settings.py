@@ -44,22 +44,6 @@ def _recursive_dirs():
         yield op.realpath(op.join(phy_root, root))
 
 
-def _default_settings_paths():
-    return [op.join(dir, 'default_settings.py')
-            for dir in _recursive_dirs()]
-
-
-def _load_default_settings(paths=None):
-    """Load all default settings in phy's package."""
-    if paths is None:
-        paths = _default_settings_paths()
-    settings = BaseSettings()
-    for path in paths:
-        if op.exists(path):
-            settings.load(path)
-    return settings
-
-
 class BaseSettings(object):
     """Store key-value pairs."""
     def __init__(self):
@@ -127,22 +111,16 @@ class BaseSettings(object):
 
 
 class Settings(object):
-    """Manage default, user-wide, and experiment-wide settings."""
+    """Manage user-wide, and experiment-wide settings."""
 
-    def __init__(self, phy_user_dir=None, default_paths=None):
+    def __init__(self, phy_user_dir=None):
         self.phy_user_dir = phy_user_dir
         if self.phy_user_dir:
             _ensure_dir_exists(self.phy_user_dir)
-        self._default_paths = default_paths or _default_settings_paths()
         self._bs = BaseSettings()
         self._load_user_settings()
 
     def _load_user_settings(self):
-        # Load phy's defaults.
-        if self._default_paths:
-            for path in self._default_paths:
-                if op.exists(path):
-                    self._bs.load(path)
 
         if not self.phy_user_dir:
             return
