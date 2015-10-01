@@ -55,4 +55,4 @@ def test_prompt(qtbot):
                   buttons=['save', 'cancel', 'close'],
                   )
     qtbot.mouseClick(box.buttons()[0], QtCore.Qt.LeftButton)
-    assert 'save' in box.clickedButton().text().lower()
+    assert 'save' in str(box.clickedButton().text()).lower()
