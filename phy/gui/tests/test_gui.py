@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
 from sys import platform
 
 from pytest import mark, raises, yield_fixture
@@ -19,11 +20,12 @@ from phy.utils.testing import captured_output, captured_logging
 # Skip these tests in "make test-quick".
 pytestmark = mark.long
 
-# Skip some tests on OS X.
-skip_mac = mark.skipif(platform == "darwin",
-                       reason="Some tests don't work on OS X because of a bug "
-                              "with QTest (qtbot) keyboard events that don't "
-                              "trigger QAction shortcuts.")
+# Skip some tests on OS X or on CI systems (Travis).
+skip = mark.skipif((platform == "darwin") or not(os.environ.get('CI', None)),
+                   reason="Some tests don't work on OS X because of a bug "
+                          "with QTest (qtbot) keyboard events that don't "
+                          "trigger QAction shortcuts. On CI these tests "
+                          "fail because the GUI is not displayed.")
 
 
 #------------------------------------------------------------------------------
@@ -110,7 +112,7 @@ def test_actions_simple(actions):
     actions.remove_all()
 
 
-@skip_mac
+@skip
 def test_actions_dock(qtbot, gui, actions):
     actions.attach(gui)
 
@@ -128,10 +130,12 @@ def test_actions_dock(qtbot, gui, actions):
         _press.append(0)
 
     qtbot.keyPress(gui, Qt.Key_G, Qt.ControlModifier)
+    qtbot.waitForWindowShown(gui)
     assert _press == [0]
 
     # Quit the GUI.
     qtbot.keyPress(gui, Qt.Key_Q, Qt.ControlModifier)
+    qtbot.waitForWindowShown(gui)
 
 
 #------------------------------------------------------------------------------
@@ -254,7 +258,7 @@ def test_snippets_actions(qtbot, actions, snippets):
     snippets.mode_off()
 
 
-@skip_mac
+@skip
 def test_snippets_dock(qtbot, gui, actions, snippets):
 
     qtbot.addWidget(gui)
@@ -277,11 +281,14 @@ def test_snippets_dock(qtbot, gui, actions, snippets):
     # Simulate the following keystrokes `:t2 ^H^H1 3-5 ab,c `
     assert not snippets.is_mode_on()
     qtbot.keyClicks(gui, ':t2 ')
+    qtbot.waitForWindowShown(gui)
+
     assert snippets.is_mode_on()
     qtbot.keyPress(gui, Qt.Key_Backspace)
     qtbot.keyPress(gui, Qt.Key_Backspace)
     qtbot.keyClicks(gui, '1 3-5 ab,c')
     qtbot.keyPress(gui, Qt.Key_Return)
+    qtbot.waitForWindowShown(gui)
 
     assert _actions == [((3, 4, 5), ('ab', 'c'))]
 
