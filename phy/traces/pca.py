@@ -87,8 +87,8 @@ def _project_pcs(x, pcs):
     pcs : array
         The PCs returned by `_compute_pcs()`.
     """
-    # pcs: (nf, ns, nc)
     # x: (n, ns, nc)
+    # pcs: (nf, ns, nc)
     # out: (n, nc, nf)
     assert pcs.ndim == 3
     assert x.ndim == 3
