@@ -126,6 +126,9 @@ class PCA(Task):
                                  )
         return self._pcs
 
+    def _project(self, waveforms):
+        return _project_pcs(waveforms, self._pcs)
+
     def transform(self, waveforms, pcs=None):
         """Project waveforms on the PCs.
 
@@ -136,6 +139,13 @@ class PCA(Task):
             Shape: `(n_spikes, n_samples, n_channels)`
 
         """
-        pcs = self._pcs if pcs is None else pcs
-        assert pcs is not None
-        return _project_pcs(waveforms, pcs)
+        self._pcs = self._pcs if pcs is None else pcs
+        assert self._pcs is not None
+        if not self.ctx:
+            return self._project(waveforms)
+        else:
+            import dask.array as da
+            assert isinstance(waveforms, da.Array)
+
+            return self.ctx.map_dask_array(self._project, waveforms,
+                                           name='features')
