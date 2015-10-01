@@ -3,7 +3,7 @@
 git+https://github.com/pytest-dev/pytest.git
 
 flake8
-coverage=3.7.1
+coverage==3.7.1
 coveralls
 responses
 pytest-cov
