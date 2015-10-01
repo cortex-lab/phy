@@ -23,7 +23,7 @@ def test_pca():
     waveforms = artificial_waveforms(n_spikes, n_samples, n_channels)
     masks = artificial_masks(n_spikes, n_channels)
 
-    pca = PCA(n_pcs=3)
+    pca = PCA()
     pcs = pca.fit(waveforms, masks)
     assert pcs.shape == (3, n_samples, n_channels)
     fet = pca.transform(waveforms)

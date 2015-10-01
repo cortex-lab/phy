@@ -7,6 +7,8 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from traitlets.config.configurable import Configurable
+from traitlets import Int
 
 from ..utils._types import _as_array
 
@@ -102,11 +104,17 @@ def _project_pcs(x, pcs):
     return x_proj
 
 
-class PCA(object):
+class PCA(Configurable):
     """Apply PCA to waveforms."""
-    def __init__(self, n_pcs=None):
-        self._n_pcs = n_pcs
+    n_features_per_channel = Int(3)
+
+    def __init__(self, ctx=None):
+        super(PCA, self).__init__()
+        self.set_context(ctx)
         self._pcs = None
+
+    def set_context(self, ctx):
+        self.ctx = ctx
 
     def fit(self, waveforms, masks=None):
         """Compute the PCs of waveforms.
@@ -120,7 +128,10 @@ class PCA(object):
             Shape: `(n_spikes, n_channels)`
 
         """
-        self._pcs = _compute_pcs(waveforms, n_pcs=self._n_pcs, masks=masks)
+        self._pcs = _compute_pcs(waveforms,
+                                 n_pcs=self.n_features_per_channel,
+                                 masks=masks,
+                                 )
         return self._pcs
 
     def transform(self, waveforms, pcs=None):
@@ -135,6 +146,5 @@ class PCA(object):
         """
         if pcs is None:
             pcs = self._pcs
-        # Need to call fit() if the pcs are None here.
-        if pcs is not None:
-            return _project_pcs(waveforms, pcs)
+        assert pcs is not None
+        return _project_pcs(waveforms, pcs)
