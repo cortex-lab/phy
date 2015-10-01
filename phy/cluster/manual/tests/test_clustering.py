@@ -11,8 +11,8 @@ from numpy.testing import assert_array_equal as ae
 from pytest import raises
 from six import itervalues
 
-from ....io.mock import artificial_spike_clusters
-from ....utils.array import (_spikes_in_clusters,)
+from phy.io.mock import artificial_spike_clusters
+from phy.io.array import (_spikes_in_clusters,)
 from ..clustering import (_extend_spikes,
                           _concatenate_spike_clusters,
                           _extend_assignment,

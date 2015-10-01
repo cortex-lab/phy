@@ -12,7 +12,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from ..utils._types import _as_array, Bunch
-from ..utils.array import _pad
+from phy.io.array import _pad
 
 logger = logging.getLogger(__name__)
 

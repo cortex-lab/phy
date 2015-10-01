@@ -9,8 +9,8 @@
 import numpy as np
 import six
 
-from ...utils.array import chunk_bounds
-from ...utils.event import EventEmitter
+from phy.io.array import chunk_bounds
+from phy.utils.event import EventEmitter
 
 
 #------------------------------------------------------------------------------

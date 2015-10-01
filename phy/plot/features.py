@@ -20,9 +20,9 @@ from ._vispy_utils import (BaseSpikeVisual,
                            _wrap_vispy,
                            )
 from ._panzoom import PanZoomGrid
-from ..utils._types import _as_array, _is_integer
-from ..utils.array import _index_of, _unique
-from ..utils._color import _selected_clusters_colors
+from phy.utils._types import _as_array, _is_integer
+from phy.io.array import _index_of, _unique
+from phy.utils._color import _selected_clusters_colors
 
 
 #------------------------------------------------------------------------------

@@ -21,8 +21,8 @@ except ImportError:  # pragma: no cover
     raise Exception("dask is not installed. "
                     "Install it with `conda install dask`.")
 
+from .array import read_array, write_array
 from phy.utils import Bunch
-from phy.utils.array import read_array, write_array
 
 logger = logging.getLogger(__name__)
 

@@ -8,11 +8,11 @@
 
 import numpy as np
 
-from ...utils._types import _as_array, _is_array_like
-from ...utils.array import (_unique,
-                            _spikes_in_clusters,
-                            _spikes_per_cluster,
-                            )
+from phy.utils._types import _as_array, _is_array_like
+from phy.io.array import (_unique,
+                          _spikes_in_clusters,
+                          _spikes_per_cluster,
+                          )
 from ._utils import UpdateInfo
 from ._history import History
 from phy.utils.event import EventEmitter

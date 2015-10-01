@@ -16,8 +16,8 @@ import numpy as np
 from vispy import app, gloo, config
 from vispy.util.event import Event
 
-from ..utils._types import _as_array, _as_list
-from ..utils.array import _unique, _in_polygon
+from phy.utils._types import _as_array, _as_list
+from phy.io.array import _unique, _in_polygon
 from ._panzoom import PanZoom
 
 logger = logging.getLogger(__name__)

@@ -11,7 +11,6 @@ import os.path as op
 import numpy as np
 from pytest import raises
 
-from .._types import _as_array
 from ..array import (_unique,
                      _normalize,
                      _index_of,
@@ -30,8 +29,9 @@ from ..array import (_unique,
                      read_array,
                      write_array,
                      )
-from ..testing import _assert_equal as ae
-from ...io.mock import artificial_spike_clusters
+from phy.utils._types import _as_array
+from phy.utils.testing import _assert_equal as ae
+from ..mock import artificial_spike_clusters
 
 
 #------------------------------------------------------------------------------
