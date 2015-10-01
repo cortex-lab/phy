@@ -171,31 +171,22 @@ def _in_polygon(points, polygon):
 # I/O functions
 # -----------------------------------------------------------------------------
 
-def _save_arrays(path, arrays):
-    """Save multiple arrays in a single file by concatenating them along
-    the first axis.
-
-    A second array is stored with the offsets.
-
-    """
-    assert path.endswith('.npy')
-    path = op.splitext(path)[0]
-    offsets = np.cumsum([arr.shape[0] for arr in arrays])
-    if not len(arrays):
-        return
-    concat = np.concatenate(arrays, axis=0)
-    np.save(path + '.npy', concat)
-    np.save(path + '.offsets.npy', offsets)
+def read_array(path):
+    """Read a .npy array."""
+    file_ext = op.splitext(path)[1]
+    if file_ext == '.npy':
+        return np.load(path)
+    raise NotImplementedError("The file extension `{}` ".format(file_ext) +
+                              "is not currently supported.")
 
 
-def _load_arrays(path):
-    assert path.endswith('.npy')
-    if not op.exists(path):
-        return []
-    path = op.splitext(path)[0]
-    concat = np.load(path + '.npy')
-    offsets = np.load(path + '.offsets.npy')
-    return np.split(concat, offsets[:-1], axis=0)
+def write_array(path, arr):
+    """Write an array to a .npy file."""
+    file_ext = op.splitext(path)[1]
+    if file_ext == '.npy':
+        return np.save(path, arr)
+    raise NotImplementedError("The file extension `{}` ".format(file_ext) +
+                              "is not currently supported.")
 
 
 # -----------------------------------------------------------------------------

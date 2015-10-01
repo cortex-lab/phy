@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
-# SpikeDetector
+# Chunking-related utility functions
 #------------------------------------------------------------------------------
 
 def _spikes_to_keep(spikes, trace_chunks, depth):
@@ -73,6 +73,10 @@ def _concat_spikes(s, m, w, trace_chunks=None, depth=None):
     s = _add_chunk_offset(s, trace_chunks, depth)
     return s, m, w
 
+
+#------------------------------------------------------------------------------
+# SpikeDetector
+#------------------------------------------------------------------------------
 
 class SpikeDetector(Configurable):
     do_filter = Bool(True)
