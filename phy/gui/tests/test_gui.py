@@ -53,7 +53,7 @@ def gui():
 # Test actions and snippet
 #------------------------------------------------------------------------------
 
-def test_actions_dock(qtbot, gui, actions):
+def test_actions_dock(qtbot, gui, actions):  # noqa
     actions.attach(gui)
 
     # Set the default actions.
@@ -74,10 +74,10 @@ def test_actions_dock(qtbot, gui, actions):
     assert _press == [0]
 
     # Quit the GUI.
-    qtbot.keyPress(gui, Qt.Key_Q, Qt.ControlModifier)  # noqa
+    qtbot.keyPress(gui, Qt.Key_Q, Qt.ControlModifier)
 
 
-def test_snippets_dock(qtbot, gui, actions, snippets):
+def test_snippets_dock(qtbot, gui, actions, snippets):  # noqa
 
     qtbot.addWidget(gui)
     gui.show()
@@ -108,7 +108,7 @@ def test_snippets_dock(qtbot, gui, actions, snippets):
     qtbot.keyPress(gui, Qt.Key_Return)
     qtbot.waitForWindowShown(gui)
 
-    assert _actions == [((3, 4, 5), ('ab', 'c'))]  # noqa
+    assert _actions == [((3, 4, 5), ('ab', 'c'))]
 
 
 #------------------------------------------------------------------------------
