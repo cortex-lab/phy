@@ -17,6 +17,16 @@ from .test_actions import actions, snippets  # noqa
 # Skip these tests in "make test-quick".
 pytestmark = mark.long
 
+# Skip some tests on OS X or on CI systems (Travis).
+skip_mac = mark.skipif(platform == "darwin",
+                       reason="Some tests don't work on OS X because of a bug "
+                              "with QTest (qtbot) keyboard events that don't "
+                              "trigger QAction shortcuts. On CI these tests "
+                              "fail because the GUI is not displayed.")
+
+skip_ci = mark.skipif(os.environ.get('CI', None) is not None,
+                      reason="Some shortcut-related Qt tests fail on CI.")
+
 
 #------------------------------------------------------------------------------
 # Utilities and fixtures
@@ -44,6 +54,8 @@ def gui():
 # Test actions and snippet
 #------------------------------------------------------------------------------
 
+@skip_mac
+@skip_ci
 def test_actions_gui(qtbot, gui, actions):  # noqa
     actions.attach(gui)
 
@@ -67,6 +79,8 @@ def test_actions_gui(qtbot, gui, actions):  # noqa
     qtbot.keyPress(gui, Qt.Key_Q, Qt.ControlModifier)
 
 
+@skip_mac
+@skip_ci
 def test_snippets_gui(qtbot, gui, actions, snippets):  # noqa
 
     qtbot.addWidget(gui)
