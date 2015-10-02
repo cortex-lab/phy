@@ -35,7 +35,7 @@ class IPluginRegistry(type):
 
 
 class IPlugin(object, metaclass=IPluginRegistry):
-    def attach_gui(self, gui):
+    def attach_gui(self, gui):  # pragma: no cover
         pass
 
 
@@ -70,12 +70,11 @@ def discover_plugins(dirs):
     """
     # Scan all subdirectories recursively.
     for plugin_dir in dirs:
-        # logger.debug("Scanning %s", plugin_dir)
         plugin_dir = op.realpath(plugin_dir)
         for subdir, dirs, files in os.walk(plugin_dir):
             # Skip test folders.
             base = op.basename(subdir)
-            if 'test' in base or '__' in base:
+            if 'test' in base or '__' in base:  # pragma: no cover
                 continue
             logger.debug("Scanning %s.", subdir)
             for filename in files:
@@ -91,15 +90,3 @@ def discover_plugins(dirs):
                     # IPluginRegistry
                     mod = imp.load_module(modname, file, path, descr)  # noqa
     return IPluginRegistry.plugins
-
-
-def iter_plugins_dirs():
-    """Iterate over all plugin directories."""
-    curdir = op.dirname(op.realpath(__file__))
-    plugins_dir = op.join(curdir, 'plugins')
-    # TODO: add other plugin directories (user plugins etc.)
-    names = [name for name in sorted(os.listdir(plugins_dir))
-             if not name.startswith(('.', '_')) and
-             op.isdir(op.join(plugins_dir, name))]
-    for name in names:
-        yield op.join(plugins_dir, name)
