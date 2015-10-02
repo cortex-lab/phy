@@ -11,7 +11,7 @@ from pytest import mark, yield_fixture
 from ..qt import Qt
 from ..gui import GUI
 from phy.utils._color import _random_color
-from .test_actions import actions, snippets
+from .test_actions import actions, snippets  # noqa
 
 # Skip these tests in "make test-quick".
 pytestmark = mark.long
@@ -74,8 +74,7 @@ def test_actions_dock(qtbot, gui, actions):
     assert _press == [0]
 
     # Quit the GUI.
-    qtbot.keyPress(gui, Qt.Key_Q, Qt.ControlModifier)
-    qtbot.waitForWindowShown(gui)
+    qtbot.keyPress(gui, Qt.Key_Q, Qt.ControlModifier)  # noqa
 
 
 def test_snippets_dock(qtbot, gui, actions, snippets):
@@ -109,7 +108,7 @@ def test_snippets_dock(qtbot, gui, actions, snippets):
     qtbot.keyPress(gui, Qt.Key_Return)
     qtbot.waitForWindowShown(gui)
 
-    assert _actions == [((3, 4, 5), ('ab', 'c'))]
+    assert _actions == [((3, 4, 5), ('ab', 'c'))]  # noqa
 
 
 #------------------------------------------------------------------------------
