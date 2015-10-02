@@ -20,19 +20,6 @@ pytestmark = mark.long
 # Utilities and fixtures
 #------------------------------------------------------------------------------
 
-def _create_canvas():
-    """Create a VisPy canvas with a color background."""
-    from vispy import app
-    c = app.Canvas()
-    c.color = _random_color()
-
-    @c.connect
-    def on_draw(e):  # pragma: no cover
-        c.context.clear(c.color)
-
-    return c
-
-
 @yield_fixture
 def actions():
     yield Actions()
