@@ -6,6 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
+from sys import platform
+
 from pytest import mark, yield_fixture
 
 from ..qt import Qt
@@ -54,9 +57,9 @@ def gui():
 # Test actions and snippet
 #------------------------------------------------------------------------------
 
-@skip_mac
+@skip_mac  # noqa
 @skip_ci
-def test_actions_gui(qtbot, gui, actions):  # noqa
+def test_actions_gui(qtbot, gui, actions):
     actions.attach(gui)
 
     # Set the default actions.
@@ -79,9 +82,9 @@ def test_actions_gui(qtbot, gui, actions):  # noqa
     qtbot.keyPress(gui, Qt.Key_Q, Qt.ControlModifier)
 
 
-@skip_mac
+@skip_mac  # noqa
 @skip_ci
-def test_snippets_gui(qtbot, gui, actions, snippets):  # noqa
+def test_snippets_gui(qtbot, gui, actions, snippets):
 
     qtbot.addWidget(gui)
     gui.show()
