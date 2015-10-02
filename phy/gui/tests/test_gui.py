@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test dock."""
+"""Test gui."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -11,6 +11,7 @@ from pytest import mark, yield_fixture
 from ..qt import Qt
 from ..gui import GUI
 from phy.utils._color import _random_color
+from phy.utils.plugin import IPlugin
 from .test_actions import actions, snippets  # noqa
 
 # Skip these tests in "make test-quick".
@@ -53,7 +54,7 @@ def gui():
 # Test actions and snippet
 #------------------------------------------------------------------------------
 
-def test_actions_dock(qtbot, gui, actions):  # noqa
+def test_actions_gui(qtbot, gui, actions):  # noqa
     actions.attach(gui)
 
     # Set the default actions.
@@ -77,7 +78,7 @@ def test_actions_dock(qtbot, gui, actions):  # noqa
     qtbot.keyPress(gui, Qt.Key_Q, Qt.ControlModifier)
 
 
-def test_snippets_dock(qtbot, gui, actions, snippets):  # noqa
+def test_snippets_gui(qtbot, gui, actions, snippets):  # noqa
 
     qtbot.addWidget(gui)
     gui.show()
@@ -112,10 +113,10 @@ def test_snippets_dock(qtbot, gui, actions, snippets):  # noqa
 
 
 #------------------------------------------------------------------------------
-# Test dock
+# Test gui
 #------------------------------------------------------------------------------
 
-def test_dock_1(qtbot):
+def test_gui_1(qtbot):
 
     gui = GUI(position=(200, 100), size=(100, 100))
     qtbot.addWidget(gui)
@@ -136,7 +137,7 @@ def test_dock_1(qtbot):
 
     assert len(gui.list_views('view')) == 2
 
-    # Check that the close_widget event is fired when the dock widget is
+    # Check that the close_widget event is fired when the gui widget is
     # closed.
     _close = []
 
@@ -149,7 +150,17 @@ def test_dock_1(qtbot):
     gui.close()
 
 
-def test_dock_status_message(qtbot):
+def test_gui_plugin(qtbot, gui):
+
+    class TestPlugin(IPlugin):
+        def attach_gui(self, gui):
+            gui._attached = True
+
+    gui.attach('testplugin')
+    assert gui._attached
+
+
+def test_gui_status_message(qtbot):
     gui = GUI()
     qtbot.addWidget(gui)
     assert gui.status_message == ''
@@ -157,7 +168,7 @@ def test_dock_status_message(qtbot):
     assert gui.status_message == ':hello world!'
 
 
-def test_dock_state(qtbot):
+def test_gui_state(qtbot):
     _gs = []
     gui = GUI(size=(100, 100))
     qtbot.addWidget(gui)

@@ -86,7 +86,8 @@ class GUI(QtGui.QMainWindow):
         self.setStatusBar(self._status_bar)
 
     def attach(self, plugin_name):
-        plugin = get_plugin(name)
+        """Attach a plugin to the GUI."""
+        plugin = get_plugin(plugin_name)()
         plugin.attach_gui(self)
 
     # Events
