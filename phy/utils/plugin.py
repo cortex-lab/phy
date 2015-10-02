@@ -29,36 +29,23 @@ class IPluginRegistry(type):
     def __init__(cls, name, bases, attrs):
         if name != 'IPlugin':
             logger.debug("Register plugin %s.", name)
-            plugin_tuple = (cls, cls.file_extensions)
+            plugin_tuple = (cls,)
             if plugin_tuple not in IPluginRegistry.plugins:
                 IPluginRegistry.plugins.append(plugin_tuple)
 
 
 class IPlugin(object, metaclass=IPluginRegistry):
-    format_name = None
-    file_extensions = ()
-
-    def register(self, podoc):
-        """Called when the plugin is activated with `--plugins`."""
-        raise NotImplementedError()
-
-    def register_from(self, podoc):
-        """Called when the plugin is activated with `--from`."""
-        raise NotImplementedError()
-
-    def register_to(self, podoc):
-        """Called when the plugin is activated with `--to`."""
-        raise NotImplementedError()
+    def attach_gui(self, gui):
+        pass
 
 
-def get_plugin(name_or_ext):
-    """Get a plugin class from its name or file extension."""
-    name_or_ext = name_or_ext.lower()
-    for (plugin, file_extension) in IPluginRegistry.plugins:
-        if (name_or_ext in plugin.__name__.lower() or
-                name_or_ext in file_extension):
+def get_plugin(name):
+    """Get a plugin class from its name."""
+    name = name.lower()
+    for (plugin,) in IPluginRegistry.plugins:
+        if name in plugin.__name__.lower():
             return plugin
-    raise ValueError("The plugin %s cannot be found." % name_or_ext)
+    raise ValueError("The plugin %s cannot be found." % name)
 
 
 #------------------------------------------------------------------------------
@@ -116,10 +103,3 @@ def iter_plugins_dirs():
              op.isdir(op.join(plugins_dir, name))]
     for name in names:
         yield op.join(plugins_dir, name)
-
-
-def _load_all_native_plugins():
-    """Load all native plugins when importing the library."""
-    curdir = op.dirname(op.realpath(__file__))
-    plugins_dir = op.join(curdir, 'plugins')
-    discover_plugins([plugins_dir])
