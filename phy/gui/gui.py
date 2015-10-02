@@ -12,6 +12,7 @@ import logging
 
 from .qt import QtCore, QtGui
 from phy.utils.event import EventEmitter
+from phy.utils.plugin import get_plugin
 
 logger = logging.getLogger(__name__)
 
@@ -83,6 +84,10 @@ class GUI(QtGui.QMainWindow):
 
         self._status_bar = QtGui.QStatusBar()
         self.setStatusBar(self._status_bar)
+
+    def attach(self, plugin_name):
+        plugin = get_plugin(name)
+        plugin.attach_gui(self)
 
     # Events
     # -------------------------------------------------------------------------
