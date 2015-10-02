@@ -16,6 +16,8 @@ import logging
 import os
 import os.path as op
 
+from six import with_metaclass
+
 logger = logging.getLogger(__name__)
 
 
@@ -34,7 +36,7 @@ class IPluginRegistry(type):
                 IPluginRegistry.plugins.append(plugin_tuple)
 
 
-class IPlugin(object, metaclass=IPluginRegistry):
+class IPlugin(with_metaclass(IPluginRegistry)):
     def attach_to_gui(self, gui, *args, **kwargs):  # pragma: no cover
         pass
 
