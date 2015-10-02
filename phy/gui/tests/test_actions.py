@@ -9,7 +9,6 @@
 from pytest import mark, raises, yield_fixture
 
 from ..actions import _show_shortcuts, Actions, Snippets, _parse_snippet
-from phy.utils._color import _random_color
 from phy.utils.testing import captured_output, captured_logging
 
 # Skip these tests in "make test-quick".
