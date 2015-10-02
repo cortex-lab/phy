@@ -6,13 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import mark, raises, yield_fixture
+from pytest import raises, yield_fixture
 
 from ..actions import _show_shortcuts, Actions, Snippets, _parse_snippet
 from phy.utils.testing import captured_output, captured_logging
-
-# Skip these tests in "make test-quick".
-pytestmark = mark.long
 
 
 #------------------------------------------------------------------------------
