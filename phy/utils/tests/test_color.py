@@ -6,16 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import mark
-
 from .._color import (_random_color, _is_bright, _random_bright_color,
                       _selected_clusters_colors,
                       )
 from ..testing import show_colored_canvas
-
-
-# Skip these tests in "make test-quick".
-pytestmark = mark.long
 
 
 #------------------------------------------------------------------------------

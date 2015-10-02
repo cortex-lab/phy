@@ -6,8 +6,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import mark
-
 import numpy as np
 
 from ..features import FeatureView, plot_features
@@ -17,10 +15,6 @@ from ...io.mock import (artificial_features,
                         artificial_spike_clusters,
                         artificial_spike_samples)
 from ...utils.testing import show_test
-
-
-# Skip these tests in "make test-quick".
-pytestmark = mark.long()
 
 
 #------------------------------------------------------------------------------

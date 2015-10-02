@@ -17,9 +17,6 @@ from phy.utils._color import _random_color
 from phy.utils.plugin import IPlugin
 from .test_actions import actions, snippets  # noqa
 
-# Skip these tests in "make test-quick".
-pytestmark = mark.long
-
 # Skip some tests on OS X or on CI systems (Travis).
 skip_mac = mark.skipif(platform == "darwin",
                        reason="Some tests don't work on OS X because of a bug "
