@@ -35,7 +35,7 @@ class IPluginRegistry(type):
 
 
 class IPlugin(object, metaclass=IPluginRegistry):
-    def attach_gui(self, gui):  # pragma: no cover
+    def attach_to_gui(self, gui, *args, **kwargs):  # pragma: no cover
         pass
 
 
