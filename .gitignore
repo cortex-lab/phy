@@ -5,6 +5,7 @@ experimental
 htmlcov
 format
 wiki
+.cache
 .idea
 .ipynb_checkpoints
 .*fuse*
