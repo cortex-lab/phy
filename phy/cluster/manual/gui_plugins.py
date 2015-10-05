@@ -154,10 +154,10 @@ class ManualClustering(IPlugin):
         pass
 
     def undo(self):
-        pass
+        self.clustering.undo()
 
     def redo(self):
-        pass
+        self.clustering.redo()
 
     # View-related actions
     # -------------------------------------------------------------------------
