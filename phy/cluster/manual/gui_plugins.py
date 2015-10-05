@@ -66,6 +66,8 @@ class ManualClustering(IPlugin):
                       cluster_metadata=None,
                       n_spikes_max_per_cluster=100,
                       ):
+        self.gui = gui
+
         # Create Clustering and ClusterMetadataUpdater.
         self.clustering = Clustering(spike_clusters)
         self.cluster_metadata = cluster_metadata
