@@ -98,10 +98,23 @@ def test_manual_clustering_wizard(manual_clustering):
 
 def test_manual_clustering_actions(manual_clustering):
     actions = manual_clustering.actions
-    # wizard = manual_clustering.wizard
+    wizard = manual_clustering.wizard
     _assert_selection = manual_clustering._assert_selection
 
+    # [3   , 2   , 7        , 5]
+    # [None, None, 'ignored', 'good']
     actions.reset_wizard()
     actions.pin()
     _assert_selection(3, 2)
-    actions.merge()
+
+    actions.merge()  # 3 + 2 => 8
+    # [8, 7, 5]
+    _assert_selection(8, 7)
+
+    wizard.next()
+    _assert_selection(8, 5)
+
+    actions.undo()
+    _assert_selection(3, 2)
+
+    # TODO: more tests, notably with group actions and wizard
