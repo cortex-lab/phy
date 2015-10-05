@@ -42,32 +42,42 @@ def test_manual_clustering(manual_clustering):
     def on_select(cluster_ids, spike_ids):
         _s.append((cluster_ids, spike_ids))
 
+    def _assert_selection(*cluster_ids):
+        assert _s[-1][0] == list(cluster_ids)
+
     # Test select actions.
     actions.select([])
-    ae(_s[-1][0], [])
-    ae(_s[-1][1], [])
+    _assert_selection()
 
     # Test wizard actions.
     actions.reset_wizard()
     assert wizard.best_list == [3, 2, 7, 5]
     assert wizard.best == 3
+    _assert_selection(3)
 
     actions.next()
     assert wizard.best == 2
+    _assert_selection(2)
 
     actions.last()
     assert wizard.best == 5
+    _assert_selection(5)
 
     actions.previous()
     assert wizard.best == 7
+    _assert_selection(7)
 
     actions.first()
     assert wizard.best == 3
+    _assert_selection(3)
 
     # Test pinning.
     actions.pin()
     assert wizard.match_list == [2, 7, 5]
     assert wizard.match == 2
+    _assert_selection(3, 2)
+
     wizard.next()
     assert wizard.match == 7
     assert len(_s) == 9
+    _assert_selection(3, 7)

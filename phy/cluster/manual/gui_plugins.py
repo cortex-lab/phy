@@ -129,32 +129,13 @@ class ManualClustering(IPlugin):
     def select(self, cluster_ids):
         self.wizard.selection = cluster_ids
 
-    # def reset_wizard(self):
-    #     self.wizard.start()
-
-    # def first(self):
-    #     self.wizard.first()
-
-    # def last(self):
-    #     self.wizard.last()
-
-    # def next(self):
-    #     self.wizard.next()
-
-    # def previous(self):
-    #     self.wizard.previous()
-
-    # def pin(self):
-    #     self.wizard.pin()
-
-    # def unpin(self):
-    #     self.wizard.unpin()
-
     # Clustering actions
     # -------------------------------------------------------------------------
 
     def merge(self, cluster_ids=None):
-        pass
+        if cluster_ids is None:
+            cluster_ids = self.wizard.selection
+        self.clustering.merge(cluster_ids)
 
     def split(self, spike_ids=None):
         pass
