@@ -105,7 +105,10 @@ class ManualClustering(IPlugin):
         # Create the default actions for the clustering GUI.
         @actions.connect
         def on_reset():
+            # Selection.
             actions.add(callback=self.select, alias='c')
+
+            # Wizard.
             actions.add(callback=self.wizard.start, name='reset_wizard')
             actions.add(callback=self.wizard.first)
             actions.add(callback=self.wizard.last)
@@ -113,7 +116,13 @@ class ManualClustering(IPlugin):
             actions.add(callback=self.wizard.next)
             actions.add(callback=self.wizard.pin)
             actions.add(callback=self.wizard.unpin)
-            # TODO: other actions
+
+            # Clustering.
+            actions.add(callback=self.merge)
+            actions.add(callback=self.split)
+            actions.add(callback=self.move)
+            actions.add(callback=self.undo)
+            actions.add(callback=self.redo)
 
         # Attach the GUI and register the actions.
         snippets.attach(gui, actions)
@@ -137,10 +146,11 @@ class ManualClustering(IPlugin):
             cluster_ids = self.wizard.selection
         self.clustering.merge(cluster_ids)
 
-    def split(self, spike_ids=None):
-        pass
+    def split(self, spike_ids):
+        self.clustering.split(spike_ids)
 
     def move(self, clusters, group):
+        # TODO
         pass
 
     def undo(self):
