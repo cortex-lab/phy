@@ -117,4 +117,11 @@ def test_manual_clustering_actions(manual_clustering):
     actions.undo()
     _assert_selection(3, 2)
 
+    actions.redo()
+    _assert_selection(8, 7)
+
+    actions.split([2, 3])  # => 9
+    _assert_selection(9, 8)
+
     # TODO: more tests, notably with group actions and wizard
+    actions.move([9], 'good')
