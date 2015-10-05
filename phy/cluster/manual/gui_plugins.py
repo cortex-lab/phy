@@ -147,6 +147,7 @@ class ManualClustering(IPlugin):
         self.clustering.merge(cluster_ids)
 
     def split(self, spike_ids):
+        # TODO: connect to request_split emitted by view
         self.clustering.split(spike_ids)
 
     def move(self, clusters, group):
@@ -158,18 +159,3 @@ class ManualClustering(IPlugin):
 
     def redo(self):
         self.clustering.redo()
-
-    # View-related actions
-    # -------------------------------------------------------------------------
-
-    def toggle_correlogram_normalization(self):
-        pass
-
-    def toggle_waveforms_mean(self):
-        pass
-
-    def toggle_waveforms_overlap(self):
-        pass
-
-    def show_features_time(self):
-        pass
