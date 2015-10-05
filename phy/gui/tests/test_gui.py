@@ -68,7 +68,7 @@ def test_actions_gui(qtbot, gui, actions):
 
     _press = []
 
-    @actions.shortcut('ctrl+g')
+    @actions.add(shortcut='ctrl+g')
     def press():
         _press.append(0)
 
@@ -92,7 +92,7 @@ def test_snippets_gui(qtbot, gui, actions, snippets):
 
     @actions.connect
     def on_reset():
-        @actions.shortcut(name='my_test_1', alias='t1')
+        @actions.add(name='my_test_1', alias='t1')
         def test(*args):
             _actions.append(args)
 
