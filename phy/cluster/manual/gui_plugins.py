@@ -9,7 +9,7 @@
 
 import logging
 
-from ._utils import ClusterMetadataUpdater
+from ._utils import ClusterMetadata, ClusterMetadataUpdater
 from .clustering import Clustering
 from .wizard import Wizard
 from phy.gui.actions import Actions, Snippets
@@ -17,6 +17,29 @@ from phy.io.array import select_spikes
 from phy.utils.plugin import IPlugin
 
 logger = logging.getLogger(__name__)
+
+
+# -----------------------------------------------------------------------------
+# Clustering objects
+# -----------------------------------------------------------------------------
+
+def create_cluster_metadata(data):
+    """Return a ClusterMetadata instance with cluster group support."""
+    meta = ClusterMetadata(data=data)
+
+    @meta.default
+    def group(cluster, ascendant_values=None):
+        if not ascendant_values:
+            return 3
+        s = list(set(ascendant_values) - set([None, 3]))
+        # Return the default value if all ascendant values are the default.
+        if not s:  # pragma: no cover
+            return 3
+        # Otherwise, return good (2) if it is present, or the largest value
+        # among those present.
+        return max(s)
+
+    return meta
 
 
 # -----------------------------------------------------------------------------
