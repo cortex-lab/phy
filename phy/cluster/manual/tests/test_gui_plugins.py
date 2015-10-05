@@ -17,33 +17,36 @@ from phy.gui.tests.test_gui import gui  # noqa
 # Test GUI plugins
 #------------------------------------------------------------------------------
 
-@yield_fixture
-def manual_clustering(qtbot, gui, spike_clusters,  # noqa
-                      cluster_metadata):
+@yield_fixture  # noqa
+def manual_clustering(qtbot, gui, spike_clusters, cluster_metadata):
     mc = gui.attach('ManualClustering',
                     spike_clusters=spike_clusters,
                     cluster_metadata=cluster_metadata,
                     )
     _set_test_wizard(mc.wizard)
-    yield mc
 
-
-def test_manual_clustering(manual_clustering):
-    actions = manual_clustering.actions
-    wizard = manual_clustering.wizard
-
-    # Test cluster ids.
-    ae(manual_clustering.cluster_ids, [2, 3, 5, 7])
-
-    # Connect to the `select` event.
     _s = []
 
-    @manual_clustering.gui.connect_
+    # Connect to the `select` event.
+    @mc.gui.connect_
     def on_select(cluster_ids, spike_ids):
         _s.append((cluster_ids, spike_ids))
 
     def _assert_selection(*cluster_ids):
         assert _s[-1][0] == list(cluster_ids)
+
+    mc._assert_selection = _assert_selection
+
+    yield mc
+
+
+def test_manual_clustering_wizard(manual_clustering):
+    actions = manual_clustering.actions
+    wizard = manual_clustering.wizard
+    _assert_selection = manual_clustering._assert_selection
+
+    # Test cluster ids.
+    ae(manual_clustering.cluster_ids, [2, 3, 5, 7])
 
     # Test select actions.
     actions.select([])
@@ -63,11 +66,19 @@ def test_manual_clustering(manual_clustering):
     assert wizard.best == 5
     _assert_selection(5)
 
+    actions.next()
+    assert wizard.best == 5
+    _assert_selection(5)
+
     actions.previous()
     assert wizard.best == 7
     _assert_selection(7)
 
     actions.first()
+    assert wizard.best == 3
+    _assert_selection(3)
+
+    actions.previous()
     assert wizard.best == 3
     _assert_selection(3)
 
@@ -79,5 +90,18 @@ def test_manual_clustering(manual_clustering):
 
     wizard.next()
     assert wizard.match == 7
-    assert len(_s) == 9
     _assert_selection(3, 7)
+
+    wizard.unpin()
+    _assert_selection(3)
+
+
+def test_manual_clustering_actions(manual_clustering):
+    actions = manual_clustering.actions
+    # wizard = manual_clustering.wizard
+    _assert_selection = manual_clustering._assert_selection
+
+    actions.reset_wizard()
+    actions.pin()
+    _assert_selection(3, 2)
+    actions.merge()
