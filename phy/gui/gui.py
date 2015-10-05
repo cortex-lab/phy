@@ -10,6 +10,8 @@
 from collections import defaultdict
 import logging
 
+from six import string_types
+
 from .qt import QtCore, QtGui
 from phy.utils.event import EventEmitter
 from phy.utils.plugin import get_plugin
@@ -85,9 +87,11 @@ class GUI(QtGui.QMainWindow):
         self._status_bar = QtGui.QStatusBar()
         self.setStatusBar(self._status_bar)
 
-    def attach(self, plugin_name, *args, **kwargs):
+    def attach(self, plugin, *args, **kwargs):
         """Attach a plugin to the GUI."""
-        plugin = get_plugin(plugin_name)()
+        if isinstance(plugin, string_types):
+            # Instantiate the plugin if the name is given.
+            plugin = get_plugin(plugin)()
         return plugin.attach_to_gui(self, *args, **kwargs)
 
     # Events

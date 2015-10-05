@@ -76,7 +76,11 @@ def _next(items, current, filter=None):
 #------------------------------------------------------------------------------
 
 class Wizard(EventEmitter):
-    """Propose a selection of high-quality clusters and merge candidates."""
+    """Propose a selection of high-quality clusters and merge candidates.
+
+    The wizard is responsible for the selected clusters.
+
+    """
     def __init__(self):
         super(Wizard, self).__init__()
         self._similarity = None
