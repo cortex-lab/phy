@@ -38,13 +38,11 @@ def cluster_metadata():
     yield create_cluster_metadata(data)
 
 
-@yield_fixture
-def wizard():
+def _set_test_wizard(wizard):
 
     def get_cluster_ids():
         return [2, 3, 5, 7]
 
-    wizard = Wizard()
     wizard.set_cluster_ids_function(get_cluster_ids)
 
     @wizard.set_status_function
@@ -59,4 +57,9 @@ def wizard():
     def similarity(cluster, other):
         return 1. + quality(cluster) - quality(other)
 
+
+@yield_fixture
+def wizard():
+    wizard = Wizard()
+    _set_test_wizard(wizard)
     yield wizard

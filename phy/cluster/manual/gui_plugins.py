@@ -103,7 +103,14 @@ class ManualClustering(IPlugin):
         # Create the default actions for the clustering GUI.
         @actions.connect
         def on_reset():
-            actions.add(callback=self.select, alias='s')
+            actions.add(callback=self.select, alias='c')
+            actions.add(callback=self.wizard.start, name='reset_wizard')
+            actions.add(callback=self.wizard.first)
+            actions.add(callback=self.wizard.last)
+            actions.add(callback=self.wizard.previous)
+            actions.add(callback=self.wizard.next)
+            actions.add(callback=self.wizard.pin)
+            actions.add(callback=self.wizard.unpin)
             # TODO: other actions
 
         # Attach the GUI and register the actions.
@@ -111,32 +118,35 @@ class ManualClustering(IPlugin):
         actions.attach(gui)
         actions.reset()
 
+        self.actions = actions
+        self.snippets = snippets
+
     # Wizard-related actions
     # -------------------------------------------------------------------------
 
     def select(self, cluster_ids):
         self.wizard.selection = cluster_ids
 
-    def reset_wizard(self):
-        pass
+    # def reset_wizard(self):
+    #     self.wizard.start()
 
-    def first(self):
-        pass
+    # def first(self):
+    #     self.wizard.first()
 
-    def last(self):
-        pass
+    # def last(self):
+    #     self.wizard.last()
 
-    def next(self):
-        pass
+    # def next(self):
+    #     self.wizard.next()
 
-    def previous(self):
-        pass
+    # def previous(self):
+    #     self.wizard.previous()
 
-    def pin(self):
-        pass
+    # def pin(self):
+    #     self.wizard.pin()
 
-    def unpin(self):
-        pass
+    # def unpin(self):
+    #     self.wizard.unpin()
 
     # Clustering actions
     # -------------------------------------------------------------------------
