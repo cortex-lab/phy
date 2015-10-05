@@ -47,14 +47,14 @@ def test_actions_simple(actions):
     def _action(*args):
         _res.append(args)
 
-    actions.add('tes&t', _action)
+    actions.add(_action, 'tes&t')
     # Adding an action twice has no effect.
-    actions.add('test', _action)
+    actions.add(_action, 'test')
 
     # Create a shortcut and display it.
     _captured = []
 
-    @actions.shortcut('h')
+    @actions.add(shortcut='h')
     def show_my_shortcuts():
         with captured_output() as (stdout, stderr):
             actions.show_shortcuts()
@@ -119,7 +119,7 @@ def test_snippets_errors(actions, snippets):
 
     @actions.connect
     def on_reset():
-        @actions.shortcut(name='my_test', alias='t')
+        @actions.add(name='my_test', alias='t')
         def test(arg):
             # Enforce single-character argument.
             assert len(str(arg)) == 1
@@ -154,15 +154,15 @@ def test_snippets_actions(actions, snippets):
 
     @actions.connect
     def on_reset():
-        @actions.shortcut(name='my_test_1')
+        @actions.add(name='my_test_1')
         def test_1(*args):
             _actions.append((1, args))
 
-        @actions.shortcut(name='my_&test_2')
+        @actions.add(name='my_&test_2')
         def test_2(*args):
             _actions.append((2, args))
 
-        @actions.shortcut(name='my_test_3', alias='t3')
+        @actions.add(name='my_test_3', alias='t3')
         def test_3(*args):
             _actions.append((3, args))
 

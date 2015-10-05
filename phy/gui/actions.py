@@ -7,6 +7,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+from functools import partial
 import logging
 
 from six import string_types, PY3
@@ -118,20 +119,32 @@ class Actions(EventEmitter):
         @self.connect
         def on_reset():
             # Default exit action.
-            @self.shortcut('ctrl+q')
+            @self.add(shortcut='ctrl+q')
             def exit():
                 gui.close()
 
-    def add(self, name, callback=None, shortcut=None, alias=None,
+    def add(self, callback=None, name=None, shortcut=None, alias=None,
             checkable=False, checked=False):
         """Add an action with a keyboard shortcut."""
+        if callback is None:
+            # Allow to use either add(func) or @add or @add(...).
+            return partial(self.add, name=name, shortcut=shortcut,
+                           alias=alias, checkable=checkable, checked=checked)
+
         # TODO: add menu_name option and create menu bar
+
+        # Get the name from the callback function if needed.
+        assert callback
+        name = name or callback.__name__
+
         # Get the alias from the character after & if it exists.
         if alias is None:
             alias = name[name.index('&') + 1] if '&' in name else name
         name = name.replace('&', '')
         if name in self._actions:
             return
+
+        # Create the QAction instance.
         action = QtGui.QAction(name, self._gui)
         action.triggered.connect(callback)
         action.setCheckable(checkable)
@@ -209,13 +222,6 @@ class Actions(EventEmitter):
         _show_shortcuts(self.shortcuts,
                         self._gui.title() if self._gui else None)
 
-    def shortcut(self, key=None, name=None, **kwargs):
-        """Decorator to add a global keyboard shortcut."""
-        def wrap(func):
-            self.add(name or func.__name__, shortcut=key,
-                     callback=func, **kwargs)
-        return wrap
-
 
 # -----------------------------------------------------------------------------
 # Snippets
@@ -265,7 +271,7 @@ class Snippets(object):
         # Register snippet mode shortcut.
         @actions.connect
         def on_reset():
-            @actions.shortcut(':')
+            @actions.add(shortcut=':')
             def enable_snippet_mode():
                 self.mode_on()
 
@@ -321,14 +327,18 @@ class Snippets(object):
                     self.command += char
                 return callback
 
-            self._actions.add('_snippet_{}'.format(i), shortcut=char,
+            self._actions.add(name='_snippet_{}'.format(i),
+                              shortcut=char,
                               callback=_make_func(char))
 
-        self._actions.add('_snippet_backspace', shortcut='backspace',
+        self._actions.add(name='_snippet_backspace',
+                          shortcut='backspace',
                           callback=self._backspace)
-        self._actions.add('_snippet_activate', shortcut=('enter', 'return'),
+        self._actions.add(name='_snippet_activate',
+                          shortcut=('enter', 'return'),
                           callback=self._enter)
-        self._actions.add('_snippet_disable', shortcut='escape',
+        self._actions.add(name='_snippet_disable',
+                          shortcut='escape',
                           callback=self.mode_off)
 
     def run(self, snippet):
