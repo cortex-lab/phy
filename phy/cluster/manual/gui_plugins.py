@@ -47,6 +47,20 @@ def create_cluster_metadata(data):
 # -----------------------------------------------------------------------------
 
 class ManualClustering(IPlugin):
+    """Plugin that brings manual clustering facilities to a GUI:
+
+    * Clustering instance: merge, split, undo, redo
+    * ClusterMetadataUpdater instance: change cluster metadata (e.g. group)
+    * Wizard
+    * Selection
+    * Many manual clustering-related actions, snippets, shortcuts, etc.
+
+    Bring the `select` event to the GUI. This is raised when clusters are
+    selected by the user or by the wizard.
+
+    Other plugins can connect to that event.
+
+    """
     def attach_to_gui(self, gui,
                       spike_clusters=None,
                       cluster_metadata=None,
@@ -58,10 +72,10 @@ class ManualClustering(IPlugin):
         cluster_meta_up = ClusterMetadataUpdater(cluster_metadata)
 
         # Create the wizard and attach it to Clustering/ClusterMetadataUpdater.
-        wizard = Wizard()
-        wizard.attach(self.clustering, cluster_meta_up)
+        self.wizard = Wizard()
+        self.wizard.attach(self.clustering, cluster_meta_up)
 
-        @wizard.connect
+        @self.wizard.connect
         def on_select(cluster_ids):
             """When the wizard selects clusters, choose a spikes subset
             and emit the `select` event on the GUI.
@@ -97,20 +111,11 @@ class ManualClustering(IPlugin):
         actions.attach(gui)
         actions.reset()
 
-    def toggle_correlogram_normalization(self):
-        pass
-
-    def toggle_waveforms_mean(self):
-        pass
-
-    def toggle_waveforms_overlap(self):
-        pass
-
-    def show_features_time(self):
-        pass
+    # Wizard-related actions
+    # -------------------------------------------------------------------------
 
     def select(self, cluster_ids):
-        pass
+        self.wizard.selection = cluster_ids
 
     def reset_wizard(self):
         pass
@@ -133,6 +138,9 @@ class ManualClustering(IPlugin):
     def unpin(self):
         pass
 
+    # Clustering actions
+    # -------------------------------------------------------------------------
+
     def merge(self, cluster_ids=None):
         pass
 
@@ -146,4 +154,19 @@ class ManualClustering(IPlugin):
         pass
 
     def redo(self):
+        pass
+
+    # View-related actions
+    # -------------------------------------------------------------------------
+
+    def toggle_correlogram_normalization(self):
+        pass
+
+    def toggle_waveforms_mean(self):
+        pass
+
+    def toggle_waveforms_overlap(self):
+        pass
+
+    def show_features_time(self):
         pass

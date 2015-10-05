@@ -22,3 +22,14 @@ def test_manual_clustering(qtbot, gui, spike_clusters,  # noqa
                     cluster_metadata=cluster_metadata,
                     )
     ae(mc.cluster_ids, [2, 3, 5, 7])
+
+    # Connect to the `select` event.
+    _s = []
+
+    @gui.connect_
+    def on_select(cluster_ids, spike_ids):
+        _s.append((cluster_ids, spike_ids))
+
+    mc.select([])
+    ae(_s[-1][0], [])
+    ae(_s[-1][1], [])
