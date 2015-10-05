@@ -53,12 +53,13 @@ class ManualClustering(IPlugin):
                       n_spikes_max_per_cluster=100,
                       ):
         # Create Clustering and ClusterMetadataUpdater.
-        clustering = Clustering(spike_clusters)
+        self.clustering = Clustering(spike_clusters)
+        self.cluster_metadata = cluster_metadata
         cluster_meta_up = ClusterMetadataUpdater(cluster_metadata)
 
         # Create the wizard and attach it to Clustering/ClusterMetadataUpdater.
         wizard = Wizard()
-        wizard.attach(clustering, cluster_meta_up)
+        wizard.attach(self.clustering, cluster_meta_up)
 
         @wizard.connect
         def on_select(cluster_ids):
@@ -70,10 +71,16 @@ class ManualClustering(IPlugin):
             """
             spike_ids = select_spikes(cluster_ids,
                                       n_spikes_max_per_cluster,
-                                      clustering.spikes_per_cluster)
+                                      self.clustering.spikes_per_cluster)
             gui.emit('select', cluster_ids, spike_ids)
 
         self.create_actions(gui)
+
+        return self
+
+    @property
+    def cluster_ids(self):
+        return self.clustering.cluster_ids
 
     def create_actions(self, gui):
         actions = Actions()
@@ -82,7 +89,7 @@ class ManualClustering(IPlugin):
         # Create the default actions for the clustering GUI.
         @actions.connect
         def on_reset():
-            actions.add(alias='s', callback=self.select)
+            actions.add(callback=self.select, alias='s')
             # TODO: other actions
 
         # Attach the GUI and register the actions.
