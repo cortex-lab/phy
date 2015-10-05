@@ -18,11 +18,6 @@ from ..wizard import Wizard
 #------------------------------------------------------------------------------
 
 @yield_fixture
-def cluster_ids():
-    yield [2, 3, 5, 7]
-
-
-@yield_fixture
 def spike_clusters():
     yield [2, 3, 5, 7]
 
