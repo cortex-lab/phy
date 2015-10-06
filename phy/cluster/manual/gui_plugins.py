@@ -9,7 +9,8 @@
 
 import logging
 
-from ._utils import ClusterMeta
+from ._history import GlobalHistory
+from ._utils import create_cluster_meta
 from .clustering import Clustering
 from .wizard import Wizard
 from phy.gui.actions import Actions, Snippets
@@ -20,30 +21,23 @@ logger = logging.getLogger(__name__)
 
 
 # -----------------------------------------------------------------------------
-# Clustering objects
+# Utility functions
 # -----------------------------------------------------------------------------
 
-def create_cluster_meta(cluster_groups):
-    """Return a ClusterMeta instance with cluster group support."""
-    meta = ClusterMeta()
-
-    def group(ascendant_values=None):
-        if not ascendant_values:  # pragma: no cover
-            return 3
-        s = list(set(ascendant_values) - set([None, 3]))
-        # Return the default value if all ascendant values are the default.
-        if not s:  # pragma: no cover
-            return 3
-        # Otherwise, return good (2) if it is present, or the largest value
-        # among those present.
-        return max(s)
-
-    meta.add_field('group', 3, group)
-
-    data = {c: {'group': v} for c, v in cluster_groups.items()}
-    meta.from_dict(data)
-
-    return meta
+def _process_ups(ups):
+    """This function processes the UpdateInfo instances of the two
+    undo stacks (clustering and cluster metadata) and concatenates them
+    into a single UpdateInfo instance."""
+    if len(ups) == 0:
+        return
+    elif len(ups) == 1:
+        return ups[0]
+    elif len(ups) == 2:
+        up = ups[0]
+        up.update(ups[1])
+        return up
+    else:
+        raise NotImplementedError()
 
 
 # -----------------------------------------------------------------------------
@@ -75,6 +69,7 @@ class ManualClustering(IPlugin):
         # Create Clustering and ClusterMeta.
         self.clustering = Clustering(spike_clusters)
         self.cluster_meta = create_cluster_meta(cluster_groups)
+        self._global_history = GlobalHistory(process_ups=_process_ups)
 
         # Create the wizard and attach it to Clustering/ClusterMeta.
         self.wizard = Wizard()
@@ -148,17 +143,19 @@ class ManualClustering(IPlugin):
         if cluster_ids is None:
             cluster_ids = self.wizard.selection
         self.clustering.merge(cluster_ids)
+        self._global_history.action(self.clustering)
 
     def split(self, spike_ids):
         # TODO: connect to request_split emitted by view
         self.clustering.split(spike_ids)
+        self._global_history.action(self.clustering)
 
     def move(self, clusters, group):
-        # TODO
-        pass
+        self.cluster_meta.set('group', clusters, group)
+        self._global_history.action(self.cluster_meta)
 
     def undo(self):
-        self.clustering.undo()
+        self._global_history.undo()
 
     def redo(self):
-        self.clustering.redo()
+        self._global_history.redo()

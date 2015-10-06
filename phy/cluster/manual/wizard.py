@@ -9,6 +9,8 @@
 import logging
 from operator import itemgetter
 
+from six import string_types
+
 from phy.utils import EventEmitter
 
 logger = logging.getLogger(__name__)
@@ -72,6 +74,8 @@ def _next(items, current, filter=None):
 
 
 def _wizard_group(group):
+    # The group should be None, 'mua', 'noise', or 'good'.
+    assert group is None or isinstance(group, string_types)
     group = group.lower() if group else group
     if group in ('mua', 'noise'):
         return 'ignored'
