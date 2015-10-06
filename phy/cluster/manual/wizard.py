@@ -448,7 +448,7 @@ class Wizard(EventEmitter):
             elif cluster == self.match:
                 self.next_match()
 
-    def attach(self, clustering, cluster_metadata):
+    def attach(self, clustering, cluster_meta):
         # TODO: might be better in an independent function in another module
 
         # The wizard gets the cluster ids from the Clustering instance
@@ -457,7 +457,7 @@ class Wizard(EventEmitter):
 
         @self.set_status_function
         def status(cluster):
-            group = cluster_metadata.group(cluster)
+            group = cluster_meta.group(cluster)
             if group is None:  # pragma: no cover
                 return None
             if group <= 1:
@@ -471,7 +471,7 @@ class Wizard(EventEmitter):
         def on_cluster(up):
             # Set the cluster metadata of new clusters.
             if up.added:
-                cluster_metadata.set_from_descendants(up.descendants)
+                cluster_meta.set_from_descendants(up.descendants)
             # Update the wizard state.
             if self._best_list or self._match_list:
                 self._update_state(up)
@@ -480,7 +480,7 @@ class Wizard(EventEmitter):
                 self._select_after_update(up)
 
         clustering.connect(on_request_undo_state)
-        cluster_metadata.connect(on_request_undo_state)
+        cluster_meta.connect(on_request_undo_state)
 
         clustering.connect(on_cluster)
-        cluster_metadata.connect(on_cluster)
+        cluster_meta.connect(on_cluster)
