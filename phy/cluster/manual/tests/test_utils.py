@@ -9,8 +9,7 @@
 import logging
 
 from .._utils import (ClusterMeta, UpdateInfo,
-                      _update_cluster_selection, create_cluster_meta,
-                      _wizard_group)
+                      _update_cluster_selection, create_cluster_meta)
 
 logger = logging.getLogger(__name__)
 
@@ -18,14 +17,6 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
-
-def test_wizard_group():
-    assert _wizard_group('noise') == 'ignored'
-    assert _wizard_group('mua') == 'ignored'
-    assert _wizard_group('good') == 'good'
-    assert _wizard_group('unknown') is None
-    assert _wizard_group(None) is None
-
 
 def test_create_cluster_meta():
     cluster_groups = {2: 3,
