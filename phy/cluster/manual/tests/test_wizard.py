@@ -169,6 +169,16 @@ def test_wizard_nav(wizard):
     assert wizard.n_processed == 2
 
 
+def test_wizard_update_1(wizard, clustering, cluster_meta):
+    wizard.attach(clustering, cluster_meta)
+    wizard.start()
+    wizard.pin()
+    assert wizard.best_list == [3, 2, 7, 5]
+    assert wizard.selection == [3, 2]
+    cluster_meta.set('group', 3, 'noise')
+    # 2: None, 3: 'noise', 5: 'mua', 7: 'good'
+
+
 def test_wizard_update_group(wizard, clustering, cluster_meta):
     wizard.attach(clustering, cluster_meta)
 
