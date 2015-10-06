@@ -32,15 +32,6 @@ def _join(clusters):
     return '[{}]'.format(', '.join(map(str, clusters)))
 
 
-def _wizard_group(group):
-    group = group.lower() if group else group
-    if group in ('mua', 'noise'):
-        return 'ignored'
-    elif group == 'good':
-        return 'good'
-    return None
-
-
 def create_cluster_meta(cluster_groups):
     """Return a ClusterMeta instance with cluster group support."""
     meta = ClusterMeta()

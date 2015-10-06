@@ -9,8 +9,8 @@
 from pytest import yield_fixture
 
 from ..clustering import Clustering
-from ..gui_plugins import create_cluster_meta
-from ..wizard import Wizard
+from ..wizard import Wizard, _wizard_group
+from .._utils import create_cluster_meta
 
 
 #------------------------------------------------------------------------------
@@ -29,10 +29,10 @@ def clustering(spike_clusters):
 
 @yield_fixture
 def cluster_groups():
-    data = {2: 3,
-            3: 3,
-            5: 1,
-            7: 2,
+    data = {2: None,
+            3: None,
+            5: 'mua',
+            7: 'good',
             }
     yield data
 
@@ -64,12 +64,8 @@ def wizard(cluster_groups):
 
     @wizard.set_status_function
     def status(cluster):
-        group = cluster_groups.get(cluster, 3)
-        if group <= 1:
-            return 'ignored'
-        elif group == 2:
-            return 'good'
-        return None
+        group = cluster_groups.get(cluster, None)
+        return _wizard_group(group)
 
     _set_test_wizard(wizard)
 
