@@ -71,6 +71,15 @@ def _next(items, current, filter=None):
         return current
 
 
+def _wizard_group(group):
+    group = group.lower() if group else group
+    if group in ('mua', 'noise'):
+        return 'ignored'
+    elif group == 'good':
+        return 'good'
+    return None
+
+
 #------------------------------------------------------------------------------
 # Wizard
 #------------------------------------------------------------------------------
@@ -458,12 +467,7 @@ class Wizard(EventEmitter):
         @self.set_status_function
         def status(cluster):
             group = cluster_meta.group(cluster)
-            if group is None:  # pragma: no cover
-                return None
-            if group <= 1:
-                return 'ignored'
-            elif group == 2:
-                return 'good'
+            return _wizard_group(group)
 
         def on_request_undo_state(up):
             return {'selection': self.selection}

@@ -171,10 +171,12 @@ class ClusterMeta(EventEmitter):
 
             # Loop over all new clusters.
             for new, vals in candidates.items():
+                vals = list(vals)
+                default = self._fields[field]
                 # If all the parents have the same value, assign it to
-                # the new cluster.
-                if len(vals) == 1:
-                    self.set(field, new, list(vals)[0])
+                # the new cluster if it is not the default.
+                if len(vals) == 1 and vals[0] != default:
+                    self.set(field, new, vals[0])
                 # Otherwise, the default is assumed.
 
     def undo(self):

@@ -12,12 +12,21 @@ from ..wizard import (_previous,
                       _next,
                       _find_first,
                       Wizard,
+                      _wizard_group,
                       )
 
 
 #------------------------------------------------------------------------------
 # Test wizard
 #------------------------------------------------------------------------------
+
+def test_wizard_group():
+    assert _wizard_group('noise') == 'ignored'
+    assert _wizard_group('mua') == 'ignored'
+    assert _wizard_group('good') == 'good'
+    assert _wizard_group('unknown') is None
+    assert _wizard_group(None) is None
+
 
 def test_utils():
     l = [2, 3, 5, 7, 11]
@@ -191,14 +200,16 @@ def test_wizard_update_group(wizard, clustering, cluster_meta):
 
     wizard.pin()
     _check_best_match(3, 2)
+    # print(wizard.best_list)
 
     # Ignore the currently-pinned cluster.
-    cluster_meta.set('group', 3, 0)
-    _check_best_match(5, 2)
+    cluster_meta.set('group', 3, 'noise')
     # 2: none, 3: ignored, 5: ignored, 7: good
+    _check_best_match(5, 2)
+    return
 
     # Ignore the current match and move to next.
-    cluster_meta.set('group', 2, 1)
+    cluster_meta.set('group', 2, 'mua')
     _check_best_match(5, 7)
     # 2: ignored, 3: ignored, 5: ignored, 7: good
 
@@ -213,7 +224,7 @@ def test_wizard_update_group(wizard, clustering, cluster_meta):
         cluster_meta.undo()
     wizard.selection = (3, 2)
     _check_best_match(3, 2)
-    cluster_meta.set('group', 3, 2)
+    cluster_meta.set('group', 3, 'good')
     _check_best_match(5, 2)
 
 
@@ -232,7 +243,7 @@ def test_wizard_update_clustering(wizard, clustering, cluster_meta):
     wizard.pin()
 
     _check_best_match(2, 3)
-    cluster_meta.set('group', 2, 2)
+    cluster_meta.set('group', 2, 'good')
     wizard.selection = [2, 3]
 
     ################################
@@ -242,8 +253,9 @@ def test_wizard_update_clustering(wizard, clustering, cluster_meta):
     clustering.merge([2, 3])  # => 8
     _check_best_match(8, 7)
     assert wizard.best_list == [8, 7, 5]
-    assert wizard.cluster_status(8) == 'good'
+    assert wizard.cluster_status(8) is None
     assert wizard.cluster_status(7) == 'good'
+    assert wizard.cluster_status(2) == 'good'
 
     # Undo merge.
     clustering.undo()
@@ -258,7 +270,7 @@ def test_wizard_update_clustering(wizard, clustering, cluster_meta):
     # Redo merge.
     clustering.redo()
     _check_best_match(8, 7)
-    assert wizard.cluster_status(8) == 'good'
+    assert wizard.cluster_status(8) is None
     assert wizard.cluster_status(7) == 'good'
 
     ################################
@@ -272,7 +284,7 @@ def test_wizard_update_clustering(wizard, clustering, cluster_meta):
     assert wizard.cluster_status(9) is None
 
     # Ignore a cluster.
-    cluster_meta.set('group', 9, 1)
+    cluster_meta.set('group', 9, 'noise')
     assert wizard.cluster_status(9) == 'ignored'
 
     # Undo split.
@@ -297,7 +309,7 @@ def test_wizard_update_clustering(wizard, clustering, cluster_meta):
     _check_best_match(11, 7)
     assert up.description == 'merge'
     assert up.history is None
-    assert wizard.cluster_status(11) is None
+    assert wizard.cluster_status(11) == 'ignored'
 
     # Undo split (=merge).
     up = clustering.undo()
