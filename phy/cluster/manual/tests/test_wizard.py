@@ -6,24 +6,13 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import yield_fixture
 from numpy.testing import assert_array_equal as ae
 
-from .._utils import ClusterMetadataUpdater
 from ..wizard import (_previous,
                       _next,
                       _find_first,
                       Wizard,
                       )
-
-
-#------------------------------------------------------------------------------
-# Fixtures
-#------------------------------------------------------------------------------
-
-@yield_fixture
-def cluster_meta_up(cluster_metadata):
-    yield ClusterMetadataUpdater(cluster_metadata)
 
 
 #------------------------------------------------------------------------------
@@ -168,9 +157,9 @@ def test_wizard_nav(wizard):
     assert wizard.n_processed == 2
 
 
-def test_wizard_update_simple(wizard, clustering, cluster_meta_up):
+def test_wizard_update_simple(wizard, clustering, cluster_meta):
     # 2: none, 3: none, 5: ignored, 7: good
-    wizard.attach(clustering, cluster_meta_up)
+    wizard.attach(clustering, cluster_meta)
 
     wizard.first()
     wizard.last()
@@ -190,8 +179,8 @@ def test_wizard_update_simple(wizard, clustering, cluster_meta_up):
     wizard.next_best()
 
 
-def test_wizard_update_group(wizard, clustering, cluster_meta_up):
-    wizard.attach(clustering, cluster_meta_up)
+def test_wizard_update_group(wizard, clustering, cluster_meta):
+    wizard.attach(clustering, cluster_meta)
 
     wizard.start()
 
@@ -204,25 +193,25 @@ def test_wizard_update_group(wizard, clustering, cluster_meta_up):
     _check_best_match(3, 2)
 
     # Ignore the currently-pinned cluster.
-    cluster_meta_up.set_group(3, 0)
+    cluster_meta.set('group', 3, 0)
     _check_best_match(5, 2)
     # 2: none, 3: ignored, 5: ignored, 7: good
 
     # Ignore the current match and move to next.
-    cluster_meta_up.set_group(2, 1)
+    cluster_meta.set('group', 2, 1)
     _check_best_match(5, 7)
     # 2: ignored, 3: ignored, 5: ignored, 7: good
 
-    cluster_meta_up.undo()
+    cluster_meta.undo()
     _check_best_match(5, 2)
 
-    cluster_meta_up.redo()
+    cluster_meta.redo()
     _check_best_match(5, 7)
 
 
-def test_wizard_update_clustering(wizard, clustering, cluster_meta_up):
+def test_wizard_update_clustering(wizard, clustering, cluster_meta):
     # 2: none, 3: none, 5: ignored, 7: good
-    wizard.attach(clustering, cluster_meta_up)
+    wizard.attach(clustering, cluster_meta)
     wizard.start()
 
     def _check_best_match(b, m):
@@ -235,7 +224,7 @@ def test_wizard_update_clustering(wizard, clustering, cluster_meta_up):
     wizard.pin()
 
     _check_best_match(2, 3)
-    cluster_meta_up.set_group(2, 2)
+    cluster_meta.set('group', 2, 2)
     wizard.selection = [2, 3]
 
     ################################
@@ -275,7 +264,7 @@ def test_wizard_update_clustering(wizard, clustering, cluster_meta_up):
     assert wizard.cluster_status(9) is None
 
     # Ignore a cluster.
-    cluster_meta_up.set_group(9, 1)
+    cluster_meta.set('group', 9, 1)
     assert wizard.cluster_status(9) == 'ignored'
 
     # Undo split.

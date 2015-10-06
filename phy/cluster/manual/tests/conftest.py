@@ -9,7 +9,7 @@
 from pytest import yield_fixture
 
 from ..clustering import Clustering
-from ..gui_plugins import create_cluster_metadata
+from ..gui_plugins import create_cluster_meta
 from ..wizard import Wizard
 
 
@@ -28,14 +28,14 @@ def clustering(spike_clusters):
 
 
 @yield_fixture
-def cluster_metadata():
+def cluster_meta():
     data = {2: {'group': 3},
             3: {'group': 3},
             5: {'group': 1},
             7: {'group': 2},
             }
 
-    yield create_cluster_metadata(data)
+    yield create_cluster_meta(data)
 
 
 def _set_test_wizard(wizard):

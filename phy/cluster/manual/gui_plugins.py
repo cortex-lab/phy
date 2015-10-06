@@ -9,7 +9,7 @@
 
 import logging
 
-from ._utils import ClusterMetadata, ClusterMetadataUpdater
+from ._utils import ClusterMeta
 from .clustering import Clustering
 from .wizard import Wizard
 from phy.gui.actions import Actions, Snippets
@@ -23,13 +23,12 @@ logger = logging.getLogger(__name__)
 # Clustering objects
 # -----------------------------------------------------------------------------
 
-def create_cluster_metadata(data):
-    """Return a ClusterMetadata instance with cluster group support."""
-    meta = ClusterMetadata(data=data)
+def create_cluster_meta(data):
+    """Return a ClusterMeta instance with cluster group support."""
+    meta = ClusterMeta()
 
-    @meta.default
-    def group(cluster, ascendant_values=None):
-        if not ascendant_values:
+    def group(ascendant_values=None):
+        if not ascendant_values:  # pragma: no cover
             return 3
         s = list(set(ascendant_values) - set([None, 3]))
         # Return the default value if all ascendant values are the default.
@@ -38,6 +37,10 @@ def create_cluster_metadata(data):
         # Otherwise, return good (2) if it is present, or the largest value
         # among those present.
         return max(s)
+
+    meta.add_field('group', 3, group)
+
+    meta.from_dict(data)
 
     return meta
 
@@ -50,7 +53,7 @@ class ManualClustering(IPlugin):
     """Plugin that brings manual clustering facilities to a GUI:
 
     * Clustering instance: merge, split, undo, redo
-    * ClusterMetadataUpdater instance: change cluster metadata (e.g. group)
+    * ClusterMeta instance: change cluster metadata (e.g. group)
     * Wizard
     * Selection
     * Many manual clustering-related actions, snippets, shortcuts, etc.
@@ -63,19 +66,18 @@ class ManualClustering(IPlugin):
     """
     def attach_to_gui(self, gui,
                       spike_clusters=None,
-                      cluster_metadata=None,
+                      cluster_meta=None,
                       n_spikes_max_per_cluster=100,
                       ):
         self.gui = gui
 
-        # Create Clustering and ClusterMetadataUpdater.
+        # Create Clustering and ClusterMeta.
         self.clustering = Clustering(spike_clusters)
-        self.cluster_metadata = cluster_metadata
-        cluster_meta_up = ClusterMetadataUpdater(cluster_metadata)
+        self.cluster_meta = cluster_meta
 
-        # Create the wizard and attach it to Clustering/ClusterMetadataUpdater.
+        # Create the wizard and attach it to Clustering/ClusterMeta.
         self.wizard = Wizard()
-        self.wizard.attach(self.clustering, cluster_meta_up)
+        self.wizard.attach(self.clustering, cluster_meta)
 
         @self.wizard.connect
         def on_select(cluster_ids):

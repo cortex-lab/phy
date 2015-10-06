@@ -18,10 +18,10 @@ from phy.gui.tests.test_gui import gui  # noqa
 #------------------------------------------------------------------------------
 
 @yield_fixture  # noqa
-def manual_clustering(qtbot, gui, spike_clusters, cluster_metadata):
+def manual_clustering(qtbot, gui, spike_clusters, cluster_meta):
     mc = gui.attach('ManualClustering',
                     spike_clusters=spike_clusters,
-                    cluster_metadata=cluster_metadata,
+                    cluster_meta=cluster_meta,
                     )
     _set_test_wizard(mc.wizard)
 

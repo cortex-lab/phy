@@ -81,140 +81,48 @@ class UpdateInfo(Bunch):
 # ClusterMetadataUpdater class
 #------------------------------------------------------------------------------
 
-class ClusterMetadata(object):
-    """Hold cluster metadata.
-
-    Features
-    --------
-
-    * New metadata fields can be easily registered
-    * Arbitrary functions can be used for default values
-
-    Notes
-    ----
-
-    If a metadata field `group` is registered, then two methods are
-    dynamically created:
-
-    * `group(cluster)` returns the group of a cluster, or the default value
-      if the cluster doesn't exist.
-    * `set_group(cluster, value)` sets a value for the `group` metadata field.
-
-    """
-    def __init__(self, data=None):
-        self._fields = {}
-        self._data = defaultdict(dict)
-        # Fill the existing values.
-        if data is not None:
-            self._data.update(data)
-
-    @property
-    def data(self):
-        return self._data
-
-    @property
-    def fields(self):
-        return sorted(self._fields)
-
-    def _get_one(self, cluster, field):
-        """Return the field value for a cluster, or the default value if it
-        doesn't exist."""
-        if cluster in self._data:
-            if field in self._data[cluster]:
-                return self._data[cluster][field]
-            elif field in self._fields:
-                # Call the default field function.
-                return self._fields[field](cluster)
-        else:
-            if field in self._fields:
-                return self._fields[field](cluster)
-
-    def _get(self, clusters, field):
-        if _is_list(clusters):
-            return [self._get_one(cluster, field)
-                    for cluster in _as_list(clusters)]
-        else:
-            return self._get_one(clusters, field)
-
-    def _set_one(self, cluster, field, value):
-        """Set a field value for a cluster."""
-        self._data[cluster][field] = value
-
-    def _set(self, clusters, field, value):
-        clusters = _as_list(clusters)
-        for cluster in clusters:
-            self._set_one(cluster, field, value)
-
-    def default(self, func):
-        """Register a new metadata field with a function
-        returning the default value of a cluster."""
-        field = func.__name__
-        # Register the decorated function as the default field function.
-        self._fields[field] = func
-        # Create self.<field>(clusters).
-        setattr(self, field, lambda clusters: self._get(clusters, field))
-        # Create self.set_<field>(clusters, value).
-        setattr(self, 'set_{0:s}'.format(field),
-                lambda clusters, value: self._set(clusters, field, value))
-        return func
-
-    def set_from_descendants(self, descendants):
-        """Update metadata of some clusters given the metadata of their
-        ascendants."""
-        fields = self.fields
-        for field in fields:
-            # For each new cluster, a set of metadata values of their
-            # ascendants.
-            candidates = defaultdict(set)
-            for old, new in descendants:
-                candidates[new].add(old)
-            for new, vals in candidates.items():
-
-                # Skip that new cluster if its value is already non-default.
-                current_val = self._get_one(new, field)
-                default_val = self._fields[field](new)
-                if current_val != default_val:
-                    continue
-
-                # Ask the field the value of the new cluster,
-                # as a function of the values of its ascendants. This is
-                # encoded in the specified default function.
-                new_val = self._fields[field](new, list(vals))
-                if new_val is not None:
-                    self._set_one(new, field, new_val)
-
-
-class ClusterMetadataUpdater(EventEmitter):
+class ClusterMeta(EventEmitter):
     """Handle cluster metadata changes."""
-    def __init__(self, cluster_metadata):
-        super(ClusterMetadataUpdater, self).__init__()
-        self._cluster_metadata = cluster_metadata
-        # Keep a deep copy of the original structure for the undo stack.
-        self._data_base = deepcopy(cluster_metadata.data)
+    def __init__(self):
+        super(ClusterMeta, self).__init__()
+        self._fields = {}
+        self._reset_data()
+
+    def _reset_data(self):
+        self._data = {}
+        self._data_base = {}
         # The stack contains (clusters, field, value, update_info, undo_state)
         # tuples.
         self._undo_stack = History((None, None, None, None, None))
 
-        for field, func in self._cluster_metadata._fields.items():
+    @property
+    def fields(self):
+        return sorted(self._fields.keys())
 
-            # Create self.<field>(clusters).
-            def _make_get(field):
-                def f(clusters):
-                    return self._cluster_metadata._get(clusters, field)
-                return f
-            setattr(self, field, _make_get(field))
+    def add_field(self, name, default_value=None, ascendants_func=None):
+        self._fields[name] = (default_value, ascendants_func)
 
-            # Create self.set_<field>(clusters, value).
-            def _make_set(field):
-                def f(clusters, value):
-                    return self._set(clusters, field, value)
-                return f
-            setattr(self, 'set_{0:s}'.format(field), _make_set(field))
+        def func(cluster):
+            return self.get(name, cluster)
 
-    def _set(self, clusters, field, value, add_to_stack=True):
+        setattr(self, name, func)
 
-        self._cluster_metadata._set(clusters, field, value)
+    def from_dict(self, dic):
+        self._reset_data()
+        for cluster, vals in dic.items():
+            for field, value in vals.items():
+                self.set(field, [cluster], value, add_to_stack=False)
+        self._data_base = deepcopy(self._data)
+
+    def set(self, field, clusters, value, add_to_stack=True):
+        assert field in self._fields
+
         clusters = _as_list(clusters)
+        for cluster in clusters:
+            if cluster not in self._data:
+                self._data[cluster] = {}
+            self._data[cluster][field] = value
+
         up = UpdateInfo(description='metadata_' + field,
                         metadata_changed=clusters,
                         metadata_value=value,
@@ -227,10 +135,38 @@ class ClusterMetadataUpdater(EventEmitter):
 
         return up
 
+    def get(self, field, cluster):
+        if _is_list(cluster):
+            return [self.get(field, c) for c in cluster]
+        assert field in self._fields
+        default = self._fields[field][0]
+        return self._data.get(cluster, {}).get(field, default)
+
     def set_from_descendants(self, descendants):
         """Update metadata of some clusters given the metadata of their
         ascendants."""
-        self._cluster_metadata.set_from_descendants(descendants)
+        for field in self.fields:
+            # For each new cluster, a set of metadata values of their
+            # ascendants.
+            candidates = defaultdict(set)
+            for old, new in descendants:
+                candidates[new].add(old)
+            for new, vals in candidates.items():
+
+                # Skip that new cluster if its value is already non-default.
+                current_val = self.get(field, new)
+                default_val = self._fields[field][0]
+                if current_val != default_val:
+                    continue
+
+                # Ask the field the value of the new cluster,
+                # as a function of the values of its ascendants. This is
+                # encoded in the specified default function.
+                func = self._fields[field][1]
+                if func:
+                    new_val = func(list(vals))
+                    if new_val is not None:
+                        self.set(field, [new], new_val)
 
     def undo(self):
         """Undo the last metadata change.
@@ -244,10 +180,10 @@ class ClusterMetadataUpdater(EventEmitter):
         args = self._undo_stack.back()
         if args is None:
             return
-        self._cluster_metadata._data = deepcopy(self._data_base)
+        self._data = deepcopy(self._data_base)
         for clusters, field, value, up, undo_state in self._undo_stack:
             if clusters is not None:
-                self._set(clusters, field, value, add_to_stack=False)
+                self.set(field, clusters, value, add_to_stack=False)
 
         # Return the UpdateInfo instance of the undo action.
         up, undo_state = args[-2:]
@@ -269,7 +205,7 @@ class ClusterMetadataUpdater(EventEmitter):
         if args is None:
             return
         clusters, field, value, up, undo_state = args
-        self._set(clusters, field, value, add_to_stack=False)
+        self.set(field, clusters, value, add_to_stack=False)
 
         # Return the UpdateInfo instance of the redo action.
         up.history = 'redo'

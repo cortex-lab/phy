@@ -8,9 +8,7 @@
 
 import logging
 
-from .._utils import (ClusterMetadata, ClusterMetadataUpdater, UpdateInfo,
-                      _update_cluster_selection,
-                      )
+from .._utils import ClusterMeta, UpdateInfo, _update_cluster_selection
 
 logger = logging.getLogger(__name__)
 
@@ -22,22 +20,15 @@ logger = logging.getLogger(__name__)
 def test_metadata_history():
     """Test ClusterMetadataUpdater history."""
 
+    meta = ClusterMeta()
+    meta.add_field('group', 3)
+    meta.add_field('color', 0)
+
     data = {2: {'group': 2, 'color': 7}, 4: {'group': 5}}
+    meta.from_dict(data)
 
-    base_meta = ClusterMetadata(data=data)
-
-    @base_meta.default
-    def group(cluster):
-        return 3
-
-    @base_meta.default
-    def color(cluster):
-        return 0
-
-    assert base_meta.group(2) == 2
-    assert base_meta.group([4, 2]) == [5, 2]
-
-    meta = ClusterMetadataUpdater(base_meta)
+    assert meta.group(2) == 2
+    assert meta.group([4, 2]) == [5, 2]
 
     # Values set in 'data'.
     assert meta.group(2) == 2
@@ -56,19 +47,19 @@ def test_metadata_history():
     meta.redo()
 
     # Action 1.
-    info = meta.set_group(2, 20)
+    info = meta.set('group', 2, 20)
     assert meta.group(2) == 20
     assert info.description == 'metadata_group'
     assert info.metadata_changed == [2]
 
     # Action 2.
-    info = meta.set_color(3, 30)
+    info = meta.set('color', 3, 30)
     assert meta.color(3) == 30
     assert info.description == 'metadata_color'
     assert info.metadata_changed == [3]
 
     # Action 3.
-    info = meta.set_color(2, 40)
+    info = meta.set('color', 2, 40)
     assert meta.color(2) == 40
     assert info.description == 'metadata_color'
     assert info.metadata_changed == [2]
@@ -121,12 +112,9 @@ def test_metadata_descendants():
             3: {'group': 3},
             }
 
-    meta = ClusterMetadata(data=data)
+    meta = ClusterMeta()
 
-    @meta.default
-    def group(cluster, ascendant_values=None):
-        if not ascendant_values:
-            return 3
+    def group(ascendant_values):
         s = list(set(ascendant_values) - set([None, 3]))
         # Return the default value if all ascendant values are the default.
         if not s:  # pragma: no cover
@@ -135,6 +123,9 @@ def test_metadata_descendants():
         # among those present.
         return max(s)
 
+    meta.add_field('group', 3, group)
+    meta.from_dict(data)
+
     meta.set_from_descendants([])
     assert meta.group(4) == 3
 
@@ -142,7 +133,7 @@ def test_metadata_descendants():
     assert meta.group(4) == 0
 
     # Reset to default.
-    meta.set_group(4, 3)
+    meta.set('group', 4, 3)
     meta.set_from_descendants([(1, 4)])
     assert meta.group(4) == 1
 
