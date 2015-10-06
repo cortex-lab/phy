@@ -32,8 +32,24 @@ def test_create_cluster_meta():
     assert meta.group(8) is None
 
 
-def test_metadata_history():
-    """Test ClusterMetadataUpdater history."""
+def test_metadata_history_simple():
+    """Test ClusterMeta history."""
+
+    meta = ClusterMeta()
+    meta.add_field('group')
+
+    meta.set('group', 2, 2)
+    assert meta.get('group', 2) == 2
+
+    meta.undo()
+    assert meta.get('group', 2) is None
+
+    meta.redo()
+    assert meta.get('group', 2) == 2
+
+
+def test_metadata_history_complex():
+    """Test ClusterMeta history."""
 
     meta = ClusterMeta()
     meta.add_field('group', 3)
@@ -119,7 +135,7 @@ def test_metadata_history():
 
 
 def test_metadata_descendants():
-    """Test ClusterMetadataUpdater history."""
+    """Test ClusterMeta history."""
 
     data = {0: {'group': 0},
             1: {'group': 1},
