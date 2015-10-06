@@ -208,6 +208,14 @@ def test_wizard_update_group(wizard, clustering, cluster_meta):
     cluster_meta.redo()
     _check_best_match(5, 7)
 
+    # Now move 3 to good.
+    for _ in range(5):
+        cluster_meta.undo()
+    wizard.selection = (3, 2)
+    _check_best_match(3, 2)
+    cluster_meta.set('group', 3, 2)
+    _check_best_match(5, 2)
+
 
 def test_wizard_update_clustering(wizard, clustering, cluster_meta):
     # 2: none, 3: none, 5: ignored, 7: good
