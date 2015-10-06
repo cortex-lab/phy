@@ -206,7 +206,6 @@ def test_wizard_update_group(wizard, clustering, cluster_meta):
     cluster_meta.set('group', 3, 'noise')
     # 2: none, 3: ignored, 5: ignored, 7: good
     _check_best_match(5, 2)
-    return
 
     # Ignore the current match and move to next.
     cluster_meta.set('group', 2, 'mua')
