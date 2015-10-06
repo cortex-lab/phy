@@ -32,7 +32,7 @@ def manual_clustering(qtbot, gui, spike_clusters, cluster_groups):
     def on_select(cluster_ids, spike_ids):
         _s.append((cluster_ids, spike_ids))
 
-    def _assert_selection(*cluster_ids):
+    def _assert_selection(*cluster_ids):  # pragma: no cover
         assert _s[-1][0] == list(cluster_ids)
         if len(cluster_ids) >= 1:
             assert mc.wizard.best == cluster_ids[0]
@@ -121,7 +121,7 @@ def test_manual_clustering_actions(manual_clustering):
 
 def test_manual_clustering_group(manual_clustering):
     actions = manual_clustering.actions
-    wizard = manual_clustering.wizard
+    # wizard = manual_clustering.wizard
     _assert_selection = manual_clustering._assert_selection
 
     actions.reset_wizard()

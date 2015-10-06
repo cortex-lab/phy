@@ -135,8 +135,6 @@ class ClusterMeta(EventEmitter):
         for cluster in clusters:
             if cluster not in self._data:
                 self._data[cluster] = {}
-            if value == 8:
-                raise RuntimeError()
             self._data[cluster][field] = value
 
         up = UpdateInfo(description='metadata_' + field,
