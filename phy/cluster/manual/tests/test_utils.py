@@ -8,7 +8,8 @@
 
 import logging
 
-from .._utils import ClusterMeta, UpdateInfo, _update_cluster_selection
+from .._utils import (ClusterMeta, UpdateInfo,
+                      _update_cluster_selection, create_cluster_meta)
 
 logger = logging.getLogger(__name__)
 
@@ -16,6 +17,20 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
+
+def test_create_cluster_meta():
+    cluster_groups = {2: 3,
+                      3: 3,
+                      5: 1,
+                      7: 2,
+                      }
+    meta = create_cluster_meta(cluster_groups)
+    assert meta.group(2) == 3
+    assert meta.group(3) == 3
+    assert meta.group(5) == 1
+    assert meta.group(7) == 2
+    assert meta.group(8) is None
+
 
 def test_metadata_history():
     """Test ClusterMetadataUpdater history."""
@@ -114,16 +129,7 @@ def test_metadata_descendants():
 
     meta = ClusterMeta()
 
-    def group(ascendant_values):
-        s = list(set(ascendant_values) - set([None, 3]))
-        # Return the default value if all ascendant values are the default.
-        if not s:  # pragma: no cover
-            return 3
-        # Otherwise, return good (2) if it is present, or the largest value
-        # among those present.
-        return max(s)
-
-    meta.add_field('group', 3, group)
+    meta.add_field('group', 3)
     meta.from_dict(data)
 
     meta.set_from_descendants([])
@@ -138,8 +144,10 @@ def test_metadata_descendants():
     assert meta.group(4) == 1
 
     meta.set_from_descendants([(1, 5), (2, 5)])
-    assert meta.group(5) == 2
+    # This is the default value because the parents have different values.
+    assert meta.group(5) == 3
 
+    meta.set('group', 3, 2)
     meta.set_from_descendants([(2, 6), (3, 6), (10, 10)])
     assert meta.group(6) == 2
 

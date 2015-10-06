@@ -8,9 +8,12 @@
 
 from copy import deepcopy
 from collections import defaultdict
+import logging
 
 from ._history import History
 from phy.utils import Bunch, _as_list, _is_list, EventEmitter
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -27,6 +30,26 @@ def _update_cluster_selection(clusters, up):
 
 def _join(clusters):
     return '[{}]'.format(', '.join(map(str, clusters)))
+
+
+def _wizard_group(group):
+    group = group.lower() if group else group
+    if group in ('mua', 'noise'):
+        return 'ignored'
+    elif group == 'good':
+        return 'good'
+    return None
+
+
+def create_cluster_meta(cluster_groups):
+    """Return a ClusterMeta instance with cluster group support."""
+    meta = ClusterMeta()
+    meta.add_field('group')
+
+    data = {c: {'group': v} for c, v in cluster_groups.items()}
+    meta.from_dict(data)
+
+    return meta
 
 
 #------------------------------------------------------------------------------
@@ -99,8 +122,8 @@ class ClusterMeta(EventEmitter):
     def fields(self):
         return sorted(self._fields.keys())
 
-    def add_field(self, name, default_value=None, ascendants_func=None):
-        self._fields[name] = (default_value, ascendants_func)
+    def add_field(self, name, default_value=None):
+        self._fields[name] = default_value
 
         def func(cluster):
             return self.get(name, cluster)
@@ -121,6 +144,8 @@ class ClusterMeta(EventEmitter):
         for cluster in clusters:
             if cluster not in self._data:
                 self._data[cluster] = {}
+            if value == 8:
+                raise RuntimeError()
             self._data[cluster][field] = value
 
         up = UpdateInfo(description='metadata_' + field,
@@ -139,34 +164,27 @@ class ClusterMeta(EventEmitter):
         if _is_list(cluster):
             return [self.get(field, c) for c in cluster]
         assert field in self._fields
-        default = self._fields[field][0]
+        default = self._fields[field]
         return self._data.get(cluster, {}).get(field, default)
 
     def set_from_descendants(self, descendants):
         """Update metadata of some clusters given the metadata of their
         ascendants."""
         for field in self.fields:
-            # For each new cluster, a set of metadata values of their
-            # ascendants.
+
+            # This gives a set of metadata values of all the parents
+            # of any new cluster.
             candidates = defaultdict(set)
             for old, new in descendants:
-                candidates[new].add(old)
+                candidates[new].add(self.get(field, old))
+
+            # Loop over all new clusters.
             for new, vals in candidates.items():
-
-                # Skip that new cluster if its value is already non-default.
-                current_val = self.get(field, new)
-                default_val = self._fields[field][0]
-                if current_val != default_val:
-                    continue
-
-                # Ask the field the value of the new cluster,
-                # as a function of the values of its ascendants. This is
-                # encoded in the specified default function.
-                func = self._fields[field][1]
-                if func:
-                    new_val = func(list(vals))
-                    if new_val is not None:
-                        self.set(field, [new], new_val)
+                # If all the parents have the same value, assign it to
+                # the new cluster.
+                if len(vals) == 1:
+                    self.set(field, new, list(vals)[0])
+                # Otherwise, the default is assumed.
 
     def undo(self):
         """Undo the last metadata change.
