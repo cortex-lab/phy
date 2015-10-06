@@ -10,7 +10,6 @@ from pytest import yield_fixture
 from numpy.testing import assert_array_equal as ae
 
 from .conftest import _set_test_wizard
-from ..gui_plugins import create_cluster_meta
 from phy.gui.tests.test_gui import gui  # noqa
 
 
@@ -35,24 +34,14 @@ def manual_clustering(qtbot, gui, spike_clusters, cluster_groups):
 
     def _assert_selection(*cluster_ids):
         assert _s[-1][0] == list(cluster_ids)
+        if len(cluster_ids) >= 1:
+            assert mc.wizard.best == cluster_ids[0]
+        elif len(cluster_ids) >= 2:
+            assert mc.wizard.match == cluster_ids[2]
 
     mc._assert_selection = _assert_selection
 
     yield mc
-
-
-def test_create_cluster_meta():
-    cluster_groups = {2: 3,
-                      3: 3,
-                      5: 1,
-                      7: 2,
-                      }
-    meta = create_cluster_meta(cluster_groups)
-    assert meta.group(2) == 3
-    assert meta.group(3) == 3
-    assert meta.group(5) == 1
-    assert meta.group(7) == 2
-    assert meta.group(8) == 3
 
 
 def test_manual_clustering_wizard(manual_clustering):
@@ -70,41 +59,32 @@ def test_manual_clustering_wizard(manual_clustering):
     # Test wizard actions.
     actions.reset_wizard()
     assert wizard.best_list == [3, 2, 7, 5]
-    assert wizard.best == 3
     _assert_selection(3)
 
     actions.next()
-    assert wizard.best == 2
     _assert_selection(2)
 
     actions.last()
-    assert wizard.best == 5
     _assert_selection(5)
 
     actions.next()
-    assert wizard.best == 5
     _assert_selection(5)
 
     actions.previous()
-    assert wizard.best == 7
     _assert_selection(7)
 
     actions.first()
-    assert wizard.best == 3
     _assert_selection(3)
 
     actions.previous()
-    assert wizard.best == 3
     _assert_selection(3)
 
     # Test pinning.
     actions.pin()
     assert wizard.match_list == [2, 7, 5]
-    assert wizard.match == 2
     _assert_selection(3, 2)
 
     wizard.next()
-    assert wizard.match == 7
     _assert_selection(3, 7)
 
     wizard.unpin()
@@ -149,6 +129,11 @@ def test_manual_clustering_group(manual_clustering):
     _assert_selection(3, 2)
 
     # [3   , 2   , 7        , 5]
-    # [None, None, 'ignored', 'good']
+    # [None, None, 'good', 'ignored']
     actions.move([3], 'good')
-    print(wizard.selection)
+
+    # ['good', None, 'good', 'ignored']
+    _assert_selection(7, 2)
+
+    actions.next()
+    _assert_selection(7, 3)
