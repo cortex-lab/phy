@@ -159,33 +159,14 @@ def test_wizard_nav(wizard):
     wizard.last()
     assert wizard.selection == [3, 5]
 
+    wizard.previous_best()
+    assert wizard.selection == [3, 2]
+
     wizard.unpin()
     assert wizard.best == 3
     assert wizard.match is None
 
     assert wizard.n_processed == 2
-
-
-def test_wizard_update_simple(wizard, clustering, cluster_meta):
-    # 2: none, 3: none, 5: ignored, 7: good
-    wizard.attach(clustering, cluster_meta)
-
-    wizard.first()
-    wizard.last()
-
-    wizard.start()
-
-    wizard.first()
-    wizard.last()
-
-    wizard.pin()
-
-    wizard.first()
-    wizard.last()
-
-    wizard.pin()
-    wizard.previous_best()
-    wizard.next_best()
 
 
 def test_wizard_update_group(wizard, clustering, cluster_meta):
@@ -200,7 +181,6 @@ def test_wizard_update_group(wizard, clustering, cluster_meta):
 
     wizard.pin()
     _check_best_match(3, 2)
-    # print(wizard.best_list)
 
     # Ignore the currently-pinned cluster.
     cluster_meta.set('group', 3, 'noise')
