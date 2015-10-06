@@ -54,7 +54,7 @@ def _set_test_wizard(wizard):
 
 
 @yield_fixture
-def wizard():
+def wizard(cluster_groups):
     wizard = Wizard()
 
     def get_cluster_ids():
@@ -63,8 +63,13 @@ def wizard():
     wizard.set_cluster_ids_function(get_cluster_ids)
 
     @wizard.set_status_function
-    def cluster_status(cluster):
-        return {2: None, 3: None, 5: 'ignored', 7: 'good'}.get(cluster, None)
+    def status(cluster):
+        group = cluster_groups.get(cluster, 3)
+        if group <= 1:
+            return 'ignored'
+        elif group == 2:
+            return 'good'
+        return None
 
     _set_test_wizard(wizard)
 
