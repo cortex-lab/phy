@@ -10,6 +10,7 @@ from pytest import yield_fixture
 from numpy.testing import assert_array_equal as ae
 
 from .conftest import _set_test_wizard
+from ..gui_plugins import create_cluster_meta
 from phy.gui.tests.test_gui import gui  # noqa
 
 
@@ -18,10 +19,10 @@ from phy.gui.tests.test_gui import gui  # noqa
 #------------------------------------------------------------------------------
 
 @yield_fixture  # noqa
-def manual_clustering(qtbot, gui, spike_clusters, cluster_meta):
+def manual_clustering(qtbot, gui, spike_clusters, cluster_groups):
     mc = gui.attach('ManualClustering',
                     spike_clusters=spike_clusters,
-                    cluster_meta=cluster_meta,
+                    cluster_groups=cluster_groups,
                     )
     _set_test_wizard(mc.wizard)
 
@@ -38,6 +39,20 @@ def manual_clustering(qtbot, gui, spike_clusters, cluster_meta):
     mc._assert_selection = _assert_selection
 
     yield mc
+
+
+def test_create_cluster_meta():
+    cluster_groups = {2: 3,
+                      3: 3,
+                      5: 1,
+                      7: 2,
+                      }
+    meta = create_cluster_meta(cluster_groups)
+    assert meta.group(2) == 3
+    assert meta.group(3) == 3
+    assert meta.group(5) == 1
+    assert meta.group(7) == 2
+    assert meta.group(8) == 3
 
 
 def test_manual_clustering_wizard(manual_clustering):
@@ -123,5 +138,17 @@ def test_manual_clustering_actions(manual_clustering):
     actions.split([2, 3])  # => 9
     _assert_selection(9, 8)
 
-    # TODO: more tests, notably with group actions and wizard
-    actions.move([9], 'good')
+
+def test_manual_clustering_group(manual_clustering):
+    actions = manual_clustering.actions
+    wizard = manual_clustering.wizard
+    _assert_selection = manual_clustering._assert_selection
+
+    actions.reset_wizard()
+    actions.pin()
+    _assert_selection(3, 2)
+
+    # [3   , 2   , 7        , 5]
+    # [None, None, 'ignored', 'good']
+    actions.move([3], 'good')
+    print(wizard.selection)

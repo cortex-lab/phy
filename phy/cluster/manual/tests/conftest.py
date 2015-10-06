@@ -28,14 +28,18 @@ def clustering(spike_clusters):
 
 
 @yield_fixture
-def cluster_meta():
-    data = {2: {'group': 3},
-            3: {'group': 3},
-            5: {'group': 1},
-            7: {'group': 2},
+def cluster_groups():
+    data = {2: 3,
+            3: 3,
+            5: 1,
+            7: 2,
             }
+    yield data
 
-    yield create_cluster_meta(data)
+
+@yield_fixture
+def cluster_meta(cluster_groups):
+    yield create_cluster_meta(cluster_groups)
 
 
 def _set_test_wizard(wizard):

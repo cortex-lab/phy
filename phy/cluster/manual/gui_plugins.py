@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Clustering objects
 # -----------------------------------------------------------------------------
 
-def create_cluster_meta(data):
+def create_cluster_meta(cluster_groups):
     """Return a ClusterMeta instance with cluster group support."""
     meta = ClusterMeta()
 
@@ -40,6 +40,7 @@ def create_cluster_meta(data):
 
     meta.add_field('group', 3, group)
 
+    data = {c: {'group': v} for c, v in cluster_groups.items()}
     meta.from_dict(data)
 
     return meta
@@ -66,18 +67,18 @@ class ManualClustering(IPlugin):
     """
     def attach_to_gui(self, gui,
                       spike_clusters=None,
-                      cluster_meta=None,
+                      cluster_groups=None,
                       n_spikes_max_per_cluster=100,
                       ):
         self.gui = gui
 
         # Create Clustering and ClusterMeta.
         self.clustering = Clustering(spike_clusters)
-        self.cluster_meta = cluster_meta
+        self.cluster_meta = create_cluster_meta(cluster_groups)
 
         # Create the wizard and attach it to Clustering/ClusterMeta.
         self.wizard = Wizard()
-        self.wizard.attach(self.clustering, cluster_meta)
+        self.wizard.attach(self.clustering, self.cluster_meta)
 
         @self.wizard.connect
         def on_select(cluster_ids):
