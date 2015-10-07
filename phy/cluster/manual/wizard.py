@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
-
 """Wizard."""
 
 #------------------------------------------------------------------------------
 # Imports
+
 #------------------------------------------------------------------------------
 
 import logging
@@ -12,7 +12,6 @@ from operator import itemgetter
 from six import string_types
 
 from ._history import History
-from phy.utils._types import _as_tuple
 from phy.utils import EventEmitter
 
 logger = logging.getLogger(__name__)
@@ -65,7 +64,7 @@ def _most_similar_clusters(cluster, cluster_ids=None, n_max=None,
         return []
     s = [(other, similarity(cluster, other))
          for other in cluster_ids
-         if other != cluster]
+         if other != cluster and status(other) != 'ignored']
     # Only keep values less than a threshold.
     if less_than:
         s = [(c, v) for (c, v) in s if v <= less_than]
@@ -102,16 +101,16 @@ def best_quality_strategy(selection,
     """
     if selection is None:
         return selection
-    selection = _as_tuple(selection)
+    selection = tuple(selection)
     n = len(selection)
     if n <= 1:
         best_clusters = _best_clusters(cluster_ids, quality)
         # Sort the best clusters according to their status.
         best_clusters = _sort(best_clusters, status=status)
         if selection:
-            return _next_in_list(best_clusters, selection[0])
+            return (_next_in_list(best_clusters, selection[0]),)
         elif best_clusters:
-            return best_clusters[0]
+            return (best_clusters[0],)
         else:
             return selection
     elif n == 2:
@@ -230,23 +229,28 @@ class Wizard(EventEmitter):
     # Selection methods
     #--------------------------------------------------------------------------
 
-    @property
-    def selection(self):
-        """Return the current cluster selection."""
-        return _as_tuple(self._selection)
-
-    @selection.setter
-    def selection(self, value):
-        if value is None:  # pragma: no cover
+    def _selection_changed(self, sel, add_to_history=True):
+        if sel is None:  # pragma: no cover
             return
+        assert hasattr(sel, '__len__')
         clusters = self.cluster_ids
-        value = tuple(cluster for cluster in value if cluster in clusters)
-        self._selection = value
-        self._history.add(self._selection)
+        sel = tuple(cluster for cluster in sel if cluster in clusters)
+        self._selection = sel
+        if add_to_history:
+            self._history.add(self._selection)
         self.emit('select', self._selection)
 
     def select(self, cluster_ids):
-        self.selection = cluster_ids
+        self._selection_changed(cluster_ids)
+
+    @property
+    def selection(self):
+        """Return the current cluster selection."""
+        return self._selection
+
+    @selection.setter
+    def selection(self, value):
+        self.select(value)
 
     @property
     def best(self):
@@ -270,35 +274,37 @@ class Wizard(EventEmitter):
             return
         if best in candidates:
             candidates.remove(best)
-        self.select([self.best, candidates[0]])
+        self.select((self.best, candidates[0]))
 
     def unpin(self):
         if len(self._selection) == 2:
-            self.selection = self.selection[0]
+            self.selection = (self.selection[0],)
 
     # Navigation
     #--------------------------------------------------------------------------
+
+    def _set_selection_from_history(self):
+        sel = self._history.current_item
+        if not sel:
+            return
+        self._selection_changed(sel, add_to_history=False)
 
     def previous(self):
         if self._history.current_position <= 2:
             return self._selection
         self._history.back()
-        sel = self._history.current_item
-        if sel:
-            self._selection = sel  # Not add this action to the history.
+        self._set_selection_from_history()
         return self._selection
 
     def next(self):
         if not self._history.is_last():
             # Go forward after a previous.
             self._history.forward()
-            sel = self._history.current_item
-            if sel:
-                self._selection = sel  # Not add this action to the history.
+            self._set_selection_from_history()
         else:
             if self._next:
                 # Or compute the next selection.
-                self.selection = _as_tuple(self._next(self._selection))
+                self.selection = self._next(self._selection)
             else:
                 logger.debug("No strategy selected in the wizard.")
         return self._selection
@@ -316,6 +322,9 @@ class Wizard(EventEmitter):
 
         @obj.connect
         def on_cluster(up):
+            if not up.history:
+                # Reset the history after every change.
+                self.reset()
             if up.history == 'undo':
                 # Revert to the given selection after an undo.
                 self._selection = tuple(up.undo_state[0]['selection'])
