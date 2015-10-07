@@ -34,9 +34,43 @@ def _argsort(seq, reverse=True, n_max=None):
         return out[:n_max]
 
 
+def _next_in_list(l, item):
+    if l and item in l and l.index(item) < len(l) - 1:
+        return l[l.index(item) + 1]
+    return item
+
+
+def _sort(clusters, status=None, remove_ignored=False):
+    """Sort clusters according to their status."""
+    assert status
+    _sort_map = {None: 0, 'good': 1, 'ignored': 2}
+    if remove_ignored:
+        clusters = [c for c in clusters if status(c) != 'ignored']
+    # NOTE: sorted is "stable": it doesn't change the order of elements
+    # that compare equal, which ensures that the order of clusters is kept
+    # among any given status.
+    key = lambda cluster: _sort_map.get(status(cluster), 0)
+    return sorted(clusters, key=key)
+
+
 def _best_clusters(clusters, quality, n_max=None):
     return _argsort([(cluster, quality(cluster))
                      for cluster in clusters], n_max=n_max)
+
+
+def _most_similar_clusters(cluster, cluster_ids=None, n_max=None,
+                           similarity=None, status=None, less_than=None):
+    """Return the `n_max` most similar clusters to a given cluster."""
+    if cluster not in cluster_ids:
+        return []
+    s = [(other, similarity(cluster, other))
+         for other in cluster_ids
+         if other != cluster]
+    # Only keep values less than a threshold.
+    if less_than:
+        s = [(c, v) for (c, v) in s if v <= less_than]
+    clusters = _argsort(s, n_max=n_max)
+    return _sort(clusters, status=status, remove_ignored=True)
 
 
 def _wizard_group(group):
@@ -50,30 +84,14 @@ def _wizard_group(group):
     return None
 
 
-def _next_in_list(l, item):
-    if l and item in l and l.index(item) < len(l) - 1:
-        return l[l.index(item) + 1]
-    return item
-
-
-def _sort(clusters, status=None, mix_good_unsorted=False):
-    """Sort clusters according to their status."""
-    assert status
-    _sort_map = {None: 0, 'good': 1, 'ignored': 2}
-    if mix_good_unsorted:
-        _sort_map['good'] = 0
-    # NOTE: sorted is "stable": it doesn't change the order of elements
-    # that compare equal, which ensures that the order of clusters is kept
-    # among any given status.
-    key = lambda cluster: _sort_map.get(status(cluster), 0)
-    return sorted(clusters, key=key)
-
-
 #------------------------------------------------------------------------------
 # Strategy functions
 #------------------------------------------------------------------------------
 
-def best_quality_strategy(selection, best_clusters=None, status=None,
+def best_quality_strategy(selection,
+                          cluster_ids=None,
+                          quality=None,
+                          status=None,
                           similarity=None):
     """Two cases depending on the number of selected clusters:
 
@@ -89,25 +107,25 @@ def best_quality_strategy(selection, best_clusters=None, status=None,
     if n == 0 or n >= 3:
         return selection
     if n == 1:
+        best_clusters = _best_clusters(cluster_ids, quality)
         # Sort the best clusters according to their status.
         best_clusters = _sort(best_clusters, status=status)
         return _next_in_list(best_clusters, selection[0])
     elif n == 2:
         best, match = selection
         value = similarity(best, match)
-        # Find the similarity of the best cluster with every other one.
-        sims = [(other, similarity(best, other)) for other in best_clusters]
-        # Only keep the less similar clusters.
-        sims = [(other, s) for (other, s) in sims if s <= value]
-        # Sort the pairs by decreasing similarity.
-        sims = sorted(sims, key=itemgetter(1), reverse=True)
-        # Just keep the cluster ids.
-        sims = [c for (c, v) in sims]
-        # Sort the candidates according to their status.
-        _sort(sims, status=status, mix_good_unsorted=True)
-        if not sims:
+        candidates = _most_similar_clusters(best,
+                                            cluster_ids=cluster_ids,
+                                            similarity=similarity,
+                                            status=status,
+                                            less_than=value)
+        if best in candidates:
+            candidates.remove(best)
+        if match in candidates:
+            candidates.remove(match)
+        if not candidates:
             return selection
-        return [best, sims[0][0]]
+        return (best, candidates[0])
 
 
 #------------------------------------------------------------------------------
@@ -185,7 +203,8 @@ class Wizard(EventEmitter):
 
         def wrapped(sel):
             return func(self._selection,
-                        best_clusters=self.best_clusters(),
+                        cluster_ids=self._get_cluster_ids(),
+                        quality=self._quality,
                         status=self._cluster_status,
                         similarity=self._similarity,
                         )
@@ -210,30 +229,6 @@ class Wizard(EventEmitter):
 
     def cluster_status(self, cluster):
         return self._cluster_status(cluster)
-
-    def best_clusters(self, n_max=None, quality=None):
-        """Return the list of best clusters sorted by decreasing quality.
-
-        The default quality function is the registered one.
-
-        """
-        quality = quality or self._quality
-        best = _best_clusters(self.cluster_ids, quality, n_max=n_max)
-        return _sort(best, status=self._cluster_status)
-
-    def most_similar_clusters(self, cluster, n_max=None, similarity=None):
-        """Return the `n_max` most similar clusters to a given cluster.
-
-        The default similarity function is the registered one.
-
-        """
-        similarity = similarity or self._similarity
-        s = [(other, similarity(cluster, other))
-             for other in self.cluster_ids
-             if other != cluster]
-        clusters = _argsort(s, n_max=n_max)
-        return _sort(clusters, status=self._cluster_status,
-                     mix_good_unsorted=True)
 
     # Selection methods
     #--------------------------------------------------------------------------
