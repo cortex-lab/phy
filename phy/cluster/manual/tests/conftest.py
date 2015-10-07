@@ -8,7 +8,6 @@
 
 from pytest import yield_fixture
 
-from ..clustering import Clustering
 from ..wizard import Wizard, _wizard_group
 from .._utils import create_cluster_meta
 
@@ -18,21 +17,17 @@ from .._utils import create_cluster_meta
 #------------------------------------------------------------------------------
 
 @yield_fixture
-def spike_clusters():
-    yield [2, 3, 5, 7]
-
-
-@yield_fixture
-def clustering(spike_clusters):
-    yield Clustering(spike_clusters)
-
-
-@yield_fixture
 def cluster_groups():
-    data = {2: None,
-            3: None,
-            5: 'mua',
-            7: 'good',
+    data = {1: 'noise',
+            2: 'mua',
+            11: 'good',
+            12: 'good',
+            13: 'good',
+            101: None,
+            102: None,
+            103: None,
+            104: None,
+            105: None,
             }
     yield data
 
@@ -42,31 +37,34 @@ def cluster_meta(cluster_groups):
     yield create_cluster_meta(cluster_groups)
 
 
-def _set_test_wizard(wizard):
+@yield_fixture
+def mock_wizard():
+
+    wizard = Wizard()
+    wizard.set_cluster_ids_function(lambda: [1, 2, 3])
 
     @wizard.set_quality_function
     def quality(cluster):
-        return cluster * .1
+        return cluster
 
     @wizard.set_similarity_function
     def similarity(cluster, other):
-        return 1. + quality(cluster) - quality(other)
+        return cluster + other
+
+    yield wizard
 
 
 @yield_fixture
-def wizard(cluster_groups):
-    wizard = Wizard()
+def wizard_with_groups(mock_wizard, cluster_groups):
 
     def get_cluster_ids():
-        return [2, 3, 5, 7]
+        return sorted(cluster_groups.keys())
 
-    wizard.set_cluster_ids_function(get_cluster_ids)
+    mock_wizard.set_cluster_ids_function(get_cluster_ids)
 
-    @wizard.set_status_function
+    @mock_wizard.set_status_function
     def status(cluster):
         group = cluster_groups.get(cluster, None)
         return _wizard_group(group)
 
-    _set_test_wizard(wizard)
-
-    yield wizard
+    yield mock_wizard

@@ -49,31 +49,22 @@ def test_wizard_group():
     assert _wizard_group(None) is None
 
 
-def test_wizard_core():
+def test_wizard_core(mock_wizard):
 
-    wizard = Wizard()
-    wizard.set_cluster_ids_function(lambda: [1, 2, 3])
+    w = mock_wizard
 
-    @wizard.set_quality_function
-    def quality(cluster):
-        return cluster
+    assert w.best_clusters() == [3, 2, 1]
+    assert w.best_clusters(n_max=0) == [3, 2, 1]
+    assert w.best_clusters(n_max=None) == [3, 2, 1]
+    assert w.best_clusters(n_max=2) == [3, 2]
+    assert w.best_clusters(n_max=1) == [3]
 
-    @wizard.set_similarity_function
-    def similarity(cluster, other):
-        return cluster + other
+    assert w.most_similar_clusters(3) == [2, 1]
+    assert w.most_similar_clusters(2) == [3, 1]
+    assert w.most_similar_clusters(1) == [3, 2]
 
-    assert wizard.best_clusters() == [3, 2, 1]
-    assert wizard.best_clusters(n_max=0) == [3, 2, 1]
-    assert wizard.best_clusters(n_max=None) == [3, 2, 1]
-    assert wizard.best_clusters(n_max=2) == [3, 2]
-    assert wizard.best_clusters(n_max=1) == [3]
-
-    assert wizard.most_similar_clusters(3) == [2, 1]
-    assert wizard.most_similar_clusters(2) == [3, 1]
-    assert wizard.most_similar_clusters(1) == [3, 2]
-
-    assert wizard.most_similar_clusters(3, n_max=0) == [2, 1]
-    assert wizard.most_similar_clusters(3, n_max=None) == [2, 1]
-    assert wizard.most_similar_clusters(3, n_max=1) == [2]
-    assert wizard.most_similar_clusters(3, n_max=2) == [2, 1]
-    assert wizard.most_similar_clusters(3, n_max=10) == [2, 1]
+    assert w.most_similar_clusters(3, n_max=0) == [2, 1]
+    assert w.most_similar_clusters(3, n_max=None) == [2, 1]
+    assert w.most_similar_clusters(3, n_max=1) == [2]
+    assert w.most_similar_clusters(3, n_max=2) == [2, 1]
+    assert w.most_similar_clusters(3, n_max=10) == [2, 1]
