@@ -49,9 +49,13 @@ def test_wizard_group():
     assert _wizard_group(None) is None
 
 
-def test_wizard_core(mock_wizard):
+def test_wizard_basic(mock_wizard):
 
     w = mock_wizard
+
+    assert w.cluster_ids == [1, 2, 3]
+    assert w.n_clusters == 3
+    assert w.cluster_status(1) is None
 
     assert w.best_clusters() == [3, 2, 1]
     assert w.best_clusters(n_max=0) == [3, 2, 1]
@@ -68,3 +72,13 @@ def test_wizard_core(mock_wizard):
     assert w.most_similar_clusters(3, n_max=1) == [2]
     assert w.most_similar_clusters(3, n_max=2) == [2, 1]
     assert w.most_similar_clusters(3, n_max=10) == [2, 1]
+
+
+def test_wizard_nav(mock_wizard):
+    w = mock_wizard
+
+    assert w.selection == ()
+
+
+def test_wizard_strategy(mock_wizard):
+    pass

@@ -12,7 +12,7 @@ from operator import itemgetter
 from six import string_types
 
 from ._history import History
-from phy.utils._types import _as_list
+from phy.utils._types import _as_list, _as_tuple
 from phy.utils import EventEmitter
 
 logger = logging.getLogger(__name__)
@@ -79,7 +79,7 @@ class Wizard(EventEmitter):
         self.reset()
 
     def reset(self):
-        self._selection = []
+        self._selection = ()
         self._history = History(())
 
     # Quality and status functions
@@ -198,13 +198,12 @@ class Wizard(EventEmitter):
     @property
     def selection(self):
         """Return the current cluster selection."""
-        return self._selection
+        return _as_tuple(self._selection)
 
     @selection.setter
     def selection(self, value):
-        value = _as_list(value)
         clusters = self.cluster_ids
-        value = [cluster for cluster in value if cluster in clusters]
+        value = tuple(cluster for cluster in value if cluster in clusters)
         self._selection = value
         self.emit('select', self._selection)
 
@@ -224,17 +223,17 @@ class Wizard(EventEmitter):
     def previous(self):
         sel = self._history.back()
         if sel:
-            self._selection = sel
+            self._selection = tuple(sel)
 
     def next(self):
         if not self._history.is_last():
             # Go forward after a previous.
             sel = self._history.forward()
             if sel:
-                self._selection = sel
+                self._selection = tuple(sel)
         else:
             # Or compute the next selection.
-            self._selection = self._next(self._selection)
+            self._selection = tuple(self._next(self._selection))
             self._history.add(self._selection)
 
     # Attach
@@ -252,7 +251,7 @@ class Wizard(EventEmitter):
         def on_cluster(up):
             if up.history == 'undo':
                 # Revert to the given selection after an undo.
-                self._selection = up.undo_state[0]['selection']
+                self._selection = tuple(up.undo_state[0]['selection'])
             else:
                 # Or move to the next selection after any other action.
                 self.next()
