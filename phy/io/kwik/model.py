@@ -777,13 +777,20 @@ class KwikModel(BaseModel):
         if value not in self.channel_groups:
             raise ValueError("The channel group {0} is invalid.".format(value))
         self._channel_group = value
+        self.clustering = 'main'
 
         # Load data.
         _to_close = self._open_kwik_if_needed()
+        self._load_clusterings('main')
         self._probe.change_channel_group(value)
         self._load_channels()
         self._load_spikes()
         self._load_features_masks()
+
+        # Recalculate spikes_per_cluster manually
+        self._spikes_per_cluster = \
+            _spikes_per_cluster(self.spike_ids, self._spike_clusters)
+
         if _to_close:
             self._kwik.close()
 

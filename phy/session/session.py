@@ -209,6 +209,7 @@ class Session(BaseSession):
 
     def change_channel_group(self, channel_group):
         """Change the current channel group."""
+        self._channel_group = channel_group
         self.model.channel_group = channel_group
         info("Switched to channel group {}.".format(channel_group))
         self.emit('open')
