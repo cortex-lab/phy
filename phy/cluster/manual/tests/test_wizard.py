@@ -11,6 +11,7 @@ from ..wizard import (_argsort,
                       _next_in_list,
                       _best_clusters,
                       _wizard_group,
+                      best_quality_strategy,
                       )
 
 
@@ -55,6 +56,24 @@ def test_next_in_list():
     assert _next_in_list(l, 2) == 3
     assert _next_in_list(l, 3) == 3
     assert _next_in_list(l, 4) == 4
+
+
+def test_best_quality_strategy():
+    best_clusters = range(5, -1, -1)
+    status = lambda c: ('ignored', 'ignored', 'good')[c] if c <= 2 else None
+    similarity = lambda c, d: c + d
+
+    def _next(selection):
+        return best_quality_strategy(selection,
+                                     best_clusters=best_clusters,
+                                     status=status,
+                                     similarity=similarity)
+
+    assert not _next(None)
+    assert not _next(())
+
+    for i in range(5, -1, -1):
+        assert _next(i) == max(0, i - 1)
 
 
 def test_wizard_group():
@@ -110,7 +129,7 @@ def test_wizard_nav(mock_wizard):
     assert w.match is None
 
     ###
-    w.selection = [1, 2, 4]
+    w.select([1, 2, 4])
     assert w.selection == (1, 2)
 
     assert w.best == 1

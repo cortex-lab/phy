@@ -82,15 +82,32 @@ def best_quality_strategy(selection, best_clusters=None, status=None,
     * 3+: do nothing
 
     """
+    if selection is None:
+        return selection
+    selection = _as_tuple(selection)
     n = len(selection)
     if n == 0 or n >= 3:
         return selection
     if n == 1:
+        # Sort the best clusters according to their status.
+        best_clusters = _sort(best_clusters, status=status)
         return _next_in_list(best_clusters, selection[0])
     elif n == 2:
         best, match = selection
         value = similarity(best, match)
-        sims = [similarity(best, other) for other in best_clusters]
+        # Find the similarity of the best cluster with every other one.
+        sims = [(other, similarity(best, other)) for other in best_clusters]
+        # Only keep the less similar clusters.
+        sims = [(other, s) for (other, s) in sims if s <= value]
+        # Sort the pairs by decreasing similarity.
+        sims = sorted(sims, key=itemgetter(1), reverse=True)
+        # Just keep the cluster ids.
+        sims = [c for (c, v) in sims]
+        # Sort the candidates according to their status.
+        _sort(sims, status=status, mix_good_unsorted=True)
+        if not sims:
+            return selection
+        return [best, sims[0][0]]
 
 
 #------------------------------------------------------------------------------
@@ -228,13 +245,16 @@ class Wizard(EventEmitter):
 
     @selection.setter
     def selection(self, value):
-        if value is None:
+        if value is None:  # pragma: no cover
             return
         clusters = self.cluster_ids
         value = tuple(cluster for cluster in value if cluster in clusters)
         self._selection = value
         self._history.add(self._selection)
         self.emit('select', self._selection)
+
+    def select(self, cluster_ids):
+        self.selection = cluster_ids
 
     @property
     def best(self):
