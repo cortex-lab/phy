@@ -6,11 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from numpy.testing import assert_array_equal as ae
-
 from ..wizard import (_argsort,
+                      _next_in_list,
                       _best_clusters,
-                      Wizard,
                       _wizard_group,
                       )
 
@@ -39,6 +37,15 @@ def test_best_clusters():
     assert _best_clusters(l, quality, n_max=1) == [4]
     assert _best_clusters(l, quality, n_max=2) == [4, 3]
     assert _best_clusters(l, quality, n_max=10) == [4, 3, 2, 1]
+
+
+def test_next_in_list():
+    l = [1, 2, 3]
+    assert _next_in_list(l, 0) == 0
+    assert _next_in_list(l, 1) == 2
+    assert _next_in_list(l, 2) == 3
+    assert _next_in_list(l, 3) == 3
+    assert _next_in_list(l, 4) == 4
 
 
 def test_wizard_group():
@@ -126,10 +133,8 @@ def test_wizard_strategy(mock_wizard):
         """Return the next best cluster."""
         if not selection:
             return best_clusters[0]
-        assert selection[0] in best_clusters
-        i = best_clusters.index(selection[0])
-        if i < len(best_clusters) - 1:
-            return best_clusters[i + 1]
+        assert len(selection) == 1
+        return _next_in_list(best_clusters, selection[0])
 
     w.set_strategy_function(strategy)
     assert w.selection == ()
