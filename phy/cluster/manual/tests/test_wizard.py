@@ -247,3 +247,10 @@ def test_wizard_attach(mock_wizard):
     assert w.selection == (1,)
 
     assert obj.emit('request_undo_state', {}) == [{'selection': (w.selection)}]
+
+    w.select((1, 2))
+    _action(description='metadata_group', metadata_changed=[1])
+    assert w.selection == (1, 3)
+
+    _action(description='metadata_group', metadata_changed=[3])
+    assert w.selection == (2,)
