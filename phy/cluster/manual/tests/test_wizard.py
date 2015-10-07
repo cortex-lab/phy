@@ -117,6 +117,8 @@ def test_wizard_group():
 
 def test_wizard_nav(mock_wizard):
     w = mock_wizard
+    assert w.cluster_ids == [1, 2, 3]
+    assert w.n_clusters == 3
 
     assert w.selection == ()
 
@@ -181,3 +183,9 @@ def test_wizard_strategy(mock_wizard):
 
     w.next()
     assert w.selection == (1,)
+
+
+def test_wizard_groups(wizard_with_groups):
+    w = wizard_with_groups
+    w.next()
+    print(w.selection)
