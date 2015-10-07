@@ -10,6 +10,7 @@ from ..wizard import (_argsort,
                       _sort,
                       _next_in_list,
                       _best_clusters,
+                      _most_similar_clusters,
                       _wizard_group,
                       best_quality_strategy,
                       )
@@ -37,6 +38,8 @@ def test_sort():
     status = lambda c: ('ignored', 'good')[c] if c <= 1 else None
 
     assert _sort(clusters, status=status) == [10, 30, 2, 20, 1, 0]
+    assert _sort(clusters, status=status, remove_ignored=True) == \
+        [10, 30, 2, 20, 1]
 
 
 def test_best_clusters():
@@ -49,6 +52,25 @@ def test_best_clusters():
     assert _best_clusters(l, quality, n_max=10) == [4, 3, 2, 1]
 
 
+def test_most_similar_clusters():
+    cluster_ids = [0, 1, 2, 3]
+                 # i, g, N, i
+    similarity = lambda c, d: c + d
+    status = lambda c: ('ignored', 'good', None, 'ignored')[c]
+
+    def _similar(cluster):
+        return _most_similar_clusters(cluster,
+                                      cluster_ids=cluster_ids,
+                                      similarity=similarity,
+                                      status=status)
+
+    assert not _similar(None)
+    assert not _similar(10)
+    assert _similar(0) == [2, 1]
+    assert _similar(1) == [2]
+    assert _similar(2) == [1]
+
+
 def test_next_in_list():
     l = [1, 2, 3]
     assert _next_in_list(l, 0) == 0
@@ -59,21 +81,30 @@ def test_next_in_list():
 
 
 def test_best_quality_strategy():
-    best_clusters = range(5, -1, -1)
+    cluster_ids = [0, 1, 2, 3, 4]
+                 # i, i, g, N, N
+    quality = lambda c: c
     status = lambda c: ('ignored', 'ignored', 'good')[c] if c <= 2 else None
     similarity = lambda c, d: c + d
 
     def _next(selection):
         return best_quality_strategy(selection,
-                                     best_clusters=best_clusters,
+                                     cluster_ids=cluster_ids,
+                                     quality=quality,
                                      status=status,
                                      similarity=similarity)
 
     assert not _next(None)
     assert not _next(())
 
-    for i in range(5, -1, -1):
+    for i in range(4, -1, -1):
         assert _next(i) == max(0, i - 1)
+
+    assert _next((4, 3)) == (4, 2)
+    assert _next((4, 2)) == (4, 2)  # 1 is ignored, so it does not appear.
+
+    assert _next((3, 2)) == (3, 2)
+    assert _next((2, 3)) == (2, 3)
 
 
 def test_wizard_group():
@@ -82,31 +113,6 @@ def test_wizard_group():
     assert _wizard_group('good') == 'good'
     assert _wizard_group('unknown') is None
     assert _wizard_group(None) is None
-
-
-def test_wizard_basic(mock_wizard):
-
-    w = mock_wizard
-
-    assert w.cluster_ids == [1, 2, 3]
-    assert w.n_clusters == 3
-    assert w.cluster_status(1) is None
-
-    assert w.best_clusters() == [3, 2, 1]
-    assert w.best_clusters(n_max=0) == [3, 2, 1]
-    assert w.best_clusters(n_max=None) == [3, 2, 1]
-    assert w.best_clusters(n_max=2) == [3, 2]
-    assert w.best_clusters(n_max=1) == [3]
-
-    assert w.most_similar_clusters(3) == [2, 1]
-    assert w.most_similar_clusters(2) == [3, 1]
-    assert w.most_similar_clusters(1) == [3, 2]
-
-    assert w.most_similar_clusters(3, n_max=0) == [2, 1]
-    assert w.most_similar_clusters(3, n_max=None) == [2, 1]
-    assert w.most_similar_clusters(3, n_max=1) == [2]
-    assert w.most_similar_clusters(3, n_max=2) == [2, 1]
-    assert w.most_similar_clusters(3, n_max=10) == [2, 1]
 
 
 def test_wizard_nav(mock_wizard):
@@ -157,8 +163,10 @@ def test_wizard_strategy(mock_wizard):
 
     w.set_status_function(lambda x: None)
 
-    def strategy(selection, best_clusters=None, status=None, similarity=None):
+    def strategy(selection, cluster_ids=None, quality=None,
+                 status=None, similarity=None):
         """Return the next best cluster."""
+        best_clusters = _best_clusters(cluster_ids, quality)
         if not selection:
             return best_clusters[0]
         assert len(selection) == 1
