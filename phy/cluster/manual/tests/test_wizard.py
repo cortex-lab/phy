@@ -100,6 +100,22 @@ def test_wizard_nav(mock_wizard):
     assert w.best == 1
     assert w.match == 2
 
+    ###
+    w.previous()
+    assert w.selection == (1,)
+
+    for _ in range(2):
+        w.previous()
+        assert w.selection == (1,)
+
+    ###
+    w.next()
+    assert w.selection == (1, 2)
+
+    for _ in range(2):
+        w.next()
+        assert w.selection == (1, 2)
+
 
 def test_wizard_strategy(mock_wizard):
     pass

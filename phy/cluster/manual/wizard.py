@@ -12,7 +12,7 @@ from operator import itemgetter
 from six import string_types
 
 from ._history import History
-from phy.utils._types import _as_list, _as_tuple
+from phy.utils._types import _as_tuple
 from phy.utils import EventEmitter
 
 logger = logging.getLogger(__name__)
@@ -205,6 +205,7 @@ class Wizard(EventEmitter):
         clusters = self.cluster_ids
         value = tuple(cluster for cluster in value if cluster in clusters)
         self._selection = value
+        self._history.add(self._selection)
         self.emit('select', self._selection)
 
     @property
@@ -221,20 +222,28 @@ class Wizard(EventEmitter):
     #--------------------------------------------------------------------------
 
     def previous(self):
-        sel = self._history.back()
+        if self._history.current_position <= 2:
+            return self._selection
+        self._history.back()
+        sel = self._history.current_item
         if sel:
-            self._selection = tuple(sel)
+            self._selection = sel  # Not add this action to the history.
+        return self._selection
 
     def next(self):
         if not self._history.is_last():
             # Go forward after a previous.
-            sel = self._history.forward()
+            self._history.forward()
+            sel = self._history.current_item
             if sel:
-                self._selection = tuple(sel)
+                self._selection = sel  # Not add this action to the history.
         else:
-            # Or compute the next selection.
-            self._selection = tuple(self._next(self._selection))
-            self._history.add(self._selection)
+            if self._next:
+                # Or compute the next selection.
+                self.selection = tuple(self._next(self._selection))
+            else:
+                logger.debug("No strategy selected in the wizard.")
+        return self._selection
 
     # Attach
     #--------------------------------------------------------------------------
