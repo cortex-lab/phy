@@ -95,10 +95,10 @@ def test_best_quality_strategy():
                                      similarity=similarity)
 
     assert not _next(None)
-    assert _next(()) == 4
+    assert _next(()) == (4,)
 
     for i in range(4, -1, -1):
-        assert _next(i) == max(0, i - 1)
+        assert _next((i,)) == (max(0, i - 1),)
 
     assert _next((4, 3)) == (4, 2)
     assert _next((4, 2)) == (4, 2)  # 1 is ignored, so it does not appear.
@@ -170,9 +170,9 @@ def test_wizard_strategy(mock_wizard):
         """Return the next best cluster."""
         best_clusters = _best_clusters(cluster_ids, quality)
         if not selection:
-            return best_clusters[0]
+            return (best_clusters[0],)
         assert len(selection) == 1
-        return _next_in_list(best_clusters, selection[0])
+        return (_next_in_list(best_clusters, selection[0]),)
 
     w.set_strategy_function(strategy)
     assert w.selection == ()
@@ -187,6 +187,22 @@ def test_wizard_strategy(mock_wizard):
 
 def test_wizard_strategy_groups(wizard_with_groups):
     w = wizard_with_groups
+    assert 101 in w.cluster_ids
+    assert 105 in w.cluster_ids
 
     for i in range(105, 100, -1):
         assert w.next() == (i,)
+
+    w.select([105])
+
+    w.pin()
+    assert w.selection == (105, 104)
+
+    w.next()
+    assert w.selection == (105, 103)
+
+    w.previous()
+    assert w.selection == (105, 104)
+
+    w.unpin()
+    assert w.selection == (105,)
