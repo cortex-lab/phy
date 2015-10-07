@@ -11,6 +11,8 @@ from operator import itemgetter
 
 from six import string_types
 
+from ._history import History
+from phy.utils._types import _as_list
 from phy.utils import EventEmitter
 
 logger = logging.getLogger(__name__)
@@ -37,42 +39,6 @@ def _best_clusters(clusters, quality, n_max=None):
                      for cluster in clusters], n_max=n_max)
 
 
-def _find_first(items, filter=None):
-    if not items:
-        return None
-    if filter is None:
-        return items[0]
-    return next(item for item in items if filter(item))
-
-
-def _previous(items, current, filter=None):
-    if current not in items:
-        logger.debug("%s is not in %s.", current, items)
-        return
-    i = items.index(current)
-    if i == 0:
-        return current
-    try:
-        return _find_first(items[:i][::-1], filter)
-    except StopIteration:
-        return current
-
-
-def _next(items, current, filter=None):
-    if not items:
-        return current
-    if current not in items:
-        logger.debug("%d is not in %s.", current, items)
-        return
-    i = items.index(current)
-    if i == len(items) - 1:
-        return current
-    try:
-        return _find_first(items[i + 1:], filter)
-    except StopIteration:
-        return current
-
-
 def _wizard_group(group):
     # The group should be None, 'mua', 'noise', or 'good'.
     assert group is None or isinstance(group, string_types)
@@ -91,7 +57,16 @@ def _wizard_group(group):
 class Wizard(EventEmitter):
     """Propose a selection of high-quality clusters and merge candidates.
 
-    The wizard is responsible for the selected clusters.
+    * The wizard is responsible for the selected clusters.
+    * The wizard keeps no state about the clusters: the state is entirely
+      provided by functions: cluster_ids, status (group), similarity, quality.
+    * The wizard keeps track of the history of the selected clusters, but this
+      history is cleared after every action that changes the state.
+    * The `next()` function proposes a new selection as a function of the
+      current selection only.
+    * There are two strategies: best-quality or best-similarity strategy.
+
+    TODO: cache expensive functions.
 
     """
     def __init__(self):
@@ -100,14 +75,12 @@ class Wizard(EventEmitter):
         self._quality = None
         self._get_cluster_ids = None
         self._cluster_status = lambda cluster: None
+        self._next = None  # Strategy function.
         self.reset()
 
     def reset(self):
         self._selection = []
-        self._best_list = []  # This list is fixed (modulo clustering actions).
-        self._match_list = []  # This list may often change.
-        self._best = None
-        self._match = None
+        self._history = History(())
 
     # Quality and status functions
     #--------------------------------------------------------------------------
@@ -144,36 +117,38 @@ class Wizard(EventEmitter):
         self._quality = func
         return func
 
+    def set_strategy_function(self, func):
+        """Register a function returning a new selection after the current
+        selection, as a function of the quality and similarity of the clusters.
+        """
+        # func(selection, cluster_ids=None, quality=None, similarity=None)
+
+        def wrapped(sel):
+            return func(self._selection,
+                        cluster_ids=self._get_cluster_ids(),
+                        quality=self._quality,
+                        similarity=self._similarity,
+                        )
+
+        self._next = wrapped
+
     # Internal methods
     #--------------------------------------------------------------------------
 
-    def _with_status(self, items, status):
-        """Filter out ignored clusters or pairs of clusters."""
-        if not isinstance(status, (list, tuple)):
-            status = [status]
-        return [item for item in items if self._cluster_status(item) in status]
+    def _sort_nomix(self, cluster):
+        # Sort by unsorted first, good second, ignored last.
+        _sort_map = {None: 0, 'good': 1, 'ignored': 2}
+        return _sort_map.get(self._cluster_status(cluster), 0)
 
-    def _check(self):
-        clusters = set(self.cluster_ids)
-        assert set(self._best_list) <= clusters
-        assert set(self._match_list) <= clusters
-        if self._best is not None and len(self._best_list) >= 1:
-            assert self._best in self._best_list
-        if self._match is not None and len(self._match_list) >= 1:
-            assert self._match in self._match_list
-        if None not in (self.best, self.match):
-            assert self.best != self.match
+    def _sort_mix(self, cluster):
+        # Sort by unsorted/good first, ignored last.
+        _sort_map = {None: 0, 'good': 0, 'ignored': 2}
+        return _sort_map.get(self._cluster_status(cluster), 0)
 
-    def _sort(self, items, mix_good_unsorted=False):
-        """Sort clusters according to their status:
-        unsorted, good, and ignored."""
-        if mix_good_unsorted:
-            return (self._with_status(items, (None, 'good')) +
-                    self._with_status(items, 'ignored'))
-        else:
-            return (self._with_status(items, None) +
-                    self._with_status(items, 'good') +
-                    self._with_status(items, 'ignored'))
+    def _sort(self, clusters, mix_good_unsorted=False):
+        """Sort clusters according to their status."""
+        key = self._sort_mix if mix_good_unsorted else self._sort_nomix
+        return sorted(clusters, key=key)
 
     # Properties
     #--------------------------------------------------------------------------
@@ -182,6 +157,11 @@ class Wizard(EventEmitter):
     def cluster_ids(self):
         """Array of cluster ids in the current clustering."""
         return sorted(self._get_cluster_ids())
+
+    @property
+    def n_clusters(self):
+        """Total number of clusters."""
+        return len(self.cluster_ids)
 
     # Core methods
     #--------------------------------------------------------------------------
@@ -195,300 +175,84 @@ class Wizard(EventEmitter):
         The default quality function is the registered one.
 
         """
-        if quality is None:
-            quality = self._quality
+        quality = quality or self._quality
         best = _best_clusters(self.cluster_ids, quality, n_max=n_max)
         return self._sort(best)
 
-    def most_similar_clusters(self, cluster=None, n_max=None, similarity=None):
+    def most_similar_clusters(self, cluster, n_max=None, similarity=None):
         """Return the `n_max` most similar clusters to a given cluster.
 
         The default similarity function is the registered one.
 
         """
-        if cluster is None:
-            cluster = self.best
-            if cluster is None:
-                cluster = self.best_clusters(1)[0]
-        if similarity is None:
-            similarity = self._similarity
+        similarity = similarity or self._similarity
         s = [(other, similarity(cluster, other))
              for other in self.cluster_ids
              if other != cluster]
         clusters = _argsort(s, n_max=n_max)
         return self._sort(clusters, mix_good_unsorted=True)
 
-    # List methods
+    # Selection methods
     #--------------------------------------------------------------------------
-
-    def _set_best_list(self, cluster=None, clusters=None):
-        if cluster is None:
-            cluster = self.best
-        if clusters is None:
-            clusters = self.best_clusters()
-        self._best_list = clusters
-        if clusters:
-            self.best = clusters[0]
-
-    def _set_match_list(self, cluster=None, clusters=None):
-        if cluster is None:
-            cluster = self.best
-        if clusters is None:
-            clusters = self.most_similar_clusters(cluster)
-        self._match_list = clusters
-        if clusters:
-            self.match = clusters[0]
-
-    @property
-    def best(self):
-        """Currently-selected best cluster."""
-        return self._best
-
-    @best.setter
-    def best(self, value):
-        assert value in self._best_list
-        self.selection = [value]
-
-    @property
-    def match(self):
-        """Currently-selected closest match."""
-        return self._match
-
-    @match.setter
-    def match(self, value):
-        if value is not None:
-            assert value in self._match_list
-        if len(self._selection) == 1:
-            self.selection = self.selection + [value]
-        elif len(self._selection) == 2:
-            self.selection = [self.selection[0], value]
 
     @property
     def selection(self):
-        """Return the current best/match cluster selection."""
+        """Return the current cluster selection."""
         return self._selection
 
     @selection.setter
     def selection(self, value):
-        """Return the current best/match cluster selection."""
-        assert isinstance(value, (tuple, list))
+        value = _as_list(value)
         clusters = self.cluster_ids
         value = [cluster for cluster in value if cluster in clusters]
         self._selection = value
-        if len(self._selection) == 1:
-            self._match = None
-        if len(self._selection) >= 1:
-            self._best = self._selection[0]
-        if len(self._selection) >= 2:
-            self._match = self._selection[1]
         self.emit('select', self._selection)
 
     @property
-    def best_list(self):
-        """Current list of best clusters, by decreasing quality."""
-        return self._best_list
+    def best(self):
+        """Currently-selected best cluster."""
+        return self._selection[0] if self._selection else None
 
     @property
-    def match_list(self):
-        """Current list of closest matches, by decreasing similarity."""
-        return self._match_list
-
-    @property
-    def n_processed(self):
-        """Numbered of processed clusters so far.
-
-        A cluster is considered processed if its status is not `None`.
-
-        """
-        return len(self._with_status(self._best_list, ('good', 'ignored')))
-
-    @property
-    def n_clusters(self):
-        """Total number of clusters."""
-        return len(self.cluster_ids)
+    def match(self):
+        """Currently-selected closest match."""
+        return self._selection[1] if len(self._selection) >= 2 else None
 
     # Navigation
     #--------------------------------------------------------------------------
 
-    def next_best(self):
-        """Select the next best cluster."""
-        boo_match = self.match is not None
-        self.best = _next(self._best_list, self._best)
-        if boo_match:
-            self._set_match_list()
-
-    def previous_best(self):
-        """Select the previous best in cluster."""
-        boo_match = self.match is not None
-        if self._best_list:
-            self.best = _previous(self._best_list, self._best)
-        if boo_match:
-            self._set_match_list()
-
-    def next_match(self):
-        """Select the next match."""
-        if self._match_list:
-            self.match = _next(self._match_list, self._match)
-
-    def previous_match(self):
-        """Select the previous match."""
-        if self._match_list:
-            self.match = _previous(self._match_list, self._match)
+    def previous(self):
+        sel = self._history.back()
+        if sel:
+            self._selection = sel
 
     def next(self):
-        """Next cluster proposition."""
-        if self.match is None:
-            return self.next_best()
+        if not self._history.is_last():
+            # Go forward after a previous.
+            sel = self._history.forward()
+            if sel:
+                self._selection = sel
         else:
-            return self.next_match()
+            # Or compute the next selection.
+            self._selection = self._next(self._selection)
+            self._history.add(self._selection)
 
-    def previous(self):
-        """Previous cluster proposition."""
-        if self.match is None:
-            return self.previous_best()
-        else:
-            return self.previous_match()
-
-    def first(self):
-        """First match or first best."""
-        if self.match is None and self._best_list:
-            self.best = self._best_list[0]
-        elif self._match_list:
-            self.match = self._match_list[0]
-
-    def last(self):
-        """Last match or last best."""
-        if self.match is None and self._best_list:
-            self.best = self._best_list[-1]
-        elif self.match_list:
-            self.match = self._match_list[-1]
-
-    # Control
+    # Attach
     #--------------------------------------------------------------------------
 
-    def start(self):
-        """Start the wizard by setting the list of best clusters."""
-        self._set_best_list()
+    def attach(self, obj):
+        """Attach an actioner to the wizard."""
 
-    def pin(self, cluster=None):
-        """Pin the current best cluster and set the list of closest matches."""
-        if cluster is None:
-            cluster = self.best
-        logger.debug("Pin %d.", cluster)
-        self.best = cluster
-        self._set_match_list(cluster)
-        self._check()
-
-    def unpin(self):
-        """Unpin the current cluster."""
-        if self.match is not None:
-            logger.debug("Unpin.")
-            self.match = None
-            self._match_list = []
-
-    # Actions
-    #--------------------------------------------------------------------------
-
-    def _delete(self, clusters):
-        for clu in clusters:
-            if clu in self._best_list:
-                self._best_list.remove(clu)
-            if clu in self._match_list:
-                self._match_list.remove(clu)
-            if clu == self._best:
-                self._best = self._best_list[0] if self._best_list else None
-            if clu == self._match:
-                self._match = None
-
-    def _add(self, clusters, position=None):
-        for clu in clusters:
-            assert clu not in self._best_list
-            assert clu not in self._match_list
-            if self.best is not None:
-                if position is not None:
-                    self._best_list.insert(position, clu)
-                else:  # pragma: no cover
-                    self._best_list.append(clu)
-            if self.match is not None:
-                self._match_list.append(clu)
-
-    def _update_state(self, up):
-        # Update the cluster status.
-        if up.description == 'metadata_group':
-            cluster = up.metadata_changed[0]
-            # Reorder the best list, so that the clusters moved in different
-            # status go to their right place in the best list.
-            if (self._best is not None and self._best_list and
-                    cluster == self._best):
-                # # Find the next best after the cluster has been moved.
-                # next_best = _next(self._best_list, self._best)
-                # Reorder the list.
-                self._best_list = self._sort(self._best_list)
-                # # Select the next best.
-                # self._best = next_best
-        # Update the wizard with new and old clusters.
-        for clu in up.added:
-            # Add the child at the parent's position.
-            parents = [x for (x, y) in up.descendants if y == clu]
-            parent = parents[0]
-            position = (self._best_list.index(parent)
-                        if self._best_list else None)
-            self._add([clu], position)
-        # Delete old clusters.
-        self._delete(up.deleted)
-        # # Select the last added cluster.
-        # if self.best is not None and up.added:
-        #     self._best = up.added[-1]
-
-    def _select_after_update(self, up):
-        if up.history == 'undo':
-            self.selection = up.undo_state[0]['selection']
-            return
-        # Make as few updates as possible in the views after clustering
-        # actions. This allows for better before/after comparisons.
-        if up.added:
-            self.selection = up.added
-        if up.description == 'merge':
-            self.pin(up.added[0])
-        if up.description == 'metadata_group':
-            cluster = up.metadata_changed[0]
-            if cluster == self.best:
-                # Pin the next best if there was a match before.
-                match_before = self.match is not None
-                self.next_best()
-                if match_before:
-                    self.pin()
-            elif cluster == self.match:
-                self.next_match()
-
-    def attach(self, clustering, cluster_meta):
-        # TODO: might be better in an independent function in another module
-
-        # The wizard gets the cluster ids from the Clustering instance
-        # and the status from ClusterMetadataUpdater.
-        self.set_cluster_ids_function(lambda: clustering.cluster_ids)
-
-        @self.set_status_function
-        def status(cluster):
-            group = cluster_meta.group(cluster)
-            return _wizard_group(group)
-
+        # Save the current selection when an action occurs.
+        @obj.connect
         def on_request_undo_state(up):
-            return {'selection': self.selection}
+            return {'selection': self._selection}
 
+        @obj.connect
         def on_cluster(up):
-            # Set the cluster metadata of new clusters.
-            if up.added:
-                cluster_meta.set_from_descendants(up.descendants)
-            # Update the wizard state.
-            if self._best_list or self._match_list:
-                self._update_state(up)
-            # Make a new selection.
-            if self._best is not None or self._match is not None:
-                self._select_after_update(up)
-
-        clustering.connect(on_request_undo_state)
-        cluster_meta.connect(on_request_undo_state)
-
-        clustering.connect(on_cluster)
-        cluster_meta.connect(on_cluster)
+            if up.history == 'undo':
+                # Revert to the given selection after an undo.
+                self._selection = up.undo_state[0]['selection']
+            else:
+                # Or move to the next selection after any other action.
+                self.next()
