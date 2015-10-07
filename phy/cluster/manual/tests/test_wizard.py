@@ -118,4 +118,25 @@ def test_wizard_nav(mock_wizard):
 
 
 def test_wizard_strategy(mock_wizard):
-    pass
+    w = mock_wizard
+
+    w.set_status_function(lambda x: None)
+
+    def strategy(selection, best_clusters=None, status=None, similarity=None):
+        """Return the next best cluster."""
+        if not selection:
+            return best_clusters[0]
+        assert selection[0] in best_clusters
+        i = best_clusters.index(selection[0])
+        if i < len(best_clusters) - 1:
+            return best_clusters[i + 1]
+
+    w.set_strategy_function(strategy)
+    assert w.selection == ()
+
+    for i in range(3, 0, -1):
+        w.next()
+        assert w.selection == (i,)
+
+    w.next()
+    assert w.selection == (1,)

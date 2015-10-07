@@ -125,8 +125,8 @@ class Wizard(EventEmitter):
 
         def wrapped(sel):
             return func(self._selection,
-                        cluster_ids=self._get_cluster_ids(),
-                        quality=self._quality,
+                        best_clusters=self.best_clusters(),
+                        status=self._cluster_status,
                         similarity=self._similarity,
                         )
 
@@ -202,6 +202,8 @@ class Wizard(EventEmitter):
 
     @selection.setter
     def selection(self, value):
+        if value is None:
+            return
         clusters = self.cluster_ids
         value = tuple(cluster for cluster in value if cluster in clusters)
         self._selection = value
@@ -240,7 +242,7 @@ class Wizard(EventEmitter):
         else:
             if self._next:
                 # Or compute the next selection.
-                self.selection = tuple(self._next(self._selection))
+                self.selection = _as_tuple(self._next(self._selection))
             else:
                 logger.debug("No strategy selected in the wizard.")
         return self._selection
