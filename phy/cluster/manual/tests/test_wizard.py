@@ -79,6 +79,27 @@ def test_wizard_nav(mock_wizard):
 
     assert w.selection == ()
 
+    ###
+    w.selection = []
+    assert w.selection == ()
+
+    assert w.best is None
+    assert w.match is None
+
+    ###
+    w.selection = [1]
+    assert w.selection == (1,)
+
+    assert w.best == 1
+    assert w.match is None
+
+    ###
+    w.selection = [1, 2, 4]
+    assert w.selection == (1, 2)
+
+    assert w.best == 1
+    assert w.match == 2
+
 
 def test_wizard_strategy(mock_wizard):
     pass

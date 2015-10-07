@@ -240,7 +240,7 @@ class Wizard(EventEmitter):
     #--------------------------------------------------------------------------
 
     def attach(self, obj):
-        """Attach an actioner to the wizard."""
+        """Attach an effector to the wizard."""
 
         # Save the current selection when an action occurs.
         @obj.connect
