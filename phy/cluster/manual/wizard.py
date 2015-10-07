@@ -104,13 +104,16 @@ def best_quality_strategy(selection,
         return selection
     selection = _as_tuple(selection)
     n = len(selection)
-    if n == 0 or n >= 3:
-        return selection
-    if n == 1:
+    if n <= 1:
         best_clusters = _best_clusters(cluster_ids, quality)
         # Sort the best clusters according to their status.
         best_clusters = _sort(best_clusters, status=status)
-        return _next_in_list(best_clusters, selection[0])
+        if selection:
+            return _next_in_list(best_clusters, selection[0])
+        elif best_clusters:
+            return best_clusters[0]
+        else:
+            return selection
     elif n == 2:
         best, match = selection
         value = similarity(best, match)
@@ -268,6 +271,10 @@ class Wizard(EventEmitter):
         if best in candidates:
             candidates.remove(best)
         self.select([self.best, candidates[0]])
+
+    def unpin(self):
+        if len(self._selection) == 2:
+            self.selection = self.selection[0]
 
     # Navigation
     #--------------------------------------------------------------------------

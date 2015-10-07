@@ -95,7 +95,7 @@ def test_best_quality_strategy():
                                      similarity=similarity)
 
     assert not _next(None)
-    assert not _next(())
+    assert _next(()) == 4
 
     for i in range(4, -1, -1):
         assert _next(i) == max(0, i - 1)
@@ -185,7 +185,8 @@ def test_wizard_strategy(mock_wizard):
     assert w.selection == (1,)
 
 
-def test_wizard_groups(wizard_with_groups):
+def test_wizard_strategy_groups(wizard_with_groups):
     w = wizard_with_groups
-    w.next()
-    print(w.selection)
+
+    for i in range(105, 100, -1):
+        assert w.next() == (i,)
