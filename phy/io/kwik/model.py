@@ -777,11 +777,25 @@ class KwikModel(BaseModel):
         if value not in self.channel_groups:
             raise ValueError("The channel group {0} is invalid.".format(value))
         self._channel_group = value
-        self.clustering = 'main'
 
         # Load data.
         _to_close = self._open_kwik_if_needed()
-        self._load_clusterings('main')
+
+        if self._kwik.h5py_file:
+            clusterings = _list_clusterings(self._kwik.h5py_file,
+                                            self._channel_group)
+        else:
+            warn(".kwik filepath doesn't exist.")
+            clusterings = None
+
+        if clusterings:
+            if 'main' in clusterings:
+                self._load_clusterings('main')
+                self.clustering = 'main'
+            else:
+                self._load_clusterings(clusterings[0])
+                self.clustering = clusterings[0]
+
         self._probe.change_channel_group(value)
         self._load_channels()
         self._load_spikes()
