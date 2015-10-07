@@ -111,7 +111,7 @@ def best_quality_strategy(selection,
             return (_next_in_list(best_clusters, selection[0]),)
         elif best_clusters:
             return (best_clusters[0],)
-        else:
+        else:  # pragma: no cover
             return selection
     elif n == 2:
         best, match = selection
@@ -270,10 +270,9 @@ class Wizard(EventEmitter):
                                             cluster_ids=self.cluster_ids,
                                             similarity=self._similarity,
                                             status=self._cluster_status)
+        assert best not in candidates
         if not candidates:
             return
-        if best in candidates:
-            candidates.remove(best)
         self.select((self.best, candidates[0]))
 
     def unpin(self):
@@ -285,7 +284,7 @@ class Wizard(EventEmitter):
 
     def _set_selection_from_history(self):
         sel = self._history.current_item
-        if not sel:
+        if not sel:  # pragma: no cover
             return
         self._selection_changed(sel, add_to_history=False)
 
