@@ -119,7 +119,7 @@ def best_quality_strategy(selection,
                                             similarity=similarity,
                                             status=status,
                                             less_than=value)
-        if best in candidates:
+        if best in candidates:  # pragma: no cover
             candidates.remove(best)
         if match in candidates:
             candidates.remove(match)
@@ -224,12 +224,6 @@ class Wizard(EventEmitter):
         """Total number of clusters."""
         return len(self.cluster_ids)
 
-    # Core methods
-    #--------------------------------------------------------------------------
-
-    def cluster_status(self, cluster):
-        return self._cluster_status(cluster)
-
     # Selection methods
     #--------------------------------------------------------------------------
 
@@ -260,6 +254,20 @@ class Wizard(EventEmitter):
     def match(self):
         """Currently-selected closest match."""
         return self._selection[1] if len(self._selection) >= 2 else None
+
+    def pin(self):
+        best = self.best
+        if best is None:
+            return
+        candidates = _most_similar_clusters(best,
+                                            cluster_ids=self.cluster_ids,
+                                            similarity=self._similarity,
+                                            status=self._cluster_status)
+        if not candidates:
+            return
+        if best in candidates:
+            candidates.remove(best)
+        self.select([self.best, candidates[0]])
 
     # Navigation
     #--------------------------------------------------------------------------
