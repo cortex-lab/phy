@@ -726,7 +726,7 @@ class KwikModel(BaseModel):
         self._channel_group_changed(self._channel_group)
 
         # This loads spike clusters and cluster groups.
-        self._clustering_changed(self._clustering)
+        self._clustering_changed(clustering)
 
         # This needs channels, channel_order, and waveform loader.
         self._update_waveform_loader()
