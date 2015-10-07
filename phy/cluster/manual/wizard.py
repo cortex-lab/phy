@@ -339,3 +339,17 @@ class Wizard(EventEmitter):
             else:
                 # Or move to the next selection after any other action.
                 self.next()
+
+    def attach_cluster_groups(self, cluster_groups):
+
+        def get_cluster_ids():
+            return sorted(cluster_groups.keys())
+
+        self.set_cluster_ids_function(get_cluster_ids)
+
+        @self.set_status_function
+        def status(cluster):
+            group = cluster_groups.get(cluster, None)
+            return _wizard_group(group)
+
+        self.set_strategy_function(best_quality_strategy)

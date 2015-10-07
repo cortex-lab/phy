@@ -187,8 +187,11 @@ def test_wizard_strategy_1(mock_wizard):
     assert w.selection == (1,)
 
 
-def test_wizard_strategy_groups(wizard_with_groups):
-    w = wizard_with_groups
+def test_wizard_strategy_groups(mock_wizard, cluster_groups):
+    w = mock_wizard
+
+    w.attach_cluster_groups(cluster_groups)
+
     assert 101 in w.cluster_ids
     assert 105 in w.cluster_ids
 
