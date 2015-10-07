@@ -50,6 +50,12 @@ def _wizard_group(group):
     return None
 
 
+def _next_in_list(l, item):
+    if l and item in l and l.index(item) < len(l) - 1:
+        return l[l.index(item) + 1]
+    return item
+
+
 #------------------------------------------------------------------------------
 # Wizard
 #------------------------------------------------------------------------------
