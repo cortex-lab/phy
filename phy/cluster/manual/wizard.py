@@ -156,10 +156,10 @@ class Wizard(EventEmitter):
         self._get_cluster_ids = None
         self._cluster_status = lambda cluster: None
         self._next = None  # Strategy function.
+        self._selection = ()
         self.reset()
 
     def reset(self):
-        self._selection = ()
         self._history = History(())
 
     # Quality and status functions
@@ -330,6 +330,12 @@ class Wizard(EventEmitter):
                 self._selection = tuple(up.undo_state[0]['selection'])
             elif up.added:
                 self.select((up.added[0],))
+            elif up.description == 'metadata_group':
+                cluster = up.metadata_changed[0]
+                if cluster == self.best:
+                    self.pin()
+                else:
+                    self.next()
             else:
                 # Or move to the next selection after any other action.
                 self.next()
