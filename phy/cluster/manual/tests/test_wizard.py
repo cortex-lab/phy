@@ -160,7 +160,7 @@ def test_wizard_nav(mock_wizard):
         assert w.selection == (1, 2)
 
 
-def test_wizard_strategy(mock_wizard):
+def test_wizard_strategy_1(mock_wizard):
     w = mock_wizard
 
     w.set_status_function(lambda x: None)
@@ -190,6 +190,9 @@ def test_wizard_strategy_groups(wizard_with_groups):
     assert 101 in w.cluster_ids
     assert 105 in w.cluster_ids
 
+    w.pin()
+    assert w.selection == ()
+
     for i in range(105, 100, -1):
         assert w.next() == (i,)
 
@@ -206,3 +209,9 @@ def test_wizard_strategy_groups(wizard_with_groups):
 
     w.unpin()
     assert w.selection == (105,)
+
+    @w.set_status_function
+    def status(cluster):
+        return 'ignored'
+
+    assert w.pin() is None

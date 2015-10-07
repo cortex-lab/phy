@@ -8,7 +8,7 @@
 
 from pytest import yield_fixture
 
-from ..wizard import Wizard, _wizard_group
+from ..wizard import Wizard, _wizard_group, best_quality_strategy
 from .._utils import create_cluster_meta
 
 
@@ -66,5 +66,7 @@ def wizard_with_groups(mock_wizard, cluster_groups):
     def status(cluster):
         group = cluster_groups.get(cluster, None)
         return _wizard_group(group)
+
+    mock_wizard.set_strategy_function(best_quality_strategy)
 
     yield mock_wizard
