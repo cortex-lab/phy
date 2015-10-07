@@ -14,6 +14,8 @@ from ..wizard import (_argsort,
                       _wizard_group,
                       best_quality_strategy,
                       )
+from .._utils import UpdateInfo
+from phy.utils import EventEmitter
 
 
 #------------------------------------------------------------------------------
@@ -215,3 +217,33 @@ def test_wizard_strategy_groups(wizard_with_groups):
         return 'ignored'
 
     assert w.pin() is None
+
+
+def test_wizard_attach(mock_wizard):
+    w = mock_wizard
+
+    def strategy(selection, **kwargs):
+        if not selection:
+            return (3,)
+        return (1 + (selection[0] % 3),)
+
+    w.set_strategy_function(strategy)
+    w.select([3])
+
+    obj = EventEmitter()
+    w.attach(obj)
+
+    def _action(**kwargs):
+        up = UpdateInfo(**kwargs)
+        return obj.emit('cluster', up)
+
+    _action(description='merge', added=[3])
+    assert w.selection == (3,)
+
+    _action(history='undo', undo_state=[{'selection': w.selection}])
+    assert w.selection == (3,)
+
+    _action(history='redo')
+    assert w.selection == (1,)
+
+    assert obj.emit('request_undo_state', {}) == [{'selection': (w.selection)}]

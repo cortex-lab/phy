@@ -263,6 +263,7 @@ class Wizard(EventEmitter):
         return self._selection[1] if len(self._selection) >= 2 else None
 
     def pin(self):
+        """Select the cluster the most similar cluster to the current best."""
         best = self.best
         if best is None:
             return
@@ -327,6 +328,8 @@ class Wizard(EventEmitter):
             if up.history == 'undo':
                 # Revert to the given selection after an undo.
                 self._selection = tuple(up.undo_state[0]['selection'])
+            elif up.added:
+                self.select((up.added[0],))
             else:
                 # Or move to the next selection after any other action.
                 self.next()
