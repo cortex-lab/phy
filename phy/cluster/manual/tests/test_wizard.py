@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 from ..wizard import (_argsort,
+                      _sort,
                       _next_in_list,
                       _best_clusters,
                       _wizard_group,
@@ -27,6 +28,14 @@ def test_argsort():
     assert _argsort(l, n_max=10) == [4, 3, 2, 1]
 
     assert _argsort(l, reverse=False) == [1, 2, 3, 4]
+
+
+def test_sort():
+    clusters = [10, 0, 1, 30, 2, 20]
+               # N, i, g,  N, N,  N
+    status = lambda c: ('ignored', 'good')[c] if c <= 1 else None
+
+    assert _sort(clusters, status=status) == [10, 30, 2, 20, 1, 0]
 
 
 def test_best_clusters():

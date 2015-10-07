@@ -56,6 +56,43 @@ def _next_in_list(l, item):
     return item
 
 
+def _sort(clusters, status=None, mix_good_unsorted=False):
+    """Sort clusters according to their status."""
+    assert status
+    _sort_map = {None: 0, 'good': 1, 'ignored': 2}
+    if mix_good_unsorted:
+        _sort_map['good'] = 0
+    # NOTE: sorted is "stable": it doesn't change the order of elements
+    # that compare equal, which ensures that the order of clusters is kept
+    # among any given status.
+    key = lambda cluster: _sort_map.get(status(cluster), 0)
+    return sorted(clusters, key=key)
+
+
+#------------------------------------------------------------------------------
+# Strategy functions
+#------------------------------------------------------------------------------
+
+def best_quality_strategy(selection, best_clusters=None, status=None,
+                          similarity=None):
+    """Two cases depending on the number of selected clusters:
+
+    * 1: move to the next best cluster
+    * 2: move to the next most similar pair
+    * 3+: do nothing
+
+    """
+    n = len(selection)
+    if n == 0 or n >= 3:
+        return selection
+    if n == 1:
+        return _next_in_list(best_clusters, selection[0])
+    elif n == 2:
+        best, match = selection
+        value = similarity(best, match)
+        sims = [similarity(best, other) for other in best_clusters]
+
+
 #------------------------------------------------------------------------------
 # Wizard
 #------------------------------------------------------------------------------
@@ -138,24 +175,6 @@ class Wizard(EventEmitter):
 
         self._next = wrapped
 
-    # Internal methods
-    #--------------------------------------------------------------------------
-
-    def _sort_nomix(self, cluster):
-        # Sort by unsorted first, good second, ignored last.
-        _sort_map = {None: 0, 'good': 1, 'ignored': 2}
-        return _sort_map.get(self._cluster_status(cluster), 0)
-
-    def _sort_mix(self, cluster):
-        # Sort by unsorted/good first, ignored last.
-        _sort_map = {None: 0, 'good': 0, 'ignored': 2}
-        return _sort_map.get(self._cluster_status(cluster), 0)
-
-    def _sort(self, clusters, mix_good_unsorted=False):
-        """Sort clusters according to their status."""
-        key = self._sort_mix if mix_good_unsorted else self._sort_nomix
-        return sorted(clusters, key=key)
-
     # Properties
     #--------------------------------------------------------------------------
 
@@ -183,7 +202,7 @@ class Wizard(EventEmitter):
         """
         quality = quality or self._quality
         best = _best_clusters(self.cluster_ids, quality, n_max=n_max)
-        return self._sort(best)
+        return _sort(best, status=self._cluster_status)
 
     def most_similar_clusters(self, cluster, n_max=None, similarity=None):
         """Return the `n_max` most similar clusters to a given cluster.
@@ -196,7 +215,8 @@ class Wizard(EventEmitter):
              for other in self.cluster_ids
              if other != cluster]
         clusters = _argsort(s, n_max=n_max)
-        return self._sort(clusters, mix_good_unsorted=True)
+        return _sort(clusters, status=self._cluster_status,
+                     mix_good_unsorted=True)
 
     # Selection methods
     #--------------------------------------------------------------------------
