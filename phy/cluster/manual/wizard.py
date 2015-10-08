@@ -280,6 +280,7 @@ class Wizard(EventEmitter):
         best = self.best
         if best is None:
             return
+        self._check_functions()
         candidates = _most_similar_clusters(best,
                                             cluster_ids=self.cluster_ids,
                                             similarity=self._similarity,
@@ -319,7 +320,21 @@ class Wizard(EventEmitter):
         self.select(())
         self.next_by_similarity()
 
+    def _check_functions(self):
+        if not self._get_cluster_ids:
+            raise RuntimeError("The cluster_ids function must be set.")
+        if not self._cluster_status:
+            logger.warn("A cluster status function has not been set.")
+            self._cluster_status = lambda c: None
+        if not self._quality:
+            logger.warn("A cluster quality function has not been set.")
+            self._quality = lambda c: 0
+        if not self._similarity:
+            logger.warn("A cluster similarity function has not been set.")
+            self._similarity = lambda c, d: 0
+
     def next_by_quality(self):
+        self._check_functions()
         self.select(_best_quality_strategy(
             self._selection,
             cluster_ids=self._get_cluster_ids(),
@@ -329,6 +344,7 @@ class Wizard(EventEmitter):
         return self._selection
 
     def next_by_similarity(self):
+        self._check_functions()
         self.select(_best_similarity_strategy(
             self._selection,
             cluster_ids=self._get_cluster_ids(),

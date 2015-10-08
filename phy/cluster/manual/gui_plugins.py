@@ -170,10 +170,6 @@ class ManualClustering(IPlugin):
 
         return self
 
-    @property
-    def cluster_ids(self):
-        return self.clustering.cluster_ids
-
     def create_actions(self, gui):
         self.actions = actions = Actions()
         self.snippets = snippets = Snippets()
@@ -217,16 +213,22 @@ class ManualClustering(IPlugin):
     def merge(self, cluster_ids=None):
         if cluster_ids is None:
             cluster_ids = self.wizard.selection
+        if len(cluster_ids) <= 1:
+            return
         self.clustering.merge(cluster_ids)
         self._global_history.action(self.clustering)
 
     def split(self, spike_ids):
+        if len(spike_ids) == 0:
+            return
         # TODO: connect to request_split emitted by view
         self.clustering.split(spike_ids)
         self._global_history.action(self.clustering)
 
-    def move(self, clusters, group):
-        self.cluster_meta.set('group', clusters, group)
+    def move(self, cluster_ids, group):
+        if len(cluster_ids) == 0:
+            return
+        self.cluster_meta.set('group', cluster_ids, group)
         self._global_history.action(self.cluster_meta)
 
     def undo(self):
@@ -236,6 +238,7 @@ class ManualClustering(IPlugin):
         self._global_history.redo()
 
     def save(self):
+        spike_clusters = self.clustering.spike_clusters
         groups = {c: self.cluster_meta.get('group', c)
-                  for c in self.cluster_ids}
-        self.emit('save_requested', self.clustering.spike_clusters, groups)
+                  for c in self.clustering.cluster_ids}
+        self.gui.emit('save_requested', spike_clusters, groups)

@@ -10,12 +10,18 @@ from pytest import yield_fixture
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
+from ..gui_plugins import _attach_wizard
 from phy.gui.tests.test_gui import gui  # noqa
 
 
 #------------------------------------------------------------------------------
 # Test GUI plugins
 #------------------------------------------------------------------------------
+
+def test_attach_wizard():
+    # TODO
+    pass
+
 
 @yield_fixture  # noqa
 def manual_clustering(qtbot, gui, cluster_ids, cluster_groups):
@@ -45,10 +51,32 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups):
     yield mc, assert_selection
 
 
-def test_manual_clustering_1(manual_clustering):
+def test_manual_clustering_edge_cases(manual_clustering):
     mc, assert_selection = manual_clustering
     assert_selection()
-    ae(mc.cluster_ids, [0, 1, 2, 10, 20, 30])
+    ae(mc.clustering.cluster_ids, [0, 1, 2, 10, 20, 30])
 
     mc.select([0])
     assert_selection(0)
+
+    mc.undo()
+    mc.redo()
+
+    # Merge.
+    mc.merge()
+    assert_selection(0)
+
+    mc.merge([])
+    assert_selection(0)
+
+    mc.merge([10])
+    assert_selection(0)
+
+    # Split.
+    mc.split([])
+    assert_selection(0)
+
+    # Move.
+    mc.move([], 'ignored')
+
+    mc.save()
