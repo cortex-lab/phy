@@ -333,22 +333,29 @@ class Wizard(EventEmitter):
             logger.warn("A cluster similarity function has not been set.")
             self._similarity = lambda c, d: 0
 
-    def next_by_quality(self):
+    def next_selection(self, cluster_ids=None,
+                       strategy=None,
+                       ignore_group=False):
+        cluster_ids = cluster_ids or self._selection
+        strategy = strategy or _best_quality_strategy
+        if ignore_group:
+            # Ignore the status of the selected clusters.
+            def status(cluster):
+                if cluster in cluster_ids:
+                    return None
+                return self._cluster_status(cluster)
+        else:
+            status = self._cluster_status
         self._check_functions()
-        self.select(_best_quality_strategy(
-            self._selection,
-            cluster_ids=self._get_cluster_ids(),
-            quality=self._quality,
-            status=self._cluster_status,
-            similarity=self._similarity))
+        self.select(strategy(cluster_ids,
+                             cluster_ids=self._get_cluster_ids(),
+                             quality=self._quality,
+                             status=status,
+                             similarity=self._similarity))
         return self._selection
 
+    def next_by_quality(self):
+        return self.next_selection(strategy=_best_quality_strategy)
+
     def next_by_similarity(self):
-        self._check_functions()
-        self.select(_best_similarity_strategy(
-            self._selection,
-            cluster_ids=self._get_cluster_ids(),
-            quality=self._quality,
-            status=self._cluster_status,
-            similarity=self._similarity))
-        return self._selection
+        return self.next_selection(strategy=_best_similarity_strategy)

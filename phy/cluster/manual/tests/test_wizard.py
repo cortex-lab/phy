@@ -186,6 +186,25 @@ def test_wizard_nav(wizard):
         assert w.selection == [1, 2]
 
 
+def test_wizard_next(wizard, status):
+    w = wizard
+
+    assert w.next_selection([30]) == [20]
+    assert w.next_selection([30], ignore_group=True) == [20]
+
+    assert w.next_selection([1]) == [0]
+    assert w.next_selection([1], ignore_group=True) == [0]
+
+    @w.set_status_function
+    def status_bis(cluster):
+        if cluster == 30:
+            return 'ignored'
+        return status(cluster)
+
+    assert w.next_selection([30]) == [0]
+    assert w.next_selection([30], ignore_group=True) == [20]
+
+
 def test_wizard_pin_by_quality(wizard):
     w = wizard
 
