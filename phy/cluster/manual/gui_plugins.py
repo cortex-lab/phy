@@ -117,6 +117,20 @@ class ManualClustering(IPlugin):
 
     Other plugins can connect to that event.
 
+    Parameters
+    ----------
+
+    gui : GUI
+    spike_clusters : ndarray
+    cluster_groups : dictionary
+    n_spikes_max_per_cluster : int
+
+    Events
+    ------
+
+    select(cluster_ids, spike_ids)
+    save_requested(spike_clusters, cluster_groups)
+
     """
     def attach_to_gui(self, gui,
                       spike_clusters=None,
@@ -215,3 +229,8 @@ class ManualClustering(IPlugin):
 
     def redo(self):
         self._global_history.redo()
+
+    def save(self):
+        groups = {c: self.cluster_meta.get('group', c)
+                  for c in self.cluster_ids}
+        self.emit('save_requested', self.clustering.spike_clusters, groups)
