@@ -135,10 +135,29 @@ def test_attach_wizard_to_cluster_meta(wizard, cluster_groups):
     assert wizard.next_by_quality() == [0]
 
 
+def test_attach_wizard_to_cluster_meta_undo(wizard, cluster_groups):
+    cluster_meta = create_cluster_meta(cluster_groups)
+    _attach_wizard_to_cluster_meta(wizard, cluster_meta)
+
+    wizard.select([20])
+
+    cluster_meta.set('group', [20], 'noise')
+    assert wizard.selection == [2]
+
+    wizard.select([30])
+
+    cluster_meta.undo()
+    assert wizard.selection == [20]
+
+    cluster_meta.redo()
+    assert wizard.selection == [2]
+
+
 def test_attach_wizard(wizard, cluster_ids, cluster_groups):
     clustering = Clustering(np.array(cluster_ids))
     cluster_meta = create_cluster_meta(cluster_groups)
     _attach_wizard(wizard, clustering, cluster_meta)
+    # TODO
 
 
 #------------------------------------------------------------------------------
