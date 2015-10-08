@@ -96,8 +96,7 @@ def _attach_wizard_to_cluster_meta(wizard, cluster_meta):
     def on_cluster(up):
         if up.description == 'metadata_group' and up.history != 'undo':
             cluster = up.metadata_changed[0]
-            wizard.select([cluster])
-            wizard.pin()
+            wizard.next_selection([cluster], ignore_group=True)
 
 
 def _attach_wizard(wizard, clustering, cluster_meta):
