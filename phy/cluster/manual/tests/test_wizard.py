@@ -36,7 +36,7 @@ def test_argsort():
 
 def test_sort():
     clusters = [10, 0, 1, 30, 2, 20]
-               # N, i, g,  N, N,  N
+    #            N, i, g,  N, N,  N
     status = lambda c: ('ignored', 'good')[c] if c <= 1 else None
 
     assert _sort(clusters, status=status) == [10, 30, 2, 20, 1, 0]
@@ -56,7 +56,7 @@ def test_best_clusters():
 
 def test_most_similar_clusters():
     cluster_ids = [0, 1, 2, 3]
-                 # i, g, N, i
+    #              i, g, N, i
     similarity = lambda c, d: c + d
     status = lambda c: ('ignored', 'good', None, 'ignored')[c]
 
@@ -84,7 +84,7 @@ def test_next_in_list():
 
 def test_best_quality_strategy():
     cluster_ids = [0, 1, 2, 3, 4]
-                 # i, i, g, N, N
+    #              i, i, g, N, N
     quality = lambda c: c
     status = lambda c: ('ignored', 'ignored', 'good')[c] if c <= 2 else None
     similarity = lambda c, d: c + d
