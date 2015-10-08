@@ -41,7 +41,7 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups):
     def assert_selection(*cluster_ids):  # pragma: no cover
         if not _s:
             return
-        assert _s[-1][0] == tuple(cluster_ids)
+        assert _s[-1][0] == list(cluster_ids)
         if len(cluster_ids) >= 1:
             assert mc.wizard.best == cluster_ids[0]
         elif len(cluster_ids) >= 2:
@@ -58,10 +58,10 @@ def test_attach_wizard_to_clustering(wizard, cluster_ids):
     clustering = Clustering(np.array(cluster_ids))
     _attach_wizard_to_clustering(wizard, clustering)
 
-    assert wizard.selection == ()
+    assert wizard.selection == []
 
     clustering.merge([30, 20])
-    assert wizard.selection == (31, 10)
+    assert wizard.selection == [31, 10]
 
 
 def test_manual_clustering_edge_cases(manual_clustering):

@@ -13,7 +13,7 @@ from operator import itemgetter
 from six import string_types
 
 from ._history import History
-from phy.utils import EventEmitter
+from phy.utils import EventEmitter, _is_array_like
 
 logger = logging.getLogger(__name__)
 
@@ -102,16 +102,15 @@ def _best_quality_strategy(selection,
     """
     if selection is None:
         return selection
-    selection = tuple(selection)
     n = len(selection)
     if n <= 1:
         best_clusters = _best_clusters(cluster_ids, quality)
         # Sort the best clusters according to their status.
         best_clusters = _sort_by_status(best_clusters, status=status)
         if selection:
-            return (_next_in_list(best_clusters, selection[0]),)
+            return [_next_in_list(best_clusters, selection[0])]
         elif best_clusters:
-            return (best_clusters[0],)
+            return [best_clusters[0]]
         else:  # pragma: no cover
             return selection
     elif n == 2:
@@ -128,7 +127,7 @@ def _best_quality_strategy(selection,
             candidates.remove(match)
         if not candidates:
             return selection
-        return (best, candidates[0])
+        return [best, candidates[0]]
 
 
 def _best_similarity_strategy(selection,
@@ -138,7 +137,6 @@ def _best_similarity_strategy(selection,
                               similarity=None):
     if selection is None:
         return selection
-    selection = tuple(selection)
     n = len(selection)
     if n >= 2:
         best, match = selection
@@ -162,7 +160,7 @@ def _best_similarity_strategy(selection,
         s = [((c, d), v) for ((c, d), v) in s if v <= value]
     pairs = _argsort(s)
     if pairs:
-        return pairs[0]
+        return list(pairs[0])
     else:
         return selection
 
@@ -191,11 +189,11 @@ class Wizard(EventEmitter):
         self._quality = None
         self._get_cluster_ids = None
         self._cluster_status = None
-        self._selection = ()
+        self._selection = []
         self.reset()
 
     def reset(self):
-        self._history = History(())
+        self._history = History([])
 
     # Quality and status functions
     #--------------------------------------------------------------------------
@@ -253,10 +251,10 @@ class Wizard(EventEmitter):
     def select(self, cluster_ids, add_to_history=True):
         if cluster_ids is None:  # pragma: no cover
             return
-        assert hasattr(cluster_ids, '__len__')
+        assert _is_array_like(cluster_ids)
         clusters = self.cluster_ids
-        cluster_ids = tuple(cluster for cluster in cluster_ids
-                            if cluster in clusters)
+        cluster_ids = [cluster for cluster in cluster_ids
+                       if cluster in clusters]
         self._selection = cluster_ids
         if add_to_history:
             self._history.add(self._selection)
@@ -290,11 +288,11 @@ class Wizard(EventEmitter):
         assert best not in candidates
         if not candidates:  # pragma: no cover
             return
-        self.select((self.best, candidates[0]))
+        self.select([self.best, candidates[0]])
 
     def unpin(self):
         if len(self._selection) == 2:
-            self.select((self.selection[0],))
+            self.select([self.selection[0]])
 
     # Navigation
     #--------------------------------------------------------------------------
@@ -319,7 +317,7 @@ class Wizard(EventEmitter):
             self._set_selection_from_history()
 
     def restart(self):
-        self.select(())
+        self.select([])
         self.next_by_similarity()
 
     def _check_functions(self):
