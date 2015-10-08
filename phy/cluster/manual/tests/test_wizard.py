@@ -136,14 +136,14 @@ def test_wizard_nav(wizard):
     assert w.selection == ()
 
     ###
-    w.selection = []
+    w.select([])
     assert w.selection == ()
 
     assert w.best is None
     assert w.match is None
 
     ###
-    w.selection = [1]
+    w.select([1])
     assert w.selection == (1,)
 
     assert w.best == 1
