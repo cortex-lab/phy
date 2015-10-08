@@ -9,6 +9,8 @@
 
 import logging
 
+import numpy as np
+
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
@@ -98,6 +100,9 @@ def _attach_wizard(wizard, clustering, cluster_meta):
         if up.added:
             cluster_meta.set_from_descendants(up.descendants)
 
+    _attach_wizard_to_clustering(wizard, clustering)
+    _attach_wizard_to_cluster_meta(wizard, cluster_meta)
+
 
 # -----------------------------------------------------------------------------
 # Clustering GUI plugins
@@ -156,7 +161,7 @@ class ManualClustering(IPlugin):
             The wizard is responsible for the notion of "selected clusters".
 
             """
-            spike_ids = select_spikes(cluster_ids,
+            spike_ids = select_spikes(np.array(cluster_ids),
                                       n_spikes_max_per_cluster,
                                       self.clustering.spikes_per_cluster)
             gui.emit('select', cluster_ids, spike_ids)
