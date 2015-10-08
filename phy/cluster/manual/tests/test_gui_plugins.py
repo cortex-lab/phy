@@ -8,6 +8,7 @@
 
 from pytest import yield_fixture
 import numpy as np
+from numpy.testing import assert_array_equal as ae
 
 from phy.gui.tests.test_gui import gui  # noqa
 
@@ -33,7 +34,9 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups):
         _s.append((cluster_ids, spike_ids))
 
     def assert_selection(*cluster_ids):  # pragma: no cover
-        assert _s[-1][0] == list(cluster_ids)
+        if not _s:
+            return
+        assert _s[-1][0] == tuple(cluster_ids)
         if len(cluster_ids) >= 1:
             assert mc.wizard.best == cluster_ids[0]
         elif len(cluster_ids) >= 2:
@@ -43,5 +46,9 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups):
 
 
 def test_manual_clustering_1(manual_clustering):
-    mc, ae = manual_clustering
-    print(mc.wizard.selection)
+    mc, assert_selection = manual_clustering
+    assert_selection()
+    ae(mc.cluster_ids, [0, 1, 2, 10, 20, 30])
+
+    mc.select([0])
+    assert_selection(0)
