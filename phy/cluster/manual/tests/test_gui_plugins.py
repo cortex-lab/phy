@@ -170,8 +170,8 @@ def test_attach_wizard_1(wizard, cluster_ids, cluster_groups):
     assert cluster_meta.get('group', 31) is None
 
     wizard.next_by_quality()
-    # TODO
-    # assert wizard.selection == [31, 11]
+    print(cluster_meta.to_dict('group'))
+    assert wizard.selection == [31, 11]
 
 
 #------------------------------------------------------------------------------

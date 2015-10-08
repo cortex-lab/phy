@@ -86,7 +86,7 @@ def test_most_similar_clusters(cluster_ids, similarity, status):
 # Test strategy functions
 #------------------------------------------------------------------------------
 
-def test_best_quality_strategy(cluster_ids, quality, status, similarity):
+def test_best_quality_strategy_1(cluster_ids, quality, status, similarity):
 
     def _next(selection):
         return _best_quality_strategy(selection,
@@ -102,8 +102,24 @@ def test_best_quality_strategy(cluster_ids, quality, status, similarity):
     assert _next([2]) == [11]
 
     assert _next([30, 20]) == [30, 2]
-    assert _next([10, 2]) == [10, 1]
+    assert _next([10, 2]) == [10, 11]
+    assert _next([10, 11]) == [10, 1]
     assert _next([10, 1]) == [10, 1]  # 0 is ignored, so it does not appear.
+
+
+def test_best_quality_strategy_2(quality, similarity):
+
+    def status(cluster):
+        return {0: 'ignored', 1: None, 2: 'good', 3: None}[cluster]
+
+    def _next(selection):
+        return _best_quality_strategy(selection,
+                                      cluster_ids=list(range(4)),
+                                      quality=quality,
+                                      status=status,
+                                      similarity=similarity)
+
+    assert _next([3, 1]) == [3, 2]
 
 
 def test_best_similarity_strategy(cluster_ids, quality, status, similarity):
@@ -183,7 +199,7 @@ def test_wizard_nav(wizard):
         assert w.selection == [1, 2]
 
 
-def test_wizard_next(wizard, status):
+def test_wizard_next_1(wizard, status):
     w = wizard
 
     assert w.next_selection([30]) == [20]
@@ -204,7 +220,7 @@ def test_wizard_next(wizard, status):
     assert w.next_selection([30], ignore_group=True) == [20]
 
 
-def test_wizard_next_bis(wizard):
+def test_wizard_next_2(wizard):
     w = wizard
 
     # 30, 20, 11, 10, 2, 1, 0
@@ -224,6 +240,21 @@ def test_wizard_next_bis(wizard):
     wizard.select([30])
     assert wizard.next_by_quality() == [2]
     assert wizard.next_by_quality() == [11]
+
+
+def test_wizard_next_3(wizard):
+    w = wizard
+
+    @w.set_cluster_ids_function
+    def cluster_ids():
+        return [0, 1, 2, 3]
+
+    @w.set_status_function
+    def status_bis(cluster):
+        return {0: 'ignored', 1: None, 2: 'good', 3: None}[cluster]
+
+    wizard.select([3, 1])
+    assert wizard.next_by_quality() == [3, 2]
 
 
 def test_wizard_pin_by_quality(wizard):

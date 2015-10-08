@@ -47,7 +47,7 @@ def _sort_by_status(clusters, status=None, remove_ignored=False):
     # NOTE: sorted is "stable": it doesn't change the order of elements
     # that compare equal, which ensures that the order of clusters is kept
     # among any given status.
-    key = lambda cluster: _sort_map.get(status(cluster), 0)
+    key = lambda cluster: _sort_map[status(cluster)]
     return sorted(clusters, key=key)
 
 
@@ -57,18 +57,16 @@ def _best_clusters(clusters, quality, n_max=None):
 
 
 def _most_similar_clusters(cluster, cluster_ids=None, n_max=None,
-                           similarity=None, status=None, less_than=None):
+                           similarity=None, status=None):
     """Return the `n_max` most similar clusters to a given cluster."""
     if cluster not in cluster_ids:
         return []
     s = [(other, similarity(cluster, other))
          for other in cluster_ids
          if other != cluster and status(other) != 'ignored']
-    # Only keep values less than a threshold.
-    if less_than:
-        s = [(c, v) for (c, v) in s if v <= less_than]
     clusters = _argsort(s, n_max=n_max)
-    return _sort_by_status(clusters, status=status, remove_ignored=True)
+    out = _sort_by_status(clusters, status=status)
+    return out
 
 
 #------------------------------------------------------------------------------
@@ -102,19 +100,15 @@ def _best_quality_strategy(selection,
             return selection
     elif n == 2:
         best, match = selection
-        value = similarity(best, match)
         candidates = _most_similar_clusters(best,
                                             cluster_ids=cluster_ids,
                                             similarity=similarity,
                                             status=status,
-                                            less_than=value)
-        if best in candidates:  # pragma: no cover
-            candidates.remove(best)
-        if match in candidates:
-            candidates.remove(match)
-        if not candidates:
+                                            )
+        if not candidates:  # pragma: no cover
             return selection
-        return [best, candidates[0]]
+        candidate = _next_in_list(candidates, match)
+        return [best, candidate]
 
 
 def _best_similarity_strategy(selection,
