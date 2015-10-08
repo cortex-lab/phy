@@ -207,6 +207,28 @@ def test_wizard_next(wizard, status):
     assert w.next_selection([30], ignore_group=True) == [20]
 
 
+def test_wizard_next_bis(wizard):
+    w = wizard
+
+    # 30, 20, 11, 10, 2, 1, 0
+    #  N,  i,  g,  g, N, g, i
+
+    @w.set_status_function
+    def status_bis(cluster):
+        return {0: 'ignored',
+                1: 'good',
+                2: None,
+                10: 'good',
+                11: 'good',
+                20: 'ignored',
+                30: None,
+                }[cluster]
+
+    wizard.select([30])
+    assert wizard.next_by_quality() == [2]
+    assert wizard.next_by_quality() == [11]
+
+
 def test_wizard_pin_by_quality(wizard):
     w = wizard
 
