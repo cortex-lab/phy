@@ -10,11 +10,12 @@
 import logging
 
 import numpy as np
+from six import string_types
 
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
-from .wizard import Wizard, _wizard_group
+from .wizard import Wizard
 from phy.gui.actions import Actions, Snippets
 from phy.io.array import select_spikes
 from phy.utils.plugin import IPlugin
@@ -45,6 +46,17 @@ def _process_ups(ups):  # pragma: no cover
 # -----------------------------------------------------------------------------
 # Attach wizard to effectors (clustering and cluster_meta)
 # -----------------------------------------------------------------------------
+
+def _wizard_group(group):
+    # The group should be None, 'mua', 'noise', or 'good'.
+    assert group is None or isinstance(group, string_types)
+    group = group.lower() if group else group
+    if group in ('mua', 'noise'):
+        return 'ignored'
+    elif group == 'good':
+        return 'good'
+    return None
+
 
 def _attach_wizard_to_effector(wizard, effector):
 

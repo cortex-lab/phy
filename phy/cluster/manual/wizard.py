@@ -73,17 +73,6 @@ def _most_similar_clusters(cluster, cluster_ids=None, n_max=None,
     return _sort_by_status(clusters, status=status, remove_ignored=True)
 
 
-def _wizard_group(group):
-    # The group should be None, 'mua', 'noise', or 'good'.
-    assert group is None or isinstance(group, string_types)
-    group = group.lower() if group else group
-    if group in ('mua', 'noise'):
-        return 'ignored'
-    elif group == 'good':
-        return 'good'
-    return None
-
-
 #------------------------------------------------------------------------------
 # Strategy functions
 #------------------------------------------------------------------------------

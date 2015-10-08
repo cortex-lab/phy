@@ -13,7 +13,6 @@ from ..wizard import (_argsort,
                       _next_in_list,
                       _best_clusters,
                       _most_similar_clusters,
-                      _wizard_group,
                       _best_quality_strategy,
                       _best_similarity_strategy,
                       Wizard,
@@ -131,14 +130,6 @@ def test_wizard_empty():
     wizard = Wizard()
     wizard.set_cluster_ids_function(lambda: [])
     wizard.restart()
-
-
-def test_wizard_group():
-    assert _wizard_group('noise') == 'ignored'
-    assert _wizard_group('mua') == 'ignored'
-    assert _wizard_group('good') == 'good'
-    assert _wizard_group('unknown') is None
-    assert _wizard_group(None) is None
 
 
 def test_wizard_nav(wizard):

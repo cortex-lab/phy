@@ -12,7 +12,8 @@ from numpy.testing import assert_array_equal as ae
 
 from ..clustering import Clustering
 from .._utils import create_cluster_meta
-from ..gui_plugins import (_attach_wizard,
+from ..gui_plugins import (_wizard_group,
+                           _attach_wizard,
                            _attach_wizard_to_clustering,
                            _attach_wizard_to_cluster_meta,
                            )
@@ -54,6 +55,14 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups):
 #------------------------------------------------------------------------------
 # Test wizard attach
 #------------------------------------------------------------------------------
+
+def test_wizard_group():
+    assert _wizard_group('noise') == 'ignored'
+    assert _wizard_group('mua') == 'ignored'
+    assert _wizard_group('good') == 'good'
+    assert _wizard_group('unknown') is None
+    assert _wizard_group(None) is None
+
 
 def test_attach_wizard_to_clustering_merge(wizard, cluster_ids):
     clustering = Clustering(np.array(cluster_ids))
@@ -106,6 +115,7 @@ def test_attach_wizard_to_cluster_meta(wizard, cluster_groups):
     assert wizard.selection == [20]
 
     cluster_meta.set('group', [20], 'noise')
+    assert cluster_meta.get('group', 20) == 'noise'
     assert wizard.selection == [10]
 
     cluster_meta.set('group', [10], 'good')
@@ -115,10 +125,12 @@ def test_attach_wizard_to_cluster_meta(wizard, cluster_groups):
     wizard.restart()
     assert wizard.selection == [30]
 
-    # 30, 20, 10, 2, 1, 0
-    #  N,  i,  g, N, g, i
+    # 30, 20, 11, 10, 2, 1, 0
+    #  N,  i,  g,  g, N, g, i
     assert wizard.next_by_quality() == [2]
-    # assert wizard.next_by_quality() == [10]
+    print(cluster_meta.to_dict('group'))
+    # TODO
+    # assert wizard.next_by_quality() == [11]
 
 
 def test_attach_wizard(wizard, cluster_ids, cluster_groups):
