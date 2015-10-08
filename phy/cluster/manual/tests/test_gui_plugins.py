@@ -170,8 +170,41 @@ def test_attach_wizard_1(wizard, cluster_ids, cluster_groups):
     assert cluster_meta.get('group', 31) is None
 
     wizard.next_by_quality()
-    print(cluster_meta.to_dict('group'))
     assert wizard.selection == [31, 11]
+
+    clustering.undo()
+    assert wizard.selection == [30, 20]
+
+
+def test_attach_wizard_2(wizard, cluster_ids, cluster_groups):
+    clustering = Clustering(np.array(cluster_ids))
+    cluster_meta = create_cluster_meta(cluster_groups)
+    _attach_wizard(wizard, clustering, cluster_meta)
+
+    wizard.select([30, 20])
+    assert wizard.selection == [30, 20]
+
+    clustering.split([1])
+    assert wizard.selection == [31, 30]
+    assert cluster_meta.get('group', 31) is None
+
+    wizard.next_by_quality()
+    assert wizard.selection == [31, 20]
+
+    clustering.undo()
+    assert wizard.selection == [30, 20]
+
+
+def test_attach_wizard_3(wizard, cluster_ids, cluster_groups):
+    clustering = Clustering(np.array(cluster_ids))
+    cluster_meta = create_cluster_meta(cluster_groups)
+    _attach_wizard(wizard, clustering, cluster_meta)
+
+    wizard.select([30, 20])
+    assert wizard.selection == [30, 20]
+
+    cluster_meta.set('group', 30, 'noise')
+    assert wizard.selection == [20]
 
 
 #------------------------------------------------------------------------------
@@ -216,4 +249,26 @@ def test_manual_clustering_merge(manual_clustering):
 
     mc.actions.select([30, 20])
     mc.actions.merge()
-    # assert_selection(31, 10)
+    assert_selection(31, 2)
+
+
+def test_manual_clustering_split(manual_clustering):
+    mc, assert_selection = manual_clustering
+
+    mc.actions.select([1, 2])
+    mc.actions.split([1, 2])
+    assert_selection(31, 20)
+
+
+def test_manual_clustering_move(manual_clustering):
+    mc, assert_selection = manual_clustering
+
+    mc.actions.select([30])
+    assert_selection(30)
+
+    # TODO: set quality and similarity functions
+    # mc.actions.next_by_quality()
+    # assert_selection(20)
+
+    # mc.actions.move([20], 'noise')
+    # assert_selection(2)

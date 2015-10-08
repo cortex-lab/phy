@@ -103,9 +103,6 @@ def _attach_wizard_to_cluster_meta(wizard, cluster_meta):
     @wizard.set_status_function
     def status(cluster):
         group = cluster_meta.get('group', cluster)
-        # TODO: remove this in order to allow for custom groups.
-        # For now, it serves as temporary check.
-        assert group is None or group in _wizard_group_mapping
         return _wizard_group(group)
 
     @cluster_meta.connect
@@ -113,15 +110,12 @@ def _attach_wizard_to_cluster_meta(wizard, cluster_meta):
         if up.description == 'metadata_group' and up.history != 'undo':
             cluster = up.metadata_changed[0]
             wizard.next_selection([cluster], ignore_group=True)
+            # TODO: pin after a move? Yes if the previous selection >= 2, no
+            # otherwise. See similar note above.
+            # wizard.pin()
 
 
 def _attach_wizard(wizard, clustering, cluster_meta):
-    @clustering.connect
-    def on_cluster(up):
-        # Set the cluster metadata of new clusters.
-        if up.added:
-            cluster_meta.set_from_descendants(up.descendants)
-
     _attach_wizard_to_clustering(wizard, clustering)
     _attach_wizard_to_cluster_meta(wizard, cluster_meta)
 
