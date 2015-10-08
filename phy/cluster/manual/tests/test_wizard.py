@@ -71,9 +71,15 @@ def test_most_similar_clusters(cluster_ids, similarity, status):
 
     assert not _similar(None)
     assert not _similar(100)
+
     assert _similar(0) == [30, 20, 2, 11, 1]
     assert _similar(1) == [30, 20, 2, 11]
     assert _similar(2) == [30, 20, 11, 1]
+
+    assert _similar(10) == [30, 20, 2, 11, 1]
+    assert _similar(11) == [30, 20, 2, 1]
+    assert _similar(20) == [30, 2, 11, 1]
+    assert _similar(30) == [20, 2, 11, 1]
 
 
 #------------------------------------------------------------------------------

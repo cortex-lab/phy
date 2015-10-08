@@ -144,7 +144,8 @@ def test_attach_wizard_to_cluster_meta_undo(wizard, cluster_groups):
     cluster_meta.set('group', [20], 'noise')
     assert wizard.selection == [2]
 
-    wizard.select([30])
+    wizard.next_by_quality()
+    assert wizard.selection == [11]
 
     cluster_meta.undo()
     assert wizard.selection == [20]
@@ -153,11 +154,24 @@ def test_attach_wizard_to_cluster_meta_undo(wizard, cluster_groups):
     assert wizard.selection == [2]
 
 
-def test_attach_wizard(wizard, cluster_ids, cluster_groups):
+def test_attach_wizard_1(wizard, cluster_ids, cluster_groups):
     clustering = Clustering(np.array(cluster_ids))
     cluster_meta = create_cluster_meta(cluster_groups)
     _attach_wizard(wizard, clustering, cluster_meta)
+
+    wizard.restart()
+    assert wizard.selection == [30]
+
+    wizard.pin()
+    assert wizard.selection == [30, 20]
+
+    clustering.merge(wizard.selection)
+    assert wizard.selection == [31, 2]
+    assert cluster_meta.get('group', 31) is None
+
+    wizard.next_by_quality()
     # TODO
+    # assert wizard.selection == [31, 11]
 
 
 #------------------------------------------------------------------------------
