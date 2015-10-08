@@ -109,6 +109,12 @@ def test_attach_wizard_to_cluster_meta(wizard, cluster_groups):
     # assert wizard.selection == [10]
 
 
+def test_attach_wizard(wizard, cluster_ids, cluster_groups):
+    clustering = Clustering(np.array(cluster_ids))
+    cluster_meta = create_cluster_meta(cluster_groups)
+    _attach_wizard(wizard, clustering, cluster_meta)
+
+
 #------------------------------------------------------------------------------
 # Test GUI plugins
 #------------------------------------------------------------------------------
