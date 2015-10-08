@@ -8,6 +8,8 @@
 
 import logging
 
+from pytest import raises
+
 from .._utils import (ClusterMeta, UpdateInfo,
                       _update_cluster_selection, create_cluster_meta)
 
@@ -46,6 +48,10 @@ def test_metadata_history_simple():
 
     meta.redo()
     assert meta.get('group', 2) == 2
+
+    with raises(AssertionError):
+        assert meta.to_dict('grou') is None
+    assert meta.to_dict('group') == {2: 2}
 
 
 def test_metadata_history_complex():
