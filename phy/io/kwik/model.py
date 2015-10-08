@@ -726,7 +726,7 @@ class KwikModel(BaseModel):
         self._channel_group_changed(self._channel_group)
 
         # This loads spike clusters and cluster groups.
-        self._clustering_changed(self._clustering)
+        self._clustering_changed(clustering)
 
         # This needs channels, channel_order, and waveform loader.
         self._update_waveform_loader()
@@ -780,10 +780,31 @@ class KwikModel(BaseModel):
 
         # Load data.
         _to_close = self._open_kwik_if_needed()
+
+        if self._kwik.h5py_file:
+            clusterings = _list_clusterings(self._kwik.h5py_file,
+                                            self._channel_group)
+        else:
+            warn(".kwik filepath doesn't exist.")
+            clusterings = None
+
+        if clusterings:
+            if 'main' in clusterings:
+                self._load_clusterings('main')
+                self.clustering = 'main'
+            else:
+                self._load_clusterings(clusterings[0])
+                self.clustering = clusterings[0]
+
         self._probe.change_channel_group(value)
         self._load_channels()
         self._load_spikes()
         self._load_features_masks()
+
+        # Recalculate spikes_per_cluster manually
+        self._spikes_per_cluster = \
+            _spikes_per_cluster(self.spike_ids, self._spike_clusters)
+
         if _to_close:
             self._kwik.close()
 
