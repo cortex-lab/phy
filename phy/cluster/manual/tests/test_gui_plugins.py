@@ -54,14 +54,45 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups):
 # Test GUI plugins
 #------------------------------------------------------------------------------
 
-def test_attach_wizard_to_clustering(wizard, cluster_ids):
+def test_attach_wizard_to_clustering_merge(wizard, cluster_ids):
     clustering = Clustering(np.array(cluster_ids))
     _attach_wizard_to_clustering(wizard, clustering)
 
     assert wizard.selection == []
 
+    wizard.select([30, 20, 10])
+    assert wizard.selection == [30, 20, 10]
+
     clustering.merge([30, 20])
+    # Select the merged cluster along with its most similar one (=pin merged).
     assert wizard.selection == [31, 10]
+
+    # Undo: the previous selection reappears.
+    clustering.undo()
+    assert wizard.selection == [30, 20, 10]
+
+    # Redo.
+    clustering.redo()
+    assert wizard.selection == [31, 10]
+
+
+def test_attach_wizard_to_clustering_split(wizard, cluster_ids):
+    clustering = Clustering(np.array(cluster_ids))
+    _attach_wizard_to_clustering(wizard, clustering)
+
+    wizard.select([30, 20, 10])
+    assert wizard.selection == [30, 20, 10]
+
+    clustering.split([5, 3])
+    assert wizard.selection == [31, 20]
+
+    # Undo: the previous selection reappears.
+    clustering.undo()
+    assert wizard.selection == [30, 20, 10]
+
+    # Redo.
+    clustering.redo()
+    assert wizard.selection == [31, 20]
 
 
 def test_manual_clustering_edge_cases(manual_clustering):

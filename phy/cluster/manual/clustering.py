@@ -404,7 +404,7 @@ class Clustering(EventEmitter):
             return UpdateInfo()
         assert len(spike_ids) == len(spike_clusters_rel)
         assert spike_ids.min() >= 0
-        assert spike_ids.max() < self._n_spikes
+        assert spike_ids.max() < self._n_spikes, "Some spikes don't exist."
 
         # Normalize the spike-cluster assignment such that
         # there are only new or dead clusters, not modified clusters.

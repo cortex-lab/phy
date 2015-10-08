@@ -75,6 +75,12 @@ def _attach_wizard_to_clustering(wizard, clustering):
     def on_cluster(up):
         if up.added and up.history != 'undo':
             wizard.select([up.added[0]])
+            # NOTE: after a merge, select the merged one AND the most similar.
+            # There is an ambiguity after a merge: does the merge occurs during
+            # a wizard session, in which case we want to pin the merged
+            # cluster? If it is just a "cold" merge, then we might not want
+            # to pin the merged cluster. But cold merges are supposed to be
+            # less frequent than wizard merges.
             wizard.pin()
 
 
