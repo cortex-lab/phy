@@ -74,7 +74,7 @@ def _attach_wizard_to_clustering(wizard, clustering):
     @clustering.connect
     def on_cluster(up):
         if up.added and up.history != 'undo':
-            wizard.select((up.added[0],))
+            wizard.select([up.added[0]])
             wizard.pin()
 
 
@@ -90,7 +90,7 @@ def _attach_wizard_to_cluster_meta(wizard, cluster_meta):
     def on_cluster(up):
         if up.description == 'metadata_group' and up.history != 'undo':
             cluster = up.metadata_changed[0]
-            wizard.select((cluster,))
+            wizard.select([cluster])
             wizard.pin()
 
 
@@ -216,7 +216,7 @@ class ManualClustering(IPlugin):
             cluster_ids = self.wizard.selection
         if len(cluster_ids) <= 1:
             return
-        self.clustering.merge(list(cluster_ids))
+        self.clustering.merge(cluster_ids)
         self._global_history.action(self.clustering)
 
     def split(self, spike_ids):

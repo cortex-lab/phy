@@ -90,14 +90,14 @@ def test_best_quality_strategy(cluster_ids, quality, status, similarity):
                                       similarity=similarity)
 
     assert not _next(None)
-    assert _next(()) == (30,)
-    assert _next((30,)) == (20,)
-    assert _next((20,)) == (10,)
-    assert _next((10,)) == (2,)
+    assert _next([]) == [30]
+    assert _next([30]) == [20]
+    assert _next([20]) == [10]
+    assert _next([10]) == [2]
 
-    assert _next((30, 20)) == (30, 10)
-    assert _next((10, 2)) == (10, 1)
-    assert _next((10, 1)) == (10, 1)  # 0 is ignored, so it does not appear.
+    assert _next([30, 20]) == [30, 10]
+    assert _next([10, 2]) == [10, 1]
+    assert _next([10, 1]) == [10, 1]  # 0 is ignored, so it does not appear.
 
 
 def test_best_similarity_strategy(cluster_ids, quality, status, similarity):
@@ -110,13 +110,13 @@ def test_best_similarity_strategy(cluster_ids, quality, status, similarity):
                                          similarity=similarity)
 
     assert not _next(None)
-    assert _next(()) == (30, 20)
-    assert _next((30, 20)) == (30, 10)
-    assert _next((30, 10)) == (30, 2)
-    assert _next((20, 10)) == (20, 2)
-    assert _next((10, 2)) == (10, 1)
-    assert _next((10, 1)) == (2, 1)
-    assert _next((2, 1)) == (2, 1)  # 0 is ignored, so it does not appear.
+    assert _next([]) == [30, 20]
+    assert _next([30, 20]) == [30, 10]
+    assert _next([30, 10]) == [30, 2]
+    assert _next([20, 10]) == [20, 2]
+    assert _next([10, 2]) == [10, 1]
+    assert _next([10, 1]) == [2, 1]
+    assert _next([2, 1]) == [2, 1]  # 0 is ignored, so it does not appear.
 
 
 #------------------------------------------------------------------------------
@@ -146,115 +146,115 @@ def test_wizard_nav(wizard):
     assert w.cluster_ids == [0, 1, 2, 10, 20, 30]
     assert w.n_clusters == 6
 
-    assert w.selection == ()
+    assert w.selection == []
 
     ###
     w.select([])
-    assert w.selection == ()
+    assert w.selection == []
 
     assert w.best is None
     assert w.match is None
 
     ###
     w.select([1])
-    assert w.selection == (1,)
+    assert w.selection == [1]
 
     assert w.best == 1
     assert w.match is None
 
     ###
     w.select([1, 2, 4])
-    assert w.selection == (1, 2)
+    assert w.selection == [1, 2]
 
     assert w.best == 1
     assert w.match == 2
 
     ###
     w.previous()
-    assert w.selection == (1,)
+    assert w.selection == [1]
 
     for _ in range(2):
         w.previous()
-        assert w.selection == (1,)
+        assert w.selection == [1]
 
     ###
     w.next()
-    assert w.selection == (1, 2)
+    assert w.selection == [1, 2]
 
     for _ in range(2):
         w.next()
-        assert w.selection == (1, 2)
+        assert w.selection == [1, 2]
 
 
 def test_wizard_pin_by_quality(wizard):
     w = wizard
 
     w.pin()
-    assert w.selection == ()
+    assert w.selection == []
 
     w.unpin()
-    assert w.selection == ()
+    assert w.selection == []
 
     w.next_by_quality()
-    assert w.selection == (30,)
+    assert w.selection == [30]
 
     w.next_by_quality()
-    assert w.selection == (20,)
+    assert w.selection == [20]
 
     w.pin()
-    assert w.selection == (20, 30)
+    assert w.selection == [20, 30]
 
     w.next_by_quality()
-    assert w.selection == (20, 10)
+    assert w.selection == [20, 10]
 
     w.unpin()
-    assert w.selection == (20,)
+    assert w.selection == [20]
 
     w.next_by_quality()
-    assert w.selection == (10,)
+    assert w.selection == [10]
 
     w.pin()
-    assert w.selection == (10, 30)
+    assert w.selection == [10, 30]
 
     w.next_by_quality()
-    assert w.selection == (10, 20)
+    assert w.selection == [10, 20]
 
     w.next_by_quality()
-    assert w.selection == (10, 2)
+    assert w.selection == [10, 2]
 
 
 def test_wizard_pin_by_similarity(wizard):
     w = wizard
 
     w.pin()
-    assert w.selection == ()
+    assert w.selection == []
 
     w.unpin()
-    assert w.selection == ()
+    assert w.selection == []
 
     w.next_by_similarity()
-    assert w.selection == (30, 20)
+    assert w.selection == [30, 20]
 
     w.next_by_similarity()
-    assert w.selection == (30, 10)
+    assert w.selection == [30, 10]
 
     w.pin()
-    assert w.selection == (30, 20)
+    assert w.selection == [30, 20]
 
     w.next_by_similarity()
-    assert w.selection == (30, 10)
+    assert w.selection == [30, 10]
 
     w.unpin()
-    assert w.selection == (30,)
+    assert w.selection == [30]
 
-    w.select((20, 10))
-    assert w.selection == (20, 10)
-
-    w.next_by_similarity()
-    assert w.selection == (20, 2)
+    w.select([20, 10])
+    assert w.selection == [20, 10]
 
     w.next_by_similarity()
-    assert w.selection == (20, 1)
+    assert w.selection == [20, 2]
 
     w.next_by_similarity()
-    assert w.selection == (10, 2)
+    assert w.selection == [20, 1]
+
+    w.next_by_similarity()
+    assert w.selection == [10, 2]
