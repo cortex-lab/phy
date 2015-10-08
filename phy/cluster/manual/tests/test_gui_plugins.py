@@ -11,6 +11,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 
 from ..clustering import Clustering
+from .._utils import create_cluster_meta
 from ..gui_plugins import (_attach_wizard,
                            _attach_wizard_to_clustering,
                            _attach_wizard_to_cluster_meta,
@@ -51,7 +52,7 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups):
 
 
 #------------------------------------------------------------------------------
-# Test GUI plugins
+# Test wizard attach
 #------------------------------------------------------------------------------
 
 def test_attach_wizard_to_clustering_merge(wizard, cluster_ids):
@@ -94,6 +95,23 @@ def test_attach_wizard_to_clustering_split(wizard, cluster_ids):
     clustering.redo()
     assert wizard.selection == [31, 20]
 
+
+def test_attach_wizard_to_cluster_meta(wizard, cluster_groups):
+    cluster_meta = create_cluster_meta(cluster_groups)
+    _attach_wizard_to_cluster_meta(wizard, cluster_meta)
+
+    wizard.select([30])
+
+    wizard.select([20])
+    assert wizard.selection == [20]
+
+    cluster_meta.set('group', [20], 'noise')
+    # assert wizard.selection == [10]
+
+
+#------------------------------------------------------------------------------
+# Test GUI plugins
+#------------------------------------------------------------------------------
 
 def test_manual_clustering_edge_cases(manual_clustering):
     mc, assert_selection = manual_clustering
