@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from pytest import raises
+
 from ..wizard import (_argsort,
                       _sort_by_status,
                       _next_in_list,
@@ -14,6 +16,7 @@ from ..wizard import (_argsort,
                       _wizard_group,
                       _best_quality_strategy,
                       _best_similarity_strategy,
+                      Wizard,
                       )
 
 
@@ -119,6 +122,16 @@ def test_best_similarity_strategy(cluster_ids, quality, status, similarity):
 #------------------------------------------------------------------------------
 # Test wizard
 #------------------------------------------------------------------------------
+
+def test_wizard_empty():
+    wizard = Wizard()
+    with raises(RuntimeError):
+        wizard.restart()
+
+    wizard = Wizard()
+    wizard.set_cluster_ids_function(lambda: [])
+    wizard.restart()
+
 
 def test_wizard_group():
     assert _wizard_group('noise') == 'ignored'

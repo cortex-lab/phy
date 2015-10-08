@@ -190,7 +190,7 @@ class Wizard(EventEmitter):
         self._similarity = None
         self._quality = None
         self._get_cluster_ids = None
-        self._cluster_status = lambda cluster: None
+        self._cluster_status = None
         self._selection = ()
         self.reset()
 
@@ -238,6 +238,8 @@ class Wizard(EventEmitter):
     @property
     def cluster_ids(self):
         """Array of cluster ids in the current clustering."""
+        if not self._get_cluster_ids:
+            return []
         return sorted(self._get_cluster_ids())
 
     @property
