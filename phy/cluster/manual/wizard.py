@@ -179,9 +179,8 @@ class Wizard(EventEmitter):
       provided by functions: cluster_ids, status (group), similarity, quality.
     * The wizard keeps track of the history of the selected clusters, but this
       history is cleared after every action that changes the state.
-    * The `next()` function proposes a new selection as a function of the
-      current selection only.
-    * There are two strategies: best-quality or best-similarity strategy.
+    * The `next_*()` functions propose a new selection as a function of the
+      current selection.
 
     TODO: cache expensive functions.
 
