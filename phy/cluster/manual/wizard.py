@@ -318,7 +318,7 @@ class Wizard(EventEmitter):
 
     def restart(self):
         self.select([])
-        self.next_by_similarity()
+        self.next_by_quality()
 
     def _check_functions(self):
         if not self._get_cluster_ids:
@@ -336,6 +336,7 @@ class Wizard(EventEmitter):
     def next_selection(self, cluster_ids=None,
                        strategy=None,
                        ignore_group=False):
+        self._check_functions()
         cluster_ids = cluster_ids or self._selection
         strategy = strategy or _best_quality_strategy
         if ignore_group:
@@ -346,7 +347,6 @@ class Wizard(EventEmitter):
                 return self._cluster_status(cluster)
         else:
             status = self._cluster_status
-        self._check_functions()
         self.select(strategy(cluster_ids,
                              cluster_ids=self._get_cluster_ids(),
                              quality=self._quality,
