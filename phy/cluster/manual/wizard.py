@@ -10,8 +10,6 @@ from itertools import product
 import logging
 from operator import itemgetter
 
-from six import string_types
-
 from ._history import History
 from phy.utils import EventEmitter, _is_array_like
 

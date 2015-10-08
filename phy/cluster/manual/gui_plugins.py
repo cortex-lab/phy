@@ -10,7 +10,6 @@
 import logging
 
 import numpy as np
-from six import string_types
 
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
@@ -47,15 +46,17 @@ def _process_ups(ups):  # pragma: no cover
 # Attach wizard to effectors (clustering and cluster_meta)
 # -----------------------------------------------------------------------------
 
+_wizard_group_mapping = {
+    'noise': 'ignored',
+    'mua': 'ignored',
+    'good': 'good',
+}
+
+
 def _wizard_group(group):
     # The group should be None, 'mua', 'noise', or 'good'.
-    assert group is None or isinstance(group, string_types)
     group = group.lower() if group else group
-    if group in ('mua', 'noise'):
-        return 'ignored'
-    elif group == 'good':
-        return 'good'
-    return None
+    return _wizard_group_mapping.get(group, None)
 
 
 def _attach_wizard_to_effector(wizard, effector):
@@ -102,6 +103,9 @@ def _attach_wizard_to_cluster_meta(wizard, cluster_meta):
     @wizard.set_status_function
     def status(cluster):
         group = cluster_meta.get('group', cluster)
+        # TODO: remove this in order to allow for custom groups.
+        # For now, it serves as temporary check.
+        assert group is None or group in _wizard_group_mapping
         return _wizard_group(group)
 
     @cluster_meta.connect
