@@ -320,6 +320,10 @@ class Wizard(EventEmitter):
             self._history.forward()
             self._set_selection_from_history()
 
+    def restart(self):
+        self.select(())
+        self.next_by_similarity()
+
     def next_by_quality(self):
         self.selection = _best_quality_strategy(
             self._selection,
