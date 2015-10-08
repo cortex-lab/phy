@@ -116,21 +116,23 @@ def test_attach_wizard_to_cluster_meta(wizard, cluster_groups):
 
     cluster_meta.set('group', [20], 'noise')
     assert cluster_meta.get('group', 20) == 'noise'
-    assert wizard.selection == [10]
-
-    cluster_meta.set('group', [10], 'good')
     assert wizard.selection == [2]
+
+    cluster_meta.set('group', [2], 'good')
+    assert wizard.selection == [11]
 
     # Restart.
     wizard.restart()
     assert wizard.selection == [30]
 
     # 30, 20, 11, 10, 2, 1, 0
-    #  N,  i,  g,  g, N, g, i
+    #  N,  i,  g,  i, g, g, i
+    assert wizard.next_by_quality() == [11]
     assert wizard.next_by_quality() == [2]
-    print(cluster_meta.to_dict('group'))
-    # TODO
-    # assert wizard.next_by_quality() == [11]
+    assert wizard.next_by_quality() == [1]
+    assert wizard.next_by_quality() == [20]
+    assert wizard.next_by_quality() == [10]
+    assert wizard.next_by_quality() == [0]
 
 
 def test_attach_wizard(wizard, cluster_ids, cluster_groups):

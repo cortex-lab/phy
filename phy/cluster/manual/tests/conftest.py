@@ -9,6 +9,7 @@
 from pytest import yield_fixture
 
 from ..wizard import Wizard
+from ..gui_plugins import _wizard_group
 
 
 #------------------------------------------------------------------------------
@@ -28,12 +29,12 @@ def get_cluster_ids(cluster_ids):
 
 @yield_fixture
 def cluster_groups():
-    yield {0: 'ignored', 1: 'good', 10: 'ignored', 11: 'good'}
+    yield {0: 'noise', 1: 'good', 10: 'mua', 11: 'good'}
 
 
 @yield_fixture
 def status(cluster_groups):
-    yield lambda c: cluster_groups.get(c, None)
+    yield lambda c: _wizard_group(cluster_groups.get(c, None))
 
 
 @yield_fixture
