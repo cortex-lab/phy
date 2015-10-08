@@ -38,9 +38,10 @@ def test_argsort():
 
 def test_sort_by_status(status):
     cluster_ids = [10, 0, 1, 30, 2, 20]
-    assert _sort_by_status(cluster_ids, status=status) == [10, 30, 2, 20, 1, 0]
+    assert _sort_by_status(cluster_ids, status=status) == \
+        [30, 2, 20, 1, 10, 0]
     assert _sort_by_status(cluster_ids, status=status,
-                           remove_ignored=True) == [10, 30, 2, 20, 1]
+                           remove_ignored=True) == [30, 2, 20, 1]
 
 
 def test_next_in_list():
@@ -71,9 +72,9 @@ def test_most_similar_clusters(cluster_ids, similarity, status):
 
     assert not _similar(None)
     assert not _similar(100)
-    assert _similar(0) == [30, 20, 10, 2, 1]
-    assert _similar(1) == [30, 20, 10, 2]
-    assert _similar(2) == [30, 20, 10, 1]
+    assert _similar(0) == [30, 20, 2, 11, 1]
+    assert _similar(1) == [30, 20, 2, 11]
+    assert _similar(2) == [30, 20, 11, 1]
 
 
 #------------------------------------------------------------------------------
@@ -92,10 +93,10 @@ def test_best_quality_strategy(cluster_ids, quality, status, similarity):
     assert not _next(None)
     assert _next([]) == [30]
     assert _next([30]) == [20]
-    assert _next([20]) == [10]
-    assert _next([10]) == [2]
+    assert _next([20]) == [2]
+    assert _next([2]) == [11]
 
-    assert _next([30, 20]) == [30, 10]
+    assert _next([30, 20]) == [30, 2]
     assert _next([10, 2]) == [10, 1]
     assert _next([10, 1]) == [10, 1]  # 0 is ignored, so it does not appear.
 
@@ -111,11 +112,10 @@ def test_best_similarity_strategy(cluster_ids, quality, status, similarity):
 
     assert not _next(None)
     assert _next([]) == [30, 20]
-    assert _next([30, 20]) == [30, 10]
-    assert _next([30, 10]) == [30, 2]
+    assert _next([30, 20]) == [30, 11]
+    assert _next([30, 11]) == [30, 2]
     assert _next([20, 10]) == [20, 2]
-    assert _next([10, 2]) == [10, 1]
-    assert _next([10, 1]) == [2, 1]
+    assert _next([10, 2]) == [2, 1]
     assert _next([2, 1]) == [2, 1]  # 0 is ignored, so it does not appear.
 
 
@@ -143,8 +143,8 @@ def test_wizard_group():
 
 def test_wizard_nav(wizard):
     w = wizard
-    assert w.cluster_ids == [0, 1, 2, 10, 20, 30]
-    assert w.n_clusters == 6
+    assert w.cluster_ids == [0, 1, 2, 10, 11, 20, 30]
+    assert w.n_clusters == 7
 
     assert w.selection == []
 
@@ -192,8 +192,10 @@ def test_wizard_next(wizard, status):
     assert w.next_selection([30]) == [20]
     assert w.next_selection([30], ignore_group=True) == [20]
 
-    assert w.next_selection([1]) == [0]
-    assert w.next_selection([1], ignore_group=True) == [0]
+    # After the last good, the best ignored.
+    assert w.next_selection([1]) == [10]
+    # After the last unsorted (1's group is ignored), the best good.
+    assert w.next_selection([1], ignore_group=True) == [11]
 
     @w.set_status_function
     def status_bis(cluster):
@@ -201,7 +203,7 @@ def test_wizard_next(wizard, status):
             return 'ignored'
         return status(cluster)
 
-    assert w.next_selection([30]) == [0]
+    assert w.next_selection([30]) == [10]
     assert w.next_selection([30], ignore_group=True) == [20]
 
 
@@ -220,26 +222,37 @@ def test_wizard_pin_by_quality(wizard):
     w.next_by_quality()
     assert w.selection == [20]
 
+    # Pin.
     w.pin()
     assert w.selection == [20, 30]
 
     w.next_by_quality()
-    assert w.selection == [20, 10]
+    assert w.selection == [20, 2]
 
+    # Unpin.
     w.unpin()
     assert w.selection == [20]
 
     w.next_by_quality()
-    assert w.selection == [10]
+    assert w.selection == [2]
 
+    # Pin.
     w.pin()
-    assert w.selection == [10, 30]
+    assert w.selection == [2, 30]
 
     w.next_by_quality()
-    assert w.selection == [10, 20]
+    assert w.selection == [2, 20]
+
+    # Candidate is best among good.
+    w.next_by_quality()
+    assert w.selection == [2, 11]
+
+    # Candidate is last among good, ignored are completely ignored.
+    w.next_by_quality()
+    assert w.selection == [2, 1]
 
     w.next_by_quality()
-    assert w.selection == [10, 2]
+    assert w.selection == [2, 1]
 
 
 def test_wizard_pin_by_similarity(wizard):
@@ -255,13 +268,13 @@ def test_wizard_pin_by_similarity(wizard):
     assert w.selection == [30, 20]
 
     w.next_by_similarity()
-    assert w.selection == [30, 10]
+    assert w.selection == [30, 11]
 
     w.pin()
     assert w.selection == [30, 20]
 
     w.next_by_similarity()
-    assert w.selection == [30, 10]
+    assert w.selection == [30, 11]
 
     w.unpin()
     assert w.selection == [30]
@@ -276,4 +289,4 @@ def test_wizard_pin_by_similarity(wizard):
     assert w.selection == [20, 1]
 
     w.next_by_similarity()
-    assert w.selection == [10, 2]
+    assert w.selection == [11, 2]
