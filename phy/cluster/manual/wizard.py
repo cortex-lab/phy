@@ -290,7 +290,7 @@ class Wizard(EventEmitter):
                                             similarity=self._similarity,
                                             status=self._cluster_status)
         assert best not in candidates
-        if not candidates:
+        if not candidates:  # pragma: no cover
             return
         self.select((self.best, candidates[0]))
 
