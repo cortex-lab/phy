@@ -27,8 +27,13 @@ def get_cluster_ids(cluster_ids):
 
 
 @yield_fixture
-def status():
-    yield lambda c: ('ignored', 'good')[c] if c <= 1 else None
+def cluster_groups():
+    yield {0: 'ignored', 1: 'good'}
+
+
+@yield_fixture
+def status(cluster_groups):
+    yield lambda c: cluster_groups.get(c, None)
 
 
 @yield_fixture
