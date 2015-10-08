@@ -66,7 +66,7 @@ def test_attach_wizard_to_clustering_merge(wizard, cluster_ids):
 
     clustering.merge([30, 20])
     # Select the merged cluster along with its most similar one (=pin merged).
-    assert wizard.selection == [31, 10]
+    assert wizard.selection == [31, 2]
 
     # Undo: the previous selection reappears.
     clustering.undo()
@@ -74,7 +74,7 @@ def test_attach_wizard_to_clustering_merge(wizard, cluster_ids):
 
     # Redo.
     clustering.redo()
-    assert wizard.selection == [31, 10]
+    assert wizard.selection == [31, 2]
 
 
 def test_attach_wizard_to_clustering_split(wizard, cluster_ids):
@@ -85,7 +85,7 @@ def test_attach_wizard_to_clustering_split(wizard, cluster_ids):
     assert wizard.selection == [30, 20, 10]
 
     clustering.split([5, 3])
-    assert wizard.selection == [31, 20]
+    assert wizard.selection == [31, 30]
 
     # Undo: the previous selection reappears.
     clustering.undo()
@@ -93,7 +93,7 @@ def test_attach_wizard_to_clustering_split(wizard, cluster_ids):
 
     # Redo.
     clustering.redo()
-    assert wizard.selection == [31, 20]
+    assert wizard.selection == [31, 30]
 
 
 def test_attach_wizard_to_cluster_meta(wizard, cluster_groups):
@@ -136,7 +136,7 @@ def test_manual_clustering_edge_cases(manual_clustering):
 
     # Empty selection at first.
     assert_selection()
-    ae(mc.clustering.cluster_ids, [0, 1, 2, 10, 20, 30])
+    ae(mc.clustering.cluster_ids, [0, 1, 2, 10, 11, 20, 30])
 
     mc.select([0])
     assert_selection(0)

@@ -17,8 +17,8 @@ from ..wizard import Wizard
 
 @yield_fixture
 def cluster_ids():
-    yield [0, 1, 2, 10, 20, 30]
-    #      i, g, N, N,  N,  N
+    yield [0, 1, 2, 10, 11, 20, 30]
+    #      i, g, N,  i,  g,  N, N
 
 
 @yield_fixture
@@ -28,7 +28,7 @@ def get_cluster_ids(cluster_ids):
 
 @yield_fixture
 def cluster_groups():
-    yield {0: 'ignored', 1: 'good'}
+    yield {0: 'ignored', 1: 'good', 10: 'ignored', 11: 'good'}
 
 
 @yield_fixture
