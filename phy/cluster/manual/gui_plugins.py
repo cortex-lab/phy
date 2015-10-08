@@ -12,7 +12,7 @@ import logging
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
-from .wizard import Wizard
+from .wizard import Wizard, _wizard_group
 from phy.gui.actions import Actions, Snippets
 from phy.io.array import select_spikes
 from phy.utils.plugin import IPlugin
@@ -38,6 +38,65 @@ def _process_ups(ups):  # pragma: no cover
         return up
     else:
         raise NotImplementedError()
+
+
+# -----------------------------------------------------------------------------
+# Attach wizard to effectors (clustering and cluster_meta)
+# -----------------------------------------------------------------------------
+
+def _attach_wizard_to_effector(wizard, effector):
+
+    # Save the current selection when an action occurs.
+    @effector.connect
+    def on_request_undo_state(up):
+        return {'selection': wizard._selection}
+
+    @effector.connect
+    def on_cluster(up):
+        if not up.history:
+            # Reset the history after every change.
+            wizard.reset()
+        if up.history == 'undo':
+            # Revert to the given selection after an undo.
+            wizard.select(up.undo_state[0]['selection'], add_to_history=False)
+
+
+def _attach_wizard_to_clustering(wizard, clustering):
+    _attach_wizard_to_effector(wizard, clustering)
+
+    @wizard.set_cluster_ids_function
+    def get_cluster_ids():
+        return clustering.cluster_ids
+
+    @clustering.connect
+    def on_cluster(up):
+        if up.added and up.history != 'undo':
+            wizard.select((up.added[0],))
+            wizard.pin()
+
+
+def _attach_wizard_to_cluster_meta(wizard, cluster_meta):
+    _attach_wizard_to_effector(wizard, cluster_meta)
+
+    @wizard.set_status_function
+    def status(cluster):
+        group = cluster_meta.get('group', cluster)
+        return _wizard_group(group)
+
+    @cluster_meta.connect
+    def on_cluster(up):
+        if up.description == 'metadata_group' and up.history != 'undo':
+            cluster = up.metadata_changed[0]
+            wizard.select((cluster,))
+            wizard.pin()
+
+
+def _attach_wizard(wizard, clustering, cluster_meta):
+    @clustering.connect
+    def on_cluster(up):
+        # Set the cluster metadata of new clusters.
+        if up.added:
+            cluster_meta.set_from_descendants(up.descendants)
 
 
 # -----------------------------------------------------------------------------
@@ -73,7 +132,7 @@ class ManualClustering(IPlugin):
 
         # Create the wizard and attach it to Clustering/ClusterMeta.
         self.wizard = Wizard()
-        self.wizard.attach(self.clustering, self.cluster_meta)
+        _attach_wizard(self.wizard, self.clustering, self.cluster_meta)
 
         @self.wizard.connect
         def on_select(cluster_ids):
@@ -97,8 +156,8 @@ class ManualClustering(IPlugin):
         return self.clustering.cluster_ids
 
     def create_actions(self, gui):
-        actions = Actions()
-        snippets = Snippets()
+        self.actions = actions = Actions()
+        self.snippets = snippets = Snippets()
 
         # Create the default actions for the clustering GUI.
         @actions.connect
@@ -107,11 +166,11 @@ class ManualClustering(IPlugin):
             actions.add(callback=self.select, alias='c')
 
             # Wizard.
-            actions.add(callback=self.wizard.start, name='reset_wizard')
-            actions.add(callback=self.wizard.first)
-            actions.add(callback=self.wizard.last)
+            actions.add(callback=self.wizard.restart, name='reset_wizard')
             actions.add(callback=self.wizard.previous)
             actions.add(callback=self.wizard.next)
+            actions.add(callback=self.wizard.next_by_quality)
+            actions.add(callback=self.wizard.next_by_similarity)
             actions.add(callback=self.wizard.pin)
             actions.add(callback=self.wizard.unpin)
 
@@ -127,14 +186,11 @@ class ManualClustering(IPlugin):
         actions.attach(gui)
         actions.reset()
 
-        self.actions = actions
-        self.snippets = snippets
-
     # Wizard-related actions
     # -------------------------------------------------------------------------
 
     def select(self, cluster_ids):
-        self.wizard.selection = cluster_ids
+        self.wizard.select(cluster_ids)
 
     # Clustering actions
     # -------------------------------------------------------------------------
