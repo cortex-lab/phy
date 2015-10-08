@@ -53,6 +53,8 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups):
 
 def test_manual_clustering_edge_cases(manual_clustering):
     mc, assert_selection = manual_clustering
+
+    # Empty selection at first.
     assert_selection()
     ae(mc.clustering.cluster_ids, [0, 1, 2, 10, 20, 30])
 
@@ -80,3 +82,11 @@ def test_manual_clustering_edge_cases(manual_clustering):
     mc.move([], 'ignored')
 
     mc.save()
+
+
+def test_manual_clustering_merge(manual_clustering):
+    mc, assert_selection = manual_clustering
+
+    mc.actions.select([30, 20])
+    mc.actions.merge()
+    # assert_selection(31, 10)

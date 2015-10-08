@@ -57,6 +57,7 @@ def _attach_wizard_to_effector(wizard, effector):
     def on_cluster(up):
         if not up.history:
             # Reset the history after every change.
+            # That's because the history contains references to dead clusters.
             wizard.reset()
         if up.history == 'undo':
             # Revert to the given selection after an undo.
@@ -215,7 +216,7 @@ class ManualClustering(IPlugin):
             cluster_ids = self.wizard.selection
         if len(cluster_ids) <= 1:
             return
-        self.clustering.merge(cluster_ids)
+        self.clustering.merge(list(cluster_ids))
         self._global_history.action(self.clustering)
 
     def split(self, spike_ids):
