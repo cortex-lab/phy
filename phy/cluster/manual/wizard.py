@@ -192,7 +192,6 @@ class Wizard(EventEmitter):
         self._quality = None
         self._get_cluster_ids = None
         self._cluster_status = lambda cluster: None
-        self._next = None  # Strategy function.
         self._selection = ()
         self.reset()
 
@@ -234,22 +233,6 @@ class Wizard(EventEmitter):
         self._quality = func
         return func
 
-    def set_strategy_function(self, func):
-        """Register a function returning a new selection after the current
-        selection, as a function of the quality and similarity of the clusters.
-        """
-        # func(selection, cluster_ids=None, quality=None, similarity=None)
-
-        def wrapped(sel):
-            return func(self._selection,
-                        cluster_ids=self._get_cluster_ids(),
-                        quality=self._quality,
-                        status=self._cluster_status,
-                        similarity=self._similarity,
-                        )
-
-        self._next = wrapped
-
     # Properties
     #--------------------------------------------------------------------------
 
@@ -266,19 +249,17 @@ class Wizard(EventEmitter):
     # Selection methods
     #--------------------------------------------------------------------------
 
-    def _selection_changed(self, sel, add_to_history=True):
-        if sel is None:  # pragma: no cover
+    def select(self, cluster_ids, add_to_history=True):
+        if cluster_ids is None:  # pragma: no cover
             return
-        assert hasattr(sel, '__len__')
+        assert hasattr(cluster_ids, '__len__')
         clusters = self.cluster_ids
-        sel = tuple(cluster for cluster in sel if cluster in clusters)
-        self._selection = sel
+        cluster_ids = tuple(cluster for cluster in cluster_ids
+                            if cluster in clusters)
+        self._selection = cluster_ids
         if add_to_history:
             self._history.add(self._selection)
         self.emit('select', self._selection)
-
-    def select(self, cluster_ids):
-        self._selection_changed(cluster_ids)
 
     @property
     def selection(self):
@@ -321,10 +302,10 @@ class Wizard(EventEmitter):
     #--------------------------------------------------------------------------
 
     def _set_selection_from_history(self):
-        sel = self._history.current_item
-        if not sel:  # pragma: no cover
+        cluster_ids = self._history.current_item
+        if not cluster_ids:  # pragma: no cover
             return
-        self._selection_changed(sel, add_to_history=False)
+        self.select(cluster_ids, add_to_history=False)
 
     def previous(self):
         if self._history.current_position <= 2:
@@ -338,55 +319,21 @@ class Wizard(EventEmitter):
             # Go forward after a previous.
             self._history.forward()
             self._set_selection_from_history()
-        else:
-            if self._next:
-                # Or compute the next selection.
-                self.selection = self._next(self._selection)
-            else:
-                logger.debug("No strategy selected in the wizard.")
+
+    def next_by_quality(self):
+        self.selection = _best_quality_strategy(
+            self._selection,
+            cluster_ids=self._get_cluster_ids(),
+            quality=self._quality,
+            status=self._cluster_status,
+            similarity=self._similarity)
         return self._selection
 
-    # Attach
-    #--------------------------------------------------------------------------
-
-    def attach(self, obj):
-        """Attach an effector to the wizard."""
-
-        # Save the current selection when an action occurs.
-        @obj.connect
-        def on_request_undo_state(up):
-            return {'selection': self._selection}
-
-        @obj.connect
-        def on_cluster(up):
-            if not up.history:
-                # Reset the history after every change.
-                self.reset()
-            if up.history == 'undo':
-                # Revert to the given selection after an undo.
-                self._selection = tuple(up.undo_state[0]['selection'])
-            elif up.added:
-                self.select((up.added[0],))
-            elif up.description == 'metadata_group':
-                cluster = up.metadata_changed[0]
-                if cluster == self.best:
-                    self.pin()
-                else:
-                    self.next()
-            else:
-                # Or move to the next selection after any other action.
-                self.next()
-
-    def attach_cluster_groups(self, cluster_groups):
-
-        def get_cluster_ids():
-            return sorted(cluster_groups.keys())
-
-        self.set_cluster_ids_function(get_cluster_ids)
-
-        @self.set_status_function
-        def status(cluster):
-            group = cluster_groups.get(cluster, None)
-            return _wizard_group(group)
-
-        self.set_strategy_function(_best_quality_strategy)
+    def next_by_similarity(self):
+        self.selection = _best_similarity_strategy(
+            self._selection,
+            cluster_ids=self._get_cluster_ids(),
+            quality=self._quality,
+            status=self._cluster_status,
+            similarity=self._similarity)
+        return self._selection
