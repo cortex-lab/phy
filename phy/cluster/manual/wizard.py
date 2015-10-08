@@ -266,10 +266,6 @@ class Wizard(EventEmitter):
         """Return the current cluster selection."""
         return self._selection
 
-    @selection.setter
-    def selection(self, value):
-        self.select(value)
-
     @property
     def best(self):
         """Currently-selected best cluster."""
@@ -296,7 +292,7 @@ class Wizard(EventEmitter):
 
     def unpin(self):
         if len(self._selection) == 2:
-            self.selection = (self.selection[0],)
+            self.select((self.selection[0],))
 
     # Navigation
     #--------------------------------------------------------------------------
@@ -325,19 +321,19 @@ class Wizard(EventEmitter):
         self.next_by_similarity()
 
     def next_by_quality(self):
-        self.selection = _best_quality_strategy(
+        self.select(_best_quality_strategy(
             self._selection,
             cluster_ids=self._get_cluster_ids(),
             quality=self._quality,
             status=self._cluster_status,
-            similarity=self._similarity)
+            similarity=self._similarity))
         return self._selection
 
     def next_by_similarity(self):
-        self.selection = _best_similarity_strategy(
+        self.select(_best_similarity_strategy(
             self._selection,
             cluster_ids=self._get_cluster_ids(),
             quality=self._quality,
             status=self._cluster_status,
-            similarity=self._similarity)
+            similarity=self._similarity))
         return self._selection
