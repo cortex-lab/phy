@@ -128,6 +128,11 @@ class ClusterMeta(EventEmitter):
                 self.set(field, [cluster], value, add_to_stack=False)
         self._data_base = deepcopy(self._data)
 
+    def to_dict(self, field):
+        assert field in self._fields, "This field doesn't exist"
+        return {cluster: self.get(field, cluster)
+                for cluster in self._data.keys()}
+
     def set(self, field, clusters, value, add_to_stack=True):
         assert field in self._fields
 
