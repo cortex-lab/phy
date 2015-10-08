@@ -40,7 +40,7 @@ def _next_in_list(l, item):
     return item
 
 
-def _sort(clusters, status=None, remove_ignored=False):
+def _sort_by_status(clusters, status=None, remove_ignored=False):
     """Sort clusters according to their status."""
     assert status
     _sort_map = {None: 0, 'good': 1, 'ignored': 2}
@@ -70,7 +70,7 @@ def _most_similar_clusters(cluster, cluster_ids=None, n_max=None,
     if less_than:
         s = [(c, v) for (c, v) in s if v <= less_than]
     clusters = _argsort(s, n_max=n_max)
-    return _sort(clusters, status=status, remove_ignored=True)
+    return _sort_by_status(clusters, status=status, remove_ignored=True)
 
 
 def _wizard_group(group):
@@ -107,7 +107,7 @@ def _best_quality_strategy(selection,
     if n <= 1:
         best_clusters = _best_clusters(cluster_ids, quality)
         # Sort the best clusters according to their status.
-        best_clusters = _sort(best_clusters, status=status)
+        best_clusters = _sort_by_status(best_clusters, status=status)
         if selection:
             return (_next_in_list(best_clusters, selection[0]),)
         elif best_clusters:
