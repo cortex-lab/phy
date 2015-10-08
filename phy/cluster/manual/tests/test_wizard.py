@@ -12,7 +12,8 @@ from ..wizard import (_argsort,
                       _best_clusters,
                       _most_similar_clusters,
                       _wizard_group,
-                      best_quality_strategy,
+                      _best_quality_strategy,
+                      _best_similarity_strategy,
                       )
 from .._utils import UpdateInfo
 from phy.utils import EventEmitter
@@ -90,11 +91,11 @@ def test_best_quality_strategy():
     similarity = lambda c, d: c + d
 
     def _next(selection):
-        return best_quality_strategy(selection,
-                                     cluster_ids=cluster_ids,
-                                     quality=quality,
-                                     status=status,
-                                     similarity=similarity)
+        return _best_quality_strategy(selection,
+                                      cluster_ids=cluster_ids,
+                                      quality=quality,
+                                      status=status,
+                                      similarity=similarity)
 
     assert not _next(None)
     assert _next(()) == (4,)
@@ -104,6 +105,30 @@ def test_best_quality_strategy():
 
     assert _next((4, 3)) == (4, 2)
     assert _next((4, 2)) == (4, 2)  # 1 is ignored, so it does not appear.
+
+    assert _next((3, 2)) == (3, 2)
+    assert _next((2, 3)) == (2, 3)
+
+
+def test_best_similarity_strategy():
+    cluster_ids = [0, 1, 2, 3, 4]
+    #              i, i, g, N, N
+    quality = lambda c: c
+    status = lambda c: ('ignored', 'ignored', 'good')[c] if c <= 2 else None
+    similarity = lambda c, d: c * 1.1 + d
+
+    def _next(selection):
+        return _best_similarity_strategy(selection,
+                                         cluster_ids=cluster_ids,
+                                         quality=quality,
+                                         status=status,
+                                         similarity=similarity)
+
+    assert not _next(None)
+    assert _next(()) == (4, 3)
+
+    assert _next((4, 3)) == (4, 2)
+    assert _next((4, 2)) == (3, 2)
 
     assert _next((3, 2)) == (3, 2)
     assert _next((2, 3)) == (2, 3)

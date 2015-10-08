@@ -6,6 +6,7 @@
 
 #------------------------------------------------------------------------------
 
+from itertools import product
 import logging
 from operator import itemgetter
 
@@ -87,11 +88,11 @@ def _wizard_group(group):
 # Strategy functions
 #------------------------------------------------------------------------------
 
-def best_quality_strategy(selection,
-                          cluster_ids=None,
-                          quality=None,
-                          status=None,
-                          similarity=None):
+def _best_quality_strategy(selection,
+                           cluster_ids=None,
+                           quality=None,
+                           status=None,
+                           similarity=None):
     """Two cases depending on the number of selected clusters:
 
     * 1: move to the next best cluster
@@ -128,6 +129,42 @@ def best_quality_strategy(selection,
         if not candidates:
             return selection
         return (best, candidates[0])
+
+
+def _best_similarity_strategy(selection,
+                              cluster_ids=None,
+                              quality=None,
+                              status=None,
+                              similarity=None):
+    if selection is None:
+        return selection
+    selection = tuple(selection)
+    n = len(selection)
+    if n >= 2:
+        best, match = selection
+        value = similarity(best, match)
+    else:
+        best, match = None, None
+        value = None
+    # We remove the current pair, the (x, x) pairs, and we ensure that
+    # (d, c) doesn't appear if (c, d) does. We choose the pair where
+    # the first cluster of the pair has the highest quality.
+    # Finally we remove the ignored clusters.
+    s = [((c, d), similarity(c, d))
+         for c, d in product(cluster_ids, repeat=2)
+         if c != d and (c, d) != (best, match)
+         and quality(c) >= quality(d)
+         and status(c) != 'ignored'
+         and status(d) != 'ignored'
+         ]
+
+    if value is not None:
+        s = [((c, d), v) for ((c, d), v) in s if v <= value]
+    pairs = _argsort(s)
+    if pairs:
+        return pairs[0]
+    else:
+        return selection
 
 
 #------------------------------------------------------------------------------
@@ -352,4 +389,4 @@ class Wizard(EventEmitter):
             group = cluster_groups.get(cluster, None)
             return _wizard_group(group)
 
-        self.set_strategy_function(best_quality_strategy)
+        self.set_strategy_function(_best_quality_strategy)
