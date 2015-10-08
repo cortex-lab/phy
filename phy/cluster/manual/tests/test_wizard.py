@@ -173,5 +173,75 @@ def test_wizard_nav(wizard):
         assert w.selection == (1, 2)
 
 
-def test_wizard_pin(wizard):
+def test_wizard_pin_by_quality(wizard):
     w = wizard
+
+    w.pin()
+    assert w.selection == ()
+
+    w.unpin()
+    assert w.selection == ()
+
+    w.next_by_quality()
+    assert w.selection == (30,)
+
+    w.next_by_quality()
+    assert w.selection == (20,)
+
+    w.pin()
+    assert w.selection == (20, 30)
+
+    w.next_by_quality()
+    assert w.selection == (20, 10)
+
+    w.unpin()
+    assert w.selection == (20,)
+
+    w.next_by_quality()
+    assert w.selection == (10,)
+
+    w.pin()
+    assert w.selection == (10, 30)
+
+    w.next_by_quality()
+    assert w.selection == (10, 20)
+
+    w.next_by_quality()
+    assert w.selection == (10, 2)
+
+
+def test_wizard_pin_by_similarity(wizard):
+    w = wizard
+
+    w.pin()
+    assert w.selection == ()
+
+    w.unpin()
+    assert w.selection == ()
+
+    w.next_by_similarity()
+    assert w.selection == (30, 20)
+
+    w.next_by_similarity()
+    assert w.selection == (30, 10)
+
+    w.pin()
+    assert w.selection == (30, 20)
+
+    w.next_by_similarity()
+    assert w.selection == (30, 10)
+
+    w.unpin()
+    assert w.selection == (30,)
+
+    w.select((20, 10))
+    assert w.selection == (20, 10)
+
+    w.next_by_similarity()
+    assert w.selection == (20, 2)
+
+    w.next_by_similarity()
+    assert w.selection == (20, 1)
+
+    w.next_by_similarity()
+    assert w.selection == (10, 2)
