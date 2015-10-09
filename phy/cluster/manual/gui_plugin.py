@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Manual clustering GUI plugins."""
+"""Manual clustering GUI plugin."""
 
 
 # -----------------------------------------------------------------------------
@@ -121,7 +121,7 @@ def _attach_wizard(wizard, clustering, cluster_meta):
 
 
 # -----------------------------------------------------------------------------
-# Clustering GUI plugins
+# Clustering GUI plugin
 # -----------------------------------------------------------------------------
 
 class ManualClustering(IPlugin):
