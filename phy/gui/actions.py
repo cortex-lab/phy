@@ -87,6 +87,15 @@ def _alias_name(name):
     return alias, name
 
 
+def _set_shortcut(action, shortcut):
+    if not shortcut:
+        return
+    if not isinstance(shortcut, (tuple, list)):
+        shortcut = [shortcut]
+    for key in shortcut:
+        action.setShortcut(key)
+
+
 class Actions(EventEmitter):
     """Handle GUI actions.
 
@@ -139,11 +148,7 @@ class Actions(EventEmitter):
         action.triggered.connect(callback)
         action.setCheckable(checkable)
         action.setChecked(checked)
-        if shortcut:
-            if not isinstance(shortcut, (tuple, list)):
-                shortcut = [shortcut]
-            for key in shortcut:
-                action.setShortcut(key)
+        _set_shortcut(action, shortcut)
 
         # HACK: add the shortcut string to the QAction object so that
         # it can be shown in show_shortcuts(). I don't manage to recover
@@ -198,6 +203,12 @@ class Actions(EventEmitter):
             if alias_or_name in (action.alias, name):
                 return name
         raise ValueError("Action `{}` doesn't exist.".format(alias_or_name))
+
+    def change_shortcut(self, name, shortcut):
+        assert name in self._actions, "This action doesn't exist."
+        action = self._actions[name]
+        action.shortcut = shortcut
+        _set_shortcut(action.qaction, shortcut)
 
     def run(self, action, *args):
         """Run an action, specified by its name or object."""
