@@ -13,6 +13,7 @@ import logging
 from six import string_types, PY3
 
 from .qt import QtGui
+from phy.utils import Bunch
 from phy.utils.event import EventEmitter
 
 logger = logging.getLogger(__name__)
@@ -79,6 +80,13 @@ def _show_shortcuts(shortcuts, name=None):
 # Actions
 # -----------------------------------------------------------------------------
 
+def _alias_name(name):
+    # Get the alias from the character after & if it exists.
+    alias = name[name.index('&') + 1] if '&' in name else name
+    name = name.replace('&', '')
+    return alias, name
+
+
 class Actions(EventEmitter):
     """Handle GUI actions.
 
@@ -123,6 +131,28 @@ class Actions(EventEmitter):
             def exit():
                 gui.close()
 
+    def _create_action_bunch(self, callback=None, name=None, shortcut=None,
+                             alias=None, checkable=False, checked=False):
+
+        # Create the QAction instance.
+        action = QtGui.QAction(name, self._gui)
+        action.triggered.connect(callback)
+        action.setCheckable(checkable)
+        action.setChecked(checked)
+        if shortcut:
+            if not isinstance(shortcut, (tuple, list)):
+                shortcut = [shortcut]
+            for key in shortcut:
+                action.setShortcut(key)
+
+        # HACK: add the shortcut string to the QAction object so that
+        # it can be shown in show_shortcuts(). I don't manage to recover
+        # the key sequence string from a QAction using Qt.
+        shortcut = shortcut or ''
+
+        return Bunch(qaction=action, name=name, alias=alias,
+                     shortcut=shortcut, callback=callback)
+
     def add(self, callback=None, name=None, shortcut=None, alias=None,
             checkable=False, checked=False):
         """Add an action with a keyboard shortcut."""
@@ -137,37 +167,20 @@ class Actions(EventEmitter):
         assert callback
         name = name or callback.__name__
 
-        # Get the alias from the character after & if it exists.
         if alias is None:
-            alias = name[name.index('&') + 1] if '&' in name else name
-        name = name.replace('&', '')
+            alias, name = _alias_name(name)
+
         if name in self._actions:
             return
 
-        # Create the QAction instance.
-        action = QtGui.QAction(name, self._gui)
-        action.triggered.connect(callback)
-        action.setCheckable(checkable)
-        action.setChecked(checked)
-        if shortcut:
-            if not isinstance(shortcut, (tuple, list)):
-                shortcut = [shortcut]
-            for key in shortcut:
-                action.setShortcut(key)
-
-        # Add some attributes to the QAction instance.
-        # The alias is used in snippets.
-        action._alias = alias
-        action._callback = callback
-        action._name = name
-        # HACK: add the shortcut string to the QAction object so that
-        # it can be shown in show_shortcuts(). I don't manage to recover
-        # the key sequence string from a QAction using Qt.
-        action._shortcut_string = shortcut or ''
+        action = self._create_action_bunch(name=name,
+                                           alias=alias,
+                                           shortcut=shortcut,
+                                           callback=callback)
 
         # Register the action.
         if self._gui:
-            self._gui.addAction(action)
+            self._gui.addAction(action.qaction)
         self._actions[name] = action
 
         # Log the creation of the action.
@@ -182,7 +195,7 @@ class Actions(EventEmitter):
     def get_name(self, alias_or_name):
         """Return an action name from its alias or name."""
         for name, action in self._actions.items():
-            if alias_or_name in (action._alias, name):
+            if alias_or_name in (action.alias, name):
                 return name
         raise ValueError("Action `{}` doesn't exist.".format(alias_or_name))
 
@@ -193,15 +206,15 @@ class Actions(EventEmitter):
             assert name in self._actions
             action = self._actions[name]
         else:
-            name = action._name
+            name = action.name
         if not name.startswith('_'):
             logger.debug("Execute action `%s`.", name)
-        return action._callback(*args)
+        return action.callback(*args)
 
     def remove(self, name):
         """Remove an action."""
         if self._gui:
-            self._gui.removeAction(self._actions[name])
+            self._gui.removeAction(self._actions[name].qaction)
         del self._actions[name]
         delattr(self, name)
 
@@ -214,7 +227,7 @@ class Actions(EventEmitter):
     @property
     def shortcuts(self):
         """A dictionary of action shortcuts."""
-        return {name: action._shortcut_string
+        return {name: action.shortcut
                 for name, action in self._actions.items()}
 
     def show_shortcuts(self):
