@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test GUI plugins."""
+"""Test GUI plugin."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -12,11 +12,11 @@ from numpy.testing import assert_array_equal as ae
 
 from ..clustering import Clustering
 from .._utils import create_cluster_meta
-from ..gui_plugins import (_wizard_group,
-                           _attach_wizard,
-                           _attach_wizard_to_clustering,
-                           _attach_wizard_to_cluster_meta,
-                           )
+from ..gui_plugin import (_wizard_group,
+                          _attach_wizard,
+                          _attach_wizard_to_clustering,
+                          _attach_wizard_to_cluster_meta,
+                          )
 from phy.gui.tests.test_gui import gui  # noqa
 
 
