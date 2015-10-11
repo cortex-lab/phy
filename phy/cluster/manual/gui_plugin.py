@@ -153,12 +153,12 @@ class ManualClustering(IPlugin):
     save_requested(spike_clusters, cluster_groups)
 
     """
-    def attach_to_gui(self, gui,
-                      spike_clusters=None,
-                      cluster_groups=None,
-                      n_spikes_max_per_cluster=100,
-                      ):
-        self.gui = gui
+    def __init__(self, spike_clusters=None,
+                 cluster_groups=None,
+                 n_spikes_max_per_cluster=100,
+                 ):
+
+        self.n_spikes_max_per_cluster = n_spikes_max_per_cluster
 
         # Create Clustering and ClusterMeta.
         self.clustering = Clustering(spike_clusters)
@@ -169,26 +169,12 @@ class ManualClustering(IPlugin):
         self.wizard = Wizard()
         _attach_wizard(self.wizard, self.clustering, self.cluster_meta)
 
-        @self.wizard.connect
-        def on_select(cluster_ids):
-            """When the wizard selects clusters, choose a spikes subset
-            and emit the `select` event on the GUI.
+        # Create the actions.
+        self._create_actions()
 
-            The wizard is responsible for the notion of "selected clusters".
-
-            """
-            spike_ids = select_spikes(np.array(cluster_ids),
-                                      n_spikes_max_per_cluster,
-                                      self.clustering.spikes_per_cluster)
-            gui.emit('select', cluster_ids, spike_ids)
-
-        self.create_actions(gui)
-
-        return self
-
-    def create_actions(self, gui):
+    def _create_actions(self):
         self.actions = actions = Actions()
-        self.snippets = snippets = Snippets()
+        self.snippets = Snippets()
 
         # Create the default actions for the clustering GUI.
         @actions.connect
@@ -212,10 +198,29 @@ class ManualClustering(IPlugin):
             actions.add(callback=self.undo)
             actions.add(callback=self.redo)
 
-        # Attach the GUI and register the actions.
-        snippets.attach(gui, actions)
-        actions.attach(gui)
         actions.reset()
+
+    def attach_to_gui(self, gui):
+        self.gui = gui
+
+        @self.wizard.connect
+        def on_select(cluster_ids):
+            """When the wizard selects clusters, choose a spikes subset
+            and emit the `select` event on the GUI.
+
+            The wizard is responsible for the notion of "selected clusters".
+
+            """
+            spike_ids = select_spikes(np.array(cluster_ids),
+                                      self.n_spikes_max_per_cluster,
+                                      self.clustering.spikes_per_cluster)
+            gui.emit('select', cluster_ids, spike_ids)
+
+        # Attach the GUI and register the actions.
+        self.snippets.attach(gui, self.actions)
+        self.actions.attach(gui)
+
+        return self
 
     # Wizard-related actions
     # -------------------------------------------------------------------------

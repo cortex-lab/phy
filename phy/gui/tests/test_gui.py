@@ -153,12 +153,15 @@ def test_gui_1(qtbot):
 def test_gui_plugin(qtbot, gui):
 
     class TestPlugin(IPlugin):
+        def __init__(self, arg):
+            self._arg = arg
+
         def attach_to_gui(self, gui):
-            gui._attached = True
+            gui._attached = self._arg
             return 'attached'
 
-    assert gui.attach('testplugin') == 'attached'
-    assert gui._attached
+    assert gui.attach('testplugin', 3) == 'attached'
+    assert gui._attached == 3
 
 
 def test_gui_status_message(qtbot):
