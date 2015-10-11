@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from pytest import raises
 
 from .._types import (Bunch, _is_integer, _is_list, _is_float,
                       _as_list, _is_array_like, _as_array, _as_tuple,
@@ -74,6 +75,10 @@ def test_array():
     _check(_as_array(3, np.float))
     _check(_as_array(3., np.float))
     _check(_as_array([3], np.float))
+    _check(_as_array(np.array([3])))
+    with raises(ValueError):
+        _check(_as_array(np.array([3]), dtype=np.object))
+    _check(_as_array(np.array([3]), np.float))
 
     assert _as_array(None) is None
     assert not _is_array_like(None)
