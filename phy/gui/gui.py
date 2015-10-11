@@ -91,8 +91,8 @@ class GUI(QtGui.QMainWindow):
         """Attach a plugin to the GUI."""
         if isinstance(plugin, string_types):
             # Instantiate the plugin if the name is given.
-            plugin = get_plugin(plugin)()
-        return plugin.attach_to_gui(self, *args, **kwargs)
+            plugin = get_plugin(plugin)(*args, **kwargs)
+        return plugin.attach_to_gui(self)
 
     # Events
     # -------------------------------------------------------------------------
