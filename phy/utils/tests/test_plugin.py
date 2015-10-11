@@ -43,6 +43,8 @@ def test_plugin_1(no_native_plugins):
     with raises(ValueError):
         get_plugin('unknown')
 
+    get_plugin('myplugin')().attach_to_gui(None)
+
 
 def test_discover_plugins(tempdir, no_native_plugins):
     path = op.join(tempdir, 'my_plugin.py')
