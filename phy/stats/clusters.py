@@ -38,6 +38,21 @@ def sorted_main_channels(mean_masks, unmasked_channels):
 # Wizard measures
 #------------------------------------------------------------------------------
 
+def max_waveform_amplitude(mean_masks, mean_waveforms):
+
+    assert mean_waveforms.ndim == 2
+    n_samples, n_channels = mean_waveforms.shape
+
+    assert mean_masks.ndim == 1
+    assert mean_masks.shape == (n_channels,)
+
+    mean_waveforms = mean_masks * mean_waveforms
+
+    # Amplitudes.
+    m, M = mean_waveforms.min(axis=1), mean_waveforms.max(axis=1)
+    return np.max(M - m)
+
+
 def mean_masked_features_distance(mean_features_0,
                                   mean_features_1,
                                   mean_masks_0,
@@ -61,9 +76,3 @@ def mean_masked_features_distance(mean_features_0,
     d_1 = mu_1 * omeg_1
 
     return np.linalg.norm(d_0 - d_1)
-
-
-def max_mean_masks(mean_masks):
-    """Return the maximum mean_masks across all channels
-    for a given cluster."""
-    return mean_masks.max()
