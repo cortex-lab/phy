@@ -17,10 +17,8 @@ import os
 import os.path as op
 
 from six import with_metaclass
-from traitlets import List, Unicode
-from traitlets.config import Configurable
 
-from ._misc import load_master_config, PHY_USER_DIR
+from . import _misc
 
 logger = logging.getLogger(__name__)
 
@@ -105,33 +103,19 @@ def discover_plugins(dirs):
     return IPluginRegistry.plugins
 
 
-class Plugins(Configurable):
-    """Configure the list of user plugin directories.
-
-    By default, there is only `~/.phy/plugins/`.
-
-    """
-    dirs = List(Unicode,
-                default_value=[op.expanduser(op.join(PHY_USER_DIR,
-                                                     'plugins/'))],
-                config=True,
-                )
+def _builtin_plugins_dir():
+    return op.realpath(op.join(op.dirname(__file__), '../plugins/'))
 
 
-def get_all_plugins():
+def _user_plugins_dir():
+    return op.expanduser(op.join(_misc.phy_user_dir(), 'plugins/'))
+
+
+def get_all_plugins(config=None):
     """Load all builtin and user plugins."""
-
-    # Builtin plugins.
-    builtin_plugins_dir = [op.realpath(op.join(op.dirname(__file__),
-                                               '../plugins/'))]
-
-    # Load the plugin dirs from all config files.
-    plugins_config = Plugins()
-    c = load_master_config()
-    plugins_config.update_config(c)
-
-    # Add the builtin dirs.
-    dirs = builtin_plugins_dir + plugins_config.dirs
-
-    # Return all loaded plugins.
+    # By default, builtin and default user plugin.
+    dirs = [_builtin_plugins_dir(), _user_plugins_dir()]
+    # Add Plugins.dir from the optionally-passed config object.
+    if config:
+        dirs += config.Plugins.dirs
     return [plugin for (plugin,) in discover_plugins(dirs)]

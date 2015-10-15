@@ -11,16 +11,15 @@ import os
 import os.path as op
 from textwrap import dedent
 
-from traitlets import List, Unicode
 from pytest import yield_fixture, raises
 
 from ..plugin import (IPluginRegistry,
                       IPlugin,
-                      Plugins,
                       get_plugin,
                       discover_plugins,
                       get_all_plugins,
                       )
+from .._misc import _write_text, load_master_config
 
 
 #------------------------------------------------------------------------------
@@ -34,6 +33,31 @@ def no_native_plugins():
     IPluginRegistry.plugins = []
     yield
     IPluginRegistry.plugins = plugins
+
+
+@yield_fixture(params=[(False, 'my_plugins/plugin.py'),
+                       (True, 'plugins/plugin.py'),
+                       ])
+def plugin(no_native_plugins, temp_user_dir, request):
+    path = op.join(temp_user_dir, request.param[1])
+    contents = """
+        from phy import IPlugin
+        class MyPlugin(IPlugin):
+            pass
+    """
+    _write_text(path, contents)
+    yield temp_user_dir, request.param[0], request.param[1]
+
+
+def _write_my_plugins_dir_in_config(temp_user_dir):
+    # Now, we specify the path to the plugin in the phy config file.
+    config_contents = """
+       c = get_config()
+       c.Plugins.dirs = ['{}']
+    """
+    _write_text(op.join(temp_user_dir, 'phy_config.py'),
+                config_contents,
+                op.join(temp_user_dir, 'my_plugins/'))
 
 
 #------------------------------------------------------------------------------
@@ -57,49 +81,37 @@ def test_plugin_1(no_native_plugins):
 def test_discover_plugins(tempdir, no_native_plugins):
     path = op.join(tempdir, 'my_plugin.py')
     contents = '''from phy import IPlugin\nclass MyPlugin(IPlugin): pass'''
-    with open(path, 'w') as f:
-        f.write(contents)
+    _write_text(path, contents)
 
     plugins = discover_plugins([tempdir])
     assert plugins
     assert plugins[0][0].__name__ == 'MyPlugin'
 
 
-def test_get_all_plugins(temp_user_dir):
-
+def test_get_all_plugins(plugin):
+    temp_user_dir, in_default_dir, path = plugin
     n_builtin_plugins = 0
 
     plugins = get_all_plugins()
-    assert len(plugins) == n_builtin_plugins
 
-    plugin_contents = dedent("""
-    from phy import IPlugin
-    class MyPlugin(IPlugin):
-        pass
-    """)
+    def _assert_loaded():
+        assert len(plugins) == n_builtin_plugins + 1
+        p = plugins[-1]
+        assert p.__name__ == 'MyPlugin'
 
-    # Create a plugin in some directory.
-    os.mkdir(op.join(temp_user_dir, 'myplugins/'))
-    with open(op.join(temp_user_dir, 'myplugins/myplugin.py'), 'w') as f:
-        f.write(plugin_contents)
+    if in_default_dir:
+        # Create a plugin in the default plugins directory: it will be
+        # discovered and automatically loaded by get_all_plugins().
+        _assert_loaded()
+    else:
+        assert len(plugins) == n_builtin_plugins
 
-    # By default, this directory has no reason to be scanned, and the
-    # plugin is not loaded.
-    plugins = get_all_plugins()
-    assert len(plugins) == n_builtin_plugins
+        # This time, we write the custom plugins path in the config file.
+        _write_my_plugins_dir_in_config(temp_user_dir)
 
-    # Specify the path to the plugin in the phy config file..
-    config_contents = dedent("""
-       c = get_config()
-       c.Plugins.dirs = ['%s']
-       """ % op.join(temp_user_dir, 'myplugins/'))
-    with open(op.join(temp_user_dir, 'phy_config.py'), 'w') as f:
-        f.write(config_contents)
+        # We reload all plugins with the master config object.
+        config = load_master_config()
+        plugins = get_all_plugins(config)
 
-    # Now, reload all plugins.
-    plugins = get_all_plugins()
-
-    # This time, the plugin will be found.
-    assert len(plugins) == n_builtin_plugins + 1
-    p = plugins[-1]
-    assert p.__name__ == 'MyPlugin'
+        # This time, the plugin should be found.
+        _assert_loaded()
