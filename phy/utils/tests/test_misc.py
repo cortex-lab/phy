@@ -22,19 +22,6 @@ from .._misc import (_git_version, _load_json, _save_json, _read_python,
                      _load_config, load_master_config,
                      _encode_qbytearray, _decode_qbytearray,
                      )
-from .. import _misc
-
-
-#------------------------------------------------------------------------------
-# Fixtures
-#------------------------------------------------------------------------------
-
-@yield_fixture
-def temp_user_dir(tempdir):
-    user_dir = _misc.PHY_USER_DIR
-    _misc.PHY_USER_DIR = tempdir
-    yield tempdir
-    _misc.PHY_USER_DIR = user_dir
 
 
 #------------------------------------------------------------------------------
