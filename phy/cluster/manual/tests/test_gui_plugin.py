@@ -260,15 +260,17 @@ def test_manual_clustering_split(manual_clustering):
     assert_selection(31, 20)
 
 
-def test_manual_clustering_move(manual_clustering):
+def test_manual_clustering_move(manual_clustering, quality, similarity):
     mc, assert_selection = manual_clustering
 
     mc.actions.select([30])
     assert_selection(30)
 
-    # TODO: set quality and similarity functions
-    # mc.actions.next_by_quality()
-    # assert_selection(20)
+    mc.wizard.set_quality_function(quality)
+    mc.wizard.set_similarity_function(similarity)
 
-    # mc.actions.move([20], 'noise')
-    # assert_selection(2)
+    mc.actions.next_by_quality()
+    assert_selection(20)
+
+    mc.actions.move([20], 'noise')
+    assert_selection(2)
