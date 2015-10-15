@@ -16,11 +16,12 @@ from ..clusters import (mean,
                         mean_probe_position,
                         sorted_main_channels,
                         mean_masked_features_distance,
-                        max_mean_masks,
+                        max_waveform_amplitude,
                         )
 from phy.electrode.mea import staggered_positions
 from phy.io.mock import (artificial_features,
                          artificial_masks,
+                         artificial_waveforms,
                          )
 
 
@@ -39,6 +40,11 @@ def n_spikes():
 
 
 @yield_fixture
+def n_samples():
+    yield 40
+
+
+@yield_fixture
 def n_features_per_channel():
     yield 4
 
@@ -51,6 +57,11 @@ def features(n_spikes, n_channels, n_features_per_channel):
 @yield_fixture
 def masks(n_spikes, n_channels):
     yield artificial_masks(n_spikes, n_channels)
+
+
+@yield_fixture
+def waveforms(n_spikes, n_samples, n_channels):
+    yield artificial_waveforms(n_spikes, n_samples, n_channels)
 
 
 @yield_fixture
@@ -97,6 +108,20 @@ def test_sorted_main_channels(masks):
     assert np.all(np.in1d(channels, [5, 7]))
 
 
+def test_max_waveform_amplitude(masks, waveforms):
+    waveforms *= .1
+    masks *= .1
+
+    waveforms[:, 10, :] *= 10
+    masks[:, 10] *= 10
+
+    mean_waveforms = mean(waveforms)
+    mean_masks = mean(masks)
+
+    amplitude = max_waveform_amplitude(mean_masks, mean_waveforms)
+    assert amplitude > 0
+
+
 def test_mean_masked_features_distance(features,
                                        n_channels,
                                        n_features_per_channel,
@@ -116,9 +141,3 @@ def test_mean_masked_features_distance(features,
     d_computed = mean_masked_features_distance(f0, f1, m0, m1,
                                                n_features_per_channel)
     ac(d_expected, d_computed)
-
-
-def test_max_mean_masks(masks):
-    mean_masks = mean(masks)
-    mmm = max_mean_masks(mean_masks)
-    assert mmm > .4
