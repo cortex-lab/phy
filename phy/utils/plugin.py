@@ -39,11 +39,13 @@ class IPluginRegistry(type):
 
 
 class IPlugin(with_metaclass(IPluginRegistry)):
-    def attach_to_gui(self, gui):
-        pass
+    """A class deriving from IPlugin can implement the following methods:
 
-    def attach_to_cli(self, cli):
-        pass
+    * `attach_to_gui(gui)`: called when the plugin is attached to a GUI.
+    * `attach_to_cli(cli)`: called when the CLI is created.
+
+    """
+    pass
 
 
 def get_plugin(name):
@@ -96,9 +98,9 @@ def discover_plugins(dirs):
                     # Loading the module registers the plugin in
                     # IPluginRegistry.
                     try:
-                        mod = imp.load_module(modname, file,
-                                              path, descr)  # noqa
-                    except Exception as e:
+                        mod = imp.load_module(modname, file,  # noqa
+                                              path, descr)
+                    except Exception as e:  # pragma: no cover
                         logger.exception(e)
     return IPluginRegistry.plugins
 

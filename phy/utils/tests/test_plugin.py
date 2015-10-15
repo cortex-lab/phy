@@ -7,9 +7,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os
 import os.path as op
-from textwrap import dedent
 
 from pytest import yield_fixture, raises
 
@@ -73,9 +71,6 @@ def test_plugin_1(no_native_plugins):
 
     with raises(ValueError):
         get_plugin('unknown')
-
-    get_plugin('myplugin')().attach_to_cli(None)
-    get_plugin('myplugin')().attach_to_gui(None)
 
 
 def test_discover_plugins(tempdir, no_native_plugins):
