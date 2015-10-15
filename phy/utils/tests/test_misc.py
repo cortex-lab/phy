@@ -142,7 +142,6 @@ def test_load_master_config(temp_user_dir):
     # Create a config file in the temporary user directory.
     config_contents = dedent("""
        c = get_config()
-
        c.MyConfigurable.my_var = 1.0
        """)
     with open(op.join(temp_user_dir, 'phy_config.py'), 'w') as f:
