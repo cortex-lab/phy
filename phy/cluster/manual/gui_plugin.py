@@ -206,15 +206,15 @@ class ManualClustering(IPlugin):
         @self.wizard.connect
         def on_select(cluster_ids):
             """When the wizard selects clusters, choose a spikes subset
-            and emit the `select` event on the GUI.
-
-            The wizard is responsible for the notion of "selected clusters".
-
-            """
+            and emit the `select` event on the GUI."""
             spike_ids = select_spikes(np.array(cluster_ids),
                                       self.n_spikes_max_per_cluster,
                                       self.clustering.spikes_per_cluster)
             gui.emit('select', cluster_ids, spike_ids)
+
+        @self.wizard.connect
+        def on_start():
+            gui.emit('wizard_start')
 
         # Attach the GUI and register the actions.
         self.snippets.attach(gui, self.actions)

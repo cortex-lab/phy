@@ -298,6 +298,7 @@ class Wizard(EventEmitter):
             self._set_selection_from_history()
 
     def restart(self):
+        self.emit('start')
         self.select([])
         self.next_by_quality()
 
