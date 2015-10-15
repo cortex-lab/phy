@@ -13,6 +13,7 @@ import os.path as op
 import os
 import sys
 import subprocess
+from textwrap import dedent
 
 from traitlets.config import Config, PyFileConfigLoader
 import numpy as np
@@ -20,8 +21,6 @@ from six import string_types, exec_
 from six.moves import builtins
 
 from ._types import _is_integer
-
-PHY_USER_DIR = op.expanduser('~/.phy/')
 
 
 #------------------------------------------------------------------------------
@@ -121,7 +120,7 @@ def _load_config(path):
 def load_master_config():
     """Load a master Config file from `~/.phy/phy_config.py`."""
     c = Config()
-    paths = [op.join(PHY_USER_DIR, 'phy_config.py')]
+    paths = [op.join(phy_user_dir(), 'phy_config.py')]
     for path in paths:
         c.update(_load_config(path))
     return c
@@ -130,6 +129,10 @@ def load_master_config():
 #------------------------------------------------------------------------------
 # Various Python utility functions
 #------------------------------------------------------------------------------
+
+def phy_user_dir():
+    return op.expanduser('~/.phy/')
+
 
 def _read_python(path):
     path = op.realpath(op.expanduser(path))
@@ -140,6 +143,17 @@ def _read_python(path):
     exec_(contents, {}, metadata)
     metadata = {k.lower(): v for (k, v) in metadata.items()}
     return metadata
+
+
+def _write_text(path, contents, *args, **kwargs):
+    contents = dedent(contents.format(*args, **kwargs))
+    dir_path = op.dirname(path)
+    if not op.exists(dir_path):
+        os.mkdir(dir_path)
+    assert op.isdir(dir_path)
+    assert not op.exists(path)
+    with open(path, 'w') as f:
+        f.write(contents)
 
 
 def _is_interactive():  # pragma: no cover
