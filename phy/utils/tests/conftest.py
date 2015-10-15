@@ -8,8 +8,6 @@
 
 from pytest import yield_fixture
 
-from phy.utils import _misc
-
 
 #------------------------------------------------------------------------------
 # Common fixtures
@@ -17,7 +15,25 @@ from phy.utils import _misc
 
 @yield_fixture
 def temp_user_dir(tempdir):
-    user_dir = _misc.PHY_USER_DIR
-    _misc.PHY_USER_DIR = tempdir
+    """NOTE: the user directory should be loaded with:
+
+    ```python
+    from .. import _misc
+    _misc.phy_user_dir()
+    ```
+
+    and not:
+
+    ```python
+    from _misc import phy_user_dir
+    ```
+
+    Otherwise, the monkey patching hack in tests won't work.
+
+    """
+    from phy.utils import _misc
+
+    user_dir = _misc.phy_user_dir
+    _misc.phy_user_dir = lambda: tempdir
     yield tempdir
-    _misc.PHY_USER_DIR = user_dir
+    _misc.phy_user_dir = user_dir
