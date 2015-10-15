@@ -23,6 +23,7 @@ from .._misc import (_git_version, _load_json, _save_json, _read_python,
                      _load_config, load_master_config,
                      _encode_qbytearray, _decode_qbytearray,
                      )
+from .. import _misc
 
 
 #------------------------------------------------------------------------------
@@ -97,6 +98,10 @@ def test_write_text(tempdir):
         _write_text(path, 'hello world')
         with open(path, 'r') as f:
             assert f.read() == 'hello world'
+
+
+def test_temp_user_dir(temp_user_dir):
+    assert _misc.phy_user_dir() == temp_user_dir
 
 
 def test_git_version():
