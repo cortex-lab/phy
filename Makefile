@@ -15,16 +15,10 @@ lint:
 	flake8 phy
 
 test: lint
-	python setup.py test
+	py.test
 
 coverage:
 	coverage --html
-
-unit-tests: lint
-	python setup.py test -a phy
-
-integration-tests: lint
-	python setup.py test -a tests
 
 apidoc:
 	python tools/api.py
