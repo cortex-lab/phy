@@ -40,13 +40,14 @@ def spike_detector(request):
     remap = request.param[0]
 
     probe = load_probe('1x32_buzsaki')
-    channel_mapping = {i: i for i in range(1, 21, 2)} if remap else None
+    site_label_to_traces_row = ({i: i for i in range(1, 21, 2)}
+                                if remap else None)
 
     sd = SpikeDetector()
     sd.use_single_threshold = False
     sample_rate = 20000
     sd.set_metadata(probe,
-                    channel_mapping=channel_mapping,
+                    site_label_to_traces_row=site_label_to_traces_row,
                     sample_rate=sample_rate)
 
     yield sd

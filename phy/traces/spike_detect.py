@@ -95,7 +95,7 @@ class SpikeDetector(Task):
     extract_s_after = Int(10)
     weight_power = Float(2)
 
-    def set_metadata(self, probe, channel_mapping=None,
+    def set_metadata(self, probe, site_label_to_traces_row=None,
                      sample_rate=None):
         assert isinstance(probe, MEA)
         self.probe = probe
@@ -104,24 +104,26 @@ class SpikeDetector(Task):
         self.sample_rate = sample_rate
 
         # Channel mapping.
-        if channel_mapping is None:
-            channel_mapping = {c: c for c in probe.channels}
+        if site_label_to_traces_row is None:
+            site_label_to_traces_row = {c: c for c in probe.channels}
         # Remove channels mapped to None or a negative value: they are dead.
-        channel_mapping = {k: v for (k, v) in channel_mapping.items()
-                           if v is not None and v >= 0}
+        site_label_to_traces_row = {k: v for (k, v) in
+                                    site_label_to_traces_row.items()
+                                    if v is not None and v >= 0}
         # channel mappings is {trace_col: channel_id}.
         # Trace columns and channel ids to keep.
-        self.trace_cols = sorted(channel_mapping.keys())
-        self.channel_ids = sorted(channel_mapping.values())
+        self.trace_cols = sorted(site_label_to_traces_row.keys())
+        self.channel_ids = sorted(site_label_to_traces_row.values())
         # The key is the col in traces, the val is the channel id.
         adj = self.probe.adjacency  # Numbers are all channel ids.
         # First, we subset the adjacency list with the kept channel ids.
         adj = _adjacency_subset(adj, self.channel_ids)
         # Then, we remap to convert from channel ids to trace columns.
         # We need to inverse the mapping.
-        channel_mapping_inv = {v: c for (c, v) in channel_mapping.items()}
+        site_label_to_traces_row_inv = {v: c for (c, v) in
+                                        site_label_to_traces_row.items()}
         # Now, the adjacency list contains trace column numbers.
-        adj = _remap_adjacency(adj, channel_mapping_inv)
+        adj = _remap_adjacency(adj, site_label_to_traces_row_inv)
         assert set(adj) <= set(self.trace_cols)
         # Finally, we need to remap with relative column indices.
         rel_mapping = {c: i for (i, c) in enumerate(self.trace_cols)}
