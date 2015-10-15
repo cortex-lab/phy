@@ -13,20 +13,32 @@ from textwrap import dedent
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import raises
+from pytest import raises, yield_fixture
 from six import string_types
 from traitlets import Float
 from traitlets.config import Configurable
 
-
-from .._misc import (_git_version, _load_json, _save_json,
-                     _load_config,
+from .._misc import (_git_version, _load_json, _save_json, _read_python,
+                     _load_config, load_master_config,
                      _encode_qbytearray, _decode_qbytearray,
                      )
+from .. import _misc
 
 
 #------------------------------------------------------------------------------
-# Tests
+# Fixtures
+#------------------------------------------------------------------------------
+
+@yield_fixture
+def temp_user_dir(tempdir):
+    user_dir = _misc.PHY_USER_DIR
+    _misc.PHY_USER_DIR = tempdir
+    yield tempdir
+    _misc.PHY_USER_DIR = user_dir
+
+
+#------------------------------------------------------------------------------
+# Misc tests
 #------------------------------------------------------------------------------
 
 def test_qbytearray(tempdir):
@@ -82,34 +94,12 @@ def test_json_numpy(tempdir):
     assert d['b'] == d_bis['b']
 
 
-def test_load_config(tempdir):
-    path = op.join(tempdir, 'config.py')
-
-    class MyConfigurable(Configurable):
-        my_var = Float(0.0, config=True)
-
-    assert MyConfigurable().my_var == 0.0
-
-    # Create and load a config file.
-    config_contents = dedent("""
-       c = get_config()
-
-       c.MyConfigurable.my_var = 1.0
-       """)
-
+def test_read_python(tempdir):
+    path = op.join(tempdir, 'mock.py')
     with open(path, 'w') as f:
-        f.write(config_contents)
+        f.write("""a = {'b': 1}""")
 
-    c = _load_config(path)
-    assert c.MyConfigurable.my_var == 1.0
-
-    # Create a new MyConfigurable instance.
-    configurable = MyConfigurable()
-    assert configurable.my_var == 0.0
-
-    # Load the config object.
-    configurable.update_config(c)
-    assert configurable.my_var == 1.0
+    assert _read_python(path) == {'a': {'b': 1}}
 
 
 def test_git_version():
@@ -125,3 +115,52 @@ def test_git_version():
         assert v[:5] == "-git-", "Git version does not begin in -git-"
     except (OSError, subprocess.CalledProcessError):  # pragma: no cover
         assert v == ""
+
+
+#------------------------------------------------------------------------------
+# Config tests
+#------------------------------------------------------------------------------
+
+def test_load_config(tempdir):
+
+    class MyConfigurable(Configurable):
+        my_var = Float(0.0, config=True)
+
+    assert MyConfigurable().my_var == 0.0
+
+    # Create and load a config file.
+    config_contents = dedent("""
+       c = get_config()
+
+       c.MyConfigurable.my_var = 1.0
+       """)
+
+    path = op.join(tempdir, 'config.py')
+    with open(path, 'w') as f:
+        f.write(config_contents)
+
+    c = _load_config(path)
+    assert c.MyConfigurable.my_var == 1.0
+
+    # Create a new MyConfigurable instance.
+    configurable = MyConfigurable()
+    assert configurable.my_var == 0.0
+
+    # Load the config object.
+    configurable.update_config(c)
+    assert configurable.my_var == 1.0
+
+
+def test_load_master_config(temp_user_dir):
+    # Create a config file in the temporary user directory.
+    config_contents = dedent("""
+       c = get_config()
+
+       c.MyConfigurable.my_var = 1.0
+       """)
+    with open(op.join(temp_user_dir, 'phy_config.py'), 'w') as f:
+        f.write(config_contents)
+
+    # Load the master config file.
+    c = load_master_config()
+    assert c.MyConfigurable.my_var == 1.

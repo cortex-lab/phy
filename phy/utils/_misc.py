@@ -14,12 +14,14 @@ import os
 import sys
 import subprocess
 
-from traitlets.config import PyFileConfigLoader
+from traitlets.config import Config, PyFileConfigLoader
 import numpy as np
 from six import string_types, exec_
 from six.moves import builtins
 
 from ._types import _is_integer
+
+PHY_USER_DIR = op.expanduser('~/.phy/')
 
 
 #------------------------------------------------------------------------------
@@ -104,6 +106,26 @@ def _save_json(path, data):
 
 
 #------------------------------------------------------------------------------
+# traitlets config
+#------------------------------------------------------------------------------
+
+def _load_config(path):
+    path = op.realpath(path)
+    dirpath, filename = op.split(path)
+    config = PyFileConfigLoader(filename, dirpath).load_config()
+    return config
+
+
+def load_master_config():
+    """Load a master Config file from `~/.phy/phy_config.py`."""
+    c = Config()
+    paths = [op.join(PHY_USER_DIR, 'phy_config.py')]
+    for path in paths:
+        c.update(_load_config(path))
+    return c
+
+
+#------------------------------------------------------------------------------
 # Various Python utility functions
 #------------------------------------------------------------------------------
 
@@ -116,12 +138,6 @@ def _read_python(path):
     exec_(contents, {}, metadata)
     metadata = {k.lower(): v for (k, v) in metadata.items()}
     return metadata
-
-
-def _load_config(path):
-    dirpath, filename = op.split(path)
-    config = PyFileConfigLoader(filename, dirpath).load_config()
-    return config
 
 
 def _is_interactive():  # pragma: no cover
