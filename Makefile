@@ -15,7 +15,7 @@ lint:
 	flake8 phy
 
 test: lint
-	py.test
+	py.test --cov-report term-missing --cov=phy phy
 
 coverage:
 	coverage --html
