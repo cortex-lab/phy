@@ -117,10 +117,11 @@ def _load_config(path):
     return config
 
 
-def load_master_config():
+def load_master_config(user_dir=None):
     """Load a master Config file from `~/.phy/phy_config.py`."""
+    user_dir = user_dir or phy_user_dir()
     c = Config()
-    paths = [op.join(phy_user_dir(), 'phy_config.py')]
+    paths = [op.join(user_dir, 'phy_config.py')]
     for path in paths:
         c.update(_load_config(path))
     return c
