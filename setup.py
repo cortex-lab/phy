@@ -54,6 +54,7 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'phy = phy.cli:phy'
         ],
     },
     include_package_data=True,

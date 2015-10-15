@@ -43,6 +43,7 @@ def test_plugin_1(no_native_plugins):
     with raises(ValueError):
         get_plugin('unknown')
 
+    get_plugin('myplugin')().attach_to_cli(None)
     get_plugin('myplugin')().attach_to_gui(None)
 
 

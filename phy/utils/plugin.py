@@ -40,6 +40,9 @@ class IPlugin(with_metaclass(IPluginRegistry)):
     def attach_to_gui(self, gui):
         pass
 
+    def attach_to_cli(self, cli):
+        pass
+
 
 def get_plugin(name):
     """Get a plugin class from its name."""
