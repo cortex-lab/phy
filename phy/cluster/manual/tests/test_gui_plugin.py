@@ -269,6 +269,16 @@ def test_manual_clustering_move(manual_clustering, quality, similarity):
     mc.wizard.set_quality_function(quality)
     mc.wizard.set_similarity_function(similarity)
 
+    # Check that the wizard_start event is fired.
+    _check = []
+
+    @mc.gui.connect_
+    def on_wizard_start():
+        _check.append('wizard')
+
+    mc.wizard.restart()
+    assert _check == ['wizard']
+
     mc.actions.next_by_quality()
     assert_selection(20)
 
