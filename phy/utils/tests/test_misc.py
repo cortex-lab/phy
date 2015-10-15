@@ -13,12 +13,13 @@ from textwrap import dedent
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import raises, yield_fixture
+from pytest import raises
 from six import string_types
 from traitlets import Float
 from traitlets.config import Configurable
 
 from .._misc import (_git_version, _load_json, _save_json, _read_python,
+                     _write_text,
                      _load_config, load_master_config,
                      _encode_qbytearray, _decode_qbytearray,
                      )
@@ -87,6 +88,15 @@ def test_read_python(tempdir):
         f.write("""a = {'b': 1}""")
 
     assert _read_python(path) == {'a': {'b': 1}}
+
+
+def test_write_text(tempdir):
+    for path in (op.join(tempdir, 'test_1'),
+                 op.join(tempdir, 'test_dir/test_2.txt'),
+                 ):
+        _write_text(path, 'hello world')
+        with open(path, 'r') as f:
+            assert f.read() == 'hello world'
 
 
 def test_git_version():
