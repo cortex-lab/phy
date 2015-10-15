@@ -110,6 +110,8 @@ def _save_json(path, data):
 #------------------------------------------------------------------------------
 
 def _load_config(path):
+    if not op.exists(path):
+        return {}
     path = op.realpath(path)
     dirpath, filename = op.split(path)
     config = PyFileConfigLoader(filename, dirpath).load_config()
