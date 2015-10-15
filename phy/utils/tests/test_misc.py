@@ -100,6 +100,10 @@ def test_write_text(tempdir):
             assert f.read() == 'hello world'
 
 
+def test_phy_user_dir():
+    assert _misc.phy_user_dir().endswith('.phy/')
+
+
 def test_temp_user_dir(temp_user_dir):
     assert _misc.phy_user_dir() == temp_user_dir
 
