@@ -10,37 +10,14 @@
 
 import os
 import os.path as op
-import sys
 import re
 
 from setuptools import setup
-from setuptools.command.test import test as TestCommand
 
 
 #------------------------------------------------------------------------------
 # Setup
 #------------------------------------------------------------------------------
-
-class PyTest(TestCommand):
-    user_options = [('pytest-args=', 'a', "String of arguments to pass to py.test")]
-
-    def initialize_options(self):
-        TestCommand.initialize_options(self)
-        self.pytest_args = '--cov-report term-missing --cov=phy phy tests'
-
-    def finalize_options(self):
-        TestCommand.finalize_options(self)
-        self.test_args = []
-        self.test_suite = True
-
-    def run_tests(self):
-        #import here, cause outside the eggs aren't loaded
-        import pytest
-        pytest_string = '-s ' + self.pytest_args
-        print("Running: py.test " + pytest_string)
-        errno = pytest.main(pytest_string)
-        sys.exit(errno)
-
 
 def _package_tree(pkgroot):
     path = op.dirname(__file__)
@@ -81,7 +58,6 @@ setup(
         ],
     },
     include_package_data=True,
-    # zip_safe=False,
     keywords='phy,data analysis,electrophysiology,neuroscience',
     classifiers=[
         'Development Status :: 4 - Beta',
@@ -94,5 +70,4 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
     ],
-    cmdclass={'test': PyTest},
 )
