@@ -9,13 +9,18 @@
 import os
 import os.path as op
 import subprocess
+from textwrap import dedent
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from pytest import raises
 from six import string_types
+from traitlets import Float
+from traitlets.config import Configurable
+
 
 from .._misc import (_git_version, _load_json, _save_json,
+                     _load_config,
                      _encode_qbytearray, _decode_qbytearray,
                      )
 
@@ -75,6 +80,36 @@ def test_json_numpy(tempdir):
     ae(arr_bis, arr)
 
     assert d['b'] == d_bis['b']
+
+
+def test_load_config(tempdir):
+    path = op.join(tempdir, 'config.py')
+
+    class MyConfigurable(Configurable):
+        my_var = Float(0.0, config=True)
+
+    assert MyConfigurable().my_var == 0.0
+
+    # Create and load a config file.
+    config_contents = dedent("""
+       c = get_config()
+
+       c.MyConfigurable.my_var = 1.0
+       """)
+
+    with open(path, 'w') as f:
+        f.write(config_contents)
+
+    c = _load_config(path)
+    assert c.MyConfigurable.my_var == 1.0
+
+    # Create a new MyConfigurable instance.
+    configurable = MyConfigurable()
+    assert configurable.my_var == 0.0
+
+    # Load the config object.
+    configurable.update_config(c)
+    assert configurable.my_var == 1.0
 
 
 def test_git_version():
