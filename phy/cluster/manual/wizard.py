@@ -236,6 +236,8 @@ class Wizard(EventEmitter):
         clusters = self.cluster_ids
         cluster_ids = [cluster for cluster in cluster_ids
                        if cluster in clusters]
+        if not self._selection and cluster_ids:
+            self.emit('start')
         self._selection = cluster_ids
         if add_to_history:
             self._history.add(self._selection)
@@ -298,7 +300,6 @@ class Wizard(EventEmitter):
             self._set_selection_from_history()
 
     def restart(self):
-        self.emit('start')
         self.select([])
         self.next_by_quality()
 
