@@ -14,6 +14,7 @@ import os
 import sys
 import subprocess
 
+from traitlets.config import PyFileConfigLoader
 import numpy as np
 from six import string_types, exec_
 from six.moves import builtins
@@ -115,6 +116,12 @@ def _read_python(path):
     exec_(contents, {}, metadata)
     metadata = {k.lower(): v for (k, v) in metadata.items()}
     return metadata
+
+
+def _load_config(path):
+    dirpath, filename = op.split(path)
+    config = PyFileConfigLoader(filename, dirpath).load_config()
+    return config
 
 
 def _is_interactive():  # pragma: no cover
