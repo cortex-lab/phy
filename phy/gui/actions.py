@@ -111,7 +111,7 @@ def _create_qaction(gui, name, callback, shortcut):
     # Create the QAction instance.
     action = QtGui.QAction(name, gui)
 
-    def wrapped(checked, *args, **kwargs):
+    def wrapped(checked, *args, **kwargs):  # pragma: no cover
         return callback(*args, **kwargs)
 
     action.triggered.connect(wrapped)

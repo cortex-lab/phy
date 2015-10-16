@@ -6,26 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os
-from sys import platform
-
-from pytest import mark, yield_fixture
-
 from ..qt import Qt
 from ..gui import GUI
 from phy.utils._color import _random_color
 from phy.utils.plugin import IPlugin
-from .test_actions import actions  # noqa
-
-# Skip some tests on OS X or on CI systems (Travis).
-skip_mac = mark.skipif(platform == "darwin",
-                       reason="Some tests don't work on OS X because of a bug "
-                              "with QTest (qtbot) keyboard events that don't "
-                              "trigger QAction shortcuts. On CI these tests "
-                              "fail because the GUI is not displayed.")
-
-skip_ci = mark.skipif(os.environ.get('CI', None) is not None,
-                      reason="Some shortcut-related Qt tests fail on CI.")
 
 
 #------------------------------------------------------------------------------
@@ -43,68 +27,6 @@ def _create_canvas():
         c.context.clear(c.color)
 
     return c
-
-
-@yield_fixture
-def gui():
-    yield GUI(position=(200, 100), size=(100, 100))
-
-
-#------------------------------------------------------------------------------
-# Test actions and snippet
-#------------------------------------------------------------------------------
-
-@skip_mac  # noqa
-@skip_ci
-def test_actions_gui(qtbot, gui, actions):
-    actions.attach(gui)
-
-    qtbot.addWidget(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
-
-    _press = []
-
-    @actions.add(shortcut='ctrl+g')
-    def press():
-        _press.append(0)
-
-    qtbot.keyPress(gui, Qt.Key_G, Qt.ControlModifier)
-    assert _press == [0]
-
-    # Quit the GUI.
-    qtbot.keyPress(gui, Qt.Key_Q, Qt.ControlModifier)
-
-
-@skip_mac  # noqa
-@skip_ci
-def test_snippets_gui(qtbot, gui, actions):
-
-    qtbot.addWidget(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
-
-    _actions = []
-
-    @actions.add(name='my_test_1', alias='t1')
-    def test(*args):
-        _actions.append(args)
-
-    # Attach the GUI and register the actions.
-    actions.attach(gui)
-    snippets = actions.snippets
-
-    # Simulate the following keystrokes `:t2 ^H^H1 3-5 ab,c `
-    assert not snippets.is_mode_on()
-    qtbot.keyClicks(gui, ':t2 ')
-
-    assert snippets.is_mode_on()
-    qtbot.keyPress(gui, Qt.Key_Backspace)
-    qtbot.keyPress(gui, Qt.Key_Backspace)
-    qtbot.keyClicks(gui, '1 3-5 ab,c')
-    qtbot.keyPress(gui, Qt.Key_Return)
-
-    assert _actions == [([3, 4, 5], ['ab', 'c'])]
 
 
 #------------------------------------------------------------------------------

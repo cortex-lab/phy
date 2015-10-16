@@ -6,30 +6,15 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import raises, yield_fixture
+from pytest import raises
 
+from ..qt import Qt
 from ..actions import (_show_shortcuts,
                        _get_shortcut_string,
                        _get_qkeysequence,
                        _parse_snippet,
-                       Actions,
-                       Snippets,
                        )
 from phy.utils.testing import captured_output, captured_logging
-
-
-#------------------------------------------------------------------------------
-# Utilities and fixtures
-#------------------------------------------------------------------------------
-
-@yield_fixture
-def actions():
-    yield Actions()
-
-
-@yield_fixture
-def snippets():
-    yield Snippets()
 
 
 #------------------------------------------------------------------------------
@@ -95,6 +80,65 @@ def test_actions_simple(actions):
     assert _res == [(1,)]
 
     actions.remove_all()
+
+
+#------------------------------------------------------------------------------
+# Test actions and snippet
+#------------------------------------------------------------------------------
+
+def test_actions_gui(qtbot, gui, actions):
+    actions.attach(gui)
+
+    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+
+    _press = []
+
+    @actions.add(shortcut='g')
+    def press():
+        _press.append(0)
+
+    actions.press()
+    assert _press == [0]
+
+    actions.exit()
+
+
+def test_snippets_gui(qtbot, gui, actions):
+
+    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+
+    _actions = []
+
+    @actions.add(name='my_test_1', alias='t1')
+    def test(*args):
+        _actions.append(args)
+
+    # Attach the GUI and register the actions.
+    actions.attach(gui)
+    snippets = actions.snippets
+
+    # Simulate the following keystrokes `:t2 ^H^H1 3-5 ab,c `
+    assert not snippets.is_mode_on()
+
+    def _run(cmd):
+        """Simulate keystrokes."""
+        for char in cmd:
+            i = snippets._snippet_chars.index(char)
+            actions.run('_snippet_{}'.format(i))
+
+    actions.enable_snippet_mode()
+    _run('t2 ')
+    assert snippets.is_mode_on()
+    actions._snippet_backspace()
+    actions._snippet_backspace()
+    _run('1 3-5 ab,c')
+    actions._snippet_activate()
+
+    assert _actions == [([3, 4, 5], ['ab', 'c'])]
 
 
 #------------------------------------------------------------------------------
