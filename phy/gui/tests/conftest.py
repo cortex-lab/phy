@@ -17,8 +17,10 @@ from ..gui import GUI
 #------------------------------------------------------------------------------
 
 @yield_fixture
-def gui():
-    yield GUI(position=(200, 100), size=(100, 100))
+def gui(qapp):
+    gui = GUI(position=(200, 100), size=(100, 100))
+    yield gui
+    gui.close()
 
 
 @yield_fixture
