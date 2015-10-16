@@ -12,7 +12,7 @@ import os
 import os.path as op
 
 from phy.utils.event import ProgressReporter
-from phy.utils.settings import _phy_user_dir, _ensure_dir_exists
+from phy.utils.settings import phy_user_dir, _ensure_dir_exists
 
 logger = logging.getLogger(__name__)
 
@@ -147,10 +147,10 @@ def download_file(url, output_path):
     return
 
 
-def download_test_data(name, phy_user_dir=None, force=False):
+def download_test_data(name, user_dir=None, force=False):
     """Download a test file."""
-    phy_user_dir = phy_user_dir or _phy_user_dir()
-    dir = op.join(phy_user_dir, 'test_data')
+    user_dir = user_dir or phy_user_dir()
+    dir = op.join(user_dir, 'test_data')
     _ensure_dir_exists(dir)
     path = op.join(dir, name)
     if not force and op.exists(path):

@@ -35,7 +35,7 @@ def phy(ctx):
 
 def load_cli_plugins(cli):
     """Load all plugins and attach them to a CLI object."""
-    from ._misc import load_master_config
+    from .settings import load_master_config
     from .plugin import get_all_plugins
 
     config = load_master_config()
