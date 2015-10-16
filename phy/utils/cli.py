@@ -43,7 +43,7 @@ def load_cli_plugins(cli):
 
     # TODO: try/except to avoid crashing if a plugin is broken.
     for plugin in plugins:
-        if not hasattr(plugin, 'attach_to_cli'):
+        if not hasattr(plugin, 'attach_to_cli'):  # pragma: no cover
             continue
         logger.info("Attach plugin `%s`.", plugin.__name__)
         # NOTE: plugin is a class, so we need to instantiate it.

@@ -15,8 +15,10 @@ from traitlets.config import Configurable
 
 from .. import config as _config
 from .._misc import _write_text
-from ..config import (_load_config,
+from ..config import (_ensure_dir_exists,
+                      _load_config,
                       load_master_config,
+                      save_config,
                       )
 
 
@@ -26,6 +28,12 @@ from ..config import (_load_config,
 
 def test_phy_user_dir():
     assert _config.phy_user_dir().endswith('.phy/')
+
+
+def test_ensure_dir_exists(tempdir):
+    path = op.join(tempdir, 'a/b/c')
+    _ensure_dir_exists(path)
+    assert op.isdir(path)
 
 
 def test_temp_user_dir(temp_user_dir):
@@ -102,3 +110,12 @@ def test_load_master_config(temp_user_dir):
     # Load the master config file.
     c = load_master_config()
     assert c.MyConfigurable.my_var == 1.
+
+
+def test_save_config(tempdir):
+    c = {'A': {'b': 3.}}
+    path = op.join(tempdir, 'config.json')
+    save_config(path, c)
+
+    c1 = _load_config(path)
+    assert c1.A.b == 3.
