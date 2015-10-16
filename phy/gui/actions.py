@@ -190,7 +190,7 @@ class Actions(EventEmitter):
 
         # Log the creation of the action.
         if not name.startswith('_'):
-            logger.debug("Add action `%s`, alias `%s`, shortcut %s.",
+            logger.debug("Add action `%s`, alias `%s`, shortcut `%s`.",
                          name, alias, shortcut or '')
 
         if callback:
@@ -208,6 +208,8 @@ class Actions(EventEmitter):
         assert name in self._actions, "This action doesn't exist."
         action = self._actions[name]
         action.shortcut = shortcut
+        logger.debug("Change shortcut of action `%s` to shortcut `%s`.",
+                     name, shortcut or '')
         _set_shortcut(action.qaction, shortcut)
 
     def run(self, action, *args):
@@ -329,7 +331,9 @@ class Snippets(object):
     def _enter(self):
         """Disable the snippet mode and execute the command."""
         command = self.command
-        logger.debug("Snippet keystroke `Enter`.")
+        logger.log(5, "Snippet keystroke `Enter`.")
+        # NOTE: we need to set back the actions (mode_off) before running
+        # the command.
         self.mode_off()
         self.run(command)
 
@@ -347,7 +351,7 @@ class Snippets(object):
 
             def _make_func(char):
                 def callback():
-                    logger.debug("Snippet keystroke `%s`.", char)
+                    logger.log(5, "Snippet keystroke `%s`.", char)
                     self.command += char
                 return callback
 
@@ -375,7 +379,11 @@ class Snippets(object):
         snippet = snippet[1:]
         snippet_args = _parse_snippet(snippet)
         alias = snippet_args[0]
-        name = self._actions.get_name(alias)
+        try:
+            name = self._actions.get_name(alias)
+        except ValueError:
+            logger.warn("Snippet `%s` cannot be found.", alias)
+            return
         assert name
         func = getattr(self._actions, name)
         try:
