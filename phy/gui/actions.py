@@ -60,7 +60,7 @@ def _parse_snippet(s):
 
 def _shortcut_string(shortcut):
     if isinstance(shortcut, QtGui.QKeySequence.StandardKey):
-        return QtGui.QKeySequence(shortcut).toString().lower()
+        return str(QtGui.QKeySequence(shortcut).toString()).lower()
     elif isinstance(shortcut, string_types):
         return shortcut
     elif isinstance(shortcut, (tuple, list)):
@@ -197,10 +197,7 @@ class Actions(EventEmitter):
 
         # Log the creation of the action.
         if not name.startswith('_'):
-            if isinstance(shortcut, QtGui.QKeySequence.StandardKey):
-                shortcut = QtGui.QKeySequence(shortcut).toString().lower()
-            elif shortcut is None:
-                shortcut = ''
+            shortcut = _shortcut_string(shortcut)
             msg = "Add action `%s`, alias `%s`" % (name, alias)
             msg += (", shortcut `%s`." % shortcut) if shortcut else '.'
             logger.debug(msg)
