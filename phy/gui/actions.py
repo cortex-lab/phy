@@ -65,6 +65,7 @@ def _shortcut_string(shortcut):
         return shortcut
     elif isinstance(shortcut, (tuple, list)):
         return ', '.join(shortcut)
+    return ''
 
 
 def _show_shortcuts(shortcuts, name=None):
@@ -82,20 +83,34 @@ def _show_shortcuts(shortcuts, name=None):
 # Actions
 # -----------------------------------------------------------------------------
 
-def _alias_name(name):
+def _alias(name):
     # Get the alias from the character after & if it exists.
     alias = name[name.index('&') + 1] if '&' in name else name
-    name = name.replace('&', '')
-    return alias, name
+    return alias
 
 
-def _set_shortcut(action, shortcut):
-    if not shortcut:
-        return
+def _get_qt_shortcut(single_shortcut):
+    if (isinstance(single_shortcut, string_types) and
+            hasattr(QtGui.QKeySequence, single_shortcut)):
+        return getattr(QtGui.QKeySequence, single_shortcut)
+    return single_shortcut
+
+
+def _get_qt_shortcuts(shortcut):
+    if shortcut is None:
+        return []
     if not isinstance(shortcut, (tuple, list)):
         shortcut = [shortcut]
-    for key in shortcut:
+    return [_get_qt_shortcut(s) for s in shortcut]
+
+
+def _create_qaction(gui, name, callback, qt_shortcuts):
+    # Create the QAction instance.
+    action = QtGui.QAction(name, gui)
+    action.triggered.connect(callback)
+    for key in qt_shortcuts:
         action.setShortcut(key)
+    return action
 
 
 class Actions(EventEmitter):
@@ -147,63 +162,36 @@ class Actions(EventEmitter):
         def on_show():
             self.reset()
 
-    def _create_action_bunch(self, callback=None, name=None, shortcut=None,
-                             alias=None, checkable=False, checked=False):
-
-        # Create the QAction instance.
-        action = QtGui.QAction(name, self._gui)
-        action.triggered.connect(callback)
-        action.setCheckable(checkable)
-        action.setChecked(checked)
-        _set_shortcut(action, shortcut)
-
-        # HACK: add the shortcut string to the QAction object so that
-        # it can be shown in show_shortcuts(). I don't manage to recover
-        # the key sequence string from a QAction using Qt.
-        shortcut = shortcut or ''
-
-        return Bunch(qaction=action, name=name, alias=alias,
-                     shortcut=shortcut, callback=callback)
-
-    def add(self, callback=None, name=None, shortcut=None, alias=None,
-            checkable=False, checked=False):
+    def add(self, callback=None, name=None, shortcut=None, alias=None):
         """Add an action with a keyboard shortcut."""
+        # TODO: add menu_name option and create menu bar
         if callback is None:
             # Allow to use either add(func) or @add or @add(...).
             return partial(self.add, name=name, shortcut=shortcut,
-                           alias=alias, checkable=checkable, checked=checked)
-
-        # TODO: add menu_name option and create menu bar
+                           alias=alias)
+        assert callback
 
         # Get the name from the callback function if needed.
-        assert callback
         name = name or callback.__name__
+        alias = alias or _alias(name)
+        name = name.replace('&', '')
+        qt_shortcuts = _get_qt_shortcuts(shortcut)
 
-        if alias is None:
-            alias, name = _alias_name(name)
-
+        # Skip existing action.
         if name in self._actions:
             return
 
-        action = self._create_action_bunch(name=name,
-                                           alias=alias,
-                                           shortcut=shortcut,
-                                           callback=callback)
-
-        # Register the action.
+        # Create and register the action.
+        action = _create_qaction(self._gui, name, callback, qt_shortcuts)
+        action_obj = Bunch(qaction=action, name=name, alias=alias,
+                           shortcut=shortcut, callback=callback)
         if self._gui:
-            self._gui.addAction(action.qaction)
-        self._actions[name] = action
+            self._gui.addAction(action)
+        self._actions[name] = action_obj
 
-        # Log the creation of the action.
-        if not name.startswith('_'):
-            shortcut = _shortcut_string(shortcut)
-            msg = "Add action `%s`, alias `%s`" % (name, alias)
-            msg += (", shortcut `%s`." % shortcut) if shortcut else '.'
-            logger.log(5, msg)
+        # Set the callback method.
         if callback:
             setattr(self, name, callback)
-        return action
 
     def get_name(self, alias_or_name):
         """Return an action name from its alias or name."""
