@@ -198,8 +198,6 @@ class ManualClustering(IPlugin):
             actions.add(callback=self.undo)
             actions.add(callback=self.redo)
 
-        actions.reset()
-
     def attach_to_gui(self, gui):
         self.gui = gui
 
