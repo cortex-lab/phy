@@ -50,8 +50,6 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups):
         elif len(cluster_ids) >= 2:
             assert mc.wizard.match == cluster_ids[2]
 
-    mc.actions.reset()
-
     yield mc, assert_selection
 
 
