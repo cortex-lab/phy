@@ -23,10 +23,12 @@ logger = logging.getLogger(__name__)
 
 @click.group()
 @click.version_option(version=phy.__version_git__)
-@click.help_option()
+@click.help_option('-h', '--help')
+@click.option('-d', '--debug', is_flag=True)
 @click.pass_context
-def phy(ctx):
-    pass
+def phy(ctx, debug):
+    if debug:
+        logging.setLevel('DEBUG')
 
 
 #------------------------------------------------------------------------------
