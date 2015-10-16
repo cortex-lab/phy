@@ -97,17 +97,12 @@ def test_snippets_gui(qtbot, gui, actions):
 
     # Simulate the following keystrokes `:t2 ^H^H1 3-5 ab,c `
     assert not snippets.is_mode_on()
-    # print(gui.actions()[0].shortcut().toString())
-    # actions.show_shortcuts()
     qtbot.keyClicks(gui, ':t2 ')
-    # qtbot.stop()
-    # return
 
     assert snippets.is_mode_on()
     qtbot.keyPress(gui, Qt.Key_Backspace)
     qtbot.keyPress(gui, Qt.Key_Backspace)
     qtbot.keyClicks(gui, '1 3-5 ab,c')
-    # qtbot.stop()
     qtbot.keyPress(gui, Qt.Key_Return)
     qtbot.waitForWindowShown(gui)
 

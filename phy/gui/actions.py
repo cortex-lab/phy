@@ -110,7 +110,11 @@ def _alias(name):
 def _create_qaction(gui, name, callback, shortcut):
     # Create the QAction instance.
     action = QtGui.QAction(name, gui)
-    action.triggered.connect(callback)
+
+    def wrapped(checked, *args, **kwargs):
+        return callback(*args, **kwargs)
+
+    action.triggered.connect(wrapped)
     sequence = _get_qkeysequence(shortcut)
     if not isinstance(sequence, (tuple, list)):
         sequence = [sequence]
@@ -371,6 +375,8 @@ class Snippets(object):
     def mode_off(self):
         if self._gui:
             self._gui.status_message = ''
+        # Remove all existing actions.
+        self._actions.remove_all()
         logger.info("Snippet mode disabled.")
         # Reestablishes the shortcuts.
         for action_obj in self._actions_backup.values():
