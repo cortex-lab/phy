@@ -200,7 +200,7 @@ class Actions(EventEmitter):
             shortcut = _shortcut_string(shortcut)
             msg = "Add action `%s`, alias `%s`" % (name, alias)
             msg += (", shortcut `%s`." % shortcut) if shortcut else '.'
-            logger.debug(msg)
+            logger.log(5, msg)
         if callback:
             setattr(self, name, callback)
         return action
@@ -391,6 +391,7 @@ class Snippets(object):
             func(*snippet_args[1:])
         except Exception as e:
             logger.warn("Error when executing snippet: %s.", str(e))
+            logger.exception(e)
 
     def is_mode_on(self):
         return self.command.startswith(':')
