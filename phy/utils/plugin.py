@@ -18,7 +18,7 @@ import os.path as op
 
 from six import with_metaclass
 
-from . import _misc
+from . import settings
 
 logger = logging.getLogger(__name__)
 
@@ -110,7 +110,7 @@ def _builtin_plugins_dir():
 
 
 def _user_plugins_dir():
-    return op.expanduser(op.join(_misc.phy_user_dir(), 'plugins/'))
+    return op.expanduser(op.join(settings.phy_user_dir(), 'plugins/'))
 
 
 def get_all_plugins(config=None):

@@ -17,7 +17,8 @@ from ..plugin import (IPluginRegistry,
                       discover_plugins,
                       get_all_plugins,
                       )
-from .._misc import _write_text, load_master_config
+from .._misc import _write_text
+from ..settings import load_master_config
 
 
 #------------------------------------------------------------------------------

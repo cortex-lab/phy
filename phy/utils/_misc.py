@@ -15,7 +15,6 @@ import sys
 import subprocess
 from textwrap import dedent
 
-from traitlets.config import Config, PyFileConfigLoader
 import numpy as np
 from six import string_types, exec_
 from six.moves import builtins
@@ -105,35 +104,8 @@ def _save_json(path, data):
 
 
 #------------------------------------------------------------------------------
-# traitlets config
-#------------------------------------------------------------------------------
-
-def _load_config(path):
-    if not op.exists(path):
-        return {}
-    path = op.realpath(path)
-    dirpath, filename = op.split(path)
-    config = PyFileConfigLoader(filename, dirpath).load_config()
-    return config
-
-
-def load_master_config(user_dir=None):
-    """Load a master Config file from `~/.phy/phy_config.py`."""
-    user_dir = user_dir or phy_user_dir()
-    c = Config()
-    paths = [op.join(user_dir, 'phy_config.py')]
-    for path in paths:
-        c.update(_load_config(path))
-    return c
-
-
-#------------------------------------------------------------------------------
 # Various Python utility functions
 #------------------------------------------------------------------------------
-
-def phy_user_dir():
-    return op.expanduser('~/.phy/')
-
 
 def _read_python(path):
     path = op.realpath(op.expanduser(path))
