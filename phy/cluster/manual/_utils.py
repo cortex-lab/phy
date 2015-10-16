@@ -37,6 +37,7 @@ def create_cluster_meta(cluster_groups):
     meta = ClusterMeta()
     meta.add_field('group')
 
+    cluster_groups = cluster_groups or {}
     data = {c: {'group': v} for c, v in cluster_groups.items()}
     meta.from_dict(data)
 
