@@ -32,7 +32,7 @@ class IPluginRegistry(type):
 
     def __init__(cls, name, bases, attrs):
         if name != 'IPlugin':
-            logger.debug("Register plugin %s.", name)
+            logger.debug("Register plugin `%s`.", name)
             plugin_tuple = (cls,)
             if plugin_tuple not in IPluginRegistry.plugins:
                 IPluginRegistry.plugins.append(plugin_tuple)
@@ -85,12 +85,12 @@ def discover_plugins(dirs):
             base = op.basename(subdir)
             if 'test' in base or '__' in base:  # pragma: no cover
                 continue
-            logger.debug("Scanning %s.", subdir)
+            logger.debug("Scanning `%s`.", subdir)
             for filename in files:
                 if (filename.startswith('__') or
                         not filename.endswith('.py')):
                     continue  # pragma: no cover
-                logger.debug("Found %s.", filename)
+                logger.debug("Found plugin module `%s`.", filename)
                 path = os.path.join(subdir, filename)
                 modname, ext = op.splitext(filename)
                 file, path, descr = imp.find_module(modname, [subdir])
