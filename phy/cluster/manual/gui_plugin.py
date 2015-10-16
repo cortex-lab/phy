@@ -10,6 +10,7 @@
 import logging
 
 import numpy as np
+from six import integer_types
 
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
@@ -201,7 +202,8 @@ class ManualClustering(IPlugin):
     def _add_action(self, callback, name=None, alias=None):
         name = name or callback.__name__
         shortcut = self.shortcuts.get(name, None)
-        self.actions.add(callback=callback, name=name, shortcut=shortcut)
+        self.actions.add(callback=callback, name=name,
+                         shortcut=shortcut, alias=alias)
 
     def _create_actions(self):
         self.actions = actions = Actions()
@@ -255,6 +257,8 @@ class ManualClustering(IPlugin):
     # -------------------------------------------------------------------------
 
     def select(self, cluster_ids):
+        if isinstance(cluster_ids, integer_types):
+            cluster_ids = [cluster_ids]
         self.wizard.select(cluster_ids)
 
     # Clustering actions

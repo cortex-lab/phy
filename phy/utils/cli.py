@@ -49,7 +49,7 @@ def load_cli_plugins(cli):
     for plugin in plugins:
         if not hasattr(plugin, 'attach_to_cli'):  # pragma: no cover
             continue
-        logger.info("Attach plugin `%s`.", plugin.__name__)
+        logger.info("Attach plugin `%s` to CLI.", plugin.__name__)
         # NOTE: plugin is a class, so we need to instantiate it.
         plugin().attach_to_cli(cli)
 
