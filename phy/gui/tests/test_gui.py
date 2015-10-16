@@ -127,9 +127,9 @@ def test_gui_1(qtbot):
 
     # Increase coverage.
     @gui.connect_
-    def on_show_gui():
+    def on_show():
         pass
-    gui.unconnect_(on_show_gui)
+    gui.unconnect_(on_show)
     qtbot.keyPress(gui, Qt.Key_Control)
     qtbot.keyRelease(gui, Qt.Key_Control)
 
@@ -186,7 +186,7 @@ def test_gui_state(qtbot):
     gui.add_view(_create_canvas(), 'view2')
 
     @gui.connect_
-    def on_close_gui():
+    def on_close():
         _gs.append(gui.save_geometry_state())
 
     gui.show()
@@ -208,7 +208,7 @@ def test_gui_state(qtbot):
     gui.add_view(_create_canvas(), 'view2')
 
     @gui.connect_
-    def on_show_gui():
+    def on_show():
         gui.restore_geometry_state(_gs[0])
 
     qtbot.addWidget(gui)
