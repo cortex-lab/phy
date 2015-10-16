@@ -16,6 +16,7 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 from .wizard import Wizard
 from phy.gui.actions import Actions, Snippets
+from phy.gui.qt import QtGui
 from phy.io.array import select_spikes
 from phy.utils.plugin import IPlugin
 
@@ -153,6 +154,25 @@ class ManualClustering(IPlugin):
     save_requested(spike_clusters, cluster_groups)
 
     """
+
+    default_shortcuts = {
+        'save': QtGui.QKeySequence.Save,
+        # Wizard actions.
+        'reset_wizard': 'ctrl+w',
+        'next': 'space',
+        'previous': 'shift+space',
+        'reset_wizard': 'ctrl+alt+space',
+        'first': QtGui.QKeySequence.MoveToStartOfLine,
+        'last': QtGui.QKeySequence.MoveToEndOfLine,
+        'pin': 'return',
+        'unpin': QtGui.QKeySequence.Back,
+        # Clustering actions.
+        'merge': 'g',
+        'split': 'k',
+        'undo': QtGui.QKeySequence.Undo,
+        'redo': QtGui.QKeySequence.Redo,
+    }
+
     def __init__(self, spike_clusters=None,
                  cluster_groups=None,
                  n_spikes_max_per_cluster=100,
@@ -172,6 +192,11 @@ class ManualClustering(IPlugin):
         # Create the actions.
         self._create_actions()
 
+    def _add_action(self, callback, name=None, alias=None):
+        name = name or callback.__name__
+        shortcut = self.default_shortcuts.get(name, None)
+        self.actions.add(callback=callback, name=name, shortcut=shortcut)
+
     def _create_actions(self):
         self.actions = actions = Actions()
         self.snippets = Snippets()
@@ -180,23 +205,23 @@ class ManualClustering(IPlugin):
         @actions.connect
         def on_reset():
             # Selection.
-            actions.add(callback=self.select, alias='c')
+            self._add_action(self.select, alias='c')
 
             # Wizard.
-            actions.add(callback=self.wizard.restart, name='reset_wizard')
-            actions.add(callback=self.wizard.previous)
-            actions.add(callback=self.wizard.next)
-            actions.add(callback=self.wizard.next_by_quality)
-            actions.add(callback=self.wizard.next_by_similarity)
-            actions.add(callback=self.wizard.pin)
-            actions.add(callback=self.wizard.unpin)
+            self._add_action(self.wizard.restart, name='reset_wizard')
+            self._add_action(self.wizard.previous)
+            self._add_action(self.wizard.next)
+            self._add_action(self.wizard.next_by_quality)
+            self._add_action(self.wizard.next_by_similarity)
+            self._add_action(self.wizard.pin)
+            self._add_action(self.wizard.unpin)
 
             # Clustering.
-            actions.add(callback=self.merge)
-            actions.add(callback=self.split)
-            actions.add(callback=self.move)
-            actions.add(callback=self.undo)
-            actions.add(callback=self.redo)
+            self._add_action(self.merge)
+            self._add_action(self.split)
+            self._add_action(self.move)
+            self._add_action(self.undo)
+            self._add_action(self.redo)
 
     def attach_to_gui(self, gui):
         self.gui = gui

@@ -136,7 +136,7 @@ class Actions(EventEmitter):
         @self.connect
         def on_reset():
             # Default exit action.
-            @self.add(shortcut='ctrl+q')
+            @self.add(shortcut=QtGui.QKeySequence.Quit)
             def exit():
                 gui.close()
 
