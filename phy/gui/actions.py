@@ -190,7 +190,7 @@ class Actions(object):
         """Run an action as specified by its name."""
         assert isinstance(name, string_types)
         # Resolve the alias if it is an alias.
-        name = self._aliases[name]
+        name = self._aliases.get(name, name)
         # Get the action.
         action = self._actions.get(name, None)
         if not action:
@@ -357,8 +357,7 @@ class Snippets(object):
         try:
             self._actions.run(name, *snippet_args[1:])
         except Exception as e:
-            logger.warn("Error when executing snippet: %s.", str(e))
-            logger.exception(e)
+            logger.warn("Error when executing snippet: \"%s\".", str(e))
 
     def is_mode_on(self):
         return self.command.startswith(':')
