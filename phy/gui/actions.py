@@ -137,7 +137,7 @@ class Actions(object):
     def get_action_dict(self):
         return self._actions.copy()
 
-    def attach(self, gui):
+    def attach(self, gui, enable_snippets=True):
         """Attach a GUI."""
         self._gui = gui
 
@@ -145,6 +145,11 @@ class Actions(object):
         @self.add(shortcut='Quit')
         def exit():
             gui.close()
+
+        # Create and attach snippets.
+        if enable_snippets:
+            self.snippets = Snippets()
+            self.snippets.attach(gui, self)
 
     def add(self, callback=None, name=None, shortcut=None, alias=None):
         """Add an action with a keyboard shortcut."""
@@ -346,7 +351,6 @@ class Snippets(object):
 
         logger.info("Processing snippet `%s`.", snippet)
         try:
-        # func(*snippet_args[1:])
             self._actions.run(name, *snippet_args[1:])
         except Exception as e:
             logger.warn("Error when executing snippet: %s.", str(e))
