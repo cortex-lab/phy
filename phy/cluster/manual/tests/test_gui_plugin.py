@@ -17,7 +17,7 @@ from ..gui_plugin import (_wizard_group,
                           _attach_wizard_to_clustering,
                           _attach_wizard_to_cluster_meta,
                           )
-from phy.gui.tests.test_gui import gui  # noqa
+from phy.gui.tests.conftest import gui  # noqa
 
 
 #------------------------------------------------------------------------------
@@ -25,7 +25,7 @@ from phy.gui.tests.test_gui import gui  # noqa
 #------------------------------------------------------------------------------
 
 @yield_fixture  # noqa
-def manual_clustering(qtbot, gui, cluster_ids, cluster_groups):
+def manual_clustering(gui, cluster_ids, cluster_groups):
     spike_clusters = np.array(cluster_ids)
 
     mc = gui.attach('ManualClustering',

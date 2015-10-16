@@ -8,7 +8,6 @@
 
 from pytest import raises
 
-from ..qt import Qt
 from ..actions import (_show_shortcuts,
                        _get_shortcut_string,
                        _get_qkeysequence,
