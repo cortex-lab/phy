@@ -13,6 +13,7 @@ import logging
 import click
 
 import phy
+from phy import add_default_handler, DEBUG
 
 logger = logging.getLogger(__name__)
 
@@ -21,14 +22,15 @@ logger = logging.getLogger(__name__)
 # CLI tool
 #------------------------------------------------------------------------------
 
+add_default_handler('DEBUG' if DEBUG else 'INFO')
+
+
 @click.group()
 @click.version_option(version=phy.__version_git__)
 @click.help_option('-h', '--help')
-@click.option('-d', '--debug', is_flag=True)
 @click.pass_context
-def phy(ctx, debug):
-    if debug:
-        logging.setLevel('DEBUG')
+def phy(ctx):
+    pass
 
 
 #------------------------------------------------------------------------------
