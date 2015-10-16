@@ -134,8 +134,9 @@ def test_snippets_errors(actions, snippets):
     snippets.attach(None, actions)
     actions.reset()
 
-    with raises(ValueError):
+    with captured_logging() as buf:
         snippets.run(':t1')
+    assert 'cannot be found' in buf.getvalue().lower()
 
     with captured_logging() as buf:
         snippets.run(':t')
