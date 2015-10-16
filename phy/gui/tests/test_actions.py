@@ -91,16 +91,8 @@ def test_actions_simple(actions):
     assert 'show_my_shortcuts' in _captured[0]
     assert ': h' in _captured[0]
 
-    with raises(ValueError):
-        assert actions.get_name('e')
-    assert actions.get_name('t') == 'test'
-    assert actions.get_name('test') == 'test'
-
     actions.run('t', 1)
     assert _res == [(1,)]
-
-    # Run an action instance.
-    actions.run(actions._actions['test'], 1)
 
     actions.remove_all()
 
@@ -155,7 +147,7 @@ def test_snippets_errors(actions, snippets):
 
     with captured_logging() as buf:
         snippets.run(':t1')
-    assert 'cannot be found' in buf.getvalue().lower()
+    assert 'error' in buf.getvalue().lower()
 
     with captured_logging() as buf:
         snippets.run(':t')
