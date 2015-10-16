@@ -132,6 +132,7 @@ class Actions(object):
     def __init__(self):
         self._gui = None
         self._actions = {}
+        self._aliases = {}
 
     def get_action_dict(self):
         return self._actions.copy()
@@ -169,26 +170,22 @@ class Actions(object):
         if self._gui:
             self._gui.addAction(action)
         self._actions[name] = action_obj
+        # Register the alias -> name mapping.
+        self._aliases[alias] = name
 
         # Set the callback method.
         if callback:
             setattr(self, name, callback)
 
-    def get_name(self, alias_or_name):
-        """Return an action name from its alias or name."""
-        for name, action in self._actions.items():
-            if alias_or_name in (action.alias, name):
-                return name
-        raise ValueError("Action `{}` doesn't exist.".format(alias_or_name))
-
-    def run(self, action, *args):
-        """Run an action, specified by its name or object."""
-        if isinstance(action, string_types):
-            name = self.get_name(action)
-            assert name in self._actions
-            action = self._actions[name]
-        else:
-            name = action.name
+    def run(self, name, *args):
+        """Run an action as specified by its name."""
+        assert isinstance(name, string_types)
+        # Resolve the alias if it is an alias.
+        name = self._aliases[name]
+        # Get the action.
+        action = self._actions.get(name, None)
+        if not action:
+            raise ValueError("Action `{}` doesn't exist.".format(name))
         if not name.startswith('_'):
             logger.debug("Execute action `%s`.", name)
         return action.callback(*args)
@@ -345,17 +342,12 @@ class Snippets(object):
         assert snippet[0] == ':'
         snippet = snippet[1:]
         snippet_args = _parse_snippet(snippet)
-        alias = snippet_args[0]
+        name = snippet_args[0]
+
+        logger.info("Processing snippet `%s`.", snippet)
         try:
-            name = self._actions.get_name(alias)
-        except ValueError:
-            logger.warn("Snippet `%s` cannot be found.", alias)
-            return
-        assert name
-        func = getattr(self._actions, name)
-        try:
-            logger.info("Processing snippet `%s`.", snippet)
-            func(*snippet_args[1:])
+        # func(*snippet_args[1:])
+            self._actions.run(name, *snippet_args[1:])
         except Exception as e:
             logger.warn("Error when executing snippet: %s.", str(e))
             logger.exception(e)
