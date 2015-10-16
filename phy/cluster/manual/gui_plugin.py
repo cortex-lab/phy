@@ -176,9 +176,15 @@ class ManualClustering(IPlugin):
     def __init__(self, spike_clusters=None,
                  cluster_groups=None,
                  n_spikes_max_per_cluster=100,
+                 shortcuts=None,
                  ):
 
         self.n_spikes_max_per_cluster = n_spikes_max_per_cluster
+
+        # Load default shortcuts, and override any user shortcuts.
+        self.shortcuts = self.default_shortcuts.copy()
+        if shortcuts:
+            self.shortcuts.update(shortcuts)
 
         # Create Clustering and ClusterMeta.
         self.clustering = Clustering(spike_clusters)
@@ -194,7 +200,7 @@ class ManualClustering(IPlugin):
 
     def _add_action(self, callback, name=None, alias=None):
         name = name or callback.__name__
-        shortcut = self.default_shortcuts.get(name, None)
+        shortcut = self.shortcuts.get(name, None)
         self.actions.add(callback=callback, name=name, shortcut=shortcut)
 
     def _create_actions(self):
