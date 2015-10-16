@@ -79,7 +79,7 @@ def discover_plugins(dirs):
     """
     # Scan all subdirectories recursively.
     for plugin_dir in dirs:
-        plugin_dir = op.realpath(plugin_dir)
+        plugin_dir = op.realpath(op.expanduser(plugin_dir))
         for subdir, dirs, files in os.walk(plugin_dir):
             # Skip test folders.
             base = op.basename(subdir)
