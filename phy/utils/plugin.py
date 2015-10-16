@@ -117,7 +117,7 @@ def get_all_plugins(config=None):
     """Load all builtin and user plugins."""
     # By default, builtin and default user plugin.
     dirs = [_builtin_plugins_dir(), _user_plugins_dir()]
-    # Add Plugins.dir from the optionally-passed config object.
+    # Add Plugins.dirs from the optionally-passed config object.
     if config:
         dirs += config.Plugins.dirs
     return [plugin for (plugin,) in discover_plugins(dirs)]
