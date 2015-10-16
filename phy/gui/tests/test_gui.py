@@ -15,7 +15,7 @@ from ..qt import Qt
 from ..gui import GUI
 from phy.utils._color import _random_color
 from phy.utils.plugin import IPlugin
-from .test_actions import actions, snippets  # noqa
+from .test_actions import actions  # noqa
 
 # Skip some tests on OS X or on CI systems (Travis).
 skip_mac = mark.skipif(platform == "darwin",
@@ -78,7 +78,7 @@ def test_actions_gui(qtbot, gui, actions):
 
 @skip_mac  # noqa
 @skip_ci
-def test_snippets_gui(qtbot, gui, actions, snippets):
+def test_snippets_gui(qtbot, gui, actions):
 
     qtbot.addWidget(gui)
     gui.show()
@@ -92,7 +92,7 @@ def test_snippets_gui(qtbot, gui, actions, snippets):
 
     # Attach the GUI and register the actions.
     actions.attach(gui)
-    snippets.attach(gui, actions)
+    snippets = actions.snippets
 
     # Simulate the following keystrokes `:t2 ^H^H1 3-5 ab,c `
     assert not snippets.is_mode_on()
