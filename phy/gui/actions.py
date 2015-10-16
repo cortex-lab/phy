@@ -140,6 +140,11 @@ class Actions(EventEmitter):
             def exit():
                 gui.close()
 
+        # Reset the actions when the GUI is first shown.
+        @gui.connect_
+        def on_show():
+            self.reset()
+
     def _create_action_bunch(self, callback=None, name=None, shortcut=None,
                              alias=None, checkable=False, checked=False):
 
@@ -203,14 +208,6 @@ class Actions(EventEmitter):
             if alias_or_name in (action.alias, name):
                 return name
         raise ValueError("Action `{}` doesn't exist.".format(alias_or_name))
-
-    def change_shortcut(self, name, shortcut):
-        assert name in self._actions, "This action doesn't exist."
-        action = self._actions[name]
-        action.shortcut = shortcut
-        logger.debug("Change shortcut of action `%s` to shortcut `%s`.",
-                     name, shortcut or '')
-        _set_shortcut(action.qaction, shortcut)
 
     def run(self, action, *args):
         """Run an action, specified by its name or object."""
