@@ -64,11 +64,6 @@ def test_actions_simple(actions):
     assert 'show_my_shortcuts' in _captured[0]
     assert ': h' in _captured[0]
 
-    actions.change_shortcut('show_my_shortcuts', 'l')
-    actions.show_my_shortcuts()
-    assert 'show_my_shortcuts' in _captured[0]
-    assert ': l' in _captured[-1]
-
     with raises(ValueError):
         assert actions.get_name('e')
     assert actions.get_name('t') == 'test'
