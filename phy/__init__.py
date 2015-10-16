@@ -59,9 +59,10 @@ def add_default_handler(level='INFO'):
     logger.addHandler(handler)
 
 
+DEBUG = False
 if '--debug' in sys.argv:  # pragma: no cover
-    add_default_handler('DEBUG')
-    logger.info("Activate DEBUG level.")
+    DEBUG = True
+    sys.argv.remove('--debug')
 
 
 # Force dask to use the synchronous scheduler: we'll use ipyparallel

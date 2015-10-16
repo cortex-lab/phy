@@ -42,9 +42,11 @@ def _load_config(path):
     dirpath, filename = op.split(path)
     file_ext = op.splitext(path)[1]
     if file_ext == '.py':
-        config = PyFileConfigLoader(filename, dirpath).load_config()
+        config = PyFileConfigLoader(filename, dirpath,
+                                    log=logger).load_config()
     elif file_ext == '.json':
-        config = JSONFileConfigLoader(filename, dirpath).load_config()
+        config = JSONFileConfigLoader(filename, dirpath,
+                                      log=logger).load_config()
     return config
 
 
