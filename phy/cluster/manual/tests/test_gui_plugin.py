@@ -31,6 +31,7 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups):
     mc = gui.attach('ManualClustering',
                     spike_clusters=spike_clusters,
                     cluster_groups=cluster_groups,
+                    shortcuts={'undo': 'ctrl+z'},
                     )
 
     _s = []

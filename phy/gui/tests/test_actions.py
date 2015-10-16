@@ -9,6 +9,7 @@
 from pytest import raises, yield_fixture
 
 from ..actions import _show_shortcuts, Actions, Snippets, _parse_snippet
+from phy.gui.qt import QtGui
 from phy.utils.testing import captured_output, captured_logging
 
 
@@ -30,14 +31,18 @@ def snippets():
 # Test actions
 #------------------------------------------------------------------------------
 
-def test_shortcuts():
+def test_shortcuts(qtbot):
+    # NOTE: a Qt application needs to be running so that we can use the
+    # KeySequence.
     shortcuts = {
         'test_1': 'ctrl+t',
         'test_2': ('ctrl+a', 'shift+b'),
+        'test_3': QtGui.QKeySequence.Undo,
     }
     with captured_output() as (stdout, stderr):
         _show_shortcuts(shortcuts, 'test')
     assert 'ctrl+a, shift+b' in stdout.getvalue()
+    assert 'ctrl+z' in stdout.getvalue()
 
 
 def test_actions_simple(actions):
