@@ -22,7 +22,7 @@ from six import StringIO
 from six.moves import builtins
 
 from ._types import _is_array_like
-from .settings import _ensure_dir_exists
+from .config import _ensure_dir_exists
 
 logger = logging.getLogger(__name__)
 

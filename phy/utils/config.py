@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Settings."""
+"""Config."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -10,10 +10,7 @@ import logging
 import os
 import os.path as op
 
-from six import string_types
 from traitlets.config import Config, PyFileConfigLoader
-
-from ._misc import _load_json, _save_json, _read_python
 
 logger = logging.getLogger(__name__)
 
