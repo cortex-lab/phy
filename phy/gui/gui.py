@@ -53,8 +53,8 @@ class GUI(QtGui.QMainWindow):
     Events
     ------
 
-    close_gui
-    show_gui
+    close
+    show
 
     Note
     ----
@@ -109,7 +109,7 @@ class GUI(QtGui.QMainWindow):
 
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
-        res = self.emit('close_gui')
+        res = self.emit('close')
         # Discard the close event if False is returned by one of the callback
         # functions.
         if False in res:  # pragma: no cover
@@ -119,7 +119,7 @@ class GUI(QtGui.QMainWindow):
 
     def show(self):
         """Show the window."""
-        self.emit('show_gui')
+        self.emit('show')
         super(GUI, self).show()
 
     # Views
