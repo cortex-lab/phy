@@ -11,7 +11,7 @@ import logging
 from operator import itemgetter
 
 from ._history import History
-from phy.utils import EventEmitter, _is_array_like
+from phy.utils import EventEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -232,7 +232,6 @@ class Wizard(EventEmitter):
     def select(self, cluster_ids, add_to_history=True):
         if cluster_ids is None:  # pragma: no cover
             return
-        assert _is_array_like(cluster_ids)
         clusters = self.cluster_ids
         cluster_ids = [cluster for cluster in cluster_ids
                        if cluster in clusters]

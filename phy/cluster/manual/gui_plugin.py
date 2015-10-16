@@ -194,6 +194,36 @@ class ManualClustering(IPlugin):
 
         # Create the wizard and attach it to Clustering/ClusterMeta.
         self.wizard = Wizard()
+
+        # Log the actions.
+        @self.clustering.connect
+        def on_cluster(up):
+            if up.history:
+                logger.info(up.history.title() + " cluster assign.")
+            elif up.description == 'merge':
+                logger.info("Merge clusters %s to %s.",
+                            ', '.join(map(str, up.deleted)),
+                            up.added[0])
+            else:
+                # TODO: how many spikes?
+                logger.info("Assigned spikes.")
+
+        @self.cluster_meta.connect  # noqa
+        def on_cluster(up):
+            if up.history:
+                logger.info(up.history.title() + " move.")
+            else:
+                logger.info("Move clusters %s to %s.",
+                            ', '.join(map(str, up.metadata_changed)),
+                            up.metadata_value)
+
+        @self.wizard.connect
+        def on_select(cluster_ids):
+            """When the wizard selects clusters, choose a spikes subset
+            and emit the `select` event on the GUI."""
+            logger.debug("Select clusters %s.",
+                         ', '.join(map(str, cluster_ids)))
+
         _attach_wizard(self.wizard, self.clustering, self.cluster_meta)
 
         # Create the actions.
@@ -202,7 +232,8 @@ class ManualClustering(IPlugin):
     def _add_action(self, callback, name=None, alias=None):
         name = name or callback.__name__
         shortcut = self.shortcuts.get(name, None)
-        self.actions.add(callback=callback, name=name,
+        self.actions.add(callback=callback,
+                         name=name,
                          shortcut=shortcut, alias=alias)
 
     def _create_actions(self):
