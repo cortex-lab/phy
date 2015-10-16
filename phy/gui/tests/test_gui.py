@@ -59,9 +59,6 @@ def gui():
 def test_actions_gui(qtbot, gui, actions):
     actions.attach(gui)
 
-    # Set the default actions.
-    actions.reset()
-
     qtbot.addWidget(gui)
     gui.show()
     qtbot.waitForWindowShown(gui)
@@ -90,30 +87,31 @@ def test_snippets_gui(qtbot, gui, actions, snippets):
 
     _actions = []
 
-    @actions.connect
-    def on_reset():
-        @actions.add(name='my_test_1', alias='t1')
-        def test(*args):
-            _actions.append(args)
+    @actions.add(name='my_test_1', alias='t1')
+    def test(*args):
+        _actions.append(args)
 
     # Attach the GUI and register the actions.
-    snippets.attach(gui, actions)
     actions.attach(gui)
-    actions.reset()
+    snippets.attach(gui, actions)
 
     # Simulate the following keystrokes `:t2 ^H^H1 3-5 ab,c `
     assert not snippets.is_mode_on()
+    # print(gui.actions()[0].shortcut().toString())
+    # actions.show_shortcuts()
     qtbot.keyClicks(gui, ':t2 ')
-    qtbot.waitForWindowShown(gui)
+    # qtbot.stop()
+    # return
 
     assert snippets.is_mode_on()
     qtbot.keyPress(gui, Qt.Key_Backspace)
     qtbot.keyPress(gui, Qt.Key_Backspace)
     qtbot.keyClicks(gui, '1 3-5 ab,c')
+    # qtbot.stop()
     qtbot.keyPress(gui, Qt.Key_Return)
     qtbot.waitForWindowShown(gui)
 
-    assert _actions == [((3, 4, 5), ('ab', 'c'))]
+    assert _actions == [([3, 4, 5], ['ab', 'c'])]
 
 
 #------------------------------------------------------------------------------

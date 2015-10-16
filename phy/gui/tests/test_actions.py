@@ -8,8 +8,13 @@
 
 from pytest import raises, yield_fixture
 
-from ..actions import _show_shortcuts, Actions, Snippets, _parse_snippet
-from phy.gui.qt import QtGui
+from ..actions import (_show_shortcuts,
+                       _get_shortcut_string,
+                       _get_qkeysequence,
+                       _parse_snippet,
+                       Actions,
+                       Snippets,
+                       )
 from phy.utils.testing import captured_output, captured_logging
 
 
@@ -32,12 +37,29 @@ def snippets():
 #------------------------------------------------------------------------------
 
 def test_shortcuts(qtbot):
+    def _assert_shortcut(name, key=None):
+        shortcut = _get_qkeysequence(name)
+        s = _get_shortcut_string(shortcut)
+        if key is None:
+            assert s == s
+        else:
+            assert key in s
+
+    _assert_shortcut('Undo', 'z')
+    _assert_shortcut('Save', 's')
+    _assert_shortcut('q')
+    _assert_shortcut('ctrl+q')
+    _assert_shortcut(':')
+    _assert_shortcut(['ctrl+a', 'shift+b'])
+
+
+def test_show_shortcuts(qtbot):
     # NOTE: a Qt application needs to be running so that we can use the
     # KeySequence.
     shortcuts = {
         'test_1': 'ctrl+t',
         'test_2': ('ctrl+a', 'shift+b'),
-        'test_3': QtGui.QKeySequence.Undo,
+        'test_3': 'ctrl+z',
     }
     with captured_output() as (stdout, stderr):
         _show_shortcuts(shortcuts, 'test')
@@ -94,8 +116,8 @@ def test_snippets_parse():
 
     _check('a', ['a'])
     _check('abc', ['abc'])
-    _check('a,b,c', [('a', 'b', 'c')])
-    _check('a b,c', ['a', ('b', 'c')])
+    _check('a,b,c', [['a', 'b', 'c']])
+    _check('a b,c', ['a', ['b', 'c']])
 
     _check('1', [1])
     _check('10', [10])
@@ -108,31 +130,28 @@ def test_snippets_parse():
     _check('0 1.', [0, 1.])
     _check('0 1.0', [0, 1.])
 
-    _check('0,1', [(0, 1)])
-    _check('0,10.', [(0, 10.)])
-    _check('0. 1,10.', [0., (1, 10.)])
+    _check('0,1', [[0, 1]])
+    _check('0,10.', [[0, 10.]])
+    _check('0. 1,10.', [0., [1, 10.]])
 
-    _check('2-7', [(2, 3, 4, 5, 6, 7)])
-    _check('2 3-5', [2, (3, 4, 5)])
+    _check('2-7', [[2, 3, 4, 5, 6, 7]])
+    _check('2 3-5', [2, [3, 4, 5]])
 
-    _check('a b,c d,2 3-5', ['a', ('b', 'c'), ('d', 2), (3, 4, 5)])
+    _check('a b,c d,2 3-5', ['a', ['b', 'c'], ['d', 2], [3, 4, 5]])
 
 
 def test_snippets_errors(actions, snippets):
 
     _actions = []
 
-    @actions.connect
-    def on_reset():
-        @actions.add(name='my_test', alias='t')
-        def test(arg):
-            # Enforce single-character argument.
-            assert len(str(arg)) == 1
-            _actions.append(arg)
+    @actions.add(name='my_test', alias='t')
+    def test(arg):
+        # Enforce single-character argument.
+        assert len(str(arg)) == 1
+        _actions.append(arg)
 
     # Attach the GUI and register the actions.
     snippets.attach(None, actions)
-    actions.reset()
 
     with captured_logging() as buf:
         snippets.run(':t1')
@@ -154,27 +173,24 @@ def test_snippets_errors(actions, snippets):
     assert _actions == ['a']
 
 
-def test_snippets_actions(actions, snippets):
+def test_snippets_actions_1(actions, snippets):
 
     _actions = []
 
-    @actions.connect
-    def on_reset():
-        @actions.add(name='my_test_1')
-        def test_1(*args):
-            _actions.append((1, args))
+    @actions.add(name='my_test_1')
+    def test_1(*args):
+        _actions.append((1, args))
 
-        @actions.add(name='my_&test_2')
-        def test_2(*args):
-            _actions.append((2, args))
+    @actions.add(name='my_&test_2')
+    def test_2(*args):
+        _actions.append((2, args))
 
-        @actions.add(name='my_test_3', alias='t3')
-        def test_3(*args):
-            _actions.append((3, args))
+    @actions.add(name='my_test_3', alias='t3')
+    def test_3(*args):
+        _actions.append((3, args))
 
     # Attach the GUI and register the actions.
     snippets.attach(None, actions)
-    actions.reset()
 
     assert snippets.command == ''
 
@@ -184,7 +200,7 @@ def test_snippets_actions(actions, snippets):
 
     # Action 2.
     snippets.run(':t 1.5 a 2-4 5,7')
-    assert _actions[-1] == (2, (1.5, 'a', (2, 3, 4), (5, 7)))
+    assert _actions[-1] == (2, (1.5, 'a', [2, 3, 4], [5, 7]))
 
     def _run(cmd):
         """Simulate keystrokes."""
@@ -203,3 +219,24 @@ def test_snippets_actions(actions, snippets):
     actions._snippet_activate()  # 'Enter'
     assert _actions[-1] == (3, ('hello',))
     snippets.mode_off()
+
+
+def test_snippets_actions_2(actions, snippets):
+
+    _actions = []
+
+    @actions.add
+    def test(arg):
+        _actions.append(arg)
+
+    # Attach the GUI and register the actions.
+    snippets.attach(None, actions)
+
+    actions.test(1)
+    assert _actions == [1]
+
+    snippets.mode_on()
+    snippets.mode_off()
+
+    actions.test(2)
+    assert _actions == [1, 2]
