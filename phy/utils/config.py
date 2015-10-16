@@ -10,7 +10,10 @@ import logging
 import os
 import os.path as op
 
-from traitlets.config import Config, PyFileConfigLoader
+from traitlets.config import (Config,
+                              PyFileConfigLoader,
+                              JSONFileConfigLoader,
+                              )
 
 logger = logging.getLogger(__name__)
 
@@ -34,7 +37,11 @@ def _load_config(path):
         return {}
     path = op.realpath(path)
     dirpath, filename = op.split(path)
-    config = PyFileConfigLoader(filename, dirpath).load_config()
+    file_ext = op.splitext(path)[1]
+    if file_ext == '.py':
+        config = PyFileConfigLoader(filename, dirpath).load_config()
+    elif file_ext == '.json':
+        config = JSONFileConfigLoader(filename, dirpath).load_config()
     return config
 
 
