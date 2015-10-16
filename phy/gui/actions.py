@@ -14,7 +14,6 @@ from six import string_types, PY3
 
 from .qt import QtGui
 from phy.utils import Bunch
-from phy.utils.event import EventEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -41,10 +40,10 @@ def _parse_list(s):
     # Range: 'x-y'
     if '-' in s:
         m, M = map(_parse_arg, s.split('-'))
-        return tuple(range(m, M + 1))
+        return list(range(m, M + 1))
     # List of ids: 'x,y,z'
     elif ',' in s:
-        return tuple(map(_parse_arg, s.split(',')))
+        return list(map(_parse_arg, s.split(',')))
     else:
         return _parse_arg(s)
 
@@ -58,24 +57,43 @@ def _parse_snippet(s):
 # Show shortcut utility functions
 # -----------------------------------------------------------------------------
 
-def _shortcut_string(shortcut):
-    if isinstance(shortcut, QtGui.QKeySequence.StandardKey):
-        return str(QtGui.QKeySequence(shortcut).toString()).lower()
-    elif isinstance(shortcut, string_types):
-        return shortcut
-    elif isinstance(shortcut, (tuple, list)):
-        return ', '.join(shortcut)
-    return ''
+def _get_shortcut_string(shortcut):
+    """Return a string representation of a shortcut."""
+    if shortcut is None:
+        return ''
+    if isinstance(shortcut, (tuple, list)):
+        return ', '.join([_get_shortcut_string(s) for s in shortcut])
+    if isinstance(shortcut, string_types):
+        return shortcut.lower()
+    assert isinstance(shortcut, QtGui.QKeySequence)
+    s = shortcut.toString() or ''
+    return str(s).lower()
+
+
+def _get_qkeysequence(shortcut):
+    """Return a QKeySequence or list of QKeySequence from a shortcut string."""
+    if shortcut is None:
+        return []
+    if isinstance(shortcut, (tuple, list)):
+        return [_get_qkeysequence(s) for s in shortcut]
+    assert isinstance(shortcut, string_types)
+    if hasattr(QtGui.QKeySequence, shortcut):
+        return QtGui.QKeySequence(getattr(QtGui.QKeySequence, shortcut))
+    sequence = QtGui.QKeySequence.fromString(shortcut)
+    assert not sequence.isEmpty()
+    return sequence
 
 
 def _show_shortcuts(shortcuts, name=None):
+    """Display shortcuts."""
     name = name or ''
     print()
     if name:
         name = ' for ' + name
     print('Keyboard shortcuts' + name)
     for name in sorted(shortcuts):
-        print('{0:<40}: {1:s}'.format(name, _shortcut_string(shortcuts[name])))
+        shortcut = _get_shortcut_string(shortcuts[name])
+        print('{0:<40}: {1:s}'.format(name, shortcut))
     print()
 
 
@@ -89,31 +107,19 @@ def _alias(name):
     return alias
 
 
-def _get_qt_shortcut(single_shortcut):
-    if (isinstance(single_shortcut, string_types) and
-            hasattr(QtGui.QKeySequence, single_shortcut)):
-        return getattr(QtGui.QKeySequence, single_shortcut)
-    return single_shortcut
-
-
-def _get_qt_shortcuts(shortcut):
-    if shortcut is None:
-        return []
-    if not isinstance(shortcut, (tuple, list)):
-        shortcut = [shortcut]
-    return [_get_qt_shortcut(s) for s in shortcut]
-
-
-def _create_qaction(gui, name, callback, qt_shortcuts):
+def _create_qaction(gui, name, callback, shortcut):
     # Create the QAction instance.
     action = QtGui.QAction(name, gui)
     action.triggered.connect(callback)
-    for key in qt_shortcuts:
-        action.setShortcut(key)
+    sequence = _get_qkeysequence(shortcut)
+    if not isinstance(sequence, (tuple, list)):
+        sequence = [sequence]
+    for s in sequence:
+        action.setShortcut(s)
     return action
 
 
-class Actions(EventEmitter):
+class Actions(object):
     """Handle GUI actions.
 
     This class attaches to a GUI and implements the following features:
@@ -124,65 +130,40 @@ class Actions(EventEmitter):
 
     """
     def __init__(self):
-        super(Actions, self).__init__()
         self._gui = None
         self._actions = {}
 
-    def reset(self):
-        """Reset the actions.
-
-        All actions should be registered here, as follows:
-
-        ```python
-        @actions.connect
-        def on_reset():
-            actions.add(...)
-            actions.add(...)
-            ...
-        ```
-
-        """
-        self.remove_all()
-        self.emit('reset')
+    def get_action_dict(self):
+        return self._actions.copy()
 
     def attach(self, gui):
         """Attach a GUI."""
         self._gui = gui
 
-        # Register default actions.
-        @self.connect
-        def on_reset():
-            # Default exit action.
-            @self.add(shortcut=QtGui.QKeySequence.Quit)
-            def exit():
-                gui.close()
-
-        # Reset the actions when the GUI is first shown.
-        @gui.connect_
-        def on_show():
-            self.reset()
+        # Default exit action.
+        @self.add(shortcut='Quit')
+        def exit():
+            gui.close()
 
     def add(self, callback=None, name=None, shortcut=None, alias=None):
         """Add an action with a keyboard shortcut."""
         # TODO: add menu_name option and create menu bar
         if callback is None:
             # Allow to use either add(func) or @add or @add(...).
-            return partial(self.add, name=name, shortcut=shortcut,
-                           alias=alias)
+            return partial(self.add, name=name, shortcut=shortcut, alias=alias)
         assert callback
 
         # Get the name from the callback function if needed.
         name = name or callback.__name__
         alias = alias or _alias(name)
         name = name.replace('&', '')
-        qt_shortcuts = _get_qt_shortcuts(shortcut)
 
         # Skip existing action.
         if name in self._actions:
             return
 
         # Create and register the action.
-        action = _create_qaction(self._gui, name, callback, qt_shortcuts)
+        action = _create_qaction(self._gui, name, callback, shortcut)
         action_obj = Bunch(qaction=action, name=name, alias=alias,
                            shortcut=shortcut, callback=callback)
         if self._gui:
@@ -234,7 +215,7 @@ class Actions(EventEmitter):
     def show_shortcuts(self):
         """Print all shortcuts."""
         _show_shortcuts(self.shortcuts,
-                        self._gui.title() if self._gui else None)
+                        self._gui.windowTitle() if self._gui else None)
 
 
 # -----------------------------------------------------------------------------
@@ -266,7 +247,7 @@ class Snippets(object):
 
     """
 
-    # HACK: Unicode characters do not appear to work on Python 2
+    # HACK: Unicode characters do not seem to work on Python 2
     cursor = '\u200A\u258C' if PY3 else ''
 
     # Allowed characters in snippet mode.
@@ -281,13 +262,14 @@ class Snippets(object):
     def attach(self, gui, actions):
         self._gui = gui
         self._actions = actions
+        # We will keep a backup of all actions so that we can switch
+        # safely to the set of shortcut actions when snippet mode is on.
+        self._actions_backup = {}
 
         # Register snippet mode shortcut.
-        @actions.connect
-        def on_reset():
-            @actions.add(shortcut=':')
-            def enable_snippet_mode():
-                self.mode_on()
+        @actions.add(shortcut=':')
+        def enable_snippet_mode():
+            self.mode_on()
 
     @property
     def command(self):
@@ -326,14 +308,11 @@ class Snippets(object):
         self.run(command)
 
     def _create_snippet_actions(self):
-        """Delete all existing actions, and add mock ones for snippet
-        keystrokes.
+        """Add mock Qt actions for snippet keystrokes.
 
         Used to enable snippet mode.
 
         """
-        self._actions.remove_all()
-
         # One action per allowed character.
         for i, char in enumerate(self._snippet_chars):
 
@@ -386,8 +365,10 @@ class Snippets(object):
 
     def mode_on(self):
         logger.info("Snippet mode enabled, press `escape` to leave this mode.")
-        # Remove all existing actions, and replace them by snippet keystroke
-        # actions.
+        self._actions_backup = self._actions.get_action_dict()
+        # Remove all existing actions.
+        self._actions.remove_all()
+        # Add snippet keystroke actions.
         self._create_snippet_actions()
         self.command = ':'
 
@@ -396,4 +377,9 @@ class Snippets(object):
             self._gui.status_message = ''
         logger.info("Snippet mode disabled.")
         # Reestablishes the shortcuts.
-        self._actions.reset()
+        for action_obj in self._actions_backup.values():
+            self._actions.add(callback=action_obj.callback,
+                              name=action_obj.name,
+                              shortcut=action_obj.shortcut,
+                              alias=action_obj.alias,
+                              )
