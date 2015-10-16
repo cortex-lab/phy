@@ -118,8 +118,8 @@ def _read_python(path):
     return metadata
 
 
-def _write_text(path, contents, *args, **kwargs):
-    contents = dedent(contents.format(*args, **kwargs))
+def _write_text(path, contents):
+    contents = dedent(contents)
     dir_path = op.dirname(path)
     if not op.exists(dir_path):
         os.mkdir(dir_path)

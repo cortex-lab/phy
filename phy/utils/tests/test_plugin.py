@@ -52,11 +52,10 @@ def _write_my_plugins_dir_in_config(temp_user_dir):
     # Now, we specify the path to the plugin in the phy config file.
     config_contents = """
        c = get_config()
-       c.Plugins.dirs = ['{}']
+       c.Plugins.dirs = ['%s']
     """
     _write_text(op.join(temp_user_dir, 'phy_config.py'),
-                config_contents,
-                op.join(temp_user_dir, 'my_plugins/'))
+                config_contents % op.join(temp_user_dir, 'my_plugins/'))
 
 
 #------------------------------------------------------------------------------
