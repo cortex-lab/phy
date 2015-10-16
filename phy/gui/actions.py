@@ -58,8 +58,10 @@ def _parse_snippet(s):
 # Show shortcut utility functions
 # -----------------------------------------------------------------------------
 
-def _show_shortcut(shortcut):
-    if isinstance(shortcut, string_types):
+def _shortcut_string(shortcut):
+    if isinstance(shortcut, QtGui.QKeySequence.StandardKey):
+        return QtGui.QKeySequence(shortcut).toString().lower()
+    elif isinstance(shortcut, string_types):
         return shortcut
     elif isinstance(shortcut, (tuple, list)):
         return ', '.join(shortcut)
@@ -72,7 +74,7 @@ def _show_shortcuts(shortcuts, name=None):
         name = ' for ' + name
     print('Keyboard shortcuts' + name)
     for name in sorted(shortcuts):
-        print('{0:<40}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
+        print('{0:<40}: {1:s}'.format(name, _shortcut_string(shortcuts[name])))
     print()
 
 
@@ -195,9 +197,13 @@ class Actions(EventEmitter):
 
         # Log the creation of the action.
         if not name.startswith('_'):
-            logger.debug("Add action `%s`, alias `%s`, shortcut `%s`.",
-                         name, alias, shortcut or '')
-
+            if isinstance(shortcut, QtGui.QKeySequence.StandardKey):
+                shortcut = QtGui.QKeySequence(shortcut).toString().lower()
+            elif shortcut is None:
+                shortcut = ''
+            msg = "Add action `%s`, alias `%s`" % (name, alias)
+            msg += (", shortcut `%s`." % shortcut) if shortcut else '.'
+            logger.debug(msg)
         if callback:
             setattr(self, name, callback)
         return action
