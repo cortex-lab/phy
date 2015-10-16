@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test settings."""
+"""Test config."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -9,26 +9,25 @@
 import os.path as op
 from textwrap import dedent
 
-from pytest import raises, yield_fixture
 from traitlets import Float
 from traitlets.config import Configurable
 
-from .. import settings as _settings
-from ..settings import (_load_config,
-                        load_master_config,
-                        )
+from .. import config as _config
+from ..config import (_load_config,
+                      load_master_config,
+                      )
 
 
 #------------------------------------------------------------------------------
-# Test settings
+# Test config
 #------------------------------------------------------------------------------
 
 def test_phy_user_dir():
-    assert _settings.phy_user_dir().endswith('.phy/')
+    assert _config.phy_user_dir().endswith('.phy/')
 
 
 def test_temp_user_dir(temp_user_dir):
-    assert _settings.phy_user_dir() == temp_user_dir
+    assert _config.phy_user_dir() == temp_user_dir
 
 
 #------------------------------------------------------------------------------

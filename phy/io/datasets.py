@@ -12,7 +12,7 @@ import os
 import os.path as op
 
 from phy.utils.event import ProgressReporter
-from phy.utils.settings import phy_user_dir, _ensure_dir_exists
+from phy.utils.config import phy_user_dir, _ensure_dir_exists
 
 logger = logging.getLogger(__name__)
 
