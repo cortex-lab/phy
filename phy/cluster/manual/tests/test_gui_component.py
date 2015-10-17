@@ -281,13 +281,29 @@ def test_manual_clustering_merge(manual_clustering):
     mc.actions.merge()
     assert_selection(31, 2)
 
+    mc.actions.undo()
+    assert_selection(30, 20)
+
+    mc.actions.redo()
+    assert_selection(31, 2)
+
 
 def test_manual_clustering_split(manual_clustering):
     mc, assert_selection = manual_clustering
 
+    mc.actions.merge([1, 2, 10])
+    assert_selection(31, 20)
+
     mc.actions.select([1, 2])
     mc.actions.split([1, 2])
-    assert_selection(31, 20)
+    assert_selection(32, 20)
+
+    mc.actions.undo()
+    # TODO
+    # assert_selection(1, 2)
+
+    mc.actions.redo()
+    # assert_selection(32, 20)
 
 
 def test_manual_clustering_move(manual_clustering, quality, similarity):
@@ -303,4 +319,10 @@ def test_manual_clustering_move(manual_clustering, quality, similarity):
     assert_selection(20)
 
     mc.actions.move([20], 'noise')
+    assert_selection(2)
+
+    mc.actions.undo()
+    assert_selection(20)
+
+    mc.actions.redo()
     assert_selection(2)
