@@ -179,8 +179,7 @@ class ManualClustering(object):
 
         # Load default shortcuts, and override any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
-        if shortcuts:
-            self.shortcuts.update(shortcuts)
+        self.shortcuts.update(shortcuts or {})
 
         # Create Clustering and ClusterMeta.
         self.clustering = Clustering(spike_clusters)
@@ -221,34 +220,27 @@ class ManualClustering(object):
 
         _attach_wizard(self.wizard, self.clustering, self.cluster_meta)
 
-    def _add_action(self, callback, name=None, alias=None):
-        name = name or callback.__name__
-        shortcut = self.shortcuts.get(name, None)
-        self.actions.add(callback=callback,
-                         name=name,
-                         shortcut=shortcut, alias=alias)
-
     def _create_actions(self, gui):
-        self.actions = Actions(gui)
+        self.actions = Actions(gui, default_shortcuts=self.shortcuts)
 
         # Selection.
-        self._add_action(self.select, alias='c')
+        self.actions.add(self.select, alias='c')
 
         # Wizard.
-        self._add_action(self.wizard.restart, name='reset_wizard')
-        self._add_action(self.wizard.previous)
-        self._add_action(self.wizard.next)
-        self._add_action(self.wizard.next_by_quality)
-        self._add_action(self.wizard.next_by_similarity)
-        self._add_action(self.wizard.pin)
-        self._add_action(self.wizard.unpin)
+        self.actions.add(self.wizard.restart, name='reset_wizard')
+        self.actions.add(self.wizard.previous)
+        self.actions.add(self.wizard.next)
+        self.actions.add(self.wizard.next_by_quality)
+        self.actions.add(self.wizard.next_by_similarity)
+        self.actions.add(self.wizard.pin)
+        self.actions.add(self.wizard.unpin)
 
         # Clustering.
-        self._add_action(self.merge)
-        self._add_action(self.split)
-        self._add_action(self.move)
-        self._add_action(self.undo)
-        self._add_action(self.redo)
+        self.actions.add(self.merge)
+        self.actions.add(self.split)
+        self.actions.add(self.move)
+        self.actions.add(self.undo)
+        self.actions.add(self.redo)
 
     def attach(self, gui):
         self.gui = gui
