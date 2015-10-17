@@ -10,7 +10,8 @@
 from collections import defaultdict
 import logging
 
-from .qt import QtCore, QtGui
+from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
+                 Qt, QSize, QMetaObject)
 from phy.utils.event import EventEmitter
 
 logger = logging.getLogger(__name__)
@@ -24,7 +25,7 @@ def _title(widget):
     return str(widget.windowTitle()).lower()
 
 
-class DockWidget(QtGui.QDockWidget):
+class DockWidget(QDockWidget):
     """A QDockWidget that can emit events."""
     def __init__(self, *args, **kwargs):
         super(DockWidget, self).__init__(*args, **kwargs)
@@ -42,7 +43,7 @@ class DockWidget(QtGui.QDockWidget):
         super(DockWidget, self).closeEvent(e)
 
 
-class GUI(QtGui.QMainWindow):
+class GUI(QMainWindow):
     """A Qt main window holding docking Qt or VisPy widgets.
 
     `GUI` derives from `QMainWindow`.
@@ -64,6 +65,8 @@ class GUI(QtGui.QMainWindow):
                  size=None,
                  title=None,
                  ):
+        if not QApplication.instance():
+            raise RuntimeError("A Qt application must be created.")
         super(GUI, self).__init__()
         if title is None:
             title = 'phy'
@@ -71,17 +74,17 @@ class GUI(QtGui.QMainWindow):
         if position is not None:
             self.move(position[0], position[1])
         if size is not None:
-            self.resize(QtCore.QSize(size[0], size[1]))
+            self.resize(QSize(size[0], size[1]))
         self.setObjectName(title)
-        QtCore.QMetaObject.connectSlotsByName(self)
-        self.setDockOptions(QtGui.QMainWindow.AllowTabbedDocks |
-                            QtGui.QMainWindow.AllowNestedDocks |
-                            QtGui.QMainWindow.AnimatedDocks
+        QMetaObject.connectSlotsByName(self)
+        self.setDockOptions(QMainWindow.AllowTabbedDocks |
+                            QMainWindow.AllowNestedDocks |
+                            QMainWindow.AnimatedDocks
                             )
         # We can derive from EventEmitter because of a conflict with connect.
         self._event = EventEmitter()
 
-        self._status_bar = QtGui.QStatusBar()
+        self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
 
     # Events
@@ -139,24 +142,24 @@ class GUI(QtGui.QMainWindow):
         dockwidget.setWidget(view)
 
         # Set gui widget options.
-        options = QtGui.QDockWidget.DockWidgetMovable
+        options = QDockWidget.DockWidgetMovable
         if closable:
-            options = options | QtGui.QDockWidget.DockWidgetClosable
+            options = options | QDockWidget.DockWidgetClosable
         if floatable:
-            options = options | QtGui.QDockWidget.DockWidgetFloatable
+            options = options | QDockWidget.DockWidgetFloatable
 
         dockwidget.setFeatures(options)
-        dockwidget.setAllowedAreas(QtCore.Qt.LeftDockWidgetArea |
-                                   QtCore.Qt.RightDockWidgetArea |
-                                   QtCore.Qt.TopDockWidgetArea |
-                                   QtCore.Qt.BottomDockWidgetArea
+        dockwidget.setAllowedAreas(Qt.LeftDockWidgetArea |
+                                   Qt.RightDockWidgetArea |
+                                   Qt.TopDockWidgetArea |
+                                   Qt.BottomDockWidgetArea
                                    )
 
         q_position = {
-            'left': QtCore.Qt.LeftDockWidgetArea,
-            'right': QtCore.Qt.RightDockWidgetArea,
-            'top': QtCore.Qt.TopDockWidgetArea,
-            'bottom': QtCore.Qt.BottomDockWidgetArea,
+            'left': Qt.LeftDockWidgetArea,
+            'right': Qt.RightDockWidgetArea,
+            'top': Qt.TopDockWidgetArea,
+            'bottom': Qt.BottomDockWidgetArea,
         }[position or 'right']
         self.addDockWidget(q_position, dockwidget)
         if floating is not None:
@@ -167,9 +170,9 @@ class GUI(QtGui.QMainWindow):
     def list_views(self, title='', is_visible=True):
         """List all views which title start with a given string."""
         title = title.lower()
-        children = self.findChildren(QtGui.QWidget)
+        children = self.findChildren(QWidget)
         return [child for child in children
-                if isinstance(child, QtGui.QDockWidget) and
+                if isinstance(child, QDockWidget) and
                 _title(child).startswith(title) and
                 (child.isVisible() if is_visible else True) and
                 child.width() >= 10 and
