@@ -277,9 +277,12 @@ class ManualClustering(object):
     # Wizard-related actions
     # -------------------------------------------------------------------------
 
-    def select(self, cluster_ids):
-        if isinstance(cluster_ids, integer_types):
-            cluster_ids = [cluster_ids]
+    def select(self, *cluster_ids):
+        # HACK: allow for select(1, 2, 3) in addition to select([1, 2, 3])
+        # This makes it more convenient to select multiple clusters with
+        # the snippet: ":c 1 2 3".
+        if cluster_ids and isinstance(cluster_ids[0], (tuple, list)):
+            cluster_ids = list(cluster_ids[0]) + list(cluster_ids[1:])
         self.wizard.select(cluster_ids)
 
     # Clustering actions
