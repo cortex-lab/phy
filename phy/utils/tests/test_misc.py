@@ -27,8 +27,8 @@ from .._misc import (_git_version, _load_json, _save_json, _read_python,
 
 def test_qbytearray(tempdir):
 
-    from phy.gui.qt import QtCore
-    arr = QtCore.QByteArray()
+    from phy.gui.qt import QByteArray
+    arr = QByteArray()
     arr.append('1')
     arr.append('2')
     arr.append('3')
