@@ -6,10 +6,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from ..qt import (QtCore, QtGui, QtWebKit,
+from pytest import raises
+
+from ..qt import (QMessageBox, Qt, QWebView,
                   _button_name_from_enum,
                   _button_enum_from_name,
                   _prompt,
+                  require_qt,
+                  create_app,
                   )
 
 
@@ -17,9 +21,36 @@ from ..qt import (QtCore, QtGui, QtWebKit,
 # Tests
 #------------------------------------------------------------------------------
 
-def test_wrap(qtbot):
+def test_require_qt_with_app():
 
-    view = QtWebKit.QWebView()
+    @require_qt
+    def f():
+        pass
+
+    with raises(RuntimeError):
+        f()
+
+
+def test_require_qt_without_app(qapp):
+
+    @require_qt
+    def f():
+        pass
+
+    # This should not raise an error.
+    f()
+
+
+def test_qt_app(qtbot):
+    create_app()
+    view = QWebView()
+    qtbot.addWidget(view)
+    view.close()
+
+
+def test_web_view(qtbot):
+
+    view = QWebView()
 
     def _assert(text):
         html = view.page().mainFrame().toHtml()
@@ -36,7 +67,7 @@ def test_wrap(qtbot):
     _assert('world')
     view.close()
 
-    view = QtWebKit.QWebView()
+    view = QWebView()
     view.resize(100, 100)
     view.show()
     qtbot.addWidget(view)
@@ -48,11 +79,11 @@ def test_wrap(qtbot):
 
 def test_prompt(qtbot):
 
-    assert _button_name_from_enum(QtGui.QMessageBox.Save) == 'save'
-    assert _button_enum_from_name('save') == QtGui.QMessageBox.Save
+    assert _button_name_from_enum(QMessageBox.Save) == 'save'
+    assert _button_enum_from_name('save') == QMessageBox.Save
 
     box = _prompt("How are you doing?",
                   buttons=['save', 'cancel', 'close'],
                   )
-    qtbot.mouseClick(box.buttons()[0], QtCore.Qt.LeftButton)
+    qtbot.mouseClick(box.buttons()[0], Qt.LeftButton)
     assert 'save' in str(box.clickedButton().text()).lower()
