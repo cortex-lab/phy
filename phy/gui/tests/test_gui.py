@@ -8,7 +8,7 @@
 
 from pytest import raises
 
-from ..qt import Qt
+from ..qt import Qt, QApplication
 from ..gui import GUI
 from phy.utils._color import _random_color
 
@@ -35,8 +35,9 @@ def _create_canvas():
 #------------------------------------------------------------------------------
 
 def test_gui_noapp():
-    with raises(RuntimeError):
-        GUI()
+    if not QApplication.instance():
+        with raises(RuntimeError):
+            GUI()
 
 
 def test_gui_1(qtbot):

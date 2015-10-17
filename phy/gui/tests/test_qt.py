@@ -14,6 +14,7 @@ from ..qt import (QMessageBox, Qt, QWebView,
                   _prompt,
                   require_qt,
                   create_app,
+                  QApplication,
                   )
 
 
@@ -27,8 +28,9 @@ def test_require_qt_with_app():
     def f():
         pass
 
-    with raises(RuntimeError):
-        f()
+    if not QApplication.instance():
+        with raises(RuntimeError):
+            f()
 
 
 def test_require_qt_without_app(qapp):
