@@ -237,7 +237,7 @@ def test_wizard_start_2(manual_clustering):
     def on_wizard_start():
         _check.append('wizard')
 
-    mc.wizard.select([1])
+    mc.select([1])
     assert _check == ['wizard']
 
 
@@ -277,7 +277,7 @@ def test_manual_clustering_edge_cases(manual_clustering):
 def test_manual_clustering_merge(manual_clustering):
     mc, assert_selection = manual_clustering
 
-    mc.actions.select([30, 20])
+    mc.actions.select(30, 20)  # NOTE: we pass multiple ints instead of a list
     mc.actions.merge()
     assert_selection(31, 2)
 
