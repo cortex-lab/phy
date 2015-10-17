@@ -9,6 +9,7 @@
 #------------------------------------------------------------------------------
 
 import logging
+import sys
 
 import click
 
@@ -23,6 +24,15 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 add_default_handler('DEBUG' if DEBUG else 'INFO')
+
+
+# Only show traceback in debug mode (--debug).
+def exceptionHandler(exception_type, exception, traceback):
+    logger.error("%s: %s", exception_type.__name__, exception)
+
+
+if not DEBUG:
+    sys.excepthook = exceptionHandler
 
 
 @click.group()
