@@ -110,7 +110,7 @@ def discover_plugins(dirs):
             # Loading the module registers the plugin in
             # IPluginRegistry.
             try:
-                mod = imp.load_module(modname, file, path, descr) # noqa
+                mod = imp.load_module(modname, file, path, descr)  # noqa
             except Exception as e:  # pragma: no cover
                 logger.exception(e)
     return IPluginRegistry.plugins
