@@ -24,10 +24,10 @@ def gui(qapp):
 
 
 @yield_fixture
-def actions():
-    yield Actions()
+def actions(gui):
+    yield Actions(gui)
 
 
 @yield_fixture
-def snippets():
-    yield Snippets()
+def snippets(gui, actions):
+    yield Snippets(gui, actions)

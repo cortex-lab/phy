@@ -86,8 +86,6 @@ def test_actions_simple(actions):
 #------------------------------------------------------------------------------
 
 def test_actions_gui(qtbot, gui, actions):
-    actions.attach(gui)
-
     qtbot.addWidget(gui)
     gui.show()
     qtbot.waitForWindowShown(gui)
@@ -105,7 +103,6 @@ def test_actions_gui(qtbot, gui, actions):
 
 
 def test_snippets_gui(qtbot, gui, actions):
-
     qtbot.addWidget(gui)
     gui.show()
     qtbot.waitForWindowShown(gui)
@@ -117,7 +114,6 @@ def test_snippets_gui(qtbot, gui, actions):
         _actions.append(args)
 
     # Attach the GUI and register the actions.
-    actions.attach(gui)
     snippets = actions.snippets
 
     # Simulate the following keystrokes `:t2 ^H^H1 3-5 ab,c `
@@ -185,9 +181,6 @@ def test_snippets_errors(actions, snippets):
         assert len(str(arg)) == 1
         _actions.append(arg)
 
-    # Attach the GUI and register the actions.
-    snippets.attach(None, actions)
-
     with captured_logging() as buf:
         snippets.run(':t1')
     assert 'error' in buf.getvalue().lower()
@@ -223,9 +216,6 @@ def test_snippets_actions_1(actions, snippets):
     @actions.add(name='my_test_3', alias='t3')
     def test_3(*args):
         _actions.append((3, args))
-
-    # Attach the GUI and register the actions.
-    snippets.attach(None, actions)
 
     assert snippets.command == ''
 
@@ -263,9 +253,6 @@ def test_snippets_actions_2(actions, snippets):
     @actions.add
     def test(arg):
         _actions.append(arg)
-
-    # Attach the GUI and register the actions.
-    snippets.attach(None, actions)
 
     actions.test(1)
     assert _actions == [1]
