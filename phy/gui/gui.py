@@ -65,7 +65,7 @@ class GUI(QMainWindow):
                  size=None,
                  title=None,
                  ):
-        if not QApplication.instance():
+        if not QApplication.instance():  # pragma: no cover
             raise RuntimeError("A Qt application must be created.")
         super(GUI, self).__init__()
         if title is None:

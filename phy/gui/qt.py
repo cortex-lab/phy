@@ -71,7 +71,7 @@ def require_qt(func):
     """
     @wraps(func)
     def wrapped(*args, **kwargs):
-        if not QApplication.instance():
+        if not QApplication.instance():  # pragma: no cover
             raise RuntimeError("A Qt application must be created.")
         return func(*args, **kwargs)
     return wrapped
