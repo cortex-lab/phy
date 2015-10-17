@@ -11,13 +11,11 @@ import base64
 import json
 import os.path as op
 import os
-import sys
 import subprocess
 from textwrap import dedent
 
 import numpy as np
 from six import string_types, exec_
-from six.moves import builtins
 
 from ._types import _is_integer
 
@@ -33,9 +31,9 @@ def _encode_qbytearray(arr):
 
 
 def _decode_qbytearray(data_b64):
-    from phy.gui.qt import QtCore
+    from phy.gui.qt import QByteArray
     encoded = base64.b64decode(data_b64)
-    out = QtCore.QByteArray.fromBase64(encoded)
+    out = QByteArray.fromBase64(encoded)
     return out
 
 
@@ -127,26 +125,6 @@ def _write_text(path, contents):
     assert not op.exists(path)
     with open(path, 'w') as f:
         f.write(contents)
-
-
-def _is_interactive():  # pragma: no cover
-    """Determine whether the user has requested interactive mode."""
-    # The Python interpreter sets sys.flags correctly, so use them!
-    if sys.flags.interactive:
-        return True
-
-    # IPython does not set sys.flags when -i is specified, so first
-    # check it if it is already imported.
-    if '__IPYTHON__' not in dir(builtins):
-        return False
-
-    # Then we check the application singleton and determine based on
-    # a variable it sets.
-    try:
-        from IPython.config.application import Application as App
-        return App.initialized() and App.instance().interact
-    except (ImportError, AttributeError):
-        return False
 
 
 def _git_version():
