@@ -220,9 +220,6 @@ class ManualClustering(object):
 
         _attach_wizard(self.wizard, self.clustering, self.cluster_meta)
 
-        # Create the actions.
-        self._create_actions()
-
     def _add_action(self, callback, name=None, alias=None):
         name = name or callback.__name__
         shortcut = self.shortcuts.get(name, None)
@@ -230,8 +227,8 @@ class ManualClustering(object):
                          name=name,
                          shortcut=shortcut, alias=alias)
 
-    def _create_actions(self):
-        self.actions = Actions()
+    def _create_actions(self, gui):
+        self.actions = Actions(gui)
 
         # Selection.
         self._add_action(self.select, alias='c')
@@ -268,8 +265,8 @@ class ManualClustering(object):
         def on_start():
             gui.emit('wizard_start')
 
-        # Attach the GUI and register the actions.
-        self.actions.attach(gui)
+        # Create the actions.
+        self._create_actions(gui)
 
         return self
 
@@ -318,5 +315,4 @@ class ManualClustering(object):
         spike_clusters = self.clustering.spike_clusters
         groups = {c: self.cluster_meta.get('group', c)
                   for c in self.clustering.cluster_ids}
-        if self.gui:
-            self.gui.emit('save_requested', spike_clusters, groups)
+        self.gui.emit('save_requested', spike_clusters, groups)
