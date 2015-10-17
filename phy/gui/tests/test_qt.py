@@ -26,10 +26,10 @@ def test_require_qt_with_app():
 
     @require_qt
     def f():
-        pass
+        pass  # pragma: no cover
 
     if not QApplication.instance():
-        with raises(RuntimeError):
+        with raises(RuntimeError):  # pragma: no cover
             f()
 
 

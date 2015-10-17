@@ -36,7 +36,7 @@ def _create_canvas():
 
 def test_gui_noapp():
     if not QApplication.instance():
-        with raises(RuntimeError):
+        with raises(RuntimeError):  # pragma: no cover
             GUI()
 
 
