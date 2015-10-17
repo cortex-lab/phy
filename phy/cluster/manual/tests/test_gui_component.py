@@ -291,19 +291,23 @@ def test_manual_clustering_merge(manual_clustering):
 def test_manual_clustering_split(manual_clustering):
     mc, assert_selection = manual_clustering
 
-    mc.actions.merge([1, 2, 10])
-    assert_selection(31, 20)
-
     mc.actions.select([1, 2])
     mc.actions.split([1, 2])
-    assert_selection(32, 20)
+    assert_selection(31, 20)
 
     mc.actions.undo()
-    # TODO
-    # assert_selection(1, 2)
+    assert_selection(1, 2)
 
     mc.actions.redo()
-    # assert_selection(32, 20)
+    assert_selection(31, 20)
+
+
+def test_manual_clustering_split_2(qapp):
+    spike_clusters = np.array([0, 0, 1])
+
+    mc = ManualClustering(spike_clusters=spike_clusters)
+    mc.actions.split([0, 1])
+    assert mc.wizard.selection == [2, 1]
 
 
 def test_manual_clustering_move(manual_clustering, quality, similarity):
