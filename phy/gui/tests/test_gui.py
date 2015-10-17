@@ -9,7 +9,6 @@
 from ..qt import Qt
 from ..gui import GUI
 from phy.utils._color import _random_color
-from phy.utils.plugin import IPlugin
 
 
 #------------------------------------------------------------------------------
@@ -67,17 +66,19 @@ def test_gui_1(qtbot):
     gui.close()
 
 
-def test_gui_plugin(qtbot, gui):
+def test_gui_component(qtbot, gui):
 
-    class TestPlugin(IPlugin):
+    class TestComponent(object):
         def __init__(self, arg):
             self._arg = arg
 
-        def attach_to_gui(self, gui):
+        def attach(self, gui):
             gui._attached = self._arg
             return 'attached'
 
-    assert gui.attach('testplugin', 3) == 'attached'
+    tc = TestComponent(3)
+
+    assert tc.attach(gui) == 'attached'
     assert gui._attached == 3
 
 
