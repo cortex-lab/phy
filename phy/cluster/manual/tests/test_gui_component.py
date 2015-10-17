@@ -12,12 +12,12 @@ from numpy.testing import assert_array_equal as ae
 
 from ..clustering import Clustering
 from .._utils import create_cluster_meta
-from ..gui_plugin import (_wizard_group,
-                          _attach_wizard,
-                          _attach_wizard_to_clustering,
-                          _attach_wizard_to_cluster_meta,
-                          ManualClustering,
-                          )
+from ..gui_component import (_wizard_group,
+                             _attach_wizard,
+                             _attach_wizard_to_clustering,
+                             _attach_wizard_to_cluster_meta,
+                             ManualClustering,
+                             )
 from phy.gui.tests.conftest import gui  # noqa
 
 
