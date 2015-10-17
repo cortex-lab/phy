@@ -3,5 +3,5 @@
 
 """GUI routines."""
 
-from .qt import start_qt_app, run_qt_app, enable_qt
+from .qt import require_qt, create_app, run_app
 from .gui import GUI

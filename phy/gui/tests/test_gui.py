@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from pytest import raises
+
 from ..qt import Qt
 from ..gui import GUI
 from phy.utils._color import _random_color
@@ -32,6 +34,11 @@ def _create_canvas():
 # Test gui
 #------------------------------------------------------------------------------
 
+def test_gui_noapp():
+    with raises(RuntimeError):
+        GUI()
+
+
 def test_gui_1(qtbot):
 
     gui = GUI(position=(200, 100), size=(100, 100))
@@ -49,7 +56,6 @@ def test_gui_1(qtbot):
     gui.add_view(_create_canvas(), 'view2')
     view.setFloating(False)
     gui.show()
-    # qtbot.waitForWindowShown(gui)
 
     assert len(gui.list_views('view')) == 2
 
@@ -66,7 +72,7 @@ def test_gui_1(qtbot):
     gui.close()
 
 
-def test_gui_component(qtbot, gui):
+def test_gui_component(gui):
 
     class TestComponent(object):
         def __init__(self, arg):
@@ -82,9 +88,7 @@ def test_gui_component(qtbot, gui):
     assert gui._attached == 3
 
 
-def test_gui_status_message(qtbot):
-    gui = GUI()
-    qtbot.addWidget(gui)
+def test_gui_status_message(gui):
     assert gui.status_message == ''
     gui.status_message = ':hello world!'
     assert gui.status_message == ':hello world!'
