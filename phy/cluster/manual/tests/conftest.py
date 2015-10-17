@@ -9,7 +9,7 @@
 from pytest import yield_fixture
 
 from ..wizard import Wizard
-from ..gui_plugin import _wizard_group
+from ..gui_component import _wizard_group
 
 
 #------------------------------------------------------------------------------

@@ -5,4 +5,4 @@
 
 from .clustering import Clustering
 from .wizard import Wizard
-from .gui_plugin import ManualClustering
+from .gui_component import ManualClustering
