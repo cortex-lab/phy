@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test GUI plugin."""
+"""Test GUI component."""
 
 #------------------------------------------------------------------------------
 # Imports
@@ -16,6 +16,7 @@ from ..gui_plugin import (_wizard_group,
                           _attach_wizard,
                           _attach_wizard_to_clustering,
                           _attach_wizard_to_cluster_meta,
+                          ManualClustering,
                           )
 from phy.gui.tests.conftest import gui  # noqa
 
@@ -28,13 +29,13 @@ from phy.gui.tests.conftest import gui  # noqa
 def manual_clustering(gui, cluster_ids, cluster_groups):
     spike_clusters = np.array(cluster_ids)
 
-    mc = gui.attach('ManualClustering',
-                    spike_clusters=spike_clusters,
-                    cluster_groups=cluster_groups,
-                    shortcuts={'undo': 'ctrl+z'},
-                    )
-
+    mc = ManualClustering(spike_clusters=spike_clusters,
+                          cluster_groups=cluster_groups,
+                          shortcuts={'undo': 'ctrl+z'},
+                          )
     _s = []
+
+    mc.attach(gui)
 
     # Connect to the `select` event.
     @mc.gui.connect_
@@ -209,7 +210,7 @@ def test_attach_wizard_3(wizard, cluster_ids, cluster_groups):
 
 
 #------------------------------------------------------------------------------
-# Test GUI plugins
+# Test GUI components
 #------------------------------------------------------------------------------
 
 def test_wizard_start_1(manual_clustering):

@@ -41,7 +41,6 @@ class IPluginRegistry(type):
 class IPlugin(with_metaclass(IPluginRegistry)):
     """A class deriving from IPlugin can implement the following methods:
 
-    * `attach_to_gui(gui)`: called when the plugin is attached to a GUI.
     * `attach_to_cli(cli)`: called when the CLI is created.
 
     """

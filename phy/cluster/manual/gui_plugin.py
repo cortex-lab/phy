@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Manual clustering GUI plugin."""
+"""Manual clustering GUI component."""
 
 
 # -----------------------------------------------------------------------------
@@ -18,7 +18,6 @@ from .clustering import Clustering
 from .wizard import Wizard
 from phy.gui.actions import Actions
 from phy.io.array import select_spikes
-from phy.utils.plugin import IPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -122,11 +121,11 @@ def _attach_wizard(wizard, clustering, cluster_meta):
 
 
 # -----------------------------------------------------------------------------
-# Clustering GUI plugin
+# Clustering GUI component
 # -----------------------------------------------------------------------------
 
-class ManualClustering(IPlugin):
-    """Plugin that brings manual clustering facilities to a GUI:
+class ManualClustering(object):
+    """Component that brings manual clustering facilities to a GUI:
 
     * Clustering instance: merge, split, undo, redo
     * ClusterMeta instance: change cluster metadata (e.g. group)
@@ -136,8 +135,6 @@ class ManualClustering(IPlugin):
 
     Bring the `select` event to the GUI. This is raised when clusters are
     selected by the user or by the wizard.
-
-    Other plugins can connect to that event.
 
     Parameters
     ----------
@@ -256,7 +253,7 @@ class ManualClustering(IPlugin):
         self._add_action(self.undo)
         self._add_action(self.redo)
 
-    def attach_to_gui(self, gui):
+    def attach(self, gui):
         self.gui = gui
 
         @self.wizard.connect
