@@ -12,7 +12,8 @@ import logging
 
 from six import string_types, PY3
 
-from .qt import QKeySequence, QAction
+from .qt import QKeySequence, QAction, require_qt
+from .gui import GUI
 from phy.utils import Bunch
 
 logger = logging.getLogger(__name__)
@@ -107,6 +108,7 @@ def _alias(name):
     return alias
 
 
+@require_qt
 def _create_qaction(gui, name, callback, shortcut):
     # Create the QAction instance.
     action = QAction(name, gui)
@@ -133,17 +135,11 @@ class Actions(object):
     * Display all shortcuts
 
     """
-    def __init__(self):
-        self._gui = None
-        self._actions = {}
+    def __init__(self, gui):
+        self._actions_dict = {}
         self._aliases = {}
-
-    def get_action_dict(self):
-        return self._actions.copy()
-
-    def attach(self, gui, enable_snippets=True):
-        """Attach a GUI."""
-        self._gui = gui
+        assert isinstance(gui, GUI)
+        self.gui = gui
 
         # Default exit action.
         @self.add(shortcut='Quit')
@@ -151,9 +147,10 @@ class Actions(object):
             gui.close()
 
         # Create and attach snippets.
-        if enable_snippets:
-            self.snippets = Snippets()
-            self.snippets.attach(gui, self)
+        self.snippets = Snippets(gui, self)
+
+    def backup(self):
+        return list(self._actions_dict.values())
 
     def add(self, callback=None, name=None, shortcut=None, alias=None):
         """Add an action with a keyboard shortcut."""
@@ -169,16 +166,15 @@ class Actions(object):
         name = name.replace('&', '')
 
         # Skip existing action.
-        if name in self._actions:
+        if name in self._actions_dict:
             return
 
         # Create and register the action.
-        action = _create_qaction(self._gui, name, callback, shortcut)
+        action = _create_qaction(self.gui, name, callback, shortcut)
         action_obj = Bunch(qaction=action, name=name, alias=alias,
                            shortcut=shortcut, callback=callback)
-        if self._gui:
-            self._gui.addAction(action)
-        self._actions[name] = action_obj
+        self.gui.addAction(action)
+        self._actions_dict[name] = action_obj
         # Register the alias -> name mapping.
         self._aliases[alias] = name
 
@@ -192,7 +188,7 @@ class Actions(object):
         # Resolve the alias if it is an alias.
         name = self._aliases.get(name, name)
         # Get the action.
-        action = self._actions.get(name, None)
+        action = self._actions_dict.get(name, None)
         if not action:
             raise ValueError("Action `{}` doesn't exist.".format(name))
         if not name.startswith('_'):
@@ -201,14 +197,13 @@ class Actions(object):
 
     def remove(self, name):
         """Remove an action."""
-        if self._gui:
-            self._gui.removeAction(self._actions[name].qaction)
-        del self._actions[name]
+        self.gui.removeAction(self._actions_dict[name].qaction)
+        del self._actions_dict[name]
         delattr(self, name)
 
     def remove_all(self):
         """Remove all actions."""
-        names = sorted(self._actions.keys())
+        names = sorted(self._actions_dict.keys())
         for name in names:
             self.remove(name)
 
@@ -216,12 +211,11 @@ class Actions(object):
     def shortcuts(self):
         """A dictionary of action shortcuts."""
         return {name: action.shortcut
-                for name, action in self._actions.items()}
+                for name, action in self._actions_dict.items()}
 
     def show_shortcuts(self):
         """Print all shortcuts."""
-        _show_shortcuts(self.shortcuts,
-                        self._gui.windowTitle() if self._gui else None)
+        _show_shortcuts(self.shortcuts, self.gui.windowTitle())
 
 
 # -----------------------------------------------------------------------------
@@ -261,16 +255,16 @@ class Snippets(object):
     _snippet_chars = ("abcdefghijklmnopqrstuvwxyz0123456789"
                       " ,.;?!_-+~=*/\(){}[]")
 
-    def __init__(self):
-        self._gui = None
-        self._cmd = ''  # only used when there is no gui attached
+    def __init__(self, gui, actions):
+        assert isinstance(gui, GUI)
+        self.gui = gui
 
-    def attach(self, gui, actions):
-        self._gui = gui
-        self._actions = actions
+        assert isinstance(actions, Actions)
+        self.actions = actions
+
         # We will keep a backup of all actions so that we can switch
         # safely to the set of shortcut actions when snippet mode is on.
-        self._actions_backup = {}
+        self._actions_backup = []
 
         # Register snippet mode shortcut.
         @actions.add(shortcut=':')
@@ -284,7 +278,7 @@ class Snippets(object):
         A cursor is appended at the end.
 
         """
-        msg = self._gui.status_message if self._gui else self._cmd
+        msg = self.gui.status_message
         n = len(msg)
         n_cur = len(self.cursor)
         return msg[:n - n_cur]
@@ -292,10 +286,7 @@ class Snippets(object):
     @command.setter
     def command(self, value):
         value += self.cursor
-        if not self._gui:
-            self._cmd = value
-        else:
-            self._gui.status_message = value
+        self.gui.status_message = value
 
     def _backspace(self):
         """Erase the last character in the snippet command."""
@@ -328,19 +319,19 @@ class Snippets(object):
                     self.command += char
                 return callback
 
-            self._actions.add(name='_snippet_{}'.format(i),
-                              shortcut=char,
-                              callback=_make_func(char))
+            self.actions.add(name='_snippet_{}'.format(i),
+                             shortcut=char,
+                             callback=_make_func(char))
 
-        self._actions.add(name='_snippet_backspace',
-                          shortcut='backspace',
-                          callback=self._backspace)
-        self._actions.add(name='_snippet_activate',
-                          shortcut=('enter', 'return'),
-                          callback=self._enter)
-        self._actions.add(name='_snippet_disable',
-                          shortcut='escape',
-                          callback=self.mode_off)
+        self.actions.add(name='_snippet_backspace',
+                         shortcut='backspace',
+                         callback=self._backspace)
+        self.actions.add(name='_snippet_activate',
+                         shortcut=('enter', 'return'),
+                         callback=self._enter)
+        self.actions.add(name='_snippet_disable',
+                         shortcut='escape',
+                         callback=self.mode_off)
 
     def run(self, snippet):
         """Executes a snippet command.
@@ -355,7 +346,7 @@ class Snippets(object):
 
         logger.info("Processing snippet `%s`.", snippet)
         try:
-            self._actions.run(name, *snippet_args[1:])
+            self.actions.run(name, *snippet_args[1:])
         except Exception as e:
             logger.warn("Error when executing snippet: \"%s\".", str(e))
 
@@ -364,23 +355,22 @@ class Snippets(object):
 
     def mode_on(self):
         logger.info("Snippet mode enabled, press `escape` to leave this mode.")
-        self._actions_backup = self._actions.get_action_dict()
+        self._actions_backup = self.actions.backup()
         # Remove all existing actions.
-        self._actions.remove_all()
+        self.actions.remove_all()
         # Add snippet keystroke actions.
         self._create_snippet_actions()
         self.command = ':'
 
     def mode_off(self):
-        if self._gui:
-            self._gui.status_message = ''
+        self.gui.status_message = ''
         # Remove all existing actions.
-        self._actions.remove_all()
+        self.actions.remove_all()
         logger.info("Snippet mode disabled.")
         # Reestablishes the shortcuts.
-        for action_obj in self._actions_backup.values():
-            self._actions.add(callback=action_obj.callback,
-                              name=action_obj.name,
-                              shortcut=action_obj.shortcut,
-                              alias=action_obj.alias,
-                              )
+        for action_obj in self._actions_backup:
+            self.actions.add(callback=action_obj.callback,
+                             name=action_obj.name,
+                             shortcut=action_obj.shortcut,
+                             alias=action_obj.alias,
+                             )
