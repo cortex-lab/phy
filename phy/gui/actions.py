@@ -12,7 +12,7 @@ import logging
 
 from six import string_types, PY3
 
-from .qt import QtGui
+from .qt import QKeySequence, QAction
 from phy.utils import Bunch
 
 logger = logging.getLogger(__name__)
@@ -65,7 +65,7 @@ def _get_shortcut_string(shortcut):
         return ', '.join([_get_shortcut_string(s) for s in shortcut])
     if isinstance(shortcut, string_types):
         return shortcut.lower()
-    assert isinstance(shortcut, QtGui.QKeySequence)
+    assert isinstance(shortcut, QKeySequence)
     s = shortcut.toString() or ''
     return str(s).lower()
 
@@ -77,9 +77,9 @@ def _get_qkeysequence(shortcut):
     if isinstance(shortcut, (tuple, list)):
         return [_get_qkeysequence(s) for s in shortcut]
     assert isinstance(shortcut, string_types)
-    if hasattr(QtGui.QKeySequence, shortcut):
-        return QtGui.QKeySequence(getattr(QtGui.QKeySequence, shortcut))
-    sequence = QtGui.QKeySequence.fromString(shortcut)
+    if hasattr(QKeySequence, shortcut):
+        return QKeySequence(getattr(QKeySequence, shortcut))
+    sequence = QKeySequence.fromString(shortcut)
     assert not sequence.isEmpty()
     return sequence
 
@@ -109,7 +109,7 @@ def _alias(name):
 
 def _create_qaction(gui, name, callback, shortcut):
     # Create the QAction instance.
-    action = QtGui.QAction(name, gui)
+    action = QAction(name, gui)
 
     def wrapped(checked, *args, **kwargs):  # pragma: no cover
         return callback(*args, **kwargs)

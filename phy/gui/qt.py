@@ -6,7 +6,6 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-from contextlib import contextmanager
 from functools import wraps
 import logging
 import sys
