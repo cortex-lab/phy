@@ -10,7 +10,6 @@
 import logging
 
 import numpy as np
-from six import integer_types
 
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
