@@ -318,4 +318,5 @@ class ManualClustering(object):
         spike_clusters = self.clustering.spike_clusters
         groups = {c: self.cluster_meta.get('group', c)
                   for c in self.clustering.cluster_ids}
-        self.gui.emit('save_requested', spike_clusters, groups)
+        if self.gui:
+            self.gui.emit('save_requested', spike_clusters, groups)
