@@ -61,6 +61,29 @@ def get_plugin(name):
 # Plugins discovery
 #------------------------------------------------------------------------------
 
+def _iter_plugin_files(dirs):
+    for plugin_dir in dirs:
+        plugin_dir = op.realpath(op.expanduser(plugin_dir))
+        if not op.exists(plugin_dir):
+            continue
+        # for filename in os.listdir(plugin_dir):
+        #     path = op.join(plugin_dir, filename)
+        #     if not op.isdir(path):
+        #         yield path
+        for subdir, dirs, files in os.walk(plugin_dir):
+            # Skip test folders.
+            base = op.basename(subdir)
+            if 'test' in base or '__' in base:  # pragma: no cover
+                continue
+            logger.debug("Scanning `%s`.", subdir)
+            for filename in files:
+                if (filename.startswith('__') or
+                        not filename.endswith('.py')):
+                    continue  # pragma: no cover
+                logger.debug("Found plugin module `%s`.", filename)
+                yield op.join(subdir, filename)
+
+
 def discover_plugins(dirs):
     """Discover the plugin classes contained in Python files.
 
@@ -78,30 +101,18 @@ def discover_plugins(dirs):
 
     """
     # Scan all subdirectories recursively.
-    for plugin_dir in dirs:
-        plugin_dir = op.realpath(op.expanduser(plugin_dir))
-        for subdir, dirs, files in os.walk(plugin_dir):
-            # Skip test folders.
-            base = op.basename(subdir)
-            if 'test' in base or '__' in base:  # pragma: no cover
-                continue
-            logger.debug("Scanning `%s`.", subdir)
-            for filename in files:
-                if (filename.startswith('__') or
-                        not filename.endswith('.py')):
-                    continue  # pragma: no cover
-                logger.debug("Found plugin module `%s`.", filename)
-                path = os.path.join(subdir, filename)
-                modname, ext = op.splitext(filename)
-                file, path, descr = imp.find_module(modname, [subdir])
-                if file:
-                    # Loading the module registers the plugin in
-                    # IPluginRegistry.
-                    try:
-                        mod = imp.load_module(modname, file,  # noqa
-                                              path, descr)
-                    except Exception as e:  # pragma: no cover
-                        logger.exception(e)
+    for path in _iter_plugin_files(dirs):
+        filename = op.basename(path)
+        subdir = op.dirname(path)
+        modname, ext = op.splitext(filename)
+        file, path, descr = imp.find_module(modname, [subdir])
+        if file:
+            # Loading the module registers the plugin in
+            # IPluginRegistry.
+            try:
+                mod = imp.load_module(modname, file, path, descr) # noqa
+            except Exception as e:  # pragma: no cover
+                logger.exception(e)
     return IPluginRegistry.plugins
 
 
