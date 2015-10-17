@@ -302,11 +302,13 @@ def test_manual_clustering_split(manual_clustering):
     assert_selection(31, 20)
 
 
-def test_manual_clustering_split_2(qapp):
+def test_manual_clustering_split_2(gui):  # noqa
     spike_clusters = np.array([0, 0, 1])
 
     mc = ManualClustering(spike_clusters=spike_clusters)
-    mc.actions.split([0, 1])
+    mc.attach(gui)
+
+    mc.actions.split([0])
     assert mc.wizard.selection == [2, 1]
 
 
