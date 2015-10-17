@@ -168,7 +168,8 @@ class ManualClustering(object):
         'redo': 'Redo',
     }
 
-    def __init__(self, spike_clusters=None,
+    def __init__(self,
+                 spike_clusters,
                  cluster_groups=None,
                  n_spikes_max_per_cluster=100,
                  shortcuts=None,

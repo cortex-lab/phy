@@ -29,7 +29,7 @@ from phy.gui.tests.conftest import gui  # noqa
 def manual_clustering(gui, cluster_ids, cluster_groups):
     spike_clusters = np.array(cluster_ids)
 
-    mc = ManualClustering(spike_clusters=spike_clusters,
+    mc = ManualClustering(spike_clusters,
                           cluster_groups=cluster_groups,
                           shortcuts={'undo': 'ctrl+z'},
                           )
@@ -305,7 +305,7 @@ def test_manual_clustering_split(manual_clustering):
 def test_manual_clustering_split_2(gui):  # noqa
     spike_clusters = np.array([0, 0, 1])
 
-    mc = ManualClustering(spike_clusters=spike_clusters)
+    mc = ManualClustering(spike_clusters)
     mc.attach(gui)
 
     mc.actions.split([0])

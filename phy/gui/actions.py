@@ -292,7 +292,7 @@ class Snippets(object):
         """Erase the last character in the snippet command."""
         if self.command == ':':
             return
-        logger.debug("Snippet keystroke `Backspace`.")
+        logger.log(5, "Snippet keystroke `Backspace`.")
         self.command = self.command[:-1]
 
     def _enter(self):

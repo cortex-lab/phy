@@ -35,7 +35,7 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.NullHandler())
 
 
-_logger_fmt = '%(asctime)s  [%(levelname)s]  %(caller)s %(message)s'
+_logger_fmt = '%(asctime)s [%(levelname)s] %(caller)s %(message)s'
 _logger_date_fmt = '%H:%M:%S'
 
 
@@ -44,7 +44,7 @@ class _Formatter(logging.Formatter):
         # Only keep the first character in the level name.
         record.levelname = record.levelname[0]
         filename = op.splitext(op.basename(record.pathname))[0]
-        record.caller = '{:s}:{:d}'.format(filename, record.lineno).ljust(16)
+        record.caller = '{:s}:{:d}'.format(filename, record.lineno).ljust(20)
         return super(_Formatter, self).format(record)
 
 

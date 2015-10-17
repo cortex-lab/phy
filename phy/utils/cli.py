@@ -27,7 +27,7 @@ add_default_handler('DEBUG' if DEBUG else 'INFO')
 
 
 # Only show traceback in debug mode (--debug).
-def exceptionHandler(exception_type, exception, traceback):
+def exceptionHandler(exception_type, exception, traceback):  # pragma: no cover
     logger.error("%s: %s", exception_type.__name__, exception)
 
 
