@@ -12,6 +12,7 @@ from ..actions import (_show_shortcuts,
                        _get_shortcut_string,
                        _get_qkeysequence,
                        _parse_snippet,
+                       Actions,
                        )
 from phy.utils.testing import captured_output, captured_logging
 
@@ -20,7 +21,7 @@ from phy.utils.testing import captured_output, captured_logging
 # Test actions
 #------------------------------------------------------------------------------
 
-def test_shortcuts(qtbot):
+def test_shortcuts(qapp):
     def _assert_shortcut(name, key=None):
         shortcut = _get_qkeysequence(name)
         s = _get_shortcut_string(shortcut)
@@ -37,7 +38,7 @@ def test_shortcuts(qtbot):
     _assert_shortcut(['ctrl+a', 'shift+b'])
 
 
-def test_show_shortcuts(qtbot):
+def test_show_shortcuts(qapp):
     # NOTE: a Qt application needs to be running so that we can use the
     # KeySequence.
     shortcuts = {
@@ -49,6 +50,12 @@ def test_show_shortcuts(qtbot):
         _show_shortcuts(shortcuts, 'test')
     assert 'ctrl+a, shift+b' in stdout.getvalue()
     assert 'ctrl+z' in stdout.getvalue()
+
+
+def test_actions_default_shortcuts(gui):
+    actions = Actions(gui, default_shortcuts={'my_action': 'a'})
+    actions.add(lambda: None, name='my_action')
+    assert actions.shortcuts['my_action'] == 'a'
 
 
 def test_actions_simple(actions):

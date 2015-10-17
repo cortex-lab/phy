@@ -135,9 +135,10 @@ class Actions(object):
     * Display all shortcuts
 
     """
-    def __init__(self, gui):
+    def __init__(self, gui, default_shortcuts=None):
         self._actions_dict = {}
         self._aliases = {}
+        self._default_shortcuts = default_shortcuts or {}
         assert isinstance(gui, GUI)
         self.gui = gui
 
@@ -164,6 +165,7 @@ class Actions(object):
         name = name or callback.__name__
         alias = alias or _alias(name)
         name = name.replace('&', '')
+        shortcut = shortcut or self._default_shortcuts.get(name, None)
 
         # Skip existing action.
         if name in self._actions_dict:
