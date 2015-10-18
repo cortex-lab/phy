@@ -9,7 +9,6 @@
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from vispy import gloo
 
 from ..utils import (_load_shader,
                      _tesselate_histogram,

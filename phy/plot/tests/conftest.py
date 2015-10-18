@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from vispy.app import Canvas, use_app, run
+from vispy.app import Canvas, use_app
 from pytest import yield_fixture
 
 

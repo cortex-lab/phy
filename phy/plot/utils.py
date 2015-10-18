@@ -7,7 +7,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from functools import wraps
 import logging
 import os.path as op
 
@@ -60,19 +59,3 @@ def _enable_depth_mask():
                    blend=True,
                    blend_func=('src_alpha', 'one_minus_src_alpha'))
     gloo.set_clear_depth(1.0)
-
-
-def _wrap_vispy(f):
-    """Decorator for a function returning a VisPy canvas.
-
-    Add `show=True` parameter.
-
-    """
-    @wraps(f)
-    def wrapped(*args, **kwargs):
-        show = kwargs.pop('show', True)
-        canvas = f(*args, **kwargs)
-        if show:
-            canvas.show()
-        return canvas
-    return wrapped
