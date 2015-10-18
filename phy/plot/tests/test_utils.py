@@ -7,8 +7,12 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os
+import os.path as op
+
 import numpy as np
 from numpy.testing import assert_array_equal as ae
+from vispy import config
 
 from ..utils import (_load_shader,
                      _tesselate_histogram,
@@ -22,6 +26,10 @@ from ..utils import (_load_shader,
 
 def test_load_shader():
     assert 'main()' in _load_shader('ax.vert')
+    assert config['include_path']
+    assert op.exists(config['include_path'][0])
+    assert op.isdir(config['include_path'][0])
+    assert os.listdir(config['include_path'][0])
 
 
 def test_tesselate_histogram():

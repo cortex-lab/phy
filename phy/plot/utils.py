@@ -12,7 +12,7 @@ import os.path as op
 
 import numpy as np
 
-from vispy import gloo
+from vispy import gloo, config
 
 logger = logging.getLogger(__name__)
 
@@ -23,7 +23,11 @@ logger = logging.getLogger(__name__)
 
 def _load_shader(filename):
     """Load a shader file."""
-    path = op.join(op.dirname(op.realpath(__file__)), 'glsl', filename)
+    curdir = op.dirname(op.realpath(__file__))
+    glsl_path = op.join(curdir, 'glsl')
+    if not config['include_path']:
+        config['include_path'] = [glsl_path]
+    path = op.join(glsl_path, filename)
     with open(path, 'r') as f:
         return f.read()
 
