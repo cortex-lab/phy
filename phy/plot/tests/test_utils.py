@@ -56,4 +56,3 @@ def test_enable_depth_mask(qtbot, canvas):
 
     canvas.show()
     qtbot.waitForWindowShown(canvas.native)
-    # qtbot.stop()

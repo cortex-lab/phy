@@ -189,13 +189,6 @@ def show_test(canvas):
             canvas.app.process_events()
 
 
-# TODO
-# def test_1(guibot):
-#     c = Canvas()
-#     guibot.add(c)
-#     guibot.wait(c)
-
-
 def show_colored_canvas(color):
     """Show a transient VisPy canvas with a uniform background color."""
     from vispy import app, gloo
