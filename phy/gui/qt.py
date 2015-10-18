@@ -17,7 +17,8 @@ logger = logging.getLogger(__name__)
 # PyQt import
 # -----------------------------------------------------------------------------
 
-from PyQt4.QtCore import Qt, QByteArray, QMetaObject, QSize  # noqa
+from PyQt4.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
+                          pyqtSignal, QSize)
 from PyQt4.QtGui import (QKeySequence, QAction, QStatusBar,  # noqa
                          QMainWindow, QDockWidget, QWidget,
                          QMessageBox, QApplication,
