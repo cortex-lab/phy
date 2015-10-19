@@ -7,6 +7,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from vispy import gloo
+
 from ..base import BaseVisual
 
 
@@ -26,6 +28,11 @@ def test_base_visual(qtbot, canvas):
 
         def is_empty(self):
             return False
+
+    def on_draw(e):
+        gloo.clear()
+
+    canvas.events['draw'].connect(on_draw, position='last')
 
     v = TestVisual()
     v.set_data()
