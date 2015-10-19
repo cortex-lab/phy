@@ -17,17 +17,19 @@ from ..base import BaseVisual
 #------------------------------------------------------------------------------
 
 def test_base_visual(qtbot, canvas):
+
     class TestVisual(BaseVisual):
         _shader_name = 'box'
         _gl_primitive_type = 'lines'
 
         def set_data(self):
-            self._data['a_position'] = [[-1, 0, 0], [1, 0, 0]]
-            self._data['n_rows'] = 1
-            self._to_upload = ['a_position', 'n_rows']
+            self.program['a_position'] = [[-1, 0, 0], [1, 0, 0]]
+            self.program['n_rows'] = 1
 
-        def is_empty(self):
-            return False
+        def on_mouse_move(self, e):
+            y = 1 - 2 * e.pos[1] / float(self.size[1])
+            self.program['a_position'] = [[-1, y, 0], [1, y, 0]]
+            self.update()
 
     def on_draw(e):
         gloo.clear()
@@ -36,8 +38,7 @@ def test_base_visual(qtbot, canvas):
 
     v = TestVisual()
     v.set_data()
+    canvas.add_visual(v)
 
-    v.attach(canvas)
     canvas.show()
-
     # qtbot.stop()
