@@ -7,8 +7,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from vispy import gloo
-
 from ..base import BaseVisual
 
 
