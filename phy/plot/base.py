@@ -42,12 +42,12 @@ class BaseVisual(object):
         pass
 
     def attach(self, canvas):
-        canvas.connect(self.on_draw)
-
         @canvas.connect
         def on_resize(event):
             """Resize the OpenGL context."""
             canvas.context.set_viewport(0, 0, event.size[0], event.size[1])
+
+        canvas.events['draw'].connect(self.on_draw, position='last')
 
     def on_draw(self, e):
         """Draw the waveforms."""
