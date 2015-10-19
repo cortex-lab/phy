@@ -74,14 +74,17 @@ class BaseVisual(object):
             self.size = event.size
             canvas.context.set_viewport(0, 0, event.size[0], event.size[1])
 
-        canvas.connect(self.on_mouse_move)
+        @canvas.connect
+        def on_mouse_move(event):
+            if self._do_show:
+                self.on_mouse_move(event)
 
     def on_mouse_move(self, e):
         pass
 
     def draw(self):
         """Draw the waveforms."""
-        if not self._do_show:
+        if self._do_show:
             self.program.draw(self._gl_primitive_type)
 
     def update(self):
