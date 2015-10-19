@@ -7,6 +7,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from vispy import gloo
+
 from ..base import BaseVisual
 
 
@@ -28,6 +30,11 @@ def test_base_visual(qtbot, canvas):
             y = 1 - 2 * e.pos[1] / float(self.size[1])
             self.program['a_position'] = [[-1, y, 0], [1, y, 0]]
             self.update()
+
+    def on_draw(e):
+        gloo.clear()
+
+    canvas.events['draw'].connect(on_draw, position='last')
 
     v = TestVisual()
     v.set_data()
