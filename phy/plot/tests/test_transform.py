@@ -48,7 +48,7 @@ def test_types():
 
 
 def test_translate_numpy():
-    _check(Translate(), [3, 4], [[4, 6]], translate=[1, 2])
+    _check(Translate(translate=[1, 2]), [3, 4], [[4, 6]])
 
 
 def test_scale_numpy():
@@ -95,8 +95,8 @@ def test_subplot_numpy():
 #------------------------------------------------------------------------------
 
 def test_translate_glsl():
-    assert 'x = x + u_translate' in Translate().glsl('x',
-                                                     translate='u_translate')
+    t = Translate(translate='u_translate').glsl('x')
+    assert 'x = x + u_translate' in t
 
 
 def test_scale_glsl():
@@ -125,5 +125,4 @@ def test_clip_glsl():
 
 def test_subplot_glsl():
     glsl = Subplot().glsl('x', shape='u_shape', index='a_index')
-    print(glsl)
     assert 'x = ' in glsl
