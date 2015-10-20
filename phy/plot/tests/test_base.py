@@ -14,7 +14,7 @@ from ..base import BaseVisual
 # Test base
 #------------------------------------------------------------------------------
 
-def test_base_visual(qtbot, canvas):
+def _test_base_visual(qtbot, canvas):
 
     class TestVisual(BaseVisual):
         _shader_name = 'box'

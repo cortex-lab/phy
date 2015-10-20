@@ -12,7 +12,8 @@ import logging
 from vispy import gloo
 from vispy.app import Canvas
 
-from .utils import _create_program
+# from .transform import TransformChain
+from .utils import _load_shader
 
 logger = logging.getLogger(__name__)
 
@@ -21,19 +22,14 @@ logger = logging.getLogger(__name__)
 # Base spike visual
 #------------------------------------------------------------------------------
 
-class BaseCanvas(Canvas):
-    def __init__(self, *args, **kwargs):
-        super(BaseCanvas, self).__init__(*args, **kwargs)
-        self._visuals = []
+def _build_program(name, transform_chain):
+    vertex = _load_shader(name + '.vert')
+    fragment = _load_shader(name + '.frag')
 
-    def add_visual(self, visual):
-        self._visuals.append(visual)
-        visual.attach(self)
+    vertex, fragment = transform_chain.insert_glsl(vertex, fragment)
 
-    def on_draw(self, e):
-        gloo.clear()
-        for visual in self._visuals:
-            visual.draw()
+    program = gloo.Program(vertex, fragment)
+    return program
 
 
 class BaseVisual(object):
@@ -47,8 +43,7 @@ class BaseVisual(object):
         self.size = 1, 1
         self._canvas = None
         self._do_show = False
-
-        self.program = _create_program(self._shader_name)
+        self.transforms = []
 
     def show(self):
         self._do_show = True
@@ -58,10 +53,6 @@ class BaseVisual(object):
 
     def set_data(self):
         """Set the data for the visual."""
-        pass
-
-    def set_transforms(self):
-        """Set the list of transforms for the visual."""
         pass
 
     def attach(self, canvas):
@@ -91,3 +82,18 @@ class BaseVisual(object):
         """Trigger a draw event in the canvas from the visual."""
         if self._canvas:
             self._canvas.update()
+
+
+class BaseCanvas(Canvas):
+    def __init__(self, *args, **kwargs):
+        super(BaseCanvas, self).__init__(*args, **kwargs)
+        self._visuals = []
+
+    def add_visual(self, visual):
+        self._visuals.append(visual)
+        visual.attach(self)
+
+    def on_draw(self, e):
+        gloo.clear()
+        for visual in self._visuals:
+            visual.draw()
