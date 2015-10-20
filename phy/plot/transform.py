@@ -21,24 +21,24 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 def _wrap_apply(f):
-    def wrapped(arr):
+    def wrapped(arr, **kwargs):
         if arr is None or not len(arr):
             return arr
         arr = np.atleast_2d(arr)
         arr = arr.astype(np.float32)
         assert arr.ndim == 2
-        assert arr.shape[1] == 2
-        out = f(arr)
+        out = f(arr, **kwargs)
         out = out.astype(np.float32)
+        out = np.atleast_2d(out)
         assert out.ndim == 2
-        assert out.shape[0] == arr.shape[0]
+        assert out.shape[1] == arr.shape[1]
         return out
     return wrapped
 
 
 def _wrap_glsl(f):
-    def wrapped(var):
-        out = f(var)
+    def wrapped(var, **kwargs):
+        out = f(var, **kwargs)
         out = dedent(out).strip()
         return out
     return wrapped
@@ -52,68 +52,57 @@ class BaseTransform(object):
     def apply(self, arr):
         raise NotImplementedError()
 
+    def glsl(self, var):
+        raise NotImplementedError()
+
 
 class Translate(BaseTransform):
-    def __init__(self, txy):
-        BaseTransform.__init__(self)
-        self.txy = np.asarray(txy)
+    def apply(self, arr, translate=None):
+        return arr + np.asarray(translate)
 
-    def apply(self, arr):
-        return arr + self.txy
-
-    def glsl(self, var):
-        return """{} + {}""".format(var, self.txy)
+    def glsl(self, var, translate=None):
+        return """{var} = {var} + {translate};""".format(var=var,
+                                                         translate=translate)
 
 
 class Scale(BaseTransform):
-    def __init__(self, sxy):
-        BaseTransform.__init__(self)
-        self.sxy = np.asarray(sxy)
+    def apply(self, arr, scale=None):
+        return arr * np.asarray(scale)
 
-    def apply(self, arr):
-        return arr * self.sxy
-
-    def glsl(self, var):
-        return """{} * {}""".format(var, self.sxy)
+    def glsl(self, var, scale=None):
+        return """{var} = {var} * {scale};""".format(var=var, scale=scale)
 
 
 class Range(BaseTransform):
-    def __init__(self, from_range, to_range):
-        BaseTransform.__init__(self)
+    def apply(self, arr, from_range=None, to_range=None):
 
-        self.from_range = from_range
-        self.to_range = to_range
+        f0 = np.asarray(from_range[:2])
+        f1 = np.asarray(from_range[2:])
+        t0 = np.asarray(to_range[:2])
+        t1 = np.asarray(to_range[2:])
 
-        self.f0 = np.asarray(from_range[:2])
-        self.f1 = np.asarray(from_range[2:])
-        self.t0 = np.asarray(to_range[:2])
-        self.t1 = np.asarray(to_range[2:])
-
-    def apply(self, arr):
-        f0, f1, t0, t1 = self.f0, self.f1, self.t0, self.t1
         return t0 + (t1 - t0) * (arr - f0) / (f1 - f0)
 
-    def glsl(self, var):
+    def glsl(self, var, from_range=None, to_range=None):
         return """
-            {t0} + ({t1} - {t0}) * ({var} - {f0}) / ({f1} - {f0})
+            {var} = {t0} + ({t1} - {t0}) * ({var} - {f0}) / ({f1} - {f0});
         """.format(var=var,
-                   f0=self.from_range[0], f1=self.from_range[1],
-                   t0=self.to_range[0], t1=self.to_range[1],
+                   f0=from_range[0], f1=from_range[1],
+                   t0=to_range[0], t1=to_range[1],
                    )
 
 
 class Clip(BaseTransform):
-    def __init__(self, bounds):
-        BaseTransform.__init__(self)
-        self.bounds = bounds
+    def apply(self, arr, bounds=None):
+        xymin = np.asarray(bounds[:2])
+        xymax = np.asarray(bounds[2:])
+        index = ((arr[:, 0] >= xymin[0]) &
+                 (arr[:, 1] >= xymin[1]) &
+                 (arr[:, 0] <= xymax[0]) &
+                 (arr[:, 1] <= xymax[1]))
+        return arr[index, ...]
 
-        self.xymin = np.asarray(bounds[:2])
-        self.xymax = np.asarray(bounds[2:])
-
-    def apply(self, arr):
-        return np.clip(arr, self.xymin, self.xymax)
-
-    def glsl(self, var):
+    def glsl(self, var, bounds=None):
         return """
             if (({var}.x < {xymin}.x) |
                 ({var}.y < {xymin}.y) |
@@ -121,12 +110,46 @@ class Clip(BaseTransform):
                 ({var}.y > {xymax}.y)) {{
                 discard;
             }}
-        """.format(xymin=self.bounds[0],
-                   xymax=self.bounds[1],
+        """.format(xymin=bounds[0],
+                   xymax=bounds[1],
                    var=var,
                    )
 
 
 class Subplot(Range):
-    # TODO
-    pass
+    def apply(self, arr, shape=None, index=None):
+        i, j = index
+        n_rows, n_cols = shape
+
+        i += 0.5
+        j += 0.5
+
+        x = -1.0 + j * (2.0 / n_cols)
+        y = +1.0 - i * (2.0 / n_rows)
+
+        width = 1.0 / (1.0 * n_cols)
+        height = 1.0 / (1.0 * n_rows)
+
+        from_range = [-1, -1, 1, 1]
+        to_range = [x, y, x + width, y + height]
+
+        return super(Subplot, self).apply(from_range, to_range)
+
+    def glsl(self, var, shape=None, index=None):
+        n_rows, n_cols = shape
+
+        width = 1.0 / (1.0 * n_cols)
+        height = 1.0 / (1.0 * n_rows)
+
+        glsl = """
+        float x = -1.0 + ({index}.y + .5) * (2.0 / {shape}.y);
+        float y = +1.0 - ({index}.x + .5) * (2.0 / {shape}.x);
+
+        float width = 1. / (1.0 * n_rows);
+        float height = 1. / (1.0 * n_rows);
+
+        {var} = vec2(x + {width} * {var}.x,
+                     y + {height} * {var}.y);
+        """
+        return glsl.format(index=index, shape=shape, var=var,
+                           width=width, height=height)
