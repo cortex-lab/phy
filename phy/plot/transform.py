@@ -197,8 +197,8 @@ class GPU(object):
 
 class TransformChain(object):
     """A linear sequence of transforms that happen on the CPU and GPU."""
-    def __init__(self, transforms):
-        self.transforms = transforms
+    def __init__(self, transforms=None):
+        self.transforms = transforms or []
 
     def _index_of_gpu(self):
         classes = [t.__class__.__name__ for t in self.transforms]
