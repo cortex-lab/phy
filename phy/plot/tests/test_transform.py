@@ -153,7 +153,6 @@ def test_transform_chain_empty(array):
     assert t.get('GPU') is None
 
     ae(t.apply(array), array)
-    assert t.glsl('position') == ''
 
 
 def test_transform_chain_one(array):
@@ -193,4 +192,20 @@ def test_transform_chain_complete(array):
     assert len(t.gpu_transforms) == 2
 
     ae(t.apply(array), [[0, .5], [1, 1.5]])
-    assert 'position = ' in t.glsl('position')
+
+    vs = dedent("""
+    attribute vec2 a_position;
+    void main() {
+        gl_Position = transform(a_position);
+    }
+    """).strip()
+
+    fs = dedent("""
+    void main() {
+        gl_FragColor = vec4(1., 1., 1., 1.);
+    }
+    """).strip()
+    vs, fs = t.insert_glsl(vs, fs)
+    assert 'a_box' in vs
+    assert 'v_a_position = a_position;' in vs
+    assert 'discard' in fs

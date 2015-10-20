@@ -8,6 +8,7 @@
 #------------------------------------------------------------------------------
 
 from textwrap import dedent
+import re
 
 import numpy as np
 
@@ -17,7 +18,7 @@ logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
-# Transforms
+# Utils
 #------------------------------------------------------------------------------
 
 def _wrap_apply(f, **kwargs_init):
@@ -48,6 +49,14 @@ def _wrap_glsl(f, **kwargs_init):
     return wrapped
 
 
+def indent(text):
+    return '\n'.join('    ' + l.strip() for l in text.splitlines())
+
+
+#------------------------------------------------------------------------------
+# Transforms
+#------------------------------------------------------------------------------
+
 class BaseTransform(object):
     def __init__(self, **kwargs):
         # Pass the constructor kwargs to the methods.
@@ -66,6 +75,7 @@ class Translate(BaseTransform):
         return arr + np.asarray(translate)
 
     def glsl(self, var, translate=None):
+        assert var
         return """{var} = {var} + {translate};""".format(var=var,
                                                          translate=translate)
 
@@ -75,6 +85,7 @@ class Scale(BaseTransform):
         return arr * np.asarray(scale)
 
     def glsl(self, var, scale=None):
+        assert var
         return """{var} = {var} * {scale};""".format(var=var, scale=scale)
 
 
@@ -91,6 +102,7 @@ class Range(BaseTransform):
         return t0 + (t1 - t0) * (arr - f0) / (f1 - f0)
 
     def glsl(self, var, from_range=None, to_range=None):
+        assert var
         if to_range is None:
             to_range = [-1, -1, 1, 1]
 
@@ -116,6 +128,7 @@ class Clip(BaseTransform):
         return arr[index, ...]
 
     def glsl(self, var, bounds=None):
+        assert var
         if bounds is None:
             bounds = 'vec2(-1, -1)', 'vec2(1, 1)'
 
@@ -158,6 +171,7 @@ class Subplot(Range):
                                           to_range=to_range)
 
     def glsl(self, var, shape=None, index=None):
+        assert var
         glsl = """
         float subplot_x = -1.0 + {index}.y * 2.0 / {shape}.y;
         float subplot_y = +1.0 - {index}.x * 2.0 / {shape}.x;
@@ -218,9 +232,52 @@ class TransformChain(object):
             arr = t.apply(arr)
         return arr
 
-    def glsl(self, var):
-        """Generate the GLSL code for the GPU transform chain."""
-        glsl = ""
+    def insert_glsl(self, vertex, fragment):
+        """Generate the GLSL code of the transform chain."""
+
+        # Find the place where to insert the GLSL snippet.
+        # This is "gl_Position = transform(data_var_name);" where
+        # data_var_name is typically an attribute.
+        vs_regex = re.compile(r'gl_Position = transform\(([\S]+)\);')
+        r = vs_regex.search(vertex)
+        assert r, ("The vertex shader must contain the transform placeholder.")
+        logger.debug("Found transform placeholder in vertex code: `%s`",
+                     r.group(0))
+
+        # Find the GLSL variable with the data (should be a `vec2`).
+        var = r.group(1)
+        assert var and var in vertex
+
+        # Generate the snippet to insert in the shaders.
+        vs_insert = ""
         for t in self.gpu_transforms:
-            glsl += t.glsl(var) + '\n'
-        return glsl
+            if isinstance(t, Clip):
+                continue
+            vs_insert += t.glsl(var) + '\n'
+        vs_insert += 'gl_Position = {};\n'.format(var)
+
+        # Clipping.
+        clip = self.get('Clip')
+        if clip:
+            # Varying name.
+            fvar = 'v_{}'.format(var)
+            glsl_clip = clip.glsl(fvar)
+
+            # Prepare the fragment regex.
+            fs_regex = re.compile(r'(void main\(\)\s*\{)')
+            fs_insert = '\\1\n{}'.format(glsl_clip)
+
+            # Add the varying declaration for clipping.
+            varying_decl = 'varying vec2 {};\n'.format(fvar)
+            vertex = varying_decl + vertex
+            fragment = varying_decl + fragment
+
+            # Make the replacement in the fragment shader for clipping.
+            fragment = fs_regex.sub(indent(fs_insert), fragment)
+            # Set the varying value in the vertex shader.
+            vs_insert += '{} = {};\n'.format(fvar, var)
+
+        # Insert the GLSL snippet of the transform chain in the vertex shader.
+        vertex = vs_regex.sub(indent(vs_insert), vertex)
+
+        return vertex, fragment
