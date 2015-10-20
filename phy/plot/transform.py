@@ -36,9 +36,18 @@ def _wrap_apply(f):
     return wrapped
 
 
+def _wrap_glsl(f):
+    def wrapped(var):
+        out = f(var)
+        out = dedent(out).strip()
+        return out
+    return wrapped
+
+
 class BaseTransform(object):
     def __init__(self):
         self.apply = _wrap_apply(self.apply)
+        self.glsl = _wrap_glsl(self.glsl)
 
     def apply(self, arr):
         raise NotImplementedError()
@@ -72,38 +81,52 @@ class Range(BaseTransform):
     def __init__(self, from_range, to_range):
         BaseTransform.__init__(self)
 
-        self.f0 = np.array(from_range[:2])
-        self.f1 = np.array(from_range[2:])
-        self.t0 = np.array(to_range[:2])
-        self.t1 = np.array(to_range[2:])
+        self.from_range = from_range
+        self.to_range = to_range
+
+        self.f0 = np.asarray(from_range[:2])
+        self.f1 = np.asarray(from_range[2:])
+        self.t0 = np.asarray(to_range[:2])
+        self.t1 = np.asarray(to_range[2:])
 
     def apply(self, arr):
         f0, f1, t0, t1 = self.f0, self.f1, self.t0, self.t1
         return t0 + (t1 - t0) * (arr - f0) / (f1 - f0)
 
     def glsl(self, var):
-        return dedent("""
+        return """
             {t0} + ({t1} - {t0}) * ({var} - {f0}) / ({f1} - {f0})
-        """).format(f0=self.f0, f1=self.f1, t0=self.t0, t1=self.t1).strip()
+        """.format(var=var,
+                   f0=self.from_range[0], f1=self.from_range[1],
+                   t0=self.to_range[0], t1=self.to_range[1],
+                   )
 
 
 class Clip(BaseTransform):
     def __init__(self, bounds):
         BaseTransform.__init__(self)
-        self.xymin = np.asarray(bounds[0:2])
+        self.bounds = bounds
+
+        self.xymin = np.asarray(bounds[:2])
         self.xymax = np.asarray(bounds[2:])
 
     def apply(self, arr):
         return np.clip(arr, self.xymin, self.xymax)
 
     def glsl(self, var):
-        return dedent("""
+        return """
             if (({var}.x < {xymin}.x) |
                 ({var}.y < {xymin}.y) |
                 ({var}.x > {xymax}.x) |
-                ({var}.y > {xymax}.y)) {
+                ({var}.y > {xymax}.y)) {{
                 discard;
-            }
-        """).format(xymin=self.xymin,
-                    xymax=self.xymax,
-                    ).strip()
+            }}
+        """.format(xymin=self.bounds[0],
+                   xymax=self.bounds[1],
+                   var=var,
+                   )
+
+
+class Subplot(Range):
+    # TODO
+    pass
