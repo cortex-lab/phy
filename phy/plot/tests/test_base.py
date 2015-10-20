@@ -33,4 +33,8 @@ def test_base_visual(qtbot, canvas):
     v.hide()
     v.show()
     qtbot.waitForWindowShown(canvas.native)
+
+    # Simulate a mouse move.
+    canvas.events.mouse_move(delta=(1., 0.))
+
     v.update()
