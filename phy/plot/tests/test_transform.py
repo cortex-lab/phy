@@ -53,19 +53,18 @@ def test_scale():
 
 
 def test_range():
-    t = Range([0, 1], [2, 3])
+    t = Range([0, 0, 1, 1], [-1, -1, 1, 1])
 
-    # One element => move to the center of the window.
-    _check(t, [-1, -1], [[1, 2]])
-    _check(t, [3, 4], [[1, 2]])
-    _check(t, [0, 1], [[1, 2]])
+    _check(t, [-1, -1], [[-3, -3]])
+    _check(t, [0, 0], [[-1, -1]])
+    _check(t, [0.5, 0.5], [[0, 0]])
+    _check(t, [1, 1], [[1, 1]])
 
-    # Extend the range symmetrically.
-    _check(t, [[-1, 0], [3, 4]], [[0, 1], [2, 3]])
+    _check(t, [[0, .5], [1.5, -.5]], [[-1, 0], [2, -2]])
 
 
 def test_clip():
-    t = Clip([0, 1], [2, 3])
+    t = Clip([0, 1, 2, 3])
 
     _check(t, [-1, -1], [[0, 1]])
     _check(t, [3, 4], [[2, 3]])

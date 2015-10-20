@@ -10,7 +10,6 @@
 from textwrap import dedent
 
 import numpy as np
-from six import string_types
 
 import logging
 
@@ -31,7 +30,8 @@ def _wrap_apply(f):
         assert arr.shape[1] == 2
         out = f(arr)
         out = out.astype(np.float32)
-        assert out.shape == arr.shape
+        assert out.ndim == 2
+        assert out.shape[0] == arr.shape[0]
         return out
     return wrapped
 
@@ -69,58 +69,41 @@ class Scale(BaseTransform):
 
 
 class Range(BaseTransform):
-    def __init__(self, xymin, xymax, mode='hard'):
+    def __init__(self, from_range, to_range):
         BaseTransform.__init__(self)
-        self.xymin = np.asarray(xymin)
-        self.xymax = np.asarray(xymax)
 
-        # Only if the variables are numbers, not strings.
-        if not isinstance(xymin, string_types):
-            self.xymax_minus_xymin = self.xymax - self.xymin
-
-        self.mode = mode
+        self.f0 = np.array(from_range[:2])
+        self.f1 = np.array(from_range[2:])
+        self.t0 = np.array(to_range[:2])
+        self.t1 = np.array(to_range[2:])
 
     def apply(self, arr):
-        if self.mode == 'hard':
-            xym = arr.min(axis=0)
-            xyM = arr.max(axis=0)
-
-            # Handle min=max degenerate cases.
-            for i in range(arr.shape[1]):
-                if np.allclose(xym[i], xyM[i]):
-                    arr[:, i] += .5
-                    xyM[i] += 1
-
-            return self.xymin + self.xymax_minus_xymin * \
-                (arr - xym) / (xyM - xym)
-
-        raise NotImplementedError()
+        f0, f1, t0, t1 = self.f0, self.f1, self.t0, self.t1
+        return t0 + (t1 - t0) * (arr - f0) / (f1 - f0)
 
     def glsl(self, var):
-        return TODO
+        return dedent("""
+            {t0} + ({t1} - {t0}) * ({var} - {f0}) / ({f1} - {f0})
+        """).format(f0=self.f0, f1=self.f1, t0=self.t0, t1=self.t1).strip()
 
 
 class Clip(BaseTransform):
-    def __init__(self, xymin, xymax):
+    def __init__(self, bounds):
         BaseTransform.__init__(self)
-        self.xymin = np.asarray(xymin)
-        self.xymax = np.asarray(xymax)
+        self.xymin = np.asarray(bounds[0:2])
+        self.xymax = np.asarray(bounds[2:])
 
     def apply(self, arr):
         return np.clip(arr, self.xymin, self.xymax)
 
     def glsl(self, var):
         return dedent("""
-        if (({var}.x < {xymin}.x) |
-            ({var}.y < {xymin}.y) |
-            ({var}.x > {xymax}.x) |
-            ({var}.y > {xymax}.y)) {
-            discard;
-        }
+            if (({var}.x < {xymin}.x) |
+                ({var}.y < {xymin}.y) |
+                ({var}.x > {xymax}.x) |
+                ({var}.y > {xymax}.y)) {
+                discard;
+            }
         """).format(xymin=self.xymin,
                     xymax=self.xymax,
-                    )
-
-
-class GPU(BaseTransform):
-    pass
+                    ).strip()
