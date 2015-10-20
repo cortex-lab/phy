@@ -20,10 +20,12 @@ logger = logging.getLogger(__name__)
 # Transforms
 #------------------------------------------------------------------------------
 
-def _wrap_apply(f):
+def _wrap_apply(f, **kwargs_init):
     def wrapped(arr, **kwargs):
         if arr is None or not len(arr):
             return arr
+        # Method kwargs first, then we update with the constructor kwargs.
+        kwargs.update(kwargs_init)
         arr = np.atleast_2d(arr)
         arr = arr.astype(np.float32)
         assert arr.ndim == 2
@@ -36,8 +38,10 @@ def _wrap_apply(f):
     return wrapped
 
 
-def _wrap_glsl(f):
+def _wrap_glsl(f, **kwargs_init):
     def wrapped(var, **kwargs):
+        # Method kwargs first, then we update with the constructor kwargs.
+        kwargs.update(kwargs_init)
         out = f(var, **kwargs)
         out = dedent(out).strip()
         return out
@@ -45,9 +49,10 @@ def _wrap_glsl(f):
 
 
 class BaseTransform(object):
-    def __init__(self):
-        self.apply = _wrap_apply(self.apply)
-        self.glsl = _wrap_glsl(self.glsl)
+    def __init__(self, **kwargs):
+        # Pass the constructor kwargs to the methods.
+        self.apply = _wrap_apply(self.apply, **kwargs)
+        self.glsl = _wrap_glsl(self.glsl, **kwargs)
 
     def apply(self, arr):
         raise NotImplementedError()
