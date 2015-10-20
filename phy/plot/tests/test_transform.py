@@ -11,7 +11,7 @@ from textwrap import dedent
 
 import numpy as np
 
-from ..transform import Translate, Scale, Range, Clip
+from ..transform import Translate, Scale, Range, Clip, Subplot
 
 
 #------------------------------------------------------------------------------
@@ -30,7 +30,7 @@ def _check(transform, array, expected, **kwargs):
     if not len(transformed):
         assert not len(expected)
     else:
-        assert np.all(transformed == expected)
+        assert np.allclose(transformed, expected)
 
 
 #------------------------------------------------------------------------------
@@ -78,6 +78,18 @@ def test_clip_numpy():
     _check(Clip(), [[-1, 0], [3, 4]], [], **kwargs)
 
 
+def test_subplot_numpy():
+    shape = (2, 3)
+
+    _check(Subplot(), [-1, -1], [-1, +0], index=(0, 0), shape=shape)
+    _check(Subplot(), [+0, +0], [-2. / 3., .5], index=(0, 0), shape=shape)
+
+    _check(Subplot(), [-1, -1], [-1, -1], index=(1, 0), shape=shape)
+    _check(Subplot(), [+1, +1], [-1. / 3, 0], index=(1, 0), shape=shape)
+
+    _check(Subplot(), [0, 1], [0, 0], index=(1, 1), shape=shape)
+
+
 #------------------------------------------------------------------------------
 # Test GLSL transforms
 #------------------------------------------------------------------------------
@@ -109,3 +121,9 @@ def test_clip_glsl():
         }
         """).strip()
     assert expected in Clip().glsl('x', bounds=['xymin', 'xymax'])
+
+
+def test_subplot_glsl():
+    glsl = Subplot().glsl('x', shape='u_shape', index='a_index')
+    print(glsl)
+    assert 'x = ' in glsl
