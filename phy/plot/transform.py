@@ -20,10 +20,14 @@ logger = logging.getLogger(__name__)
 
 def _wrap_apply(f):
     def wrapped(arr):
+        if arr is None or not len(arr):
+            return arr
         arr = np.atleast_2d(arr)
+        arr = arr.astype(np.float32)
         assert arr.ndim == 2
         assert arr.shape[1] == 2
         out = f(arr)
+        out = out.astype(np.float32)
         assert out.shape == arr.shape
         return out
     return wrapped
@@ -58,8 +62,13 @@ class Scale(BaseTransform):
 class Range(BaseTransform):
     def __init__(self, xmin, ymin, xmax, ymax, mode='hard'):
         BaseTransform.__init__(self)
-        self.xmin, ymin = xmin, ymin
-        self.xmax, ymax = xmax, ymax
+        self.xmin, self.ymin = xmin, ymin
+        self.xmax, self.ymax = xmax, ymax
+
+        self.xymin = np.array([[self.xmin, self.ymin]])
+        self.xymax = np.array([[self.xmax, self.ymax]])
+        self.xymax_minus_xymin = self.xymax - self.xymin
+
         self.mode = mode
 
     def apply(self, arr):
@@ -67,10 +76,14 @@ class Range(BaseTransform):
             xym = arr.min(axis=0)
             xyM = arr.max(axis=0)
 
-            xymin = np.array([[self.xmin, self.ymin]])
-            xymax = np.array([[self.xmax, self.ymax]])
+            # Handle min=max degenerate cases.
+            for i in range(arr.shape[1]):
+                if np.allclose(xym[i], xyM[i]):
+                    arr[:, i] += .5
+                    xyM[i] += 1
 
-            xymin + (xymax - xymin) * (arr - xym) / (xyM - xym)
+            return self.xymin + self.xymax_minus_xymin * \
+                (arr - xym) / (xyM - xym)
 
         raise NotImplementedError()
 
@@ -78,11 +91,13 @@ class Range(BaseTransform):
 class Clip(BaseTransform):
     def __init__(self, xmin, ymin, xmax, ymax):
         BaseTransform.__init__(self)
-        self.xmin, ymin = xmin, ymin
-        self.xmax, ymax = xmax, ymax
+        self.xmin, self.ymin = xmin, ymin
+        self.xmax, self.ymax = xmax, ymax
+        self.xymin = np.array([self.xmin, self.ymin])
+        self.xymax = np.array([self.xmax, self.ymax])
 
     def apply(self, arr):
-        pass
+        return np.clip(arr, self.xymin, self.xymax)
 
 
 class GPU(BaseTransform):

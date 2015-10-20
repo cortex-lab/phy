@@ -11,43 +11,66 @@ from itertools import product
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import yield_fixture
 
 from ..transform import Translate, Scale, Range, Clip, GPU
+
+
+#------------------------------------------------------------------------------
+# Fixtures
+#------------------------------------------------------------------------------
+
+def _check(transform, array, expected):
+    transformed = transform.apply(array)
+    if array is None or not len(array):
+        assert transformed == array
+        return
+    array = np.atleast_2d(array)
+    if isinstance(array, np.ndarray):
+        assert transformed.shape == array.shape
+        assert transformed.dtype == np.float32
+    assert np.all(transformed == expected)
 
 
 #------------------------------------------------------------------------------
 # Test transform
 #------------------------------------------------------------------------------
 
-@yield_fixture(params=product([0, 1, 2], ['i', 'f']))
-def array(request):
-    m, t = request.param
-    if t == 'i':
-        a, b = 3, 4
-    elif t == 'f':
-        a, b = 3., 4.
-    arr = [a, b]
-    if m == 1:
-        arr = [arr]
-    elif m == 2:
-        arr = np.array(arr)
-    elif m == 3:
-        arr = np.array([arr])
-    elif m == 4:
-        arr = np.array([arr, arr, arr])
-    yield arr
-
-
-def _check(transform, array, expected):
-    transformed = transform.apply(array)
-    array = np.atleast_2d(array)
-    if isinstance(array, np.ndarray):
-        assert transformed.shape == array.shape
-        assert transformed.dtype == array.dtype
-    ae(transformed, expected)
-
-
-def test_translate(array):
+def test_types():
     t = Translate(1, 2)
-    _check(t, array, [[4, 6]])
+    _check(t, [], [])
+
+    for ab in [[3, 4], [3., 4.]]:
+        for arr in [ab, [ab], np.array(ab), np.array([ab]),
+                    np.array([ab, ab, ab])]:
+            _check(t, arr, [[4, 6]])
+
+
+def test_translate():
+    t = Translate(1, 2)
+    _check(t, [3, 4], [[4, 6]])
+
+
+def test_scale():
+    t = Scale(-1, 2)
+    _check(t, [3, 4], [[-3, 8]])
+
+
+def test_range():
+    t = Range(0, 1, 2, 3)
+
+    # One element => move to the center of the window.
+    _check(t, [-1, -1], [[1, 2]])
+    _check(t, [3, 4], [[1, 2]])
+    _check(t, [0, 1], [[1, 2]])
+
+    # Extend the range symmetrically.
+    _check(t, [[-1, 0], [3, 4]], [[0, 1], [2, 3]])
+
+
+def test_clip():
+    t = Clip(0, 1, 2, 3)
+
+    _check(t, [-1, -1], [[0, 1]])
+    _check(t, [3, 4], [[2, 3]])
+
+    _check(t, [[-1, 0], [3, 4]], [[0, 1], [2, 3]])
