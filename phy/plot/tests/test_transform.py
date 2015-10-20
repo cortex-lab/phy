@@ -7,12 +7,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from itertools import product
-
 import numpy as np
-from numpy.testing import assert_array_equal as ae
 
-from ..transform import Translate, Scale, Range, Clip, GPU
+from ..transform import Translate, Scale, Range, Clip
 
 
 #------------------------------------------------------------------------------
