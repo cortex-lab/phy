@@ -33,7 +33,7 @@ def _check(transform, array, expected):
 #------------------------------------------------------------------------------
 
 def test_types():
-    t = Translate(1, 2)
+    t = Translate([1, 2])
     _check(t, [], [])
 
     for ab in [[3, 4], [3., 4.]]:
@@ -43,17 +43,17 @@ def test_types():
 
 
 def test_translate():
-    t = Translate(1, 2)
+    t = Translate([1, 2])
     _check(t, [3, 4], [[4, 6]])
 
 
 def test_scale():
-    t = Scale(-1, 2)
+    t = Scale([-1, 2])
     _check(t, [3, 4], [[-3, 8]])
 
 
 def test_range():
-    t = Range(0, 1, 2, 3)
+    t = Range([0, 1], [2, 3])
 
     # One element => move to the center of the window.
     _check(t, [-1, -1], [[1, 2]])
@@ -65,7 +65,7 @@ def test_range():
 
 
 def test_clip():
-    t = Clip(0, 1, 2, 3)
+    t = Clip([0, 1], [2, 3])
 
     _check(t, [-1, -1], [[0, 1]])
     _check(t, [3, 4], [[2, 3]])
