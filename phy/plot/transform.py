@@ -80,6 +80,8 @@ class Scale(BaseTransform):
 
 class Range(BaseTransform):
     def apply(self, arr, from_range=None, to_range=None):
+        if to_range is None:
+            to_range = [-1, -1, 1, 1]
 
         f0 = np.asarray(from_range[:2])
         f1 = np.asarray(from_range[2:])
@@ -89,6 +91,9 @@ class Range(BaseTransform):
         return t0 + (t1 - t0) * (arr - f0) / (f1 - f0)
 
     def glsl(self, var, from_range=None, to_range=None):
+        if to_range is None:
+            to_range = [-1, -1, 1, 1]
+
         return """
             {var} = {t0} + ({t1} - {t0}) * ({var} - {f0}) / ({f1} - {f0});
         """.format(var=var,
@@ -99,6 +104,9 @@ class Range(BaseTransform):
 
 class Clip(BaseTransform):
     def apply(self, arr, bounds=None):
+        if bounds is None:
+            bounds = [-1, -1, 1, 1]
+
         xymin = np.asarray(bounds[:2])
         xymax = np.asarray(bounds[2:])
         index = ((arr[:, 0] >= xymin[0]) &
@@ -108,6 +116,9 @@ class Clip(BaseTransform):
         return arr[index, ...]
 
     def glsl(self, var, bounds=None):
+        if bounds is None:
+            bounds = 'vec2(-1, -1)', 'vec2(1, 1)'
+
         return """
             if (({var}.x < {xymin}.x) |
                 ({var}.y < {xymin}.y) |
@@ -148,13 +159,68 @@ class Subplot(Range):
 
     def glsl(self, var, shape=None, index=None):
         glsl = """
-        float x = -1.0 + {index}.y * 2.0 / {shape}.y;
-        float y = +1.0 - {index}.x * 2.0 / {shape}.x;
+        float subplot_x = -1.0 + {index}.y * 2.0 / {shape}.y;
+        float subplot_y = +1.0 - {index}.x * 2.0 / {shape}.x;
 
-        float width = 2. / {shape}.y;
-        float height = 2. / {shape}.x;
+        float subplot_width = 2. / {shape}.y;
+        float subplot_height = 2. / {shape}.x;
 
-        {var} = vec2(x + width * {var}.x,
-                     y + height * {var}.y);
+        {var} = vec2(subplot_x + subplot_width * {var}.x,
+                     subplot_y + subplot_height * {var}.y);
         """
         return glsl.format(index=index, shape=shape, var=var)
+
+
+#------------------------------------------------------------------------------
+# Transform chains
+#------------------------------------------------------------------------------
+
+class GPU(object):
+    """Used to specify that the next transforms in the chain happen on
+    the GPU."""
+    pass
+
+
+class TransformChain(object):
+    """A linear sequence of transforms that happen on the CPU and GPU."""
+    def __init__(self, transforms):
+        self.transforms = transforms
+
+    def _index_of_gpu(self):
+        classes = [t.__class__.__name__ for t in self.transforms]
+        return classes.index('GPU') if 'GPU' in classes else None
+
+    @property
+    def cpu_transforms(self):
+        """All transforms until `GPU()`."""
+        i = self._index_of_gpu()
+        return self.transforms[:i] if i is not None else self.transforms
+
+    @property
+    def gpu_transforms(self):
+        """All transforms after `GPU()`."""
+        i = self._index_of_gpu()
+        return self.transforms[i + 1:] if i is not None else []
+
+    def add(self, transforms):
+        """Add some transforms."""
+        self.transforms.extend(transforms)
+
+    def get(self, class_name):
+        """Get a transform in the chain from its name."""
+        for transform in self.transforms:
+            if transform.__class__.__name__ == class_name:
+                return transform
+
+    def apply(self, arr):
+        """Apply all CPU transforms on an array."""
+        for t in self.cpu_transforms:
+            arr = t.apply(arr)
+        return arr
+
+    def glsl(self, var):
+        """Generate the GLSL code for the GPU transform chain."""
+        glsl = ""
+        for t in self.gpu_transforms:
+            glsl += t.glsl(var) + '\n'
+        return glsl
