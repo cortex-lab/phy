@@ -7,7 +7,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from textwrap import dedent
+
 import numpy as np
+from six import string_types
 
 import logging
 
@@ -42,32 +45,38 @@ class BaseTransform(object):
 
 
 class Translate(BaseTransform):
-    def __init__(self, tx, ty):
+    def __init__(self, txy):
         BaseTransform.__init__(self)
-        self.tx, self.ty = tx, ty
+        self.txy = np.asarray(txy)
 
     def apply(self, arr):
-        return arr + np.array([[self.tx, self.ty]])
+        return arr + self.txy
+
+    def glsl(self, var):
+        return """{} + {}""".format(var, self.txy)
 
 
 class Scale(BaseTransform):
-    def __init__(self, sx, sy):
+    def __init__(self, sxy):
         BaseTransform.__init__(self)
-        self.sx, self.sy = sx, sy
+        self.sxy = np.asarray(sxy)
 
     def apply(self, arr):
-        return arr * np.array([[self.sx, self.sy]])
+        return arr * self.sxy
+
+    def glsl(self, var):
+        return """{} * {}""".format(var, self.sxy)
 
 
 class Range(BaseTransform):
-    def __init__(self, xmin, ymin, xmax, ymax, mode='hard'):
+    def __init__(self, xymin, xymax, mode='hard'):
         BaseTransform.__init__(self)
-        self.xmin, self.ymin = xmin, ymin
-        self.xmax, self.ymax = xmax, ymax
+        self.xymin = np.asarray(xymin)
+        self.xymax = np.asarray(xymax)
 
-        self.xymin = np.array([[self.xmin, self.ymin]])
-        self.xymax = np.array([[self.xmax, self.ymax]])
-        self.xymax_minus_xymin = self.xymax - self.xymin
+        # Only if the variables are numbers, not strings.
+        if not isinstance(xymin, string_types):
+            self.xymax_minus_xymin = self.xymax - self.xymin
 
         self.mode = mode
 
@@ -87,17 +96,30 @@ class Range(BaseTransform):
 
         raise NotImplementedError()
 
+    def glsl(self, var):
+        return TODO
+
 
 class Clip(BaseTransform):
-    def __init__(self, xmin, ymin, xmax, ymax):
+    def __init__(self, xymin, xymax):
         BaseTransform.__init__(self)
-        self.xmin, self.ymin = xmin, ymin
-        self.xmax, self.ymax = xmax, ymax
-        self.xymin = np.array([self.xmin, self.ymin])
-        self.xymax = np.array([self.xmax, self.ymax])
+        self.xymin = np.asarray(xymin)
+        self.xymax = np.asarray(xymax)
 
     def apply(self, arr):
         return np.clip(arr, self.xymin, self.xymax)
+
+    def glsl(self, var):
+        return dedent("""
+        if (({var}.x < {xymin}.x) |
+            ({var}.y < {xymin}.y) |
+            ({var}.x > {xymax}.x) |
+            ({var}.y > {xymax}.y)) {
+            discard;
+        }
+        """).format(xymin=self.xymin,
+                    xymax=self.xymax,
+                    )
 
 
 class GPU(BaseTransform):
