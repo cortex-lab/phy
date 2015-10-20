@@ -117,39 +117,39 @@ class Clip(BaseTransform):
 
 
 class Subplot(Range):
+    """Assume that the from range is [-1, -1, 1, 1]."""
     def apply(self, arr, shape=None, index=None):
         i, j = index
         n_rows, n_cols = shape
-
-        i += 0.5
-        j += 0.5
+        assert 0 <= i <= n_rows - 1
+        assert 0 <= j <= n_cols - 1
 
         x = -1.0 + j * (2.0 / n_cols)
         y = +1.0 - i * (2.0 / n_rows)
 
-        width = 1.0 / (1.0 * n_cols)
-        height = 1.0 / (1.0 * n_rows)
+        width = 2.0 / n_cols
+        height = 2.0 / n_rows
+
+        # The origin (x, y) corresponds to the lower-left corner of the
+        # target box.
+        y -= height
 
         from_range = [-1, -1, 1, 1]
         to_range = [x, y, x + width, y + height]
 
-        return super(Subplot, self).apply(from_range, to_range)
+        return super(Subplot, self).apply(arr,
+                                          from_range=from_range,
+                                          to_range=to_range)
 
     def glsl(self, var, shape=None, index=None):
-        n_rows, n_cols = shape
-
-        width = 1.0 / (1.0 * n_cols)
-        height = 1.0 / (1.0 * n_rows)
-
         glsl = """
-        float x = -1.0 + ({index}.y + .5) * (2.0 / {shape}.y);
-        float y = +1.0 - ({index}.x + .5) * (2.0 / {shape}.x);
+        float x = -1.0 + {index}.y * 2.0 / {shape}.y;
+        float y = +1.0 - {index}.x * 2.0 / {shape}.x;
 
-        float width = 1. / (1.0 * n_rows);
-        float height = 1. / (1.0 * n_rows);
+        float width = 2. / {shape}.y;
+        float height = 2. / {shape}.x;
 
-        {var} = vec2(x + {width} * {var}.x,
-                     y + {height} * {var}.y);
+        {var} = vec2(x + width * {var}.x,
+                     y + height * {var}.y);
         """
-        return glsl.format(index=index, shape=shape, var=var,
-                           width=width, height=height)
+        return glsl.format(index=index, shape=shape, var=var)
