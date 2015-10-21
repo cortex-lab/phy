@@ -93,16 +93,17 @@ def subplot_range(shape=None, index=None):
 
 class BaseTransform(object):
     def __init__(self, **kwargs):
+        self.__dict__.update(kwargs)
         # Pass the constructor kwargs to the methods.
         self.apply = _wrap_apply(self.apply, **kwargs)
         self.glsl = _wrap_glsl(self.glsl, **kwargs)
         self.pre_transforms = _wrap_prepost(self.pre_transforms, **kwargs)
         self.post_transforms = _wrap_prepost(self.post_transforms, **kwargs)
 
-    def pre_transforms(self):
+    def pre_transforms(self, **kwargs):
         return []
 
-    def post_transforms(self):
+    def post_transforms(self, **kwargs):
         return []
 
     def apply(self, arr):
@@ -219,7 +220,8 @@ class TransformChain(object):
     """A linear sequence of transforms that happen on the CPU and GPU."""
     def __init__(self, transforms=None):
         self.transformed_var_name = None
-        self.transforms = transforms or []
+        self.transforms = []
+        self.add(transforms)
 
     def _index_of_gpu(self):
         classes = [t.__class__.__name__ for t in self.transforms]
@@ -239,17 +241,20 @@ class TransformChain(object):
 
     def add(self, transforms):
         """Add some transforms."""
-        self.transforms.extend(transforms)
+        for t in transforms:
+            if hasattr(t, 'pre_transforms'):
+                for p in t.pre_transforms():
+                    self.transforms.append(p)
+            self.transforms.append(t)
+            if hasattr(t, 'post_transforms'):
+                for p in t.post_transforms():
+                    self.transforms.append(p)
 
     def get(self, class_name):
         """Get a transform in the chain from its name."""
         for transform in self.transforms:
             if transform.__class__.__name__ == class_name:
                 return transform
-
-    def _extend(self):
-        """Insert pre- and post- transforms into the chain."""
-        # TODO
 
     def apply(self, arr):
         """Apply all CPU transforms on an array."""

@@ -13,7 +13,7 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 from pytest import yield_fixture
 
-from ..transform import (_glslify,
+from ..transform import (_glslify, BaseTransform,
                          Translate, Scale, Range, Clip, Subplot, GPU,
                          TransformChain,
                          )
@@ -164,6 +164,19 @@ def test_transform_chain_empty(array):
     assert t.get('GPU') is None
 
     ae(t.apply(array), array)
+
+
+def test_transform_chain_pre_post(array):
+    class MyTransform(BaseTransform):
+        def pre_transforms(self, key=None):
+            return [MyTransform(key=key - 1)]
+
+        def post_transforms(self, key=None):
+            return [MyTransform(key=key + 1), MyTransform(key=key + 2)]
+
+    t = TransformChain([Translate(), MyTransform(key=0), Scale()])
+    expected = [None, -1, 0, 1, 2, None]
+    assert [getattr(p, 'key', None) for p in t.cpu_transforms] == expected
 
 
 def test_transform_chain_one(array):
