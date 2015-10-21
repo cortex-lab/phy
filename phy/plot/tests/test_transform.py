@@ -132,9 +132,9 @@ def test_range_glsl():
 
 def test_clip_glsl():
     expected = dedent("""
-        if ((x.x < xymin.x) |
-            (x.y < xymin.y) |
-            (x.x > xymax.x) |
+        if ((x.x < xymin.x) ||
+            (x.y < xymin.y) ||
+            (x.x > xymax.x) ||
             (x.y > xymax.y)) {
             discard;
         }
@@ -218,5 +218,9 @@ def test_transform_chain_complete(array):
     """).strip()
     vs, fs = t.insert_glsl(vs, fs)
     assert 'a_box' in vs
-    assert 'v_a_position = a_position;' in vs
+    assert 'v_' in vs
+    assert 'v_' in fs
     assert 'discard' in fs
+
+    # Increase coverage.
+    t.insert_glsl(vs.replace('transform', ''), fs)

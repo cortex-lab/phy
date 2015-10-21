@@ -50,6 +50,14 @@ def _wrap_glsl(f, **kwargs_init):
     return wrapped
 
 
+def _wrap_prepost(f, **kwargs_init):
+    def wrapped(*args, **kwargs):
+        # Method kwargs first, then we update with the constructor kwargs.
+        kwargs.update(kwargs_init)
+        return f(*args, **kwargs)
+    return wrapped
+
+
 def indent(text):
     return '\n'.join('    ' + l.strip() for l in text.splitlines())
 
@@ -82,6 +90,14 @@ class BaseTransform(object):
         # Pass the constructor kwargs to the methods.
         self.apply = _wrap_apply(self.apply, **kwargs)
         self.glsl = _wrap_glsl(self.glsl, **kwargs)
+        self.pre_transforms = _wrap_prepost(self.pre_transforms, **kwargs)
+        self.post_transforms = _wrap_prepost(self.post_transforms, **kwargs)
+
+    def pre_transforms(self):
+        return []
+
+    def post_transforms(self):
+        return []
 
     def apply(self, arr):
         raise NotImplementedError()
@@ -154,11 +170,12 @@ class Clip(BaseTransform):
         assert var
         if bounds is None:
             bounds = 'vec2(-1, -1)', 'vec2(1, 1)'
+        bounds = _glslify_range(bounds)
 
         return """
-            if (({var}.x < {xymin}.x) |
-                ({var}.y < {xymin}.y) |
-                ({var}.x > {xymax}.x) |
+            if (({var}.x < {xymin}.x) ||
+                ({var}.y < {xymin}.y) ||
+                ({var}.x > {xymax}.x) ||
                 ({var}.y > {xymax}.y)) {{
                 discard;
             }}
@@ -177,15 +194,11 @@ class Subplot(Range):
         assert 0 <= i <= n_rows - 1
         assert 0 <= j <= n_cols - 1
 
-        x = -1.0 + j * (2.0 / n_cols)
-        y = +1.0 - i * (2.0 / n_rows)
-
         width = 2.0 / n_cols
         height = 2.0 / n_rows
 
-        # The origin (x, y) corresponds to the lower-left corner of the
-        # target box.
-        y -= height
+        x = -1.0 + j * width
+        y = +1.0 - (i + 1) * height
 
         from_range = [-1, -1, 1, 1]
         to_range = [x, y, x + width, y + height]
@@ -200,18 +213,20 @@ class Subplot(Range):
 
     def glsl(self, var, shape=None, index=None):
         assert var
-        snippet = """
-        float subplot_x = -1.0 + {index}.y * 2.0 / {shape}.y;
-        float subplot_y = +1.0 - {index}.x * 2.0 / {shape}.x;
 
+        index = _glslify_pair(index)
+        shape = _glslify_pair(shape)
+
+        snippet = """
         float subplot_width = 2. / {shape}.y;
         float subplot_height = 2. / {shape}.x;
 
-        {var} = vec2(subplot_x + subplot_width * {var}.x,
-                     subplot_y + subplot_height * {var}.y);
-        """
-        index = _glslify_pair(index)
-        shape = _glslify_pair(shape)
+        float subplot_x = -1.0 + {index}.y * subplot_width;
+        float subplot_y = +1.0 - ({index}.x + 1) * subplot_height;
+
+        {var} = vec2(subplot_x + subplot_width * ({var}.x + 1) * .5,
+                     subplot_y + subplot_height * ({var}.y + 1) * .5);
+        """.format(index=index, shape=shape, var=var)
 
         snippet = snippet.format(index=index, shape=shape, var=var)
         return snippet
@@ -259,6 +274,10 @@ class TransformChain(object):
             if transform.__class__.__name__ == class_name:
                 return transform
 
+    def _extend(self):
+        """Insert pre- and post- transforms into the chain."""
+        # TODO
+
     def apply(self, arr):
         """Apply all CPU transforms on an array."""
         for t in self.cpu_transforms:
@@ -288,7 +307,7 @@ class TransformChain(object):
         assert var and var in vertex
 
         # Generate the snippet to insert in the shaders.
-        temp_var = '_transformed_data'
+        temp_var = 'temp_pos_tr'
         vs_insert = "vec2 {} = {};\n".format(temp_var, var)
         for t in self.gpu_transforms:
             if isinstance(t, Clip):
@@ -300,7 +319,7 @@ class TransformChain(object):
         clip = self.get('Clip')
         if clip:
             # Varying name.
-            fvar = 'v_{}'.format(var)
+            fvar = 'v_{}'.format(temp_var)
             glsl_clip = clip.glsl(fvar)
 
             # Prepare the fragment regex.
@@ -315,7 +334,7 @@ class TransformChain(object):
             # Make the replacement in the fragment shader for clipping.
             fragment = fs_regex.sub(indent(fs_insert), fragment)
             # Set the varying value in the vertex shader.
-            vs_insert += '{} = {};\n'.format(fvar, var)
+            vs_insert += '{} = {};\n'.format(fvar, temp_var)
 
         # Insert the GLSL snippet of the transform chain in the vertex shader.
         vertex = vs_regex.sub(indent(vs_insert), vertex)
