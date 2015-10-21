@@ -12,8 +12,9 @@ import logging
 from vispy import gloo
 from vispy.app import Canvas
 
-# from .transform import TransformChain
+from .transform import TransformChain
 from .utils import _load_shader
+from phy.utils import EventEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -22,27 +23,29 @@ logger = logging.getLogger(__name__)
 # Base spike visual
 #------------------------------------------------------------------------------
 
-def _build_program(name, transform_chain):
+def _build_program(name, transform_chain=None):
     vertex = _load_shader(name + '.vert')
     fragment = _load_shader(name + '.frag')
 
-    vertex, fragment = transform_chain.insert_glsl(vertex, fragment)
+    if transform_chain:
+        vertex, fragment = transform_chain.insert_glsl(vertex, fragment)
 
     program = gloo.Program(vertex, fragment)
     return program
 
 
 class BaseVisual(object):
-    _gl_primitive_type = None
-    _shader_name = None
+    gl_primitive_type = None
+    shader_name = None
 
     def __init__(self):
-        assert self._gl_primitive_type
-        assert self._shader_name
+        assert self.gl_primitive_type
+        assert self.shader_name
 
         self.size = 1, 1
         self._canvas = None
         self._do_show = False
+        self.program = None
         self.transforms = []
 
     def show(self):
@@ -55,9 +58,26 @@ class BaseVisual(object):
         """Set the data for the visual."""
         pass
 
-    def attach(self, canvas):
+    def attach(self, canvas, interact=None):
         """Attach some events."""
+        logger.debug("Attach `%s` with interact `%s` to canvas.",
+                     self.__class__.__name__, interact or '')
         self._canvas = canvas
+
+        # Used when the canvas requests all attached visuals
+        # for the given interact.
+        @canvas.connect_
+        def on_get_visual_for_interact(interact_req):
+            if interact_req == interact:
+                return self
+
+        # NOTE: this is connect_ and not connect because we're using
+        # phy's event system, not VisPy's. The reason is that the order
+        # of the callbacks is not kept by VisPy, whereas we need the order
+        # to draw visuals in the order they are attached.
+        @canvas.connect_
+        def on_draw():
+            self.draw()
 
         @canvas.connect
         def on_resize(event):
@@ -73,10 +93,21 @@ class BaseVisual(object):
     def on_mouse_move(self, e):
         pass
 
+    def build_program(self, transforms=None):
+        transforms = transforms or []
+        assert self.program is None, "The program has already been built."
+
+        # Build the transform chain using the visuals transforms first,
+        # and the interact's transforms then.
+        transform_chain = TransformChain(self.transforms + transforms)
+
+        logger.debug("Build the program of `%s`.", self.__class__.__name__)
+        self.program = _build_program(self.shader_name, transform_chain)
+
     def draw(self):
         """Draw the waveforms."""
-        if self._do_show:
-            self.program.draw(self._gl_primitive_type)
+        if self._do_show and self.program:
+            self.program.draw(self.gl_primitive_type)
 
     def update(self):
         """Trigger a draw event in the canvas from the visual."""
@@ -87,13 +118,65 @@ class BaseVisual(object):
 class BaseCanvas(Canvas):
     def __init__(self, *args, **kwargs):
         super(BaseCanvas, self).__init__(*args, **kwargs)
-        self._visuals = []
+        self._events = EventEmitter()
 
-    def add_visual(self, visual):
-        self._visuals.append(visual)
-        visual.attach(self)
+    def connect_(self, *args, **kwargs):
+        return self._events.connect(*args, **kwargs)
+
+    def emit_(self, *args, **kwargs):
+        return self._events.emit(*args, **kwargs)
 
     def on_draw(self, e):
         gloo.clear()
-        for visual in self._visuals:
-            visual.draw()
+        self._events.emit('draw')
+
+
+class BaseInteract(object):
+    """Implement interactions for a set of attached visuals in a canvas.
+
+    Derived classes must:
+
+    * Define a unique `self.name`
+    * Define a list of transforms
+
+    """
+    name = None
+    transforms = None
+
+    def __init__(self):
+        self._canvas = None
+
+    def attach(self, canvas):
+        """Attach the interact to a canvas."""
+        self._canvas = canvas
+
+        @canvas.connect_
+        def on_draw():
+            # The programs are built only once per visual.
+            self.build_programs()
+
+        canvas.connect(self.on_mouse_move)
+        canvas.connect(self.on_key_press)
+
+    def iter_attached_visuals(self):
+        """Yield all visuals attached to that interact in the canvas."""
+        for visual in self._canvas.emit('get_visual_for_interact', self.name):
+            if visual:
+                yield visual
+
+    def build_programs(self):
+        """Build the programs of all attached visuals.
+
+        The transform chain of the interact must have been built before.
+
+        """
+        for visual in self.iter_attached_visuals():
+            if not visual.program:
+                assert self.transforms
+                visual.build_program(self.transforms)
+
+    def on_mouse_move(self, event):
+        pass
+
+    def on_key_press(self, event):
+        pass

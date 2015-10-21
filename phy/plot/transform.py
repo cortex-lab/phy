@@ -240,7 +240,12 @@ class TransformChain(object):
         # data_var_name is typically an attribute.
         vs_regex = re.compile(r'gl_Position = transform\(([\S]+)\);')
         r = vs_regex.search(vertex)
-        assert r, ("The vertex shader must contain the transform placeholder.")
+        if not r:
+            logger.debug("The vertex shader doesn't contain the transform "
+                         "placeholder: skipping the transform chain "
+                         "GLSL insertion.")
+            return vertex, fragment
+        assert r
         logger.debug("Found transform placeholder in vertex code: `%s`",
                      r.group(0))
 
