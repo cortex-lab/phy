@@ -142,8 +142,8 @@ def test_interact(qtbot, canvas):
             self.transforms = [Scale(scale=(.1, .1)),
                                Translate(translate=(-1, -1)),
                                GPU(),
-                               Range(from_range=(-1, -1, 1, 1),
-                                     to_range=(-1.5, -1.5, 1.5, 1.5),
+                               Range(from_bounds=(-1, -1, 1, 1),
+                                     to_bounds=(-1.5, -1.5, 1.5, 1.5),
                                      ),
                                ]
 

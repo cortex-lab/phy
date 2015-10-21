@@ -71,7 +71,7 @@ def test_scale_cpu():
 
 
 def test_range_cpu():
-    kwargs = dict(from_range=[0, 0, 1, 1], to_range=[-1, -1, 1, 1])
+    kwargs = dict(from_bounds=[0, 0, 1, 1], to_bounds=[-1, -1, 1, 1])
 
     _check(Range(), [-1, -1], [[-3, -3]], **kwargs)
     _check(Range(), [0, 0], [[-1, -1]], **kwargs)
@@ -122,12 +122,12 @@ def test_scale_glsl():
 
 def test_range_glsl():
 
-    assert Range(from_range=[-1, -1, 1, 1]).glsl('x')
+    assert Range(from_bounds=[-1, -1, 1, 1]).glsl('x')
 
     expected = ('u_to.xy + (u_to.zw - u_to.xy) * (x - u_from.xy) / '
                 '(u_from.zw - u_from.xy)')
-    r = Range(to_range=['u_to.xy', 'u_to.zw'])
-    assert expected in r.glsl('x', from_range=['u_from.xy', 'u_from.zw'])
+    r = Range(to_bounds=['u_to.xy', 'u_to.zw'])
+    assert expected in r.glsl('x', from_bounds=['u_from.xy', 'u_from.zw'])
 
 
 def test_clip_glsl():
@@ -193,7 +193,7 @@ def test_transform_chain_two(array):
 def test_transform_chain_complete(array):
     t = TransformChain([Scale(scale=.5),
                         Scale(scale=2.)])
-    t.add([Range(from_range=[-3, -3, 1, 1]),
+    t.add([Range(from_bounds=[-3, -3, 1, 1]),
            GPU(),
            Clip(),
            Subplot(shape='u_shape', index='a_box'),
