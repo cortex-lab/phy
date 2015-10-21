@@ -63,6 +63,7 @@ def indent(text):
 
 
 def _glslify_pair(p):
+    """GLSL-ify either a string identifier (vec2) or a pair of numbers."""
     if isinstance(p, string_types):
         return p
     elif len(p) == 2:
@@ -72,6 +73,8 @@ def _glslify_pair(p):
 
 
 def _glslify_range(r):
+    """GLSL-ify either a pair of string identifiers (vec2) or a pair of
+    pairs of numbers."""
     if len(r) == 2:
         assert isinstance(r[0], string_types)
         assert isinstance(r[1], string_types)
@@ -126,50 +129,39 @@ class Scale(BaseTransform):
 
 
 class Range(BaseTransform):
-    def apply(self, arr, from_range=None, to_range=None):
-        if to_range is None:
-            to_range = [-1, -1, 1, 1]
-
-        f0 = np.asarray(from_range[:2])
-        f1 = np.asarray(from_range[2:])
-        t0 = np.asarray(to_range[:2])
-        t1 = np.asarray(to_range[2:])
+    def apply(self, arr, from_bounds=None, to_bounds=(-1, -1, 1, 1)):
+        f0 = np.asarray(from_bounds[:2])
+        f1 = np.asarray(from_bounds[2:])
+        t0 = np.asarray(to_bounds[:2])
+        t1 = np.asarray(to_bounds[2:])
 
         return t0 + (t1 - t0) * (arr - f0) / (f1 - f0)
 
-    def glsl(self, var, from_range=None, to_range=None):
+    def glsl(self, var, from_bounds=None, to_bounds=(-1, -1, 1, 1)):
         assert var
-        if to_range is None:
-            to_range = [-1, -1, 1, 1]
 
-        from_range = _glslify_range(from_range)
-        to_range = _glslify_range(to_range)
+        from_bounds = _glslify_range(from_bounds)
+        to_bounds = _glslify_range(to_bounds)
 
         return """
             {var} = {t0} + ({t1} - {t0}) * ({var} - {f0}) / ({f1} - {f0});
         """.format(var=var,
-                   f0=from_range[0], f1=from_range[1],
-                   t0=to_range[0], t1=to_range[1],
+                   f0=from_bounds[0], f1=from_bounds[1],
+                   t0=to_bounds[0], t1=to_bounds[1],
                    )
 
 
 class Clip(BaseTransform):
-    def apply(self, arr, bounds=None):
-        if bounds is None:
-            bounds = [-1, -1, 1, 1]
-
-        xymin = np.asarray(bounds[:2])
-        xymax = np.asarray(bounds[2:])
-        index = ((arr[:, 0] >= xymin[0]) &
-                 (arr[:, 1] >= xymin[1]) &
-                 (arr[:, 0] <= xymax[0]) &
-                 (arr[:, 1] <= xymax[1]))
+    def apply(self, arr, bounds=(-1, -1, 1, 1)):
+        index = ((arr[:, 0] >= bounds[0]) &
+                 (arr[:, 1] >= bounds[1]) &
+                 (arr[:, 0] <= bounds[2]) &
+                 (arr[:, 1] <= bounds[3]))
         return arr[index, ...]
 
-    def glsl(self, var, bounds=None):
+    def glsl(self, var, bounds=(-1, -1, 1, 1)):
         assert var
-        if bounds is None:
-            bounds = 'vec2(-1, -1)', 'vec2(1, 1)'
+
         bounds = _glslify_range(bounds)
 
         return """
@@ -200,16 +192,16 @@ class Subplot(Range):
         x = -1.0 + j * width
         y = +1.0 - (i + 1) * height
 
-        from_range = [-1, -1, 1, 1]
-        to_range = [x, y, x + width, y + height]
+        from_bounds = [-1, -1, 1, 1]
+        to_bounds = [x, y, x + width, y + height]
 
-        return from_range, to_range
+        return from_bounds, to_bounds
 
     def apply(self, arr, shape=None, index=None):
-        from_range, to_range = self.get_range(shape=shape, index=index)
+        from_bounds, to_bounds = self.get_range(shape=shape, index=index)
         return super(Subplot, self).apply(arr,
-                                          from_range=from_range,
-                                          to_range=to_range)
+                                          from_bounds=from_bounds,
+                                          to_bounds=to_bounds)
 
     def glsl(self, var, shape=None, index=None):
         assert var
