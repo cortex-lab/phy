@@ -62,26 +62,29 @@ def indent(text):
     return '\n'.join('    ' + l.strip() for l in text.splitlines())
 
 
-def _glslify_pair(p):
-    """GLSL-ify either a string identifier (vec2) or a pair of numbers."""
-    if isinstance(p, string_types):
-        return p
-    elif len(p) == 2:
-        s = 'vec2({:.3f}, {:.3f})'
-        return s.format(*p)
-    raise ValueError()  # pragma: no cover
-
-
-def _glslify_range(r):
-    """GLSL-ify either a pair of string identifiers (vec2) or a pair of
-    pairs of numbers."""
-    if len(r) == 2:
-        assert isinstance(r[0], string_types)
-        assert isinstance(r[1], string_types)
+def _glslify(r):
+    """Transform a string or a n-tuple to a valid GLSL expression."""
+    if isinstance(r, string_types):
         return r
-    elif len(r) == 4:
-        return _glslify_pair(r[:2]), _glslify_pair(r[2:])
-    raise ValueError()  # pragma: no cover
+    else:
+        assert 2 <= len(r) <= 4
+        return 'vec{}({})'.format(len(r), ', '.join(map(str, r)))
+
+
+def subplot_range(shape=None, index=None):
+    i, j = index
+    n_rows, n_cols = shape
+
+    assert 0 <= i <= n_rows - 1
+    assert 0 <= j <= n_cols - 1
+
+    width = 2.0 / n_cols
+    height = 2.0 / n_rows
+
+    x = -1.0 + j * width
+    y = +1.0 - (i + 1) * height
+
+    return [x, y, x + width, y + height]
 
 
 #------------------------------------------------------------------------------
@@ -140,15 +143,12 @@ class Range(BaseTransform):
     def glsl(self, var, from_bounds=None, to_bounds=(-1, -1, 1, 1)):
         assert var
 
-        from_bounds = _glslify_range(from_bounds)
-        to_bounds = _glslify_range(to_bounds)
+        from_bounds = _glslify(from_bounds)
+        to_bounds = _glslify(to_bounds)
 
-        return """
-            {var} = {t0} + ({t1} - {t0}) * ({var} - {f0}) / ({f1} - {f0});
-        """.format(var=var,
-                   f0=from_bounds[0], f1=from_bounds[1],
-                   t0=to_bounds[0], t1=to_bounds[1],
-                   )
+        return ("{var} = {t}.xy + ({t}.zw - {t}.xy) * "
+                "({var} - {f}.xy) / ({f}.zw - {f}.xy);"
+                "").format(var=var, f=from_bounds, t=to_bounds)
 
 
 class Clip(BaseTransform):
@@ -162,43 +162,24 @@ class Clip(BaseTransform):
     def glsl(self, var, bounds=(-1, -1, 1, 1)):
         assert var
 
-        bounds = _glslify_range(bounds)
+        bounds = _glslify(bounds)
 
         return """
-            if (({var}.x < {xymin}.x) ||
-                ({var}.y < {xymin}.y) ||
-                ({var}.x > {xymax}.x) ||
-                ({var}.y > {xymax}.y)) {{
+            if (({var}.x < {bounds}.x) ||
+                ({var}.y < {bounds}.y) ||
+                ({var}.x > {bounds}.z) ||
+                ({var}.y > {bounds}.w)) {{
                 discard;
             }}
-        """.format(xymin=bounds[0],
-                   xymax=bounds[1],
-                   var=var,
-                   )
+        """.format(bounds=bounds, var=var)
 
 
 class Subplot(Range):
     """Assume that the from range is [-1, -1, 1, 1]."""
 
-    def get_range(self, shape=None, index=None):
-        i, j = index
-        n_rows, n_cols = shape
-        assert 0 <= i <= n_rows - 1
-        assert 0 <= j <= n_cols - 1
-
-        width = 2.0 / n_cols
-        height = 2.0 / n_rows
-
-        x = -1.0 + j * width
-        y = +1.0 - (i + 1) * height
-
-        from_bounds = [-1, -1, 1, 1]
-        to_bounds = [x, y, x + width, y + height]
-
-        return from_bounds, to_bounds
-
     def apply(self, arr, shape=None, index=None):
-        from_bounds, to_bounds = self.get_range(shape=shape, index=index)
+        from_bounds = (-1, -1, 1, 1)
+        to_bounds = subplot_range(shape=shape, index=index)
         return super(Subplot, self).apply(arr,
                                           from_bounds=from_bounds,
                                           to_bounds=to_bounds)
@@ -206,8 +187,8 @@ class Subplot(Range):
     def glsl(self, var, shape=None, index=None):
         assert var
 
-        index = _glslify_pair(index)
-        shape = _glslify_pair(shape)
+        index = _glslify(index)
+        shape = _glslify(shape)
 
         snippet = """
         float subplot_width = 2. / {shape}.y;

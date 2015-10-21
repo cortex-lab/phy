@@ -10,7 +10,8 @@
 import numpy as np
 
 from ..base import BaseVisual, BaseInteract
-from ..transform import Translate, Scale, Range, Clip, Subplot, GPU
+from ..transform import (subplot_range, Translate, Scale, Range,
+                         Clip, Subplot, GPU)
 
 
 #------------------------------------------------------------------------------
@@ -152,7 +153,7 @@ def test_interact(qtbot, canvas):
 
         def __init__(self):
             super(TestInteract, self).__init__()
-            bounds = Subplot().get_range(shape=(2, 3), index=(1, 2))[1]
+            bounds = subplot_range(shape=(2, 3), index=(1, 2))
             self.transforms = [Subplot(shape=(2, 3), index=(1, 2)),
                                Clip(bounds=bounds),
                                ]
