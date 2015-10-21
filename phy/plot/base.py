@@ -49,6 +49,10 @@ class BaseVisual(object):
         self.data = {}  # Data to set on the program when possible.
         self.program = None
         self.transforms = []
+        # Combine the visual's transforms and the interact transforms.
+        # The interact triggers the creation of the transform chain in
+        # self.build_program().
+        self.transform_chain = None
 
     def show(self):
         self._do_show = True
@@ -60,7 +64,7 @@ class BaseVisual(object):
         """Set the data for the visual."""
         pass
 
-    def attach(self, canvas, interact=None):
+    def attach(self, canvas, interact='base'):
         """Attach some events."""
         logger.debug("Attach `%s` with interact `%s` to canvas.",
                      self.__class__.__name__, interact or '')
@@ -96,25 +100,48 @@ class BaseVisual(object):
         pass
 
     def build_program(self, transforms=None):
+        """Create the gloo program by specifying the transforms
+        given by the optionally-attached interact.
+
+        This function also uploads all variables set in `self.data` in
+        `self.set_data()`.
+
+        This function is called by the interact's `build_programs()` method
+        during the draw event (only effective the first time necessary).
+
+        """
         transforms = transforms or []
         assert self.program is None, "The program has already been built."
 
         # Build the transform chain using the visuals transforms first,
         # and the interact's transforms then.
-        transform_chain = TransformChain(self.transforms + transforms)
+        self.transform_chain = TransformChain(self.transforms + transforms)
 
         logger.debug("Build the program of `%s`.", self.__class__.__name__)
-        self.program = _build_program(self.shader_name, transform_chain)
+        self.program = _build_program(self.shader_name, self.transform_chain)
+
+        # Get the name of the variable that needs to be transformed.
+        # This variable (typically a_position) comes from the vertex shader
+        # which contains the string `gl_Position = transform(the_name);`.
+        var = self.transform_chain.transformed_var_name
+        if not var:
+            logger.debug("No transformed variable has been found.")
+
+        # Upload the data if necessary.
+        logger.debug("Upload program objects %s.",
+                     ', '.join(self.data.keys()))
+        for name, value in self.data.items():
+            # Normalize the value that needs to be transformed.
+            if name == var:
+                value = self.transform_chain.apply(value)
+            self.program[name] = value
+        self.data.clear()
 
     def draw(self):
         """Draw the visual."""
         # Skip the drawing if the program hasn't been built yet.
         # The program is built by the attached interact.
         if self._do_show and self.program:
-            # Upload the data if necessary.
-            for name, value in self.data.items():
-                self.program[name] = value
-            self.data.clear()
             # Finally, draw the program.
             self.program.draw(self.gl_primitive_type)
 
@@ -149,7 +176,7 @@ class BaseInteract(object):
     * Define a list of transforms
 
     """
-    name = None
+    name = 'base'
     transforms = None
 
     def __init__(self):

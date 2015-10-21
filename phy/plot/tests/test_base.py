@@ -7,7 +7,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from ..base import BaseVisual
+from ..base import BaseVisual, BaseInteract
+from ..transform import Scale
 
 
 #------------------------------------------------------------------------------
@@ -47,6 +48,22 @@ def test_base_interact(qtbot, canvas):
         shader_name = 'test'
         gl_primitive_type = 'lines'
 
+        def __init__(self):
+            super(TestVisual, self).__init__()
+            self.set_data()
+
         def set_data(self):
-            self.program['a_position'] = [[-1, 0], [1, 0]]
-            self.show()
+            self.data['a_position'] = [[-1, 0], [1, 0]]
+            self.transforms = [Scale((.5, 1))]
+
+    v = TestVisual()
+    v.attach(canvas)
+
+    interact = BaseInteract()
+    interact.attach(canvas)
+
+    canvas.show()
+    qtbot.waitForWindowShown(canvas.native)
+    # qtbot.stop()
+
+    v.update()
