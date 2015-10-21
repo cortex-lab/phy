@@ -44,7 +44,9 @@ class BaseVisual(object):
 
         self.size = 1, 1
         self._canvas = None
-        self._do_show = False
+        # Not taken into account when the program has not been built.
+        self._do_show = True
+        self.data = {}  # Data to set on the program when possible.
         self.program = None
         self.transforms = []
 
@@ -105,8 +107,15 @@ class BaseVisual(object):
         self.program = _build_program(self.shader_name, transform_chain)
 
     def draw(self):
-        """Draw the waveforms."""
+        """Draw the visual."""
+        # Skip the drawing if the program hasn't been built yet.
+        # The program is built by the attached interact.
         if self._do_show and self.program:
+            # Upload the data if necessary.
+            for name, value in self.data.items():
+                self.program[name] = value
+            self.data.clear()
+            # Finally, draw the program.
             self.program.draw(self.gl_primitive_type)
 
     def update(self):
@@ -152,7 +161,8 @@ class BaseInteract(object):
 
         @canvas.connect_
         def on_draw():
-            # The programs are built only once per visual.
+            # Build the programs of all attached visuals.
+            # Programs that are already built are skipped.
             self.build_programs()
 
         canvas.connect(self.on_mouse_move)
@@ -160,7 +170,7 @@ class BaseInteract(object):
 
     def iter_attached_visuals(self):
         """Yield all visuals attached to that interact in the canvas."""
-        for visual in self._canvas.emit('get_visual_for_interact', self.name):
+        for visual in self._canvas.emit_('get_visual_for_interact', self.name):
             if visual:
                 yield visual
 
