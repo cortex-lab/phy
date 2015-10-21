@@ -24,6 +24,26 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 
 class BaseVisual(object):
+    """A Visual represents one object (or homogeneous set of objects).
+
+    It is rendered with a single pass of a single gloo program with a single
+    type of GL primitive.
+
+    Derived classes must implement:
+
+    * `gl_primitive_type`: `lines`, `points`, etc.
+    * `vertex` and `fragment`, or `shader_name`: the GLSL code, or the name of
+      the GLSL files to load from the `glsl/` subdirectory.
+    `shader_name`
+    * `data`: a dictionary acting as a proxy for the gloo Program.
+      This is because the Program is built later, once the interact has been
+      attached. The interact is responsible for the creation of the program,
+      since it implements a part of the transform chain.
+    * `transforms`: a list of `Transform` instances, which can act on the CPU
+      or the GPU. The interact's transforms will be appended to that list
+      when the visual is attached to the canvas.
+
+    """
     gl_primitive_type = None
     vertex = None
     fragment = None
@@ -39,11 +59,14 @@ class BaseVisual(object):
 
         self.size = 1, 1
         self._canvas = None
+        self.program = None
         # Not taken into account when the program has not been built.
         self._do_show = True
+
+        # To set in `set_data()`.
         self.data = {}  # Data to set on the program when possible.
-        self.program = None
         self.transforms = []
+
         # Combine the visual's transforms and the interact transforms.
         # The interact triggers the creation of the transform chain in
         # self.build_program().
@@ -56,11 +79,21 @@ class BaseVisual(object):
         self._do_show = False
 
     def set_data(self):
-        """Set the data for the visual."""
+        """Set the data for the visual.
+
+        Derived classes can add data to the `self.data` dictionary and
+        set transforms in the `self.transforms` list.
+
+        """
         pass
 
     def attach(self, canvas, interact='base'):
-        """Attach some events."""
+        """Attach the visual to a canvas.
+
+        The interact's name can be specified. The interact's transforms
+        will be appended to the visual's transforms.
+
+        """
         logger.debug("Attach `%s` with interact `%s` to canvas.",
                      self.__class__.__name__, interact or '')
         self._canvas = canvas
@@ -91,7 +124,15 @@ class BaseVisual(object):
             if self._do_show:
                 self.on_mouse_move(event)
 
+        @canvas.connect
+        def on_key_press(event):
+            if self._do_show:
+                self.on_key_press(event)
+
     def on_mouse_move(self, e):
+        pass
+
+    def on_key_press(self, e):
         pass
 
     def build_program(self, transforms=None):
@@ -150,6 +191,7 @@ class BaseVisual(object):
 
 
 class BaseCanvas(Canvas):
+    """A blank VisPy canvas with a custom event system that keeps the order."""
     def __init__(self, *args, **kwargs):
         super(BaseCanvas, self).__init__(*args, **kwargs)
         self._events = EventEmitter()
@@ -170,8 +212,8 @@ class BaseInteract(object):
 
     Derived classes must:
 
-    * Define a unique `self.name`
-    * Define a list of transforms
+    * Define a unique `name`
+    * Define a list of `transforms`
 
     """
     name = 'base'
@@ -202,7 +244,8 @@ class BaseInteract(object):
     def build_programs(self):
         """Build the programs of all attached visuals.
 
-        The transform chain of the interact must have been built before.
+        The list of transforms of the interact should have been set before
+        calling this function.
 
         """
         for visual in self.iter_attached_visuals():
