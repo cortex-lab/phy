@@ -16,7 +16,7 @@ from ..transform import Scale
 #------------------------------------------------------------------------------
 
 def test_visual_shader_name(qtbot, canvas):
-
+    """Test a BaseVisual with a shader name."""
     class TestVisual(BaseVisual):
         shader_name = 'box'
         gl_primitive_type = 'lines'
@@ -37,6 +37,7 @@ def test_visual_shader_name(qtbot, canvas):
 
 
 def test_base_visual(qtbot, canvas):
+    """Test a BaseVisual with custom shaders."""
 
     class TestVisual(BaseVisual):
         vertex = """
@@ -69,12 +70,13 @@ def test_base_visual(qtbot, canvas):
 
     # Simulate a mouse move.
     canvas.events.mouse_move(delta=(1., 0.))
+    canvas.events.key_press(text='a')
 
     v.update()
 
 
 def test_base_interact(qtbot, canvas):
-
+    """Test a BaseVisual with a CPU transform and a blank interact."""
     class TestVisual(BaseVisual):
         vertex = """
             attribute vec2 a_position;
@@ -97,9 +99,11 @@ def test_base_interact(qtbot, canvas):
             self.data['a_position'] = [[-1, 0], [1, 0]]
             self.transforms = [Scale(scale=(.5, 1))]
 
+    # We attach the visual to the canvas. By default, a BaseInteract is used.
     v = TestVisual()
     v.attach(canvas)
 
+    # Base interact (no transform).
     interact = BaseInteract()
     interact.attach(canvas)
 
