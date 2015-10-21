@@ -138,12 +138,12 @@ def test_interact(qtbot, canvas):
             self.set_data()
 
         def set_data(self):
-            self.data['a_position'] = np.random.uniform(0, 20, (100, 2))
+            self.data['a_position'] = np.random.uniform(0, 20, (100000, 2))
             self.transforms = [Scale(scale=(.1, .1)),
                                Translate(translate=(-1, -1)),
                                GPU(),
                                Range(from_range=(-1, -1, 1, 1),
-                                     to_range=(-.9, -.9, .9, .9),
+                                     to_range=(-1.5, -1.5, 1.5, 1.5),
                                      ),
                                ]
 
@@ -152,7 +152,10 @@ def test_interact(qtbot, canvas):
 
         def __init__(self):
             super(TestInteract, self).__init__()
-            self.transforms = [Subplot(shape=(2, 3), index=(1, 2))]
+            bounds = Subplot().get_range(shape=(2, 3), index=(1, 2))[1]
+            self.transforms = [Subplot(shape=(2, 3), index=(1, 2)),
+                               Clip(bounds=bounds),
+                               ]
 
     # We attach the visual to the canvas. By default, a BaseInteract is used.
     v = TestVisual()
