@@ -155,8 +155,11 @@ class BaseVisual(object):
 
         logger.debug("Build the program of `%s`.", self.__class__.__name__)
         if self.transform_chain:
+            # Insert the interact's GLSL into the shaders.
             self.vertex, self.fragment = self.transform_chain.insert_glsl(
                 self.vertex, self.fragment)
+        logger.debug("Vertex shader: \n%s", self.vertex)
+        logger.debug("Fragment shader: \n%s", self.fragment)
         self.program = gloo.Program(self.vertex, self.fragment)
 
         # Get the name of the variable that needs to be transformed.

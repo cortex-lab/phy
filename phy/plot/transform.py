@@ -11,6 +11,7 @@ from textwrap import dedent
 import re
 
 import numpy as np
+from six import string_types
 
 import logging
 
@@ -51,6 +52,25 @@ def _wrap_glsl(f, **kwargs_init):
 
 def indent(text):
     return '\n'.join('    ' + l.strip() for l in text.splitlines())
+
+
+def _glslify_pair(p):
+    if isinstance(p, string_types):
+        return p
+    elif len(p) == 2:
+        s = 'vec2({:.3f}, {:.3f})'
+        return s.format(*p)
+    raise ValueError()  # pragma: no cover
+
+
+def _glslify_range(r):
+    if len(r) == 2:
+        assert isinstance(r[0], string_types)
+        assert isinstance(r[1], string_types)
+        return r
+    elif len(r) == 4:
+        return _glslify_pair(r[:2]), _glslify_pair(r[2:])
+    raise ValueError()  # pragma: no cover
 
 
 #------------------------------------------------------------------------------
@@ -106,6 +126,9 @@ class Range(BaseTransform):
         if to_range is None:
             to_range = [-1, -1, 1, 1]
 
+        from_range = _glslify_range(from_range)
+        to_range = _glslify_range(to_range)
+
         return """
             {var} = {t0} + ({t1} - {t0}) * ({var} - {f0}) / ({f1} - {f0});
         """.format(var=var,
@@ -147,7 +170,8 @@ class Clip(BaseTransform):
 
 class Subplot(Range):
     """Assume that the from range is [-1, -1, 1, 1]."""
-    def apply(self, arr, shape=None, index=None):
+
+    def get_range(self, shape=None, index=None):
         i, j = index
         n_rows, n_cols = shape
         assert 0 <= i <= n_rows - 1
@@ -166,13 +190,17 @@ class Subplot(Range):
         from_range = [-1, -1, 1, 1]
         to_range = [x, y, x + width, y + height]
 
+        return from_range, to_range
+
+    def apply(self, arr, shape=None, index=None):
+        from_range, to_range = self.get_range(shape=shape, index=index)
         return super(Subplot, self).apply(arr,
                                           from_range=from_range,
                                           to_range=to_range)
 
     def glsl(self, var, shape=None, index=None):
         assert var
-        glsl = """
+        snippet = """
         float subplot_x = -1.0 + {index}.y * 2.0 / {shape}.y;
         float subplot_y = +1.0 - {index}.x * 2.0 / {shape}.x;
 
@@ -182,7 +210,11 @@ class Subplot(Range):
         {var} = vec2(subplot_x + subplot_width * {var}.x,
                      subplot_y + subplot_height * {var}.y);
         """
-        return glsl.format(index=index, shape=shape, var=var)
+        index = _glslify_pair(index)
+        shape = _glslify_pair(shape)
+
+        snippet = snippet.format(index=index, shape=shape, var=var)
+        return snippet
 
 
 #------------------------------------------------------------------------------
@@ -256,12 +288,13 @@ class TransformChain(object):
         assert var and var in vertex
 
         # Generate the snippet to insert in the shaders.
-        vs_insert = ""
+        temp_var = '_transformed_data'
+        vs_insert = "vec2 {} = {};\n".format(temp_var, var)
         for t in self.gpu_transforms:
             if isinstance(t, Clip):
                 continue
-            vs_insert += t.glsl(var) + '\n'
-        vs_insert += 'gl_Position = vec4({}, 0., 1.);\n'.format(var)
+            vs_insert += t.glsl(temp_var) + '\n'
+        vs_insert += 'gl_Position = vec4({}, 0., 1.);\n'.format(temp_var)
 
         # Clipping.
         clip = self.get('Clip')

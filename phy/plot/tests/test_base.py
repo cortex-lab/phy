@@ -7,8 +7,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
+
 from ..base import BaseVisual, BaseInteract
-from ..transform import Scale
+from ..transform import Translate, Scale, Range, Clip, Subplot, GPU
 
 
 #------------------------------------------------------------------------------
@@ -105,6 +107,59 @@ def test_base_interact(qtbot, canvas):
 
     # Base interact (no transform).
     interact = BaseInteract()
+    interact.attach(canvas)
+
+    canvas.show()
+    qtbot.waitForWindowShown(canvas.native)
+    # qtbot.stop()
+
+
+def test_interact(qtbot, canvas):
+    """Test a BaseVisual with multiple CPU and GPU transforms and a
+    non-blank interact."""
+
+    class TestVisual(BaseVisual):
+        vertex = """
+            attribute vec2 a_position;
+            void main() {
+                gl_Position = transform(a_position);
+                gl_PointSize = 2.0;
+            }
+            """
+        fragment = """
+            void main() {
+                gl_FragColor = vec4(1, 1, 1, 1);
+            }
+        """
+        gl_primitive_type = 'points'
+
+        def __init__(self):
+            super(TestVisual, self).__init__()
+            self.set_data()
+
+        def set_data(self):
+            self.data['a_position'] = np.random.uniform(0, 20, (100, 2))
+            self.transforms = [Scale(scale=(.1, .1)),
+                               Translate(translate=(-1, -1)),
+                               GPU(),
+                               Range(from_range=(-1, -1, 1, 1),
+                                     to_range=(-.9, -.9, .9, .9),
+                                     ),
+                               ]
+
+    class TestInteract(BaseInteract):
+        name = 'test'
+
+        def __init__(self):
+            super(TestInteract, self).__init__()
+            self.transforms = [Subplot(shape=(2, 3), index=(1, 2))]
+
+    # We attach the visual to the canvas. By default, a BaseInteract is used.
+    v = TestVisual()
+    v.attach(canvas, 'test')
+
+    # Base interact (no transform).
+    interact = TestInteract()
     interact.attach(canvas)
 
     canvas.show()

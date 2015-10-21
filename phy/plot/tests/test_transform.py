@@ -13,7 +13,8 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 from pytest import yield_fixture
 
-from ..transform import (Translate, Scale, Range, Clip, Subplot, GPU,
+from ..transform import (_glslify_range,
+                         Translate, Scale, Range, Clip, Subplot, GPU,
                          TransformChain,
                          )
 
@@ -35,6 +36,16 @@ def _check(transform, array, expected, **kwargs):
         assert not len(expected)
     else:
         assert np.allclose(transformed, expected)
+
+
+#------------------------------------------------------------------------------
+# Test utils
+#------------------------------------------------------------------------------
+
+def test_glslify_range():
+    assert _glslify_range(('a', 'b')) == ('a', 'b')
+    assert _glslify_range((1, 2, 3, 4)) == ('vec2(1.000, 2.000)',
+                                            'vec2(3.000, 4.000)')
 
 
 #------------------------------------------------------------------------------
