@@ -198,6 +198,7 @@ class GPU(object):
 class TransformChain(object):
     """A linear sequence of transforms that happen on the CPU and GPU."""
     def __init__(self, transforms=None):
+        self.transformed_var_name = None
         self.transforms = transforms or []
 
     def _index_of_gpu(self):
@@ -251,6 +252,7 @@ class TransformChain(object):
 
         # Find the GLSL variable with the data (should be a `vec2`).
         var = r.group(1)
+        self.transformed_var_name = var
         assert var and var in vertex
 
         # Generate the snippet to insert in the shaders.
