@@ -261,7 +261,7 @@ class TransformChain(object):
             if isinstance(t, Clip):
                 continue
             vs_insert += t.glsl(var) + '\n'
-        vs_insert += 'gl_Position = {};\n'.format(var)
+        vs_insert += 'gl_Position = vec4({}, 0., 1.);\n'.format(var)
 
         # Clipping.
         clip = self.get('Clip')

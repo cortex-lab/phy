@@ -23,24 +23,19 @@ logger = logging.getLogger(__name__)
 # Base spike visual
 #------------------------------------------------------------------------------
 
-def _build_program(name, transform_chain=None):
-    vertex = _load_shader(name + '.vert')
-    fragment = _load_shader(name + '.frag')
-
-    if transform_chain:
-        vertex, fragment = transform_chain.insert_glsl(vertex, fragment)
-
-    program = gloo.Program(vertex, fragment)
-    return program
-
-
 class BaseVisual(object):
     gl_primitive_type = None
-    shader_name = None
+    vertex = None
+    fragment = None
+    shader_name = None  # Use this to load shaders from the glsl/ library.
 
     def __init__(self):
+        if self.shader_name:
+            self.vertex = _load_shader(self.shader_name + '.vert')
+            self.fragment = _load_shader(self.shader_name + '.frag')
+        assert self.vertex
+        assert self.fragment
         assert self.gl_primitive_type
-        assert self.shader_name
 
         self.size = 1, 1
         self._canvas = None
@@ -118,7 +113,10 @@ class BaseVisual(object):
         self.transform_chain = TransformChain(self.transforms + transforms)
 
         logger.debug("Build the program of `%s`.", self.__class__.__name__)
-        self.program = _build_program(self.shader_name, self.transform_chain)
+        if self.transform_chain:
+            self.vertex, self.fragment = self.transform_chain.insert_glsl(
+                self.vertex, self.fragment)
+        self.program = gloo.Program(self.vertex, self.fragment)
 
         # Get the name of the variable that needs to be transformed.
         # This variable (typically a_position) comes from the vertex shader
@@ -209,7 +207,6 @@ class BaseInteract(object):
         """
         for visual in self.iter_attached_visuals():
             if not visual.program:
-                assert self.transforms
                 visual.build_program(self.transforms)
 
     def on_mouse_move(self, event):
