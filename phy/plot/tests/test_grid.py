@@ -7,6 +7,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from itertools import product
+
 import numpy as np
 from pytest import yield_fixture
 
@@ -24,6 +26,7 @@ class MyTestVisual(BaseVisual):
         attribute vec2 a_position;
         void main() {
             gl_Position = transform(a_position);
+            gl_PointSize = 2.;
         }
         """
     fragment = """
@@ -31,7 +34,7 @@ class MyTestVisual(BaseVisual):
             gl_FragColor = vec4(1, 1, 1, 1);
         }
     """
-    gl_primitive_type = 'lines'
+    gl_primitive_type = 'points'
 
     def __init__(self):
         super(MyTestVisual, self).__init__()
@@ -39,7 +42,19 @@ class MyTestVisual(BaseVisual):
         self.set_data()
 
     def set_data(self):
-        self.data['a_position'] = [[-1, 0], [1, 0]]
+        n = 1000
+
+        box = [[i, j] for i, j in product(range(2), range(3))]
+        box = np.repeat(box, n, axis=0)
+
+        coeff = [(1 + i + j) for i, j in product(range(2), range(3))]
+        coeff = np.repeat(coeff, n)
+        coeff = coeff[:, None]
+
+        position = .1 * coeff * np.random.randn(2 * 3 * n, 2)
+
+        self.data['a_position'] = position.astype(np.float32)
+        self.data['a_box'] = box.astype(np.float32)
 
 
 @yield_fixture
@@ -65,4 +80,5 @@ def grid(qtbot, canvas, visual):
 #------------------------------------------------------------------------------
 
 def test_grid_1(qtbot, visual, grid):
-    qtbot.stop()
+    pass
+    # qtbot.stop()

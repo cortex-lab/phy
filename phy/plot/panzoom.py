@@ -101,13 +101,11 @@ class PanZoom(BaseInteract):
         self.transforms = [Translate(translate='u_pan'),
                            Scale(scale='u_zoom')]
         self.vertex_decl = 'uniform vec2 u_pan;\nuniform vec2 u_zoom;\n'
+        self.data['u_pan'] = pan
+        self.data['u_zoom'] = zoom
 
     # Various properties
     # -------------------------------------------------------------------------
-
-    def is_attached(self):
-        """Whether the transform is attached to a canvas."""
-        return self._canvas is not None
 
     @property
     def aspect(self):
@@ -234,11 +232,6 @@ class PanZoom(BaseInteract):
             self._zoom[1] = max(self._zoom[1],
                                 1. / (self.ymax - self._pan[1]))
 
-    def update(self):
-        """Update the attached canvas if it exists."""
-        if self.is_attached():
-            self._canvas.update()
-
     # Pan and zoom
     # -------------------------------------------------------------------------
 
@@ -336,25 +329,20 @@ class PanZoom(BaseInteract):
     def _pan_keyboard(self, key):
         k = .1 / np.asarray(self.zoom)
         if key == 'Left':
-            # self.pan += (+k[0], +0)
             self.pan_delta((+k[0], +0))
         elif key == 'Right':
-            # self.pan += (-k[0], +0)
             self.pan_delta((-k[0], +0))
         elif key == 'Down':
             self.pan_delta((+0, +k[1]))
-            # self.pan += (+0, +k[1])
         elif key == 'Up':
             self.pan_delta((+0, -k[1]))
-            # self.pan += (+0, -k[1])
-        self._canvas.update()
+        self.update()
 
     def reset(self):
         """Reset the view."""
         self.pan = (0., 0.)
         self.zoom = 1.
-        if self._canvas:
-            self._canvas.update()
+        self.update()
 
     def on_resize(self, event):
         """Resize event."""
