@@ -78,6 +78,7 @@ class PanZoom(BaseInteract):
         self._zoom_to_pointer = True
         self._canvas_aspect = np.ones(2)
 
+        # We define the GLSL uniforms used for pan and zoom.
         self.transforms = [Translate(translate='u_pan'),
                            Scale(scale='u_zoom')]
         self.vertex_decl = 'uniform vec2 u_pan;\nuniform vec2 u_zoom;\n'
@@ -108,10 +109,8 @@ class PanZoom(BaseInteract):
 
     @xmin.setter
     def xmin(self, value):
-        if self._xmax is not None:
-            self._xmin = np.minimum(value, self._xmax)
-        else:
-            self._xmin = value
+        self._xmin = (np.minimum(value, self._xmax)
+                      if self._xmax is not None else value)
 
     @property
     def xmax(self):
@@ -120,10 +119,8 @@ class PanZoom(BaseInteract):
 
     @xmax.setter
     def xmax(self, value):
-        if self._xmin is not None:
-            self._xmax = np.maximum(value, self._xmin)
-        else:
-            self._xmax = value
+        self._xmax = (np.maximum(value, self._xmin)
+                      if self._xmin is not None else value)
 
     # ymin/ymax
     # -------------------------------------------------------------------------
@@ -135,10 +132,8 @@ class PanZoom(BaseInteract):
 
     @ymin.setter
     def ymin(self, value):
-        if self._ymax is not None:
-            self._ymin = min(value, self._ymax)
-        else:
-            self._ymin = value
+        self._ymin = (min(value, self._ymax)
+                      if self._ymax is not None else value)
 
     @property
     def ymax(self):
@@ -147,10 +142,8 @@ class PanZoom(BaseInteract):
 
     @ymax.setter
     def ymax(self, value):
-        if self._ymin is not None:
-            self._ymax = max(value, self._ymin)
-        else:
-            self._ymax = value
+        self._ymax = (max(value, self._ymin)
+                      if self._ymin is not None else value)
 
     # zmin/zmax
     # -------------------------------------------------------------------------
@@ -183,13 +176,10 @@ class PanZoom(BaseInteract):
             visual.data['u_zoom'] = zoom
 
     def _zoom_aspect(self, zoom=None):
-        if zoom is None:
-            zoom = self._zoom
+        zoom = zoom if zoom is not None else self._zoom
         zoom = _as_array(zoom)
-        if self._aspect is not None:
-            aspect = self._canvas_aspect * self._aspect
-        else:
-            aspect = 1.
+        aspect = (self._canvas_aspect * self._aspect
+                  if self._aspect is not None else 1.)
         return zoom * aspect
 
     def _normalize(self, x_y, restrict_to_box=True):
@@ -200,13 +190,13 @@ class PanZoom(BaseInteract):
 
     def _constrain_pan(self):
         """Constrain bounding box."""
-        if self.xmin is not None and self._xmax is not None:
+        if self.xmin is not None and self.xmax is not None:
             p0 = self.xmin + 1. / self._zoom[0]
             p1 = self.xmax - 1. / self._zoom[0]
             p0, p1 = min(p0, p1), max(p0, p1)
             self._pan[0] = np.clip(self._pan[0], p0, p1)
 
-        if self.ymin is not None and self._ymax is not None:
+        if self.ymin is not None and self.ymax is not None:
             p0 = self.ymin + 1. / self._zoom[1]
             p1 = self.ymax - 1. / self._zoom[1]
             p0, p1 = min(p0, p1), max(p0, p1)
@@ -260,8 +250,6 @@ class PanZoom(BaseInteract):
             value = (value, value)
         assert len(value) == 2
         self._zoom = np.clip(value, self._zmin, self._zmax)
-        if not self.is_attached:
-            return
 
         # Constrain bounding box.
         self._constrain_pan()
@@ -345,7 +333,8 @@ class PanZoom(BaseInteract):
     def reset(self):
         self.pan = (0., 0.)
         self.zoom = 1.
-        self._canvas.update()
+        if self._canvas:
+            self._canvas.update()
 
     def on_resize(self, event):
         """Resize event."""

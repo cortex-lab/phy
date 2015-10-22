@@ -121,6 +121,51 @@ def test_panzoom_basic_pan_zoom():
     assert pz.zoom[1] > 3 * pz.zoom[0]
 
 
+def test_panzoom_constraints_x():
+    pz = PanZoom()
+    pz.xmin, pz.xmax = -2, 2
+
+    # Pan beyond the bounds.
+    pz.pan_delta((-2, 2))
+    assert pz.pan == [-1, 2]
+    pz.reset()
+
+    # Zoom beyond the bounds.
+    pz.zoom_delta((-1, -2))
+    assert pz.pan == [0, 0]
+    assert pz.zoom[0] == .5
+    assert pz.zoom[1] < .5
+
+
+def test_panzoom_constraints_y():
+    pz = PanZoom()
+    pz.ymin, pz.ymax = -2, 2
+
+    # Pan beyond the bounds.
+    pz.pan_delta((2, -2))
+    assert pz.pan == [2, -1]
+    pz.reset()
+
+    # Zoom beyond the bounds.
+    pz.zoom_delta((-2, -1))
+    assert pz.pan == [0, 0]
+    assert pz.zoom[0] < .5
+    assert pz.zoom[1] == .5
+
+
+def test_panzoom_constraints_z():
+    pz = PanZoom()
+    pz.zmin, pz.zmax = .5, 2
+
+    # Zoom beyond the bounds.
+    pz.zoom_delta((-10, -10))
+    assert pz.zoom == [.5, .5]
+    pz.reset()
+
+    pz.zoom_delta((10, 10))
+    assert pz.zoom == [2, 2]
+
+
 def test_panzoom_pan_mouse(qtbot, canvas, panzoom):
     pz = panzoom
 
