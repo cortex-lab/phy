@@ -43,7 +43,6 @@ class PanZoom(BaseInteract):
 
     """
 
-    name = 'panzoom'
     _default_zoom_coeff = 1.5
     _default_wheel_coeff = .1
     _arrows = ('Left', 'Right', 'Up', 'Down')
