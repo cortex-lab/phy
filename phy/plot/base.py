@@ -236,6 +236,7 @@ class BaseInteract(object):
 
     def __init__(self):
         self._canvas = None
+        self.data = {}
 
     @property
     def size(self):
@@ -256,6 +257,10 @@ class BaseInteract(object):
         canvas.connect(self.on_mouse_wheel)
         canvas.connect(self.on_key_press)
 
+    def is_attached(self):
+        """Whether the transform is attached to a canvas."""
+        return self._canvas is not None
+
     def iter_attached_visuals(self):
         """Yield all visuals attached to that interact in the canvas."""
         if self._canvas:
@@ -273,6 +278,8 @@ class BaseInteract(object):
         """
         for visual in self.iter_attached_visuals():
             if not visual.program:
+                # Use the interact's data.
+                visual.data.update(self.data)
                 visual.build_program(self.transforms,
                                      vertex_decl=self.vertex_decl,
                                      frag_decl=self.frag_decl,
@@ -289,3 +296,8 @@ class BaseInteract(object):
 
     def on_key_press(self, event):
         pass
+
+    def update(self):
+        """Update the attached canvas if it exists."""
+        if self.is_attached():
+            self._canvas.update()
