@@ -172,7 +172,8 @@ class PanZoom(BaseInteract):
 
     def _iter_programs(self):
         for visual in self.iter_attached_visuals():
-            yield visual.program
+            if visual.program:
+                yield visual.program
 
     def _apply_pan_zoom(self):
         zoom = self._zoom_aspect()
@@ -320,36 +321,6 @@ class PanZoom(BaseInteract):
         else:
             self._canvas_aspect = np.array([1.0, aspect / 1.0])
 
-    def on_resize(self, event):
-        """Resize event."""
-        self._set_canvas_aspect()
-        # Update zoom level
-        self.zoom = self._zoom
-
-    def on_mouse_move(self, event):
-        """Pan and zoom with the mouse."""
-        if event.modifiers:
-            return
-        if event.is_dragging:
-            x0, y0 = self._normalize(event.press_event.pos)
-            x1, y1 = self._normalize(event.last_event.pos, False)
-            x, y = self._normalize(event.pos, False)
-            dx, dy = x - x1, -(y - y1)
-            if event.button == 1:
-                self.pan_delta((dx, dy))
-            elif event.button == 2:
-                c = np.sqrt(self.size[0]) * .03
-                self.zoom_delta((dx, dy), (x0, y0), c=c)
-
-    def on_mouse_wheel(self, event):
-        """Zoom with the mouse wheel."""
-        if event.modifiers:
-            return
-        dx = np.sign(event.delta[1]) * self._wheel_coeff
-        # Zoom toward the mouse pointer.
-        x0, y0 = self._normalize(event.pos)
-        self.zoom_delta((dx, dx), (x0, y0))
-
     def _zoom_keyboard(self, key):
         k = .05
         if key == '-':
@@ -373,8 +344,42 @@ class PanZoom(BaseInteract):
         self.zoom = 1.
         self._canvas.update()
 
+    def on_resize(self, event):
+        """Resize event."""
+        super(PanZoom, self).on_resize(event)
+        self._set_canvas_aspect()
+        # Update zoom level
+        self.zoom = self._zoom
+
+    def on_mouse_move(self, event):
+        """Pan and zoom with the mouse."""
+        super(PanZoom, self).on_mouse_move(event)
+        if event.modifiers:
+            return
+        if event.is_dragging:
+            x0, y0 = self._normalize(event.press_event.pos)
+            x1, y1 = self._normalize(event.last_event.pos, False)
+            x, y = self._normalize(event.pos, False)
+            dx, dy = x - x1, -(y - y1)
+            if event.button == 1:
+                self.pan_delta((dx, dy))
+            elif event.button == 2:
+                c = np.sqrt(self.size[0]) * .03
+                self.zoom_delta((dx, dy), (x0, y0), c=c)
+
+    def on_mouse_wheel(self, event):
+        """Zoom with the mouse wheel."""
+        super(PanZoom, self).on_mouse_wheel(event)
+        if event.modifiers:
+            return
+        dx = np.sign(event.delta[1]) * self._wheel_coeff
+        # Zoom toward the mouse pointer.
+        x0, y0 = self._normalize(event.pos)
+        self.zoom_delta((dx, dx), (x0, y0))
+
     def on_key_press(self, event):
         """Key press event."""
+        super(PanZoom, self).on_key_press(event)
 
         # Zooming with the keyboard.
         key = event.key

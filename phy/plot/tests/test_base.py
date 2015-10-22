@@ -56,11 +56,14 @@ def test_base_visual(qtbot, canvas):
         """
         gl_primitive_type = 'lines'
 
+        def __init__(self):
+            super(TestVisual, self).__init__()
+            self.set_data()
+
         def set_data(self):
             self.data['a_position'] = [[-1, 0], [1, 0]]
 
     v = TestVisual()
-    v.set_data()
     # We need to build the program explicitly when there is no interact.
     v.attach(canvas)
     v.build_program()
