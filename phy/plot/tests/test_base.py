@@ -75,7 +75,7 @@ def test_base_visual(qtbot, canvas):
     # qtbot.stop()
 
     # Simulate a mouse move.
-    canvas.events.mouse_move(delta=(1., 0.))
+    canvas.events.mouse_move(pos=(0., 0.))
     canvas.events.key_press(text='a')
 
     v.update()
