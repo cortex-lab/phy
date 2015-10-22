@@ -176,16 +176,11 @@ class PanZoom(BaseInteract):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _iter_programs(self):
-        for visual in self.iter_attached_visuals():
-            if visual.program:
-                yield visual.program
-
     def _apply_pan_zoom(self):
         zoom = self._zoom_aspect()
-        for program in self._iter_programs():
-            program['u_pan'] = self._pan
-            program['u_zoom'] = zoom
+        for visual in self.iter_attached_visuals():
+            visual.data['u_pan'] = self._pan
+            visual.data['u_zoom'] = zoom
 
     def _zoom_aspect(self, zoom=None):
         if zoom is None:
