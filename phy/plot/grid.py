@@ -20,7 +20,7 @@ from .transform import Scale, Subplot, Clip
 class Grid(BaseInteract):
     """Grid interact.
 
-    NOTE: to be used in a grid, a visual must define `a_box`.
+    NOTE: to be used in a grid, a visual must define `a_box_index`.
 
     """
 
@@ -29,7 +29,7 @@ class Grid(BaseInteract):
         self._zoom = 1.
 
         # Name of the variable with the box index.
-        self.box_var = box_var or 'a_box'
+        self.box_var = box_var or 'a_box_index'
 
         self.shape = shape
         assert len(shape) == 2
@@ -41,11 +41,12 @@ class Grid(BaseInteract):
         self.transforms = [Scale(scale='u_zoom'),
                            Scale(scale=(m, m)),
                            Clip(bounds=[-m, -m, m, m]),
-                           Subplot(shape=shape, index='a_box'),
+                           Subplot(shape=shape, index='a_box_index'),
                            ]
-        self.vertex_decl = 'attribute vec2 a_box;\nuniform float u_zoom;\n'
+        self.vertex_decl = ('attribute vec2 a_box_index;\n'
+                            'uniform float u_zoom;\n')
         self.data['u_zoom'] = self._zoom
-        self.data['a_box'] = (0, 0)
+        self.data['a_box_index'] = (0, 0)
 
     @property
     def zoom(self):
