@@ -87,6 +87,17 @@ def subplot_range(shape=None, index=None):
     return [x, y, x + width, y + height]
 
 
+def pixels_to_ndc(pos, size=None):
+    """Convert from pixels to normalized device coordinates (in [-1, 1])."""
+    pos = np.asarray(pos, dtype=np.float32)
+    size = np.asarray(size, dtype=np.float32)
+    pos = pos / (size / 2.) - 1
+    # Flip y, because the origin in pixels is at the top left corner of the
+    # window.
+    pos[1] = -pos[1]
+    return pos
+
+
 #------------------------------------------------------------------------------
 # Transforms
 #------------------------------------------------------------------------------

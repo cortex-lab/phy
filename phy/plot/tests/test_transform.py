@@ -13,7 +13,8 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 from pytest import yield_fixture
 
-from ..transform import (_glslify, BaseTransform,
+from ..transform import (_glslify, pixels_to_ndc,
+                         BaseTransform,
                          Translate, Scale, Range, Clip, Subplot, GPU,
                          TransformChain,
                          )
@@ -46,6 +47,10 @@ def test_glslify():
     assert _glslify('a') == 'a', 'b'
     assert _glslify((1, 2, 3, 4)) == 'vec4(1, 2, 3, 4)'
     assert _glslify((1., 2.)) == 'vec2(1.0, 2.0)'
+
+
+def test_pixels_to_ndc():
+    assert list(pixels_to_ndc((0, 0), size=(10, 10))) == [-1, 1]
 
 
 #------------------------------------------------------------------------------

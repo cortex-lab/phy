@@ -12,7 +12,7 @@ import math
 import numpy as np
 
 from .base import BaseInteract
-from .transform import Translate, Scale
+from .transform import Translate, Scale, pixels_to_ndc
 from phy.utils._types import _as_array
 
 
@@ -202,11 +202,8 @@ class PanZoom(BaseInteract):
                   if self._aspect is not None else 1.)
         return zoom * aspect
 
-    def _normalize(self, x_y, restrict_to_box=True):
-        x_y = np.asarray(x_y, dtype=np.float32)
-        size = np.asarray(self.size, dtype=np.float32)
-        pos = x_y / (size / 2.) - 1
-        return pos
+    def _normalize(self, pos):
+        return pixels_to_ndc(pos, size=self.size)
 
     def _constrain_pan(self):
         """Constrain bounding box."""
@@ -310,7 +307,7 @@ class PanZoom(BaseInteract):
                                                         zoom_y_new))
 
             self.pan = (pan_x - x0 * (1. / zoom_x - 1. / zoom_x_new),
-                        pan_y + y0 * (1. / zoom_y - 1. / zoom_y_new))
+                        pan_y - y0 * (1. / zoom_y - 1. / zoom_y_new))
 
         self.update()
 
@@ -374,9 +371,9 @@ class PanZoom(BaseInteract):
             return
         if event.is_dragging:
             x0, y0 = self._normalize(event.press_event.pos)
-            x1, y1 = self._normalize(event.last_event.pos, False)
-            x, y = self._normalize(event.pos, False)
-            dx, dy = x - x1, -(y - y1)
+            x1, y1 = self._normalize(event.last_event.pos)
+            x, y = self._normalize(event.pos)
+            dx, dy = x - x1, y - y1
             if event.button == 1:
                 self.pan_delta((dx, dy))
             elif event.button == 2:
