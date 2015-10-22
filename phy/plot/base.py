@@ -278,8 +278,10 @@ class BaseInteract(object):
         """
         for visual in self.iter_attached_visuals():
             if not visual.program:
-                # Use the interact's data.
-                visual.data.update(self.data)
+                # Use the interact's data by default.
+                for n, v in self.data.items():
+                    if n not in visual.data:
+                        visual.data[n] = v
                 visual.build_program(self.transforms,
                                      vertex_decl=self.vertex_decl,
                                      frag_decl=self.frag_decl,

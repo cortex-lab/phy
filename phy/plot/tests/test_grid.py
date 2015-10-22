@@ -10,6 +10,7 @@
 from itertools import product
 
 import numpy as np
+from vispy.util import keys
 from pytest import yield_fixture
 
 from ..base import BaseVisual
@@ -79,6 +80,24 @@ def grid(qtbot, canvas, visual):
 # Test grid
 #------------------------------------------------------------------------------
 
-def test_grid_1(qtbot, visual, grid):
-    pass
-    # qtbot.stop()
+def test_grid_1(qtbot, canvas, visual, grid):
+
+    # Zoom with the keyboard.
+    canvas.events.key_press(key=keys.Key('+'))
+    assert grid.zoom > 1
+
+    # Unzoom with the keyboard.
+    canvas.events.key_press(key=keys.Key('-'))
+    assert grid.zoom == 1.
+
+    # Set the zoom explicitly.
+    grid.zoom = 2
+    assert grid.zoom == 2.
+
+    # No effect with modifiers.
+    canvas.events.key_press(key=keys.Key('r'), modifiers=(keys.CONTROL,))
+    assert grid.zoom == 2.
+
+    # Press 'R'.
+    canvas.events.key_press(key=keys.Key('r'))
+    assert grid.zoom == 1.

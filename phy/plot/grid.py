@@ -21,7 +21,6 @@ class Grid(BaseInteract):
     """Grid interact.
 
     NOTE: to be used in a grid, a visual must define `a_box`.
-    TODO: improve this, so that a visual doesn't have to be aware of the grid.
 
     """
 
@@ -39,13 +38,14 @@ class Grid(BaseInteract):
 
         # Define the grid transform and clipping.
         m = 1. - .05  # Margin.
-        self.transforms = [Scale(scale='u_scale'),
+        self.transforms = [Scale(scale='u_zoom'),
                            Scale(scale=(m, m)),
                            Clip(bounds=[-m, -m, m, m]),
                            Subplot(shape=shape, index='a_box'),
                            ]
-        self.vertex_decl = 'attribute vec2 a_box;\nuniform float u_scale;\n'
-        self.data['u_scale'] = self._zoom
+        self.vertex_decl = 'attribute vec2 a_box;\nuniform float u_zoom;\n'
+        self.data['u_zoom'] = self._zoom
+        self.data['a_box'] = (0, 0)
 
     @property
     def zoom(self):
@@ -57,7 +57,7 @@ class Grid(BaseInteract):
         """Zoom level."""
         self._zoom = value
         for visual in self.iter_attached_visuals():
-            visual.data['u_scale'] = value
+            visual.data['u_zoom'] = value
 
     def on_key_press(self, event):
         """Pan and zoom with the keyboard."""
