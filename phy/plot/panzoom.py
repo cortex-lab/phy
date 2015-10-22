@@ -226,6 +226,10 @@ class PanZoom(BaseInteract):
             self._zoom[1] = max(self._zoom[1],
                                 1. / (self.ymax - self._pan[1]))
 
+    def update(self):
+        if self.is_attached():
+            self._canvas.update()
+
     # Pan and zoom
     # -------------------------------------------------------------------------
 
@@ -272,10 +276,9 @@ class PanZoom(BaseInteract):
 
         self.pan = (pan_x + dx / zoom_x,
                     pan_y + dy / zoom_y)
+        self.update()
 
-        self._canvas.update()
-
-    def zoom_delta(self, d, p, c=1.):
+    def zoom_delta(self, d, p=(0., 0.), c=1.):
         dx, dy = d
         x0, y0 = p
 
@@ -298,7 +301,7 @@ class PanZoom(BaseInteract):
             self.pan = (pan_x - x0 * (1. / zoom_x - 1. / zoom_x_new),
                         pan_y + y0 * (1. / zoom_y - 1. / zoom_y_new))
 
-        self._canvas.update()
+        self.update()
 
     # Event callbacks
     # -------------------------------------------------------------------------
