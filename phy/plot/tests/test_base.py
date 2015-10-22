@@ -111,6 +111,7 @@ def test_base_interact(qtbot, canvas):
     interact.attach(canvas)
 
     canvas.show()
+    assert interact.size[0] >= 1
     qtbot.waitForWindowShown(canvas.native)
     # qtbot.stop()
 

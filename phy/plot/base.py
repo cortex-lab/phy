@@ -225,6 +225,10 @@ class BaseInteract(object):
     def __init__(self):
         self._canvas = None
 
+    @property
+    def size(self):
+        return self._canvas.size if self._canvas else None
+
     def attach(self, canvas):
         """Attach the interact to a canvas."""
         self._canvas = canvas
@@ -235,7 +239,9 @@ class BaseInteract(object):
             # Programs that are already built are skipped.
             self.build_programs()
 
+        canvas.connect(self.on_resize)
         canvas.connect(self.on_mouse_move)
+        canvas.connect(self.on_mouse_wheel)
         canvas.connect(self.on_key_press)
 
     def iter_attached_visuals(self):
@@ -255,7 +261,13 @@ class BaseInteract(object):
             if not visual.program:
                 visual.build_program(self.transforms)
 
+    def on_resize(self, event):
+        pass
+
     def on_mouse_move(self, event):
+        pass
+
+    def on_mouse_wheel(self, event):
         pass
 
     def on_key_press(self, event):
