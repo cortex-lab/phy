@@ -21,7 +21,27 @@ from phy.utils._types import _as_array
 #------------------------------------------------------------------------------
 
 class PanZoom(BaseInteract):
-    """Pan and zoom interact."""
+    """Pan and zoom interact.
+
+    To use it:
+
+    ```python
+    # Create a visual.
+    visual = MyVisual(...)
+    visual.set_data(...)
+
+    # Attach the visual to the canvas.
+    canvas = BaseCanvas()
+    visual.attach(canvas, 'PanZoom')
+
+    # Create and attach the PanZoom interact.
+    pz = PanZoom()
+    pz.attach(canvas)
+
+    canvas.show()
+    ```
+
+    """
 
     name = 'panzoom'
     _default_zoom_coeff = 1.5
@@ -219,6 +239,7 @@ class PanZoom(BaseInteract):
                                 1. / (self.ymax - self._pan[1]))
 
     def update(self):
+        """Update the attached canvas if it exists."""
         if self.is_attached():
             self._canvas.update()
 
@@ -258,6 +279,7 @@ class PanZoom(BaseInteract):
         self._apply_pan_zoom()
 
     def pan_delta(self, d):
+        """Pan the view by a given amount."""
         dx, dy = d
 
         pan_x, pan_y = self.pan
@@ -267,6 +289,7 @@ class PanZoom(BaseInteract):
         self.update()
 
     def zoom_delta(self, d, p=(0., 0.), c=1.):
+        """Zoom the view by a given amount."""
         dx, dy = d
         x0, y0 = p
 
@@ -331,6 +354,7 @@ class PanZoom(BaseInteract):
         self._canvas.update()
 
     def reset(self):
+        """Reset the view."""
         self.pan = (0., 0.)
         self.zoom = 1.
         if self._canvas:
@@ -370,7 +394,7 @@ class PanZoom(BaseInteract):
         self.zoom_delta((dx, dx), (x0, y0))
 
     def on_key_press(self, event):
-        """Key press event."""
+        """Pan and zoom with the keyboard."""
         super(PanZoom, self).on_key_press(event)
 
         # Zooming with the keyboard.
@@ -394,6 +418,6 @@ class PanZoom(BaseInteract):
     # -------------------------------------------------------------------------
 
     def attach(self, canvas):
-        """Attach this tranform to a canvas."""
+        """Attach this interact to a canvas."""
         super(PanZoom, self).attach(canvas)
         self._set_canvas_aspect()
