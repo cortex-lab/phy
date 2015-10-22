@@ -55,7 +55,7 @@ class MyTestVisual(BaseVisual):
         position = .1 * coeff * np.random.randn(2 * 3 * n, 2)
 
         self.data['a_position'] = position.astype(np.float32)
-        self.data['a_box'] = box.astype(np.float32)
+        self.data['a_box_index'] = box.astype(np.float32)
 
 
 @yield_fixture

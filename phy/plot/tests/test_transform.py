@@ -214,7 +214,7 @@ def test_transform_chain_complete(array):
     t.add([Range(from_bounds=[-3, -3, 1, 1]),
            GPU(),
            Clip(),
-           Subplot(shape='u_shape', index='a_box'),
+           Subplot(shape='u_shape', index='a_box_index'),
            ])
 
     assert len(t.cpu_transforms) == 3
@@ -235,7 +235,7 @@ def test_transform_chain_complete(array):
     }
     """).strip()
     vs, fs = t.insert_glsl(vs, fs)
-    assert 'a_box' in vs
+    assert 'a_box_index' in vs
     assert 'v_' in vs
     assert 'v_' in fs
     assert 'discard' in fs
