@@ -246,9 +246,11 @@ class BaseInteract(object):
 
     def iter_attached_visuals(self):
         """Yield all visuals attached to that interact in the canvas."""
-        for visual in self._canvas.emit_('get_visual_for_interact', self.name):
-            if visual:
-                yield visual
+        if self._canvas:
+            for visual in self._canvas.emit_('get_visual_for_interact',
+                                             self.name):
+                if visual:
+                    yield visual
 
     def build_programs(self):
         """Build the programs of all attached visuals.
