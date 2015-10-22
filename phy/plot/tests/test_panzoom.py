@@ -52,3 +52,19 @@ def test_panzoom_basic_pan_zoom():
     assert panzoom.zoom == [1., 1.]
     panzoom.zoom = (2., .5)
     assert panzoom.zoom == [2., .5]
+    panzoom.zoom = (1., 1.)
+
+    # Pan delta.
+    panzoom.pan_delta((-1., 1.))
+    assert panzoom.pan == [0., 0.]
+
+    # Zoom delta.
+    panzoom.zoom_delta((1., 1.))
+    assert panzoom.zoom[0] > 2
+    assert panzoom.zoom[0] == panzoom.zoom[1]
+    panzoom.zoom = (1., 1.)
+
+    # Zoom delta.
+    panzoom.zoom_delta((2., 3.), (.5, .5))
+    assert panzoom.zoom[0] > 2
+    assert panzoom.zoom[1] > 3 * panzoom.zoom[0]
