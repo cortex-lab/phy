@@ -7,10 +7,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import numpy as np
+import math
 
 from .base import BaseInteract
-from .transform import Scale, Subplot, Clip, pixels_to_ndc
+from .transform import Scale, Subplot, Clip
 
 
 #------------------------------------------------------------------------------
@@ -18,22 +18,61 @@ from .transform import Scale, Subplot, Clip, pixels_to_ndc
 #------------------------------------------------------------------------------
 
 class Grid(BaseInteract):
-    """Grid interact."""
+    """Grid interact.
+
+    NOTE: to be used in a grid, a visual must define `a_box`.
+    TODO: improve this, so that a visual doesn't have to be aware of the grid.
+
+    """
 
     def __init__(self, shape, box_var=None):
-        """
-        """
         super(Grid, self).__init__()
+        self._zoom = 1.
+
+        # Name of the variable with the box index.
         self.box_var = box_var or 'a_box'
+
         self.shape = shape
         assert len(shape) == 2
         assert shape[0] >= 1
         assert shape[1] >= 1
 
         # Define the grid transform and clipping.
-        m = 1. - .05
-        self.transforms = [Scale(scale=(m, m)),
+        m = 1. - .05  # Margin.
+        self.transforms = [Scale(scale='u_scale'),
+                           Scale(scale=(m, m)),
                            Clip(bounds=[-m, -m, m, m]),
                            Subplot(shape=shape, index='a_box'),
                            ]
-        self.vertex_decl = 'attribute vec2 a_box;\n'
+        self.vertex_decl = 'attribute vec2 a_box;\nuniform float u_scale;\n'
+        self.data['u_scale'] = self._zoom
+
+    @property
+    def zoom(self):
+        """Zoom level."""
+        return self._zoom
+
+    @zoom.setter
+    def zoom(self, value):
+        """Zoom level."""
+        self._zoom = value
+        for visual in self.iter_attached_visuals():
+            visual.data['u_scale'] = value
+
+    def on_key_press(self, event):
+        """Pan and zoom with the keyboard."""
+        super(Grid, self).on_key_press(event)
+        if event.modifiers:
+            return
+        key = event.key
+
+        # Zoom.
+        if key in ('-', '+'):
+            k = .05 if key == '+' else -.05
+            self.zoom *= math.exp(1.5 * k)
+            self.update()
+
+        # Reset with 'R'.
+        if key == 'R':
+            self.zoom = 1.
+            self.update()
