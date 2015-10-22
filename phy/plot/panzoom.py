@@ -12,6 +12,7 @@ import math
 import numpy as np
 
 from .base import BaseInteract
+from .transform import Translate, Scale
 from phy.utils._types import _as_array
 
 
@@ -76,6 +77,10 @@ class PanZoom(BaseInteract):
 
         self._zoom_to_pointer = True
         self._canvas_aspect = np.ones(2)
+
+        self.transforms = [Translate(translate='u_pan'),
+                           Scale(scale='u_zoom')]
+        self.vertex_decl = 'uniform vec2 u_pan;\nuniform vec2 u_zoom;\n'
 
     # Various properties
     # -------------------------------------------------------------------------
