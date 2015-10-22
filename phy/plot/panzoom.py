@@ -22,6 +22,7 @@ from phy.utils._types import _as_array
 class PanZoom(BaseInteract):
     """Pan and zoom interact."""
 
+    name = 'panzoom'
     _default_zoom_coeff = 1.5
     _default_wheel_coeff = .1
     _arrows = ('Left', 'Right', 'Up', 'Down')
