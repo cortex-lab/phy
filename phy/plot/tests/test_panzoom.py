@@ -7,7 +7,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-# import numpy as np
+import numpy as np
+from vispy.app import MouseEvent
+from vispy.util import keys
 from pytest import yield_fixture
 
 from ..base import BaseVisual
@@ -45,6 +47,20 @@ class MyTestVisual(BaseVisual):
 @yield_fixture
 def visual():
     yield MyTestVisual()
+
+
+@yield_fixture
+def panzoom(qtbot, canvas, visual):
+    visual.attach(canvas, 'PanZoom')
+    visual.show()
+
+    pz = PanZoom()
+    pz.attach(canvas)
+
+    canvas.show()
+    qtbot.waitForWindowShown(canvas.native)
+
+    yield pz
 
 
 #------------------------------------------------------------------------------
@@ -105,14 +121,56 @@ def test_pz_basic_pan_zoom():
     assert pz.zoom[1] > 3 * pz.zoom[0]
 
 
-def test_pz_attached(qtbot, canvas, visual):
+def test_pz_pan(qtbot, canvas, panzoom):
+    pz = panzoom
 
-    visual.attach(canvas, 'PanZoom')
-    visual.show()
+    # Pan with mouse.
+    press = MouseEvent(type='mouse_press', pos=(0, 0))
+    canvas.events.mouse_move(pos=(10., 0.), button=1,
+                             last_event=press, press_event=press)
+    assert pz.pan[0] > 0
+    assert pz.pan[1] == 0
+    pz.pan = (0, 0)
 
-    pz = PanZoom()
-    pz.attach(canvas)
+    # Pan with keyboard.
+    canvas.events.key_press(key=keys.UP)
+    assert pz.pan[0] == 0
+    assert pz.pan[1] < 0
+    pz.pan = (0, 0)
 
-    canvas.show()
-    qtbot.waitForWindowShown(canvas.native)
+    # Reset with R.
+    canvas.events.key_press(text='r')
+    assert pz.pan == [0, 0]
+
+    # qtbot.stop()
+
+
+def test_pz_zoom(qtbot, canvas, panzoom):
+    pz = panzoom
+
+    # Zoom with mouse.
+    press = MouseEvent(type='mouse_press', pos=(50., 50.))
+    canvas.events.mouse_move(pos=(0., 0.), button=2,
+                             last_event=press, press_event=press)
+    assert pz.pan[0] < 0
+    assert pz.pan[1] < 0
+    assert pz.zoom[0] < 1
+    assert pz.zoom[1] > 1
+    pz.reset()
+
+    # Zoom with mouse.
+    size = np.asarray(canvas.size)
+    canvas.events.mouse_wheel(pos=size / 2., delta=(0., 1.))
+    assert pz.pan == [0, 0]
+    assert pz.zoom[0] > 1
+    assert pz.zoom[1] > 1
+    pz.reset()
+
+    # Zoom with keyboard.
+    canvas.events.key_press(key=keys.Key('+'))
+    assert pz.pan == [0, 0]
+    assert pz.zoom[0] > 1
+    assert pz.zoom[1] > 1
+    pz.reset()
+
     # qtbot.stop()

@@ -270,14 +270,12 @@ class PanZoom(BaseInteract):
         self._apply_pan_zoom()
 
     def pan_delta(self, d):
-
         dx, dy = d
 
         pan_x, pan_y = self.pan
         zoom_x, zoom_y = self._zoom_aspect(self._zoom)
 
-        self.pan = (pan_x + dx / zoom_x,
-                    pan_y + dy / zoom_y)
+        self.pan = (pan_x + dx / zoom_x, pan_y + dy / zoom_y)
         self.update()
 
     def zoom_delta(self, d, p=(0., 0.), c=1.):
@@ -329,18 +327,22 @@ class PanZoom(BaseInteract):
         self.zoom_delta((k, k), (0, 0))
 
     def _pan_keyboard(self, key):
-        k = .1 / self.zoom
+        k = .1 / np.asarray(self.zoom)
         if key == 'Left':
-            self.pan += (+k[0], +0)
+            # self.pan += (+k[0], +0)
+            self.pan_delta((+k[0], +0))
         elif key == 'Right':
-            self.pan += (-k[0], +0)
+            # self.pan += (-k[0], +0)
+            self.pan_delta((-k[0], +0))
         elif key == 'Down':
-            self.pan += (+0, +k[1])
+            self.pan_delta((+0, +k[1]))
+            # self.pan += (+0, +k[1])
         elif key == 'Up':
-            self.pan += (+0, -k[1])
+            self.pan_delta((+0, -k[1]))
+            # self.pan += (+0, -k[1])
         self._canvas.update()
 
-    def _reset_keyboard(self):
+    def reset(self):
         self.pan = (0., 0.)
         self.zoom = 1.
         self._canvas.update()
@@ -397,7 +399,7 @@ class PanZoom(BaseInteract):
 
         # Reset with 'R'.
         if key == 'R':
-            self._reset_keyboard()
+            self.reset()
 
     # Canvas methods
     # -------------------------------------------------------------------------
