@@ -67,7 +67,7 @@ def panzoom(qtbot, canvas, visual):
 # Test panzoom
 #------------------------------------------------------------------------------
 
-def test_pz_basic_attrs():
+def test_panzoom_basic_attrs():
     pz = PanZoom()
 
     assert not pz.is_attached()
@@ -91,7 +91,7 @@ def test_pz_basic_attrs():
     assert list(pz.iter_attached_visuals()) == []
 
 
-def test_pz_basic_pan_zoom():
+def test_panzoom_basic_pan_zoom():
     pz = PanZoom()
 
     # Pan.
@@ -121,7 +121,7 @@ def test_pz_basic_pan_zoom():
     assert pz.zoom[1] > 3 * pz.zoom[0]
 
 
-def test_pz_pan_mouse(qtbot, canvas, panzoom):
+def test_panzoom_pan_mouse(qtbot, canvas, panzoom):
     pz = panzoom
 
     # Pan with mouse.
@@ -140,7 +140,7 @@ def test_pz_pan_mouse(qtbot, canvas, panzoom):
     assert pz.pan == [0, 0]
 
 
-def test_pz_pan_keyboard(qtbot, canvas, panzoom):
+def test_panzoom_pan_keyboard(qtbot, canvas, panzoom):
     pz = panzoom
 
     # Pan with keyboard.
@@ -164,7 +164,7 @@ def test_pz_pan_keyboard(qtbot, canvas, panzoom):
     assert pz.pan == [0, 0]
 
 
-def test_pz_zoom_mouse(qtbot, canvas, panzoom):
+def test_panzoom_zoom_mouse(qtbot, canvas, panzoom):
     pz = panzoom
 
     # Zoom with mouse.
@@ -193,7 +193,7 @@ def test_pz_zoom_mouse(qtbot, canvas, panzoom):
     pz.reset()
 
 
-def test_pz_zoom_keyboard(qtbot, canvas, panzoom):
+def test_panzoom_zoom_keyboard(qtbot, canvas, panzoom):
     pz = panzoom
 
     # Zoom with keyboard.
@@ -206,3 +206,10 @@ def test_pz_zoom_keyboard(qtbot, canvas, panzoom):
     canvas.events.key_press(key=keys.Key('-'))
     assert pz.pan == [0, 0]
     assert pz.zoom == [1, 1]
+
+
+def test_panzoom_resize(qtbot, canvas, panzoom):
+    # Increase coverage with different aspect ratio.
+    canvas.native.resize(400, 600)
+    # canvas.events.resize(size=(100, 1000))
+    assert list(panzoom._canvas_aspect) == [1., 2. / 3]
