@@ -12,6 +12,7 @@ from pytest import yield_fixture
 
 from ..base import BaseVisual
 from ..panzoom import PanZoom
+from ..transform import GPU
 
 
 #------------------------------------------------------------------------------
@@ -34,6 +35,7 @@ class MyTestVisual(BaseVisual):
 
     def __init__(self):
         super(MyTestVisual, self).__init__()
+        self.transforms = [GPU()]
         self.set_data()
 
     def set_data(self):
@@ -105,7 +107,8 @@ def test_pz_basic_pan_zoom():
 
 def test_pz_attached(qtbot, canvas, visual):
 
-    visual.attach(canvas)
+    visual.attach(canvas, 'PanZoom')
+    visual.show()
 
     pz = PanZoom()
     pz.attach(canvas)

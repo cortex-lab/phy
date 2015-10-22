@@ -135,7 +135,7 @@ class BaseVisual(object):
     def on_key_press(self, e):
         pass
 
-    def build_program(self, transforms=None):
+    def build_program(self, transforms=None, vertex_decl='', frag_decl=''):
         """Create the gloo program by specifying the transforms
         given by the optionally-attached interact.
 
@@ -158,6 +158,9 @@ class BaseVisual(object):
             # Insert the interact's GLSL into the shaders.
             self.vertex, self.fragment = self.transform_chain.insert_glsl(
                 self.vertex, self.fragment)
+            # Insert shader declarations.
+            self.vertex = vertex_decl + '\n' + self.vertex
+            self.fragment = frag_decl + '\n' + self.fragment
         logger.log(5, "Vertex shader: \n%s", self.vertex)
         logger.log(5, "Fragment shader: \n%s", self.fragment)
         self.program = gloo.Program(self.vertex, self.fragment)
@@ -219,6 +222,8 @@ class BaseInteract(object):
 
     """
     transforms = None
+    vertex_decl = ''
+    frag_decl = ''
 
     def __init__(self):
         self._canvas = None
@@ -259,7 +264,10 @@ class BaseInteract(object):
         """
         for visual in self.iter_attached_visuals():
             if not visual.program:
-                visual.build_program(self.transforms)
+                visual.build_program(self.transforms,
+                                     vertex_decl=self.vertex_decl,
+                                     frag_decl=self.frag_decl,
+                                     )
 
     def on_resize(self, event):
         pass

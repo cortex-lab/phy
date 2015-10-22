@@ -115,6 +115,7 @@ class BaseTransform(object):
 
 class Translate(BaseTransform):
     def apply(self, arr, translate=None):
+        assert isinstance(arr, np.ndarray)
         return arr + np.asarray(translate)
 
     def glsl(self, var, translate=None):
