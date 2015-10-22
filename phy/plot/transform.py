@@ -305,9 +305,13 @@ class TransformChain(object):
 
         # Generate the snippet to insert in the shaders.
         temp_var = 'temp_pos_tr'
+        # Name for the (eventual) varying.
+        fvar = 'v_{}'.format(temp_var)
         vs_insert = "vec2 {} = {};\n".format(temp_var, var)
         for t in self.gpu_transforms:
             if isinstance(t, Clip):
+                # Set the varying value in the vertex shader.
+                vs_insert += '{} = {};\n'.format(fvar, temp_var)
                 continue
             vs_insert += t.glsl(temp_var) + '\n'
         vs_insert += 'gl_Position = vec4({}, 0., 1.);\n'.format(temp_var)
@@ -316,7 +320,6 @@ class TransformChain(object):
         clip = self.get('Clip')
         if clip:
             # Varying name.
-            fvar = 'v_{}'.format(temp_var)
             glsl_clip = clip.glsl(fvar)
 
             # Prepare the fragment regex.
@@ -330,8 +333,6 @@ class TransformChain(object):
 
             # Make the replacement in the fragment shader for clipping.
             fragment = fs_regex.sub(indent(fs_insert), fragment)
-            # Set the varying value in the vertex shader.
-            vs_insert += '{} = {};\n'.format(fvar, temp_var)
 
         # Insert the GLSL snippet of the transform chain in the vertex shader.
         vertex = vs_regex.sub(indent(vs_insert), vertex)
