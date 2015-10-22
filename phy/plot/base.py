@@ -120,6 +120,11 @@ class BaseVisual(object):
             canvas.context.set_viewport(0, 0, event.size[0], event.size[1])
 
         @canvas.connect
+        def on_mouse_wheel(event):
+            if self._do_show:
+                self.on_mouse_wheel(event)
+
+        @canvas.connect
         def on_mouse_move(event):
             if self._do_show:
                 self.on_mouse_move(event)
@@ -130,6 +135,9 @@ class BaseVisual(object):
                 self.on_key_press(event)
 
     def on_mouse_move(self, e):
+        pass
+
+    def on_mouse_wheel(self, e):
         pass
 
     def on_key_press(self, e):
