@@ -87,7 +87,7 @@ class BaseVisual(object):
         """
         pass
 
-    def attach(self, canvas, interact='base'):
+    def attach(self, canvas, interact='BaseInteract'):
         """Attach the visual to a canvas.
 
         The interact's name can be specified. The interact's transforms
@@ -215,11 +215,9 @@ class BaseInteract(object):
 
     Derived classes must:
 
-    * Define a unique `name`
     * Define a list of `transforms`
 
     """
-    name = 'base'
     transforms = None
 
     def __init__(self):
@@ -248,7 +246,7 @@ class BaseInteract(object):
         """Yield all visuals attached to that interact in the canvas."""
         if self._canvas:
             for visual in self._canvas.emit_('get_visual_for_interact',
-                                             self.name):
+                                             self.__class__.__name__):
                 if visual:
                     yield visual
 

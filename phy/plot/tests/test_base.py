@@ -153,8 +153,6 @@ def test_interact(qtbot, canvas):
                                ]
 
     class TestInteract(BaseInteract):
-        name = 'test'
-
         def __init__(self):
             super(TestInteract, self).__init__()
             bounds = subplot_range(shape=(2, 3), index=(1, 2))
@@ -164,7 +162,7 @@ def test_interact(qtbot, canvas):
 
     # We attach the visual to the canvas. By default, a BaseInteract is used.
     v = TestVisual()
-    v.attach(canvas, 'test')
+    v.attach(canvas, 'TestInteract')
 
     # Base interact (no transform).
     interact = TestInteract()
