@@ -50,7 +50,7 @@ def _wrap_glsl(f, **kwargs_init):
     return wrapped
 
 
-def _wrap_prepost(f, **kwargs_init):
+def _wrap(f, **kwargs_init):
     def wrapped(*args, **kwargs):
         # Method kwargs first, then we update with the constructor kwargs.
         kwargs.update(kwargs_init)
@@ -71,7 +71,7 @@ def _glslify(r):
         return 'vec{}({})'.format(len(r), ', '.join(map(str, r)))
 
 
-def subplot_range(shape=None, index=None):
+def subplot_bounds(shape=None, index=None):
     i, j = index
     n_rows, n_cols = shape
 
@@ -108,8 +108,8 @@ class BaseTransform(object):
         # Pass the constructor kwargs to the methods.
         self.apply = _wrap_apply(self.apply, **kwargs)
         self.glsl = _wrap_glsl(self.glsl, **kwargs)
-        self.pre_transforms = _wrap_prepost(self.pre_transforms, **kwargs)
-        self.post_transforms = _wrap_prepost(self.post_transforms, **kwargs)
+        self.pre_transforms = _wrap(self.pre_transforms, **kwargs)
+        self.post_transforms = _wrap(self.post_transforms, **kwargs)
 
     def pre_transforms(self, **kwargs):
         return []
@@ -188,11 +188,18 @@ class Clip(BaseTransform):
 
 
 class Subplot(Range):
-    """Assume that the from range is [-1, -1, 1, 1]."""
+    """Assume that the from_bounds is [-1, -1, 1, 1]."""
+
+    def __init__(self, **kwargs):
+        super(Subplot, self).__init__(**kwargs)
+        self.get_bounds = _wrap(self.get_bounds)
+
+    def get_bounds(self, shape=None, index=None):
+        return subplot_bounds(shape=shape, index=index)
 
     def apply(self, arr, shape=None, index=None):
         from_bounds = (-1, -1, 1, 1)
-        to_bounds = subplot_range(shape=shape, index=index)
+        to_bounds = self.get_bounds(shape=shape, index=index)
         return super(Subplot, self).apply(arr,
                                           from_bounds=from_bounds,
                                           to_bounds=to_bounds)
