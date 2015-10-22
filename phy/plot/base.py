@@ -165,16 +165,23 @@ class BaseVisual(object):
         logger.log(5, "Fragment shader: \n%s", self.fragment)
         self.program = gloo.Program(self.vertex, self.fragment)
 
+        if not self.transform_chain.transformed_var_name:
+            logger.debug("No transformed variable has been found.")
+        # Upload the data if necessary.
+        self._upload_data()
+
+    def _upload_data(self):
+        """Upload pending data (attributes and uniforms) before drawing."""
+        if not self.data:
+            return
+
         # Get the name of the variable that needs to be transformed.
         # This variable (typically a_position) comes from the vertex shader
         # which contains the string `gl_Position = transform(the_name);`.
         var = self.transform_chain.transformed_var_name
-        if not var:
-            logger.debug("No transformed variable has been found.")
 
-        # Upload the data if necessary.
-        logger.debug("Upload program objects %s.",
-                     ', '.join(self.data.keys()))
+        logger.log(5, "Upload program objects %s.",
+                   ', '.join(self.data.keys()))
         for name, value in self.data.items():
             # Normalize the value that needs to be transformed.
             if name == var:
@@ -187,6 +194,8 @@ class BaseVisual(object):
         # Skip the drawing if the program hasn't been built yet.
         # The program is built by the attached interact.
         if self._do_show and self.program:
+            # Upload pending data.
+            self._upload_data()
             # Finally, draw the program.
             self.program.draw(self.gl_primitive_type)
 
