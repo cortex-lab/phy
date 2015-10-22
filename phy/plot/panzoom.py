@@ -314,7 +314,7 @@ class PanZoom(BaseInteract):
 
     def _set_canvas_aspect(self):
         w, h = self.size
-        aspect = max(1., w / max(float(h), 1.))
+        aspect = w / max(float(h), 1.)
         if aspect > 1.0:
             self._canvas_aspect = np.array([1.0 / aspect, 1.0])
         else:
