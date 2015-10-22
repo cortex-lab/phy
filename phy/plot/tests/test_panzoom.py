@@ -52,7 +52,6 @@ def visual():
 @yield_fixture
 def panzoom(qtbot, canvas, visual):
     visual.attach(canvas, 'PanZoom')
-    visual.show()
 
     pz = PanZoom()
     pz.attach(canvas)
