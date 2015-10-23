@@ -240,7 +240,7 @@ class BaseCanvas(Canvas):
     def connect_(self, *args, **kwargs):
         return self._events.connect(*args, **kwargs)
 
-    def emit_(self, *args, **kwargs):
+    def emit_(self, *args, **kwargs):  # pragma: no cover
         return self._events.emit(*args, **kwargs)
 
     def on_draw(self, e):
