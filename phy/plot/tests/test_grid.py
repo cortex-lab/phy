@@ -13,9 +13,8 @@ import numpy as np
 from vispy.util import keys
 from pytest import yield_fixture
 
-from ..base import BaseVisual
+from ..base import BaseVisual, BaseCanvas
 from ..grid import Grid
-from ..transform import GPU
 
 
 #------------------------------------------------------------------------------
@@ -37,10 +36,8 @@ class MyTestVisual(BaseVisual):
     """
     gl_primitive_type = 'points'
 
-    def __init__(self):
-        super(MyTestVisual, self).__init__()
-        self.transforms = [GPU()]
-        self.set_data()
+    def get_shaders(self):
+        return self.vertex, self.fragment
 
     def set_data(self):
         n = 1000
@@ -54,33 +51,34 @@ class MyTestVisual(BaseVisual):
 
         position = .1 * coeff * np.random.randn(2 * 3 * n, 2)
 
-        self.data['a_position'] = position.astype(np.float32)
-        self.data['a_box_index'] = box.astype(np.float32)
+        self.program['a_position'] = position.astype(np.float32)
+        self.program['a_box_index'] = box.astype(np.float32)
 
 
 @yield_fixture
-def visual():
-    yield MyTestVisual()
+def canvas(qapp):
+    c = BaseCanvas(keys='interactive', interact=Grid(shape=(2, 3)))
+    yield c
+    c.close()
 
 
 @yield_fixture
-def grid(qtbot, canvas, visual):
-    visual.attach(canvas, 'Grid')
-
-    grid = Grid(shape=(2, 3))
-    grid.attach(canvas)
+def grid(qtbot, canvas):
+    visual = MyTestVisual()
+    visual.attach(canvas)
+    visual.set_data()
 
     canvas.show()
     qtbot.waitForWindowShown(canvas.native)
 
-    yield grid
+    yield canvas.interact
 
 
 #------------------------------------------------------------------------------
 # Test grid
 #------------------------------------------------------------------------------
 
-def test_grid_1(qtbot, canvas, visual, grid):
+def test_grid_1(qtbot, canvas, grid):
 
     # Zoom with the keyboard.
     canvas.events.key_press(key=keys.Key('+'))
@@ -101,3 +99,5 @@ def test_grid_1(qtbot, canvas, visual, grid):
     # Press 'R'.
     canvas.events.key_press(key=keys.Key('r'))
     assert grid.zoom == 1.
+
+    # qtbot.stop()

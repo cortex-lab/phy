@@ -36,17 +36,26 @@ class Grid(BaseInteract):
         assert shape[0] >= 1
         assert shape[1] >= 1
 
+    def get_shader_declarations(self):
+        return ('attribute vec2 a_box_index;\n'
+                'uniform float u_zoom;\n', '')
+
+    def get_transforms(self):
         # Define the grid transform and clipping.
         m = 1. - .05  # Margin.
-        self.transforms = [Scale(scale='u_zoom'),
-                           Scale(scale=(m, m)),
-                           Clip(bounds=[-m, -m, m, m]),
-                           Subplot(shape=shape, index='a_box_index'),
-                           ]
-        self.vertex_decl = ('attribute vec2 a_box_index;\n'
-                            'uniform float u_zoom;\n')
-        self.data['u_zoom'] = self._zoom
-        self.data['a_box_index'] = (0, 0)
+        return [Scale(scale='u_zoom'),
+                Scale(scale=(m, m)),
+                Clip(bounds=[-m, -m, m, m]),
+                Subplot(shape=self.shape, index='a_box_index'),
+                ]
+
+    def update_program(self, program):
+        program['u_zoom'] = self._zoom
+        # Only set the default box index if necessary.
+        try:
+            program['a_box_index']
+        except KeyError:
+            program['a_box_index'] = (0, 0)
 
     @property
     def zoom(self):
@@ -57,8 +66,7 @@ class Grid(BaseInteract):
     def zoom(self, value):
         """Zoom level."""
         self._zoom = value
-        for visual in self.iter_attached_visuals():
-            visual.data['u_zoom'] = value
+        self.update()
 
     def on_key_press(self, event):
         """Pan and zoom with the keyboard."""
