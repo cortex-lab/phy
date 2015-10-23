@@ -12,9 +12,8 @@ from vispy.app import MouseEvent
 from vispy.util import keys
 from pytest import yield_fixture
 
-from ..base import BaseVisual
+from ..base import BaseVisual, BaseCanvas
 from ..panzoom import PanZoom
-from ..transform import GPU
 
 
 #------------------------------------------------------------------------------
@@ -35,31 +34,30 @@ class MyTestVisual(BaseVisual):
     """
     gl_primitive_type = 'lines'
 
-    def __init__(self):
-        super(MyTestVisual, self).__init__()
-        self.transforms = [GPU()]
-        self.set_data()
+    def get_shaders(self):
+        return self.vertex, self.fragment
 
     def set_data(self):
-        self.data['a_position'] = [[-1, 0], [1, 0]]
+        self.program['a_position'] = [[-1, 0], [1, 0]]
 
 
 @yield_fixture
-def visual():
-    yield MyTestVisual()
+def canvas(qapp):
+    c = BaseCanvas(keys='interactive', interact=PanZoom())
+    yield c
+    c.close()
 
 
 @yield_fixture
-def panzoom(qtbot, canvas, visual):
-    visual.attach(canvas, 'PanZoom')
-
-    pz = PanZoom()
-    pz.attach(canvas)
+def panzoom(qtbot, canvas):
+    visual = MyTestVisual()
+    visual.attach(canvas)
+    visual.set_data()
 
     canvas.show()
     qtbot.waitForWindowShown(canvas.native)
 
-    yield pz
+    yield canvas.interact
 
 
 #------------------------------------------------------------------------------
@@ -87,7 +85,7 @@ def test_panzoom_basic_attrs():
         setattr(pz, name, v * 2)
         assert getattr(pz, name) == v * 2
 
-    assert list(pz.iter_attached_visuals()) == []
+    assert list(pz.get_visuals()) == []
 
 
 def test_panzoom_basic_pan_zoom():
@@ -182,6 +180,8 @@ def test_panzoom_pan_mouse(qtbot, canvas, panzoom):
                              last_event=press, press_event=press,
                              modifiers=(keys.CONTROL,))
     assert pz.pan == [0, 0]
+
+    # qtbot.stop()
 
 
 def test_panzoom_pan_keyboard(qtbot, canvas, panzoom):

@@ -97,12 +97,17 @@ class PanZoom(BaseInteract):
         self._zoom_to_pointer = True
         self._canvas_aspect = np.ones(2)
 
-        # We define the GLSL uniforms used for pan and zoom.
-        self.transforms = [Translate(translate='u_pan'),
-                           Scale(scale='u_zoom')]
-        self.vertex_decl = 'uniform vec2 u_pan;\nuniform vec2 u_zoom;\n'
-        self.data['u_pan'] = pan
-        self.data['u_zoom'] = zoom
+    def get_shader_declarations(self):
+        return 'uniform vec2 u_pan;\nuniform vec2 u_zoom;\n', ''
+
+    def get_transforms(self):
+        return [Translate(translate='u_pan'),
+                Scale(scale='u_zoom')]
+
+    def update_program(self, program):
+        zoom = self._zoom_aspect()
+        program['u_pan'] = self._pan
+        program['u_zoom'] = zoom
 
     # Various properties
     # -------------------------------------------------------------------------
@@ -186,12 +191,6 @@ class PanZoom(BaseInteract):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _apply_pan_zoom(self):
-        zoom = self._zoom_aspect()
-        for visual in self.iter_attached_visuals():
-            visual.data['u_pan'] = self._pan
-            visual.data['u_zoom'] = zoom
-
     def _zoom_aspect(self, zoom=None):
         zoom = zoom if zoom is not None else self._zoom
         zoom = _as_array(zoom)
@@ -246,7 +245,7 @@ class PanZoom(BaseInteract):
         assert len(value) == 2
         self._pan[:] = value
         self._constrain_pan()
-        self._apply_pan_zoom()
+        self.update()
 
     @property
     def zoom(self):
@@ -265,7 +264,7 @@ class PanZoom(BaseInteract):
         self._constrain_pan()
         self._constrain_zoom()
 
-        self._apply_pan_zoom()
+        self.update()
 
     def pan_delta(self, d):
         """Pan the view by a given amount."""

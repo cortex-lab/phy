@@ -9,7 +9,7 @@
 
 import numpy as np
 
-from ..base import BaseVisual, BaseInteract
+from ..base import BaseCanvas, BaseVisual, BaseInteract
 from ..transform import (subplot_bounds, Translate, Scale, Range,
                          Clip, Subplot, GPU)
 
@@ -25,14 +25,14 @@ def test_visual_shader_name(qtbot, canvas):
         gl_primitive_type = 'lines'
 
         def set_data(self):
-            self.data['a_position'] = [[-1, 0, 0], [1, 0, 0]]
-            self.data['n_rows'] = 1
+            self.program['a_position'] = [[-1, 0, 0], [1, 0, 0]]
+            self.program['n_rows'] = 1
 
     v = TestVisual()
-    v.set_data()
     # We need to build the program explicitly when there is no interact.
     v.attach(canvas)
-    v.build_program()
+    # Must be called *after* attach().
+    v.set_data()
 
     canvas.show()
     qtbot.waitForWindowShown(canvas.native)
@@ -56,21 +56,18 @@ def test_base_visual(qtbot, canvas):
         """
         gl_primitive_type = 'lines'
 
-        def __init__(self):
-            super(TestVisual, self).__init__()
-            self.set_data()
+        def get_shaders(self):
+            return self.vertex, self.fragment
 
         def set_data(self):
-            self.data['a_position'] = [[-1, 0], [1, 0]]
+            self.program['a_position'] = [[-1, 0], [1, 0]]
 
     v = TestVisual()
     # We need to build the program explicitly when there is no interact.
     v.attach(canvas)
-    v.build_program()
+    v.set_data()
 
     canvas.show()
-    v.hide()
-    v.show()
     qtbot.waitForWindowShown(canvas.native)
     # qtbot.stop()
 
@@ -97,24 +94,22 @@ def test_base_interact(qtbot, canvas):
         """
         gl_primitive_type = 'lines'
 
-        def __init__(self):
-            super(TestVisual, self).__init__()
-            self.set_data()
+        def get_shaders(self):
+            return self.vertex, self.fragment
+
+        def get_transforms(self):
+            return [Scale(scale=(.5, 1))]
 
         def set_data(self):
-            self.data['a_position'] = [[-1, 0], [1, 0]]
-            self.transforms = [Scale(scale=(.5, 1))]
+            self.program['a_position'] = [[-1, 0], [1, 0]]
 
     # We attach the visual to the canvas. By default, a BaseInteract is used.
     v = TestVisual()
     v.attach(canvas)
-
-    # Base interact (no transform).
-    interact = BaseInteract()
-    interact.attach(canvas)
+    v.set_data()
 
     canvas.show()
-    assert interact.size[0] >= 1
+    assert canvas.interact.size[0] >= 1
     qtbot.waitForWindowShown(canvas.native)
     # qtbot.stop()
 
@@ -138,36 +133,37 @@ def test_interact(qtbot, canvas):
         """
         gl_primitive_type = 'points'
 
-        def __init__(self):
-            super(TestVisual, self).__init__()
-            self.set_data()
+        def get_shaders(self):
+            return self.vertex, self.fragment
+
+        def get_transforms(self):
+            return [Scale(scale=(.1, .1)),
+                    Translate(translate=(-1, -1)),
+                    GPU(),
+                    Range(from_bounds=(-1, -1, 1, 1),
+                          to_bounds=(-1.5, -1.5, 1.5, 1.5),
+                          ),
+                    ]
 
         def set_data(self):
-            self.data['a_position'] = np.random.uniform(0, 20, (100000, 2))
-            self.transforms = [Scale(scale=(.1, .1)),
-                               Translate(translate=(-1, -1)),
-                               GPU(),
-                               Range(from_bounds=(-1, -1, 1, 1),
-                                     to_bounds=(-1.5, -1.5, 1.5, 1.5),
-                                     ),
-                               ]
+            data = np.random.uniform(0, 20, (1000, 2)).astype(np.float32)
+            self.program['a_position'] = self.apply_cpu_transforms(data)
 
     class TestInteract(BaseInteract):
-        def __init__(self):
-            super(TestInteract, self).__init__()
+        def get_transforms(self):
             bounds = subplot_bounds(shape=(2, 3), index=(1, 2))
-            self.transforms = [Subplot(shape=(2, 3), index=(1, 2)),
-                               Clip(bounds=bounds),
-                               ]
+            return [Subplot(shape=(2, 3), index=(1, 2)),
+                    Clip(bounds=bounds),
+                    ]
+
+    canvas = BaseCanvas(keys='interactive', interact=TestInteract())
 
     # We attach the visual to the canvas. By default, a BaseInteract is used.
     v = TestVisual()
-    v.attach(canvas, 'TestInteract')
-
-    # Base interact (no transform).
-    interact = TestInteract()
-    interact.attach(canvas)
+    v.attach(canvas)
+    v.set_data()
 
     canvas.show()
     qtbot.waitForWindowShown(canvas.native)
     # qtbot.stop()
+    canvas.close()
