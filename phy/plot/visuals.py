@@ -61,12 +61,16 @@ def _get_pos_depth(pos_tr, depth):
     return pos_depth
 
 
-def _get_colors(colors, n):
-    if colors is None:
-        colors = np.ones((n, 4), dtype=np.float32)
-    colors = np.asarray(colors, dtype=np.float32)
-    assert colors.shape == (n, 4)
-    return colors
+def _get_attr(attr, n, default):
+    if not hasattr(default, '__len__'):
+        default = [default]
+    if attr is None:
+        attr = np.tile(default, (n, 1))
+    attr = np.asarray(attr, dtype=np.float32)
+    if attr.ndim == 1:
+        attr = attr[:, np.newaxis]
+    assert attr.shape == (n, len(default))
+    return attr
 
 
 #------------------------------------------------------------------------------
@@ -136,18 +140,10 @@ class ScatterVisual(BaseVisual):
         # Set the data bounds from the data.
         self.data_bounds = _get_data_bounds(data_bounds, pos)
 
-        # Set the transformed position.
         pos_tr = self.apply_cpu_transforms(pos)
         self.program['a_position'] = _get_pos_depth(pos_tr, depth)
-
-        # Set the marker size.
-        if size is None:
-            size = self._default_marker_size * np.ones(n, dtype=np.float32)
-        size = np.asarray(size, dtype=np.float32)
-        self.program['a_size'] = size
-
-        # Set the colors.
-        self.program['a_color'] = _get_colors(colors, n)
+        self.program['a_size'] = _get_attr(size, n, self._default_marker_size)
+        self.program['a_color'] = _get_attr(colors, n, (1, 1, 1, 1))
 
 
 class PlotVisual(BaseVisual):
