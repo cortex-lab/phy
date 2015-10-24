@@ -81,27 +81,15 @@ def test_base_visual(qtbot, canvas):
 def test_base_interact(qtbot, canvas):
     """Test a BaseVisual with a CPU transform and a blank interact."""
     class TestVisual(BaseVisual):
-        vertex = """
-            attribute vec2 a_position;
-            void main() {
-                gl_Position = transform(a_position);
-            }
-            """
-        fragment = """
-            void main() {
-                gl_FragColor = vec4(1, 1, 1, 1);
-            }
-        """
+        shader_name = 'simple'
         gl_primitive_type = 'lines'
-
-        def get_shaders(self):
-            return self.vertex, self.fragment
 
         def get_transforms(self):
             return [Scale(scale=(.5, 1))]
 
         def set_data(self):
             self.program['a_position'] = [[-1, 0], [1, 0]]
+            self.program['u_color'] = [1, 1, 1, 1]
 
     # We attach the visual to the canvas. By default, a BaseInteract is used.
     v = TestVisual()
