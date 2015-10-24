@@ -11,7 +11,7 @@ import os
 import os.path as op
 
 import numpy as np
-from numpy.testing import assert_array_equal as ae
+from numpy.testing import assert_allclose as ac
 from vispy import config
 
 from ..utils import (_load_shader,
@@ -40,12 +40,13 @@ def test_create_program():
 
 
 def test_tesselate_histogram():
-    n = 5
+    n = 7
     hist = np.arange(n)
     thist = _tesselate_histogram(hist)
-    assert thist.shape == (5 * n + 1, 2)
-    ae(thist[0], [-1, -1])
-    ae(thist[-1], [1, -1])
+    assert thist.shape == (6 * n, 2)
+    ac(thist[0], [-1., 0])
+    ac(thist[-3], [1., n - 1])
+    ac(thist[-1], [1., 0])
 
 
 def test_enable_depth_mask(qtbot, canvas):
