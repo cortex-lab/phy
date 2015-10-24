@@ -12,7 +12,7 @@ from vispy.gloo import Texture2D
 
 from .base import BaseVisual
 from .transform import Range, GPU
-from .utils import _enable_depth_mask
+from .utils import _enable_depth_mask, _tesselate_histogram
 
 
 #------------------------------------------------------------------------------
@@ -173,6 +173,7 @@ class PlotVisual(BaseVisual):
         signal_index = np.arange(n_signals)
         signal_index = np.repeat(signal_index, n_samples)
         signal_index = signal_index.astype(np.float32)
+        self.program['a_signal_index'] = signal_index
 
         # Generate the (n, 2) pos array.
         pos = np.empty((n, 2), dtype=np.float32)
@@ -208,9 +209,6 @@ class PlotVisual(BaseVisual):
         pos_depth[:, 2] = depth
         self.program['a_position'] = pos_depth
 
-        # Signal index.
-        self.program['a_signal_index'] = signal_index
-
         # Signal bounds (positions).
         if signal_bounds is None:
             signal_bounds = np.tile([-1, -1, 1, 1], (n_signals, 1))
@@ -243,14 +241,89 @@ class PlotVisual(BaseVisual):
 
 
 class HistogramVisual(BaseVisual):
-    shader_name = 'plot'
+    shader_name = 'histogram'
     gl_primitive_type = 'triangles'
 
-    def get_transforms(self):
-        pass
+    def __init__(self):
+        super(HistogramVisual, self).__init__()
+        self.n_bins = 0
+        self.hist_max = 1
 
-    def set_data(self):
-        pass
+    def get_transforms(self):
+        return [Range(from_bounds=[0, 0, self.n_bins, self.hist_max],
+                      to_bounds=[0, 0, 1, 1]),
+                GPU(),
+                Range(from_bounds='hist_bounds',   # (0, 0, 1, v)
+                      to_bounds=(-1, -1, 1, 1)),
+                ]
+
+    def set_data(self,
+                 hist=None,
+                 hist_lims=None,
+                 hist_colors=None,
+                 ):
+        assert hist is not None
+        hist = np.atleast_2d(hist)
+        assert hist.ndim == 2
+        n_hists, n_bins = hist.shape
+        n = 6 * n_hists * n_bins
+        self.n_bins = n_bins
+
+        # Generate hist_max.
+        hist_max = hist.max() if hist.size else 1.
+        hist_max = float(hist_max)
+        hist_max = hist_max if hist_max > 0 else 1.
+        assert hist_max > 0
+        self.hist_max = hist_max
+
+        # Concatenate all histograms.
+        pos = np.vstack(_tesselate_histogram(row) for row in hist)
+        assert pos.shape == (n, 2)
+
+        # Set the transformed position.
+        pos_tr = self.apply_cpu_transforms(pos)
+        pos_tr = np.asarray(pos_tr, dtype=np.float32)
+        assert pos_tr.shape == (n, 2)
+        self.program['a_position'] = pos_tr
+
+        # Generate the hist index.
+        hist_index = np.arange(n_hists)
+        # 6 * n_bins vertices per histogram.
+        hist_index = np.repeat(hist_index, n_bins * 6)
+        hist_index = hist_index.astype(np.float32)
+        assert hist_index.shape == (n,)
+        self.program['a_hist_index'] = hist_index
+
+        # Hist colors.
+        if hist_colors is None:
+            hist_colors = np.ones((n_hists, 4), dtype=np.float32)
+        assert hist_colors.shape == (n_hists, 4)
+        # Convert to 3D texture.
+        hist_colors = hist_colors[np.newaxis, ...].astype(np.float32)
+        assert hist_colors.shape == (1, n_hists, 4)
+        self.program['u_hist_colors'] = Texture2D(hist_colors)
+
+        # Hist bounds.
+        if hist_lims is None:
+            hist_lims = hist_max * np.ones(n_hists)
+        hist_lims = np.asarray(hist_lims, dtype=np.float32)
+        # NOTE: hist_lims is now relative to hist_max (what is on the GPU).
+        hist_lims = hist_lims / hist_max
+        assert hist_lims.shape == (n_hists,)
+        # Now, we create the 4-tuples for the bounds: [0, 0, 1, hists_lim].
+        hist_bounds = np.zeros((n_hists, 4), dtype=np.float32)
+        hist_bounds[:, 2] = 1
+        hist_bounds[:, 3] = hist_lims
+        # Convert to 3D texture.
+        hist_bounds = hist_bounds[np.newaxis, ...].astype(np.float32)
+        assert hist_bounds.shape == (1, n_hists, 4)
+        assert np.all(hist_bounds >= 0)
+        assert np.all(hist_bounds <= 10)
+        # NOTE: necessary because VisPy silently clips textures to [0, 1].
+        hist_bounds /= 10.
+        self.program['u_hist_bounds'] = Texture2D(hist_bounds)
+
+        self.program['n_hists'] = n_hists
 
 
 class TextVisual(BaseVisual):
