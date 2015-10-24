@@ -40,23 +40,32 @@ def _create_program(name):
 
 
 def _tesselate_histogram(hist):
+    """
+
+    2/4  3
+     ____
+    |\   |
+    | \  |
+    |  \ |
+    |___\|
+
+    0   1/5
+
+    """
     assert hist.ndim == 1
     nsamples = len(hist)
     dx = 2. / nsamples
 
     x0 = -1 + dx * np.arange(nsamples)
 
-    x = np.zeros(5 * nsamples + 1)
-    y = -1.0 * np.ones(5 * nsamples + 1)
+    x = np.zeros(6 * nsamples)
+    y = np.zeros(6 * nsamples)
 
-    x[0:-1:5] = x0
-    x[1::5] = x0
-    x[2::5] = x0 + dx
-    x[3::5] = x0
-    x[4::5] = x0 + dx
-    x[-1] = 1
+    x[0::2] = np.repeat(x0, 3)
+    x[1::2] = x[0::2] + dx
 
-    y[1::5] = y[2::5] = -1 + 2. * hist
+    # y[0::6] = y[1::6] = y[5::6] = -1
+    y[2::6] = y[3::6] = y[4::6] = hist
 
     return np.c_[x, y]
 
