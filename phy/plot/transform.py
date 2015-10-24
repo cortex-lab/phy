@@ -98,6 +98,10 @@ def pixels_to_ndc(pos, size=None):
     return pos
 
 
+"""Bounds in Normalized Device Coordinates (NDC)."""
+NDC = (-1.0, -1.0, +1.0, +1.0)
+
+
 #------------------------------------------------------------------------------
 # Transforms
 #------------------------------------------------------------------------------
@@ -145,7 +149,7 @@ class Scale(BaseTransform):
 
 
 class Range(BaseTransform):
-    def apply(self, arr, from_bounds=None, to_bounds=(-1, -1, 1, 1)):
+    def apply(self, arr, from_bounds=None, to_bounds=NDC):
         f0 = np.asarray(from_bounds[:2])
         f1 = np.asarray(from_bounds[2:])
         t0 = np.asarray(to_bounds[:2])
@@ -153,7 +157,7 @@ class Range(BaseTransform):
 
         return t0 + (t1 - t0) * (arr - f0) / (f1 - f0)
 
-    def glsl(self, var, from_bounds=None, to_bounds=(-1, -1, 1, 1)):
+    def glsl(self, var, from_bounds=None, to_bounds=NDC):
         assert var
 
         from_bounds = _glslify(from_bounds)
@@ -165,14 +169,14 @@ class Range(BaseTransform):
 
 
 class Clip(BaseTransform):
-    def apply(self, arr, bounds=(-1, -1, 1, 1)):
+    def apply(self, arr, bounds=NDC):
         index = ((arr[:, 0] >= bounds[0]) &
                  (arr[:, 1] >= bounds[1]) &
                  (arr[:, 0] <= bounds[2]) &
                  (arr[:, 1] <= bounds[3]))
         return arr[index, ...]
 
-    def glsl(self, var, bounds=(-1, -1, 1, 1)):
+    def glsl(self, var, bounds=NDC):
         assert var
 
         bounds = _glslify(bounds)
@@ -198,7 +202,7 @@ class Subplot(Range):
         return subplot_bounds(shape=shape, index=index)
 
     def apply(self, arr, shape=None, index=None):
-        from_bounds = (-1, -1, 1, 1)
+        from_bounds = NDC
         to_bounds = self.get_bounds(shape=shape, index=index)
         return super(Subplot, self).apply(arr,
                                           from_bounds=from_bounds,
