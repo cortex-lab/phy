@@ -18,42 +18,33 @@ from ..visuals import ScatterVisual, PlotVisual, HistogramVisual
 #------------------------------------------------------------------------------
 
 
+def _test_visual(qtbot, c, v, stop=False, **kwargs):
+    v.attach(c)
+    v.set_data(**kwargs)
+    c.show()
+    if stop:  # pragma: no cover
+        qtbot.stop()
+
+
 #------------------------------------------------------------------------------
 # Test scatter visual
 #------------------------------------------------------------------------------
 
 def test_scatter_empty(qtbot, canvas):
-
-    v = ScatterVisual()
-    v.attach(canvas)
-
-    n = 0
-    pos = np.zeros((n, 2))
-    v.set_data(pos=pos)
-
-    canvas.show()
-    # qtbot.stop()
+    pos = np.zeros((0, 2))
+    _test_visual(qtbot, canvas, ScatterVisual(), pos=pos)
 
 
 @mark.parametrize('marker_type', ScatterVisual._supported_marker_types)
 def test_scatter_markers(qtbot, canvas_pz, marker_type):
-
-    # Try all marker types.
-    v = ScatterVisual(marker_type=marker_type)
-    v.attach(canvas_pz)
-
     n = 100
     pos = .2 * np.random.randn(n, 2)
-    v.set_data(pos=pos)
-
-    canvas_pz.show()
-    # qtbot.stop()
+    _test_visual(qtbot, canvas_pz,
+                 ScatterVisual(marker_type=marker_type),
+                 pos=pos)
 
 
 def test_scatter_custom(qtbot, canvas_pz):
-
-    v = ScatterVisual()
-    v.attach(canvas_pz)
 
     n = 100
 
@@ -67,10 +58,8 @@ def test_scatter_custom(qtbot, canvas_pz):
     # Random sizes
     s = 5 + 20 * np.random.rand(n)
 
-    v.set_data(pos=pos, colors=c, size=s)
-
-    canvas_pz.show()
-    # qtbot.stop()
+    _test_visual(qtbot, canvas_pz, ScatterVisual(),
+                 pos=pos, colors=c, size=s)
 
 
 #------------------------------------------------------------------------------
@@ -78,45 +67,24 @@ def test_scatter_custom(qtbot, canvas_pz):
 #------------------------------------------------------------------------------
 
 def test_plot_empty(qtbot, canvas):
-
-    v = PlotVisual()
-    v.attach(canvas)
-
     data = np.zeros((1, 0))
-    v.set_data(data=data)
-
-    canvas.show()
-    # qtbot.stop()
+    _test_visual(qtbot, canvas, PlotVisual(),
+                 data=data)
 
 
 def test_plot_0(qtbot, canvas_pz):
-
-    v = PlotVisual()
-    v.attach(canvas_pz)
-
     data = np.zeros((1, 10))
-    v.set_data(data=data)
-
-    canvas_pz.show()
-    # qtbot.stop()
+    _test_visual(qtbot, canvas_pz, PlotVisual(),
+                 data=data)
 
 
 def test_plot_1(qtbot, canvas_pz):
-
-    v = PlotVisual()
-    v.attach(canvas_pz)
-
     data = .2 * np.random.randn(1, 10)
-    v.set_data(data=data)
-
-    canvas_pz.show()
-    # qtbot.stop()
+    _test_visual(qtbot, canvas_pz, PlotVisual(),
+                 data=data)
 
 
 def test_plot_2(qtbot, canvas_pz):
-
-    v = PlotVisual()
-    v.attach(canvas_pz)
 
     n_signals = 50
     data = 20 * np.random.randn(n_signals, 10)
@@ -132,11 +100,10 @@ def test_plot_2(qtbot, canvas_pz):
     c = np.random.uniform(.5, 1, size=(n_signals, 4))
     c[:, 3] = .5
 
-    v.set_data(data=data, data_bounds=[-10, 10],
-               signal_bounds=b, signal_colors=c)
-
-    canvas_pz.show()
-    # qtbot.stop()
+    _test_visual(qtbot, canvas_pz, PlotVisual(),
+                 data=data, data_bounds=[-10, 10],
+                 signal_bounds=b, signal_colors=c,
+                 stop=True)
 
 
 #------------------------------------------------------------------------------
@@ -144,45 +111,24 @@ def test_plot_2(qtbot, canvas_pz):
 #------------------------------------------------------------------------------
 
 def test_histogram_empty(qtbot, canvas):
-
-    v = HistogramVisual()
-    v.attach(canvas)
-
     hist = np.zeros((1, 0))
-    v.set_data(hist=hist)
-
-    canvas.show()
-    # qtbot.stop()
+    _test_visual(qtbot, canvas, HistogramVisual(),
+                 hist=hist)
 
 
 def test_histogram_0(qtbot, canvas_pz):
-
-    v = HistogramVisual()
-    v.attach(canvas_pz)
-
     hist = np.zeros((1, 10))
-    v.set_data(hist=hist)
-
-    canvas_pz.show()
-    # qtbot.stop()
+    _test_visual(qtbot, canvas_pz, HistogramVisual(),
+                 hist=hist)
 
 
 def test_histogram_1(qtbot, canvas_pz):
-
-    v = HistogramVisual()
-    v.attach(canvas_pz)
-
     hist = np.random.rand(1, 10)
-    v.set_data(hist=hist)
-
-    canvas_pz.show()
-    # qtbot.stop()
+    _test_visual(qtbot, canvas_pz, HistogramVisual(),
+                 hist=hist)
 
 
 def test_histogram_2(qtbot, canvas_pz):
-
-    v = HistogramVisual()
-    v.attach(canvas_pz)
 
     n_hists = 5
     hist = np.random.rand(n_hists, 21)
@@ -191,7 +137,5 @@ def test_histogram_2(qtbot, canvas_pz):
     c = np.random.uniform(.3, .6, size=(n_hists, 4))
     c[:, 3] = 1
 
-    v.set_data(hist=hist, hist_colors=c, hist_lims=2 * np.ones(n_hists))
-
-    canvas_pz.show()
-    # qtbot.stop()
+    _test_visual(qtbot, canvas_pz, HistogramVisual(),
+                 hist=hist, hist_colors=c, hist_lims=2 * np.ones(n_hists))

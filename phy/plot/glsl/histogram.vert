@@ -13,7 +13,8 @@ varying float v_hist_index;
 void main() {
     vec4 hist_bounds = fetch_texture(a_hist_index,
                                      u_hist_bounds,
-                                     n_hists) * 10.;  // avoid texture clipping
+                                     n_hists);
+    hist_bounds = hist_bounds * 10.;  // NOTE: avoid texture clipping
     gl_Position = transform(a_position);
 
     v_color = fetch_texture(a_hist_index, u_hist_colors, n_hists);
