@@ -295,8 +295,8 @@ class TransformChain(object):
                          "GLSL insertion.")
             return vertex, fragment
         assert r
-        logger.debug("Found transform placeholder in vertex code: `%s`",
-                     r.group(0))
+        logger.log(5, "Found transform placeholder in vertex code: `%s`",
+                   r.group(0))
 
         # Find the GLSL variable with the data (should be a `vec2`).
         var = r.group(1)
