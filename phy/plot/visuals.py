@@ -42,6 +42,33 @@ def _check_pos_2D(pos):
     return pos
 
 
+def _get_pos_depth(pos_tr, depth):
+    n = pos_tr.shape[0]
+    pos_tr = np.asarray(pos_tr, dtype=np.float32)
+    assert pos_tr.shape == (n, 2)
+
+    # Set the depth.
+    if depth is None:
+        depth = np.zeros(n, dtype=np.float32)
+    depth = np.asarray(depth, dtype=np.float32)
+    assert depth.shape == (n,)
+
+    # Set the a_position attribute.
+    pos_depth = np.empty((n, 3), dtype=np.float32)
+    pos_depth[:, :2] = pos_tr
+    pos_depth[:, 2] = depth
+
+    return pos_depth
+
+
+def _get_colors(colors, n):
+    if colors is None:
+        colors = np.ones((n, 4), dtype=np.float32)
+    colors = np.asarray(colors, dtype=np.float32)
+    assert colors.shape == (n, 4)
+    return colors
+
+
 #------------------------------------------------------------------------------
 # Visuals
 #------------------------------------------------------------------------------
@@ -111,20 +138,7 @@ class ScatterVisual(BaseVisual):
 
         # Set the transformed position.
         pos_tr = self.apply_cpu_transforms(pos)
-        pos_tr = np.asarray(pos_tr, dtype=np.float32)
-        assert pos_tr.shape == (n, 2)
-
-        # Set the depth.
-        if depth is None:
-            depth = np.zeros(n, dtype=np.float32)
-        depth = np.asarray(depth, dtype=np.float32)
-        assert depth.shape == (n,)
-
-        # Set the a_position attribute.
-        pos_depth = np.empty((n, 3), dtype=np.float32)
-        pos_depth[:, :2] = pos_tr
-        pos_depth[:, 2] = depth
-        self.program['a_position'] = pos_depth
+        self.program['a_position'] = _get_pos_depth(pos_tr, depth)
 
         # Set the marker size.
         if size is None:
@@ -132,12 +146,8 @@ class ScatterVisual(BaseVisual):
         size = np.asarray(size, dtype=np.float32)
         self.program['a_size'] = size
 
-        # Set the group colors.
-        if colors is None:
-            colors = np.ones((n, 4), dtype=np.float32)
-        colors = np.asarray(colors, dtype=np.float32)
-        assert colors.shape == (n, 4)
-        self.program['a_color'] = colors
+        # Set the colors.
+        self.program['a_color'] = _get_colors(colors, n)
 
 
 class PlotVisual(BaseVisual):
@@ -197,20 +207,7 @@ class PlotVisual(BaseVisual):
 
         # Set the transformed position.
         pos_tr = self.apply_cpu_transforms(pos)
-        pos_tr = np.asarray(pos_tr, dtype=np.float32)
-        assert pos_tr.shape == (n, 2)
-
-        # Set the depth.
-        if depth is None:
-            depth = np.zeros(n, dtype=np.float32)
-        depth = np.asarray(depth, dtype=np.float32)
-        assert depth.shape == (n,)
-
-        # Set the a_position attribute.
-        pos_depth = np.empty((n, 3), dtype=np.float32)
-        pos_depth[:, :2] = pos_tr
-        pos_depth[:, 2] = depth
-        self.program['a_position'] = pos_depth
+        self.program['a_position'] = _get_pos_depth(pos_tr, depth)
 
         # Signal bounds (positions).
         if signal_bounds is None:
