@@ -26,6 +26,7 @@ def _check_data_bounds(data_bounds):
 
 
 def _get_data_bounds(data_bounds, pos):
+    """"Prepare data bounds, possibly using min/max of the data."""
     if not len(pos):
         return data_bounds or NDC
     if data_bounds is None:
@@ -36,6 +37,7 @@ def _get_data_bounds(data_bounds, pos):
 
 
 def _check_pos_2D(pos):
+    """Check position data before GPU uploading."""
     assert pos is not None
     pos = np.asarray(pos)
     assert pos.ndim == 2
@@ -43,6 +45,7 @@ def _check_pos_2D(pos):
 
 
 def _get_pos_depth(pos_tr, depth):
+    """Prepare a (N, 3) position-depth array for GPU uploading."""
     n = pos_tr.shape[0]
     pos_tr = np.asarray(pos_tr, dtype=np.float32)
     assert pos_tr.shape == (n, 2)
@@ -61,7 +64,8 @@ def _get_pos_depth(pos_tr, depth):
     return pos_depth
 
 
-def _get_attr(attr, n, default):
+def _get_attr(attr, default, n):
+    """Prepare an attribute for GPU uploading."""
     if not hasattr(default, '__len__'):
         default = [default]
     if attr is None:
@@ -71,6 +75,15 @@ def _get_attr(attr, n, default):
         attr = attr[:, np.newaxis]
     assert attr.shape == (n, len(default))
     return attr
+
+
+def _get_index(n_items, item_size, n):
+    """Prepare an index attribute for GPU uploading."""
+    index = np.arange(n_items)
+    index = np.repeat(index, item_size)
+    index = index.astype(np.float32)
+    assert index.shape == (n,)
+    return index
 
 
 #------------------------------------------------------------------------------
@@ -142,8 +155,8 @@ class ScatterVisual(BaseVisual):
 
         pos_tr = self.apply_cpu_transforms(pos)
         self.program['a_position'] = _get_pos_depth(pos_tr, depth)
-        self.program['a_size'] = _get_attr(size, n, self._default_marker_size)
-        self.program['a_color'] = _get_attr(colors, n, (1, 1, 1, 1))
+        self.program['a_size'] = _get_attr(size, self._default_marker_size, n)
+        self.program['a_color'] = _get_attr(colors, (1, 1, 1, 1), n)
 
 
 class PlotVisual(BaseVisual):
@@ -179,10 +192,7 @@ class PlotVisual(BaseVisual):
         assert x.shape == (n,)
 
         # Generate the signal index.
-        signal_index = np.arange(n_signals)
-        signal_index = np.repeat(signal_index, n_samples)
-        signal_index = signal_index.astype(np.float32)
-        self.program['a_signal_index'] = signal_index
+        self.program['a_signal_index'] = _get_index(n_signals, n_samples, n)
 
         # Generate the (n, 2) pos array.
         pos = np.empty((n, 2), dtype=np.float32)
@@ -282,12 +292,7 @@ class HistogramVisual(BaseVisual):
         self.program['a_position'] = pos_tr
 
         # Generate the hist index.
-        hist_index = np.arange(n_hists)
-        # 6 * n_bins vertices per histogram.
-        hist_index = np.repeat(hist_index, n_bins * 6)
-        hist_index = hist_index.astype(np.float32)
-        assert hist_index.shape == (n,)
-        self.program['a_hist_index'] = hist_index
+        self.program['a_hist_index'] = _get_index(n_hists, n_bins * 6, n)
 
         # Hist colors.
         if hist_colors is None:
