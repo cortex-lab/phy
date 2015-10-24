@@ -32,16 +32,13 @@ class BaseVisual(object):
     Derived classes must implement:
 
     * `gl_primitive_type`: `lines`, `points`, etc.
-    * `vertex` and `fragment`, or `shader_name`: the GLSL code, or the name of
-      the GLSL files to load from the `glsl/` subdirectory.
-    `shader_name`
-    * `data`: a dictionary acting as a proxy for the gloo Program.
-      This is because the Program is built later, once the interact has been
-      attached. The interact is responsible for the creation of the program,
-      since it implements a part of the transform chain.
-    * `transforms`: a list of `Transform` instances, which can act on the CPU
-      or the GPU. The interact's transforms will be appended to that list
-      when the visual is attached to the canvas.
+    * `get_shaders()`: return the vertex and fragment shaders, or just
+      `shader_name` for built-in shaders
+    * `get_transforms()`: return a list of `Transform` instances, which
+       can act on the CPU or the GPU. The interact's transforms will be
+       appended to that list when the visual is attached to the canvas.
+    * `set_data()`: has access to `self.program`. Must be called after
+      `attach()`.
 
     """
     gl_primitive_type = None
