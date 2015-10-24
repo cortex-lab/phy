@@ -21,12 +21,12 @@ from ..transform import (subplot_bounds, Translate, Scale, Range,
 def test_visual_shader_name(qtbot, canvas):
     """Test a BaseVisual with a shader name."""
     class TestVisual(BaseVisual):
-        shader_name = 'box'
+        shader_name = 'simple'
         gl_primitive_type = 'lines'
 
         def set_data(self):
-            self.program['a_position'] = [[-1, 0, 0], [1, 0, 0]]
-            self.program['n_rows'] = 1
+            self.program['a_position'] = [[-1, 0], [1, 0]]
+            self.program['u_color'] = [1, 1, 1, 1]
 
     v = TestVisual()
     # We need to build the program explicitly when there is no interact.

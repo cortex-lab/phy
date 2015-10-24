@@ -1,6 +1,4 @@
 #include "markers/%MARKER_TYPE.glsl"
-#include "filled_antialias.glsl"
-#include "grid.glsl"
 
 varying vec4 v_color;
 varying float v_size;
