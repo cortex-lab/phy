@@ -11,7 +11,7 @@ import numpy as np
 from vispy.gloo import Texture2D
 
 from .base import BaseVisual
-from .transform import Range, GPU
+from .transform import Range, GPU, NDC
 from .utils import _enable_depth_mask, _tesselate_histogram
 
 
@@ -27,7 +27,7 @@ def _check_data_bounds(data_bounds):
 
 def _get_data_bounds(data_bounds, pos):
     if not len(pos):
-        return data_bounds or [-1, -1, 1, 1]
+        return data_bounds or NDC
     if data_bounds is None:
         m, M = pos.min(axis=0), pos.max(axis=0)
         data_bounds = [m[0], m[1], M[0], M[1]]
@@ -68,7 +68,7 @@ class ScatterVisual(BaseVisual):
     def __init__(self, marker_type=None):
         super(ScatterVisual, self).__init__()
         # Default bounds.
-        self.data_bounds = [-1, -1, 1, 1]
+        self.data_bounds = NDC
         self.n_points = None
 
         # Set the marker type.
@@ -141,13 +141,13 @@ class PlotVisual(BaseVisual):
 
     def __init__(self):
         super(PlotVisual, self).__init__()
-        self.data_bounds = [-1, -1, 1, 1]
+        self.data_bounds = NDC
         _enable_depth_mask()
 
     def get_transforms(self):
         return [Range(from_bounds=self.data_bounds),
                 GPU(),
-                Range(from_bounds=(-1, -1, 1, 1),
+                Range(from_bounds=NDC,
                       to_bounds='signal_bounds'),
                 ]
 
@@ -211,7 +211,7 @@ class PlotVisual(BaseVisual):
 
         # Signal bounds (positions).
         if signal_bounds is None:
-            signal_bounds = np.tile([-1, -1, 1, 1], (n_signals, 1))
+            signal_bounds = np.tile(NDC, (n_signals, 1))
         assert signal_bounds.shape == (n_signals, 4)
         # Convert to 3D texture.
         signal_bounds = signal_bounds[np.newaxis, ...].astype(np.float32)
@@ -254,7 +254,7 @@ class HistogramVisual(BaseVisual):
                       to_bounds=[0, 0, 1, 1]),
                 GPU(),
                 Range(from_bounds='hist_bounds',   # (0, 0, 1, v)
-                      to_bounds=(-1, -1, 1, 1)),
+                      to_bounds=NDC),
                 ]
 
     def set_data(self,
