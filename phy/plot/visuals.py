@@ -8,10 +8,31 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from vispy.gloo import Texture2D
 
 from .base import BaseVisual
 from .transform import Range, GPU
 from .utils import _enable_depth_mask
+
+
+#------------------------------------------------------------------------------
+# Utils
+#------------------------------------------------------------------------------
+
+def _check_data_bounds(data_bounds):
+    assert len(data_bounds) == 4
+    assert data_bounds[0] < data_bounds[2]
+    assert data_bounds[1] < data_bounds[3]
+
+
+def _get_data_bounds(data_bounds, pos):
+    if not len(pos):
+        return data_bounds or [-1, -1, 1, 1]
+    if data_bounds is None:
+        m, M = pos.min(axis=0), pos.max(axis=0)
+        data_bounds = [m[0], m[1], M[0], M[1]]
+    _check_data_bounds(data_bounds)
+    return data_bounds
 
 
 #------------------------------------------------------------------------------
@@ -81,12 +102,7 @@ class ScatterVisual(BaseVisual):
         n = pos.shape[0]
 
         # Set the data bounds from the data.
-        if data_bounds is None:
-            m, M = pos.min(axis=0), pos.max(axis=0)
-            data_bounds = [m[0], m[1], M[0], M[1]]
-        assert len(data_bounds) == 4
-        assert data_bounds[0] < data_bounds[2]
-        assert data_bounds[1] < data_bounds[3]
+        self.data_bounds = _get_data_bounds(data_bounds, pos)
 
         # Set the transformed position.
         pos_tr = self.apply_cpu_transforms(pos)
@@ -99,6 +115,7 @@ class ScatterVisual(BaseVisual):
         depth = np.asarray(depth, dtype=np.float32)
         assert depth.shape == (n,)
 
+        # Set the a_position attribute.
         pos_depth = np.empty((n, 3), dtype=np.float32)
         pos_depth[:, :2] = pos_tr
         pos_depth[:, 2] = depth
@@ -120,13 +137,109 @@ class ScatterVisual(BaseVisual):
 
 class PlotVisual(BaseVisual):
     shader_name = 'plot'
-    gl_primitive_type = 'lines'
+    gl_primitive_type = 'line_strip'
+
+    def __init__(self):
+        super(PlotVisual, self).__init__()
+        self.data_bounds = [-1, -1, 1, 1]
+        _enable_depth_mask()
 
     def get_transforms(self):
-        pass
+        return [Range(from_bounds=self.data_bounds),
+                GPU(),
+                Range(from_bounds=(-1, -1, 1, 1),
+                      to_bounds='signal_bounds'),
+                ]
 
-    def set_data(self):
-        pass
+    def set_data(self,
+                 data=None,
+                 depth=None,
+                 data_bounds=None,
+                 signal_bounds=None,
+                 signal_colors=None,
+                 ):
+        assert data is not None
+        data = np.asarray(data)
+        assert data.ndim == 2
+        n_signals, n_samples = data.shape
+        n = n_signals * n_samples
+
+        # Generate the x coordinates.
+        x = np.linspace(-1., 1., n_samples)
+        x = np.tile(x, n_signals)
+        assert x.shape == (n,)
+
+        # Generate the signal index.
+        signal_index = np.arange(n_signals)
+        signal_index = np.repeat(signal_index, n_samples)
+        signal_index = signal_index.astype(np.float32)
+
+        # Generate the (n, 2) pos array.
+        pos = np.empty((n, 2), dtype=np.float32)
+        pos[:, 0] = x
+        pos[:, 1] = data.ravel()
+
+        # Generate the complete data_bounds 4-tuple from the specified 2-tuple.
+        if data_bounds is None:
+            data_bounds = [data.min(), data.max()] if data.size else [-1, 1]
+        assert len(data_bounds) == 2
+        # Ensure that the data bounds are not degenerate.
+        if data_bounds[0] == data_bounds[1]:
+            data_bounds = [data_bounds[0] - 1, data_bounds[0] + 1]
+        ymin, ymax = data_bounds
+        data_bounds = [-1, ymin, 1, ymax]
+        _check_data_bounds(data_bounds)
+        self.data_bounds = data_bounds
+
+        # Set the transformed position.
+        pos_tr = self.apply_cpu_transforms(pos)
+        pos_tr = np.asarray(pos_tr, dtype=np.float32)
+        assert pos_tr.shape == (n, 2)
+
+        # Set the depth.
+        if depth is None:
+            depth = np.zeros(n, dtype=np.float32)
+        depth = np.asarray(depth, dtype=np.float32)
+        assert depth.shape == (n,)
+
+        # Set the a_position attribute.
+        pos_depth = np.empty((n, 3), dtype=np.float32)
+        pos_depth[:, :2] = pos_tr
+        pos_depth[:, 2] = depth
+        self.program['a_position'] = pos_depth
+
+        # Signal index.
+        self.program['a_signal_index'] = signal_index
+
+        # Signal bounds (positions).
+        if signal_bounds is None:
+            signal_bounds = np.tile([-1, -1, 1, 1], (n_signals, 1))
+        assert signal_bounds.shape == (n_signals, 4)
+        # Convert to 3D texture.
+        signal_bounds = signal_bounds[np.newaxis, ...].astype(np.float32)
+        assert signal_bounds.shape == (1, n_signals, 4)
+        # NOTE: we need to cast the texture to [0, 255] (uint8).
+        # This is easy as soon as we assume that the signal bounds are in
+        # [-1, 1].
+        assert np.all(signal_bounds >= -1)
+        assert np.all(signal_bounds <= 1)
+        signal_bounds = 127 * (signal_bounds + 1)
+        assert np.all(signal_bounds >= 0)
+        assert np.all(signal_bounds <= 255)
+        signal_bounds = signal_bounds.astype(np.uint8)
+        self.program['u_signal_bounds'] = Texture2D(signal_bounds)
+
+        # Signal colors.
+        if signal_colors is None:
+            signal_colors = np.ones((n_signals, 4), dtype=np.float32)
+        assert signal_colors.shape == (n_signals, 4)
+        # Convert to 3D texture.
+        signal_colors = signal_colors[np.newaxis, ...].astype(np.float32)
+        assert signal_colors.shape == (1, n_signals, 4)
+        self.program['u_signal_colors'] = Texture2D(signal_colors)
+
+        # Number of signals.
+        self.program['n_signals'] = n_signals
 
 
 class HistogramVisual(BaseVisual):

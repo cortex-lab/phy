@@ -10,15 +10,16 @@
 import numpy as np
 from pytest import mark
 
-from ..visuals import ScatterVisual
+from ..visuals import ScatterVisual, PlotVisual
 
 
 #------------------------------------------------------------------------------
 # Fixtures
 #------------------------------------------------------------------------------
 
+
 #------------------------------------------------------------------------------
-# Test visuals
+# Test scatter visual
 #------------------------------------------------------------------------------
 
 def test_scatter_empty(qtbot, canvas):
@@ -31,7 +32,7 @@ def test_scatter_empty(qtbot, canvas):
     v.set_data(pos=pos)
 
     canvas.show()
-    qtbot.stop()
+    # qtbot.stop()
 
 
 @mark.parametrize('marker_type', ScatterVisual._supported_marker_types)
@@ -67,6 +68,72 @@ def test_scatter_custom(qtbot, canvas_pz):
     s = 5 + 20 * np.random.rand(n)
 
     v.set_data(pos=pos, colors=c, size=s)
+
+    canvas_pz.show()
+    # qtbot.stop()
+
+
+#------------------------------------------------------------------------------
+# Test plot visual
+#------------------------------------------------------------------------------
+
+def test_plot_empty(qtbot, canvas):
+
+    v = PlotVisual()
+    v.attach(canvas)
+
+    data = np.zeros((1, 0))
+    v.set_data(data=data)
+
+    canvas.show()
+    # qtbot.stop()
+
+
+def test_plot_0(qtbot, canvas_pz):
+
+    v = PlotVisual()
+    v.attach(canvas_pz)
+
+    data = np.zeros((1, 10))
+    v.set_data(data=data)
+
+    canvas_pz.show()
+    # qtbot.stop()
+
+
+def test_plot_1(qtbot, canvas_pz):
+
+    v = PlotVisual()
+    v.attach(canvas_pz)
+
+    data = .2 * np.random.randn(1, 10)
+    v.set_data(data=data)
+
+    canvas_pz.show()
+    # qtbot.stop()
+
+
+def test_plot_2(qtbot, canvas_pz):
+
+    v = PlotVisual()
+    v.attach(canvas_pz)
+
+    n_signals = 50
+    data = 20 * np.random.randn(n_signals, 10)
+
+    # Signal bounds.
+    b = np.zeros((n_signals, 4))
+    b[:, 0] = -1
+    b[:, 1] = np.linspace(-1, 1 - 2. / n_signals, n_signals)
+    b[:, 2] = 1
+    b[:, 3] = np.linspace(-1 + 2. / n_signals, 1., n_signals)
+
+    # Signal colors.
+    c = np.random.uniform(.5, 1, size=(n_signals, 4))
+    c[:, 3] = .5
+
+    v.set_data(data=data, data_bounds=[-10, 10],
+               signal_bounds=b, signal_colors=c)
 
     canvas_pz.show()
     # qtbot.stop()
