@@ -10,7 +10,7 @@
 import numpy as np
 from pytest import mark
 
-from ..visuals import ScatterVisual, PlotVisual
+from ..visuals import ScatterVisual, PlotVisual, HistogramVisual
 
 
 #------------------------------------------------------------------------------
@@ -134,6 +134,64 @@ def test_plot_2(qtbot, canvas_pz):
 
     v.set_data(data=data, data_bounds=[-10, 10],
                signal_bounds=b, signal_colors=c)
+
+    canvas_pz.show()
+    # qtbot.stop()
+
+
+#------------------------------------------------------------------------------
+# Test histogram visual
+#------------------------------------------------------------------------------
+
+def test_histogram_empty(qtbot, canvas):
+
+    v = HistogramVisual()
+    v.attach(canvas)
+
+    hist = np.zeros((1, 0))
+    v.set_data(hist=hist)
+
+    canvas.show()
+    # qtbot.stop()
+
+
+def test_histogram_0(qtbot, canvas_pz):
+
+    v = HistogramVisual()
+    v.attach(canvas_pz)
+
+    hist = np.zeros((1, 10))
+    v.set_data(hist=hist)
+
+    canvas_pz.show()
+    # qtbot.stop()
+
+
+def test_histogram_1(qtbot, canvas_pz):
+
+    v = HistogramVisual()
+    v.attach(canvas_pz)
+
+    hist = np.random.rand(1, 10)
+    v.set_data(hist=hist)
+
+    canvas_pz.show()
+    # qtbot.stop()
+
+
+def test_histogram_2(qtbot, canvas_pz):
+
+    v = HistogramVisual()
+    v.attach(canvas_pz)
+
+    n_hists = 5
+    hist = np.random.rand(n_hists, 21)
+
+    # Histogram colors.
+    c = np.random.uniform(.3, .6, size=(n_hists, 4))
+    c[:, 3] = 1
+
+    v.set_data(hist=hist, hist_colors=c, hist_lims=2 * np.ones(n_hists))
 
     canvas_pz.show()
     # qtbot.stop()
