@@ -44,9 +44,9 @@ def test_tesselate_histogram():
     hist = np.arange(n)
     thist = _tesselate_histogram(hist)
     assert thist.shape == (6 * n, 2)
-    ac(thist[0], [-1., 0])
-    ac(thist[-3], [1., n - 1])
-    ac(thist[-1], [1., 0])
+    ac(thist[0], [0, 0])
+    ac(thist[-3], [n, n - 1])
+    ac(thist[-1], [n, 0])
 
 
 def test_enable_depth_mask(qtbot, canvas):

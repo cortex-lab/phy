@@ -54,17 +54,15 @@ def _tesselate_histogram(hist):
     """
     assert hist.ndim == 1
     nsamples = len(hist)
-    dx = 2. / nsamples
 
-    x0 = -1 + dx * np.arange(nsamples)
+    x0 = np.arange(nsamples)
 
     x = np.zeros(6 * nsamples)
     y = np.zeros(6 * nsamples)
 
     x[0::2] = np.repeat(x0, 3)
-    x[1::2] = x[0::2] + dx
+    x[1::2] = x[0::2] + 1
 
-    # y[0::6] = y[1::6] = y[5::6] = -1
     y[2::6] = y[3::6] = y[4::6] = hist
 
     return np.c_[x, y]
