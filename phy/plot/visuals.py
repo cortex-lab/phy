@@ -35,6 +35,13 @@ def _get_data_bounds(data_bounds, pos):
     return data_bounds
 
 
+def _check_pos_2D(pos):
+    assert pos is not None
+    pos = np.asarray(pos)
+    assert pos.ndim == 2
+    return pos
+
+
 #------------------------------------------------------------------------------
 # Visuals
 #------------------------------------------------------------------------------
@@ -95,11 +102,9 @@ class ScatterVisual(BaseVisual):
                  size=None,
                  data_bounds=None,
                  ):
-        assert pos is not None
-        pos = np.asarray(pos)
-        assert pos.ndim == 2
-        assert pos.shape[1] == 2
+        pos = _check_pos_2D(pos)
         n = pos.shape[0]
+        assert pos.shape == (n, 2)
 
         # Set the data bounds from the data.
         self.data_bounds = _get_data_bounds(data_bounds, pos)
@@ -158,9 +163,7 @@ class PlotVisual(BaseVisual):
                  signal_bounds=None,
                  signal_colors=None,
                  ):
-        assert data is not None
-        data = np.asarray(data)
-        assert data.ndim == 2
+        pos = _check_pos_2D(data)
         n_signals, n_samples = data.shape
         n = n_signals * n_samples
 
@@ -262,11 +265,10 @@ class HistogramVisual(BaseVisual):
                  hist_lims=None,
                  hist_colors=None,
                  ):
-        assert hist is not None
-        hist = np.atleast_2d(hist)
-        assert hist.ndim == 2
+        hist = _check_pos_2D(hist)
         n_hists, n_bins = hist.shape
         n = 6 * n_hists * n_bins
+        # Store n_bins for get_transforms().
         self.n_bins = n_bins
 
         # Generate hist_max.
