@@ -10,7 +10,8 @@
 import numpy as np
 from pytest import mark
 
-from ..visuals import ScatterVisual, PlotVisual, HistogramVisual
+from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
+                       BoxVisual, AxesVisual,)
 
 
 #------------------------------------------------------------------------------
@@ -138,3 +139,38 @@ def test_histogram_2(qtbot, canvas_pz):
 
     _test_visual(qtbot, canvas_pz, HistogramVisual(),
                  hist=hist, hist_colors=c, hist_lims=2 * np.ones(n_hists))
+
+
+#------------------------------------------------------------------------------
+# Test box visual
+#------------------------------------------------------------------------------
+
+def test_box_empty(qtbot, canvas):
+    _test_visual(qtbot, canvas, BoxVisual())
+
+
+def test_box_0(qtbot, canvas_pz):
+    _test_visual(qtbot, canvas_pz, BoxVisual(),
+                 bounds=(-.5, -.5, 0., 0.),
+                 color=(1., 0., 0., .5))
+
+
+#------------------------------------------------------------------------------
+# Test axes visual
+#------------------------------------------------------------------------------
+
+def test_axes_empty(qtbot, canvas):
+    _test_visual(qtbot, canvas, AxesVisual())
+
+
+def test_axes_0(qtbot, canvas_pz):
+    _test_visual(qtbot, canvas_pz, AxesVisual(),
+                 xs=[0])
+
+
+def test_axes_1(qtbot, canvas_pz):
+    _test_visual(qtbot, canvas_pz, AxesVisual(),
+                 xs=[-.25, -.1],
+                 ys=[-.15],
+                 bounds=(-.5, -.5, 0., 0.),
+                 color=(0., 1., 0., .5))

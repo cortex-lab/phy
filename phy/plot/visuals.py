@@ -135,6 +135,13 @@ def _get_texture(arr, default, n_items, from_bounds):
     return arr
 
 
+def _get_color(color, default):
+    if color is None:
+        color = default
+    assert len(color) == 4
+    return color
+
+
 #------------------------------------------------------------------------------
 # Visuals
 #------------------------------------------------------------------------------
@@ -333,3 +340,43 @@ class TextVisual(BaseVisual):
 
     def set_data(self):
         pass
+
+
+class BoxVisual(BaseVisual):
+    shader_name = 'simple'
+    gl_primitive_type = 'lines'
+    _default_color = (.35, .35, .35, 1.)
+
+    def set_data(self, bounds=NDC, color=None):
+        # Set the position.
+        x0, y0, x1, y1 = bounds
+        arr = np.array([[x0, y0],
+                        [x0, y1],
+                        [x0, y1],
+                        [x1, y1],
+                        [x1, y1],
+                        [x1, y0],
+                        [x1, y0],
+                        [x0, y0]], dtype=np.float32)
+        self.program['a_position'] = self.apply_cpu_transforms(arr)
+
+        # Set the color
+        self.program['u_color'] = _get_color(color, self._default_color)
+
+
+class AxesVisual(BaseVisual):
+    shader_name = 'simple'
+    gl_primitive_type = 'lines'
+    _default_color = (.2, .2, .2, 1.)
+
+    def set_data(self, xs=(), ys=(), bounds=NDC, color=None):
+        # Set the position.
+        arr = [[x, bounds[1], x, bounds[3]] for x in xs]
+        arr += [[bounds[0], y, bounds[2], y] for y in ys]
+        arr = np.hstack(arr or [[]]).astype(np.float32)
+        arr = arr.reshape((-1, 2)).astype(np.float32)
+        position = self.apply_cpu_transforms(arr)
+        self.program['a_position'] = position
+
+        # Set the color
+        self.program['u_color'] = _get_color(color, self._default_color)
