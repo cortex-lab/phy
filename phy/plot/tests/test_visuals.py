@@ -21,6 +21,19 @@ from ..visuals import ScatterVisual
 # Test visuals
 #------------------------------------------------------------------------------
 
+def test_scatter_empty(qtbot, canvas):
+
+    v = ScatterVisual()
+    v.attach(canvas)
+
+    n = 0
+    pos = np.zeros((n, 2))
+    v.set_data(pos=pos)
+
+    canvas.show()
+    qtbot.stop()
+
+
 @mark.parametrize('marker_type', ScatterVisual._supported_marker_types)
 def test_scatter_markers(qtbot, canvas_pz, marker_type):
 
