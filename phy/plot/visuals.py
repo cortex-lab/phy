@@ -112,7 +112,7 @@ def _get_texture(arr, default, n_items, from_bounds):
     """Prepare data to be uploaded as a texture, with casting to uint8.
     The from_bounds must be specified.
     """
-    if not hasattr(default, '__len__'):
+    if not hasattr(default, '__len__'):  # pragma: no cover
         default = [default]
     n_cols = len(default)
     if arr is None:
@@ -299,11 +299,8 @@ class HistogramVisual(BaseVisual):
         # Generate hist_max.
         self.hist_max = _get_hist_max(hist)
 
-        # Concatenate all histograms.
-        pos = np.vstack(_tesselate_histogram(row) for row in hist)
-        assert pos.shape == (n, 2)
-
         # Set the transformed position.
+        pos = np.vstack(_tesselate_histogram(row) for row in hist)
         pos_tr = self.apply_cpu_transforms(pos)
         pos_tr = np.asarray(pos_tr, dtype=np.float32)
         assert pos_tr.shape == (n, 2)
