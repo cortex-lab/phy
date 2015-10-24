@@ -32,13 +32,6 @@ def _load_shader(filename):
         return f.read()
 
 
-def _create_program(name):
-    vertex = _load_shader(name + '.vert')
-    fragment = _load_shader(name + '.frag')
-    program = gloo.Program(vertex, fragment)
-    return program
-
-
 def _tesselate_histogram(hist):
     """
 
