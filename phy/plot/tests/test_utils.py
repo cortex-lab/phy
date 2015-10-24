@@ -26,7 +26,7 @@ from ..utils import (_load_shader,
 #------------------------------------------------------------------------------
 
 def test_load_shader():
-    assert 'main()' in _load_shader('ax.vert')
+    assert 'main()' in _load_shader('simple.vert')
     assert config['include_path']
     assert op.exists(config['include_path'][0])
     assert op.isdir(config['include_path'][0])
