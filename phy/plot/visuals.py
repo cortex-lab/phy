@@ -36,6 +36,20 @@ def _get_data_bounds(data_bounds, pos):
     return data_bounds
 
 
+def _get_data_bounds_1D(data_bounds, data):
+    """Generate the complete data_bounds 4-tuple from the specified 2-tuple."""
+    if data_bounds is None:
+        data_bounds = [data.min(), data.max()] if data.size else [-1, 1]
+    assert len(data_bounds) == 2
+    # Ensure that the data bounds are not degenerate.
+    if data_bounds[0] == data_bounds[1]:
+        data_bounds = [data_bounds[0] - 1, data_bounds[0] + 1]
+    ymin, ymax = data_bounds
+    data_bounds = [-1, ymin, 1, ymax]
+    _check_data_bounds(data_bounds)
+    return data_bounds
+
+
 def _check_pos_2D(pos):
     """Check position data before GPU uploading."""
     assert pos is not None
@@ -84,6 +98,33 @@ def _get_index(n_items, item_size, n):
     index = index.astype(np.float32)
     assert index.shape == (n,)
     return index
+
+
+def _get_texture(arr, default, n_items, from_bounds):
+    """Prepare data to be uploaded as a texture, with casting to uint8.
+    The from_bounds must be specified.
+    """
+    if not hasattr(default, '__len__'):
+        default = [default]
+    n_cols = len(default)
+    if arr is None:
+        arr = np.tile(default, (n_items, 1))
+    assert arr.shape == (n_items, n_cols)
+    # Convert to 3D texture.
+    arr = arr[np.newaxis, ...].astype(np.float32)
+    assert arr.shape == (1, n_items, n_cols)
+    # NOTE: we need to cast the texture to [0, 255] (uint8).
+    # This is easy as soon as we assume that the signal bounds are in
+    # [-1, 1].
+    assert len(from_bounds) == 2
+    m, M = map(float, from_bounds)
+    assert np.all(arr >= m)
+    assert np.all(arr <= M)
+    arr = 255 * (arr - m) / (M - m)
+    assert np.all(arr >= 0)
+    assert np.all(arr <= 255)
+    arr = arr.astype(np.uint8)
+    return arr
 
 
 #------------------------------------------------------------------------------
@@ -191,55 +232,28 @@ class PlotVisual(BaseVisual):
         x = np.tile(x, n_signals)
         assert x.shape == (n,)
 
-        # Generate the signal index.
-        self.program['a_signal_index'] = _get_index(n_signals, n_samples, n)
-
         # Generate the (n, 2) pos array.
         pos = np.empty((n, 2), dtype=np.float32)
         pos[:, 0] = x
         pos[:, 1] = data.ravel()
 
-        # Generate the complete data_bounds 4-tuple from the specified 2-tuple.
-        if data_bounds is None:
-            data_bounds = [data.min(), data.max()] if data.size else [-1, 1]
-        assert len(data_bounds) == 2
-        # Ensure that the data bounds are not degenerate.
-        if data_bounds[0] == data_bounds[1]:
-            data_bounds = [data_bounds[0] - 1, data_bounds[0] + 1]
-        ymin, ymax = data_bounds
-        data_bounds = [-1, ymin, 1, ymax]
-        _check_data_bounds(data_bounds)
-        self.data_bounds = data_bounds
-
         # Set the transformed position.
         pos_tr = self.apply_cpu_transforms(pos)
         self.program['a_position'] = _get_pos_depth(pos_tr, depth)
 
+        # Generate the signal index.
+        self.program['a_signal_index'] = _get_index(n_signals, n_samples, n)
+
+        # Generate the complete data_bounds 4-tuple from the specified 2-tuple.
+        self.data_bounds = _get_data_bounds_1D(data_bounds, data)
+
         # Signal bounds (positions).
-        if signal_bounds is None:
-            signal_bounds = np.tile(NDC, (n_signals, 1))
-        assert signal_bounds.shape == (n_signals, 4)
-        # Convert to 3D texture.
-        signal_bounds = signal_bounds[np.newaxis, ...].astype(np.float32)
-        assert signal_bounds.shape == (1, n_signals, 4)
-        # NOTE: we need to cast the texture to [0, 255] (uint8).
-        # This is easy as soon as we assume that the signal bounds are in
-        # [-1, 1].
-        assert np.all(signal_bounds >= -1)
-        assert np.all(signal_bounds <= 1)
-        signal_bounds = 127 * (signal_bounds + 1)
-        assert np.all(signal_bounds >= 0)
-        assert np.all(signal_bounds <= 255)
-        signal_bounds = signal_bounds.astype(np.uint8)
+        signal_bounds = _get_texture(signal_bounds, NDC, n_signals, [-1, 1])
         self.program['u_signal_bounds'] = Texture2D(signal_bounds)
 
         # Signal colors.
-        if signal_colors is None:
-            signal_colors = np.ones((n_signals, 4), dtype=np.float32)
-        assert signal_colors.shape == (n_signals, 4)
-        # Convert to 3D texture.
-        signal_colors = signal_colors[np.newaxis, ...].astype(np.float32)
-        assert signal_colors.shape == (1, n_signals, 4)
+        signal_colors = _get_texture(signal_colors, (1,) * 4,
+                                     n_signals, [0, 1])
         self.program['u_signal_colors'] = Texture2D(signal_colors)
 
         # Number of signals.
