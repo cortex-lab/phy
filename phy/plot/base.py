@@ -211,6 +211,7 @@ class BaseInteract(object):
 class BaseCanvas(Canvas):
     """A blank VisPy canvas with a custom event system that keeps the order."""
     def __init__(self, *args, **kwargs):
+        kwargs['keys'] = 'interactive'
         super(BaseCanvas, self).__init__(*args, **kwargs)
         self._events = EventEmitter()
         self.interacts = []
