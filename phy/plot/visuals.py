@@ -115,6 +115,10 @@ def _get_color(color, default):
     return color
 
 
+def _get_linear_x(n_signals, n_samples):
+    return np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
+
+
 #------------------------------------------------------------------------------
 # Visuals
 #------------------------------------------------------------------------------
@@ -203,27 +207,33 @@ class PlotVisual(BaseVisual):
                 ]
 
     def set_data(self,
-                 data=None,
+                 x=None,
+                 y=None,
                  depth=None,
                  data_bounds=None,
                  signal_colors=None,
                  ):
-        pos = _check_pos_2D(data)
-        n_signals, n_samples = data.shape
-        n = n_signals * n_samples
 
-        # Generate the x coordinates.
-        x = np.linspace(-1., 1., n_samples)
-        x = np.tile(x, n_signals)
-        assert x.shape == (n,)
+        # Default x coordinates.
+        if x is None:
+            assert y is not None
+            x = _get_linear_x(*y.shape)
+
+        assert x is not None
+        assert y is not None
+        assert x.ndim == 2
+        assert x.shape == y.shape
+        n_signals, n_samples = x.shape
+        n = n_signals * n_samples
 
         # Generate the (n, 2) pos array.
         pos = np.empty((n, 2), dtype=np.float32)
-        pos[:, 0] = x
-        pos[:, 1] = data.ravel()
+        pos[:, 0] = x.ravel()
+        pos[:, 1] = y.ravel()
+        pos = _check_pos_2D(pos)
 
         # Generate the complete data_bounds 4-tuple from the specified 2-tuple.
-        self.data_bounds = _get_data_bounds_1D(data_bounds, data)
+        self.data_bounds = _get_data_bounds_1D(data_bounds, y)
 
         # Set the transformed position.
         pos_tr = self.apply_cpu_transforms(pos)
