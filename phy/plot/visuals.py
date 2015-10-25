@@ -119,6 +119,9 @@ def _get_linear_x(n_signals, n_samples):
     return np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
 
 
+DEFAULT_COLOR = (0.03,  0.57,  0.98, .75)
+
+
 #------------------------------------------------------------------------------
 # Visuals
 #------------------------------------------------------------------------------
@@ -129,7 +132,7 @@ class ScatterVisual(BaseVisual):
 
     _default_marker_size = 10.
     _default_marker_type = 'disc'
-    _default_color = (1, 1, 1, 1)
+    _default_color = DEFAULT_COLOR
     _supported_marker_types = (
         'arrow',
         'asterisk',
@@ -198,6 +201,7 @@ class ScatterVisual(BaseVisual):
 class PlotVisual(BaseVisual):
     shader_name = 'plot'
     gl_primitive_type = 'line_strip'
+    _default_color = DEFAULT_COLOR
 
     def __init__(self):
         super(PlotVisual, self).__init__()
@@ -246,7 +250,7 @@ class PlotVisual(BaseVisual):
         self.program['a_signal_index'] = _get_index(n_signals, n_samples, n)
 
         # Signal colors.
-        signal_colors = _get_texture(signal_colors, (1,) * 4,
+        signal_colors = _get_texture(signal_colors, self._default_color,
                                      n_signals, [0, 1])
         self.program['u_signal_colors'] = Texture2D(signal_colors)
 
@@ -257,6 +261,7 @@ class PlotVisual(BaseVisual):
 class HistogramVisual(BaseVisual):
     shader_name = 'histogram'
     gl_primitive_type = 'triangles'
+    _default_color = DEFAULT_COLOR
 
     def __init__(self):
         super(HistogramVisual, self).__init__()
@@ -297,7 +302,7 @@ class HistogramVisual(BaseVisual):
 
         # Hist colors.
         self.program['u_hist_colors'] = _get_texture(hist_colors,
-                                                     (1, 1, 1, 1),
+                                                     self._default_color,
                                                      n_hists, [0, 1])
 
         # Hist bounds.
