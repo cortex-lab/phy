@@ -56,8 +56,9 @@ def _get_array(val, shape, default=None):
     out = np.zeros(shape, dtype=np.float32)
     # This solves `ValueError: could not broadcast input array from shape (n)
     # into shape (n, 1)`.
-    if val is not None and isinstance(val, np.ndarray) and out.ndim > val.ndim:
-        val = val[:, np.newaxis]
+    if val is not None and isinstance(val, np.ndarray):
+        if val.size == out.size:
+            val = val.reshape(out.shape)
     out[...] = val if val is not None else default
     assert out.shape == shape
     return out

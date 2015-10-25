@@ -9,7 +9,7 @@
 
 import numpy as np
 
-from ..plot import GridView
+from ..plot import GridView, BoxedView, StackedView
 from ..visuals import _get_linear_x
 
 
@@ -57,5 +57,44 @@ def test_grid_plot(qtbot):
 
     view[0, 0].plot(x, y)
     view[0, 1].plot(x, y, color=np.random.uniform(.5, .8, size=(n_plots, 4)))
+
+    _show(qtbot, view)
+
+
+def test_grid_hist(qtbot):
+    view = GridView(3, 3)
+
+    hist = np.random.rand(3, 3, 20)
+
+    for i in range(3):
+        for j in range(3):
+            view[i, j].hist(hist[i, j, :],
+                            color=np.random.uniform(.5, .8, size=4))
+
+    _show(qtbot, view)
+
+
+def test_grid_complete(qtbot):
+    view = GridView(2, 2)
+    t = _get_linear_x(1, 1000).ravel()
+
+    view[0, 0].scatter(*np.random.randn(2, 100))
+    view[0, 1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
+
+    view[1, 1].hist(np.random.rand(5, 10),
+                    color=np.random.uniform(.4, .9, size=(5, 4)))
+
+    _show(qtbot, view)
+
+
+def test_stacked_complete(qtbot):
+    view = StackedView(4)
+    t = _get_linear_x(1, 1000).ravel()
+
+    view[0].scatter(*np.random.randn(2, 100))
+    view[1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
+
+    view[2].hist(np.random.rand(5, 10),
+                 color=np.random.uniform(.4, .9, size=(5, 4)))
 
     _show(qtbot, view)
