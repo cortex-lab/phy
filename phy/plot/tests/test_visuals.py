@@ -103,7 +103,7 @@ def test_plot_2(qtbot, canvas_pz):
 
     _test_visual(qtbot, canvas_pz, PlotVisual(),
                  y=y, data_bounds=[-50, 50],
-                 signal_colors=c)
+                 plot_colors=c)
 
 
 #------------------------------------------------------------------------------

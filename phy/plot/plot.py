@@ -14,6 +14,8 @@ import numpy as np
 
 from .base import BaseCanvas
 from .interact import Grid  # Boxed, Stacked
+from .panzoom import PanZoom
+from .transform import NDC
 from .visuals import _get_array, ScatterVisual, PlotVisual, HistogramVisual
 
 
@@ -40,8 +42,8 @@ class Accumulator(object):
         self._data[name].append(val)
 
     def __getitem__(self, name):
-        size = self.size
-        assert all(s == size for s in self._size.values())
+        # size = self.size
+        # assert all(s == size for s in self._size.values())
         return np.vstack(self._data[name]).astype(np.float32)
 
 
@@ -79,7 +81,15 @@ class SubView(object):
         return self._set(ScatterVisual, loc)
 
     def plot(self, x, y, color=None):
-        loc = locals()
+        x = np.atleast_2d(x)
+        y = np.atleast_2d(y)
+        # Validate x and y.
+        assert x.ndim == y.ndim == 2
+        assert x.shape == y.shape
+        n_plots, n_samples = x.shape
+        color = _get_array(color, (n_plots, 4), PlotVisual._default_color)
+        # Set the spec.
+        loc = dict(x=x, y=y, color=color)
         return self._set(PlotVisual, loc)
 
     def hist(self, hist, color=None):
@@ -87,7 +97,7 @@ class SubView(object):
         return self._set(HistogramVisual, loc)
 
     def __repr__(self):
-        return str(self.spec)
+        return str(self.spec)  # pragma: no cover
 
 
 class BaseView(BaseCanvas):
@@ -138,6 +148,22 @@ class BaseView(BaseCanvas):
         v.set_data(pos=ac['pos'], color=ac['color'], size=ac['size'])
         v.program['a_box_index'] = ac['box_index']
 
+    def _build_plot(self, subviews):
+        """Build all plot subviews."""
+
+        ac = Accumulator()
+        for sv in subviews:
+            n = sv.x.size
+            ac['x'] = sv.x
+            ac['y'] = sv.y
+            ac['plot_colors'] = sv.color
+            ac['box_index'] = np.tile(sv.idx, (n, 1))
+
+        v = PlotVisual()
+        v.attach(self)
+        v.set_data(x=ac['x'], y=ac['y'], plot_colors=ac['plot_colors'])
+        v.program['a_box_index'] = ac['box_index']
+
     def build(self):
         """Build all visuals."""
         for visual_class, subviews in groupby(self.iter_subviews(),
@@ -159,7 +185,8 @@ class BaseView(BaseCanvas):
 class GridView(BaseView):
     def __init__(self, n_rows, n_cols):
         self.n_rows, self.n_cols = n_rows, n_cols
-        interacts = [Grid(n_rows, n_cols)]
+        pz = PanZoom(aspect=None, constrain_bounds=NDC)
+        interacts = [Grid(n_rows, n_cols), pz]
         super(GridView, self).__init__(interacts)
 
     def get_box_ndim(self):

@@ -208,7 +208,7 @@ class PlotVisual(BaseVisual):
                  y=None,
                  depth=None,
                  data_bounds=None,
-                 signal_colors=None,
+                 plot_colors=None,
                  ):
 
         # Default x coordinates.
@@ -240,9 +240,9 @@ class PlotVisual(BaseVisual):
         self.program['a_signal_index'] = _get_index(n_signals, n_samples, n)
 
         # Signal colors.
-        signal_colors = _get_texture(signal_colors, self._default_color,
-                                     n_signals, [0, 1])
-        self.program['u_signal_colors'] = Texture2D(signal_colors)
+        plot_colors = _get_texture(plot_colors, self._default_color,
+                                   n_signals, [0, 1])
+        self.program['u_plot_colors'] = Texture2D(plot_colors)
 
         # Number of signals.
         self.program['n_signals'] = n_signals
