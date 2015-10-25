@@ -25,8 +25,6 @@ def _load_shader(filename):
     """Load a shader file."""
     curdir = op.dirname(op.realpath(__file__))
     glsl_path = op.join(curdir, 'glsl')
-    if not config['include_path']:
-        config['include_path'] = [glsl_path]
     path = op.join(glsl_path, filename)
     with open(path, 'r') as f:
         return f.read()
