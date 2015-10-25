@@ -9,12 +9,16 @@
 
 import math
 
+import numpy as np
+from vispy.gloo import Texture2D
+
 from .base import BaseInteract
-from .transform import Scale, Subplot, Clip
+from .transform import Scale, Range, Subplot, Clip, NDC
+from .utils import _get_texture
 
 
 #------------------------------------------------------------------------------
-# Grid class
+# Grid interact
 #------------------------------------------------------------------------------
 
 class Grid(BaseInteract):
@@ -85,3 +89,65 @@ class Grid(BaseInteract):
         if key == 'R':
             self.zoom = 1.
             self.update()
+
+
+#------------------------------------------------------------------------------
+# Boxed interact
+#------------------------------------------------------------------------------
+
+class Boxed(BaseInteract):
+    """Boxed interact.
+
+    NOTE: to be used in a boxed, a visual must define `a_box_index`.
+
+    """
+    def __init__(self, box_bounds, box_var=None):
+        super(Boxed, self).__init__()
+
+        # Name of the variable with the box index.
+        self.box_var = box_var or 'a_box_index'
+
+        self.box_bounds = np.atleast_2d(box_bounds)
+        assert self.box_bounds.shape[1] == 4
+        self.n_boxes = len(self.box_bounds)
+
+    def get_shader_declarations(self):
+        return ('#include "utils.glsl"\n\n'
+                'attribute float {};\n'.format(self.box_var) +
+                'uniform sampler2D u_box_bounds;\n'
+                'uniform float n_boxes;', '')
+
+    def get_pre_transforms(self):
+        return """
+            // Fetch the box bounds for the current box (`box_var`).
+            vec4 box_bounds = fetch_texture({},
+                                            u_box_bounds,
+                                            n_boxes);
+            box_bounds = (2 * box_bounds - 1);  // See hack in Python.
+            """.format(self.box_var)
+
+    def get_transforms(self):
+        return [Range(from_bounds=NDC,
+                      to_bounds='box_bounds'),
+                ]
+
+    def update_program(self, program):
+        # Signal bounds (positions).
+        box_bounds = _get_texture(self.box_bounds, NDC, self.n_boxes, [-1, 1])
+        program['u_box_bounds'] = Texture2D(box_bounds)
+        program['n_boxes'] = self.n_boxes
+
+
+class Stacked(BaseInteract):
+    """Stacked interact.
+
+    NOTE: to be used in a stacked, a visual must define `a_box_index`.
+
+    """
+
+    # # Signal bounds.
+    # b = np.zeros((n_signals, 4))
+    # b[:, 0] = -1
+    # b[:, 1] = np.linspace(-1, 1 - 2. / n_signals, n_signals)
+    # b[:, 2] = 1
+    # b[:, 3] = np.linspace(-1 + 2. / n_signals, 1., n_signals)
