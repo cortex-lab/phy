@@ -12,7 +12,7 @@ from vispy.gloo import Texture2D
 
 from .base import BaseVisual
 from .transform import Range, GPU, NDC
-from .utils import _enable_depth_mask, _tesselate_histogram
+from .utils import _enable_depth_mask, _tesselate_histogram, _get_texture
 
 
 #------------------------------------------------------------------------------
@@ -106,33 +106,6 @@ def _get_index(n_items, item_size, n):
     index = index.astype(np.float32)
     assert index.shape == (n,)
     return index
-
-
-def _get_texture(arr, default, n_items, from_bounds):
-    """Prepare data to be uploaded as a texture, with casting to uint8.
-    The from_bounds must be specified.
-    """
-    if not hasattr(default, '__len__'):  # pragma: no cover
-        default = [default]
-    n_cols = len(default)
-    if arr is None:
-        arr = np.tile(default, (n_items, 1))
-    assert arr.shape == (n_items, n_cols)
-    # Convert to 3D texture.
-    arr = arr[np.newaxis, ...].astype(np.float32)
-    assert arr.shape == (1, n_items, n_cols)
-    # NOTE: we need to cast the texture to [0, 255] (uint8).
-    # This is easy as soon as we assume that the signal bounds are in
-    # [-1, 1].
-    assert len(from_bounds) == 2
-    m, M = map(float, from_bounds)
-    assert np.all(arr >= m)
-    assert np.all(arr <= M)
-    arr = 255 * (arr - m) / (M - m)
-    assert np.all(arr >= 0)
-    assert np.all(arr <= 255)
-    arr = arr.astype(np.uint8)
-    return arr
 
 
 def _get_color(color, default):
