@@ -53,7 +53,7 @@ def _get_data_bounds_1D(data_bounds, data):
 def _check_pos_2D(pos):
     """Check position data before GPU uploading."""
     assert pos is not None
-    pos = np.asarray(pos)
+    pos = np.asarray(pos, dtype=np.float32)
     assert pos.ndim == 2
     return pos
 
@@ -126,7 +126,10 @@ def _get_linear_x(n_signals, n_samples):
 class ScatterVisual(BaseVisual):
     shader_name = 'scatter'
     gl_primitive_type = 'points'
+
     _default_marker_size = 10.
+    _default_marker_type = 'disc'
+    _default_color = (1, 1, 1, 1)
     _supported_marker_types = (
         'arrow',
         'asterisk',
@@ -156,7 +159,7 @@ class ScatterVisual(BaseVisual):
         self.n_points = None
 
         # Set the marker type.
-        self.marker_type = marker_type or 'disc'
+        self.marker_type = marker_type or self._default_marker_type
         assert self.marker_type in self._supported_marker_types
 
         # Enable transparency.
@@ -189,7 +192,7 @@ class ScatterVisual(BaseVisual):
         pos_tr = self.apply_cpu_transforms(pos)
         self.program['a_position'] = _get_pos_depth(pos_tr, depth)
         self.program['a_size'] = _get_attr(size, self._default_marker_size, n)
-        self.program['a_color'] = _get_attr(colors, (1, 1, 1, 1), n)
+        self.program['a_color'] = _get_attr(colors, self._default_color, n)
 
 
 class PlotVisual(BaseVisual):
