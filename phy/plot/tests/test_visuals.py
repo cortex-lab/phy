@@ -8,9 +8,8 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from pytest import mark, yield_fixture
+from pytest import mark
 
-from ..panzoom import PanZoom
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
                        BoxVisual, AxesVisual,)
 
@@ -18,12 +17,6 @@ from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
 #------------------------------------------------------------------------------
 # Fixtures
 #------------------------------------------------------------------------------
-
-@yield_fixture
-def canvas_pz(canvas):
-    PanZoom().attach(canvas)
-    yield canvas
-
 
 def _test_visual(qtbot, c, v, stop=False, **kwargs):
     v.attach(c)
@@ -36,8 +29,8 @@ def _test_visual(qtbot, c, v, stop=False, **kwargs):
 
 #------------------------------------------------------------------------------
 # Test scatter visual
-#------------------------------------------------------------------------------
 
+#------------------------------------------------------------------------------
 def test_scatter_empty(qtbot, canvas):
     pos = np.zeros((0, 2))
     _test_visual(qtbot, canvas, ScatterVisual(), pos=pos)
