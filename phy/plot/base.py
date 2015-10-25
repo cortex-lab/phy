@@ -84,8 +84,7 @@ class BaseVisual(object):
         """
         logger.debug("Attach `%s` to canvas.", self.__class__.__name__)
 
-        self.program = canvas.interact.build_program(self)
-        # self.transform_chain = canvas.interact.transform_chain
+        self.program = build_program(self, canvas.interacts)
 
         # NOTE: this is connect_ and not connect because we're using
         # phy's event system, not VisPy's. The reason is that the order
@@ -124,6 +123,10 @@ class BaseVisual(object):
             # Draw the program.
             self.program.draw(self.gl_primitive_type)
 
+
+#------------------------------------------------------------------------------
+# Base interact
+#------------------------------------------------------------------------------
 
 class BaseInteract(object):
     """Implement interactions for a set of attached visuals in a canvas.
@@ -172,6 +175,9 @@ class BaseInteract(object):
         """Attach the interact to a canvas."""
         self._canvas = canvas
 
+        # This might be improved.
+        canvas.interacts.append(self)
+
         canvas.connect(self.on_resize)
         canvas.connect(self.on_mouse_move)
         canvas.connect(self.on_mouse_wheel)
@@ -180,40 +186,6 @@ class BaseInteract(object):
     def is_attached(self):
         """Whether the transform is attached to a canvas."""
         return self._canvas is not None
-
-    def build_program(self, visual):
-        """Create the gloo program of a visual using the interact's
-        transforms.
-
-        This method is called when a visual is attached to the canvas.
-
-        """
-        assert visual.program is None, "The program has already been built."
-        assert visual not in self.visuals
-        self.visuals.append(visual)
-
-        # Build the transform chain using the visuals transforms first,
-        # then the interact's transforms.
-        transform_chain = TransformChain(visual.get_transforms() +
-                                         self.get_transforms())
-
-        logger.debug("Build the program of `%s`.", self.__class__.__name__)
-        # Insert the interact's GLSL into the shaders.
-        vertex, fragment = visual.get_shaders()
-        # Get the GLSL snippet to insert before the transformations.
-        pre = self.get_pre_transforms()
-        vertex, fragment = transform_chain.insert_glsl(vertex, fragment, pre)
-
-        # Insert shader declarations.
-        vertex_decl, frag_decl = self.get_shader_declarations()
-        vertex = vertex_decl + '\n' + vertex
-        fragment = frag_decl + '\n' + fragment
-        logger.log(5, "Vertex shader: \n%s", vertex)
-        logger.log(5, "Fragment shader: \n%s", fragment)
-
-        program = gloo.Program(vertex, fragment)
-        self.update_program(program)
-        return program
 
     def on_resize(self, event):
         pass
@@ -235,14 +207,16 @@ class BaseInteract(object):
             self._canvas.update()
 
 
+#------------------------------------------------------------------------------
+# Base canvas
+#------------------------------------------------------------------------------
+
 class BaseCanvas(Canvas):
     """A blank VisPy canvas with a custom event system that keeps the order."""
     def __init__(self, *args, **kwargs):
-        # Set the interact.
-        self.interact = kwargs.pop('interact', BaseInteract())
         super(BaseCanvas, self).__init__(*args, **kwargs)
         self._events = EventEmitter()
-        self.interact.attach(self)
+        self.interacts = []
 
     def connect_(self, *args, **kwargs):
         return self._events.connect(*args, **kwargs)
@@ -253,3 +227,50 @@ class BaseCanvas(Canvas):
     def on_draw(self, e):
         gloo.clear()
         self._events.emit('draw')
+
+
+#------------------------------------------------------------------------------
+# Build program with interacts
+#------------------------------------------------------------------------------
+
+def build_program(visual, interacts=()):
+    """Create the gloo program of a visual using the interacts
+    transforms.
+
+    This method is called when a visual is attached to the canvas.
+
+    """
+    assert visual.program is None, "The program has already been built."
+
+    # Build the transform chain using the visuals transforms first,
+    # then the interact's transforms.
+    transforms = visual.get_transforms()
+    for interact in interacts:
+        transforms.extend(interact.get_transforms())
+    transform_chain = TransformChain(transforms)
+
+    logger.debug("Build the program of `%s`.", visual.__class__.__name__)
+    # Insert the interact's GLSL into the shaders.
+    vertex, fragment = visual.get_shaders()
+    # Get the GLSL snippet to insert before the transformations.
+    pre = '\n'.join(interact.get_pre_transforms() for interact in interacts)
+    vertex, fragment = transform_chain.insert_glsl(vertex, fragment, pre)
+
+    # Insert shader declarations using the interacts (if any).
+    if interacts:
+        vertex_decls, frag_decls = zip(*(interact.get_shader_declarations()
+                                         for interact in interacts))
+
+        vertex = '\n'.join(vertex_decls) + '\n' + vertex
+        fragment = '\n'.join(frag_decls) + '\n' + fragment
+
+    logger.log(5, "Vertex shader: \n%s", vertex)
+    logger.log(5, "Fragment shader: \n%s", fragment)
+
+    program = gloo.Program(vertex, fragment)
+
+    # Update the program with all interacts.
+    for interact in interacts:
+        interact.update_program(program)
+
+    return program

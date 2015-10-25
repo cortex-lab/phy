@@ -79,7 +79,7 @@ def test_base_visual(qtbot, canvas):
 
 
 def test_base_interact(qtbot, canvas):
-    """Test a BaseVisual with a CPU transform and a blank interact."""
+    """Test a BaseVisual with a CPU transform and no interact."""
     class TestVisual(BaseVisual):
         shader_name = 'simple'
         gl_primitive_type = 'lines'
@@ -97,14 +97,18 @@ def test_base_interact(qtbot, canvas):
     v.set_data()
 
     canvas.show()
-    assert canvas.interact.size[0] >= 1
+    assert not canvas.interacts
     qtbot.waitForWindowShown(canvas.native)
     # qtbot.stop()
 
 
 def test_interact(qtbot, canvas):
     """Test a BaseVisual with multiple CPU and GPU transforms and a
-    non-blank interact."""
+    non-blank interact.
+
+    There should be points filling the entire lower (2, 3) subplot.
+
+    """
 
     class TestVisual(BaseVisual):
         vertex = """
@@ -144,7 +148,7 @@ def test_interact(qtbot, canvas):
                     Clip(bounds=bounds),
                     ]
 
-    canvas = BaseCanvas(keys='interactive', interact=TestInteract())
+    TestInteract().attach(canvas)
 
     # We attach the visual to the canvas. By default, a BaseInteract is used.
     v = TestVisual()
@@ -152,6 +156,6 @@ def test_interact(qtbot, canvas):
     v.set_data()
 
     canvas.show()
+    assert len(canvas.interacts) == 1
     qtbot.waitForWindowShown(canvas.native)
     # qtbot.stop()
-    canvas.close()
