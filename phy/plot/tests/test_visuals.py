@@ -96,7 +96,7 @@ def test_plot_2(qtbot, canvas_pz):
 
     _test_visual(qtbot, canvas_pz, PlotVisual(),
                  data=data, data_bounds=[-50, 50],
-                 signal_colors=c, stop=True)
+                 signal_colors=c)
 
 
 #------------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test grid."""
+"""Test interact."""
 
 
 #------------------------------------------------------------------------------
@@ -14,7 +14,7 @@ from vispy.util import keys
 from pytest import yield_fixture
 
 from ..base import BaseVisual, BaseCanvas
-from ..grid import Grid
+from ..interact import Grid
 
 
 #------------------------------------------------------------------------------
