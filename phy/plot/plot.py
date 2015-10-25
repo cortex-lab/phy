@@ -14,7 +14,7 @@ import numpy as np
 
 from .base import BaseCanvas
 from .interact import Grid  # Boxed, Stacked
-from .visuals import ScatterVisual, PlotVisual, HistogramVisual
+from .visuals import _get_array, ScatterVisual, PlotVisual, HistogramVisual
 
 
 #------------------------------------------------------------------------------
@@ -22,6 +22,7 @@ from .visuals import ScatterVisual, PlotVisual, HistogramVisual
 #------------------------------------------------------------------------------
 
 class Accumulator(object):
+    """Accumulate arrays for concatenation."""
     def __init__(self):
         self._size = defaultdict(int)
         self._data = defaultdict(list)
@@ -68,27 +69,11 @@ class SubView(object):
         assert x.ndim == y.ndim == 1
         assert x.shape == y.shape
         n = x.shape[0]
-        # Default color.
-        if color is None:
-            color = ScatterVisual._default_color
-        color = np.asarray(color)
-        if color.ndim == 1:
-            color = np.tile(color, (n, 1)).astype(np.float32)
-        assert color.shape == (n, 4)
-        # Default size.
-        if size is None:
-            size = ScatterVisual._default_marker_size
-        if not hasattr(size, '__len__'):
-            size = [size]
-        size = np.asarray(size)
-        if size.size == 1:
-            size = np.tile(size, (n, 1)).astype(np.float32)
-        if size.ndim == 1:
-            size = size[:, np.newaxis]
-        assert size.shape == (n, 1)
+        # Set the color and size.
+        color = _get_array(color, (n, 4), ScatterVisual._default_color)
+        size = _get_array(size, (n, 1), ScatterVisual._default_marker_size)
         # Default marker.
-        if marker is None:
-            marker = ScatterVisual._default_marker
+        marker = marker or ScatterVisual._default_marker
         # Set the spec.
         loc = dict(x=x, y=y, color=color, size=size, marker=marker)
         return self._set(ScatterVisual, loc)
@@ -150,7 +135,7 @@ class BaseView(BaseCanvas):
 
         v = ScatterVisual(marker=marker)
         v.attach(self)
-        v.set_data(pos=ac['pos'], colors=ac['color'], size=ac['size'])
+        v.set_data(pos=ac['pos'], color=ac['color'], size=ac['size'])
         v.program['a_box_index'] = ac['box_index']
 
     def build(self):
