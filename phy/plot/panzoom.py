@@ -54,32 +54,18 @@ class PanZoom(BaseInteract):
                  zmin=1e-5, zmax=1e5,
                  xmin=None, xmax=None,
                  ymin=None, ymax=None,
+                 constrain_bounds=None,
                  pan_var_name='u_pan',
                  zoom_var_name='u_zoom',
                  ):
-        """
-        Initialize the transform.
-
-        Parameters
-        ----------
-
-        aspect : float (default is None)
-           Indicate what is the aspect ratio of the object displayed. This is
-           necessary to convert pixel drag move in object space coordinates.
-
-        pan : float, float (default is 0, 0)
-           Initial translation
-
-        zoom : float, float (default is 1)
-           Initial zoom level
-
-        zmin : float (default is 0.01)
-           Minimum zoom level
-
-        zmax : float (default is 1000)
-           Maximum zoom level
-        """
         super(PanZoom, self).__init__()
+
+        if constrain_bounds:
+            assert xmin is None
+            assert ymin is None
+            assert xmax is None
+            assert ymax is None
+            xmin, ymin, xmax, ymax = constrain_bounds
 
         self.pan_var_name = pan_var_name
         self.zoom_var_name = zoom_var_name
