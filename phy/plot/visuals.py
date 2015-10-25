@@ -50,6 +50,19 @@ def _get_data_bounds_1D(data_bounds, data):
     return data_bounds
 
 
+def _get_array(val, shape, default=None):
+    """Ensure an object is an array with the specified shape."""
+    assert val is not None or default is not None
+    out = np.zeros(shape, dtype=np.float32)
+    # This solves `ValueError: could not broadcast input array from shape (n)
+    # into shape (n, 1)`.
+    if val is not None and isinstance(val, np.ndarray) and out.ndim > val.ndim:
+        val = val[:, np.newaxis]
+    out[...] = val if val is not None else default
+    assert out.shape == shape
+    return out
+
+
 def _check_pos_2D(pos):
     """Check position data before GPU uploading."""
     assert pos is not None
@@ -61,21 +74,9 @@ def _check_pos_2D(pos):
 def _get_pos_depth(pos_tr, depth):
     """Prepare a (N, 3) position-depth array for GPU uploading."""
     n = pos_tr.shape[0]
-    pos_tr = np.asarray(pos_tr, dtype=np.float32)
-    assert pos_tr.shape == (n, 2)
-
-    # Set the depth.
-    if depth is None:
-        depth = np.zeros(n, dtype=np.float32)
-    depth = np.asarray(depth, dtype=np.float32)
-    assert depth.shape == (n,)
-
-    # Set the a_position attribute.
-    pos_depth = np.empty((n, 3), dtype=np.float32)
-    pos_depth[:, :2] = pos_tr
-    pos_depth[:, 2] = depth
-
-    return pos_depth
+    pos_tr = _get_array(pos_tr, (n, 2))
+    depth = _get_array(depth, (n, 1), 0)
+    return np.c_[pos_tr, depth]
 
 
 def _get_hist_max(hist):
@@ -84,19 +85,6 @@ def _get_hist_max(hist):
     hist_max = hist_max if hist_max > 0 else 1.
     assert hist_max > 0
     return hist_max
-
-
-def _get_attr(attr, default, n):
-    """Prepare an attribute for GPU uploading."""
-    if not hasattr(default, '__len__'):
-        default = [default]
-    if attr is None:
-        attr = np.tile(default, (n, 1))
-    attr = np.asarray(attr, dtype=np.float32)
-    if attr.ndim == 1:
-        attr = attr[:, np.newaxis]
-    assert attr.shape == (n, len(default))
-    return attr
 
 
 def _get_index(n_items, item_size, n):
@@ -180,7 +168,7 @@ class ScatterVisual(BaseVisual):
     def set_data(self,
                  pos=None,
                  depth=None,
-                 colors=None,
+                 color=None,
                  marker=None,
                  size=None,
                  data_bounds=None,
@@ -194,8 +182,10 @@ class ScatterVisual(BaseVisual):
 
         pos_tr = self.apply_cpu_transforms(pos)
         self.program['a_position'] = _get_pos_depth(pos_tr, depth)
-        self.program['a_size'] = _get_attr(size, self._default_marker_size, n)
-        self.program['a_color'] = _get_attr(colors, self._default_color, n)
+        self.program['a_size'] = _get_array(size, (n, 1),
+                                            self._default_marker_size)
+        self.program['a_color'] = _get_array(color, (n, 4),
+                                             self._default_color)
 
 
 class PlotVisual(BaseVisual):

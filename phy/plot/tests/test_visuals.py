@@ -67,7 +67,7 @@ def test_scatter_custom(qtbot, canvas_pz):
     s = 5 + 20 * np.random.rand(n)
 
     _test_visual(qtbot, canvas_pz, ScatterVisual(),
-                 pos=pos, colors=c, size=s)
+                 pos=pos, color=c, size=s)
 
 
 #------------------------------------------------------------------------------
