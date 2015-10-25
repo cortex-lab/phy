@@ -12,7 +12,7 @@ import os.path as op
 
 import numpy as np
 
-from vispy import gloo, config
+from vispy import gloo
 
 logger = logging.getLogger(__name__)
 
