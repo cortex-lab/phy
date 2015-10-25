@@ -119,7 +119,7 @@ def _get_linear_x(n_signals, n_samples):
     return np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
 
 
-DEFAULT_COLOR = (0.03,  0.57,  0.98, .75)
+DEFAULT_COLOR = (0.03, 0.57, 0.98, .75)
 
 
 #------------------------------------------------------------------------------
@@ -131,9 +131,9 @@ class ScatterVisual(BaseVisual):
     gl_primitive_type = 'points'
 
     _default_marker_size = 10.
-    _default_marker_type = 'disc'
+    _default_marker = 'disc'
     _default_color = DEFAULT_COLOR
-    _supported_marker_types = (
+    _supported_markers = (
         'arrow',
         'asterisk',
         'chevron',
@@ -155,15 +155,15 @@ class ScatterVisual(BaseVisual):
         'vbar',
     )
 
-    def __init__(self, marker_type=None):
+    def __init__(self, marker=None):
         super(ScatterVisual, self).__init__()
         # Default bounds.
         self.data_bounds = NDC
         self.n_points = None
 
         # Set the marker type.
-        self.marker_type = marker_type or self._default_marker_type
-        assert self.marker_type in self._supported_marker_types
+        self.marker = marker or self._default_marker
+        assert self.marker in self._supported_markers
 
         # Enable transparency.
         _enable_depth_mask()
@@ -171,7 +171,7 @@ class ScatterVisual(BaseVisual):
     def get_shaders(self):
         v, f = super(ScatterVisual, self).get_shaders()
         # Replace the marker type in the shader.
-        f = f.replace('%MARKER_TYPE', self.marker_type)
+        f = f.replace('%MARKER', self.marker)
         return v, f
 
     def get_transforms(self):
@@ -181,7 +181,7 @@ class ScatterVisual(BaseVisual):
                  pos=None,
                  depth=None,
                  colors=None,
-                 marker_type=None,
+                 marker=None,
                  size=None,
                  data_bounds=None,
                  ):

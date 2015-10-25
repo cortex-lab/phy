@@ -13,7 +13,7 @@ from collections import defaultdict
 import numpy as np
 
 from .base import BaseCanvas
-from .interact import Grid, Boxed, Stacked
+from .interact import Grid  # Boxed, Stacked
 from .visuals import ScatterVisual, PlotVisual, HistogramVisual
 
 
@@ -70,14 +70,25 @@ class SubView(object):
         n = x.shape[0]
         # Default color.
         if color is None:
-            color = np.ones((n, 4), dtype=np.float32)
+            color = ScatterVisual._default_color
+        color = np.asarray(color)
+        if color.ndim == 1:
+            color = np.tile(color, (n, 1)).astype(np.float32)
+        assert color.shape == (n, 4)
         # Default size.
         if size is None:
-            ds = ScatterVisual._default_marker_size
-            size = ds * np.ones((n, 1), dtype=np.float32)
+            size = ScatterVisual._default_marker_size
+        if not hasattr(size, '__len__'):
+            size = [size]
+        size = np.asarray(size)
+        if size.size == 1:
+            size = np.tile(size, (n, 1)).astype(np.float32)
+        if size.ndim == 1:
+            size = size[:, np.newaxis]
+        assert size.shape == (n, 1)
         # Default marker.
         if marker is None:
-            marker = ScatterVisual._default_marker_type
+            marker = ScatterVisual._default_marker
         # Set the spec.
         loc = dict(x=x, y=y, color=color, size=size, marker=marker)
         return self._set(ScatterVisual, loc)
@@ -137,7 +148,7 @@ class BaseView(BaseCanvas):
             ac['size'] = sv.size
             ac['box_index'] = np.tile(sv.idx, (n, 1))
 
-        v = ScatterVisual()
+        v = ScatterVisual(marker=marker)
         v.attach(self)
         v.set_data(pos=ac['pos'], colors=ac['color'], size=ac['size'])
         v.program['a_box_index'] = ac['box_index']

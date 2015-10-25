@@ -42,7 +42,7 @@ def test_scatter_markers(qtbot, canvas_pz):
     n = 100
     pos = .2 * np.random.randn(n, 2)
 
-    v = ScatterVisual(marker_type='vbar')
+    v = ScatterVisual(marker='vbar')
     v.attach(c)
     v.set_data(pos=pos)
 
