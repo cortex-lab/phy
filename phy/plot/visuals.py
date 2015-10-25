@@ -227,15 +227,12 @@ class PlotVisual(BaseVisual):
     def get_transforms(self):
         return [Range(from_bounds=self.data_bounds),
                 GPU(),
-                Range(from_bounds=NDC,
-                      to_bounds='signal_bounds'),
                 ]
 
     def set_data(self,
                  data=None,
                  depth=None,
                  data_bounds=None,
-                 signal_bounds=None,
                  signal_colors=None,
                  ):
         pos = _check_pos_2D(data)
@@ -252,19 +249,15 @@ class PlotVisual(BaseVisual):
         pos[:, 0] = x
         pos[:, 1] = data.ravel()
 
+        # Generate the complete data_bounds 4-tuple from the specified 2-tuple.
+        self.data_bounds = _get_data_bounds_1D(data_bounds, data)
+
         # Set the transformed position.
         pos_tr = self.apply_cpu_transforms(pos)
         self.program['a_position'] = _get_pos_depth(pos_tr, depth)
 
         # Generate the signal index.
         self.program['a_signal_index'] = _get_index(n_signals, n_samples, n)
-
-        # Generate the complete data_bounds 4-tuple from the specified 2-tuple.
-        self.data_bounds = _get_data_bounds_1D(data_bounds, data)
-
-        # Signal bounds (positions).
-        signal_bounds = _get_texture(signal_bounds, NDC, n_signals, [-1, 1])
-        self.program['u_signal_bounds'] = Texture2D(signal_bounds)
 
         # Signal colors.
         signal_colors = _get_texture(signal_colors, (1,) * 4,

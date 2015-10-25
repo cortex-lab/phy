@@ -90,20 +90,13 @@ def test_plot_2(qtbot, canvas_pz):
     n_signals = 50
     data = 20 * np.random.randn(n_signals, 10)
 
-    # Signal bounds.
-    b = np.zeros((n_signals, 4))
-    b[:, 0] = -1
-    b[:, 1] = np.linspace(-1, 1 - 2. / n_signals, n_signals)
-    b[:, 2] = 1
-    b[:, 3] = np.linspace(-1 + 2. / n_signals, 1., n_signals)
-
     # Signal colors.
     c = np.random.uniform(.5, 1, size=(n_signals, 4))
     c[:, 3] = .5
 
     _test_visual(qtbot, canvas_pz, PlotVisual(),
-                 data=data, data_bounds=[-10, 10],
-                 signal_bounds=b, signal_colors=c)
+                 data=data, data_bounds=[-50, 50],
+                 signal_colors=c, stop=True)
 
 
 #------------------------------------------------------------------------------
