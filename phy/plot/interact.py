@@ -42,19 +42,19 @@ class Grid(BaseInteract):
 
     def get_shader_declarations(self):
         return ('attribute vec2 a_box_index;\n'
-                'uniform float u_zoom;\n', '')
+                'uniform float u_grid_zoom;\n', '')
 
     def get_transforms(self):
         # Define the grid transform and clipping.
         m = 1. - .05  # Margin.
-        return [Scale(scale='u_zoom'),
+        return [Scale(scale='u_grid_zoom'),
                 Scale(scale=(m, m)),
                 Clip(bounds=[-m, -m, m, m]),
                 Subplot(shape=self.shape, index='a_box_index'),
                 ]
 
     def update_program(self, program):
-        program['u_zoom'] = self._zoom
+        program['u_grid_zoom'] = self._zoom
         # Only set the default box index if necessary.
         try:
             program['a_box_index']

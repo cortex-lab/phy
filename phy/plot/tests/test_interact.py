@@ -14,6 +14,7 @@ from vispy.util import keys
 
 from ..base import BaseVisual
 from ..interact import Grid, Boxed
+from ..panzoom import PanZoom
 
 
 #------------------------------------------------------------------------------
@@ -53,7 +54,9 @@ class MyTestVisual(BaseVisual):
 def _create_visual(qtbot, canvas, interact, box_index):
     c = canvas
 
+    # Attach the interact *and* PanZoom. The order matters!
     interact.attach(c)
+    PanZoom().attach(c)
 
     visual = MyTestVisual()
     visual.attach(c)
