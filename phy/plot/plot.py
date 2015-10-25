@@ -26,24 +26,12 @@ from .visuals import _get_array, ScatterVisual, PlotVisual, HistogramVisual
 class Accumulator(object):
     """Accumulate arrays for concatenation."""
     def __init__(self):
-        self._size = defaultdict(int)
         self._data = defaultdict(list)
 
-    @property
-    def size(self):
-        return self._size[list(self._size.keys())[0]]
-
-    @property
-    def data(self):
-        return {name: self[name] for name in self._data}
-
     def __setitem__(self, name, val):
-        self._size[name] += len(val)
         self._data[name].append(val)
 
     def __getitem__(self, name):
-        # size = self.size
-        # assert all(s == size for s in self._size.values())
         return np.vstack(self._data[name]).astype(np.float32)
 
 
@@ -118,9 +106,6 @@ class BaseView(BaseCanvas):
 
     # To override
     # -------------------------------------------------------------------------
-
-    def get_box_ndim(self):
-        raise NotImplementedError()
 
     def iter_index(self):
         raise NotImplementedError()
@@ -213,9 +198,6 @@ class GridView(BaseView):
         interacts = [Grid(n_rows, n_cols), pz]
         super(GridView, self).__init__(interacts)
 
-    def get_box_ndim(self):
-        return 2
-
     def iter_index(self):
         for i in range(self.n_rows):
             for j in range(self.n_cols):
@@ -229,9 +211,6 @@ class BoxedView(BaseView):
         interacts = [Boxed(box_bounds), pz]
         super(BoxedView, self).__init__(interacts)
 
-    def get_box_ndim(self):
-        return 1
-
     def iter_index(self):
         for i in range(self.n_plots):
             yield i
@@ -243,9 +222,6 @@ class StackedView(BaseView):
         pz = PanZoom(aspect=None, constrain_bounds=NDC)
         interacts = [Stacked(n_plots, margin=.1), pz]
         super(StackedView, self).__init__(interacts)
-
-    def get_box_ndim(self):
-        return 1
 
     def iter_index(self):
         for i in range(self.n_plots):

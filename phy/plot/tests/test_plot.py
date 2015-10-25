@@ -89,11 +89,26 @@ def test_grid_complete(qtbot):
 
 def test_stacked_complete(qtbot):
     view = StackedView(4)
-    t = _get_linear_x(1, 1000).ravel()
 
+    t = _get_linear_x(1, 1000).ravel()
     view[0].scatter(*np.random.randn(2, 100))
     view[1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
+    view[2].hist(np.random.rand(5, 10),
+                 color=np.random.uniform(.4, .9, size=(5, 4)))
 
+    _show(qtbot, view)
+
+
+def test_boxed_complete(qtbot):
+    n = 3
+    b = np.zeros((n, 4))
+    b[:, 0] = b[:, 1] = np.linspace(-1., 1. - 2. / 3., n)
+    b[:, 2] = b[:, 3] = np.linspace(-1. + 2. / 3., 1., n)
+    view = BoxedView(b)
+
+    t = _get_linear_x(1, 1000).ravel()
+    view[0].scatter(*np.random.randn(2, 100))
+    view[1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
     view[2].hist(np.random.rand(5, 10),
                  color=np.random.uniform(.4, .9, size=(5, 4)))
 
