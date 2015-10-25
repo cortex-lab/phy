@@ -103,6 +103,8 @@ class BaseVisual(object):
         canvas.connect(self.on_mouse_move)
         canvas.connect(self.on_key_press)
 
+        # NOTE: this might be improved.
+        canvas.visuals.append(self)
         # HACK: allow a visual to update the canvas it is attached to.
         self.update = canvas.update
 
@@ -138,8 +140,6 @@ class BaseInteract(object):
     """
     def __init__(self):
         self._canvas = None
-        # List of attached visuals.
-        self.visuals = []
 
     # To override
     # -------------------------------------------------------------------------
@@ -164,9 +164,6 @@ class BaseInteract(object):
     # Public methods
     # -------------------------------------------------------------------------
 
-    def get_visuals(self):
-        return self.visuals
-
     @property
     def size(self):
         return self._canvas.size if self._canvas else None
@@ -175,7 +172,7 @@ class BaseInteract(object):
         """Attach the interact to a canvas."""
         self._canvas = canvas
 
-        # This might be improved.
+        # NOTE: this might be improved.
         canvas.interacts.append(self)
 
         canvas.connect(self.on_resize)
@@ -202,7 +199,7 @@ class BaseInteract(object):
     def update(self):
         """Update the attached canvas and all attached programs."""
         if self.is_attached():
-            for visual in self.get_visuals():
+            for visual in self._canvas.visuals:
                 self.update_program(visual.program)
             self._canvas.update()
 
@@ -217,6 +214,7 @@ class BaseCanvas(Canvas):
         super(BaseCanvas, self).__init__(*args, **kwargs)
         self._events = EventEmitter()
         self.interacts = []
+        self.visuals = []
 
     def connect_(self, *args, **kwargs):
         return self._events.connect(*args, **kwargs)

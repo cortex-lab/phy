@@ -10,6 +10,7 @@ from vispy.app import use_app
 from pytest import yield_fixture
 
 from ..base import BaseCanvas
+from ..panzoom import PanZoom
 
 
 #------------------------------------------------------------------------------
@@ -22,3 +23,9 @@ def canvas(qapp):
     c = BaseCanvas(keys='interactive')
     yield c
     c.close()
+
+
+@yield_fixture
+def canvas_pz(canvas):
+    PanZoom().attach(canvas)
+    yield canvas

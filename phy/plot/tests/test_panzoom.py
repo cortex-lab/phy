@@ -8,11 +8,11 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from pytest import yield_fixture
 from vispy.app import MouseEvent
 from vispy.util import keys
-from pytest import yield_fixture
 
-from ..base import BaseVisual, BaseCanvas
+from ..base import BaseVisual
 from ..panzoom import PanZoom
 
 
@@ -30,22 +30,16 @@ class MyTestVisual(BaseVisual):
 
 
 @yield_fixture
-def canvas(qapp):
-    c = BaseCanvas(keys='interactive', interact=PanZoom())
-    yield c
-    c.close()
-
-
-@yield_fixture
-def panzoom(qtbot, canvas):
+def panzoom(qtbot, canvas_pz):
+    c = canvas_pz
     visual = MyTestVisual()
-    visual.attach(canvas)
+    visual.attach(c)
     visual.set_data()
 
-    canvas.show()
-    qtbot.waitForWindowShown(canvas.native)
+    c.show()
+    qtbot.waitForWindowShown(c.native)
 
-    yield canvas.interact
+    yield c.interacts[0]
 
 
 #------------------------------------------------------------------------------
@@ -151,58 +145,61 @@ def test_panzoom_constraints_z():
     assert pz.zoom == [2, 2]
 
 
-def test_panzoom_pan_mouse(qtbot, canvas, panzoom):
+def test_panzoom_pan_mouse(qtbot, canvas_pz, panzoom):
+    c = canvas_pz
     pz = panzoom
 
     # Pan with mouse.
     press = MouseEvent(type='mouse_press', pos=(0, 0))
-    canvas.events.mouse_move(pos=(10., 0.), button=1,
-                             last_event=press, press_event=press)
+    c.events.mouse_move(pos=(10., 0.), button=1,
+                        last_event=press, press_event=press)
     assert pz.pan[0] > 0
     assert pz.pan[1] == 0
     pz.pan = (0, 0)
 
     # Panning with a modifier should not pan.
     press = MouseEvent(type='mouse_press', pos=(0, 0))
-    canvas.events.mouse_move(pos=(10., 0.), button=1,
-                             last_event=press, press_event=press,
-                             modifiers=(keys.CONTROL,))
+    c.events.mouse_move(pos=(10., 0.), button=1,
+                        last_event=press, press_event=press,
+                        modifiers=(keys.CONTROL,))
     assert pz.pan == [0, 0]
 
     # qtbot.stop()
 
 
-def test_panzoom_pan_keyboard(qtbot, canvas, panzoom):
+def test_panzoom_pan_keyboard(qtbot, canvas_pz, panzoom):
+    c = canvas_pz
     pz = panzoom
 
     # Pan with keyboard.
-    canvas.events.key_press(key=keys.UP)
+    c.events.key_press(key=keys.UP)
     assert pz.pan[0] == 0
     assert pz.pan[1] < 0
 
     # All panning movements with keys.
-    canvas.events.key_press(key=keys.LEFT)
-    canvas.events.key_press(key=keys.DOWN)
-    canvas.events.key_press(key=keys.RIGHT)
+    c.events.key_press(key=keys.LEFT)
+    c.events.key_press(key=keys.DOWN)
+    c.events.key_press(key=keys.RIGHT)
     assert pz.pan == [0, 0]
 
     # Reset with R.
-    canvas.events.key_press(key=keys.RIGHT)
-    canvas.events.key_press(key=keys.Key('r'))
+    c.events.key_press(key=keys.RIGHT)
+    c.events.key_press(key=keys.Key('r'))
     assert pz.pan == [0, 0]
 
     # Using modifiers should not pan.
-    canvas.events.key_press(key=keys.UP, modifiers=(keys.CONTROL,))
+    c.events.key_press(key=keys.UP, modifiers=(keys.CONTROL,))
     assert pz.pan == [0, 0]
 
 
-def test_panzoom_zoom_mouse(qtbot, canvas, panzoom):
+def test_panzoom_zoom_mouse(qtbot, canvas_pz, panzoom):
+    c = canvas_pz
     pz = panzoom
 
     # Zoom with mouse.
     press = MouseEvent(type='mouse_press', pos=(50., 50.))
-    canvas.events.mouse_move(pos=(0., 0.), button=2,
-                             last_event=press, press_event=press)
+    c.events.mouse_move(pos=(0., 0.), button=2,
+                        last_event=press, press_event=press)
     assert pz.pan[0] < 0
     assert pz.pan[1] < 0
     assert pz.zoom[0] < 1
@@ -210,38 +207,43 @@ def test_panzoom_zoom_mouse(qtbot, canvas, panzoom):
     pz.reset()
 
     # Zoom with mouse.
-    size = np.asarray(canvas.size)
-    canvas.events.mouse_wheel(pos=size / 2., delta=(0., 1.))
+    size = np.asarray(c.size)
+    c.events.mouse_wheel(pos=size / 2., delta=(0., 1.))
     assert pz.pan == [0, 0]
     assert pz.zoom[0] > 1
     assert pz.zoom[1] > 1
     pz.reset()
 
     # Using modifiers with the wheel should not zoom.
-    canvas.events.mouse_wheel(pos=(0., 0.), delta=(0., 1.),
-                              modifiers=(keys.CONTROL,))
+    c.events.mouse_wheel(pos=(0., 0.), delta=(0., 1.),
+                         modifiers=(keys.CONTROL,))
     assert pz.pan == [0, 0]
     assert pz.zoom == [1, 1]
     pz.reset()
 
 
-def test_panzoom_zoom_keyboard(qtbot, canvas, panzoom):
+def test_panzoom_zoom_keyboard(qtbot, canvas_pz, panzoom):
+    c = canvas_pz
     pz = panzoom
 
     # Zoom with keyboard.
-    canvas.events.key_press(key=keys.Key('+'))
+    c.events.key_press(key=keys.Key('+'))
     assert pz.pan == [0, 0]
     assert pz.zoom[0] > 1
     assert pz.zoom[1] > 1
 
     # Unzoom with keyboard.
-    canvas.events.key_press(key=keys.Key('-'))
+    c.events.key_press(key=keys.Key('-'))
     assert pz.pan == [0, 0]
     assert pz.zoom == [1, 1]
 
 
-def test_panzoom_resize(qtbot, canvas, panzoom):
+def test_panzoom_resize(qtbot, canvas_pz, panzoom):
+    c = canvas_pz
+    pz = panzoom
+
     # Increase coverage with different aspect ratio.
-    canvas.native.resize(400, 600)
-    # canvas.events.resize(size=(100, 1000))
-    assert list(panzoom._canvas_aspect) == [1., 2. / 3]
+    c.native.resize(400, 600)
+    # qtbot.stop()
+    # c.events.resize(size=(100, 1000))
+    assert list(pz._canvas_aspect) == [1., 2. / 3]
