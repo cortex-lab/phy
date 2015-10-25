@@ -8,8 +8,9 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from pytest import mark
+from pytest import mark, yield_fixture
 
+from ..panzoom import PanZoom
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
                        BoxVisual, AxesVisual,)
 
@@ -18,11 +19,17 @@ from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
 # Fixtures
 #------------------------------------------------------------------------------
 
+@yield_fixture
+def canvas_pz(canvas):
+    PanZoom().attach(canvas)
+    yield canvas
+
 
 def _test_visual(qtbot, c, v, stop=False, **kwargs):
     v.attach(c)
     v.set_data(**kwargs)
     c.show()
+    qtbot.waitForWindowShown(c.native)
     if stop:  # pragma: no cover
         qtbot.stop()
 

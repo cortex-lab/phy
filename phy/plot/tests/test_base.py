@@ -9,7 +9,7 @@
 
 import numpy as np
 
-from ..base import BaseCanvas, BaseVisual, BaseInteract
+from ..base import BaseVisual, BaseInteract
 from ..transform import (subplot_bounds, Translate, Scale, Range,
                          Clip, Subplot, GPU)
 

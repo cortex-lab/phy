@@ -1,3 +1,4 @@
+#include "antialias/filled.glsl"
 #include "markers/%MARKER_TYPE.glsl"
 
 varying vec4 v_color;
