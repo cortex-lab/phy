@@ -142,12 +142,20 @@ class BaseInteract(object):
     # -------------------------------------------------------------------------
 
     def get_shader_declarations(self):
+        """Return extra declarations for the vertex and fragment shaders."""
         return '', ''
 
+    def get_pre_transforms(self):
+        """Return an optional GLSL snippet to insert into the vertex shader
+        before the transforms."""
+        return ''
+
     def get_transforms(self):
+        """Return the list of transforms."""
         return []
 
     def update_program(self, program):
+        """Update a program during an interaction event."""
         pass
 
     # Public methods
@@ -192,7 +200,9 @@ class BaseInteract(object):
         logger.debug("Build the program of `%s`.", self.__class__.__name__)
         # Insert the interact's GLSL into the shaders.
         vertex, fragment = visual.get_shaders()
-        vertex, fragment = transform_chain.insert_glsl(vertex, fragment)
+        # Get the GLSL snippet to insert before the transformations.
+        pre = self.get_pre_transforms()
+        vertex, fragment = transform_chain.insert_glsl(vertex, fragment, pre)
 
         # Insert shader declarations.
         vertex_decl, frag_decl = self.get_shader_declarations()
