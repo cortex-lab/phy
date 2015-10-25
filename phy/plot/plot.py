@@ -13,7 +13,7 @@ from collections import defaultdict
 import numpy as np
 
 from .base import BaseCanvas
-from .interact import Grid  # Boxed, Stacked
+from .interact import Grid, Boxed, Stacked
 from .panzoom import PanZoom
 from .transform import NDC
 from .visuals import _get_array, ScatterVisual, PlotVisual, HistogramVisual
@@ -59,9 +59,9 @@ class SubView(object):
     def visual_class(self):
         return self.spec.get('visual_class', None)
 
-    def _set(self, visual_class, loc):
+    def _set(self, visual_class, spec):
         self.spec['visual_class'] = visual_class
-        self.spec.update(loc)
+        self.spec.update(spec)
 
     def __getattr__(self, name):
         return self.spec[name]
@@ -77,8 +77,8 @@ class SubView(object):
         # Default marker.
         marker = marker or ScatterVisual._default_marker
         # Set the spec.
-        loc = dict(x=x, y=y, color=color, size=size, marker=marker)
-        return self._set(ScatterVisual, loc)
+        spec = dict(x=x, y=y, color=color, size=size, marker=marker)
+        return self._set(ScatterVisual, spec)
 
     def plot(self, x, y, color=None):
         x = np.atleast_2d(x)
@@ -87,14 +87,22 @@ class SubView(object):
         assert x.ndim == y.ndim == 2
         assert x.shape == y.shape
         n_plots, n_samples = x.shape
+        # Get the colors.
         color = _get_array(color, (n_plots, 4), PlotVisual._default_color)
         # Set the spec.
-        loc = dict(x=x, y=y, color=color)
-        return self._set(PlotVisual, loc)
+        spec = dict(x=x, y=y, color=color)
+        return self._set(PlotVisual, spec)
 
-    def hist(self, hist, color=None):
-        loc = locals()
-        return self._set(HistogramVisual, loc)
+    def hist(self, data, color=None):
+        # Validate data.
+        if data.ndim == 1:
+            data = data[np.newaxis, :]
+        assert data.ndim == 2
+        n_hists, n_samples = data.shape
+        # Get the colors.
+        color = _get_array(color, (n_hists, 4), HistogramVisual._default_color)
+        spec = dict(data=data, color=color)
+        return self._set(HistogramVisual, spec)
 
     def __repr__(self):
         return str(self.spec)  # pragma: no cover
@@ -164,6 +172,22 @@ class BaseView(BaseCanvas):
         v.set_data(x=ac['x'], y=ac['y'], plot_colors=ac['plot_colors'])
         v.program['a_box_index'] = ac['box_index']
 
+    def _build_histogram(self, subviews):
+        """Build all histogram subviews."""
+
+        ac = Accumulator()
+        for sv in subviews:
+            n = sv.data.size
+            ac['data'] = sv.data
+            ac['hist_colors'] = sv.color
+            # NOTE: the `6 * ` comes from the histogram tesselation.
+            ac['box_index'] = np.tile(sv.idx, (6 * n, 1))
+
+        v = HistogramVisual()
+        v.attach(self)
+        v.set_data(hist=ac['data'], hist_colors=ac['hist_colors'])
+        v.program['a_box_index'] = ac['box_index']
+
     def build(self):
         """Build all visuals."""
         for visual_class, subviews in groupby(self.iter_subviews(),
@@ -198,11 +222,31 @@ class GridView(BaseView):
                 yield (i, j)
 
 
+class BoxedView(BaseView):
+    def __init__(self, box_bounds):
+        self.n_plots = len(box_bounds)
+        pz = PanZoom(aspect=None, constrain_bounds=NDC)
+        interacts = [Boxed(box_bounds), pz]
+        super(BoxedView, self).__init__(interacts)
+
+    def get_box_ndim(self):
+        return 1
+
+    def iter_index(self):
+        for i in range(self.n_plots):
+            yield i
+
+
 class StackedView(BaseView):
     def __init__(self, n_plots):
-        super(StackedView, self).__init__()
+        self.n_plots = n_plots
+        pz = PanZoom(aspect=None, constrain_bounds=NDC)
+        interacts = [Stacked(n_plots, margin=.1), pz]
+        super(StackedView, self).__init__(interacts)
 
+    def get_box_ndim(self):
+        return 1
 
-class BoxedView(BaseView):
-    def __init__(self, box_positions):
-        super(BoxedView, self).__init__()
+    def iter_index(self):
+        for i in range(self.n_plots):
+            yield i
