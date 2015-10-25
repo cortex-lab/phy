@@ -8,7 +8,6 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from pytest import mark
 
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
                        BoxVisual, AxesVisual,)
@@ -36,13 +35,20 @@ def test_scatter_empty(qtbot, canvas):
     _test_visual(qtbot, canvas, ScatterVisual(), pos=pos)
 
 
-@mark.parametrize('marker_type', ScatterVisual._supported_marker_types)
-def test_scatter_markers(qtbot, canvas_pz, marker_type):
+def test_scatter_markers(qtbot, canvas_pz):
+    c = canvas_pz
+
     n = 100
     pos = .2 * np.random.randn(n, 2)
-    _test_visual(qtbot, canvas_pz,
-                 ScatterVisual(marker_type=marker_type),
-                 pos=pos)
+
+    v = ScatterVisual(marker_type='vbar')
+    v.attach(c)
+    v.set_data(pos=pos)
+
+    c.show()
+    qtbot.waitForWindowShown(c.native)
+
+    # qtbot.stop()
 
 
 def test_scatter_custom(qtbot, canvas_pz):
