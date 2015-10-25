@@ -285,7 +285,7 @@ class TransformChain(object):
             arr = t.apply(arr)
         return arr
 
-    def insert_glsl(self, vertex, fragment):
+    def insert_glsl(self, vertex, fragment, pre_transforms=''):
         """Generate the GLSL code of the transform chain."""
 
         # Find the place where to insert the GLSL snippet.
@@ -311,7 +311,10 @@ class TransformChain(object):
         temp_var = 'temp_pos_tr'
         # Name for the (eventual) varying.
         fvar = 'v_{}'.format(temp_var)
-        vs_insert = "vec2 {} = {};\n".format(temp_var, var)
+        vs_insert = ''
+        # Insert the pre-transforms.
+        vs_insert += pre_transforms + '\n'
+        vs_insert += "vec2 {} = {};\n".format(temp_var, var)
         for t in self.gpu_transforms:
             if isinstance(t, Clip):
                 # Set the varying value in the vertex shader.
