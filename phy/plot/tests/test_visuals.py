@@ -10,7 +10,8 @@
 import numpy as np
 
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
-                       BoxVisual, AxesVisual,)
+                       BoxVisual, AxesVisual,
+                       )
 
 
 #------------------------------------------------------------------------------
@@ -74,34 +75,34 @@ def test_scatter_custom(qtbot, canvas_pz):
 #------------------------------------------------------------------------------
 
 def test_plot_empty(qtbot, canvas):
-    data = np.zeros((1, 0))
+    y = np.zeros((1, 0))
     _test_visual(qtbot, canvas, PlotVisual(),
-                 data=data)
+                 y=y)
 
 
 def test_plot_0(qtbot, canvas_pz):
-    data = np.zeros((1, 10))
+    y = np.zeros((1, 10))
     _test_visual(qtbot, canvas_pz, PlotVisual(),
-                 data=data)
+                 y=y)
 
 
 def test_plot_1(qtbot, canvas_pz):
-    data = .2 * np.random.randn(1, 10)
+    y = .2 * np.random.randn(1, 10)
     _test_visual(qtbot, canvas_pz, PlotVisual(),
-                 data=data)
+                 y=y)
 
 
 def test_plot_2(qtbot, canvas_pz):
 
     n_signals = 50
-    data = 20 * np.random.randn(n_signals, 10)
+    y = 20 * np.random.randn(n_signals, 10)
 
     # Signal colors.
     c = np.random.uniform(.5, 1, size=(n_signals, 4))
     c[:, 3] = .5
 
     _test_visual(qtbot, canvas_pz, PlotVisual(),
-                 data=data, data_bounds=[-50, 50],
+                 y=y, data_bounds=[-50, 50],
                  signal_colors=c)
 
 
