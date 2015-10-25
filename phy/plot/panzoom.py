@@ -54,6 +54,8 @@ class PanZoom(BaseInteract):
                  zmin=1e-5, zmax=1e5,
                  xmin=None, xmax=None,
                  ymin=None, ymax=None,
+                 pan_var_name='u_pan',
+                 zoom_var_name='u_zoom',
                  ):
         """
         Initialize the transform.
@@ -79,6 +81,9 @@ class PanZoom(BaseInteract):
         """
         super(PanZoom, self).__init__()
 
+        self.pan_var_name = pan_var_name
+        self.zoom_var_name = zoom_var_name
+
         self._aspect = aspect
 
         self._zmin = zmin
@@ -98,16 +103,17 @@ class PanZoom(BaseInteract):
         self._canvas_aspect = np.ones(2)
 
     def get_shader_declarations(self):
-        return 'uniform vec2 u_pan;\nuniform vec2 u_zoom;\n', ''
+        return ('uniform vec2 {};\n'.format(self.pan_var_name) +
+                'uniform vec2 {};\n'.format(self.zoom_var_name)), ''
 
     def get_transforms(self):
-        return [Translate(translate='u_pan'),
-                Scale(scale='u_zoom')]
+        return [Translate(translate=self.pan_var_name),
+                Scale(scale=self.zoom_var_name)]
 
     def update_program(self, program):
         zoom = self._zoom_aspect()
-        program['u_pan'] = self._pan
-        program['u_zoom'] = zoom
+        program[self.pan_var_name] = self._pan
+        program[self.zoom_var_name] = zoom
 
     # Various properties
     # -------------------------------------------------------------------------
