@@ -57,7 +57,7 @@ def _create_visual(qtbot, canvas, interact, box_index):
 
     # Attach the interact *and* PanZoom. The order matters!
     interact.attach(c)
-    PanZoom(constrain_bounds=NDC).attach(c)
+    PanZoom(aspect=None, constrain_bounds=NDC).attach(c)
 
     visual = MyTestVisual()
     visual.attach(c)
@@ -84,20 +84,20 @@ def test_grid_1(qtbot, canvas):
     grid = Grid(2, 3)
     _create_visual(qtbot, canvas, grid, box_index)
 
-    # Zoom with the keyboard.
+    # No effect without modifiers.
     c.events.key_press(key=keys.Key('+'))
+    assert grid.zoom == 1.
+
+    # Zoom with the keyboard.
+    c.events.key_press(key=keys.Key('+'), modifiers=(keys.CONTROL,))
     assert grid.zoom > 1
 
     # Unzoom with the keyboard.
-    c.events.key_press(key=keys.Key('-'))
+    c.events.key_press(key=keys.Key('-'), modifiers=(keys.CONTROL,))
     assert grid.zoom == 1.
 
     # Set the zoom explicitly.
     grid.zoom = 2
-    assert grid.zoom == 2.
-
-    # No effect with modifiers.
-    c.events.key_press(key=keys.Key('r'), modifiers=(keys.CONTROL,))
     assert grid.zoom == 2.
 
     # Press 'R'.

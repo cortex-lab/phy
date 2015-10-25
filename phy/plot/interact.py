@@ -86,12 +86,10 @@ class Grid(BaseInteract):
     def on_key_press(self, event):
         """Pan and zoom with the keyboard."""
         super(Grid, self).on_key_press(event)
-        if event.modifiers:
-            return
         key = event.key
 
         # Zoom.
-        if key in ('-', '+'):
+        if key in ('-', '+') and event.modifiers == ('Control',):
             k = .05 if key == '+' else -.05
             self.zoom *= math.exp(1.5 * k)
             self.update()
