@@ -11,9 +11,8 @@ from itertools import product
 
 import numpy as np
 from vispy.util import keys
-from pytest import yield_fixture
 
-from ..base import BaseVisual, BaseCanvas
+from ..base import BaseVisual
 from ..interact import Grid, Boxed
 
 
@@ -51,28 +50,10 @@ class MyTestVisual(BaseVisual):
         self.program['a_position'] = position.astype(np.float32)
 
 
-@yield_fixture
-def canvas_grid(qapp):
-    c = BaseCanvas(keys='interactive', interact=Grid(shape=(2, 3)))
-    yield c
-    c.close()
-
-
-@yield_fixture
-def canvas_boxed(qapp):
-    n = 6
-    b = np.zeros((n, 4))
-
-    b[:, 0] = b[:, 1] = np.linspace(-1., 1. - 1. / 3., n)
-    b[:, 2] = b[:, 3] = np.linspace(-1. + 1. / 3., 1., n)
-
-    c = BaseCanvas(keys='interactive', interact=Boxed(box_bounds=b))
-    yield c
-    c.close()
-
-
-def get_interact(qtbot, canvas, box_index):
+def _create_visual(qtbot, canvas, interact, box_index):
     c = canvas
+
+    interact.attach(c)
 
     visual = MyTestVisual()
     visual.attach(c)
@@ -83,21 +64,21 @@ def get_interact(qtbot, canvas, box_index):
     c.show()
     qtbot.waitForWindowShown(c.native)
 
-    return c.interact
-
 
 #------------------------------------------------------------------------------
 # Test grid
 #------------------------------------------------------------------------------
 
-def test_grid_1(qtbot, canvas_grid):
-    c = canvas_grid
+def test_grid_1(qtbot, canvas):
+
+    c = canvas
     n = 1000
 
     box_index = [[i, j] for i, j in product(range(2), range(3))]
     box_index = np.repeat(box_index, n, axis=0)
 
-    grid = get_interact(qtbot, canvas_grid, box_index)
+    grid = Grid(shape=(2, 3))
+    _create_visual(qtbot, canvas, grid, box_index)
 
     # Zoom with the keyboard.
     c.events.key_press(key=keys.Key('+'))
@@ -122,12 +103,18 @@ def test_grid_1(qtbot, canvas_grid):
     qtbot.stop()
 
 
-def test_boxed_1(qtbot, canvas_boxed):
-    c = canvas_boxed
+def test_boxed_1(qtbot, canvas):
+
+    n = 6
+    b = np.zeros((n, 4))
+
+    b[:, 0] = b[:, 1] = np.linspace(-1., 1. - 1. / 3., n)
+    b[:, 2] = b[:, 3] = np.linspace(-1. + 1. / 3., 1., n)
 
     n = 1000
     box_index = np.repeat(np.arange(6), n, axis=0)
 
-    boxed = get_interact(qtbot, canvas_boxed, box_index)
+    boxed = Boxed(box_bounds=b)
+    _create_visual(qtbot, canvas, boxed, box_index)
 
     qtbot.stop()
