@@ -24,21 +24,32 @@ from .utils import _get_texture
 class Grid(BaseInteract):
     """Grid interact.
 
-    NOTE: to be used in a grid, a visual must define `a_box_index`.
+    NOTE: to be used in a grid, a visual must define `a_box_index`
+    (by default) or another GLSL variable specified in `box_var`.
+
+    Parameters
+    ----------
+
+    n_rows : int
+        Number of rows in the grid.
+    n_cols : int
+        Number of cols in the grid.
+    box_var : str
+        Name of the GLSL variable with the box index.
 
     """
 
-    def __init__(self, shape, box_var=None):
+    def __init__(self, n_rows, n_cols, box_var=None):
         super(Grid, self).__init__()
         self._zoom = 1.
 
         # Name of the variable with the box index.
         self.box_var = box_var or 'a_box_index'
 
-        self.shape = shape
-        assert len(shape) == 2
-        assert shape[0] >= 1
-        assert shape[1] >= 1
+        self.shape = (n_rows, n_cols)
+        assert len(self.shape) == 2
+        assert self.shape[0] >= 1
+        assert self.shape[1] >= 1
 
     def get_shader_declarations(self):
         return ('attribute vec2 a_box_index;\n'
@@ -98,7 +109,17 @@ class Grid(BaseInteract):
 class Boxed(BaseInteract):
     """Boxed interact.
 
-    NOTE: to be used in a boxed, a visual must define `a_box_index`.
+    NOTE: to be used in a boxed, a visual must define `a_box_index`
+    (by default) or another GLSL variable specified in `box_var`.
+
+    Parameters
+    ----------
+
+    box_bounds : array-like
+        A (n, 4) array where each row contains the `(xmin, ymin, xmax, ymax)`
+        bounds of every box, in normalized device coordinates.
+    box_var : str
+        Name of the GLSL variable with the box index.
 
     """
     def __init__(self, box_bounds, box_var=None):
@@ -138,16 +159,36 @@ class Boxed(BaseInteract):
         program['n_boxes'] = self.n_boxes
 
 
-class Stacked(BaseInteract):
+class Stacked(Boxed):
     """Stacked interact.
 
-    NOTE: to be used in a stacked, a visual must define `a_box_index`.
+    NOTE: to be used in a stacked, a visual must define `a_box_index`
+    (by default) or another GLSL variable specified in `box_var`.
+
+    Parameters
+    ----------
+
+    n_boxes : int
+        Number of boxes to stack vertically.
+    margin : int (0 by default)
+        The margin between the stacked subplots. Can be negative. Must be
+        between -1 and 1. The unit is relative to each box's size.
+    box_var : str
+        Name of the GLSL variable with the box index.
 
     """
+    def __init__(self, n_boxes, margin=0, box_var=None):
 
-    # # Signal bounds.
-    # b = np.zeros((n_signals, 4))
-    # b[:, 0] = -1
-    # b[:, 1] = np.linspace(-1, 1 - 2. / n_signals, n_signals)
-    # b[:, 2] = 1
-    # b[:, 3] = np.linspace(-1 + 2. / n_signals, 1., n_signals)
+        # The margin must be in [-1, 1]
+        margin = np.clip(margin, -1, 1)
+        # Normalize the margin.
+        margin = 2. * margin / float(n_boxes)
+
+        # Signal bounds.
+        b = np.zeros((n_boxes, 4))
+        b[:, 0] = -1
+        b[:, 1] = np.linspace(-1, 1 - 2. / n_boxes + margin, n_boxes)
+        b[:, 2] = 1
+        b[:, 3] = np.linspace(-1 + 2. / n_boxes - margin, 1., n_boxes)
+
+        super(Stacked, self).__init__(b, box_var=box_var)

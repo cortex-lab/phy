@@ -13,8 +13,9 @@ import numpy as np
 from vispy.util import keys
 
 from ..base import BaseVisual
-from ..interact import Grid, Boxed
+from ..interact import Grid, Boxed, Stacked
 from ..panzoom import PanZoom
+from ..transform import NDC
 
 
 #------------------------------------------------------------------------------
@@ -56,7 +57,7 @@ def _create_visual(qtbot, canvas, interact, box_index):
 
     # Attach the interact *and* PanZoom. The order matters!
     interact.attach(c)
-    PanZoom().attach(c)
+    PanZoom(constrain_bounds=NDC).attach(c)
 
     visual = MyTestVisual()
     visual.attach(c)
@@ -80,7 +81,7 @@ def test_grid_1(qtbot, canvas):
     box_index = [[i, j] for i, j in product(range(2), range(3))]
     box_index = np.repeat(box_index, n, axis=0)
 
-    grid = Grid(shape=(2, 3))
+    grid = Grid(2, 3)
     _create_visual(qtbot, canvas, grid, box_index)
 
     # Zoom with the keyboard.
@@ -119,5 +120,16 @@ def test_boxed_1(qtbot, canvas):
 
     boxed = Boxed(box_bounds=b)
     _create_visual(qtbot, canvas, boxed, box_index)
+
+    # qtbot.stop()
+
+
+def test_stacked_1(qtbot, canvas):
+
+    n = 1000
+    box_index = np.repeat(np.arange(6), n, axis=0)
+
+    stacked = Stacked(n_boxes=6, margin=-10)
+    _create_visual(qtbot, canvas, stacked, box_index)
 
     # qtbot.stop()
