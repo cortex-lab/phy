@@ -100,7 +100,7 @@ def test_grid_1(qtbot, canvas):
     c.events.key_press(key=keys.Key('r'))
     assert grid.zoom == 1.
 
-    qtbot.stop()
+    # qtbot.stop()
 
 
 def test_boxed_1(qtbot, canvas):
@@ -117,4 +117,4 @@ def test_boxed_1(qtbot, canvas):
     boxed = Boxed(box_bounds=b)
     _create_visual(qtbot, canvas, boxed, box_index)
 
-    qtbot.stop()
+    # qtbot.stop()

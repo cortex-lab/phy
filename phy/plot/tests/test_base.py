@@ -78,7 +78,15 @@ def test_base_visual(qtbot, canvas):
     v.update()
 
 
-def test_base_interact(qtbot, canvas):
+def test_base_interact():
+    interact = BaseInteract()
+    assert interact.get_shader_declarations() == ('', '')
+    assert interact.get_pre_transforms() == ''
+    assert interact.get_transforms() == []
+    interact.update_program(None)
+
+
+def test_no_interact(qtbot, canvas):
     """Test a BaseVisual with a CPU transform and no interact."""
     class TestVisual(BaseVisual):
         shader_name = 'simple'

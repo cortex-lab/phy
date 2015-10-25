@@ -67,8 +67,6 @@ def test_panzoom_basic_attrs():
         setattr(pz, name, v * 2)
         assert getattr(pz, name) == v * 2
 
-    assert list(pz.get_visuals()) == []
-
 
 def test_panzoom_basic_pan_zoom():
     pz = PanZoom()
