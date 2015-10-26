@@ -116,6 +116,11 @@ class Boxed(BaseInteract):
     box_bounds : array-like
         A (n, 4) array where each row contains the `(xmin, ymin, xmax, ymax)`
         bounds of every box, in normalized device coordinates.
+
+        NOTE: the box bounds need to be contained within [-1, 1] at all times,
+        otherwise an error will be raised. This is to prevent silent clipping
+        of the values when they are passed to a gloo Texture2D.
+
     box_var : str
         Name of the GLSL variable with the box index.
 

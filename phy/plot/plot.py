@@ -207,8 +207,9 @@ class GridView(BaseView):
 class BoxedView(BaseView):
     def __init__(self, box_bounds):
         self.n_plots = len(box_bounds)
-        pz = PanZoom(aspect=None, constrain_bounds=NDC)
-        interacts = [Boxed(box_bounds), pz]
+        self._boxed = Boxed(box_bounds)
+        self._pz = PanZoom(aspect=None, constrain_bounds=NDC)
+        interacts = [self._boxed, self._pz]
         super(BoxedView, self).__init__(interacts)
 
     def iter_index(self):

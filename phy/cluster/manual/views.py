@@ -69,8 +69,8 @@ class WaveformView(BoxedView):
         in channel_positions.
 
         """
-        # Initialize the view.
 
+        # Initialize the view.
         if channel_positions is None:
             channel_positions = linear_positions(self.n_channels)
         bounds = _get_data_bounds(None, channel_positions)
