@@ -14,8 +14,7 @@ import numpy as np
 from phy.io.array import _index_of
 from phy.electrode.mea import linear_positions
 from phy.plot import BoxedView, _get_linear_x
-from phy.plot.visuals import _get_data_bounds
-from phy.plot.transform import Range
+from phy.plot.utils import _get_boxes
 
 logger = logging.getLogger(__name__)
 
@@ -73,15 +72,7 @@ class WaveformView(BoxedView):
         # Initialize the view.
         if channel_positions is None:
             channel_positions = linear_positions(self.n_channels)
-        bounds = _get_data_bounds(None, channel_positions)
-        channel_positions = Range(from_bounds=bounds).apply(channel_positions)
-        channel_positions *= .75
-
-        self.box_size = (.1, .1)
-        bs = np.array([self.box_size])
-        box_bounds = np.c_[channel_positions - bs / 2.,
-                           channel_positions + bs / 2.,
-                           ]
+        box_bounds = _get_boxes(channel_positions)
         super(WaveformView, self).__init__(box_bounds)
 
         # Waveforms.

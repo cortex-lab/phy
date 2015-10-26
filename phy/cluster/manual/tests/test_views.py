@@ -35,7 +35,7 @@ def _show(qtbot, view, stop=False):
 def test_waveform_view(qtbot):
     n_spikes = 20
     n_samples = 30
-    n_channels = 10
+    n_channels = 40
     n_clusters = 3
 
     waveforms = artificial_waveforms(n_spikes, n_samples, n_channels)
