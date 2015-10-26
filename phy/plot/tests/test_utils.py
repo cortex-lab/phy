@@ -11,14 +11,16 @@ import os
 import os.path as op
 
 import numpy as np
+from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
 from vispy import config
 
-from phy.electrode.mea import linear_positions
+from phy.electrode.mea import linear_positions, staggered_positions
 from ..utils import (_load_shader,
                      _tesselate_histogram,
                      _enable_depth_mask,
                      _boxes_overlap,
+                     _binary_search,
                      _get_boxes,
                      )
 
@@ -74,13 +76,29 @@ def test_boxes_overlap():
     assert _boxes_overlap(x0, y0, x1, y1)
 
 
+def test_binary_search():
+    def f(x):
+        return x < .4
+    ac(_binary_search(f, 0, 1), .4)
+    ac(_binary_search(f, 0, .3), .3)
+    ac(_binary_search(f, .5, 1), .5)
+
+
 def test_get_boxes():
-    positions = [[-1, -1], [1., 1.]]
-    x0, y0, x1, y1 = _get_boxes(positions)
-    assert np.all(x1 - x0 >= .4)
-    assert np.all(y1 - y0 >= .4)
-    assert not _boxes_overlap(x0, y0, x1, y1)
+    positions = [[-1, 0], [1, 0]]
+    boxes = _get_boxes(positions)
+    ac(boxes, [[-1, -.25, 0, .25],
+               [0, -.25, 1, .25]], atol=1e-4)
 
     positions = linear_positions(4)
-    x0, y0, x1, y1 = _get_boxes(positions)
-    assert not _boxes_overlap(x0, y0, x1, y1)
+    boxes = _get_boxes(positions)
+    ac(boxes, [[-0.5, -1.0, +0.5, -0.5],
+               [-0.5, -0.5, +0.5, +0.0],
+               [-0.5, +0.0, +0.5, +0.5],
+               [-0.5, +0.5, +0.5, +1.0],
+               ], atol=1e-4)
+
+    positions = staggered_positions(8)
+    boxes = _get_boxes(positions)
+    ae(boxes[:, 1], np.arange(.75, -1.1, -.25))
+    ae(boxes[:, 3], np.arange(1, -.76, -.25))
