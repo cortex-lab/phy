@@ -80,6 +80,7 @@ class WaveformView(BoxedView):
         self.n_spikes, self.n_samples, self.n_channels = waveforms.shape
         self.waveforms = waveforms
 
+        # TODO: refactor with _get_array
         # Masks.
         if masks is None:
             masks = np.ones((self.n_spikes, self.n_channels), dtype=np.float32)
@@ -124,6 +125,8 @@ class WaveformView(BoxedView):
         for ch in range(self.n_channels):
             self[ch].plot(x=t, y=w[:, :, ch], color=color)
 
+        # TODO: build only once, then just set data (don't recreate visuals)
+        # TODO: more interactions in boxed interact
         self.build()
         self.update()
 
@@ -142,3 +145,32 @@ class WaveformView(BoxedView):
         # TODO: make sure the GUI emits these events
         gui.connect(self.on_select)
         gui.connect(self.on_cluster)
+
+
+class TraceView(BoxedView):
+    def __init__(self,
+                 traces=None,
+                 spike_times=None,
+                 spike_clusters=None,):
+        pass
+
+
+class FeatureView(BoxedView):
+    def __init__(self,
+                 features=None,
+                 dimensions=None,
+                 extra_features=None,
+                 ):
+        pass
+
+
+class CorrelogramView(BoxedView):
+    def __init__(self,
+                 spike_samples=None,
+                 spike_times=None,
+                 bin_size=None,
+                 window_size=None,
+                 excerpt_size=None,
+                 n_excerpts=None,
+                 ):
+        pass
