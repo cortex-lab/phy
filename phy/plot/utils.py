@@ -105,9 +105,25 @@ def _boxes_overlap(x0, y0, x1, y1):
     return np.any(overlap_matrix.ravel())
 
 
-def _rescale_positions(pos, size):
-    """Rescale positions so that the boxes fit in NDC."""
-    a, b = size
+def _binary_search(f, xmin, xmax, eps=1e-9):
+    """Return the largest x such f(x) is True."""
+    middle = (xmax + xmin) / 2.
+    while xmax - xmin > eps:
+        assert xmin < xmax
+        middle = (xmax + xmin) / 2.
+        if f(xmax):
+            return xmax
+        if not f(xmin):
+            return xmin
+        if f(middle):
+            xmin = middle
+        else:
+            xmax = middle
+    return middle
+
+
+def _get_boxes(pos, margin=0):
+    """Generate non-overlapping boxes in NDC from a set of positions."""
 
     # Get x, y.
     pos = np.asarray(pos, dtype=np.float32)
@@ -115,57 +131,40 @@ def _rescale_positions(pos, size):
     x = x[:, np.newaxis]
     y = y[:, np.newaxis]
 
+    # Deal with degenerate x case.
     xmin, xmax = x.min(), x.max()
-    ymin, ymax = y.min(), y.max()
+    if xmin == xmax:
+        wmax = 1.
+    else:
+        wmax = xmax - xmin
 
-    # Renormalize into [-1, 1].
-    pos = Range(from_bounds=(xmin, ymin, xmax, ymax),
-                to_bounds=(-1, -1, 1, 1)).apply(pos)
+    ar = .5
 
-    # Rescale the positions so that everything fits in the box.
-    alpha = 1.
-    if xmin != 0:
-        alpha = min(alpha, (-1 + a) / xmin)
-    if xmax != 0:
-        alpha = min(alpha, (+1 - a) / xmax)
+    def f1(w):
+        """Return true if the configuration with the current box size
+        is non-overlapping."""
+        h = w * ar  # fixed aspect ratio
+        return not _boxes_overlap(x - w, y - h, x + w, y + h)
 
-    beta = 1.
-    if ymin != 0:
-        beta = min(beta, (-1 + b) / ymin)
-    if ymax != 0:
-        beta = min(beta, (+1 - b) / ymax)
+    # Find the largest box size leading to non-overlapping boxes.
+    w = _binary_search(f1, 0, wmax)
+    w = w * (1 - margin)  # margin
+    h = w * ar  # aspect ratio
 
-    # Get xy01.
-    x0, y0 = alpha * x - a, beta * y - b
-    x1, y1 = alpha * x + a, beta * y + b
+    x0, y0 = x - w, y - h
+    x1, y1 = x + w, y + h
 
-    return x0, y0, x1, y1
+    # Renormalize the whole thing by keeping the aspect ratio.
+    x0min, y0min, x1max, y1max = x0.min(), y0.min(), x1.max(), y1.max()
+    dx = x1max - x0min
+    dy = y1max - y0min
+    if dx > dy:
+        b = (x0min, (y1max + y0min) / 2. - dx / 2.,
+             x1max, (y1max + y0min) / 2. + dx / 2.)
+    else:
+        b = ((x1max + x0min) / 2. - dy / 2., y0min,
+             (x1max + x0min) / 2. + dy / 2., y1max)
 
-
-def _get_boxes(pos):
-    """Generate non-overlapping boxes in NDC from a set of positions."""
-
-    # Find a box_size such that the boxes are non-overlapping.
-    def f(size):
-        a, b = size
-        x0, y0, x1, y1 = _rescale_positions(pos, size)
-
-        if _boxes_overlap(x0, y0, x1, y1):
-            return 0.
-
-        return -(2 * a + b)
-
-    cons = [{'type': 'ineq', 'fun': lambda s: s[0]},
-            {'type': 'ineq', 'fun': lambda s: s[1]},
-            {'type': 'ineq', 'fun': lambda s: 1 - s[0]},
-            {'type': 'ineq', 'fun': lambda s: 1 - s[1]},
-            ]
-
-    from scipy.optimize import minimize
-    res = minimize(f, (.05, .01),
-                   constraints=cons,
-                   )
-    w, h = res.x
-    assert f((w, h)) < 0
-
-    return _rescale_positions(pos, (w, h))
+    r = Range(from_bounds=b,
+              to_bounds=(-1, -1, 1, 1))
+    return np.c_[r.apply(np.c_[x0, y0]), r.apply(np.c_[x1, y1])]
