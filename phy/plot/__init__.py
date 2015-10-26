@@ -12,6 +12,9 @@ import os.path as op
 
 from vispy import config
 
+from .plot import GridView, BoxedView, StackedView  # noqa
+from.visuals import _get_linear_x
+
 
 #------------------------------------------------------------------------------
 # Add the `glsl/ path` for shader include
