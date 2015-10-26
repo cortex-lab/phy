@@ -54,4 +54,4 @@ def test_waveform_view(qtbot):
 
     v.on_select(cluster_ids, spike_ids)
 
-    _show(qtbot, v, True)
+    _show(qtbot, v)
