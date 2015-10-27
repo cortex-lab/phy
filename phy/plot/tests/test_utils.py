@@ -22,6 +22,7 @@ from ..utils import (_load_shader,
                      _boxes_overlap,
                      _binary_search,
                      _get_boxes,
+                     _get_box_pos_size,
                      )
 
 
@@ -88,7 +89,7 @@ def test_get_boxes():
     positions = [[-1, 0], [1, 0]]
     boxes = _get_boxes(positions)
     ac(boxes, [[-1, -.25, 0, .25],
-               [0, -.25, 1, .25]], atol=1e-4)
+               [+0, -.25, 1, .25]], atol=1e-4)
 
     positions = linear_positions(4)
     boxes = _get_boxes(positions)
@@ -102,3 +103,11 @@ def test_get_boxes():
     boxes = _get_boxes(positions)
     ae(boxes[:, 1], np.arange(.75, -1.1, -.25))
     ae(boxes[:, 3], np.arange(1, -.76, -.25))
+
+
+def test_get_box_pos_size():
+    bounds = [[-1, -.25, 0, .25],
+              [+0, -.25, 1, .25]]
+    pos, size = _get_box_pos_size(bounds)
+    ae(pos, [[-.5, 0], [.5, 0]])
+    assert size == (.5, .25)
