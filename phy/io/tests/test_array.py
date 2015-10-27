@@ -26,6 +26,7 @@ from ..array import (_unique,
                      get_excerpts,
                      _range_from_slice,
                      _pad,
+                     _get_padded,
                      read_array,
                      write_array,
                      )
@@ -112,6 +113,16 @@ def test_pad():
 
     with raises(ValueError):
         _pad(arr, -1)
+
+
+def test_get_padded():
+    arr = np.array([1, 2, 3])[:, np.newaxis]
+
+    with raises(RuntimeError):
+        ae(_get_padded(arr, -2, 5).ravel(), [1, 2, 3, 0, 0])
+    ae(_get_padded(arr, 1, 2).ravel(), [2])
+    ae(_get_padded(arr, 0, 5).ravel(), [1, 2, 3, 0, 0])
+    ae(_get_padded(arr, -2, 3).ravel(), [0, 0, 1, 2, 3])
 
 
 def test_unique():

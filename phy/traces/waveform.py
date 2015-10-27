@@ -12,7 +12,7 @@ import numpy as np
 from scipy.interpolate import interp1d
 
 from ..utils._types import _as_array, Bunch
-from phy.io.array import _pad
+from phy.io.array import _pad, _get_padded
 
 logger = logging.getLogger(__name__)
 
@@ -20,26 +20,6 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 # Waveform extractor from a connected component
 #------------------------------------------------------------------------------
-
-def _get_padded(data, start, end):
-    """Return `data[start:end]` filling in with zeros outside array bounds
-
-    Assumes that either `start<0` or `end>len(data)` but not both.
-
-    """
-    if start < 0 and end > data.shape[0]:
-        raise RuntimeError()
-    if start < 0:
-        start_zeros = np.zeros((-start, data.shape[1]),
-                               dtype=data.dtype)
-        return np.vstack((start_zeros, data[:end]))
-    elif end > data.shape[0]:
-        end_zeros = np.zeros((end - data.shape[0], data.shape[1]),
-                             dtype=data.dtype)
-        return np.vstack((data[start:], end_zeros))
-    else:
-        return data[start:end]
-
 
 class WaveformExtractor(object):
     """Extract waveforms after data filtering and spike detection."""
