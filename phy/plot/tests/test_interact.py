@@ -11,6 +11,7 @@ from itertools import product
 
 import numpy as np
 from numpy.testing import assert_equal as ae
+from numpy.testing import assert_allclose as ac
 from vispy.util import keys
 
 from ..base import BaseVisual
@@ -124,6 +125,38 @@ def test_boxed_1(qtbot, canvas):
 
     ae(boxed.box_bounds, b)
     boxed.box_bounds = b
+
+    # Change box vertical size.
+    bs = boxed.box_size
+    for k in (('+', '-'), ('Up', 'Down')):
+        canvas.events.key_press(key=keys.Key(k[0]), modifiers=(keys.CONTROL,))
+        assert boxed.box_size[1] > bs[1]
+        canvas.events.key_press(key=keys.Key(k[1]), modifiers=(keys.CONTROL,))
+        ac(boxed.box_size[1], bs[1], atol=1e-3)
+
+    # Change box horizontal size.
+    bs = boxed.box_size
+    canvas.events.key_press(key=keys.Key('Left'), modifiers=(keys.CONTROL,))
+    assert boxed.box_size[0] < bs[0]
+    canvas.events.key_press(key=keys.Key('Right'), modifiers=(keys.CONTROL,))
+    ac(boxed.box_size[0], bs[0], atol=1e-3)
+
+    # Change box vertical positions.
+    bp = boxed.box_pos
+    canvas.events.key_press(key=keys.Key('Up'), modifiers=(keys.SHIFT,))
+    assert np.all(np.abs(boxed.box_pos[:, 1]) > np.abs(bp[:, 1]))
+    canvas.events.key_press(key=keys.Key('Down'), modifiers=(keys.SHIFT,))
+    ac(boxed.box_pos, bp, atol=1e-3)
+
+    # Change box horizontal positions.
+    bp = boxed.box_pos
+    canvas.events.key_press(key=keys.Key('Left'), modifiers=(keys.SHIFT,))
+    assert np.all(np.abs(boxed.box_pos[:, 0]) < np.abs(bp[:, 0]))
+    canvas.events.key_press(key=keys.Key('Right'), modifiers=(keys.SHIFT,))
+    ac(boxed.box_pos, bp, atol=1e-3)
+
+    # Release a key.
+    canvas.events.key_release(key=keys.Key('Right'), modifiers=(keys.SHIFT,))
 
     # qtbot.stop()
 
