@@ -43,15 +43,26 @@ def test_waveform_view(qtbot):
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     channel_positions = staggered_positions(n_channels)
 
+    # Create the view.
     v = WaveformView(waveforms=waveforms,
                      masks=masks,
                      spike_clusters=spike_clusters,
                      channel_positions=channel_positions,
                      )
 
-    spike_ids = np.arange(10)
+    # Select some spikes.
+    spike_ids = np.arange(5)
     cluster_ids = np.unique(spike_clusters[spike_ids])
-
     v.on_select(cluster_ids, spike_ids)
 
-    _show(qtbot, v)
+    # Show the view.
+    v.show()
+    qtbot.waitForWindowShown(v.native)
+
+    # Select other spikes.
+    spike_ids = np.arange(2, 10)
+    cluster_ids = np.unique(spike_clusters[spike_ids])
+    v.on_select(cluster_ids, spike_ids)
+
+    # qtbot.stop()
+    v.close()

@@ -111,7 +111,7 @@ class WaveformView(BoxedView):
         t = _get_linear_x(n_spikes, self.n_samples)
 
         # Get the colors.
-        color = colors[spike_clusters_rel[spike_ids]]
+        color = colors[spike_clusters_rel]
         # Alpha channel.
         color = np.c_[color, np.ones((n_spikes, 1))]
 
@@ -128,7 +128,6 @@ class WaveformView(BoxedView):
                           color=color,
                           depth=depth[:, ch])
 
-        # TODO: more interactions in boxed interact
         self.build()
         self.update()
 
