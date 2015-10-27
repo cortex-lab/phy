@@ -68,7 +68,7 @@ class SubView(object):
         spec = dict(x=x, y=y, color=color, size=size, marker=marker)
         return self._set(ScatterVisual, spec)
 
-    def plot(self, x, y, color=None):
+    def plot(self, x, y, color=None, depth=None):
         x = np.atleast_2d(x)
         y = np.atleast_2d(y)
         # Validate x and y.
@@ -77,8 +77,10 @@ class SubView(object):
         n_plots, n_samples = x.shape
         # Get the colors.
         color = _get_array(color, (n_plots, 4), PlotVisual._default_color)
+        # Get the depth.
+        depth = _get_array(depth, (n_plots,), 0)
         # Set the spec.
-        spec = dict(x=x, y=y, color=color)
+        spec = dict(x=x, y=y, color=color, depth=depth)
         return self._set(PlotVisual, spec)
 
     def hist(self, data, color=None):
