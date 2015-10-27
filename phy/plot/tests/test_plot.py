@@ -10,7 +10,7 @@
 import numpy as np
 
 from ..plot import GridView, BoxedView, StackedView
-from ..visuals import _get_linear_x
+from ..utils import _get_linear_x
 
 
 #------------------------------------------------------------------------------
