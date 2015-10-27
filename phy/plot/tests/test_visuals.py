@@ -101,8 +101,12 @@ def test_plot_2(qtbot, canvas_pz):
     c = np.random.uniform(.5, 1, size=(n_signals, 4))
     c[:, 3] = .5
 
+    # Depth.
+    depth = np.linspace(0., -1., n_signals)
+
     _test_visual(qtbot, canvas_pz, PlotVisual(),
-                 y=y, data_bounds=[-50, 50],
+                 y=y, depth=depth,
+                 data_bounds=[-50, 50],
                  plot_colors=c)
 
 

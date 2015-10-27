@@ -223,6 +223,10 @@ class PlotVisual(BaseVisual):
 
         # Set the transformed position.
         pos_tr = self.apply_cpu_transforms(pos)
+
+        # Depth.
+        depth = _get_array(depth, (n_signals,), 0)
+        depth = np.repeat(depth, n_samples)
         self.program['a_position'] = _get_pos_depth(pos_tr, depth)
 
         # Generate the signal index.
