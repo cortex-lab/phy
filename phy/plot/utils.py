@@ -136,14 +136,7 @@ def _binary_search(f, xmin, xmax, eps=1e-9):
     return middle
 
 
-def _get_boxes(pos, margin=0):
-    """Generate non-overlapping boxes in NDC from a set of positions."""
-
-    # Get x, y.
-    pos = np.asarray(pos, dtype=np.float32)
-    x, y = pos.T
-    x = x[:, np.newaxis]
-    y = y[:, np.newaxis]
+def _get_box_size(x, y, ar=.5, margin=0):
 
     # Deal with degenerate x case.
     xmin, xmax = x.min(), x.max()
@@ -151,8 +144,6 @@ def _get_boxes(pos, margin=0):
         wmax = 1.
     else:
         wmax = xmax - xmin
-
-    ar = .5
 
     def f1(w):
         """Return true if the configuration with the current box size
@@ -164,6 +155,20 @@ def _get_boxes(pos, margin=0):
     w = _binary_search(f1, 0, wmax)
     w = w * (1 - margin)  # margin
     h = w * ar  # aspect ratio
+
+    return w, h
+
+
+def _get_boxes(pos, size=None, margin=0):
+    """Generate non-overlapping boxes in NDC from a set of positions."""
+
+    # Get x, y.
+    pos = np.asarray(pos, dtype=np.float32)
+    x, y = pos.T
+    x = x[:, np.newaxis]
+    y = y[:, np.newaxis]
+
+    w, h = size if size is not None else _get_box_size(x, y)
 
     x0, y0 = x - w, y - h
     x1, y1 = x + w, y + h
@@ -182,3 +187,16 @@ def _get_boxes(pos, margin=0):
     r = Range(from_bounds=b,
               to_bounds=(-1, -1, 1, 1))
     return np.c_[r.apply(np.c_[x0, y0]), r.apply(np.c_[x1, y1])]
+
+
+def _get_box_pos_size(box_bounds):
+    box_bounds = np.asarray(box_bounds)
+    x0, y0, x1, y1 = box_bounds.T
+    w = (x1 - x0) * .5
+    h = (y1 - y0) * .5
+    # All boxes must have the same size.
+    if not np.all(w == w[0]) or not np.all(h == h[0]):
+        raise ValueError("All boxes don't have the same size.")
+    x = (x0 + x1) * .5
+    y = (y0 + y1) * .5
+    return np.c_[x, y], (w[0], h[0])
