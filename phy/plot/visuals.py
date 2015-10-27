@@ -12,82 +12,23 @@ from vispy.gloo import Texture2D
 
 from .base import BaseVisual
 from .transform import Range, GPU, NDC
-from .utils import (_enable_depth_mask, _tesselate_histogram,
-                    _get_texture, _get_array,
+from .utils import (_enable_depth_mask,
+                    _tesselate_histogram,
+                    _get_texture,
+                    _get_array,
+                    _get_data_bounds,
+                    _get_pos_depth,
+                    _check_pos_2D,
+                    _get_index,
+                    _get_linear_x,
+                    _get_hist_max,
+                    _get_color,
                     )
 
 
 #------------------------------------------------------------------------------
 # Utils
 #------------------------------------------------------------------------------
-
-def _check_data_bounds(data_bounds):
-    assert len(data_bounds) == 4
-    assert data_bounds[0] < data_bounds[2]
-    assert data_bounds[1] < data_bounds[3]
-
-
-def _get_data_bounds(data_bounds, pos):
-    """"Prepare data bounds, possibly using min/max of the data."""
-    if not len(pos):
-        return data_bounds or NDC
-    if data_bounds is None:
-        m, M = pos.min(axis=0), pos.max(axis=0)
-        data_bounds = [m[0], m[1], M[0], M[1]]
-    data_bounds = list(data_bounds)
-    if data_bounds[0] == data_bounds[2]:  # pragma: no cover
-        data_bounds[0] -= 1
-        data_bounds[2] += 1
-    if data_bounds[1] == data_bounds[3]:
-        data_bounds[1] -= 1
-        data_bounds[3] += 1
-    _check_data_bounds(data_bounds)
-    return data_bounds
-
-
-def _check_pos_2D(pos):
-    """Check position data before GPU uploading."""
-    assert pos is not None
-    pos = np.asarray(pos, dtype=np.float32)
-    assert pos.ndim == 2
-    return pos
-
-
-def _get_pos_depth(pos_tr, depth):
-    """Prepare a (N, 3) position-depth array for GPU uploading."""
-    n = pos_tr.shape[0]
-    pos_tr = _get_array(pos_tr, (n, 2))
-    depth = _get_array(depth, (n, 1), 0)
-    return np.c_[pos_tr, depth]
-
-
-def _get_hist_max(hist):
-    hist_max = hist.max() if hist.size else 1.
-    hist_max = float(hist_max)
-    hist_max = hist_max if hist_max > 0 else 1.
-    assert hist_max > 0
-    return hist_max
-
-
-def _get_index(n_items, item_size, n):
-    """Prepare an index attribute for GPU uploading."""
-    index = np.arange(n_items)
-    index = np.repeat(index, item_size)
-    index = index.astype(np.float32)
-    assert index.shape == (n,)
-    return index
-
-
-def _get_color(color, default):
-    if color is None:
-        color = default
-    assert len(color) == 4
-    return color
-
-
-def _get_linear_x(n_signals, n_samples):
-    return np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
-
 
 DEFAULT_COLOR = (0.03, 0.57, 0.98, .75)
 
