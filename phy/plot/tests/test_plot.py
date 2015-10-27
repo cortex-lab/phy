@@ -112,4 +112,16 @@ def test_boxed_complete(qtbot):
     view[2].hist(np.random.rand(5, 10),
                  color=np.random.uniform(.4, .9, size=(5, 4)))
 
-    _show(qtbot, view)
+    # Build and show.
+    view.build()
+    view.show()
+
+    # Change a subplot.
+    view[2].hist(np.random.rand(5, 10),
+                 color=np.random.uniform(.4, .9, size=(5, 4)))
+
+    # Rebuild and show.
+    view.build()
+    qtbot.waitForWindowShown(view.native)
+
+    view.close()
