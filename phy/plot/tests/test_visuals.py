@@ -106,7 +106,7 @@ def test_plot_2(qtbot, canvas_pz):
 
     _test_visual(qtbot, canvas_pz, PlotVisual(),
                  y=y, depth=depth,
-                 data_bounds=[-50, 50],
+                 data_bounds=[-1, -50, 1, 50],
                  plot_colors=c)
 
 

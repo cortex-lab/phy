@@ -34,20 +34,13 @@ def _get_data_bounds(data_bounds, pos):
     if data_bounds is None:
         m, M = pos.min(axis=0), pos.max(axis=0)
         data_bounds = [m[0], m[1], M[0], M[1]]
-    _check_data_bounds(data_bounds)
-    return data_bounds
-
-
-def _get_data_bounds_1D(data_bounds, data):
-    """Generate the complete data_bounds 4-tuple from the specified 2-tuple."""
-    if data_bounds is None:
-        data_bounds = [data.min(), data.max()] if data.size else [-1, 1]
-    assert len(data_bounds) == 2
-    # Ensure that the data bounds are not degenerate.
-    if data_bounds[0] == data_bounds[1]:
-        data_bounds = [data_bounds[0] - 1, data_bounds[0] + 1]
-    ymin, ymax = data_bounds
-    data_bounds = [-1, ymin, 1, ymax]
+    data_bounds = list(data_bounds)
+    if data_bounds[0] == data_bounds[2]:  # pragma: no cover
+        data_bounds[0] -= 1
+        data_bounds[2] += 1
+    if data_bounds[1] == data_bounds[3]:
+        data_bounds[1] -= 1
+        data_bounds[3] += 1
     _check_data_bounds(data_bounds)
     return data_bounds
 
@@ -218,8 +211,7 @@ class PlotVisual(BaseVisual):
         pos[:, 1] = y.ravel()
         pos = _check_pos_2D(pos)
 
-        # Generate the complete data_bounds 4-tuple from the specified 2-tuple.
-        self.data_bounds = _get_data_bounds_1D(data_bounds, y)
+        self.data_bounds = _get_data_bounds(data_bounds, pos)
 
         # Set the transformed position.
         pos_tr = self.apply_cpu_transforms(pos)
