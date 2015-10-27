@@ -13,6 +13,7 @@ import os.path as op
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
+from pytest import raises
 from vispy import config
 
 from phy.electrode.mea import linear_positions, staggered_positions
@@ -111,3 +112,8 @@ def test_get_box_pos_size():
     pos, size = _get_box_pos_size(bounds)
     ae(pos, [[-.5, 0], [.5, 0]])
     assert size == (.5, .25)
+
+    with raises(ValueError):
+        bounds = [[-1, -.25, 0, .25],
+                  [+0, -.25, 1, .5]]
+        _get_box_pos_size(bounds)

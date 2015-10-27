@@ -195,7 +195,7 @@ def _get_box_pos_size(box_bounds):
     w = (x1 - x0) * .5
     h = (y1 - y0) * .5
     # All boxes must have the same size.
-    if not np.all(w == w[0]) or not np.all(h == h[0]):
+    if not np.allclose(w, w[0]) or not np.allclose(h, h[0]):
         raise ValueError("All boxes don't have the same size.")
     x = (x0 + x1) * .5
     y = (y0 + y1) * .5

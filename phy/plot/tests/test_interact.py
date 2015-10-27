@@ -10,6 +10,7 @@
 from itertools import product
 
 import numpy as np
+from numpy.testing import assert_equal as ae
 from vispy.util import keys
 
 from ..base import BaseVisual
@@ -120,6 +121,25 @@ def test_boxed_1(qtbot, canvas):
 
     boxed = Boxed(box_bounds=b)
     _create_visual(qtbot, canvas, boxed, box_index)
+
+    ae(boxed.box_bounds, b)
+    boxed.box_bounds = b
+
+    # qtbot.stop()
+
+
+def test_boxed_2(qtbot, canvas):
+    """Test setting the box position and size dynamically."""
+
+    n = 1000
+    pos = np.c_[np.zeros(6), np.linspace(-1., 1., 6)]
+    box_index = np.repeat(np.arange(6), n, axis=0)
+
+    boxed = Boxed(box_pos=pos)
+    _create_visual(qtbot, canvas, boxed, box_index)
+
+    boxed.box_pos *= .25
+    boxed.box_size = [1, .1]
 
     # qtbot.stop()
 
