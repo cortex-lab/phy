@@ -98,6 +98,20 @@ def _get_texture(arr, default, n_items, from_bounds):
     return arr
 
 
+def _get_array(val, shape, default=None):
+    """Ensure an object is an array with the specified shape."""
+    assert val is not None or default is not None
+    out = np.zeros(shape, dtype=np.float32)
+    # This solves `ValueError: could not broadcast input array from shape (n)
+    # into shape (n, 1)`.
+    if val is not None and isinstance(val, np.ndarray):
+        if val.size == out.size:
+            val = val.reshape(out.shape)
+    out[...] = val if val is not None else default
+    assert out.shape == shape
+    return out
+
+
 def _boxes_overlap(x0, y0, x1, y1):
     n = len(x0)
     overlap_matrix = ((x0 < x1.T) & (x1 > x0.T) & (y0 < y1.T) & (y1 > y0.T))

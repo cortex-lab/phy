@@ -12,7 +12,9 @@ from vispy.gloo import Texture2D
 
 from .base import BaseVisual
 from .transform import Range, GPU, NDC
-from .utils import _enable_depth_mask, _tesselate_histogram, _get_texture
+from .utils import (_enable_depth_mask, _tesselate_histogram,
+                    _get_texture, _get_array,
+                    )
 
 
 #------------------------------------------------------------------------------
@@ -48,20 +50,6 @@ def _get_data_bounds_1D(data_bounds, data):
     data_bounds = [-1, ymin, 1, ymax]
     _check_data_bounds(data_bounds)
     return data_bounds
-
-
-def _get_array(val, shape, default=None):
-    """Ensure an object is an array with the specified shape."""
-    assert val is not None or default is not None
-    out = np.zeros(shape, dtype=np.float32)
-    # This solves `ValueError: could not broadcast input array from shape (n)
-    # into shape (n, 1)`.
-    if val is not None and isinstance(val, np.ndarray):
-        if val.size == out.size:
-            val = val.reshape(out.shape)
-    out[...] = val if val is not None else default
-    assert out.shape == shape
-    return out
 
 
 def _check_pos_2D(pos):
