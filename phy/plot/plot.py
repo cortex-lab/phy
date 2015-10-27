@@ -135,6 +135,8 @@ def _build_histogram(items):
 
 
 class ViewItem(Bunch):
+    """A visual item that will be rendered in batch with other view items
+    of the same type."""
     def __init__(self, base, visual_class=None, data=None, box_index=None):
         super(ViewItem, self).__init__(visual_class=visual_class,
                                        data=Bunch(data),
@@ -149,6 +151,8 @@ class ViewItem(Bunch):
 
 
 class BaseView(BaseCanvas):
+    """High-level plotting canvas."""
+
     def __init__(self, interacts):
         super(BaseView, self).__init__()
         # Attach the passed interacts to the current canvas.
@@ -177,11 +181,12 @@ class BaseView(BaseCanvas):
         return _Proxy()
 
     def _iter_items(self):
-        """Iterate over all items."""
+        """Iterate over all view items."""
         for item in self._items:
             yield item
 
     def _visuals_to_build(self):
+        """Return the set of visual classes that need to be rebuilt."""
         visual_classes = set()
         for item in self._items:
             if item.to_build:
@@ -189,6 +194,7 @@ class BaseView(BaseCanvas):
         return visual_classes
 
     def _get_visual(self, key):
+        """Create or return a visual from its class or tuple (class, param)."""
         if key not in self._visuals:
             # Create the visual.
             if isinstance(key, tuple):
@@ -207,6 +213,7 @@ class BaseView(BaseCanvas):
     # -------------------------------------------------------------------------
 
     def plot(self, *args, **kwargs):
+        """Add a line plot."""
         box_index = kwargs.pop('box_index', None)
         data = _prepare_plot(*args, **kwargs)
         item = ViewItem(self, visual_class=PlotVisual,
@@ -215,6 +222,7 @@ class BaseView(BaseCanvas):
         return item
 
     def scatter(self, *args, **kwargs):
+        """Add a scatter plot."""
         box_index = kwargs.pop('box_index', None)
         data = _prepare_scatter(*args, **kwargs)
         item = ViewItem(self, visual_class=ScatterVisual,
@@ -223,6 +231,7 @@ class BaseView(BaseCanvas):
         return item
 
     def hist(self, *args, **kwargs):
+        """Add a histogram plot."""
         box_index = kwargs.pop('box_index', None)
         data = _prepare_hist(*args, **kwargs)
         item = ViewItem(self, visual_class=HistogramVisual,
@@ -243,6 +252,7 @@ class BaseView(BaseCanvas):
                 continue
 
             # Histogram.
+            # TODO: refactor this (DRY).
             if visual_class == HistogramVisual:
                 data, box_index = _build_histogram(items)
                 v = self._get_visual(HistogramVisual)
@@ -280,6 +290,7 @@ class BaseView(BaseCanvas):
 #------------------------------------------------------------------------------
 
 class GridView(BaseView):
+    """A 2D grid with clipping."""
     def __init__(self, n_rows, n_cols):
         self.n_rows, self.n_cols = n_rows, n_cols
         pz = PanZoom(aspect=None, constrain_bounds=NDC)
@@ -288,6 +299,7 @@ class GridView(BaseView):
 
 
 class BoxedView(BaseView):
+    """Subplots at arbitrary positions"""
     def __init__(self, box_bounds):
         self.n_plots = len(box_bounds)
         self._boxed = Boxed(box_bounds)
@@ -297,6 +309,7 @@ class BoxedView(BaseView):
 
 
 class StackedView(BaseView):
+    """Stacked subplots"""
     def __init__(self, n_plots):
         self.n_plots = n_plots
         pz = PanZoom(aspect=None, constrain_bounds=NDC)
