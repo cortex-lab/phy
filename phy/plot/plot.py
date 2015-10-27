@@ -54,7 +54,7 @@ def _prepare_scatter(x, y, color=None, size=None, marker=None):
     return dict(x=x, y=y, color=color, size=size, marker=marker)
 
 
-def _prepare_plot(x, y, color=None, depth=None):
+def _prepare_plot(x, y, color=None, depth=None, data_bounds=None):
     x = np.atleast_2d(x)
     y = np.atleast_2d(y)
     # Validate x and y.
@@ -65,7 +65,7 @@ def _prepare_plot(x, y, color=None, depth=None):
     color = _get_array(color, (n_plots, 4), PlotVisual._default_color)
     # Get the depth.
     depth = _get_array(depth, (n_plots,), 0)
-    return dict(x=x, y=y, color=color, depth=depth)
+    return dict(x=x, y=y, color=color, depth=depth, data_bounds=data_bounds)
 
 
 def _prepare_hist(data, color=None):
@@ -115,7 +115,10 @@ def _build_plot(items):
         ac['plot_colors'] = item.data.color
         ac['box_index'] = _prepare_box_index(item.box_index, n)
 
-    return (dict(x=ac['x'], y=ac['y'], plot_colors=ac['plot_colors']),
+    return (dict(x=ac['x'], y=ac['y'],
+                 plot_colors=ac['plot_colors'],
+                 data_bounds=item.data.data_bounds,
+                 ),
             ac['box_index'])
 
 
