@@ -13,7 +13,7 @@ import numpy as np
 
 from phy.io.array import _index_of
 from phy.electrode.mea import linear_positions
-from phy.plot import BoxedView, _get_linear_x
+from phy.plot import BoxedView, StackedView, GridView, _get_linear_x
 from phy.plot.utils import _get_boxes, _get_array
 
 logger = logging.getLogger(__name__)
@@ -148,15 +148,140 @@ class WaveformView(BoxedView):
         gui.connect(self.on_cluster)
 
 
-class TraceView(BoxedView):
+class TraceView(StackedView):
     def __init__(self,
                  traces=None,
+                 sample_rate=None,
                  spike_times=None,
-                 spike_clusters=None,):
-        pass
+                 spike_clusters=None,
+                 masks=None,
+                 n_samples_per_spike=None,
+                 ):
+
+        # Sample rate.
+        assert sample_rate > 0
+        self.sample_rate = sample_rate
+
+        # Traces.
+        assert traces.ndim == 2
+        self.n_samples, self.n_channels = traces.shape
+        self.traces = traces
+
+        # Number of samples per spike.
+        self.n_samples_per_spike = (n_samples_per_spike or
+                                    int(.002 * sample_rate))
+
+        # Spike times.
+        if spike_times is not None:
+            self.n_spikes = len(spike_times)
+            assert spike_times.shape == (self.n_spikes,)
+            self.spike_times = spike_times
+
+            # Spike clusters.
+            if spike_clusters is None:
+                spike_clusters = np.zeros(self.n_spikes)
+            assert spike_clusters.shape == (self.n_spikes,)
+            self.spike_clusters = spike_clusters
+
+            # Masks.
+            masks = _get_array(masks, (self.n_spikes, self.n_channels), 1)
+            assert masks.shape == (self.n_spikes, self.n_channels)
+            self.masks = masks
+        else:
+            self.spike_times = self.spike_clusters = self.masks = None
+
+        # Initialize the view.
+        super(TraceView, self).__init__(self.n_channels)
+
+        # TODO: choose the interval.
+        self.set_interval((0., .25))
+
+    def _load_traces(self, interval):
+        """Load traces in an interval (in seconds)."""
+
+        start, end = interval
+
+        i, j = int(self.sample_rate * start), int(self.sample_rate * end)
+        traces = self.traces[i:j, :]
+
+        # Detrend the traces.
+        m = np.mean(traces[::10, :], axis=0)
+        traces -= m
+
+        # Create the plots.
+        return traces
+
+    def _load_spikes(self, interval):
+        assert self.spike_times is not None
+        # Keep the spikes in the interval.
+        a, b = self.spike_times.searchsorted(interval)
+        return self.spike_times[a:b], self.spike_clusters[a:b], self.masks[a:b]
+
+    def set_interval(self, interval):
+
+        color = (.5, .5, .5, 1)
+
+        # Load traces.
+        traces = self._load_traces(interval)
+        assert traces.shape[1] == self.n_channels
+
+        # Generate the trace plots.
+        # TODO OPTIM: avoid the loop and generate all channel traces in
+        # one pass with NumPy (but need to set a_box_index manually too).
+        t = _get_linear_x(1, traces.shape[0])
+        for ch in range(self.n_channels):
+            self[ch].plot(t, traces[:, ch], color=color)
+
+        # if self.spike_times is not None:
+        #     spike_times, spike_clusters, masks = self._load_spikes(interval)
+
+        self.build()
+        self.update()
+
+    # # Keep the spikes in the interval.
+    # spikes = self.spike_ids
+    # spike_samples = self.model.spike_samples[spikes]
+    # a, b = spike_samples.searchsorted(interval)
+    # spikes = spikes[a:b]
+    # self.view.visual.n_spikes = len(spikes)
+    # self.view.visual.spike_ids = spikes
 
 
-class FeatureView(BoxedView):
+    # def on_select(self, cluster_ids, spike_ids):
+        # n_clusters = len(cluster_ids)
+        # n_spikes = len(spike_ids)
+        # if n_spikes == 0:
+        #     return
+
+        # # Relative spike clusters.
+        # # NOTE: the order of the clusters in cluster_ids matters.
+        # # It will influence the relative index of the clusters, which
+        # # in return influence the depth.
+        # spike_clusters = self.spike_clusters[spike_ids]
+        # assert np.all(np.in1d(spike_clusters, cluster_ids))
+        # spike_clusters_rel = _index_of(spike_clusters, cluster_ids)
+
+        # # Fetch the waveforms.
+        # w = self.waveforms[spike_ids]
+        # colors = _selected_clusters_colors(n_clusters)
+        # t = _get_linear_x(n_spikes, self.n_samples)
+
+        # # Get the colors.
+        # color = colors[spike_clusters_rel]
+        # # Alpha channel.
+        # color = np.c_[color, np.ones((n_spikes, 1))]
+
+        # # Plot all waveforms.
+        # for ch in range(self.n_channels):
+        #     self[ch].plot(x=t, y=w[:, :, ch],
+        #                   color=color,
+        #                   depth=depth[:, ch])
+
+        # self.build()
+        # self.update()
+
+
+class FeatureView(GridView):
     def __init__(self,
                  features=None,
                  dimensions=None,
@@ -165,7 +290,7 @@ class FeatureView(BoxedView):
         pass
 
 
-class CorrelogramView(BoxedView):
+class CorrelogramView(GridView):
     def __init__(self,
                  spike_samples=None,
                  spike_times=None,
