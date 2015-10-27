@@ -156,6 +156,26 @@ def _pad(arr, n, dir='right'):
         return out
 
 
+def _get_padded(data, start, end):
+    """Return `data[start:end]` filling in with zeros outside array bounds
+
+    Assumes that either `start<0` or `end>len(data)` but not both.
+
+    """
+    if start < 0 and end > data.shape[0]:
+        raise RuntimeError()
+    if start < 0:
+        start_zeros = np.zeros((-start, data.shape[1]),
+                               dtype=data.dtype)
+        return np.vstack((start_zeros, data[:end]))
+    elif end > data.shape[0]:
+        end_zeros = np.zeros((end - data.shape[0], data.shape[1]),
+                             dtype=data.dtype)
+        return np.vstack((data[start:], end_zeros))
+    else:
+        return data[start:end]
+
+
 def _in_polygon(points, polygon):
     """Return the points that are inside a polygon."""
     from matplotlib.path import Path
