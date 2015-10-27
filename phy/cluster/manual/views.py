@@ -114,13 +114,20 @@ class WaveformView(BoxedView):
         color = colors[spike_clusters_rel[spike_ids]]
         # Alpha channel.
         color = np.c_[color, np.ones((n_spikes, 1))]
-        # TODO: depth
+
+        # Depth as a function of the cluster index and masks.
+        m = self.masks[spike_ids, :]
+        depth = -0.1 - (spike_clusters_rel[:, np.newaxis] + m)
+        assert depth.shape == (n_spikes, self.n_channels)
+        depth = depth / float(n_clusters + 10.)
+        depth[m <= 0.25] = 0
 
         # Plot all waveforms.
         for ch in range(self.n_channels):
-            self[ch].plot(x=t, y=w[:, :, ch], color=color)
+            self[ch].plot(x=t, y=w[:, :, ch],
+                          color=color,
+                          depth=depth[:, ch])
 
-        # TODO: build only once, then just set data (don't recreate visuals)
         # TODO: more interactions in boxed interact
         self.build()
         self.update()
