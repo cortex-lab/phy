@@ -116,9 +116,10 @@ class PlotVisual(BaseVisual):
     gl_primitive_type = 'line_strip'
     _default_color = DEFAULT_COLOR
 
-    def __init__(self):
+    def __init__(self, n_samples=None):
         super(PlotVisual, self).__init__()
         self.data_bounds = NDC
+        self.n_samples = n_samples
         _enable_depth_mask()
 
     def get_transforms(self):
@@ -144,6 +145,8 @@ class PlotVisual(BaseVisual):
         assert x.ndim == 2
         assert x.shape == y.shape
         n_signals, n_samples = x.shape
+        if self.n_samples:
+            assert n_samples == self.n_samples
         n = n_signals * n_samples
 
         # Generate the (n, 2) pos array.
