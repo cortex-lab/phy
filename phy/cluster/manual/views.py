@@ -14,7 +14,7 @@ import numpy as np
 from phy.io.array import _index_of
 from phy.electrode.mea import linear_positions
 from phy.plot import BoxedView, _get_linear_x
-from phy.plot.utils import _get_boxes
+from phy.plot.utils import _get_boxes, _get_array
 
 logger = logging.getLogger(__name__)
 
@@ -80,13 +80,8 @@ class WaveformView(BoxedView):
         self.n_spikes, self.n_samples, self.n_channels = waveforms.shape
         self.waveforms = waveforms
 
-        # TODO: refactor with _get_array
         # Masks.
-        if masks is None:
-            masks = np.ones((self.n_spikes, self.n_channels), dtype=np.float32)
-        assert masks.ndim == 2
-        assert masks.shape == (self.n_spikes, self.n_channels)
-        self.masks = masks
+        self.masks = _get_array(masks, (self.n_spikes, self.n_channels), 1)
 
         # Spike clusters.
         assert spike_clusters.shape == (self.n_spikes,)
