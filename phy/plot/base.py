@@ -181,7 +181,7 @@ class BaseInteract(object):
         canvas.connect(self.on_key_press)
 
     def is_attached(self):
-        """Whether the transform is attached to a canvas."""
+        """Whether the interact is attached to a canvas."""
         return self._canvas is not None
 
     def on_resize(self, event):

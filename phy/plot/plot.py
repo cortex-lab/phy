@@ -12,6 +12,7 @@ from collections import defaultdict
 
 import numpy as np
 
+from phy.utils import Bunch, _is_array_like
 from .base import BaseCanvas
 from .interact import Grid, Boxed, Stacked
 from .panzoom import PanZoom
@@ -40,63 +41,111 @@ class Accumulator(object):
 # Base plotting interface
 #------------------------------------------------------------------------------
 
-class SubView(object):
-    def __init__(self, idx):
-        self.spec = {'idx': idx}
+def _prepare_scatter(x, y, color=None, size=None, marker=None):
+    # Validate x and y.
+    assert x.ndim == y.ndim == 1
+    assert x.shape == y.shape
+    n = x.shape[0]
+    # Set the color and size.
+    color = _get_array(color, (n, 4), ScatterVisual._default_color)
+    size = _get_array(size, (n, 1), ScatterVisual._default_marker_size)
+    # Default marker.
+    marker = marker or ScatterVisual._default_marker
+    return dict(x=x, y=y, color=color, size=size, marker=marker)
 
-    @property
-    def visual_class(self):
-        return self.spec.get('visual_class', None)
 
-    def _set(self, visual_class, spec):
-        self.spec['visual_class'] = visual_class
-        self.spec.update(spec)
+def _prepare_plot(x, y, color=None, depth=None):
+    x = np.atleast_2d(x)
+    y = np.atleast_2d(y)
+    # Validate x and y.
+    assert x.ndim == y.ndim == 2
+    assert x.shape == y.shape
+    n_plots, n_samples = x.shape
+    # Get the colors.
+    color = _get_array(color, (n_plots, 4), PlotVisual._default_color)
+    # Get the depth.
+    depth = _get_array(depth, (n_plots,), 0)
+    return dict(x=x, y=y, color=color, depth=depth)
 
-    def __getattr__(self, name):
-        return self.spec[name]
 
-    def scatter(self, x, y, color=None, size=None, marker=None):
-        # Validate x and y.
-        assert x.ndim == y.ndim == 1
-        assert x.shape == y.shape
-        n = x.shape[0]
-        # Set the color and size.
-        color = _get_array(color, (n, 4), ScatterVisual._default_color)
-        size = _get_array(size, (n, 1), ScatterVisual._default_marker_size)
-        # Default marker.
-        marker = marker or ScatterVisual._default_marker
-        # Set the spec.
-        spec = dict(x=x, y=y, color=color, size=size, marker=marker)
-        return self._set(ScatterVisual, spec)
+def _prepare_hist(data, color=None):
+    # Validate data.
+    if data.ndim == 1:
+        data = data[np.newaxis, :]
+    assert data.ndim == 2
+    n_hists, n_samples = data.shape
+    # Get the colors.
+    color = _get_array(color, (n_hists, 4), HistogramVisual._default_color)
+    return dict(data=data, color=color)
 
-    def plot(self, x, y, color=None, depth=None):
-        x = np.atleast_2d(x)
-        y = np.atleast_2d(y)
-        # Validate x and y.
-        assert x.ndim == y.ndim == 2
-        assert x.shape == y.shape
-        n_plots, n_samples = x.shape
-        # Get the colors.
-        color = _get_array(color, (n_plots, 4), PlotVisual._default_color)
-        # Get the depth.
-        depth = _get_array(depth, (n_plots,), 0)
-        # Set the spec.
-        spec = dict(x=x, y=y, color=color, depth=depth)
-        return self._set(PlotVisual, spec)
 
-    def hist(self, data, color=None):
-        # Validate data.
-        if data.ndim == 1:
-            data = data[np.newaxis, :]
-        assert data.ndim == 2
-        n_hists, n_samples = data.shape
-        # Get the colors.
-        color = _get_array(color, (n_hists, 4), HistogramVisual._default_color)
-        spec = dict(data=data, color=color)
-        return self._set(HistogramVisual, spec)
+def _prepare_box_index(box_index, n):
+    if not _is_array_like(box_index):
+        box_index = np.tile(box_index, (n, 1))
+    box_index = np.asarray(box_index, dtype=np.int32)
+    assert box_index.ndim == 2
+    assert box_index.shape[0] == n
+    return box_index
 
-    def __repr__(self):
-        return str(self.spec)  # pragma: no cover
+
+def _build_scatter(items):
+    """Build scatter items and return parameters for `set_data()`."""
+
+    ac = Accumulator()
+    for item in items:
+        # The item data has already been prepared.
+        n = len(item.data.x)
+        ac['pos'] = np.c_[item.data.x, item.data.y]
+        ac['color'] = item.data.color
+        ac['size'] = item.data.size
+        ac['box_index'] = _prepare_box_index(item.box_index, n)
+
+    return (dict(pos=ac['pos'], color=ac['color'], size=ac['size']),
+            ac['box_index'])
+
+
+def _build_plot(items):
+    """Build all plot items and return parameters for `set_data()`."""
+
+    ac = Accumulator()
+    for item in items:
+        n = item.data.x.size
+        ac['x'] = item.data.x
+        ac['y'] = item.data.y
+        ac['plot_colors'] = item.data.color
+        ac['box_index'] = _prepare_box_index(item.box_index, n)
+
+    return (dict(x=ac['x'], y=ac['y'], plot_colors=ac['plot_colors']),
+            ac['box_index'])
+
+
+def _build_histogram(items):
+    """Build all histogram items and return parameters for `set_data()`."""
+
+    ac = Accumulator()
+    for item in items:
+        n = item.data.data.size
+        ac['data'] = item.data.data
+        ac['hist_colors'] = item.data.color
+        # NOTE: the `6 * ` comes from the histogram tesselation.
+        ac['box_index'] = _prepare_box_index(item.box_index, 6 * n)
+
+    return (dict(hist=ac['data'], hist_colors=ac['hist_colors']),
+            ac['box_index'])
+
+
+class ViewItem(Bunch):
+    def __init__(self, base, visual_class=None, data=None, box_index=None):
+        super(ViewItem, self).__init__(visual_class=visual_class,
+                                       data=Bunch(data),
+                                       box_index=box_index,
+                                       to_build=True,
+                                       )
+        self._base = base
+
+    def set_data(self, **kwargs):
+        self.data.update(kwargs)
+        self.to_build = True
 
 
 class BaseView(BaseCanvas):
@@ -105,28 +154,39 @@ class BaseView(BaseCanvas):
         # Attach the passed interacts to the current canvas.
         for interact in interacts:
             interact.attach(self)
-        self.subviews = {}
+        self._items = []  # List of view items instances.
         self._visuals = {}
 
     # To override
     # -------------------------------------------------------------------------
 
-    def iter_index(self):
-        raise NotImplementedError()
-
-    # Internal methods
-    # -------------------------------------------------------------------------
-
-    def iter_subviews(self):
-        for idx in self.iter_index():
-            sv = self.subviews.get(idx, None)
-            if sv:
-                yield sv
-
     def __getitem__(self, idx):
-        sv = SubView(idx)
-        self.subviews[idx] = sv
-        return sv
+        class _Proxy(object):
+            def scatter(s, *args, **kwargs):
+                kwargs['box_index'] = idx
+                return self.scatter(*args, **kwargs)
+
+            def plot(s, *args, **kwargs):
+                kwargs['box_index'] = idx
+                return self.plot(*args, **kwargs)
+
+            def hist(s, *args, **kwargs):
+                kwargs['box_index'] = idx
+                return self.hist(*args, **kwargs)
+
+        return _Proxy()
+
+    def _iter_items(self):
+        """Iterate over all items."""
+        for item in self._items:
+            yield item
+
+    def _visuals_to_build(self):
+        visual_classes = set()
+        for item in self._items:
+            if item.to_build:
+                visual_classes.add(item.visual_class)
+        return visual_classes
 
     def _get_visual(self, key):
         if key not in self._visuals:
@@ -143,67 +203,76 @@ class BaseView(BaseCanvas):
             self._visuals[key] = v
         return self._visuals[key]
 
-    def _build_scatter(self, subviews, marker):
-        """Build all scatter subviews with the same marker type."""
+    # Public methods
+    # -------------------------------------------------------------------------
 
-        ac = Accumulator()
-        for sv in subviews:
-            assert sv.marker == marker
-            n = len(sv.x)
-            ac['pos'] = np.c_[sv.x, sv.y]
-            ac['color'] = sv.color
-            ac['size'] = sv.size
-            ac['box_index'] = np.tile(sv.idx, (n, 1))
+    def plot(self, *args, **kwargs):
+        box_index = kwargs.pop('box_index', None)
+        data = _prepare_plot(*args, **kwargs)
+        item = ViewItem(self, visual_class=PlotVisual,
+                        data=data, box_index=box_index)
+        self._items.append(item)
+        return item
 
-        v = self._get_visual((ScatterVisual, marker))
-        v.set_data(pos=ac['pos'], color=ac['color'], size=ac['size'])
-        v.program['a_box_index'] = ac['box_index']
+    def scatter(self, *args, **kwargs):
+        box_index = kwargs.pop('box_index', None)
+        data = _prepare_scatter(*args, **kwargs)
+        item = ViewItem(self, visual_class=ScatterVisual,
+                        data=data, box_index=box_index)
+        self._items.append(item)
+        return item
 
-    def _build_plot(self, subviews):
-        """Build all plot subviews."""
-
-        ac = Accumulator()
-        for sv in subviews:
-            n = sv.x.size
-            ac['x'] = sv.x
-            ac['y'] = sv.y
-            ac['plot_colors'] = sv.color
-            ac['box_index'] = np.tile(sv.idx, (n, 1))
-
-        v = self._get_visual(PlotVisual)
-        v.set_data(x=ac['x'], y=ac['y'], plot_colors=ac['plot_colors'])
-        v.program['a_box_index'] = ac['box_index']
-
-    def _build_histogram(self, subviews):
-        """Build all histogram subviews."""
-
-        ac = Accumulator()
-        for sv in subviews:
-            n = sv.data.size
-            ac['data'] = sv.data
-            ac['hist_colors'] = sv.color
-            # NOTE: the `6 * ` comes from the histogram tesselation.
-            ac['box_index'] = np.tile(sv.idx, (6 * n, 1))
-
-        v = self._get_visual(HistogramVisual)
-        v.set_data(hist=ac['data'], hist_colors=ac['hist_colors'])
-        v.program['a_box_index'] = ac['box_index']
+    def hist(self, *args, **kwargs):
+        box_index = kwargs.pop('box_index', None)
+        data = _prepare_hist(*args, **kwargs)
+        item = ViewItem(self, visual_class=HistogramVisual,
+                        data=data, box_index=box_index)
+        self._items.append(item)
+        return item
 
     def build(self):
         """Build all visuals."""
-        # TODO: fix a bug where an old subplot is not deleted if it
-        # is changed to another type, and there is no longer any subplot
-        # of the old type. The old visual should be delete or hidden.
-        for visual_class, subviews in groupby(self.iter_subviews(),
-                                              lambda sv: sv.visual_class):
+        visuals_to_build = self._visuals_to_build()
+
+        for visual_class, items in groupby(self._iter_items(),
+                                           lambda item: item.visual_class):
+            items = list(items)
+
+            # Skip visuals that do not need to be built.
+            if visual_class not in visuals_to_build:
+                continue
+
+            # Histogram.
+            if visual_class == HistogramVisual:
+                data, box_index = _build_histogram(items)
+                v = self._get_visual(HistogramVisual)
+                v.set_data(**data)
+                v.program['a_box_index'] = box_index
+                for item in items:
+                    item.to_build = False
+
+            # Scatter.
             if visual_class == ScatterVisual:
-                for marker, subviews_scatter in groupby(subviews,
-                                                        lambda sv: sv.marker):
-                    self._build_scatter(subviews_scatter, marker)
-            elif visual_class == PlotVisual:
-                self._build_plot(subviews)
-            elif visual_class == HistogramVisual:
-                self._build_histogram(subviews)
+                items_grouped = groupby(items, lambda item: item.data.marker)
+                for marker, items_scatter in items_grouped:
+                    items_scatter = list(items_scatter)
+                    data, box_index = _build_scatter(items_scatter)
+                    v = self._get_visual((ScatterVisual, marker))
+                    v.set_data(**data)
+                    v.program['a_box_index'] = box_index
+                    for item in items_scatter:
+                        item.to_build = False
+
+            # Plot.
+            if visual_class == PlotVisual:
+                data, box_index = _build_plot(items)
+                v = self._get_visual(PlotVisual)
+                v.set_data(**data)
+                v.program['a_box_index'] = box_index
+                for item in items:
+                    item.to_build = False
+
+        self.update()
 
 
 #------------------------------------------------------------------------------
@@ -217,11 +286,6 @@ class GridView(BaseView):
         interacts = [Grid(n_rows, n_cols), pz]
         super(GridView, self).__init__(interacts)
 
-    def iter_index(self):
-        for i in range(self.n_rows):
-            for j in range(self.n_cols):
-                yield (i, j)
-
 
 class BoxedView(BaseView):
     def __init__(self, box_bounds):
@@ -231,10 +295,6 @@ class BoxedView(BaseView):
         interacts = [self._boxed, self._pz]
         super(BoxedView, self).__init__(interacts)
 
-    def iter_index(self):
-        for i in range(self.n_plots):
-            yield i
-
 
 class StackedView(BaseView):
     def __init__(self, n_plots):
@@ -242,7 +302,3 @@ class StackedView(BaseView):
         pz = PanZoom(aspect=None, constrain_bounds=NDC)
         interacts = [Stacked(n_plots, margin=.1), pz]
         super(StackedView, self).__init__(interacts)
-
-    def iter_index(self):
-        for i in range(self.n_plots):
-            yield i
