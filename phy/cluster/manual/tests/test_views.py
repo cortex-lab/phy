@@ -11,9 +11,10 @@ import numpy as np
 from phy.io.mock import (artificial_waveforms,
                          artificial_spike_clusters,
                          artificial_masks,
+                         artificial_traces,
                          )
 from phy.electrode.mea import staggered_positions
-from ..views import WaveformView
+from ..views import WaveformView, TraceView
 
 
 #------------------------------------------------------------------------------
@@ -49,7 +50,6 @@ def test_waveform_view(qtbot):
                      spike_clusters=spike_clusters,
                      channel_positions=channel_positions,
                      )
-
     # Select some spikes.
     spike_ids = np.arange(5)
     cluster_ids = np.unique(spike_clusters[spike_ids])
@@ -66,3 +66,15 @@ def test_waveform_view(qtbot):
 
     # qtbot.stop()
     v.close()
+
+
+def test_trace_view_no_spikes(qtbot):
+    n_samples = 5000
+    n_channels = 12
+    sample_rate = 10000.
+
+    traces = artificial_traces(n_samples, n_channels)
+
+    # Create the view.
+    v = TraceView(traces=traces, sample_rate=sample_rate)
+    _show(qtbot, v)
