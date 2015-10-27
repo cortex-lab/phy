@@ -104,7 +104,7 @@ def test_stacked_complete(qtbot):
                  color=np.random.uniform(.4, .9, size=(5, 4)))
     view[2].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
 
-    v = view[1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
+    v = view[1].plot(t[::2], np.sin(20 * t[::2]), color=(1, 0, 0, 1))
     v.set_data(color=(0, 1, 0, 1))
 
     _show(qtbot, view)

@@ -264,6 +264,7 @@ class BaseView(BaseCanvas):
             # Scatter.
             if visual_class == ScatterVisual:
                 items_grouped = groupby(items, lambda item: item.data.marker)
+                # One visual per marker type.
                 for marker, items_scatter in items_grouped:
                     items_scatter = list(items_scatter)
                     data, box_index = _build_scatter(items_scatter)
@@ -275,12 +276,19 @@ class BaseView(BaseCanvas):
 
             # Plot.
             if visual_class == PlotVisual:
-                data, box_index = _build_plot(items)
-                v = self._get_visual(PlotVisual)
-                v.set_data(**data)
-                v.program['a_box_index'] = box_index
-                for item in items:
-                    item.to_build = False
+                items_grouped = groupby(items,
+                                        lambda item: item.data.x.shape[1])
+                # HACK: one visual per number of samples, because currently
+                # a PlotVisual only accepts a regular (n_plots, n_samples)
+                # array as input.
+                for n_samples, items_plot in items_grouped:
+                    items_plot = list(items_plot)
+                    data, box_index = _build_plot(items_plot)
+                    v = self._get_visual((PlotVisual, n_samples))
+                    v.set_data(**data)
+                    v.program['a_box_index'] = box_index
+                    for item in items_plot:
+                        item.to_build = False
 
         self.update()
 
