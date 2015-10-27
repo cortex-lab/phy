@@ -103,6 +103,7 @@ class BaseView(BaseCanvas):
         for interact in interacts:
             interact.attach(self)
         self.subviews = {}
+        self._visuals = {}
 
     # To override
     # -------------------------------------------------------------------------
@@ -124,6 +125,21 @@ class BaseView(BaseCanvas):
         self.subviews[idx] = sv
         return sv
 
+    def _get_visual(self, key):
+        if key not in self._visuals:
+            # Create the visual.
+            if isinstance(key, tuple):
+                # Case of the scatter plot, where the visual depends on the
+                # marker.
+                v = key[0](key[1])
+            else:
+                v = key()
+            # Attach the visual to the view.
+            v.attach(self)
+            # Store the visual for reuse.
+            self._visuals[key] = v
+        return self._visuals[key]
+
     def _build_scatter(self, subviews, marker):
         """Build all scatter subviews with the same marker type."""
 
@@ -136,8 +152,7 @@ class BaseView(BaseCanvas):
             ac['size'] = sv.size
             ac['box_index'] = np.tile(sv.idx, (n, 1))
 
-        v = ScatterVisual(marker=marker)
-        v.attach(self)
+        v = self._get_visual((ScatterVisual, marker))
         v.set_data(pos=ac['pos'], color=ac['color'], size=ac['size'])
         v.program['a_box_index'] = ac['box_index']
 
@@ -152,8 +167,7 @@ class BaseView(BaseCanvas):
             ac['plot_colors'] = sv.color
             ac['box_index'] = np.tile(sv.idx, (n, 1))
 
-        v = PlotVisual()
-        v.attach(self)
+        v = self._get_visual(PlotVisual)
         v.set_data(x=ac['x'], y=ac['y'], plot_colors=ac['plot_colors'])
         v.program['a_box_index'] = ac['box_index']
 
@@ -168,13 +182,15 @@ class BaseView(BaseCanvas):
             # NOTE: the `6 * ` comes from the histogram tesselation.
             ac['box_index'] = np.tile(sv.idx, (6 * n, 1))
 
-        v = HistogramVisual()
-        v.attach(self)
+        v = self._get_visual(HistogramVisual)
         v.set_data(hist=ac['data'], hist_colors=ac['hist_colors'])
         v.program['a_box_index'] = ac['box_index']
 
     def build(self):
         """Build all visuals."""
+        # TODO: fix a bug where an old subplot is not deleted if it
+        # is changed to another type, and there is no longer any subplot
+        # of the old type. The old visual should be delete or hidden.
         for visual_class, subviews in groupby(self.iter_subviews(),
                                               lambda sv: sv.visual_class):
             if visual_class == ScatterVisual:
