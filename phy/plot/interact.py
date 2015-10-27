@@ -14,7 +14,7 @@ from vispy.gloo import Texture2D
 
 from .base import BaseInteract
 from .transform import Scale, Range, Subplot, Clip, NDC
-from .utils import _get_texture
+from .utils import _get_texture, _get_boxes, _get_box_pos_size
 
 
 #------------------------------------------------------------------------------
@@ -125,15 +125,27 @@ class Boxed(BaseInteract):
         Name of the GLSL variable with the box index.
 
     """
-    def __init__(self, box_bounds, box_var=None):
+    def __init__(self,
+                 box_bounds=None,
+                 box_pos=None,
+                 box_size=None,
+                 box_var=None):
         super(Boxed, self).__init__()
 
         # Name of the variable with the box index.
         self.box_var = box_var or 'a_box_index'
 
-        self.box_bounds = np.atleast_2d(box_bounds)
-        assert self.box_bounds.shape[1] == 4
-        self.n_boxes = len(self.box_bounds)
+        # Find the box bounds if only the box positions are passed.
+        if box_bounds is None:
+            assert box_pos is not None
+            # This will find a good box size automatically if it is not
+            # specified.
+            box_bounds = _get_boxes(box_pos, size=box_size)
+
+        self._box_bounds = np.atleast_2d(box_bounds)
+        assert self._box_bounds.shape[1] == 4
+
+        self.n_boxes = len(self._box_bounds)
 
     def get_shader_declarations(self):
         return ('#include "utils.glsl"\n\n'
@@ -157,9 +169,42 @@ class Boxed(BaseInteract):
 
     def update_program(self, program):
         # Signal bounds (positions).
-        box_bounds = _get_texture(self.box_bounds, NDC, self.n_boxes, [-1, 1])
+        box_bounds = _get_texture(self._box_bounds, NDC, self.n_boxes, [-1, 1])
         program['u_box_bounds'] = Texture2D(box_bounds)
         program['n_boxes'] = self.n_boxes
+
+    # Change the box bounds, positions, or size
+    #--------------------------------------------------------------------------
+
+    @property
+    def box_bounds(self):
+        return self._box_bounds
+
+    @box_bounds.setter
+    def box_bounds(self, val):
+        assert val.shape == (self.n_boxes, 4)
+        self._box_bounds = val
+        self.update()
+
+    @property
+    def box_pos(self):
+        box_pos, _ = _get_box_pos_size(self._box_bounds)
+        return box_pos
+
+    @box_pos.setter
+    def box_pos(self, val):
+        assert val.shape == (self.n_boxes, 2)
+        self.box_bounds = _get_boxes(val, size=self.box_size)
+
+    @property
+    def box_size(self):
+        _, box_size = _get_box_pos_size(self._box_bounds)
+        return box_size
+
+    @box_size.setter
+    def box_size(self, val):
+        assert len(val) == 2
+        self.box_bounds = _get_boxes(self.box_pos, size=val)
 
 
 class Stacked(Boxed):
