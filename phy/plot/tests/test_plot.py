@@ -42,8 +42,14 @@ def test_grid_scatter(qtbot):
 
     view[1, 0].scatter(x, y, size=np.random.uniform(5, 20, size=n))
     view[1, 1]
+
+    # Multiple scatters in the same subplot.
+    view[1, 2].scatter(x[2::6], y[2::6], marker='asterisk',
+                       color=(0, 1, 0, .25), size=20)
     view[1, 2].scatter(x[::5], y[::5], marker='heart',
-                       color=(1, 0, 0, .25), size=20)
+                       color=(1, 0, 0, .35), size=50)
+    view[1, 2].scatter(x[1::3], y[1::3], marker='heart',
+                       color=(1, 0, 1, .35), size=30)
 
     _show(qtbot, view)
 
@@ -92,9 +98,14 @@ def test_stacked_complete(qtbot):
 
     t = _get_linear_x(1, 1000).ravel()
     view[0].scatter(*np.random.randn(2, 100))
-    view[1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
+
+    # Different types of visuals in the same subplot.
     view[2].hist(np.random.rand(5, 10),
                  color=np.random.uniform(.4, .9, size=(5, 4)))
+    view[2].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
+
+    v = view[1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
+    v.set_data(color=(0, 1, 0, 1))
 
     _show(qtbot, view)
 
