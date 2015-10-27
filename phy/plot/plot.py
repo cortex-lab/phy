@@ -16,7 +16,8 @@ from .base import BaseCanvas
 from .interact import Grid, Boxed, Stacked
 from .panzoom import PanZoom
 from .transform import NDC
-from .visuals import _get_array, ScatterVisual, PlotVisual, HistogramVisual
+from .utils import _get_array
+from .visuals import ScatterVisual, PlotVisual, HistogramVisual
 
 
 #------------------------------------------------------------------------------
