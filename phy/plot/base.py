@@ -8,15 +8,24 @@
 #------------------------------------------------------------------------------
 
 import logging
+import re
 
 from vispy import gloo
 from vispy.app import Canvas
 
-from .transform import TransformChain, GPU
+from .transform import TransformChain, GPU, Clip
 from .utils import _load_shader
 from phy.utils import EventEmitter
 
 logger = logging.getLogger(__name__)
+
+
+#------------------------------------------------------------------------------
+# Utils
+#------------------------------------------------------------------------------
+
+def indent(text):
+    return '\n'.join('    ' + l.strip() for l in text.splitlines())
 
 
 #------------------------------------------------------------------------------
@@ -243,6 +252,72 @@ class BaseCanvas(Canvas):
 # Build program with interacts
 #------------------------------------------------------------------------------
 
+def insert_glsl(transform_chain, vertex, fragment,
+                pre_transforms='', post_transforms=''):
+    """Generate the GLSL code of the transform chain."""
+
+    # TODO: move this to base.py
+
+    # Find the place where to insert the GLSL snippet.
+    # This is "gl_Position = transform(data_var_name);" where
+    # data_var_name is typically an attribute.
+    vs_regex = re.compile(r'gl_Position = transform\(([\S]+)\);')
+    r = vs_regex.search(vertex)
+    if not r:
+        logger.debug("The vertex shader doesn't contain the transform "
+                     "placeholder: skipping the transform chain "
+                     "GLSL insertion.")
+        return vertex, fragment
+    assert r
+    logger.log(5, "Found transform placeholder in vertex code: `%s`",
+               r.group(0))
+
+    # Find the GLSL variable with the data (should be a `vec2`).
+    var = r.group(1)
+    transform_chain.transformed_var_name = var
+    assert var and var in vertex
+
+    # Generate the snippet to insert in the shaders.
+    temp_var = 'temp_pos_tr'
+    # Name for the (eventual) varying.
+    fvar = 'v_{}'.format(temp_var)
+    vs_insert = ''
+    # Insert the pre-transforms.
+    vs_insert += pre_transforms + '\n'
+    vs_insert += "vec2 {} = {};\n".format(temp_var, var)
+    for t in transform_chain.gpu_transforms:
+        if isinstance(t, Clip):
+            # Set the varying value in the vertex shader.
+            vs_insert += '{} = {};\n'.format(fvar, temp_var)
+            continue
+        vs_insert += t.glsl(temp_var) + '\n'
+    vs_insert += 'gl_Position = vec4({}, 0., 1.);\n'.format(temp_var)
+    vs_insert += post_transforms + '\n'
+
+    # Clipping.
+    clip = transform_chain.get('Clip')
+    if clip:
+        # Varying name.
+        glsl_clip = clip.glsl(fvar)
+
+        # Prepare the fragment regex.
+        fs_regex = re.compile(r'(void main\(\)\s*\{)')
+        fs_insert = '\\1\n{}'.format(glsl_clip)
+
+        # Add the varying declaration for clipping.
+        varying_decl = 'varying vec2 {};\n'.format(fvar)
+        vertex = varying_decl + vertex
+        fragment = varying_decl + fragment
+
+        # Make the replacement in the fragment shader for clipping.
+        fragment = fs_regex.sub(indent(fs_insert), fragment)
+
+    # Insert the GLSL snippet of the transform chain in the vertex shader.
+    vertex = vs_regex.sub(indent(vs_insert), vertex)
+
+    return vertex, fragment
+
+
 def build_program(visual, interacts=()):
     """Create the gloo program of a visual using the interacts
     transforms.
@@ -266,8 +341,8 @@ def build_program(visual, interacts=()):
     pre = '\n'.join(interact.get_pre_transforms() for interact in interacts)
     # GLSL snippet to insert after all transformations.
     post = visual.get_post_transforms()
-    vertex, fragment = transform_chain.insert_glsl(vertex, fragment,
-                                                   pre, post)
+    vertex, fragment = insert_glsl(transform_chain, vertex, fragment,
+                                   pre, post)
 
     # Insert shader declarations using the interacts (if any).
     if interacts:

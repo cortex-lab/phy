@@ -7,11 +7,13 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from textwrap import dedent
+
 import numpy as np
 
-from ..base import BaseVisual, BaseInteract
+from ..base import BaseVisual, BaseInteract, insert_glsl
 from ..transform import (subplot_bounds, Translate, Scale, Range,
-                         Clip, Subplot, GPU)
+                         Clip, Subplot, GPU, TransformChain)
 
 
 #------------------------------------------------------------------------------
@@ -172,3 +174,34 @@ def test_interact(qtbot, canvas):
     assert len(canvas.interacts) == 1
     qtbot.waitForWindowShown(canvas.native)
     # qtbot.stop()
+
+
+def test_transform_chain_complete():
+    t = TransformChain([Scale(scale=.5),
+                        Scale(scale=2.)])
+    t.add([Range(from_bounds=[-3, -3, 1, 1]),
+           GPU(),
+           Clip(),
+           Subplot(shape='u_shape', index='a_box_index'),
+           ])
+
+    vs = dedent("""
+    attribute vec2 a_position;
+    void main() {
+        gl_Position = transform(a_position);
+    }
+    """).strip()
+
+    fs = dedent("""
+    void main() {
+        gl_FragColor = vec4(1., 1., 1., 1.);
+    }
+    """).strip()
+    vs, fs = insert_glsl(t, vs, fs)
+    assert 'a_box_index' in vs
+    assert 'v_' in vs
+    assert 'v_' in fs
+    assert 'discard' in fs
+
+    # Increase coverage.
+    insert_glsl(t, vs.replace('transform', ''), fs)

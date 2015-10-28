@@ -221,24 +221,3 @@ def test_transform_chain_complete(array):
     assert len(t.gpu_transforms) == 2
 
     ae(t.apply(array), [[0, .5], [1, 1.5]])
-
-    vs = dedent("""
-    attribute vec2 a_position;
-    void main() {
-        gl_Position = transform(a_position);
-    }
-    """).strip()
-
-    fs = dedent("""
-    void main() {
-        gl_FragColor = vec4(1., 1., 1., 1.);
-    }
-    """).strip()
-    vs, fs = t.insert_glsl(vs, fs)
-    assert 'a_box_index' in vs
-    assert 'v_' in vs
-    assert 'v_' in fs
-    assert 'discard' in fs
-
-    # Increase coverage.
-    t.insert_glsl(vs.replace('transform', ''), fs)
