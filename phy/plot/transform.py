@@ -285,8 +285,11 @@ class TransformChain(object):
             arr = t.apply(arr)
         return arr
 
-    def insert_glsl(self, vertex, fragment, pre_transforms=''):
+    def insert_glsl(self, vertex, fragment,
+                    pre_transforms='', post_transforms=''):
         """Generate the GLSL code of the transform chain."""
+
+        # TODO: move this to base.py
 
         # Find the place where to insert the GLSL snippet.
         # This is "gl_Position = transform(data_var_name);" where
@@ -322,6 +325,7 @@ class TransformChain(object):
                 continue
             vs_insert += t.glsl(temp_var) + '\n'
         vs_insert += 'gl_Position = vec4({}, 0., 1.);\n'.format(temp_var)
+        vs_insert += post_transforms + '\n'
 
         # Clipping.
         clip = self.get('Clip')
