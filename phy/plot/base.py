@@ -35,8 +35,8 @@ class BaseVisual(object):
     * `get_shaders()`: return the vertex and fragment shaders, or just
       `shader_name` for built-in shaders
     * `get_transforms()`: return a list of `Transform` instances, which
-       can act on the CPU or the GPU. The interact's transforms will be
-       appended to that list when the visual is attached to the canvas.
+    * `get_post_transforms()`: return a GLSL snippet to insert after
+      all transforms in the vertex shader.
     * `set_data()`: has access to `self.program`. Must be called after
       `attach()`.
 
@@ -52,12 +52,23 @@ class BaseVisual(object):
     # -------------------------------------------------------------------------
 
     def get_shaders(self):
+        """Return the vertex and fragment shader code."""
         assert self.shader_name
         return (_load_shader(self.shader_name + '.vert'),
                 _load_shader(self.shader_name + '.frag'))
 
     def get_transforms(self):
+        """Return the list of transforms for the visual.
+
+        There needs to be one and exactly one instance of `GPU()`.
+
+        """
         return [GPU()]
+
+    def get_post_transforms(self):
+        """Return a GLSL snippet to insert after all transforms in the
+        vertex shader."""
+        return ''
 
     def set_data(self):
         """Set data to the program.
@@ -253,7 +264,10 @@ def build_program(visual, interacts=()):
     vertex, fragment = visual.get_shaders()
     # Get the GLSL snippet to insert before the transformations.
     pre = '\n'.join(interact.get_pre_transforms() for interact in interacts)
-    vertex, fragment = transform_chain.insert_glsl(vertex, fragment, pre)
+    # GLSL snippet to insert after all transformations.
+    post = visual.get_post_transforms()
+    vertex, fragment = transform_chain.insert_glsl(vertex, fragment,
+                                                   pre, post)
 
     # Insert shader declarations using the interacts (if any).
     if interacts:

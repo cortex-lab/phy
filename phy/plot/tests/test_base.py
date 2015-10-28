@@ -145,6 +145,11 @@ def test_interact(qtbot, canvas):
                           ),
                     ]
 
+        def get_post_transforms(self):
+            return """
+                gl_Position.y += 1;
+            """
+
         def set_data(self):
             data = np.random.uniform(0, 20, (1000, 2)).astype(np.float32)
             self.program['a_position'] = self.apply_cpu_transforms(data)
