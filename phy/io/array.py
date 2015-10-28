@@ -330,6 +330,8 @@ def _spikes_in_clusters(spike_clusters, clusters):
 
 def _spikes_per_cluster(spike_clusters, spike_ids=None):
     """Return a dictionary {cluster: list_of_spikes}."""
+    if not len(spike_clusters):
+        return {}
     if spike_ids is None:
         spike_ids = np.arange(len(spike_clusters)).astype(np.int64)
     rel_spikes = np.argsort(spike_clusters)
