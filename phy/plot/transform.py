@@ -8,7 +8,6 @@
 #------------------------------------------------------------------------------
 
 from textwrap import dedent
-import re
 
 import numpy as np
 from six import string_types
@@ -56,10 +55,6 @@ def _wrap(f, **kwargs_init):
         kwargs.update(kwargs_init)
         return f(*args, **kwargs)
     return wrapped
-
-
-def indent(text):
-    return '\n'.join('    ' + l.strip() for l in text.splitlines())
 
 
 def _glslify(r):
@@ -284,68 +279,3 @@ class TransformChain(object):
         for t in self.cpu_transforms:
             arr = t.apply(arr)
         return arr
-
-    def insert_glsl(self, vertex, fragment,
-                    pre_transforms='', post_transforms=''):
-        """Generate the GLSL code of the transform chain."""
-
-        # TODO: move this to base.py
-
-        # Find the place where to insert the GLSL snippet.
-        # This is "gl_Position = transform(data_var_name);" where
-        # data_var_name is typically an attribute.
-        vs_regex = re.compile(r'gl_Position = transform\(([\S]+)\);')
-        r = vs_regex.search(vertex)
-        if not r:
-            logger.debug("The vertex shader doesn't contain the transform "
-                         "placeholder: skipping the transform chain "
-                         "GLSL insertion.")
-            return vertex, fragment
-        assert r
-        logger.log(5, "Found transform placeholder in vertex code: `%s`",
-                   r.group(0))
-
-        # Find the GLSL variable with the data (should be a `vec2`).
-        var = r.group(1)
-        self.transformed_var_name = var
-        assert var and var in vertex
-
-        # Generate the snippet to insert in the shaders.
-        temp_var = 'temp_pos_tr'
-        # Name for the (eventual) varying.
-        fvar = 'v_{}'.format(temp_var)
-        vs_insert = ''
-        # Insert the pre-transforms.
-        vs_insert += pre_transforms + '\n'
-        vs_insert += "vec2 {} = {};\n".format(temp_var, var)
-        for t in self.gpu_transforms:
-            if isinstance(t, Clip):
-                # Set the varying value in the vertex shader.
-                vs_insert += '{} = {};\n'.format(fvar, temp_var)
-                continue
-            vs_insert += t.glsl(temp_var) + '\n'
-        vs_insert += 'gl_Position = vec4({}, 0., 1.);\n'.format(temp_var)
-        vs_insert += post_transforms + '\n'
-
-        # Clipping.
-        clip = self.get('Clip')
-        if clip:
-            # Varying name.
-            glsl_clip = clip.glsl(fvar)
-
-            # Prepare the fragment regex.
-            fs_regex = re.compile(r'(void main\(\)\s*\{)')
-            fs_insert = '\\1\n{}'.format(glsl_clip)
-
-            # Add the varying declaration for clipping.
-            varying_decl = 'varying vec2 {};\n'.format(fvar)
-            vertex = varying_decl + vertex
-            fragment = varying_decl + fragment
-
-            # Make the replacement in the fragment shader for clipping.
-            fragment = fs_regex.sub(indent(fs_insert), fragment)
-
-        # Insert the GLSL snippet of the transform chain in the vertex shader.
-        vertex = vs_regex.sub(indent(vs_insert), vertex)
-
-        return vertex, fragment
