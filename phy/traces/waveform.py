@@ -346,6 +346,7 @@ class SpikeLoader(object):
         self.shape = (len(spike_samples),
                       waveforms.n_samples_waveforms,
                       waveforms.n_channels_waveforms)
+        self.ndim = len(self.shape)
 
     def __getitem__(self, item):
         times = self._spike_samples[item]
