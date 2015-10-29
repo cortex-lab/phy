@@ -147,7 +147,13 @@ class ManualClustering(object):
     ------
 
     select(cluster_ids, spike_ids)
+        when clusters are selected
+    on_cluster(up)
+        when a merge or split happens
+    wizard_start()
+        when the wizard (re)starts
     save_requested(spike_clusters, cluster_groups)
+        when a save is requested by the user
 
     """
 
@@ -175,6 +181,7 @@ class ManualClustering(object):
                  shortcuts=None,
                  ):
 
+        self.gui = None
         self.n_spikes_max_per_cluster = n_spikes_max_per_cluster
 
         # Load default shortcuts, and override any user shortcuts.
@@ -202,6 +209,9 @@ class ManualClustering(object):
                 # TODO: how many spikes?
                 logger.info("Assigned spikes.")
 
+            if self.gui:
+                self.gui.emit('on_cluster', up)
+
         @self.cluster_meta.connect  # noqa
         def on_cluster(up):
             if up.history:
@@ -210,6 +220,9 @@ class ManualClustering(object):
                 logger.info("Move clusters %s to %s.",
                             ', '.join(map(str, up.metadata_changed)),
                             up.metadata_value)
+
+            if self.gui:
+                self.gui.emit('on_cluster', up)
 
         @self.wizard.connect
         def on_select(cluster_ids):
@@ -252,11 +265,14 @@ class ManualClustering(object):
             spike_ids = select_spikes(np.array(cluster_ids),
                                       self.n_spikes_max_per_cluster,
                                       self.clustering.spikes_per_cluster)
-            gui.emit('select', cluster_ids, spike_ids)
+
+            if self.gui:
+                self.gui.emit('select', cluster_ids, spike_ids)
 
         @self.wizard.connect
         def on_start():
-            gui.emit('wizard_start')
+            if self.gui:
+                gui.emit('wizard_start')
 
         # Create the actions.
         self._create_actions(gui)

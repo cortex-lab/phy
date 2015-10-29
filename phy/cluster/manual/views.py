@@ -159,7 +159,9 @@ class WaveformView(BoxedView):
     def on_key_press(self, e):
         pass
 
-    def attach_to_gui(self, gui):
+    def attach(self, gui):
+        """Attach the view to the GUI."""
+
         gui.add_view(self)
 
         # TODO: make sure the GUI emits these events
