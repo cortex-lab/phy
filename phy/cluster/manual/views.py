@@ -15,7 +15,7 @@ from phy.io.array import _index_of, _get_padded
 from phy.electrode.mea import linear_positions
 from phy.plot import (BoxedView, StackedView, GridView,
                       _get_linear_x)
-from phy.plot.utils import _get_boxes, _get_array
+from phy.plot.utils import _get_boxes
 
 logger = logging.getLogger(__name__)
 
@@ -99,7 +99,7 @@ class WaveformView(BoxedView):
         self.waveforms = waveforms
 
         # Masks.
-        self.masks = _get_array(masks, (self.n_spikes, self.n_channels), 1)
+        self.masks = masks
 
         # Spike clusters.
         assert spike_clusters.shape == (self.n_spikes,)
@@ -134,8 +134,11 @@ class WaveformView(BoxedView):
         color = np.c_[color, np.ones((n_spikes, 1))]
 
         # Depth as a function of the cluster index and masks.
-        m = self.masks[spike_ids, :]
+        m = self.masks[spike_ids]
+        m = np.atleast_2d(m)
+        assert m.ndim == 2
         depth = -0.1 - (spike_clusters_rel[:, np.newaxis] + m)
+        assert m.shape == (n_spikes, self.n_channels)
         assert depth.shape == (n_spikes, self.n_channels)
         depth = depth / float(n_clusters + 10.)
         depth[m <= 0.25] = 0
@@ -164,9 +167,8 @@ class WaveformView(BoxedView):
 
         gui.add_view(self)
 
-        # TODO: make sure the GUI emits these events
-        gui.connect(self.on_select)
-        gui.connect(self.on_cluster)
+        gui.connect_(self.on_select)
+        gui.connect_(self.on_cluster)
 
 
 class TraceView(StackedView):
@@ -206,7 +208,6 @@ class TraceView(StackedView):
             self.spike_clusters = spike_clusters
 
             # Masks.
-            masks = _get_array(masks, (self.n_spikes, self.n_channels), 1)
             assert masks.shape == (self.n_spikes, self.n_channels)
             self.masks = masks
         else:

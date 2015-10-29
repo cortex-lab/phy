@@ -328,6 +328,8 @@ def test_spikes_per_cluster():
     n_clusters = 3
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
+    assert not _spikes_per_cluster([])
+
     spikes_per_cluster = _spikes_per_cluster(spike_clusters)
     assert list(spikes_per_cluster.keys()) == list(range(n_clusters))
 
