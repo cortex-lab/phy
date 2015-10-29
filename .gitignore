@@ -11,6 +11,7 @@ wiki
 .ipynb_checkpoints
 .*fuse*
 *.orig
+*.log
 .eggs
 .profile
 __pycache__
