@@ -64,7 +64,7 @@ def _prepare_plot(x, y, color=None, depth=None, data_bounds=None):
     # Get the colors.
     color = _get_array(color, (n_plots, 4), PlotVisual._default_color)
     # Get the depth.
-    depth = _get_array(depth, (n_plots,), 0)
+    depth = _get_array(depth, (n_plots, 1), 0)
     return dict(x=x, y=y, color=color, depth=depth, data_bounds=data_bounds)
 
 
