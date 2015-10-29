@@ -226,13 +226,6 @@ class ManualClustering(object):
             if self.gui:
                 self.gui.emit('on_cluster', up)
 
-        @self.wizard.connect
-        def on_select(cluster_ids):
-            """When the wizard selects clusters, choose a spikes subset
-            and emit the `select` event on the GUI."""
-            logger.debug("Select clusters %s.",
-                         ', '.join(map(str, cluster_ids)))
-
         _attach_wizard(self.wizard, self.clustering, self.cluster_meta)
 
     def _create_actions(self, gui):
@@ -267,6 +260,8 @@ class ManualClustering(object):
             spike_ids = select_spikes(np.array(cluster_ids),
                                       self.n_spikes_max_per_cluster,
                                       self.clustering.spikes_per_cluster)
+            logger.debug("Select clusters: %s (%d spikes).",
+                         ', '.join(map(str, cluster_ids)), len(spike_ids))
 
             if self.gui:
                 self.gui.emit('select', cluster_ids, spike_ids)
