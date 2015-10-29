@@ -17,7 +17,7 @@ from traceback import format_exception
 import click
 
 import phy
-from phy import add_default_handler, DEBUG
+from phy import add_default_handler, DEBUG, _Formatter, _logger_fmt
 
 logger = logging.getLogger(__name__)
 
@@ -41,16 +41,15 @@ def exceptionHandler(exception_type, exception, traceback):  # pragma: no cover
 sys.excepthook = exceptionHandler
 
 
-# Create a `phy.log` log file with DEBUG level in the current directory.
 def _add_log_file(filename):
+    """Create a `phy.log` log file with DEBUG level in the
+    current directory."""
     handler = logging.FileHandler(filename)
     handler.setLevel(logging.DEBUG)
-    formatter = phy._Formatter(fmt=phy._logger_fmt,
-                               datefmt='%Y-%m-%d %H:%M:%S')
+    formatter = _Formatter(fmt=_logger_fmt,
+                           datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-
-_add_log_file(op.join(os.getcwd(), 'phy.log'))
 
 
 #------------------------------------------------------------------------------
@@ -64,7 +63,9 @@ _add_log_file(op.join(os.getcwd(), 'phy.log'))
 def phy(ctx):
     """By default, the `phy` command does nothing. Add subcommands with plugins
     using `attach_to_cli()` and the `click` library."""
-    pass
+
+    # Create a `phy.log` log file with DEBUG level in the current directory.
+    _add_log_file(op.join(os.getcwd(), 'phy.log'))
 
 
 #------------------------------------------------------------------------------
