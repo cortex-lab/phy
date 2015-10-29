@@ -194,6 +194,9 @@ def connected_components(weak_crossings=None,
     if probe_adjacency_list is None:
         probe_adjacency_list = {}
 
+    if channels is None:
+        channels = []
+
     # If the channels aren't referenced at all but exist in 'channels', add a
     # trivial self-connection so temporal floodfill will work. If this channel
     # is dead, it should be removed from 'channels'
