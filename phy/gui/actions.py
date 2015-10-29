@@ -153,7 +153,8 @@ class Actions(object):
     def backup(self):
         return list(self._actions_dict.values())
 
-    def add(self, callback=None, name=None, shortcut=None, alias=None):
+    def add(self, callback=None, name=None, shortcut=None, alias=None,
+            verbose=True):
         """Add an action with a keyboard shortcut."""
         # TODO: add menu_name option and create menu bar
         if callback is None:
@@ -175,7 +176,7 @@ class Actions(object):
         action = _create_qaction(self.gui, name, callback, shortcut)
         action_obj = Bunch(qaction=action, name=name, alias=alias,
                            shortcut=shortcut, callback=callback)
-        if not name.startswith('_'):
+        if verbose and not name.startswith('_'):
             logger.debug("Add action `%s` (%s).", name,
                          _get_shortcut_string(action.shortcut()))
         self.gui.addAction(action)
@@ -378,4 +379,5 @@ class Snippets(object):
                              name=action_obj.name,
                              shortcut=action_obj.shortcut,
                              alias=action_obj.alias,
+                             verbose=False,
                              )
