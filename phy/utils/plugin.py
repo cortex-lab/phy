@@ -124,6 +124,7 @@ def get_all_plugins(config=None):
     # By default, builtin and default user plugin.
     dirs = [_builtin_plugins_dir(), _user_plugins_dir()]
     # Add Plugins.dirs from the optionally-passed config object.
-    if config:
+    if config and isinstance(config.Plugins.dirs, list):
         dirs += config.Plugins.dirs
+    logger.debug("Discovering plugins in: %s.", ', '.join(dirs))
     return [plugin for (plugin,) in discover_plugins(dirs)]
