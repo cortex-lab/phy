@@ -195,9 +195,11 @@ class SpikeDetekt(EventEmitter):
 
     def _create_detector(self):
         graph = self._kwargs['probe_adjacency_list']
+        probe_channels = self._kwargs['probe_channels']
         join_size = self._kwargs['connected_component_join_size']
         return FloodFillDetector(probe_adjacency_list=graph,
                                  join_size=join_size,
+                                 channels_per_group=probe_channels,
                                  )
 
     def _create_extractor(self, thresholds):

@@ -155,7 +155,8 @@ def _to_list(x):
 def connected_components(weak_crossings=None,
                          strong_crossings=None,
                          probe_adjacency_list=None,
-                         join_size=None):
+                         join_size=None,
+                         channels=None):
     """Find all connected components in binary arrays of threshold crossings.
 
     Parameters
@@ -167,9 +168,12 @@ def connected_components(weak_crossings=None,
         `(n_samples, n_channels)` array with strong threshold crossings
     probe_adjacency_list : dict
         A dict `{channel: [neighbors]}`
+    channels : array
+        An (n_channels,) array with a list of all non-dead channels
     join_size : int
         The number of samples defining the tolerance in time for
         finding connected components
+
 
     Returns
     -------
@@ -189,6 +193,13 @@ def connected_components(weak_crossings=None,
 
     if probe_adjacency_list is None:
         probe_adjacency_list = {}
+
+    # If the channels aren't referenced at all but exist in 'channels', add a
+    # trivial self-connection so temporal floodfill will work. If this channel
+    # is dead, it should be removed from 'channels'
+    for i in channels:
+        if not probe_adjacency_list.get(i):
+            probe_adjacency_list[i] = {i}
 
     # Make sure the values are sets.
     probe_adjacency_list = {c: set(cs)
@@ -337,17 +348,23 @@ class FloodFillDetector(object):
     for every sample in the component.
 
     """
-    def __init__(self, probe_adjacency_list=None, join_size=None):
+    def __init__(self, probe_adjacency_list=None, join_size=None,
+                 channels_per_group=None):
         self._adjacency_list = probe_adjacency_list
         self._join_size = join_size
+        self._channels_per_group = channels_per_group
 
     def __call__(self, weak_crossings=None, strong_crossings=None):
         weak_crossings = _as_array(weak_crossings, np.bool)
         strong_crossings = _as_array(strong_crossings, np.bool)
+        all_channels = sorted([item for sublist
+                              in self._channels_per_group.values()
+                              for item in sublist])
 
         cc = connected_components(weak_crossings=weak_crossings,
                                   strong_crossings=strong_crossings,
                                   probe_adjacency_list=self._adjacency_list,
+                                  channels=all_channels,
                                   join_size=self._join_size,
                                   )
         # cc is a list of list of pairs (sample, channel)
