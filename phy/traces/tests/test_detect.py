@@ -251,8 +251,11 @@ def test_flood_fill():
 
     graph = {0: [1, 2], 1: [0, 2], 2: [0, 1], 3: []}
 
+    channels = {0: [1, 2, 3]}
+
     ff = FloodFillDetector(probe_adjacency_list=graph,
                            join_size=1,
+                           channels_per_group=channels
                            )
 
     weak = [[0, 0, 0, 0],
