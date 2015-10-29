@@ -84,17 +84,17 @@ def _get_texture(arr, default, n_items, from_bounds):
     # Convert to 3D texture.
     arr = arr[np.newaxis, ...].astype(np.float32)
     assert arr.shape == (1, n_items, n_cols)
-    # NOTE: we need to cast the texture to [0, 255] (uint8).
+    # NOTE: we need to cast the texture to [0., 1.] (float texture).
     # This is easy as soon as we assume that the signal bounds are in
     # [-1, 1].
     assert len(from_bounds) == 2
     m, M = map(float, from_bounds)
     assert np.all(arr >= m)
     assert np.all(arr <= M)
-    arr = 255 * (arr - m) / (M - m)
+    arr = 1. * (arr - m) / (M - m)
     assert np.all(arr >= 0)
-    assert np.all(arr <= 255)
-    arr = arr.astype(np.uint8)
+    assert np.all(arr <= 1.)
+    arr = arr.astype(np.float32)
     return arr
 
 
