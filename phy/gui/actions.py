@@ -9,6 +9,8 @@
 
 from functools import partial
 import logging
+import sys
+import traceback
 
 from six import string_types, PY3
 
@@ -355,6 +357,7 @@ class Snippets(object):
             self.actions.run(name, *snippet_args[1:])
         except Exception as e:
             logger.warn("Error when executing snippet: \"%s\".", str(e))
+            logger.debug(''.join(traceback.format_exception(*sys.exc_info())))
 
     def is_mode_on(self):
         return self.command.startswith(':')

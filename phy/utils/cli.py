@@ -32,9 +32,9 @@ add_default_handler(level='DEBUG' if DEBUG else 'INFO')
 def exceptionHandler(exception_type, exception, traceback):  # pragma: no cover
     logger.error("An error has occurred (%s): %s",
                  exception_type.__name__, exception)
-    logger.debug('\n'.join(format_exception(exception_type,
-                                            exception,
-                                            traceback)))
+    logger.debug(''.join(format_exception(exception_type,
+                                          exception,
+                                          traceback)))
 
 # Only show traceback in debug mode (--debug).
 # if not DEBUG:

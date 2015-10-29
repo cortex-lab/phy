@@ -108,6 +108,7 @@ def _index_of(arr, lookup):
     # TODO: assertions to disable in production for performance reasons.
     # TODO: np.searchsorted(lookup, arr) is faster on small arrays with large
     # values
+    lookup = np.asarray(lookup, dtype=np.int32)
     m = (lookup.max() if len(lookup) else 0) + 1
     tmp = np.zeros(m + 1, dtype=np.int)
     # Ensure that -1 values are kept.
