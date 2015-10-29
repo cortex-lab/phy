@@ -156,8 +156,8 @@ class ViewItem(Bunch):
 class BaseView(BaseCanvas):
     """High-level plotting canvas."""
 
-    def __init__(self, interacts):
-        super(BaseView, self).__init__()
+    def __init__(self, interacts, **kwargs):
+        super(BaseView, self).__init__(**kwargs)
         # Attach the passed interacts to the current canvas.
         for interact in interacts:
             interact.attach(self)
@@ -302,27 +302,27 @@ class BaseView(BaseCanvas):
 
 class GridView(BaseView):
     """A 2D grid with clipping."""
-    def __init__(self, n_rows, n_cols):
+    def __init__(self, n_rows, n_cols, **kwargs):
         self.n_rows, self.n_cols = n_rows, n_cols
         pz = PanZoom(aspect=None, constrain_bounds=NDC)
         interacts = [Grid(n_rows, n_cols), pz]
-        super(GridView, self).__init__(interacts)
+        super(GridView, self).__init__(interacts, **kwargs)
 
 
 class BoxedView(BaseView):
     """Subplots at arbitrary positions"""
-    def __init__(self, box_bounds):
+    def __init__(self, box_bounds, **kwargs):
         self.n_plots = len(box_bounds)
         self._boxed = Boxed(box_bounds)
         self._pz = PanZoom(aspect=None, constrain_bounds=NDC)
         interacts = [self._boxed, self._pz]
-        super(BoxedView, self).__init__(interacts)
+        super(BoxedView, self).__init__(interacts, **kwargs)
 
 
 class StackedView(BaseView):
     """Stacked subplots"""
-    def __init__(self, n_plots):
+    def __init__(self, n_plots, **kwargs):
         self.n_plots = n_plots
         pz = PanZoom(aspect=None, constrain_bounds=NDC)
         interacts = [Stacked(n_plots, margin=.1), pz]
-        super(StackedView, self).__init__(interacts)
+        super(StackedView, self).__init__(interacts, **kwargs)

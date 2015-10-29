@@ -79,6 +79,7 @@ class WaveformView(BoxedView):
                  masks=None,
                  spike_clusters=None,
                  channel_positions=None,
+                 keys='interactive',
                  ):
         """
 
@@ -91,7 +92,7 @@ class WaveformView(BoxedView):
         if channel_positions is None:
             channel_positions = linear_positions(self.n_channels)
         box_bounds = _get_boxes(channel_positions)
-        super(WaveformView, self).__init__(box_bounds)
+        super(WaveformView, self).__init__(box_bounds, keys=keys)
 
         # Waveforms.
         assert waveforms.ndim == 3
@@ -108,6 +109,12 @@ class WaveformView(BoxedView):
         # Channel positions.
         assert channel_positions.shape == (self.n_channels, 2)
         self.channel_positions = channel_positions
+
+        # Initialize the subplots.
+        self._plots = {ch: self[ch].plot(x=[], y=[])
+                       for ch in range(self.n_channels)}
+        self.build()
+        self.update()
 
     def on_select(self, cluster_ids, spike_ids):
         n_clusters = len(cluster_ids)
@@ -146,9 +153,9 @@ class WaveformView(BoxedView):
         # Plot all waveforms.
         # TODO: optim: avoid the loop.
         for ch in range(self.n_channels):
-            self[ch].plot(x=t, y=w[:, :, ch],
-                          color=color,
-                          depth=depth[:, ch])
+            self._plots[ch].set_data(x=t, y=w[:, :, ch],
+                                     color=color,
+                                     depth=depth[:, ch])
 
         self.build()
         self.update()
