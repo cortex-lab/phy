@@ -294,3 +294,28 @@ def test_flood_fill():
              ]
     cc = ff(weak, strong)
     _assert_components_equal(cc, comps)
+
+    channels = {0: [1, 2, 3, 4]}
+
+    ff = FloodFillDetector(probe_adjacency_list=graph,
+                           join_size=2,
+                           channels_per_group=channels
+                           )
+
+    weak = [[0, 0, 0, 0, 0],
+            [0, 1, 0, 1, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1],
+            [0, 0, 0, 0, 0],
+            ]
+
+    comps = [[(1, 1)],
+             [(1, 3)],
+             [(4, 4), (6, 4)],
+             ]
+
+    cc = ff(weak, weak)
+    _assert_components_equal(cc, comps)
