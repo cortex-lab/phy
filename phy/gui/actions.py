@@ -175,6 +175,9 @@ class Actions(object):
         action = _create_qaction(self.gui, name, callback, shortcut)
         action_obj = Bunch(qaction=action, name=name, alias=alias,
                            shortcut=shortcut, callback=callback)
+        if not name.startswith('_'):
+            logger.debug("Add action `%s` (%s).", name,
+                         _get_shortcut_string(action.shortcut()))
         self.gui.addAction(action)
         self._actions_dict[name] = action_obj
         # Register the alias -> name mapping.

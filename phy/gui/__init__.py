@@ -5,3 +5,4 @@
 
 from .qt import require_qt, create_app, run_app
 from .gui import GUI
+from .actions import Actions
