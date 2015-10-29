@@ -69,7 +69,7 @@ class GUI(QMainWindow):
             raise RuntimeError("A Qt application must be created.")
         super(GUI, self).__init__()
         if title is None:
-            title = 'phy'
+            title = self.__class__.__name__
         self.setWindowTitle(title)
         if position is not None:
             self.move(position[0], position[1])
@@ -119,7 +119,7 @@ class GUI(QMainWindow):
 
     def add_view(self,
                  view,
-                 title='view',
+                 title=None,
                  position=None,
                  closable=True,
                  floatable=True,
@@ -131,9 +131,12 @@ class GUI(QMainWindow):
         try:
             from vispy.app import Canvas
             if isinstance(view, Canvas):
+                title = title or view.__class__.__name__
                 view = view.native
         except ImportError:  # pragma: no cover
             pass
+
+        title = title or view.__class__.__name__
 
         # Create the gui widget.
         dockwidget = DockWidget(self)

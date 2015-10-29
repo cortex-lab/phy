@@ -10,6 +10,7 @@
 import logging
 
 import numpy as np
+from six import string_types
 
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
@@ -54,6 +55,7 @@ _wizard_group_mapping = {
 
 def _wizard_group(group):
     # The group should be None, 'mua', 'noise', or 'good'.
+    assert group is None or isinstance(group, string_types)
     group = group.lower() if group else group
     return _wizard_group_mapping.get(group, None)
 
