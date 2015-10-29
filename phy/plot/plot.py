@@ -112,11 +112,13 @@ def _build_plot(items):
         n = item.data.x.size
         ac['x'] = item.data.x
         ac['y'] = item.data.y
+        ac['depth'] = item.data.depth
         ac['plot_colors'] = item.data.color
         ac['box_index'] = _prepare_box_index(item.box_index, n)
 
     return (dict(x=ac['x'], y=ac['y'],
                  plot_colors=ac['plot_colors'],
+                 depth=ac['depth'],
                  data_bounds=item.data.data_bounds,
                  ),
             ac['box_index'])
