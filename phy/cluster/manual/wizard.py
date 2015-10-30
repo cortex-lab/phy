@@ -270,10 +270,16 @@ class Wizard(EventEmitter):
         if not candidates:  # pragma: no cover
             return
         self.select([self.best, candidates[0]])
+        # Clear the navigation history when pinning, such that `previous`
+        # keeps the pinned cluster selected.
+        self._history.clear()
 
     def unpin(self):
         if len(self._selection) == 2:
             self.select([self.selection[0]])
+            # Clear the navigation history when unpinning, such that `previous`
+            # keeps the pinned cluster selected.
+            self._history.clear()
 
     # Navigation
     #--------------------------------------------------------------------------
