@@ -47,7 +47,11 @@ def _concatenate_spike_clusters(*pairs):
     return concat[:, 0].astype(np.int64), concat[:, 1].astype(np.int64)
 
 
-def _extend_assignment(spike_ids, old_spike_clusters, spike_clusters_rel):
+def _extend_assignment(spike_ids,
+                       old_spike_clusters,
+                       spike_clusters_rel,
+                       new_cluster_id,
+                       ):
     # 1. Add spikes that belong to modified clusters.
     # 2. Find new cluster ids for all changed clusters.
 
@@ -59,7 +63,6 @@ def _extend_assignment(spike_ids, old_spike_clusters, spike_clusters_rel):
     assert spike_clusters_rel.min() >= 0
 
     # We renumber the new cluster indices.
-    new_cluster_id = old_spike_clusters.max() + 1
     new_spike_clusters = (spike_clusters_rel +
                           (new_cluster_id - spike_clusters_rel.min()))
 
@@ -200,10 +203,13 @@ class Clustering(EventEmitter):
     def new_cluster_id(self):
         """Generate a brand new cluster id.
 
-        This is `maximum cluster id + 1`.
+        NOTE: This new id strictly increases after an undo + new action,
+        meaning that old cluster ids are *not* reused. This ensures that
+        any cluster_id-based cache will always be valid even after undo
+        operations (i.e. no need for explicit cache invalidation in this case).
 
         """
-        return int(np.max(self.cluster_ids)) + 1
+        return self._new_cluster_id
 
     @property
     def n_clusters(self):
@@ -228,6 +234,9 @@ class Clustering(EventEmitter):
     #--------------------------------------------------------------------------
 
     def _update_all_spikes_per_cluster(self):
+        # Reset the new cluster id.
+        self._new_cluster_id = self._spike_clusters.max() + 1
+        # Update the spikes_per_cluster dict.
         self._spikes_per_cluster = _spikes_per_cluster(self._spike_clusters,
                                                        self._spike_ids)
 
@@ -270,6 +279,9 @@ class Clustering(EventEmitter):
                                  old_spike_clusters, old_spikes_per_cluster,
                                  new_spike_clusters, new_spikes_per_cluster)
 
+        # We update the new cluster id (strictly increasing during a session).
+        self._new_cluster_id = max(self._new_cluster_id, max(up.added) + 1)
+
         # We make the assignments.
         self._spike_clusters[spike_ids] = new_spike_clusters
         return up
@@ -293,6 +305,9 @@ class Clustering(EventEmitter):
         self._spikes_per_cluster[to] = spike_ids
         for cluster in cluster_ids:
             del self._spikes_per_cluster[cluster]
+
+        # We update the new cluster id (strictly increasing during a session).
+        self._new_cluster_id = max(max(up.added) + 1, self._new_cluster_id)
 
         # Assign the clusters.
         self.spike_clusters[spike_ids] = to
@@ -408,12 +423,14 @@ class Clustering(EventEmitter):
 
         # Normalize the spike-cluster assignment such that
         # there are only new or dead clusters, not modified clusters.
-        # This implies that spikes not explicitely selected, but that
+        # This implies that spikes not explicitly selected, but that
         # belong to clusters affected by the operation, will be assigned
         # to brand new clusters.
         spike_ids, cluster_ids = _extend_assignment(spike_ids,
                                                     self._spike_clusters,
-                                                    spike_clusters_rel)
+                                                    spike_clusters_rel,
+                                                    self.new_cluster_id(),
+                                                    )
 
         up = self._do_assign(spike_ids, cluster_ids)
         undo_state = self.emit('request_undo_state', up)
