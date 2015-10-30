@@ -155,10 +155,9 @@ class Context(object):
         # Try importing joblib.
         try:
             from joblib import Memory
-            joblib_cachedir = self._path('joblib')
-            self._memory = Memory(cachedir=joblib_cachedir)
+            self._memory = Memory(cachedir=self.cache_dir)
             logger.debug("Initialize joblib cache dir at `%s`.",
-                         joblib_cachedir)
+                         self.cache_dir)
         except ImportError:  # pragma: no cover
             logger.warn("Joblib is not installed. "
                         "Install it with `conda install joblib`.")
@@ -176,7 +175,7 @@ class Context(object):
             # Dill is necessary because we need to serialize closures.
             value.use_dill()
 
-    def _path(self, rel_path, *args, **kwargs):
+    def _path(self, rel_path='', *args, **kwargs):
         """Get the full path to a local cache resource."""
         return op.join(self.cache_dir, rel_path.format(*args, **kwargs))
 
