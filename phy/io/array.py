@@ -331,7 +331,7 @@ def _spikes_in_clusters(spike_clusters, clusters):
 
 def _spikes_per_cluster(spike_clusters, spike_ids=None):
     """Return a dictionary {cluster: list_of_spikes}."""
-    if not len(spike_clusters):
+    if spike_clusters is None or not len(spike_clusters):
         return {}
     if spike_ids is None:
         spike_ids = np.arange(len(spike_clusters)).astype(np.int64)
@@ -390,8 +390,8 @@ def select_spikes(cluster_ids=None,
         for cluster in cluster_ids:
             # Decrease the number of spikes per cluster when there
             # are more clusters.
-            n = max_n_spikes_per_cluster * exp(-.1 * (n_clusters - 1))
-            n = int(max(1, n))
+            n = int(max_n_spikes_per_cluster * exp(-.1 * (n_clusters - 1)))
+            n = max(1, n)
             spikes = spikes_per_cluster[cluster]
             selection[cluster] = regular_subset(spikes, n_spikes_max=n)
     return _flatten_per_cluster(selection)
