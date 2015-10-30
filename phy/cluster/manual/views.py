@@ -75,6 +75,9 @@ def _extract_wave(traces, spk, mask, wave_len=None):
 # -----------------------------------------------------------------------------
 
 class WaveformView(BoxedView):
+    normalization_percentile = .95
+    normalization_n_spikes = 1000
+
     def __init__(self,
                  waveforms=None,
                  masks=None,
@@ -102,8 +105,12 @@ class WaveformView(BoxedView):
 
         # Waveform normalization.
         n = waveforms.shape[0]
-        k = max(1, n // 1000)
-        m = np.abs(waveforms[::k]).max()
+        k = max(1, n // self.normalization_n_spikes)
+        w = np.abs(waveforms[::k])
+        n = w.shape[0]
+        w = w.reshape((n, -1))
+        w = w.max(axis=1)
+        m = np.percentile(w, self.normalization_percentile)
         self.data_bounds = [-1, -m, +1, +m]
 
         # Masks.
