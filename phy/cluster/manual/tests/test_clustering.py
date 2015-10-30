@@ -84,7 +84,9 @@ def test_extend_assignment():
         clusters_rel = [123] * len(spike_ids)
         new_spike_ids, new_cluster_ids = _extend_assignment(spike_ids,
                                                             spike_clusters,
-                                                            clusters_rel)
+                                                            clusters_rel,
+                                                            10,
+                                                            )
         ae(new_spike_ids, [0, 2, 6])
         ae(new_cluster_ids, [10, 10, 11])
 
@@ -92,7 +94,9 @@ def test_extend_assignment():
     clusters_rel = [0, 1]
     new_spike_ids, new_cluster_ids = _extend_assignment(spike_ids,
                                                         spike_clusters,
-                                                        clusters_rel)
+                                                        clusters_rel,
+                                                        10,
+                                                        )
     ae(new_spike_ids, [0, 2, 6])
     ae(new_cluster_ids, [10, 11, 12])
 
@@ -330,7 +334,9 @@ def test_clustering_merge():
     _assert_is_checkpoint(3)
 
     # We merge again.
-    assert clustering.new_cluster_id() == 14
+    # NOTE: 14 has been wasted, move to 15: necessary to avoid explicit cache
+    # invalidation when caching clusterid-based functions.
+    assert clustering.new_cluster_id() == 15
     assert any(clustering.spike_clusters == 13)
     assert all(clustering.spike_clusters != 14)
     info = clustering.merge([8, 7], 15)
