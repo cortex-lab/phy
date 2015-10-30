@@ -100,6 +100,12 @@ class WaveformView(BoxedView):
         self.n_spikes, self.n_samples, self.n_channels = waveforms.shape
         self.waveforms = waveforms
 
+        # Waveform normalization.
+        n = waveforms.shape[0]
+        k = max(1, n // 1000)
+        m = np.abs(waveforms[::k]).max()
+        self.data_bounds = [-1, -m, +1, +m]
+
         # Masks.
         self.masks = masks
 
@@ -161,7 +167,9 @@ class WaveformView(BoxedView):
 
             self._plots[ch].set_data(x=t, y=w[:, :, ch],
                                      color=color,
-                                     depth=depth[:, ch])
+                                     depth=depth[:, ch],
+                                     data_bounds=self.data_bounds,
+                                     )
 
         self.build()
         self.update()
