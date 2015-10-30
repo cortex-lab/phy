@@ -162,7 +162,7 @@ class ManualClustering(object):
     default_shortcuts = {
         'save': 'Save',
         # Wizard actions.
-        'next': 'space',
+        'next_by_quality': 'space',
         'previous': 'shift+space',
         'reset_wizard': 'ctrl+alt+space',
         'first': 'MoveToStartOfLine',
@@ -237,9 +237,9 @@ class ManualClustering(object):
         # Wizard.
         self.actions.add(self.wizard.restart, name='reset_wizard')
         self.actions.add(self.wizard.previous)
-        self.actions.add(self.wizard.next)
         self.actions.add(self.wizard.next_by_quality)
         self.actions.add(self.wizard.next_by_similarity)
+        self.actions.add(self.wizard.next)  # no shortcut
         self.actions.add(self.wizard.pin)
         self.actions.add(self.wizard.unpin)
 
