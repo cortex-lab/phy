@@ -174,6 +174,7 @@ class Wizard(EventEmitter):
         self.reset()
 
     def reset(self):
+        self._selection = []
         self._history = History([])
 
     # Quality and status functions
@@ -318,6 +319,7 @@ class Wizard(EventEmitter):
     def next_selection(self, cluster_ids=None,
                        strategy=None,
                        ignore_group=False):
+        """Make a new cluster selection according to a given strategy."""
         self._check_functions()
         cluster_ids = cluster_ids or self._selection
         strategy = strategy or _best_quality_strategy
@@ -329,11 +331,15 @@ class Wizard(EventEmitter):
                 return self._cluster_status(cluster)
         else:
             status = self._cluster_status
-        self.select(strategy(cluster_ids,
-                             cluster_ids=self._get_cluster_ids(),
-                             quality=self._quality,
-                             status=status,
-                             similarity=self._similarity))
+        new_selection = strategy(cluster_ids,
+                                 cluster_ids=self._get_cluster_ids(),
+                                 quality=self._quality,
+                                 status=status,
+                                 similarity=self._similarity)
+        # Skip new selection if it is the same.
+        if new_selection == self._selection:
+            return
+        self.select(new_selection)
         return self._selection
 
     def next_by_quality(self):

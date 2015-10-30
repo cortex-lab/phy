@@ -203,6 +203,8 @@ def test_wizard_next_1(wizard, status):
     w = wizard
 
     assert w.next_selection([30]) == [20]
+
+    w.reset()
     assert w.next_selection([30], ignore_group=True) == [20]
 
     # After the last good, the best ignored.
