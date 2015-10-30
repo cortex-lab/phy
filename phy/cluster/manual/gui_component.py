@@ -168,7 +168,7 @@ class ManualClustering(object):
         'first': 'MoveToStartOfLine',
         'last': 'MoveToEndOfLine',
         'pin': 'return',
-        'unpin': 'Backspace',
+        'unpin': 'backspace',
         # Clustering actions.
         'merge': 'g',
         'split': 'k',
