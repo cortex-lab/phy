@@ -161,8 +161,6 @@ class Wizard(EventEmitter):
     * The `next_*()` functions propose a new selection as a function of the
       current selection.
 
-    TODO: cache expensive functions.
-
     """
     def __init__(self):
         super(Wizard, self).__init__()

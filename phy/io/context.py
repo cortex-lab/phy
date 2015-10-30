@@ -143,11 +143,12 @@ class Context(object):
     def __init__(self, cache_dir, ipy_view=None):
 
         # Make sure the cache directory exists.
-        self.cache_dir = op.realpath(cache_dir)
+        self.cache_dir = op.realpath(op.expanduser(cache_dir))
         if not op.exists(self.cache_dir):
+            logger.debug("Create cache directory `%s`.", self.cache_dir)
             os.makedirs(self.cache_dir)
 
-        self._set_memory(cache_dir)
+        self._set_memory(self.cache_dir)
         self.ipy_view = ipy_view if ipy_view else None
 
     def _set_memory(self, cache_dir):
@@ -156,6 +157,8 @@ class Context(object):
             from joblib import Memory
             joblib_cachedir = self._path('joblib')
             self._memory = Memory(cachedir=joblib_cachedir)
+            logger.debug("Initialize joblib cache dir at `%s`.",
+                         joblib_cachedir)
         except ImportError:  # pragma: no cover
             logger.warn("Joblib is not installed. "
                         "Install it with `conda install joblib`.")
