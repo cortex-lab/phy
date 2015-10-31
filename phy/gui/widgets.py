@@ -36,9 +36,7 @@ _PAGE_TEMPLATE = """
     <style>
     {styles:s}
     </style>
-    <script>
-    {scripts:s}
-    </script>
+    {header:s}
 </head>
 <body>
 
@@ -56,7 +54,8 @@ class HTMLWidget(QWebView):
     def __init__(self):
         super(HTMLWidget, self).__init__()
         self._styles = [_DEFAULT_STYLES]
-        self._scripts = []
+        self._header = ''
+        self._body = ''
 
     def html(self):
         return self.page().mainFrame().toHtml()
@@ -64,16 +63,18 @@ class HTMLWidget(QWebView):
     def add_styles(self, s):
         self._styles.append(s)
 
-    def add_scripts(self, s):
-        self._scripts.append(s)
+    def add_header(self, h):
+        self._header += (h + '\n')
+
+    def set_body(self, s):
+        self._body = s
 
     def build(self):
         styles = '\n\n'.join(self._styles)
-        scripts = '\n\n'.join(self._scripts)
         html = _PAGE_TEMPLATE.format(title=self.title,
                                      styles=styles,
-                                     scripts=scripts,
-                                     body=self.body,
+                                     header=self._header,
+                                     body=self._body,
                                      )
         self.setHtml(html)
 
