@@ -18,12 +18,12 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 from PyQt4.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
-                          pyqtSignal, QSize)
+                          pyqtSignal, QSize, QUrl)
 from PyQt4.QtGui import (QKeySequence, QAction, QStatusBar,  # noqa
                          QMainWindow, QDockWidget, QWidget,
                          QMessageBox, QApplication,
                          )
-from PyQt4.QtWebKit import QWebView   # noqa
+from PyQt4.QtWebKit import QWebView, QWebSettings   # noqa
 
 
 # -----------------------------------------------------------------------------
