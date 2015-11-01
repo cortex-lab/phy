@@ -25,7 +25,7 @@ def test_widget_html(qtbot):
     widget.add_styles('html, body, p {background-color: purple;}')
     widget.add_header('<!-- comment -->')
     widget.set_body('Hello world!')
-
+    widget.eval_js('widget.set_body("Hello from Javascript!");')
     widget.show()
     qtbot.waitForWindowShown(widget)
     # qtbot.stop()

@@ -10,7 +10,7 @@
 import logging
 import os.path as op
 
-from .qt import QWebView, QUrl, QWebSettings
+from .qt import QWebView, QUrl, QWebSettings, pyqtSlot
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +49,13 @@ _PAGE_TEMPLATE = """
 
 
 class HTMLWidget(QWebView):
+    """An HTML widget that is displayed with Qt.
+
+    Python methods can be called from Javascript with `widget.the_method()`.
+    They must be decorated with `pyqtSlot(str)` or similar, depending on
+    the parameters.
+
+    """
     title = 'Widget'
     body = ''
 
@@ -59,6 +66,17 @@ class HTMLWidget(QWebView):
         self._styles = [_DEFAULT_STYLES]
         self._header = ''
         self._body = ''
+        self.add_to_js('widget', self)
+
+    def add_to_js(self, name, var):
+        """Add an object to Javascript."""
+        frame = self.page().mainFrame()
+        frame.addToJavaScriptWindowObject(name, var)
+
+    def eval_js(self, expr):
+        """Evaluate a Javascript expression."""
+        frame = self.page().mainFrame()
+        frame.evaluateJavaScript(expr)
 
     def html(self):
         return self.page().mainFrame().toHtml()
@@ -72,6 +90,7 @@ class HTMLWidget(QWebView):
     def add_header(self, h):
         self._header += (h + '\n')
 
+    @pyqtSlot(str)
     def set_body(self, s):
         self._body = s
 
