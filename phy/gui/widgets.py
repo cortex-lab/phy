@@ -101,19 +101,19 @@ class HTMLWidget(QWebView):
 _TABLE_STYLE = r"""
 
 th.sort-header::-moz-selection { background:transparent; }
-th.sort-header::selection      { background:transparent; }
+th.sort-header::selection  { background:transparent; }
 th.sort-header { cursor:pointer; }
 
 table th.sort-header:after {
-  content: "\25B2";
-  float: right;
-  margin-left: 5px;
-  margin-right: 5px;
-  visibility: hidden;
+    content: "\25B2";
+    float: right;
+    margin-left: 3px;
+    margin-right: 15px;
+    visibility: hidden;
 }
 
 table th.sort-header:hover:after {
-  visibility: visible;
+    visibility: visible;
 }
 
 table th.sort-up:after {
@@ -126,7 +126,7 @@ table th.sort-down:after {
 table th.sort-up:after,
 table th.sort-down:after,
 table th.sort-down:hover:after {
-  visibility: visible;
+    visibility: visible;
 }
 
 """
