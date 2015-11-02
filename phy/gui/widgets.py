@@ -11,6 +11,8 @@ import json
 import logging
 import os.path as op
 
+from six import text_type
+
 from .qt import QWebView, QWebPage, QUrl, QWebSettings, pyqtSlot
 from phy.utils import EventEmitter
 
@@ -162,11 +164,11 @@ class HTMLWidget(QWebView):
     @pyqtSlot(str)
     def _set_from_js(self, obj):
         """Called from Javascript to pass any object to Python through JSON."""
-        self._obj = json.loads(str(obj))
+        self._obj = json.loads(text_type(obj))
 
     @pyqtSlot(str, str)
     def _emit_from_js(self, name, arg_json):
-        self.emit(name, json.loads(str(arg_json)))
+        self.emit(text_type(name), json.loads(text_type(arg_json)))
 
     def get_js(self, expr):
         """Evaluate a Javascript expression and get a Python object.
