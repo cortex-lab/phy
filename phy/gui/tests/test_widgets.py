@@ -31,6 +31,15 @@ def test_widget_html(qtbot):
     # qtbot.stop()
 
 
+def test_widget_javascript(qtbot):
+    widget = HTMLWidget()
+    widget.show()
+    qtbot.waitForWindowShown(widget)
+    widget.eval_js('number = 1;')
+    assert widget.get_js('number') == 1
+    # qtbot.stop()
+
+
 def test_table(qtbot):
     table = Table()
 
