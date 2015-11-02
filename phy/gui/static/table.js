@@ -76,8 +76,8 @@ Table.prototype.select = function(ids, raise_event) {
 
     // Add the class.
     for (var i = 0; i < ids.length; i++) {
-        var id = parseInt(String(ids[i]));
-        this.rows[id].classList.add('selected');
+        ids[i] = parseInt(String(ids[i]));
+        this.rows[ids[i]].classList.add('selected');
     }
 
     this.selected = ids;
