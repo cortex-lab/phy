@@ -54,10 +54,10 @@ def test_table(qtbot):
                    )
     table.select([4])
 
-    assert table.pinned == []
-
     table.next()
     assert table.selected == [5]
 
     table.previous()
     assert table.selected == [3]
+
+    # qtbot.stop()
