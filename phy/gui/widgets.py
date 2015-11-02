@@ -204,14 +204,6 @@ class Table(HTMLWidget):
                                  )
         self.eval_js('table.setData({});'.format(data))
 
-    def set_state(self, selected=None, sort_col=None, sort_dir=None):
-        """Set the state of the widget."""
-        state = _create_json_dict(selected=[int(_) for _ in selected],
-                                  sortCol=sort_col,
-                                  sortDir=sort_dir,
-                                  )
-        self.eval_js('table.setState({});'.format(state))
-
     def next(self):
         """Select the next non-skip row."""
         self.eval_js('table.next();')
@@ -222,14 +214,9 @@ class Table(HTMLWidget):
 
     def select(self, ids):
         """Select some rows."""
-        self.set_state(selected=ids)
-
-    @property
-    def state(self):
-        """Current state."""
-        return self.get_js("table.getState()")
+        self.eval_js('table.select({});'.format(json.dumps(ids)))
 
     @property
     def selected(self):
         """Currently selected rows."""
-        return [int(_) for _ in self.state.get('selected', [])]
+        return [int(_) for _ in self.get_js('table.selected')]

@@ -1,11 +1,7 @@
 
 var Table = function (el) {
     this.el = el;
-    this.state = {
-        sortCol: null,
-        sortDir: null,
-        selected: [],
-    }
+    this.selected = [];
     this.headers = {};  // {name: th} mapping
     this.rows = {};  // {id: tr} mapping
     this.tablesort = null;
@@ -52,7 +48,7 @@ Table.prototype.setData = function(data) {
 
             var evt = e ? e:window.event;
             if (evt.ctrlKey || evt.metaKey) {
-                selected = that.state.selected.concat(selected);
+                selected = that.selected.concat(selected);
             }
             that.select(selected);
         }
@@ -66,99 +62,33 @@ Table.prototype.setData = function(data) {
 
     // Enable the tablesort plugin.
     this.tablesort = new Tablesort(this.el);
-
-    // Synchronize the state.
-    var that = this;
-    this.el.addEventListener('afterSort', function() {
-        for (var header in that.headers) {
-            if (that.headers[header].classList.contains('sort-up')) {
-                that.state.sortCol = header;
-                that.state.sortDir = 'desc';
-                break;
-            }
-            if (that.headers[header].classList.contains('sort-down')) {
-                that.state.sortCol = header;
-                that.state.sortDir = 'asc';
-                break;
-            }
-        }
-    });
 };
 
-Table.prototype.setState = function(state) {
+Table.prototype.select = function(ids) {
 
-    // Make sure both sortCol and sortDir are specified.
-    if (!('sortCol' in state) && ('sortDir' in state)) {
-        state.sortCol = this.state.sortCol;
-    }
-    if (!('sortDir' in state) && ('sortCol' in state)) {
-        state.sortDir = this.state.sortDir;
-    }
-
-    if ('sortCol' in state) {
-
-        // Update the state.
-        this.state.sortCol = state.sortCol;
-        this.state.sortDir = state.sortDir;
-
-        // Remove all sorts.
-        for (var h in this.headers) {
-            this.headers[h].classList.remove('sort-up');
-            this.headers[h].classList.remove('sort-down');
-        }
-
-        // Set the sort direction in the header class.
-        var header = this.headers[state.sortCol];
-        header.classList.add(state.sortDir === 'desc' ?
-                             'sort-down' : 'sort-up');
-
-        // Sort the table.
-        this.tablesort.sortTable(header);
-    }
-    if ('selected' in state) {
-        this.setRowClass('selected', state.selected);
-        this.state.selected = state.selected;
-    }
-};
-
-Table.prototype.setRowClass = function(name, ids) {
     // Remove the class on all rows.
-    for (var i = 0; i < this.state[name].length; i++) {
-        var id = this.state[name][i];
+    for (var i = 0; i < this.selected.length; i++) {
+        var id = this.selected[i];
         var row = this.rows[id];
-        row.classList.remove(name);
+        row.classList.remove('selected');
     }
 
     // Add the class.
     for (var i = 0; i < ids.length; i++) {
-        var id = ids[i];
-        this.rows[id].classList.add(name);
+        var id = parseInt(String(ids[i]));
+        this.rows[id].classList.add('selected');
     }
-};
 
-Table.prototype.stateUpdated = function() {
-    // TODO: call widget.setState(this.state);
+    this.selected = ids;
 };
-
-Table.prototype.getState = function() {
-    return this.state;
-}
 
 Table.prototype.clear = function() {
-    this.setState({
-        selected: [],
-    });
-};
-
-Table.prototype.select = function(items) {
-    this.setState({
-        selected: items,
-    });
+    this.selected = [];
 };
 
 Table.prototype.next = function() {
-    if (this.state.selected.length != 1) return;
-    var id = this.state.selected[0];
+    if (this.selected.length != 1) return;
+    var id = this.selected[0];
     var row = this.rows[id];
     var i0 = row.rowIndex + 1;
     var items = [];
@@ -173,14 +103,12 @@ Table.prototype.next = function() {
 
     if (!(items.length)) return;
 
-    this.setState({
-        selected: items,
-    });
+    this.select(items);
 };
 
 Table.prototype.previous = function() {
-    if (this.state.selected.length != 1) return;
-    var id = this.state.selected[0];
+    if (this.selected.length != 1) return;
+    var id = this.selected[0];
     var row = this.rows[id];
     var i0 = row.rowIndex - 1;
     var items = [];
@@ -196,7 +124,5 @@ Table.prototype.previous = function() {
 
     if (!(items.length)) return;
 
-    this.setState({
-        selected: items,
-    });
+    this.select(items);
 };
