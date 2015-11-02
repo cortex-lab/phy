@@ -5,7 +5,6 @@ var Table = function (el) {
         sortCol: null,
         sortDir: null,
         selected: [],
-        pinned: [],
     }
     this.headers = {};  // {name: th} mapping
     this.rows = {};  // {id: tr} mapping
@@ -49,7 +48,7 @@ Table.prototype.setData = function(data) {
         }
 
         tr.onclick = function(e) {
-            var selected = [parseInt(this.dataset.id)];
+            var selected = [this.dataset.id];
 
             var evt = e ? e:window.event;
             if (evt.ctrlKey || evt.metaKey) {
@@ -118,11 +117,7 @@ Table.prototype.setState = function(state) {
     }
     if ('selected' in state) {
         this.setRowClass('selected', state.selected);
-        this.state.selected = state.selected.map(parseInt);
-    }
-    if ('pinned' in state) {
-        this.setRowClass('pinned', state.pinned);
-        this.state.pinned = state.pinned.map(parseInt);
+        this.state.selected = state.selected;
     }
 };
 
@@ -152,25 +147,12 @@ Table.prototype.getState = function() {
 Table.prototype.clear = function() {
     this.setState({
         selected: [],
-        pinned: [],
     });
 };
 
 Table.prototype.select = function(items) {
     this.setState({
         selected: items,
-    });
-};
-
-Table.prototype.pin = function(items) {
-    this.setState({
-        pinned: items,
-    });
-};
-
-Table.prototype.unpin = function() {
-    this.setState({
-        pinned: [],
     });
 };
 
@@ -191,7 +173,6 @@ Table.prototype.next = function() {
 
     if (!(items.length)) return;
 
-    // TODO: keep the pinned
     this.setState({
         selected: items,
     });
@@ -215,7 +196,6 @@ Table.prototype.previous = function() {
 
     if (!(items.length)) return;
 
-    // TODO: keep the pinned
     this.setState({
         selected: items,
     });

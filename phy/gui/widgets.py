@@ -181,7 +181,7 @@ def _create_json_dict(**kwargs):
 
 
 class Table(HTMLWidget):
-    """A sortable table with support for selection and pinning."""
+    """A sortable table with support for selection."""
 
     _table_id = 'the-table'
 
@@ -198,21 +198,15 @@ class Table(HTMLWidget):
         self.build()
 
     def set_data(self, items, cols):
-        """Set the rows and cols of the table.
-
-        TODO: rename items to rows.
-
-        """
+        """Set the rows and cols of the table."""
         data = _create_json_dict(items=items,
                                  cols=cols,
                                  )
         self.eval_js('table.setData({});'.format(data))
 
-    def set_state(self, selected=None, pinned=None,
-                  sort_col=None, sort_dir=None):
+    def set_state(self, selected=None, sort_col=None, sort_dir=None):
         """Set the state of the widget."""
-        state = _create_json_dict(selected=selected,
-                                  pinned=pinned,
+        state = _create_json_dict(selected=[int(_) for _ in selected],
                                   sortCol=sort_col,
                                   sortDir=sort_dir,
                                   )
@@ -238,9 +232,4 @@ class Table(HTMLWidget):
     @property
     def selected(self):
         """Currently selected rows."""
-        return self.state.get('selected', [])
-
-    @property
-    def pinned(self):
-        """Currently pinned rows."""
-        return self.state.get('pinned', [])
+        return [int(_) for _ in self.state.get('selected', [])]
