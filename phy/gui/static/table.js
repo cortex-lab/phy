@@ -64,7 +64,8 @@ Table.prototype.setData = function(data) {
     this.tablesort = new Tablesort(this.el);
 };
 
-Table.prototype.select = function(ids) {
+Table.prototype.select = function(ids, raise_event) {
+    raise_event = typeof raise_event !== 'undefined' ? false : true;
 
     // Remove the class on all rows.
     for (var i = 0; i < this.selected.length; i++) {
@@ -80,6 +81,10 @@ Table.prototype.select = function(ids) {
     }
 
     this.selected = ids;
+
+    if (raise_event) {
+        emit("select", ids);
+    }
 };
 
 Table.prototype.clear = function() {

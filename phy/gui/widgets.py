@@ -12,6 +12,7 @@ import logging
 import os.path as op
 
 from .qt import QWebView, QWebPage, QUrl, QWebSettings, pyqtSlot
+from phy.utils import EventEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -77,6 +78,24 @@ class HTMLWidget(QWebView):
         self._header = ''
         self._body = ''
         self.add_to_js('widget', self)
+        self._event = EventEmitter()
+        self.add_header('''<script>
+                        var emit = function (name, arg) {
+                            widget._emit_from_js(name, JSON.stringify(arg));
+                        };
+                        </script>''')
+
+    # Events
+    # -------------------------------------------------------------------------
+
+    def emit(self, *args, **kwargs):
+        return self._event.emit(*args, **kwargs)
+
+    def connect_(self, *args, **kwargs):
+        self._event.connect(*args, **kwargs)
+
+    def unconnect_(self, *args, **kwargs):
+        self._event.unconnect(*args, **kwargs)
 
     # Headers
     # -------------------------------------------------------------------------
@@ -144,6 +163,10 @@ class HTMLWidget(QWebView):
     def _set_from_js(self, obj):
         """Called from Javascript to pass any object to Python through JSON."""
         self._obj = json.loads(str(obj))
+
+    @pyqtSlot(str, str)
+    def _emit_from_js(self, name, arg_json):
+        self.emit(name, json.loads(str(arg_json)))
 
     def get_js(self, expr):
         """Evaluate a Javascript expression and get a Python object.
@@ -214,7 +237,7 @@ class Table(HTMLWidget):
 
     def select(self, ids):
         """Select some rows."""
-        self.eval_js('table.select({});'.format(json.dumps(ids)))
+        self.eval_js('table.select({}, false);'.format(json.dumps(ids)))
 
     @property
     def selected(self):
