@@ -37,6 +37,18 @@ def test_widget_javascript(qtbot):
     qtbot.waitForWindowShown(widget)
     widget.eval_js('number = 1;')
     assert widget.get_js('number') == 1
+
+    _out = []
+
+    @widget.connect_
+    def on_test(arg):
+        _out.append(arg)
+
+    widget.eval_js('emit("test", [1, 2]);')
+    assert _out == [[1, 2]]
+
+    widget.unconnect_(on_test)
+
     # qtbot.stop()
 
 
@@ -59,5 +71,16 @@ def test_table(qtbot):
 
     table.previous()
     assert table.selected == [3]
+
+    _sel = []
+
+    @table.connect_
+    def on_select(items):
+        _sel.append(items)
+
+    table.eval_js('table.select([1]);')
+    assert _sel == [[1]]
+
+    assert table.selected == [1]
 
     # qtbot.stop()
