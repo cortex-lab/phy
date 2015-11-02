@@ -34,25 +34,21 @@ def test_widget_html(qtbot):
 def test_table(qtbot):
     table = Table()
 
-    table.set_body("""
-
-        <table id="the-table" class="sort">
-            <thead>
-                <tr><th>id</th><th>count</th></tr>
-            </thead>
-            <tbody>
-                <tr><td>1</td><td>20</td></tr>
-                <tr><td>2</td><td>10</td></tr>
-                <tr><td>3</td><td>30</td></tr>
-            </tbody>
-        </table>
-
-        <script>
-            new Tablesort(document.getElementById('the-table'));
-        </script>
-
-    """)
-
     table.show()
     qtbot.waitForWindowShown(table)
-    # qtbot.stop()
+
+    items = [{'id': i, 'count': 10 * i} for i in range(10)]
+    items[4]['skip'] = True
+
+    table.set_data(cols=['id', 'count'],
+                   items=items,
+                   )
+    table.select([4])
+
+    assert table.pinned == []
+
+    table.next()
+    assert table.selected == [5]
+
+    table.previous()
+    assert table.selected == [3]

@@ -2,10 +2,12 @@
 # https://github.com/pytest-dev/pytest/issues/744
 git+https://github.com/pytest-dev/pytest.git
 
+# Need development version of pytest-qt for qtbot.wait() method
+git+https://github.com/pytest-dev/pytest-qt.git
+
 flake8
 coverage==3.7.1
 coveralls
 responses
 pytest-cov
-pytest-qt
 nose

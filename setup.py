@@ -50,7 +50,8 @@ setup(
     packages=_package_tree('phy'),
     package_dir={'phy': 'phy'},
     package_data={
-        'phy': ['*.vert', '*.frag', '*.glsl', '*.html', '*.css', '*.prb'],
+        'phy': ['*.vert', '*.frag', '*.glsl',
+                '*.html', '*.css', '*.js', '*.prb'],
     },
     entry_points={
         'console_scripts': [
