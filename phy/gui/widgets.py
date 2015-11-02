@@ -143,7 +143,7 @@ class HTMLWidget(QWebView):
     @pyqtSlot(str)
     def _set_from_js(self, obj):
         """Called from Javascript to pass any object to Python through JSON."""
-        self._obj = json.loads(obj)
+        self._obj = json.loads(str(obj))
 
     def get_js(self, expr):
         """Evaluate a Javascript expression and get a Python object.
