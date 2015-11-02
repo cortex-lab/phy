@@ -7,10 +7,11 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+import json
 import logging
 import os.path as op
 
-from .qt import QWebView, QUrl, QWebSettings, pyqtSlot
+from .qt import QWebView, QWebPage, QUrl, QWebSettings, pyqtSlot
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +49,11 @@ _PAGE_TEMPLATE = """
 """
 
 
+class WebPage(QWebPage):
+    def javaScriptConsoleMessage(self, msg, line, source):
+        logger.debug(msg)  # pragma: no cover
+
+
 class HTMLWidget(QWebView):
     """An HTML widget that is displayed with Qt.
 
@@ -63,26 +69,24 @@ class HTMLWidget(QWebView):
         super(HTMLWidget, self).__init__()
         self.settings().setAttribute(
             QWebSettings.LocalContentCanAccessRemoteUrls, True)
+        self.settings().setAttribute(
+            QWebSettings.DeveloperExtrasEnabled, True)
+        self.setPage(WebPage())
+        self._obj = None
         self._styles = [_DEFAULT_STYLES]
         self._header = ''
         self._body = ''
         self.add_to_js('widget', self)
 
-    def add_to_js(self, name, var):
-        """Add an object to Javascript."""
-        frame = self.page().mainFrame()
-        frame.addToJavaScriptWindowObject(name, var)
-
-    def eval_js(self, expr):
-        """Evaluate a Javascript expression."""
-        frame = self.page().mainFrame()
-        frame.evaluateJavaScript(expr)
-
-    def html(self):
-        return self.page().mainFrame().toHtml()
+    # Headers
+    # -------------------------------------------------------------------------
 
     def add_styles(self, s):
         self._styles.append(s)
+
+    def add_style_src(self, filename):
+        self.add_header(('<link rel="stylesheet" type="text/css" '
+                         'href="{}" />').format(filename))
 
     def add_script_src(self, filename):
         self.add_header('<script src="{}"></script>'.format(filename))
@@ -90,9 +94,18 @@ class HTMLWidget(QWebView):
     def add_header(self, h):
         self._header += (h + '\n')
 
+    # HTML methods
+    # -------------------------------------------------------------------------
+
     @pyqtSlot(str)
     def set_body(self, s):
         self._body = s
+
+    def add_body(self, s):
+        self._body += '\n' + s + '\n'
+
+    def html(self):
+        return self.page().mainFrame().toHtml()
 
     def build(self):
         styles = '\n\n'.join(self._styles)
@@ -106,6 +119,29 @@ class HTMLWidget(QWebView):
         base_url = QUrl().fromLocalFile(static_dir)
         self.setHtml(html, base_url)
 
+    # Javascript methods
+    # -------------------------------------------------------------------------
+
+    def add_to_js(self, name, var):
+        """Add an object to Javascript."""
+        frame = self.page().mainFrame()
+        frame.addToJavaScriptWindowObject(name, var)
+
+    def eval_js(self, expr):
+        """Evaluate a Javascript expression."""
+        frame = self.page().mainFrame()
+        frame.evaluateJavaScript(expr)
+
+    @pyqtSlot(str)
+    def _set_from_js(self, obj):
+        self._obj = json.loads(obj)
+
+    def get_js(self, expr):
+        self.eval_js('widget._set_from_js(JSON.stringify({}));'.format(expr))
+        obj = self._obj
+        self._obj = None
+        return obj
+
     def show(self):
         # Build if no HTML has been set.
         if self.html() == '<html><head></head><body></body></html>':
@@ -117,42 +153,62 @@ class HTMLWidget(QWebView):
 # HTML table
 # -----------------------------------------------------------------------------
 
-_TABLE_STYLE = r"""
-
-th.sort-header::-moz-selection { background:transparent; }
-th.sort-header::selection  { background:transparent; }
-th.sort-header { cursor:pointer; }
-
-table th.sort-header:after {
-    content: "\25B2";
-    float: right;
-    margin-left: 3px;
-    margin-right: 15px;
-    visibility: hidden;
-}
-
-table th.sort-header:hover:after {
-    visibility: visible;
-}
-
-table th.sort-up:after {
-    content: "\25BC";
-}
-table th.sort-down:after {
-    content: "\25B2";
-}
-
-table th.sort-up:after,
-table th.sort-down:after,
-table th.sort-down:hover:after {
-    visibility: visible;
-}
-
-"""
+def _create_json_dict(**kwargs):
+    d = {}
+    for k, v in kwargs.items():
+        if v is not None:
+            d[k] = v
+    return json.dumps(d)
 
 
 class Table(HTMLWidget):
+
+    _table_id = 'the-table'
+
     def __init__(self):
         super(Table, self).__init__()
-        self.add_styles(_TABLE_STYLE)
+        self.add_style_src('table.css')
         self.add_script_src('tablesort.min.js')
+        self.add_script_src('table.js')
+        self.set_body('<table id="{}" class="sort"></table>'.format(
+                      self._table_id))
+        self.add_body('''<script>
+                      var table = new Table(document.getElementById("{}"));
+                      </script>'''.format(self._table_id))
+        self.build()
+
+    def set_data(self, items, cols):
+        data = _create_json_dict(items=items,
+                                 cols=cols,
+                                 )
+        self.eval_js('table.setData({});'.format(data))
+
+    def set_state(self, selected=None, pinned=None,
+                  sort_col=None, sort_dir=None):
+        state = _create_json_dict(selected=selected,
+                                  pinned=pinned,
+                                  sortCol=sort_col,
+                                  sortDir=sort_dir,
+                                  )
+        self.eval_js('table.setState({});'.format(state))
+
+    def next(self):
+        self.eval_js('table.next();')
+
+    def previous(self):
+        self.eval_js('table.previous();')
+
+    def select(self, ids):
+        self.set_state(selected=ids)
+
+    @property
+    def state(self):
+        return self.get_js("table.getState()")
+
+    @property
+    def selected(self):
+        return self.state.get('selected', [])
+
+    @property
+    def pinned(self):
+        return self.state.get('pinned', [])

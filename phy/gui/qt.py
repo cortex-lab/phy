@@ -23,7 +23,7 @@ from PyQt4.QtGui import (QKeySequence, QAction, QStatusBar,  # noqa
                          QMainWindow, QDockWidget, QWidget,
                          QMessageBox, QApplication,
                          )
-from PyQt4.QtWebKit import QWebView, QWebSettings   # noqa
+from PyQt4.QtWebKit import QWebView, QWebPage, QWebSettings   # noqa
 
 
 # -----------------------------------------------------------------------------
