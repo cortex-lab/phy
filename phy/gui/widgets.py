@@ -82,16 +82,20 @@ class HTMLWidget(QWebView):
     # -------------------------------------------------------------------------
 
     def add_styles(self, s):
+        """Add CSS styles."""
         self._styles.append(s)
 
     def add_style_src(self, filename):
+        """Link a CSS file."""
         self.add_header(('<link rel="stylesheet" type="text/css" '
                          'href="{}" />').format(filename))
 
     def add_script_src(self, filename):
+        """Link a JS script."""
         self.add_header('<script src="{}"></script>'.format(filename))
 
     def add_header(self, h):
+        """Add HTML code to the header."""
         self._header += (h + '\n')
 
     # HTML methods
@@ -99,15 +103,19 @@ class HTMLWidget(QWebView):
 
     @pyqtSlot(str)
     def set_body(self, s):
+        """Set the HTML body."""
         self._body = s
 
     def add_body(self, s):
+        """Add HTML code to the body."""
         self._body += '\n' + s + '\n'
 
     def html(self):
+        """Return the full HTML source of the widget."""
         return self.page().mainFrame().toHtml()
 
     def build(self):
+        """Build the full HTML source."""
         styles = '\n\n'.join(self._styles)
         html = _PAGE_TEMPLATE.format(title=self.title,
                                      styles=styles,
@@ -134,15 +142,26 @@ class HTMLWidget(QWebView):
 
     @pyqtSlot(str)
     def _set_from_js(self, obj):
+        """Called from Javascript to pass any object to Python through JSON."""
         self._obj = json.loads(obj)
 
     def get_js(self, expr):
+        """Evaluate a Javascript expression and get a Python object.
+
+        This uses JSON serialization/deserialization under the hood.
+
+        """
         self.eval_js('widget._set_from_js(JSON.stringify({}));'.format(expr))
         obj = self._obj
         self._obj = None
         return obj
 
     def show(self):
+        """Show the widget.
+
+        A build is triggered if necessary.
+
+        """
         # Build if no HTML has been set.
         if self.html() == '<html><head></head><body></body></html>':
             self.build()
@@ -162,6 +181,7 @@ def _create_json_dict(**kwargs):
 
 
 class Table(HTMLWidget):
+    """A sortable table with support for selection and pinning."""
 
     _table_id = 'the-table'
 
@@ -178,6 +198,11 @@ class Table(HTMLWidget):
         self.build()
 
     def set_data(self, items, cols):
+        """Set the rows and cols of the table.
+
+        TODO: rename items to rows.
+
+        """
         data = _create_json_dict(items=items,
                                  cols=cols,
                                  )
@@ -185,6 +210,7 @@ class Table(HTMLWidget):
 
     def set_state(self, selected=None, pinned=None,
                   sort_col=None, sort_dir=None):
+        """Set the state of the widget."""
         state = _create_json_dict(selected=selected,
                                   pinned=pinned,
                                   sortCol=sort_col,
@@ -193,22 +219,28 @@ class Table(HTMLWidget):
         self.eval_js('table.setState({});'.format(state))
 
     def next(self):
+        """Select the next non-skip row."""
         self.eval_js('table.next();')
 
     def previous(self):
+        """Select the previous non-skip row."""
         self.eval_js('table.previous();')
 
     def select(self, ids):
+        """Select some rows."""
         self.set_state(selected=ids)
 
     @property
     def state(self):
+        """Current state."""
         return self.get_js("table.getState()")
 
     @property
     def selected(self):
+        """Currently selected rows."""
         return self.state.get('selected', [])
 
     @property
     def pinned(self):
+        """Currently pinned rows."""
         return self.state.get('pinned', [])
