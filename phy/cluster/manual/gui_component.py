@@ -10,13 +10,16 @@
 import logging
 
 import numpy as np
-from six import string_types
 
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
-from .wizard import Wizard
+from phy.stats.clusters import (mean,
+                                max_waveform_amplitude,
+                                mean_masked_features_distance,
+                                )
 from phy.gui.actions import Actions
+from phy.gui.widgets import Table
 from phy.io.array import select_spikes
 
 logger = logging.getLogger(__name__)
@@ -42,83 +45,61 @@ def _process_ups(ups):  # pragma: no cover
         raise NotImplementedError()
 
 
-# -----------------------------------------------------------------------------
-# Attach wizard to effectors (clustering and cluster_meta)
-# -----------------------------------------------------------------------------
+def _make_wizard_default_functions(waveforms=None,
+                                   features=None,
+                                   masks=None,
+                                   n_features_per_channel=None,
+                                   spikes_per_cluster=None,
+                                   ):
+    spc = spikes_per_cluster
+    nfc = n_features_per_channel
 
-_wizard_group_mapping = {
-    'noise': 'ignored',
-    'mua': 'ignored',
-    'good': 'good',
-}
+    def max_waveform_amplitude_quality(cluster):
+        spike_ids = select_spikes(cluster_ids=[cluster],
+                                  max_n_spikes_per_cluster=100,
+                                  spikes_per_cluster=spc,
+                                  )
+        m = np.atleast_2d(masks[spike_ids])
+        w = np.atleast_3d(waveforms[spike_ids])
+        mean_masks = mean(m)
+        mean_waveforms = mean(w)
+        q = max_waveform_amplitude(mean_masks, mean_waveforms)
+        logger.debug("Computed cluster quality for %d: %.3f.",
+                     cluster, q)
+        return q
 
+    def mean_masked_features_similarity(c0, c1):
+        s0 = select_spikes(cluster_ids=[c0],
+                           max_n_spikes_per_cluster=100,
+                           spikes_per_cluster=spc,
+                           )
+        s1 = select_spikes(cluster_ids=[c1],
+                           max_n_spikes_per_cluster=100,
+                           spikes_per_cluster=spc,
+                           )
 
-def _wizard_group(group):
-    # The group should be None, 'mua', 'noise', or 'good'.
-    assert group is None or isinstance(group, string_types)
-    group = group.lower() if group else group
-    return _wizard_group_mapping.get(group, None)
+        f0 = features[s0]
+        m0 = np.atleast_2d(masks[s0])
 
+        f1 = features[s1]
+        m1 = np.atleast_2d(masks[s1])
 
-def _attach_wizard_to_effector(wizard, effector):
+        mf0 = mean(f0)
+        mm0 = mean(m0)
 
-    # Save the current selection when an action occurs.
-    @effector.connect
-    def on_request_undo_state(up):
-        return {'selection': wizard._selection}
+        mf1 = mean(f1)
+        mm1 = mean(m1)
 
-    @effector.connect
-    def on_cluster(up):
-        if not up.history:
-            # Reset the history after every change.
-            # That's because the history contains references to dead clusters.
-            wizard.reset()
-        if up.history == 'undo':
-            # Revert to the given selection after an undo.
-            wizard.select(up.undo_state[0]['selection'], add_to_history=False)
+        d = mean_masked_features_distance(mf0, mf1, mm0, mm1,
+                                          n_features_per_channel=nfc,
+                                          )
 
+        logger.debug("Computed cluster similarity for (%d, %d): %.3f.",
+                     c0, c1, d)
+        return -d  # NOTE: convert distance to score
 
-def _attach_wizard_to_clustering(wizard, clustering):
-    _attach_wizard_to_effector(wizard, clustering)
-
-    @wizard.set_cluster_ids_function
-    def get_cluster_ids():
-        return clustering.cluster_ids
-
-    @clustering.connect
-    def on_cluster(up):
-        if up.added and up.history != 'undo':
-            wizard.select([up.added[0]])
-            # NOTE: after a merge, select the merged one AND the most similar.
-            # There is an ambiguity after a merge: does the merge occurs during
-            # a wizard session, in which case we want to pin the merged
-            # cluster? If it is just a "cold" merge, then we might not want
-            # to pin the merged cluster. But cold merges are supposed to be
-            # less frequent than wizard merges.
-            wizard.pin()
-
-
-def _attach_wizard_to_cluster_meta(wizard, cluster_meta):
-    _attach_wizard_to_effector(wizard, cluster_meta)
-
-    @wizard.set_status_function
-    def status(cluster):
-        group = cluster_meta.get('group', cluster)
-        return _wizard_group(group)
-
-    @cluster_meta.connect
-    def on_cluster(up):
-        if up.description == 'metadata_group' and up.history != 'undo':
-            cluster = up.metadata_changed[0]
-            wizard.next_selection([cluster], ignore_group=True)
-            # TODO: pin after a move? Yes if the previous selection >= 2, no
-            # otherwise. See similar note above.
-            # wizard.pin()
-
-
-def _attach_wizard(wizard, clustering, cluster_meta):
-    _attach_wizard_to_clustering(wizard, clustering)
-    _attach_wizard_to_cluster_meta(wizard, cluster_meta)
+    return (max_waveform_amplitude_quality,
+            mean_masked_features_similarity)
 
 
 # -----------------------------------------------------------------------------
@@ -130,7 +111,6 @@ class ManualClustering(object):
 
     * Clustering instance: merge, split, undo, redo
     * ClusterMeta instance: change cluster metadata (e.g. group)
-    * Wizard
     * Selection
     * Many manual clustering-related actions, snippets, shortcuts, etc.
 
@@ -162,13 +142,9 @@ class ManualClustering(object):
     default_shortcuts = {
         'save': 'Save',
         # Wizard actions.
-        'next_by_quality': 'space',
+        'next': 'space',
         'previous': 'shift+space',
         'reset_wizard': 'ctrl+alt+space',
-        'first': 'MoveToStartOfLine',
-        'last': 'MoveToEndOfLine',
-        'pin': 'return',
-        'unpin': 'backspace',
         # Clustering actions.
         'merge': 'g',
         'split': 'k',
@@ -181,6 +157,8 @@ class ManualClustering(object):
                  cluster_groups=None,
                  n_spikes_max_per_cluster=100,
                  shortcuts=None,
+                 quality_func=None,
+                 similarity_func=None,
                  ):
 
         self.gui = None
@@ -195,8 +173,9 @@ class ManualClustering(object):
         self.cluster_meta = create_cluster_meta(cluster_groups)
         self._global_history = GlobalHistory(process_ups=_process_ups)
 
-        # Create the wizard and attach it to Clustering/ClusterMeta.
-        self.wizard = Wizard()
+        # Wizard functions.
+        self.quality_func = quality_func or (lambda c: 0)
+        self.similarity_func = similarity_func or (lambda c, d: 0)
 
         # Log the actions.
         @self.clustering.connect
@@ -226,7 +205,7 @@ class ManualClustering(object):
             if self.gui:
                 self.gui.emit('on_cluster', up)
 
-        _attach_wizard(self.wizard, self.clustering, self.cluster_meta)
+        # _attach_wizard(self.wizard, self.clustering, self.cluster_meta)
 
     def _create_actions(self, gui):
         self.actions = Actions(gui, default_shortcuts=self.shortcuts)
@@ -235,13 +214,13 @@ class ManualClustering(object):
         self.actions.add(self.select, alias='c')
 
         # Wizard.
-        self.actions.add(self.wizard.restart, name='reset_wizard')
-        self.actions.add(self.wizard.previous)
-        self.actions.add(self.wizard.next_by_quality)
-        self.actions.add(self.wizard.next_by_similarity)
-        self.actions.add(self.wizard.next)  # no shortcut
-        self.actions.add(self.wizard.pin)
-        self.actions.add(self.wizard.unpin)
+        # self.actions.add(self.wizard.restart, name='reset_wizard')
+        # self.actions.add(self.wizard.previous)
+        # self.actions.add(self.wizard.next_by_quality)
+        # self.actions.add(self.wizard.next_by_similarity)
+        # self.actions.add(self.wizard.next)  # no shortcut
+        # self.actions.add(self.wizard.pin)
+        # self.actions.add(self.wizard.unpin)
 
         # Clustering.
         self.actions.add(self.merge)
@@ -250,10 +229,22 @@ class ManualClustering(object):
         self.actions.add(self.undo)
         self.actions.add(self.redo)
 
+    def _create_cluster_view(self):
+        table = Table()
+        cols = ['id', 'quality']
+        items = [{'id': int(clu), 'quality': self.quality_func(clu)}
+                 for clu in self.clustering.cluster_ids]
+        table.set_data(items, cols)
+        table.build()
+        return table
+
     def attach(self, gui):
         self.gui = gui
 
-        @self.wizard.connect
+        self.cluster_view = self._create_cluster_view()
+        gui.add_view(self.cluster_view, title='ClusterView')
+
+        @self.cluster_view.connect_
         def on_select(cluster_ids):
             """When the wizard selects clusters, choose a spikes subset
             and emit the `select` event on the GUI."""
@@ -266,17 +257,12 @@ class ManualClustering(object):
             if self.gui:
                 self.gui.emit('select', cluster_ids, spike_ids)
 
-        @self.wizard.connect
-        def on_start():
-            if self.gui:
-                gui.emit('wizard_start')
-
         # Create the actions.
         self._create_actions(gui)
 
         return self
 
-    # Wizard-related actions
+    # Selection actions
     # -------------------------------------------------------------------------
 
     def select(self, *cluster_ids):
@@ -285,15 +271,15 @@ class ManualClustering(object):
         # the snippet: ":c 1 2 3".
         if cluster_ids and isinstance(cluster_ids[0], (tuple, list)):
             cluster_ids = list(cluster_ids[0]) + list(cluster_ids[1:])
-        self.wizard.select(cluster_ids)
+        # self.wizard.select(cluster_ids)
 
     # Clustering actions
     # -------------------------------------------------------------------------
 
     def merge(self, cluster_ids=None):
-        if cluster_ids is None:
-            cluster_ids = self.wizard.selection
-        if len(cluster_ids) <= 1:
+        # if cluster_ids is None:
+        #     cluster_ids = self.wizard.selection
+        if len(cluster_ids or []) <= 1:
             return
         self.clustering.merge(cluster_ids)
         self._global_history.action(self.clustering)

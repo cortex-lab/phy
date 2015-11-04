@@ -134,6 +134,7 @@ def test_context_map(parallel_context):
 
 def test_task():
     task = Task(ctx=None)
+    assert task
 
 
 #------------------------------------------------------------------------------
