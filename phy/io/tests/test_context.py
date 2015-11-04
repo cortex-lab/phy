@@ -14,7 +14,9 @@ from numpy.testing import assert_array_equal as ae
 from pytest import yield_fixture, mark, raises
 from six.moves import cPickle
 
-from ..context import Context, _iter_chunks_dask, write_array, read_array
+from ..context import (Context, Task,
+                       _iter_chunks_dask, write_array, read_array,
+                       )
 
 
 #------------------------------------------------------------------------------
@@ -128,6 +130,10 @@ def test_context_map(parallel_context):
             parallel_context.map_async(square, [1, 2, 3])
     else:
         assert parallel_context.map_async(square, [1, 2, 3]).get() == [1, 4, 9]
+
+
+def test_task():
+    task = Task(ctx=None)
 
 
 #------------------------------------------------------------------------------

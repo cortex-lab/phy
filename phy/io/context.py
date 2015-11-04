@@ -175,10 +175,6 @@ class Context(object):
             # Dill is necessary because we need to serialize closures.
             value.use_dill()
 
-    def _path(self, rel_path='', *args, **kwargs):
-        """Get the full path to a local cache resource."""
-        return op.join(self.cache_dir, rel_path.format(*args, **kwargs))
-
     def cache(self, f):
         """Cache a function using the context's cache directory."""
         if self._memory is None:  # pragma: no cover
