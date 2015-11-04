@@ -233,6 +233,7 @@ class Table(HTMLWidget):
         super(Table, self).__init__()
         self.add_style_src('table.css')
         self.add_script_src('tablesort.min.js')
+        self.add_script_src('tablesort.number.js')
         self.add_script_src('table.js')
         self.set_body('<table id="{}" class="sort"></table>'.format(
                       self._table_id))
