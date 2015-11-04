@@ -18,7 +18,7 @@ from phy.gui import GUI
 # Fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture  # noqa
+@yield_fixture
 def manual_clustering(gui, cluster_ids, cluster_groups):
     spike_clusters = np.array(cluster_ids)
 
@@ -115,7 +115,7 @@ def test_manual_clustering_split(manual_clustering):
     assert_selection(31, 20)
 
 
-def test_manual_clustering_split_2(gui):  # noqa
+def test_manual_clustering_split_2(gui):
     spike_clusters = np.array([0, 0, 1])
 
     mc = ManualClustering(spike_clusters)
@@ -123,15 +123,6 @@ def test_manual_clustering_split_2(gui):  # noqa
 
     mc.actions.split([0])
     # assert mc.wizard.selection == [2, 1]
-
-
-def test_manual_clustering_show(qtbot, gui):  # noqa
-    spike_clusters = np.array([0, 0, 1, 2, 0, 1])
-
-    mc = ManualClustering(spike_clusters)
-    mc.attach(gui)
-    gui.show()
-    # qtbot.stop()
 
 
 def test_manual_clustering_move(manual_clustering, quality, similarity):
@@ -154,3 +145,15 @@ def test_manual_clustering_move(manual_clustering, quality, similarity):
 
     mc.actions.redo()
     assert_selection(2)
+
+
+def test_manual_clustering_show(qtbot, gui):
+    spike_clusters = np.array([0, 0, 1, 2, 0, 1])
+
+    def sf(c, d):
+        return float(c + d)
+
+    mc = ManualClustering(spike_clusters, similarity_func=sf)
+    mc.attach(gui)
+    gui.show()
+    qtbot.stop()
