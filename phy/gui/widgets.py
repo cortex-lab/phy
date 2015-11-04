@@ -247,6 +247,10 @@ class Table(HTMLWidget):
                                  )
         self.eval_js('table.setData({});'.format(data))
 
+    def sort_by(self, header):
+        """Sort by a given variable."""
+        self.eval_js('table.sortBy("{}");'.format(header))
+
     def next(self):
         """Select the next non-skip row."""
         self.eval_js('table.next();')

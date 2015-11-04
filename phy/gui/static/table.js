@@ -12,6 +12,11 @@ Table.prototype.setData = function(data) {
     var that = this;
     var keys = data.cols;
 
+    // Clear the table.
+    while (this.el.firstChild) {
+        this.el.removeChild(this.el.firstChild);
+    }
+
     var thead = document.createElement("thead");
     var tbody = document.createElement("tbody");
 
@@ -62,6 +67,10 @@ Table.prototype.setData = function(data) {
 
     // Enable the tablesort plugin.
     this.tablesort = new Tablesort(this.el);
+};
+
+Table.prototype.sortBy = function(header) {
+    this.tablesort.sortTable(this.headers[header]);
 };
 
 Table.prototype.select = function(ids, raise_event) {
