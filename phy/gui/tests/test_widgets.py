@@ -28,7 +28,8 @@ def test_widget_html(qtbot):
     widget.eval_js('widget.set_body("Hello from Javascript!");')
     widget.show()
     qtbot.waitForWindowShown(widget)
-    # qtbot.stop()
+    widget.build()
+    assert 'Javascript' in widget.html()
 
 
 def test_widget_javascript(qtbot):

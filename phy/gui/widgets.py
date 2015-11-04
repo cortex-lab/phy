@@ -86,6 +86,10 @@ class HTMLWidget(QWebView):
                             widget._emit_from_js(name, JSON.stringify(arg));
                         };
                         </script>''')
+        # Pending eval_js to call *after* the page has been built and loaded.
+        # Use for calls to `eval_js()` before the page is loaded.
+        self._pending_eval_js = []
+        self.loadFinished.connect(self._load_finished)
 
     # Events
     # -------------------------------------------------------------------------
@@ -148,8 +152,17 @@ class HTMLWidget(QWebView):
         base_url = QUrl().fromLocalFile(static_dir)
         self.setHtml(html, base_url)
 
+    def is_built(self):
+        return self.html() != '<html><head></head><body></body></html>'
+
     # Javascript methods
     # -------------------------------------------------------------------------
+
+    def _load_finished(self):
+        assert self.is_built()
+        for expr in self._pending_eval_js:
+            self.eval_js(expr)
+        self._pending_eval_js = []
 
     def add_to_js(self, name, var):
         """Add an object to Javascript."""
@@ -158,8 +171,13 @@ class HTMLWidget(QWebView):
 
     def eval_js(self, expr):
         """Evaluate a Javascript expression."""
-        frame = self.page().mainFrame()
-        frame.evaluateJavaScript(expr)
+        if not self.is_built():
+            # If the page is not built yet, postpone the evaluation of the JS
+            # to after the page is loaded.
+            self._pending_eval_js.append(expr)
+            return
+        logger.debug("Evaluate Javascript: `%s`.", expr)
+        self.page().mainFrame().evaluateJavaScript(expr)
 
     @pyqtSlot(str)
     def _set_from_js(self, obj):
@@ -188,7 +206,7 @@ class HTMLWidget(QWebView):
 
         """
         # Build if no HTML has been set.
-        if self.html() == '<html><head></head><body></body></html>':
+        if not self.is_built():
             self.build()
         return super(HTMLWidget, self).show()
 
