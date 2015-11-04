@@ -239,7 +239,7 @@ class ManualClustering(object):
         @cluster_view.connect_
         def on_select(cluster_ids):
             # Emit GUI.select when the selection changes in the cluster view.
-            self.select(cluster_ids)
+            self._emit_select(cluster_ids)
             # Pin the clusters and update the similarity view.
             self.pin(cluster_ids)
 
@@ -248,7 +248,7 @@ class ManualClustering(object):
         def on_select(cluster_ids):
             # Select the clusters from both views.
             cluster_ids = cluster_view.selected + cluster_ids
-            self.select(cluster_ids)
+            self._emit_select(cluster_ids)
 
         # Update the cluster views and selection when a cluster event occurs.
         @self.gui.connect_
@@ -257,19 +257,35 @@ class ManualClustering(object):
             sort = cluster_view.current_sort
             # Reinitialize the cluster view.
             self._update_cluster_view(cluster_view)
+            # Reset the previous sort options.
+            if sort[0]:
+                self.cluster_view.sort_by(sort[0])
+                # TODO: second time for desc
             # Select all new clusters in view 1.
             if up.added:
-                cluster_view.select(up.added)
+                self.select(up.added)
             else:
                 cluster_view.next()
 
     def _update_cluster_view(self, cluster_view):
         cols = ['id', 'quality']
         # TODO: skip
-        items = [{'id': int(clu), 'quality': self.quality_func(clu)}
+        items = [{'id': clu, 'quality': self.quality_func(clu)}
                  for clu in self.clustering.cluster_ids]
         # TODO: custom measures
         cluster_view.set_data(items, cols)
+
+    def _emit_select(self, cluster_ids):
+        """Choose spikes from the specified clusters and emit the
+        `select` event on the GUI."""
+        # Choose a spike subset.
+        spike_ids = select_spikes(np.array(cluster_ids),
+                                  self.n_spikes_max_per_cluster,
+                                  self.clustering.spikes_per_cluster)
+        logger.debug("Select clusters: %s (%d spikes).",
+                     ', '.join(map(str, cluster_ids)), len(spike_ids))
+        if self.gui:
+            self.gui.emit('select', cluster_ids, spike_ids)
 
     # Public methods
     # -------------------------------------------------------------------------
@@ -295,32 +311,23 @@ class ManualClustering(object):
     # -------------------------------------------------------------------------
 
     def select(self, *cluster_ids):
-        """Choose spikes from the specified clusters and emit the
-        `select` event on the GUI."""
-
+        """Select action: select clusters in the cluster view."""
         # HACK: allow for `select(1, 2, 3)` in addition to `select([1, 2, 3])`
         # This makes it more convenient to select multiple clusters with
         # the snippet: `:c 1 2 3` instead of `:c 1,2,3`.
         if cluster_ids and isinstance(cluster_ids[0], (tuple, list)):
             cluster_ids = list(cluster_ids[0]) + list(cluster_ids[1:])
-
-        # Choose a spike subset.
-        spike_ids = select_spikes(np.array(cluster_ids),
-                                  self.n_spikes_max_per_cluster,
-                                  self.clustering.spikes_per_cluster)
-        logger.debug("Select clusters: %s (%d spikes).",
-                     ', '.join(map(str, cluster_ids)), len(spike_ids))
-        if self.gui:
-            self.gui.emit('select', cluster_ids, spike_ids)
+        # Update the cluster view selection.
+        self.cluster_view.select(cluster_ids)
 
     def pin(self, cluster_ids):
         """Update the similarity view with matches for the specified
         clusters."""
         # TODO: similarity wrt several clusters
-        sel = int(cluster_ids[0])
+        sel = cluster_ids[0]
         cols = ['id', 'similarity']
         # TODO: skip
-        items = [{'id': int(clu),
+        items = [{'id': clu,
                   'similarity': self.similarity_func(sel, clu)}
                  for clu in self.clustering.cluster_ids]
         self.similarity_view.set_data(items, cols)
@@ -333,8 +340,9 @@ class ManualClustering(object):
     # -------------------------------------------------------------------------
 
     def merge(self, cluster_ids=None):
-        # if cluster_ids is None:
-        #     cluster_ids = self.wizard.selection
+        if cluster_ids is None:
+            cluster_ids = (self.cluster_view.selected +
+                           self.similarity_view.selected)
         if len(cluster_ids or []) <= 1:
             return
         self.clustering.merge(cluster_ids)

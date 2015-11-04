@@ -19,12 +19,14 @@ from phy.gui import GUI
 #------------------------------------------------------------------------------
 
 @yield_fixture
-def manual_clustering(gui, cluster_ids, cluster_groups):
+def manual_clustering(gui, cluster_ids, cluster_groups, quality, similarity):
     spike_clusters = np.array(cluster_ids)
 
     mc = ManualClustering(spike_clusters,
                           cluster_groups=cluster_groups,
                           shortcuts={'undo': 'ctrl+z'},
+                          quality_func=quality,
+                          similarity_func=similarity,
                           )
     _s = []
 
@@ -33,12 +35,12 @@ def manual_clustering(gui, cluster_ids, cluster_groups):
     # Connect to the `select` event.
     @mc.gui.connect_
     def on_select(cluster_ids, spike_ids):
-        _s.append((cluster_ids, spike_ids))
+        _s.append(cluster_ids)
 
     def assert_selection(*cluster_ids):  # pragma: no cover
         if not _s:
             return
-        assert _s[-1][0] == list(cluster_ids)
+        assert _s[-1] == list(cluster_ids)
 
     yield mc, assert_selection
 

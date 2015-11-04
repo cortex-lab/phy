@@ -15,6 +15,7 @@ from six import text_type
 
 from .qt import QWebView, QWebPage, QUrl, QWebSettings, pyqtSlot
 from phy.utils import EventEmitter
+from phy.utils._misc import _CustomEncoder
 
 logger = logging.getLogger(__name__)
 
@@ -216,12 +217,19 @@ class HTMLWidget(QWebView):
 # HTML table
 # -----------------------------------------------------------------------------
 
+def dumps(o):
+    return json.dumps(o, cls=_CustomEncoder)
+
+
 def _create_json_dict(**kwargs):
     d = {}
+    # Remove None elements.
     for k, v in kwargs.items():
         if v is not None:
             d[k] = v
-    return json.dumps(d)
+    # The custom encoder serves for NumPy scalars that are non
+    # JSON-serializable (!!).
+    return dumps(d)
 
 
 class Table(HTMLWidget):
@@ -262,7 +270,7 @@ class Table(HTMLWidget):
 
     def select(self, ids):
         """Select some rows."""
-        self.eval_js('table.select({}, false);'.format(json.dumps(ids)))
+        self.eval_js('table.select({}, false);'.format(dumps(ids)))
 
     @property
     def selected(self):
