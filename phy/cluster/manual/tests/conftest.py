@@ -20,11 +20,6 @@ def cluster_ids():
 
 
 @yield_fixture
-def get_cluster_ids(cluster_ids):
-    yield lambda: cluster_ids
-
-
-@yield_fixture
 def cluster_groups():
     yield {0: 'noise', 1: 'good', 10: 'mua', 11: 'good'}
 

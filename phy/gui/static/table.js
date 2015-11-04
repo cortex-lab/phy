@@ -85,9 +85,7 @@ Table.prototype.currentSort = function() {
     return [null, null];
 };
 
-Table.prototype.select = function(ids, raise_event) {
-    // The default is true.
-    raise_event = typeof raise_event !== 'undefined' ? false : true;
+Table.prototype.select = function(ids) {
 
     // Remove the class on all rows.
     for (var i = 0; i < this.selected.length; i++) {
@@ -104,9 +102,7 @@ Table.prototype.select = function(ids, raise_event) {
 
     this.selected = ids;
 
-    if (raise_event) {
-        emit("select", ids);
-    }
+    emit("select", ids);
 };
 
 Table.prototype.clear = function() {
