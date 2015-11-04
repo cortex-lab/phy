@@ -156,4 +156,4 @@ def test_manual_clustering_show(qtbot, gui):
     mc = ManualClustering(spike_clusters, similarity_func=sf)
     mc.attach(gui)
     gui.show()
-    qtbot.stop()
+    # qtbot.stop()

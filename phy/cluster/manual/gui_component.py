@@ -224,12 +224,9 @@ class ManualClustering(object):
     def _create_cluster_views(self, gui):
         # Create the cluster view.
         self.cluster_view = cluster_view = Table()
-        cols = ['id', 'quality']
-        # TODO: skip
-        items = [{'id': int(clu), 'quality': self.quality_func(clu)}
-                 for clu in self.clustering.cluster_ids]
-        # TODO: custom measures
-        cluster_view.set_data(items, cols)
+        # NOTE: table.setData() must be called *before* build() so that
+        # the JS call is deferred to after the HTML widget is fully loaded.
+        self._update_cluster_view(cluster_view)
         cluster_view.build()
         gui.add_view(cluster_view, title='ClusterView')
 
@@ -238,16 +235,41 @@ class ManualClustering(object):
         similarity_view.build()
         gui.add_view(similarity_view, title='SimilarityView')
 
-        @self.cluster_view.connect_
+        # Selection in the cluster view.
+        @cluster_view.connect_
         def on_select(cluster_ids):
+            # Emit GUI.select when the selection changes in the cluster view.
             self.select(cluster_ids)
+            # Pin the clusters and update the similarity view.
             self.pin(cluster_ids)
 
-        @self.similarity_view.connect_  # noqa
+        # Selection in the similarity view.
+        @similarity_view.connect_  # noqa
         def on_select(cluster_ids):
             # Select the clusters from both views.
             cluster_ids = cluster_view.selected + cluster_ids
             self.select(cluster_ids)
+
+        # Update the cluster views and selection when a cluster event occurs.
+        @self.gui.connect_
+        def on_cluster(up):
+            # Get the current sort of the cluster view.
+            sort = cluster_view.current_sort
+            # Reinitialize the cluster view.
+            self._update_cluster_view(cluster_view)
+            # Select all new clusters in view 1.
+            if up.added:
+                cluster_view.select(up.added)
+            else:
+                cluster_view.next()
+
+    def _update_cluster_view(self, cluster_view):
+        cols = ['id', 'quality']
+        # TODO: skip
+        items = [{'id': int(clu), 'quality': self.quality_func(clu)}
+                 for clu in self.clustering.cluster_ids]
+        # TODO: custom measures
+        cluster_view.set_data(items, cols)
 
     # Public methods
     # -------------------------------------------------------------------------
