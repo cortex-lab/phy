@@ -232,22 +232,42 @@ class ManualClustering(object):
     def _create_cluster_view(self):
         table = Table()
         cols = ['id', 'quality']
+        # TODO: skip
         items = [{'id': int(clu), 'quality': self.quality_func(clu)}
                  for clu in self.clustering.cluster_ids]
         table.set_data(items, cols)
         table.build()
         return table
 
+    def _create_similarity_view(self):
+        table = Table()
+        table.build()
+        return table
+
     def attach(self, gui):
         self.gui = gui
 
+        # Cluster view.
         self.cluster_view = self._create_cluster_view()
         gui.add_view(self.cluster_view, title='ClusterView')
 
-        @self.cluster_view.connect_
-        def on_select(cluster_ids):
-            """When the wizard selects clusters, choose a spikes subset
-            and emit the `select` event on the GUI."""
+        # Similarity view.
+        self.similarity_view = self._create_similarity_view()
+        gui.add_view(self.similarity_view, title='SimilarityView')
+
+        def _update_similarity_view(cluster_ids):
+            if len(cluster_ids) == 1:
+                sel = int(cluster_ids[0])
+                cols = ['id', 'similarity']
+                # TODO: skip
+                items = [{'id': int(clu),
+                          'similarity': self.similarity_func(sel, clu)}
+                         for clu in self.clustering.cluster_ids]
+                self.similarity_view.set_data(items, cols)
+                self.similarity_view.sort_by('similarity')
+                self.similarity_view.sort_by('similarity')
+
+        def _select(cluster_ids):
             spike_ids = select_spikes(np.array(cluster_ids),
                                       self.n_spikes_max_per_cluster,
                                       self.clustering.spikes_per_cluster)
@@ -256,6 +276,18 @@ class ManualClustering(object):
 
             if self.gui:
                 self.gui.emit('select', cluster_ids, spike_ids)
+
+        def on_select1(cluster_ids):
+            # Update the similarity view when the selection changes in
+            # the cluster view.
+            _update_similarity_view(cluster_ids)
+            _select(cluster_ids)
+        self.cluster_view.connect_(on_select1, event='select')
+
+        def on_select2(cluster_ids):
+            # TODO: prepend the clusters selected in the cluster view
+            _select(cluster_ids)
+        self.similarity_view.connect_(on_select2, event='select')  # noqa
 
         # Create the actions.
         self._create_actions(gui)
