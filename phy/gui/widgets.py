@@ -268,9 +268,11 @@ class Table(HTMLWidget):
         """Select the previous non-skip row."""
         self.eval_js('table.previous();')
 
-    def select(self, ids):
+    def select(self, ids, raise_event=False):
         """Select some rows."""
-        self.eval_js('table.select({}, false);'.format(dumps(ids)))
+        raise_event = text_type(raise_event).lower()
+        self.eval_js('table.select({}, {});'.format(dumps(ids),
+                     raise_event))
 
     @property
     def selected(self):
