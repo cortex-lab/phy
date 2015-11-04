@@ -268,3 +268,7 @@ class Table(HTMLWidget):
     def selected(self):
         """Currently selected rows."""
         return [int(_) for _ in self.get_js('table.selected')]
+
+    @property
+    def current_sort(self):
+        return tuple(self.get_js('table.currentSort()'))
