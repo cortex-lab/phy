@@ -38,8 +38,6 @@ def manual_clustering(gui, cluster_ids, cluster_groups, quality, similarity):
         _s.append(cluster_ids)
 
     def assert_selection(*cluster_ids):  # pragma: no cover
-        if not _s:
-            return
         assert _s[-1] == list(cluster_ids)
 
     yield mc, assert_selection
@@ -92,28 +90,28 @@ def test_manual_clustering_edge_cases(manual_clustering):
 def test_manual_clustering_merge(manual_clustering):
     mc, assert_selection = manual_clustering
 
-    mc.actions.select(30, 20)  # NOTE: we pass multiple ints instead of a list
-    mc.actions.merge()
+    mc.select(30, 20)  # NOTE: we pass multiple ints instead of a list
+    mc.merge()
     assert_selection(31, 2)
 
-    mc.actions.undo()
+    mc.undo()
     assert_selection(30, 20)
 
-    mc.actions.redo()
+    mc.redo()
     assert_selection(31, 2)
 
 
 def test_manual_clustering_split(manual_clustering):
     mc, assert_selection = manual_clustering
 
-    mc.actions.select([1, 2])
-    mc.actions.split([1, 2])
+    mc.select([1, 2])
+    mc.split([1, 2])
     assert_selection(31, 20)
 
-    mc.actions.undo()
+    mc.undo()
     assert_selection(1, 2)
 
-    mc.actions.redo()
+    mc.redo()
     assert_selection(31, 20)
 
 
@@ -123,36 +121,28 @@ def test_manual_clustering_split_2(gui):
     mc = ManualClustering(spike_clusters)
     mc.attach(gui)
 
-    mc.actions.split([0])
+    mc.split([0])
     # assert mc.wizard.selection == [2, 1]
 
 
 def test_manual_clustering_move(manual_clustering, quality, similarity):
     mc, assert_selection = manual_clustering
 
-    mc.actions.select([30])
+    mc.select([30])
     assert_selection(30)
 
     mc.cluster_view.next()
     assert_selection(20)
 
-    mc.actions.move([20], 'noise')
+    mc.move([20], 'noise')
     assert_selection(2)
 
-    mc.actions.undo()
+    mc.undo()
     assert_selection(20)
 
-    mc.actions.redo()
+    mc.redo()
     assert_selection(2)
 
 
-def test_manual_clustering_show(qtbot, gui):
-    spike_clusters = np.array([0, 0, 1, 2, 0, 1])
-
-    def sf(c, d):
-        return float(c + d)
-
-    mc = ManualClustering(spike_clusters, similarity_func=sf)
-    mc.attach(gui)
-    gui.show()
-    # qtbot.stop()
+# def test_manual_clustering_show(qtbot, gui):
+#     mc, assert_selection = manual_clustering
