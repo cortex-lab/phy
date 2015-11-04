@@ -113,7 +113,7 @@ Table.prototype.clear = function() {
 };
 
 Table.prototype.next = function() {
-    if (this.selected.length != 1) return;
+    // TODO: what to do when doing next() while several items are selected.
     var id = this.selected[0];
     var row = this.rows[id];
     var i0 = row.rowIndex + 1;
@@ -133,7 +133,7 @@ Table.prototype.next = function() {
 };
 
 Table.prototype.previous = function() {
-    if (this.selected.length != 1) return;
+    // TODO: what to do when doing next() while several items are selected.
     var id = this.selected[0];
     var row = this.rows[id];
     var i0 = row.rowIndex - 1;
