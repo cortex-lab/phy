@@ -8,9 +8,6 @@
 
 from pytest import yield_fixture
 
-from ..wizard import Wizard
-from ..gui_component import _wizard_group
-
 
 #------------------------------------------------------------------------------
 # Fixtures
@@ -33,11 +30,6 @@ def cluster_groups():
 
 
 @yield_fixture
-def status(cluster_groups):
-    yield lambda c: _wizard_group(cluster_groups.get(c, None))
-
-
-@yield_fixture
 def quality():
     yield lambda c: c
 
@@ -45,15 +37,3 @@ def quality():
 @yield_fixture
 def similarity():
     yield lambda c, d: c * 1.01 + d
-
-
-@yield_fixture
-def wizard(get_cluster_ids, status, quality, similarity):
-    wizard = Wizard()
-
-    wizard.set_cluster_ids_function(get_cluster_ids)
-    wizard.set_status_function(status)
-    wizard.set_quality_function(quality)
-    wizard.set_similarity_function(similarity)
-
-    yield wizard

@@ -174,9 +174,10 @@ class HTMLWidget(QWebView):
         if not self.is_built():
             # If the page is not built yet, postpone the evaluation of the JS
             # to after the page is loaded.
+            logger.log(5, "Postpone evaluation of `%s`.", expr)
             self._pending_eval_js.append(expr)
             return
-        logger.debug("Evaluate Javascript: `%s`.", expr)
+        logger.log(5, "Evaluate Javascript: `%s`.", expr)
         self.page().mainFrame().evaluateJavaScript(expr)
 
     @pyqtSlot(str)
@@ -238,7 +239,6 @@ class Table(HTMLWidget):
         self.add_body('''<script>
                       var table = new Table(document.getElementById("{}"));
                       </script>'''.format(self._table_id))
-        self.build()
 
     def set_data(self, items, cols):
         """Set the rows and cols of the table."""
