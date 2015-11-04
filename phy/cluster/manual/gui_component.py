@@ -114,26 +114,26 @@ class ManualClustering(object):
     * Selection
     * Many manual clustering-related actions, snippets, shortcuts, etc.
 
-    Bring the `select` event to the GUI. This is raised when clusters are
-    selected by the user or by the wizard.
-
     Parameters
     ----------
 
-    gui : GUI
     spike_clusters : ndarray
     cluster_groups : dictionary
     n_spikes_max_per_cluster : int
+    shortcuts : dict
+    quality_func : function
+    similarity_func : function
 
-    Events
-    ------
+    GUI events
+    ----------
+
+    When this component is attached to a GUI, the GUI emits the following
+    events:
 
     select(cluster_ids, spike_ids)
         when clusters are selected
-    on_cluster(up)
+    cluster(up)
         when a merge or split happens
-    wizard_start()
-        when the wizard (re)starts
     save_requested(spike_clusters, cluster_groups)
         when a save is requested by the user
 
@@ -191,7 +191,7 @@ class ManualClustering(object):
                 logger.info("Assigned spikes.")
 
             if self.gui:
-                self.gui.emit('on_cluster', up)
+                self.gui.emit('cluster', up)
 
         @self.cluster_meta.connect  # noqa
         def on_cluster(up):
@@ -203,24 +203,16 @@ class ManualClustering(object):
                             up.metadata_value)
 
             if self.gui:
-                self.gui.emit('on_cluster', up)
+                self.gui.emit('cluster', up)
 
-        # _attach_wizard(self.wizard, self.clustering, self.cluster_meta)
+    # Internal methods
+    # -------------------------------------------------------------------------
 
     def _create_actions(self, gui):
         self.actions = Actions(gui, default_shortcuts=self.shortcuts)
 
         # Selection.
         self.actions.add(self.select, alias='c')
-
-        # Wizard.
-        # self.actions.add(self.wizard.restart, name='reset_wizard')
-        # self.actions.add(self.wizard.previous)
-        # self.actions.add(self.wizard.next_by_quality)
-        # self.actions.add(self.wizard.next_by_similarity)
-        # self.actions.add(self.wizard.next)  # no shortcut
-        # self.actions.add(self.wizard.pin)
-        # self.actions.add(self.wizard.unpin)
 
         # Clustering.
         self.actions.add(self.merge)
@@ -229,65 +221,48 @@ class ManualClustering(object):
         self.actions.add(self.undo)
         self.actions.add(self.redo)
 
-    def _create_cluster_view(self):
-        table = Table()
+    def _create_cluster_views(self, gui):
+        # Create the cluster view.
+        self.cluster_view = cluster_view = Table()
         cols = ['id', 'quality']
         # TODO: skip
         items = [{'id': int(clu), 'quality': self.quality_func(clu)}
                  for clu in self.clustering.cluster_ids]
-        table.set_data(items, cols)
-        table.build()
-        return table
+        # TODO: custom measures
+        cluster_view.set_data(items, cols)
+        cluster_view.build()
+        gui.add_view(cluster_view, title='ClusterView')
 
-    def _create_similarity_view(self):
-        table = Table()
-        table.build()
-        return table
+        # Create the similarity view.
+        self.similarity_view = similarity_view = Table()
+        similarity_view.build()
+        gui.add_view(similarity_view, title='SimilarityView')
+
+        @self.cluster_view.connect_
+        def on_select(cluster_ids):
+            self.select(cluster_ids)
+            self.pin(cluster_ids)
+
+        @self.similarity_view.connect_  # noqa
+        def on_select(cluster_ids):
+            # Select the clusters from both views.
+            cluster_ids = cluster_view.selected + cluster_ids
+            self.select(cluster_ids)
+
+    # Public methods
+    # -------------------------------------------------------------------------
+
+    def set_quality_func(self, f):
+        self.quality_func = f
+
+    def set_similarity_func(self, f):
+        self.similarity_func = f
 
     def attach(self, gui):
         self.gui = gui
 
-        # Cluster view.
-        self.cluster_view = self._create_cluster_view()
-        gui.add_view(self.cluster_view, title='ClusterView')
-
-        # Similarity view.
-        self.similarity_view = self._create_similarity_view()
-        gui.add_view(self.similarity_view, title='SimilarityView')
-
-        def _update_similarity_view(cluster_ids):
-            if len(cluster_ids) == 1:
-                sel = int(cluster_ids[0])
-                cols = ['id', 'similarity']
-                # TODO: skip
-                items = [{'id': int(clu),
-                          'similarity': self.similarity_func(sel, clu)}
-                         for clu in self.clustering.cluster_ids]
-                self.similarity_view.set_data(items, cols)
-                self.similarity_view.sort_by('similarity')
-                self.similarity_view.sort_by('similarity')
-
-        def _select(cluster_ids):
-            spike_ids = select_spikes(np.array(cluster_ids),
-                                      self.n_spikes_max_per_cluster,
-                                      self.clustering.spikes_per_cluster)
-            logger.debug("Select clusters: %s (%d spikes).",
-                         ', '.join(map(str, cluster_ids)), len(spike_ids))
-
-            if self.gui:
-                self.gui.emit('select', cluster_ids, spike_ids)
-
-        def on_select1(cluster_ids):
-            # Update the similarity view when the selection changes in
-            # the cluster view.
-            _update_similarity_view(cluster_ids)
-            _select(cluster_ids)
-        self.cluster_view.connect_(on_select1, event='select')
-
-        def on_select2(cluster_ids):
-            # TODO: prepend the clusters selected in the cluster view
-            _select(cluster_ids)
-        self.similarity_view.connect_(on_select2, event='select')  # noqa
+        # Create the cluster views.
+        self._create_cluster_views(gui)
 
         # Create the actions.
         self._create_actions(gui)
@@ -298,12 +273,39 @@ class ManualClustering(object):
     # -------------------------------------------------------------------------
 
     def select(self, *cluster_ids):
-        # HACK: allow for select(1, 2, 3) in addition to select([1, 2, 3])
+        """Choose spikes from the specified clusters and emit the
+        `select` event on the GUI."""
+
+        # HACK: allow for `select(1, 2, 3)` in addition to `select([1, 2, 3])`
         # This makes it more convenient to select multiple clusters with
-        # the snippet: ":c 1 2 3".
+        # the snippet: `:c 1 2 3` instead of `:c 1,2,3`.
         if cluster_ids and isinstance(cluster_ids[0], (tuple, list)):
             cluster_ids = list(cluster_ids[0]) + list(cluster_ids[1:])
-        # self.wizard.select(cluster_ids)
+
+        # Choose a spike subset.
+        spike_ids = select_spikes(np.array(cluster_ids),
+                                  self.n_spikes_max_per_cluster,
+                                  self.clustering.spikes_per_cluster)
+        logger.debug("Select clusters: %s (%d spikes).",
+                     ', '.join(map(str, cluster_ids)), len(spike_ids))
+        if self.gui:
+            self.gui.emit('select', cluster_ids, spike_ids)
+
+    def pin(self, cluster_ids):
+        """Update the similarity view with matches for the specified
+        clusters."""
+        # TODO: similarity wrt several clusters
+        sel = int(cluster_ids[0])
+        cols = ['id', 'similarity']
+        # TODO: skip
+        items = [{'id': int(clu),
+                  'similarity': self.similarity_func(sel, clu)}
+                 for clu in self.clustering.cluster_ids]
+        self.similarity_view.set_data(items, cols)
+
+        # NOTE: sort twice to get decreasing order.
+        self.similarity_view.sort_by('similarity')
+        self.similarity_view.sort_by('similarity')
 
     # Clustering actions
     # -------------------------------------------------------------------------
