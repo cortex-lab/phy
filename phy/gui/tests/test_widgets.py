@@ -6,7 +6,32 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from pytest import yield_fixture
+
 from ..widgets import HTMLWidget, Table
+
+
+#------------------------------------------------------------------------------
+# Fixtures
+#------------------------------------------------------------------------------
+
+@yield_fixture
+def table(qtbot):
+    table = Table()
+
+    table.show()
+    qtbot.waitForWindowShown(table)
+
+    items = [{'id': i, 'count': 100 - 10 * i} for i in range(10)]
+    items[4]['skip'] = True
+
+    table.set_data(cols=['id', 'count'],
+                   items=items,
+                   )
+
+    yield table
+
+    table.close()
 
 
 #------------------------------------------------------------------------------
@@ -53,18 +78,7 @@ def test_widget_javascript(qtbot):
     # qtbot.stop()
 
 
-def test_table(qtbot):
-    table = Table()
-
-    table.show()
-    qtbot.waitForWindowShown(table)
-
-    items = [{'id': i, 'count': 100 - 10 * i} for i in range(10)]
-    items[4]['skip'] = True
-
-    table.set_data(cols=['id', 'count'],
-                   items=items,
-                   )
+def test_table_nav(qtbot, table):
     table.select([4])
 
     table.next()
@@ -84,12 +98,21 @@ def test_table(qtbot):
 
     assert table.selected == [1]
 
+    # qtbot.stop()
+
+
+def test_table_sort(qtbot, table):
+    table.select([1])
+
     # Sort by count decreasing, and check that 0 (count 100) comes before
     # 1 (count 90). This checks that sorting works with number (need to
     # import tablesort.number.js).
     table.sort_by('count')
     table.sort_by('count')
+
     table.previous()
     assert table.selected == [0]
+
+    assert table.current_sort == ('count', 'desc')
 
     # qtbot.stop()

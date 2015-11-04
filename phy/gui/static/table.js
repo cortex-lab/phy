@@ -73,6 +73,18 @@ Table.prototype.sortBy = function(header) {
     this.tablesort.sortTable(this.headers[header]);
 };
 
+Table.prototype.currentSort = function() {
+    for (var header in this.headers) {
+        if (this.headers[header].classList.contains('sort-up')) {
+            return [header, 'desc'];
+        }
+        if (this.headers[header].classList.contains('sort-down')) {
+            return [header, 'asc'];
+        }
+    }
+    return [null, null];
+}
+
 Table.prototype.select = function(ids, raise_event) {
     raise_event = typeof raise_event !== 'undefined' ? false : true;
 
