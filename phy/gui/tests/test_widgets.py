@@ -86,6 +86,11 @@ def test_widget_javascript_2(qtbot):
     # qtbot.stop()
 
 
+def test_table_nav_first(qtbot, table):
+    table.next()
+    assert table.selected == [0]
+
+
 def test_table_nav(qtbot, table):
     table.select([4])
 

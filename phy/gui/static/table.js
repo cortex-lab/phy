@@ -112,40 +112,41 @@ Table.prototype.clear = function() {
 Table.prototype.next = function() {
     // TODO: what to do when doing next() while several items are selected.
     var id = this.selected[0];
-    var row = this.rows[id];
-    var i0 = row.rowIndex + 1;
-    var items = [];
-
+    if (id === undefined) {
+        var row = null;
+        var i0 = 1;  // 1, not 0, because we skip the header.
+    }
+    else {
+        var row = this.rows[id];
+        var i0 = row.rowIndex + 1;
+    }
     for (var i = i0; i < this.el.rows.length; i++) {
         row = this.el.rows[i];
         if (!(row.dataset.skip)) {
-            items.push(row.dataset.id);
-            break;
+            this.select([row.dataset.id]);
+            return;
         }
     }
-
-    if (!(items.length)) return;
-
-    this.select(items);
 };
 
 Table.prototype.previous = function() {
     // TODO: what to do when doing next() while several items are selected.
     var id = this.selected[0];
-    var row = this.rows[id];
-    var i0 = row.rowIndex - 1;
-    var items = [];
+    if (id === undefined) {
+        var row = null;
+        var i0 = this.rows.length - 1;
+    }
+    else {
+        var row = this.rows[id];
+        var i0 = row.rowIndex - 1;
+    }
 
     // NOTE: i >= 1 because we skip the header column.
     for (var i = i0; i >= 1; i--) {
         row = this.el.rows[i];
         if (!(row.dataset.skip)) {
-            items.push(row.dataset.id);
-            break;
+            this.select([row.dataset.id]);
+            return;
         }
     }
-
-    if (!(items.length)) return;
-
-    this.select(items);
 };
