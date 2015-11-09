@@ -40,6 +40,7 @@ def table(qtbot):
 
 def test_widget_empty(qtbot):
     widget = HTMLWidget()
+    widget.build()
     widget.show()
     qtbot.waitForWindowShown(widget)
     # qtbot.stop()
@@ -50,20 +51,27 @@ def test_widget_html(qtbot):
     widget.add_styles('html, body, p {background-color: purple;}')
     widget.add_header('<!-- comment -->')
     widget.set_body('Hello world!')
-    widget.eval_js('widget.set_body("Hello from Javascript!");')
+    widget.build()
     widget.show()
     qtbot.waitForWindowShown(widget)
+    assert 'Hello world!' in widget.html()
+
+
+def test_widget_javascript_1(qtbot):
+    widget = HTMLWidget()
     widget.build()
-    assert 'Javascript' in widget.html()
+    widget.show()
+    qtbot.waitForWindowShown(widget)
+
+    widget.eval_js('number = 1;')
+    assert widget.get_js('number') == 1
 
 
 def test_widget_javascript(qtbot):
     widget = HTMLWidget()
+    widget.build()
     widget.show()
     qtbot.waitForWindowShown(widget)
-    widget.eval_js('number = 1;')
-    assert widget.get_js('number') == 1
-
     _out = []
 
     @widget.connect_

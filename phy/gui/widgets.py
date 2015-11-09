@@ -87,10 +87,7 @@ class HTMLWidget(QWebView):
                             widget._emit_from_js(name, JSON.stringify(arg));
                         };
                         </script>''')
-        # Pending eval_js to call *after* the page has been built and loaded.
-        # Use for calls to `eval_js()` before the page is loaded.
-        self._pending_eval_js = []
-        self.loadFinished.connect(self._load_finished)
+        self.loadFinished.connect(lambda: self.emit('load'))
 
     # Events
     # -------------------------------------------------------------------------
@@ -127,7 +124,6 @@ class HTMLWidget(QWebView):
     # HTML methods
     # -------------------------------------------------------------------------
 
-    @pyqtSlot(str)
     def set_body(self, s):
         """Set the HTML body."""
         self._body = s
@@ -159,12 +155,6 @@ class HTMLWidget(QWebView):
     # Javascript methods
     # -------------------------------------------------------------------------
 
-    def _load_finished(self):
-        assert self.is_built()
-        for expr in self._pending_eval_js:
-            self.eval_js(expr)
-        self._pending_eval_js = []
-
     def add_to_js(self, name, var):
         """Add an object to Javascript."""
         frame = self.page().mainFrame()
@@ -172,12 +162,8 @@ class HTMLWidget(QWebView):
 
     def eval_js(self, expr):
         """Evaluate a Javascript expression."""
-        if not self.is_built():
-            # If the page is not built yet, postpone the evaluation of the JS
-            # to after the page is loaded.
-            logger.log(5, "Postpone evaluation of `%s`.", expr)
-            self._pending_eval_js.append(expr)
-            return
+        if not self.is_built():  # pragma: no cover
+            raise RuntimeError("The page isn't built.")
         logger.log(5, "Evaluate Javascript: `%s`.", expr)
         self.page().mainFrame().evaluateJavaScript(expr)
 
@@ -200,17 +186,6 @@ class HTMLWidget(QWebView):
         obj = self._obj
         self._obj = None
         return obj
-
-    def show(self):
-        """Show the widget.
-
-        A build is triggered if necessary.
-
-        """
-        # Build if no HTML has been set.
-        if not self.is_built():
-            self.build()
-        return super(HTMLWidget, self).show()
 
 
 # -----------------------------------------------------------------------------
@@ -248,6 +223,7 @@ class Table(HTMLWidget):
         self.add_body('''<script>
                       var table = new Table(document.getElementById("{}"));
                       </script>'''.format(self._table_id))
+        self.build()
 
     def set_data(self, items, cols):
         """Set the rows and cols of the table."""
