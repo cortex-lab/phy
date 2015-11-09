@@ -265,8 +265,11 @@ class ManualClustering(object):
                 # TODO: second time for desc
             # Select all new clusters in view 1.
             if up.added:
+                # TODO: self.select(sel1, sel2) for both views.
                 self.select(up.added)
+                self.pin(up.added)
             else:
+                # TODO: move in the sim view if the moved cluster were there
                 cluster_view.next()
 
     def _update_cluster_view(self, cluster_view):
