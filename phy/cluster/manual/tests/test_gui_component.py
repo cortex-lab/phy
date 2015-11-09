@@ -19,7 +19,8 @@ from phy.gui import GUI
 #------------------------------------------------------------------------------
 
 @yield_fixture
-def manual_clustering(gui, cluster_ids, cluster_groups, quality, similarity):
+def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
+                      quality, similarity):
     spike_clusters = np.array(cluster_ids)
 
     mc = ManualClustering(spike_clusters,
@@ -28,19 +29,9 @@ def manual_clustering(gui, cluster_ids, cluster_groups, quality, similarity):
                           quality_func=quality,
                           similarity_func=similarity,
                           )
-    _s = []
-
     mc.attach(gui)
-
-    # Connect to the `select` event.
-    @mc.gui.connect_
-    def on_select(cluster_ids, spike_ids):
-        _s.append(cluster_ids)
-
-    def assert_selection(*cluster_ids):  # pragma: no cover
-        assert _s[-1] == list(cluster_ids)
-
-    yield mc, assert_selection
+    qtbot.waitForWindowShown(mc.cluster_view)
+    yield mc
 
 
 @yield_fixture
@@ -55,31 +46,30 @@ def gui(qapp):
 #------------------------------------------------------------------------------
 
 def test_manual_clustering_edge_cases(manual_clustering):
-    mc, assert_selection = manual_clustering
+    mc = manual_clustering
 
     # Empty selection at first.
-    assert_selection()
     ae(mc.clustering.cluster_ids, [0, 1, 2, 10, 11, 20, 30])
 
     mc.select([0])
-    assert_selection(0)
+    assert mc.selected == [0]
 
     mc.undo()
     mc.redo()
 
     # Merge.
     mc.merge()
-    assert_selection(0)
+    assert mc.selected == [0]
 
     mc.merge([])
-    assert_selection(0)
+    assert mc.selected == [0]
 
     mc.merge([10])
-    assert_selection(0)
+    assert mc.selected == [0]
 
     # Split.
     mc.split([])
-    assert_selection(0)
+    assert mc.selected == [0]
 
     # Move.
     mc.move([], 'ignored')
@@ -88,31 +78,31 @@ def test_manual_clustering_edge_cases(manual_clustering):
 
 
 def test_manual_clustering_merge(manual_clustering):
-    mc, assert_selection = manual_clustering
+    mc = manual_clustering
 
     mc.select(30, 20)  # NOTE: we pass multiple ints instead of a list
     mc.merge()
-    assert_selection(31, 2)
+    assert mc.selected == [31, 2]
 
     mc.undo()
-    assert_selection(30, 20)
+    assert mc.selected == [30, 20]
 
     mc.redo()
-    assert_selection(31, 2)
+    assert mc.selected == [31, 2]
 
 
 def test_manual_clustering_split(manual_clustering):
-    mc, assert_selection = manual_clustering
+    mc = manual_clustering
 
     mc.select([1, 2])
     mc.split([1, 2])
-    assert_selection(31, 20)
+    assert mc.selected == [31, 20]
 
     mc.undo()
-    assert_selection(1, 2)
+    assert mc.selected == [1, 2]
 
     mc.redo()
-    assert_selection(31, 20)
+    assert mc.selected == [31, 20]
 
 
 def test_manual_clustering_split_2(gui):
@@ -126,22 +116,22 @@ def test_manual_clustering_split_2(gui):
 
 
 def test_manual_clustering_move(manual_clustering, quality, similarity):
-    mc, assert_selection = manual_clustering
+    mc = manual_clustering
 
     mc.select([30])
-    assert_selection(30)
+    assert mc.selected == [30]
 
     mc.cluster_view.next()
-    assert_selection(20)
+    assert mc.selected == [20]
 
     mc.move([20], 'noise')
-    assert_selection(2)
+    assert mc.selected == [2]
 
     mc.undo()
-    assert_selection(20)
+    assert mc.selected == [20]
 
     mc.redo()
-    assert_selection(2)
+    assert mc.selected == [2]
 
 
 # def test_manual_clustering_show(qtbot, gui):

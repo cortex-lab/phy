@@ -224,16 +224,18 @@ class ManualClustering(object):
     def _create_cluster_views(self, gui):
         # Create the cluster view.
         self.cluster_view = cluster_view = Table()
-        # NOTE: table.setData() must be called *before* build() so that
-        # the JS call is deferred to after the HTML widget is fully loaded.
-        self._update_cluster_view(cluster_view)
-        cluster_view.build()
+
+        @cluster_view.connect_
+        def on_load():
+            self._update_cluster_view(cluster_view)
+
         gui.add_view(cluster_view, title='ClusterView')
+        cluster_view.show()
 
         # Create the similarity view.
         self.similarity_view = similarity_view = Table()
-        similarity_view.build()
         gui.add_view(similarity_view, title='SimilarityView')
+        similarity_view.show()
 
         # Selection in the cluster view.
         @cluster_view.connect_
@@ -310,6 +312,10 @@ class ManualClustering(object):
     # Selection actions
     # -------------------------------------------------------------------------
 
+    @property
+    def selected(self):
+        return self.cluster_view.selected + self.similarity_view.selected
+
     def select(self, *cluster_ids):
         """Select action: select clusters in the cluster view."""
         # HACK: allow for `select(1, 2, 3)` in addition to `select([1, 2, 3])`
@@ -329,7 +335,8 @@ class ManualClustering(object):
         # TODO: skip
         items = [{'id': clu,
                   'similarity': self.similarity_func(sel, clu)}
-                 for clu in self.clustering.cluster_ids]
+                 for clu in self.clustering.cluster_ids
+                 if clu not in cluster_ids]
         self.similarity_view.set_data(items, cols)
 
         # NOTE: sort twice to get decreasing order.

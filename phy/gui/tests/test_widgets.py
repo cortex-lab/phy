@@ -67,7 +67,7 @@ def test_widget_javascript_1(qtbot):
     assert widget.get_js('number') == 1
 
 
-def test_widget_javascript(qtbot):
+def test_widget_javascript_2(qtbot):
     widget = HTMLWidget()
     widget.build()
     widget.show()
