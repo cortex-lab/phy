@@ -252,6 +252,14 @@ class ManualClustering(object):
             cluster_ids = cluster_view.selected + cluster_ids
             self._emit_select(cluster_ids)
 
+        # Save the current selection when an action occurs.
+        def on_request_undo_state(up):
+            return {'selection': (self.cluster_view.selected,
+                                  self.similarity_view.selected)}
+
+        self.clustering.connect(on_request_undo_state)
+        self.cluster_meta.connect(on_request_undo_state)
+
         # Update the cluster views and selection when a cluster event occurs.
         @self.gui.connect_
         def on_cluster(up):
@@ -264,10 +272,18 @@ class ManualClustering(object):
                 self.cluster_view.sort_by(sort[0])
                 # TODO: second time for desc
             # Select all new clusters in view 1.
-            if up.added:
+            if up.history == 'undo':
+                # Select the clusters that were selected before the undone
+                # action.
+                clusters_0, clusters_1 = up.undo_state[0]['selection']
+                self.cluster_view.select(clusters_0)
+                self.similarity_view.select(clusters_1)
+            elif up.added:
                 # TODO: self.select(sel1, sel2) for both views.
                 self.select(up.added)
                 self.pin(up.added)
+                # TODO: only if similarity selection non empty
+                similarity_view.next()
             else:
                 # TODO: move in the sim view if the moved cluster were there
                 cluster_view.next()
@@ -315,10 +331,6 @@ class ManualClustering(object):
     # Selection actions
     # -------------------------------------------------------------------------
 
-    @property
-    def selected(self):
-        return self.cluster_view.selected + self.similarity_view.selected
-
     def select(self, *cluster_ids):
         """Select action: select clusters in the cluster view."""
         # HACK: allow for `select(1, 2, 3)` in addition to `select([1, 2, 3])`
@@ -332,6 +344,8 @@ class ManualClustering(object):
     def pin(self, cluster_ids):
         """Update the similarity view with matches for the specified
         clusters."""
+        if not len(cluster_ids):
+            return
         # TODO: similarity wrt several clusters
         sel = cluster_ids[0]
         cols = ['id', 'similarity']
@@ -345,6 +359,10 @@ class ManualClustering(object):
         # NOTE: sort twice to get decreasing order.
         self.similarity_view.sort_by('similarity')
         self.similarity_view.sort_by('similarity')
+
+    @property
+    def selected(self):
+        return self.cluster_view.selected + self.similarity_view.selected
 
     # Clustering actions
     # -------------------------------------------------------------------------
