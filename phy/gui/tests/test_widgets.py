@@ -64,7 +64,7 @@ def test_widget_javascript_1(qtbot):
     qtbot.waitForWindowShown(widget)
 
     widget.eval_js('number = 1;')
-    assert widget.get_js('number') == 1
+    assert widget.eval_js('number') == 1
 
 
 def test_widget_javascript_2(qtbot):

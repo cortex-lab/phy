@@ -165,27 +165,11 @@ class HTMLWidget(QWebView):
         if not self.is_built():  # pragma: no cover
             raise RuntimeError("The page isn't built.")
         logger.log(5, "Evaluate Javascript: `%s`.", expr)
-        self.page().mainFrame().evaluateJavaScript(expr)
-
-    @pyqtSlot(str)
-    def _set_from_js(self, obj):
-        """Called from Javascript to pass any object to Python through JSON."""
-        self._obj = json.loads(text_type(obj))
+        return self.page().mainFrame().evaluateJavaScript(expr)
 
     @pyqtSlot(str, str)
     def _emit_from_js(self, name, arg_json):
         self.emit(text_type(name), json.loads(text_type(arg_json)))
-
-    def get_js(self, expr):
-        """Evaluate a Javascript expression and get a Python object.
-
-        This uses JSON serialization/deserialization under the hood.
-
-        """
-        self.eval_js('widget._set_from_js(JSON.stringify({}));'.format(expr))
-        obj = self._obj
-        self._obj = None
-        return obj
 
 
 # -----------------------------------------------------------------------------
@@ -252,8 +236,8 @@ class Table(HTMLWidget):
     @property
     def selected(self):
         """Currently selected rows."""
-        return [int(_) for _ in self.get_js('table.selected')]
+        return [int(_) for _ in self.eval_js('table.selected')]
 
     @property
     def current_sort(self):
-        return tuple(self.get_js('table.currentSort()'))
+        return tuple(self.eval_js('table.currentSort()'))
