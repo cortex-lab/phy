@@ -35,8 +35,10 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
 
 
 @yield_fixture
-def gui(qapp):
+def gui(qtbot):
     gui = GUI(position=(200, 100), size=(500, 500))
+    gui.show()
+    qtbot.waitForWindowShown(gui)
     yield gui
     gui.close()
 
@@ -82,13 +84,13 @@ def test_manual_clustering_merge(manual_clustering):
 
     mc.select(30, 20)  # NOTE: we pass multiple ints instead of a list
     mc.merge()
-    assert mc.selected == [31, 2]
+    assert mc.selected == [31, 11]
 
     mc.undo()
     assert mc.selected == [30, 20]
 
     mc.redo()
-    assert mc.selected == [31, 2]
+    assert mc.selected == [31, 11]
 
 
 def test_manual_clustering_split(manual_clustering):
@@ -96,13 +98,13 @@ def test_manual_clustering_split(manual_clustering):
 
     mc.select([1, 2])
     mc.split([1, 2])
-    assert mc.selected == [31, 20]
+    assert mc.selected == [31, 30]
 
     mc.undo()
     assert mc.selected == [1, 2]
 
     mc.redo()
-    assert mc.selected == [31, 20]
+    assert mc.selected == [31, 30]
 
 
 def test_manual_clustering_split_2(gui):
@@ -112,27 +114,23 @@ def test_manual_clustering_split_2(gui):
     mc.attach(gui)
 
     mc.split([0])
-    # assert mc.wizard.selection == [2, 1]
+    assert mc.selected == [2, 3, 1]
 
 
 def test_manual_clustering_move(manual_clustering, quality, similarity):
     mc = manual_clustering
+    mc.cluster_view.sort_by('quality')
+    # TODO: desc
+    # mc.cluster_view.sort_by('quality')
 
-    mc.select([30])
-    assert mc.selected == [30]
-
-    mc.cluster_view.next()
+    mc.select([20])
     assert mc.selected == [20]
 
     mc.move([20], 'noise')
-    assert mc.selected == [2]
+    assert mc.selected == [30]
 
     mc.undo()
     assert mc.selected == [20]
 
     mc.redo()
-    assert mc.selected == [2]
-
-
-# def test_manual_clustering_show(qtbot, gui):
-#     mc, assert_selection = manual_clustering
+    assert mc.selected == [30]

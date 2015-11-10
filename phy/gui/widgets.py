@@ -234,6 +234,7 @@ class Table(HTMLWidget):
 
     def sort_by(self, header):
         """Sort by a given variable."""
+        # TODO: asc or desc
         self.eval_js('table.sortBy("{}");'.format(header))
 
     def next(self):
