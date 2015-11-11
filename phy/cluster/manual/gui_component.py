@@ -45,12 +45,12 @@ def _process_ups(ups):  # pragma: no cover
         raise NotImplementedError()
 
 
-def _make_wizard_default_functions(waveforms=None,
-                                   features=None,
-                                   masks=None,
-                                   n_features_per_channel=None,
-                                   spikes_per_cluster=None,
-                                   ):
+def default_wizard_functions(waveforms=None,
+                             features=None,
+                             masks=None,
+                             n_features_per_channel=None,
+                             spikes_per_cluster=None,
+                             ):
     spc = spikes_per_cluster
     nfc = n_features_per_channel
 
