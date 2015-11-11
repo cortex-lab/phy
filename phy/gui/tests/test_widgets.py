@@ -86,6 +86,12 @@ def test_widget_javascript_2(qtbot):
     # qtbot.stop()
 
 
+def test_table_duplicates(qtbot, table):
+    table.select([1, 1])
+    assert table.selected == [1]
+    # qtbot.stop()
+
+
 def test_table_nav_first(qtbot, table):
     table.next()
     assert table.selected == [0]
