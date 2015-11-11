@@ -230,11 +230,13 @@ class ManualClustering(object):
             self._update_cluster_view(cluster_view)
 
         gui.add_view(cluster_view, title='ClusterView')
+        cluster_view.build()
         cluster_view.show()
 
         # Create the similarity view.
         self.similarity_view = similarity_view = Table()
         gui.add_view(similarity_view, title='SimilarityView')
+        similarity_view.build()
         similarity_view.show()
 
         # Selection in the cluster view.

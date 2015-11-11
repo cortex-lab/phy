@@ -30,7 +30,6 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
                           similarity_func=similarity,
                           )
     mc.attach(gui)
-    qtbot.waitForWindowShown(gui)
     yield mc
 
 
