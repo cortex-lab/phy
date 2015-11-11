@@ -1,3 +1,4 @@
+// Utils.
 
 function uniq(a) {
     var seen = {};
@@ -6,6 +7,12 @@ function uniq(a) {
     });
 }
 
+function isFloat(n) {
+    return n === Number(n) && n % 1 !== 0;
+}
+
+
+// Table class.
 
 var Table = function (el) {
     this.el = el;
@@ -46,6 +53,9 @@ Table.prototype.setData = function(data) {
         for (var j = 0; j < keys.length; j++) {
             var key = keys[j];
             var value = row[key];
+            // Format numbers.
+            if (isFloat(value))
+                value = value.toPrecision(3);
             var td = document.createElement("td");
             td.appendChild(document.createTextNode(value));
             tr.appendChild(td);
