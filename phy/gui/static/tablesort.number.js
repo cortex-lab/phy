@@ -1,6 +1,6 @@
 (function(){
   var cleanNumber = function(i) {
-    return i.replace(/[^\-?0-9.]/g, '');
+    return i.replace(/[^\-\+eE\,?0-9\.]/g, '');
   },
 
   compareNumber = function(a, b) {
