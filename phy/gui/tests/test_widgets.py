@@ -22,7 +22,7 @@ def table(qtbot):
     table.show()
     qtbot.waitForWindowShown(table)
 
-    items = [{'id': i, 'count': 100 - 10 * i} for i in range(10)]
+    items = [{'id': i, 'count': 10000.5 - 10 * i} for i in range(10)]
     items[4]['skip'] = True
 
     table.set_data(cols=['id', 'count'],
@@ -35,7 +35,7 @@ def table(qtbot):
 
 
 #------------------------------------------------------------------------------
-# Test actions
+# Test widgets
 #------------------------------------------------------------------------------
 
 def test_widget_empty(qtbot):
@@ -85,6 +85,10 @@ def test_widget_javascript_2(qtbot):
 
     # qtbot.stop()
 
+
+#------------------------------------------------------------------------------
+# Test table
+#------------------------------------------------------------------------------
 
 def test_table_duplicates(qtbot, table):
     table.select([1, 1])

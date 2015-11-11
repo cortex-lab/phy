@@ -29,7 +29,7 @@ _DEFAULT_STYLES = """
         background-color: black;
         color: white;
         font-family: sans-serif;
-        font-size: 18pt;
+        font-size: 14pt;
         margin: 5px 10px;
     }
 """
