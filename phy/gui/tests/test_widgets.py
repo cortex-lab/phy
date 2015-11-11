@@ -18,7 +18,7 @@ from ..widgets import HTMLWidget, Table
 @yield_fixture
 def table(qtbot):
     table = Table()
-
+    table.build()
     table.show()
     qtbot.waitForWindowShown(table)
 

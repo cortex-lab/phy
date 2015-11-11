@@ -87,10 +87,12 @@ class HTMLWidget(QWebView):
                             widget._emit_from_js(name, JSON.stringify(arg));
                         };
                         </script>''')
-        self.loadFinished.connect(lambda: self.emit('load'))
 
     # Events
     # -------------------------------------------------------------------------
+
+    def _load_finished(self, boo):
+        self.emit('load')
 
     def emit(self, *args, **kwargs):
         return self._event.emit(*args, **kwargs)
@@ -147,6 +149,7 @@ class HTMLWidget(QWebView):
         logger.log(5, "Set HTML: %s", html)
         static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
         base_url = QUrl().fromLocalFile(static_dir)
+        self.loadFinished.connect(self._load_finished)
         self.setHtml(html, base_url)
 
     def is_built(self):
@@ -207,7 +210,10 @@ class Table(HTMLWidget):
         self.add_body('''<script>
                       var table = new Table(document.getElementById("{}"));
                       </script>'''.format(self._table_id))
-        self.build()
+        # NOTE: the table should *not* be built at initialization, because
+        # we may need to connect the load event before the table is built.
+        # This is why this line is commented.
+        # self.build()
 
     def set_data(self, items, cols):
         """Set the rows and cols of the table."""
