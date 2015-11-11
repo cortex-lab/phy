@@ -13,7 +13,7 @@ import os.path as op
 
 from six import text_type
 
-from .qt import QWebView, QWebPage, QUrl, QWebSettings, pyqtSlot
+from .qt import QWebView, QWebPage, QUrl, QWebSettings, QVariant, pyqtSlot
 from phy.utils import EventEmitter
 from phy.utils._misc import _CustomEncoder
 
@@ -168,7 +168,8 @@ class HTMLWidget(QWebView):
         if not self.is_built():  # pragma: no cover
             raise RuntimeError("The page isn't built.")
         logger.log(5, "Evaluate Javascript: `%s`.", expr)
-        return self.page().mainFrame().evaluateJavaScript(expr)
+        out = self.page().mainFrame().evaluateJavaScript(expr)
+        return out.toPyObject() if isinstance(out, QVariant) else out
 
     @pyqtSlot(str, str)
     def _emit_from_js(self, name, arg_json):
