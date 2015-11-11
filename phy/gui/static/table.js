@@ -1,4 +1,12 @@
 
+function uniq(a) {
+    var seen = {};
+    return a.filter(function(item) {
+        return seen.hasOwnProperty(item) ? false : (seen[item] = true);
+    });
+}
+
+
 var Table = function (el) {
     this.el = el;
     this.selected = [];
@@ -49,13 +57,26 @@ Table.prototype.setData = function(data) {
         }
 
         tr.onclick = function(e) {
-            var selected = [this.dataset.id];
-
+            var id = parseInt(String(this.dataset.id));
             var evt = e ? e:window.event;
+            // Control pressed: toggle selected.
             if (evt.ctrlKey || evt.metaKey) {
-                selected = that.selected.concat(selected);
+                var index = that.selected.indexOf(id);
+                // If this item is already selected, deselect it.
+                if (index != -1) {
+                    var selected = that.selected.slice();
+                    selected.splice(index, 1);
+                    that.select(selected);
+                }
+                // Otherwise, select it.
+                else {
+                    that.select(that.selected.concat([id]));
+                }
             }
-            that.select(selected);
+            // Otherwise, select just that item.
+            else {
+                that.select([id]);
+            }
         }
 
         tbody.appendChild(tr);
@@ -86,6 +107,7 @@ Table.prototype.currentSort = function() {
 };
 
 Table.prototype.select = function(ids) {
+    ids = uniq(ids);
 
     // Remove the class on all rows.
     for (var i = 0; i < this.selected.length; i++) {
