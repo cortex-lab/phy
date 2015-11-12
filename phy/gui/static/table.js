@@ -24,6 +24,11 @@ var Table = function (el) {
 
 Table.prototype.setData = function(data) {
     if (data.items.length == 0) return;
+
+    // Reinitialize the state.
+    this.selected = [];
+    this.rows = {};
+
     var that = this;
     var keys = data.cols;
 
@@ -103,8 +108,9 @@ Table.prototype.setData = function(data) {
 Table.prototype.sortBy = function(header, dir) {
     dir = typeof dir !== 'undefined' ? dir : 'asc';
     this.tablesort.sortTable(this.headers[header]);
-    if (dir == 'desc')
+    if (dir == 'desc') {
         this.tablesort.sortTable(this.headers[header]);
+    }
 };
 
 Table.prototype.currentSort = function() {
@@ -157,7 +163,7 @@ Table.prototype.next = function() {
     }
     for (var i = i0; i < this.el.rows.length; i++) {
         row = this.el.rows[i];
-        if (!(row.dataset.skip)) {
+        if (row.dataset.skip != 'true') {
             this.select([row.dataset.id]);
             return;
         }

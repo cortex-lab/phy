@@ -90,7 +90,7 @@ def test_manual_clustering_edge_cases(manual_clustering):
     mc.save()
 
 
-def test_manual_clustering_1(qtbot, gui):
+def test_manual_clustering_default_metrics(qtbot, gui):
 
     n_spikes = 10
     n_samples = 4
@@ -136,10 +136,25 @@ def test_manual_clustering_1(qtbot, gui):
     assert mc.selected == [best, match]
 
 
+def test_manual_clustering_skip(qtbot, gui, manual_clustering):
+    mc = manual_clustering
+
+    # yield [0, 1, 2, 10, 11, 20, 30]
+    # #      i, g, N,  i,  g,  N, N
+    expected = [30, 20, 11, 2, 1]
+
+    for clu in expected:
+        mc.cluster_view.next()
+        assert mc.selected == [clu]
+
+
 def test_manual_clustering_merge(manual_clustering):
     mc = manual_clustering
 
-    mc.select(30, 20)  # NOTE: we pass multiple ints instead of a list
+    mc.cluster_view.select([30])
+    mc.similarity_view.select([20])
+    assert mc.selected == [30, 20]
+
     mc.merge()
     assert mc.selected == [31, 11]
 
@@ -155,13 +170,13 @@ def test_manual_clustering_split(manual_clustering):
 
     mc.select([1, 2])
     mc.split([1, 2])
-    assert mc.selected == [31, 30]
+    assert mc.selected == [31]
 
     mc.undo()
     assert mc.selected == [1, 2]
 
     mc.redo()
-    assert mc.selected == [31, 30]
+    assert mc.selected == [31]
 
 
 def test_manual_clustering_split_2(gui, quality, similarity):
@@ -174,12 +189,11 @@ def test_manual_clustering_split_2(gui, quality, similarity):
     mc.set_similarity_func(similarity)
 
     mc.split([0])
-    assert mc.selected == [2, 3, 1]
+    assert mc.selected == [2, 3]
 
 
 def test_manual_clustering_move(manual_clustering, quality, similarity):
     mc = manual_clustering
-    mc.cluster_view.sort_by('quality', 'desc')
 
     mc.select([20])
     assert mc.selected == [20]

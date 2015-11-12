@@ -181,8 +181,7 @@ class ManualClustering(object):
                             ', '.join(map(str, up.deleted)),
                             up.added[0])
             else:
-                # TODO: how many spikes?
-                logger.info("Assigned spikes.")
+                logger.info("Assigned %s spikes.", len(up.spike_ids))
 
             if self.gui:
                 self.gui.emit('cluster', up)
@@ -250,14 +249,17 @@ class ManualClustering(object):
         self.clustering.connect(on_request_undo_state)
         self.cluster_meta.connect(on_request_undo_state)
 
-    def _update_cluster_view(self, cluster_view):
+    def _update_cluster_view(self):
         assert self.quality_func
         cols = ['id', 'quality']
-        # TODO: skip
-        items = [{'id': clu, 'quality': self.quality_func(clu)}
+        items = [{'id': clu,
+                  'quality': self.quality_func(clu),
+                  'skip': self.cluster_meta.get('group', clu) in
+                  ('noise', 'mua'),
+                  }
                  for clu in self.clustering.cluster_ids]
         # TODO: custom measures
-        cluster_view.set_data(items, cols)
+        self.cluster_view.set_data(items, cols)
 
     def _emit_select(self, cluster_ids):
         """Choose spikes from the specified clusters and emit the
@@ -277,9 +279,8 @@ class ManualClustering(object):
     def set_quality_func(self, f):
         self.quality_func = f
 
-        self._update_cluster_view(self.cluster_view)
-        self.cluster_view.sort_by('quality')
-        self.cluster_view.sort_by('quality')
+        self._update_cluster_view()
+        self.cluster_view.sort_by('quality', 'desc')
 
     def set_similarity_func(self, f):
         self.similarity_func = f
@@ -299,11 +300,15 @@ class ManualClustering(object):
         def on_cluster(up):
             # Get the current sort of the cluster view.
             sort = self.cluster_view.current_sort
-            # Reinitialize the cluster view.
-            self._update_cluster_view(self.cluster_view)
-            # Reset the previous sort options.
-            if sort[0]:
-                self.cluster_view.sort_by(*sort)
+            sel_1 = self.similarity_view.selected
+
+            if up.added:
+                # Reinitialize the cluster view.
+                self._update_cluster_view()
+                # Reset the previous sort options.
+                if sort[0]:
+                    self.cluster_view.sort_by(*sort)
+
             # Select all new clusters in view 1.
             if up.history == 'undo':
                 # Select the clusters that were selected before the undone
@@ -314,12 +319,17 @@ class ManualClustering(object):
             elif up.added:
                 self.select(up.added)
                 self.pin(up.added)
-                # TODO: only if similarity selection non empty
-                self.similarity_view.next()
+                if sel_1:
+                    self.similarity_view.next()
+            elif up.metadata_changed:
+                # Select next in similarity view if all moved are in that view.
+                if set(up.metadata_changed) <= set(sel_1):
+                    self.similarity_view.next()
+                # Otherwise, select next in cluster view.
+                else:
+                    self.cluster_view.next()
             else:
-                # TODO: move in the sim view if the moved cluster were there
                 self.cluster_view.next()
-
         return self
 
     # Selection actions
@@ -338,6 +348,7 @@ class ManualClustering(object):
     def pin(self, cluster_ids=None):
         """Update the similarity view with matches for the specified
         clusters."""
+        # TODO: rename into _update_similarity_view()
         assert self.similarity_func
         if cluster_ids is None or not len(cluster_ids):
             cluster_ids = self.cluster_view.selected
@@ -361,8 +372,7 @@ class ManualClustering(object):
 
     def merge(self, cluster_ids=None):
         if cluster_ids is None:
-            cluster_ids = (self.cluster_view.selected +
-                           self.similarity_view.selected)
+            cluster_ids = self.selected
         if len(cluster_ids or []) <= 1:
             return
         self.clustering.merge(cluster_ids)
