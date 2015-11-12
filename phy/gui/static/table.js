@@ -100,8 +100,11 @@ Table.prototype.setData = function(data) {
     this.tablesort = new Tablesort(this.el);
 };
 
-Table.prototype.sortBy = function(header) {
+Table.prototype.sortBy = function(header, dir) {
+    dir = typeof dir !== 'undefined' ? dir : 'asc';
     this.tablesort.sortTable(this.headers[header]);
+    if (dir == 'desc')
+        this.tablesort.sortTable(this.headers[header]);
 };
 
 Table.prototype.currentSort = function() {

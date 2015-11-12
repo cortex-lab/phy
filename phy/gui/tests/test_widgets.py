@@ -125,8 +125,7 @@ def test_table_sort(qtbot, table):
     # Sort by count decreasing, and check that 0 (count 100) comes before
     # 1 (count 90). This checks that sorting works with number (need to
     # import tablesort.number.js).
-    table.sort_by('count')
-    table.sort_by('count')
+    table.sort_by('count', 'desc')
 
     table.previous()
     assert table.selected == [0]

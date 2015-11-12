@@ -179,18 +179,16 @@ def test_manual_clustering_split_2(gui, quality, similarity):
 
 def test_manual_clustering_move(manual_clustering, quality, similarity):
     mc = manual_clustering
-    mc.cluster_view.sort_by('quality')
-    # TODO: desc
-    # mc.cluster_view.sort_by('quality')
+    mc.cluster_view.sort_by('quality', 'desc')
 
     mc.select([20])
     assert mc.selected == [20]
 
     mc.move([20], 'noise')
-    assert mc.selected == [30]
+    assert mc.selected == [11]
 
     mc.undo()
     assert mc.selected == [20]
 
     mc.redo()
-    assert mc.selected == [30]
+    assert mc.selected == [11]
