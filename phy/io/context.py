@@ -155,7 +155,7 @@ class Context(object):
         # Try importing joblib.
         try:
             from joblib import Memory
-            self._memory = Memory(cachedir=self.cache_dir)
+            self._memory = Memory(cachedir=self.cache_dir, verbose=0)
             logger.debug("Initialize joblib cache dir at `%s`.",
                          self.cache_dir)
         except ImportError:  # pragma: no cover
