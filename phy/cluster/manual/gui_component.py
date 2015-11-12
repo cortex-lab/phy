@@ -93,10 +93,10 @@ def default_wizard_functions(waveforms=None,
         d = mean_masked_features_distance(mf0, mf1, mm0, mm1,
                                           n_features_per_channel=nfc,
                                           )
-
+        d = 1. / max(1e-10, d)  # From distance to similarity.
         logger.debug("Computed cluster similarity for (%d, %d): %.3f.",
                      c0, c1, d)
-        return -d  # NOTE: convert distance to score
+        return d
 
     return (max_waveform_amplitude_quality,
             mean_masked_features_similarity)
@@ -157,8 +157,6 @@ class ManualClustering(object):
                  cluster_groups=None,
                  n_spikes_max_per_cluster=100,
                  shortcuts=None,
-                 quality_func=None,
-                 similarity_func=None,
                  ):
 
         self.gui = None
@@ -172,10 +170,6 @@ class ManualClustering(object):
         self.clustering = Clustering(spike_clusters)
         self.cluster_meta = create_cluster_meta(cluster_groups)
         self._global_history = GlobalHistory(process_ups=_process_ups)
-
-        # Wizard functions.
-        self.quality_func = quality_func or (lambda c: 0)
-        self.similarity_func = similarity_func or (lambda c, d: 0)
 
         # Log the actions.
         @self.clustering.connect
@@ -205,6 +199,9 @@ class ManualClustering(object):
             if self.gui:
                 self.gui.emit('cluster', up)
 
+        # Create the cluster views.
+        self._create_cluster_views()
+
     # Internal methods
     # -------------------------------------------------------------------------
 
@@ -221,22 +218,13 @@ class ManualClustering(object):
         self.actions.add(self.undo)
         self.actions.add(self.redo)
 
-    def _create_cluster_views(self, gui):
+    def _create_cluster_views(self):
         # Create the cluster view.
         self.cluster_view = cluster_view = Table()
-
-        @cluster_view.connect_
-        def on_load():
-            self._update_cluster_view(cluster_view)
-
-        gui.add_view(cluster_view, title='ClusterView')
-        cluster_view.build()
         cluster_view.show()
 
         # Create the similarity view.
         self.similarity_view = similarity_view = Table()
-        gui.add_view(similarity_view, title='SimilarityView')
-        similarity_view.build()
         similarity_view.show()
 
         # Selection in the cluster view.
@@ -262,35 +250,8 @@ class ManualClustering(object):
         self.clustering.connect(on_request_undo_state)
         self.cluster_meta.connect(on_request_undo_state)
 
-        # Update the cluster views and selection when a cluster event occurs.
-        @self.gui.connect_
-        def on_cluster(up):
-            # Get the current sort of the cluster view.
-            sort = cluster_view.current_sort
-            # Reinitialize the cluster view.
-            self._update_cluster_view(cluster_view)
-            # Reset the previous sort options.
-            if sort[0]:
-                self.cluster_view.sort_by(sort[0])
-                # TODO: second time for desc
-            # Select all new clusters in view 1.
-            if up.history == 'undo':
-                # Select the clusters that were selected before the undone
-                # action.
-                clusters_0, clusters_1 = up.undo_state[0]['selection']
-                self.cluster_view.select(clusters_0)
-                self.similarity_view.select(clusters_1)
-            elif up.added:
-                # TODO: self.select(sel1, sel2) for both views.
-                self.select(up.added)
-                self.pin(up.added)
-                # TODO: only if similarity selection non empty
-                similarity_view.next()
-            else:
-                # TODO: move in the sim view if the moved cluster were there
-                cluster_view.next()
-
     def _update_cluster_view(self, cluster_view):
+        assert self.quality_func
         cols = ['id', 'quality']
         # TODO: skip
         items = [{'id': clu, 'quality': self.quality_func(clu)}
@@ -316,17 +277,50 @@ class ManualClustering(object):
     def set_quality_func(self, f):
         self.quality_func = f
 
+        self._update_cluster_view(self.cluster_view)
+        self.cluster_view.sort_by('quality')
+        self.cluster_view.sort_by('quality')
+
     def set_similarity_func(self, f):
         self.similarity_func = f
 
     def attach(self, gui):
         self.gui = gui
 
-        # Create the cluster views.
-        self._create_cluster_views(gui)
-
         # Create the actions.
         self._create_actions(gui)
+
+        # Add the cluster views.
+        gui.add_view(self.cluster_view, title='ClusterView')
+        gui.add_view(self.similarity_view, title='SimilarityView')
+
+        # Update the cluster views and selection when a cluster event occurs.
+        @self.gui.connect_
+        def on_cluster(up):
+            # Get the current sort of the cluster view.
+            sort = self.cluster_view.current_sort
+            # Reinitialize the cluster view.
+            self._update_cluster_view(self.cluster_view)
+            # Reset the previous sort options.
+            if sort[0]:
+                self.cluster_view.sort_by(sort[0])
+                # TODO: second time for desc
+            # Select all new clusters in view 1.
+            if up.history == 'undo':
+                # Select the clusters that were selected before the undone
+                # action.
+                clusters_0, clusters_1 = up.undo_state[0]['selection']
+                self.cluster_view.select(clusters_0)
+                self.similarity_view.select(clusters_1)
+            elif up.added:
+                # TODO: self.select(sel1, sel2) for both views.
+                self.select(up.added)
+                self.pin(up.added)
+                # TODO: only if similarity selection non empty
+                self.similarity_view.next()
+            else:
+                # TODO: move in the sim view if the moved cluster were there
+                self.cluster_view.next()
 
         return self
 
@@ -343,11 +337,12 @@ class ManualClustering(object):
         # Update the cluster view selection.
         self.cluster_view.select(cluster_ids)
 
-    def pin(self, cluster_ids):
+    def pin(self, cluster_ids=None):
         """Update the similarity view with matches for the specified
         clusters."""
-        if not len(cluster_ids):
-            return
+        assert self.similarity_func
+        if cluster_ids is None or not len(cluster_ids):
+            cluster_ids = self.cluster_view.selected
         # TODO: similarity wrt several clusters
         sel = cluster_ids[0]
         cols = ['id', 'similarity']
