@@ -303,8 +303,7 @@ class ManualClustering(object):
             self._update_cluster_view(self.cluster_view)
             # Reset the previous sort options.
             if sort[0]:
-                self.cluster_view.sort_by(sort[0])
-                # TODO: second time for desc
+                self.cluster_view.sort_by(*sort)
             # Select all new clusters in view 1.
             if up.history == 'undo':
                 # Select the clusters that were selected before the undone
@@ -313,7 +312,6 @@ class ManualClustering(object):
                 self.cluster_view.select(clusters_0)
                 self.similarity_view.select(clusters_1)
             elif up.added:
-                # TODO: self.select(sel1, sel2) for both views.
                 self.select(up.added)
                 self.pin(up.added)
                 # TODO: only if similarity selection non empty
@@ -352,10 +350,7 @@ class ManualClustering(object):
                  for clu in self.clustering.cluster_ids
                  if clu not in cluster_ids]
         self.similarity_view.set_data(items, cols)
-
-        # NOTE: sort twice to get decreasing order.
-        self.similarity_view.sort_by('similarity')
-        self.similarity_view.sort_by('similarity')
+        self.similarity_view.sort_by('similarity', 'desc')
 
     @property
     def selected(self):
