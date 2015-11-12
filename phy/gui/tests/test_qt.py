@@ -65,7 +65,8 @@ def test_wait_signal(qtbot):
 
     assert x == []
 
-    _wait_signal(timer.timeout)
+    with _wait_signal(timer.timeout):
+        pass
     assert x == [0]
 
 
