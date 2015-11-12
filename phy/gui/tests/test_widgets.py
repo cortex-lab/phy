@@ -18,7 +18,6 @@ from ..widgets import HTMLWidget, Table
 @yield_fixture
 def table(qtbot):
     table = Table()
-    table.build()
     table.show()
     qtbot.waitForWindowShown(table)
 
@@ -40,7 +39,6 @@ def table(qtbot):
 
 def test_widget_empty(qtbot):
     widget = HTMLWidget()
-    widget.build()
     widget.show()
     qtbot.waitForWindowShown(widget)
     # qtbot.stop()
@@ -51,7 +49,6 @@ def test_widget_html(qtbot):
     widget.add_styles('html, body, p {background-color: purple;}')
     widget.add_header('<!-- comment -->')
     widget.set_body('Hello world!')
-    widget.build()
     widget.show()
     qtbot.waitForWindowShown(widget)
     assert 'Hello world!' in widget.html()
@@ -59,17 +56,15 @@ def test_widget_html(qtbot):
 
 def test_widget_javascript_1(qtbot):
     widget = HTMLWidget()
-    widget.build()
+    widget.eval_js('number = 1;')
     widget.show()
     qtbot.waitForWindowShown(widget)
 
-    widget.eval_js('number = 1;')
     assert widget.eval_js('number') == 1
 
 
 def test_widget_javascript_2(qtbot):
     widget = HTMLWidget()
-    widget.build()
     widget.show()
     qtbot.waitForWindowShown(widget)
     _out = []
