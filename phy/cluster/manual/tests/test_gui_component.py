@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from operator import itemgetter
+
 from pytest import yield_fixture
 import numpy as np
 from numpy.testing import assert_array_equal as ae
@@ -114,18 +116,24 @@ def test_manual_clustering_1(qtbot, gui):
     mc.set_quality_func(q)
     mc.set_similarity_func(s)
 
+    quality = [(c, q(c)) for c in spc]
+    best = sorted(quality, key=itemgetter(1))[-1][0]
+
+    similarity = [(d, s(best, d)) for d in spc if d != best]
+    match = sorted(similarity, key=itemgetter(1))[-1][0]
+
     mc.attach(gui)
     gui.show()
     qtbot.waitForWindowShown(gui)
 
     mc.cluster_view.next()
-    assert mc.cluster_view.selected == [1]
+    assert mc.cluster_view.selected == [best]
 
     mc.pin()
     mc.similarity_view.next()
 
-    assert mc.similarity_view.selected == [2]
-    assert mc.selected == [1, 2]
+    assert mc.similarity_view.selected == [match]
+    assert mc.selected == [best, match]
 
 
 def test_manual_clustering_merge(manual_clustering):
