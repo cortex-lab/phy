@@ -18,7 +18,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 from PyQt4.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
-                          QVariant,
+                          QVariant, QEventLoop, QTimer,
                           pyqtSignal, pyqtSlot, QSize, QUrl)
 from PyQt4.QtGui import (QKeySequence, QAction, QStatusBar,  # noqa
                          QMainWindow, QDockWidget, QWidget,
@@ -57,6 +57,16 @@ def _prompt(message, buttons=('yes', 'no'), title='Question'):
 
 def _show_box(box):  # pragma: no cover
     return _button_name_from_enum(box.exec_())
+
+
+def _wait_signal(signal, timeout=None):
+    """Block loop until signal emitted, or timeout (ms) elapses."""
+    # http://jdreaver.com/posts/2014-07-03-waiting-for-signals-pyside-pyqt.html
+    loop = QEventLoop()
+    signal.connect(loop.quit)
+    if timeout is not None:
+        QTimer.singleShot(timeout, loop.quit)
+    loop.exec_()
 
 
 # -----------------------------------------------------------------------------
