@@ -13,7 +13,10 @@ import os.path as op
 
 from six import text_type
 
-from .qt import QWebView, QWebPage, QUrl, QWebSettings, QVariant, pyqtSlot
+from .qt import (QWebView, QWebPage, QUrl, QWebSettings, QVariant,
+                 pyqtSlot,
+                 _wait_signal,
+                 )
 from phy.utils import EventEmitter
 from phy.utils._misc import _CustomEncoder
 
@@ -87,12 +90,10 @@ class HTMLWidget(QWebView):
                             widget._emit_from_js(name, JSON.stringify(arg));
                         };
                         </script>''')
+        self._pending_js_eval = []
 
     # Events
     # -------------------------------------------------------------------------
-
-    def _load_finished(self, boo):
-        self.emit('load')
 
     def emit(self, *args, **kwargs):
         return self._event.emit(*args, **kwargs)
@@ -138,7 +139,7 @@ class HTMLWidget(QWebView):
         """Return the full HTML source of the widget."""
         return self.page().mainFrame().toHtml()
 
-    def build(self):
+    def _build(self):
         """Build the full HTML source."""
         styles = '\n\n'.join(self._styles)
         html = _PAGE_TEMPLATE.format(title=self.title,
@@ -149,7 +150,6 @@ class HTMLWidget(QWebView):
         logger.log(5, "Set HTML: %s", html)
         static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
         base_url = QUrl().fromLocalFile(static_dir)
-        self.loadFinished.connect(self._load_finished)
         self.setHtml(html, base_url)
 
     def is_built(self):
@@ -165,8 +165,9 @@ class HTMLWidget(QWebView):
 
     def eval_js(self, expr):
         """Evaluate a Javascript expression."""
-        if not self.is_built():  # pragma: no cover
-            raise RuntimeError("The page isn't built.")
+        if not self.is_built():
+            self._pending_js_eval.append(expr)
+            return
         logger.log(5, "Evaluate Javascript: `%s`.", expr)
         out = self.page().mainFrame().evaluateJavaScript(expr)
         return out.toPyObject() if isinstance(out, QVariant) else out
@@ -174,6 +175,16 @@ class HTMLWidget(QWebView):
     @pyqtSlot(str, str)
     def _emit_from_js(self, name, arg_json):
         self.emit(text_type(name), json.loads(text_type(arg_json)))
+
+    def show(self):
+        with _wait_signal(self.loadFinished, 100):
+            self._build()
+            super(HTMLWidget, self).show()
+        # Call the pending JS eval calls after the page has been built.
+        assert self.is_built()
+        for expr in self._pending_js_eval:
+            self.eval_js(expr)
+        self._pending_js_eval = []
 
 
 # -----------------------------------------------------------------------------
@@ -211,10 +222,6 @@ class Table(HTMLWidget):
         self.add_body('''<script>
                       var table = new Table(document.getElementById("{}"));
                       </script>'''.format(self._table_id))
-        # NOTE: the table should *not* be built at initialization, because
-        # we may need to connect the load event before the table is built.
-        # This is why this line is commented.
-        # self.build()
 
     def set_data(self, items, cols):
         """Set the rows and cols of the table."""
