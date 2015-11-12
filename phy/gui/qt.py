@@ -6,6 +6,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+from contextlib import contextmanager
 from functools import wraps
 import logging
 import sys
@@ -59,11 +60,15 @@ def _show_box(box):  # pragma: no cover
     return _button_name_from_enum(box.exec_())
 
 
+@contextmanager
 def _wait_signal(signal, timeout=None):
     """Block loop until signal emitted, or timeout (ms) elapses."""
     # http://jdreaver.com/posts/2014-07-03-waiting-for-signals-pyside-pyqt.html
     loop = QEventLoop()
     signal.connect(loop.quit)
+
+    yield
+
     if timeout is not None:
         QTimer.singleShot(timeout, loop.quit)
     loop.exec_()
