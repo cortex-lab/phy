@@ -8,10 +8,11 @@
 
 from pytest import raises
 
-from ..qt import (QMessageBox, Qt, QWebView,
+from ..qt import (QMessageBox, Qt, QWebView, QTimer,
                   _button_name_from_enum,
                   _button_enum_from_name,
                   _prompt,
+                  _wait_signal,
                   require_qt,
                   create_app,
                   QApplication,
@@ -48,6 +49,24 @@ def test_qt_app(qtbot):
     view = QWebView()
     qtbot.addWidget(view)
     view.close()
+
+
+def test_wait_signal(qtbot):
+    x = []
+
+    def f():
+        x.append(0)
+
+    timer = QTimer()
+    timer.setInterval(100)
+    timer.setSingleShot(True)
+    timer.timeout.connect(f)
+    timer.start()
+
+    assert x == []
+
+    _wait_signal(timer.timeout)
+    assert x == [0]
 
 
 def test_web_view(qtbot):
