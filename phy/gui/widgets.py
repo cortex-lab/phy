@@ -177,7 +177,7 @@ class HTMLWidget(QWebView):
         self.emit(text_type(name), json.loads(text_type(arg_json)))
 
     def show(self):
-        with _wait_signal(self.loadFinished, 100):
+        with _wait_signal(self.loadFinished, 50):
             self._build()
             super(HTMLWidget, self).show()
         # Call the pending JS eval calls after the page has been built.
