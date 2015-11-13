@@ -200,7 +200,9 @@ class ManualClustering(object):
         self._create_cluster_views()
         self._default_sort = None
         self._columns = []
-        self.add_column('skip', self._do_skip)
+        # Default columns.
+        self.add_column('id', lambda clu: clu)
+        self.add_column('skip', self._do_skip, show=False)
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -253,7 +255,7 @@ class ManualClustering(object):
     @property
     def _column_names(self):
         """Name of the columns."""
-        return [name for (name, func) in self._columns]
+        return [name for (name, func, show) in self._columns if show]
 
     def _do_skip(self, cluster_id):
         """Whether to skip that cluster."""
@@ -262,10 +264,8 @@ class ManualClustering(object):
     def _get_cluster_info(self, cluster_id, extra_columns=None):
         """Return the data dictionary for a cluster row."""
         extra_columns = extra_columns or []
-        info = {'id': cluster_id}
-        info.update({name: func(cluster_id)
-                     for (name, func) in (self._columns + extra_columns)})
-        return info
+        return {name: func(cluster_id)
+                for (name, func, show) in (self._columns + extra_columns)}
 
     def _update_cluster_view(self):
         """Initialize the cluster view with cluster data."""
@@ -284,7 +284,7 @@ class ManualClustering(object):
         cluster_id = cluster_ids[0]
         # Similarity wrt the first cluster.
         sim = lambda c: self.similarity_func(cluster_id, c)
-        items = [self._get_cluster_info(clu, [('similarity', sim)])
+        items = [self._get_cluster_info(clu, [('similarity', sim, True)])
                  for clu in self.clustering.cluster_ids
                  if clu not in cluster_ids
                  ]
@@ -315,9 +315,9 @@ class ManualClustering(object):
         """Set the similarity function."""
         self.similarity_func = f
 
-    def add_column(self, name, func, is_default_sort=False):
+    def add_column(self, name, func, is_default_sort=False, show=True):
         """Add a new column in the cluster views."""
-        self._columns.append((name, func))
+        self._columns.append((name, func, show))
         if is_default_sort:
             self._default_sort = name
 
