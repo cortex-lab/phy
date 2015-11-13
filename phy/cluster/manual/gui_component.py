@@ -121,8 +121,6 @@ class ManualClustering(object):
     cluster_groups : dictionary
     n_spikes_max_per_cluster : int
     shortcuts : dict
-    quality_func : function
-    similarity_func : function
 
     GUI events
     ----------
@@ -200,6 +198,9 @@ class ManualClustering(object):
 
         # Create the cluster views.
         self._create_cluster_views()
+        self._default_sort = None
+        self._columns = []
+        self.add_column('skip', self._do_skip)
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -249,17 +250,47 @@ class ManualClustering(object):
         self.clustering.connect(on_request_undo_state)
         self.cluster_meta.connect(on_request_undo_state)
 
+    @property
+    def _column_names(self):
+        """Name of the columns."""
+        return [name for (name, func) in self._columns]
+
+    def _do_skip(self, cluster_id):
+        """Whether to skip that cluster."""
+        return self.cluster_meta.get('group', cluster_id) in ('noise', 'mua')
+
+    def _get_cluster_info(self, cluster_id, extra_columns=None):
+        """Return the data dictionary for a cluster row."""
+        extra_columns = extra_columns or []
+        info = {'id': cluster_id}
+        info.update({name: func(cluster_id)
+                     for (name, func) in (self._columns + extra_columns)})
+        return info
+
     def _update_cluster_view(self):
-        assert self.quality_func
-        cols = ['id', 'quality']
-        items = [{'id': clu,
-                  'quality': self.quality_func(clu),
-                  'skip': self.cluster_meta.get('group', clu) in
-                  ('noise', 'mua'),
-                  }
-                 for clu in self.clustering.cluster_ids]
-        # TODO: custom measures
-        self.cluster_view.set_data(items, cols)
+        """Initialize the cluster view with cluster data."""
+        items = [self._get_cluster_info(cluster_id)
+                 for cluster_id in self.clustering.cluster_ids]
+        self.cluster_view.set_data(items, self._column_names)
+        if self._default_sort:
+            self.cluster_view.sort_by(self._default_sort, 'desc')
+
+    def _update_similarity_view(self, cluster_ids=None):
+        """Update the similarity view with matches for the specified
+        clusters."""
+        assert self.similarity_func
+        if cluster_ids is None or not len(cluster_ids):
+            cluster_ids = self.cluster_view.selected
+        cluster_id = cluster_ids[0]
+        # Similarity wrt the first cluster.
+        sim = lambda c: self.similarity_func(cluster_id, c)
+        items = [self._get_cluster_info(clu, [('similarity', sim)])
+                 for clu in self.clustering.cluster_ids
+                 if clu not in cluster_ids
+                 ]
+        cols = self._column_names + ['similarity']
+        self.similarity_view.set_data(items, cols)
+        self.similarity_view.sort_by('similarity', 'desc')
 
     def _emit_select(self, cluster_ids):
         """Choose spikes from the specified clusters and emit the
@@ -277,13 +308,18 @@ class ManualClustering(object):
     # -------------------------------------------------------------------------
 
     def set_quality_func(self, f):
-        self.quality_func = f
-
+        self.add_column('quality', f, True)
         self._update_cluster_view()
-        self.cluster_view.sort_by('quality', 'desc')
 
     def set_similarity_func(self, f):
+        """Set the similarity function."""
         self.similarity_func = f
+
+    def add_column(self, name, func, is_default_sort=False):
+        """Add a new column in the cluster views."""
+        self._columns.append((name, func))
+        if is_default_sort:
+            self._default_sort = name
 
     def attach(self, gui):
         self.gui = gui
@@ -343,23 +379,6 @@ class ManualClustering(object):
             cluster_ids = list(cluster_ids[0]) + list(cluster_ids[1:])
         # Update the cluster view selection.
         self.cluster_view.select(cluster_ids)
-
-    def _update_similarity_view(self, cluster_ids=None):
-        """Update the similarity view with matches for the specified
-        clusters."""
-        assert self.similarity_func
-        if cluster_ids is None or not len(cluster_ids):
-            cluster_ids = self.cluster_view.selected
-        # NOTE: we can also implement similarity wrt several clusters
-        sel = cluster_ids[0]
-        cols = ['id', 'similarity']
-        # TODO: skip
-        items = [{'id': clu,
-                  'similarity': self.similarity_func(sel, clu)}
-                 for clu in self.clustering.cluster_ids
-                 if clu not in cluster_ids]
-        self.similarity_view.set_data(items, cols)
-        self.similarity_view.sort_by('similarity', 'desc')
 
     @property
     def selected(self):
