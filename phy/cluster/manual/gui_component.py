@@ -232,7 +232,7 @@ class ManualClustering(object):
             # Emit GUI.select when the selection changes in the cluster view.
             self._emit_select(cluster_ids)
             # Pin the clusters and update the similarity view.
-            self.pin(cluster_ids)
+            self._update_similarity_view(cluster_ids)
 
         # Selection in the similarity view.
         @similarity_view.connect_  # noqa
@@ -318,7 +318,6 @@ class ManualClustering(object):
                 self.similarity_view.select(clusters_1)
             elif up.added:
                 self.select(up.added)
-                self.pin(up.added)
                 if sel_1:
                     self.similarity_view.next()
             elif up.metadata_changed:
@@ -345,14 +344,13 @@ class ManualClustering(object):
         # Update the cluster view selection.
         self.cluster_view.select(cluster_ids)
 
-    def pin(self, cluster_ids=None):
+    def _update_similarity_view(self, cluster_ids=None):
         """Update the similarity view with matches for the specified
         clusters."""
-        # TODO: rename into _update_similarity_view()
         assert self.similarity_func
         if cluster_ids is None or not len(cluster_ids):
             cluster_ids = self.cluster_view.selected
-        # TODO: similarity wrt several clusters
+        # NOTE: we can also implement similarity wrt several clusters
         sel = cluster_ids[0]
         cols = ['id', 'similarity']
         # TODO: skip

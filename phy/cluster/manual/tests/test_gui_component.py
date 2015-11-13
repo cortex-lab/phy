@@ -67,9 +67,6 @@ def test_manual_clustering_edge_cases(manual_clustering):
     mc.undo()
     mc.redo()
 
-    # Pin.
-    mc.pin([])
-
     # Merge.
     mc.merge()
     assert mc.selected == [0]
@@ -129,7 +126,6 @@ def test_manual_clustering_default_metrics(qtbot, gui):
     mc.cluster_view.next()
     assert mc.cluster_view.selected == [best]
 
-    mc.pin()
     mc.similarity_view.next()
 
     assert mc.similarity_view.selected == [match]
