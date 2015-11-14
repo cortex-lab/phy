@@ -288,7 +288,7 @@ def test_manual_clustering_action_move_2(manual_clustering):
     mc.cluster_meta.get('group', 2) == 'good'
 
 
-def _test_manual_clustering_action_move_3(manual_clustering):
+def test_manual_clustering_action_move_3(manual_clustering):
     mc = manual_clustering
 
     mc.select([30])
@@ -297,13 +297,13 @@ def _test_manual_clustering_action_move_3(manual_clustering):
     assert mc.selected == [30, 20]
     mc.actions.move_all_to_noise()
 
-    assert mc.selected == [11, 10]
+    assert mc.selected == [11, 2]
     mc.actions.move_all_to_mua()
 
-    assert mc.selected == [2, 1]
+    assert mc.selected == [1]
     mc.actions.move_all_to_good()
 
-    assert mc.selected == [30, 1]
+    assert mc.selected == [1]
 
     mc.cluster_meta.get('group', 30) == 'noise'
     mc.cluster_meta.get('group', 20) == 'noise'
