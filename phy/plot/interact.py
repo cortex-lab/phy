@@ -171,7 +171,8 @@ class Boxed(BaseInteract):
     def update_program(self, program):
         # Signal bounds (positions).
         box_bounds = _get_texture(self._box_bounds, NDC, self.n_boxes, [-1, 1])
-        program['u_box_bounds'] = Texture2D(box_bounds)
+        program['u_box_bounds'] = Texture2D(box_bounds,
+                                            internalformat='rgba32f')
         program['n_boxes'] = self.n_boxes
 
     # Change the box bounds, positions, or size
