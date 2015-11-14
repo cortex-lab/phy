@@ -185,7 +185,7 @@ Table.prototype.previous = function() {
     // NOTE: i >= 1 because we skip the header column.
     for (var i = i0; i >= 1; i--) {
         row = this.el.rows[i];
-        if (!(row.dataset.skip)) {
+        if (row.dataset.skip != 'true') {
             this.select([row.dataset.id]);
             return;
         }
