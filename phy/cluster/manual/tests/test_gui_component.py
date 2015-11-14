@@ -227,7 +227,7 @@ def test_manual_clustering_move_2(manual_clustering):
 # Test shortcuts
 #------------------------------------------------------------------------------
 
-def test_manual_clustering_action_reset(manual_clustering):
+def test_manual_clustering_action_reset(qtbot, manual_clustering):
     mc = manual_clustering
 
     mc.actions.select([10, 11])
@@ -235,8 +235,17 @@ def test_manual_clustering_action_reset(manual_clustering):
     mc.actions.reset()
     assert mc.selected == [30]
 
+    mc.actions.next()
+    assert mc.selected == [30, 20]
 
-def test_manual_clustering_action_move(manual_clustering):
+    mc.actions.next()
+    assert mc.selected == [30, 11]
+
+    mc.actions.previous()
+    assert mc.selected == [30, 20]
+
+
+def test_manual_clustering_action_move_1(manual_clustering):
     mc = manual_clustering
 
     mc.actions.next()
@@ -254,4 +263,53 @@ def test_manual_clustering_action_move(manual_clustering):
 
     mc.cluster_meta.get('group', 30) == 'noise'
     mc.cluster_meta.get('group', 20) == 'mua'
-    mc.cluster_meta.get('group', 12) == 'good'
+    mc.cluster_meta.get('group', 11) == 'good'
+
+
+def test_manual_clustering_action_move_2(manual_clustering):
+    mc = manual_clustering
+
+    mc.select([30])
+    mc.similarity_view.select([20])
+
+    assert mc.selected == [30, 20]
+    mc.actions.move_similar_to_noise()
+
+    assert mc.selected == [30, 11]
+    mc.actions.move_similar_to_mua()
+
+    assert mc.selected == [30, 2]
+    mc.actions.move_similar_to_good()
+
+    assert mc.selected == [30, 1]
+
+    mc.cluster_meta.get('group', 20) == 'noise'
+    mc.cluster_meta.get('group', 11) == 'mua'
+    mc.cluster_meta.get('group', 2) == 'good'
+
+
+def _test_manual_clustering_action_move_3(manual_clustering):
+    mc = manual_clustering
+
+    mc.select([30])
+    mc.similarity_view.select([20])
+
+    assert mc.selected == [30, 20]
+    mc.actions.move_all_to_noise()
+
+    assert mc.selected == [11, 10]
+    mc.actions.move_all_to_mua()
+
+    assert mc.selected == [2, 1]
+    mc.actions.move_all_to_good()
+
+    assert mc.selected == [30, 1]
+
+    mc.cluster_meta.get('group', 30) == 'noise'
+    mc.cluster_meta.get('group', 20) == 'noise'
+
+    mc.cluster_meta.get('group', 11) == 'mua'
+    mc.cluster_meta.get('group', 10) == 'mua'
+
+    mc.cluster_meta.get('group', 2) == 'good'
+    mc.cluster_meta.get('group', 1) == 'good'
