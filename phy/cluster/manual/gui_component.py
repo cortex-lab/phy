@@ -326,6 +326,41 @@ class ManualClustering(object):
         self.similarity_view.set_data(items, cols)
         self.similarity_view.sort_by('similarity', 'desc')
 
+    def on_cluster(self, up):
+        """Update the cluster views after clustering actions."""
+
+        # Get the current sort of the cluster view.
+        sort = self.cluster_view.current_sort
+        sel_1 = self.similarity_view.selected
+
+        if up.added:
+            # Reinitialize the cluster view.
+            self._update_cluster_view()
+            # Reset the previous sort options.
+            if sort[0]:
+                self.cluster_view.sort_by(*sort)
+
+        # Select all new clusters in view 1.
+        if up.history == 'undo':
+            # Select the clusters that were selected before the undone
+            # action.
+            clusters_0, clusters_1 = up.undo_state[0]['selection']
+            self.cluster_view.select(clusters_0)
+            self.similarity_view.select(clusters_1)
+        elif up.added:
+            self.select(up.added)
+            if sel_1:
+                self.similarity_view.next()
+        elif up.metadata_changed:
+            # Select next in similarity view if all moved are in that view.
+            if set(up.metadata_changed) <= set(sel_1):
+                self.similarity_view.next()
+            # Otherwise, select next in cluster view.
+            else:
+                self.cluster_view.next()
+                if sel_1:
+                    self.similarity_view.next()
+
     def _emit_select(self, cluster_ids):
         """Choose spikes from the specified clusters and emit the
         `select` event on the GUI."""
@@ -366,37 +401,7 @@ class ManualClustering(object):
         gui.add_view(self.similarity_view, title='SimilarityView')
 
         # Update the cluster views and selection when a cluster event occurs.
-        @self.gui.connect_
-        def on_cluster(up):
-            # Get the current sort of the cluster view.
-            sort = self.cluster_view.current_sort
-            sel_1 = self.similarity_view.selected
-
-            if up.added:
-                # Reinitialize the cluster view.
-                self._update_cluster_view()
-                # Reset the previous sort options.
-                if sort[0]:
-                    self.cluster_view.sort_by(*sort)
-
-            # Select all new clusters in view 1.
-            if up.history == 'undo':
-                # Select the clusters that were selected before the undone
-                # action.
-                clusters_0, clusters_1 = up.undo_state[0]['selection']
-                self.cluster_view.select(clusters_0)
-                self.similarity_view.select(clusters_1)
-            elif up.added:
-                self.select(up.added)
-                if sel_1:
-                    self.similarity_view.next()
-            elif up.metadata_changed:
-                # Select next in similarity view if all moved are in that view.
-                if set(up.metadata_changed) <= set(sel_1):
-                    self.similarity_view.next()
-                # Otherwise, select next in cluster view.
-                else:
-                    self.cluster_view.next()
+        self.gui.connect_(self.on_cluster)
         return self
 
     # Selection actions
