@@ -7,6 +7,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+from functools import partial
 import logging
 
 import numpy as np
@@ -138,14 +139,30 @@ class ManualClustering(object):
     """
 
     default_shortcuts = {
-        'save': 'Save',
-        # Wizard actions.
-        'next': 'space',
-        'previous': 'shift+space',
-        'reset_wizard': 'ctrl+alt+space',
-        # Clustering actions.
+        # Clustering.
         'merge': 'g',
         'split': 'k',
+
+        # Move.
+        'move_best_to_noise': 'alt+n',
+        'move_best_to_mua': 'alt+m',
+        'move_best_to_good': 'alt+g',
+
+        'move_similar_to_noise': 'ctrl+n',
+        'move_similar_to_mua': 'ctrl+m',
+        'move_similar_to_good': 'ctrl+g',
+
+        'move_all_to_noise': 'ctrl+alt+n',
+        'move_all_to_mua': 'ctrl+alt+m',
+        'move_all_to_good': 'ctrl+alt+g',
+
+        # Wizard.
+        'reset': 'ctrl+alt+space',
+        'next': 'space',
+        'previous': 'shift+space',
+
+        # Misc.
+        'save': 'Save',
         'undo': 'Undo',
         'redo': 'Redo',
     }
@@ -214,11 +231,29 @@ class ManualClustering(object):
         self.actions.add(self.select, alias='c')
 
         # Clustering.
-        self.actions.add(self.merge)
-        self.actions.add(self.split)
+        self.actions.add(self.merge, alias='g')
+        self.actions.add(self.split, alias='k')
+
+        # Move.
         self.actions.add(self.move)
+
+        for group in ('noise', 'mua', 'good'):
+            self.actions.add(partial(self.move_best, group),
+                             name='move_best_to_' + group)
+            self.actions.add(partial(self.move_similar, group),
+                             name='move_similar_to_' + group)
+            self.actions.add(partial(self.move_all, group),
+                             name='move_all_to_' + group)
+
+        # Wizard.
+        self.actions.add(self.reset)
+        self.actions.add(self.next)
+        self.actions.add(self.previous)
+
+        # Others.
         self.actions.add(self.undo)
         self.actions.add(self.redo)
+        self.actions.add(self.save)
 
     def _create_cluster_views(self):
         # Create the cluster view.
@@ -399,11 +434,42 @@ class ManualClustering(object):
         self.clustering.split(spike_ids)
         self._global_history.action(self.clustering)
 
+    # Move actions
+    # -------------------------------------------------------------------------
+
     def move(self, cluster_ids, group):
         if len(cluster_ids) == 0:
             return
         self.cluster_meta.set('group', cluster_ids, group)
         self._global_history.action(self.cluster_meta)
+
+    def move_best(self, group):
+        self.move(self.cluster_view.selected, group)
+
+    def move_similar(self, group):
+        self.move(self.similarity_view.selected, group)
+
+    def move_all(self, group):
+        self.move(self.selected, group)
+
+    # Wizard actions
+    # -------------------------------------------------------------------------
+
+    def reset(self):
+        self._update_cluster_view()
+        self.cluster_view.next()
+
+    def next(self):
+        if not self.selected:
+            self.cluster_view.next()
+        else:
+            self.similarity_view.next()
+
+    def previous(self):
+        self.similarity_view.previous()
+
+    # Other actions
+    # -------------------------------------------------------------------------
 
     def undo(self):
         self._global_history.undo()
