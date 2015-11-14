@@ -304,11 +304,19 @@ class ManualClustering(object):
 
     def _update_cluster_view(self):
         """Initialize the cluster view with cluster data."""
+
+        # Get the current sort of the cluster view.
+        sort_col, sort_dir = self.cluster_view.current_sort
+
+        # Update the cluster view rows.
         items = [self._get_cluster_info(cluster_id)
                  for cluster_id in self.clustering.cluster_ids]
         self.cluster_view.set_data(items, self._column_names)
-        if self._default_sort:
-            self.cluster_view.sort_by(self._default_sort, 'desc')
+
+        # Sort with the previous sort or the default one.
+        sort_col = sort_col or self._default_sort
+        sort_dir = sort_dir or 'desc'
+        self.cluster_view.sort_by(sort_col, sort_dir)
 
     def _update_similarity_view(self):
         """Update the similarity view with matches for the specified
@@ -329,16 +337,11 @@ class ManualClustering(object):
     def on_cluster(self, up):
         """Update the cluster views after clustering actions."""
 
-        # Get the current sort of the cluster view.
-        sort = self.cluster_view.current_sort
-        sel_1 = self.similarity_view.selected
+        similar = self.similarity_view.selected
 
+        # Reinitialize the cluster view if clusters have changed.
         if up.added:
-            # Reinitialize the cluster view.
             self._update_cluster_view()
-            # Reset the previous sort options.
-            if sort[0]:
-                self.cluster_view.sort_by(*sort)
 
         # Select all new clusters in view 1.
         if up.history == 'undo':
@@ -349,16 +352,23 @@ class ManualClustering(object):
             self.similarity_view.select(clusters_1)
         elif up.added:
             self.select(up.added)
-            if sel_1:
+            if similar:
                 self.similarity_view.next()
         elif up.metadata_changed:
             # Select next in similarity view if all moved are in that view.
-            if set(up.metadata_changed) <= set(sel_1):
+            if set(up.metadata_changed) <= set(similar):
                 self.similarity_view.next()
             # Otherwise, select next in cluster view.
             else:
+                # Update the cluster view, and select the clusters that
+                # were selected before the action.
+                selected = self.cluster_view.selected
+                self._update_cluster_view()
+                self.select(selected)
+
+                # Select the next cluster in the view.
                 self.cluster_view.next()
-                if sel_1:
+                if similar:
                     self.similarity_view.next()
 
     def _emit_select(self, cluster_ids):
