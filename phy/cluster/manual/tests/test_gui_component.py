@@ -188,7 +188,7 @@ def test_manual_clustering_split_2(gui, quality, similarity):
     assert mc.selected == [2, 3]
 
 
-def test_manual_clustering_move(manual_clustering, quality, similarity):
+def test_manual_clustering_move_1(manual_clustering, quality, similarity):
     mc = manual_clustering
 
     mc.select([20])
@@ -202,3 +202,21 @@ def test_manual_clustering_move(manual_clustering, quality, similarity):
 
     mc.redo()
     assert mc.selected == [11]
+
+
+def test_manual_clustering_move_2(manual_clustering, quality, similarity):
+    mc = manual_clustering
+
+    mc.select([20])
+    mc.similarity_view.select([10])
+
+    assert mc.selected == [20, 10]
+
+    mc.move([10], 'noise')
+    assert mc.selected == [20, 2]
+
+    mc.undo()
+    assert mc.selected == [20, 10]
+
+    mc.redo()
+    assert mc.selected == [20, 2]

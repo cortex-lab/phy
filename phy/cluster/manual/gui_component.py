@@ -362,8 +362,6 @@ class ManualClustering(object):
                 # Otherwise, select next in cluster view.
                 else:
                     self.cluster_view.next()
-            else:
-                self.cluster_view.next()
         return self
 
     # Selection actions
