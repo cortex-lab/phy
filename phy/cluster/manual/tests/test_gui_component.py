@@ -40,6 +40,7 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
     mc.set_similarity_func(similarity)
 
     yield mc
+    del mc
 
 
 @yield_fixture
@@ -49,10 +50,12 @@ def gui(qtbot):
     qtbot.waitForWindowShown(gui)
     yield gui
     gui.close()
+    del gui
+    qtbot.wait(10)
 
 
 #------------------------------------------------------------------------------
-# Test GUI components
+# Test GUI component
 #------------------------------------------------------------------------------
 
 def test_manual_clustering_edge_cases(manual_clustering):
@@ -120,8 +123,6 @@ def test_manual_clustering_default_metrics(qtbot, gui):
     match = sorted(similarity, key=itemgetter(1))[-1][0]
 
     mc.attach(gui)
-    gui.show()
-    qtbot.waitForWindowShown(gui)
 
     mc.cluster_view.next()
     assert mc.cluster_view.selected == [best]
@@ -188,7 +189,7 @@ def test_manual_clustering_split_2(gui, quality, similarity):
     assert mc.selected == [2, 3]
 
 
-def test_manual_clustering_move_1(manual_clustering, quality, similarity):
+def test_manual_clustering_move_1(manual_clustering):
     mc = manual_clustering
 
     mc.select([20])
@@ -204,7 +205,7 @@ def test_manual_clustering_move_1(manual_clustering, quality, similarity):
     assert mc.selected == [11]
 
 
-def test_manual_clustering_move_2(manual_clustering, quality, similarity):
+def test_manual_clustering_move_2(manual_clustering):
     mc = manual_clustering
 
     mc.select([20])
@@ -220,3 +221,37 @@ def test_manual_clustering_move_2(manual_clustering, quality, similarity):
 
     mc.redo()
     assert mc.selected == [20, 2]
+
+
+#------------------------------------------------------------------------------
+# Test shortcuts
+#------------------------------------------------------------------------------
+
+def test_manual_clustering_action_reset(manual_clustering):
+    mc = manual_clustering
+
+    mc.actions.select([10, 11])
+
+    mc.actions.reset()
+    assert mc.selected == [30]
+
+
+def test_manual_clustering_action_move(manual_clustering):
+    mc = manual_clustering
+
+    mc.actions.next()
+
+    assert mc.selected == [30]
+    mc.actions.move_best_to_noise()
+
+    assert mc.selected == [20]
+    mc.actions.move_best_to_mua()
+
+    assert mc.selected == [11]
+    mc.actions.move_best_to_good()
+
+    assert mc.selected == [2]
+
+    mc.cluster_meta.get('group', 30) == 'noise'
+    mc.cluster_meta.get('group', 20) == 'mua'
+    mc.cluster_meta.get('group', 12) == 'good'
