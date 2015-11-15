@@ -51,7 +51,7 @@ def gui(qtbot):
     yield gui
     gui.close()
     del gui
-    qtbot.wait(10)
+    qtbot.wait(5)
 
 
 #------------------------------------------------------------------------------

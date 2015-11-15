@@ -177,7 +177,7 @@ class HTMLWidget(QWebView):
         self.emit(text_type(name), json.loads(text_type(arg_json)))
 
     def show(self):
-        with _wait_signal(self.loadFinished, 50):
+        with _wait_signal(self.loadFinished, 20):
             self._build()
             super(HTMLWidget, self).show()
         # Call the pending JS eval calls after the page has been built.
@@ -224,13 +224,19 @@ class Table(HTMLWidget):
                       </script>'''.format(self._table_id))
         self._columns = [('id', (lambda _: _), {})]
 
-    def add_column(self, func=None, options=None):
-        """Add a column function, takes an id as argument, return a value."""
-        if func is None:
-            return lambda f: self.add_column(f, options=options)
-
+    def add_column(self, func, name=None, options=None):
+        """Add a column function which takes an id as argument and
+        returns a value."""
+        assert func
+        name = name or func.__name__
         options = options or {}
-        self._columns.append((func.__name__, func, options))
+        self._columns.append([name, func, options])
+        return func
+
+    def get_column(self, name):
+        for col in self._columns:
+            if col[0] == name:
+                return col
 
     @property
     def column_names(self):

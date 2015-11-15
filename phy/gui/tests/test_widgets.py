@@ -21,13 +21,13 @@ def table(qtbot):
     table.show()
     qtbot.waitForWindowShown(table)
 
-    @table.add_column(options={'show': True})
     def count(id):
         return 10000.5 - 10 * id
+    table.add_column(count, options={'show': True})
 
-    @table.add_column
     def skip(id):
         return id == 4
+    table.add_column(skip)
 
     table.set_rows(range(10))
 
