@@ -245,7 +245,7 @@ def test_manual_clustering_action_reset(qtbot, manual_clustering):
     assert mc.selected == [30, 20]
 
 
-def test_manual_clustering_action_move_1(manual_clustering):
+def test_manual_clustering_action_move_1(qtbot, manual_clustering):
     mc = manual_clustering
 
     mc.actions.next()
@@ -264,6 +264,8 @@ def test_manual_clustering_action_move_1(manual_clustering):
     mc.cluster_meta.get('group', 30) == 'noise'
     mc.cluster_meta.get('group', 20) == 'mua'
     mc.cluster_meta.get('group', 11) == 'good'
+
+    # qtbot.stop()
 
 
 def test_manual_clustering_action_move_2(manual_clustering):
