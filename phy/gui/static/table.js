@@ -165,6 +165,7 @@ Table.prototype.next = function() {
         row = this.el.rows[i];
         if (row.dataset.skip != 'true') {
             this.select([row.dataset.id]);
+            row.scrollIntoView(false);
             return;
         }
     }
@@ -187,6 +188,7 @@ Table.prototype.previous = function() {
         row = this.el.rows[i];
         if (row.dataset.skip != 'true') {
             this.select([row.dataset.id]);
+            // row.scrollIntoView(false);
             return;
         }
     }
