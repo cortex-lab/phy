@@ -377,8 +377,7 @@ class ManualClustering(object):
                 # were selected before the action.
                 selected = self.similarity_view.selected
                 self._update_similarity_view()
-                self.similarity_view.select(selected)
-
+                self.similarity_view.select(selected, do_emit=False)
                 self.similarity_view.next()
             # Otherwise, select next in cluster view.
             else:
@@ -386,9 +385,7 @@ class ManualClustering(object):
                 # were selected before the action.
                 selected = self.cluster_view.selected
                 self._update_cluster_view()
-                self.select(selected)
-
-                # Select the next cluster in the view.
+                self.cluster_view.select(selected, do_emit=False)
                 self.cluster_view.next()
                 if similar:
                     self.similarity_view.next()
