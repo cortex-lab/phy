@@ -7,7 +7,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-from functools import partial, wraps
+from functools import partial
 import logging
 
 import numpy as np

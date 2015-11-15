@@ -230,13 +230,8 @@ class Table(HTMLWidget):
         assert func
         name = name or func.__name__
         options = options or {}
-        self._columns.append([name, func, options])
+        self._columns.append((name, func, options))
         return func
-
-    def get_column(self, name):
-        for col in self._columns:
-            if col[0] == name:
-                return col
 
     @property
     def column_names(self):
