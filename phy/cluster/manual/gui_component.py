@@ -107,6 +107,16 @@ def default_wizard_functions(waveforms=None,
 # Clustering GUI component
 # -----------------------------------------------------------------------------
 
+class ClusterView(Table):
+    def __init__(self):
+        super(ClusterView, self).__init__()
+        self.add_styles('''
+                        table tr[data-good='true'] {
+                            color: #B4DEA6;
+                        }
+                        ''')
+
+
 class ManualClustering(object):
     """Component that brings manual clustering facilities to a GUI:
 
@@ -219,7 +229,8 @@ class ManualClustering(object):
         self._columns = []
         # Default columns.
         self.add_column('id', lambda clu: clu)
-        self.add_column('skip', self._do_skip, show=False)
+        self.add_column('skip', self._skip_col, show=False)
+        self.add_column('good', self._good_col, show=False)
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -257,15 +268,15 @@ class ManualClustering(object):
 
     def _create_cluster_views(self):
         # Create the cluster view.
-        self.cluster_view = cluster_view = Table()
-        cluster_view.show()
+        self.cluster_view = ClusterView()
+        self.cluster_view.show()
 
         # Create the similarity view.
-        self.similarity_view = similarity_view = Table()
-        similarity_view.show()
+        self.similarity_view = ClusterView()
+        self.similarity_view.show()
 
         # Selection in the cluster view.
-        @cluster_view.connect_
+        @self.cluster_view.connect_
         def on_select(cluster_ids):
             # Emit GUI.select when the selection changes in the cluster view.
             self._emit_select(cluster_ids)
@@ -273,10 +284,10 @@ class ManualClustering(object):
             self._update_similarity_view()
 
         # Selection in the similarity view.
-        @similarity_view.connect_  # noqa
+        @self.similarity_view.connect_  # noqa
         def on_select(cluster_ids):
             # Select the clusters from both views.
-            cluster_ids = cluster_view.selected + cluster_ids
+            cluster_ids = self.cluster_view.selected + cluster_ids
             self._emit_select(cluster_ids)
 
         # Save the current selection when an action occurs.
@@ -292,9 +303,13 @@ class ManualClustering(object):
         """Name of the columns."""
         return [name for (name, func, show) in self._columns if show]
 
-    def _do_skip(self, cluster_id):
+    def _skip_col(self, cluster_id):
         """Whether to skip that cluster."""
         return self.cluster_meta.get('group', cluster_id) in ('noise', 'mua')
+
+    def _good_col(self, cluster_id):
+        """Good column for color."""
+        return self.cluster_meta.get('group', cluster_id) == 'good'
 
     def _get_cluster_info(self, cluster_id, extra_columns=None):
         """Return the data dictionary for a cluster row."""
