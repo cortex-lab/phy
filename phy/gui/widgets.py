@@ -227,7 +227,7 @@ class Table(HTMLWidget):
     def add_column(self, func=None, options=None):
         """Add a column function, takes an id as argument, return a value."""
         if func is None:
-            return lambda f: self.add_column_func(f, options=options)
+            return lambda f: self.add_column(f, options=options)
 
         options = options or {}
         self._columns.append((func.__name__, func, options))

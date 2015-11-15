@@ -21,7 +21,7 @@ def table(qtbot):
     table.show()
     qtbot.waitForWindowShown(table)
 
-    @table.add_column
+    @table.add_column(options={'show': True})
     def count(id):
         return 10000.5 - 10 * id
 
