@@ -111,6 +111,8 @@ Table.prototype.setData = function(data) {
 
 Table.prototype.sortBy = function(header, dir) {
     dir = typeof dir !== 'undefined' ? dir : 'asc';
+    if (this.headers[header] == undefined)
+        throw "The column `" + header + "` doesn't exist."
     this.tablesort.sortTable(this.headers[header]);
     if (dir == 'desc') {
         this.tablesort.sortTable(this.headers[header]);
