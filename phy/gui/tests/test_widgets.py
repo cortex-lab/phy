@@ -21,12 +21,15 @@ def table(qtbot):
     table.show()
     qtbot.waitForWindowShown(table)
 
-    items = [{'id': i, 'count': 10000.5 - 10 * i} for i in range(10)]
-    items[4]['skip'] = True
+    @table.add_column
+    def count(id):
+        return 10000.5 - 10 * id
 
-    table.set_data(cols=['id', 'count'],
-                   items=items,
-                   )
+    @table.add_column
+    def skip(id):
+        return id == 4
+
+    table.set_rows(range(10))
 
     yield table
 

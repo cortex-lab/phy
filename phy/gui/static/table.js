@@ -23,6 +23,10 @@ var Table = function (el) {
 };
 
 Table.prototype.setData = function(data) {
+    /*
+    data.cols: list of column names
+    data.items: list of rows (each row is an object {col: value})
+     */
     if (data.items.length == 0) return;
 
     // Reinitialize the state.

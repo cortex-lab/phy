@@ -222,11 +222,30 @@ class Table(HTMLWidget):
         self.add_body('''<script>
                       var table = new Table(document.getElementById("{}"));
                       </script>'''.format(self._table_id))
+        self._columns = [('id', (lambda _: _), {})]
 
-    def set_data(self, items, cols):
-        """Set the rows and cols of the table."""
+    def add_column(self, func=None, options=None):
+        """Add a column function, takes an id as argument, return a value."""
+        if func is None:
+            return lambda f: self.add_column_func(f, options=options)
+
+        options = options or {}
+        self._columns.append((func.__name__, func, options))
+
+    @property
+    def column_names(self):
+        return [name for (name, func, options) in self._columns
+                if options.get('show', True)]
+
+    def _get_row(self, id):
+        """Create a row dictionary for a given object id."""
+        return {name: func(id) for (name, func, options) in self._columns}
+
+    def set_rows(self, ids):
+        """Set the rows of the table."""
+        items = [self._get_row(id) for id in ids]
         data = _create_json_dict(items=items,
-                                 cols=cols,
+                                 cols=self.column_names,
                                  )
         self.eval_js('table.setData({});'.format(data))
 
