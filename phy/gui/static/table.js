@@ -125,7 +125,9 @@ Table.prototype.currentSort = function() {
     return [null, null];
 };
 
-Table.prototype.select = function(ids) {
+Table.prototype.select = function(ids, do_emit) {
+    do_emit = typeof do_emit !== 'undefined' ? do_emit : true;
+
     ids = uniq(ids);
 
     // Remove the class on all rows.
@@ -143,7 +145,8 @@ Table.prototype.select = function(ids) {
 
     this.selected = ids;
 
-    emit("select", ids);
+    if (do_emit)
+        emit("select", ids);
 };
 
 Table.prototype.clear = function() {
