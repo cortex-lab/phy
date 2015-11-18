@@ -35,17 +35,17 @@ def load_gui_plugins(gui, plugins=None, session=None):
 
     """
     session = session or {}
+    plugins = plugins or []
 
     # GUI name.
     name = gui.name
 
     # If no plugins are specified, load the master config and
     # get the list of user plugins to attach to the GUI.
-    if plugins is None:
-        config = load_master_config()
-        plugins = config[name].plugins
-        if not isinstance(plugins, list):
-            plugins = []
+    config = load_master_config()
+    plugins_conf = config[name].plugins
+    plugins_conf = plugins_conf if isinstance(plugins_conf, list) else []
+    plugins.extend(plugins_conf)
 
     # Attach the plugins to the GUI.
     for plugin in plugins:
