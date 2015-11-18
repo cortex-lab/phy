@@ -81,8 +81,8 @@ def test_read_write(tempdir):
 
 
 def test_context_load_save(context):
-    context.save('hello', {'text': 'world'})
-    assert context.load('hello')['text'] == 'world'
+    context.save('a/hello', {'text': 'world'})
+    assert context.load('a/hello')['text'] == 'world'
 
 
 def test_context_cache(context):
