@@ -81,6 +81,8 @@ def test_read_write(tempdir):
 
 
 def test_context_load_save(context):
+    assert context.load('unexisting') is None
+
     context.save('a/hello', {'text': 'world'})
     assert context.load('a/hello')['text'] == 'world'
 
