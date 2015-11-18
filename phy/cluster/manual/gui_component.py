@@ -170,6 +170,8 @@ class ManualClustering(object):
         'reset': 'ctrl+alt+space',
         'next': 'space',
         'previous': 'shift+space',
+        'next_best': 'down',
+        'previous_best': 'up',
 
         # Misc.
         'save': 'Save',
@@ -272,6 +274,8 @@ class ManualClustering(object):
         self.actions.add(self.reset)
         self.actions.add(self.next)
         self.actions.add(self.previous)
+        self.actions.add(self.next_best)
+        self.actions.add(self.previous_best)
 
         # Others.
         self.actions.add(self.undo)
@@ -466,6 +470,12 @@ class ManualClustering(object):
     def reset(self):
         self._update_cluster_view()
         self.cluster_view.next()
+
+    def next_best(self):
+        self.cluster_view.next()
+
+    def previous_best(self):
+        self.cluster_view.previous()
 
     def next(self):
         if not self.selected:

@@ -245,6 +245,19 @@ def test_manual_clustering_action_reset(qtbot, manual_clustering):
     assert mc.selected == [30, 20]
 
 
+def test_manual_clustering_action_nav(qtbot, manual_clustering):
+    mc = manual_clustering
+
+    mc.actions.reset()
+    assert mc.selected == [30]
+
+    mc.actions.next_best()
+    assert mc.selected == [20]
+
+    mc.actions.previous_best()
+    assert mc.selected == [30]
+
+
 def test_manual_clustering_action_move_1(qtbot, manual_clustering):
     mc = manual_clustering
 
