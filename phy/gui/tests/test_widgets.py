@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import yield_fixture
+from pytest import yield_fixture, raises
 
 from ..widgets import HTMLWidget, Table
 
@@ -92,6 +92,9 @@ def test_table_default_sort(qtbot):
     table = Table()
     table.show()
     # qtbot.waitForWindowShown(table)
+
+    with raises(ValueError):
+        table.add_column(lambda _: _)
 
     def count(id):
         return 10000.5 - 10 * id

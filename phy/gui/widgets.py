@@ -234,6 +234,9 @@ class Table(HTMLWidget):
         returns a value."""
         assert func
         name = name or func.__name__
+        if name == '<lambda>':
+            raise ValueError("Please provide a valid name for " +
+                             name)
         d = {'func': func,
              'show': show,
              }
