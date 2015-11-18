@@ -254,7 +254,7 @@ class Table(HTMLWidget):
         sort_dir = sort_dir or default_sort_dir or 'desc'
 
         # Set the rows.
-        logger.debug("Set %d rows.", len(ids))
+        logger.debug("Set %d rows in the cluster view.", len(ids))
         items = [self._get_row(id) for id in ids]
         data = _create_json_dict(items=items,
                                  cols=self.column_names,
