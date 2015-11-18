@@ -393,8 +393,12 @@ class ManualClustering(object):
 
     def set_default_sort(self, name, sort_dir='desc'):
         logger.debug("Set default sort `%s` %s.", name, sort_dir)
+        # Set the default sort.
         self.cluster_view.set_default_sort(name, sort_dir)
+        # Reset the cluster view.
         self._update_cluster_view()
+        # Sort by the default sort.
+        self.cluster_view.sort_by(name, sort_dir)
 
     def set_similarity_func(self, f):
         """Set the similarity function."""
