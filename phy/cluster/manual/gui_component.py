@@ -392,6 +392,7 @@ class ManualClustering(object):
     # -------------------------------------------------------------------------
 
     def set_default_sort(self, name, sort_dir='desc'):
+        logger.debug("Set default sort `%s` %s.", name, sort_dir)
         self.cluster_view.set_default_sort(name, sort_dir)
         self._update_cluster_view()
 
