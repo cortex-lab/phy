@@ -391,8 +391,8 @@ class ManualClustering(object):
     # Public methods
     # -------------------------------------------------------------------------
 
-    def set_default_sort(self, name, dir):
-        self.cluster_view.set_default_sort(name, dir)
+    def set_default_sort(self, name, sort_dir='desc'):
+        self.cluster_view.set_default_sort(name, sort_dir)
         self._update_cluster_view()
 
     def set_similarity_func(self, f):
