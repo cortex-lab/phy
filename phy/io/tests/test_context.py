@@ -80,6 +80,11 @@ def test_read_write(tempdir):
     ae(read_array(op.join(tempdir, 'test.npy')), x)
 
 
+def test_context_load_save(context):
+    context.save('hello', {'text': 'world'})
+    assert context.load('hello')['text'] == 'world'
+
+
 def test_context_cache(context):
 
     _res = []
