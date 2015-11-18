@@ -224,7 +224,6 @@ class ManualClustering(object):
                 self.gui.emit('cluster', up)
 
         # Create the cluster views.
-        self._default_sort = None
         self._create_cluster_views()
 
         # Default columns.
@@ -232,12 +231,12 @@ class ManualClustering(object):
             """Whether to skip that cluster."""
             return (self.cluster_meta.get('group', cluster_id)
                     in ('noise', 'mua'))
-        self.add_column(skip, options={'show': False})
+        self.add_column(skip, show=False)
 
         def good(cluster_id):
             """Good column for color."""
             return self.cluster_meta.get('group', cluster_id) == 'good'
-        self.add_column(good, options={'show': False})
+        self.add_column(good, show=False)
 
         self._best = None
 
@@ -311,29 +310,13 @@ class ManualClustering(object):
         self.clustering.connect(on_request_undo_state)
         self.cluster_meta.connect(on_request_undo_state)
 
-    def add_column(self, func=None, name=None, options=None):
-        options = options or {}
-        name = name or func.__name__
-        assert name
-        if options.get('is_default_sort', False):
-            self._default_sort = name
-        self.cluster_view.add_column(func=func, name=name, options=options)
-        self.similarity_view.add_column(func=func, name=name, options=options)
+    def add_column(self, *args, **kwargs):
+        self.cluster_view.add_column(*args, **kwargs)
+        self.similarity_view.add_column(*args, **kwargs)
 
     def _update_cluster_view(self):
         """Initialize the cluster view with cluster data."""
-
-        # Get the current sort of the cluster view.
-        sort_col, sort_dir = self.cluster_view.current_sort
-
-        # Update the cluster view rows.
         self.cluster_view.set_rows(self.clustering.cluster_ids)
-
-        # Sort with the previous sort or the default one.
-        sort_col = sort_col or self._default_sort
-        assert sort_col
-        sort_dir = sort_dir or 'desc'
-        self.cluster_view.sort_by(sort_col, sort_dir)
 
     def _update_similarity_view(self):
         """Update the similarity view with matches for the specified
@@ -403,8 +386,7 @@ class ManualClustering(object):
     # -------------------------------------------------------------------------
 
     def set_quality_func(self, f):
-        self.add_column(func=f, name='quality',
-                        options={'show': True, 'is_default_sort': True})
+        self.add_column(func=f, name='quality', show=True, default_sort='desc')
         self._update_cluster_view()
 
     def set_similarity_func(self, f):
