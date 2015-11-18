@@ -193,6 +193,10 @@ class GUI(QMainWindow):
     # -------------------------------------------------------------------------
 
     @property
+    def name(self):
+        return str(self.windowTitle())
+
+    @property
     def status_message(self):
         """The message in the status bar."""
         return str(self._status_bar.currentMessage())

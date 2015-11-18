@@ -45,6 +45,8 @@ def test_gui_1(qtbot):
     gui = GUI(position=(200, 100), size=(100, 100))
     qtbot.addWidget(gui)
 
+    assert gui.name == 'GUI'
+
     # Increase coverage.
     @gui.connect_
     def on_show():
