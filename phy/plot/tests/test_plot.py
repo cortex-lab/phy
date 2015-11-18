@@ -9,6 +9,7 @@
 
 import numpy as np
 
+from ..panzoom import PanZoom
 from ..plot import GridView, BoxedView, StackedView
 from ..utils import _get_linear_x
 
@@ -33,6 +34,8 @@ def _show(qtbot, view, stop=False):
 def test_grid_scatter(qtbot):
     view = GridView(2, 3)
     n = 1000
+
+    assert isinstance(view.panzoom, PanZoom)
 
     x = np.random.randn(n)
     y = np.random.randn(n)

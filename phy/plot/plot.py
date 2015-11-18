@@ -166,6 +166,13 @@ class BaseView(BaseCanvas):
         self._items = []  # List of view items instances.
         self._visuals = {}
 
+    @property
+    def panzoom(self):
+        """PanZoom instance from the interact list, if it exists."""
+        for interact in self.interacts:
+            if isinstance(interact, PanZoom):
+                return interact
+
     # To override
     # -------------------------------------------------------------------------
 
