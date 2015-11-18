@@ -65,6 +65,9 @@ class GUI(QMainWindow):
                  size=None,
                  title=None,
                  ):
+        # HACK to ensure that closeEvent is called only twice (seems like a
+        # Qt bug).
+        self._closed = False
         if not QApplication.instance():  # pragma: no cover
             raise RuntimeError("A Qt application must be created.")
         super(GUI, self).__init__()
@@ -101,6 +104,9 @@ class GUI(QMainWindow):
 
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
+        if self._closed:
+            return
+        self._closed = True
         res = self.emit('close')
         # Discard the close event if False is returned by one of the callback
         # functions.
