@@ -132,6 +132,8 @@ def test_gui_state(qtbot):
     def on_show():
         gui.restore_geometry_state(_gs[0])
 
+    assert gui.restore_geometry_state(None) is None
+
     qtbot.addWidget(gui)
     gui.show()
 
