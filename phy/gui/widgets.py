@@ -7,6 +7,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+from collections import OrderedDict
 import json
 import logging
 import os.path as op
@@ -224,27 +225,29 @@ class Table(HTMLWidget):
         self.add_body('''<script>
                       var table = new Table(document.getElementById("{}"));
                       </script>'''.format(self._table_id))
-        self._columns = [('id', (lambda _: _), {})]
+        self._columns = OrderedDict()
+        self._default_sort = (None, None)
+        self.add_column(lambda _: _, name='id')
 
-    def add_column(self, func, name=None, show=True, default_sort=None):
+    def add_column(self, func, name=None, show=True):
         """Add a column function which takes an id as argument and
         returns a value."""
         assert func
         name = name or func.__name__
-        options = {'show': show,
-                   'default_sort': default_sort,
-                   }
-        self._columns.append((name, func, options))
+        d = {'func': func,
+             'show': show,
+             }
+        self._columns[name] = d
         return func
 
     @property
     def column_names(self):
-        return [name for (name, func, options) in self._columns
-                if options.get('show', True)]
+        return [name for (name, d) in self._columns.items()
+                if d.get('show', True)]
 
     def _get_row(self, id):
         """Create a row dictionary for a given object id."""
-        return {name: func(id) for (name, func, options) in self._columns}
+        return {name: d['func'](id) for (name, d) in self._columns.items()}
 
     def set_rows(self, ids):
         """Set the rows of the table."""
@@ -288,10 +291,10 @@ class Table(HTMLWidget):
     @property
     def default_sort(self):
         """Default sort as a pair `(name, dir)`."""
-        for (name, func, options) in self._columns:
-            if options.get('default_sort', None):
-                return name, options['default_sort']
-        return None, None
+        return self._default_sort
+
+    def set_default_sort(self, name, sort_dir='desc'):
+        self._default_sort = name, sort_dir
 
     @property
     def selected(self):

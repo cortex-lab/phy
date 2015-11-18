@@ -95,7 +95,8 @@ def test_table_default_sort(qtbot):
 
     def count(id):
         return 10000.5 - 10 * id
-    table.add_column(count, default_sort='asc')
+    table.add_column(count)
+    table.set_default_sort('count', 'asc')
     table.set_rows(range(10))
 
     assert table.default_sort == ('count', 'asc')
