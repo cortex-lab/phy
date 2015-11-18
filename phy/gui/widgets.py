@@ -139,18 +139,21 @@ class HTMLWidget(QWebView):
         """Return the full HTML source of the widget."""
         return self.page().mainFrame().toHtml()
 
-    def _build(self):
+    def build(self):
         """Build the full HTML source."""
-        styles = '\n\n'.join(self._styles)
-        html = _PAGE_TEMPLATE.format(title=self.title,
-                                     styles=styles,
-                                     header=self._header,
-                                     body=self._body,
-                                     )
-        logger.log(5, "Set HTML: %s", html)
-        static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
-        base_url = QUrl().fromLocalFile(static_dir)
-        self.setHtml(html, base_url)
+        if self.is_built():  # pragma: no cover
+            return
+        with _wait_signal(self.loadFinished, 20):
+            styles = '\n\n'.join(self._styles)
+            html = _PAGE_TEMPLATE.format(title=self.title,
+                                         styles=styles,
+                                         header=self._header,
+                                         body=self._body,
+                                         )
+            logger.log(5, "Set HTML: %s", html)
+            static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
+            base_url = QUrl().fromLocalFile(static_dir)
+            self.setHtml(html, base_url)
 
     def is_built(self):
         return self.html() != '<html><head></head><body></body></html>'
@@ -177,9 +180,8 @@ class HTMLWidget(QWebView):
         self.emit(text_type(name), json.loads(text_type(arg_json)))
 
     def show(self):
-        with _wait_signal(self.loadFinished, 20):
-            self._build()
-            super(HTMLWidget, self).show()
+        self.build()
+        super(HTMLWidget, self).show()
         # Call the pending JS eval calls after the page has been built.
         assert self.is_built()
         for expr in self._pending_js_eval:
