@@ -175,6 +175,7 @@ class ManualClustering(object):
 
         # Misc.
         'save': 'Save',
+        'show_shortcuts': 'shift+h',
         'undo': 'Undo',
         'redo': 'Redo',
     }
@@ -278,6 +279,7 @@ class ManualClustering(object):
         self.actions.add(self.previous_best)
 
         # Others.
+        self.actions.add(self.actions.show_shortcuts)
         self.actions.add(self.undo)
         self.actions.add(self.redo)
         self.actions.add(self.save)
@@ -314,12 +316,6 @@ class ManualClustering(object):
         self.clustering.connect(on_request_undo_state)
         self.cluster_meta.connect(on_request_undo_state)
 
-    def add_column(self, func=None, name=None, show=True):
-        if func is None:
-            return lambda f: self.add_column(f, name=name, show=show)
-        self.cluster_view.add_column(func, name=name, show=show)
-        self.similarity_view.add_column(func, name=name, show=show)
-
     def _update_cluster_view(self):
         """Initialize the cluster view with cluster data."""
         self.cluster_view.set_rows(self.clustering.cluster_ids)
@@ -334,6 +330,40 @@ class ManualClustering(object):
         self.similarity_view.set_rows([c for c in self.clustering.cluster_ids
                                        if c not in selection])
         self.similarity_view.sort_by('similarity', 'desc')
+
+    def _emit_select(self, cluster_ids):
+        """Choose spikes from the specified clusters and emit the
+        `select` event on the GUI."""
+        # Choose a spike subset.
+        spike_ids = select_spikes(np.array(cluster_ids),
+                                  self.n_spikes_max_per_cluster,
+                                  self.clustering.spikes_per_cluster)
+        logger.debug("Select clusters: %s (%d spikes).",
+                     ', '.join(map(str, cluster_ids)), len(spike_ids))
+        if self.gui:
+            self.gui.emit('select', cluster_ids, spike_ids)
+
+    # Public methods
+    # -------------------------------------------------------------------------
+
+    def add_column(self, func=None, name=None, show=True):
+        if func is None:
+            return lambda f: self.add_column(f, name=name, show=show)
+        self.cluster_view.add_column(func, name=name, show=show)
+        self.similarity_view.add_column(func, name=name, show=show)
+
+    def set_default_sort(self, name, sort_dir='desc'):
+        logger.debug("Set default sort `%s` %s.", name, sort_dir)
+        # Set the default sort.
+        self.cluster_view.set_default_sort(name, sort_dir)
+        # Reset the cluster view.
+        self._update_cluster_view()
+        # Sort by the default sort.
+        self.cluster_view.sort_by(name, sort_dir)
+
+    def set_similarity_func(self, f):
+        """Set the similarity function."""
+        self.similarity_func = f
 
     def on_cluster(self, up):
         """Update the cluster views after clustering actions."""
@@ -375,34 +405,6 @@ class ManualClustering(object):
                 self.cluster_view.next()
                 if similar:
                     self.similarity_view.next()
-
-    def _emit_select(self, cluster_ids):
-        """Choose spikes from the specified clusters and emit the
-        `select` event on the GUI."""
-        # Choose a spike subset.
-        spike_ids = select_spikes(np.array(cluster_ids),
-                                  self.n_spikes_max_per_cluster,
-                                  self.clustering.spikes_per_cluster)
-        logger.debug("Select clusters: %s (%d spikes).",
-                     ', '.join(map(str, cluster_ids)), len(spike_ids))
-        if self.gui:
-            self.gui.emit('select', cluster_ids, spike_ids)
-
-    # Public methods
-    # -------------------------------------------------------------------------
-
-    def set_default_sort(self, name, sort_dir='desc'):
-        logger.debug("Set default sort `%s` %s.", name, sort_dir)
-        # Set the default sort.
-        self.cluster_view.set_default_sort(name, sort_dir)
-        # Reset the cluster view.
-        self._update_cluster_view()
-        # Sort by the default sort.
-        self.cluster_view.sort_by(name, sort_dir)
-
-    def set_similarity_func(self, f):
-        """Set the similarity function."""
-        self.similarity_func = f
 
     def attach(self, gui):
         self.gui = gui
