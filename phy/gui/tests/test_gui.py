@@ -9,7 +9,8 @@
 from pytest import raises
 
 from ..qt import Qt, QApplication
-from ..gui import GUI
+from ..gui import GUI, load_gui_plugins
+from phy.utils import IPlugin
 from phy.utils._color import _random_color
 
 
@@ -73,6 +74,21 @@ def test_gui_1(qtbot):
     assert _close == [0]
 
     gui.close()
+
+
+def test_load_gui_plugins(gui, tempdir):
+
+    load_gui_plugins(gui)
+
+    _tmp = []
+
+    class MyPlugin(IPlugin):
+        def attach_to_gui(self, gui, session):
+            _tmp.append(session)
+
+    load_gui_plugins(gui, plugins=['MyPlugin'], session='hello')
+
+    assert _tmp == ['hello']
 
 
 def test_gui_component(gui):
