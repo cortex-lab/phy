@@ -189,6 +189,11 @@ def test_panzoom_pan_keyboard(qtbot, canvas_pz, panzoom):
     c.events.key_press(key=keys.UP, modifiers=(keys.CONTROL,))
     assert pz.pan == [0, 0]
 
+    # Disable keyboard pan.
+    pz.enable_keyboard_pan = False
+    c.events.key_press(key=keys.UP, modifiers=(keys.CONTROL,))
+    assert pz.pan == [0, 0]
+
 
 def test_panzoom_zoom_mouse(qtbot, canvas_pz, panzoom):
     c = canvas_pz

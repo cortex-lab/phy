@@ -85,6 +85,7 @@ class PanZoom(BaseInteract):
         self._zoom_coeff = self._default_zoom_coeff
         self._wheel_coeff = self._default_wheel_coeff
 
+        self.enable_keyboard_pan = True
         self._zoom_to_pointer = True
         self._canvas_aspect = np.ones(2)
 
@@ -378,7 +379,7 @@ class PanZoom(BaseInteract):
             return
 
         # Pan.
-        if key in self._arrows:
+        if self.enable_keyboard_pan and key in self._arrows:
             self._pan_keyboard(key)
 
         # Zoom.
