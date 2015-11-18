@@ -224,12 +224,14 @@ class Table(HTMLWidget):
                       </script>'''.format(self._table_id))
         self._columns = [('id', (lambda _: _), {})]
 
-    def add_column(self, func, name=None, options=None):
+    def add_column(self, func, name=None, show=True, default_sort=False):
         """Add a column function which takes an id as argument and
         returns a value."""
         assert func
         name = name or func.__name__
-        options = options or {}
+        options = {'show': show,
+                   'default_sort': default_sort,
+                   }
         self._columns.append((name, func, options))
         return func
 

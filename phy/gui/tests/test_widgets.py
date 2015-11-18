@@ -23,7 +23,7 @@ def table(qtbot):
 
     def count(id):
         return 10000.5 - 10 * id
-    table.add_column(count, options={'show': True})
+    table.add_column(count, show=True)
 
     def skip(id):
         return id == 4
