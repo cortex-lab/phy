@@ -95,16 +95,23 @@ def test_table_default_sort(qtbot):
 
     def count(id):
         return 10000.5 - 10 * id
-    table.add_column(count, default_sort=True)
+    table.add_column(count, default_sort='asc')
     table.set_rows(range(10))
 
-    assert table.default_sort == 'count'
+    assert table.default_sort == ('count', 'asc')
+    table.next()
+    assert table.selected == [9]
+
+    table.sort_by('id', 'desc')
+    table.set_rows(range(11))
+    table.next()
+    assert table.selected == [10]
 
     table.close()
 
 
 def test_table_duplicates(qtbot, table):
-    assert table.default_sort is None
+    assert table.default_sort == (None, None)
 
     table.select([1, 1])
     assert table.selected == [1]

@@ -224,7 +224,7 @@ class Table(HTMLWidget):
                       </script>'''.format(self._table_id))
         self._columns = [('id', (lambda _: _), {})]
 
-    def add_column(self, func, name=None, show=True, default_sort=False):
+    def add_column(self, func, name=None, show=True, default_sort=None):
         """Add a column function which takes an id as argument and
         returns a value."""
         assert func
@@ -246,14 +246,28 @@ class Table(HTMLWidget):
 
     def set_rows(self, ids):
         """Set the rows of the table."""
+        # Determine the sort column and dir to set after the rows.
+        sort_col, sort_dir = self.current_sort
+        default_sort_col, default_sort_dir = self.default_sort
+
+        sort_col = sort_col or default_sort_col
+        sort_dir = sort_dir or default_sort_dir or 'desc'
+
+        # Set the rows.
+        logger.debug("Set %d rows.", len(ids))
         items = [self._get_row(id) for id in ids]
         data = _create_json_dict(items=items,
                                  cols=self.column_names,
                                  )
         self.eval_js('table.setData({});'.format(data))
 
+        # Sort.
+        if sort_col:
+            self.sort_by(sort_col, sort_dir)
+
     def sort_by(self, header, dir='asc'):
         """Sort by a given variable."""
+        logger.debug("Sort by `%s` %s.", header, dir)
         self.eval_js('table.sortBy("{}", "{}");'.format(header, dir))
 
     def next(self):
@@ -271,10 +285,11 @@ class Table(HTMLWidget):
 
     @property
     def default_sort(self):
-        """Name of the first column that acts as default sort."""
+        """Default sort as a pair `(name, dir)`."""
         for (name, func, options) in self._columns:
-            if options.get('default_sort', False):
-                return name
+            if options.get('default_sort', None):
+                return name, options['default_sort']
+        return None, None
 
     @property
     def selected(self):
