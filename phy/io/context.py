@@ -23,7 +23,7 @@ except ImportError:  # pragma: no cover
                     "Install it with `conda install dask`.")
 
 from .array import read_array, write_array
-from phy.utils import Bunch
+from phy.utils import Bunch, _save_json, _load_json
 
 logger = logging.getLogger(__name__)
 
@@ -249,6 +249,16 @@ class Context(object):
             return self._map_ipy(f, *args, sync=True)
         else:
             return self._map_serial(f, *args)
+
+    def save(self, name, data):
+        """Save a dictionary in a JSON file within the cache directory."""
+        path = op.join(self.cache_dir, name + '.json')
+        _save_json(path, data)
+
+    def load(self, name):
+        """Load saved data from the cache directory."""
+        path = op.join(self.cache_dir, name + '.json')
+        return _load_json(path)
 
     def __getstate__(self):
         """Make sure that this class is picklable."""
