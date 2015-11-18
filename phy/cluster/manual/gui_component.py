@@ -314,9 +314,11 @@ class ManualClustering(object):
         self.clustering.connect(on_request_undo_state)
         self.cluster_meta.connect(on_request_undo_state)
 
-    def add_column(self, *args, **kwargs):
-        self.cluster_view.add_column(*args, **kwargs)
-        self.similarity_view.add_column(*args, **kwargs)
+    def add_column(self, func=None, name=None, show=True):
+        if func is None:
+            return lambda f: self.add_column(f, name=name, show=show)
+        self.cluster_view.add_column(func, name=name, show=show)
+        self.similarity_view.add_column(func, name=name, show=show)
 
     def _update_cluster_view(self):
         """Initialize the cluster view with cluster data."""
@@ -389,8 +391,8 @@ class ManualClustering(object):
     # Public methods
     # -------------------------------------------------------------------------
 
-    def set_quality_func(self, f):
-        self.add_column(func=f, name='quality', show=True, default_sort='desc')
+    def set_default_sort(self, name, dir):
+        self.cluster_view.set_default_sort(name, dir)
         self._update_cluster_view()
 
     def set_similarity_func(self, f):
