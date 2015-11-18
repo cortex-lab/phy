@@ -16,8 +16,8 @@ from traceback import format_exception
 
 import click
 
-import phy
-from phy import add_default_handler, DEBUG, _Formatter, _logger_fmt
+from phy import (add_default_handler, DEBUG, _Formatter, _logger_fmt,
+                 __version_git__)
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +49,7 @@ def _add_log_file(filename):
     formatter = _Formatter(fmt=_logger_fmt,
                            datefmt='%Y-%m-%d %H:%M:%S')
     handler.setFormatter(formatter)
-    logger.addHandler(handler)
+    logging.getLogger().addHandler(handler)
 
 
 #------------------------------------------------------------------------------
@@ -57,7 +57,7 @@ def _add_log_file(filename):
 #------------------------------------------------------------------------------
 
 @click.group()
-@click.version_option(version=phy.__version_git__)
+@click.version_option(version=__version_git__)
 @click.help_option('-h', '--help')
 @click.pass_context
 def phy(ctx):

@@ -95,8 +95,8 @@ def default_wizard_functions(waveforms=None,
                                           n_features_per_channel=nfc,
                                           )
         d = 1. / max(1e-10, d)  # From distance to similarity.
-        logger.debug("Computed cluster similarity for (%d, %d): %.3f.",
-                     c0, c1, d)
+        logger.log(5, "Computed cluster similarity for (%d, %d): %.3f.",
+                   c0, c1, d)
         return d
 
     return (max_waveform_amplitude_quality,
