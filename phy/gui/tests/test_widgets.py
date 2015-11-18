@@ -19,7 +19,7 @@ from ..widgets import HTMLWidget, Table
 def table(qtbot):
     table = Table()
     table.show()
-    qtbot.waitForWindowShown(table)
+    # qtbot.waitForWindowShown(table)
 
     def count(id):
         return 10000.5 - 10 * id
@@ -43,7 +43,7 @@ def table(qtbot):
 def test_widget_empty(qtbot):
     widget = HTMLWidget()
     widget.show()
-    qtbot.waitForWindowShown(widget)
+    # qtbot.waitForWindowShown(widget)
     # qtbot.stop()
 
 
@@ -53,7 +53,7 @@ def test_widget_html(qtbot):
     widget.add_header('<!-- comment -->')
     widget.set_body('Hello world!')
     widget.show()
-    qtbot.waitForWindowShown(widget)
+    # qtbot.waitForWindowShown(widget)
     assert 'Hello world!' in widget.html()
 
 
@@ -61,7 +61,7 @@ def test_widget_javascript_1(qtbot):
     widget = HTMLWidget()
     widget.eval_js('number = 1;')
     widget.show()
-    qtbot.waitForWindowShown(widget)
+    # qtbot.waitForWindowShown(widget)
 
     assert widget.eval_js('number') == 1
 
@@ -69,7 +69,7 @@ def test_widget_javascript_1(qtbot):
 def test_widget_javascript_2(qtbot):
     widget = HTMLWidget()
     widget.show()
-    qtbot.waitForWindowShown(widget)
+    # qtbot.waitForWindowShown(widget)
     _out = []
 
     @widget.connect_
@@ -91,7 +91,7 @@ def test_widget_javascript_2(qtbot):
 def test_table_default_sort(qtbot):
     table = Table()
     table.show()
-    qtbot.waitForWindowShown(table)
+    # qtbot.waitForWindowShown(table)
 
     def count(id):
         return 10000.5 - 10 * id
