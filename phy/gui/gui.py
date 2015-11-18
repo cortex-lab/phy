@@ -228,6 +228,8 @@ class GUI(QMainWindow):
         This function can be called in `on_show()`.
 
         """
+        if not gs:
+            return
         if gs.get('geometry', None):
             self.restoreGeometry((gs['geometry']))
         if gs.get('state', None):

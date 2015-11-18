@@ -259,6 +259,9 @@ class Context(object):
     def load(self, name):
         """Load saved data from the cache directory."""
         path = op.join(self.cache_dir, name + '.json')
+        if not op.exists(path):
+            logger.debug("The file `%s` doesn't exist.", path)
+            return
         return _load_json(path)
 
     def __getstate__(self):
