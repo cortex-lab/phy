@@ -88,7 +88,24 @@ def test_widget_javascript_2(qtbot):
 # Test table
 #------------------------------------------------------------------------------
 
+def test_table_default_sort(qtbot):
+    table = Table()
+    table.show()
+    qtbot.waitForWindowShown(table)
+
+    def count(id):
+        return 10000.5 - 10 * id
+    table.add_column(count, default_sort=True)
+    table.set_rows(range(10))
+
+    assert table.default_sort == 'count'
+
+    table.close()
+
+
 def test_table_duplicates(qtbot, table):
+    assert table.default_sort is None
+
     table.select([1, 1])
     assert table.selected == [1]
     # qtbot.stop()
