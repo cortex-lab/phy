@@ -124,7 +124,6 @@ class GUI(QMainWindow):
                  closable=True,
                  floatable=True,
                  floating=None,
-                 # parent=None,  # object to pass in the raised events
                  **kwargs):
         """Add a widget to the main window."""
 

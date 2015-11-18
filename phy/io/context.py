@@ -23,7 +23,7 @@ except ImportError:  # pragma: no cover
                     "Install it with `conda install dask`.")
 
 from .array import read_array, write_array
-from phy.utils import Bunch, _save_json, _load_json
+from phy.utils import Bunch, _save_json, _load_json, _ensure_dir_exists
 
 logger = logging.getLogger(__name__)
 
@@ -253,6 +253,7 @@ class Context(object):
     def save(self, name, data):
         """Save a dictionary in a JSON file within the cache directory."""
         path = op.join(self.cache_dir, name + '.json')
+        _ensure_dir_exists(op.dirname(path))
         _save_json(path, data)
 
     def load(self, name):
