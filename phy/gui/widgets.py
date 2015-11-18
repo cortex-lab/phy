@@ -270,10 +270,18 @@ class Table(HTMLWidget):
         self.eval_js('table.select({}, {});'.format(dumps(ids), do_emit))
 
     @property
+    def default_sort(self):
+        """Name of the first column that acts as default sort."""
+        for (name, func, options) in self._columns:
+            if options.get('default_sort', False):
+                return name
+
+    @property
     def selected(self):
         """Currently selected rows."""
         return [int(_) for _ in self.eval_js('table.selected')]
 
     @property
     def current_sort(self):
+        """Current sort: a tuple `(name, dir)`."""
         return tuple(self.eval_js('table.currentSort()'))
