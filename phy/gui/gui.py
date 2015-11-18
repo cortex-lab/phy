@@ -13,6 +13,8 @@ import logging
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  Qt, QSize, QMetaObject)
 from phy.utils.event import EventEmitter
+from phy.utils import load_master_config
+from phy.utils.plugin import get_plugin
 
 logger = logging.getLogger(__name__)
 
@@ -23,6 +25,32 @@ logger = logging.getLogger(__name__)
 
 def _title(widget):
     return str(widget.windowTitle()).lower()
+
+
+def load_gui_plugins(gui, plugins=None, session=None):
+    """Attach a list of plugins to a GUI.
+
+    By default, the list of plugins is taken from the `c.TheGUI.plugins`
+    parameter, where `TheGUI` is the name of the GUI class.
+
+    """
+    session = session or {}
+
+    # GUI name.
+    name = gui.name
+
+    # If no plugins are specified, load the master config and
+    # get the list of user plugins to attach to the GUI.
+    if plugins is None:
+        config = load_master_config()
+        plugins = config[name].plugins
+        if not isinstance(plugins, list):
+            plugins = []
+
+    # Attach the plugins to the GUI.
+    for plugin in plugins:
+        logger.info("Attach plugin `%s` to %s.", plugin, name)
+        get_plugin(plugin)().attach_to_gui(gui, session)
 
 
 class DockWidget(QDockWidget):
