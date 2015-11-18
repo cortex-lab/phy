@@ -36,7 +36,9 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
                           shortcuts={'undo': 'ctrl+z'},
                           )
     mc.attach(gui)
-    mc.set_quality_func(quality)
+
+    mc.add_column(quality, name='quality')
+    mc.set_default_sort('quality', 'desc')
     mc.set_similarity_func(similarity)
 
     yield mc
@@ -113,11 +115,15 @@ def test_manual_clustering_default_metrics(qtbot, gui):
                                     n_features_per_channel=npc,
                                     spikes_per_cluster=spc,
                                     )
-    mc.set_quality_func(q)
+
+    @mc.add_column()
+    def quality(cluster):
+        return q(cluster)
+
+    mc.set_default_sort('quality', 'desc')
     mc.set_similarity_func(s)
 
-    quality = [(c, q(c)) for c in spc]
-    best = sorted(quality, key=itemgetter(1))[-1][0]
+    best = sorted([(c, q(c)) for c in spc], key=itemgetter(1))[-1][0]
 
     similarity = [(d, s(best, d)) for d in spc if d != best]
     match = sorted(similarity, key=itemgetter(1))[-1][0]
@@ -182,7 +188,8 @@ def test_manual_clustering_split_2(gui, quality, similarity):
     mc = ManualClustering(spike_clusters)
     mc.attach(gui)
 
-    mc.set_quality_func(quality)
+    mc.add_column(quality, name='quality')
+    mc.set_default_sort('quality', 'desc')
     mc.set_similarity_func(similarity)
 
     mc.split([0])
