@@ -76,7 +76,11 @@ class BaseVisual(object):
 
     def get_post_transforms(self):
         """Return a GLSL snippet to insert after all transforms in the
-        vertex shader."""
+        vertex shader.
+
+        The snippet should modify `gl_Position`.
+
+        """
         return ''
 
     def set_data(self):

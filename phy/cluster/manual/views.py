@@ -14,6 +14,7 @@ from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 
 from phy.io.array import _index_of, _get_padded
 from phy.electrode.mea import linear_positions
+from phy.gui import Actions
 from phy.plot import (BoxedView, StackedView, GridView,
                       _get_linear_x)
 from phy.plot.utils import _get_boxes
@@ -77,6 +78,11 @@ def _extract_wave(traces, spk, mask, wave_len=None):
 class WaveformView(BoxedView):
     normalization_percentile = .95
     normalization_n_spikes = 1000
+    overlap = True
+
+    default_shortcuts = {
+        'toggle_waveform_overlap': 'o',
+    }
 
     def __init__(self,
                  waveforms=None,
@@ -91,6 +97,9 @@ class WaveformView(BoxedView):
         in channel_positions.
 
         """
+
+        self._cluster_ids = None
+        self._spike_ids = None
 
         # Initialize the view.
         if channel_positions is None:
@@ -136,6 +145,9 @@ class WaveformView(BoxedView):
         if n_spikes == 0:
             return
 
+        self._cluster_ids = cluster_ids
+        self._spike_ids = spike_ids
+
         # Relative spike clusters.
         # NOTE: the order of the clusters in cluster_ids matters.
         # It will influence the relative index of the clusters, which
@@ -148,6 +160,10 @@ class WaveformView(BoxedView):
         w = self.waveforms[spike_ids]
         colors = _selected_clusters_colors(n_clusters)
         t = _get_linear_x(n_spikes, self.n_samples)
+        # Overlap.
+        if self.overlap:
+            t = t + 2.5 * (spike_clusters_rel[:, np.newaxis] -
+                           (n_clusters - 1) / 2.)
 
         # Depth as a function of the cluster index and masks.
         m = self.masks[spike_ids]
@@ -181,15 +197,6 @@ class WaveformView(BoxedView):
         self.build()
         self.update()
 
-    def on_cluster(self, up):
-        pass
-
-    def on_mouse_move(self, e):
-        pass
-
-    def on_key_press(self, e):
-        pass
-
     def attach(self, gui):
         """Attach the view to the GUI."""
 
@@ -200,7 +207,15 @@ class WaveformView(BoxedView):
         gui.add_view(self)
 
         gui.connect_(self.on_select)
-        gui.connect_(self.on_cluster)
+        # gui.connect_(self.on_cluster)
+
+        # TODO: customizable shortcut too
+        self.actions = Actions(gui, default_shortcuts=self.default_shortcuts)
+        self.actions.add(self.toggle_waveform_overlap, alias='o')
+
+    def toggle_waveform_overlap(self):
+        self.overlap = not self.overlap
+        self.on_select(self._cluster_ids, self._spike_ids)
 
 
 class TraceView(StackedView):
