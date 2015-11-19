@@ -50,6 +50,11 @@ def _wrap_glsl(f, **kwargs_init):
 
 
 def _wrap(f, **kwargs_init):
+    """Pass extra keyword arguments to a function.
+
+    Used to pass constructor arguments to class methods in transforms.
+
+    """
     def wrapped(*args, **kwargs):
         # Method kwargs first, then we update with the constructor kwargs.
         kwargs.update(kwargs_init)
@@ -107,14 +112,6 @@ class BaseTransform(object):
         # Pass the constructor kwargs to the methods.
         self.apply = _wrap_apply(self.apply, **kwargs)
         self.glsl = _wrap_glsl(self.glsl, **kwargs)
-        self.pre_transforms = _wrap(self.pre_transforms, **kwargs)
-        self.post_transforms = _wrap(self.post_transforms, **kwargs)
-
-    def pre_transforms(self, **kwargs):
-        return []
-
-    def post_transforms(self, **kwargs):
-        return []
 
     def apply(self, arr):
         raise NotImplementedError()
@@ -260,13 +257,7 @@ class TransformChain(object):
     def add(self, transforms):
         """Add some transforms."""
         for t in transforms:
-            if hasattr(t, 'pre_transforms'):
-                for p in t.pre_transforms():
-                    self.transforms.append(p)
             self.transforms.append(t)
-            if hasattr(t, 'post_transforms'):
-                for p in t.post_transforms():
-                    self.transforms.append(p)
 
     def get(self, class_name):
         """Get a transform in the chain from its name."""
