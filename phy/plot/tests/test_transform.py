@@ -14,7 +14,6 @@ from numpy.testing import assert_equal as ae
 from pytest import yield_fixture
 
 from ..transform import (_glslify, pixels_to_ndc,
-                         BaseTransform,
                          Translate, Scale, Range, Clip, Subplot, GPU,
                          TransformChain,
                          )
