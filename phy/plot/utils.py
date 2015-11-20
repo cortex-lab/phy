@@ -101,6 +101,8 @@ def _get_texture(arr, default, n_items, from_bounds):
 def _get_array(val, shape, default=None):
     """Ensure an object is an array with the specified shape."""
     assert val is not None or default is not None
+    if hasattr(val, '__len__') and len(val) == 0:
+        val = None
     out = np.zeros(shape, dtype=np.float32)
     # This solves `ValueError: could not broadcast input array from shape (n)
     # into shape (n, 1)`.

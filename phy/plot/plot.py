@@ -42,6 +42,8 @@ class Accumulator(object):
 #------------------------------------------------------------------------------
 
 def _prepare_scatter(x, y, color=None, size=None, marker=None):
+    x = np.asarray(x)
+    y = np.asarray(y)
     # Validate x and y.
     assert x.ndim == y.ndim == 1
     assert x.shape == y.shape
