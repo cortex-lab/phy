@@ -106,8 +106,6 @@ def test_actions_gui(qtbot, gui, actions):
     actions.press()
     assert _press == [0]
 
-    actions.exit()
-
 
 def test_snippets_gui(qtbot, gui, actions):
     qtbot.addWidget(gui)

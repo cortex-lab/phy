@@ -73,7 +73,7 @@ def test_gui_1(qtbot):
     view.close()
     assert _close == [0]
 
-    gui.close()
+    gui.default_actions.exit()
 
 
 def test_load_gui_plugins(gui, tempdir):

@@ -15,7 +15,6 @@ import traceback
 from six import string_types, PY3
 
 from .qt import QKeySequence, QAction, require_qt
-from .gui import GUI
 from phy.utils import Bunch
 
 logger = logging.getLogger(__name__)
@@ -141,13 +140,7 @@ class Actions(object):
         self._actions_dict = {}
         self._aliases = {}
         self._default_shortcuts = default_shortcuts or {}
-        assert isinstance(gui, GUI)
         self.gui = gui
-
-        # Default exit action.
-        @self.add(shortcut='Quit')
-        def exit():
-            gui.close()
 
         # Create and attach snippets.
         self.snippets = Snippets(gui, self)
@@ -264,7 +257,6 @@ class Snippets(object):
                       " ,.;?!_-+~=*/\(){}[]")
 
     def __init__(self, gui, actions):
-        assert isinstance(gui, GUI)
         self.gui = gui
 
         assert isinstance(actions, Actions)
