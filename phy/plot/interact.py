@@ -30,26 +30,25 @@ class Grid(BaseInteract):
     Parameters
     ----------
 
-    n_rows : int
-        Number of rows in the grid.
-    n_cols : int
-        Number of cols in the grid.
+    shape : tuple or str
+        Number of rows, cols in the grid.
     box_var : str
         Name of the GLSL variable with the box index.
 
     """
 
-    def __init__(self, n_rows, n_cols, box_var=None):
+    def __init__(self, shape, box_var=None):
         super(Grid, self).__init__()
         self._zoom = 1.
 
         # Name of the variable with the box index.
         self.box_var = box_var or 'a_box_index'
 
-        self.shape = (n_rows, n_cols)
-        assert len(self.shape) == 2
-        assert self.shape[0] >= 1
-        assert self.shape[1] >= 1
+        self.shape = shape
+        if isinstance(self.shape, tuple):
+            assert len(self.shape) == 2
+            assert self.shape[0] >= 1
+            assert self.shape[1] >= 1
 
     def get_shader_declarations(self):
         return ('attribute vec2 a_box_index;\n'

@@ -324,10 +324,10 @@ class BaseView(BaseCanvas):
 
 class GridView(BaseView):
     """A 2D grid with clipping."""
-    def __init__(self, n_rows, n_cols, **kwargs):
-        self.n_rows, self.n_cols = n_rows, n_cols
+    def __init__(self, shape, **kwargs):
+        self.n_rows, self.n_cols = shape
         pz = PanZoom(aspect=None, constrain_bounds=NDC)
-        interacts = [Grid(n_rows, n_cols), pz]
+        interacts = [Grid(shape), pz]
         super(GridView, self).__init__(interacts, **kwargs)
 
 

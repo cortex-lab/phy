@@ -83,7 +83,7 @@ def test_grid_1(qtbot, canvas):
     box_index = [[i, j] for i, j in product(range(2), range(3))]
     box_index = np.repeat(box_index, n, axis=0)
 
-    grid = Grid(2, 3)
+    grid = Grid((2, 3))
     _create_visual(qtbot, canvas, grid, box_index)
 
     # No effect without modifiers.

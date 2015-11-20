@@ -500,10 +500,11 @@ class FeatureView(GridView):
         assert features.ndim == 3
         self.n_spikes, self.n_channels, self.n_features = features.shape
         self.n_cols = self.n_features + 1
+        self.shape = (self.n_cols, self.n_cols)
         self.features = features
 
         # Initialize the view.
-        super(FeatureView, self).__init__(self.n_cols, self.n_cols, keys=keys)
+        super(FeatureView, self).__init__(self.shape, keys=keys)
 
         # Feature normalization.
         self.data_bounds = _get_data_bounds(features,
@@ -626,8 +627,8 @@ class CorrelogramView(GridView):
 
         # Initialize the view.
         self.n_cols = 2  # TODO: dynamic grid shape in interact
-        super(CorrelogramView, self).__init__(self.n_cols, self.n_cols,
-                                              keys=keys)
+        self.shape = (self.n_cols, self.n_cols)
+        super(CorrelogramView, self).__init__(self.shape, keys=keys)
 
         # Spike clusters.
         assert spike_clusters.shape == (self.n_spikes,)
