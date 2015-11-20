@@ -32,7 +32,7 @@ def _show(qtbot, view, stop=False):
 #------------------------------------------------------------------------------
 
 def test_grid_scatter(qtbot):
-    view = GridView(2, 3)
+    view = GridView((2, 3))
     n = 1000
 
     assert isinstance(view.panzoom, PanZoom)
@@ -58,7 +58,7 @@ def test_grid_scatter(qtbot):
 
 
 def test_grid_plot(qtbot):
-    view = GridView(1, 2)
+    view = GridView((1, 2))
     n_plots, n_samples = 10, 50
 
     x = _get_linear_x(n_plots, n_samples)
@@ -71,7 +71,7 @@ def test_grid_plot(qtbot):
 
 
 def test_grid_hist(qtbot):
-    view = GridView(3, 3)
+    view = GridView((3, 3))
 
     hist = np.random.rand(3, 3, 20)
 
@@ -84,7 +84,7 @@ def test_grid_hist(qtbot):
 
 
 def test_grid_complete(qtbot):
-    view = GridView(2, 2)
+    view = GridView((2, 2))
     t = _get_linear_x(1, 1000).ravel()
 
     view[0, 0].scatter(*np.random.randn(2, 100))

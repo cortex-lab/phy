@@ -109,6 +109,23 @@ def test_grid_1(qtbot, canvas):
     # qtbot.stop()
 
 
+def test_grid_2(qtbot, canvas):
+
+    n = 1000
+
+    box_index = [[i, j] for i, j in product(range(2), range(3))]
+    box_index = np.repeat(box_index, n, axis=0)
+
+    class MyGrid(Grid):
+        def get_pre_transforms(self):
+            return 'vec2 u_shape = vec2(3, 3);'
+
+    grid = MyGrid('u_shape')
+    _create_visual(qtbot, canvas, grid, box_index)
+
+    # qtbot.stop()
+
+
 def test_boxed_1(qtbot, canvas):
 
     n = 6
