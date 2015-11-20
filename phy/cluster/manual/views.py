@@ -19,6 +19,7 @@ from phy.gui import Actions
 from phy.plot import (BoxedView, StackedView, GridView,
                       _get_linear_x)
 from phy.plot.utils import _get_boxes
+from phy.stats import correlograms
 from phy.utils._types import _is_integer
 
 logger = logging.getLogger(__name__)
@@ -599,11 +600,74 @@ class FeatureView(GridView):
 
 class CorrelogramView(GridView):
     def __init__(self,
-                 spike_samples=None,
                  spike_times=None,
+                 spike_clusters=None,
+                 sample_rate=None,
                  bin_size=None,
                  window_size=None,
                  excerpt_size=None,
                  n_excerpts=None,
+                 keys='interactive',
                  ):
-        pass
+
+        assert sample_rate > 0
+        self.sample_rate = sample_rate
+
+        assert bin_size > 0
+        self.bin_size = bin_size
+
+        assert window_size > 0
+        self.window_size = window_size
+
+        # TODO: excerpt
+
+        self.spike_times = np.asarray(spike_times)
+        self.n_spikes, = self.spike_times.shape
+
+        # Initialize the view.
+        self.n_cols = 2  # TODO: dynamic grid shape in interact
+        super(CorrelogramView, self).__init__(self.n_cols, self.n_cols,
+                                              keys=keys)
+
+        # Spike clusters.
+        assert spike_clusters.shape == (self.n_spikes,)
+        self.spike_clusters = spike_clusters
+
+        # Initialize the subplots.
+        self._plots = {(i, j): self[i, j].hist(hist=[])
+                       for i in range(self.n_cols)
+                       for j in range(self.n_cols)
+                       }
+        self.build()
+        self.update()
+
+    def on_select(self, cluster_ids, spike_ids):
+        n_clusters = len(cluster_ids)
+        n_spikes = len(spike_ids)
+        if n_spikes == 0:
+            return
+
+        ccg = correlograms(self.spike_times,
+                           self.spike_clusters,
+                           cluster_ids=cluster_ids,
+                           sample_rate=self.sample_rate,
+                           bin_size=self.bin_size,
+                           window_size=self.window_size,
+                           )
+
+        lim = ccg.max()
+
+        colors = _selected_clusters_colors(n_clusters)
+
+        for i in range(n_clusters):
+            for j in range(n_clusters):
+                hist = ccg[i, j, :]
+                color = colors[i] if i == j else np.ones(3)
+                color = np.hstack((color, [1]))
+                self._plots[i, j].set_data(hist=hist,
+                                           color=color,
+                                           ylim=[lim],
+                                           )
+
+        self.build()
+        self.update()

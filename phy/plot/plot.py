@@ -70,15 +70,25 @@ def _prepare_plot(x, y, color=None, depth=None, data_bounds=None):
     return dict(x=x, y=y, color=color, depth=depth, data_bounds=data_bounds)
 
 
-def _prepare_hist(data, color=None):
-    # Validate data.
-    if data.ndim == 1:
-        data = data[np.newaxis, :]
-    assert data.ndim == 2
-    n_hists, n_samples = data.shape
+def _prepare_hist(hist, ylim=None, color=None):
+    hist = np.asarray(hist)
+    # Validate hist.
+    if hist.ndim == 1:
+        hist = hist[np.newaxis, :]
+    assert hist.ndim == 2
+    n_hists, n_samples = hist.shape
+    # y-limit
+    if ylim is None:
+        ylim = hist.max() if hist.size else 1.
+    if not hasattr(ylim, '__len__'):
+        ylim = [ylim]
+    ylim = np.atleast_2d(ylim)
+    if len(ylim) == 1:
+        ylim = np.tile(ylim, (n_hists, 1))
+    assert len(ylim) == n_hists
     # Get the colors.
     color = _get_array(color, (n_hists, 4), HistogramVisual._default_color)
-    return dict(data=data, color=color)
+    return dict(hist=hist, ylim=ylim, color=color)
 
 
 def _prepare_box_index(box_index, n):
@@ -131,13 +141,14 @@ def _build_histogram(items):
 
     ac = Accumulator()
     for item in items:
-        n = item.data.data.size
-        ac['data'] = item.data.data
-        ac['hist_colors'] = item.data.color
+        n = item.data.hist.size
+        ac['hist'] = item.data.hist
+        ac['color'] = item.data.color
+        ac['ylim'] = item.data.ylim
         # NOTE: the `6 * ` comes from the histogram tesselation.
         ac['box_index'] = _prepare_box_index(item.box_index, 6 * n)
 
-    return (dict(hist=ac['data'], hist_colors=ac['hist_colors']),
+    return (dict(hist=ac['hist'], ylim=ac['ylim'], color=ac['color']),
             ac['box_index'])
 
 

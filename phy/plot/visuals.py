@@ -197,8 +197,8 @@ class HistogramVisual(BaseVisual):
 
     def set_data(self,
                  hist=None,
-                 hist_lims=None,
-                 hist_colors=None,
+                 ylim=None,
+                 color=None,
                  ):
         hist = _check_pos_2D(hist)
         n_hists, n_bins = hist.shape
@@ -206,7 +206,8 @@ class HistogramVisual(BaseVisual):
         # Store n_bins for get_transforms().
         self.n_bins = n_bins
 
-        # Generate hist_max.
+        # NOTE: this must be set *before* `apply_cpu_transforms` such
+        # that the histogram is correctly normalized.
         self.hist_max = _get_hist_max(hist)
 
         # Set the transformed position.
@@ -220,15 +221,16 @@ class HistogramVisual(BaseVisual):
         self.program['a_hist_index'] = _get_index(n_hists, n_bins * 6, n)
 
         # Hist colors.
-        self.program['u_hist_colors'] = _get_texture(hist_colors,
-                                                     self._default_color,
-                                                     n_hists, [0, 1])
+        self.program['u_color'] = _get_texture(color,
+                                               self._default_color,
+                                               n_hists, [0, 1])
 
         # Hist bounds.
+        assert ylim is None or len(ylim) == n_hists
         hist_bounds = np.c_[np.zeros((n_hists, 2)),
-                            np.ones(n_hists),
-                            hist_lims] if hist_lims is not None else None
-        hist_bounds = _get_texture(hist_bounds, [0, 0, 1, self.hist_max],
+                            np.ones((n_hists, 1)),
+                            ylim / self.hist_max] if ylim is not None else None
+        hist_bounds = _get_texture(hist_bounds, [0, 0, 1, 1],
                                    n_hists, [0, 10])
         self.program['u_hist_bounds'] = Texture2D(hist_bounds)
         self.program['n_hists'] = n_hists
