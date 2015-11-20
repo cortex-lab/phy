@@ -82,6 +82,50 @@ def _get_data_bounds(arr, n_spikes=None, percentile=None):
     return [-1, -m, +1, +m]
 
 
+def _get_spike_clusters_rel(spike_clusters, spike_ids, cluster_ids):
+    # Relative spike clusters.
+    # NOTE: the order of the clusters in cluster_ids matters.
+    # It will influence the relative index of the clusters, which
+    # in return influence the depth.
+    spike_clusters = spike_clusters[spike_ids]
+    assert np.all(np.in1d(spike_clusters, cluster_ids))
+    spike_clusters_rel = _index_of(spike_clusters, cluster_ids)
+    return spike_clusters_rel
+
+
+def _get_depth(masks,
+               spike_clusters_rel=None,
+               n_clusters=None,
+               ):
+    n_spikes, n_channels = masks.shape
+    masks = np.atleast_2d(masks)
+    assert masks.ndim == 2
+    depth = (-0.1 - (spike_clusters_rel[:, np.newaxis] + masks) /
+             float(n_clusters + 10.))
+    depth[masks <= 0.25] = 0
+    assert depth.shape == (n_spikes, n_channels)
+    return depth
+
+
+def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
+    n_spikes = len(masks)
+    assert masks.shape == (n_spikes,)
+    assert spike_clusters_rel.shape == (n_spikes,)
+
+    # Fetch the features.
+    colors = _selected_clusters_colors(n_clusters)
+
+    # Color as a function of the mask.
+    color = colors[spike_clusters_rel]
+    hsv = rgb_to_hsv(color[:, :3])
+    # Change the saturation and value as a function of the mask.
+    hsv[:, 1] *= masks
+    hsv[:, 2] *= .5 * (1. + masks)
+    color = hsv_to_rgb(hsv)
+    color = np.c_[color, .5 * np.ones((n_spikes, 1))]
+    return color
+
+
 # -----------------------------------------------------------------------------
 # Waveform view
 # -----------------------------------------------------------------------------
@@ -155,16 +199,12 @@ class WaveformView(BoxedView):
         self._spike_ids = spike_ids
 
         # Relative spike clusters.
-        # NOTE: the order of the clusters in cluster_ids matters.
-        # It will influence the relative index of the clusters, which
-        # in return influence the depth.
-        spike_clusters = self.spike_clusters[spike_ids]
-        assert np.all(np.in1d(spike_clusters, cluster_ids))
-        spike_clusters_rel = _index_of(spike_clusters, cluster_ids)
+        spike_clusters_rel = _get_spike_clusters_rel(self.spike_clusters,
+                                                     spike_ids,
+                                                     cluster_ids)
 
         # Fetch the waveforms.
         w = self.waveforms[spike_ids]
-        colors = _selected_clusters_colors(n_clusters)
         t = _get_linear_x(n_spikes, self.n_samples)
         # Overlap.
         if self.overlap:
@@ -172,28 +212,17 @@ class WaveformView(BoxedView):
                            (n_clusters - 1) / 2.)
 
         # Depth as a function of the cluster index and masks.
-        m = self.masks[spike_ids]
-        m = np.atleast_2d(m)
-        assert m.ndim == 2
-        depth = (-0.1 - (spike_clusters_rel[:, np.newaxis] + m) /
-                 float(n_clusters + 10.))
-        depth[m <= 0.25] = 0
-        assert m.shape == (n_spikes, self.n_channels)
-        assert depth.shape == (n_spikes, self.n_channels)
+        masks = self.masks[spike_ids]
+        depth = _get_depth(masks,
+                           spike_clusters_rel=spike_clusters_rel,
+                           n_clusters=n_clusters)
 
         # Plot all waveforms.
-        # TODO: optim: avoid the loop.
+        # OPTIM: avoid the loop.
         for ch in range(self.n_channels):
-
-            # Color as a function of the mask.
-            color = colors[spike_clusters_rel]
-            hsv = rgb_to_hsv(color[:, :3])
-            # Change the saturation and value as a function of the mask.
-            hsv[:, 1] *= m[:, ch]
-            hsv[:, 2] *= .5 * (1. + m[:, ch])
-            color = hsv_to_rgb(hsv)
-            color = np.c_[color, .5 * np.ones((n_spikes, 1))]
-
+            color = _get_color(masks[:, ch],
+                               spike_clusters_rel=spike_clusters_rel,
+                               n_clusters=n_clusters)
             self._plots[ch].set_data(x=t, y=w[:, :, ch],
                                      color=color,
                                      depth=depth[:, ch],
@@ -382,50 +411,6 @@ def _dimensions(x_channels, y_channels):
             y_dim[i, j] = (y_channels[j - 1], i - 1)
 
     return x_dim, y_dim
-
-
-def _get_spike_clusters_rel(spike_clusters, spike_ids, cluster_ids):
-    # Relative spike clusters.
-    # NOTE: the order of the clusters in cluster_ids matters.
-    # It will influence the relative index of the clusters, which
-    # in return influence the depth.
-    spike_clusters = spike_clusters[spike_ids]
-    assert np.all(np.in1d(spike_clusters, cluster_ids))
-    spike_clusters_rel = _index_of(spike_clusters, cluster_ids)
-    return spike_clusters_rel
-
-
-def _get_depth(masks,
-               spike_clusters_rel=None,
-               n_clusters=None,
-               ):
-    n_spikes, n_channels = masks.shape
-    masks = np.atleast_2d(masks)
-    assert masks.ndim == 2
-    depth = (-0.1 - (spike_clusters_rel[:, np.newaxis] + masks) /
-             float(n_clusters + 10.))
-    depth[masks <= 0.25] = 0
-    assert depth.shape == (n_spikes, n_channels)
-    return depth
-
-
-def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
-    n_spikes = len(masks)
-    assert masks.shape == (n_spikes,)
-    assert spike_clusters_rel.shape == (n_spikes,)
-
-    # Fetch the features.
-    colors = _selected_clusters_colors(n_clusters)
-
-    # Color as a function of the mask.
-    color = colors[spike_clusters_rel]
-    hsv = rgb_to_hsv(color[:, :3])
-    # Change the saturation and value as a function of the mask.
-    hsv[:, 1] *= masks
-    hsv[:, 2] *= .5 * (1. + masks)
-    color = hsv_to_rgb(hsv)
-    color = np.c_[color, .5 * np.ones((n_spikes, 1))]
-    return color
 
 
 def _project_mask_depth(dim, masks, depth):
