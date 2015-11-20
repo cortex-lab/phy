@@ -11,7 +11,6 @@ from numpy.testing import assert_array_equal as ae
 
 from ..ccg import (_increment,
                    _diff_shifted,
-                   _symmetrize_correlograms,
                    correlograms,
                    )
 
