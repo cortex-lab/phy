@@ -142,7 +142,7 @@ def test_histogram_2(qtbot, canvas_pz):
     c[:, 3] = 1
 
     _test_visual(qtbot, canvas_pz, HistogramVisual(),
-                 hist=hist, hist_colors=c, hist_lims=2 * np.ones(n_hists))
+                 hist=hist, color=c, ylim=2 * np.ones(n_hists))
 
 
 #------------------------------------------------------------------------------

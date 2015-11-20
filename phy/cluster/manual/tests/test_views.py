@@ -18,7 +18,8 @@ from phy.io.mock import (artificial_waveforms,
                          artificial_traces,
                          )
 from phy.electrode.mea import staggered_positions
-from ..views import WaveformView, FeatureView, TraceView, _extract_wave
+from ..views import (WaveformView, FeatureView, CorrelogramView, TraceView,
+                     _extract_wave)
 
 
 #------------------------------------------------------------------------------
@@ -161,6 +162,48 @@ def test_feature_view(qtbot):
                     spike_times=spike_times,
                     spike_clusters=spike_clusters,
                     )
+    # Select some spikes.
+    spike_ids = np.arange(n_spikes)
+    cluster_ids = np.unique(spike_clusters[spike_ids])
+    v.on_select(cluster_ids, spike_ids)
+
+    # Show the view.
+    v.show()
+    qtbot.waitForWindowShown(v.native)
+
+    # Select other spikes.
+    spike_ids = np.arange(2, 10)
+    cluster_ids = np.unique(spike_clusters[spike_ids])
+    v.on_select(cluster_ids, spike_ids)
+
+    # qtbot.stop()
+    v.close()
+
+
+#------------------------------------------------------------------------------
+# Test correlogram view
+#------------------------------------------------------------------------------
+
+def test_correlogram_view(qtbot):
+    n_spikes = 50
+    n_clusters = 2
+    sample_rate = 20000.
+    bin_size = 1e-3
+    window_size = 50e-3
+
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    spike_times = artificial_spike_samples(n_spikes) / sample_rate
+
+    # Create the view.
+    v = CorrelogramView(spike_times=spike_times,
+                        spike_clusters=spike_clusters,
+                        sample_rate=sample_rate,
+                        bin_size=bin_size,
+                        window_size=window_size,
+                        excerpt_size=None,
+                        n_excerpts=None,
+                        )
+
     # Select some spikes.
     spike_ids = np.arange(n_spikes)
     cluster_ids = np.unique(spike_clusters[spike_ids])

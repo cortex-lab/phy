@@ -72,8 +72,10 @@ def _enable_depth_mask():
 
 
 def _get_texture(arr, default, n_items, from_bounds):
-    """Prepare data to be uploaded as a texture, with casting to uint8.
+    """Prepare data to be uploaded as a texture.
+
     The from_bounds must be specified.
+
     """
     if not hasattr(default, '__len__'):  # pragma: no cover
         default = [default]
@@ -91,7 +93,7 @@ def _get_texture(arr, default, n_items, from_bounds):
     m, M = map(float, from_bounds)
     assert np.all(arr >= m)
     assert np.all(arr <= M)
-    arr = 1. * (arr - m) / (M - m)
+    arr = (arr - m) / (M - m)
     assert np.all(arr >= 0)
     assert np.all(arr <= 1.)
     arr = arr.astype(np.float32)
