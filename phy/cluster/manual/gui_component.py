@@ -175,7 +175,6 @@ class ManualClustering(object):
 
         # Misc.
         'save': 'Save',
-        'show_shortcuts': 'shift+h',
         'undo': 'Undo',
         'redo': 'Redo',
     }
@@ -190,7 +189,7 @@ class ManualClustering(object):
         self.gui = None
         self.n_spikes_max_per_cluster = n_spikes_max_per_cluster
 
-        # Load default shortcuts, and override any user shortcuts.
+        # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
         self.shortcuts.update(shortcuts or {})
 
@@ -279,7 +278,6 @@ class ManualClustering(object):
         self.actions.add(self.previous_best)
 
         # Others.
-        self.actions.add(self.actions.show_shortcuts)
         self.actions.add(self.undo)
         self.actions.add(self.redo)
         self.actions.add(self.save)

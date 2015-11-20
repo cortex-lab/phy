@@ -22,6 +22,8 @@ from phy.utils.testing import captured_output, captured_logging
 #------------------------------------------------------------------------------
 
 def test_shortcuts(qapp):
+    assert 'z' in _get_shortcut_string('Undo')
+
     def _assert_shortcut(name, key=None):
         shortcut = _get_qkeysequence(name)
         s = _get_shortcut_string(shortcut)
@@ -105,6 +107,10 @@ def test_actions_gui(qtbot, gui, actions):
 
     actions.press()
     assert _press == [0]
+
+    with captured_output() as (stdout, stderr):
+        gui.default_actions.show_shortcuts()
+    assert 'g\n' in stdout.getvalue()
 
 
 def test_snippets_gui(qtbot, gui, actions):

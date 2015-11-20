@@ -142,6 +142,7 @@ class WaveformView(BoxedView):
                  masks=None,
                  spike_clusters=None,
                  channel_positions=None,
+                 shortcuts=None,
                  keys='interactive',
                  ):
         """
@@ -150,6 +151,10 @@ class WaveformView(BoxedView):
         in channel_positions.
 
         """
+
+        # Load default shortcuts, and override with any user shortcuts.
+        self.shortcuts = self.default_shortcuts.copy()
+        self.shortcuts.update(shortcuts or {})
 
         self._cluster_ids = None
         self._spike_ids = None
@@ -243,9 +248,8 @@ class WaveformView(BoxedView):
         gui.connect_(self.on_select)
         # gui.connect_(self.on_cluster)
 
-        # TODO: customizable shortcut too
-        self.actions = Actions(gui, default_shortcuts=self.default_shortcuts)
-        self.actions.add(self.toggle_waveform_overlap, alias='o')
+        self.actions = Actions(gui, default_shortcuts=self.shortcuts)
+        self.actions.add(self.toggle_waveform_overlap)
 
     def toggle_waveform_overlap(self):
         self.overlap = not self.overlap
