@@ -12,6 +12,7 @@ import logging
 
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  Qt, QSize, QMetaObject)
+from .actions import Actions
 from phy.utils.event import EventEmitter
 from phy.utils import load_master_config
 from phy.utils.plugin import get_plugin
@@ -117,6 +118,13 @@ class GUI(QMainWindow):
 
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
+
+        # Default exit action.
+        self.default_actions = Actions(self)
+
+        @self.default_actions.add(shortcut='Quit')
+        def exit():
+            self.close()
 
     # Events
     # -------------------------------------------------------------------------
