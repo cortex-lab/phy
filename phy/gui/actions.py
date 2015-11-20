@@ -66,7 +66,10 @@ def _get_shortcut_string(shortcut):
     if isinstance(shortcut, (tuple, list)):
         return ', '.join([_get_shortcut_string(s) for s in shortcut])
     if isinstance(shortcut, string_types):
-        return shortcut.lower()
+        if hasattr(QKeySequence, shortcut):
+            shortcut = QKeySequence(getattr(QKeySequence, shortcut))
+        else:
+            return shortcut.lower()
     assert isinstance(shortcut, QKeySequence)
     s = shortcut.toString() or ''
     return str(s).lower()
@@ -141,6 +144,7 @@ class Actions(object):
         self._aliases = {}
         self._default_shortcuts = default_shortcuts or {}
         self.gui = gui
+        gui.actions.append(self)
 
         # Create and attach snippets.
         self.snippets = Snippets(gui, self)
