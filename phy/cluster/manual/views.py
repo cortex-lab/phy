@@ -71,8 +71,19 @@ def _extract_wave(traces, spk, mask, wave_len=None):
     return data, channels
 
 
+def _get_data_bounds(arr, n_spikes=None, percentile=None):
+    n = arr.shape[0]
+    k = max(1, n // n_spikes)
+    w = np.abs(arr[::k])
+    n = w.shape[0]
+    w = w.reshape((n, -1))
+    w = w.max(axis=1)
+    m = np.percentile(w, percentile)
+    return [-1, -m, +1, +m]
+
+
 # -----------------------------------------------------------------------------
-# Views
+# Waveform view
 # -----------------------------------------------------------------------------
 
 class WaveformView(BoxedView):
@@ -113,14 +124,9 @@ class WaveformView(BoxedView):
         self.waveforms = waveforms
 
         # Waveform normalization.
-        n = waveforms.shape[0]
-        k = max(1, n // self.normalization_n_spikes)
-        w = np.abs(waveforms[::k])
-        n = w.shape[0]
-        w = w.reshape((n, -1))
-        w = w.max(axis=1)
-        m = np.percentile(w, self.normalization_percentile)
-        self.data_bounds = [-1, -m, +1, +m]
+        self.data_bounds = _get_data_bounds(waveforms,
+                                            self.normalization_n_spikes,
+                                            self.normalization_percentile)
 
         # Masks.
         self.masks = masks
@@ -217,6 +223,10 @@ class WaveformView(BoxedView):
         self.overlap = not self.overlap
         self.on_select(self._cluster_ids, self._spike_ids)
 
+
+# -----------------------------------------------------------------------------
+# Trace view
+# -----------------------------------------------------------------------------
 
 class TraceView(StackedView):
     def __init__(self,
@@ -340,13 +350,201 @@ class TraceView(StackedView):
         self.update()
 
 
+# -----------------------------------------------------------------------------
+# Feature view
+# -----------------------------------------------------------------------------
+
+def _dimensions(x_channels, y_channels):
+    """Default dimensions matrix."""
+    # time, depth     time,    (x, 0)     time,    (y, 0)     time, (z, 0)
+    # time, (x', 0)   (x', 0), (x, 0)     (x', 1), (y, 0)     (x', 2), (z, 0)
+    # time, (y', 0)   (y', 0), (x, 1)     (y', 1), (y, 1)     (y', 2), (z, 1)
+    # time, (z', 0)   (z', 0), (x, 2)     (z', 1), (y, 2)     (z', 2), (z, 2)
+
+    n = len(x_channels)
+    assert len(y_channels) == n
+    y_dim = {}
+    x_dim = {}
+    # TODO: depth
+    x_dim[0, 0] = 'time'
+    y_dim[0, 0] = 'time'
+
+    # Time in first column and first row.
+    for i in range(1, n + 1):
+        x_dim[0, i] = 'time'
+        y_dim[0, i] = (x_channels[i - 1], 0)
+        x_dim[i, 0] = 'time'
+        y_dim[i, 0] = (y_channels[i - 1], 0)
+
+    for i in range(1, n + 1):
+        for j in range(1, n + 1):
+            x_dim[i, j] = (x_channels[i - 1], j - 1)
+            y_dim[i, j] = (y_channels[j - 1], i - 1)
+
+    return x_dim, y_dim
+
+
+def _get_spike_clusters_rel(spike_clusters, spike_ids, cluster_ids):
+    # Relative spike clusters.
+    # NOTE: the order of the clusters in cluster_ids matters.
+    # It will influence the relative index of the clusters, which
+    # in return influence the depth.
+    spike_clusters = spike_clusters[spike_ids]
+    assert np.all(np.in1d(spike_clusters, cluster_ids))
+    spike_clusters_rel = _index_of(spike_clusters, cluster_ids)
+    return spike_clusters_rel
+
+
+def _get_depth(masks,
+               spike_clusters_rel=None,
+               n_clusters=None,
+               ):
+    n_spikes, n_channels = masks.shape
+    masks = np.atleast_2d(masks)
+    assert masks.ndim == 2
+    depth = (-0.1 - (spike_clusters_rel[:, np.newaxis] + masks) /
+             float(n_clusters + 10.))
+    depth[masks <= 0.25] = 0
+    assert depth.shape == (n_spikes, n_channels)
+    return depth
+
+
+def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
+    n_spikes = len(masks)
+    assert masks.shape == (n_spikes,)
+    assert spike_clusters_rel.shape == (n_spikes,)
+
+    # Fetch the features.
+    colors = _selected_clusters_colors(n_clusters)
+
+    # Color as a function of the mask.
+    color = colors[spike_clusters_rel]
+    hsv = rgb_to_hsv(color[:, :3])
+    # Change the saturation and value as a function of the mask.
+    hsv[:, 1] *= masks
+    hsv[:, 2] *= .5 * (1. + masks)
+    color = hsv_to_rgb(hsv)
+    color = np.c_[color, .5 * np.ones((n_spikes, 1))]
+    return color
+
+
+def _project_mask_depth(dim, masks, depth):
+    n_spikes = masks.shape[0]
+    if dim != 'time':
+        ch, fet = dim
+        m = masks[:, ch]
+        d = depth[:, ch]
+    else:
+        m = np.ones(n_spikes)
+        d = np.zeros(n_spikes)
+    return m, d
+
+
 class FeatureView(GridView):
+    normalization_percentile = .95
+    normalization_n_spikes = 1000
+
     def __init__(self,
                  features=None,
-                 dimensions=None,
-                 extra_features=None,
+                 masks=None,
+                 spike_times=None,
+                 spike_clusters=None,
+                 keys='interactive',
                  ):
-        pass
+
+        assert features.ndim == 3
+        self.n_spikes, self.n_channels, self.n_features = features.shape
+        self.n_cols = self.n_features + 1
+        self.features = features
+
+        # Initialize the view.
+        super(FeatureView, self).__init__(self.n_cols, self.n_cols, keys=keys)
+
+        # Feature normalization.
+        self.data_bounds = _get_data_bounds(features,
+                                            self.normalization_n_spikes,
+                                            self.normalization_percentile)
+
+        # Masks.
+        self.masks = masks
+
+        # Spike clusters.
+        assert spike_clusters.shape == (self.n_spikes,)
+        self.spike_clusters = spike_clusters
+
+        # Spike times.
+        assert spike_times.shape == (self.n_spikes,)
+        self.spike_times = spike_times
+
+        # Initialize the subplots.
+        self._plots = {(i, j): self[i, j].scatter(x=[], y=[], size=[])
+                       for i in range(self.n_cols)
+                       for j in range(self.n_cols)
+                       }
+        self.build()
+        self.update()
+
+    def _get_feature(self, dim, spike_ids=None):
+        f = self.features[spike_ids]
+        assert f.ndim == 3
+
+        if dim == 'time':
+            t = self.spike_times[spike_ids]
+            t0, t1 = self.spike_times[0], self.spike_times[-1]
+            t = -1 + 2 * (t - t0) / float(t1 - t0)
+            return .9 * t
+        else:
+            assert len(dim) == 2
+            ch, fet = dim
+            # TODO: normalization of features
+            return f[:, ch, fet]
+
+    def on_select(self, cluster_ids, spike_ids):
+        n_clusters = len(cluster_ids)
+        n_spikes = len(spike_ids)
+        if n_spikes == 0:
+            return
+
+        spike_clusters_rel = _get_spike_clusters_rel(self.spike_clusters,
+                                                     spike_ids,
+                                                     cluster_ids)
+
+        masks = self.masks[spike_ids]
+        depth = _get_depth(masks,
+                           spike_clusters_rel=spike_clusters_rel,
+                           n_clusters=n_clusters)
+
+        x_dim, y_dim = _dimensions(range(self.n_cols),
+                                   range(self.n_cols))
+
+        # Plot all features.
+        # TODO: optim: avoid the loop.
+        for i in range(self.n_cols):
+            for j in range(self.n_cols):
+
+                x = self._get_feature(x_dim[i, j], spike_ids)
+                y = self._get_feature(y_dim[i, j], spike_ids)
+
+                mx, dx = _project_mask_depth(x_dim[i, j], masks, depth)
+                my, dy = _project_mask_depth(y_dim[i, j], masks, depth)
+
+                d = np.maximum(dx, dy)
+                m = np.maximum(mx, my)
+
+                color = _get_color(m,
+                                   spike_clusters_rel=spike_clusters_rel,
+                                   n_clusters=n_clusters)
+
+                self._plots[i, j].set_data(x=x,
+                                           y=y,
+                                           color=color,
+                                           depth=d,
+                                           data_bounds=self.data_bounds,
+                                           size=5 * np.ones(n_spikes),
+                                           )
+
+        self.build()
+        self.update()
 
 
 class CorrelogramView(GridView):

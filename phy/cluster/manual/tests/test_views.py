@@ -11,13 +11,14 @@ from numpy.testing import assert_equal as ae
 from pytest import raises
 
 from phy.io.mock import (artificial_waveforms,
+                         artificial_features,
                          artificial_spike_clusters,
                          artificial_spike_samples,
                          artificial_masks,
                          artificial_traces,
                          )
 from phy.electrode.mea import staggered_positions
-from ..views import WaveformView, TraceView, _extract_wave
+from ..views import WaveformView, FeatureView, TraceView, _extract_wave
 
 
 #------------------------------------------------------------------------------
@@ -61,7 +62,7 @@ def test_extract_wave():
 
 
 #------------------------------------------------------------------------------
-# Test views
+# Test waveform view
 #------------------------------------------------------------------------------
 
 def test_waveform_view(qtbot):
@@ -99,6 +100,10 @@ def test_waveform_view(qtbot):
     v.close()
 
 
+#------------------------------------------------------------------------------
+# Test trace view
+#------------------------------------------------------------------------------
+
 def test_trace_view_no_spikes(qtbot):
     n_samples = 1000
     n_channels = 12
@@ -133,3 +138,42 @@ def test_trace_view_spikes(qtbot):
                   n_samples_per_spike=6,
                   )
     _show(qtbot, v)
+
+
+#------------------------------------------------------------------------------
+# Test feature view
+#------------------------------------------------------------------------------
+
+def test_feature_view(qtbot):
+    n_spikes = 50
+    n_channels = 5
+    n_clusters = 2
+    n_features = 4
+
+    features = artificial_features(n_spikes, n_channels, n_features)
+    masks = artificial_masks(n_spikes, n_channels)
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    spike_times = artificial_spike_samples(n_spikes) / 20000.
+
+    # Create the view.
+    v = FeatureView(features=features,
+                    masks=masks,
+                    spike_times=spike_times,
+                    spike_clusters=spike_clusters,
+                    )
+    # Select some spikes.
+    spike_ids = np.arange(n_spikes)
+    cluster_ids = np.unique(spike_clusters[spike_ids])
+    v.on_select(cluster_ids, spike_ids)
+
+    # Show the view.
+    v.show()
+    qtbot.waitForWindowShown(v.native)
+
+    # Select other spikes.
+    spike_ids = np.arange(2, 10)
+    cluster_ids = np.unique(spike_clusters[spike_ids])
+    v.on_select(cluster_ids, spike_ids)
+
+    # qtbot.stop()
+    v.close()
