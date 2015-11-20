@@ -93,28 +93,26 @@ def _get_spike_clusters_rel(spike_clusters, spike_ids, cluster_ids):
     return spike_clusters_rel
 
 
-def _get_depth(masks,
-               spike_clusters_rel=None,
-               n_clusters=None,
-               ):
-    n_spikes, n_channels = masks.shape
-    masks = np.atleast_2d(masks)
-    assert masks.ndim == 2
-    depth = (-0.1 - (spike_clusters_rel[:, np.newaxis] + masks) /
+def _get_depth(masks, spike_clusters_rel=None, n_clusters=None):
+    """Return the OpenGL z-depth of vertices as a function of the
+    mask and cluster index."""
+    n_spikes = len(masks)
+    assert masks.shape == (n_spikes,)
+    depth = (-0.1 - (spike_clusters_rel + masks) /
              float(n_clusters + 10.))
     depth[masks <= 0.25] = 0
-    assert depth.shape == (n_spikes, n_channels)
+    assert depth.shape == (n_spikes,)
     return depth
 
 
 def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
+    """Return the color of vertices as a function of the mask and
+    cluster index."""
     n_spikes = len(masks)
     assert masks.shape == (n_spikes,)
     assert spike_clusters_rel.shape == (n_spikes,)
-
-    # Fetch the features.
+    # Generate the colors.
     colors = _selected_clusters_colors(n_clusters)
-
     # Color as a function of the mask.
     color = colors[spike_clusters_rel]
     hsv = rgb_to_hsv(color[:, :3])
@@ -213,19 +211,20 @@ class WaveformView(BoxedView):
 
         # Depth as a function of the cluster index and masks.
         masks = self.masks[spike_ids]
-        depth = _get_depth(masks,
-                           spike_clusters_rel=spike_clusters_rel,
-                           n_clusters=n_clusters)
 
         # Plot all waveforms.
         # OPTIM: avoid the loop.
         for ch in range(self.n_channels):
-            color = _get_color(masks[:, ch],
+            m = masks[:, ch]
+            depth = _get_depth(m,
+                               spike_clusters_rel=spike_clusters_rel,
+                               n_clusters=n_clusters)
+            color = _get_color(m,
                                spike_clusters_rel=spike_clusters_rel,
                                n_clusters=n_clusters)
             self._plots[ch].set_data(x=t, y=w[:, :, ch],
                                      color=color,
-                                     depth=depth[:, ch],
+                                     depth=depth,
                                      data_bounds=self.data_bounds,
                                      )
 
@@ -413,12 +412,14 @@ def _dimensions(x_channels, y_channels):
     return x_dim, y_dim
 
 
-def _project_mask_depth(dim, masks, depth):
+def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
     n_spikes = masks.shape[0]
     if dim != 'time':
         ch, fet = dim
         m = masks[:, ch]
-        d = depth[:, ch]
+        d = _get_depth(m,
+                       spike_clusters_rel=spike_clusters_rel,
+                       n_clusters=n_clusters)
     else:
         m = np.ones(n_spikes)
         d = np.zeros(n_spikes)
@@ -490,14 +491,10 @@ class FeatureView(GridView):
         if n_spikes == 0:
             return
 
-        spike_clusters_rel = _get_spike_clusters_rel(self.spike_clusters,
-                                                     spike_ids,
-                                                     cluster_ids)
-
         masks = self.masks[spike_ids]
-        depth = _get_depth(masks,
-                           spike_clusters_rel=spike_clusters_rel,
-                           n_clusters=n_clusters)
+        sc = _get_spike_clusters_rel(self.spike_clusters,
+                                     spike_ids,
+                                     cluster_ids)
 
         x_dim, y_dim = _dimensions(range(self.n_cols),
                                    range(self.n_cols))
@@ -510,14 +507,18 @@ class FeatureView(GridView):
                 x = self._get_feature(x_dim[i, j], spike_ids)
                 y = self._get_feature(y_dim[i, j], spike_ids)
 
-                mx, dx = _project_mask_depth(x_dim[i, j], masks, depth)
-                my, dy = _project_mask_depth(y_dim[i, j], masks, depth)
+                mx, dx = _project_mask_depth(x_dim[i, j], masks,
+                                             spike_clusters_rel=sc,
+                                             n_clusters=n_clusters)
+                my, dy = _project_mask_depth(y_dim[i, j], masks,
+                                             spike_clusters_rel=sc,
+                                             n_clusters=n_clusters)
 
                 d = np.maximum(dx, dy)
                 m = np.maximum(mx, my)
 
                 color = _get_color(m,
-                                   spike_clusters_rel=spike_clusters_rel,
+                                   spike_clusters_rel=sc,
                                    n_clusters=n_clusters)
 
                 self._plots[i, j].set_data(x=x,
