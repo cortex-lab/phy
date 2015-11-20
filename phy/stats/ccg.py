@@ -36,26 +36,49 @@ def _create_correlograms_array(n_clusters, winsize_bins):
                     dtype=np.int32)
 
 
-def correlograms(spike_samples, spike_clusters,
-                 cluster_order=None,
-                 binsize=None, winsize_bins=None):
+def _symmetrize_correlograms(correlograms):
+    """Return the symmetrized version of the CCG arrays."""
+
+    n_clusters, _, n_bins = correlograms.shape
+    assert n_clusters == _
+
+    # We symmetrize c[i, j, 0].
+    # This is necessary because the algorithm in correlograms()
+    # is sensitive to the order of identical spikes.
+    correlograms[..., 0] = np.maximum(correlograms[..., 0],
+                                      correlograms[..., 0].T)
+
+    sym = correlograms[..., 1:][..., ::-1]
+    sym = np.transpose(sym, (1, 0, 2))
+
+    return np.dstack((sym, correlograms))
+
+
+def correlograms(spike_times,
+                 spike_clusters,
+                 cluster_ids=None,
+                 sample_rate=1.,
+                 bin_size=None,
+                 window_size=None,
+                 symmetrize=True,
+                 ):
     """Compute all pairwise cross-correlograms among the clusters appearing
     in `spike_clusters`.
 
     Parameters
     ----------
 
-    spike_samples : array-like
-        Spike times in samples (integers).
+    spike_times : array-like
+        Spike times in seconds.
     spike_clusters : array-like
         Spike-cluster mapping.
-    cluster_order : array-like
+    cluster_ids : array-like
         The list of unique clusters, in any order. That order will be used
         in the output array.
-    binsize : int
-        Number of time samples in one bin.
-    winsize_bins : int (odd number)
-        Number of bins in the window.
+    bin_size : float
+        Size of the bin, in seconds.
+    window_size : float
+        Size of the window, in seconds.
 
     Returns
     -------
@@ -64,37 +87,35 @@ def correlograms(spike_samples, spike_clusters,
         A `(n_clusters, n_clusters, winsize_samples)` array with all pairwise
         CCGs.
 
-    Notes
-    -----
-
-    If winsize_samples is the (odd) number of time samples in the window
-    then:
-
-        winsize_bins = 2 * ((winsize_samples // 2) // binsize) + 1
-        assert winsize_bins % 2 == 1
-
-    For performance reasons, it is recommended to compute the CCGs on a subset
-    with only a few thousands or tens of thousands of spikes.
-
     """
+    assert sample_rate > 0.
+
+    # Get the spike samples.
+    spike_times = np.asarray(spike_times, dtype=np.float64)
+    spike_samples = (spike_times * sample_rate).astype(np.int64)
 
     spike_clusters = _as_array(spike_clusters)
-    spike_samples = _as_array(spike_samples)
-    if spike_samples.dtype in (np.int32, np.int64):
-        spike_samples = spike_samples.astype(np.uint64)
-
-    assert spike_samples.dtype == np.uint64
 
     assert spike_samples.ndim == 1
     assert spike_samples.shape == spike_clusters.shape
 
+    # Find `binsize`.
+    bin_size = np.clip(bin_size, 1e-5, 1e5)  # in seconds
+    binsize = int(sample_rate * bin_size)  # in samples
+    assert binsize >= 1
+
+    # Find `winsize_bins`.
+    window_size = np.clip(window_size, 1e-5, 1e5)  # in seconds
+    winsize_bins = 2 * int(.5 * window_size / bin_size) + 1
+
+    assert winsize_bins >= 1
     assert winsize_bins % 2 == 1
 
     # Take the cluster oder into account.
-    if cluster_order is None:
+    if cluster_ids is None:
         clusters = _unique(spike_clusters)
     else:
-        clusters = _as_array(cluster_order)
+        clusters = _as_array(cluster_ids)
     n_clusters = len(clusters)
 
     # Like spike_clusters, but with 0..n_clusters-1 indices.
@@ -148,26 +169,7 @@ def correlograms(spike_samples, spike_clusters,
                  np.arange(n_clusters),
                  0] = 0
 
-    return correlograms
-
-
-#------------------------------------------------------------------------------
-# Helper functions for CCG data structures
-#------------------------------------------------------------------------------
-
-def _symmetrize_correlograms(correlograms):
-    """Return the symmetrized version of the CCG arrays."""
-
-    n_clusters, _, n_bins = correlograms.shape
-    assert n_clusters == _
-
-    # We symmetrize c[i, j, 0].
-    # This is necessary because the algorithm in correlograms()
-    # is sensitive to the order of identical spikes.
-    correlograms[..., 0] = np.maximum(correlograms[..., 0],
-                                      correlograms[..., 0].T)
-
-    sym = correlograms[..., 1:][..., ::-1]
-    sym = np.transpose(sym, (1, 0, 2))
-
-    return np.dstack((sym, correlograms))
+    if symmetrize:
+        return _symmetrize_correlograms(correlograms)
+    else:
+        return correlograms
