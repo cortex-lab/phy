@@ -11,6 +11,7 @@ import logging
 
 import numpy as np
 from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
+from six import string_types
 
 from phy.io.array import _index_of, _get_padded
 from phy.electrode.mea import linear_positions
@@ -18,6 +19,7 @@ from phy.gui import Actions
 from phy.plot import (BoxedView, StackedView, GridView,
                       _get_linear_x)
 from phy.plot.utils import _get_boxes
+from phy.utils._types import _is_integer
 
 logger = logging.getLogger(__name__)
 
@@ -386,8 +388,26 @@ class TraceView(StackedView):
 # Feature view
 # -----------------------------------------------------------------------------
 
-def _dimensions(x_channels, y_channels):
-    """Default dimensions matrix."""
+def _check_dimension(dim, n_channels, n_features):
+    """Check that a dimension is valid."""
+    if _is_integer(dim):
+        dim = (dim, 0)
+    if isinstance(dim, tuple):
+        assert len(dim) == 2
+        channel, feature = dim
+        assert _is_integer(channel)
+        assert _is_integer(feature)
+        assert 0 <= channel < n_channels
+        assert 0 <= feature < n_features
+    elif isinstance(dim, string_types):
+        assert dim == 'time'
+    elif dim:
+        raise ValueError('{0} should be (channel, feature) '.format(dim) +
+                         'or one of the extra features.')
+
+
+def _dimensions_matrix(x_channels, y_channels):
+    """Dimensions matrix."""
     # time, depth     time,    (x, 0)     time,    (y, 0)     time, (z, 0)
     # time, (x', 0)   (x', 0), (x, 0)     (x', 1), (y, 0)     (x', 2), (z, 0)
     # time, (y', 0)   (y', 0), (x, 1)     (y', 1), (y, 1)     (y', 2), (z, 1)
@@ -397,7 +417,7 @@ def _dimensions(x_channels, y_channels):
     assert len(y_channels) == n
     y_dim = {}
     x_dim = {}
-    # TODO: depth
+    # TODO: extra feature like probe depth
     x_dim[0, 0] = 'time'
     y_dim[0, 0] = 'time'
 
@@ -416,7 +436,41 @@ def _dimensions(x_channels, y_channels):
     return x_dim, y_dim
 
 
+def _dimensions_for_clusters(cluster_ids, n_cols=None,
+                             best_channels_func=None):
+    """Return the dimension matrix for the selected clusters."""
+    n = len(cluster_ids)
+    if not n:
+        return {}, {}
+    best_channels_func = best_channels_func or (lambda _: range(n_cols))
+    x_channels = best_channels_func(cluster_ids[min(1, n - 1)])
+    y_channels = best_channels_func(cluster_ids[0])
+    y_channels = y_channels[:n_cols - 1]
+    # For the x axis, remove the channels that already are in
+    # the y axis.
+    x_channels = [c for c in x_channels if c not in y_channels]
+    # Now, select the right number of channels in the x axis.
+    x_channels = x_channels[:n_cols - 1]
+    if len(x_channels) < n_cols - 1:
+        x_channels = y_channels
+    return _dimensions_matrix(x_channels, y_channels)
+
+
+def _smart_dim(dim, n_features=None, prev_dim=None, prev_dim_other=None):
+    channel, feature = dim
+    prev_channel, prev_feature = prev_dim
+    # Scroll the feature if the channel is the same.
+    if prev_channel == channel:
+        feature = (prev_feature + 1) % n_features
+    # Scroll the feature if it is the same than in the other axis.
+    if (prev_dim_other != 'time' and
+            prev_dim_other == (channel, feature)):
+        feature = (feature + 1) % n_features
+    dim = (channel, feature)
+
+
 def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
+    """Return the mask and depth vectors for a given dimension."""
     n_spikes = masks.shape[0]
     if dim != 'time':
         ch, fet = dim
@@ -500,8 +554,10 @@ class FeatureView(GridView):
                                      spike_ids,
                                      cluster_ids)
 
-        x_dim, y_dim = _dimensions(range(self.n_cols),
-                                   range(self.n_cols))
+        x_dim, y_dim = _dimensions_for_clusters(cluster_ids,
+                                                n_cols=self.n_cols,
+                                                # TODO
+                                                best_channels_func=None)
 
         # Plot all features.
         # TODO: optim: avoid the loop.
@@ -536,6 +592,10 @@ class FeatureView(GridView):
         self.build()
         self.update()
 
+
+# -----------------------------------------------------------------------------
+# Correlogram view
+# -----------------------------------------------------------------------------
 
 class CorrelogramView(GridView):
     def __init__(self,
