@@ -186,7 +186,7 @@ def test_feature_view(qtbot):
 
 def test_correlogram_view(qtbot):
     n_spikes = 50
-    n_clusters = 2
+    n_clusters = 1
     sample_rate = 20000.
     bin_size = 1e-3
     window_size = 50e-3
