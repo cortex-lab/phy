@@ -626,7 +626,7 @@ class CorrelogramView(GridView):
         self.n_spikes, = self.spike_times.shape
 
         # Initialize the view.
-        self.n_cols = 2  # TODO: dynamic grid shape in interact
+        self.n_cols = 1  # TODO: dynamic grid shape in interact
         self.shape = (self.n_cols, self.n_cols)
         super(CorrelogramView, self).__init__(self.shape, keys=keys)
 
@@ -648,8 +648,12 @@ class CorrelogramView(GridView):
         if n_spikes == 0:
             return
 
-        ccg = correlograms(self.spike_times,
-                           self.spike_clusters,
+        # TODO: excerpt
+        ind = np.in1d(self.spike_clusters, cluster_ids)
+        st = self.spike_times[ind]
+        sc = self.spike_clusters[ind]
+
+        ccg = correlograms(st, sc,
                            cluster_ids=cluster_ids,
                            sample_rate=self.sample_rate,
                            bin_size=self.bin_size,
@@ -672,3 +676,17 @@ class CorrelogramView(GridView):
 
         self.build()
         self.update()
+
+    def attach(self, gui):
+        """Attach the view to the GUI."""
+
+        # Disable keyboard pan so that we can use arrows as global shortcuts
+        # in the GUI.
+        self.panzoom.enable_keyboard_pan = False
+
+        gui.add_view(self)
+
+        gui.connect_(self.on_select)
+        # gui.connect_(self.on_cluster)
+
+        # self.actions = Actions(gui, default_shortcuts=self.shortcuts)
