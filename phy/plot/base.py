@@ -16,7 +16,6 @@ from vispy.app import Canvas
 
 from .transform import TransformChain, Clip
 from .utils import _load_shader
-from phy.utils import EventEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -43,8 +42,9 @@ class BaseVisual(object):
     def __init__(self):
         self.gl_primitive_type = None
         self.transforms = TransformChain()
-        self._to_insert = defaultdict(list)
-        # This will be set by attach().
+        self.inserter = GLSLInserter()
+        # The program will be set by the canvas when the visual is
+        # added to the canvas.
         self.program = None
 
     # Visual definition
@@ -57,26 +57,16 @@ class BaseVisual(object):
     def set_primitive_type(self, primitive_type):
         self.gl_primitive_type = primitive_type
 
-    # Shader insertion
-    # -------------------------------------------------------------------------
-
-    def _insert(self, shader_type, glsl, location):
-        assert location in (
-            'header',
-            'before_transforms',
-            'transforms',
-            'after_transforms',
-        )
-        self._to_insert[shader_type, location].append(glsl)
-
-    def insert_vert(self, glsl, location):
-        self._insert('vert', glsl, location)
-
-    def insert_frag(self, glsl, location):
-        self._insert('frag', glsl, location)
-
-    def get_inserts(self, shader_type, location):
-        return '\n'.join(self._to_insert[shader_type, location])
+    def on_draw(self):
+        """Draw the visual."""
+        # Skip the drawing if the program hasn't been built yet.
+        # The program is built by the interact.
+        if self.program:
+            # Draw the program.
+            self.program.draw(self.gl_primitive_type)
+        else:  # pragma: no cover
+            logger.debug("Skipping drawing visual `%s` because the program "
+                         "has not been built yet.", self)
 
     # To override
     # -------------------------------------------------------------------------
@@ -90,170 +80,20 @@ class BaseVisual(object):
         """
         raise NotImplementedError()
 
-    # Public methods
-    # -------------------------------------------------------------------------
-
-    def attach(self, canvas):
-        """Attach the visual to a canvas.
-
-        After calling this method, the following properties are available:
-
-        * self.program
-
-        """
-        logger.debug("Attach `%s` to canvas.", self.__class__.__name__)
-
-        self.program = build_program(self, canvas.interacts)
-
-        # NOTE: this is connect_ and not connect because we're using
-        # phy's event system, not VisPy's. The reason is that the order
-        # of the callbacks is not kept by VisPy, whereas we need the order
-        # to draw visuals in the order they are attached.
-        @canvas.connect_
-        def on_draw():
-            self.on_draw()
-
-        @canvas.connect
-        def on_resize(event):
-            """Resize the OpenGL context."""
-            canvas.context.set_viewport(0, 0, event.size[0], event.size[1])
-
-        canvas.connect(self.on_mouse_wheel)
-        canvas.connect(self.on_mouse_move)
-        canvas.connect(self.on_key_press)
-
-        # NOTE: this might be improved.
-        canvas.visuals.append(self)
-        # HACK: allow a visual to update the canvas it is attached to.
-        self.update = canvas.update
-
-    def on_mouse_move(self, e):
-        pass
-
-    def on_mouse_wheel(self, e):
-        pass
-
-    def on_key_press(self, e):
-        pass
-
-    def on_draw(self):
-        """Draw the visual."""
-        # Skip the drawing if the program hasn't been built yet.
-        # The program is built by the interact.
-        if self.program:
-            # Draw the program.
-            self.program.draw(self.gl_primitive_type)
-
-
-#------------------------------------------------------------------------------
-# Base interact
-#------------------------------------------------------------------------------
-
-class BaseInteract(object):
-    """Implement interactions for a set of attached visuals in a canvas.
-
-    Derived classes must:
-
-    * Define a list of `transforms`
-
-    """
-    def __init__(self):
-        self._canvas = None
-
-    # To override
-    # -------------------------------------------------------------------------
-
-    def get_shader_declarations(self):
-        """Return extra declarations for the vertex and fragment shaders."""
-        return '', ''
-
-    def get_pre_transforms(self):
-        """Return an optional GLSL snippet to insert into the vertex shader
-        before the transforms."""
-        return ''
-
-    def get_transforms(self):
-        """Return the list of transforms."""
-        return []
-
-    def update_program(self, program):
-        """Update a program during an interaction event."""
-        pass
-
-    # Public methods
-    # -------------------------------------------------------------------------
-
-    @property
-    def size(self):
-        return self._canvas.size if self._canvas else None
-
-    def attach(self, canvas):
-        """Attach the interact to a canvas."""
-        self._canvas = canvas
-
-        # NOTE: this might be improved.
-        canvas.interacts.append(self)
-
-        canvas.connect(self.on_resize)
-        canvas.connect(self.on_mouse_move)
-        canvas.connect(self.on_mouse_wheel)
-        canvas.connect(self.on_key_press)
-
-    def is_attached(self):
-        """Whether the interact is attached to a canvas."""
-        return self._canvas is not None
-
-    def on_resize(self, event):
-        pass
-
-    def on_mouse_move(self, event):
-        pass
-
-    def on_mouse_wheel(self, event):
-        pass
-
-    def on_key_press(self, event):
-        pass
-
-    def update(self):
-        """Update the attached canvas and all attached programs."""
-        if self.is_attached():
-            for visual in self._canvas.visuals:
-                self.update_program(visual.program)
-            self._canvas.update()
-
-
-#------------------------------------------------------------------------------
-# Base canvas
-#------------------------------------------------------------------------------
-
-class BaseCanvas(Canvas):
-    """A blank VisPy canvas with a custom event system that keeps the order."""
-    def __init__(self, *args, **kwargs):
-        super(BaseCanvas, self).__init__(*args, **kwargs)
-        self._events = EventEmitter()
-        self.interacts = []
-        self.visuals = []
-
-    def connect_(self, *args, **kwargs):
-        return self._events.connect(*args, **kwargs)
-
-    def emit_(self, *args, **kwargs):  # pragma: no cover
-        return self._events.emit(*args, **kwargs)
-
-    def on_draw(self, e):
-        gloo.clear()
-        self._events.emit('draw')
-
 
 #------------------------------------------------------------------------------
 # Build program with interacts
 #------------------------------------------------------------------------------
 
-def insert_glsl(transform_chain, vertex, fragment,
-                pre_transforms='', post_transforms=''):
-    """Generate the GLSL code of the transform chain."""
+def _insert_glsl(vertex, fragment, to_insert):
+    """Insert snippets in a shader.
 
+    to_insert is a dict `{(shader_type, location): snippet}`.
+
+    Snippets can contain `{{ var }}` placeholders for the transformed variable
+    name.
+
+    """
     # Find the place where to insert the GLSL snippet.
     # This is "gl_Position = transform(data_var_name);" where
     # data_var_name is typically an attribute.
@@ -270,90 +110,117 @@ def insert_glsl(transform_chain, vertex, fragment,
 
     # Find the GLSL variable with the data (should be a `vec2`).
     var = r.group(1)
-    transform_chain.transformed_var_name = var
     assert var and var in vertex
 
-    # Generate the snippet to insert in the shaders.
-    temp_var = 'temp_pos_tr'
-    # Name for the (eventual) varying.
-    fvar = 'v_{}'.format(temp_var)
-    vs_insert = ''
-    # Insert the pre-transforms.
-    vs_insert += pre_transforms + '\n'
-    vs_insert += "vec2 {} = {};\n".format(temp_var, var)
-    for t in transform_chain.gpu_transforms:
-        if isinstance(t, Clip):
-            # Set the varying value in the vertex shader.
-            vs_insert += '{} = {};\n'.format(fvar, temp_var)
-            continue
-        vs_insert += t.glsl(temp_var) + '\n'
-    vs_insert += 'gl_Position = vec4({}, 0., 1.);\n'.format(temp_var)
-    vs_insert += post_transforms + '\n'
+    # Headers.
+    vertex = to_insert['vert', 'header'] + '\n\n' + vertex
+    fragment = to_insert['frag', 'header'] + '\n\n' + fragment
 
-    # Clipping.
-    clip = transform_chain.get('Clip')
-    if clip:
-        # Varying name.
-        glsl_clip = clip.glsl(fvar)
+    # Get the pre and post transforms.
+    vs_insert = to_insert['vert', 'before_transforms']
+    vs_insert += to_insert['vert', 'transforms']
+    vs_insert += to_insert['vert', 'after_transforms']
 
-        # Prepare the fragment regex.
-        fs_regex = re.compile(r'(void main\(\)\s*\{)')
-        fs_insert = '\\1\n{}'.format(glsl_clip)
-
-        # Add the varying declaration for clipping.
-        varying_decl = 'varying vec2 {};\n'.format(fvar)
-        vertex = varying_decl + vertex
-        fragment = varying_decl + fragment
-
-        # Make the replacement in the fragment shader for clipping.
-        fragment = fs_regex.sub(indent(fs_insert), fragment)
-
-    # Insert the GLSL snippet of the transform chain in the vertex shader.
+    # Insert the GLSL snippet in the vertex shader.
     vertex = vs_regex.sub(indent(vs_insert), vertex)
+
+    # Now, we make the replacements in the fragment shader.
+    fs_regex = re.compile(r'(void main\(\)\s*\{)')
+    # NOTE: we add the `void main(){` that was removed by the regex.
+    fs_insert = '\\1\n' + to_insert['frag', 'before_transforms']
+    fragment = fs_regex.sub(indent(fs_insert), fragment)
+
+    # Replace the transformed variable placeholder by its name.
+    vertex = vertex.replace('{{ var }}', var)
 
     return vertex, fragment
 
 
-def build_program(visual, interacts=()):
-    """Create the gloo program of a visual using the interacts
-    transforms.
+class GLSLInserter(object):
+    def __init__(self):
+        self._to_insert = defaultdict(list)
+        self.insert_vert('vec2 temp_pos_tr = {{ var }};',
+                         'before_transforms')
+        self.insert_vert('gl_Position = vec4(temp_pos_tr, 0., 1.);',
+                         'after_transforms')
+        self.insert_vert('varying vec2 v_temp_pos_tr;\n', 'header')
+        self.insert_frag('varying vec2 v_temp_pos_tr;\n', 'header')
 
-    This method is called when a visual is attached to the canvas.
+    def _insert(self, shader_type, glsl, location):
+        assert location in (
+            'header',
+            'before_transforms',
+            'transforms',
+            'after_transforms',
+        )
+        self._to_insert[shader_type, location].append(glsl)
 
-    """
-    assert visual.program is None, "The program has already been built."
+    def insert_vert(self, glsl, location='transforms'):
+        self._insert('vert', glsl, location)
 
-    # Build the transform chain using the visuals transforms first,
-    # then the interact's transforms.
-    transforms = visual.transforms
-    for interact in interacts:
-        transforms += TransformChain(interact.get_transforms())
+    def insert_frag(self, glsl, location=None):
+        self._insert('frag', glsl, location)
 
-    logger.debug("Build the program of `%s`.", visual.__class__.__name__)
-    # Insert the interact's GLSL into the shaders.
-    vertex, fragment = visual.vertex_shader, visual.fragment_shader
-    # Get the GLSL snippet to insert before the transformations.
-    pre = '\n'.join(interact.get_pre_transforms() for interact in interacts)
-    # GLSL snippet to insert after all transformations.
-    post = visual.get_inserts('vert', 'after_transforms')
-    vertex, fragment = insert_glsl(transforms, vertex, fragment,
-                                   pre, post)
+    def add_transform_chain(self, tc):
+        # Generate the transforms snippet.
+        for t in tc.gpu_transforms:
+            if isinstance(t, Clip):
+                # Set the varying value in the vertex shader.
+                self.insert_vert('v_temp_pos_tr = temp_pos_tr;')
+                continue
+            self.insert_vert(t.glsl('temp_pos_tr'))
+        # Clipping.
+        clip = tc.get('Clip')
+        if clip:
+            self.insert_frag(clip.glsl('v_temp_pos_tr'), 'before_transforms')
 
-    # Insert shader declarations using the interacts (if any).
-    if interacts:
-        vertex_decls, frag_decls = zip(*(interact.get_shader_declarations()
-                                         for interact in interacts))
+    def insert_into_shaders(self, vertex, fragment):
+        to_insert = defaultdict(str)
+        to_insert.update({key: '\n'.join(self._to_insert[key])
+                          for key in self._to_insert})
+        return _insert_glsl(vertex, fragment, to_insert)
 
-        vertex = '\n'.join(vertex_decls) + '\n' + vertex
-        fragment = '\n'.join(frag_decls) + '\n' + fragment
 
-    logger.log(5, "Vertex shader: \n%s", vertex)
-    logger.log(5, "Fragment shader: \n%s", fragment)
+#------------------------------------------------------------------------------
+# Base canvas
+#------------------------------------------------------------------------------
 
-    program = gloo.Program(vertex, fragment)
+class BaseCanvas(Canvas):
+    """A blank VisPy canvas with a custom event system that keeps the order."""
+    def __init__(self, *args, **kwargs):
+        super(BaseCanvas, self).__init__(*args, **kwargs)
+        self.transforms = TransformChain()
+        self.visuals = []
 
-    # Update the program with all interacts.
-    for interact in interacts:
-        interact.update_program(program)
+    def add_visual(self, visual):
+        """Add a visual to the canvas, and build its program by the same
+        occasion.
 
-    return program
+        We can't build the visual's program before, because we need the canvas'
+        transforms first.
+
+        """
+        # Retrieve the visual's GLSL inserter.
+        inserter = visual.inserter
+        # Add the visual's transforms.
+        inserter.add_transform_chain(visual.transforms)
+        # Then, add the canvas' transforms.
+        inserter.add_transform_chain(self.transforms)
+        # Now, we insert the transforms GLSL into the shaders.
+        vs, fs = visual.vertex_shader, visual.fragment_shader
+        vs, fs = inserter.insert_into_shaders(vs, fs)
+        # Finally, we create the visual's program.
+        visual.program = gloo.Program(vs, fs)
+        logger.log(5, "Vertex shader: %s", vs)
+        logger.log(5, "Fragment shader: %s", fs)
+        # Register the visual in the list of visuals in the canvas.
+        self.visuals.append(visual)
+
+    def on_resize(self, event):
+        """Resize the OpenGL context."""
+        self.context.set_viewport(0, 0, event.size[0], event.size[1])
+
+    def on_draw(self, e):
+        gloo.clear()
+        for visual in self.visuals:
+            visual.on_draw()
