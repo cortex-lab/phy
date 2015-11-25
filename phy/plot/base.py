@@ -7,13 +7,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from collections import defaultdict
 import logging
 import re
 
 from vispy import gloo
 from vispy.app import Canvas
 
-from .transform import TransformChain, GPU, Clip
+from .transform import TransformChain, Clip
 from .utils import _load_shader
 from phy.utils import EventEmitter
 
@@ -38,50 +39,47 @@ class BaseVisual(object):
     It is rendered with a single pass of a single gloo program with a single
     type of GL primitive.
 
-    Derived classes must implement:
-
-    * `gl_primitive_type`: `lines`, `points`, etc.
-    * `get_shaders()`: return the vertex and fragment shaders, or just
-      `shader_name` for built-in shaders
-    * `get_transforms()`: return a list of `Transform` instances, which
-    * `get_post_transforms()`: return a GLSL snippet to insert after
-      all transforms in the vertex shader.
-    * `set_data()`: has access to `self.program`. Must be called after
-      `attach()`.
-
     """
-    gl_primitive_type = None
-    shader_name = None
-
     def __init__(self):
+        self.gl_primitive_type = None
+        self.transforms = TransformChain()
+        self._to_insert = defaultdict(list)
         # This will be set by attach().
         self.program = None
 
-    # To override
+    # Visual definition
     # -------------------------------------------------------------------------
 
-    def get_shaders(self):
-        """Return the vertex and fragment shader code."""
-        assert self.shader_name
-        return (_load_shader(self.shader_name + '.vert'),
-                _load_shader(self.shader_name + '.frag'))
+    def set_shader(self, name):
+        self.vertex_shader = _load_shader(name + '.vert')
+        self.fragment_shader = _load_shader(name + '.frag')
 
-    def get_transforms(self):
-        """Return the list of transforms for the visual.
+    def set_primitive_type(self, primitive_type):
+        self.gl_primitive_type = primitive_type
 
-        There needs to be one and exactly one instance of `GPU()`.
+    # Shader insertion
+    # -------------------------------------------------------------------------
 
-        """
-        return [GPU()]
+    def _insert(self, shader_type, glsl, location):
+        assert location in (
+            'header',
+            'before_transforms',
+            'transforms',
+            'after_transforms',
+        )
+        self._to_insert[shader_type, location].append(glsl)
 
-    def get_post_transforms(self):
-        """Return a GLSL snippet to insert after all transforms in the
-        vertex shader.
+    def insert_vert(self, glsl, location):
+        self._insert('vert', glsl, location)
 
-        The snippet should modify `gl_Position`.
+    def insert_frag(self, glsl, location):
+        self._insert('frag', glsl, location)
 
-        """
-        return ''
+    def get_inserts(self, shader_type, location):
+        return '\n'.join(self._to_insert[shader_type, location])
+
+    # To override
+    # -------------------------------------------------------------------------
 
     def set_data(self):
         """Set data to the program.
@@ -94,9 +92,6 @@ class BaseVisual(object):
 
     # Public methods
     # -------------------------------------------------------------------------
-
-    def apply_cpu_transforms(self, data):
-        return TransformChain(self.get_transforms()).apply(data)
 
     def attach(self, canvas):
         """Attach the visual to a canvas.
@@ -259,8 +254,6 @@ def insert_glsl(transform_chain, vertex, fragment,
                 pre_transforms='', post_transforms=''):
     """Generate the GLSL code of the transform chain."""
 
-    # TODO: move this to base.py
-
     # Find the place where to insert the GLSL snippet.
     # This is "gl_Position = transform(data_var_name);" where
     # data_var_name is typically an attribute.
@@ -332,19 +325,18 @@ def build_program(visual, interacts=()):
 
     # Build the transform chain using the visuals transforms first,
     # then the interact's transforms.
-    transforms = visual.get_transforms()
+    transforms = visual.transforms
     for interact in interacts:
-        transforms.extend(interact.get_transforms())
-    transform_chain = TransformChain(transforms)
+        transforms += TransformChain(interact.get_transforms())
 
     logger.debug("Build the program of `%s`.", visual.__class__.__name__)
     # Insert the interact's GLSL into the shaders.
-    vertex, fragment = visual.get_shaders()
+    vertex, fragment = visual.vertex_shader, visual.fragment_shader
     # Get the GLSL snippet to insert before the transformations.
     pre = '\n'.join(interact.get_pre_transforms() for interact in interacts)
     # GLSL snippet to insert after all transformations.
-    post = visual.get_post_transforms()
-    vertex, fragment = insert_glsl(transform_chain, vertex, fragment,
+    post = visual.get_inserts('vert', 'after_transforms')
+    vertex, fragment = insert_glsl(transforms, vertex, fragment,
                                    pre, post)
 
     # Insert shader declarations using the interacts (if any).
