@@ -236,10 +236,14 @@ class TransformChain(object):
 
     def add_on_cpu(self, transforms):
         """Add some transforms."""
+        if not isinstance(transforms, list):
+            transforms = [transforms]
         self.cpu_transforms.extend(transforms or [])
 
     def add_on_gpu(self, transforms):
         """Add some transforms."""
+        if not isinstance(transforms, list):
+            transforms = [transforms]
         self.gpu_transforms.extend(transforms or [])
 
     def get(self, class_name):
@@ -253,3 +257,10 @@ class TransformChain(object):
         for t in self.cpu_transforms:
             arr = t.apply(arr)
         return arr
+
+    def __add__(self, tc):
+        assert isinstance(tc, TransformChain)
+        assert tc.transformed_var_name == self.transformed_var_name
+        self.cpu_transforms.extend(tc.cpu_transforms)
+        self.gpu_transforms.extend(tc.gpu_transforms)
+        return self

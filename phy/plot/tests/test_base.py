@@ -13,7 +13,7 @@ import numpy as np
 
 from ..base import BaseVisual, BaseInteract, insert_glsl
 from ..transform import (subplot_bounds, Translate, Scale, Range,
-                         Clip, Subplot, GPU, TransformChain)
+                         Clip, Subplot, TransformChain)
 
 
 #------------------------------------------------------------------------------
@@ -23,8 +23,11 @@ from ..transform import (subplot_bounds, Translate, Scale, Range,
 def test_visual_shader_name(qtbot, canvas):
     """Test a BaseVisual with a shader name."""
     class TestVisual(BaseVisual):
-        shader_name = 'simple'
-        gl_primitive_type = 'lines'
+
+        def __init__(self):
+            super(TestVisual, self).__init__()
+            self.set_shader('simple')
+            self.set_primitive_type('lines')
 
         def set_data(self):
             self.program['a_position'] = [[-1, 0], [1, 0]]
@@ -45,21 +48,21 @@ def test_base_visual(qtbot, canvas):
     """Test a BaseVisual with custom shaders."""
 
     class TestVisual(BaseVisual):
-        vertex = """
-            attribute vec2 a_position;
-            void main() {
-                gl_Position = vec4(a_position.xy, 0, 1);
-            }
-            """
-        fragment = """
-            void main() {
-                gl_FragColor = vec4(1, 1, 1, 1);
-            }
-        """
-        gl_primitive_type = 'lines'
 
-        def get_shaders(self):
-            return self.vertex, self.fragment
+        def __init__(self):
+            super(TestVisual, self).__init__()
+            self.vertex_shader = """
+                attribute vec2 a_position;
+                void main() {
+                    gl_Position = vec4(a_position.xy, 0, 1);
+                }
+                """
+            self.fragment_shader = """
+                void main() {
+                    gl_FragColor = vec4(1, 1, 1, 1);
+                }
+            """
+            self.set_primitive_type('lines')
 
         def set_data(self):
             self.program['a_position'] = [[-1, 0], [1, 0]]
@@ -91,11 +94,11 @@ def test_base_interact():
 def test_no_interact(qtbot, canvas):
     """Test a BaseVisual with a CPU transform and no interact."""
     class TestVisual(BaseVisual):
-        shader_name = 'simple'
-        gl_primitive_type = 'lines'
-
-        def get_transforms(self):
-            return [Scale(scale=(.5, 1))]
+        def __init__(self):
+            super(TestVisual, self).__init__()
+            self.set_shader('simple')
+            self.set_primitive_type('lines')
+            self.transforms.add_on_cpu(Scale(scale=(.5, 1)))
 
         def set_data(self):
             self.program['a_position'] = [[-1, 0], [1, 0]]
@@ -121,40 +124,31 @@ def test_interact(qtbot, canvas):
     """
 
     class TestVisual(BaseVisual):
-        vertex = """
-            attribute vec2 a_position;
-            void main() {
-                gl_Position = transform(a_position);
-                gl_PointSize = 2.0;
-            }
+        def __init__(self):
+            super(TestVisual, self).__init__()
+            self.vertex_shader = """
+                attribute vec2 a_position;
+                void main() {
+                    gl_Position = transform(a_position);
+                    gl_PointSize = 2.0;
+                }
             """
-        fragment = """
-            void main() {
-                gl_FragColor = vec4(1, 1, 1, 1);
-            }
-        """
-        gl_primitive_type = 'points'
-
-        def get_shaders(self):
-            return self.vertex, self.fragment
-
-        def get_transforms(self):
-            return [Scale(scale=(.1, .1)),
-                    Translate(translate=(-1, -1)),
-                    GPU(),
-                    Range(from_bounds=(-1, -1, 1, 1),
-                          to_bounds=(-1.5, -1.5, 1.5, 1.5),
-                          ),
-                    ]
-
-        def get_post_transforms(self):
-            return """
-                gl_Position.y += 1;
+            self.fragment_shader = """
+                void main() {
+                    gl_FragColor = vec4(1, 1, 1, 1);
+                }
             """
+            self.set_primitive_type('points')
+            self.transforms.add_on_cpu(Scale(scale=(.1, .1)))
+            self.transforms.add_on_cpu(Translate(translate=(-1, -1)))
+            self.transforms.add_on_cpu(Range(from_bounds=(-1, -1, 1, 1),
+                                             to_bounds=(-1.5, -1.5, 1.5, 1.5),
+                                             ))
+            self.insert_vert("""gl_Position.y += 1;""", 'after_transforms')
 
         def set_data(self):
             data = np.random.uniform(0, 20, (1000, 2)).astype(np.float32)
-            self.program['a_position'] = self.apply_cpu_transforms(data)
+            self.program['a_position'] = self.transforms.apply(data)
 
     class TestInteract(BaseInteract):
         def get_transforms(self):
@@ -179,11 +173,10 @@ def test_interact(qtbot, canvas):
 def test_transform_chain_complete():
     t = TransformChain([Scale(scale=.5),
                         Scale(scale=2.)])
-    t.add([Range(from_bounds=[-3, -3, 1, 1]),
-           GPU(),
-           Clip(),
-           Subplot(shape='u_shape', index='a_box_index'),
-           ])
+    t.add_on_cpu([Range(from_bounds=[-3, -3, 1, 1])])
+    t.add_on_gpu([Clip(),
+                  Subplot(shape='u_shape', index='a_box_index'),
+                  ])
 
     vs = dedent("""
     attribute vec2 a_position;

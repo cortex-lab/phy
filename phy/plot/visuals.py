@@ -11,7 +11,7 @@ import numpy as np
 from vispy.gloo import Texture2D
 
 from .base import BaseVisual
-from .transform import Range, GPU, NDC
+from .transform import Range, NDC
 from .utils import (_enable_depth_mask,
                     _tesselate_histogram,
                     _get_texture,
@@ -103,7 +103,7 @@ class ScatterVisual(BaseVisual):
         # Set the data bounds from the data.
         self.data_bounds = _get_data_bounds(data_bounds, pos)
 
-        pos_tr = self.apply_cpu_transforms(pos)
+        pos_tr = self.transforms.apply(pos)
         self.program['a_position'] = _get_pos_depth(pos_tr, depth)
         self.program['a_size'] = _get_array(size, (n, 1),
                                             self._default_marker_size)
@@ -158,7 +158,7 @@ class PlotVisual(BaseVisual):
         self.data_bounds = _get_data_bounds(data_bounds, pos)
 
         # Set the transformed position.
-        pos_tr = self.apply_cpu_transforms(pos)
+        pos_tr = self.transforms.apply(pos)
 
         # Depth.
         depth = _get_array(depth, (n_signals,), 0)
@@ -212,7 +212,7 @@ class HistogramVisual(BaseVisual):
 
         # Set the transformed position.
         pos = np.vstack(_tesselate_histogram(row) for row in hist)
-        pos_tr = self.apply_cpu_transforms(pos)
+        pos_tr = self.transforms.apply(pos)
         pos_tr = np.asarray(pos_tr, dtype=np.float32)
         assert pos_tr.shape == (n, 2)
         self.program['a_position'] = pos_tr
@@ -263,7 +263,7 @@ class BoxVisual(BaseVisual):
                         [x1, y0],
                         [x1, y0],
                         [x0, y0]], dtype=np.float32)
-        self.program['a_position'] = self.apply_cpu_transforms(arr)
+        self.program['a_position'] = self.transforms.apply(arr)
 
         # Set the color
         self.program['u_color'] = _get_color(color, self._default_color)
@@ -280,7 +280,7 @@ class AxesVisual(BaseVisual):
         arr += [[bounds[0], y, bounds[2], y] for y in ys]
         arr = np.hstack(arr or [[]]).astype(np.float32)
         arr = arr.reshape((-1, 2)).astype(np.float32)
-        position = self.apply_cpu_transforms(arr)
+        position = self.transforms.apply(arr)
         self.program['a_position'] = position
 
         # Set the color
