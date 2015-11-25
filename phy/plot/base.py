@@ -180,6 +180,10 @@ class GLSLInserter(object):
                           for key in self._to_insert})
         return _insert_glsl(vertex, fragment, to_insert)
 
+    def __add__(self, inserter):
+        self._to_insert.update(inserter._to_insert)
+        return self
+
 
 #------------------------------------------------------------------------------
 # Base canvas
@@ -190,6 +194,7 @@ class BaseCanvas(Canvas):
     def __init__(self, *args, **kwargs):
         super(BaseCanvas, self).__init__(*args, **kwargs)
         self.transforms = TransformChain()
+        self.inserter = GLSLInserter()
         self.visuals = []
 
     def add_visual(self, visual):
@@ -206,6 +211,8 @@ class BaseCanvas(Canvas):
         inserter.add_transform_chain(visual.transforms)
         # Then, add the canvas' transforms.
         inserter.add_transform_chain(self.transforms)
+        # Also, add the canvas' inserter.
+        inserter += self.inserter
         # Now, we insert the transforms GLSL into the shaders.
         vs, fs = visual.vertex_shader, visual.fragment_shader
         vs, fs = inserter.insert_into_shaders(vs, fs)

@@ -38,9 +38,6 @@ DEFAULT_COLOR = (0.03, 0.57, 0.98, .75)
 #------------------------------------------------------------------------------
 
 class ScatterVisual(BaseVisual):
-    shader_name = 'scatter'
-    gl_primitive_type = 'points'
-
     _default_marker_size = 10.
     _default_marker = 'disc'
     _default_color = DEFAULT_COLOR
@@ -79,14 +76,11 @@ class ScatterVisual(BaseVisual):
         # Enable transparency.
         _enable_depth_mask()
 
-    def get_shaders(self):
-        v, f = super(ScatterVisual, self).get_shaders()
-        # Replace the marker type in the shader.
-        f = f.replace('%MARKER', self.marker)
-        return v, f
-
-    def get_transforms(self):
-        return [Range(from_bounds=self.data_bounds), GPU()]
+        self.set_shader('scatter')
+        self.fragment_shader = self.fragment_shader.replace('%MARKER',
+                                                            self.marker)
+        self.set_primitive_type('points')
+        self.transforms.add_on_cpu(Range(from_bounds=self.data_bounds))
 
     def set_data(self,
                  pos=None,
