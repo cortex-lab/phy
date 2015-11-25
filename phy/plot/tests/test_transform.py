@@ -196,12 +196,17 @@ def test_transform_chain_two(array):
 def test_transform_chain_complete(array):
     t = TransformChain([Scale(scale=.5),
                         Scale(scale=2.)])
-    t.add_on_cpu([Range(from_bounds=[-3, -3, 1, 1])])
-    t.add_on_gpu([Clip(),
-                          Subplot(shape='u_shape', index='a_box_index'),
-                          ])
+    t.add_on_cpu(Range(from_bounds=[-3, -3, 1, 1]))
+    t.add_on_gpu(Clip())
+    t.add_on_gpu([Subplot(shape='u_shape', index='a_box_index')])
 
     assert len(t.cpu_transforms) == 3
     assert len(t.gpu_transforms) == 2
 
     ae(t.apply(array), [[0, .5], [1, 1.5]])
+
+
+def test_transform_chain_add():
+    tc = TransformChain([Scale(scale=.5)])
+    tc += TransformChain([Scale(scale=2)])
+    ae(tc.apply([3]), [[3]])
