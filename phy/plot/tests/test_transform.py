@@ -196,8 +196,8 @@ def test_transform_chain_two(array):
 def test_transform_chain_complete(array):
     t = TransformChain([Scale(scale=.5),
                         Scale(scale=2.)])
-    t.add_cpu_transforms([Range(from_bounds=[-3, -3, 1, 1])])
-    t.add_gpu_transforms([Clip(),
+    t.add_on_cpu([Range(from_bounds=[-3, -3, 1, 1])])
+    t.add_on_gpu([Clip(),
                           Subplot(shape='u_shape', index='a_box_index'),
                           ])
 
