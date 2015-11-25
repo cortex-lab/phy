@@ -12,7 +12,6 @@ import math
 import numpy as np
 from vispy.gloo import Texture2D
 
-from .base import BaseInteract
 from .transform import Scale, Range, Subplot, Clip, NDC
 from .utils import _get_texture, _get_boxes, _get_box_pos_size
 
@@ -21,7 +20,7 @@ from .utils import _get_texture, _get_boxes, _get_box_pos_size
 # Grid interact
 #------------------------------------------------------------------------------
 
-class Grid(BaseInteract):
+class Grid(object):
     """Grid interact.
 
     NOTE: to be used in a grid, a visual must define `a_box_index`
@@ -38,7 +37,6 @@ class Grid(BaseInteract):
     """
 
     def __init__(self, shape, box_var=None):
-        super(Grid, self).__init__()
         self._zoom = 1.
 
         # Name of the variable with the box index.
@@ -84,7 +82,6 @@ class Grid(BaseInteract):
 
     def on_key_press(self, event):
         """Pan and zoom with the keyboard."""
-        super(Grid, self).on_key_press(event)
         key = event.key
 
         # Zoom.
@@ -103,7 +100,7 @@ class Grid(BaseInteract):
 # Boxed interact
 #------------------------------------------------------------------------------
 
-class Boxed(BaseInteract):
+class Boxed(object):
     """Boxed interact.
 
     NOTE: to be used in a boxed, a visual must define `a_box_index`
@@ -129,7 +126,6 @@ class Boxed(BaseInteract):
                  box_pos=None,
                  box_size=None,
                  box_var=None):
-        super(Boxed, self).__init__()
         self._key_pressed = None
 
         # Name of the variable with the box index.

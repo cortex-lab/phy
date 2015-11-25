@@ -106,8 +106,6 @@ class ScatterVisual(BaseVisual):
 
 
 class PlotVisual(BaseVisual):
-    shader_name = 'plot'
-    gl_primitive_type = 'line_strip'
     _default_color = DEFAULT_COLOR
 
     def __init__(self, n_samples=None):
@@ -116,10 +114,9 @@ class PlotVisual(BaseVisual):
         self.n_samples = n_samples
         _enable_depth_mask()
 
-    def get_transforms(self):
-        return [Range(from_bounds=self.data_bounds),
-                GPU(),
-                ]
+        self.set_shader('plot')
+        self.set_primitive_type('line_strip')
+        self.transforms.add_on_cpu(Range(from_bounds=self.data_bounds))
 
     def set_data(self,
                  x=None,
@@ -172,8 +169,6 @@ class PlotVisual(BaseVisual):
 
 
 class HistogramVisual(BaseVisual):
-    shader_name = 'histogram'
-    gl_primitive_type = 'triangles'
     _default_color = DEFAULT_COLOR
 
     def __init__(self):
@@ -181,13 +176,14 @@ class HistogramVisual(BaseVisual):
         self.n_bins = 0
         self.hist_max = 1
 
-    def get_transforms(self):
-        return [Range(from_bounds=[0, 0, self.n_bins, self.hist_max],
-                      to_bounds=[0, 0, 1, 1]),
-                GPU(),
-                Range(from_bounds='hist_bounds',   # (0, 0, 1, v)
-                      to_bounds=NDC),
-                ]
+        self.set_shader('histogram')
+        self.set_primitive_type('triangles')
+        self.transforms.add_on_cpu(Range(from_bounds=[0, 0, self.n_bins,
+                                                      self.hist_max],
+                                         to_bounds=[0, 0, 1, 1]))
+        # (0, 0, 1, v)
+        self.transforms.add_on_gpu(Range(from_bounds='hist_bounds',
+                                         to_bounds=NDC))
 
     def set_data(self,
                  hist=None,
@@ -231,20 +227,22 @@ class HistogramVisual(BaseVisual):
 
 
 class TextVisual(BaseVisual):
-    shader_name = 'text'
-    gl_primitive_type = 'points'
-
-    def get_transforms(self):
-        pass
+    def __init__(self):
+        super(TextVisual, self).__init__()
+        self.set_shader('text')
+        self.set_primitive_type('points')
 
     def set_data(self):
         pass
 
 
 class BoxVisual(BaseVisual):
-    shader_name = 'simple'
-    gl_primitive_type = 'lines'
     _default_color = (.35, .35, .35, 1.)
+
+    def __init__(self):
+        super(BoxVisual, self).__init__()
+        self.set_shader('simple')
+        self.set_primitive_type('lines')
 
     def set_data(self, bounds=NDC, color=None):
         # Set the position.
@@ -264,9 +262,12 @@ class BoxVisual(BaseVisual):
 
 
 class AxesVisual(BaseVisual):
-    shader_name = 'simple'
-    gl_primitive_type = 'lines'
     _default_color = (.2, .2, .2, 1.)
+
+    def __init__(self):
+        super(AxesVisual, self).__init__()
+        self.set_shader('simple')
+        self.set_primitive_type('lines')
 
     def set_data(self, xs=(), ys=(), bounds=NDC, color=None):
         # Set the position.
