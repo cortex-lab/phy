@@ -11,7 +11,6 @@ import math
 
 import numpy as np
 
-from .base import BaseInteract
 from .transform import Translate, Scale, pixels_to_ndc
 from phy.utils._types import _as_array
 
@@ -20,7 +19,7 @@ from phy.utils._types import _as_array
 # PanZoom class
 #------------------------------------------------------------------------------
 
-class PanZoom(BaseInteract):
+class PanZoom(object):
     """Pan and zoom interact.
 
     To use it:
@@ -58,8 +57,6 @@ class PanZoom(BaseInteract):
                  pan_var_name='u_pan',
                  zoom_var_name='u_zoom',
                  ):
-        super(PanZoom, self).__init__()
-
         if constrain_bounds:
             assert xmin is None
             assert ymin is None
@@ -89,13 +86,8 @@ class PanZoom(BaseInteract):
         self._zoom_to_pointer = True
         self._canvas_aspect = np.ones(2)
 
-    def get_shader_declarations(self):
-        return ('uniform vec2 {};\n'.format(self.pan_var_name) +
-                'uniform vec2 {};\n'.format(self.zoom_var_name)), ''
-
-    def get_transforms(self):
-        return [Translate(translate=self.pan_var_name),
-                Scale(scale=self.zoom_var_name)]
+        # Will be set when attached to a canvas.
+        self.canvas = None
 
     def update_program(self, program):
         zoom = self._zoom_aspect()
@@ -338,14 +330,12 @@ class PanZoom(BaseInteract):
 
     def on_resize(self, event):
         """Resize event."""
-        super(PanZoom, self).on_resize(event)
         self._set_canvas_aspect()
         # Update zoom level
         self.zoom = self._zoom
 
     def on_mouse_move(self, event):
         """Pan and zoom with the mouse."""
-        super(PanZoom, self).on_mouse_move(event)
         if event.modifiers:
             return
         if event.is_dragging:
@@ -361,7 +351,6 @@ class PanZoom(BaseInteract):
 
     def on_mouse_wheel(self, event):
         """Zoom with the mouse wheel."""
-        super(PanZoom, self).on_mouse_wheel(event)
         if event.modifiers:
             return
         dx = np.sign(event.delta[1]) * self._wheel_coeff
@@ -371,8 +360,6 @@ class PanZoom(BaseInteract):
 
     def on_key_press(self, event):
         """Pan and zoom with the keyboard."""
-        super(PanZoom, self).on_key_press(event)
-
         # Zooming with the keyboard.
         key = event.key
         if event.modifiers:
@@ -393,7 +380,32 @@ class PanZoom(BaseInteract):
     # Canvas methods
     # -------------------------------------------------------------------------
 
+    @property
+    def size(self):
+        if self.canvas:
+            return self.canvas.size
+
     def attach(self, canvas):
         """Attach this interact to a canvas."""
-        super(PanZoom, self).attach(canvas)
+        self.canvas = canvas
+        canvas.panzoom = self
+
+        canvas.transforms.add_on_gpu([Translate(translate=self.pan_var_name),
+                                      Scale(scale=self.zoom_var_name)])
+        # Add the variable declarations.
+        vs = ('uniform vec2 {};\n'.format(self.pan_var_name) +
+              'uniform vec2 {};\n'.format(self.zoom_var_name))
+        canvas.inserter.insert_vert(vs, 'header')
+
+        canvas.connect(self.on_resize)
+        canvas.connect(self.on_mouse_move)
+        canvas.connect(self.on_mouse_wheel)
+        canvas.connect(self.on_key_press)
+
         self._set_canvas_aspect()
+
+    def update(self):
+        if not self.canvas:
+            return
+        for visual in self.canvas.visuals:
+            self.update_program(visual.program)

@@ -19,7 +19,7 @@ from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
 #------------------------------------------------------------------------------
 
 def _test_visual(qtbot, c, v, stop=False, **kwargs):
-    v.attach(c)
+    c.add_visual(v)
     v.set_data(**kwargs)
     c.show()
     qtbot.waitForWindowShown(c.native)
@@ -43,7 +43,7 @@ def test_scatter_markers(qtbot, canvas_pz):
     pos = .2 * np.random.randn(n, 2)
 
     v = ScatterVisual(marker='vbar')
-    v.attach(c)
+    c.add_visual(v)
     v.set_data(pos=pos)
 
     c.show()

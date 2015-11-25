@@ -12,8 +12,8 @@ import os.path as op
 
 from vispy import config
 
-from .interact import Grid, Stacked, Boxed
-from .plot import GridView, BoxedView, StackedView  # noqa
+# from .interact import Grid, Stacked, Boxed
+# from .plot import GridView, BoxedView, StackedView  # noqa
 from .transform import Translate, Scale, Range, Subplot, NDC
 from .panzoom import PanZoom
 from.visuals import _get_linear_x

@@ -21,8 +21,10 @@ from ..panzoom import PanZoom
 #------------------------------------------------------------------------------
 
 class MyTestVisual(BaseVisual):
-    shader_name = 'simple'
-    gl_primitive_type = 'lines'
+    def __init__(self):
+        super(MyTestVisual, self).__init__()
+        self.set_shader('simple')
+        self.set_primitive_type('lines')
 
     def set_data(self):
         self.program['a_position'] = [[-1, 0], [1, 0]]
@@ -33,13 +35,13 @@ class MyTestVisual(BaseVisual):
 def panzoom(qtbot, canvas_pz):
     c = canvas_pz
     visual = MyTestVisual()
-    visual.attach(c)
+    c.add_visual(visual)
     visual.set_data()
 
     c.show()
     qtbot.waitForWindowShown(c.native)
 
-    yield c.interacts[0]
+    yield c.panzoom
 
 
 #------------------------------------------------------------------------------
@@ -49,7 +51,7 @@ def panzoom(qtbot, canvas_pz):
 def test_panzoom_basic_attrs():
     pz = PanZoom()
 
-    assert not pz.is_attached()
+    # assert not pz.is_attached()
 
     # Aspect.
     assert pz.aspect == 1.
