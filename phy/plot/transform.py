@@ -225,43 +225,26 @@ class Subplot(Range):
 # Transform chains
 #------------------------------------------------------------------------------
 
-class GPU(object):
-    """Used to specify that the next transforms in the chain happen on
-    the GPU."""
-    pass
-
-
 class TransformChain(object):
     """A linear sequence of transforms that happen on the CPU and GPU."""
-    def __init__(self, transforms=None):
+    def __init__(self, cpu_transforms=None, gpu_transforms=None):
         self.transformed_var_name = None
-        self.transforms = []
-        self.add(transforms)
+        self.cpu_transforms = []
+        self.gpu_transforms = []
+        self.add_cpu_transforms(cpu_transforms or [])
+        self.add_gpu_transforms(gpu_transforms or [])
 
-    def _index_of_gpu(self):
-        classes = [t.__class__.__name__ for t in self.transforms]
-        return classes.index('GPU') if 'GPU' in classes else None
-
-    @property
-    def cpu_transforms(self):
-        """All transforms until `GPU()`."""
-        i = self._index_of_gpu()
-        return self.transforms[:i] if i is not None else self.transforms
-
-    @property
-    def gpu_transforms(self):
-        """All transforms after `GPU()`."""
-        i = self._index_of_gpu()
-        return self.transforms[i + 1:] if i is not None else []
-
-    def add(self, transforms):
+    def add_cpu_transforms(self, transforms):
         """Add some transforms."""
-        for t in transforms:
-            self.transforms.append(t)
+        self.cpu_transforms.extend(transforms or [])
+
+    def add_gpu_transforms(self, transforms):
+        """Add some transforms."""
+        self.gpu_transforms.extend(transforms or [])
 
     def get(self, class_name):
         """Get a transform in the chain from its name."""
-        for transform in self.transforms:
+        for transform in self.cpu_transforms + self.gpu_transforms:
             if transform.__class__.__name__ == class_name:
                 return transform
 
