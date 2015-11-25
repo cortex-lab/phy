@@ -231,14 +231,14 @@ class TransformChain(object):
         self.transformed_var_name = None
         self.cpu_transforms = []
         self.gpu_transforms = []
-        self.add_cpu_transforms(cpu_transforms or [])
-        self.add_gpu_transforms(gpu_transforms or [])
+        self.add_on_cpu(cpu_transforms or [])
+        self.add_on_gpu(gpu_transforms or [])
 
-    def add_cpu_transforms(self, transforms):
+    def add_on_cpu(self, transforms):
         """Add some transforms."""
         self.cpu_transforms.extend(transforms or [])
 
-    def add_gpu_transforms(self, transforms):
+    def add_on_gpu(self, transforms):
         """Add some transforms."""
         self.gpu_transforms.extend(transforms or [])
 
