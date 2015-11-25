@@ -409,3 +409,4 @@ class PanZoom(object):
             return
         for visual in self.canvas.visuals:
             self.update_program(visual.program)
+        self.canvas.update()
