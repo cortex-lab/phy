@@ -51,8 +51,6 @@ def panzoom(qtbot, canvas_pz):
 def test_panzoom_basic_attrs():
     pz = PanZoom()
 
-    # assert not pz.is_attached()
-
     # Aspect.
     assert pz.aspect == 1.
     pz.aspect = 2.
@@ -68,6 +66,19 @@ def test_panzoom_basic_attrs():
         assert getattr(pz, name) == v
         setattr(pz, name, v * 2)
         assert getattr(pz, name) == v * 2
+
+
+def test_panzoom_basic_constrain():
+    pz = PanZoom(constrain_bounds=(-1, -1, 1, 1))
+
+    # Aspect.
+    assert pz.aspect == 1.
+    pz.aspect = 2.
+    assert pz.aspect == 2.
+
+    # Constraints.
+    assert pz.xmin == pz.ymin == -1
+    assert pz.xmax == pz.ymax == +1
 
 
 def test_panzoom_basic_pan_zoom():

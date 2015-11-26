@@ -390,8 +390,8 @@ class PanZoom(object):
         self.canvas = canvas
         canvas.panzoom = self
 
-        canvas.transforms.add_on_gpu([Translate(translate=self.pan_var_name),
-                                      Scale(scale=self.zoom_var_name)])
+        canvas.transforms.add_on_gpu([Translate(self.pan_var_name),
+                                      Scale(self.zoom_var_name)])
         # Add the variable declarations.
         vs = ('uniform vec2 {};\n'.format(self.pan_var_name) +
               'uniform vec2 {};\n'.format(self.zoom_var_name))
