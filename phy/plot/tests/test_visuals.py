@@ -95,7 +95,8 @@ def test_plot_1(qtbot, canvas_pz):
 def test_plot_2(qtbot, canvas_pz):
 
     n_signals = 50
-    y = 20 * np.random.randn(n_signals, 10)
+    n_samples = 10
+    y = 20 * np.random.randn(n_signals, n_samples)
 
     # Signal colors.
     c = np.random.uniform(.5, 1, size=(n_signals, 4))
@@ -104,7 +105,7 @@ def test_plot_2(qtbot, canvas_pz):
     # Depth.
     depth = np.linspace(0., -1., n_signals)
 
-    _test_visual(qtbot, canvas_pz, PlotVisual(),
+    _test_visual(qtbot, canvas_pz, PlotVisual(n_samples=n_samples),
                  y=y, depth=depth,
                  data_bounds=[-1, -50, 1, 50],
                  plot_colors=c)
