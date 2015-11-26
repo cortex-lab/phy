@@ -80,7 +80,7 @@ class ScatterVisual(BaseVisual):
         self.fragment_shader = self.fragment_shader.replace('%MARKER',
                                                             self.marker)
         self.set_primitive_type('points')
-        self.transforms.add_on_cpu(Range(from_bounds=self.data_bounds))
+        self.transforms.add_on_cpu(Range(self.data_bounds))
 
     def set_data(self,
                  pos=None,
@@ -110,13 +110,14 @@ class PlotVisual(BaseVisual):
 
     def __init__(self, n_samples=None):
         super(PlotVisual, self).__init__()
-        self.data_bounds = NDC
         self.n_samples = n_samples
         _enable_depth_mask()
 
         self.set_shader('plot')
         self.set_primitive_type('line_strip')
-        self.transforms.add_on_cpu(Range(from_bounds=self.data_bounds))
+
+        self.data_range = Range(NDC)
+        self.transforms.add_on_cpu(self.data_range)
 
     def set_data(self,
                  x=None,
@@ -146,7 +147,9 @@ class PlotVisual(BaseVisual):
         pos[:, 1] = y.ravel()
         pos = _check_pos_2D(pos)
 
-        self.data_bounds = _get_data_bounds(data_bounds, pos)
+        # Update the data range using the specified data_bounds and the data.
+        # NOTE: this must be called *before* transforms.apply().
+        self.data_range.from_bounds = _get_data_bounds(data_bounds, pos)
 
         # Set the transformed position.
         pos_tr = self.transforms.apply(pos)
@@ -174,16 +177,15 @@ class HistogramVisual(BaseVisual):
     def __init__(self):
         super(HistogramVisual, self).__init__()
         self.n_bins = 0
-        self.hist_max = 1
 
         self.set_shader('histogram')
         self.set_primitive_type('triangles')
-        self.transforms.add_on_cpu(Range(from_bounds=[0, 0, self.n_bins,
-                                                      self.hist_max],
-                                         to_bounds=[0, 0, 1, 1]))
+
+        self.data_range = Range([0, 0, self.n_bins, 1],
+                                [0, 0, 1, 1])
+        self.transforms.add_on_cpu(self.data_range)
         # (0, 0, 1, v)
-        self.transforms.add_on_gpu(Range(from_bounds='hist_bounds',
-                                         to_bounds=NDC))
+        self.transforms.add_on_gpu(Range('hist_bounds', NDC))
 
     def set_data(self,
                  hist=None,
@@ -198,7 +200,8 @@ class HistogramVisual(BaseVisual):
 
         # NOTE: this must be set *before* `apply_cpu_transforms` such
         # that the histogram is correctly normalized.
-        self.hist_max = _get_hist_max(hist)
+        hist_max = _get_hist_max(hist)
+        self.data_range.from_bounds = [0, 0, self.n_bins, hist_max]
 
         # Set the transformed position.
         pos = np.vstack(_tesselate_histogram(row) for row in hist)
@@ -219,7 +222,7 @@ class HistogramVisual(BaseVisual):
         assert ylim is None or len(ylim) == n_hists
         hist_bounds = np.c_[np.zeros((n_hists, 2)),
                             np.ones((n_hists, 1)),
-                            ylim / self.hist_max] if ylim is not None else None
+                            ylim / hist_max] if ylim is not None else None
         hist_bounds = _get_texture(hist_bounds, [0, 0, 1, 1],
                                    n_hists, [0, 10])
         self.program['u_hist_bounds'] = Texture2D(hist_bounds)
@@ -227,7 +230,8 @@ class HistogramVisual(BaseVisual):
 
 
 class TextVisual(BaseVisual):
-    def __init__(self):
+    def __init__(self):  # pragma: no cover
+        # TODO: this text visual
         super(TextVisual, self).__init__()
         self.set_shader('text')
         self.set_primitive_type('points')
