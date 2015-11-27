@@ -12,6 +12,7 @@ import math
 import numpy as np
 from vispy.gloo import Texture2D
 
+from .base import BaseInteract
 from .transform import Scale, Range, Subplot, Clip, NDC
 from .utils import _get_texture, _get_boxes, _get_box_pos_size
 
@@ -20,7 +21,7 @@ from .utils import _get_texture, _get_boxes, _get_box_pos_size
 # Grid interact
 #------------------------------------------------------------------------------
 
-class Grid(object):
+class Grid(BaseInteract):
     """Grid interact.
 
     NOTE: to be used in a grid, a visual must define `a_box_index`
@@ -48,20 +49,23 @@ class Grid(object):
             assert self.shape[0] >= 1
             assert self.shape[1] >= 1
 
-    def get_shader_declarations(self):
-        return ('attribute vec2 a_box_index;\n'
-                'uniform float u_grid_zoom;\n', '')
-
-    def get_transforms(self):
-        # Define the grid transform and clipping.
+    def attach(self, canvas):
+        super(Grid, self).attach(canvas)
         m = 1. - .05  # Margin.
-        return [Scale(scale='u_grid_zoom'),
-                Scale(scale=(m, m)),
-                Clip(bounds=[-m, -m, m, m]),
-                Subplot(shape=self.shape, index='a_box_index'),
-                ]
+        canvas.transforms.add_on_gpu([Scale('u_grid_zoom'),
+                                      Scale((m, m)),
+                                      Clip([-m, -m, m, m]),
+                                      Subplot(self.shape, 'a_box_index'),
+                                      ])
+        canvas.inserter.insert_vert("""
+                                    attribute vec2 a_box_index;
+                                    //uniform float u_grid_shape;
+                                    uniform float u_grid_zoom;
+                                    """, 'header')
+        canvas.connect(self.on_key_press)
 
     def update_program(self, program):
+        # program['u_grid_shape'] = self.shape
         program['u_grid_zoom'] = self._zoom
         # Only set the default box index if necessary.
         try:
@@ -100,7 +104,7 @@ class Grid(object):
 # Boxed interact
 #------------------------------------------------------------------------------
 
-class Boxed(object):
+class Boxed(BaseInteract):
     """Boxed interact.
 
     NOTE: to be used in a boxed, a visual must define `a_box_index`
@@ -143,25 +147,23 @@ class Boxed(object):
 
         self.n_boxes = len(self._box_bounds)
 
-    def get_shader_declarations(self):
-        return ('#include "utils.glsl"\n\n'
-                'attribute float {};\n'.format(self.box_var) +
-                'uniform sampler2D u_box_bounds;\n'
-                'uniform float n_boxes;', '')
-
-    def get_pre_transforms(self):
-        return """
+    def attach(self, canvas):
+        super(Boxed, self).attach(canvas)
+        canvas.transforms.add_on_gpu([Range(NDC, 'box_bounds')])
+        canvas.inserter.insert_vert("""
+            #include "utils.glsl"
+            attribute float {};
+            uniform sampler2D u_box_bounds;
+            uniform float n_boxes;""".format(self.box_var), 'header')
+        canvas.inserter.insert_vert("""
             // Fetch the box bounds for the current box (`box_var`).
             vec4 box_bounds = fetch_texture({},
                                             u_box_bounds,
                                             n_boxes);
             box_bounds = (2 * box_bounds - 1);  // See hack in Python.
-            """.format(self.box_var)
-
-    def get_transforms(self):
-        return [Range(from_bounds=NDC,
-                      to_bounds='box_bounds'),
-                ]
+            """.format(self.box_var), 'before_transforms')
+        canvas.connect(self.on_key_press)
+        canvas.connect(self.on_key_release)
 
     def update_program(self, program):
         # Signal bounds (positions).

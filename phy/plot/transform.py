@@ -181,7 +181,7 @@ class Subplot(Range):
         self.shape = shape
         self.index = index
         self.from_bounds = NDC
-        if isinstance(self.shape, tuple):
+        if isinstance(self.shape, tuple) and isinstance(self.index, tuple):
             self.to_bounds = subplot_bounds(shape=self.shape, index=self.index)
 
     def glsl(self, var):
