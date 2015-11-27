@@ -25,22 +25,21 @@ from ..transform import NDC
 #------------------------------------------------------------------------------
 
 class MyTestVisual(BaseVisual):
-    vertex = """
-        attribute vec2 a_position;
-        void main() {
-            gl_Position = transform(a_position);
-            gl_PointSize = 2.;
-        }
+    def __init__(self):
+        super(MyTestVisual, self).__init__()
+        self.vertex_shader = """
+            attribute vec2 a_position;
+            void main() {
+                gl_Position = transform(a_position);
+                gl_PointSize = 2.;
+            }
         """
-    fragment = """
-        void main() {
-            gl_FragColor = vec4(1, 1, 1, 1);
-        }
-    """
-    gl_primitive_type = 'points'
-
-    def get_shaders(self):
-        return self.vertex, self.fragment
+        self.fragment_shader = """
+            void main() {
+                gl_FragColor = vec4(1, 1, 1, 1);
+            }
+        """
+        self.set_primitive_type('points')
 
     def set_data(self):
         n = 1000
@@ -62,7 +61,7 @@ def _create_visual(qtbot, canvas, interact, box_index):
     PanZoom(aspect=None, constrain_bounds=NDC).attach(c)
 
     visual = MyTestVisual()
-    visual.attach(c)
+    c.add_visual(visual)
     visual.set_data()
 
     visual.program['a_box_index'] = box_index.astype(np.float32)
@@ -117,8 +116,10 @@ def test_grid_2(qtbot, canvas):
     box_index = np.repeat(box_index, n, axis=0)
 
     class MyGrid(Grid):
-        def get_pre_transforms(self):
-            return 'vec2 u_shape = vec2(3, 3);'
+        def attach(self, canvas):
+            super(MyGrid, self).attach(canvas)
+            canvas.inserter.insert_vert('vec2 u_shape = vec2(3, 3);',
+                                        'before_transforms')
 
     grid = MyGrid('u_shape')
     _create_visual(qtbot, canvas, grid, box_index)

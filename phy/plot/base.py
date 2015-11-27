@@ -13,6 +13,7 @@ import re
 
 from vispy import gloo
 from vispy.app import Canvas
+from vispy.util.event import Event
 
 from .transform import TransformChain, Clip
 from .utils import _load_shader
@@ -189,6 +190,12 @@ class GLSLInserter(object):
 # Base canvas
 #------------------------------------------------------------------------------
 
+class VisualEvent(Event):
+    def __init__(self, type, visual=None):
+        super(VisualEvent, self).__init__(type)
+        self.visual = visual
+
+
 class BaseCanvas(Canvas):
     """A blank VisPy canvas with a custom event system that keeps the order."""
     def __init__(self, *args, **kwargs):
@@ -196,6 +203,7 @@ class BaseCanvas(Canvas):
         self.transforms = TransformChain()
         self.inserter = GLSLInserter()
         self.visuals = []
+        self.events.add(visual_added=VisualEvent)
 
     def add_visual(self, visual):
         """Add a visual to the canvas, and build its program by the same
@@ -222,6 +230,7 @@ class BaseCanvas(Canvas):
         logger.log(5, "Fragment shader: %s", fs)
         # Register the visual in the list of visuals in the canvas.
         self.visuals.append(visual)
+        self.events.visual_added(visual=visual)
 
     def on_resize(self, event):
         """Resize the OpenGL context."""
@@ -231,3 +240,28 @@ class BaseCanvas(Canvas):
         gloo.clear()
         for visual in self.visuals:
             visual.on_draw()
+
+
+#------------------------------------------------------------------------------
+# Base interact
+#------------------------------------------------------------------------------
+
+class BaseInteract(object):
+    def attach(self, canvas):
+        """Attach this interact to a canvas."""
+        self.canvas = canvas
+        canvas.panzoom = self
+
+        @canvas.connect
+        def on_visual_added(e):
+            self.update_program(e.visual.program)
+
+    def update_program(self, program):
+        pass
+
+    def update(self):
+        if not self.canvas:
+            return
+        for visual in self.canvas.visuals:
+            self.update_program(visual.program)
+        self.canvas.update()

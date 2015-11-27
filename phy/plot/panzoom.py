@@ -11,6 +11,7 @@ import math
 
 import numpy as np
 
+from .base import BaseInteract
 from .transform import Translate, Scale, pixels_to_ndc
 from phy.utils._types import _as_array
 
@@ -19,7 +20,7 @@ from phy.utils._types import _as_array
 # PanZoom class
 #------------------------------------------------------------------------------
 
-class PanZoom(object):
+class PanZoom(BaseInteract):
     """Pan and zoom interact.
 
     To use it:
@@ -382,8 +383,7 @@ class PanZoom(object):
 
     def attach(self, canvas):
         """Attach this interact to a canvas."""
-        self.canvas = canvas
-        canvas.panzoom = self
+        super(PanZoom, self).attach(canvas)
 
         canvas.transforms.add_on_gpu([Translate(self.pan_var_name),
                                       Scale(self.zoom_var_name)])
@@ -400,13 +400,5 @@ class PanZoom(object):
         self._set_canvas_aspect()
 
     def update_program(self, program):
-        zoom = self._zoom_aspect()
         program[self.pan_var_name] = self._pan
-        program[self.zoom_var_name] = zoom
-
-    def update(self):
-        if not self.canvas:
-            return
-        for visual in self.canvas.visuals:
-            self.update_program(visual.program)
-        self.canvas.update()
+        program[self.zoom_var_name] = self._zoom_aspect()
