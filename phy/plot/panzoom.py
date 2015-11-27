@@ -89,11 +89,6 @@ class PanZoom(object):
         # Will be set when attached to a canvas.
         self.canvas = None
 
-    def update_program(self, program):
-        zoom = self._zoom_aspect()
-        program[self.pan_var_name] = self._pan
-        program[self.zoom_var_name] = zoom
-
     # Various properties
     # -------------------------------------------------------------------------
 
@@ -403,6 +398,11 @@ class PanZoom(object):
         canvas.connect(self.on_key_press)
 
         self._set_canvas_aspect()
+
+    def update_program(self, program):
+        zoom = self._zoom_aspect()
+        program[self.pan_var_name] = self._pan
+        program[self.zoom_var_name] = zoom
 
     def update(self):
         if not self.canvas:
