@@ -182,20 +182,18 @@ def _get_data_bounds(data_bounds, pos):
     return data_bounds
 
 
-def _check_pos_2D(pos):
-    """Check position data before GPU uploading."""
-    assert pos is not None
-    pos = np.asarray(pos, dtype=np.float32)
-    assert pos.ndim == 2
-    return pos
+def _get_pos(x, y):
+    assert x is not None
+    assert y is not None
 
+    x = np.asarray(x, dtype=np.float32)
+    y = np.asarray(y, dtype=np.float32)
 
-def _get_pos_depth(pos_tr, depth):
-    """Prepare a (N, 3) position-depth array for GPU uploading."""
-    n = pos_tr.shape[0]
-    pos_tr = _get_array(pos_tr, (n, 2))
-    depth = _get_array(depth, (n, 1), 0)
-    return np.c_[pos_tr, depth]
+    # Validate the position.
+    assert x.ndim == y.ndim == 1
+    assert x.shape == y.shape
+
+    return x, y
 
 
 def _get_hist_max(hist):

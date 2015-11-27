@@ -17,13 +17,13 @@ from .utils import (_enable_depth_mask,
                     _get_texture,
                     _get_array,
                     _get_data_bounds,
-                    _get_pos_depth,
-                    _check_pos_2D,
+                    _get_pos,
                     _get_index,
                     _get_linear_x,
                     _get_hist_max,
                     _get_color,
                     )
+from phy.utils import Bunch
 
 
 #------------------------------------------------------------------------------
@@ -65,8 +65,6 @@ class ScatterVisual(BaseVisual):
 
     def __init__(self, marker=None):
         super(ScatterVisual, self).__init__()
-        # Default bounds.
-        self.data_bounds = NDC
         self.n_points = None
 
         # Set the marker type.
@@ -80,37 +78,52 @@ class ScatterVisual(BaseVisual):
         self.fragment_shader = self.fragment_shader.replace('%MARKER',
                                                             self.marker)
         self.set_primitive_type('points')
-        self.transforms.add_on_cpu(Range(self.data_bounds))
+        self.data_range = Range(NDC)
+        self.transforms.add_on_cpu(self.data_range)
 
-    def set_data(self,
-                 pos=None,
-                 depth=None,
+    @staticmethod
+    def validate(x=None,
+                 y=None,
                  color=None,
-                 marker=None,
                  size=None,
+                 depth=None,
                  data_bounds=None,
                  ):
-        pos = _check_pos_2D(pos)
+        x, y = _get_pos(x, y)
+        pos = np.c_[x, y]
         n = pos.shape[0]
-        assert pos.shape == (n, 2)
 
-        # Set the data bounds from the data.
-        self.data_bounds = _get_data_bounds(data_bounds, pos)
+        # Validate the data.
+        color = _get_array(color, (n, 4), ScatterVisual._default_color)
+        size = _get_array(size, (n, 1), ScatterVisual._default_marker_size)
+        depth = _get_array(depth, (n, 1), 0)
+        data_bounds = _get_data_bounds(data_bounds, pos)
 
-        pos_tr = self.transforms.apply(pos)
-        self.program['a_position'] = _get_pos_depth(pos_tr, depth)
-        self.program['a_size'] = _get_array(size, (n, 1),
-                                            self._default_marker_size)
-        self.program['a_color'] = _get_array(color, (n, 4),
-                                             self._default_color)
+        return Bunch(pos=pos, color=color, size=size,
+                     depth=depth, data_bounds=data_bounds)
+
+    def set_data(self,
+                 x=None,
+                 y=None,
+                 color=None,
+                 size=None,
+                 depth=None,
+                 data_bounds=None,
+                 ):
+        data = self.validate(x=x, y=y, color=color, size=size, depth=depth,
+                             data_bounds=data_bounds)
+        self.data_range.from_bounds = data.data_bounds
+        pos_tr = self.transforms.apply(data.pos)
+        self.program['a_position'] = np.c_[pos_tr, data.depth]
+        self.program['a_size'] = data.size
+        self.program['a_color'] = data.color
 
 
 class PlotVisual(BaseVisual):
     _default_color = DEFAULT_COLOR
 
-    def __init__(self, n_samples=None):
+    def __init__(self):
         super(PlotVisual, self).__init__()
-        self.n_samples = n_samples
         _enable_depth_mask()
 
         self.set_shader('plot')
@@ -119,55 +132,64 @@ class PlotVisual(BaseVisual):
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
 
-    def set_data(self,
-                 x=None,
+    @staticmethod
+    def validate(x=None,
                  y=None,
+                 color=None,
                  depth=None,
                  data_bounds=None,
-                 plot_colors=None,
                  ):
 
-        # Default x coordinates.
         if x is None:
             assert y is not None
             x = _get_linear_x(*y.shape)
 
+        # Default x coordinates.
         assert x is not None
         assert y is not None
+        x = np.asarray(x, np.float32)
+        y = np.asarray(y, np.float32)
         assert x.ndim == 2
         assert x.shape == y.shape
         n_signals, n_samples = x.shape
-        if self.n_samples:
-            assert n_samples == self.n_samples
+
+        # Validate the data.
+        color = _get_array(color, (n_signals, 4), PlotVisual._default_color)
+        depth = _get_array(depth, (n_signals,), 0)
+
+        return Bunch(x=x, y=y,
+                     color=color, depth=depth,
+                     data_bounds=data_bounds)
+
+    def set_data(self,
+                 x=None,
+                 y=None,
+                 color=None,
+                 depth=None,
+                 data_bounds=None,
+                 ):
+        data = self.validate(x=x, y=y, color=color, depth=depth,
+                             data_bounds=data_bounds)
+        x, y = data.x, data.y
+
+        n_signals, n_samples = x.shape
         n = n_signals * n_samples
 
-        # Generate the (n, 2) pos array.
+        # Generate the position array.
         pos = np.empty((n, 2), dtype=np.float32)
         pos[:, 0] = x.ravel()
         pos[:, 1] = y.ravel()
-        pos = _check_pos_2D(pos)
-
-        # Update the data range using the specified data_bounds and the data.
-        # NOTE: this must be called *before* transforms.apply().
-        self.data_range.from_bounds = _get_data_bounds(data_bounds, pos)
-
-        # Set the transformed position.
+        self.data_range.from_bounds = _get_data_bounds(data.data_bounds, pos)
         pos_tr = self.transforms.apply(pos)
 
-        # Depth.
-        depth = _get_array(depth, (n_signals,), 0)
-        depth = np.repeat(depth, n_samples)
-        self.program['a_position'] = _get_pos_depth(pos_tr, depth)
+        depth = np.repeat(data.depth, n_samples)
 
-        # Generate the signal index.
+        self.program['a_position'] = np.c_[pos_tr, depth]
         self.program['a_signal_index'] = _get_index(n_signals, n_samples, n)
-
-        # Signal colors.
-        plot_colors = _get_texture(plot_colors, self._default_color,
-                                   n_signals, [0, 1])
-        self.program['u_plot_colors'] = Texture2D(plot_colors)
-
-        # Number of signals.
+        self.program['u_plot_colors'] = Texture2D(_get_texture(data.color,
+                                                  PlotVisual._default_color,
+                                                  n_signals,
+                                                  [0, 1]))
         self.program['n_signals'] = n_signals
 
 
@@ -176,37 +198,57 @@ class HistogramVisual(BaseVisual):
 
     def __init__(self):
         super(HistogramVisual, self).__init__()
-        self.n_bins = 0
 
         self.set_shader('histogram')
         self.set_primitive_type('triangles')
 
-        self.data_range = Range([0, 0, self.n_bins, 1],
+        self.data_range = Range([0, 0, 1, 1],
                                 [0, 0, 1, 1])
         self.transforms.add_on_cpu(self.data_range)
         # (0, 0, 1, v)
         self.transforms.add_on_gpu(Range('hist_bounds', NDC))
 
+    @staticmethod
+    def validate(hist=None,
+                 color=None,
+                 ylim=None,
+                 ):
+        assert hist is not None
+        hist = np.asarray(hist, np.float32)
+        if hist.ndim == 1:
+            hist = hist[None, :]
+        assert hist.ndim == 2
+        n_hists, n_bins = hist.shape
+
+        # Validate the data.
+        color = _get_array(color, (n_hists, 4), HistogramVisual._default_color)
+
+        return Bunch(hist=hist,
+                     ylim=ylim,
+                     color=color,
+                     )
+
     def set_data(self,
                  hist=None,
-                 ylim=None,
                  color=None,
+                 ylim=None,
                  ):
-        hist = _check_pos_2D(hist)
+
+        data = self.validate(hist=hist, color=color, ylim=ylim)
+        hist = data.hist
+
         n_hists, n_bins = hist.shape
         n = 6 * n_hists * n_bins
-        # Store n_bins for get_transforms().
-        self.n_bins = n_bins
 
         # NOTE: this must be set *before* `apply_cpu_transforms` such
         # that the histogram is correctly normalized.
         hist_max = _get_hist_max(hist)
-        self.data_range.from_bounds = [0, 0, self.n_bins, hist_max]
+        self.data_range.from_bounds = [0, 0, n_bins, hist_max]
 
         # Set the transformed position.
         pos = np.vstack(_tesselate_histogram(row) for row in hist)
+        pos = pos.astype(np.float32)
         pos_tr = self.transforms.apply(pos)
-        pos_tr = np.asarray(pos_tr, dtype=np.float32)
         assert pos_tr.shape == (n, 2)
         self.program['a_position'] = pos_tr
 
@@ -214,7 +256,7 @@ class HistogramVisual(BaseVisual):
         self.program['a_hist_index'] = _get_index(n_hists, n_bins * 6, n)
 
         # Hist colors.
-        self.program['u_color'] = _get_texture(color,
+        self.program['u_color'] = _get_texture(data.color,
                                                self._default_color,
                                                n_hists, [0, 1])
 

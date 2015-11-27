@@ -32,19 +32,19 @@ def _test_visual(qtbot, c, v, stop=False, **kwargs):
 
 #------------------------------------------------------------------------------
 def test_scatter_empty(qtbot, canvas):
-    pos = np.zeros((0, 2))
-    _test_visual(qtbot, canvas, ScatterVisual(), pos=pos)
+    _test_visual(qtbot, canvas, ScatterVisual(), x=np.zeros(0), y=np.zeros(0))
 
 
 def test_scatter_markers(qtbot, canvas_pz):
     c = canvas_pz
 
     n = 100
-    pos = .2 * np.random.randn(n, 2)
+    x = .2 * np.random.randn(n)
+    y = .2 * np.random.randn(n)
 
     v = ScatterVisual(marker='vbar')
     c.add_visual(v)
-    v.set_data(pos=pos)
+    v.set_data(x=x, y=y)
 
     c.show()
     qtbot.waitForWindowShown(c.native)
@@ -57,7 +57,8 @@ def test_scatter_custom(qtbot, canvas_pz):
     n = 100
 
     # Random position.
-    pos = .2 * np.random.randn(n, 2)
+    x = .2 * np.random.randn(n)
+    y = .2 * np.random.randn(n)
 
     # Random colors.
     c = np.random.uniform(.4, .7, size=(n, 4))
@@ -67,7 +68,9 @@ def test_scatter_custom(qtbot, canvas_pz):
     s = 5 + 20 * np.random.rand(n)
 
     _test_visual(qtbot, canvas_pz, ScatterVisual(),
-                 pos=pos, color=c, size=s)
+                 x=x, y=y, color=c, size=s)
+
+    # qtbot.stop()
 
 
 #------------------------------------------------------------------------------
@@ -105,10 +108,10 @@ def test_plot_2(qtbot, canvas_pz):
     # Depth.
     depth = np.linspace(0., -1., n_signals)
 
-    _test_visual(qtbot, canvas_pz, PlotVisual(n_samples=n_samples),
+    _test_visual(qtbot, canvas_pz, PlotVisual(),
                  y=y, depth=depth,
                  data_bounds=[-1, -50, 1, 50],
-                 plot_colors=c)
+                 color=c)
 
 
 #------------------------------------------------------------------------------
@@ -122,7 +125,7 @@ def test_histogram_empty(qtbot, canvas):
 
 
 def test_histogram_0(qtbot, canvas_pz):
-    hist = np.zeros((1, 10))
+    hist = np.zeros((10,))
     _test_visual(qtbot, canvas_pz, HistogramVisual(),
                  hist=hist)
 
