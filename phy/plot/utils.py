@@ -19,102 +19,8 @@ logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
-# Misc
+# Box positioning
 #------------------------------------------------------------------------------
-
-def _load_shader(filename):
-    """Load a shader file."""
-    curdir = op.dirname(op.realpath(__file__))
-    glsl_path = op.join(curdir, 'glsl')
-    path = op.join(glsl_path, filename)
-    with open(path, 'r') as f:
-        return f.read()
-
-
-def _tesselate_histogram(hist):
-    """
-
-    2/4  3
-     ____
-    |\   |
-    | \  |
-    |  \ |
-    |___\|
-
-    0   1/5
-
-    """
-    assert hist.ndim == 1
-    nsamples = len(hist)
-
-    x0 = np.arange(nsamples)
-
-    x = np.zeros(6 * nsamples)
-    y = np.zeros(6 * nsamples)
-
-    x[0::2] = np.repeat(x0, 3)
-    x[1::2] = x[0::2] + 1
-
-    y[2::6] = y[3::6] = y[4::6] = hist
-
-    return np.c_[x, y]
-
-
-def _enable_depth_mask():
-    gloo.set_state(clear_color='black',
-                   depth_test=True,
-                   depth_range=(0., 1.),
-                   # depth_mask='true',
-                   depth_func='lequal',
-                   blend=True,
-                   blend_func=('src_alpha', 'one_minus_src_alpha'))
-    gloo.set_clear_depth(1.0)
-
-
-def _get_texture(arr, default, n_items, from_bounds):
-    """Prepare data to be uploaded as a texture.
-
-    The from_bounds must be specified.
-
-    """
-    if not hasattr(default, '__len__'):  # pragma: no cover
-        default = [default]
-    n_cols = len(default)
-    if arr is None:
-        arr = np.tile(default, (n_items, 1))
-    assert arr.shape == (n_items, n_cols)
-    # Convert to 3D texture.
-    arr = arr[np.newaxis, ...].astype(np.float32)
-    assert arr.shape == (1, n_items, n_cols)
-    # NOTE: we need to cast the texture to [0., 1.] (float texture).
-    # This is easy as soon as we assume that the signal bounds are in
-    # [-1, 1].
-    assert len(from_bounds) == 2
-    m, M = map(float, from_bounds)
-    assert np.all(arr >= m)
-    assert np.all(arr <= M)
-    arr = (arr - m) / (M - m)
-    assert np.all(arr >= 0)
-    assert np.all(arr <= 1.)
-    arr = arr.astype(np.float32)
-    return arr
-
-
-def _get_array(val, shape, default=None):
-    """Ensure an object is an array with the specified shape."""
-    assert val is not None or default is not None
-    if hasattr(val, '__len__') and len(val) == 0:
-        val = None
-    out = np.zeros(shape, dtype=np.float32)
-    # This solves `ValueError: could not broadcast input array from shape (n)
-    # into shape (n, 1)`.
-    if val is not None and isinstance(val, np.ndarray):
-        if val.size == out.size:
-            val = val.reshape(out.shape)
-    out[...] = val if val is not None else default
-    assert out.shape == shape
-    return out
-
 
 def _boxes_overlap(x0, y0, x1, y1):
     n = len(x0)
@@ -203,6 +109,55 @@ def _get_box_pos_size(box_bounds):
     return np.c_[x, y], (w.mean(), h.mean())
 
 
+#------------------------------------------------------------------------------
+# Data validation
+#------------------------------------------------------------------------------
+
+def _get_texture(arr, default, n_items, from_bounds):
+    """Prepare data to be uploaded as a texture.
+
+    The from_bounds must be specified.
+
+    """
+    if not hasattr(default, '__len__'):  # pragma: no cover
+        default = [default]
+    n_cols = len(default)
+    if arr is None:
+        arr = np.tile(default, (n_items, 1))
+    assert arr.shape == (n_items, n_cols)
+    # Convert to 3D texture.
+    arr = arr[np.newaxis, ...].astype(np.float32)
+    assert arr.shape == (1, n_items, n_cols)
+    # NOTE: we need to cast the texture to [0., 1.] (float texture).
+    # This is easy as soon as we assume that the signal bounds are in
+    # [-1, 1].
+    assert len(from_bounds) == 2
+    m, M = map(float, from_bounds)
+    assert np.all(arr >= m)
+    assert np.all(arr <= M)
+    arr = (arr - m) / (M - m)
+    assert np.all(arr >= 0)
+    assert np.all(arr <= 1.)
+    arr = arr.astype(np.float32)
+    return arr
+
+
+def _get_array(val, shape, default=None):
+    """Ensure an object is an array with the specified shape."""
+    assert val is not None or default is not None
+    if hasattr(val, '__len__') and len(val) == 0:
+        val = None
+    out = np.zeros(shape, dtype=np.float32)
+    # This solves `ValueError: could not broadcast input array from shape (n)
+    # into shape (n, 1)`.
+    if val is not None and isinstance(val, np.ndarray):
+        if val.size == out.size:
+            val = val.reshape(out.shape)
+    out[...] = val if val is not None else default
+    assert out.shape == shape
+    return out
+
+
 def _check_data_bounds(data_bounds):
     assert len(data_bounds) == 4
     assert data_bounds[0] < data_bounds[2]
@@ -269,3 +224,56 @@ def _get_color(color, default):
 
 def _get_linear_x(n_signals, n_samples):
     return np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
+
+
+#------------------------------------------------------------------------------
+# Misc
+#------------------------------------------------------------------------------
+
+def _load_shader(filename):
+    """Load a shader file."""
+    curdir = op.dirname(op.realpath(__file__))
+    glsl_path = op.join(curdir, 'glsl')
+    path = op.join(glsl_path, filename)
+    with open(path, 'r') as f:
+        return f.read()
+
+
+def _tesselate_histogram(hist):
+    """
+
+    2/4  3
+     ____
+    |\   |
+    | \  |
+    |  \ |
+    |___\|
+
+    0   1/5
+
+    """
+    assert hist.ndim == 1
+    nsamples = len(hist)
+
+    x0 = np.arange(nsamples)
+
+    x = np.zeros(6 * nsamples)
+    y = np.zeros(6 * nsamples)
+
+    x[0::2] = np.repeat(x0, 3)
+    x[1::2] = x[0::2] + 1
+
+    y[2::6] = y[3::6] = y[4::6] = hist
+
+    return np.c_[x, y]
+
+
+def _enable_depth_mask():
+    gloo.set_state(clear_color='black',
+                   depth_test=True,
+                   depth_range=(0., 1.),
+                   # depth_mask='true',
+                   depth_func='lequal',
+                   blend=True,
+                   blend_func=('src_alpha', 'one_minus_src_alpha'))
+    gloo.set_clear_depth(1.0)
