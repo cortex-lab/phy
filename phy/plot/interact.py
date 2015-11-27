@@ -59,13 +59,11 @@ class Grid(BaseInteract):
                                       ])
         canvas.inserter.insert_vert("""
                                     attribute vec2 a_box_index;
-                                    //uniform float u_grid_shape;
                                     uniform float u_grid_zoom;
                                     """, 'header')
         canvas.connect(self.on_key_press)
 
     def update_program(self, program):
-        # program['u_grid_shape'] = self.shape
         program['u_grid_zoom'] = self._zoom
         # Only set the default box index if necessary.
         try:
