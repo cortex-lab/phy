@@ -247,6 +247,8 @@ class BaseCanvas(Canvas):
 #------------------------------------------------------------------------------
 
 class BaseInteract(object):
+    canvas = None
+
     def attach(self, canvas):
         """Attach this interact to a canvas."""
         self.canvas = canvas
