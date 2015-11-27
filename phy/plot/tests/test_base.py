@@ -10,7 +10,7 @@
 import numpy as np
 from pytest import yield_fixture
 
-from ..base import BaseVisual, GLSLInserter
+from ..base import BaseVisual, BaseInteract, GLSLInserter
 from ..transform import (subplot_bounds, Translate, Scale, Range,
                          Clip, Subplot, TransformChain)
 
@@ -135,3 +135,27 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
     canvas.show()
     qtbot.waitForWindowShown(canvas.native)
     # qtbot.stop()
+
+
+def test_interact_1(qtbot, canvas):
+    interact = BaseInteract()
+    interact.update()
+
+    class TestVisual(BaseVisual):
+        def __init__(self):
+            super(TestVisual, self).__init__()
+            self.set_shader('simple')
+            self.set_primitive_type('lines')
+
+        def set_data(self):
+            self.program['a_position'] = [[-1, 0], [1, 0]]
+            self.program['u_color'] = [1, 1, 1, 1]
+
+    interact.attach(canvas)
+    v = TestVisual()
+    canvas.add_visual(v)
+    v.set_data()
+
+    canvas.show()
+    qtbot.waitForWindowShown(canvas.native)
+    interact.update()
