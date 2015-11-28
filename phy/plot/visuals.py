@@ -81,6 +81,12 @@ class ScatterVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
     @staticmethod
+    def vertex_count(x=None, y=None, pos=None, **kwargs):
+        if pos is not None:
+            return len(pos)
+        return x.size if x is not None else y.size
+
+    @staticmethod
     def validate(x=None,
                  y=None,
                  pos=None,
@@ -142,8 +148,8 @@ class PlotVisual(BaseVisual):
         # Default x coordinates.
         assert x is not None
         assert y is not None
-        x = np.asarray(x, np.float32)
-        y = np.asarray(y, np.float32)
+        x = np.atleast_2d(x).astype(np.float32)
+        y = np.atleast_2d(y).astype(np.float32)
         assert x.ndim == 2
         assert x.shape == y.shape
         n_signals, n_samples = x.shape
@@ -166,6 +172,10 @@ class PlotVisual(BaseVisual):
         return Bunch(x=x, y=y,
                      color=color, depth=depth,
                      data_bounds=data_bounds)
+
+    @staticmethod
+    def vertex_count(x=None, y=None, **kwargs):
+        return x.size if x is not None else y.size
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
@@ -229,20 +239,27 @@ class HistogramVisual(BaseVisual):
             ylim = hist.max() if hist.size > 0 else 1.
         ylim = np.atleast_1d(ylim)
         if len(ylim) == 1:
-            ylim = np.tile(ylim, len(ylim))
-        assert ylim.shape == (n_hists,)
+            ylim = np.tile(ylim, n_hists)
+        if ylim.ndim == 1:
+            ylim = ylim[:, np.newaxis]
+        assert ylim.shape == (n_hists, 1)
 
         return Bunch(hist=hist,
                      ylim=ylim,
                      color=color,
                      )
 
+    @staticmethod
+    def vertex_count(hist, **kwargs):
+        n_hists, n_bins = hist.shape
+        return 6 * n_hists * n_bins
+
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
         hist = data.hist
 
         n_hists, n_bins = hist.shape
-        n = 6 * n_hists * n_bins
+        n = self.vertex_count(hist)
 
         # NOTE: this must be set *before* `apply_cpu_transforms` such
         # that the histogram is correctly normalized.

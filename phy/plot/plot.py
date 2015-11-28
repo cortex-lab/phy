@@ -7,13 +7,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from collections import defaultdict
-from contextlib import contextmanager
-from itertools import groupby
+from collections import defaultdict, OrderedDict
 
 import numpy as np
 
-from phy.utils import Bunch, _is_array_like
 from .base import BaseCanvas
 from .interact import Grid, Boxed, Stacked
 from .panzoom import PanZoom
@@ -59,41 +56,43 @@ def _make_scatter_class(marker):
 
 class BaseView(BaseCanvas):
     """High-level plotting canvas."""
+    _default_box_index = (0,)
 
     def __init__(self, **kwargs):
+        if not kwargs.get('keys', None):
+            kwargs['keys'] = 'interactive'
         super(BaseView, self).__init__(**kwargs)
-        self._default_box_index = None
         self.clear()
 
     def clear(self):
-        self._items = defaultdict(list)
+        self._items = OrderedDict()
 
     def _add_item(self, cls, *args, **kwargs):
         data = cls.validate(*args, **kwargs)
-        data['box_index'] = kwargs.get('box_index', self._default_box_index)
+        n = cls.vertex_count(**data)
+        box_index = kwargs.get('box_index', self._default_box_index)
+        k = len(box_index) if hasattr(box_index, '__len__') else 1
+        box_index = _get_array(box_index, (n, k))
+        data['box_index'] = box_index
+        if cls not in self._items:
+            self._items[cls] = []
         self._items[cls].append(data)
+        return data
 
     def plot(self, *args, **kwargs):
-        self._add_item(PlotVisual, *args, **kwargs)
+        return self._add_item(PlotVisual, *args, **kwargs)
 
     def scatter(self, *args, **kwargs):
-        cls = _make_scatter_class(kwargs.get('marker',
+        cls = _make_scatter_class(kwargs.pop('marker',
                                              ScatterVisual._default_marker))
-        self._add_item(cls, *args, **kwargs)
+        return self._add_item(cls, *args, **kwargs)
 
     def hist(self, *args, **kwargs):
-        self._add_item(HistogramVisual, *args, **kwargs)
+        return self._add_item(HistogramVisual, *args, **kwargs)
 
     def __getitem__(self, box_index):
-
-        @contextmanager
-        def box_index_ctx():
-            self._default_box_index = box_index
-            yield
-            self._default_box_index = None
-
-        with box_index_ctx():
-            return self
+        self._default_box_index = box_index
+        return self
 
     def build(self):
         for cls, data_list in self._items.items():
@@ -102,36 +101,44 @@ class BaseView(BaseCanvas):
             visual = cls()
             self.add_visual(visual)
             visual.set_data(**data)
-            try:
-                visual.program['a_box_index']
-                visual.program['a_box_index'] = box_index
-            except KeyError:
-                pass
+            visual.program['a_box_index'] = box_index
 
 
-# class GridView(BaseView):
-#     """A 2D grid with clipping."""
-#     def __init__(self, shape, **kwargs):
-#         self.n_rows, self.n_cols = shape
-#         pz = PanZoom(aspect=None, constrain_bounds=NDC)
-#         interacts = [Grid(shape), pz]
-#         super(GridView, self).__init__(interacts, **kwargs)
+class GridView(BaseView):
+    """A 2D grid with clipping."""
+    _default_box_index = (0, 0)
+
+    def __init__(self, shape=None, **kwargs):
+        super(GridView, self).__init__(**kwargs)
+
+        self.grid = Grid(shape)
+        self.grid.attach(self)
+
+        self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
+        self.panzoom.attach(self)
 
 
-# class BoxedView(BaseView):
-#     """Subplots at arbitrary positions"""
-#     def __init__(self, box_bounds, **kwargs):
-#         self.n_plots = len(box_bounds)
-#         self._boxed = Boxed(box_bounds)
-#         self._pz = PanZoom(aspect=None, constrain_bounds=NDC)
-#         interacts = [self._boxed, self._pz]
-#         super(BoxedView, self).__init__(interacts, **kwargs)
+class BoxedView(BaseView):
+    """Subplots at arbitrary positions"""
+    def __init__(self, box_bounds, **kwargs):
+        super(BoxedView, self).__init__(**kwargs)
+        self.n_plots = len(box_bounds)
+
+        self.boxed = Boxed(box_bounds)
+        self.boxed.attach(self)
+
+        self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
+        self.panzoom.attach(self)
 
 
-# class StackedView(BaseView):
-#     """Stacked subplots"""
-#     def __init__(self, n_plots, **kwargs):
-#         self.n_plots = n_plots
-#         pz = PanZoom(aspect=None, constrain_bounds=NDC)
-#         interacts = [Stacked(n_plots, margin=.1), pz]
-#         super(StackedView, self).__init__(interacts, **kwargs)
+class StackedView(BaseView):
+    """Stacked subplots"""
+    def __init__(self, n_plots, **kwargs):
+        super(StackedView, self).__init__(**kwargs)
+        self.n_plots = n_plots
+
+        self.stacked = Stacked(n_plots, margin=.1)
+        self.stacked.attach(self)
+
+        self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
+        self.panzoom.attach(self)

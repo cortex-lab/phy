@@ -10,7 +10,7 @@
 import numpy as np
 
 from ..panzoom import PanZoom
-from ..plot import BaseView  #, GridView, BoxedView, StackedView
+from ..plot import BaseView, GridView, BoxedView, StackedView
 from ..utils import _get_linear_x
 
 
@@ -39,12 +39,12 @@ def test_base_view(qtbot):
     y = np.random.randn(n)
 
     view.scatter(x, y)
-    _show(qtbot, view, stop=True)
+    _show(qtbot, view)
 
 
 def test_grid_scatter(qtbot):
     view = GridView((2, 3))
-    n = 1000
+    n = 100
 
     assert isinstance(view.panzoom, PanZoom)
 
@@ -108,18 +108,19 @@ def test_grid_complete(qtbot):
 
 
 def test_stacked_complete(qtbot):
-    view = StackedView(4)
+    view = StackedView(3)
 
     t = _get_linear_x(1, 1000).ravel()
     view[0].scatter(*np.random.randn(2, 100))
 
     # Different types of visuals in the same subplot.
-    view[2].hist(np.random.rand(5, 10),
+    view[1].hist(np.random.rand(5, 10),
                  color=np.random.uniform(.4, .9, size=(5, 4)))
-    view[2].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
+    view[1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
 
-    v = view[1].plot(t[::2], np.sin(20 * t[::2]), color=(1, 0, 0, 1))
-    v.set_data(color=(0, 1, 0, 1))
+    # TODO
+    # v = view[2].plot(t[::2], np.sin(20 * t[::2]), color=(1, 0, 0, 1))
+    # v.update(color=(0, 1, 0, 1))
 
     _show(qtbot, view)
 
@@ -137,16 +138,4 @@ def test_boxed_complete(qtbot):
     view[2].hist(np.random.rand(5, 10),
                  color=np.random.uniform(.4, .9, size=(5, 4)))
 
-    # Build and show.
-    view.build()
-    view.show()
-
-    # Change a subplot.
-    view[2].hist(np.random.rand(5, 10),
-                 color=np.random.uniform(.4, .9, size=(5, 4)))
-
-    # Rebuild and show.
-    view.build()
-    qtbot.waitForWindowShown(view.native)
-
-    view.close()
+    _show(qtbot, view)

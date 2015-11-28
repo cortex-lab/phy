@@ -55,8 +55,10 @@ class Grid(BaseInteract):
                                       ])
         canvas.inserter.insert_vert("""
                                     attribute vec2 {};
+                                    uniform vec2 {};
                                     uniform float u_grid_zoom;
-                                    """.format(self.box_var), 'header')
+                                    """.format(self.box_var, self.shape_var),
+                                    'header')
         canvas.connect(self.on_key_press)
 
     def update_program(self, program):

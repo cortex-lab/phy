@@ -115,14 +115,9 @@ def test_grid_2(qtbot, canvas):
     box_index = [[i, j] for i, j in product(range(2), range(3))]
     box_index = np.repeat(box_index, n, axis=0)
 
-    class MyGrid(Grid):
-        def attach(self, canvas):
-            super(MyGrid, self).attach(canvas)
-            canvas.inserter.insert_vert('vec2 u_shape = vec2(3, 3);',
-                                        'before_transforms')
-
-    grid = MyGrid(shape_var='u_shape')
+    grid = Grid()
     _create_visual(qtbot, canvas, grid, box_index)
+    grid.shape = (3, 3)
 
     # qtbot.stop()
 
