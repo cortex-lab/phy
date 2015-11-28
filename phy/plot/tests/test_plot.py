@@ -10,7 +10,7 @@
 import numpy as np
 
 from ..panzoom import PanZoom
-from ..plot import GridView, BoxedView, StackedView
+from ..plot import BaseView  #, GridView, BoxedView, StackedView
 from ..utils import _get_linear_x
 
 
@@ -30,6 +30,17 @@ def _show(qtbot, view, stop=False):
 #------------------------------------------------------------------------------
 # Test plotting interface
 #------------------------------------------------------------------------------
+
+def test_base_view(qtbot):
+    view = BaseView(keys='interactive')
+    n = 1000
+
+    x = np.random.randn(n)
+    y = np.random.randn(n)
+
+    view.scatter(x, y)
+    _show(qtbot, view, stop=True)
+
 
 def test_grid_scatter(qtbot):
     view = GridView((2, 3))
