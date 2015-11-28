@@ -19,6 +19,7 @@ from phy.electrode.mea import linear_positions, staggered_positions
 from ..utils import (_load_shader,
                      _tesselate_histogram,
                      _enable_depth_mask,
+                     _get_data_bounds,
                      _boxes_overlap,
                      _binary_search,
                      _get_boxes,
@@ -56,6 +57,27 @@ def test_enable_depth_mask(qtbot, canvas):
 
     canvas.show()
     qtbot.waitForWindowShown(canvas.native)
+
+
+def test_get_data_bounds():
+    db0 = np.array([[0, 1, 4, 5],
+                    [0, 1, 4, 5],
+                    [0, 1, 4, 5]])
+    arr = np.arange(6).reshape((3, 2))
+    assert np.all(_get_data_bounds(None, arr) == [[0, 1, 4, 5]])
+
+    db = db0.copy()
+    assert np.all(_get_data_bounds(db, arr) == [[0, 1, 4, 5]])
+
+    db = db0.copy()
+    db[2, :] = [1, 1, 1, 1]
+    assert np.all(_get_data_bounds(db, arr)[:2, :] == [[0, 1, 4, 5]])
+    assert np.all(_get_data_bounds(db, arr)[2, :] == [0, 0, 2, 2])
+
+    db = db0.copy()
+    db[:2, :] = [1, 1, 1, 1]
+    assert np.all(_get_data_bounds(db, arr)[:2, :] == [[0, 0, 2, 2]])
+    assert np.all(_get_data_bounds(db, arr)[2, :] == [0, 1, 4, 5])
 
 
 def test_boxes_overlap():

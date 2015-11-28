@@ -159,9 +159,10 @@ def _get_array(val, shape, default=None):
 
 
 def _check_data_bounds(data_bounds):
-    assert len(data_bounds) == 4
-    assert data_bounds[0] < data_bounds[2]
-    assert data_bounds[1] < data_bounds[3]
+    assert data_bounds.ndim == 2
+    assert data_bounds.shape[1] == 4
+    assert np.all(data_bounds[:, 0] < data_bounds[:, 2])
+    assert np.all(data_bounds[:, 1] < data_bounds[:, 3])
 
 
 def _get_data_bounds(data_bounds, pos):
@@ -171,13 +172,17 @@ def _get_data_bounds(data_bounds, pos):
     if data_bounds is None:
         m, M = pos.min(axis=0), pos.max(axis=0)
         data_bounds = [m[0], m[1], M[0], M[1]]
-    data_bounds = list(data_bounds)
-    if data_bounds[0] == data_bounds[2]:  # pragma: no cover
-        data_bounds[0] -= 1
-        data_bounds[2] += 1
-    if data_bounds[1] == data_bounds[3]:
-        data_bounds[1] -= 1
-        data_bounds[3] += 1
+    data_bounds = np.atleast_2d(data_bounds)
+
+    ind_x = data_bounds[:, 0] == data_bounds[:, 2]
+    ind_y = data_bounds[:, 1] == data_bounds[:, 3]
+    if np.sum(ind_x):
+        data_bounds[ind_x, 0] -= 1
+        data_bounds[ind_x, 2] += 1
+    if np.sum(ind_y):
+        data_bounds[ind_y, 1] -= 1
+        data_bounds[ind_y, 3] += 1
+
     _check_data_bounds(data_bounds)
     return data_bounds
 
