@@ -70,8 +70,6 @@ def test_scatter_custom(qtbot, canvas_pz):
     _test_visual(qtbot, canvas_pz, ScatterVisual(),
                  x=x, y=y, color=c, size=s)
 
-    # qtbot.stop()
-
 
 #------------------------------------------------------------------------------
 # Test plot visual
