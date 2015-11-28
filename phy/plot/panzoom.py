@@ -384,6 +384,7 @@ class PanZoom(BaseInteract):
     def attach(self, canvas):
         """Attach this interact to a canvas."""
         super(PanZoom, self).attach(canvas)
+        canvas.panzoom = self
 
         canvas.transforms.add_on_gpu([Translate(self.pan_var_name),
                                       Scale(self.zoom_var_name)])

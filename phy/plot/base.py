@@ -252,7 +252,6 @@ class BaseInteract(object):
     def attach(self, canvas):
         """Attach this interact to a canvas."""
         self.canvas = canvas
-        canvas.panzoom = self
 
         @canvas.connect
         def on_visual_added(e):
