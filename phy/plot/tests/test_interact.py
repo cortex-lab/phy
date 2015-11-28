@@ -121,7 +121,7 @@ def test_grid_2(qtbot, canvas):
             canvas.inserter.insert_vert('vec2 u_shape = vec2(3, 3);',
                                         'before_transforms')
 
-    grid = MyGrid('u_shape')
+    grid = MyGrid(shape_var='u_shape')
     _create_visual(qtbot, canvas, grid, box_index)
 
     # qtbot.stop()
