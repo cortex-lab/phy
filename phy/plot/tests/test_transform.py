@@ -83,6 +83,19 @@ def test_range_cpu():
            [[0, .5], [1.5, -.5]], [[-1, 0], [2, -2]])
 
 
+def test_range_cpu_vectorized():
+    arr = np.arange(6).reshape((3, 2)) * 1.
+    arr_tr = arr / 5.
+    arr_tr[2, :] /= 10
+
+    f = np.tile([0, 0, 5, 5], (3, 1))
+    f[2, :] *= 10
+
+    t = np.tile([0, 0, 1, 1], (3, 1))
+
+    _check(Range(f, t), arr, arr_tr)
+
+
 def test_clip_cpu():
     _check(Clip(), [0, 0], [0, 0])  # Default bounds.
 

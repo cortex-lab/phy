@@ -125,14 +125,17 @@ class Scale(BaseTransform):
 class Range(BaseTransform):
     def __init__(self, from_bounds=None, to_bounds=None):
         super(Range, self).__init__()
-        self.from_bounds = from_bounds or NDC
-        self.to_bounds = to_bounds or NDC
+        self.from_bounds = from_bounds if from_bounds is not None else NDC
+        self.to_bounds = to_bounds if to_bounds is not None else NDC
 
     def apply(self, arr):
-        f0 = np.asarray(self.from_bounds[:2])
-        f1 = np.asarray(self.from_bounds[2:])
-        t0 = np.asarray(self.to_bounds[:2])
-        t1 = np.asarray(self.to_bounds[2:])
+        self.from_bounds = np.asarray(self.from_bounds)
+        self.to_bounds = np.asarray(self.to_bounds)
+
+        f0 = np.asarray(self.from_bounds[..., :2])
+        f1 = np.asarray(self.from_bounds[..., 2:])
+        t0 = np.asarray(self.to_bounds[..., :2])
+        t1 = np.asarray(self.to_bounds[..., 2:])
 
         return t0 + (t1 - t0) * (arr - f0) / (f1 - f0)
 
