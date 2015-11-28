@@ -83,13 +83,17 @@ class ScatterVisual(BaseVisual):
     @staticmethod
     def validate(x=None,
                  y=None,
+                 pos=None,
                  color=None,
                  size=None,
                  depth=None,
                  data_bounds=None,
-                 **kwargs):
-        x, y = _get_pos(x, y)
-        pos = np.c_[x, y]
+                 ):
+        if pos is None:
+            x, y = _get_pos(x, y)
+            pos = np.c_[x, y]
+        assert pos.ndim == 2
+        assert pos.shape[1] == 2
         n = pos.shape[0]
 
         # Validate the data.
@@ -129,8 +133,7 @@ class PlotVisual(BaseVisual):
                  y=None,
                  color=None,
                  depth=None,
-                 data_bounds=None,
-                 **kwargs):
+                 data_bounds=None):
 
         if x is None:
             assert y is not None
@@ -210,8 +213,7 @@ class HistogramVisual(BaseVisual):
     @staticmethod
     def validate(hist=None,
                  color=None,
-                 ylim=None,
-                 **kwargs):
+                 ylim=None):
         assert hist is not None
         hist = np.asarray(hist, np.float32)
         if hist.ndim == 1:
