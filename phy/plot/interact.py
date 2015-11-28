@@ -55,21 +55,21 @@ class Grid(BaseInteract):
         canvas.transforms.add_on_gpu([Scale('u_grid_zoom'),
                                       Scale((m, m)),
                                       Clip([-m, -m, m, m]),
-                                      Subplot(self.shape, 'a_box_index'),
+                                      Subplot(self.shape, self.box_var),
                                       ])
         canvas.inserter.insert_vert("""
-                                    attribute vec2 a_box_index;
+                                    attribute vec2 {};
                                     uniform float u_grid_zoom;
-                                    """, 'header')
+                                    """.format(self.box_var), 'header')
         canvas.connect(self.on_key_press)
 
     def update_program(self, program):
         program['u_grid_zoom'] = self._zoom
         # Only set the default box index if necessary.
         try:
-            program['a_box_index']
+            program[self.box_var]
         except KeyError:
-            program['a_box_index'] = (0, 0)
+            program[self.box_var] = (0, 0)
 
     @property
     def zoom(self):
