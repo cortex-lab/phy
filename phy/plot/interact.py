@@ -37,17 +37,13 @@ class Grid(BaseInteract):
 
     """
 
-    def __init__(self, shape, box_var=None):
+    def __init__(self, shape=(1, 1), shape_var='u_grid_shape', box_var=None):
         self._zoom = 1.
 
         # Name of the variable with the box index.
         self.box_var = box_var or 'a_box_index'
-
-        self.shape = shape
-        if isinstance(self.shape, tuple):
-            assert len(self.shape) == 2
-            assert self.shape[0] >= 1
-            assert self.shape[1] >= 1
+        self.shape_var = shape_var
+        self._shape = shape
 
     def attach(self, canvas):
         super(Grid, self).attach(canvas)
@@ -55,7 +51,7 @@ class Grid(BaseInteract):
         canvas.transforms.add_on_gpu([Scale('u_grid_zoom'),
                                       Scale((m, m)),
                                       Clip([-m, -m, m, m]),
-                                      Subplot(self.shape, self.box_var),
+                                      Subplot(self.shape_var, self.box_var),
                                       ])
         canvas.inserter.insert_vert("""
                                     attribute vec2 {};
@@ -65,6 +61,7 @@ class Grid(BaseInteract):
 
     def update_program(self, program):
         program['u_grid_zoom'] = self._zoom
+        program[self.shape_var] = self._shape
         # Only set the default box index if necessary.
         try:
             program[self.box_var]
@@ -80,6 +77,15 @@ class Grid(BaseInteract):
     def zoom(self, value):
         """Zoom level."""
         self._zoom = value
+        self.update()
+
+    @property
+    def shape(self):
+        return self._shape
+
+    @shape.setter
+    def shape(self, value):
+        self._shape = value
         self.update()
 
     def on_key_press(self, event):
