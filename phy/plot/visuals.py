@@ -87,7 +87,7 @@ class ScatterVisual(BaseVisual):
                  size=None,
                  depth=None,
                  data_bounds=None,
-                 ):
+                 **kwargs):
         x, y = _get_pos(x, y)
         pos = np.c_[x, y]
         n = pos.shape[0]
@@ -102,16 +102,8 @@ class ScatterVisual(BaseVisual):
         return Bunch(pos=pos, color=color, size=size,
                      depth=depth, data_bounds=data_bounds)
 
-    def set_data(self,
-                 x=None,
-                 y=None,
-                 color=None,
-                 size=None,
-                 depth=None,
-                 data_bounds=None,
-                 ):
-        data = self.validate(x=x, y=y, color=color, size=size, depth=depth,
-                             data_bounds=data_bounds)
+    def set_data(self, *args, **kwargs):
+        data = self.validate(*args, **kwargs)
         self.data_range.from_bounds = data.data_bounds
         pos_tr = self.transforms.apply(data.pos)
         self.program['a_position'] = np.c_[pos_tr, data.depth]
@@ -138,7 +130,7 @@ class PlotVisual(BaseVisual):
                  color=None,
                  depth=None,
                  data_bounds=None,
-                 ):
+                 **kwargs):
 
         if x is None:
             assert y is not None
@@ -172,15 +164,8 @@ class PlotVisual(BaseVisual):
                      color=color, depth=depth,
                      data_bounds=data_bounds)
 
-    def set_data(self,
-                 x=None,
-                 y=None,
-                 color=None,
-                 depth=None,
-                 data_bounds=None,
-                 ):
-        data = self.validate(x=x, y=y, color=color, depth=depth,
-                             data_bounds=data_bounds)
+    def set_data(self, *args, **kwargs):
+        data = self.validate(*args, **kwargs)
         x, y = data.x, data.y
 
         n_signals, n_samples = x.shape
@@ -226,7 +211,7 @@ class HistogramVisual(BaseVisual):
     def validate(hist=None,
                  color=None,
                  ylim=None,
-                 ):
+                 **kwargs):
         assert hist is not None
         hist = np.asarray(hist, np.float32)
         if hist.ndim == 1:
@@ -250,13 +235,8 @@ class HistogramVisual(BaseVisual):
                      color=color,
                      )
 
-    def set_data(self,
-                 hist=None,
-                 color=None,
-                 ylim=None,
-                 ):
-
-        data = self.validate(hist=hist, color=color, ylim=ylim)
+    def set_data(self, *args, **kwargs):
+        data = self.validate(*args, **kwargs)
         hist = data.hist
 
         n_hists, n_bins = hist.shape
