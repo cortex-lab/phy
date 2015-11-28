@@ -165,13 +165,14 @@ def _check_data_bounds(data_bounds):
     assert np.all(data_bounds[:, 1] < data_bounds[:, 3])
 
 
-def _get_data_bounds(data_bounds, pos):
+def _get_data_bounds(data_bounds, pos=None, length=None):
     """"Prepare data bounds, possibly using min/max of the data."""
-    if not len(pos):
-        return data_bounds or NDC
     if data_bounds is None:
-        m, M = pos.min(axis=0), pos.max(axis=0)
-        data_bounds = [m[0], m[1], M[0], M[1]]
+        if pos is not None and len(pos):
+            m, M = pos.min(axis=0), pos.max(axis=0)
+            data_bounds = [m[0], m[1], M[0], M[1]]
+        else:
+            data_bounds = NDC
     data_bounds = np.atleast_2d(data_bounds)
 
     ind_x = data_bounds[:, 0] == data_bounds[:, 2]
@@ -182,6 +183,15 @@ def _get_data_bounds(data_bounds, pos):
     if np.sum(ind_y):
         data_bounds[ind_y, 1] -= 1
         data_bounds[ind_y, 3] += 1
+
+    # Extend the data_bounds if needed.
+    if length is None:
+        length = pos.shape[0] if pos is not None else 1
+    if data_bounds.shape[0] == 1:
+        data_bounds = np.tile(data_bounds, (length, 1))
+
+    # Check the shape of data_bounds.
+    assert data_bounds.shape == (length, 4)
 
     _check_data_bounds(data_bounds)
     return data_bounds

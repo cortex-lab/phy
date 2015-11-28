@@ -98,6 +98,7 @@ class ScatterVisual(BaseVisual):
         size = _get_array(size, (n, 1), ScatterVisual._default_marker_size)
         depth = _get_array(depth, (n, 1), 0)
         data_bounds = _get_data_bounds(data_bounds, pos)
+        assert data_bounds.shape[0] == n
 
         return Bunch(pos=pos, color=color, size=size,
                      depth=depth, data_bounds=data_bounds)
@@ -157,6 +158,17 @@ class PlotVisual(BaseVisual):
         color = _get_array(color, (n_signals, 4), PlotVisual._default_color)
         depth = _get_array(depth, (n_signals,), 0)
 
+        # Validate data bounds.
+        if data_bounds is None:
+            if n_samples > 0:
+                # NOTE: by default, per-signal normalization.
+                data_bounds = np.c_[x.min(axis=1), y.min(axis=1),
+                                    x.max(axis=1), y.max(axis=1)]
+            else:
+                data_bounds = NDC
+        data_bounds = _get_data_bounds(data_bounds, length=n_signals)
+        assert data_bounds.shape == (n_signals, 4)
+
         return Bunch(x=x, y=y,
                      color=color, depth=depth,
                      data_bounds=data_bounds)
@@ -179,9 +191,15 @@ class PlotVisual(BaseVisual):
         pos = np.empty((n, 2), dtype=np.float32)
         pos[:, 0] = x.ravel()
         pos[:, 1] = y.ravel()
-        self.data_range.from_bounds = _get_data_bounds(data.data_bounds, pos)
+
+        # Repeat the data bounds for every vertex in the signals.
+        data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
+        self.data_range.from_bounds = data_bounds
+
+        # Transform the positions.
         pos_tr = self.transforms.apply(pos)
 
+        # Repeat the depth.
         depth = np.repeat(data.depth, n_samples)
 
         self.program['a_position'] = np.c_[pos_tr, depth]
