@@ -20,7 +20,6 @@ from .utils import (_enable_depth_mask,
                     _get_pos,
                     _get_index,
                     _get_linear_x,
-                    _get_hist_max,
                     _get_color,
                     )
 from phy.utils import Bunch
@@ -220,11 +219,8 @@ class HistogramVisual(BaseVisual):
         self.set_shader('histogram')
         self.set_primitive_type('triangles')
 
-        self.data_range = Range([0, 0, 1, 1],
-                                [0, 0, 1, 1])
+        self.data_range = Range([0, 0, 1, 1])
         self.transforms.add_on_cpu(self.data_range)
-        # (0, 0, 1, v)
-        self.transforms.add_on_gpu(Range('hist_bounds', NDC))
 
     @staticmethod
     def validate(hist=None,
@@ -240,6 +236,14 @@ class HistogramVisual(BaseVisual):
 
         # Validate the data.
         color = _get_array(color, (n_hists, 4), HistogramVisual._default_color)
+
+        # Validate ylim.
+        if ylim is None:
+            ylim = hist.max() if hist.size > 0 else 1.
+        ylim = np.atleast_1d(ylim)
+        if len(ylim) == 1:
+            ylim = np.tile(ylim, len(ylim))
+        assert ylim.shape == (n_hists,)
 
         return Bunch(hist=hist,
                      ylim=ylim,
@@ -260,8 +264,11 @@ class HistogramVisual(BaseVisual):
 
         # NOTE: this must be set *before* `apply_cpu_transforms` such
         # that the histogram is correctly normalized.
-        hist_max = _get_hist_max(hist)
-        self.data_range.from_bounds = [0, 0, n_bins, hist_max]
+        data_bounds = np.c_[np.zeros((n_hists, 2)),
+                            n_bins * np.ones((n_hists, 1)),
+                            data.ylim]
+        data_bounds = np.repeat(data_bounds, 6 * n_bins, axis=0)
+        self.data_range.from_bounds = data_bounds
 
         # Set the transformed position.
         pos = np.vstack(_tesselate_histogram(row) for row in hist)
@@ -277,15 +284,6 @@ class HistogramVisual(BaseVisual):
         self.program['u_color'] = _get_texture(data.color,
                                                self._default_color,
                                                n_hists, [0, 1])
-
-        # Hist bounds.
-        assert ylim is None or len(ylim) == n_hists
-        hist_bounds = np.c_[np.zeros((n_hists, 2)),
-                            np.ones((n_hists, 1)),
-                            ylim / hist_max] if ylim is not None else None
-        hist_bounds = _get_texture(hist_bounds, [0, 0, 1, 1],
-                                   n_hists, [0, 10])
-        self.program['u_hist_bounds'] = Texture2D(hist_bounds)
         self.program['n_hists'] = n_hists
 
 
