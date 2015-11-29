@@ -617,21 +617,11 @@ class CorrelogramView(GridView):
         self.n_spikes, = self.spike_times.shape
 
         # Initialize the view.
-        self.n_cols = 1  # TODO: dynamic grid shape in interact
-        self.shape = (self.n_cols, self.n_cols)
-        super(CorrelogramView, self).__init__(self.shape, keys=keys)
+        super(CorrelogramView, self).__init__(keys=keys)
 
         # Spike clusters.
         assert spike_clusters.shape == (self.n_spikes,)
         self.spike_clusters = spike_clusters
-
-        # Initialize the subplots.
-        self._plots = {(i, j): self[i, j].hist(hist=[])
-                       for i in range(self.n_cols)
-                       for j in range(self.n_cols)
-                       }
-        self.build()
-        self.update()
 
     def on_select(self, cluster_ids, spike_ids):
         n_clusters = len(cluster_ids)
@@ -655,18 +645,17 @@ class CorrelogramView(GridView):
 
         colors = _selected_clusters_colors(n_clusters)
 
-        for i in range(n_clusters):
-            for j in range(n_clusters):
-                hist = ccg[i, j, :]
-                color = colors[i] if i == j else np.ones(3)
-                color = np.hstack((color, [1]))
-                self._plots[i, j].set_data(hist=hist,
-                                           color=color,
-                                           ylim=[lim],
-                                           )
-
-        self.build()
-        self.update()
+        self.grid.shape = (n_clusters, n_clusters)
+        with self.building():
+            for i in range(n_clusters):
+                for j in range(n_clusters):
+                    hist = ccg[i, j, :]
+                    color = colors[i] if i == j else np.ones(3)
+                    color = np.hstack((color, [1]))
+                    self[i, j].hist(hist,
+                                    color=color,
+                                    ylim=[lim],
+                                    )
 
     def attach(self, gui):
         """Attach the view to the GUI."""
