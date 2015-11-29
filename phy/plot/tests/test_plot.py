@@ -31,6 +31,21 @@ def _show(qtbot, view, stop=False):
 # Test plotting interface
 #------------------------------------------------------------------------------
 
+def test_building(qtbot):
+    view = BaseView(keys='interactive')
+    n = 1000
+
+    x = np.random.randn(n)
+    y = np.random.randn(n)
+
+    with view.building():
+        view.scatter(x, y)
+
+    view.show()
+    qtbot.waitForWindowShown(view.native)
+    view.close()
+
+
 def test_base_view(qtbot):
     view = BaseView(keys='interactive')
     n = 1000
