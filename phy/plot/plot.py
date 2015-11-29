@@ -8,6 +8,7 @@
 #------------------------------------------------------------------------------
 
 from collections import defaultdict, OrderedDict
+from contextlib import contextmanager
 
 import numpy as np
 
@@ -68,12 +69,14 @@ class BaseView(BaseCanvas):
         self._items = OrderedDict()
 
     def _add_item(self, cls, *args, **kwargs):
+        box_index = kwargs.pop('box_index', self._default_box_index)
+        k = len(box_index) if hasattr(box_index, '__len__') else 1
+
         data = cls.validate(*args, **kwargs)
         n = cls.vertex_count(**data)
-        box_index = kwargs.get('box_index', self._default_box_index)
-        k = len(box_index) if hasattr(box_index, '__len__') else 1
         box_index = _get_array(box_index, (n, k))
         data['box_index'] = box_index
+
         if cls not in self._items:
             self._items[cls] = []
         self._items[cls].append(data)
@@ -102,6 +105,13 @@ class BaseView(BaseCanvas):
             self.add_visual(visual)
             visual.set_data(**data)
             visual.program['a_box_index'] = box_index
+        self.update()
+
+    @contextmanager
+    def building(self):
+        self.clear()
+        yield
+        self.build()
 
 
 class GridView(BaseView):

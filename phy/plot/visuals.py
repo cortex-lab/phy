@@ -156,7 +156,7 @@ class PlotVisual(BaseVisual):
 
         # Validate the data.
         color = _get_array(color, (n_signals, 4), PlotVisual._default_color)
-        depth = _get_array(depth, (n_signals,), 0)
+        depth = _get_array(depth, (n_signals, 1), 0)
 
         # Validate data bounds.
         if data_bounds is None:
