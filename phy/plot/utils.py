@@ -122,7 +122,7 @@ def _get_texture(arr, default, n_items, from_bounds):
     if not hasattr(default, '__len__'):  # pragma: no cover
         default = [default]
     n_cols = len(default)
-    if arr is None:
+    if arr is None:  # pragma: no cover
         arr = np.tile(default, (n_items, 1))
     assert arr.shape == (n_items, n_cols)
     # Convert to 3D texture.
@@ -145,7 +145,7 @@ def _get_texture(arr, default, n_items, from_bounds):
 def _get_array(val, shape, default=None):
     """Ensure an object is an array with the specified shape."""
     assert val is not None or default is not None
-    if hasattr(val, '__len__') and len(val) == 0:
+    if hasattr(val, '__len__') and len(val) == 0:  # pragma: no cover
         val = None
     out = np.zeros(shape, dtype=np.float32)
     # This solves `ValueError: could not broadcast input array from shape (n)
@@ -209,14 +209,6 @@ def _get_pos(x, y):
     assert x.shape == y.shape
 
     return x, y
-
-
-def _get_hist_max(hist):
-    hist_max = hist.max() if hist.size else 1.
-    hist_max = float(hist_max)
-    hist_max = hist_max if hist_max > 0 else 1.
-    assert hist_max > 0
-    return hist_max
 
 
 def _get_index(n_items, item_size, n):

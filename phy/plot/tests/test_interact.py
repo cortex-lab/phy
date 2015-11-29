@@ -118,6 +118,7 @@ def test_grid_2(qtbot, canvas):
     grid = Grid()
     _create_visual(qtbot, canvas, grid, box_index)
     grid.shape = (3, 3)
+    assert grid.shape == (3, 3)
 
     # qtbot.stop()
 

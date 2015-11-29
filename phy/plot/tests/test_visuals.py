@@ -20,6 +20,8 @@ from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
 
 def _test_visual(qtbot, c, v, stop=False, **kwargs):
     c.add_visual(v)
+    v.validate(**kwargs)
+    assert v.vertex_count(**kwargs) >= 0
     v.set_data(**kwargs)
     c.show()
     qtbot.waitForWindowShown(c.native)
@@ -57,8 +59,7 @@ def test_scatter_custom(qtbot, canvas_pz):
     n = 100
 
     # Random position.
-    x = .2 * np.random.randn(n)
-    y = .2 * np.random.randn(n)
+    pos = .2 * np.random.randn(n, 2)
 
     # Random colors.
     c = np.random.uniform(.4, .7, size=(n, 4))
@@ -68,7 +69,7 @@ def test_scatter_custom(qtbot, canvas_pz):
     s = 5 + 20 * np.random.rand(n)
 
     _test_visual(qtbot, canvas_pz, ScatterVisual(),
-                 x=x, y=y, color=c, size=s)
+                 pos=pos, color=c, size=s)
 
 
 #------------------------------------------------------------------------------

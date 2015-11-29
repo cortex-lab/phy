@@ -72,6 +72,16 @@ class BaseVisual(object):
     # To override
     # -------------------------------------------------------------------------
 
+    @staticmethod
+    def validate(**kwargs):
+        """Make consistent the input data for the visual."""
+        return kwargs
+
+    @staticmethod
+    def vertex_count(**kwargs):
+        """Return the number of vertices as a function of the input data."""
+        return 0
+
     def set_data(self):
         """Set data to the program.
 
