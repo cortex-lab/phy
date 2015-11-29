@@ -251,6 +251,7 @@ class HistogramVisual(BaseVisual):
 
     @staticmethod
     def vertex_count(hist, **kwargs):
+        hist = np.atleast_2d(hist)
         n_hists, n_bins = hist.shape
         return 6 * n_hists * n_bins
 
