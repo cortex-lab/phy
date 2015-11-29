@@ -189,12 +189,6 @@ class WaveformView(BoxedView):
         assert channel_positions.shape == (self.n_channels, 2)
         self.channel_positions = channel_positions
 
-        # Initialize the subplots.
-        self._plots = {ch: self[ch].plot(x=[], y=[])
-                       for ch in range(self.n_channels)}
-        self.build()
-        self.update()
-
     def on_select(self, cluster_ids, spike_ids):
         n_clusters = len(cluster_ids)
         n_spikes = len(spike_ids)
@@ -222,22 +216,20 @@ class WaveformView(BoxedView):
 
         # Plot all waveforms.
         # OPTIM: avoid the loop.
-        for ch in range(self.n_channels):
-            m = masks[:, ch]
-            depth = _get_depth(m,
-                               spike_clusters_rel=spike_clusters_rel,
-                               n_clusters=n_clusters)
-            color = _get_color(m,
-                               spike_clusters_rel=spike_clusters_rel,
-                               n_clusters=n_clusters)
-            self._plots[ch].set_data(x=t, y=w[:, :, ch],
-                                     color=color,
-                                     depth=depth,
-                                     data_bounds=self.data_bounds,
-                                     )
-
-        self.build()
-        self.update()
+        with self.building():
+            for ch in range(self.n_channels):
+                m = masks[:, ch]
+                depth = _get_depth(m,
+                                   spike_clusters_rel=spike_clusters_rel,
+                                   n_clusters=n_clusters)
+                color = _get_color(m,
+                                   spike_clusters_rel=spike_clusters_rel,
+                                   n_clusters=n_clusters)
+                self[ch].plot(x=t, y=w[:, :, ch],
+                              color=color,
+                              depth=depth,
+                              data_bounds=self.data_bounds,
+                              )
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -333,7 +325,7 @@ class TraceView(StackedView):
         return self.spike_times[a:b], self.spike_clusters[a:b], self.masks[a:b]
 
     def set_interval(self, interval):
-
+        self.clear()
         start, end = interval
         color = (.5, .5, .5, 1)
 
@@ -345,7 +337,7 @@ class TraceView(StackedView):
         assert traces.shape[1] == self.n_channels
 
         m, M = traces.min(), traces.max()
-        data_bounds = [start, m, end, M]
+        data_bounds = np.array([start, m, end, M])
 
         # Generate the trace plots.
         # TODO OPTIM: avoid the loop and generate all channel traces in
@@ -365,16 +357,16 @@ class TraceView(StackedView):
             dur_spike = wave_len * dt
             trace_start = int(self.sample_rate * start)
 
-            # ac = Accumulator()
             for i in range(n_spikes):
                 sample_rel = (int(spike_times[i] * self.sample_rate) -
                               trace_start)
                 mask = self.masks[i]
+                # TODO
                 # clu = spike_clusters[i]
                 w, ch = _extract_wave(traces, sample_rel, mask, wave_len)
                 n_ch = len(ch)
                 t0 = spike_times[i] - dur_spike / 2.
-                color = (1, 0, 0, 1)
+                color = np.array([1, 0, 0, 1])
                 box_index = np.repeat(ch[:, np.newaxis], wave_len, axis=0)
                 t = t0 + dt * np.arange(wave_len)
                 t = np.tile(t, (n_ch, 1))
@@ -383,6 +375,12 @@ class TraceView(StackedView):
 
         self.build()
         self.update()
+
+    def on_select(self, cluster_ids, spike_ids):
+        pass
+
+    def attach(self, gui):
+        pass
 
 
 # -----------------------------------------------------------------------------
@@ -522,14 +520,6 @@ class FeatureView(GridView):
         assert spike_times.shape == (self.n_spikes,)
         self.spike_times = spike_times
 
-        # Initialize the subplots.
-        self._plots = {(i, j): self[i, j].scatter(x=[], y=[], size=[])
-                       for i in range(self.n_cols)
-                       for j in range(self.n_cols)
-                       }
-        self.build()
-        self.update()
-
     def _get_feature(self, dim, spike_ids=None):
         f = self.features[spike_ids]
         assert f.ndim == 3
@@ -563,36 +553,37 @@ class FeatureView(GridView):
 
         # Plot all features.
         # TODO: optim: avoid the loop.
-        for i in range(self.n_cols):
-            for j in range(self.n_cols):
+        with self.building():
+            for i in range(self.n_cols):
+                for j in range(self.n_cols):
 
-                x = self._get_feature(x_dim[i, j], spike_ids)
-                y = self._get_feature(y_dim[i, j], spike_ids)
+                    x = self._get_feature(x_dim[i, j], spike_ids)
+                    y = self._get_feature(y_dim[i, j], spike_ids)
 
-                mx, dx = _project_mask_depth(x_dim[i, j], masks,
-                                             spike_clusters_rel=sc,
-                                             n_clusters=n_clusters)
-                my, dy = _project_mask_depth(y_dim[i, j], masks,
-                                             spike_clusters_rel=sc,
-                                             n_clusters=n_clusters)
+                    mx, dx = _project_mask_depth(x_dim[i, j], masks,
+                                                 spike_clusters_rel=sc,
+                                                 n_clusters=n_clusters)
+                    my, dy = _project_mask_depth(y_dim[i, j], masks,
+                                                 spike_clusters_rel=sc,
+                                                 n_clusters=n_clusters)
 
-                d = np.maximum(dx, dy)
-                m = np.maximum(mx, my)
+                    d = np.maximum(dx, dy)
+                    m = np.maximum(mx, my)
 
-                color = _get_color(m,
-                                   spike_clusters_rel=sc,
-                                   n_clusters=n_clusters)
+                    color = _get_color(m,
+                                       spike_clusters_rel=sc,
+                                       n_clusters=n_clusters)
 
-                self._plots[i, j].set_data(x=x,
-                                           y=y,
-                                           color=color,
-                                           depth=d,
-                                           data_bounds=self.data_bounds,
-                                           size=5 * np.ones(n_spikes),
-                                           )
+                    self[i, j].scatter(x=x,
+                                       y=y,
+                                       color=color,
+                                       depth=d,
+                                       data_bounds=self.data_bounds,
+                                       size=5 * np.ones(n_spikes),
+                                       )
 
-        self.build()
-        self.update()
+    def attach(self, gui):
+        pass
 
 
 # -----------------------------------------------------------------------------
