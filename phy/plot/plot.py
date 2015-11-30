@@ -82,6 +82,7 @@ class BaseView(BaseCanvas):
 
     def clear(self):
         self._items = OrderedDict()
+        self.visuals = []
 
     def _add_item(self, cls, *args, **kwargs):
         box_index = kwargs.pop('box_index', self._default_box_index)

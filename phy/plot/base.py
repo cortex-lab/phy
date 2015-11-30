@@ -16,7 +16,7 @@ from vispy.app import Canvas
 from vispy.util.event import Event
 
 from .transform import TransformChain, Clip
-from .utils import _load_shader
+from .utils import _load_shader, _enable_depth_mask
 
 logger = logging.getLogger(__name__)
 
@@ -218,6 +218,9 @@ class BaseCanvas(Canvas):
         self.inserter = GLSLInserter()
         self.visuals = []
         self.events.add(visual_added=VisualEvent)
+
+        # Enable transparency.
+        _enable_depth_mask()
 
     def add_visual(self, visual):
         """Add a visual to the canvas, and build its program by the same

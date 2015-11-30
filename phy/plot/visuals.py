@@ -12,8 +12,7 @@ from vispy.gloo import Texture2D
 
 from .base import BaseVisual
 from .transform import Range, NDC
-from .utils import (_enable_depth_mask,
-                    _tesselate_histogram,
+from .utils import (_tesselate_histogram,
                     _get_texture,
                     _get_array,
                     _get_data_bounds,
@@ -68,9 +67,6 @@ class ScatterVisual(BaseVisual):
         # Set the marker type.
         self.marker = marker or self._default_marker
         assert self.marker in self._supported_markers
-
-        # Enable transparency.
-        _enable_depth_mask()
 
         self.set_shader('scatter')
         self.fragment_shader = self.fragment_shader.replace('%MARKER',
@@ -142,7 +138,6 @@ class PlotVisual(BaseVisual):
 
     def __init__(self):
         super(PlotVisual, self).__init__()
-        _enable_depth_mask()
 
         self.set_shader('plot')
         self.set_primitive_type('line_strip')
