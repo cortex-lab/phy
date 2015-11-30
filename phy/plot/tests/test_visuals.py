@@ -89,7 +89,7 @@ def test_plot_0(qtbot, canvas_pz):
 
 
 def test_plot_1(qtbot, canvas_pz):
-    y = .2 * np.random.randn(1, 10)
+    y = .2 * np.random.randn(10)
     _test_visual(qtbot, canvas_pz, PlotVisual(),
                  y=y)
 

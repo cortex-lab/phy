@@ -119,8 +119,19 @@ class ScatterVisual(BaseVisual):
         self.program['a_color'] = data.color
 
 
+def _as_list(arr):
+    if isinstance(arr, np.ndarray):
+        if arr.ndim == 1:
+            return [arr]
+        elif arr.ndim == 2:
+            return list(arr)
+    assert isinstance(arr, list)
+    return arr
+
+
 class PlotVisual(BaseVisual):
     _default_color = DEFAULT_COLOR
+    allow_list = ('x', 'y')
 
     def __init__(self):
         super(PlotVisual, self).__init__()
@@ -140,60 +151,38 @@ class PlotVisual(BaseVisual):
                  data_bounds=None,
                  ):
 
-        # Default x coordinates.
         assert y is not None
+        y = _as_list(y)
 
-        if isinstance(y, np.ndarray) and y.ndim == 2:
-            if x is None:
-                x = _get_linear_x(*y.shape)
-            assert x.ndim == 2
-            assert x.shape == y.shape
-            n_signals, n_samples = y.shape
-            n = y.size
-            # Data bounds.
-            if data_bounds is None:
-                if n_samples > 0:
-                    # NOTE: by default, per-signal normalization.
-                    data_bounds = np.c_[x.min(axis=1), y.min(axis=1),
-                                        x.max(axis=1), y.max(axis=1)]
-                else:
-                    data_bounds = NDC
-            # x = x.ravel()
-            # y = y.ravel()
-        elif isinstance(y, list):
-            if x is None:
-                x = [np.linspace(-1., 1., len(_)) for _ in y]
-            assert isinstance(x, list)
-            # Remove empty elements.
-            x = [_ for _ in x if len(_)]
-            y = [_ for _ in y if len(_)]
-            assert len(x) == len(y)
-            n_signals = len(x)
-            n_samples = [len(_) for _ in y]
-            if data_bounds is None:
-                xmin = [_.min() for _ in x]
-                ymin = [_.min() for _ in y]
-                xmax = [_.max() for _ in x]
-                ymax = [_.max() for _ in y]
-                data_bounds = np.c_[xmin, ymin, xmax, ymax]
-            n = sum(n_samples)
-            # x = np.concatenate(x)
-            # y = np.concatenate(y)
+        if x is None:
+            x = [np.linspace(-1., 1., len(_)) for _ in y]
+        x = _as_list(x)
 
-        # assert x.shape == y.shape == (n,)
-        # NOTE: n_samples may be an int or a list of ints.
+        # Remove empty elements.
+        x = [_ for _ in x if len(_)]
+        y = [_ for _ in y if len(_)]
+        assert len(x) == len(y)
+
+        assert [len(_) for _ in x] == [len(_) for _ in y]
+
+        n_signals = len(x)
+
+        if data_bounds is None:
+            xmin = [_.min() for _ in x]
+            ymin = [_.min() for _ in y]
+            xmax = [_.max() for _ in x]
+            ymax = [_.max() for _ in y]
+            data_bounds = np.c_[xmin, ymin, xmax, ymax]
 
         color = _get_array(color, (n_signals, 4), PlotVisual._default_color)
         assert color.shape == (n_signals, 4)
 
         depth = _get_array(depth, (n_signals, 1), 0)
-        depth = np.repeat(depth, n_samples, axis=0).astype(np.float32)
-        assert depth.shape == (n, 1)
+        assert depth.shape == (n_signals, 1)
 
         data_bounds = _get_data_bounds(data_bounds, length=n_signals)
-        data_bounds = np.repeat(data_bounds, n_samples, axis=0)
         data_bounds = data_bounds.astype(np.float32)
-        assert data_bounds.shape == (n, 4)
+        assert data_bounds.shape == (n_signals, 4)
 
         return Bunch(x=x, y=y,
                      color=color, depth=depth,
@@ -207,16 +196,12 @@ class PlotVisual(BaseVisual):
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
 
-        if isinstance(data.y, np.ndarray):
-            n_signals, n_samples = data.y.shape
-            n = data.y.size
-            x, y = data.x, data.y
-        elif isinstance(data.y, list):
-            n_signals = len(data.y)
-            n_samples = [len(_) for _ in data.y]
-            n = sum(n_samples)
-            x = np.concatenate(data.x)
-            y = np.concatenate(data.y)
+        assert isinstance(data.y, list)
+        n_signals = len(data.y)
+        n_samples = [len(_) for _ in data.y]
+        n = sum(n_samples)
+        x = np.concatenate(data.x) if len(data.x) else np.array([])
+        y = np.concatenate(data.y) if len(data.y) else np.array([])
 
         # Generate the position array.
         pos = np.empty((n, 2), dtype=np.float32)
@@ -230,10 +215,14 @@ class PlotVisual(BaseVisual):
         assert signal_index.shape == (n, 1)
 
         # Transform the positions.
-        self.data_range.from_bounds = data.data_bounds
+        data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
+        self.data_range.from_bounds = data_bounds
         pos_tr = self.transforms.apply(pos)
 
-        self.program['a_position'] = np.c_[pos_tr, data.depth]
+        # Position and depth.
+        depth = np.repeat(data.depth, n_samples, axis=0)
+        self.program['a_position'] = np.c_[pos_tr, depth]
+
         self.program['a_signal_index'] = signal_index
         self.program['u_plot_colors'] = Texture2D(_get_texture(data.color,
                                                   PlotVisual._default_color,
