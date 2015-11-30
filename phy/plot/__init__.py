@@ -15,7 +15,7 @@ from vispy import config
 from .plot import GridView, BoxedView, StackedView  # noqa
 from .transform import Translate, Scale, Range, Subplot, NDC
 from .panzoom import PanZoom
-from.visuals import _get_linear_x
+from .utils import _get_linear_x
 
 
 #------------------------------------------------------------------------------
