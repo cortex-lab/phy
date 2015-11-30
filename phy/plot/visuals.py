@@ -19,7 +19,6 @@ from .utils import (_enable_depth_mask,
                     _get_data_bounds,
                     _get_pos,
                     _get_index,
-                    _get_linear_x,
                     _get_color,
                     )
 from phy.utils import Bunch
