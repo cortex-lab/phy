@@ -24,6 +24,10 @@ from .visuals import ScatterVisual, PlotVisual, HistogramVisual
 # Utils
 #------------------------------------------------------------------------------
 
+def _flatten(l):
+    return [item for sublist in l for item in sublist]
+
+
 class Accumulator(object):
     """Accumulate arrays for concatenation."""
     def __init__(self):
@@ -33,7 +37,7 @@ class Accumulator(object):
         self._data[name].append(val)
 
     def get(self, name):
-        return self._data[name]
+        return _flatten(self._data[name])
 
     @property
     def names(self):
@@ -90,7 +94,6 @@ class BaseView(BaseCanvas):
 
         if cls not in self._items:
             self._items[cls] = []
-        print(data['y'])
         self._items[cls].append(data)
         return data
 
