@@ -31,8 +31,8 @@ def _test_visual(qtbot, c, v, stop=False, **kwargs):
 
 #------------------------------------------------------------------------------
 # Test scatter visual
-
 #------------------------------------------------------------------------------
+
 def test_scatter_empty(qtbot, canvas):
     _test_visual(qtbot, canvas, ScatterVisual(), x=np.zeros(0), y=np.zeros(0))
 
@@ -111,6 +111,16 @@ def test_plot_2(qtbot, canvas_pz):
                  y=y, depth=depth,
                  data_bounds=[-1, -50, 1, 50],
                  color=c)
+
+
+def test_plot_list(qtbot, canvas_pz):
+    y = [np.random.randn(i) for i in (5, 20)]
+
+    c = np.random.uniform(.5, 1, size=(2, 4))
+    c[:, 3] = .5
+
+    _test_visual(qtbot, canvas_pz, PlotVisual(),
+                 y=y, color=c)
 
 
 #------------------------------------------------------------------------------
