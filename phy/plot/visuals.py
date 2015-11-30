@@ -82,9 +82,7 @@ class ScatterVisual(BaseVisual):
 
     @staticmethod
     def vertex_count(x=None, y=None, pos=None, **kwargs):
-        if pos is not None:
-            return len(pos)
-        return x.size if x is not None else y.size
+        return y.size if y is not None else len(pos)
 
     @staticmethod
     def validate(x=None,
@@ -160,8 +158,8 @@ class PlotVisual(BaseVisual):
                                         x.max(axis=1), y.max(axis=1)]
                 else:
                     data_bounds = NDC
-            x = x.ravel()
-            y = y.ravel()
+            # x = x.ravel()
+            # y = y.ravel()
         elif isinstance(y, list):
             if x is None:
                 x = [np.linspace(-1., 1., len(_)) for _ in y]
@@ -179,10 +177,46 @@ class PlotVisual(BaseVisual):
                 ymax = [_.max() for _ in y]
                 data_bounds = np.c_[xmin, ymin, xmax, ymax]
             n = sum(n_samples)
-            x = np.concatenate(x)
-            y = np.concatenate(y)
-            assert x.shape == y.shape == (n,)
+            # x = np.concatenate(x)
+            # y = np.concatenate(y)
+
+        # assert x.shape == y.shape == (n,)
         # NOTE: n_samples may be an int or a list of ints.
+
+        color = _get_array(color, (n_signals, 4), PlotVisual._default_color)
+        assert color.shape == (n_signals, 4)
+
+        depth = _get_array(depth, (n_signals, 1), 0)
+        depth = np.repeat(depth, n_samples, axis=0).astype(np.float32)
+        assert depth.shape == (n, 1)
+
+        data_bounds = _get_data_bounds(data_bounds, length=n_signals)
+        data_bounds = np.repeat(data_bounds, n_samples, axis=0)
+        data_bounds = data_bounds.astype(np.float32)
+        assert data_bounds.shape == (n, 4)
+
+        return Bunch(x=x, y=y,
+                     color=color, depth=depth,
+                     data_bounds=data_bounds)
+
+    @staticmethod
+    def vertex_count(y=None, **kwargs):
+        """Take the output of validate() as input."""
+        return y.size if isinstance(y, np.ndarray) else sum(len(_) for _ in y)
+
+    def set_data(self, *args, **kwargs):
+        data = self.validate(*args, **kwargs)
+
+        if isinstance(data.y, np.ndarray):
+            n_signals, n_samples = data.y.shape
+            n = data.y.size
+            x, y = data.x, data.y
+        elif isinstance(data.y, list):
+            n_signals = len(data.y)
+            n_samples = [len(_) for _ in data.y]
+            n = sum(n_samples)
+            x = np.concatenate(data.x)
+            y = np.concatenate(data.y)
 
         # Generate the position array.
         pos = np.empty((n, 2), dtype=np.float32)
@@ -195,42 +229,17 @@ class PlotVisual(BaseVisual):
         signal_index = _get_array(signal_index, (n, 1)).astype(np.float32)
         assert signal_index.shape == (n, 1)
 
-        color = _get_array(color, (n_signals, 4), PlotVisual._default_color)
-        # color = np.repeat(color, n_samples, axis=0).astype(np.float32)
-        assert color.shape == (n_signals, 4)
-
-        depth = _get_array(depth, (n_signals, 1), 0)
-        depth = np.repeat(depth, n_samples, axis=0).astype(np.float32)
-        assert depth.shape == (n, 1)
-
-        data_bounds = _get_data_bounds(data_bounds, length=n_signals)
-        data_bounds = np.repeat(data_bounds, n_samples, axis=0)
-        data_bounds = data_bounds.astype(np.float32)
-        assert data_bounds.shape == (n, 4)
-
-        return Bunch(pos=pos, n_signals=n_signals,
-                     signal_index=signal_index,
-                     color=color, depth=depth,
-                     data_bounds=data_bounds)
-
-    @staticmethod
-    def vertex_count(x=None, y=None, **kwargs):
-        return y.size if isinstance(y, np.ndarray) else sum(len(_) for _ in y)
-
-    def set_data(self, *args, **kwargs):
-        data = self.validate(*args, **kwargs)
-
         # Transform the positions.
         self.data_range.from_bounds = data.data_bounds
-        pos_tr = self.transforms.apply(data.pos)
+        pos_tr = self.transforms.apply(pos)
 
         self.program['a_position'] = np.c_[pos_tr, data.depth]
-        self.program['a_signal_index'] = data.signal_index
+        self.program['a_signal_index'] = signal_index
         self.program['u_plot_colors'] = Texture2D(_get_texture(data.color,
                                                   PlotVisual._default_color,
-                                                  data.n_signals,
+                                                  n_signals,
                                                   [0, 1]))
-        self.program['n_signals'] = data.n_signals
+        self.program['n_signals'] = n_signals
 
 
 class HistogramVisual(BaseVisual):

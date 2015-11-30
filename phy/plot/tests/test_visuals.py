@@ -20,8 +20,8 @@ from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
 
 def _test_visual(qtbot, c, v, stop=False, **kwargs):
     c.add_visual(v)
-    v.validate(**kwargs)
-    assert v.vertex_count(**kwargs) >= 0
+    data = v.validate(**kwargs)
+    assert v.vertex_count(**data) >= 0
     v.set_data(**kwargs)
     c.show()
     qtbot.waitForWindowShown(c.native)
