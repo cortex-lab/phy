@@ -117,7 +117,7 @@ def test_trace_view_no_spikes(qtbot):
     _show(qtbot, v)
 
 
-def SKIPtest_trace_view_spikes(qtbot):
+def test_trace_view_spikes(qtbot):
     n_samples = 1000
     n_channels = 12
     sample_rate = 2000.
@@ -131,7 +131,6 @@ def SKIPtest_trace_view_spikes(qtbot):
     masks = artificial_masks(n_spikes, n_channels)
 
     # Create the view.
-    # TODO: make this work = plots with variable n_samples
     v = TraceView(traces=traces,
                   sample_rate=sample_rate,
                   spike_times=spike_times,
