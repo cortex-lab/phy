@@ -85,11 +85,13 @@ class BaseView(BaseCanvas):
 
     def _add_item(self, cls, *args, **kwargs):
         box_index = kwargs.pop('box_index', self._default_box_index)
-        k = len(box_index) if hasattr(box_index, '__len__') else 1
 
         data = cls.validate(*args, **kwargs)
         n = cls.vertex_count(**data)
-        box_index = _get_array(box_index, (n, k))
+
+        if not isinstance(box_index, np.ndarray):
+            k = len(box_index) if hasattr(box_index, '__len__') else 1
+            box_index = _get_array(box_index, (n, k))
         data['box_index'] = box_index
 
         if cls not in self._items:

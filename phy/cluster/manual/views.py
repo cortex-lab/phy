@@ -361,7 +361,7 @@ class TraceView(StackedView):
                 sample_rel = (int(spike_times[i] * self.sample_rate) -
                               trace_start)
                 mask = self.masks[i]
-                # TODO
+                # TODO: color of spike = white or color if selected cluster
                 # clu = spike_clusters[i]
                 w, ch = _extract_wave(traces, sample_rel, mask, wave_len)
                 n_ch = len(ch)
