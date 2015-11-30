@@ -129,6 +129,14 @@ def _as_list(arr):
     return arr
 
 
+def _min(arr):
+    return arr.min() if len(arr) else 0
+
+
+def _max(arr):
+    return arr.max() if len(arr) else 1
+
+
 class PlotVisual(BaseVisual):
     _default_color = DEFAULT_COLOR
     allow_list = ('x', 'y')
@@ -159,8 +167,6 @@ class PlotVisual(BaseVisual):
         x = _as_list(x)
 
         # Remove empty elements.
-        x = [_ for _ in x if len(_)]
-        y = [_ for _ in y if len(_)]
         assert len(x) == len(y)
 
         assert [len(_) for _ in x] == [len(_) for _ in y]
@@ -168,10 +174,10 @@ class PlotVisual(BaseVisual):
         n_signals = len(x)
 
         if data_bounds is None:
-            xmin = [_.min() for _ in x]
-            ymin = [_.min() for _ in y]
-            xmax = [_.max() for _ in x]
-            ymax = [_.max() for _ in y]
+            xmin = [_min(_) for _ in x]
+            ymin = [_min(_) for _ in y]
+            xmax = [_max(_) for _ in x]
+            ymax = [_max(_) for _ in y]
             data_bounds = np.c_[xmin, ymin, xmax, ymax]
 
         color = _get_array(color, (n_signals, 4), PlotVisual._default_color)

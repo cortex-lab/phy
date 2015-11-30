@@ -18,15 +18,13 @@ from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
 # Fixtures
 #------------------------------------------------------------------------------
 
-def _test_visual(qtbot, c, v, stop=False, **kwargs):
+def _test_visual(qtbot, c, v, **kwargs):
     c.add_visual(v)
     data = v.validate(**kwargs)
     assert v.vertex_count(**data) >= 0
     v.set_data(**kwargs)
     c.show()
     qtbot.waitForWindowShown(c.native)
-    if stop:  # pragma: no cover
-        qtbot.stop()
 
 
 #------------------------------------------------------------------------------
