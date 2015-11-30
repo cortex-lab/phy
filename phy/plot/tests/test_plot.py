@@ -85,13 +85,13 @@ def test_grid_scatter(qtbot):
 
 def test_grid_plot(qtbot):
     view = GridView((1, 2))
-    n_plots, n_samples = 10, 50
+    n_plots, n_samples = 2, 5
 
     x = _get_linear_x(n_plots, n_samples)
     y = np.random.randn(n_plots, n_samples)
 
     view[0, 0].plot(x, y)
-    view[0, 1].plot(x, y, color=np.random.uniform(.5, .8, size=(n_plots, 4)))
+    # view[0, 1].plot(x, y, color=np.random.uniform(.5, .8, size=(n_plots, 4)))
 
     _show(qtbot, view)
 

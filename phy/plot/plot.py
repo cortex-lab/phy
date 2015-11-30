@@ -32,18 +32,29 @@ class Accumulator(object):
     def add(self, name, val):
         self._data[name].append(val)
 
+    def get(self, name):
+        return self._data[name]
+
+    @property
+    def names(self):
+        return set(self._data)
+
     def __getitem__(self, name):
         return np.vstack(self._data[name]).astype(np.float32)
 
 
-def _accumulate(data_list):
+def _accumulate(data_list, no_concat=()):
     acc = Accumulator()
-    names = set()
     for data in data_list:
         for name, val in data.items():
-            names.add(name)
             acc.add(name, val)
-    return {name: acc[name] for name in names}
+    out = {name: acc[name] for name in acc.names if name not in no_concat}
+
+    # Some variables should not be concatenated but should be kept as lists.
+    # This is when there can be several arrays of variable length (NumPy
+    # doesn't support ragged arrays).
+    out.update({name: acc.get(name) for name in no_concat})
+    return out
 
 
 def _make_scatter_class(marker):
@@ -79,6 +90,7 @@ class BaseView(BaseCanvas):
 
         if cls not in self._items:
             self._items[cls] = []
+        print(data['y'])
         self._items[cls].append(data)
         return data
 
@@ -99,7 +111,9 @@ class BaseView(BaseCanvas):
 
     def build(self):
         for cls, data_list in self._items.items():
-            data = _accumulate(data_list)
+            # Some variables are not concatenated. They are specified
+            # in `allow_list`.
+            data = _accumulate(data_list, cls.allow_list)
             box_index = data.pop('box_index')
             visual = cls()
             self.add_visual(visual)

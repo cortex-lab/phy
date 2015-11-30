@@ -40,6 +40,10 @@ class BaseVisual(object):
     type of GL primitive.
 
     """
+
+    """Data variables that can be lists of arrays."""
+    allow_list = ()
+
     def __init__(self):
         self.gl_primitive_type = None
         self.transforms = TransformChain()
