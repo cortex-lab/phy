@@ -89,6 +89,8 @@ def correlograms(spike_times,
 
     """
     assert sample_rate > 0.
+    assert np.all(np.diff(spike_times) >= 0), ("The spike times must be "
+                                               "increasing.")
 
     # Get the spike samples.
     spike_times = np.asarray(spike_times, dtype=np.float64)
