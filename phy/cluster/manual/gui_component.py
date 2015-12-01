@@ -143,7 +143,7 @@ class ManualClustering(object):
         when clusters are selected
     cluster(up)
         when a merge or split happens
-    save_requested(spike_clusters, cluster_groups)
+    request_save(spike_clusters, cluster_groups)
         when a save is requested by the user
 
     """
@@ -505,6 +505,6 @@ class ManualClustering(object):
 
     def save(self):
         spike_clusters = self.clustering.spike_clusters
-        groups = {c: self.cluster_meta.get('group', c)
+        groups = {c: self.cluster_meta.get('group', c) or 'unsorted'
                   for c in self.clustering.cluster_ids}
-        self.gui.emit('save_requested', spike_clusters, groups)
+        self.gui.emit('request_save', spike_clusters, groups)
