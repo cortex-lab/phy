@@ -12,7 +12,7 @@ import logging
 
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  Qt, QSize, QMetaObject)
-from .actions import Actions, _show_shortcuts
+from .actions import Actions, _show_shortcuts, Snippets
 from phy.utils.event import EventEmitter
 from phy.utils import load_master_config
 from phy.utils.plugin import get_plugin
@@ -125,9 +125,9 @@ class GUI(QMainWindow):
         # Default actions.
         self.default_actions = Actions(self)
 
-        @self.default_actions.add(shortcut='HelpContents')
+        @self.default_actions.add(shortcut=('HelpContents', 'h'))
         def show_shortcuts():
-            shortcuts = {}
+            shortcuts = self.default_actions.shortcuts
             for actions in self.actions:
                 shortcuts.update(actions.shortcuts)
             _show_shortcuts(shortcuts, self.name)
@@ -135,6 +135,9 @@ class GUI(QMainWindow):
         @self.default_actions.add(shortcut='Quit')
         def exit():
             self.close()
+
+        # Create and attach snippets.
+        self.snippets = Snippets(self)
 
     # Events
     # -------------------------------------------------------------------------

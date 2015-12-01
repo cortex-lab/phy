@@ -87,7 +87,12 @@ def test_actions_simple(actions):
     actions.run('t', 1)
     assert _res == [(1,)]
 
+    assert 'show_my_shortcuts' in actions
+    assert 'unknown' not in actions
+
     actions.remove_all()
+
+    assert '<Actions' in actions.__repr__()
 
 
 #------------------------------------------------------------------------------
@@ -113,6 +118,22 @@ def test_actions_gui(qtbot, gui, actions):
     assert 'g\n' in stdout.getvalue()
 
 
+def test_actions_disable(qtbot, gui, actions):
+    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+
+    @actions.add(shortcut='g')
+    def press():
+        pass
+
+    actions.disable()
+    assert not actions.get('press').isEnabled()
+
+    actions.enable()
+    assert actions.get('press').isEnabled()
+
+
 def test_snippets_gui(qtbot, gui, actions):
     qtbot.addWidget(gui)
     gui.show()
@@ -125,7 +146,7 @@ def test_snippets_gui(qtbot, gui, actions):
         _actions.append(args)
 
     # Attach the GUI and register the actions.
-    snippets = actions.snippets
+    snippets = gui.snippets
 
     # Simulate the following keystrokes `:t2 ^H^H1 3-5 ab,c `
     assert not snippets.is_mode_on()
@@ -134,15 +155,15 @@ def test_snippets_gui(qtbot, gui, actions):
         """Simulate keystrokes."""
         for char in cmd:
             i = snippets._snippet_chars.index(char)
-            actions.run('_snippet_{}'.format(i))
+            snippets.actions.run('_snippet_{}'.format(i))
 
-    actions.enable_snippet_mode()
+    snippets.actions.enable_snippet_mode()
     _run('t2 ')
     assert snippets.is_mode_on()
-    actions._snippet_backspace()
-    actions._snippet_backspace()
+    snippets.actions._snippet_backspace()
+    snippets.actions._snippet_backspace()
     _run('1 3-5 ab,c')
-    actions._snippet_activate()
+    snippets.actions._snippet_activate()
 
     assert _actions == [([3, 4, 5], ['ab', 'c'])]
 
@@ -194,7 +215,7 @@ def test_snippets_errors(actions, snippets):
 
     with captured_logging() as buf:
         snippets.run(':t1')
-    assert 'error' in buf.getvalue().lower()
+    assert 'couldn\'t' in buf.getvalue().lower()
 
     with captured_logging() as buf:
         snippets.run(':t')
@@ -242,7 +263,7 @@ def test_snippets_actions_1(actions, snippets):
         """Simulate keystrokes."""
         for char in cmd:
             i = snippets._snippet_chars.index(char)
-            actions.run('_snippet_{}'.format(i))
+            snippets.actions.run('_snippet_{}'.format(i))
 
     # Need to activate the snippet mode first.
     with raises(ValueError):
@@ -250,9 +271,9 @@ def test_snippets_actions_1(actions, snippets):
 
     # Simulate keystrokes ':t3 hello<Enter>'
     snippets.mode_on()  # ':'
-    actions._snippet_backspace()
+    snippets.actions._snippet_backspace()
     _run('t3 hello')
-    actions._snippet_activate()  # 'Enter'
+    snippets.actions._snippet_activate()  # 'Enter'
     assert _actions[-1] == (3, ('hello',))
     snippets.mode_off()
 

@@ -29,5 +29,5 @@ def actions(gui):
 
 
 @yield_fixture
-def snippets(gui, actions):
-    yield Snippets(gui, actions)
+def snippets(gui):
+    yield Snippets(gui)

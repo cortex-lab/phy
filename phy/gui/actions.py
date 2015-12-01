@@ -124,8 +124,7 @@ def _create_qaction(gui, name, callback, shortcut):
     sequence = _get_qkeysequence(shortcut)
     if not isinstance(sequence, (tuple, list)):
         sequence = [sequence]
-    for s in sequence:
-        action.setShortcut(s)
+    action.setShortcuts(sequence)
     return action
 
 
@@ -145,12 +144,6 @@ class Actions(object):
         self._default_shortcuts = default_shortcuts or {}
         self.gui = gui
         gui.actions.append(self)
-
-        # Create and attach snippets.
-        self.snippets = Snippets(gui, self)
-
-    def backup(self):
-        return list(self._actions_dict.values())
 
     def add(self, callback=None, name=None, shortcut=None, alias=None,
             verbose=True):
@@ -187,6 +180,26 @@ class Actions(object):
         if callback:
             setattr(self, name, callback)
 
+    def disable(self, name=None):
+        """Disable one or all actions."""
+        if name is None:
+            for name in self._actions_dict:
+                self.disable(name)
+            return
+        self._actions_dict[name].qaction.setEnabled(False)
+
+    def enable(self, name=None):
+        """Enable one or all actions."""
+        if name is None:
+            for name in self._actions_dict:
+                self.enable(name)
+            return
+        self._actions_dict[name].qaction.setEnabled(True)
+
+    def get(self, name):
+        """Get a QAction instance from its name."""
+        return self._actions_dict[name].qaction
+
     def run(self, name, *args):
         """Run an action as specified by its name."""
         assert isinstance(name, string_types)
@@ -221,6 +234,12 @@ class Actions(object):
     def show_shortcuts(self):
         """Print all shortcuts."""
         _show_shortcuts(self.shortcuts, self.gui.windowTitle())
+
+    def __contains__(self, name):
+        return name in self._actions_dict
+
+    def __repr__(self):
+        return '<Actions {}>'.format(sorted(self._actions_dict))
 
 
 # -----------------------------------------------------------------------------
@@ -260,20 +279,17 @@ class Snippets(object):
     _snippet_chars = ("abcdefghijklmnopqrstuvwxyz0123456789"
                       " ,.;?!_-+~=*/\(){}[]")
 
-    def __init__(self, gui, actions):
+    def __init__(self, gui):
         self.gui = gui
 
-        assert isinstance(actions, Actions)
-        self.actions = actions
-
-        # We will keep a backup of all actions so that we can switch
-        # safely to the set of shortcut actions when snippet mode is on.
-        self._actions_backup = []
+        self.actions = Actions(gui)
 
         # Register snippet mode shortcut.
-        @actions.add(shortcut=':')
+        @self.actions.add(shortcut=':')
         def enable_snippet_mode():
             self.mode_on()
+
+        self._create_snippet_actions()
 
     @property
     def command(self):
@@ -350,7 +366,16 @@ class Snippets(object):
 
         logger.info("Processing snippet `%s`.", snippet)
         try:
-            self.actions.run(name, *snippet_args[1:])
+            # Try to run the snippet on all attached Actions instances.
+            for actions in self.gui.actions:
+                try:
+                    actions.run(name, *snippet_args[1:])
+                    return
+                except ValueError:
+                    # This Actions instance doesn't contain the requested
+                    # snippet, trying the next attached Actions instance.
+                    pass
+            logger.warn("Couldn't find action `%s`.", name)
         except Exception as e:
             logger.warn("Error when executing snippet: \"%s\".", str(e))
             logger.debug(''.join(traceback.format_exception(*sys.exc_info())))
@@ -360,23 +385,22 @@ class Snippets(object):
 
     def mode_on(self):
         logger.info("Snippet mode enabled, press `escape` to leave this mode.")
-        self._actions_backup = self.actions.backup()
-        # Remove all existing actions.
-        self.actions.remove_all()
-        # Add snippet keystroke actions.
-        self._create_snippet_actions()
+
+        # Silent all actions except the Snippets actions.
+        for actions in self.gui.actions:
+            if actions != self.actions:
+                actions.disable()
+        self.actions.enable()
+
         self.command = ':'
 
     def mode_off(self):
         self.gui.status_message = ''
-        # Remove all existing actions.
-        self.actions.remove_all()
+
+        # Re-enable all actions except the Snippets actions.
+        self.actions.disable()
+        for actions in self.gui.actions:
+            if actions != self.actions:
+                actions.enable()
+
         logger.info("Snippet mode disabled.")
-        # Reestablishes the shortcuts.
-        for action_obj in self._actions_backup:
-            self.actions.add(callback=action_obj.callback,
-                             name=action_obj.name,
-                             shortcut=action_obj.shortcut,
-                             alias=action_obj.alias,
-                             verbose=False,
-                             )
