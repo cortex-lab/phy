@@ -51,6 +51,7 @@ def gui(qtbot):
     gui.show()
     qtbot.waitForWindowShown(gui)
     yield gui
+    qtbot.wait(5)
     gui.close()
     del gui
     qtbot.wait(5)
