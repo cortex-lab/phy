@@ -152,6 +152,8 @@ def _insert_glsl(vertex, fragment, to_insert):
 
 
 class GLSLInserter(object):
+    """Insert GLSL snippets into shader codes."""
+
     def __init__(self):
         self._to_insert = defaultdict(list)
         self.insert_vert('vec2 temp_pos_tr = {{ var }};',
@@ -171,12 +173,25 @@ class GLSLInserter(object):
         self._to_insert[shader_type, location].append(glsl)
 
     def insert_vert(self, glsl, location='transforms'):
+        """Insert a GLSL snippet into the vertex shader.
+
+        The location can be:
+
+        * `header`: declaration of GLSL variables
+        * `before_transforms`: just before the transforms in the vertex shader
+        * `transforms`: where the GPU transforms are applied in the vertex
+          shader
+        * `after_transforms`: just after the GPU transforms
+
+        """
         self._insert('vert', glsl, location)
 
     def insert_frag(self, glsl, location=None):
+        """Insert a GLSL snippet into the fragment shader."""
         self._insert('frag', glsl, location)
 
     def add_transform_chain(self, tc):
+        """Insert the GLSL snippets of a transform chain."""
         # Generate the transforms snippet.
         for t in tc.gpu_transforms:
             if isinstance(t, Clip):
@@ -190,12 +205,14 @@ class GLSLInserter(object):
             self.insert_frag(clip.glsl('v_temp_pos_tr'), 'before_transforms')
 
     def insert_into_shaders(self, vertex, fragment):
+        """Apply the insertions to shader code."""
         to_insert = defaultdict(str)
         to_insert.update({key: '\n'.join(self._to_insert[key])
                           for key in self._to_insert})
         return _insert_glsl(vertex, fragment, to_insert)
 
     def __add__(self, inserter):
+        """Concatenate two inserters."""
         self._to_insert.update(inserter._to_insert)
         return self
 
@@ -254,6 +271,7 @@ class BaseCanvas(Canvas):
         self.context.set_viewport(0, 0, event.size[0], event.size[1])
 
     def on_draw(self, e):
+        """Draw all visuals."""
         gloo.clear()
         for visual in self.visuals:
             visual.on_draw()
@@ -264,6 +282,7 @@ class BaseCanvas(Canvas):
 #------------------------------------------------------------------------------
 
 class BaseInteract(object):
+    """Implement dynamic transforms on a canvas."""
     canvas = None
 
     def attach(self, canvas):
@@ -275,9 +294,12 @@ class BaseInteract(object):
             self.update_program(e.visual.program)
 
     def update_program(self, program):
+        """Override this method to update programs when `self.update()`
+        is called."""
         pass
 
     def update(self):
+        """Update all visuals in the attached canvas."""
         if not self.canvas:
             return
         for visual in self.canvas.visuals:
