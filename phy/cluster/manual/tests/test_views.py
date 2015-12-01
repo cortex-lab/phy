@@ -200,8 +200,8 @@ def test_correlogram_view(qtbot):
                         sample_rate=sample_rate,
                         bin_size=bin_size,
                         window_size=window_size,
-                        excerpt_size=None,
-                        n_excerpts=None,
+                        excerpt_size=8,
+                        n_excerpts=5,
                         )
 
     # Select some spikes.
