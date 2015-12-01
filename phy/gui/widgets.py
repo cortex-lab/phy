@@ -262,7 +262,7 @@ class Table(HTMLWidget):
         sort_dir = sort_dir or default_sort_dir or 'desc'
 
         # Set the rows.
-        logger.debug("Set %d rows in the table.", len(ids))
+        logger.log(5, "Set %d rows in the table.", len(ids))
         items = [self._get_row(id) for id in ids]
         data = _create_json_dict(items=items,
                                  cols=self.column_names,
@@ -275,7 +275,7 @@ class Table(HTMLWidget):
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
-        logger.debug("Sort by `%s` %s.", name, sort_dir)
+        logger.log(5, "Sort by `%s` %s.", name, sort_dir)
         self.eval_js('table.sortBy("{}", "{}");'.format(name, sort_dir))
 
     def next(self):

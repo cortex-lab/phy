@@ -132,7 +132,7 @@ class GUI(QMainWindow):
                 shortcuts.update(actions.shortcuts)
             _show_shortcuts(shortcuts, self.name)
 
-        @self.default_actions.add(shortcut='Quit')
+        @self.default_actions.add(shortcut='ctrl+q')
         def exit():
             self.close()
 
