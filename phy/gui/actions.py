@@ -290,6 +290,7 @@ class Snippets(object):
             self.mode_on()
 
         self._create_snippet_actions()
+        self.mode_off()
 
     @property
     def command(self):
@@ -402,5 +403,7 @@ class Snippets(object):
         for actions in self.gui.actions:
             if actions != self.actions:
                 actions.enable()
+        # The `:` shortcut should always be enabled.
+        self.actions.enable('enable_snippet_mode')
 
         logger.info("Snippet mode disabled.")
