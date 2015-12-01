@@ -34,20 +34,30 @@ class Accumulator(object):
         self._data = defaultdict(list)
 
     def add(self, name, val):
+        """Add an array."""
         self._data[name].append(val)
 
     def get(self, name):
+        """Return the list of arrays for a given name."""
         return _flatten(self._data[name])
 
     @property
     def names(self):
+        """List of names."""
         return set(self._data)
 
     def __getitem__(self, name):
+        """Concatenate all arrays with a given name."""
         return np.vstack(self._data[name]).astype(np.float32)
 
 
 def _accumulate(data_list, no_concat=()):
+    """Concatenate a list of dicts `(name, array)`.
+
+    You can specify some names which arrays should not be concatenated.
+    This is necessary with lists of plots with different sizes.
+
+    """
     acc = Accumulator()
     for data in data_list:
         for name, val in data.items():
@@ -62,6 +72,7 @@ def _accumulate(data_list, no_concat=()):
 
 
 def _make_scatter_class(marker):
+    """Return a temporary ScatterVisual class with a given marker."""
     return type('ScatterVisual' + marker.title(),
                 (ScatterVisual,), {'_default_marker': marker})
 
@@ -81,10 +92,12 @@ class BaseView(BaseCanvas):
         self.clear()
 
     def clear(self):
+        """Reset the view."""
         self._items = OrderedDict()
         self.visuals = []
 
     def _add_item(self, cls, *args, **kwargs):
+        """Add a plot item."""
         box_index = kwargs.pop('box_index', self._default_box_index)
 
         data = cls.validate(*args, **kwargs)
@@ -101,14 +114,17 @@ class BaseView(BaseCanvas):
         return data
 
     def plot(self, *args, **kwargs):
+        """Add a line plot."""
         return self._add_item(PlotVisual, *args, **kwargs)
 
     def scatter(self, *args, **kwargs):
+        """Add a scatter plot."""
         cls = _make_scatter_class(kwargs.pop('marker',
                                              ScatterVisual._default_marker))
         return self._add_item(cls, *args, **kwargs)
 
     def hist(self, *args, **kwargs):
+        """Add some histograms."""
         return self._add_item(HistogramVisual, *args, **kwargs)
 
     def __getitem__(self, box_index):
@@ -116,6 +132,12 @@ class BaseView(BaseCanvas):
         return self
 
     def build(self):
+        """Build all added items.
+
+        Visuals are created, added, and built. The `set_data()` methods can
+        be called afterwards.
+
+        """
         for cls, data_list in self._items.items():
             # Some variables are not concatenated. They are specified
             # in `allow_list`.
@@ -129,6 +151,7 @@ class BaseView(BaseCanvas):
 
     @contextmanager
     def building(self):
+        """Context manager to specify the plots."""
         self.clear()
         yield
         self.build()
