@@ -98,7 +98,8 @@ def _show_shortcuts(shortcuts, name=None):
     print('Keyboard shortcuts' + name)
     for name in sorted(shortcuts):
         shortcut = _get_shortcut_string(shortcuts[name])
-        print('{0:<40}: {1:s}'.format(name, shortcut))
+        if not name.startswith('_'):
+            print('{0:<40}: {1:s}'.format(name, shortcut))
     print()
 
 

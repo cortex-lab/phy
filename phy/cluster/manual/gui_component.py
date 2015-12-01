@@ -177,7 +177,7 @@ class ManualClustering(object):
         'save': 'Save',
         'show_shortcuts': 'Save',
         'undo': 'Undo',
-        'redo': ('Redo', 'ctrl+y'),
+        'redo': ('ctrl+shift+z', 'ctrl+y'),
     }
 
     def __init__(self,
