@@ -13,7 +13,7 @@ import numpy as np
 from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 from six import string_types
 
-from phy.io.array import _index_of, _get_padded
+from phy.io.array import _index_of, _get_padded, get_excerpts
 from phy.electrode.mea import linear_positions
 from phy.gui import Actions
 from phy.plot import (BoxedView, StackedView, GridView,
@@ -132,6 +132,7 @@ def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
 # -----------------------------------------------------------------------------
 
 class WaveformView(BoxedView):
+    # TODO: make this configurable
     normalization_percentile = .95
     normalization_n_spikes = 1000
     overlap = True
@@ -484,6 +485,7 @@ def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
 
 
 class FeatureView(GridView):
+    # TODO: make this configurable
     normalization_percentile = .95
     normalization_n_spikes = 1000
 
@@ -591,6 +593,10 @@ class FeatureView(GridView):
 # -----------------------------------------------------------------------------
 
 class CorrelogramView(GridView):
+    # TODO: make this configurable
+    excerpt_size = 10000
+    n_excerpts = 100
+
     def __init__(self,
                  spike_times=None,
                  spike_clusters=None,
@@ -611,7 +617,8 @@ class CorrelogramView(GridView):
         assert window_size > 0
         self.window_size = window_size
 
-        # TODO: excerpt
+        self.excerpt_size = excerpt_size or self.excerpt_size
+        self.n_excerpts = n_excerpts or self.n_excerpts
 
         self.spike_times = np.asarray(spike_times)
         self.n_spikes, = self.spike_times.shape
@@ -629,11 +636,24 @@ class CorrelogramView(GridView):
         if n_spikes == 0:
             return
 
-        # TODO: excerpt
+        # Keep spikes belonging to the selected clusters.
         ind = np.in1d(self.spike_clusters, cluster_ids)
         st = self.spike_times[ind]
         sc = self.spike_clusters[ind]
 
+        # Take excerpts of the spikes.
+        n_spikes_total = len(st)
+        st = get_excerpts(st, excerpt_size=self.excerpt_size,
+                          n_excerpts=self.n_excerpts)
+        sc = get_excerpts(sc, excerpt_size=self.excerpt_size,
+                          n_excerpts=self.n_excerpts)
+        n_spikes_exerpts = len(st)
+        logger.debug("Computing correlograms for clusters %s (%d/%d spikes).",
+                     ', '.join(map(str, cluster_ids)),
+                     n_spikes_exerpts, n_spikes_total,
+                     )
+
+        # Compute all pairwise correlograms.
         ccg = correlograms(st, sc,
                            cluster_ids=cluster_ids,
                            sample_rate=self.sample_rate,
