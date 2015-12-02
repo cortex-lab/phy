@@ -241,7 +241,7 @@ class WaveformView(BaseSpikeCanvas):
     """A VisPy canvas displaying waveforms."""
     _visual_class = WaveformVisual
     _arrows = ('Left', 'Right', 'Up', 'Down')
-    _pm = ('+', '-')
+    _pm = ('+', '-', '=')
     _events = ('channel_click',)
     _key_pressed = None
     _show_mean = False
@@ -417,7 +417,7 @@ class WaveformView(BaseSpikeCanvas):
                 self.box_scale = (u * coeff, v)
             elif key in ('Down', '-'):
                 self.box_scale = (u, v / coeff)
-            elif key in ('Up', '+'):
+            elif key in ('Up', '+', '='):
                 self.box_scale = (u, v * coeff)
 
         # Probe scale.
