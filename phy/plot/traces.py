@@ -288,12 +288,12 @@ class TraceView(BaseSpikeCanvas):
         ctrl = 'Control' in event.modifiers
 
         # Box scale.
-        if ctrl and key in ('+', '-'):
+        if ctrl and key in ('+', '-', '='):
             coeff = 1.1
             u = self.channel_scale
             if key == '-':
                 self.channel_scale = u / coeff
-            elif key == '+':
+            elif key == '+' or key == '=':
                 self.channel_scale = u * coeff
 
 
