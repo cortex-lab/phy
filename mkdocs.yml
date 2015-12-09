@@ -1,6 +1,7 @@
 site_name: phy
 pages:
 - Home: 'index.md'
+- FAQ: 'faq.md'
 - Installation: 'install.md'
 - Overview: 'overview.md'
 - GUI: 'gui.md'
