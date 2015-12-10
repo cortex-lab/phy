@@ -164,7 +164,45 @@ The `ManualClustering` component encapsulates all the logic for a manual cluster
 * clustering actions: merge, split, undo stack
 * moving clusters to groups
 
-Create an object with `mc = ManualClustering(spike_clusters)`. Then you can attach it to a GUI to bring manual clustering facilities to the GUI: `mc.attach(gui)`. This adds the manual clustering actions and the two cluster views.
+Create an object with `mc = ManualClustering(spike_clusters)`. Then you can attach it to a GUI to bring manual clustering facilities to the GUI: `mc.attach(gui)`. This adds the manual clustering actions and the two tables to the GUI: the cluster view and the similarity view.
 
-### Cluster view
+The main objects are the following:
+
+`mc.clustering`: a `Clustering` instance
+`mc.cluster_meta`: a `ClusterMeta` instance
+`mc.cluster_view`: the cluster view (derives from `Table`)
+`mc.similarity_view`: the similarity view (derives from `Table`)
+`mc.actions`: the clustering actions (instance of `Actions`)
+
+In practice, you generally access this object from a GUI plugin, available in `session.manual_clustering`.
+
+### Cluster and similarity view
+
+The cluster view shows the list of all clusters with their ids, while the similarity view shows the list of all clusters sorted by decreasing similarity wrt the currently-selected clusters in the cluster view.
+
+You can add a new column in both views as follows:
+
+```python
+>>> @mc.add_column
+... def n_spikes(cluster_id):
+...     return mc.clustering.cluster_counts[cluster_id]
+```
+
+The similarity view has an additional column compared to the cluster view: `similarity` with respect to the currently-selected clusters in the cluster view.
+
+See also the following methods:
+
+* `mc.set_default_sort(name)`: set a column as default sort in the quality cluster view
+* `mc.set_similarity_func(func)`: set a similarity function for the similarity view
+
+### Cluster selection
+
+The `ManualClustering` instance is responsible for the selection of the clusters.
+
+* `mc.select(cluster_ids)`: select some clusters
+* `mc.selected`: list of currently-selected clusters
+
+When the selection changes, the attached GUI raises the `select(cluster_ids, spike_ids)` event.
+
+Other events are `cluster(up)` when a clustering action occurs, and `request_save(spike_clusters, cluster_groups)` when the user wants to save the results of the manual clustering session.
 
