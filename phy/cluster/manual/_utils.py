@@ -112,9 +112,11 @@ class ClusterMeta(EventEmitter):
 
     @property
     def fields(self):
+        """List of fields."""
         return sorted(self._fields.keys())
 
     def add_field(self, name, default_value=None):
+        """Add a field with an optional default value."""
         self._fields[name] = default_value
 
         def func(cluster):
@@ -123,6 +125,7 @@ class ClusterMeta(EventEmitter):
         setattr(self, name, func)
 
     def from_dict(self, dic):
+        """Import data from a {cluster: {field: value}} dictionary."""
         self._reset_data()
         for cluster, vals in dic.items():
             for field, value in vals.items():
@@ -130,11 +133,14 @@ class ClusterMeta(EventEmitter):
         self._data_base = deepcopy(self._data)
 
     def to_dict(self, field):
+        """Export data to a {cluster: value} dictionary, for a particular
+        field."""
         assert field in self._fields, "This field doesn't exist"
         return {cluster: self.get(field, cluster)
                 for cluster in self._data.keys()}
 
     def set(self, field, clusters, value, add_to_stack=True):
+        """Set the value of one of several clusters."""
         assert field in self._fields
 
         clusters = _as_list(clusters)
@@ -156,6 +162,7 @@ class ClusterMeta(EventEmitter):
         return up
 
     def get(self, field, cluster):
+        """Retrieve the value of one cluster."""
         if _is_list(cluster):
             return [self.get(field, c) for c in cluster]
         assert field in self._fields
