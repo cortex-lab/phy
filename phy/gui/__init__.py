@@ -6,3 +6,4 @@
 from .qt import require_qt, create_app, run_app
 from .gui import GUI, load_gui_plugins
 from .actions import Actions
+from .widgets import HTMLWidget, Table

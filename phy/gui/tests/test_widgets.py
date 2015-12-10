@@ -88,6 +88,10 @@ def test_widget_javascript_2(qtbot):
 # Test table
 #------------------------------------------------------------------------------
 
+def test_table_current_sort():
+    assert Table().current_sort == (None, None)
+
+
 def test_table_default_sort(qtbot):
     table = Table()
     table.show()
