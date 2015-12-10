@@ -146,11 +146,7 @@ class BaseView(BaseCanvas):
             visual = cls()
             self.add_visual(visual)
             visual.set_data(**data)
-            try:
-                visual.program['a_box_index']
-                visual.program['a_box_index'] = box_index
-            except KeyError:
-                pass
+            visual.program['a_box_index'] = box_index
         self.update()
 
     @contextmanager
