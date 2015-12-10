@@ -146,7 +146,11 @@ class BaseView(BaseCanvas):
             visual = cls()
             self.add_visual(visual)
             visual.set_data(**data)
-            visual.program['a_box_index'] = box_index
+            try:
+                visual.program['a_box_index']
+                visual.program['a_box_index'] = box_index
+            except KeyError:
+                pass
         self.update()
 
     @contextmanager
@@ -155,6 +159,15 @@ class BaseView(BaseCanvas):
         self.clear()
         yield
         self.build()
+
+
+class SimpleView(BaseView):
+    """A simple view."""
+    def __init__(self, shape=None, **kwargs):
+        super(SimpleView, self).__init__(**kwargs)
+
+        self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
+        self.panzoom.attach(self)
 
 
 class GridView(BaseView):

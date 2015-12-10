@@ -10,7 +10,7 @@
 import numpy as np
 
 from ..panzoom import PanZoom
-from ..plot import BaseView, GridView, BoxedView, StackedView
+from ..plot import BaseView, SimpleView, GridView, BoxedView, StackedView
 from ..utils import _get_linear_x
 
 
@@ -46,8 +46,8 @@ def test_building(qtbot):
     view.close()
 
 
-def test_base_view(qtbot):
-    view = BaseView(keys='interactive')
+def test_simple_view(qtbot):
+    view = SimpleView(keys='interactive')
     n = 1000
 
     x = np.random.randn(n)
