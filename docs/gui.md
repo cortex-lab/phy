@@ -29,7 +29,6 @@ Let's create an empty GUI:
 >>> from phy.gui import GUI
 >>> gui = GUI(position=(400, 200), size=(600, 400))
 >>> gui.show()
-INFO:phy.gui.actions:Snippet mode disabled.
 ```
 
 ## Adding a visualization
@@ -68,10 +67,7 @@ Here we add a matplotlib figure to our GUI:
 >>> ax = f.add_subplot(111)
 >>> t = np.linspace(-10., 10., 1000)
 >>> ax.plot(t, np.sin(t))
-...
->>> # TODO: implement this directly in phy
-... from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
->>> gui.add_view(FigureCanvas(f))
+>>> gui.add_view(f)
 <phy.gui.gui.DockWidget at 0x7f7e800da708>
 ```
 

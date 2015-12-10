@@ -134,6 +134,13 @@ def test_actions_disable(qtbot, gui, actions):
     assert actions.get('press').isEnabled()
 
 
+def test_snippets_message(qtbot, gui):
+    gui.status_message = 'Hello world!'
+    gui.snippets.mode_on()
+    gui.snippets.mode_off()
+    assert gui.status_message == 'Hello world!'
+
+
 def test_snippets_gui(qtbot, gui, actions):
     qtbot.addWidget(gui)
     gui.show()
