@@ -29,6 +29,7 @@ Let's create an empty GUI:
 >>> from phy.gui import GUI
 >>> gui = GUI(position=(400, 200), size=(600, 400))
 >>> gui.show()
+INFO:phy.gui.actions:Snippet mode disabled.
 ```
 
 ## Adding a visualization
@@ -50,7 +51,7 @@ The `gui.add_view()` method accepts any VisPy canvas. For example, here we add a
 ...     gloo.clear('purple')
 ...
 >>> gui.add_view(c)
-<phy.gui.gui.DockWidget at 0x1091945e8>
+<phy.gui.gui.DockWidget at 0x7f7e81466dc8>
 ```
 
 We can now dock and undock our widget from the GUI. This is particularly convenient when there are many widgets.
@@ -71,7 +72,7 @@ Here we add a matplotlib figure to our GUI:
 >>> # TODO: implement this directly in phy
 ... from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg as FigureCanvas
 >>> gui.add_view(FigureCanvas(f))
-<phy.gui.gui.DockWidget at 0x109194b88>
+<phy.gui.gui.DockWidget at 0x7f7e800da708>
 ```
 
 ## Adding an HTML widget
@@ -91,6 +92,7 @@ Now that our widget is created, let's add it to the GUI:
 
 ```python
 >>> gui.add_view(widget)
+<phy.gui.gui.DockWidget at 0x7f7e780b3288>
 ```
 
 You'll find in the API reference other methods to edit the styles, scripts, header, and body of the HTML widget.
@@ -107,7 +109,7 @@ We can use Javascript in an HTML widget, and we can make Python and Javascript c
 ... widget.eval_js("document.getElementById('mydiv').innerHTML='hello'")
 >>> widget.show()
 >>> gui.add_view(widget)
-<phy.gui.gui.DockWidget at 0x10b092798>
+<phy.gui.gui.DockWidget at 0x7f7e780b3438>
 ```
 
 You can use `widget.eval_js()` to evaluate Javascript code from Python. Conversely, you can use `widget.some_method()` from Javascript, where `some_method()` is a method implemented in a subclass of `HTMLWidget`.
@@ -118,10 +120,10 @@ Let's display the list of views in the GUI:
 
 ```python
 >>> gui.list_views()
-[<phy.gui.gui.DockWidget at 0x1091945e8>,
- <phy.gui.gui.DockWidget at 0x109194b88>,
- <phy.gui.gui.DockWidget at 0x1091949d8>,
- <phy.gui.gui.DockWidget at 0x10b092798>]
+[<phy.gui.gui.DockWidget at 0x7f7e81466dc8>,
+ <phy.gui.gui.DockWidget at 0x7f7e800da708>,
+ <phy.gui.gui.DockWidget at 0x7f7e780b3288>,
+ <phy.gui.gui.DockWidget at 0x7f7e780b3438>]
 ```
 
 The following method allows you to check how many views of each class there are:
@@ -151,12 +153,52 @@ The object `gs` is a JSON-serializable Python dictionary.
 
 ## Adding actions
 
-```python
+An **action** is a Python function that can be run by the user by clicking on a button or pressing a keyboard shortcut. You can create an `Actions` object to specify a list of actions attached to a GUI.
 
+```python
+>>> from phy.gui import Actions
+>>> actions = Actions(gui)
+...
+>>> @actions.add(shortcut='ctrl+h')
+... def hello():
+...     print("Hello world!")
+```
+
+Now, if you press *Ctrl+H* in the GUI, you'll see ̀`Hello world!` printed in the console.
+
+Once an action is added, you can call it with `actions.hello()` where `hello` is the name of the action. By default, this is the name of the associated function, but you can also specify the name explicitly with the `name=...` keyword argument in `actions.add()`.
+
+You'll find more details about `actions.add()` in the API reference.
+
+Every GUI comes with a `default_actions` property which implements actions always available in GUIs:
+
+```python
+>>> gui.default_actions
+<Actions ['exit', 'show_shortcuts']>
+```
+
+For example, the following action shows the shortcuts of all actions attached to the GUI:
+
+```python
+>>> gui.default_actions.show_shortcuts()
+
+Keyboard shortcuts for GUI
+enable_snippet_mode                     : :
+exit                                    : ctrl+q
+hello                                   : ctrl+h
+show_shortcuts                          : f1, h
 ```
 
 ## Snippets
 
-```python
+The GUI provides a convenient system to quickly execute actions without leaving one's keyboard. Inspired by console-based text editors like *vim*, it is enabled by pressing `:` on the keyboard. Once this mode is enabled, what you type is displayed in the status bar. Then, you can call a function by typing its name or its alias. You can also use arguments to the actions, using a special syntax. Here is an example.
 
+```python
+>>> @actions.add(alias='c')
+... def select(ids, obj):
+...     print("Select %s with %s" % (ids, obj))
 ```
+
+Now, pressing `:c 3-6 hello` followed by the `Enter` keystrokes displays `Select [3, 4, 5, 6] with hello` in the console.
+
+By convention, multiple arguments are separated by spaces, sequences of numbers are given either with `2,3,5,7` or `3-6` for consecutive numbers. If an alias is not specified when adding the action, you can always use the full action's name.
