@@ -8,8 +8,8 @@ phy is entirely agnostic to file formats and processing workflows. As such, it c
 
 * GUI
 * Plotting
-* Command-line interface
 * Configuration and plugin system
+* Command-line interface
 * Manual clustering routines
 * Analysis functions
 * Utilities
