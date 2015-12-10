@@ -282,6 +282,7 @@ class Snippets(object):
 
     def __init__(self, gui):
         self.gui = gui
+        self._status_message = gui.status_message
 
         self.actions = Actions(gui)
 
@@ -387,6 +388,8 @@ class Snippets(object):
 
     def mode_on(self):
         logger.info("Snippet mode enabled, press `escape` to leave this mode.")
+        # Save the current status message.
+        self._status_message = self.gui.status_message
 
         # Silent all actions except the Snippets actions.
         for actions in self.gui.actions:
@@ -397,7 +400,9 @@ class Snippets(object):
         self.command = ':'
 
     def mode_off(self):
-        self.gui.status_message = ''
+        # Reset the GUI status message that was set before the mode was
+        # activated.
+        self.gui.status_message = self._status_message
 
         # Re-enable all actions except the Snippets actions.
         self.actions.disable()
@@ -407,4 +412,4 @@ class Snippets(object):
         # The `:` shortcut should always be enabled.
         self.actions.enable('enable_snippet_mode')
 
-        logger.info("Snippet mode disabled.")
+        logger.debug("Snippet mode disabled.")
