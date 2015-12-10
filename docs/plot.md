@@ -1,6 +1,6 @@
 # Plotting with VisPy
 
-phy provides a simple and fast plotting system based on VisPy's low-level **gloo** interface. This plotting system is entirely generic. Currently, it privileges speed and scalability over quality. In other words, you can display millions of points at very high speed, but the plotting quality is not as good as matplotlib, for example.
+phy provides a simple and fast plotting system based on VisPy's low-level **gloo** interface. This plotting system is entirely generic. Currently, it privileges speed and scalability over quality. In other words, you can display millions of points at very high speed, but the plotting quality is not as good as matplotlib, for example. While this sytem uses the GPU extensively, knowledge of GPU or OpenGL is not required for most purposes.
 
 First, we need to activate the Qt event loop in IPython, or create and run the Qt application in a script.
 
@@ -101,3 +101,19 @@ The boxed view lets you put subplots at arbitrary locations. You can dynamically
 You can use `ctrl+arrows` and `shift+arrows` to change the scaling of the positions and boxes.
 
 ## Data normalization
+
+Data normalization is supported via the `data_bounds` keyword. This is a 4-tuple `(xmin, ymin, xmax, ymax)` with the coordinates of the viewport in the data coordinate system. By default, this is obtained with the min and max of the data. Here is an example:
+
+```python
+>>> view = StackedView(2)
+...
+>>> n = 100
+>>> x = np.linspace(0., 1., n)
+>>> y = np.random.rand(n)
+...
+>>> with view.building():
+...     view[0].plot(x, y, data_bounds=(0, 0, 1, 1))
+...     view[1].plot(x, y, data_bounds=(0, -10, 1, 10))
+...
+>>> view.show()
+```
