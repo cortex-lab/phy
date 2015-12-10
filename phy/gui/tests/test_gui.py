@@ -8,8 +8,11 @@
 
 from pytest import raises
 
-from ..qt import Qt, QApplication
-from ..gui import GUI, load_gui_plugins
+from ..qt import Qt, QApplication, QWidget
+from ..gui import (GUI, load_gui_plugins,
+                   _try_get_matplotlib_canvas,
+                   _try_get_vispy_canvas,
+                   )
 from phy.utils import IPlugin
 from phy.utils._color import _random_color
 
@@ -32,7 +35,21 @@ def _create_canvas():
 
 
 #------------------------------------------------------------------------------
-# Test gui
+# Test views
+#------------------------------------------------------------------------------
+
+def test_vispy_view():
+    from vispy.app import Canvas
+    assert isinstance(_try_get_vispy_canvas(Canvas()), QWidget)
+
+
+def test_matplotlib_view():
+    from matplotlib.pyplot import Figure
+    assert isinstance(_try_get_matplotlib_canvas(Figure()), QWidget)
+
+
+#------------------------------------------------------------------------------
+# Test GUI
 #------------------------------------------------------------------------------
 
 def test_gui_noapp():
