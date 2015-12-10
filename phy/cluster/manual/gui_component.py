@@ -315,6 +315,8 @@ class ManualClustering(object):
         self.clustering.connect(on_request_undo_state)
         self.cluster_meta.connect(on_request_undo_state)
 
+        self._update_cluster_view()
+
     def _update_cluster_view(self):
         """Initialize the cluster view with cluster data."""
         self.cluster_view.set_rows(self.clustering.cluster_ids)
