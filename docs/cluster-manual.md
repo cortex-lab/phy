@@ -84,8 +84,6 @@ metadata_changed = []
 deleted = [0, 1, 2]
 ```
 
-
-
 ## Cluster metadata
 
 The `ClusterMeta` class implement the logic of assigning metadata to every cluster (for example, a cluster group) as a succession of undoable operations.
@@ -138,12 +136,35 @@ You can import and export data from a dictionary using the `to_dict()` and `from
 {3: 'good'}
 ```
 
-## Cluster view
+## Views
 
-## Waveform view
+There are several views typically associated with manual clustering operations.
 
-## Feature view
+### Waveform view
 
-## Trace view
+The waveform view displays action potentials across all channels, following the probe geometry.
+
+### Feature view
+
+The feature view shows the principal components of spikes across multiple dimensions.
+
+### Trace view
+
+### Correlogram view
+
+The correlogram view computes and shows all pairwise correlograms of a set of clusters.
 
 ## Manual clustering GUI component
+
+The `ManualClustering` component encapsulates all the logic for a manual clustering GUI:
+
+* cluster views
+* selection of clusters
+* navigation with a wizard
+* clustering actions: merge, split, undo stack
+* moving clusters to groups
+
+Create an object with `mc = ManualClustering(spike_clusters)`. Then you can attach it to a GUI to bring manual clustering facilities to the GUI: `mc.attach(gui)`. This adds the manual clustering actions and the two cluster views.
+
+### Cluster view
+
