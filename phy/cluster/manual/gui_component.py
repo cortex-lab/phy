@@ -112,7 +112,7 @@ class ClusterView(Table):
         super(ClusterView, self).__init__()
         self.add_styles('''
                         table tr[data-good='true'] {
-                            color: #B4DEA6;
+                            color: #86D16D;
                         }
                         ''')
 
