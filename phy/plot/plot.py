@@ -146,7 +146,8 @@ class BaseView(BaseCanvas):
             visual = cls()
             self.add_visual(visual)
             visual.set_data(**data)
-            visual.program['a_box_index'] = box_index
+            if 'a_box_index' in visual.program:
+                visual.program['a_box_index'] = box_index
         self.update()
 
     @contextmanager
@@ -182,11 +183,14 @@ class GridView(BaseView):
 
 class BoxedView(BaseView):
     """Subplots at arbitrary positions"""
-    def __init__(self, box_bounds, **kwargs):
+    def __init__(self, box_bounds=None, box_pos=None, box_size=None, **kwargs):
         super(BoxedView, self).__init__(**kwargs)
-        self.n_plots = len(box_bounds)
+        self.n_plots = (len(box_bounds)
+                        if box_bounds is not None else len(box_pos))
 
-        self.boxed = Boxed(box_bounds)
+        self.boxed = Boxed(box_bounds=box_bounds,
+                           box_pos=box_pos,
+                           box_size=box_size)
         self.boxed.attach(self)
 
         self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
