@@ -21,7 +21,7 @@ For interactive use and explorative work, it is highly recommended to use IPytho
 
 ## Creating a GUI
 
-phy provides a **GUI**, a main window with dockable widgets (`QMainWindow`). By default, a GUI is empty, but you can add views. A view is any Qt widget or a VisPy canvas.
+phy provides a **GUI**, a main window with dockable widgets (`QMainWindow`). By default, a GUI is empty, but you can add views. A view is any Qt widget or a matplotlib or VisPy canvas.
 
 Let's create an empty GUI:
 
@@ -134,7 +134,7 @@ We can use Javascript in an HTML widget, and we can make Python and Javascript c
 ```python
 >>> from phy.gui import HTMLWidget
 >>> widget = HTMLWidget()
->>> widget.set_body('<div id="mydiv">')
+>>> widget.set_body('<div id="mydiv"></div>')
 >>> # We can execute Javascript code from Python.
 ... widget.eval_js("document.getElementById('mydiv').innerHTML='hello'")
 >>> widget.show()
@@ -142,7 +142,7 @@ We can use Javascript in an HTML widget, and we can make Python and Javascript c
 <phy.gui.gui.DockWidget at 0x7f7e780b3438>
 ```
 
-You can use `widget.eval_js()` to evaluate Javascript code from Python. Conversely, you can use `widget.some_method()` from Javascript, where `some_method()` is a method implemented in a subclass of `HTMLWidget`.
+You can use `widget.eval_js()` to evaluate Javascript code from Python. Conversely, you can use `widget.some_method()` from Javascript, where `some_method()` is a method implemented in your widget (which should be a subclass of `HTMLWidget`).
 
 ## Other GUI methods
 
@@ -194,7 +194,7 @@ An **action** is a Python function that can be run by the user by clicking on a 
 ...     print("Hello world!")
 ```
 
-Now, if you press *Ctrl+H* in the GUI, you'll see ̀`Hello world!` printed in the console.
+Now, if you press *Ctrl+H* in the GUI, you'll see `Hello world!` printed in the console.
 
 Once an action is added, you can call it with `actions.hello()` where `hello` is the name of the action. By default, this is the name of the associated function, but you can also specify the name explicitly with the `name=...` keyword argument in `actions.add()`.
 
@@ -219,6 +219,8 @@ hello                                   : ctrl+h
 show_shortcuts                          : f1, h
 ```
 
+You can create multiple `Actions` instance for a single GUI, which allows you to separate between different sets of actions.
+
 ## Snippets
 
 The GUI provides a convenient system to quickly execute actions without leaving one's keyboard. Inspired by console-based text editors like *vim*, it is enabled by pressing `:` on the keyboard. Once this mode is enabled, what you type is displayed in the status bar. Then, you can call a function by typing its name or its alias. You can also use arguments to the actions, using a special syntax. Here is an example.
@@ -229,6 +231,6 @@ The GUI provides a convenient system to quickly execute actions without leaving 
 ...     print("Select %s with %s" % (ids, obj))
 ```
 
-Now, pressing `:c 3-6 hello` followed by the `Enter` keystrokes displays `Select [3, 4, 5, 6] with hello` in the console.
+Now, pressing `:c 3-6 hello` followed by the `Enter` keystroke displays `Select [3, 4, 5, 6] with hello` in the console.
 
 By convention, multiple arguments are separated by spaces, sequences of numbers are given either with `2,3,5,7` or `3-6` for consecutive numbers. If an alias is not specified when adding the action, you can always use the full action's name.
