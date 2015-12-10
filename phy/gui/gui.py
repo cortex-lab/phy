@@ -28,6 +28,29 @@ def _title(widget):
     return str(widget.windowTitle()).lower()
 
 
+def _try_get_vispy_canvas(view):
+    # Get the Qt widget from a VisPy canvas.
+    try:
+        from vispy.app import Canvas
+        if isinstance(view, Canvas):
+            view = view.native
+    except ImportError:  # pragma: no cover
+        pass
+    return view
+
+
+def _try_get_matplotlib_canvas(view):
+    # Get the Qt widget from a matplotlib figure.
+    try:
+        from matplotlib.pyplot import Figure
+        from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
+        if isinstance(view, Figure):
+            view = FigureCanvasQTAgg(view)
+    except ImportError:  # pragma: no cover
+        pass
+    return view
+
+
 def load_gui_plugins(gui, plugins=None, session=None):
     """Attach a list of plugins to a GUI.
 
@@ -182,15 +205,9 @@ class GUI(QMainWindow):
                  **kwargs):
         """Add a widget to the main window."""
 
-        try:
-            from vispy.app import Canvas
-            if isinstance(view, Canvas):
-                title = title or view.__class__.__name__
-                view = view.native
-        except ImportError:  # pragma: no cover
-            pass
-
         title = title or view.__class__.__name__
+        view = _try_get_vispy_canvas(view)
+        view = _try_get_matplotlib_canvas(view)
 
         # Create the gui widget.
         dockwidget = DockWidget(self)
