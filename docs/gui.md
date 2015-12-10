@@ -50,7 +50,7 @@ The `gui.add_view()` method accepts any VisPy canvas. For example, here we add a
 ...     gloo.clear('purple')
 ...
 >>> gui.add_view(c)
-<phy.gui.gui.DockWidget at 0x7f7e81466dc8>
+<phy.gui.gui.DockWidget at 0x7f717087b0d8>
 ```
 
 We can now dock and undock our widget from the GUI. This is particularly convenient when there are many widgets.
@@ -68,7 +68,7 @@ Here we add a matplotlib figure to our GUI:
 >>> t = np.linspace(-10., 10., 1000)
 >>> ax.plot(t, np.sin(t))
 >>> gui.add_view(f)
-<phy.gui.gui.DockWidget at 0x7f7e800da708>
+<phy.gui.gui.DockWidget at 0x7f717011dee8>
 ```
 
 ## Adding an HTML widget
@@ -78,7 +78,7 @@ phy provides an `HTMLWidget` component which allows you to create widgets in HTM
 First, let's create a standalone HTML widget:
 
 ```python
->>> from phy.gui.widgets import HTMLWidget
+>>> from phy.gui import HTMLWidget
 >>> widget = HTMLWidget()
 >>> widget.set_body("Hello world!")
 >>> widget.show()
@@ -93,12 +93,51 @@ Now that our widget is created, let's add it to the GUI:
 
 You'll find in the API reference other methods to edit the styles, scripts, header, and body of the HTML widget.
 
+### Table
+
+phy also provides a `Table` widget written in HTML and Javascript (using the [tablesort](https://github.com/tristen/tablesort) Javascript library). This widget shows a table of items, where every item (row) has an id, and every column is defined as a function `id => string`, the string being the contents of a row's cell in the table. The table can be sorted by every column.
+
+One or several items can be selected by the user. The `select` event is raised when rows are selected. Here is a complete example:
+
+---
+scrolled: true
+...
+
+```python
+>>> from phy.gui import Table
+>>> table = Table()
+...
+>>> # We add a column in the table.
+... @table.add_column
+... def name(id):
+...     # This function takes an id as input and returns a string.
+...     return "My id is %d" % id
+...
+>>> # Now we add some rows.
+... table.set_rows([2, 3, 5, 7])
+...
+>>> # We print something when items are selected.
+... @table.connect_
+... def on_select(ids):
+...     # NOTE: we use `connect_` and not `connect`, because `connect` is
+...     # a Qt method associated to every Qt widget, and `Table` is a subclass
+...     # of `QWidget`. Using `connect_` ensures that we're using phy's event
+...     # system, not Qt's.
+...     print("The items %s have been selected." % ids)
+...
+>>> table.show()
+The items [3] have been selected.
+The items [3, 5] have been selected.
+```
+
+
+
 ### Interactivity with Javascript
 
 We can use Javascript in an HTML widget, and we can make Python and Javascript communicate.
 
 ```python
->>> from phy.gui.widgets import HTMLWidget
+>>> from phy.gui import HTMLWidget
 >>> widget = HTMLWidget()
 >>> widget.set_body('<div id="mydiv">')
 >>> # We can execute Javascript code from Python.

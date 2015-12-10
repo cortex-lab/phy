@@ -411,5 +411,3 @@ class Snippets(object):
                 actions.enable()
         # The `:` shortcut should always be enabled.
         self.actions.enable('enable_snippet_mode')
-
-        logger.debug("Snippet mode disabled.")

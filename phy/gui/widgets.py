@@ -245,6 +245,7 @@ class Table(HTMLWidget):
 
     @property
     def column_names(self):
+        """List of column names."""
         return [name for (name, d) in self._columns.items()
                 if d.get('show', True)]
 
@@ -279,11 +280,11 @@ class Table(HTMLWidget):
         self.eval_js('table.sortBy("{}", "{}");'.format(name, sort_dir))
 
     def next(self):
-        """Select the next non-skip row."""
+        """Select the next non-skipped row."""
         self.eval_js('table.next();')
 
     def previous(self):
-        """Select the previous non-skip row."""
+        """Select the previous non-skipped row."""
         self.eval_js('table.previous();')
 
     def select(self, ids, do_emit=True):
@@ -297,6 +298,7 @@ class Table(HTMLWidget):
         return self._default_sort
 
     def set_default_sort(self, name, sort_dir='desc'):
+        """Set the default sort column."""
         self._default_sort = name, sort_dir
 
     @property
@@ -307,4 +309,4 @@ class Table(HTMLWidget):
     @property
     def current_sort(self):
         """Current sort: a tuple `(name, dir)`."""
-        return tuple(self.eval_js('table.currentSort()'))
+        return tuple(self.eval_js('table.currentSort()') or (None, None))
