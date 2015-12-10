@@ -99,10 +99,6 @@ phy also provides a `Table` widget written in HTML and Javascript (using the [ta
 
 One or several items can be selected by the user. The `select` event is raised when rows are selected. Here is a complete example:
 
----
-scrolled: true
-...
-
 ```python
 >>> from phy.gui import Table
 >>> table = Table()
@@ -129,7 +125,6 @@ scrolled: true
 The items [3] have been selected.
 The items [3, 5] have been selected.
 ```
-
 
 
 ### Interactivity with Javascript
