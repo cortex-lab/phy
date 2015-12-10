@@ -47,7 +47,7 @@ def test_building(qtbot):
 
 
 def test_simple_view(qtbot):
-    view = SimpleView(keys='interactive')
+    view = SimpleView()
     n = 1000
 
     x = np.random.randn(n)

@@ -74,3 +74,30 @@ The stacked view lets you stack several subplots vertically with no clipping. An
 ...
 >>> view.show()
 ```
+
+## Boxed view
+
+The boxed view lets you put subplots at arbitrary locations. You can dynamically change the positions and the sizes of the boxes. An example is the waveform view, where line plots are positioned at the recording sites on a multielectrode array.
+
+```python
+>>> # Generate box positions along a circle.
+... dt = np.pi / 10
+>>> t = np.arange(0, 2 * np.pi, dt)
+>>> x = np.cos(t)
+>>> y = np.sin(t)
+>>> box_pos = np.c_[x, y]
+...
+>>> view = BoxedView(box_pos=box_pos)
+...
+>>> with view.building():
+...     for i in range(view.n_plots):
+...         # Create the subplots.
+...         view[i].plot(y=np.random.randn(10, 100),
+...                      color=np.random.uniform(.5, .9, 4))
+...
+>>> view.show()
+```
+
+You can use `ctrl+arrows` and `shift+arrows` to change the scaling of the positions and boxes.
+
+## Data normalization
