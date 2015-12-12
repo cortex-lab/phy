@@ -224,12 +224,14 @@ class TransformChain(object):
         if not isinstance(transforms, list):
             transforms = [transforms]
         self.cpu_transforms.extend(transforms or [])
+        return self
 
     def add_on_gpu(self, transforms):
         """Add some transforms."""
         if not isinstance(transforms, list):
             transforms = [transforms]
         self.gpu_transforms.extend(transforms or [])
+        return self
 
     def get(self, class_name):
         """Get a transform in the chain from its name."""

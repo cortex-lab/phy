@@ -239,7 +239,7 @@ class BaseCanvas(Canvas):
         # Enable transparency.
         _enable_depth_mask()
 
-    def add_visual(self, visual):
+    def add_visual(self, visual, transforms=None):
         """Add a visual to the canvas, and build its program by the same
         occasion.
 
@@ -251,8 +251,14 @@ class BaseCanvas(Canvas):
         inserter = visual.inserter
         # Add the visual's transforms.
         inserter.add_transform_chain(visual.transforms)
-        # Then, add the canvas' transforms.
-        inserter.add_transform_chain(self.transforms)
+        # Then, add the canvas' transforms...
+        if transforms is None:
+            inserter.add_transform_chain(self.transforms)
+        # or user-specified transforms.
+        else:
+            tc = TransformChain()
+            tc.add_on_gpu(transforms)
+            inserter.add_transform_chain(tc)
         # Also, add the canvas' inserter.
         inserter += self.inserter
         # Now, we insert the transforms GLSL into the shaders.
