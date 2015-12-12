@@ -59,7 +59,7 @@ _PAGE_TEMPLATE = """
 
 class WebPage(QWebPage):
     def javaScriptConsoleMessage(self, msg, line, source):
-        logger.debug("Error line %d: %s", line, msg)  # pragma: no cover
+        logger.debug("[%d] %s", line, msg)  # pragma: no cover
 
 
 class HTMLWidget(QWebView):

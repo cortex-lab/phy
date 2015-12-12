@@ -201,24 +201,24 @@ Table.prototype.rowIterator = function(id, doSkip) {
         n: that.el.rows.length,
         row: function () { return that.el.rows[this.i]; },
         previous: function () {
-            if (this.i == undefined) this.i = 1;
+            if (this.i == undefined) this.i = this.n;
             for (var i = this.i - 1; i >= 1; i--) {
                 if (!doSkip || !that.isRowSkipped(i)) {
                     this.i = i;
                     return this.row();
                 }
             }
-            return that.firstRow();
+            return this.row();
         },
         next: function () {
-            if (this.i == undefined) this.i = this.n - 1;
+            if (this.i == undefined) this.i = 0;
             for (var i = this.i + 1; i < this.n; i++) {
                 if (!doSkip || !that.isRowSkipped(i)) {
                     this.i = i;
                     return this.row();
                 }
             }
-            return that.firstRow();
+            return this.row();
         }
     };
 };
