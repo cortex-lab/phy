@@ -159,25 +159,52 @@ Table.prototype.clear = function() {
     this.selected = [];
 };
 
+Table.prototype.firstRow = function() {
+    return this.el.rows[1];
+};
+
+Table.prototype.nextRow = function(id) {
+    // TODO: what to do when doing next() while several items are selected.
+    var i0 = 1;
+    if (id !== undefined) {
+        i0 = this.rows[id].rowIndex;
+    }
+    var that = this;
+    return {
+        i: i0,
+        increment: function () {
+            if (this.i < this.n - 1) {
+                this.i++;
+                return true;
+            }
+            return false;
+        },
+        n: that.el.rows.length,
+        row: function () { return that.el.rows[this.i]; },
+        next: function () {
+            this.increment();
+            return this.row();
+        }
+    };
+};
+
 Table.prototype.next = function() {
     // TODO: what to do when doing next() while several items are selected.
     var id = this.selected[0];
-    if (id === undefined) {
-        var row = null;
-        var i0 = 1;  // 1, not 0, because we skip the header.
+    if (id == undefined) {
+        var row = this.firstRow();
     }
     else {
-        var row = this.rows[id];
-        var i0 = row.rowIndex + 1;
-    }
-    for (var i = i0; i < this.el.rows.length; i++) {
-        row = this.el.rows[i];
-        if (row.dataset.skip != 'true') {
-            this.select([row.dataset.id]);
-            row.scrollIntoView(false);
-            return;
+        // Select the next non-skip.
+        var iterator = this.nextRow(id);
+        var row = iterator.next();
+        while (row.dataset.skip == 'true') {
+            row = iterator.next();
         }
     }
+    this.select([row.dataset.id]);
+    row.scrollIntoView(false);
+    return;
 };
 
 Table.prototype.previous = function() {
