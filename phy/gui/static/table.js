@@ -54,6 +54,7 @@ Table.prototype.setData = function(data) {
         this.headers[key] = th;
     }
     thead.appendChild(tr);
+    this.nrows = data.items.length;
 
     // Data rows.
     for (var i = 0; i < data.items.length; i++) {
@@ -121,6 +122,14 @@ Table.prototype.setData = function(data) {
     this.tablesort = new Tablesort(this.el);
 };
 
+Table.prototype.rowId = function(i) {
+    return this.el.rows[i].dataset.id;
+};
+
+Table.prototype.isRowSkipped = function(i) {
+    return this.el.rows[i].dataset.skip == 'true';
+};
+
 Table.prototype.sortBy = function(header, dir) {
     dir = typeof dir !== 'undefined' ? dir : 'asc';
     if (this.headers[header] == undefined)
@@ -179,9 +188,10 @@ Table.prototype.lastRow = function() {
     return this.el.rows[this.el.rows.length - 1];
 };
 
-Table.prototype.rowIterator = function(id) {
+Table.prototype.rowIterator = function(id, doSkip) {
+    doSkip = typeof doSkip !== 'undefined' ? doSkip : true;
     // TODO: what to do when doing next() while several items are selected.
-    var i0 = 1;
+    var i0 = undefined;
     if (id !== undefined) {
         i0 = this.rows[id].rowIndex;
     }
@@ -191,16 +201,24 @@ Table.prototype.rowIterator = function(id) {
         n: that.el.rows.length,
         row: function () { return that.el.rows[this.i]; },
         previous: function () {
-            if (this.i > 1) {
-                this.i--;
+            if (this.i == undefined) this.i = 1;
+            for (var i = this.i - 1; i >= 1; i--) {
+                if (!doSkip || !that.isRowSkipped(i)) {
+                    this.i = i;
+                    return this.row();
+                }
             }
-            return this.row();
+            return that.firstRow();
         },
         next: function () {
-            if (this.i < this.n - 1) {
-                this.i++;
+            if (this.i == undefined) this.i = this.n - 1;
+            for (var i = this.i + 1; i < this.n; i++) {
+                if (!doSkip || !that.isRowSkipped(i)) {
+                    this.i = i;
+                    return this.row();
+                }
             }
-            return this.row();
+            return that.firstRow();
         }
     };
 };
@@ -208,17 +226,8 @@ Table.prototype.rowIterator = function(id) {
 Table.prototype.next = function() {
     // TODO: what to do when doing next() while several items are selected.
     var id = this.selected[0];
-    if (id == undefined) {
-        var row = this.firstRow();
-    }
-    else {
-        // Select the next non-skip.
-        var iterator = this.rowIterator(id);
-        var row = iterator.next();
-        while (row.dataset.skip == 'true') {
-            row = iterator.next();
-        }
-    }
+    var iterator = this.rowIterator(id);
+    var row = iterator.next();
     this.select([row.dataset.id]);
     row.scrollIntoView(false);
     return;
@@ -227,17 +236,8 @@ Table.prototype.next = function() {
 Table.prototype.previous = function() {
     // TODO: what to do when doing previous() while several items are selected.
     var id = this.selected[0];
-    if (id == undefined) {
-        var row = this.lastRow();
-    }
-    else {
-        // Select the previous non-skip.
-        var iterator = this.rowIterator(id);
-        var row = iterator.previous();
-        while (row.dataset.skip == 'true') {
-            row = iterator.previous();
-        }
-    }
+    var iterator = this.rowIterator(id);
+    var row = iterator.previous();
     this.select([row.dataset.id]);
     row.scrollIntoView(false);
     return;
