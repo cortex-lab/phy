@@ -132,6 +132,10 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
     canvas.add_visual(v)
     v.set_data()
 
+    v = TestVisual()
+    canvas.add_visual(v, transforms=[Subplot((10, 10), (0, 0))])
+    v.set_data()
+
     canvas.show()
     qtbot.waitForWindowShown(canvas.native)
     # qtbot.stop()
