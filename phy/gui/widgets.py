@@ -33,7 +33,7 @@ _DEFAULT_STYLES = """
         background-color: black;
         color: white;
         font-family: sans-serif;
-        font-size: 14pt;
+        font-size: 12pt;
         margin: 5px 10px;
     }
 """

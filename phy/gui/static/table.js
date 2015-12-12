@@ -134,6 +134,14 @@ Table.prototype.sortBy = function(header, dir) {
     dir = typeof dir !== 'undefined' ? dir : 'asc';
     if (this.headers[header] == undefined)
         throw "The column `" + header + "` doesn't exist."
+
+    // Remove all sort classes.
+    for (var i = 0; i < this.headers.length; i++) {
+        this.headers[i].classList.remove('sort-up');
+        this.headers[i].classList.remove('sort-down');
+    }
+
+    // Add sort.
     this.tablesort.sortTable(this.headers[header]);
     if (dir == 'desc') {
         this.tablesort.sortTable(this.headers[header]);
