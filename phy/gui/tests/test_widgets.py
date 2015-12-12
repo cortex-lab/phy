@@ -131,7 +131,7 @@ def test_table_nav_first(qtbot, table):
     assert table.selected == [0]
 
 
-def test_table_nav(qtbot, table):
+def test_table_nav_0(qtbot, table):
     table.select([4])
 
     table.next()
