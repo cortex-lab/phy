@@ -133,7 +133,7 @@ def test_table_nav_first(qtbot, table):
 
 def test_table_nav_last(qtbot, table):
     table.previous()
-    assert table.selected == [9]
+    assert table.selected == [0]
 
 
 def test_table_nav_0(qtbot, table):
