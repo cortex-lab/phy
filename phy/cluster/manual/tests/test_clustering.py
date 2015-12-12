@@ -456,8 +456,8 @@ def test_clustering_long():
     assert clustering.new_cluster_id() == n_clusters
     assert clustering.n_clusters == n_clusters
 
-    assert len(clustering.cluster_counts) == n_clusters
-    assert sum(itervalues(clustering.cluster_counts)) == n_spikes
+    assert len(clustering.spike_counts) == n_clusters
+    assert sum(itervalues(clustering.spike_counts)) == n_spikes
     _check_spikes_per_cluster(clustering)
 
     # Updating a cluster, method 1.
@@ -479,18 +479,18 @@ def test_clustering_long():
     new_cluster = 101
     clustering.assign(np.arange(0, 10), new_cluster)
     assert new_cluster in clustering.cluster_ids
-    assert clustering.cluster_counts[new_cluster] == 10
+    assert clustering.spike_counts[new_cluster] == 10
     assert np.all(clustering.spike_clusters[:10] == new_cluster)
     _check_spikes_per_cluster(clustering)
 
     # Merge.
-    count = clustering.cluster_counts.copy()
+    count = clustering.spike_counts.copy()
     my_spikes_0 = np.nonzero(np.in1d(clustering.spike_clusters, [2, 3]))[0]
     info = clustering.merge([2, 3])
     my_spikes = info.spike_ids
     ae(my_spikes, my_spikes_0)
     assert (new_cluster + 1) in clustering.cluster_ids
-    assert clustering.cluster_counts[new_cluster + 1] == count[2] + count[3]
+    assert clustering.spike_counts[new_cluster + 1] == count[2] + count[3]
     assert np.all(clustering.spike_clusters[my_spikes] == (new_cluster + 1))
     _check_spikes_per_cluster(clustering)
 
@@ -498,13 +498,13 @@ def test_clustering_long():
     clustering.spike_clusters[:] = spike_clusters_base[:]
     clustering._update_all_spikes_per_cluster()
     my_spikes_0 = np.nonzero(np.in1d(clustering.spike_clusters, [4, 6]))[0]
-    count = clustering.cluster_counts
+    count = clustering.spike_counts
     count4, count6 = count[4], count[6]
     info = clustering.merge([4, 6], 11)
     my_spikes = info.spike_ids
     ae(my_spikes, my_spikes_0)
     assert 11 in clustering.cluster_ids
-    assert clustering.cluster_counts[11] == count4 + count6
+    assert clustering.spike_counts[11] == count4 + count6
     assert np.all(clustering.spike_clusters[my_spikes] == 11)
     _check_spikes_per_cluster(clustering)
 
