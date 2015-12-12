@@ -19,12 +19,9 @@ install:
   - conda update -q conda
   - conda info -a
   # Create the environment.
-  - conda create -q -n testenv python=$TRAVIS_PYTHON_VERSION
-  - source activate testenv
-  - conda install pip numpy=1.9 vispy matplotlib scipy h5py pyqt ipython requests six dill ipyparallel joblib dask click
-  # NOTE: cython is only temporarily needed for building KK2.
-  # Once we have KK2 binary builds on binstar we can remove this dependency.
-  - conda install cython && pip install klustakwik2
+  - conda env create
+  - source activate phy
+  - conda install python=$TRAVIS_PYTHON_VERSION
   # Dev requirements
   - pip install -r requirements-dev.txt
   - pip install -e .
