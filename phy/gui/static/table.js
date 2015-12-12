@@ -92,6 +92,18 @@ Table.prototype.setData = function(data) {
                     that.select(that.selected.concat([id]));
                 }
             }
+            else if (evt.shiftKey) {
+                var clicked_idx = that.rows[id].rowIndex;
+                var sel_idx = that.rows[that.selected[0]].rowIndex;
+                if (sel_idx == undefined) return;
+                var i0 = Math.min(clicked_idx, sel_idx);
+                var i1 = Math.max(clicked_idx, sel_idx);
+                var sel = [];
+                for (var i = i0; i <= i1; i++) {
+                    sel.push(that.el.rows[i].dataset.id);
+                }
+                that.select(sel);
+            }
             // Otherwise, select just that item.
             else {
                 that.select([id]);
