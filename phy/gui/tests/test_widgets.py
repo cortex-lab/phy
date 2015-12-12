@@ -133,7 +133,21 @@ def test_table_nav_first(qtbot, table):
 
 def test_table_nav_last(qtbot, table):
     table.previous()
-    assert table.selected == [0]
+    assert table.selected == [9]
+
+
+def test_table_nav_edge_0(qtbot, table):
+    # The first item is skipped.
+    table.set_rows([4, 5])
+    table.next()
+    assert table.selected == [5]
+
+
+def test_table_nav_edge_1(qtbot, table):
+    # The last item is skipped.
+    table.set_rows([3, 4])
+    table.previous()
+    assert table.selected == [3]
 
 
 def test_table_nav_0(qtbot, table):
