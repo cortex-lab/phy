@@ -195,7 +195,7 @@ class Clustering(EventEmitter):
         return np.array(sorted(self._spikes_per_cluster))
 
     @property
-    def cluster_counts(self):
+    def spike_counts(self):
         """Dictionary with the number of spikes in each cluster."""
         return {cluster: len(self._spikes_per_cluster[cluster])
                 for cluster in self.cluster_ids}

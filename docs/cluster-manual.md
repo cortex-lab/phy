@@ -12,7 +12,7 @@ Notable properties are:
 
 * `clustering.spikes_per_cluster`: a dictionary `{cluster_id: spike_ids}`.
 * `clustering.cluster_ids`: array of all non-empty clusters
-* `clustering.cluster_counts`: dictionary with the number of spikes in each cluster
+* `clustering.spike_counts`: dictionary with the number of spikes in each cluster
 
 Notable methods are:
 
@@ -64,7 +64,7 @@ array([3, 4, 5])
 ```
 
 ```python
->>> clustering.cluster_counts
+>>> clustering.spike_counts
 {3: 1, 4: 1, 5: 3}
 ```
 
@@ -185,7 +185,7 @@ You can add a new column in both views as follows:
 ```python
 >>> @mc.add_column
 ... def n_spikes(cluster_id):
-...     return mc.clustering.cluster_counts[cluster_id]
+...     return mc.clustering.spike_counts[cluster_id]
 ```
 
 The similarity view has an additional column compared to the cluster view: `similarity` with respect to the currently-selected clusters in the cluster view.
