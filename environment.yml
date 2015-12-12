@@ -11,6 +11,7 @@ dependencies:
   - pyqt
   - ipython
   - requests
+  - traitlets
   - six
   - ipyparallel
   - joblib

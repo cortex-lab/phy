@@ -19,9 +19,8 @@ install:
   - conda update -q conda
   - conda info -a
   # Create the environment.
-  - conda env create
+  - conda env create python=$TRAVIS_PYTHON_VERSION
   - source activate phy
-  - conda install python=$TRAVIS_PYTHON_VERSION
   # Dev requirements
   - pip install -r requirements-dev.txt
   - pip install -e .
