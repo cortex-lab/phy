@@ -163,7 +163,11 @@ Table.prototype.firstRow = function() {
     return this.el.rows[1];
 };
 
-Table.prototype.nextRow = function(id) {
+Table.prototype.lastRow = function() {
+    return this.el.rows[this.el.rows.length - 1];
+};
+
+Table.prototype.rowIterator = function(id) {
     // TODO: what to do when doing next() while several items are selected.
     var i0 = 1;
     if (id !== undefined) {
@@ -172,17 +176,18 @@ Table.prototype.nextRow = function(id) {
     var that = this;
     return {
         i: i0,
-        increment: function () {
-            if (this.i < this.n - 1) {
-                this.i++;
-                return true;
-            }
-            return false;
-        },
         n: that.el.rows.length,
         row: function () { return that.el.rows[this.i]; },
+        previous: function () {
+            if (this.i > 1) {
+                this.i--;
+            }
+            return this.row();
+        },
         next: function () {
-            this.increment();
+            if (this.i < this.n - 1) {
+                this.i++;
+            }
             return this.row();
         }
     };
@@ -196,7 +201,7 @@ Table.prototype.next = function() {
     }
     else {
         // Select the next non-skip.
-        var iterator = this.nextRow(id);
+        var iterator = this.rowIterator(id);
         var row = iterator.next();
         while (row.dataset.skip == 'true') {
             row = iterator.next();
@@ -208,24 +213,20 @@ Table.prototype.next = function() {
 };
 
 Table.prototype.previous = function() {
-    // TODO: what to do when doing next() while several items are selected.
+    // TODO: what to do when doing previous() while several items are selected.
     var id = this.selected[0];
-    if (id === undefined) {
-        var row = null;
-        var i0 = this.rows.length - 1;
+    if (id == undefined) {
+        var row = this.lastRow();
     }
     else {
-        var row = this.rows[id];
-        var i0 = row.rowIndex - 1;
-    }
-
-    // NOTE: i >= 1 because we skip the header column.
-    for (var i = i0; i >= 1; i--) {
-        row = this.el.rows[i];
-        if (row.dataset.skip != 'true') {
-            this.select([row.dataset.id]);
-            // row.scrollIntoView(false);
-            return;
+        // Select the previous non-skip.
+        var iterator = this.rowIterator(id);
+        var row = iterator.previous();
+        while (row.dataset.skip == 'true') {
+            row = iterator.previous();
         }
     }
+    this.select([row.dataset.id]);
+    row.scrollIntoView(false);
+    return;
 };
