@@ -189,7 +189,7 @@ class GridView(BaseView):
 
     def build(self):
         n, m = self.grid.shape
-        a = .01  # margin
+        a = .045  # margin
         for i in range(n):
             for j in range(m):
                 self[i, j].lines(x0=[-1, +1, +1, -1],

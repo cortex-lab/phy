@@ -47,7 +47,7 @@ class Grid(BaseInteract):
 
     def attach(self, canvas):
         super(Grid, self).attach(canvas)
-        m = 1. - .05
+        m = 1. - .025
         m2 = 1. - .075
         canvas.transforms.add_on_gpu([Scale('u_grid_zoom'),
                                       Scale((m2, m2)),
