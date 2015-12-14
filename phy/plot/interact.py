@@ -136,8 +136,11 @@ class Boxed(BaseInteract):
                  box_bounds=None,
                  box_pos=None,
                  box_size=None,
-                 box_var=None):
+                 box_var=None,
+                 keep_aspect_ratio=True,
+                 ):
         self._key_pressed = None
+        self.keep_aspect_ratio = keep_aspect_ratio
 
         # Name of the variable with the box index.
         self.box_var = box_var or 'a_box_index'
@@ -147,13 +150,13 @@ class Boxed(BaseInteract):
             assert box_pos is not None
             # This will find a good box size automatically if it is not
             # specified.
-            box_bounds = _get_boxes(box_pos, size=box_size)
+            box_bounds = _get_boxes(box_pos, size=box_size,
+                                    keep_aspect_ratio=self.keep_aspect_ratio)
 
         self._box_bounds = np.atleast_2d(box_bounds)
         assert self._box_bounds.shape[1] == 4
 
         self.n_boxes = len(self._box_bounds)
-        self.enable_box_width_shortcuts = True
 
     def attach(self, canvas):
         super(Boxed, self).attach(canvas)
@@ -201,7 +204,8 @@ class Boxed(BaseInteract):
     @box_pos.setter
     def box_pos(self, val):
         assert val.shape == (self.n_boxes, 2)
-        self.box_bounds = _get_boxes(val, size=self.box_size)
+        self.box_bounds = _get_boxes(val, size=self.box_size,
+                                     keep_aspect_ratio=self.keep_aspect_ratio)
 
     @property
     def box_size(self):
@@ -211,7 +215,8 @@ class Boxed(BaseInteract):
     @box_size.setter
     def box_size(self, val):
         assert len(val) == 2
-        self.box_bounds = _get_boxes(self.box_pos, size=val)
+        self.box_bounds = _get_boxes(self.box_pos, size=val,
+                                     keep_aspect_ratio=self.keep_aspect_ratio)
 
     # Interaction event callbacks
     #--------------------------------------------------------------------------
@@ -232,12 +237,11 @@ class Boxed(BaseInteract):
         if ctrl and key in self._arrows + self._pm:
             coeff = 1.1
             box_size = np.array(self.box_size)
-            if self.enable_box_width_shortcuts:
-                if key == 'Left':
-                    box_size[0] /= coeff
-                elif key == 'Right':
-                    box_size[0] *= coeff
-            if key in ('Down', '-'):
+            if key == 'Left':
+                box_size[0] /= coeff
+            elif key == 'Right':
+                box_size[0] *= coeff
+            elif key in ('Down', '-'):
                 box_size[1] /= coeff
             elif key in ('Up', '+'):
                 box_size[1] *= coeff
@@ -294,4 +298,6 @@ class Stacked(Boxed):
         b[:, 3] = np.linspace(-1 + 2. / n_boxes - margin, 1., n_boxes)
         b = b[::-1, :]
 
-        super(Stacked, self).__init__(b, box_var=box_var)
+        super(Stacked, self).__init__(b, box_var=box_var,
+                                      keep_aspect_ratio=False,
+                                      )
