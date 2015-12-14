@@ -12,3 +12,4 @@ exclude_lines =
     raise AssertionError
     raise NotImplementedError
     pass
+    return

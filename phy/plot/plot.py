@@ -87,7 +87,7 @@ class BaseView(BaseCanvas):
 
     def __init__(self, **kwargs):
         if not kwargs.get('keys', None):
-            kwargs['keys'] = 'interactive'
+            kwargs['keys'] = None
         super(BaseView, self).__init__(**kwargs)
         self.clear()
 
