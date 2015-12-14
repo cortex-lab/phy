@@ -141,21 +141,21 @@ def test_trace_view_spikes(qtbot):
     n_channels = 12
     sample_rate = 2000.
     n_spikes = 20
-    # n_clusters = 3
+    n_clusters = 3
 
     traces = artificial_traces(n_samples, n_channels)
     spike_times = artificial_spike_samples(n_spikes) / sample_rate
-    # spike_times = [.1, .2]
-    # spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     masks = artificial_masks(n_spikes, n_channels)
 
     # Create the view.
     v = TraceView(traces=traces,
                   sample_rate=sample_rate,
                   spike_times=spike_times,
-                  # spike_clusters=spike_clusters,
+                  spike_clusters=spike_clusters,
                   masks=masks,
                   n_samples_per_spike=6,
+                  keys='interactive',
                   )
     _show(qtbot, v)
 
