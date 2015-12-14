@@ -170,5 +170,4 @@ def test_line_empty(qtbot, canvas):
 def test_line_0(qtbot, canvas_pz):
     y = np.linspace(-.5, .5, 10)
     _test_visual(qtbot, canvas_pz, LineVisual(),
-                 y0=y, y1=y, data_bounds=[-1, -1, 1, 1],
-                 color=(1., 1., 0., .5))
+                 y0=y, y1=y, data_bounds=[-1, -1, 1, 1])

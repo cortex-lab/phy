@@ -138,7 +138,9 @@ def _validate_line_coord(x, n, default):
     if not hasattr(x, '__len__'):
         x = x * np.ones(n)
     assert isinstance(x, np.ndarray)
-    assert x.shape == (n,)
+    if x.ndim == 1:
+        x = x[:, None]
+    assert x.shape == (n, 1)
     return x.astype(np.float32)
 
 
@@ -339,12 +341,18 @@ class TextVisual(BaseVisual):
 
 
 class LineVisual(BaseVisual):
-    _default_color = (.35, .35, .35, 1.)
+    """Lines.
 
-    def __init__(self):
+    Note: currently, all lines shall have the same color.
+
+    """
+    _default_color = (1., 1., 1., 1.)
+
+    def __init__(self, color=None):
         super(LineVisual, self).__init__()
         self.set_shader('simple')
         self.set_primitive_type('lines')
+        self.color = color or self._default_color
 
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
@@ -354,7 +362,7 @@ class LineVisual(BaseVisual):
                  y0=None,
                  x1=None,
                  y1=None,
-                 color=None,
+                 # color=None,
                  data_bounds=None,
                  ):
 
@@ -365,17 +373,16 @@ class LineVisual(BaseVisual):
         x1 = _validate_line_coord(x1, n_lines, +1)
         y1 = _validate_line_coord(y1, n_lines, +1)
 
-        assert x0.shape == y0.shape == x1.shape == y1.shape == (n_lines,)
+        assert x0.shape == y0.shape == x1.shape == y1.shape == (n_lines, 1)
 
+        # By default, we assume that the coordinates are in NDC.
         if data_bounds is None:
-            xmin = min(x0.min(), x1.min())
-            ymin = min(y0.min(), y1.min())
-            xmax = max(x0.max(), x1.max())
-            ymax = max(y0.max(), y1.max())
-            data_bounds = np.c_[xmin, ymin, xmax, ymax]
+            data_bounds = NDC
 
-        color = _get_array(color, (4,), LineVisual._default_color)
-        assert len(color) == 4
+        # NOTE: currently, we don't support custom colors. We could do it
+        # by replacing the uniform by an attribute in the shaders.
+        # color = _get_array(color, (4,), LineVisual._default_color)
+        # assert len(color) == 4
 
         data_bounds = _get_data_bounds(data_bounds, length=n_lines)
         data_bounds = data_bounds.astype(np.float32)
@@ -385,7 +392,7 @@ class LineVisual(BaseVisual):
                      y0=y0,
                      x1=x1,
                      y1=y1,
-                     color=color,
+                     # color=color,
                      data_bounds=data_bounds,
                      )
 
@@ -414,4 +421,5 @@ class LineVisual(BaseVisual):
         self.program['a_position'] = pos_tr
 
         # Color.
-        self.program['u_color'] = data.color
+        # self.program['u_color'] = data.color
+        self.program['u_color'] = self.color
