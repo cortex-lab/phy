@@ -51,6 +51,7 @@ def _get_box_size(x, y, ar=.5, margin=0):
     # Deal with degenerate x case.
     xmin, xmax = x.min(), x.max()
     if xmin == xmax:
+        # If all positions are vertical, the width can be maximum.
         wmax = 1.
     else:
         wmax = xmax - xmin
@@ -58,18 +59,20 @@ def _get_box_size(x, y, ar=.5, margin=0):
     def f1(w):
         """Return true if the configuration with the current box size
         is non-overlapping."""
+        # NOTE: w|h are the *half* width|height.
         h = w * ar  # fixed aspect ratio
         return not _boxes_overlap(x - w, y - h, x + w, y + h)
 
     # Find the largest box size leading to non-overlapping boxes.
     w = _binary_search(f1, 0, wmax)
     w = w * (1 - margin)  # margin
+    # Clip the half-width.
     h = w * ar  # aspect ratio
 
     return w, h
 
 
-def _get_boxes(pos, size=None, margin=0):
+def _get_boxes(pos, size=None, margin=0, keep_aspect_ratio=True):
     """Generate non-overlapping boxes in NDC from a set of positions."""
 
     # Get x, y.
@@ -85,15 +88,17 @@ def _get_boxes(pos, size=None, margin=0):
 
     # Renormalize the whole thing by keeping the aspect ratio.
     x0min, y0min, x1max, y1max = x0.min(), y0.min(), x1.max(), y1.max()
-    dx = x1max - x0min
-    dy = y1max - y0min
-    if dx > dy:
-        b = (x0min, (y1max + y0min) / 2. - dx / 2.,
-             x1max, (y1max + y0min) / 2. + dx / 2.)
+    if not keep_aspect_ratio:
+        b = (x0min, y0min, x1max, y1max)
     else:
-        b = ((x1max + x0min) / 2. - dy / 2., y0min,
-             (x1max + x0min) / 2. + dy / 2., y1max)
-
+        dx = x1max - x0min
+        dy = y1max - y0min
+        if dx > dy:
+            b = (x0min, (y1max + y0min) / 2. - dx / 2.,
+                 x1max, (y1max + y0min) / 2. + dx / 2.)
+        else:
+            b = ((x1max + x0min) / 2. - dy / 2., y0min,
+                 (x1max + x0min) / 2. + dy / 2., y1max)
     r = Range(from_bounds=b,
               to_bounds=(-1, -1, 1, 1))
     return np.c_[r.apply(np.c_[x0, y0]), r.apply(np.c_[x1, y1])]
