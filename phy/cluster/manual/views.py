@@ -251,11 +251,11 @@ class WaveformView(BoxedView):
 # -----------------------------------------------------------------------------
 
 class TraceView(StackedView):
-    interval_duration = .25  # default duration of the interval
+    interval_duration = .5  # default duration of the interval
     shift_amount = .1
     default_shortcuts = {
-        'go_left': 'ctrl+left',
-        'go_right': 'ctrl+right',
+        'go_left': 'alt+left',
+        'go_right': 'alt+right',
     }
 
     def __init__(self,
@@ -313,9 +313,6 @@ class TraceView(StackedView):
         # Initial interval.
         self.cluster_ids = []
         self.set_interval((0., self.interval_duration))
-
-        # We use ctrl+left|right to navigate in the view.
-        self.enable_box_width_shortcuts = False
 
     def _load_traces(self, interval):
         """Load traces in an interval (in seconds)."""
@@ -444,7 +441,7 @@ class TraceView(StackedView):
 
     def on_select(self, cluster_ids, spike_ids):
         self.cluster_ids = list(cluster_ids)
-        self.set_interval((0., .25))
+        self.set_interval(self.interval)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
