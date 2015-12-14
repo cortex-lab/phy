@@ -279,7 +279,7 @@ class TraceView(StackedView):
         self.dt = 1. / self.sample_rate
 
         # Traces.
-        assert traces.ndim == 2
+        assert len(traces.shape) == 2
         self.n_samples, self.n_channels = traces.shape
         self.traces = traces
         self.duration = self.dt * self.n_samples
@@ -323,10 +323,11 @@ class TraceView(StackedView):
         start, end = interval
 
         i, j = round(self.sample_rate * start), round(self.sample_rate * end)
+        i, j = int(i), int(j)
         traces = self.traces[i:j, :]
 
         # Detrend the traces.
-        m = np.mean(traces[::10, :], axis=0)
+        m = np.mean(traces[::10, :], axis=0).astype(traces.dtype)
         traces -= m
 
         # Create the plots.
@@ -564,7 +565,7 @@ class FeatureView(GridView):
                  keys=None,
                  ):
 
-        assert features.ndim == 3
+        assert len(features.shape) == 3
         self.n_spikes, self.n_channels, self.n_features = features.shape
         self.n_cols = self.n_features + 1
         self.shape = (self.n_cols, self.n_cols)
