@@ -10,7 +10,7 @@
 import numpy as np
 
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
-                       BoxVisual, AxesVisual,
+                       BoxVisual, AxesVisual, LineVisual,
                        )
 
 
@@ -157,6 +157,19 @@ def test_histogram_2(qtbot, canvas_pz):
 
     _test_visual(qtbot, canvas_pz, HistogramVisual(),
                  hist=hist, color=c, ylim=2 * np.ones(n_hists))
+
+
+#------------------------------------------------------------------------------
+# Test line visual
+#------------------------------------------------------------------------------
+
+def test_line_empty(qtbot, canvas):
+    _test_visual(qtbot, canvas, LineVisual())
+
+
+def test_line_0(qtbot, canvas_pz):
+    _test_visual(qtbot, canvas_pz, LineVisual(),
+                 color=(1., 0., 0., .5))
 
 
 #------------------------------------------------------------------------------
