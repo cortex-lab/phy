@@ -8,7 +8,7 @@
 
 import numpy as np
 from numpy.testing import assert_equal as ae
-from pytest import raises
+from pytest import raises, yield_fixture
 
 from phy.io.mock import (artificial_waveforms,
                          artificial_features,
@@ -17,9 +17,11 @@ from phy.io.mock import (artificial_waveforms,
                          artificial_masks,
                          artificial_traces,
                          )
+from phy.gui import GUI
 from phy.electrode.mea import staggered_positions
 from ..views import (WaveformView, FeatureView, CorrelogramView, TraceView,
-                     _extract_wave)
+                     _extract_wave, _selected_clusters_colors,
+                     )
 
 
 #------------------------------------------------------------------------------
@@ -32,6 +34,15 @@ def _show(qtbot, view, stop=False):
     if stop:  # pragma: no cover
         qtbot.stop()
     view.close()
+
+
+@yield_fixture
+def gui(qtbot):
+    gui = GUI(position=(200, 100), size=(800, 600))
+    # gui.show()
+    # qtbot.waitForWindowShown(gui)
+    yield gui
+    gui.close()
 
 
 #------------------------------------------------------------------------------
@@ -62,11 +73,18 @@ def test_extract_wave():
        [[16, 17, 18], [21, 22, 23], [0, 0, 0], [0, 0, 0]])
 
 
+def test_selected_clusters_colors():
+    assert _selected_clusters_colors().shape[0] > 10
+    assert _selected_clusters_colors(0).shape[0] == 0
+    assert _selected_clusters_colors(1).shape[0] == 1
+    assert _selected_clusters_colors(100).shape[0] == 100
+
+
 #------------------------------------------------------------------------------
 # Test waveform view
 #------------------------------------------------------------------------------
 
-def test_waveform_view(qtbot):
+def test_waveform_view(qtbot, gui):
     n_spikes = 20
     n_samples = 30
     n_channels = 40
@@ -84,13 +102,13 @@ def test_waveform_view(qtbot):
                      channel_positions=channel_positions,
                      )
     # Select some spikes.
-    spike_ids = np.arange(5)
+    spike_ids = np.arange(10)
     cluster_ids = np.unique(spike_clusters[spike_ids])
     v.on_select(cluster_ids, spike_ids)
 
     # Show the view.
-    v.show()
-    qtbot.waitForWindowShown(v.native)
+    v.attach(gui)
+    gui.show()
 
     # Select other spikes.
     spike_ids = np.arange(2, 10)
@@ -98,7 +116,6 @@ def test_waveform_view(qtbot):
     v.on_select(cluster_ids, spike_ids)
 
     # qtbot.stop()
-    v.close()
 
 
 #------------------------------------------------------------------------------

@@ -14,7 +14,6 @@ from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 from six import string_types
 
 from phy.io.array import _index_of, _get_padded, get_excerpts
-from phy.electrode.mea import linear_positions
 from phy.gui import Actions
 from phy.plot import (BoxedView, StackedView, GridView,
                       _get_linear_x)
@@ -64,7 +63,7 @@ def _extract_wave(traces, spk, mask, wave_len=None):
     channels = np.nonzero(mask > .1)[0]
     # There should be at least one non-masked channel.
     if not len(channels):
-        return
+        return  # pragma: no cover
     i = spk - wave_len // 2
     j = spk + wave_len // 2
     a, b = max(0, i), min(j, n_samples - 1)
@@ -147,7 +146,7 @@ class WaveformView(BoxedView):
                  spike_clusters=None,
                  channel_positions=None,
                  shortcuts=None,
-                 keys='interactive',
+                 keys=None,
                  ):
         """
 
@@ -164,8 +163,6 @@ class WaveformView(BoxedView):
         self._spike_ids = None
 
         # Initialize the view.
-        if channel_positions is None:
-            channel_positions = linear_positions(self.n_channels)
         box_bounds = _get_boxes(channel_positions)
         super(WaveformView, self).__init__(box_bounds, keys=keys)
 
@@ -494,7 +491,7 @@ class FeatureView(GridView):
                  masks=None,
                  spike_times=None,
                  spike_clusters=None,
-                 keys='interactive',
+                 keys=None,
                  ):
 
         assert features.ndim == 3
@@ -605,7 +602,7 @@ class CorrelogramView(GridView):
                  window_size=None,
                  excerpt_size=None,
                  n_excerpts=None,
-                 keys='interactive',
+                 keys=None,
                  ):
 
         assert sample_rate > 0
@@ -648,10 +645,10 @@ class CorrelogramView(GridView):
         sc = get_excerpts(sc, excerpt_size=self.excerpt_size,
                           n_excerpts=self.n_excerpts)
         n_spikes_exerpts = len(st)
-        logger.debug("Computing correlograms for clusters %s (%d/%d spikes).",
-                     ', '.join(map(str, cluster_ids)),
-                     n_spikes_exerpts, n_spikes_total,
-                     )
+        logger.log(5, "Computing correlograms for clusters %s (%d/%d spikes).",
+                   ', '.join(map(str, cluster_ids)),
+                   n_spikes_exerpts, n_spikes_total,
+                   )
 
         # Compute all pairwise correlograms.
         ccg = correlograms(st, sc,
