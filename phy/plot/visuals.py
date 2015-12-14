@@ -132,6 +132,24 @@ def _max(arr):
     return arr.max() if len(arr) else 1
 
 
+def _validate_line_coord(x, n, default):
+    assert n >= 0
+    if x is None:
+        x = default
+    if not hasattr(x, '__len__'):
+        x = x * np.ones(n)
+    assert isinstance(x, np.ndarray)
+    assert x.shape == (n,)
+    return x.astype(np.float32)
+
+
+def _get_length(*args):
+    for arg in args:
+        if hasattr(arg, '__len__'):
+            return len(arg)
+    return 1
+
+
 class PlotVisual(BaseVisual):
     _default_color = DEFAULT_COLOR
     allow_list = ('x', 'y')
@@ -319,6 +337,86 @@ class TextVisual(BaseVisual):
 
     def set_data(self):
         pass
+
+
+class LineVisual(BaseVisual):
+    _default_color = (.35, .35, .35, 1.)
+
+    def __init__(self):
+        super(LineVisual, self).__init__()
+        self.set_shader('simple')
+        self.set_primitive_type('lines')
+
+        self.data_range = Range(NDC)
+        self.transforms.add_on_cpu(self.data_range)
+
+    @staticmethod
+    def validate(x0=None,
+                 y0=None,
+                 x1=None,
+                 y1=None,
+                 color=None,
+                 data_bounds=None,
+                 ):
+
+        # Get the number of lines.
+        n_lines = _get_length(x0, y0, x1, y1)
+        x0 = _validate_line_coord(x0, n_lines, -1)
+        y0 = _validate_line_coord(y0, n_lines, -1)
+        x1 = _validate_line_coord(x1, n_lines, +1)
+        y1 = _validate_line_coord(y1, n_lines, +1)
+
+        assert x0.shape == y0.shape == x1.shape == y1.shape == (n_lines,)
+
+        if data_bounds is None:
+            xmin = min(x0.min(), x1.min())
+            ymin = min(y0.min(), y1.min())
+            xmax = max(x0.max(), x1.max())
+            ymax = max(y0.max(), y1.max())
+            data_bounds = np.c_[xmin, ymin, xmax, ymax]
+
+        color = _get_array(color, (4,), LineVisual._default_color)
+        # assert color.shape == (n_lines, 4)
+        assert len(color) == 4
+
+        data_bounds = _get_data_bounds(data_bounds, length=n_lines)
+        data_bounds = data_bounds.astype(np.float32)
+        assert data_bounds.shape == (n_lines, 4)
+
+        return Bunch(x0=x0,
+                     y0=y0,
+                     x1=x1,
+                     y1=y1,
+                     color=color,
+                     data_bounds=data_bounds,
+                     )
+
+    @staticmethod
+    def vertex_count(x0=None, y0=None, x1=None, y1=None, **kwargs):
+        """Take the output of validate() as input."""
+        return 2 * _get_length(x0, y0, x1, y1)
+
+    def set_data(self, *args, **kwargs):
+        data = self.validate(*args, **kwargs)
+        pos = np.c_[data.x0, data.y0, data.x1, data.y1]
+        n_lines = pos.shape[0]
+        n_vertices = 2 * n_lines
+        pos = pos.reshape((-1, 2))
+
+        # Transform the positions.
+        data_bounds = np.repeat(data.data_bounds, n_vertices, axis=0)
+        self.data_range.from_bounds = data_bounds
+        pos_tr = self.transforms.apply(pos)
+
+        # Position.
+        assert pos_tr.shape == (n_vertices, 2)
+        self.program['a_position'] = pos_tr
+
+        # Color.
+        # a_color = np.repeat(data.color, 2, axis=0).astype(np.float32)
+        # assert a_color.shape == (n_vertices, 4)
+        # self.program['a_color'] = a_color
+        self.program['u_color'] = data.color
 
 
 class BoxVisual(BaseVisual):
