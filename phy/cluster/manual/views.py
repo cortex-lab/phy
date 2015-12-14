@@ -11,7 +11,6 @@ import logging
 
 import numpy as np
 from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
-from six import string_types
 
 from phy.io.array import _index_of, _get_padded, get_excerpts
 from phy.gui import Actions
@@ -19,7 +18,6 @@ from phy.plot import (BoxedView, StackedView, GridView,
                       _get_linear_x)
 from phy.plot.utils import _get_boxes
 from phy.stats import correlograms
-from phy.utils._types import _is_integer
 
 logger = logging.getLogger(__name__)
 
@@ -385,24 +383,6 @@ class TraceView(StackedView):
 # Feature view
 # -----------------------------------------------------------------------------
 
-def _check_dimension(dim, n_channels, n_features):
-    """Check that a dimension is valid."""
-    if _is_integer(dim):
-        dim = (dim, 0)
-    if isinstance(dim, tuple):
-        assert len(dim) == 2
-        channel, feature = dim
-        assert _is_integer(channel)
-        assert _is_integer(feature)
-        assert 0 <= channel < n_channels
-        assert 0 <= feature < n_features
-    elif isinstance(dim, string_types):
-        assert dim == 'time'
-    elif dim:
-        raise ValueError('{0} should be (channel, feature) '.format(dim) +
-                         'or one of the extra features.')
-
-
 def _dimensions_matrix(x_channels, y_channels):
     """Dimensions matrix."""
     # time, depth     time,    (x, 0)     time,    (y, 0)     time, (z, 0)
@@ -451,19 +431,6 @@ def _dimensions_for_clusters(cluster_ids, n_cols=None,
     if len(x_channels) < n_cols - 1:
         x_channels = y_channels
     return _dimensions_matrix(x_channels, y_channels)
-
-
-def _smart_dim(dim, n_features=None, prev_dim=None, prev_dim_other=None):
-    channel, feature = dim
-    prev_channel, prev_feature = prev_dim
-    # Scroll the feature if the channel is the same.
-    if prev_channel == channel:
-        feature = (prev_feature + 1) % n_features
-    # Scroll the feature if it is the same than in the other axis.
-    if (prev_dim_other != 'time' and
-            prev_dim_other == (channel, feature)):
-        feature = (feature + 1) % n_features
-    dim = (channel, feature)
 
 
 def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
