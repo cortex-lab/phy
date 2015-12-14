@@ -182,7 +182,7 @@ def test_trace_view_spikes(qtbot, gui):
 # Test feature view
 #------------------------------------------------------------------------------
 
-def test_feature_view(qtbot):
+def test_feature_view(gui, qtbot):
     n_spikes = 50
     n_channels = 5
     n_clusters = 2
@@ -204,9 +204,8 @@ def test_feature_view(qtbot):
     cluster_ids = np.unique(spike_clusters[spike_ids])
     v.on_select(cluster_ids, spike_ids)
 
-    # Show the view.
-    v.show()
-    qtbot.waitForWindowShown(v.native)
+    v.attach(gui)
+    gui.show()
 
     # Select other spikes.
     spike_ids = np.arange(2, 10)
@@ -214,7 +213,6 @@ def test_feature_view(qtbot):
     v.on_select(cluster_ids, spike_ids)
 
     # qtbot.stop()
-    v.close()
 
 
 #------------------------------------------------------------------------------
