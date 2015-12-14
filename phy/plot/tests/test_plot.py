@@ -109,6 +109,15 @@ def test_grid_hist(qtbot):
     _show(qtbot, view)
 
 
+def test_grid_lines(qtbot):
+    view = GridView((1, 2))
+
+    view[0, 0].lines(y0=-.5, y1=-.5)
+    view[0, 1].lines(y0=+.5, y1=+.5)
+
+    _show(qtbot, view)
+
+
 def test_grid_complete(qtbot):
     view = GridView((2, 2))
     t = _get_linear_x(1, 1000).ravel()
