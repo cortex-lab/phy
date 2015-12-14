@@ -140,7 +140,7 @@ def test_trace_view_spikes(qtbot, gui):
     n_samples = 1000
     n_channels = 12
     sample_rate = 2000.
-    n_spikes = 20
+    n_spikes = 50
     n_clusters = 3
 
     traces = artificial_traces(n_samples, n_channels)
@@ -170,6 +170,11 @@ def test_trace_view_spikes(qtbot, gui):
     spike_ids = np.arange(2, 10)
     cluster_ids = np.unique(spike_clusters[spike_ids])
     v.on_select(cluster_ids, spike_ids)
+
+    v.go_to(.5)
+    v.go_to(-.5)
+    v.go_left()
+    v.go_right()
     # qtbot.stop()
 
 

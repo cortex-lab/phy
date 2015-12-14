@@ -153,6 +153,7 @@ class Boxed(BaseInteract):
         assert self._box_bounds.shape[1] == 4
 
         self.n_boxes = len(self._box_bounds)
+        self.enable_box_width_shortcuts = True
 
     def attach(self, canvas):
         super(Boxed, self).attach(canvas)
@@ -231,11 +232,12 @@ class Boxed(BaseInteract):
         if ctrl and key in self._arrows + self._pm:
             coeff = 1.1
             box_size = np.array(self.box_size)
-            if key == 'Left':
-                box_size[0] /= coeff
-            elif key == 'Right':
-                box_size[0] *= coeff
-            elif key in ('Down', '-'):
+            if self.enable_box_width_shortcuts:
+                if key == 'Left':
+                    box_size[0] /= coeff
+                elif key == 'Right':
+                    box_size[0] *= coeff
+            if key in ('Down', '-'):
                 box_size[1] /= coeff
             elif key in ('Up', '+'):
                 box_size[1] *= coeff
