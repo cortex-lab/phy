@@ -18,7 +18,6 @@ from .utils import (_tesselate_histogram,
                     _get_data_bounds,
                     _get_pos,
                     _get_index,
-                    _get_color,
                     )
 from phy.utils import Bunch
 
@@ -376,7 +375,6 @@ class LineVisual(BaseVisual):
             data_bounds = np.c_[xmin, ymin, xmax, ymax]
 
         color = _get_array(color, (4,), LineVisual._default_color)
-        # assert color.shape == (n_lines, 4)
         assert len(color) == 4
 
         data_bounds = _get_data_bounds(data_bounds, length=n_lines)
@@ -398,13 +396,16 @@ class LineVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        pos = np.c_[data.x0, data.y0, data.x1, data.y1]
+        pos = np.c_[data.x0, data.y0, data.x1, data.y1].astype(np.float32)
+        assert pos.ndim == 2
+        assert pos.shape[1] == 4
+        assert pos.dtype == np.float32
         n_lines = pos.shape[0]
         n_vertices = 2 * n_lines
         pos = pos.reshape((-1, 2))
 
         # Transform the positions.
-        data_bounds = np.repeat(data.data_bounds, n_vertices, axis=0)
+        data_bounds = np.repeat(data.data_bounds, 2, axis=0)
         self.data_range.from_bounds = data_bounds
         pos_tr = self.transforms.apply(pos)
 
@@ -413,53 +414,4 @@ class LineVisual(BaseVisual):
         self.program['a_position'] = pos_tr
 
         # Color.
-        # a_color = np.repeat(data.color, 2, axis=0).astype(np.float32)
-        # assert a_color.shape == (n_vertices, 4)
-        # self.program['a_color'] = a_color
         self.program['u_color'] = data.color
-
-
-class BoxVisual(BaseVisual):
-    _default_color = (.35, .35, .35, 1.)
-
-    def __init__(self):
-        super(BoxVisual, self).__init__()
-        self.set_shader('simple')
-        self.set_primitive_type('lines')
-
-    def set_data(self, bounds=NDC, color=None):
-        # Set the position.
-        x0, y0, x1, y1 = bounds
-        arr = np.array([[x0, y0],
-                        [x0, y1],
-                        [x0, y1],
-                        [x1, y1],
-                        [x1, y1],
-                        [x1, y0],
-                        [x1, y0],
-                        [x0, y0]], dtype=np.float32)
-        self.program['a_position'] = self.transforms.apply(arr)
-
-        # Set the color
-        self.program['u_color'] = _get_color(color, self._default_color)
-
-
-class AxesVisual(BaseVisual):
-    _default_color = (.2, .2, .2, 1.)
-
-    def __init__(self):
-        super(AxesVisual, self).__init__()
-        self.set_shader('simple')
-        self.set_primitive_type('lines')
-
-    def set_data(self, xs=(), ys=(), bounds=NDC, color=None):
-        # Set the position.
-        arr = [[x, bounds[1], x, bounds[3]] for x in xs]
-        arr += [[bounds[0], y, bounds[2], y] for y in ys]
-        arr = np.hstack(arr or [[]]).astype(np.float32)
-        arr = arr.reshape((-1, 2)).astype(np.float32)
-        position = self.transforms.apply(arr)
-        self.program['a_position'] = position
-
-        # Set the color
-        self.program['u_color'] = _get_color(color, self._default_color)
