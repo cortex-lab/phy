@@ -129,7 +129,6 @@ def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
 # -----------------------------------------------------------------------------
 
 class WaveformView(BoxedView):
-    # TODO: make this configurable
     normalization_percentile = .95
     normalization_n_spikes = 1000
     overlap = True
@@ -252,6 +251,13 @@ class WaveformView(BoxedView):
 # -----------------------------------------------------------------------------
 
 class TraceView(StackedView):
+    interval_duration = .25  # default duration of the interval
+    shift_amount = .1
+    default_shortcuts = {
+        'go_left': 'ctrl+left',
+        'go_right': 'ctrl+right',
+    }
+
     def __init__(self,
                  traces=None,
                  sample_rate=None,
@@ -259,8 +265,13 @@ class TraceView(StackedView):
                  spike_clusters=None,
                  masks=None,
                  n_samples_per_spike=None,
+                 shortcuts=None,
                  keys=None,
                  ):
+
+        # Load default shortcuts, and override with any user shortcuts.
+        self.shortcuts = self.default_shortcuts.copy()
+        self.shortcuts.update(shortcuts or {})
 
         # Sample rate.
         assert sample_rate > 0
@@ -271,10 +282,11 @@ class TraceView(StackedView):
         assert traces.ndim == 2
         self.n_samples, self.n_channels = traces.shape
         self.traces = traces
+        self.duration = self.dt * self.n_samples
 
         # Number of samples per spike.
         self.n_samples_per_spike = (n_samples_per_spike or
-                                    int(.002 * sample_rate))
+                                    round(.002 * sample_rate))
 
         # Spike times.
         if spike_times is not None:
@@ -298,15 +310,19 @@ class TraceView(StackedView):
         # Initialize the view.
         super(TraceView, self).__init__(self.n_channels, keys=keys)
 
-        # TODO: choose the interval.
-        self.set_interval((0., .25))
+        # Initial interval.
+        self.cluster_ids = []
+        self.set_interval((0., self.interval_duration))
+
+        # We use ctrl+left|right to navigate in the view.
+        self.enable_box_width_shortcuts = False
 
     def _load_traces(self, interval):
         """Load traces in an interval (in seconds)."""
 
         start, end = interval
 
-        i, j = int(self.sample_rate * start), int(self.sample_rate * end)
+        i, j = round(self.sample_rate * start), round(self.sample_rate * end)
         traces = self.traces[i:j, :]
 
         # Detrend the traces.
@@ -331,17 +347,17 @@ class TraceView(StackedView):
                           color=(gray, gray, gray, 1),
                           data_bounds=data_bounds)
 
-    def _plot_spike(self, spike_idx, start=None, cluster_ids=None,
+    def _plot_spike(self, spike_idx, start=None,
                     traces=None, spike_times=None, spike_clusters=None,
                     masks=None, data_bounds=None):
 
         wave_len = self.n_samples_per_spike
         dur_spike = wave_len * self.dt
-        trace_start = int(self.sample_rate * start)
+        trace_start = round(self.sample_rate * start)
 
         # Find the first x of the spike, relative to the start of
         # the interval
-        sample_rel = (int(spike_times[spike_idx] * self.sample_rate) -
+        sample_rel = (round(spike_times[spike_idx] * self.sample_rate) -
                       trace_start)
 
         # Extract the waveform from the traces.
@@ -350,17 +366,17 @@ class TraceView(StackedView):
 
         # Determine the color as a function of the spike's cluster.
         clu = spike_clusters[spike_idx]
-        if cluster_ids is None or clu not in cluster_ids:
+        if self.cluster_ids is None or clu not in self.cluster_ids:
             gray = .9
             color = (gray, gray, gray, 1)
         else:
-            clu_rel = cluster_ids.index(clu)
+            clu_rel = self.cluster_ids.index(clu)
             r, g, b = (_COLORMAP[clu_rel % len(_COLORMAP)] / 255.)
             color = (r, g, b, 1.)
             sc = clu_rel * np.ones(len(ch), dtype=np.int32)
             color = _get_color(masks[spike_idx, ch],
                                spike_clusters_rel=sc,
-                               n_clusters=len(cluster_ids))
+                               n_clusters=len(self.cluster_ids))
 
         # Generate the x coordinates of the waveform.
         t0 = spike_times[spike_idx] - dur_spike / 2.
@@ -372,11 +388,26 @@ class TraceView(StackedView):
         self.plot(t, w.T, color=color, box_index=box_index,
                   data_bounds=data_bounds)
 
-    def set_interval(self, interval, cluster_ids=None):
+    def _restrict_interval(self, interval):
+        start, end = interval
+        # Restrict the interval to the boundaries of the traces.
+        if start < 0:
+            end += (-start)
+            start = 0
+        elif end >= self.duration:
+            start -= (end - self.duration)
+            end = self.duration
+        start = np.clip(start, 0, end)
+        end = np.clip(end, start, self.duration)
+        assert 0 <= start < end <= self.duration
+        return start, end
+
+    def set_interval(self, interval):
         """Display the traces and spikes in a given interval."""
         self.clear()
+        interval = self._restrict_interval(interval)
+        self.interval = interval
         start, end = interval
-        cluster_ids = list(cluster_ids) if cluster_ids is not None else None
 
         # Load traces.
         traces = self._load_traces(interval)
@@ -400,7 +431,6 @@ class TraceView(StackedView):
             for i in range(len(spike_times)):
                 self._plot_spike(i,
                                  start=start,
-                                 cluster_ids=cluster_ids,
                                  traces=traces,
                                  spike_times=spike_times,
                                  spike_clusters=spike_clusters,
@@ -412,8 +442,8 @@ class TraceView(StackedView):
         self.update()
 
     def on_select(self, cluster_ids, spike_ids):
-        # TODO: choose the interval.
-        self.set_interval((0., .25), cluster_ids=cluster_ids)
+        self.cluster_ids = list(cluster_ids)
+        self.set_interval((0., .25))
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -427,8 +457,30 @@ class TraceView(StackedView):
         gui.connect_(self.on_select)
         # gui.connect_(self.on_cluster)
 
-        # self.actions = Actions(gui, default_shortcuts=self.shortcuts)
-        # self.actions.add(self.toggle_waveform_overlap)
+        self.actions = Actions(gui, default_shortcuts=self.shortcuts)
+        self.actions.add(self.go_to, alias='tg')
+        self.actions.add(self.shift, alias='ts')
+        self.actions.add(self.go_right)
+        self.actions.add(self.go_left)
+
+    def go_to(self, time):
+        start, end = self.interval
+        half_dur = (end - start) * .5
+        self.set_interval((time - half_dur, time + half_dur))
+
+    def shift(self, delay):
+        time = sum(self.interval) * .5
+        self.go_to(time + delay)
+
+    def go_right(self):
+        start, end = self.interval
+        delay = (end - start) * .2
+        self.shift(delay)
+
+    def go_left(self):
+        start, end = self.interval
+        delay = (end - start) * .2
+        self.shift(-delay)
 
 
 # -----------------------------------------------------------------------------
@@ -501,7 +553,6 @@ def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
 
 
 class FeatureView(GridView):
-    # TODO: make this configurable
     normalization_percentile = .95
     normalization_n_spikes = 1000
 
@@ -609,7 +660,6 @@ class FeatureView(GridView):
 # -----------------------------------------------------------------------------
 
 class CorrelogramView(GridView):
-    # TODO: make this configurable
     excerpt_size = 10000
     n_excerpts = 100
 
