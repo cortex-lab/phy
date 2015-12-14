@@ -137,11 +137,12 @@ def _validate_line_coord(x, n, default):
         x = default
     if not hasattr(x, '__len__'):
         x = x * np.ones(n)
+    x = np.asarray(x, dtype=np.float32)
     assert isinstance(x, np.ndarray)
     if x.ndim == 1:
         x = x[:, None]
     assert x.shape == (n, 1)
-    return x.astype(np.float32)
+    return x
 
 
 def _get_length(*args):
@@ -346,7 +347,7 @@ class LineVisual(BaseVisual):
     Note: currently, all lines shall have the same color.
 
     """
-    _default_color = (1., 1., 1., 1.)
+    _default_color = (.3, .3, .3, 1.)
 
     def __init__(self, color=None):
         super(LineVisual, self).__init__()

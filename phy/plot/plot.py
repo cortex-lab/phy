@@ -187,6 +187,19 @@ class GridView(BaseView):
         self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
         self.panzoom.attach(self)
 
+    def build(self):
+        n, m = self.grid.shape
+        a = .01  # margin
+        for i in range(n):
+            for j in range(m):
+                self[i, j].lines(x0=[-1, +1, +1, -1],
+                                 y0=[-1, -1, +1, +1],
+                                 x1=[+1, +1, -1, -1],
+                                 y1=[-1, +1, +1, -1],
+                                 data_bounds=[-1 + a, -1 + a, 1 - a, 1 - a],
+                                 )
+        super(GridView, self).build()
+
 
 class BoxedView(BaseView):
     """Subplots at arbitrary positions"""

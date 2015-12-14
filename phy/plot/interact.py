@@ -47,9 +47,10 @@ class Grid(BaseInteract):
 
     def attach(self, canvas):
         super(Grid, self).attach(canvas)
-        m = 1. - .05  # Margin.
+        m = 1. - .05
+        m2 = 1. - .075
         canvas.transforms.add_on_gpu([Scale('u_grid_zoom'),
-                                      Scale((m, m)),
+                                      Scale((m2, m2)),
                                       Clip([-m, -m, m, m]),
                                       Subplot(self.shape_var, self.box_var),
                                       ])
