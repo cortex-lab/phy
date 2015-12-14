@@ -115,6 +115,8 @@ def test_waveform_view(qtbot, gui):
     cluster_ids = np.unique(spike_clusters[spike_ids])
     v.on_select(cluster_ids, spike_ids)
 
+    v.toggle_waveform_overlap()
+
     # qtbot.stop()
 
 
@@ -139,19 +141,19 @@ def test_trace_view_spikes(qtbot):
     n_channels = 12
     sample_rate = 2000.
     n_spikes = 20
-    n_clusters = 3
+    # n_clusters = 3
 
     traces = artificial_traces(n_samples, n_channels)
     spike_times = artificial_spike_samples(n_spikes) / sample_rate
     # spike_times = [.1, .2]
-    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    # spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
     masks = artificial_masks(n_spikes, n_channels)
 
     # Create the view.
     v = TraceView(traces=traces,
                   sample_rate=sample_rate,
                   spike_times=spike_times,
-                  spike_clusters=spike_clusters,
+                  # spike_clusters=spike_clusters,
                   masks=masks,
                   n_samples_per_spike=6,
                   )
@@ -201,7 +203,7 @@ def test_feature_view(qtbot):
 # Test correlogram view
 #------------------------------------------------------------------------------
 
-def test_correlogram_view(qtbot):
+def test_correlogram_view(qtbot, gui):
     n_spikes = 50
     n_clusters = 5
     sample_rate = 20000.
@@ -235,5 +237,6 @@ def test_correlogram_view(qtbot):
     cluster_ids = np.unique(spike_clusters[spike_ids])
     v.on_select(cluster_ids, spike_ids)
 
+    v.attach(gui)
+    gui.show()
     # qtbot.stop()
-    v.close()
