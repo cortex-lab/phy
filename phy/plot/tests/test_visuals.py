@@ -10,7 +10,7 @@
 import numpy as np
 
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
-                       BoxVisual, AxesVisual, LineVisual,
+                       LineVisual,
                        )
 
 
@@ -168,40 +168,7 @@ def test_line_empty(qtbot, canvas):
 
 
 def test_line_0(qtbot, canvas_pz):
+    y = np.linspace(-.5, .5, 10)
     _test_visual(qtbot, canvas_pz, LineVisual(),
-                 color=(1., 0., 0., .5))
-
-
-#------------------------------------------------------------------------------
-# Test box visual
-#------------------------------------------------------------------------------
-
-def test_box_empty(qtbot, canvas):
-    _test_visual(qtbot, canvas, BoxVisual())
-
-
-def test_box_0(qtbot, canvas_pz):
-    _test_visual(qtbot, canvas_pz, BoxVisual(),
-                 bounds=(-.5, -.5, 0., 0.),
-                 color=(1., 0., 0., .5))
-
-
-#------------------------------------------------------------------------------
-# Test axes visual
-#------------------------------------------------------------------------------
-
-def test_axes_empty(qtbot, canvas):
-    _test_visual(qtbot, canvas, AxesVisual())
-
-
-def test_axes_0(qtbot, canvas_pz):
-    _test_visual(qtbot, canvas_pz, AxesVisual(),
-                 xs=[0])
-
-
-def test_axes_1(qtbot, canvas_pz):
-    _test_visual(qtbot, canvas_pz, AxesVisual(),
-                 xs=[-.25, -.1],
-                 ys=[-.15],
-                 bounds=(-.5, -.5, 0., 0.),
-                 color=(0., 1., 0., .5))
+                 y0=y, y1=y, data_bounds=[-1, -1, 1, 1],
+                 color=(1., 1., 0., .5))

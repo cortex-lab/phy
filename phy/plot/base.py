@@ -79,12 +79,12 @@ class BaseVisual(object):
     @staticmethod
     def validate(**kwargs):
         """Make consistent the input data for the visual."""
-        return kwargs
+        return kwargs  # pragma: no cover
 
     @staticmethod
     def vertex_count(**kwargs):
         """Return the number of vertices as a function of the input data."""
-        return 0
+        return 0  # pragma: no cover
 
     def set_data(self):
         """Set data to the program.

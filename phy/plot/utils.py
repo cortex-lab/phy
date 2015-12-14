@@ -220,13 +220,6 @@ def _get_index(n_items, item_size, n):
     return index
 
 
-def _get_color(color, default):
-    if color is None:
-        color = default
-    assert len(color) == 4
-    return color
-
-
 def _get_linear_x(n_signals, n_samples):
     return np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
 
