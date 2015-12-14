@@ -113,6 +113,11 @@ def test_get_boxes():
     ac(boxes, [[-1, -.25, 0, .25],
                [+0, -.25, 1, .25]], atol=1e-4)
 
+    positions = [[-1, 0], [1, 0]]
+    boxes = _get_boxes(positions, keep_aspect_ratio=False)
+    ac(boxes, [[-1, -1, 0, 1],
+               [0, -1, 1, 1]], atol=1e-4)
+
     positions = linear_positions(4)
     boxes = _get_boxes(positions)
     ac(boxes, [[-0.5, -1.0, +0.5, -0.5],
