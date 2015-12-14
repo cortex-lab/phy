@@ -136,7 +136,7 @@ def test_trace_view_no_spikes(qtbot):
     _show(qtbot, v)
 
 
-def test_trace_view_spikes(qtbot):
+def test_trace_view_spikes(qtbot, gui):
     n_samples = 1000
     n_channels = 12
     sample_rate = 2000.
@@ -155,9 +155,22 @@ def test_trace_view_spikes(qtbot):
                   spike_clusters=spike_clusters,
                   masks=masks,
                   n_samples_per_spike=6,
-                  keys='interactive',
                   )
-    _show(qtbot, v)
+
+    # Select some spikes.
+    spike_ids = np.arange(10)
+    cluster_ids = np.unique(spike_clusters[spike_ids])
+    v.on_select(cluster_ids, spike_ids)
+
+    # Show the view.
+    v.attach(gui)
+    gui.show()
+
+    # Select other spikes.
+    spike_ids = np.arange(2, 10)
+    cluster_ids = np.unique(spike_clusters[spike_ids])
+    v.on_select(cluster_ids, spike_ids)
+    # qtbot.stop()
 
 
 #------------------------------------------------------------------------------
