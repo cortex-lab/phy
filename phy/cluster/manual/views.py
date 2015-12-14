@@ -259,11 +259,13 @@ class TraceView(StackedView):
                  spike_clusters=None,
                  masks=None,
                  n_samples_per_spike=None,
+                 keys=None,
                  ):
 
         # Sample rate.
         assert sample_rate > 0
         self.sample_rate = sample_rate
+        self.dt = 1. / self.sample_rate
 
         # Traces.
         assert traces.ndim == 2
@@ -294,7 +296,7 @@ class TraceView(StackedView):
             self.spike_times = self.spike_clusters = self.masks = None
 
         # Initialize the view.
-        super(TraceView, self).__init__(self.n_channels)
+        super(TraceView, self).__init__(self.n_channels, keys=keys)
 
         # TODO: choose the interval.
         self.set_interval((0., .25))
@@ -315,59 +317,90 @@ class TraceView(StackedView):
         return traces
 
     def _load_spikes(self, interval):
+        """Return spike times, spike clusters, masks."""
         assert self.spike_times is not None
         # Keep the spikes in the interval.
         a, b = self.spike_times.searchsorted(interval)
         return self.spike_times[a:b], self.spike_clusters[a:b], self.masks[a:b]
 
-    def set_interval(self, interval):
+    def _plot_traces(self, traces, start=None, data_bounds=None):
+        t = start + np.arange(traces.shape[0]) * self.dt
+        gray = .4
+        for ch in range(self.n_channels):
+            self[ch].plot(t, traces[:, ch],
+                          color=(gray, gray, gray, 1),
+                          data_bounds=data_bounds)
+
+    def _plot_spike(self, spike_idx, start=None, cluster_ids=None,
+                    traces=None, spike_times=None, spike_clusters=None,
+                    masks=None, data_bounds=None):
+
+        wave_len = self.n_samples_per_spike
+        dur_spike = wave_len * self.dt
+        trace_start = int(self.sample_rate * start)
+
+        # Find the first x of the spike, relative to the start of
+        # the interval
+        sample_rel = (int(spike_times[spike_idx] * self.sample_rate) -
+                      trace_start)
+
+        # Determine the color as a function of the spike's cluster.
+        clu = spike_clusters[spike_idx]
+        if cluster_ids is None or clu not in cluster_ids:
+            gray = .9
+            color = (gray, gray, gray, 1)
+        else:
+            clu_rel = cluster_ids.index(clu)
+            color = _COLORMAP[clu_rel % len(_COLORMAP)]
+
+        # Extract the waveform from the traces.
+        w, ch = _extract_wave(traces, sample_rel,
+                              self.masks[spike_idx], wave_len)
+
+        # Generate the x coordinates of the waveform.
+        t0 = spike_times[spike_idx] - dur_spike / 2.
+        t = t0 + self.dt * np.arange(wave_len)
+        t = np.tile(t, (len(ch), 1))
+
+        # The box index depends on the channel.
+        box_index = np.repeat(ch[:, np.newaxis], wave_len, axis=0)
+        self.plot(t, w.T, color=color, box_index=box_index,
+                  data_bounds=data_bounds)
+
+    def set_interval(self, interval, cluster_ids=None):
+        """Display the traces and spikes in a given interval."""
         self.clear()
         start, end = interval
-        color = (.5, .5, .5, 1)
-
-        dt = 1. / self.sample_rate
 
         # Load traces.
         traces = self._load_traces(interval)
-        n_samples = traces.shape[0]
         assert traces.shape[1] == self.n_channels
 
+        # Determine the data bounds.
         m, M = traces.min(), traces.max()
         data_bounds = np.array([start, m, end, M])
 
-        # Generate the trace plots.
-        # TODO OPTIM: avoid the loop and generate all channel traces in
+        # Plot the traces.
+        # OPTIM: avoid the loop and generate all channel traces in
         # one pass with NumPy (but need to set a_box_index manually too).
-        # t = _get_linear_x(1, traces.shape[0])
-        t = start + np.arange(n_samples) * dt
-        for ch in range(self.n_channels):
-            self[ch].plot(t, traces[:, ch], color=color,
-                          data_bounds=data_bounds)
+        self._plot_traces(traces, start=start, data_bounds=data_bounds)
 
         # Display the spikes.
         if self.spike_times is not None:
-            wave_len = self.n_samples_per_spike
+            # Load the spikes.
             spike_times, spike_clusters, masks = self._load_spikes(interval)
-            n_spikes = len(spike_times)
-            dt = 1. / float(self.sample_rate)
-            dur_spike = wave_len * dt
-            trace_start = int(self.sample_rate * start)
 
-            for i in range(n_spikes):
-                sample_rel = (int(spike_times[i] * self.sample_rate) -
-                              trace_start)
-                mask = self.masks[i]
-                # TODO: color of spike = white or color if selected cluster
-                # clu = spike_clusters[i]
-                w, ch = _extract_wave(traces, sample_rel, mask, wave_len)
-                n_ch = len(ch)
-                t0 = spike_times[i] - dur_spike / 2.
-                color = np.array([1, 0, 0, 1])
-                box_index = np.repeat(ch[:, np.newaxis], wave_len, axis=0)
-                t = t0 + dt * np.arange(wave_len)
-                t = np.tile(t, (n_ch, 1))
-                self.plot(t, w.T, color=color, box_index=box_index,
-                          data_bounds=data_bounds)
+            # Plot every spike.
+            for i in range(len(spike_times)):
+                self._plot_spike(i,
+                                 start=start,
+                                 cluster_ids=cluster_ids,
+                                 traces=traces,
+                                 spike_times=spike_times,
+                                 spike_clusters=spike_clusters,
+                                 masks=masks,
+                                 data_bounds=data_bounds,
+                                 )
 
         self.build()
         self.update()
@@ -518,7 +551,7 @@ class FeatureView(GridView):
                                                 best_channels_func=None)
 
         # Plot all features.
-        # TODO: optim: avoid the loop.
+        # OPTIM: avoid the loop.
         with self.building():
             for i in range(self.n_cols):
                 for j in range(self.n_cols):
