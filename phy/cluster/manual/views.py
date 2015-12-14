@@ -650,7 +650,16 @@ class FeatureView(GridView):
                                        )
 
     def attach(self, gui):
-        pass
+        """Attach the view to the GUI."""
+
+        # Disable keyboard pan so that we can use arrows as global shortcuts
+        # in the GUI.
+        self.panzoom.enable_keyboard_pan = False
+
+        gui.add_view(self)
+
+        gui.connect_(self.on_select)
+        # gui.connect_(self.on_cluster)
 
 
 # -----------------------------------------------------------------------------
