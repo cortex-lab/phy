@@ -99,6 +99,17 @@ def test_actions_simple(actions):
 # Test actions and snippet
 #------------------------------------------------------------------------------
 
+def test_actions_gui_menu(qtbot, gui, actions):
+    qtbot.addWidget(gui)
+
+    @actions.add(shortcut='g', menu='&File')
+    def press():
+        pass
+
+    gui.show()
+    # qtbot.stop()
+
+
 def test_actions_gui(qtbot, gui, actions):
     qtbot.addWidget(gui)
     gui.show()

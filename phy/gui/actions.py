@@ -116,7 +116,7 @@ def _alias(name):
 @require_qt
 def _create_qaction(gui, name, callback, shortcut):
     # Create the QAction instance.
-    action = QAction(name, gui)
+    action = QAction(name.title(), gui)
 
     def wrapped(checked, *args, **kwargs):  # pragma: no cover
         return callback(*args, **kwargs)
@@ -147,12 +147,13 @@ class Actions(object):
         gui.actions.append(self)
 
     def add(self, callback=None, name=None, shortcut=None, alias=None,
-            verbose=True):
+            menu=None, verbose=True):
         """Add an action with a keyboard shortcut."""
         # TODO: add menu_name option and create menu bar
         if callback is None:
             # Allow to use either add(func) or @add or @add(...).
-            return partial(self.add, name=name, shortcut=shortcut, alias=alias)
+            return partial(self.add, name=name, shortcut=shortcut,
+                           alias=alias, menu=menu)
         assert callback
 
         # Get the name from the callback function if needed.
@@ -168,11 +169,14 @@ class Actions(object):
         # Create and register the action.
         action = _create_qaction(self.gui, name, callback, shortcut)
         action_obj = Bunch(qaction=action, name=name, alias=alias,
-                           shortcut=shortcut, callback=callback)
+                           shortcut=shortcut, callback=callback, menu=menu)
         if verbose and not name.startswith('_'):
             logger.log(5, "Add action `%s` (%s).", name,
                        _get_shortcut_string(action.shortcut()))
         self.gui.addAction(action)
+        # Add the action to the menu.
+        if menu:
+            self.gui.get_menu(menu).addAction(action)
         self._actions_dict[name] = action_obj
         # Register the alias -> name mapping.
         self._aliases[alias] = name

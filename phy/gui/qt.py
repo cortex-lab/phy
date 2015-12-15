@@ -23,7 +23,7 @@ from PyQt4.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
                           pyqtSignal, pyqtSlot, QSize, QUrl)
 from PyQt4.QtGui import (QKeySequence, QAction, QStatusBar,  # noqa
                          QMainWindow, QDockWidget, QWidget,
-                         QMessageBox, QApplication,
+                         QMessageBox, QApplication, QMenuBar,
                          )
 from PyQt4.QtWebKit import QWebView, QWebPage, QWebSettings   # noqa
 

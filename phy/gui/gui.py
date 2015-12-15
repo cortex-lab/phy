@@ -11,7 +11,7 @@ from collections import defaultdict
 import logging
 
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
-                 Qt, QSize, QMetaObject)
+                 Qt, QSize, QMetaObject, QMenuBar,)
 from .actions import Actions, _show_shortcuts, Snippets
 from phy.utils.event import EventEmitter
 from phy.utils import load_master_config
@@ -136,6 +136,10 @@ class GUI(QMainWindow):
                             QMainWindow.AllowNestedDocks |
                             QMainWindow.AnimatedDocks
                             )
+
+        # Mapping {name: menuBar}.
+        self._menus = {}
+
         # We can derive from EventEmitter because of a conflict with connect.
         self._event = EventEmitter()
 
@@ -260,6 +264,15 @@ class GUI(QMainWindow):
         for view in views:
             counts[_title(view)] += 1
         return dict(counts)
+
+    # Menu bar
+    # -------------------------------------------------------------------------
+
+    def get_menu(self, name):
+        """Return or create a menu."""
+        if name not in self._menus:
+            self._menus[name] = self.menuBar().addMenu(name)
+        return self._menus[name]
 
     # Status bar
     # -------------------------------------------------------------------------
