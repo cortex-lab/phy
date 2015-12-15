@@ -73,14 +73,15 @@ def _extract_wave(traces, spk, mask, wave_len=None):
 
 def _get_data_bounds(arr, n_spikes=None, percentile=None):
     n = arr.shape[0]
-    n_spikes = n_spikes or n
-    percentile = percentile or 100
-    k = max(1, n // n_spikes)
+    k = max(1, n // n_spikes) if n_spikes else 1
     w = np.abs(arr[::k])
     n = w.shape[0]
     w = w.reshape((n, -1))
     w = w.max(axis=1)
-    m = np.percentile(w, percentile)
+    if percentile is not None:
+        m = np.percentile(w, percentile)
+    else:
+        m = w.max()
     return [-1, -m, +1, +m]
 
 
@@ -604,10 +605,7 @@ class FeatureView(GridView):
 
         """
         assert values.shape == (self.n_spikes,)
-        bounds = _get_data_bounds(values,
-                                  n_spikes=self.normalization_n_spikes,
-                                  percentile=self.normalization_percentile,
-                                  )
+        bounds = _get_data_bounds(values)
         self.attributes[name] = (values, bounds)
 
     def _get_feature(self, dim, spike_ids=None):
