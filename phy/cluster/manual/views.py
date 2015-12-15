@@ -595,6 +595,21 @@ class FeatureView(GridView):
 
         self.add_attribute('time', spike_times)
 
+    def add_attribute(self, name, values):
+        """Add an attribute (aka extra feature).
+
+        The values should be a 1D array with `n_spikes` elements.
+
+        By default, there is the `time` attribute.
+
+        """
+        assert values.shape == (self.n_spikes,)
+        bounds = _get_data_bounds(values,
+                                  n_spikes=self.normalization_n_spikes,
+                                  percentile=self.normalization_percentile,
+                                  )
+        self.attributes[name] = (values, bounds)
+
     def _get_feature(self, dim, spike_ids=None):
         f = self.features[spike_ids]
         assert f.ndim == 3
@@ -602,7 +617,8 @@ class FeatureView(GridView):
         if dim in self.attributes:
             # Extra features like time.
             values, _ = self.attributes[dim]
-            assert values.shape == (self.n_spikes,)
+            values = values[spike_ids]
+            assert values.shape == (len(spike_ids),)
             return values
         else:
             assert len(dim) == 2
@@ -626,20 +642,51 @@ class FeatureView(GridView):
         y0, y1 = self._get_dim_bounds_single(y_dim)
         return [x0, y0, x1, y1]
 
-    def add_attribute(self, name, values):
-        assert values.shape == (self.n_spikes,)
-        bounds = _get_data_bounds(values,
-                                  n_spikes=self.normalization_n_spikes,
-                                  percentile=self.normalization_percentile,
-                                  )
-        self.attributes[name] = (values, bounds)
+    def _plot_features(self, i, j, x_dim, y_dim,
+                       cluster_ids=None, spike_ids=None,
+                       masks=None, spike_clusters_rel=None):
+        sc = spike_clusters_rel
+        n_clusters = len(cluster_ids)
+
+        # Retrieve the x and y values for the subplot.
+        x = self._get_feature(x_dim[i, j], spike_ids)
+        y = self._get_feature(y_dim[i, j], spike_ids)
+
+        # Retrieve the data bounds.
+        data_bounds = self._get_dim_bounds(x_dim[i, j],
+                                           y_dim[i, j])
+
+        # Retrieve the masks and depth.
+        mx, dx = _project_mask_depth(x_dim[i, j], masks,
+                                     spike_clusters_rel=sc,
+                                     n_clusters=n_clusters)
+        my, dy = _project_mask_depth(y_dim[i, j], masks,
+                                     spike_clusters_rel=sc,
+                                     n_clusters=n_clusters)
+
+        d = np.maximum(dx, dy)
+        m = np.maximum(mx, my)
+
+        # Get the color of the markers.
+        color = _get_color(m,
+                           spike_clusters_rel=sc,
+                           n_clusters=n_clusters)
+
+        # Create the scatter plot for the current subplot.
+        self[i, j].scatter(x=x,
+                           y=y,
+                           color=color,
+                           depth=d,
+                           data_bounds=data_bounds,
+                           size=5 * np.ones(len(spike_ids)),
+                           )
 
     def on_select(self, cluster_ids, spike_ids):
-        n_clusters = len(cluster_ids)
         n_spikes = len(spike_ids)
         if n_spikes == 0:
             return
 
+        # Get the masks for the selected spikes.
         masks = self.masks[spike_ids]
         sc = _get_spike_clusters_rel(self.spike_clusters,
                                      spike_ids,
@@ -654,34 +701,12 @@ class FeatureView(GridView):
         with self.building():
             for i in range(self.n_cols):
                 for j in range(self.n_cols):
-
-                    x = self._get_feature(x_dim[i, j], spike_ids)
-                    y = self._get_feature(y_dim[i, j], spike_ids)
-
-                    data_bounds = self._get_dim_bounds(x_dim[i, j],
-                                                       y_dim[i, j])
-
-                    mx, dx = _project_mask_depth(x_dim[i, j], masks,
-                                                 spike_clusters_rel=sc,
-                                                 n_clusters=n_clusters)
-                    my, dy = _project_mask_depth(y_dim[i, j], masks,
-                                                 spike_clusters_rel=sc,
-                                                 n_clusters=n_clusters)
-
-                    d = np.maximum(dx, dy)
-                    m = np.maximum(mx, my)
-
-                    color = _get_color(m,
-                                       spike_clusters_rel=sc,
-                                       n_clusters=n_clusters)
-
-                    self[i, j].scatter(x=x,
-                                       y=y,
-                                       color=color,
-                                       depth=d,
-                                       data_bounds=data_bounds,
-                                       size=5 * np.ones(n_spikes),
-                                       )
+                    self._plot_features(i, j, x_dim, y_dim,
+                                        cluster_ids=cluster_ids,
+                                        spike_ids=spike_ids,
+                                        masks=masks,
+                                        spike_clusters_rel=sc,
+                                        )
 
     def attach(self, gui):
         """Attach the view to the GUI."""
