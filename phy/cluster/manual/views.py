@@ -605,8 +605,8 @@ class FeatureView(GridView):
 
         """
         assert values.shape == (self.n_spikes,)
-        bounds = _get_data_bounds(values)
-        self.attributes[name] = (values, bounds)
+        lim = values.min(), values.max()
+        self.attributes[name] = (values, lim)
 
     def _get_feature(self, dim, spike_ids=None):
         f = self.features[spike_ids]
@@ -627,7 +627,7 @@ class FeatureView(GridView):
         """Return the min and max of the bounds for a single dimension."""
         if dim in self.attributes:
             # Attribute: the data bounds were computed in add_attribute().
-            _, y0, _, y1 = self.attributes[dim][1]
+            y0, y1 = self.attributes[dim][1]
         else:
             # Features: the data bounds were computed in the constructor.
             _, y0, _, y1 = self.data_bounds
