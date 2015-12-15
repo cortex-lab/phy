@@ -207,10 +207,10 @@ def test_feature_view(gui, qtbot):
     v.attach(gui)
     gui.show()
 
-    # Select other spikes.
-    spike_ids = np.arange(2, 10)
-    cluster_ids = np.unique(spike_clusters[spike_ids])
-    v.on_select(cluster_ids, spike_ids)
+    # # Select other spikes.
+    # spike_ids = np.arange(2, 10)
+    # cluster_ids = np.unique(spike_clusters[spike_ids])
+    # v.on_select(cluster_ids, spike_ids)
 
     # qtbot.stop()
 
