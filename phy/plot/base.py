@@ -48,9 +48,13 @@ class BaseVisual(object):
         self.gl_primitive_type = None
         self.transforms = TransformChain()
         self.inserter = GLSLInserter()
+        self.inserter.insert_vert('uniform vec2 u_window_size;', 'header')
         # The program will be set by the canvas when the visual is
         # added to the canvas.
         self.program = None
+        # Whether u_window_size is used in the shaders. Allow to avoid
+        # the warning in VisPy when setting an inactive uniform.
+        self._use_window_size = False
 
     # Visual definition
     # -------------------------------------------------------------------------
@@ -58,6 +62,12 @@ class BaseVisual(object):
     def set_shader(self, name):
         self.vertex_shader = _load_shader(name + '.vert')
         self.fragment_shader = _load_shader(name + '.frag')
+
+        # HACK: we check whether u_window_size is used in order to avoid
+        # the VisPy warning.
+        s = self.vertex_shader + self.fragment_shader
+        s = s.replace('u_window_size;', '')
+        self._use_window_size = ('u_window_size' in s)
 
     def set_primitive_type(self, primitive_type):
         self.gl_primitive_type = primitive_type
@@ -72,6 +82,10 @@ class BaseVisual(object):
         else:  # pragma: no cover
             logger.debug("Skipping drawing visual `%s` because the program "
                          "has not been built yet.", self)
+
+    def on_resize(self, size):
+        if self._use_window_size:
+            self.program['u_window_size'] = size
 
     # To override
     # -------------------------------------------------------------------------
@@ -207,13 +221,15 @@ class GLSLInserter(object):
     def insert_into_shaders(self, vertex, fragment):
         """Apply the insertions to shader code."""
         to_insert = defaultdict(str)
-        to_insert.update({key: '\n'.join(self._to_insert[key])
+        to_insert.update({key: '\n'.join(self._to_insert[key]) + '\n'
                           for key in self._to_insert})
         return _insert_glsl(vertex, fragment, to_insert)
 
     def __add__(self, inserter):
         """Concatenate two inserters."""
-        self._to_insert.update(inserter._to_insert)
+        for key, values in self._to_insert.items():
+            values.extend([_ for _ in inserter._to_insert[key]
+                           if _ not in values])
         return self
 
 
@@ -268,6 +284,8 @@ class BaseCanvas(Canvas):
         visual.program = gloo.Program(vs, fs)
         logger.log(5, "Vertex shader: %s", vs)
         logger.log(5, "Fragment shader: %s", fs)
+        # Initialize the size.
+        visual.on_resize(self.size)
         # Register the visual in the list of visuals in the canvas.
         self.visuals.append(visual)
         self.events.visual_added(visual=visual)
@@ -275,6 +293,9 @@ class BaseCanvas(Canvas):
     def on_resize(self, event):
         """Resize the OpenGL context."""
         self.context.set_viewport(0, 0, event.size[0], event.size[1])
+        for visual in self.visuals:
+            visual.on_resize(event.size)
+        self.update()
 
     def on_draw(self, e):
         """Draw all visuals."""
