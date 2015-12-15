@@ -540,7 +540,7 @@ def _dimensions_for_clusters(cluster_ids, n_cols=None,
 def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
     """Return the mask and depth vectors for a given dimension."""
     n_spikes = masks.shape[0]
-    if dim != 'time':
+    if isinstance(dim, tuple):
         ch, fet = dim
         m = masks[:, ch]
         d = _get_depth(m,
@@ -736,6 +736,11 @@ class FeatureView(GridView):
 class CorrelogramView(GridView):
     excerpt_size = 10000
     n_excerpts = 100
+    uniform_normalization = False
+    default_shortcuts = {
+        'go_left': 'alt+left',
+        'go_right': 'alt+right',
+    }
 
     def __init__(self,
                  spike_times=None,
@@ -745,8 +750,16 @@ class CorrelogramView(GridView):
                  window_size=None,
                  excerpt_size=None,
                  n_excerpts=None,
+                 shortcuts=None,
                  keys=None,
                  ):
+
+        # Load default shortcuts, and override with any user shortcuts.
+        self.shortcuts = self.default_shortcuts.copy()
+        self.shortcuts.update(shortcuts or {})
+
+        self._cluster_ids = None
+        self._spike_ids = None
 
         assert sample_rate > 0
         self.sample_rate = sample_rate
@@ -770,11 +783,7 @@ class CorrelogramView(GridView):
         assert spike_clusters.shape == (self.n_spikes,)
         self.spike_clusters = spike_clusters
 
-    def on_select(self, cluster_ids, spike_ids):
-        n_clusters = len(cluster_ids)
-        n_spikes = len(spike_ids)
-        if n_spikes == 0:
-            return
+    def _compute_correlograms(self, cluster_ids):
 
         # Keep spikes belonging to the selected clusters.
         ind = np.in1d(self.spike_clusters, cluster_ids)
@@ -801,7 +810,19 @@ class CorrelogramView(GridView):
                            window_size=self.window_size,
                            )
 
-        lim = ccg.max()
+        return ccg
+
+    def on_select(self, cluster_ids, spike_ids):
+        self._cluster_ids = cluster_ids
+        self._spike_ids = spike_ids
+
+        n_clusters = len(cluster_ids)
+        n_spikes = len(spike_ids)
+        if n_spikes == 0:
+            return
+
+        ccg = self._compute_correlograms(cluster_ids)
+        ylim = [ccg.max()] if not self.uniform_normalization else None
 
         colors = _selected_clusters_colors(n_clusters)
 
@@ -814,8 +835,12 @@ class CorrelogramView(GridView):
                     color = np.hstack((color, [1]))
                     self[i, j].hist(hist,
                                     color=color,
-                                    ylim=[lim],
+                                    ylim=ylim,
                                     )
+
+    def toggle_normalization(self):
+        self.uniform_normalization = not self.uniform_normalization
+        self.on_select(self._cluster_ids, self._spike_ids)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -829,4 +854,5 @@ class CorrelogramView(GridView):
         gui.connect_(self.on_select)
         # gui.connect_(self.on_cluster)
 
-        # self.actions = Actions(gui, default_shortcuts=self.shortcuts)
+        self.actions = Actions(gui, default_shortcuts=self.shortcuts)
+        self.actions.add(self.toggle_normalization, shortcut='n')
