@@ -76,7 +76,6 @@ def _create_visual(qtbot, canvas, interact, box_index):
 
 def test_grid_1(qtbot, canvas):
 
-    c = canvas
     n = 1000
 
     box_index = [[i, j] for i, j in product(range(2), range(3))]
