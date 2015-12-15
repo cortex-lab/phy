@@ -78,10 +78,7 @@ def _get_data_bounds(arr, n_spikes=None, percentile=None):
     n = w.shape[0]
     w = w.reshape((n, -1))
     w = w.max(axis=1)
-    if percentile is not None:
-        m = np.percentile(w, percentile)
-    else:
-        m = w.max()
+    m = np.percentile(w, percentile)
     return [-1, -m, +1, +m]
 
 

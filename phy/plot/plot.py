@@ -189,14 +189,14 @@ class GridView(BaseView):
 
     def build(self):
         n, m = self.grid.shape
-        a = .045  # margin
+        a = 1 + 0.03  # margin
         for i in range(n):
             for j in range(m):
-                self[i, j].lines(x0=[-1, +1, +1, -1],
-                                 y0=[-1, -1, +1, +1],
-                                 x1=[+1, +1, -1, -1],
-                                 y1=[-1, +1, +1, -1],
-                                 data_bounds=[-1 + a, -1 + a, 1 - a, 1 - a],
+                self[i, j].lines(x0=[-a, +a, +a, -a],
+                                 y0=[-a, -a, +a, +a],
+                                 x1=[+a, +a, -a, -a],
+                                 y1=[-a, +a, +a, -a],
+                                 data_bounds=NDC,
                                  )
         super(GridView, self).build()
 
