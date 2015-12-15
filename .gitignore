@@ -12,7 +12,7 @@ wiki
 .ipynb_checkpoints
 .*fuse*
 *.orig
-*.log
+*.log*
 .eggs
 .profile
 __pycache__

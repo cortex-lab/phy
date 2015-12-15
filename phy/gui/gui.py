@@ -105,6 +105,7 @@ class GUI(QMainWindow):
 
     close
     show
+    add_view
 
     Note
     ----
@@ -244,6 +245,7 @@ class GUI(QMainWindow):
         if floating is not None:
             dockwidget.setFloating(floating)
         dockwidget.show()
+        self.emit('add_view', view)
         return dockwidget
 
     def list_views(self, title='', is_visible=True):
