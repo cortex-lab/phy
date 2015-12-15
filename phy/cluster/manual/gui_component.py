@@ -262,34 +262,38 @@ class ManualClustering(object):
         self.actions = Actions(gui, default_shortcuts=self.shortcuts)
 
         # Selection.
-        self.actions.add(self.select, alias='c')
+        self.actions.add(self.select, alias='c', menu='&Cluster')
+        self.actions.separator('&Cluster')
 
         # Clustering.
-        self.actions.add(self.merge, alias='g')
-        self.actions.add(self.split, alias='k')
+        self.actions.add(self.merge, alias='g', menu='&Cluster')
+        self.actions.add(self.split, alias='k', menu='&Cluster')
+        self.actions.separator('&Cluster')
 
         # Move.
         self.actions.add(self.move)
 
         for group in ('noise', 'mua', 'good'):
             self.actions.add(partial(self.move_best, group),
-                             name='move_best_to_' + group)
+                             name='move_best_to_' + group, menu='&Cluster')
             self.actions.add(partial(self.move_similar, group),
-                             name='move_similar_to_' + group)
+                             name='move_similar_to_' + group, menu='&Cluster')
             self.actions.add(partial(self.move_all, group),
-                             name='move_all_to_' + group)
-
-        # Wizard.
-        self.actions.add(self.reset)
-        self.actions.add(self.next)
-        self.actions.add(self.previous)
-        self.actions.add(self.next_best)
-        self.actions.add(self.previous_best)
+                             name='move_all_to_' + group, menu='&Cluster')
+        self.actions.separator('&Cluster')
 
         # Others.
-        self.actions.add(self.undo)
-        self.actions.add(self.redo)
-        self.actions.add(self.save)
+        self.actions.add(self.undo, menu='&Cluster')
+        self.actions.add(self.redo, menu='&Cluster')
+        self.actions.add(self.save, menu='&Cluster')
+
+        # Wizard.
+        self.actions.add(self.reset, menu='&Wizard')
+        self.actions.add(self.next, menu='&Wizard')
+        self.actions.add(self.previous, menu='&Wizard')
+        self.actions.add(self.next_best, menu='&Wizard')
+        self.actions.add(self.previous_best, menu='&Wizard')
+        self.actions.separator('&Cluster')
 
     def _create_cluster_views(self):
         # Create the cluster view.

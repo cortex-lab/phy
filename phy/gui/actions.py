@@ -116,7 +116,7 @@ def _alias(name):
 @require_qt
 def _create_qaction(gui, name, callback, shortcut):
     # Create the QAction instance.
-    action = QAction(name.title(), gui)
+    action = QAction(name.capitalize().replace('_', ' '), gui)
 
     def wrapped(checked, *args, **kwargs):  # pragma: no cover
         return callback(*args, **kwargs)
@@ -184,6 +184,10 @@ class Actions(object):
         # Set the callback method.
         if callback:
             setattr(self, name, callback)
+
+    def separator(self, menu):
+        """Add a separator"""
+        self.gui.get_menu(menu).addSeparator()
 
     def disable(self, name=None):
         """Disable one or all actions."""

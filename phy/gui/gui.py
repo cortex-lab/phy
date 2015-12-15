@@ -11,7 +11,7 @@ from collections import defaultdict
 import logging
 
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
-                 Qt, QSize, QMetaObject, QMenuBar,)
+                 Qt, QSize, QMetaObject)
 from .actions import Actions, _show_shortcuts, Snippets
 from phy.utils.event import EventEmitter
 from phy.utils import load_master_config
