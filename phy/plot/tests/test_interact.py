@@ -85,26 +85,6 @@ def test_grid_1(qtbot, canvas):
     grid = Grid((2, 3))
     _create_visual(qtbot, canvas, grid, box_index)
 
-    # No effect without modifiers.
-    c.events.key_press(key=keys.Key('+'))
-    assert grid.zoom == 1.
-
-    # Zoom with the keyboard.
-    c.events.key_press(key=keys.Key('+'), modifiers=(keys.CONTROL,))
-    assert grid.zoom > 1
-
-    # Unzoom with the keyboard.
-    c.events.key_press(key=keys.Key('-'), modifiers=(keys.CONTROL,))
-    assert grid.zoom == 1.
-
-    # Set the zoom explicitly.
-    grid.zoom = 2
-    assert grid.zoom == 2.
-
-    # Press 'R'.
-    c.events.key_press(key=keys.Key('r'))
-    assert grid.zoom == 1.
-
     # qtbot.stop()
 
 
