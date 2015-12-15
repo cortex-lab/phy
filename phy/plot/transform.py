@@ -86,6 +86,14 @@ def subplot_bounds(shape=None, index=None):
     return [x, y, x + width, y + height]
 
 
+def subplot_bounds_glsl(shape=None, index=None):
+    x0 = '-1.0 + 2.0 * {i}.y / {s}.y'.format(s=shape, i=index)
+    y0 = '+1.0 - 2.0 * ({i}.x + 1) / {s}.x'.format(s=shape, i=index)
+    x1 = '-1.0 + 2.0 * ({i}.y + 1) / {s}.y'.format(s=shape, i=index)
+    y1 = '+1.0 - 2.0 * ({i}.x) / {s}.x'.format(s=shape, i=index)
+    return 'vec4({x0}, {y0}, {x1}, {y1})'.format(x0=x0, y0=y0, x1=x1, y1=y1)
+
+
 def pixels_to_ndc(pos, size=None):
     """Convert from pixels to normalized device coordinates (in [-1, 1])."""
     pos = np.asarray(pos, dtype=np.float32)
@@ -221,26 +229,10 @@ class Subplot(Range):
         self.from_bounds = NDC
         if isinstance(self.shape, tuple) and isinstance(self.index, tuple):
             self.to_bounds = subplot_bounds(shape=self.shape, index=self.index)
-
-    def glsl(self, var):
-        assert var
-
-        index = _glslify(self.index)
-        shape = _glslify(self.shape)
-
-        snippet = """
-        float subplot_width = 2. / {shape}.y;
-        float subplot_height = 2. / {shape}.x;
-
-        float subplot_x = -1.0 + {index}.y * subplot_width;
-        float subplot_y = +1.0 - ({index}.x + 1) * subplot_height;
-
-        {var} = vec2(subplot_x + subplot_width * ({var}.x + 1) * .5,
-                     subplot_y + subplot_height * ({var}.y + 1) * .5);
-        """.format(index=index, shape=shape, var=var)
-
-        snippet = snippet.format(index=index, shape=shape, var=var)
-        return snippet
+        elif (isinstance(self.shape, string_types) and
+                isinstance(self.index, string_types)):
+            self.to_bounds = subplot_bounds_glsl(shape=self.shape,
+                                                 index=self.index)
 
 
 #------------------------------------------------------------------------------
