@@ -200,6 +200,13 @@ def test_feature_view(gui, qtbot):
                     spike_times=spike_times,
                     spike_clusters=spike_clusters,
                     )
+
+    @v.set_best_channels_func
+    def best_channels(cluster_id):
+        return list(range(n_channels))
+
+    v.add_attribute('sine', np.sin(np.linspace(-10., 10., n_spikes)))
+
     # Select some spikes.
     spike_ids = np.arange(n_spikes)
     cluster_ids = np.unique(spike_clusters[spike_ids])
@@ -253,6 +260,8 @@ def test_correlogram_view(qtbot, gui):
     spike_ids = np.arange(2, 10)
     cluster_ids = np.unique(spike_clusters[spike_ids])
     v.on_select(cluster_ids, spike_ids)
+
+    v.toggle_normalization()
 
     v.attach(gui)
     gui.show()
