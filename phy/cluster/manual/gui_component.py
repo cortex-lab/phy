@@ -198,7 +198,16 @@ class ManualClustering(object):
         self.clustering = Clustering(spike_clusters)
         self.cluster_meta = create_cluster_meta(cluster_groups)
         self._global_history = GlobalHistory(process_ups=_process_ups)
+        self._register_logging()
 
+        # Create the cluster views.
+        self._create_cluster_views()
+        self._add_default_columns()
+
+    # Internal methods
+    # -------------------------------------------------------------------------
+
+    def _register_logging(self):
         # Log the actions.
         @self.clustering.connect
         def on_cluster(up):
@@ -226,10 +235,12 @@ class ManualClustering(object):
             if self.gui:
                 self.gui.emit('cluster', up)
 
-        # Create the cluster views.
-        self._create_cluster_views()
-
+    def _add_default_columns(self):
         # Default columns.
+        @self.add_column(name='n_spikes')
+        def n_spikes(cluster_id):
+            return self.clustering.spike_counts[cluster_id]
+
         def skip(cluster_id):
             """Whether to skip that cluster."""
             return (self.cluster_meta.get('group', cluster_id)
@@ -246,9 +257,6 @@ class ManualClustering(object):
         def similarity(cluster_id):
             return self.similarity_func(cluster_id, self._best)
         self.similarity_view.add_column(similarity)
-
-    # Internal methods
-    # -------------------------------------------------------------------------
 
     def _create_actions(self, gui):
         self.actions = Actions(gui, default_shortcuts=self.shortcuts)
