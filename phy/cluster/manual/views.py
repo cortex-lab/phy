@@ -73,6 +73,8 @@ def _extract_wave(traces, spk, mask, wave_len=None):
 
 def _get_data_bounds(arr, n_spikes=None, percentile=None):
     n = arr.shape[0]
+    n_spikes = n_spikes or n
+    percentile = percentile or 100
     k = max(1, n // n_spikes)
     w = np.abs(arr[::k])
     n = w.shape[0]
@@ -552,7 +554,7 @@ def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
 
 class FeatureView(GridView):
     normalization_percentile = .95
-    normalization_n_spikes = 1000
+    normalization_n_spikes = 10000
 
     def __init__(self,
                  features=None,
@@ -585,22 +587,52 @@ class FeatureView(GridView):
 
         # Spike times.
         assert spike_times.shape == (self.n_spikes,)
-        self.spike_times = spike_times
+
+        # Attributes: extra features. This is a dictionary
+        # {name: (array, data_bounds)}
+        # where each array is a `(n_spikes,)` array.
+        self.attributes = {}
+
+        self.add_attribute('time', spike_times)
 
     def _get_feature(self, dim, spike_ids=None):
         f = self.features[spike_ids]
         assert f.ndim == 3
 
-        if dim == 'time':
-            t = self.spike_times[spike_ids]
-            t0, t1 = self.spike_times[0], self.spike_times[-1]
-            t = -1 + 2 * (t - t0) / float(t1 - t0)
-            return .9 * t
+        if dim in self.attributes:
+            # Extra features like time.
+            values, _ = self.attributes[dim]
+            assert values.shape == (self.n_spikes,)
+            return values
         else:
             assert len(dim) == 2
             ch, fet = dim
-            # TODO: normalization of features
             return f[:, ch, fet]
+
+    def _get_dim_bounds_single(self, dim):
+        """Return the min and max of the bounds for a single dimension."""
+        if dim in self.attributes:
+            # Attribute: the data bounds were computed in add_attribute().
+            _, y0, _, y1 = self.attributes[dim][1]
+        else:
+            # Features: the data bounds were computed in the constructor.
+            _, y0, _, y1 = self.data_bounds
+        return y0, y1
+
+    def _get_dim_bounds(self, x_dim, y_dim):
+        """Return the data bounds of a subplot, as a function of the
+        two x-y dimensions."""
+        x0, x1 = self._get_dim_bounds_single(x_dim)
+        y0, y1 = self._get_dim_bounds_single(y_dim)
+        return [x0, y0, x1, y1]
+
+    def add_attribute(self, name, values):
+        assert values.shape == (self.n_spikes,)
+        bounds = _get_data_bounds(values,
+                                  n_spikes=self.normalization_n_spikes,
+                                  percentile=self.normalization_percentile,
+                                  )
+        self.attributes[name] = (values, bounds)
 
     def on_select(self, cluster_ids, spike_ids):
         n_clusters = len(cluster_ids)
@@ -619,13 +651,15 @@ class FeatureView(GridView):
                                                 best_channels_func=None)
 
         # Plot all features.
-        # OPTIM: avoid the loop.
         with self.building():
             for i in range(self.n_cols):
                 for j in range(self.n_cols):
 
                     x = self._get_feature(x_dim[i, j], spike_ids)
                     y = self._get_feature(y_dim[i, j], spike_ids)
+
+                    data_bounds = self._get_dim_bounds(x_dim[i, j],
+                                                       y_dim[i, j])
 
                     mx, dx = _project_mask_depth(x_dim[i, j], masks,
                                                  spike_clusters_rel=sc,
@@ -645,7 +679,7 @@ class FeatureView(GridView):
                                        y=y,
                                        color=color,
                                        depth=d,
-                                       data_bounds=self.data_bounds,
+                                       data_bounds=data_bounds,
                                        size=5 * np.ones(n_spikes),
                                        )
 
