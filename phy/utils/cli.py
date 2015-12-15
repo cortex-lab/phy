@@ -8,6 +8,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import gzip
 import logging
 import os
 import os.path as op
@@ -42,9 +43,11 @@ sys.excepthook = exceptionHandler
 
 
 def _add_log_file(filename):
-    """Create a `phy.log` log file with DEBUG level in the
+    """Create a `phy.log.gz` log file with DEBUG level in the
     current directory."""
-    handler = logging.FileHandler(filename)
+    log_file = gzip.open(filename, mode='wt', encoding='utf-8')
+    handler = logging.StreamHandler(log_file)
+
     handler.setLevel(logging.DEBUG)
     formatter = _Formatter(fmt=_logger_fmt,
                            datefmt='%Y-%m-%d %H:%M:%S')
@@ -65,7 +68,7 @@ def phy(ctx):
     using `attach_to_cli()` and the `click` library."""
 
     # Create a `phy.log` log file with DEBUG level in the current directory.
-    _add_log_file(op.join(os.getcwd(), 'phy.log'))
+    _add_log_file(op.join(os.getcwd(), 'phy.log.gz'))
 
 
 #------------------------------------------------------------------------------
