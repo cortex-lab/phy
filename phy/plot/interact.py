@@ -11,7 +11,7 @@ import numpy as np
 from vispy.gloo import Texture2D
 
 from .base import BaseInteract
-from .transform import Scale, Range, Subplot, Clip, NDC
+from .transform import Range, Subplot, Clip, NDC
 from .utils import _get_texture, _get_boxes, _get_box_pos_size
 
 
