@@ -115,8 +115,8 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
             self.transforms.add_on_cpu(Range((-1, -1, 1, 1),
                                              (-1.5, -1.5, 1.5, 1.5),
                                              ))
-            self.inserter.insert_vert('gl_Position.y += 1;',
-                                      'after_transforms')
+            s = 'gl_Position.y += (1 + 1e-8 * u_window_size.x);'
+            self.inserter.insert_vert(s, 'after_transforms')
 
         def set_data(self):
             data = np.random.uniform(0, 20, (1000, 2)).astype(np.float32)
