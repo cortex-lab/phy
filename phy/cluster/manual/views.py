@@ -592,6 +592,7 @@ class FeatureView(GridView):
         self.attributes = {}
 
         self.add_attribute('time', spike_times)
+        self.best_channels_func = None
 
     def add_attribute(self, name, values):
         """Add an attribute (aka extra feature).
@@ -676,6 +677,10 @@ class FeatureView(GridView):
                            size=5 * np.ones(len(spike_ids)),
                            )
 
+    def set_best_channels_func(self, func):
+        """Set a function `cluster_id => list of best channels`."""
+        self.best_channels_func = func
+
     def on_select(self, cluster_ids, spike_ids):
         n_spikes = len(spike_ids)
         if n_spikes == 0:
@@ -687,10 +692,16 @@ class FeatureView(GridView):
                                      spike_ids,
                                      cluster_ids)
 
+        f = self.best_channels_func
         x_dim, y_dim = _dimensions_for_clusters(cluster_ids,
                                                 n_cols=self.n_cols,
-                                                # TODO
-                                                best_channels_func=None)
+                                                best_channels_func=f)
+
+        # Set a non-time attribute as y coordinate in the top-left subplot.
+        attrs = sorted(self.attributes)
+        attrs.remove('time')
+        if attrs:
+            y_dim[0, 0] = attrs[0]
 
         # Plot all features.
         with self.building():
