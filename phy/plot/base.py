@@ -52,9 +52,6 @@ class BaseVisual(object):
         # The program will be set by the canvas when the visual is
         # added to the canvas.
         self.program = None
-        # Whether u_window_size is used in the shaders. Allow to avoid
-        # the warning in VisPy when setting an inactive uniform.
-        self._use_window_size = False
 
     # Visual definition
     # -------------------------------------------------------------------------
@@ -62,12 +59,6 @@ class BaseVisual(object):
     def set_shader(self, name):
         self.vertex_shader = _load_shader(name + '.vert')
         self.fragment_shader = _load_shader(name + '.frag')
-
-        # HACK: we check whether u_window_size is used in order to avoid
-        # the VisPy warning.
-        s = self.vertex_shader + self.fragment_shader
-        s = s.replace('u_window_size;', '')
-        self._use_window_size = ('u_window_size' in s)
 
     def set_primitive_type(self, primitive_type):
         self.gl_primitive_type = primitive_type
@@ -84,7 +75,11 @@ class BaseVisual(object):
                          "has not been built yet.", self)
 
     def on_resize(self, size):
-        if self._use_window_size:
+        # HACK: we check whether u_window_size is used in order to avoid
+        # the VisPy warning. We only update it if that uniform is active.
+        s = '\n'.join(self.program.shaders)
+        s = s.replace('uniform vec2 u_window_size;', '')
+        if 'u_window_size' in s:
             self.program['u_window_size'] = size
 
     # To override
