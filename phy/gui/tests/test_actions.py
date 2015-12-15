@@ -106,6 +106,8 @@ def test_actions_gui_menu(qtbot, gui, actions):
     def press():
         pass
 
+    actions.separator('File')
+
     gui.show()
     # qtbot.stop()
 
