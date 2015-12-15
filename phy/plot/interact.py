@@ -35,8 +35,7 @@ class Grid(BaseInteract):
 
     """
 
-    _margin_scale = 1 - .075
-    _margin_clip = 1 - .025
+    _margin_clip = 1 - .035
 
     def __init__(self, shape=(1, 1), shape_var='u_grid_shape', box_var=None):
         # Name of the variable with the box index.
@@ -46,9 +45,7 @@ class Grid(BaseInteract):
 
     def attach(self, canvas):
         super(Grid, self).attach(canvas)
-        canvas.transforms.add_on_gpu([Scale((self._margin_scale,
-                                             self._margin_scale)),
-                                      Clip([-self._margin_clip,
+        canvas.transforms.add_on_gpu([Clip([-self._margin_clip,
                                             -self._margin_clip,
                                             +self._margin_clip,
                                             +self._margin_clip,
