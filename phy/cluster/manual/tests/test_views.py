@@ -116,6 +116,7 @@ def test_waveform_view(qtbot, gui):
     v.on_select(cluster_ids, spike_ids)
 
     v.toggle_waveform_overlap()
+    v.toggle_waveform_overlap()
 
     # qtbot.stop()
 

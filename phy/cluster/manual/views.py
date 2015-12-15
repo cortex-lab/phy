@@ -131,7 +131,7 @@ def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
 class WaveformView(BoxedView):
     normalization_percentile = .95
     normalization_n_spikes = 1000
-    overlap = True
+    overlap = False
 
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
@@ -202,9 +202,11 @@ class WaveformView(BoxedView):
         w = self.waveforms[spike_ids]
         t = _get_linear_x(n_spikes, self.n_samples)
         # Overlap.
-        if self.overlap:
+        if not self.overlap:
             t = t + 2.5 * (spike_clusters_rel[:, np.newaxis] -
                            (n_clusters - 1) / 2.)
+            # The total width should not depend on the number of clusters.
+            t /= n_clusters
 
         # Depth as a function of the cluster index and masks.
         masks = self.masks[spike_ids]
