@@ -35,6 +35,9 @@ class Grid(BaseInteract):
 
     """
 
+    _margin_scale = 1 - .075
+    _margin_clip = 1 - .025
+
     def __init__(self, shape=(1, 1), shape_var='u_grid_shape', box_var=None):
         # Name of the variable with the box index.
         self.box_var = box_var or 'a_box_index'
@@ -43,10 +46,13 @@ class Grid(BaseInteract):
 
     def attach(self, canvas):
         super(Grid, self).attach(canvas)
-        m = 1. - .025
-        m2 = 1. - .075
-        canvas.transforms.add_on_gpu([Scale((m2, m2)),
-                                      Clip([-m, -m, m, m]),
+        canvas.transforms.add_on_gpu([Scale((self._margin_scale,
+                                             self._margin_scale)),
+                                      Clip([-self._margin_clip,
+                                            -self._margin_clip,
+                                            +self._margin_clip,
+                                            +self._margin_clip,
+                                            ]),
                                       Subplot(self.shape_var, self.box_var),
                                       ])
         canvas.inserter.insert_vert("""
