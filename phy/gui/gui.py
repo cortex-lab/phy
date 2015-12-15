@@ -152,16 +152,17 @@ class GUI(QMainWindow):
         # Default actions.
         self.default_actions = Actions(self)
 
-        @self.default_actions.add(shortcut=('HelpContents', 'h'))
+        @self.default_actions.add(shortcut='ctrl+q', menu='&File')
+        def exit():
+            self.close()
+
+        @self.default_actions.add(shortcut=('HelpContents', 'h'),
+                                  menu='&Help')
         def show_shortcuts():
             shortcuts = self.default_actions.shortcuts
             for actions in self.actions:
                 shortcuts.update(actions.shortcuts)
             _show_shortcuts(shortcuts, self.name)
-
-        @self.default_actions.add(shortcut='ctrl+q')
-        def exit():
-            self.close()
 
         # Create and attach snippets.
         self.snippets = Snippets(self)
