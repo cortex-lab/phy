@@ -7,8 +7,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import math
-
 import numpy as np
 from vispy.gloo import Texture2D
 
