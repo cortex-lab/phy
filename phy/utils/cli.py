@@ -45,7 +45,7 @@ sys.excepthook = exceptionHandler
 def _add_log_file(filename):
     """Create a `phy.log.gz` log file with DEBUG level in the
     current directory."""
-    log_file = gzip.open(filename, mode='wt', encoding='utf-8')
+    log_file = gzip.open(filename, mode='wt')
     handler = logging.StreamHandler(log_file)
 
     handler.setLevel(logging.DEBUG)
