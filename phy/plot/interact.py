@@ -38,8 +38,6 @@ class Grid(BaseInteract):
     """
 
     def __init__(self, shape=(1, 1), shape_var='u_grid_shape', box_var=None):
-        self._zoom = 1.
-
         # Name of the variable with the box index.
         self.box_var = box_var or 'a_box_index'
         self.shape_var = shape_var
@@ -49,38 +47,23 @@ class Grid(BaseInteract):
         super(Grid, self).attach(canvas)
         m = 1. - .025
         m2 = 1. - .075
-        canvas.transforms.add_on_gpu([Scale('u_grid_zoom'),
-                                      Scale((m2, m2)),
+        canvas.transforms.add_on_gpu([Scale((m2, m2)),
                                       Clip([-m, -m, m, m]),
                                       Subplot(self.shape_var, self.box_var),
                                       ])
         canvas.inserter.insert_vert("""
                                     attribute vec2 {};
                                     uniform vec2 {};
-                                    uniform float u_grid_zoom;
                                     """.format(self.box_var, self.shape_var),
                                     'header')
-        canvas.connect(self.on_key_press)
 
     def update_program(self, program):
-        program['u_grid_zoom'] = self._zoom
         program[self.shape_var] = self._shape
         # Only set the default box index if necessary.
         try:
             program[self.box_var]
         except KeyError:
             program[self.box_var] = (0, 0)
-
-    @property
-    def zoom(self):
-        """Zoom level."""
-        return self._zoom
-
-    @zoom.setter
-    def zoom(self, value):
-        """Zoom level."""
-        self._zoom = value
-        self.update()
 
     @property
     def shape(self):
@@ -90,21 +73,6 @@ class Grid(BaseInteract):
     def shape(self, value):
         self._shape = value
         self.update()
-
-    def on_key_press(self, event):
-        """Pan and zoom with the keyboard."""
-        key = event.key
-
-        # Zoom.
-        if key in ('-', '+') and event.modifiers == ('Control',):
-            k = .05 if key == '+' else -.05
-            self.zoom *= math.exp(1.5 * k)
-            self.update()
-
-        # Reset with 'R'.
-        if key == 'R':
-            self.zoom = 1.
-            self.update()
 
 
 #------------------------------------------------------------------------------
