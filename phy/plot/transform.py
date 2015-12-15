@@ -54,6 +54,22 @@ def _glslify(r):
         return 'vec{}({})'.format(len(r), ', '.join(map(str, r)))
 
 
+def _minus(value):
+    if isinstance(value, np.ndarray):
+        return -value
+    else:
+        assert len(value) == 2
+        return -value[0], -value[1]
+
+
+def _inverse(value):
+    if isinstance(value, np.ndarray):
+        return 1. / value
+    else:
+        assert len(value) == 2
+        return 1. / value[0], 1. / value[1]
+
+
 def subplot_bounds(shape=None, index=None):
     i, j = index
     n_rows, n_cols = shape
@@ -101,6 +117,9 @@ class BaseTransform(object):
     def glsl(self, var):
         raise NotImplementedError()
 
+    def inverse(self):
+        raise NotImplementedError()
+
 
 class Translate(BaseTransform):
     def apply(self, arr):
@@ -112,6 +131,12 @@ class Translate(BaseTransform):
         return """{var} = {var} + {translate};""".format(var=var,
                                                          translate=self.value)
 
+    def inverse(self):
+        if isinstance(self.value, string_types):
+            return Translate('-' + self.value)
+        else:
+            return Translate(_minus(self.value))
+
 
 class Scale(BaseTransform):
     def apply(self, arr):
@@ -120,6 +145,12 @@ class Scale(BaseTransform):
     def glsl(self, var):
         assert var
         return """{var} = {var} * {scale};""".format(var=var, scale=self.value)
+
+    def inverse(self):
+        if isinstance(self.value, string_types):
+            return Scale('1.0 / ' + self.value)
+        else:
+            return Scale(_inverse(self.value))
 
 
 class Range(BaseTransform):
@@ -148,6 +179,10 @@ class Range(BaseTransform):
         return ("{var} = {t}.xy + ({t}.zw - {t}.xy) * "
                 "({var} - {f}.xy) / ({f}.zw - {f}.xy);"
                 "").format(var=var, f=from_bounds, t=to_bounds)
+
+    def inverse(self):
+        return Range(from_bounds=self.to_bounds,
+                     to_bounds=self.from_bounds)
 
 
 class Clip(BaseTransform):

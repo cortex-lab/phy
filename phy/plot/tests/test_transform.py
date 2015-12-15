@@ -23,7 +23,7 @@ from ..transform import (_glslify, pixels_to_ndc,
 # Fixtures
 #------------------------------------------------------------------------------
 
-def _check(transform, array, expected):
+def _check_forward(transform, array, expected):
     transformed = transform.apply(array)
     if array is None or not len(array):
         assert transformed == array
@@ -35,7 +35,17 @@ def _check(transform, array, expected):
     if not len(transformed):
         assert not len(expected)
     else:
-        assert np.allclose(transformed, expected)
+        assert np.allclose(transformed, expected, atol=1e-7)
+
+
+def _check(transform, array, expected):
+    _check_forward(transform, array, expected)
+    # Test the inverse transform if it is implemented.
+    try:
+        inv = transform.inverse()
+        _check_forward(inv, expected, array)
+    except NotImplementedError:
+        pass
 
 
 #------------------------------------------------------------------------------
