@@ -358,6 +358,29 @@ def _flatten_per_cluster(per_cluster):
     return np.sort(np.concatenate(list(per_cluster.values()))).astype(np.int64)
 
 
+def grouped_mean(arr, spike_clusters):
+    """Compute the mean of a spike-dependent quantity for every cluster.
+
+    The two arguments should be 1D array with `n_spikes` elements.
+
+    The output is a 1D array with `n_clusters` elements. The clusters are
+    sorted in increasing order.
+
+    """
+    arr = np.asarray(arr)
+    spike_clusters = np.asarray(spike_clusters)
+    assert arr.ndim == 1
+    assert arr.shape[0] == len(spike_clusters)
+    cluster_ids = _unique(spike_clusters)
+    spike_clusters_rel = _index_of(spike_clusters, cluster_ids)
+    spike_counts = np.bincount(spike_clusters_rel)
+    assert len(spike_counts) == len(cluster_ids)
+    t = np.zeros(len(cluster_ids))
+    # Compute the sum with possible repetitions.
+    np.add.at(t, spike_clusters_rel, arr)
+    return t / spike_counts
+
+
 def regular_subset(spikes, n_spikes_max=None, offset=0):
     """Prune the current selection to get at most n_spikes_max spikes."""
     assert spikes is not None

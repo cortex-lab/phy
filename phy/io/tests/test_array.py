@@ -23,6 +23,7 @@ from ..array import (_unique,
                      regular_subset,
                      excerpts,
                      data_chunk,
+                     grouped_mean,
                      get_excerpts,
                      _range_from_slice,
                      _pad,
@@ -342,6 +343,12 @@ def test_flatten_per_cluster():
     spc = {2: [2, 7, 11], 3: [3, 5], 5: []}
     arr = _flatten_per_cluster(spc)
     ae(arr, [2, 3, 5, 7, 11])
+
+
+def test_grouped_mean():
+    spike_clusters = np.array([2, 3, 2, 2, 5])
+    arr = spike_clusters * 10
+    ae(grouped_mean(arr, spike_clusters), [20, 30, 50])
 
 
 def test_select_spikes():
