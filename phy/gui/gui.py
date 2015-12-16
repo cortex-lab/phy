@@ -222,7 +222,7 @@ class GUI(QMainWindow):
             dockwidget.setFloating(floating)
         dockwidget.show()
         self.emit('add_view', view)
-        logger.debug("Add %s to %s.", title, self)
+        logger.log(5, "Add %s to GUI.", title)
         return dockwidget
 
     def list_views(self, title='', is_visible=True):
