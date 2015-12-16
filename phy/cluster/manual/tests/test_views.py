@@ -83,7 +83,7 @@ def _test_view(view_name, model=None, state=None):
     gui = create_gui(model=model, state=state)
     gui.show()
 
-    v = gui.list_views(view_name)[0].view
+    v = gui.list_views(view_name)[0]
 
     # Select some spikes.
     spike_ids = np.arange(10)
