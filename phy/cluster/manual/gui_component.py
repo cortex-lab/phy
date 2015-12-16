@@ -427,8 +427,8 @@ class ManualClustering(object):
         self._create_actions(gui)
 
         # Add the cluster views.
-        gui.add_view(self.cluster_view, title='ClusterView')
-        gui.add_view(self.similarity_view, title='SimilarityView')
+        gui.add_view(self.cluster_view, name='ClusterView')
+        gui.add_view(self.similarity_view, name='SimilarityView')
 
         # Update the cluster views and selection when a cluster event occurs.
         self.gui.connect_(self.on_cluster)
