@@ -313,7 +313,6 @@ class GUI(QMainWindow):
         return {
             'geometry': self.saveGeometry(),
             'state': self.saveState(),
-            'view_count': self.view_count(),
         }
 
     def restore_geometry_state(self, gs):
@@ -349,14 +348,14 @@ class GUIState(Bunch):
         self.update(_load_json(filename))
 
 
-def create_gui(model=None, state=None):
+def create_gui(name=None, model=None, state=None):
     """Create a GUI with a model and a GUI state.
 
     By default, the list of plugins is taken from the `c.TheGUI.plugins`
     parameter, where `TheGUI` is the name of the GUI class.
 
     """
-    gui = GUI()
+    gui = GUI(name=name)
     state = state or GUIState()
     plugins = state.plugins
     # GUI name.
