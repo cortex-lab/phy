@@ -8,7 +8,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import gzip
 import logging
 import os
 import os.path as op
@@ -43,10 +42,9 @@ sys.excepthook = exceptionHandler
 
 
 def _add_log_file(filename):
-    """Create a `phy.log.gz` log file with DEBUG level in the
+    """Create a `phy.log` log file with DEBUG level in the
     current directory."""
-    log_file = gzip.open(filename, mode='wt')
-    handler = logging.StreamHandler(log_file)
+    handler = logging.FileHandler(filename)
 
     handler.setLevel(logging.DEBUG)
     formatter = _Formatter(fmt=_logger_fmt,
@@ -68,7 +66,7 @@ def phy(ctx):
     using `attach_to_cli()` and the `click` library."""
 
     # Create a `phy.log` log file with DEBUG level in the current directory.
-    _add_log_file(op.join(os.getcwd(), 'phy.log.gz'))
+    _add_log_file(op.join(os.getcwd(), 'phy.log'))
 
 
 #------------------------------------------------------------------------------
@@ -87,7 +85,7 @@ def load_cli_plugins(cli):
     for plugin in plugins:
         if not hasattr(plugin, 'attach_to_cli'):  # pragma: no cover
             continue
-        logger.info("Attach plugin `%s` to CLI.", plugin.__name__)
+        logger.debug("Attach plugin `%s` to CLI.", plugin.__name__)
         # NOTE: plugin is a class, so we need to instantiate it.
         plugin().attach_to_cli(cli)
 
