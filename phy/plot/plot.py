@@ -71,10 +71,18 @@ def _accumulate(data_list, no_concat=()):
     return out
 
 
+# NOTE: we ensure that we only create every type *once*, so that
+# BaseView._items has only one key for any class.
+_SCATTER_CLASSES = {}
+
+
 def _make_scatter_class(marker):
     """Return a temporary ScatterVisual class with a given marker."""
-    return type('ScatterVisual' + marker.title(),
-                (ScatterVisual,), {'_default_marker': marker})
+    name = 'ScatterVisual' + marker.title()
+    if name not in _SCATTER_CLASSES:
+        cls = type(name, (ScatterVisual,), {'_default_marker': marker})
+        _SCATTER_CLASSES[name] = cls
+    return _SCATTER_CLASSES[name]
 
 
 #------------------------------------------------------------------------------
