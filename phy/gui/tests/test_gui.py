@@ -90,8 +90,13 @@ def test_gui_1(qtbot):
     @view.connect_
     def on_close_widget():
         _close.append(0)
+
+    @gui.connect_
+    def on_close_view(view):
+        _close.append(1)
+
     view.close()
-    assert _close == [0]
+    assert _close == [1, 0]
 
     gui.default_actions.exit()
 
