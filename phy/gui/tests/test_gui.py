@@ -6,10 +6,13 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 from pytest import raises
 
 from ..qt import Qt, QApplication, QWidget
-from ..gui import (GUI, load_gui_plugins,
+from ..gui import (GUI, GUIState,
+                   create_gui,
                    _try_get_matplotlib_canvas,
                    _try_get_vispy_canvas,
                    )
@@ -93,19 +96,29 @@ def test_gui_1(qtbot):
     gui.default_actions.exit()
 
 
-def test_load_gui_plugins(gui, tempdir):
+def test_gui_state(tempdir):
+    path = op.join(tempdir, 'state.json')
 
-    load_gui_plugins(gui)
+    state = GUIState(hello='world')
+    state.to_json(path)
+
+    state = GUIState()
+    state.from_json(path)
+    assert state.hello == 'world'
+
+
+def test_create_gui_1(qapp, tempdir):
 
     _tmp = []
 
     class MyPlugin(IPlugin):
-        def attach_to_gui(self, gui, session):
-            _tmp.append(session)
+        def attach_to_gui(self, gui, model=None, state=None):
+            _tmp.append(state.hello)
 
-    load_gui_plugins(gui, plugins=['MyPlugin'], session='hello')
+    gui = create_gui(state=GUIState(plugins=['MyPlugin'], hello='world'))
+    assert gui
 
-    assert _tmp == ['hello']
+    assert _tmp == ['world']
 
 
 def test_gui_component(gui):
@@ -130,7 +143,7 @@ def test_gui_status_message(gui):
     assert gui.status_message == ':hello world!'
 
 
-def test_gui_state(qtbot):
+def test_gui_geometry_state(qtbot):
     _gs = []
     gui = GUI(size=(100, 100))
     qtbot.addWidget(gui)
