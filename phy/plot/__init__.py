@@ -12,7 +12,7 @@ import os.path as op
 
 from vispy import config
 
-from .plot import SimpleView, GridView, BoxedView, StackedView  # noqa
+from .plot import View  # noqa
 from .transform import Translate, Scale, Range, Subplot, NDC
 from .panzoom import PanZoom
 from .utils import _get_linear_x
