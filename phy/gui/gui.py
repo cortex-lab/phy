@@ -69,6 +69,38 @@ class DockWidget(QDockWidget):
         super(DockWidget, self).closeEvent(e)
 
 
+def _create_dock_widget(widget, name, closable=True, floatable=True):
+    # Create the gui widget.
+    dock_widget = DockWidget()
+    dock_widget.setObjectName(name)
+    dock_widget.setWindowTitle(name)
+    dock_widget.setWidget(widget)
+
+    # Set gui widget options.
+    options = QDockWidget.DockWidgetMovable
+    if closable:
+        options = options | QDockWidget.DockWidgetClosable
+    if floatable:
+        options = options | QDockWidget.DockWidgetFloatable
+
+    dock_widget.setFeatures(options)
+    dock_widget.setAllowedAreas(Qt.LeftDockWidgetArea |
+                                Qt.RightDockWidgetArea |
+                                Qt.TopDockWidgetArea |
+                                Qt.BottomDockWidgetArea
+                                )
+
+    return dock_widget
+
+
+def _get_dock_position(position):
+    return {'left': Qt.LeftDockWidgetArea,
+            'right': Qt.RightDockWidgetArea,
+            'top': Qt.TopDockWidgetArea,
+            'bottom': Qt.BottomDockWidgetArea,
+            }[position or 'right']
+
+
 class GUI(QMainWindow):
     """A Qt main window holding docking Qt or VisPy widgets.
 
@@ -80,6 +112,7 @@ class GUI(QMainWindow):
     close
     show
     add_view
+    close_view
 
     Note
     ----
@@ -188,61 +221,41 @@ class GUI(QMainWindow):
 
     def add_view(self,
                  view,
-                 title=None,
+                 name=None,
                  position=None,
                  closable=True,
                  floatable=True,
-                 floating=None,
-                 **kwargs):
+                 floating=None):
         """Add a widget to the main window."""
 
-        original_view = view
-        title = title or view.__class__.__name__
-        view = _try_get_vispy_canvas(view)
-        view = _try_get_matplotlib_canvas(view)
+        name = name or view.__class__.__name__
+        widget = _try_get_vispy_canvas(view)
+        widget = _try_get_matplotlib_canvas(widget)
 
-        # Create the gui widget.
-        dockwidget = DockWidget(self)
-        dockwidget.setObjectName(title)
-        dockwidget.setWindowTitle(title)
-        dockwidget.setWidget(view)
-        dockwidget.view = original_view
-
-        # Set gui widget options.
-        options = QDockWidget.DockWidgetMovable
-        if closable:
-            options = options | QDockWidget.DockWidgetClosable
-        if floatable:
-            options = options | QDockWidget.DockWidgetFloatable
-
-        dockwidget.setFeatures(options)
-        dockwidget.setAllowedAreas(Qt.LeftDockWidgetArea |
-                                   Qt.RightDockWidgetArea |
-                                   Qt.TopDockWidgetArea |
-                                   Qt.BottomDockWidgetArea
-                                   )
-
-        q_position = {
-            'left': Qt.LeftDockWidgetArea,
-            'right': Qt.RightDockWidgetArea,
-            'top': Qt.TopDockWidgetArea,
-            'bottom': Qt.BottomDockWidgetArea,
-        }[position or 'right']
-        self.addDockWidget(q_position, dockwidget)
+        dock_widget = _create_dock_widget(widget, name,
+                                          closable=closable,
+                                          floatable=floatable,
+                                          )
+        self.addDockWidget(_get_dock_position(position), dock_widget)
         if floating is not None:
-            dockwidget.setFloating(floating)
-        dockwidget.show()
-        self.emit('add_view', view)
-        logger.log(5, "Add %s to GUI.", title)
-        return dockwidget
+            dock_widget.setFloating(floating)
 
-    def list_views(self, title='', is_visible=True):
-        """List all views which title start with a given string."""
-        title = title.lower()
+        @dock_widget.connect_
+        def on_close_widget():
+            self.emit('close_view', view)
+
+        dock_widget.show()
+        self.emit('add_view', view)
+        logger.log(5, "Add %s to GUI.", name)
+        return dock_widget
+
+    def list_views(self, name='', is_visible=True):
+        """List all views which name start with a given string."""
+        name = name.lower()
         children = self.findChildren(QWidget)
         return [child for child in children
                 if isinstance(child, QDockWidget) and
-                _title(child).startswith(title) and
+                _title(child).startswith(name) and
                 (child.isVisible() if is_visible else True) and
                 child.width() >= 10 and
                 child.height() >= 10
