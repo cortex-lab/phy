@@ -124,10 +124,49 @@ def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
 
 
 # -----------------------------------------------------------------------------
+# Manual clustering view
+# -----------------------------------------------------------------------------
+
+class ManualClusteringView(View):
+    default_shortcuts = {
+    }
+
+    def __init__(self, shortcuts=None, **kwargs):
+
+        # Load default shortcuts, and override with any user shortcuts.
+        self.shortcuts = self.default_shortcuts.copy()
+        self.shortcuts.update(shortcuts or {})
+
+        self.cluster_ids = None
+        self.spike_ids = None
+
+        super(ManualClusteringView, self).__init__(**kwargs)
+
+    def on_select(self, cluster_ids=None, spike_ids=None):
+        cluster_ids = (cluster_ids if cluster_ids is not None
+                       else self.cluster_ids)
+        spike_ids = (spike_ids if spike_ids is not None
+                     else self.spike_ids)
+        self.cluster_ids = list(cluster_ids)
+        self.spike_ids = spike_ids
+
+    def attach(self, gui):
+        """Attach the view to the GUI."""
+
+        # Disable keyboard pan so that we can use arrows as global shortcuts
+        # in the GUI.
+        self.panzoom.enable_keyboard_pan = False
+
+        gui.add_view(self)
+        gui.connect_(self.on_select)
+        self.actions = Actions(gui, default_shortcuts=self.shortcuts)
+
+
+# -----------------------------------------------------------------------------
 # Waveform view
 # -----------------------------------------------------------------------------
 
-class WaveformView(View):
+class WaveformView(ManualClusteringView):
     normalization_percentile = .95
     normalization_n_spikes = 1000
     overlap = False
@@ -141,29 +180,18 @@ class WaveformView(View):
                  masks=None,
                  spike_clusters=None,
                  channel_positions=None,
-                 shortcuts=None,
-                 keys=None,
-                 ):
+                 **kwargs):
         """
 
         The channel order in waveforms needs to correspond to the one
         in channel_positions.
 
         """
-
-        # Load default shortcuts, and override with any user shortcuts.
-        self.shortcuts = self.default_shortcuts.copy()
-        self.shortcuts.update(shortcuts or {})
-
-        self._cluster_ids = None
-        self._spike_ids = None
-
         # Initialize the view.
         box_bounds = _get_boxes(channel_positions)
         super(WaveformView, self).__init__(layout='boxed',
                                            box_bounds=box_bounds,
-                                           keys=keys,
-                                           )
+                                           **kwargs)
 
         # Waveforms.
         assert waveforms.ndim == 3
@@ -186,14 +214,14 @@ class WaveformView(View):
         assert channel_positions.shape == (self.n_channels, 2)
         self.channel_positions = channel_positions
 
-    def on_select(self, cluster_ids, spike_ids):
+    def on_select(self, cluster_ids=None, spike_ids=None):
+        super(WaveformView, self).on_select(cluster_ids=cluster_ids,
+                                            spike_ids=spike_ids)
+        cluster_ids, spike_ids = self.cluster_ids, self.spike_ids
         n_clusters = len(cluster_ids)
         n_spikes = len(spike_ids)
         if n_spikes == 0:
             return
-
-        self._cluster_ids = cluster_ids
-        self._spike_ids = spike_ids
 
         # Relative spike clusters.
         spike_clusters_rel = _get_spike_clusters_rel(self.spike_clusters,
@@ -232,29 +260,19 @@ class WaveformView(View):
 
     def attach(self, gui):
         """Attach the view to the GUI."""
-
-        # Disable keyboard pan so that we can use arrows as global shortcuts
-        # in the GUI.
-        self.panzoom.enable_keyboard_pan = False
-
-        gui.add_view(self)
-
-        gui.connect_(self.on_select)
-        # gui.connect_(self.on_cluster)
-
-        self.actions = Actions(gui, default_shortcuts=self.shortcuts)
+        super(WaveformView, self).attach(gui)
         self.actions.add(self.toggle_waveform_overlap)
 
     def toggle_waveform_overlap(self):
         self.overlap = not self.overlap
-        self.on_select(self._cluster_ids, self._spike_ids)
+        self.on_select()
 
 
 # -----------------------------------------------------------------------------
 # Trace view
 # -----------------------------------------------------------------------------
 
-class TraceView(View):
+class TraceView(ManualClusteringView):
     interval_duration = .5  # default duration of the interval
     shift_amount = .1
     default_shortcuts = {
@@ -269,13 +287,7 @@ class TraceView(View):
                  spike_clusters=None,
                  masks=None,
                  n_samples_per_spike=None,
-                 shortcuts=None,
-                 keys=None,
-                 ):
-
-        # Load default shortcuts, and override with any user shortcuts.
-        self.shortcuts = self.default_shortcuts.copy()
-        self.shortcuts.update(shortcuts or {})
+                 **kwargs):
 
         # Sample rate.
         assert sample_rate > 0
@@ -314,11 +326,9 @@ class TraceView(View):
         # Initialize the view.
         super(TraceView, self).__init__(layout='stacked',
                                         n_plots=self.n_channels,
-                                        keys=keys,
-                                        )
+                                        **kwargs)
 
         # Initial interval.
-        self.cluster_ids = []
         self.set_interval((0., self.interval_duration))
 
     def _load_traces(self, interval):
@@ -446,23 +456,14 @@ class TraceView(View):
         self.build()
         self.update()
 
-    def on_select(self, cluster_ids, spike_ids):
-        self.cluster_ids = list(cluster_ids)
+    def on_select(self, cluster_ids=None, spike_ids=None):
+        super(TraceView, self).on_select(cluster_ids=cluster_ids,
+                                         spike_ids=spike_ids)
         self.set_interval(self.interval)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
-
-        # Disable keyboard pan so that we can use arrows as global shortcuts
-        # in the GUI.
-        self.panzoom.enable_keyboard_pan = False
-
-        gui.add_view(self)
-
-        gui.connect_(self.on_select)
-        # gui.connect_(self.on_cluster)
-
-        self.actions = Actions(gui, default_shortcuts=self.shortcuts)
+        super(TraceView, self).attach(gui)
         self.actions.add(self.go_to, alias='tg')
         self.actions.add(self.shift, alias='ts')
         self.actions.add(self.go_right)
@@ -557,7 +558,7 @@ def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
     return m, d
 
 
-class FeatureView(View):
+class FeatureView(ManualClusteringView):
     normalization_percentile = .95
     normalization_n_spikes = 1000
     _feature_scaling = 1.
@@ -572,13 +573,7 @@ class FeatureView(View):
                  masks=None,
                  spike_times=None,
                  spike_clusters=None,
-                 shortcuts=None,
-                 keys=None,
-                 ):
-
-        # Load default shortcuts, and override with any user shortcuts.
-        self.shortcuts = self.default_shortcuts.copy()
-        self.shortcuts.update(shortcuts or {})
+                 **kwargs):
 
         assert len(features.shape) == 3
         self.n_spikes, self.n_channels, self.n_features = features.shape
@@ -589,8 +584,7 @@ class FeatureView(View):
         # Initialize the view.
         super(FeatureView, self).__init__(layout='grid',
                                           shape=self.shape,
-                                          keys=keys,
-                                          )
+                                          **kwargs)
 
         # Feature normalization.
         self.data_bounds = _get_data_bounds(features,
@@ -702,13 +696,13 @@ class FeatureView(View):
         """Set a function `cluster_id => list of best channels`."""
         self.best_channels_func = func
 
-    def on_select(self, cluster_ids, spike_ids):
+    def on_select(self, cluster_ids=None, spike_ids=None):
+        super(FeatureView, self).on_select(cluster_ids=cluster_ids,
+                                           spike_ids=spike_ids)
+        cluster_ids, spike_ids = self.cluster_ids, self.spike_ids
         n_spikes = len(spike_ids)
         if n_spikes == 0:
             return
-
-        self._cluster_ids = cluster_ids
-        self._spike_ids = spike_ids
 
         # Get the masks for the selected spikes.
         masks = self.masks[spike_ids]
@@ -742,17 +736,7 @@ class FeatureView(View):
 
     def attach(self, gui):
         """Attach the view to the GUI."""
-
-        # Disable keyboard pan so that we can use arrows as global shortcuts
-        # in the GUI.
-        self.panzoom.enable_keyboard_pan = False
-
-        gui.add_view(self)
-
-        gui.connect_(self.on_select)
-        # gui.connect_(self.on_cluster)
-
-        self.actions = Actions(gui, default_shortcuts=self.shortcuts)
+        super(FeatureView, self).attach(gui)
         self.actions.add(self.increase_feature_scaling)
         self.actions.add(self.decrease_feature_scaling)
 
@@ -769,14 +753,14 @@ class FeatureView(View):
     @feature_scaling.setter
     def feature_scaling(self, value):
         self._feature_scaling = value
-        self.on_select(self._cluster_ids, self._spike_ids)
+        self.on_select()
 
 
 # -----------------------------------------------------------------------------
 # Correlogram view
 # -----------------------------------------------------------------------------
 
-class CorrelogramView(View):
+class CorrelogramView(ManualClusteringView):
     excerpt_size = 10000
     n_excerpts = 100
     uniform_normalization = False
@@ -793,16 +777,7 @@ class CorrelogramView(View):
                  window_size=None,
                  excerpt_size=None,
                  n_excerpts=None,
-                 shortcuts=None,
-                 keys=None,
-                 ):
-
-        # Load default shortcuts, and override with any user shortcuts.
-        self.shortcuts = self.default_shortcuts.copy()
-        self.shortcuts.update(shortcuts or {})
-
-        self._cluster_ids = None
-        self._spike_ids = None
+                 **kwargs):
 
         assert sample_rate > 0
         self.sample_rate = sample_rate
@@ -822,8 +797,7 @@ class CorrelogramView(View):
         # Initialize the view.
         super(CorrelogramView, self).__init__(layout='grid',
                                               shape=(1, 1),
-                                              keys=keys,
-                                              )
+                                              **kwargs)
 
         # Spike clusters.
         assert spike_clusters.shape == (self.n_spikes,)
@@ -858,10 +832,10 @@ class CorrelogramView(View):
 
         return ccg
 
-    def on_select(self, cluster_ids, spike_ids):
-        self._cluster_ids = cluster_ids
-        self._spike_ids = spike_ids
-
+    def on_select(self, cluster_ids=None, spike_ids=None):
+        super(CorrelogramView, self).on_select(cluster_ids=cluster_ids,
+                                               spike_ids=spike_ids)
+        cluster_ids, spike_ids = self.cluster_ids, self.spike_ids
         n_clusters = len(cluster_ids)
         n_spikes = len(spike_ids)
         if n_spikes == 0:
@@ -886,19 +860,9 @@ class CorrelogramView(View):
 
     def toggle_normalization(self):
         self.uniform_normalization = not self.uniform_normalization
-        self.on_select(self._cluster_ids, self._spike_ids)
+        self.on_select()
 
     def attach(self, gui):
         """Attach the view to the GUI."""
-
-        # Disable keyboard pan so that we can use arrows as global shortcuts
-        # in the GUI.
-        self.panzoom.enable_keyboard_pan = False
-
-        gui.add_view(self)
-
-        gui.connect_(self.on_select)
-        # gui.connect_(self.on_cluster)
-
-        self.actions = Actions(gui, default_shortcuts=self.shortcuts)
+        super(CorrelogramView, self).attach(gui)
         self.actions.add(self.toggle_normalization, shortcut='n')
