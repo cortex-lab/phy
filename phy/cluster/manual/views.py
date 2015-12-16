@@ -554,15 +554,26 @@ def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
 
 class FeatureView(GridView):
     normalization_percentile = .95
-    normalization_n_spikes = 10000
+    normalization_n_spikes = 1000
+    _feature_scaling = 1.
+
+    default_shortcuts = {
+        'increase_feature_scaling': 'ctrl++',
+        'decrease_feature_scaling': 'ctrl+-',
+    }
 
     def __init__(self,
                  features=None,
                  masks=None,
                  spike_times=None,
                  spike_clusters=None,
+                 shortcuts=None,
                  keys=None,
                  ):
+
+        # Load default shortcuts, and override with any user shortcuts.
+        self.shortcuts = self.default_shortcuts.copy()
+        self.shortcuts.update(shortcuts or {})
 
         assert len(features.shape) == 3
         self.n_spikes, self.n_channels, self.n_features = features.shape
@@ -621,7 +632,7 @@ class FeatureView(GridView):
         else:
             assert len(dim) == 2
             ch, fet = dim
-            return f[:, ch, fet]
+            return f[:, ch, fet] * self._feature_scaling
 
     def _get_dim_bounds_single(self, dim):
         """Return the min and max of the bounds for a single dimension."""
@@ -688,6 +699,9 @@ class FeatureView(GridView):
         if n_spikes == 0:
             return
 
+        self._cluster_ids = cluster_ids
+        self._spike_ids = spike_ids
+
         # Get the masks for the selected spikes.
         masks = self.masks[spike_ids]
         sc = _get_spike_clusters_rel(self.spike_clusters,
@@ -727,6 +741,25 @@ class FeatureView(GridView):
 
         gui.connect_(self.on_select)
         # gui.connect_(self.on_cluster)
+
+        self.actions = Actions(gui, default_shortcuts=self.shortcuts)
+        self.actions.add(self.increase_feature_scaling)
+        self.actions.add(self.decrease_feature_scaling)
+
+    def increase_feature_scaling(self):
+        self.feature_scaling *= 1.2
+
+    def decrease_feature_scaling(self):
+        self.feature_scaling /= 1.2
+
+    @property
+    def feature_scaling(self):
+        return self._feature_scaling
+
+    @feature_scaling.setter
+    def feature_scaling(self, value):
+        self._feature_scaling = value
+        self.on_select(self._cluster_ids, self._spike_ids)
 
 
 # -----------------------------------------------------------------------------

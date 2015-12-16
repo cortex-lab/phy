@@ -220,6 +220,9 @@ def test_feature_view(gui, qtbot):
     cluster_ids = np.unique(spike_clusters[spike_ids])
     v.on_select(cluster_ids, spike_ids)
 
+    v.increase_feature_scaling()
+    v.decrease_feature_scaling()
+
     # qtbot.stop()
 
 
