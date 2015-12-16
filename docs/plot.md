@@ -14,11 +14,11 @@ Let's create a simple view with a scatter plot.
 
 ```python
 >>> import numpy as np
->>> from phy.plot import SimpleView, GridView, BoxedView, StackedView
+>>> from phy.plot import View
 ```
 
 ```python
->>> view = SimpleView()
+>>> view = View()
 ...
 >>> n = 1000
 >>> x, y = np.random.randn(2, n)
@@ -40,12 +40,14 @@ Note that you can pan and zoom with the mouse and keyboard.
 
 The other plotting commands currently supported are `plot()` and `hist()`. We're planning to add support for text in the near future.
 
+Several layouts are supported for subplots.
+
 ## Grid view
 
-The `GridView` lets you create multiple subplots arranged in a grid. Subplots are all individually clipped, which means that their viewports never overlap across the grid boundaries. Here is an example:
+The Grid view lets you create multiple subplots arranged in a grid (like in matplotlib). Subplots are all individually clipped, which means that their viewports never overlap across the grid boundaries. Here is an example:
 
 ```python
->>> view = GridView((1, 2))  # the shape is `(n_rows, n_cols)`
+>>> view = View(layout='grid', shape=(1, 2))  # the shape is `(n_rows, n_cols)`
 ...
 >>> x = np.linspace(-10., 10., 1000)
 ...
@@ -65,7 +67,7 @@ Note that there are no axes at this point, but we'll be working on it. Also, ind
 The stacked view lets you stack several subplots vertically with no clipping. An example is a trace view showing a multichannel time-dependent signal.
 
 ```python
->>> view = StackedView(50)
+>>> view = View(layout='stacked', n_plots=50)
 ...
 >>> with view.building():
 ...     for i in range(view.n_plots):
@@ -87,7 +89,7 @@ The boxed view lets you put subplots at arbitrary locations. You can dynamically
 >>> y = np.sin(t)
 >>> box_pos = np.c_[x, y]
 ...
->>> view = BoxedView(box_pos=box_pos)
+>>> view = View(layout='boxed', box_pos=box_pos)
 ...
 >>> with view.building():
 ...     for i in range(view.n_plots):
@@ -105,7 +107,7 @@ You can use `ctrl+arrows` and `shift+arrows` to change the scaling of the positi
 Data normalization is supported via the `data_bounds` keyword. This is a 4-tuple `(xmin, ymin, xmax, ymax)` with the coordinates of the viewport in the data coordinate system. By default, this is obtained with the min and max of the data. Here is an example:
 
 ```python
->>> view = StackedView(2)
+>>> view = View(layout='stacked', n_plots=2)
 ...
 >>> n = 100
 >>> x = np.linspace(0., 1., n)

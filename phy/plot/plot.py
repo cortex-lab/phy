@@ -72,7 +72,7 @@ def _accumulate(data_list, no_concat=()):
 
 
 # NOTE: we ensure that we only create every type *once*, so that
-# BaseView._items has only one key for any class.
+# View._items has only one key for any class.
 _SCATTER_CLASSES = {}
 
 
@@ -89,14 +89,37 @@ def _make_scatter_class(marker):
 # Plotting interface
 #------------------------------------------------------------------------------
 
-class BaseView(BaseCanvas):
+class View(BaseCanvas):
     """High-level plotting canvas."""
     _default_box_index = (0,)
 
-    def __init__(self, **kwargs):
+    def __init__(self, layout=None, shape=None, n_plots=None,
+                 box_bounds=None, box_pos=None, box_size=None, **kwargs):
         if not kwargs.get('keys', None):
             kwargs['keys'] = None
-        super(BaseView, self).__init__(**kwargs)
+        super(View, self).__init__(**kwargs)
+
+        if layout == 'grid':
+            self._default_box_index = (0, 0)
+            self.grid = Grid(shape)
+            self.grid.attach(self)
+
+        elif layout == 'boxed':
+            self.n_plots = (len(box_bounds)
+                            if box_bounds is not None else len(box_pos))
+            self.boxed = Boxed(box_bounds=box_bounds,
+                               box_pos=box_pos,
+                               box_size=box_size)
+            self.boxed.attach(self)
+
+        elif layout == 'stacked':
+            self.n_plots = n_plots
+            self.stacked = Stacked(n_plots, margin=.1)
+            self.stacked.attach(self)
+
+        self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
+        self.panzoom.attach(self)
+
         self.clear()
 
     def clear(self):
@@ -171,55 +194,3 @@ class BaseView(BaseCanvas):
         self.clear()
         yield
         self.build()
-
-
-class SimpleView(BaseView):
-    """A simple view."""
-    def __init__(self, shape=None, **kwargs):
-        super(SimpleView, self).__init__(**kwargs)
-
-        self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
-        self.panzoom.attach(self)
-
-
-class GridView(BaseView):
-    """A 2D grid with clipping."""
-    _default_box_index = (0, 0)
-
-    def __init__(self, shape=None, **kwargs):
-        super(GridView, self).__init__(**kwargs)
-
-        self.grid = Grid(shape)
-        self.grid.attach(self)
-
-        self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
-        self.panzoom.attach(self)
-
-
-class BoxedView(BaseView):
-    """Subplots at arbitrary positions"""
-    def __init__(self, box_bounds=None, box_pos=None, box_size=None, **kwargs):
-        super(BoxedView, self).__init__(**kwargs)
-        self.n_plots = (len(box_bounds)
-                        if box_bounds is not None else len(box_pos))
-
-        self.boxed = Boxed(box_bounds=box_bounds,
-                           box_pos=box_pos,
-                           box_size=box_size)
-        self.boxed.attach(self)
-
-        self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
-        self.panzoom.attach(self)
-
-
-class StackedView(BaseView):
-    """Stacked subplots"""
-    def __init__(self, n_plots, **kwargs):
-        super(StackedView, self).__init__(**kwargs)
-        self.n_plots = n_plots
-
-        self.stacked = Stacked(n_plots, margin=.1)
-        self.stacked.attach(self)
-
-        self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
-        self.panzoom.attach(self)

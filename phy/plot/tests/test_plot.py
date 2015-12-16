@@ -10,7 +10,7 @@
 import numpy as np
 
 from ..panzoom import PanZoom
-from ..plot import BaseView, SimpleView, GridView, BoxedView, StackedView
+from ..plot import View
 from ..utils import _get_linear_x
 
 
@@ -32,7 +32,7 @@ def _show(qtbot, view, stop=False):
 #------------------------------------------------------------------------------
 
 def test_building(qtbot):
-    view = BaseView(keys='interactive')
+    view = View(keys='interactive')
     n = 1000
 
     x = np.random.randn(n)
@@ -47,7 +47,7 @@ def test_building(qtbot):
 
 
 def test_simple_view(qtbot):
-    view = SimpleView()
+    view = View()
     n = 1000
 
     x = np.random.randn(n)
@@ -58,7 +58,7 @@ def test_simple_view(qtbot):
 
 
 def test_grid_scatter(qtbot):
-    view = GridView((2, 3))
+    view = View(layout='grid', shape=(2, 3))
     n = 100
 
     assert isinstance(view.panzoom, PanZoom)
@@ -84,7 +84,7 @@ def test_grid_scatter(qtbot):
 
 
 def test_grid_plot(qtbot):
-    view = GridView((1, 2))
+    view = View(layout='grid', shape=(1, 2))
     n_plots, n_samples = 5, 50
 
     x = _get_linear_x(n_plots, n_samples)
@@ -97,7 +97,7 @@ def test_grid_plot(qtbot):
 
 
 def test_grid_hist(qtbot):
-    view = GridView((3, 3))
+    view = View(layout='grid', shape=(3, 3))
 
     hist = np.random.rand(3, 3, 20)
 
@@ -110,7 +110,7 @@ def test_grid_hist(qtbot):
 
 
 def test_grid_lines(qtbot):
-    view = GridView((1, 2))
+    view = View(layout='grid', shape=(1, 2))
 
     view[0, 0].lines(y0=-.5, y1=-.5)
     view[0, 1].lines(y0=+.5, y1=+.5)
@@ -119,7 +119,7 @@ def test_grid_lines(qtbot):
 
 
 def test_grid_complete(qtbot):
-    view = GridView((2, 2))
+    view = View(layout='grid', shape=(2, 2))
     t = _get_linear_x(1, 1000).ravel()
 
     view[0, 0].scatter(*np.random.randn(2, 100))
@@ -132,7 +132,7 @@ def test_grid_complete(qtbot):
 
 
 def test_stacked_complete(qtbot):
-    view = StackedView(3)
+    view = View(layout='stacked', n_plots=3)
 
     t = _get_linear_x(1, 1000).ravel()
     view[0].scatter(*np.random.randn(2, 100))
@@ -154,7 +154,7 @@ def test_boxed_complete(qtbot):
     b = np.zeros((n, 4))
     b[:, 0] = b[:, 1] = np.linspace(-1., 1. - 2. / 3., n)
     b[:, 2] = b[:, 3] = np.linspace(-1. + 2. / 3., 1., n)
-    view = BoxedView(b)
+    view = View(layout='boxed', box_bounds=b)
 
     t = _get_linear_x(1, 1000).ravel()
     view[0].scatter(*np.random.randn(2, 100))
