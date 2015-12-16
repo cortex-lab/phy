@@ -185,6 +185,7 @@ class GUI(QMainWindow):
                  **kwargs):
         """Add a widget to the main window."""
 
+        original_view = view
         title = title or view.__class__.__name__
         view = _try_get_vispy_canvas(view)
         view = _try_get_matplotlib_canvas(view)
@@ -194,6 +195,7 @@ class GUI(QMainWindow):
         dockwidget.setObjectName(title)
         dockwidget.setWindowTitle(title)
         dockwidget.setWidget(view)
+        dockwidget.view = original_view
 
         # Set gui widget options.
         options = QDockWidget.DockWidgetMovable
@@ -220,6 +222,7 @@ class GUI(QMainWindow):
             dockwidget.setFloating(floating)
         dockwidget.show()
         self.emit('add_view', view)
+        logger.debug("Add %s to %s.", title, self)
         return dockwidget
 
     def list_views(self, title='', is_visible=True):

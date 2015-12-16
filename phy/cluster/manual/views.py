@@ -17,6 +17,8 @@ from phy.gui import Actions
 from phy.plot import View, _get_linear_x
 from phy.plot.utils import _get_boxes
 from phy.stats import correlograms
+from phy.stats.clusters import mean, unmasked_channels, sorted_main_channels
+from phy.utils import IPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -161,6 +163,8 @@ class ManualClusteringView(View):
         gui.connect_(self.on_select)
         self.actions = Actions(gui, default_shortcuts=self.shortcuts)
 
+        self.show()
+
 
 # -----------------------------------------------------------------------------
 # Waveform view
@@ -266,6 +270,17 @@ class WaveformView(ManualClusteringView):
     def toggle_waveform_overlap(self):
         self.overlap = not self.overlap
         self.on_select()
+
+
+class WaveformViewPlugin(IPlugin):
+    def attach_to_gui(self, gui, model=None, state=None):
+        w = WaveformView(waveforms=model.waveforms,
+                         masks=model.masks,
+                         spike_clusters=model.spike_clusters,
+                         channel_positions=model.channel_positions,
+                         )
+        w.attach(gui)
+        # TODO: scaling factors
 
 
 # -----------------------------------------------------------------------------
@@ -489,6 +504,17 @@ class TraceView(ManualClusteringView):
         self.shift(-delay)
 
 
+class TraceViewPlugin(IPlugin):
+    def attach_to_gui(self, gui, model=None, state=None):
+        t = TraceView(traces=model.traces,
+                      sample_rate=model.sample_rate,
+                      spike_times=model.spike_times,
+                      spike_clusters=model.spike_clusters,
+                      masks=model.masks,
+                      )
+        t.attach(gui)
+
+
 # -----------------------------------------------------------------------------
 # Feature view
 # -----------------------------------------------------------------------------
@@ -539,7 +565,7 @@ def _dimensions_for_clusters(cluster_ids, n_cols=None,
     # Now, select the right number of channels in the x axis.
     x_channels = x_channels[:n_cols - 1]
     if len(x_channels) < n_cols - 1:
-        x_channels = y_channels
+        x_channels = y_channels  # pragma: no cover
     return _dimensions_matrix(x_channels, y_channels)
 
 
@@ -756,6 +782,28 @@ class FeatureView(ManualClusteringView):
         self.on_select()
 
 
+class FeatureViewPlugin(IPlugin):
+    def attach_to_gui(self, gui, model=None, state=None):
+
+        f = FeatureView(features=model.features,
+                        masks=model.masks,
+                        spike_clusters=model.spike_clusters,
+                        spike_times=model.spike_times,
+                        )
+
+        @f.set_best_channels_func
+        def best_channels(cluster_id):
+            """Select the best channels for a given cluster."""
+            # TODO: better perf with cluster stats and cache
+            spike_ids = model.spikes_per_cluster[cluster_id]
+            m = model.masks[spike_ids]
+            mean_masks = mean(m)
+            uch = unmasked_channels(mean_masks)
+            return sorted_main_channels(mean_masks, uch)
+
+        f.attach(gui)
+
+
 # -----------------------------------------------------------------------------
 # Correlogram view
 # -----------------------------------------------------------------------------
@@ -866,3 +914,16 @@ class CorrelogramView(ManualClusteringView):
         """Attach the view to the GUI."""
         super(CorrelogramView, self).attach(gui)
         self.actions.add(self.toggle_normalization, shortcut='n')
+
+
+class CorrelogramViewPlugin(IPlugin):
+    def attach_to_gui(self, gui, model=None, state=None):
+        ccg = CorrelogramView(spike_times=model.spike_times,
+                              spike_clusters=model.spike_clusters,
+                              sample_rate=model.sample_rate,
+                              bin_size=state.CorrelogramView1.bin_size,
+                              window_size=state.CorrelogramView1.window_size,
+                              excerpt_size=state.CorrelogramView1.excerpt_size,
+                              n_excerpts=state.CorrelogramView1.n_excerpts,
+                              )
+        ccg.attach(gui)

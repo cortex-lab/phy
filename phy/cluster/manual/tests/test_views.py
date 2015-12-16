@@ -6,10 +6,13 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from contextlib import contextmanager
+
 import numpy as np
 from numpy.testing import assert_equal as ae
 from pytest import raises, yield_fixture
 
+from phy.io.array import _spikes_per_cluster
 from phy.io.mock import (artificial_waveforms,
                          artificial_features,
                          artificial_spike_clusters,
@@ -17,11 +20,10 @@ from phy.io.mock import (artificial_waveforms,
                          artificial_masks,
                          artificial_traces,
                          )
-from phy.gui import GUI
+from phy.gui import create_gui
 from phy.electrode.mea import staggered_positions
-from ..views import (WaveformView, FeatureView, CorrelogramView, TraceView,
-                     _extract_wave, _selected_clusters_colors,
-                     )
+from phy.utils import Bunch
+from ..views import TraceView, _extract_wave, _selected_clusters_colors
 
 
 #------------------------------------------------------------------------------
@@ -36,12 +38,65 @@ def _show(qtbot, view, stop=False):
     view.close()
 
 
+@yield_fixture(scope='session')
+def model():
+    model = Bunch()
+
+    n_spikes = 51
+    n_samples_w = 31
+    n_samples_t = 20000
+    n_channels = 11
+    n_clusters = 3
+    n_features = 4
+
+    model.n_channels = n_channels
+    model.n_spikes = n_spikes
+    model.sample_rate = 20000.
+    model.spike_times = artificial_spike_samples(n_spikes) * 1.
+    model.spike_times /= model.spike_times[-1]
+    model.spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    model.channel_positions = staggered_positions(n_channels)
+    model.waveforms = artificial_waveforms(n_spikes, n_samples_w, n_channels)
+    model.masks = artificial_masks(n_spikes, n_channels)
+    model.traces = artificial_traces(n_samples_t, n_channels)
+    model.features = artificial_features(n_spikes, n_channels, n_features)
+    model.spikes_per_cluster = _spikes_per_cluster(model.spike_clusters)
+
+    yield model
+
+
 @yield_fixture
-def gui(qtbot):
-    gui = GUI(position=(200, 100), size=(800, 600))
-    # gui.show()
-    # qtbot.waitForWindowShown(gui)
-    yield gui
+def state():
+    state = Bunch()
+    state.CorrelogramView1 = Bunch(bin_size=1e-3,
+                                   window_size=50e-3,
+                                   excerpt_size=8,
+                                   n_excerpts=5,
+                                   )
+    state.n_samples_per_spike = 6
+    yield state
+
+
+@contextmanager
+def _test_view(view_name, model=None, state=None):
+    state.plugins = [view_name + 'Plugin']
+    gui = create_gui(model=model, state=state)
+    gui.show()
+
+    v = gui.list_views(view_name)[0].view
+
+    # Select some spikes.
+    spike_ids = np.arange(10)
+    cluster_ids = np.unique(model.spike_clusters[spike_ids])
+    v.on_select(cluster_ids, spike_ids)
+
+    # Select other spikes.
+    spike_ids = np.arange(2, 10)
+    cluster_ids = np.unique(model.spike_clusters[spike_ids])
+    v.on_select(cluster_ids, spike_ids)
+
+    yield v
+
     gui.close()
 
 
@@ -84,39 +139,10 @@ def test_selected_clusters_colors():
 # Test waveform view
 #------------------------------------------------------------------------------
 
-def test_waveform_view(qtbot, gui):
-    n_spikes = 20
-    n_samples = 30
-    n_channels = 40
-    n_clusters = 3
-
-    waveforms = artificial_waveforms(n_spikes, n_samples, n_channels)
-    masks = artificial_masks(n_spikes, n_channels)
-    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
-    channel_positions = staggered_positions(n_channels)
-
-    # Create the view.
-    v = WaveformView(waveforms=waveforms,
-                     masks=masks,
-                     spike_clusters=spike_clusters,
-                     channel_positions=channel_positions,
-                     )
-    # Select some spikes.
-    spike_ids = np.arange(10)
-    cluster_ids = np.unique(spike_clusters[spike_ids])
-    v.on_select(cluster_ids, spike_ids)
-
-    # Show the view.
-    v.attach(gui)
-    gui.show()
-
-    # Select other spikes.
-    spike_ids = np.arange(2, 10)
-    cluster_ids = np.unique(spike_clusters[spike_ids])
-    v.on_select(cluster_ids, spike_ids)
-
-    v.toggle_waveform_overlap()
-    v.toggle_waveform_overlap()
+def test_waveform_view(qtbot, model, state):
+    with _test_view('WaveformView', model=model, state=state) as v:
+        v.toggle_waveform_overlap()
+        v.toggle_waveform_overlap()
 
     # qtbot.stop()
 
@@ -137,45 +163,13 @@ def test_trace_view_no_spikes(qtbot):
     _show(qtbot, v)
 
 
-def test_trace_view_spikes(qtbot, gui):
-    n_samples = 1000
-    n_channels = 12
-    sample_rate = 2000.
-    n_spikes = 50
-    n_clusters = 3
+def test_trace_view_spikes(qtbot, model, state):
+    with _test_view('TraceView', model=model, state=state) as v:
+        v.go_to(.5)
+        v.go_to(-.5)
+        v.go_left()
+        v.go_right()
 
-    traces = artificial_traces(n_samples, n_channels)
-    spike_times = artificial_spike_samples(n_spikes) / sample_rate
-    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
-    masks = artificial_masks(n_spikes, n_channels)
-
-    # Create the view.
-    v = TraceView(traces=traces,
-                  sample_rate=sample_rate,
-                  spike_times=spike_times,
-                  spike_clusters=spike_clusters,
-                  masks=masks,
-                  n_samples_per_spike=6,
-                  )
-
-    # Select some spikes.
-    spike_ids = np.arange(10)
-    cluster_ids = np.unique(spike_clusters[spike_ids])
-    v.on_select(cluster_ids, spike_ids)
-
-    # Show the view.
-    v.attach(gui)
-    gui.show()
-
-    # Select other spikes.
-    spike_ids = np.arange(2, 10)
-    cluster_ids = np.unique(spike_clusters[spike_ids])
-    v.on_select(cluster_ids, spike_ids)
-
-    v.go_to(.5)
-    v.go_to(-.5)
-    v.go_left()
-    v.go_right()
     # qtbot.stop()
 
 
@@ -183,45 +177,17 @@ def test_trace_view_spikes(qtbot, gui):
 # Test feature view
 #------------------------------------------------------------------------------
 
-def test_feature_view(gui, qtbot):
-    n_spikes = 50
-    n_channels = 5
-    n_clusters = 2
-    n_features = 4
+def test_feature_view(qtbot, model, state):
+    with _test_view('FeatureView', model=model, state=state) as v:
 
-    features = artificial_features(n_spikes, n_channels, n_features)
-    masks = artificial_masks(n_spikes, n_channels)
-    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
-    spike_times = artificial_spike_samples(n_spikes) / 20000.
+        @v.set_best_channels_func
+        def best_channels(cluster_id):
+            return list(range(model.n_channels))
 
-    # Create the view.
-    v = FeatureView(features=features,
-                    masks=masks,
-                    spike_times=spike_times,
-                    spike_clusters=spike_clusters,
-                    )
+        v.add_attribute('sine', np.sin(np.linspace(-10., 10., model.n_spikes)))
 
-    @v.set_best_channels_func
-    def best_channels(cluster_id):
-        return list(range(n_channels))
-
-    v.add_attribute('sine', np.sin(np.linspace(-10., 10., n_spikes)))
-
-    # Select some spikes.
-    spike_ids = np.arange(n_spikes)
-    cluster_ids = np.unique(spike_clusters[spike_ids])
-    v.on_select(cluster_ids, spike_ids)
-
-    v.attach(gui)
-    gui.show()
-
-    # Select other spikes.
-    spike_ids = np.arange(2, 10)
-    cluster_ids = np.unique(spike_clusters[spike_ids])
-    v.on_select(cluster_ids, spike_ids)
-
-    v.increase_feature_scaling()
-    v.decrease_feature_scaling()
+        v.increase_feature_scaling()
+        v.decrease_feature_scaling()
 
     # qtbot.stop()
 
@@ -230,42 +196,8 @@ def test_feature_view(gui, qtbot):
 # Test correlogram view
 #------------------------------------------------------------------------------
 
-def test_correlogram_view(qtbot, gui):
-    n_spikes = 50
-    n_clusters = 5
-    sample_rate = 20000.
-    bin_size = 1e-3
-    window_size = 50e-3
+def test_correlogram_view(qtbot, model, state):
+    with _test_view('CorrelogramView', model=model, state=state) as v:
+        v.toggle_normalization()
 
-    spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
-    spike_times = artificial_spike_samples(n_spikes) / sample_rate
-
-    # Create the view.
-    v = CorrelogramView(spike_times=spike_times,
-                        spike_clusters=spike_clusters,
-                        sample_rate=sample_rate,
-                        bin_size=bin_size,
-                        window_size=window_size,
-                        excerpt_size=8,
-                        n_excerpts=5,
-                        )
-
-    # Select some spikes.
-    spike_ids = np.arange(n_spikes)
-    cluster_ids = np.unique(spike_clusters[spike_ids])
-    v.on_select(cluster_ids, spike_ids)
-
-    # Show the view.
-    v.show()
-    qtbot.waitForWindowShown(v.native)
-
-    # Select other spikes.
-    spike_ids = np.arange(2, 10)
-    cluster_ids = np.unique(spike_clusters[spike_ids])
-    v.on_select(cluster_ids, spike_ids)
-
-    v.toggle_normalization()
-
-    v.attach(gui)
-    gui.show()
     # qtbot.stop()
