@@ -14,8 +14,7 @@ from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 
 from phy.io.array import _index_of, _get_padded, get_excerpts
 from phy.gui import Actions
-from phy.plot import (BoxedView, StackedView, GridView,
-                      _get_linear_x)
+from phy.plot import View, _get_linear_x
 from phy.plot.utils import _get_boxes
 from phy.stats import correlograms
 
@@ -128,7 +127,7 @@ def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
 # Waveform view
 # -----------------------------------------------------------------------------
 
-class WaveformView(BoxedView):
+class WaveformView(View):
     normalization_percentile = .95
     normalization_n_spikes = 1000
     overlap = False
@@ -161,7 +160,10 @@ class WaveformView(BoxedView):
 
         # Initialize the view.
         box_bounds = _get_boxes(channel_positions)
-        super(WaveformView, self).__init__(box_bounds, keys=keys)
+        super(WaveformView, self).__init__(layout='boxed',
+                                           box_bounds=box_bounds,
+                                           keys=keys,
+                                           )
 
         # Waveforms.
         assert waveforms.ndim == 3
@@ -252,7 +254,7 @@ class WaveformView(BoxedView):
 # Trace view
 # -----------------------------------------------------------------------------
 
-class TraceView(StackedView):
+class TraceView(View):
     interval_duration = .5  # default duration of the interval
     shift_amount = .1
     default_shortcuts = {
@@ -310,7 +312,10 @@ class TraceView(StackedView):
             self.spike_times = self.spike_clusters = self.masks = None
 
         # Initialize the view.
-        super(TraceView, self).__init__(self.n_channels, keys=keys)
+        super(TraceView, self).__init__(layout='stacked',
+                                        n_plots=self.n_channels,
+                                        keys=keys,
+                                        )
 
         # Initial interval.
         self.cluster_ids = []
@@ -552,7 +557,7 @@ def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
     return m, d
 
 
-class FeatureView(GridView):
+class FeatureView(View):
     normalization_percentile = .95
     normalization_n_spikes = 1000
     _feature_scaling = 1.
@@ -582,7 +587,10 @@ class FeatureView(GridView):
         self.features = features
 
         # Initialize the view.
-        super(FeatureView, self).__init__(self.shape, keys=keys)
+        super(FeatureView, self).__init__(layout='grid',
+                                          shape=self.shape,
+                                          keys=keys,
+                                          )
 
         # Feature normalization.
         self.data_bounds = _get_data_bounds(features,
@@ -768,7 +776,7 @@ class FeatureView(GridView):
 # Correlogram view
 # -----------------------------------------------------------------------------
 
-class CorrelogramView(GridView):
+class CorrelogramView(View):
     excerpt_size = 10000
     n_excerpts = 100
     uniform_normalization = False
@@ -812,7 +820,10 @@ class CorrelogramView(GridView):
         self.n_spikes, = self.spike_times.shape
 
         # Initialize the view.
-        super(CorrelogramView, self).__init__(keys=keys)
+        super(CorrelogramView, self).__init__(layout='grid',
+                                              shape=(1, 1),
+                                              keys=keys,
+                                              )
 
         # Spike clusters.
         assert spike_clusters.shape == (self.n_spikes,)
