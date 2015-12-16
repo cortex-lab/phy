@@ -367,6 +367,8 @@ class LineVisual(BaseVisual):
                  data_bounds=None,
                  ):
 
+        # TODO: single argument pos (n, 4) instead of x0 y0 etc.
+
         # Get the number of lines.
         n_lines = _get_length(x0, y0, x1, y1)
         x0 = _validate_line_coord(x0, n_lines, -1)

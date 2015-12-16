@@ -266,6 +266,15 @@ class TransformChain(object):
             if transform.__class__.__name__ == class_name:
                 return transform
 
+    def remove(self, class_name):
+        """Remove a transform in the chain."""
+        cpu_transforms = [t for t in self.cpu_transforms
+                          if t.__class__.__name__ != class_name]
+        gpu_transforms = [t for t in self.gpu_transforms
+                          if t.__class__.__name__ != class_name]
+        return (TransformChain().add_on_cpu(cpu_transforms).
+                add_on_gpu(gpu_transforms))
+
     def apply(self, arr):
         """Apply all CPU transforms on an array."""
         for t in self.cpu_transforms:

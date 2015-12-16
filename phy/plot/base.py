@@ -52,6 +52,7 @@ class BaseVisual(object):
         # The program will be set by the canvas when the visual is
         # added to the canvas.
         self.program = None
+        self.set_canvas_transforms_filter(lambda t: t)
 
     # Visual definition
     # -------------------------------------------------------------------------
@@ -103,6 +104,10 @@ class BaseVisual(object):
 
         """
         raise NotImplementedError()
+
+    def set_canvas_transforms_filter(self, f):
+        """Set a function filtering the canvas' transforms."""
+        self.canvas_transforms_filter = f
 
 
 #------------------------------------------------------------------------------
@@ -250,7 +255,7 @@ class BaseCanvas(Canvas):
         # Enable transparency.
         _enable_depth_mask()
 
-    def add_visual(self, visual, transforms=None):
+    def add_visual(self, visual):
         """Add a visual to the canvas, and build its program by the same
         occasion.
 
@@ -262,14 +267,9 @@ class BaseCanvas(Canvas):
         inserter = visual.inserter
         # Add the visual's transforms.
         inserter.add_transform_chain(visual.transforms)
-        # Then, add the canvas' transforms...
-        if transforms is None:
-            inserter.add_transform_chain(self.transforms)
-        # or user-specified transforms.
-        else:
-            tc = TransformChain()
-            tc.add_on_gpu(transforms)
-            inserter.add_transform_chain(tc)
+        # Then, add the canvas' transforms.
+        canvas_transforms = visual.canvas_transforms_filter(self.transforms)
+        inserter.add_transform_chain(canvas_transforms)
         # Also, add the canvas' inserter.
         inserter += self.inserter
         # Now, we insert the transforms GLSL into the shaders.
