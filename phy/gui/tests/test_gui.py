@@ -76,12 +76,12 @@ def test_gui_1(qtbot):
     qtbot.keyPress(gui, Qt.Key_Control)
     qtbot.keyRelease(gui, Qt.Key_Control)
 
-    view = gui.add_view(_create_canvas(), 'view1', floating=True)
-    gui.add_view(_create_canvas(), 'view2')
+    view = gui.add_view(_create_canvas(), floating=True)
+    gui.add_view(_create_canvas())
     view.setFloating(False)
     gui.show()
 
-    assert len(gui.list_views('view')) == 2
+    assert len(gui.list_views('Canvas')) == 2
 
     # Check that the close_widget event is fired when the gui widget is
     # closed.

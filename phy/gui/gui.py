@@ -24,10 +24,6 @@ logger = logging.getLogger(__name__)
 # GUI main window
 # -----------------------------------------------------------------------------
 
-def _title(widget):
-    return str(widget.windowTitle()).lower()
-
-
 def _try_get_vispy_canvas(view):
     # Get the Qt widget from a VisPy canvas.
     try:
@@ -164,6 +160,8 @@ class GUI(QMainWindow):
             name = self.__class__.__name__
         self.setWindowTitle(name)
         self.setObjectName(name)
+        # Set the name in the GUI.
+        self.__name__ = name
 
     def _set_pos_size(self, position, size):
         if position is not None:
@@ -184,7 +182,7 @@ class GUI(QMainWindow):
             shortcuts = self.default_actions.shortcuts
             for actions in self.actions:
                 shortcuts.update(actions.shortcuts)
-            _show_shortcuts(shortcuts, self.name)
+            _show_shortcuts(shortcuts, self.__name__)
 
     # Events
     # -------------------------------------------------------------------------
@@ -219,6 +217,13 @@ class GUI(QMainWindow):
     # Views
     # -------------------------------------------------------------------------
 
+    def _get_view_name(self, view):
+        """The view name is the class name followed by 1, 2, or n."""
+        name = view.__class__.__name__
+        views = self.list_views(name)
+        n = len(views) + 1
+        return '{:s}{:d}'.format(name, n)
+
     def add_view(self,
                  view,
                  name=None,
@@ -228,7 +233,9 @@ class GUI(QMainWindow):
                  floating=None):
         """Add a widget to the main window."""
 
-        name = name or view.__class__.__name__
+        name = name or self._get_view_name(view)
+        # Set the name in the view.
+        view.__name__ = name
         widget = _try_get_vispy_canvas(view)
         widget = _try_get_matplotlib_canvas(widget)
 
@@ -239,6 +246,7 @@ class GUI(QMainWindow):
         self.addDockWidget(_get_dock_position(position), dock_widget)
         if floating is not None:
             dock_widget.setFloating(floating)
+        dock_widget.view = view
 
         @dock_widget.connect_
         def on_close_widget():
@@ -251,11 +259,10 @@ class GUI(QMainWindow):
 
     def list_views(self, name='', is_visible=True):
         """List all views which name start with a given string."""
-        name = name.lower()
         children = self.findChildren(QWidget)
-        return [child for child in children
+        return [child.view for child in children
                 if isinstance(child, QDockWidget) and
-                _title(child).startswith(name) and
+                child.view.__name__.startswith(name) and
                 (child.isVisible() if is_visible else True) and
                 child.width() >= 10 and
                 child.height() >= 10
@@ -266,7 +273,7 @@ class GUI(QMainWindow):
         views = self.list_views()
         counts = defaultdict(lambda: 0)
         for view in views:
-            counts[_title(view)] += 1
+            counts[view.__name__] += 1
         return dict(counts)
 
     # Menu bar
@@ -353,7 +360,7 @@ def create_gui(model=None, state=None):
     state = state or GUIState()
     plugins = state.plugins
     # GUI name.
-    name = gui.name
+    name = gui.__name__
 
     # If no plugins are specified, load the master config and
     # get the list of user plugins to attach to the GUI.
