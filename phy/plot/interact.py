@@ -11,8 +11,9 @@ import numpy as np
 from vispy.gloo import Texture2D
 
 from .base import BaseInteract
-from .transform import Range, Subplot, Clip, NDC
+from .transform import Scale, Range, Subplot, Clip, NDC
 from .utils import _get_texture, _get_boxes, _get_box_pos_size
+from .visuals import LineVisual
 
 
 #------------------------------------------------------------------------------
@@ -35,7 +36,7 @@ class Grid(BaseInteract):
 
     """
 
-    _margin_clip = 1 - .035
+    margin = .075
 
     def __init__(self, shape=(1, 1), shape_var='u_grid_shape', box_var=None):
         # Name of the variable with the box index.
@@ -45,11 +46,10 @@ class Grid(BaseInteract):
 
     def attach(self, canvas):
         super(Grid, self).attach(canvas)
-        canvas.transforms.add_on_gpu([Clip([-self._margin_clip,
-                                            -self._margin_clip,
-                                            +self._margin_clip,
-                                            +self._margin_clip,
-                                            ]),
+        ms = 1 - self.margin
+        mc = 1 - self.margin
+        canvas.transforms.add_on_gpu([Scale((ms, ms)),
+                                      Clip([-mc, -mc, +mc, +mc]),
                                       Subplot(self.shape_var, self.box_var),
                                       ])
         canvas.inserter.insert_vert("""
@@ -57,6 +57,34 @@ class Grid(BaseInteract):
                                     uniform vec2 {};
                                     """.format(self.box_var, self.shape_var),
                                     'header')
+
+    def add_boxes(self, canvas):
+        n, m = self.shape
+        n_boxes = n * m
+        a = 1 + .05
+
+        x0 = np.tile([-a, +a, +a, -a], n_boxes)
+        y0 = np.tile([-a, -a, +a, +a], n_boxes)
+        x1 = np.tile([+a, +a, -a, -a], n_boxes)
+        y1 = np.tile([-a, +a, +a, -a], n_boxes)
+
+        box_index = []
+        for i in range(n):
+            for j in range(m):
+                box_index.append([i, j])
+        box_index = np.vstack(box_index)
+        box_index = np.repeat(box_index, 8, axis=0)
+        box_index = box_index.astype(np.float32)
+
+        boxes = LineVisual()
+
+        @boxes.set_canvas_transforms_filter
+        def _remove_clip(tc):
+            return tc.remove('Clip')
+
+        canvas.add_visual(boxes)
+        boxes.set_data(x0=x0, y0=y0, x1=x1, y1=y1)
+        boxes.program['a_box_index'] = box_index
 
     def update_program(self, program):
         program[self.shape_var] = self._shape

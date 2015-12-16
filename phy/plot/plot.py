@@ -187,18 +187,9 @@ class GridView(BaseView):
         self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
         self.panzoom.attach(self)
 
-    def build(self):
-        n, m = self.grid.shape
-        a = self.grid._margin_clip
-        for i in range(n):
-            for j in range(m):
-                self[i, j].lines(x0=[-a, +a, +a, -a],
-                                 y0=[-a, -a, +a, +a],
-                                 x1=[+a, +a, -a, -a],
-                                 y1=[-a, +a, +a, -a],
-                                 data_bounds=NDC,
-                                 )
-        super(GridView, self).build()
+        # NOTE: we need to add the grid boxes after PanZoom so that
+        # they work with pan & zoom.
+        self.grid.add_boxes(self)
 
 
 class BoxedView(BaseView):
