@@ -58,10 +58,10 @@ class Grid(BaseInteract):
                                     """.format(self.box_var, self.shape_var),
                                     'header')
 
-    def add_boxes(self, canvas):
-        if not isinstance(self.shape, tuple):
-            return
-        n, m = self.shape
+    def add_boxes(self, canvas, shape=None):
+        shape = shape or self.shape
+        assert isinstance(shape, tuple)
+        n, m = shape
         n_boxes = n * m
         a = 1 + .05
 

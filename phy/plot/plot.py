@@ -195,10 +195,6 @@ class GridView(BaseView):
         self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
         self.panzoom.attach(self)
 
-        # NOTE: we need to add the grid boxes after PanZoom so that
-        # they work with pan & zoom.
-        self.grid.add_boxes(self)
-
 
 class BoxedView(BaseView):
     """Subplots at arbitrary positions"""

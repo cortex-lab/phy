@@ -84,6 +84,8 @@ def test_grid_1(qtbot, canvas):
     grid = Grid((2, 3))
     _create_visual(qtbot, canvas, grid, box_index)
 
+    grid.add_boxes(canvas)
+
     # qtbot.stop()
 
 
