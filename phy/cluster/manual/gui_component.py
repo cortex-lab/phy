@@ -22,6 +22,7 @@ from phy.stats.clusters import (mean,
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table
 from phy.io.array import select_spikes
+from phy.utils import IPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -522,3 +523,37 @@ class ManualClustering(object):
         groups = {c: self.cluster_meta.get('group', c) or 'unsorted'
                   for c in self.clustering.cluster_ids}
         self.gui.emit('request_save', spike_clusters, groups)
+
+
+class ManualClusteringPlugin(IPlugin):
+    def attach_to_gui(self, gui, model=None, state=None):
+
+        # Attach the manual clustering logic (wizard, merge, split,
+        # undo stack) to the GUI.
+        n = state.n_spikes_max_per_cluster
+        mc = ManualClustering(model.spike_clusters,
+                              cluster_groups=model.cluster_groups,
+                              n_spikes_max_per_cluster=n,
+                              )
+        mc.attach(gui)
+
+        spc = mc.clustering.spikes_per_cluster
+        nfc = model.n_features_per_channel
+
+        q, s = default_wizard_functions(waveforms=model.waveforms,
+                                        features=model.features,
+                                        masks=model.masks,
+                                        n_features_per_channel=nfc,
+                                        spikes_per_cluster=spc,
+                                        )
+
+        ctx = getattr(gui, 'context', None)
+        if ctx:  # pragma: no cover
+            q, s = ctx.cache(q), ctx.cache(s)
+        else:
+            logger.warn("Context not available, unable to cache "
+                        "the wizard functions.")
+
+        mc.add_column(q, name='quality')
+        mc.set_default_sort('quality')
+        mc.set_similarity_func(s)
