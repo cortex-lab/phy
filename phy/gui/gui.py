@@ -90,7 +90,7 @@ class GUI(QMainWindow):
     def __init__(self,
                  position=None,
                  size=None,
-                 title=None,
+                 name=None,
                  ):
         # HACK to ensure that closeEvent is called only twice (seems like a
         # Qt bug).
@@ -98,19 +98,14 @@ class GUI(QMainWindow):
         if not QApplication.instance():  # pragma: no cover
             raise RuntimeError("A Qt application must be created.")
         super(GUI, self).__init__()
-        if title is None:
-            title = self.__class__.__name__
-        self.setWindowTitle(title)
-        if position is not None:
-            self.move(position[0], position[1])
-        if size is not None:
-            self.resize(QSize(size[0], size[1]))
-        self.setObjectName(title)
         QMetaObject.connectSlotsByName(self)
         self.setDockOptions(QMainWindow.AllowTabbedDocks |
                             QMainWindow.AllowNestedDocks |
                             QMainWindow.AnimatedDocks
                             )
+
+        self._set_name(name)
+        self._set_pos_size(position, size)
 
         # Mapping {name: menuBar}.
         self._menus = {}
@@ -118,6 +113,7 @@ class GUI(QMainWindow):
         # We can derive from EventEmitter because of a conflict with connect.
         self._event = EventEmitter()
 
+        # Status bar.
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
 
@@ -125,6 +121,24 @@ class GUI(QMainWindow):
         self.actions = []
 
         # Default actions.
+        self._set_default_actions()
+
+        # Create and attach snippets.
+        self.snippets = Snippets(self)
+
+    def _set_name(self, name):
+        if name is None:
+            name = self.__class__.__name__
+        self.setWindowTitle(name)
+        self.setObjectName(name)
+
+    def _set_pos_size(self, position, size):
+        if position is not None:
+            self.move(position[0], position[1])
+        if size is not None:
+            self.resize(QSize(size[0], size[1]))
+
+    def _set_default_actions(self):
         self.default_actions = Actions(self)
 
         @self.default_actions.add(shortcut='ctrl+q', menu='&File')
@@ -138,9 +152,6 @@ class GUI(QMainWindow):
             for actions in self.actions:
                 shortcuts.update(actions.shortcuts)
             _show_shortcuts(shortcuts, self.name)
-
-        # Create and attach snippets.
-        self.snippets = Snippets(self)
 
     # Events
     # -------------------------------------------------------------------------
