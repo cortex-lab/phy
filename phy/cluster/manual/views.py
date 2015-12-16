@@ -729,6 +729,8 @@ class FeatureView(GridView):
                                         masks=masks,
                                         spike_clusters_rel=sc,
                                         )
+            # Add the boxes.
+            self.grid.add_boxes(self, self.shape)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
