@@ -73,7 +73,7 @@ def load_gui_plugins(gui, plugins=None, session=None):
 
     # Attach the plugins to the GUI.
     for plugin in plugins:
-        logger.info("Attach plugin `%s` to %s.", plugin, name)
+        logger.debug("Attach plugin `%s` to %s.", plugin, name)
         get_plugin(plugin)().attach_to_gui(gui, session)
 
 
