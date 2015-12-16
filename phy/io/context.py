@@ -23,7 +23,8 @@ except ImportError:  # pragma: no cover
                     "Install it with `conda install dask`.")
 
 from .array import read_array, write_array
-from phy.utils import Bunch, _save_json, _load_json, _ensure_dir_exists
+from phy.utils import (Bunch, _save_json, _load_json, _ensure_dir_exists,
+                       IPlugin,)
 
 logger = logging.getLogger(__name__)
 
@@ -276,6 +277,12 @@ class Context(object):
         self.__dict__ = state
         # Recreate the joblib Memory instance.
         self._set_memory(state['cache_dir'])
+
+
+class ContextPlugin(IPlugin):
+    def attach_to_gui(self, gui, model=None, state=None):
+        # Create the computing context.
+        gui.context = Context(op.join(op.dirname(model.path), '.phy/'))
 
 
 #------------------------------------------------------------------------------
