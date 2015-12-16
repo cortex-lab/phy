@@ -14,7 +14,7 @@ from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  Qt, QSize, QMetaObject)
 from .actions import Actions, _show_shortcuts, Snippets
 from phy.utils.event import EventEmitter
-from phy.utils import load_master_config
+from phy.utils import load_master_config, Bunch, _load_json, _save_json
 from phy.utils.plugin import get_plugin
 
 logger = logging.getLogger(__name__)
@@ -49,32 +49,6 @@ def _try_get_matplotlib_canvas(view):
     except ImportError:  # pragma: no cover
         pass
     return view
-
-
-def load_gui_plugins(gui, plugins=None, session=None):
-    """Attach a list of plugins to a GUI.
-
-    By default, the list of plugins is taken from the `c.TheGUI.plugins`
-    parameter, where `TheGUI` is the name of the GUI class.
-
-    """
-    session = session or {}
-    plugins = plugins or []
-
-    # GUI name.
-    name = gui.name
-
-    # If no plugins are specified, load the master config and
-    # get the list of user plugins to attach to the GUI.
-    config = load_master_config()
-    plugins_conf = config[name].plugins
-    plugins_conf = plugins_conf if isinstance(plugins_conf, list) else []
-    plugins.extend(plugins_conf)
-
-    # Attach the plugins to the GUI.
-    for plugin in plugins:
-        logger.debug("Attach plugin `%s` to %s.", plugin, name)
-        get_plugin(plugin)().attach_to_gui(gui, session)
 
 
 class DockWidget(QDockWidget):
@@ -322,3 +296,48 @@ class GUI(QMainWindow):
             self.restoreGeometry((gs['geometry']))
         if gs.get('state', None):
             self.restoreState((gs['state']))
+
+
+# -----------------------------------------------------------------------------
+# GUI state, creator, plugins
+# -----------------------------------------------------------------------------
+
+class GUIState(Bunch):
+    def __init__(self, geometry_state=None, plugins=None, **kwargs):
+        super(GUIState, self).__init__(geomety_state=geometry_state,
+                                       plugins=plugins or [],
+                                       **kwargs)
+
+    def to_json(self, filename):
+        _save_json(filename, self)
+
+    def from_json(self, filename):
+        self.update(_load_json(filename))
+
+
+def create_gui(model=None, state=None):
+    """Create a GUI with a model and a GUI state.
+
+    By default, the list of plugins is taken from the `c.TheGUI.plugins`
+    parameter, where `TheGUI` is the name of the GUI class.
+
+    """
+    gui = GUI()
+    state = state or GUIState()
+    plugins = state.plugins
+    # GUI name.
+    name = gui.name
+
+    # If no plugins are specified, load the master config and
+    # get the list of user plugins to attach to the GUI.
+    config = load_master_config()
+    plugins_conf = config[name].plugins
+    plugins_conf = plugins_conf if isinstance(plugins_conf, list) else []
+    plugins.extend(plugins_conf)
+
+    # Attach the plugins to the GUI.
+    for plugin in plugins:
+        logger.debug("Attach plugin `%s` to %s.", plugin, name)
+        get_plugin(plugin)().attach_to_gui(gui, state=state, model=model)
+
+    return gui
