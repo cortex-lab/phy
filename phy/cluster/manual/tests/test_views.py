@@ -10,6 +10,7 @@ from contextlib import contextmanager
 
 import numpy as np
 from numpy.testing import assert_equal as ae
+from numpy.testing import assert_allclose as ac
 from pytest import raises, yield_fixture
 
 from phy.io.array import _spikes_per_cluster
@@ -65,23 +66,18 @@ def model():
     yield model
 
 
-@yield_fixture(scope='function')
-def state():
-    state = GUIState()
-    state.set_view_params('CorrelogramView1',
-                          bin_size=1e-3,
-                          window_size=50e-3,
-                          excerpt_size=8,
-                          n_excerpts=5,
-                          )
-    state.n_samples_per_spike = 6
-    yield state
-
-
 @contextmanager
-def _test_view(view_name, model=None, state=None):
-    state.plugins = [view_name + 'Plugin']
-    gui = create_gui(model=model, state=state)
+def _test_view(view_name, model=None, tempdir=None):
+
+    # Save a test GUI state JSON file in the tempdir.
+    state = GUIState(config_dir=tempdir)
+    state.set_view_params('TraceView1', box_size=(1., .01))
+    state.set_view_params('FeatureView1', feature_scaling=.5)
+    state.save()
+
+    # Create the GUI.
+    plugins = [view_name + 'Plugin']
+    gui = create_gui(model=model, plugins=plugins, config_dir=tempdir)
     gui.show()
 
     v = gui.list_views(view_name)[0]
@@ -140,8 +136,8 @@ def test_selected_clusters_colors():
 # Test waveform view
 #------------------------------------------------------------------------------
 
-def test_waveform_view(qtbot, model, state):
-    with _test_view('WaveformView', model=model, state=state) as v:
+def test_waveform_view(qtbot, model, tempdir):
+    with _test_view('WaveformView', model=model, tempdir=tempdir) as v:
         v.toggle_waveform_overlap()
         v.toggle_waveform_overlap()
 
@@ -164,22 +160,26 @@ def test_trace_view_no_spikes(qtbot):
     _show(qtbot, v)
 
 
-def test_trace_view_spikes(qtbot, model, state):
-    with _test_view('TraceView', model=model, state=state) as v:
+def test_trace_view_spikes(qtbot, model, tempdir):
+    with _test_view('TraceView', model=model, tempdir=tempdir) as v:
+        ac(v.stacked.box_size, (1., .01), atol=1e-2)
+
         v.go_to(.5)
         v.go_to(-.5)
         v.go_left()
         v.go_right()
 
-    # qtbot.stop()
+        # qtbot.stop()
 
 
 #------------------------------------------------------------------------------
 # Test feature view
 #------------------------------------------------------------------------------
 
-def test_feature_view(qtbot, model, state):
-    with _test_view('FeatureView', model=model, state=state) as v:
+def test_feature_view(qtbot, model, tempdir):
+    with _test_view('FeatureView', model=model, tempdir=tempdir) as v:
+
+        assert v.feature_scaling == .5
 
         @v.set_best_channels_func
         def best_channels(cluster_id):
@@ -197,8 +197,8 @@ def test_feature_view(qtbot, model, state):
 # Test correlogram view
 #------------------------------------------------------------------------------
 
-def test_correlogram_view(qtbot, model, state):
-    with _test_view('CorrelogramView', model=model, state=state) as v:
+def test_correlogram_view(qtbot, model, tempdir):
+    with _test_view('CorrelogramView', model=model, tempdir=tempdir) as v:
         v.toggle_normalization()
 
     # qtbot.stop()

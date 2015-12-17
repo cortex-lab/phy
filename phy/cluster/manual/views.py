@@ -278,19 +278,19 @@ class WaveformViewPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
         # NOTE: we assume that the state contains fields for every view.
         # Load the box_bounds from the state.
-        box_bounds = state.get_view_param('WaveformView', 'box_bounds')
-        w = WaveformView(waveforms=model.waveforms,
-                         masks=model.masks,
-                         spike_clusters=model.spike_clusters,
-                         channel_positions=model.channel_positions,
-                         box_bounds=box_bounds,
-                         )
-        w.attach(gui)
+        box_bounds, = state.get_view_params('WaveformView', 'box_bounds')
+        view = WaveformView(waveforms=model.waveforms,
+                            masks=model.masks,
+                            spike_clusters=model.spike_clusters,
+                            channel_positions=model.channel_positions,
+                            box_bounds=box_bounds,
+                            )
+        view.attach(gui)
 
         @gui.connect_
         def on_close():
             # Save the box bounds.
-            state.set_view_params(w, box_bounds=w.boxed.box_bounds)
+            state.set_view_params(view, box_bounds=view.boxed.box_bounds)
 
 
 # -----------------------------------------------------------------------------
@@ -516,13 +516,21 @@ class TraceView(ManualClusteringView):
 
 class TraceViewPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
-        t = TraceView(traces=model.traces,
-                      sample_rate=model.sample_rate,
-                      spike_times=model.spike_times,
-                      spike_clusters=model.spike_clusters,
-                      masks=model.masks,
-                      )
-        t.attach(gui)
+        view = TraceView(traces=model.traces,
+                         sample_rate=model.sample_rate,
+                         spike_times=model.spike_times,
+                         spike_clusters=model.spike_clusters,
+                         masks=model.masks,
+                         )
+        b, = state.get_view_params('TraceView', 'box_size')
+        if b:
+            view.stacked.box_size = b
+        view.attach(gui)
+
+        @gui.connect_
+        def on_close():
+            # Save the box bounds.
+            state.set_view_params(view, box_size=view.stacked.box_size)
 
 
 # -----------------------------------------------------------------------------
@@ -780,9 +788,11 @@ class FeatureView(ManualClusteringView):
 
     def increase_feature_scaling(self):
         self.feature_scaling *= 1.2
+        self.on_select()
 
     def decrease_feature_scaling(self):
         self.feature_scaling /= 1.2
+        self.on_select()
 
     @property
     def feature_scaling(self):
@@ -791,19 +801,21 @@ class FeatureView(ManualClusteringView):
     @feature_scaling.setter
     def feature_scaling(self, value):
         self._feature_scaling = value
-        self.on_select()
 
 
 class FeatureViewPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
 
-        f = FeatureView(features=model.features,
-                        masks=model.masks,
-                        spike_clusters=model.spike_clusters,
-                        spike_times=model.spike_times,
-                        )
+        view = FeatureView(features=model.features,
+                           masks=model.masks,
+                           spike_clusters=model.spike_clusters,
+                           spike_times=model.spike_times,
+                           )
+        fs, = state.get_view_params('FeatureView', 'feature_scaling')
+        if fs:
+            view.feature_scaling = fs
 
-        @f.set_best_channels_func
+        @view.set_best_channels_func
         def best_channels(cluster_id):
             """Select the best channels for a given cluster."""
             # TODO: better perf with cluster stats and cache
@@ -813,7 +825,12 @@ class FeatureViewPlugin(IPlugin):
             uch = unmasked_channels(mean_masks)
             return sorted_main_channels(mean_masks, uch)
 
-        f.attach(gui)
+        view.attach(gui)
+
+        @gui.connect_
+        def on_close():
+            # Save the box bounds.
+            state.set_view_params(view, feature_scaling=view.feature_scaling)
 
 
 # -----------------------------------------------------------------------------
@@ -823,6 +840,8 @@ class FeatureViewPlugin(IPlugin):
 class CorrelogramView(ManualClusteringView):
     excerpt_size = 10000
     n_excerpts = 100
+    bin_size = 1e-3
+    window_size = 50e-3
     uniform_normalization = False
     default_shortcuts = {
         'go_left': 'alt+left',
@@ -842,11 +861,11 @@ class CorrelogramView(ManualClusteringView):
         assert sample_rate > 0
         self.sample_rate = sample_rate
 
-        assert bin_size > 0
-        self.bin_size = bin_size
+        self.bin_size = bin_size or self.bin_size
+        assert self.bin_size > 0
 
-        assert window_size > 0
-        self.window_size = window_size
+        self.window_size = window_size or self.window_size
+        assert self.window_size > 0
 
         self.excerpt_size = excerpt_size or self.excerpt_size
         self.n_excerpts = n_excerpts or self.n_excerpts
@@ -930,12 +949,18 @@ class CorrelogramView(ManualClusteringView):
 
 class CorrelogramViewPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
-        ccg = CorrelogramView(spike_times=model.spike_times,
-                              spike_clusters=model.spike_clusters,
-                              sample_rate=model.sample_rate,
-                              bin_size=state.CorrelogramView1.bin_size,
-                              window_size=state.CorrelogramView1.window_size,
-                              excerpt_size=state.CorrelogramView1.excerpt_size,
-                              n_excerpts=state.CorrelogramView1.n_excerpts,
-                              )
-        ccg.attach(gui)
+        bs, ws, es, ne = state.get_view_params('CorrelogramView',
+                                               'bin_size',
+                                               'window_size',
+                                               'excerpt_size',
+                                               'n_excerpts',
+                                               )
+        view = CorrelogramView(spike_times=model.spike_times,
+                               spike_clusters=model.spike_clusters,
+                               sample_rate=model.sample_rate,
+                               bin_size=bs,
+                               window_size=ws,
+                               excerpt_size=es,
+                               n_excerpts=ne,
+                               )
+        view.attach(gui)
