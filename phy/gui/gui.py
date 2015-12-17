@@ -347,6 +347,15 @@ class GUIState(Bunch):
     def from_json(self, filename):
         self.update(_load_json(filename))
 
+    def get_view_param(self, view_name, name):
+        return self.get(view_name + '1', Bunch()).get(name, None)
+
+    def set_view_params(self, view, **kwargs):
+        view_name = view.__name__
+        if view_name not in self:
+            self[view_name] = Bunch()
+        self[view_name].update(kwargs)
+
 
 def create_gui(name=None, model=None, state=None):
     """Create a GUI with a model and a GUI state.

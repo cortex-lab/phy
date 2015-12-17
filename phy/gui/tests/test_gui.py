@@ -16,7 +16,7 @@ from ..gui import (GUI, GUIState,
                    _try_get_matplotlib_canvas,
                    _try_get_vispy_canvas,
                    )
-from phy.utils import IPlugin
+from phy.utils import IPlugin, Bunch
 from phy.utils._color import _random_color
 
 
@@ -101,7 +101,7 @@ def test_gui_1(qtbot):
     gui.default_actions.exit()
 
 
-def test_gui_state(tempdir):
+def test_gui_state_json(tempdir):
     path = op.join(tempdir, 'state.json')
 
     state = GUIState(hello='world')
@@ -110,6 +110,15 @@ def test_gui_state(tempdir):
     state = GUIState()
     state.from_json(path)
     assert state.hello == 'world'
+
+
+def test_gui_state_view():
+    view = Bunch(__name__='myview1')
+    state = GUIState()
+    state.set_view_params(view, hello='world')
+    state.get_view_param('unknown', 'hello') is None
+    state.get_view_param('myview', 'unknown') is None
+    state.get_view_param('myview', 'hello') == 'world'
 
 
 def test_create_gui_1(qapp, tempdir):
