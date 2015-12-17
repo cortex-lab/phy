@@ -530,10 +530,8 @@ class ManualClusteringPlugin(IPlugin):
 
         # Attach the manual clustering logic (wizard, merge, split,
         # undo stack) to the GUI.
-        n = state.n_spikes_max_per_cluster
         mc = ManualClustering(model.spike_clusters,
                               cluster_groups=model.cluster_groups,
-                              n_spikes_max_per_cluster=n,
                               )
         mc.attach(gui)
 

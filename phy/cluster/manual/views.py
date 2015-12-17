@@ -283,9 +283,12 @@ class WaveformViewPlugin(IPlugin):
                             masks=model.masks,
                             spike_clusters=model.spike_clusters,
                             channel_positions=model.channel_positions,
-                            box_bounds=box_bounds,
                             )
         view.attach(gui)
+
+        b, = state.get_view_params('WaveformView', 'box_size')
+        if b:
+            view.boxed.box_size = b
 
         @gui.connect_
         def on_close():

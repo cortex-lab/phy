@@ -71,6 +71,7 @@ def _test_view(view_name, model=None, tempdir=None):
 
     # Save a test GUI state JSON file in the tempdir.
     state = GUIState(config_dir=tempdir)
+    state.set_view_params('WaveformView1', box_size=(.1, .1))
     state.set_view_params('TraceView1', box_size=(1., .01))
     state.set_view_params('FeatureView1', feature_scaling=.5)
     state.save()
@@ -138,6 +139,7 @@ def test_selected_clusters_colors():
 
 def test_waveform_view(qtbot, model, tempdir):
     with _test_view('WaveformView', model=model, tempdir=tempdir) as v:
+        ac(v.boxed.box_size, (.1, .1), atol=1e-2)
         v.toggle_waveform_overlap()
         v.toggle_waveform_overlap()
 
