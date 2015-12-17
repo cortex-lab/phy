@@ -554,6 +554,7 @@ class ManualClusteringPlugin(IPlugin):
             logger.warn("Context not available, unable to cache "
                         "the wizard functions.")
 
-        mc.add_column(q, name='quality')
+        # Add the quality column in the cluster view.
+        mc.cluster_view.add_column(q, name='quality')
         mc.set_default_sort('quality')
         mc.set_similarity_func(s)
