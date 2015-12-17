@@ -98,7 +98,7 @@ def _save_json(path, data):
     data = _stringify_keys(data)
     path = op.realpath(op.expanduser(path))
     with open(path, 'w') as f:
-        json.dump(data, f, cls=_CustomEncoder, indent=2)
+        json.dump(data, f, cls=_CustomEncoder, indent=2, sort_keys=True)
 
 
 #------------------------------------------------------------------------------
