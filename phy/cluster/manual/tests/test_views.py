@@ -20,7 +20,7 @@ from phy.io.mock import (artificial_waveforms,
                          artificial_masks,
                          artificial_traces,
                          )
-from phy.gui import create_gui
+from phy.gui import create_gui, GUIState
 from phy.electrode.mea import staggered_positions
 from phy.utils import Bunch
 from ..views import TraceView, _extract_wave, _selected_clusters_colors
@@ -65,14 +65,15 @@ def model():
     yield model
 
 
-@yield_fixture
+@yield_fixture(scope='function')
 def state():
-    state = Bunch()
-    state.CorrelogramView1 = Bunch(bin_size=1e-3,
-                                   window_size=50e-3,
-                                   excerpt_size=8,
-                                   n_excerpts=5,
-                                   )
+    state = GUIState()
+    state.set_view_params('CorrelogramView1',
+                          bin_size=1e-3,
+                          window_size=50e-3,
+                          excerpt_size=8,
+                          n_excerpts=5,
+                          )
     state.n_samples_per_spike = 6
     yield state
 
@@ -144,7 +145,7 @@ def test_waveform_view(qtbot, model, state):
         v.toggle_waveform_overlap()
         v.toggle_waveform_overlap()
 
-    # qtbot.stop()
+        # qtbot.stop()
 
 
 #------------------------------------------------------------------------------

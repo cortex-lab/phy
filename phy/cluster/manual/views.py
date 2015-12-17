@@ -278,7 +278,7 @@ class WaveformViewPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
         # NOTE: we assume that the state contains fields for every view.
         # Load the box_bounds from the state.
-        box_bounds = state.WaveformView1.box_bounds
+        box_bounds = state.get_view_param('WaveformView', 'box_bounds')
         w = WaveformView(waveforms=model.waveforms,
                          masks=model.masks,
                          spike_clusters=model.spike_clusters,
@@ -290,7 +290,7 @@ class WaveformViewPlugin(IPlugin):
         @gui.connect_
         def on_close():
             # Save the box bounds.
-            state[w.__name__].box_bounds = w.stacked.box_bounds
+            state.set_view_params(w, box_bounds=w.boxed.box_bounds)
 
 
 # -----------------------------------------------------------------------------
