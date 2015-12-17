@@ -15,7 +15,6 @@ from ..gui import (GUI, GUIState,
                    create_gui,
                    _try_get_matplotlib_canvas,
                    _try_get_vispy_canvas,
-                   SaveGUIStatePlugin,
                    SaveGeometryStatePlugin,
                    )
 from phy.io import Context
@@ -196,6 +195,8 @@ def test_create_gui_1(qapp, tempdir):
 
     assert _tmp == ['world']
 
+    gui.close()
+
 
 def test_save_geometry_state(gui):
     state = Bunch()
@@ -206,12 +207,3 @@ def test_save_geometry_state(gui):
     assert state.geometry_state['state']
 
     gui.show()
-
-
-def test_save_gui_state(gui, tempdir):
-    gui.context = Context(tempdir)
-    state = Bunch(hello='world', state_save_location='local')
-    SaveGUIStatePlugin().attach_to_gui(gui, state=state)
-    gui.close()
-    json = _load_json(op.join(tempdir, 'GUI/state.json'))
-    assert json['hello'] == 'world'

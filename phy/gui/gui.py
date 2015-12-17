@@ -9,12 +9,16 @@
 
 from collections import defaultdict
 import logging
+import os.path as op
+
+from six import string_types
 
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  Qt, QSize, QMetaObject)
 from .actions import Actions, _show_shortcuts, Snippets
 from phy.utils.event import EventEmitter
-from phy.utils import load_master_config, Bunch, _load_json, _save_json
+from phy.utils import (load_master_config, Bunch, _load_json, _save_json,
+                       _ensure_dir_exists, phy_user_dir,)
 from phy.utils.plugin import get_plugin, IPlugin
 
 logger = logging.getLogger(__name__)
@@ -335,6 +339,25 @@ class GUI(QMainWindow):
 # GUI state, creator, plugins
 # -----------------------------------------------------------------------------
 
+def _get_path(name):
+    return op.join(phy_user_dir(), name + '.json')
+
+
+def _save(name, data):
+    path = _get_path(name)
+    _ensure_dir_exists(op.dirname(path))
+    logger.debug("Save data to `%s`.", path)
+    _save_json(path, data)
+
+
+def _load(name):
+    path = _get_path(name)
+    if not op.exists(path):
+        logger.debug("The file `%s` doesn't exist.", path)
+        return
+    return _load_json(path)
+
+
 class GUIState(Bunch):
     def __init__(self, geometry_state=None, plugins=None, **kwargs):
         super(GUIState, self).__init__(geomety_state=geometry_state,
@@ -351,7 +374,7 @@ class GUIState(Bunch):
         return self.get(view_name + '1', Bunch()).get(name, None)
 
     def set_view_params(self, view, **kwargs):
-        view_name = view.__name__
+        view_name = view if isinstance(view, string_types) else view.__name__
         if view_name not in self:
             self[view_name] = Bunch()
         self[view_name].update(kwargs)
@@ -367,20 +390,8 @@ class SaveGeometryStatePlugin(IPlugin):
 
         @gui.connect_
         def on_show():
-            gs = state['geometry_state']
+            gs = state.get('geometry_state', None)
             gui.restore_geometry_state(gs)
-
-
-class SaveGUIStatePlugin(IPlugin):
-    def attach_to_gui(self, gui, state=None, model=None):
-
-        state_name = '{}/state'.format(gui.name)
-        location = state.get('state_save_location', 'global')
-
-        @gui.connect_
-        def on_close():
-            logger.debug("Save GUI state to %s.", state_name)
-            gui.context.save(state_name, state, location=location)
 
 
 def create_gui(name=None, model=None, state=None):
@@ -396,6 +407,10 @@ def create_gui(name=None, model=None, state=None):
     # GUI name.
     name = gui.__name__
 
+    # Load the state from disk.
+    state_name = '{}/state'.format(gui.name)
+    state.update(_load(state_name) or {})
+
     # If no plugins are specified, load the master config and
     # get the list of user plugins to attach to the GUI.
     config = load_master_config()
@@ -407,5 +422,10 @@ def create_gui(name=None, model=None, state=None):
     for plugin in plugins:
         logger.debug("Attach plugin `%s` to %s.", plugin, name)
         get_plugin(plugin)().attach_to_gui(gui, state=state, model=model)
+
+    # Save the state to disk.
+    @gui.connect_
+    def on_close():
+        _save(state_name, state)
 
     return gui
