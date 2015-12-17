@@ -15,8 +15,11 @@ from ..gui import (GUI, GUIState,
                    create_gui,
                    _try_get_matplotlib_canvas,
                    _try_get_vispy_canvas,
+                   SaveGUIStatePlugin,
+                   SaveGeometryStatePlugin,
                    )
-from phy.utils import IPlugin, Bunch
+from phy.io import Context
+from phy.utils import IPlugin, Bunch, _load_json
 from phy.utils._color import _random_color
 
 
@@ -76,7 +79,7 @@ def test_gui_1(qtbot):
     qtbot.keyPress(gui, Qt.Key_Control)
     qtbot.keyRelease(gui, Qt.Key_Control)
 
-    view = gui.add_view(_create_canvas(), floating=True)
+    view = gui.add_view(_create_canvas(), floating=True, closable=True)
     gui.add_view(_create_canvas())
     view.setFloating(False)
     gui.show()
@@ -99,56 +102,6 @@ def test_gui_1(qtbot):
     assert _close == [1, 0]
 
     gui.default_actions.exit()
-
-
-def test_gui_state_json(tempdir):
-    path = op.join(tempdir, 'state.json')
-
-    state = GUIState(hello='world')
-    state.to_json(path)
-
-    state = GUIState()
-    state.from_json(path)
-    assert state.hello == 'world'
-
-
-def test_gui_state_view():
-    view = Bunch(__name__='myview1')
-    state = GUIState()
-    state.set_view_params(view, hello='world')
-    state.get_view_param('unknown', 'hello') is None
-    state.get_view_param('myview', 'unknown') is None
-    state.get_view_param('myview', 'hello') == 'world'
-
-
-def test_create_gui_1(qapp, tempdir):
-
-    _tmp = []
-
-    class MyPlugin(IPlugin):
-        def attach_to_gui(self, gui, model=None, state=None):
-            _tmp.append(state.hello)
-
-    gui = create_gui(state=GUIState(plugins=['MyPlugin'], hello='world'))
-    assert gui
-
-    assert _tmp == ['world']
-
-
-def test_gui_component(gui):
-
-    class TestComponent(object):
-        def __init__(self, arg):
-            self._arg = arg
-
-        def attach(self, gui):
-            gui._attached = self._arg
-            return 'attached'
-
-    tc = TestComponent(3)
-
-    assert tc.attach(gui) == 'attached'
-    assert gui._attached == 3
 
 
 def test_gui_status_message(gui):
@@ -204,3 +157,61 @@ def test_gui_geometry_state(qtbot):
     }
 
     gui.close()
+
+
+#------------------------------------------------------------------------------
+# Test GUI plugin
+#------------------------------------------------------------------------------
+
+def test_gui_state_json(tempdir):
+    path = op.join(tempdir, 'state.json')
+
+    state = GUIState(hello='world')
+    state.to_json(path)
+
+    state = GUIState()
+    state.from_json(path)
+    assert state.hello == 'world'
+
+
+def test_gui_state_view():
+    view = Bunch(__name__='myview1')
+    state = GUIState()
+    state.set_view_params(view, hello='world')
+    state.get_view_param('unknown', 'hello') is None
+    state.get_view_param('myview', 'unknown') is None
+    state.get_view_param('myview', 'hello') == 'world'
+
+
+def test_create_gui_1(qapp, tempdir):
+
+    _tmp = []
+
+    class MyPlugin(IPlugin):
+        def attach_to_gui(self, gui, model=None, state=None):
+            _tmp.append(state.hello)
+
+    gui = create_gui(state=GUIState(plugins=['MyPlugin'], hello='world'))
+    assert gui
+
+    assert _tmp == ['world']
+
+
+def test_save_geometry_state(gui):
+    state = Bunch()
+    SaveGeometryStatePlugin().attach_to_gui(gui, state=state)
+    gui.close()
+
+    assert state.geometry_state['geometry']
+    assert state.geometry_state['state']
+
+    gui.show()
+
+
+def test_save_gui_state(gui, tempdir):
+    gui.context = Context(tempdir)
+    state = Bunch(hello='world', state_save_location='local')
+    SaveGUIStatePlugin().attach_to_gui(gui, state=state)
+    gui.close()
+    json = _load_json(op.join(tempdir, 'GUI/state.json'))
+    assert json['hello'] == 'world'
