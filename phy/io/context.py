@@ -25,6 +25,7 @@ except ImportError:  # pragma: no cover
 from .array import read_array, write_array
 from phy.utils import (Bunch, _save_json, _load_json, _ensure_dir_exists,
                        IPlugin,)
+from phy.utils.config import phy_user_dir
 
 logger = logging.getLogger(__name__)
 
@@ -251,15 +252,22 @@ class Context(object):
         else:
             return self._map_serial(f, *args)
 
-    def save(self, name, data):
+    def _get_path(self, name, location):
+        if location == 'local':
+            return op.join(self.cache_dir, name + '.json')
+        elif location == 'global':
+            return op.join(phy_user_dir(), name + '.json')
+
+    def save(self, name, data, location='local'):
         """Save a dictionary in a JSON file within the cache directory."""
-        path = op.join(self.cache_dir, name + '.json')
+        path = self._get_path(name, location)
         _ensure_dir_exists(op.dirname(path))
+        logger.debug("Save data to `%s`.", path)
         _save_json(path, data)
 
-    def load(self, name):
+    def load(self, name, location='local'):
         """Load saved data from the cache directory."""
-        path = op.join(self.cache_dir, name + '.json')
+        path = self._get_path(name, location)
         if not op.exists(path):
             logger.debug("The file `%s` doesn't exist.", path)
             return
