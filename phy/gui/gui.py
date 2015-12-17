@@ -15,7 +15,7 @@ from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
 from .actions import Actions, _show_shortcuts, Snippets
 from phy.utils.event import EventEmitter
 from phy.utils import load_master_config, Bunch, _load_json, _save_json
-from phy.utils.plugin import get_plugin
+from phy.utils.plugin import get_plugin, IPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -355,6 +355,32 @@ class GUIState(Bunch):
         if view_name not in self:
             self[view_name] = Bunch()
         self[view_name].update(kwargs)
+
+
+class SaveGeometryStatePlugin(IPlugin):
+    def attach_to_gui(self, gui, state=None, model=None):
+
+        @gui.connect_
+        def on_close():
+            gs = gui.save_geometry_state()
+            state['geometry_state'] = gs
+
+        @gui.connect_
+        def on_show():
+            gs = state['geometry_state']
+            gui.restore_geometry_state(gs)
+
+
+class SaveGUIStatePlugin(IPlugin):
+    def attach_to_gui(self, gui, state=None, model=None):
+
+        state_name = '{}/state'.format(gui.name)
+        location = state.get('state_save_location', 'global')
+
+        @gui.connect_
+        def on_close():
+            logger.debug("Save GUI state to %s.", state_name)
+            gui.context.save(state_name, state, location=location)
 
 
 def create_gui(name=None, model=None, state=None):
