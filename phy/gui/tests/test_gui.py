@@ -15,7 +15,6 @@ from ..gui import (GUI, GUIState,
                    create_gui,
                    _try_get_matplotlib_canvas,
                    _try_get_vispy_canvas,
-                   DefaultBunch, DefaultDictBunch,
                    )
 from phy.utils import IPlugin
 from phy.utils._color import _random_color
@@ -55,21 +54,6 @@ def test_matplotlib_view():
 #------------------------------------------------------------------------------
 # Test GUI
 #------------------------------------------------------------------------------
-
-def test_default_bunch():
-    b = DefaultBunch()
-    assert b.hello is None
-    b.hello = 'world'
-    assert b.hello == 'world'
-
-    b = DefaultDictBunch()
-    assert len(b.unknown) == 0
-    assert b.hello.world is None
-    assert len(b.hello) == 1
-    assert b.hello == {'world': None}
-    b.hello.dolly = '!'
-    assert b.hello.dolly == '!'
-
 
 def test_gui_noapp():
     if not QApplication.instance():
