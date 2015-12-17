@@ -335,21 +335,6 @@ class GUI(QMainWindow):
 # GUI state, creator, plugins
 # -----------------------------------------------------------------------------
 
-class DefaultBunch(defaultdict):
-    def __init__(self, *args, **kwargs):
-        super(DefaultBunch, self).__init__(*args, **kwargs)
-        self.__dict__ = self
-
-    def __missing__(self, item)
-        pass
-
-
-class DefaultDictBunch(defaultdict):
-    def __init__(self, **kwargs):
-        super(DefaultDictBunch, self).__init__(DefaultBunch, **kwargs)
-        self.__dict__ = self
-
-
 class GUIState(Bunch):
     def __init__(self, geometry_state=None, plugins=None, **kwargs):
         super(GUIState, self).__init__(geomety_state=geometry_state,
