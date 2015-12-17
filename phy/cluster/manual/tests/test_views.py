@@ -189,7 +189,7 @@ def test_feature_view(qtbot, model, state):
         v.increase_feature_scaling()
         v.decrease_feature_scaling()
 
-    # qtbot.stop()
+        # qtbot.stop()
 
 
 #------------------------------------------------------------------------------

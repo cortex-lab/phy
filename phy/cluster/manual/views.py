@@ -587,6 +587,7 @@ def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
 class FeatureView(ManualClusteringView):
     normalization_percentile = .95
     normalization_n_spikes = 1000
+    _default_marker_size = 3.
     _feature_scaling = 1.
 
     default_shortcuts = {
@@ -710,12 +711,13 @@ class FeatureView(ManualClusteringView):
                            n_clusters=n_clusters)
 
         # Create the scatter plot for the current subplot.
+        ms = self._default_marker_size
         self[i, j].scatter(x=x,
                            y=y,
                            color=color,
                            depth=d,
                            data_bounds=data_bounds,
-                           size=5 * np.ones(len(spike_ids)),
+                           size=ms * np.ones(len(spike_ids)),
                            )
 
     def set_best_channels_func(self, func):
