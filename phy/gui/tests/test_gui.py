@@ -17,7 +17,7 @@ from ..gui import (GUI, GUIState,
                    _try_get_vispy_canvas,
                    SaveGeometryStatePlugin,
                    )
-from phy.utils import IPlugin, Bunch
+from phy.utils import IPlugin, Bunch, _save_json, _ensure_dir_exists
 from phy.utils._color import _random_color
 
 
@@ -161,27 +161,20 @@ def test_gui_geometry_state(qtbot):
 # Test GUI plugin
 #------------------------------------------------------------------------------
 
-def test_gui_state_json(tempdir):
-    path = op.join(tempdir, 'state.json')
-
-    state = GUIState(hello='world')
-    state.to_json(path)
-
-    state = GUIState()
-    state.from_json(path)
-    assert state.hello == 'world'
-
-
 def test_gui_state_view():
     view = Bunch(__name__='myview1')
     state = GUIState()
     state.set_view_params(view, hello='world')
-    state.get_view_param('unknown', 'hello') is None
-    state.get_view_param('myview', 'unknown') is None
-    state.get_view_param('myview', 'hello') == 'world'
+    state.get_view_params('unknown', 'hello') == [None]
+    state.get_view_params('myview', 'unknown') == [None]
+    state.get_view_params('myview', 'hello') == ['world']
 
 
 def test_create_gui_1(qapp, tempdir):
+
+    _ensure_dir_exists(op.join(tempdir, 'GUI/'))
+    path = op.join(tempdir, 'GUI/state.json')
+    _save_json(path, {'hello': 'world'})
 
     _tmp = []
 
@@ -189,10 +182,13 @@ def test_create_gui_1(qapp, tempdir):
         def attach_to_gui(self, gui, model=None, state=None):
             _tmp.append(state.hello)
 
-    gui = create_gui(state=GUIState(plugins=['MyPlugin'], hello='world'))
+    gui = create_gui(plugins=['MyPlugin'], config_dir=tempdir)
     assert gui
-
     assert _tmp == ['world']
+    gui.state.hello = 'dolly'
+    gui.state.save()
+
+    assert GUIState(config_dir=tempdir).hello == 'dolly'
 
     gui.close()
 

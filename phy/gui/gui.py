@@ -17,7 +17,8 @@ from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  Qt, QSize, QMetaObject)
 from .actions import Actions, _show_shortcuts, Snippets
 from phy.utils.event import EventEmitter
-from phy.utils import (load_master_config, Bunch, _load_json, _save_json,
+from phy.utils import (load_master_config, Bunch, _bunchify,
+                       _load_json, _save_json,
                        _ensure_dir_exists, phy_user_dir,)
 from phy.utils.plugin import get_plugin, IPlugin
 
@@ -339,56 +340,49 @@ class GUI(QMainWindow):
 # GUI state, creator, plugins
 # -----------------------------------------------------------------------------
 
-def _get_path(name):
-    return op.join(phy_user_dir(), name + '.json')
-
-
-def _save(name, data):
-    path = _get_path(name)
-    _ensure_dir_exists(op.dirname(path))
-    logger.debug("Save data to `%s`.", path)
-    _save_json(path, data)
-
-
-def _bunchify(b):
-    """Ensure all dict elements are Bunch."""
-    assert isinstance(b, dict)
-    b = Bunch(b)
-    for k in b:
-        if isinstance(b[k], dict):
-            b[k] = Bunch(b[k])
-    return b
-
-
-def _load(name):
-    path = _get_path(name)
-    if not op.exists(path):
-        logger.debug("The file `%s` doesn't exist.", path)
-        return
-    return _bunchify(_load_json(path))
-
-
 class GUIState(Bunch):
-    def __init__(self, geometry_state=None, plugins=None, **kwargs):
-        super(GUIState, self).__init__(geometry_state=geometry_state,
-                                       plugins=plugins or [],
-                                       **kwargs)
+    """Represent the state of the GUI: positions of the views and
+    all parameters associated to the GUI and views.
 
-    def to_json(self, filename):
-        _save_json(filename, self)
+    This is automatically loaded from the configuration directory.
 
-    def from_json(self, filename):
-        # TODO: remove?
-        self.update(_load_json(filename))
+    """
+    def __init__(self, name='GUI', config_dir=None, **kwargs):
+        super(GUIState, self).__init__(**kwargs)
+        self.name = name
+        self.config_dir = config_dir or phy_user_dir()
+        _ensure_dir_exists(op.join(self.config_dir, self.name))
+        self.load()
 
-    def get_view_param(self, view_name, name):
-        return self.get(view_name + '1', Bunch()).get(name, None)
+    def get_view_params(self, view_name, *names):
+        # TODO: how to choose view index
+        return [self.get(view_name + '1', Bunch()).get(name, None)
+                for name in names]
 
     def set_view_params(self, view, **kwargs):
         view_name = view if isinstance(view, string_types) else view.__name__
         if view_name not in self:
             self[view_name] = Bunch()
         self[view_name].update(kwargs)
+
+    @property
+    def path(self):
+        return op.join(self.config_dir, self.name, 'state.json')
+
+    def load(self):
+        """Load the state from the JSON file in the config dir."""
+        if not op.exists(self.path):
+            logger.debug("The GUI state file `%s` doesn't exist.", self.path)
+            # TODO: create the default state.
+            return
+        assert op.exists(self.path)
+        logger.debug("Load the GUI state from `%s`.", self.path)
+        self.update(_bunchify(_load_json(self.path)))
+
+    def save(self):
+        """Save the state to the JSON file in the config dir."""
+        logger.debug("Save the GUI state to `%s`.", self.path)
+        _save_json(self.path, self)
 
 
 class SaveGeometryStatePlugin(IPlugin):
@@ -405,28 +399,24 @@ class SaveGeometryStatePlugin(IPlugin):
             gui.restore_geometry_state(gs)
 
 
-def create_gui(name=None, model=None, state=None):
-    """Create a GUI with a model and a GUI state.
+def create_gui(name=None, model=None, plugins=None, config_dir=None):
+    """Create a GUI with a model and a list of plugins.
 
     By default, the list of plugins is taken from the `c.TheGUI.plugins`
     parameter, where `TheGUI` is the name of the GUI class.
 
     """
     gui = GUI(name=name)
-    state = state or GUIState()
-    assert isinstance(state, GUIState)
-    plugins = state.plugins
-    # GUI name.
     name = gui.__name__
+    plugins = plugins or []
 
-    # Load the state from disk.
-    state_name = '{}/state'.format(gui.name)
-    state.update(_load(state_name) or Bunch())
+    # Load the state.
+    state = GUIState(gui.name, config_dir=config_dir)
+    gui.state = state
 
     # If no plugins are specified, load the master config and
     # get the list of user plugins to attach to the GUI.
-    config = load_master_config()
-    plugins_conf = config[name].plugins
+    plugins_conf = load_master_config()[name].plugins
     plugins_conf = plugins_conf if isinstance(plugins_conf, list) else []
     plugins.extend(plugins_conf)
 
@@ -438,6 +428,6 @@ def create_gui(name=None, model=None, state=None):
     # Save the state to disk.
     @gui.connect_
     def on_close():
-        _save(state_name, state)
+        state.save()
 
     return gui
