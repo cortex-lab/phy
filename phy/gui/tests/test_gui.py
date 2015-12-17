@@ -17,8 +17,7 @@ from ..gui import (GUI, GUIState,
                    _try_get_vispy_canvas,
                    SaveGeometryStatePlugin,
                    )
-from phy.io import Context
-from phy.utils import IPlugin, Bunch, _load_json
+from phy.utils import IPlugin, Bunch
 from phy.utils._color import _random_color
 
 
