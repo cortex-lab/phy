@@ -31,6 +31,16 @@ class Bunch(dict):
         return Bunch(super(Bunch, self).copy())
 
 
+def _bunchify(b):
+    """Ensure all dict elements are Bunch."""
+    assert isinstance(b, dict)
+    b = Bunch(b)
+    for k in b:
+        if isinstance(b[k], dict):
+            b[k] = Bunch(b[k])
+    return b
+
+
 def _is_list(obj):
     return isinstance(obj, list)
 
