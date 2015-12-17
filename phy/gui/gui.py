@@ -350,17 +350,27 @@ def _save(name, data):
     _save_json(path, data)
 
 
+def _bunchify(b):
+    """Ensure all dict elements are Bunch."""
+    assert isinstance(b, dict)
+    b = Bunch(b)
+    for k in b:
+        if isinstance(b[k], dict):
+            b[k] = Bunch(b[k])
+    return b
+
+
 def _load(name):
     path = _get_path(name)
     if not op.exists(path):
         logger.debug("The file `%s` doesn't exist.", path)
         return
-    return _load_json(path)
+    return _bunchify(_load_json(path))
 
 
 class GUIState(Bunch):
     def __init__(self, geometry_state=None, plugins=None, **kwargs):
-        super(GUIState, self).__init__(geomety_state=geometry_state,
+        super(GUIState, self).__init__(geometry_state=geometry_state,
                                        plugins=plugins or [],
                                        **kwargs)
 
@@ -368,6 +378,7 @@ class GUIState(Bunch):
         _save_json(filename, self)
 
     def from_json(self, filename):
+        # TODO: remove?
         self.update(_load_json(filename))
 
     def get_view_param(self, view_name, name):
@@ -403,13 +414,14 @@ def create_gui(name=None, model=None, state=None):
     """
     gui = GUI(name=name)
     state = state or GUIState()
+    assert isinstance(state, GUIState)
     plugins = state.plugins
     # GUI name.
     name = gui.__name__
 
     # Load the state from disk.
     state_name = '{}/state'.format(gui.name)
-    state.update(_load(state_name) or {})
+    state.update(_load(state_name) or Bunch())
 
     # If no plugins are specified, load the master config and
     # get the list of user plugins to attach to the GUI.
