@@ -59,6 +59,16 @@ def parallel_context(tempdir, ipy_client, request):
     yield ctx
 
 
+@yield_fixture
+def temp_phy_user_dir(tempdir):
+    """Use a temporary phy user directory."""
+    import phy.io.context
+    f = phy.io.context.phy_user_dir
+    phy.io.context.phy_user_dir = lambda: tempdir
+    yield
+    phy.io.context.phy_user_dir = f
+
+
 #------------------------------------------------------------------------------
 # ipyparallel tests
 #------------------------------------------------------------------------------
@@ -81,11 +91,14 @@ def test_read_write(tempdir):
     ae(read_array(op.join(tempdir, 'test.npy')), x)
 
 
-def test_context_load_save(context):
+def test_context_load_save(tempdir, context, temp_phy_user_dir):
     assert context.load('unexisting') is None
 
     context.save('a/hello', {'text': 'world'})
     assert context.load('a/hello')['text'] == 'world'
+
+    context.save('a/hello', {'text': 'world!'}, location='global')
+    assert context.load('a/hello', location='global')['text'] == 'world!'
 
 
 def test_context_cache(context):
@@ -127,7 +140,7 @@ def test_context_plugin(tempdir):
     gui = Bunch()
     path = op.join(tempdir, 'model.ext')
     ContextPlugin().attach_to_gui(gui, model=Bunch(path=path), state=Bunch())
-    assert gui.context.cache_dir == op.dirname(path) + '/.phy'
+    assert op.dirname(path) + '/.phy' in gui.context.cache_dir
 
 
 #------------------------------------------------------------------------------
