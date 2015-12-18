@@ -12,7 +12,7 @@ import math
 import numpy as np
 
 from .base import BaseInteract
-from .transform import Translate, Scale, pixels_to_ndc
+from .transform import Translate, Scale, TransformChain, pixels_to_ndc
 from phy.utils._types import _as_array
 
 
@@ -282,6 +282,24 @@ class PanZoom(BaseInteract):
                         pan_y - y0 * (1. / zoom_y - 1. / zoom_y_new))
 
         self.update()
+
+    def set_range(self, bounds):
+        """Zoom to fit a box."""
+        # a * (-1 + t) = v0
+        # a * (+1 + t) = v1
+        bounds = np.asarray(bounds, dtype=np.float64)
+        v0 = bounds[:2]
+        v1 = bounds[2:]
+        self.zoom = (v1 - v0) / 2.
+        self.pan = v1 / self.zoom - 1
+
+    def get_range(self):
+        """Return the bounds currently visible."""
+        v0 = np.array([-1., -1.])
+        v1 = np.array([+1., +1.])
+        x0, y0 = self.zoom * (v0 + self.pan)
+        x1, y1 = self.zoom * (v1 + self.pan)
+        return (x0, y0, x1, y1)
 
     # Event callbacks
     # -------------------------------------------------------------------------

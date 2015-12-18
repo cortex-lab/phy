@@ -8,6 +8,7 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from numpy.testing import assert_allclose as ac
 from pytest import yield_fixture
 from vispy.app import MouseEvent
 from vispy.util import keys
@@ -155,6 +156,23 @@ def test_panzoom_constraints_z():
     pz.zoom_delta((10, 10))
     assert pz.zoom == [2, 2]
 
+
+def test_panzoom_set_range():
+    pz = PanZoom()
+
+    def _test_range(*bounds):
+        pz.set_range(bounds)
+        ac(pz.get_range(), bounds)
+
+    _test_range(-1, -1, 1, 1)
+    _test_range(-.5, -.5, .5, .5)
+    _test_range(0, 0, 1, 1)
+    _test_range(-.5, 0, 0, 1)
+
+
+#------------------------------------------------------------------------------
+# Test panzoom on canvas
+#------------------------------------------------------------------------------
 
 def test_panzoom_pan_mouse(qtbot, canvas_pz, panzoom):
     c = canvas_pz

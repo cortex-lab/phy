@@ -237,3 +237,11 @@ def test_transform_chain_add():
     tc_2.add_on_cpu([Scale(2)])
 
     ae((tc + tc_2).apply([3]), [[3]])
+
+
+def test_transform_chain_inverse():
+    tc = TransformChain()
+    tc.add_on_cpu([Scale(.5), Translate((1, 0)), Scale(2)])
+    tci = tc.inverse()
+    ae(tc.apply([[1, 0]]), [[3, 0]])
+    ae(tci.apply([[3, 0]]), [[1, 0]])

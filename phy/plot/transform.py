@@ -65,9 +65,11 @@ def _minus(value):
 def _inverse(value):
     if isinstance(value, np.ndarray):
         return 1. / value
-    else:
+    elif hasattr(value, '__len__'):
         assert len(value) == 2
         return 1. / value[0], 1. / value[1]
+    else:
+        return 1. / value
 
 
 def subplot_bounds(shape=None, index=None):
@@ -281,6 +283,13 @@ class TransformChain(object):
         for t in self.cpu_transforms:
             arr = t.apply(arr)
         return arr
+
+    def inverse(self):
+        """Return the inverse chain of transforms."""
+        transforms = self.cpu_transforms + self.gpu_transforms
+        inv_transforms = [transform.inverse()
+                          for transform in transforms[::-1]]
+        return TransformChain().add_on_cpu(inv_transforms)
 
     def __add__(self, tc):
         assert isinstance(tc, TransformChain)
