@@ -260,7 +260,8 @@ class ManualClustering(object):
         self.similarity_view.add_column(similarity)
 
     def _create_actions(self, gui):
-        self.actions = Actions(gui, default_shortcuts=self.shortcuts)
+        self.actions = Actions(gui, name='Manual clustering',
+                               default_shortcuts=self.shortcuts)
 
         # Selection.
         self.actions.add(self.select, alias='c', menu='&Cluster')
