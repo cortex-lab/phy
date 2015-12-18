@@ -100,8 +100,12 @@ def _get_depth(masks, spike_clusters_rel=None, n_clusters=None):
     mask and cluster index."""
     n_spikes = len(masks)
     assert masks.shape == (n_spikes,)
-    depth = (-0.1 - (spike_clusters_rel + masks) /
-             float(n_clusters + 10.))
+    # Fixed depth for background spikes.
+    if spike_clusters_rel is None:
+        depth = .5 * np.ones(n_spikes)
+    else:
+        depth = (-0.1 - (spike_clusters_rel + masks) /
+                 float(n_clusters + 10.))
     depth[masks <= 0.25] = 0
     assert depth.shape == (n_spikes,)
     return depth
@@ -110,19 +114,26 @@ def _get_depth(masks, spike_clusters_rel=None, n_clusters=None):
 def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
     """Return the color of vertices as a function of the mask and
     cluster index."""
-    n_spikes = len(masks)
+    n_spikes = masks.shape[0]
+    # The transparency depends on whether the spike clusters are specified.
+    # For background spikes, we use a smaller alpha.
+    alpha = .5 if spike_clusters_rel is not None else .25
     assert masks.shape == (n_spikes,)
-    assert spike_clusters_rel.shape == (n_spikes,)
     # Generate the colors.
     colors = _selected_clusters_colors(n_clusters)
     # Color as a function of the mask.
-    color = colors[spike_clusters_rel]
+    if spike_clusters_rel is not None:
+        assert spike_clusters_rel.shape == (n_spikes,)
+        color = colors[spike_clusters_rel]
+    else:
+        # Fixed color when the spike clusters are not specified.
+        color = .5 * np.ones((n_spikes, 3))
     hsv = rgb_to_hsv(color[:, :3])
     # Change the saturation and value as a function of the mask.
     hsv[:, 1] *= masks
     hsv[:, 2] *= .5 * (1. + masks)
     color = hsv_to_rgb(hsv)
-    color = np.c_[color, .5 * np.ones((n_spikes, 1))]
+    color = np.c_[color, alpha * np.ones((n_spikes, 1))]
     return color
 
 
@@ -819,6 +830,7 @@ class FeatureView(ManualClusteringView):
     max_n_spikes_per_cluster = 100000
     normalization_percentile = .95
     normalization_n_spikes = 1000
+    n_spikes_bg = 10000
     _default_marker_size = 3.
     _feature_scaling = 1.
 
@@ -852,6 +864,11 @@ class FeatureView(ManualClusteringView):
 
         # Masks.
         self.masks = masks
+
+        # Background spikes.
+        k = max(1, self.n_spikes // self.n_spikes_bg)
+        self.spike_ids_bg = slice(None, None, k)
+        self.masks_bg = self.masks[self.spike_ids_bg]
 
         # Spike clusters.
         assert spike_clusters.shape == (self.n_spikes,)
@@ -888,7 +905,7 @@ class FeatureView(ManualClusteringView):
             # Extra features like time.
             values, _ = self.attributes[dim]
             values = values[spike_ids]
-            assert values.shape == (len(spike_ids),)
+            assert values.shape == (f.shape[0],)
             return values
         else:
             assert len(dim) == 2
@@ -912,15 +929,16 @@ class FeatureView(ManualClusteringView):
         y0, y1 = self._get_dim_bounds_single(y_dim)
         return [x0, y0, x1, y1]
 
-    def _plot_features(self, i, j, x_dim, y_dim,
-                       cluster_ids=None, spike_ids=None,
+    def _plot_features(self, i, j, x_dim, y_dim, x, y,
                        masks=None, spike_clusters_rel=None):
-        sc = spike_clusters_rel
-        n_clusters = len(cluster_ids)
+        """Plot the features in a subplot."""
+        assert x.shape == y.shape
+        n_spikes = x.shape[0]
 
-        # Retrieve the x and y values for the subplot.
-        x = self._get_feature(x_dim[i, j], spike_ids)
-        y = self._get_feature(y_dim[i, j], spike_ids)
+        sc = spike_clusters_rel
+        if sc is not None:
+            assert sc.shape == (n_spikes,)
+        n_clusters = len(self.cluster_ids)
 
         # Retrieve the data bounds.
         data_bounds = self._get_dim_bounds(x_dim[i, j],
@@ -933,23 +951,25 @@ class FeatureView(ManualClusteringView):
         my, dy = _project_mask_depth(y_dim[i, j], masks,
                                      spike_clusters_rel=sc,
                                      n_clusters=n_clusters)
+        assert mx.shape == my.shape == dx.shape == dy.shape == (n_spikes,)
 
         d = np.maximum(dx, dy)
         m = np.maximum(mx, my)
 
         # Get the color of the markers.
-        color = _get_color(m,
-                           spike_clusters_rel=sc,
-                           n_clusters=n_clusters)
+        color = _get_color(m, spike_clusters_rel=sc, n_clusters=n_clusters)
+        assert color.shape == (n_spikes, 4)
 
         # Create the scatter plot for the current subplot.
-        ms = self._default_marker_size
+        # The marker size is smaller for background spikes.
+        ms = (self._default_marker_size
+              if spike_clusters_rel is not None else 1.)
         self[i, j].scatter(x=x,
                            y=y,
                            color=color,
                            depth=d,
                            data_bounds=data_bounds,
-                           size=ms * np.ones(len(spike_ids)),
+                           size=ms * np.ones(n_spikes),
                            )
 
     def set_best_channels_func(self, func):
@@ -991,12 +1011,22 @@ class FeatureView(ManualClusteringView):
         with self.building():
             for i in range(self.n_cols):
                 for j in range(self.n_cols):
-                    self._plot_features(i, j, x_dim, y_dim,
-                                        cluster_ids=cluster_ids,
-                                        spike_ids=spike_ids,
+
+                    # Retrieve the x and y values for the subplot.
+                    x = self._get_feature(x_dim[i, j], self.spike_ids)
+                    y = self._get_feature(y_dim[i, j], self.spike_ids)
+
+                    # Retrieve the x and y values for the background spikes.
+                    x_bg = self._get_feature(x_dim[i, j], self.spike_ids_bg)
+                    y_bg = self._get_feature(y_dim[i, j], self.spike_ids_bg)
+
+                    # Background features.
+                    self._plot_features(i, j, x_dim, y_dim, x_bg, y_bg,
+                                        masks=self.masks_bg)
+                    # Cluster features.
+                    self._plot_features(i, j, x_dim, y_dim, x, y,
                                         masks=masks,
-                                        spike_clusters_rel=sc,
-                                        )
+                                        spike_clusters_rel=sc)
             # Add the boxes.
             self.grid.add_boxes(self, self.shape)
 
