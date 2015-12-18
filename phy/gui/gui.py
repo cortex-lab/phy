@@ -125,6 +125,7 @@ class GUI(QMainWindow):
                  position=None,
                  size=None,
                  name=None,
+                 subtitle=None,
                  ):
         # HACK to ensure that closeEvent is called only twice (seems like a
         # Qt bug).
@@ -138,7 +139,7 @@ class GUI(QMainWindow):
                             QMainWindow.AnimatedDocks
                             )
 
-        self._set_name(name)
+        self._set_name(name, subtitle)
         self._set_pos_size(position, size)
 
         # Mapping {name: menuBar}.
@@ -160,13 +161,14 @@ class GUI(QMainWindow):
         # Create and attach snippets.
         self.snippets = Snippets(self)
 
-    def _set_name(self, name):
+    def _set_name(self, name, subtitle):
         if name is None:
             name = self.__class__.__name__
-        self.setWindowTitle(name)
+        title = name if not subtitle else name + ' - ' + subtitle
+        self.setWindowTitle(title)
         self.setObjectName(name)
         # Set the name in the GUI.
-        self.__name__ = name
+        self.name = name
 
     def _set_pos_size(self, position, size):
         if position is not None:
@@ -291,10 +293,6 @@ class GUI(QMainWindow):
     # -------------------------------------------------------------------------
 
     @property
-    def name(self):
-        return str(self.windowTitle())
-
-    @property
     def status_message(self):
         """The message in the status bar."""
         return str(self._status_bar.currentMessage())
@@ -397,15 +395,16 @@ class SaveGeometryStatePlugin(IPlugin):
             gui.restore_geometry_state(gs)
 
 
-def create_gui(name=None, model=None, plugins=None, config_dir=None):
+def create_gui(name=None, subtitle=None, model=None,
+               plugins=None, config_dir=None):
     """Create a GUI with a model and a list of plugins.
 
     By default, the list of plugins is taken from the `c.TheGUI.plugins`
     parameter, where `TheGUI` is the name of the GUI class.
 
     """
-    gui = GUI(name=name)
-    name = gui.__name__
+    gui = GUI(name=name, subtitle=subtitle)
+    name = gui.name
     plugins = plugins or []
 
     # Load the state.
