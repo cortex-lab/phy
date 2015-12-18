@@ -65,10 +65,12 @@ class Grid(BaseInteract):
         n_boxes = n * m
         a = 1 + .05
 
-        x0 = np.tile([-a, +a, +a, -a], n_boxes)
-        y0 = np.tile([-a, -a, +a, +a], n_boxes)
-        x1 = np.tile([+a, +a, -a, -a], n_boxes)
-        y1 = np.tile([-a, +a, +a, -a], n_boxes)
+        pos = np.array([[-a, -a, +a, -a],
+                        [+a, -a, +a, +a],
+                        [+a, +a, -a, +a],
+                        [-a, +a, -a, -a],
+                        ])
+        pos = np.tile(pos, (n_boxes, 1))
 
         box_index = []
         for i in range(n):
@@ -85,7 +87,7 @@ class Grid(BaseInteract):
             return tc.remove('Clip')
 
         canvas.add_visual(boxes)
-        boxes.set_data(x0=x0, y0=y0, x1=x1, y1=y1)
+        boxes.set_data(pos=pos)
         boxes.program['a_box_index'] = box_index
 
     def update_program(self, program):

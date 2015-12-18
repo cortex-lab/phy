@@ -131,27 +131,6 @@ def _max(arr):
     return arr.max() if len(arr) else 1
 
 
-def _validate_line_coord(x, n, default):
-    assert n >= 0
-    if x is None:
-        x = default
-    if not hasattr(x, '__len__'):
-        x = x * np.ones(n)
-    x = np.asarray(x, dtype=np.float32)
-    assert isinstance(x, np.ndarray)
-    if x.ndim == 1:
-        x = x[:, None]
-    assert x.shape == (n, 1)
-    return x
-
-
-def _get_length(*args):
-    for arg in args:
-        if hasattr(arg, '__len__'):
-            return len(arg)
-    return 1
-
-
 class PlotVisual(BaseVisual):
     _default_color = DEFAULT_COLOR
     allow_list = ('x', 'y')
@@ -359,7 +338,7 @@ class LineVisual(BaseVisual):
     @staticmethod
     def validate(pos=None, color=None, data_bounds=None):
         assert pos is not None
-        pos = np.asarray(pos)
+        pos = np.atleast_2d(pos)
         assert pos.ndim == 2
         n_lines = pos.shape[0]
         assert pos.shape[1] == 4
