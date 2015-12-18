@@ -182,11 +182,13 @@ class GUI(QMainWindow):
 
         @self.default_actions.add(shortcut=('HelpContents', 'h'))
         def show_all_shortcuts():
+            """Show the shortcuts of all actions."""
             for actions in self.actions:
                 actions.show_shortcuts()
 
         @self.default_actions.add(shortcut='ctrl+q')
         def exit():
+            """Close the GUI."""
             self.close()
 
     # Events
