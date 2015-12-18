@@ -283,7 +283,7 @@ class PanZoom(BaseInteract):
 
         self.update()
 
-    def set_pan_zoom(self, pan, zoom):
+    def set_pan_zoom(self, pan=None, zoom=None):
         self._pan = pan
         self._zoom = np.clip(zoom, self._zmin, self._zmax)
 
@@ -293,7 +293,7 @@ class PanZoom(BaseInteract):
 
         self.update()
 
-    def set_range(self, bounds):
+    def set_range(self, bounds, keep_aspect=False):
         """Zoom to fit a box."""
         # a * (v0 + t) = -1
         # a * (v1 + t) = +1
@@ -302,7 +302,11 @@ class PanZoom(BaseInteract):
         bounds = np.asarray(bounds, dtype=np.float64)
         v0 = bounds[:2]
         v1 = bounds[2:]
-        self.set_pan_zoom(-.5 * (v0 + v1), 2. / (v1 - v0))
+        pan = -.5 * (v0 + v1)
+        zoom = 2. / (v1 - v0)
+        if keep_aspect:
+            zoom = zoom.min() * np.ones(2)
+        self.set_pan_zoom(pan=pan, zoom=zoom)
 
     def get_range(self):
         """Return the bounds currently visible."""
