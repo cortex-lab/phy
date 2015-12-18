@@ -169,6 +169,8 @@ def test_waveform_view(qtbot, model, tempdir):
         v.shrink_vertically()
         ac(v.boxed.box_pos, bp)
 
+        v.zoom_on_channels([0, 2, 4])
+
         # qtbot.stop()
 
 

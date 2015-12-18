@@ -412,6 +412,19 @@ class WaveformView(ManualClusteringView):
         self.probe_scaling[1] /= self.scaling_coeff
         self._update_boxes()
 
+    # Navigation
+    # -------------------------------------------------------------------------
+
+    def zoom_on_channels(self, channels_rel):
+        """Zoom on some channels."""
+        channels_rel = np.asarray(channels_rel, dtype=np.int32)
+        assert 0 <= channels_rel.min() <= channels_rel.max() < self.n_channels
+        # Bounds of the channels.
+        b = self.boxed.box_bounds[channels_rel]
+        x0, y0 = b[:, :2].min(axis=0)
+        x1, y1 = b[:, 2:].max(axis=0)
+        self.panzoom.set_range((x0, y0, x1, y1), keep_aspect=True)
+
 
 class WaveformViewPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
