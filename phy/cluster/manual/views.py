@@ -162,7 +162,8 @@ class ManualClusteringView(View):
         gui.add_view(self)
         gui.connect_(self.on_select)
         self.actions = Actions(gui,
-                               name=self.__name__,
+                               name=self.__class__.__name__,
+                               menu=self.__class__.__name__,
                                default_shortcuts=self.shortcuts)
 
         self.show()

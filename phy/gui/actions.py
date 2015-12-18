@@ -138,11 +138,12 @@ class Actions(object):
     * Display all shortcuts
 
     """
-    def __init__(self, gui, name=None, default_shortcuts=None):
+    def __init__(self, gui, name=None, menu=None, default_shortcuts=None):
         self._actions_dict = {}
         self._aliases = {}
         self._default_shortcuts = default_shortcuts or {}
         self.name = name
+        self.menu = menu
         self.gui = gui
         gui.actions.append(self)
 
@@ -175,6 +176,7 @@ class Actions(object):
                        _get_shortcut_string(action.shortcut()))
         self.gui.addAction(action)
         # Add the action to the menu.
+        menu = menu or self.menu
         if menu:
             self.gui.get_menu(menu).addAction(action)
         self._actions_dict[name] = action_obj
@@ -185,9 +187,9 @@ class Actions(object):
         if callback:
             setattr(self, name, callback)
 
-    def separator(self, menu):
+    def separator(self, menu=None):
         """Add a separator"""
-        self.gui.get_menu(menu).addSeparator()
+        self.gui.get_menu(menu or self.menu).addSeparator()
 
     def disable(self, name=None):
         """Disable one or all actions."""
