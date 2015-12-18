@@ -107,6 +107,13 @@ def test_gui_status_message(gui):
     gui.status_message = ':hello world!'
     assert gui.status_message == ':hello world!'
 
+    gui.lock_status()
+    gui.status_message = ''
+    assert gui.status_message == ':hello world!'
+    gui.unlock_status()
+    gui.status_message = ''
+    assert gui.status_message == ''
+
 
 def test_gui_geometry_state(qtbot):
     _gs = []
