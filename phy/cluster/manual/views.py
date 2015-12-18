@@ -130,6 +130,7 @@ def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
 # -----------------------------------------------------------------------------
 
 class ManualClusteringView(View):
+    max_n_spikes_per_cluster = None
     default_shortcuts = {
     }
 
@@ -144,13 +145,18 @@ class ManualClusteringView(View):
 
         super(ManualClusteringView, self).__init__(**kwargs)
 
-    def on_select(self, cluster_ids=None, spike_ids=None):
-        cluster_ids = (cluster_ids if cluster_ids is not None
-                       else self.cluster_ids)
-        spike_ids = (spike_ids if spike_ids is not None
-                     else self.spike_ids)
-        self.cluster_ids = list(cluster_ids)
-        self.spike_ids = spike_ids
+    def on_select(self, cluster_ids=None, selector=None, spike_ids=None):
+        cluster_ids = list(cluster_ids if cluster_ids is not None
+                           else self.cluster_ids)
+        if spike_ids is None:
+            # Use the selector to select some or all of the spikes.
+            if selector:
+                ns = self.max_n_spikes_per_cluster
+                spike_ids = selector.select_spikes(cluster_ids, ns)
+            else:
+                spike_ids = self.spike_ids
+        self.cluster_ids = cluster_ids
+        self.spike_ids = np.asarray(spike_ids)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -174,6 +180,7 @@ class ManualClusteringView(View):
 # -----------------------------------------------------------------------------
 
 class WaveformView(ManualClusteringView):
+    max_n_spikes_per_cluster = 100
     normalization_percentile = .95
     normalization_n_spikes = 1000
     overlap = False
@@ -249,9 +256,9 @@ class WaveformView(ManualClusteringView):
         assert channel_positions.shape == (self.n_channels, 2)
         self.channel_positions = channel_positions
 
-    def on_select(self, cluster_ids=None, spike_ids=None):
+    def on_select(self, cluster_ids=None, **kwargs):
         super(WaveformView, self).on_select(cluster_ids=cluster_ids,
-                                            spike_ids=spike_ids)
+                                            **kwargs)
         cluster_ids, spike_ids = self.cluster_ids, self.spike_ids
         n_clusters = len(cluster_ids)
         n_spikes = len(spike_ids)
@@ -585,9 +592,9 @@ class TraceView(ManualClusteringView):
         self.build()
         self.update()
 
-    def on_select(self, cluster_ids=None, spike_ids=None):
+    def on_select(self, cluster_ids=None, **kwargs):
         super(TraceView, self).on_select(cluster_ids=cluster_ids,
-                                         spike_ids=spike_ids)
+                                         **kwargs)
         self.set_interval(self.interval)
 
     def attach(self, gui):
@@ -753,6 +760,7 @@ def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
 
 
 class FeatureView(ManualClusteringView):
+    max_n_spikes_per_cluster = 100000
     normalization_percentile = .95
     normalization_n_spikes = 1000
     _default_marker_size = 3.
@@ -892,9 +900,9 @@ class FeatureView(ManualClusteringView):
         """Set a function `cluster_id => list of best channels`."""
         self.best_channels_func = func
 
-    def on_select(self, cluster_ids=None, spike_ids=None):
+    def on_select(self, cluster_ids=None, **kwargs):
         super(FeatureView, self).on_select(cluster_ids=cluster_ids,
-                                           spike_ids=spike_ids)
+                                           **kwargs)
         cluster_ids, spike_ids = self.cluster_ids, self.spike_ids
         n_spikes = len(spike_ids)
         if n_spikes == 0:
@@ -1061,9 +1069,9 @@ class CorrelogramView(ManualClusteringView):
 
         return ccg
 
-    def on_select(self, cluster_ids=None, spike_ids=None):
+    def on_select(self, cluster_ids=None, **kwargs):
         super(CorrelogramView, self).on_select(cluster_ids=cluster_ids,
-                                               spike_ids=spike_ids)
+                                               **kwargs)
         cluster_ids, spike_ids = self.cluster_ids, self.spike_ids
         n_clusters = len(cluster_ids)
         n_spikes = len(spike_ids)
