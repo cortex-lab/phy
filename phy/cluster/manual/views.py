@@ -756,8 +756,8 @@ class FeatureView(ManualClusteringView):
     _feature_scaling = 1.
 
     default_shortcuts = {
-        'increase_feature_scaling': 'ctrl++',
-        'decrease_feature_scaling': 'ctrl+-',
+        'increase': 'ctrl++',
+        'decrease': 'ctrl+-',
     }
 
     def __init__(self,
