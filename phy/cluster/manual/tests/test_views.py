@@ -186,7 +186,7 @@ def test_trace_view_no_spikes(qtbot):
 
 def test_trace_view_spikes(qtbot, model, tempdir):
     with _test_view('TraceView', model=model, tempdir=tempdir) as v:
-        ac(v.stacked.box_size, (1., .01), atol=1e-2)
+        ac(v.stacked.box_size, (1., .08181), atol=1e-3)
 
         v.go_to(.5)
         v.go_to(-.5)
@@ -211,8 +211,8 @@ def test_feature_view(qtbot, model, tempdir):
 
         v.add_attribute('sine', np.sin(np.linspace(-10., 10., model.n_spikes)))
 
-        v.increase_feature_scaling()
-        v.decrease_feature_scaling()
+        v.increase()
+        v.decrease()
 
         # qtbot.stop()
 

@@ -174,7 +174,7 @@ class WaveformView(ManualClusteringView):
     normalization_percentile = .95
     normalization_n_spikes = 1000
     overlap = False
-    box_coeff = 1.1
+    scaling_coeff = 1.1
 
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
@@ -319,38 +319,38 @@ class WaveformView(ManualClusteringView):
                                 self.box_size * self.box_scaling)
 
     def widen(self):
-        self.box_scaling[0] *= self.box_coeff
+        self.box_scaling[0] *= self.scaling_coeff
         self._update_boxes()
 
     def narrow(self):
-        self.box_scaling[0] /= self.box_coeff
+        self.box_scaling[0] /= self.scaling_coeff
         self._update_boxes()
 
     def increase(self):
-        self.box_scaling[1] *= self.box_coeff
+        self.box_scaling[1] *= self.scaling_coeff
         self._update_boxes()
 
     def decrease(self):
-        self.box_scaling[1] /= self.box_coeff
+        self.box_scaling[1] /= self.scaling_coeff
         self._update_boxes()
 
     # Probe scaling
     # -------------------------------------------------------------------------
 
     def extend_horizontally(self):
-        self.probe_scaling[0] *= self.box_coeff
+        self.probe_scaling[0] *= self.scaling_coeff
         self._update_boxes()
 
     def shrink_horizontally(self):
-        self.probe_scaling[0] /= self.box_coeff
+        self.probe_scaling[0] /= self.scaling_coeff
         self._update_boxes()
 
     def extend_vertically(self):
-        self.probe_scaling[1] *= self.box_coeff
+        self.probe_scaling[1] *= self.scaling_coeff
         self._update_boxes()
 
     def shrink_vertically(self):
-        self.probe_scaling[1] /= self.box_coeff
+        self.probe_scaling[1] /= self.scaling_coeff
         self._update_boxes()
 
 
@@ -382,9 +382,12 @@ class WaveformViewPlugin(IPlugin):
 class TraceView(ManualClusteringView):
     interval_duration = .5  # default duration of the interval
     shift_amount = .1
+    scaling_coeff = 1.1
     default_shortcuts = {
         'go_left': 'alt+left',
         'go_right': 'alt+right',
+        'increase': 'alt+up',
+        'decrease': 'alt+down',
     }
 
     def __init__(self,
@@ -394,6 +397,7 @@ class TraceView(ManualClusteringView):
                  spike_clusters=None,
                  masks=None,
                  n_samples_per_spike=None,
+                 scaling=None,
                  **kwargs):
 
         # Sample rate.
@@ -434,9 +438,19 @@ class TraceView(ManualClusteringView):
         super(TraceView, self).__init__(layout='stacked',
                                         n_plots=self.n_channels,
                                         **kwargs)
+        # Box and probe scaling.
+        self.scaling = scaling or 1.
+
+        # Make a copy of the initial box pos and size. We'll apply the scaling
+        # to these quantities.
+        self.box_size = np.array(self.stacked.box_size)
+        self._update_boxes()
 
         # Initial interval.
         self.set_interval((0., self.interval_duration))
+
+    # Internal methods
+    # -------------------------------------------------------------------------
 
     def _load_traces(self, interval):
         """Load traces in an interval (in seconds)."""
@@ -524,6 +538,9 @@ class TraceView(ManualClusteringView):
         assert 0 <= start < end <= self.duration
         return start, end
 
+    # Public methods
+    # -------------------------------------------------------------------------
+
     def set_interval(self, interval):
         """Display the traces and spikes in a given interval."""
         self.clear()
@@ -575,6 +592,11 @@ class TraceView(ManualClusteringView):
         self.actions.add(self.shift, alias='ts')
         self.actions.add(self.go_right)
         self.actions.add(self.go_left)
+        self.actions.add(self.increase)
+        self.actions.add(self.decrease)
+
+    # Navigation
+    # -------------------------------------------------------------------------
 
     def go_to(self, time):
         start, end = self.interval
@@ -595,24 +617,40 @@ class TraceView(ManualClusteringView):
         delay = (end - start) * .2
         self.shift(-delay)
 
+    # Channel scaling
+    # -------------------------------------------------------------------------
+
+    # TODO: ctrl+alt+left/right to increase duration
+    # TODO: current interval, current central time
+
+    def _update_boxes(self):
+        self.stacked.box_size = self.box_size * self.scaling
+
+    def increase(self):
+        self.scaling *= self.scaling_coeff
+        self._update_boxes()
+
+    def decrease(self):
+        self.scaling /= self.scaling_coeff
+        self._update_boxes()
+
 
 class TraceViewPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
+        s, = state.get_view_params('TraceView', 'scaling')
         view = TraceView(traces=model.traces,
                          sample_rate=model.sample_rate,
                          spike_times=model.spike_times,
                          spike_clusters=model.spike_clusters,
                          masks=model.masks,
+                         scaling=s,
                          )
-        b, = state.get_view_params('TraceView', 'box_size')
-        if b:
-            view.stacked.box_size = b
         view.attach(gui)
 
         @gui.connect_
         def on_close():
             # Save the box bounds.
-            state.set_view_params(view, box_size=view.stacked.box_size)
+            state.set_view_params(view, scaling=view.scaling)
 
 
 # -----------------------------------------------------------------------------
@@ -865,14 +903,14 @@ class FeatureView(ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(FeatureView, self).attach(gui)
-        self.actions.add(self.increase_feature_scaling)
-        self.actions.add(self.decrease_feature_scaling)
+        self.actions.add(self.increase)
+        self.actions.add(self.decrease)
 
-    def increase_feature_scaling(self):
+    def increase(self):
         self.feature_scaling *= 1.2
         self.on_select()
 
-    def decrease_feature_scaling(self):
+    def decrease(self):
         self.feature_scaling /= 1.2
         self.on_select()
 
