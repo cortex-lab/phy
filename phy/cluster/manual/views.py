@@ -11,6 +11,7 @@ import logging
 
 import numpy as np
 from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
+from vispy.util.event import Event
 
 from phy.io.array import _index_of, _get_padded, get_excerpts
 from phy.gui import Actions
@@ -129,6 +130,12 @@ def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
 # Manual clustering view
 # -----------------------------------------------------------------------------
 
+class StatusEvent(Event):
+    def __init__(self, type, message=None):
+        super(StatusEvent, self).__init__(type)
+        self.message = message
+
+
 class ManualClusteringView(View):
     max_n_spikes_per_cluster = None
     default_shortcuts = {
@@ -148,6 +155,7 @@ class ManualClusteringView(View):
         self.spike_ids = None
 
         super(ManualClusteringView, self).__init__(**kwargs)
+        self.events.add(status=StatusEvent)
 
     def on_select(self, cluster_ids=None, selector=None, spike_ids=None):
         cluster_ids = list(cluster_ids if cluster_ids is not None
@@ -176,7 +184,17 @@ class ManualClusteringView(View):
                                menu=self.__class__.__name__,
                                default_shortcuts=self.shortcuts)
 
+        # Update the GUI status message when the `self.set_status()` method
+        # is called, i.e. when the `status` event is raised by the VisPy
+        # view.
+        @self.connect
+        def on_status(e):
+            gui.status_message = e.message
+
         self.show()
+
+    def set_status(self, message):
+        self.events.status(message=message)
 
 
 # -----------------------------------------------------------------------------
@@ -569,7 +587,7 @@ class TraceView(ManualClusteringView):
         assert traces.shape[1] == self.n_channels
 
         # Set the status message.
-        self.status = 'Interval: {:.3f}s - {:.3f}s'.format(start, end)
+        self.set_status('Interval: {:.3f} s - {:.3f} s'.format(start, end))
 
         # Determine the data bounds.
         m, M = traces.min(), traces.max()
@@ -928,10 +946,9 @@ class FeatureView(ManualClusteringView):
 
         # Set the status message.
         n = self.n_cols
-        self.status = 'Channels: ' + ', '.join(map(str, (y_dim[0, i]
-                                               for i in range(1, n))))
-        self.status += '  -  '
-        self.status += ', '.join(map(str, (y_dim[i, 0] for i in range(1, n))))
+        ch_i = ', '.join(map(str, (y_dim[0, i] for i in range(1, n))))
+        ch_j = ', '.join(map(str, (y_dim[i, 0] for i in range(1, n))))
+        self.set_status('Channels: {} - {}'.format(ch_i, ch_j))
 
         # Set a non-time attribute as y coordinate in the top-left subplot.
         attrs = sorted(self.attributes)
@@ -1099,7 +1116,7 @@ class CorrelogramView(ManualClusteringView):
 
         # Set the status message.
         b, w = self.bin_size * 1000, self.window_size * 1000
-        self.status = 'Bin: {:.1f}. Window: {:.1f}.'.format(b, w)
+        self.set_status('Bin: {:.1f} ms. Window: {:.1f} ms.'.format(b, w))
 
         self.grid.shape = (n_clusters, n_clusters)
         with self.building():
