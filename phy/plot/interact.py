@@ -172,8 +172,6 @@ class Boxed(BaseInteract):
                                             n_boxes);
             box_bounds = (2 * box_bounds - 1);  // See hack in Python.
             """.format(self.box_var), 'before_transforms')
-        canvas.connect(self.on_key_press)
-        canvas.connect(self.on_key_release)
 
     def update_program(self, program):
         # Signal bounds (positions).
@@ -216,52 +214,6 @@ class Boxed(BaseInteract):
         assert len(val) == 2
         self.box_bounds = _get_boxes(self.box_pos, size=val,
                                      keep_aspect_ratio=self.keep_aspect_ratio)
-
-    # Interaction event callbacks
-    #--------------------------------------------------------------------------
-
-    _arrows = ('Left', 'Right', 'Up', 'Down')
-    _pm = ('+', '-')
-
-    def on_key_press(self, event):
-        """Handle key press events."""
-        key = event.key
-
-        self._key_pressed = key
-
-        ctrl = 'Control' in event.modifiers
-        shift = 'Shift' in event.modifiers
-
-        # Box scale.
-        if ctrl and key in self._arrows + self._pm:
-            coeff = 1.1
-            box_size = np.array(self.box_size)
-            if key == 'Left':
-                box_size[0] /= coeff
-            elif key == 'Right':
-                box_size[0] *= coeff
-            elif key in ('Down', '-'):
-                box_size[1] /= coeff
-            elif key in ('Up', '+'):
-                box_size[1] *= coeff
-            self.box_size = box_size
-
-        # Probe scale.
-        if shift and key in self._arrows:
-            coeff = 1.1
-            box_pos = self.box_pos
-            if key == 'Left':
-                box_pos[:, 0] /= coeff
-            elif key == 'Right':
-                box_pos[:, 0] *= coeff
-            elif key == 'Down':
-                box_pos[:, 1] /= coeff
-            elif key == 'Up':
-                box_pos[:, 1] *= coeff
-            self.box_pos = box_pos
-
-    def on_key_release(self, event):
-        self._key_pressed = None  # pragma: no cover
 
 
 class Stacked(Boxed):

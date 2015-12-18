@@ -139,7 +139,7 @@ def test_selected_clusters_colors():
 
 def test_waveform_view(qtbot, model, tempdir):
     with _test_view('WaveformView', model=model, tempdir=tempdir) as v:
-        ac(v.boxed.box_size, (.1, .1), atol=1e-2)
+        ac(v.boxed.box_size, (.1818, .0909), atol=1e-2)
         v.toggle_waveform_overlap()
         v.toggle_waveform_overlap()
 
