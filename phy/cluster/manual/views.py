@@ -193,8 +193,15 @@ class ManualClusteringView(View):
 
         self.show()
 
-    def set_status(self, message):
+    def set_status(self, message=None):
+        message = message or self.status
+        if not message:
+            return
+        self.status = message
         self.events.status(message=message)
+
+    def on_mouse_move(self, e):
+        self.set_status()
 
 
 # -----------------------------------------------------------------------------
@@ -575,7 +582,7 @@ class TraceView(ManualClusteringView):
     # Public methods
     # -------------------------------------------------------------------------
 
-    def set_interval(self, interval):
+    def set_interval(self, interval, change_status=True):
         """Display the traces and spikes in a given interval."""
         self.clear()
         interval = self._restrict_interval(interval)
@@ -587,7 +594,8 @@ class TraceView(ManualClusteringView):
         assert traces.shape[1] == self.n_channels
 
         # Set the status message.
-        self.set_status('Interval: {:.3f} s - {:.3f} s'.format(start, end))
+        if change_status:
+            self.set_status('Interval: {:.3f} s - {:.3f} s'.format(start, end))
 
         # Determine the data bounds.
         m, M = traces.min(), traces.max()
@@ -620,7 +628,7 @@ class TraceView(ManualClusteringView):
     def on_select(self, cluster_ids=None, **kwargs):
         super(TraceView, self).on_select(cluster_ids=cluster_ids,
                                          **kwargs)
-        self.set_interval(self.interval)
+        self.set_interval(self.interval, change_status=False)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -1071,6 +1079,10 @@ class CorrelogramView(ManualClusteringView):
         assert spike_clusters.shape == (self.n_spikes,)
         self.spike_clusters = spike_clusters
 
+        # Set the status message.
+        b, w = self.bin_size * 1000, self.window_size * 1000
+        self.set_status('Bin: {:.1f} ms. Window: {:.1f} ms.'.format(b, w))
+
     def _compute_correlograms(self, cluster_ids):
 
         # Keep spikes belonging to the selected clusters.
@@ -1113,10 +1125,6 @@ class CorrelogramView(ManualClusteringView):
         ylim = [ccg.max()] if not self.uniform_normalization else None
 
         colors = _selected_clusters_colors(n_clusters)
-
-        # Set the status message.
-        b, w = self.bin_size * 1000, self.window_size * 1000
-        self.set_status('Bin: {:.1f} ms. Window: {:.1f} ms.'.format(b, w))
 
         self.grid.shape = (n_clusters, n_clusters)
         with self.building():
