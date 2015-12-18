@@ -126,8 +126,19 @@ def test_actions_gui(qtbot, gui, actions):
     actions.press()
     assert _press == [0]
 
+    # Show action shortcuts.
+    with captured_output() as (stdout, stderr):
+        actions.show_shortcuts()
+    assert 'g\n' in stdout.getvalue()
+
+    # Show default action shortcuts.
     with captured_output() as (stdout, stderr):
         gui.default_actions.show_shortcuts()
+    assert 'q\n' in stdout.getvalue()
+
+    # Show all action shortcuts.
+    with captured_output() as (stdout, stderr):
+        gui.default_actions.show_all_shortcuts()
     assert 'g\n' in stdout.getvalue()
 
 

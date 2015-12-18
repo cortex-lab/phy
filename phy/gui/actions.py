@@ -92,7 +92,7 @@ def _get_qkeysequence(shortcut):
 def _show_shortcuts(shortcuts, name=None):
     """Display shortcuts."""
     name = name or ''
-    print()
+    print('')
     if name:
         name = ' for ' + name
     print('Keyboard shortcuts' + name)
@@ -100,7 +100,6 @@ def _show_shortcuts(shortcuts, name=None):
         shortcut = _get_shortcut_string(shortcuts[name])
         if not name.startswith('_'):
             print('{0:<40}: {1:s}'.format(name, shortcut))
-    print()
 
 
 # -----------------------------------------------------------------------------
@@ -139,10 +138,11 @@ class Actions(object):
     * Display all shortcuts
 
     """
-    def __init__(self, gui, default_shortcuts=None):
+    def __init__(self, gui, name=None, default_shortcuts=None):
         self._actions_dict = {}
         self._aliases = {}
         self._default_shortcuts = default_shortcuts or {}
+        self.name = name
         self.gui = gui
         gui.actions.append(self)
 
@@ -242,7 +242,11 @@ class Actions(object):
 
     def show_shortcuts(self):
         """Print all shortcuts."""
-        _show_shortcuts(self.shortcuts, self.gui.windowTitle())
+        gui_name = self.gui.name
+        actions_name = self.name
+        name = ('{} - {}'.format(gui_name, actions_name)
+                if actions_name else gui_name)
+        _show_shortcuts(self.shortcuts, name)
 
     def __contains__(self, name):
         return name in self._actions_dict
@@ -292,7 +296,7 @@ class Snippets(object):
         self.gui = gui
         self._status_message = gui.status_message
 
-        self.actions = Actions(gui)
+        self.actions = Actions(gui, name='Snippets')
 
         # Register snippet mode shortcut.
         @self.actions.add(shortcut=':')

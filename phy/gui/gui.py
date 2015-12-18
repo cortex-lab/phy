@@ -15,7 +15,7 @@ from six import string_types
 
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  Qt, QSize, QMetaObject)
-from .actions import Actions, _show_shortcuts, Snippets
+from .actions import Actions, Snippets
 from phy.utils.event import EventEmitter
 from phy.utils import (load_master_config, Bunch, _bunchify,
                        _load_json, _save_json,
@@ -175,19 +175,17 @@ class GUI(QMainWindow):
             self.resize(QSize(size[0], size[1]))
 
     def _set_default_actions(self):
-        self.default_actions = Actions(self)
+        self.default_actions = Actions(self, name='Default')
 
         @self.default_actions.add(shortcut='ctrl+q', menu='&File')
         def exit():
             self.close()
 
         @self.default_actions.add(shortcut=('HelpContents', 'h'),
-                                  menu='&Help')
-        def show_shortcuts():
-            shortcuts = self.default_actions.shortcuts
+                                  menu='&File')
+        def show_all_shortcuts():
             for actions in self.actions:
-                shortcuts.update(actions.shortcuts)
-            _show_shortcuts(shortcuts, self.__name__)
+                actions.show_shortcuts()
 
     # Events
     # -------------------------------------------------------------------------
