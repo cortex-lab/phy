@@ -323,7 +323,9 @@ class Snippets(object):
     @command.setter
     def command(self, value):
         value += self.cursor
+        self.gui.unlock_status()
         self.gui.status_message = value
+        self.gui.lock_status()
 
     def _backspace(self):
         """Erase the last character in the snippet command."""
@@ -404,6 +406,7 @@ class Snippets(object):
         logger.info("Snippet mode enabled, press `escape` to leave this mode.")
         # Save the current status message.
         self._status_message = self.gui.status_message
+        self.gui.lock_status()
 
         # Silent all actions except the Snippets actions.
         for actions in self.gui.actions:
@@ -414,6 +417,7 @@ class Snippets(object):
         self.command = ':'
 
     def mode_off(self):
+        self.gui.unlock_status()
         # Reset the GUI status message that was set before the mode was
         # activated.
         self.gui.status_message = self._status_message

@@ -69,6 +69,10 @@ class DockWidget(QDockWidget):
         self.emit('close_widget')
         super(DockWidget, self).closeEvent(e)
 
+    def enterEvent(self, e):  # pragma: no cover
+        self.emit('enter_widget')
+        super(DockWidget, self).enterEvent(e)
+
 
 def _create_dock_widget(widget, name, closable=True, floatable=True):
     # Create the gui widget.
@@ -149,6 +153,7 @@ class GUI(QMainWindow):
         self._event = EventEmitter()
 
         # Status bar.
+        self._lock_status = False
         self._status_bar = QStatusBar()
         self.setStatusBar(self._status_bar)
 
@@ -252,9 +257,16 @@ class GUI(QMainWindow):
             dock_widget.setFloating(floating)
         dock_widget.view = view
 
+        # Emit the close_view event when the dock widget is closed.
         @dock_widget.connect_
         def on_close_widget():
             self.emit('close_view', view)
+
+        # Change the status bar when the mouse enters in a widget.
+        @dock_widget.connect_
+        def on_enter_widget():  # pragma: no cover
+            if getattr(view, 'status', None):
+                self.status_message = view.status
 
         dock_widget.show()
         self.emit('add_view', view)
@@ -299,7 +311,15 @@ class GUI(QMainWindow):
 
     @status_message.setter
     def status_message(self, value):
+        if self._lock_status:
+            return
         self._status_bar.showMessage(str(value))
+
+    def lock_status(self):
+        self._lock_status = True
+
+    def unlock_status(self):
+        self._lock_status = False
 
     # State
     # -------------------------------------------------------------------------
