@@ -382,7 +382,8 @@ class GUIState(Bunch):
     def save(self):
         """Save the state to the JSON file in the config dir."""
         logger.debug("Save the GUI state to `%s`.", self.path)
-        _save_json(self.path, self)
+        _save_json(self.path, {k: v for k, v in self.items()
+                               if k not in ('config_dir', 'name')})
 
 
 class SaveGeometryStatePlugin(IPlugin):
