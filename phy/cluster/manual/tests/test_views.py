@@ -75,6 +75,7 @@ def _test_view(view_name, model=None, tempdir=None):
     state.set_view_params('WaveformView1', box_size=(.1, .1))
     state.set_view_params('TraceView1', box_size=(1., .01))
     state.set_view_params('FeatureView1', feature_scaling=.5)
+    state.set_view_params('CorrelogramView1', uniform_normalization=True)
     state.save()
 
     # Create the GUI.

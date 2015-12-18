@@ -200,7 +200,7 @@ class ManualClusteringView(View):
         self.status = message
         self.events.status(message=message)
 
-    def on_mouse_move(self, e):
+    def on_mouse_move(self, e):  # pragma: no cover
         self.set_status()
 
 
@@ -1150,12 +1150,14 @@ class CorrelogramView(ManualClusteringView):
 
 class CorrelogramViewPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
-        bs, ws, es, ne = state.get_view_params('CorrelogramView',
-                                               'bin_size',
-                                               'window_size',
-                                               'excerpt_size',
-                                               'n_excerpts',
-                                               )
+        bs, ws, es, ne, un = state.get_view_params('CorrelogramView',
+                                                   'bin_size',
+                                                   'window_size',
+                                                   'excerpt_size',
+                                                   'n_excerpts',
+                                                   'uniform_normalization',
+                                                   )
+
         view = CorrelogramView(spike_times=model.spike_times,
                                spike_clusters=model.spike_clusters,
                                sample_rate=model.sample_rate,
@@ -1164,4 +1166,13 @@ class CorrelogramViewPlugin(IPlugin):
                                excerpt_size=es,
                                n_excerpts=ne,
                                )
+        if un is not None:
+            view.uniform_normalization = un
         view.attach(gui)
+
+        @gui.connect_
+        def on_close():
+            # Save the normalization.
+            un = view.uniform_normalization
+            state.set_view_params(view,
+                                  uniform_normalization=un)
