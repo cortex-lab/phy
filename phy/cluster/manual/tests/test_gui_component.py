@@ -73,7 +73,7 @@ def test_manual_clustering_plugin(qtbot, gui):
                   features=np.zeros((3, 1, 2)),
                   masks=np.zeros((3, 1)),
                   )
-    state = Bunch(n_spikes_max_per_cluster=10)
+    state = Bunch()
     ManualClusteringPlugin().attach_to_gui(gui, model=model, state=state)
 
 

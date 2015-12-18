@@ -21,7 +21,7 @@ from phy.stats.clusters import (mean,
                                 )
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table
-from phy.io.array import select_spikes
+from phy.io.array import select_spikes, Selector
 from phy.utils import IPlugin
 
 logger = logging.getLogger(__name__)
@@ -52,13 +52,15 @@ def default_wizard_functions(waveforms=None,
                              masks=None,
                              n_features_per_channel=None,
                              spikes_per_cluster=None,
+                             max_n_spikes_per_cluster=1000,
                              ):
     spc = spikes_per_cluster
     nfc = n_features_per_channel
+    maxn = max_n_spikes_per_cluster
 
     def max_waveform_amplitude_quality(cluster):
         spike_ids = select_spikes(cluster_ids=[cluster],
-                                  max_n_spikes_per_cluster=100,
+                                  max_n_spikes_per_cluster=maxn,
                                   spikes_per_cluster=spc,
                                   )
         m = np.atleast_2d(masks[spike_ids])
@@ -72,11 +74,11 @@ def default_wizard_functions(waveforms=None,
 
     def mean_masked_features_similarity(c0, c1):
         s0 = select_spikes(cluster_ids=[c0],
-                           max_n_spikes_per_cluster=100,
+                           max_n_spikes_per_cluster=maxn,
                            spikes_per_cluster=spc,
                            )
         s1 = select_spikes(cluster_ids=[c1],
-                           max_n_spikes_per_cluster=100,
+                           max_n_spikes_per_cluster=maxn,
                            spikes_per_cluster=spc,
                            )
 
@@ -131,7 +133,6 @@ class ManualClustering(object):
 
     spike_clusters : ndarray
     cluster_groups : dictionary
-    n_spikes_max_per_cluster : int
     shortcuts : dict
 
     GUI events
@@ -140,7 +141,7 @@ class ManualClustering(object):
     When this component is attached to a GUI, the GUI emits the following
     events:
 
-    select(cluster_ids, spike_ids)
+    select(cluster_ids, selector)
         when clusters are selected
     cluster(up)
         when a merge or split happens
@@ -184,12 +185,10 @@ class ManualClustering(object):
     def __init__(self,
                  spike_clusters,
                  cluster_groups=None,
-                 n_spikes_max_per_cluster=100,
                  shortcuts=None,
                  ):
 
         self.gui = None
-        self.n_spikes_max_per_cluster = n_spikes_max_per_cluster
 
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
@@ -200,6 +199,13 @@ class ManualClustering(object):
         self.cluster_meta = create_cluster_meta(cluster_groups)
         self._global_history = GlobalHistory(process_ups=_process_ups)
         self._register_logging()
+
+        # Create the spike selector.
+        sc = self.clustering.spike_clusters
+        spc = self.clustering.spikes_per_cluster
+        self.selector = Selector(spike_clusters=sc,
+                                 spikes_per_cluster=spc,
+                                 )
 
         # Create the cluster views.
         self._create_cluster_views()
@@ -351,14 +357,9 @@ class ManualClustering(object):
     def _emit_select(self, cluster_ids):
         """Choose spikes from the specified clusters and emit the
         `select` event on the GUI."""
-        # Choose a spike subset.
-        spike_ids = select_spikes(np.array(cluster_ids),
-                                  self.n_spikes_max_per_cluster,
-                                  self.clustering.spikes_per_cluster)
-        logger.debug("Select clusters: %s (%d spikes).",
-                     ', '.join(map(str, cluster_ids)), len(spike_ids))
+        logger.debug("Select clusters: %s.", ', '.join(map(str, cluster_ids)))
         if self.gui:
-            self.gui.emit('select', cluster_ids, spike_ids)
+            self.gui.emit('select', cluster_ids, self.selector)
 
     # Public methods
     # -------------------------------------------------------------------------
