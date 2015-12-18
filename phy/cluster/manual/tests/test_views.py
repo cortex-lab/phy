@@ -254,4 +254,4 @@ def test_correlogram_view(qtbot, model, tempdir):
     with _test_view('CorrelogramView', model=model, tempdir=tempdir) as v:
         v.toggle_normalization()
 
-    # qtbot.stop()
+        # qtbot.stop()
