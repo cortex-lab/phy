@@ -174,9 +174,22 @@ class WaveformView(ManualClusteringView):
     normalization_percentile = .95
     normalization_n_spikes = 1000
     overlap = False
+    box_coeff = 1.1
 
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
+
+        # Box scaling.
+        'widen': 'ctrl+right',
+        'narrow': 'ctrl+left',
+        'increase': 'ctrl+up',
+        'decrease': 'ctrl+down',
+
+        # Probe scaling.
+        'extend_horizontally': 'shift+right',
+        'shrink_horizontally': 'shift+left',
+        'extend_vertically': 'shift+up',
+        'shrink_vertically': 'shift+down',
     }
 
     def __init__(self,
@@ -184,7 +197,8 @@ class WaveformView(ManualClusteringView):
                  masks=None,
                  spike_clusters=None,
                  channel_positions=None,
-                 box_bounds=None,
+                 box_scaling=None,
+                 probe_scaling=None,
                  **kwargs):
         """
 
@@ -193,11 +207,22 @@ class WaveformView(ManualClusteringView):
 
         """
         # Initialize the view.
-        box_bounds = (_get_boxes(channel_positions) if box_bounds is None
-                      else box_bounds)
+        box_bounds = _get_boxes(channel_positions)
         super(WaveformView, self).__init__(layout='boxed',
                                            box_bounds=box_bounds,
                                            **kwargs)
+
+        # Box and probe scaling.
+        self.box_scaling = np.array(box_scaling if box_scaling is not None
+                                    else (1., 1.))
+        self.probe_scaling = np.array(probe_scaling
+                                      if probe_scaling is not None
+                                      else (1., 1.))
+
+        # Make a copy of the initial box pos and size. We'll apply the scaling
+        # to these quantities.
+        self.box_pos = np.array(self.boxed.box_pos)
+        self.box_size = np.array(self.boxed.box_size)
 
         # Waveforms.
         assert waveforms.ndim == 3
@@ -269,28 +294,86 @@ class WaveformView(ManualClusteringView):
         super(WaveformView, self).attach(gui)
         self.actions.add(self.toggle_waveform_overlap)
 
+        # Box scaling.
+        self.actions.add(self.widen)
+        self.actions.add(self.narrow)
+        self.actions.add(self.increase)
+        self.actions.add(self.decrease)
+
+        # Probe scaling.
+        self.actions.add(self.extend_horizontally)
+        self.actions.add(self.shrink_horizontally)
+        self.actions.add(self.extend_vertically)
+        self.actions.add(self.shrink_vertically)
+
     def toggle_waveform_overlap(self):
         self.overlap = not self.overlap
         self.on_select()
 
+    # Box scaling
+    # -------------------------------------------------------------------------
+
+    def _update_box_size(self):
+        self.boxed.box_size = self.box_size * self.box_scaling
+
+    def widen(self):
+        self.box_scaling[0] *= self.box_coeff
+        self._update_box_size()
+
+    def narrow(self):
+        self.box_scaling[0] /= self.box_coeff
+        self._update_box_size()
+
+    def increase(self):
+        self.box_scaling[1] *= self.box_coeff
+        self._update_box_size()
+
+    def decrease(self):
+        self.box_scaling[1] /= self.box_coeff
+        self._update_box_size()
+
+    # Probe scaling
+    # -------------------------------------------------------------------------
+
+    def _update_box_pos(self):
+        self.boxed.box_pos = self.box_pos * self.probe_scaling
+
+    def extend_horizontally(self):
+        self.probe_scaling[0] *= self.box_coeff
+        self._update_box_pos()
+
+    def shrink_horizontally(self):
+        self.probe_scaling[0] /= self.box_coeff
+        self._update_box_pos()
+
+    def extend_vertically(self):
+        self.probe_scaling[1] *= self.box_coeff
+        self._update_box_pos()
+
+    def shrink_vertically(self):
+        self.probe_scaling[1] /= self.box_coeff
+        self._update_box_pos()
+
 
 class WaveformViewPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
+        bs, ps = state.get_view_params('WaveformView', 'box_scaling',
+                                       'probe_scaling')
         view = WaveformView(waveforms=model.waveforms,
                             masks=model.masks,
                             spike_clusters=model.spike_clusters,
                             channel_positions=model.channel_positions,
+                            box_scaling=bs,
+                            probe_scaling=ps,
                             )
         view.attach(gui)
-
-        b, = state.get_view_params('WaveformView', 'box_size')
-        if b:
-            view.boxed.box_size = b
 
         @gui.connect_
         def on_close():
             # Save the box bounds.
-            state.set_view_params(view, box_size=view.boxed.box_size)
+            state.set_view_params(view,
+                                  box_scaling=view.box_scaling,
+                                  probe_scaling=view.probe_scaling)
 
 
 # -----------------------------------------------------------------------------
