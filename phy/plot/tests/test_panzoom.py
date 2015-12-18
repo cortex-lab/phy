@@ -176,6 +176,9 @@ def test_panzoom_set_range():
     _test_range(-1, 0, 1, 1)
     ac(pz.zoom, (1, 2))
 
+    pz.set_range((-1, 0, 1, 1), keep_aspect=True)
+    ac(pz.zoom, (1, 1))
+
 
 #------------------------------------------------------------------------------
 # Test panzoom on canvas
