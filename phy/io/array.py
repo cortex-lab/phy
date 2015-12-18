@@ -432,7 +432,7 @@ class Selector(object):
         self.spikes_per_cluster = spikes_per_cluster
         self.n_spikes = len(spike_clusters)
         self.spike_ids = (np.asarray(spike_ids) if spike_ids is not None
-                          else np.arange(self.n_spikes))
+                          else None)
 
     def select_spikes(self, cluster_ids=None,
                       max_n_spikes_per_cluster=None):
