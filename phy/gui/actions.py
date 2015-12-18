@@ -177,7 +177,8 @@ class Actions(object):
         self.gui.addAction(action)
         # Add the action to the menu.
         menu = menu or self.menu
-        if menu:
+        # Do not show private actions in the menu.
+        if menu and not name.startswith('_'):
             self.gui.get_menu(menu).addAction(action)
         self._actions_dict[name] = action_obj
         # Register the alias -> name mapping.
@@ -298,7 +299,7 @@ class Snippets(object):
         self.gui = gui
         self._status_message = gui.status_message
 
-        self.actions = Actions(gui, name='Snippets')
+        self.actions = Actions(gui, name='Snippets', menu='Snippets')
 
         # Register snippet mode shortcut.
         @self.actions.add(shortcut=':')

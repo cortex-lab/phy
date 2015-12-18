@@ -158,8 +158,8 @@ class ManualClusteringView(View):
         self.events.add(status=StatusEvent)
 
     def on_select(self, cluster_ids=None, selector=None, spike_ids=None):
-        cluster_ids = list(cluster_ids if cluster_ids is not None
-                           else self.cluster_ids)
+        cluster_ids = (cluster_ids if cluster_ids is not None
+                       else self.cluster_ids)
         if spike_ids is None:
             # Use the selector to select some or all of the spikes.
             if selector:
@@ -167,8 +167,8 @@ class ManualClusteringView(View):
                 spike_ids = selector.select_spikes(cluster_ids, ns)
             else:
                 spike_ids = self.spike_ids
-        self.cluster_ids = cluster_ids
-        self.spike_ids = np.asarray(spike_ids)
+        self.cluster_ids = list(cluster_ids) if cluster_ids is not None else []
+        self.spike_ids = np.asarray(spike_ids if spike_ids is not None else [])
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -395,8 +395,11 @@ class WaveformView(ManualClusteringView):
 
 class WaveformViewPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
-        bs, ps = state.get_view_params('WaveformView', 'box_scaling',
-                                       'probe_scaling')
+        bs, ps, ov = state.get_view_params('WaveformView',
+                                           'box_scaling',
+                                           'probe_scaling',
+                                           'overlap',
+                                           )
         view = WaveformView(waveforms=model.waveforms,
                             masks=model.masks,
                             spike_clusters=model.spike_clusters,
@@ -406,12 +409,17 @@ class WaveformViewPlugin(IPlugin):
                             )
         view.attach(gui)
 
+        if ov is not None:
+            view.overlap = ov
+
         @gui.connect_
         def on_close():
             # Save the box bounds.
             state.set_view_params(view,
                                   box_scaling=tuple(view.box_scaling),
-                                  probe_scaling=tuple(view.probe_scaling))
+                                  probe_scaling=tuple(view.probe_scaling),
+                                  overlap=view.overlap,
+                                  )
 
 
 # -----------------------------------------------------------------------------
@@ -1058,12 +1066,6 @@ class CorrelogramView(ManualClusteringView):
         assert sample_rate > 0
         self.sample_rate = sample_rate
 
-        self.bin_size = bin_size or self.bin_size
-        assert self.bin_size > 0
-
-        self.window_size = window_size or self.window_size
-        assert self.window_size > 0
-
         self.excerpt_size = excerpt_size or self.excerpt_size
         self.n_excerpts = n_excerpts or self.n_excerpts
 
@@ -1079,6 +1081,17 @@ class CorrelogramView(ManualClusteringView):
         assert spike_clusters.shape == (self.n_spikes,)
         self.spike_clusters = spike_clusters
 
+        # Set the default bin and window size.
+        self.set_bin_window(bin_size=bin_size, window_size=window_size)
+
+    def set_bin_window(self, bin_size=None, window_size=None):
+        bin_size = bin_size or self.bin_size
+        window_size = window_size or self.window_size
+        assert 1e-6 < bin_size < 1e3
+        assert 1e-6 < window_size < 1e3
+        assert bin_size < window_size
+        self.bin_size = bin_size
+        self.window_size = window_size
         # Set the status message.
         b, w = self.bin_size * 1000, self.window_size * 1000
         self.set_status('Bin: {:.1f} ms. Window: {:.1f} ms.'.format(b, w))
@@ -1146,6 +1159,18 @@ class CorrelogramView(ManualClusteringView):
         """Attach the view to the GUI."""
         super(CorrelogramView, self).attach(gui)
         self.actions.add(self.toggle_normalization, shortcut='n')
+        self.actions.add(self.set_bin, alias='cb')
+        self.actions.add(self.set_window, alias='cw')
+
+    def set_bin(self, bin_size):
+        """Set the correlogram bin size in milliseconds."""
+        self.set_bin_window(bin_size=bin_size * 1e-3)
+        self.on_select()
+
+    def set_window(self, window_size):
+        """Set the correlogram window size in milliseconds."""
+        self.set_bin_window(window_size=window_size * 1e-3)
+        self.on_select()
 
 
 class CorrelogramViewPlugin(IPlugin):
@@ -1175,4 +1200,7 @@ class CorrelogramViewPlugin(IPlugin):
             # Save the normalization.
             un = view.uniform_normalization
             state.set_view_params(view,
-                                  uniform_normalization=un)
+                                  uniform_normalization=un,
+                                  bin_size=view.bin_size,
+                                  window_size=view.window_size,
+                                  )
