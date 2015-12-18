@@ -19,6 +19,7 @@ from ..array import (_unique,
                      _spikes_per_cluster,
                      _flatten_per_cluster,
                      select_spikes,
+                     Selector,
                      chunk_bounds,
                      regular_subset,
                      excerpts,
@@ -355,6 +356,7 @@ def test_select_spikes():
     with raises(AssertionError):
         select_spikes()
     spikes = [2, 3, 5, 7, 11]
+    sc = [2, 3, 3, 2, 2]
     spc = {2: [2, 7, 11], 3: [3, 5], 5: []}
     ae(select_spikes([], spikes_per_cluster=spc), [])
     ae(select_spikes([2, 3, 5], spikes_per_cluster=spc), spikes)
@@ -364,3 +366,11 @@ def test_select_spikes():
     ae(select_spikes([2, 3, 5], None, spikes_per_cluster=spc), spikes)
     ae(select_spikes([2, 3, 5], 1, spikes_per_cluster=spc), [2, 3])
     ae(select_spikes([2, 5], 2, spikes_per_cluster=spc), [2])
+
+    sel = Selector(spike_clusters=sc,
+                   spikes_per_cluster=spc,
+                   spike_ids=spikes,
+                   )
+    assert sel.select_spikes() is None
+    ae(sel.select_spikes([2, 5]), spc[2])
+    ae(sel.select_spikes([2, 5], 2), [2])

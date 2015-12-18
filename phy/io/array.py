@@ -418,3 +418,34 @@ def select_spikes(cluster_ids=None,
             spikes = spikes_per_cluster[cluster]
             selection[cluster] = regular_subset(spikes, n_spikes_max=n)
     return _flatten_per_cluster(selection)
+
+
+class Selector(object):
+    """This object is passed with the `select` event when clusters are
+    selected. It allows to make selections of spikes."""
+    def __init__(self,
+                 spike_clusters=None,
+                 spikes_per_cluster=None,
+                 spike_ids=None,
+                 ):
+        self.spike_clusters = spike_clusters
+        self.spikes_per_cluster = spikes_per_cluster
+        self.n_spikes = len(spike_clusters)
+        self.spike_ids = (np.asarray(spike_ids) if spike_ids is not None
+                          else np.arange(self.n_spikes))
+
+    def select_spikes(self, cluster_ids=None,
+                      max_n_spikes_per_cluster=None):
+        if cluster_ids is None or not len(cluster_ids):
+            return None
+        ns = max_n_spikes_per_cluster
+        assert len(cluster_ids) >= 1
+        # Select all spikes belonging to the cluster.
+        if ns is None:
+            spikes_rel = _spikes_in_clusters(self.spike_clusters, cluster_ids)
+            return (self.spike_ids[spikes_rel]
+                    if self.spike_ids is not None else spikes_rel)
+        # Select a subset of the spikes.
+        return select_spikes(cluster_ids,
+                             spikes_per_cluster=self.spikes_per_cluster,
+                             max_n_spikes_per_cluster=ns)
