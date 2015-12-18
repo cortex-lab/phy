@@ -164,10 +164,14 @@ def test_histogram_2(qtbot, canvas_pz):
 #------------------------------------------------------------------------------
 
 def test_line_empty(qtbot, canvas):
-    _test_visual(qtbot, canvas, LineVisual())
+    pos = np.zeros((0, 4))
+    _test_visual(qtbot, canvas, LineVisual(), pos=pos)
 
 
 def test_line_0(qtbot, canvas_pz):
+    n = 10
     y = np.linspace(-.5, .5, 10)
+    pos = np.c_[-np.ones(n), y, np.ones(n), y]
+    color = np.random.uniform(.5, .9, (n, 4))
     _test_visual(qtbot, canvas_pz, LineVisual(),
-                 y0=y, y1=y, data_bounds=[-1, -1, 1, 1])
+                 pos=pos, color=color, data_bounds=[-1, -1, 1, 1])
