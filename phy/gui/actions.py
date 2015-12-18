@@ -9,6 +9,7 @@
 
 from functools import partial
 import logging
+import re
 import sys
 import traceback
 
@@ -113,7 +114,7 @@ def _alias(name):
 
 
 @require_qt
-def _create_qaction(gui, name, callback, shortcut):
+def _create_qaction(gui, name, callback, shortcut, docstring=None):
     # Create the QAction instance.
     action = QAction(name.capitalize().replace('_', ' '), gui)
 
@@ -125,6 +126,9 @@ def _create_qaction(gui, name, callback, shortcut):
     if not isinstance(sequence, (tuple, list)):
         sequence = [sequence]
     action.setShortcuts(sequence)
+    assert docstring
+    action.setStatusTip(docstring)
+    action.setWhatsThis(docstring)
     return action
 
 
@@ -148,7 +152,7 @@ class Actions(object):
         gui.actions.append(self)
 
     def add(self, callback=None, name=None, shortcut=None, alias=None,
-            menu=None, verbose=True):
+            docstring=None, menu=None, verbose=True):
         """Add an action with a keyboard shortcut."""
         # TODO: add menu_name option and create menu bar
         if callback is None:
@@ -167,8 +171,13 @@ class Actions(object):
         if name in self._actions_dict:
             return
 
+        # Set the status tip from the function's docstring.
+        docstring = docstring or callback.__doc__ or name
+        docstring = re.sub(r'[\s]{2,}', ' ', docstring)
+
         # Create and register the action.
-        action = _create_qaction(self.gui, name, callback, shortcut)
+        action = _create_qaction(self.gui, name, callback, shortcut,
+                                 docstring=docstring)
         action_obj = Bunch(qaction=action, name=name, alias=alias,
                            shortcut=shortcut, callback=callback, menu=menu)
         if verbose and not name.startswith('_'):
@@ -304,6 +313,8 @@ class Snippets(object):
         # Register snippet mode shortcut.
         @self.actions.add(shortcut=':')
         def enable_snippet_mode():
+            """Enable the snippet mode (type action alias in the status
+            bar)."""
             self.mode_on()
 
         self._create_snippet_actions()

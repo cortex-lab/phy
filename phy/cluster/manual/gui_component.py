@@ -286,11 +286,16 @@ class ManualClustering(object):
 
         for group in ('noise', 'mua', 'good'):
             self.actions.add(partial(self.move_best, group),
-                             name='move_best_to_' + group)
+                             name='move_best_to_' + group,
+                             docstring='Move the best clusters to %s.' % group)
             self.actions.add(partial(self.move_similar, group),
-                             name='move_similar_to_' + group)
+                             name='move_similar_to_' + group,
+                             docstring='Move the similar clusters to %s.' %
+                             group)
             self.actions.add(partial(self.move_all, group),
-                             name='move_all_to_' + group)
+                             name='move_all_to_' + group,
+                             docstring='Move all selected clusters to %s.' %
+                             group)
         self.actions.separator()
 
         # Others.
@@ -446,7 +451,7 @@ class ManualClustering(object):
     # -------------------------------------------------------------------------
 
     def select(self, *cluster_ids):
-        """Select action: select clusters in the cluster view."""
+        """Select a list of clusters."""
         # HACK: allow for `select(1, 2, 3)` in addition to `select([1, 2, 3])`
         # This makes it more convenient to select multiple clusters with
         # the snippet: `:c 1 2 3` instead of `:c 1,2,3`.
@@ -463,6 +468,7 @@ class ManualClustering(object):
     # -------------------------------------------------------------------------
 
     def merge(self, cluster_ids=None):
+        """Merge the selected clusters."""
         if cluster_ids is None:
             cluster_ids = self.selected
         if len(cluster_ids or []) <= 1:
@@ -471,6 +477,7 @@ class ManualClustering(object):
         self._global_history.action(self.clustering)
 
     def split(self, spike_ids):
+        """Split the selected spikes (NOT IMPLEMENTED YET)."""
         if len(spike_ids) == 0:
             return
         # TODO: connect to request_split emitted by view
@@ -481,52 +488,64 @@ class ManualClustering(object):
     # -------------------------------------------------------------------------
 
     def move(self, cluster_ids, group):
+        """Move clusters to a group."""
         if len(cluster_ids) == 0:
             return
         self.cluster_meta.set('group', cluster_ids, group)
         self._global_history.action(self.cluster_meta)
 
     def move_best(self, group):
+        """Move all selected best clusters to a group."""
         self.move(self.cluster_view.selected, group)
 
     def move_similar(self, group):
+        """Move all selected similar clusters to a group."""
         self.move(self.similarity_view.selected, group)
 
     def move_all(self, group):
+        """Move all selected clusters to a group."""
         self.move(self.selected, group)
 
     # Wizard actions
     # -------------------------------------------------------------------------
 
     def reset(self):
+        """Reset the wizard."""
         self._update_cluster_view()
         self.cluster_view.next()
 
     def next_best(self):
+        """Select the next best cluster."""
         self.cluster_view.next()
 
     def previous_best(self):
+        """Select the previous best cluster."""
         self.cluster_view.previous()
 
     def next(self):
+        """Select the next cluster."""
         if not self.selected:
             self.cluster_view.next()
         else:
             self.similarity_view.next()
 
     def previous(self):
+        """Select the previous cluster."""
         self.similarity_view.previous()
 
     # Other actions
     # -------------------------------------------------------------------------
 
     def undo(self):
+        """Undo the last action."""
         self._global_history.undo()
 
     def redo(self):
+        """Undo the last undone action."""
         self._global_history.redo()
 
     def save(self):
+        """Save the manual clustering back to disk."""
         spike_clusters = self.clustering.spike_clusters
         groups = {c: self.cluster_meta.get('group', c) or 'unsorted'
                   for c in self.clustering.cluster_ids}

@@ -347,6 +347,7 @@ class WaveformView(ManualClusteringView):
         self.actions.add(self.shrink_vertically)
 
     def toggle_waveform_overlap(self):
+        """Toggle the overlap of the waveforms."""
         self.overlap = not self.overlap
         self.on_select()
 
@@ -358,18 +359,22 @@ class WaveformView(ManualClusteringView):
                                 self.box_size * self.box_scaling)
 
     def widen(self):
+        """Increase the horizontal scaling of the waveforms."""
         self.box_scaling[0] *= self.scaling_coeff
         self._update_boxes()
 
     def narrow(self):
+        """Decrease the horizontal scaling of the waveforms."""
         self.box_scaling[0] /= self.scaling_coeff
         self._update_boxes()
 
     def increase(self):
+        """Increase the vertical scaling of the waveforms."""
         self.box_scaling[1] *= self.scaling_coeff
         self._update_boxes()
 
     def decrease(self):
+        """Decrease the vertical scaling of the waveforms."""
         self.box_scaling[1] /= self.scaling_coeff
         self._update_boxes()
 
@@ -377,18 +382,22 @@ class WaveformView(ManualClusteringView):
     # -------------------------------------------------------------------------
 
     def extend_horizontally(self):
+        """Increase the horizontal scaling of the probe."""
         self.probe_scaling[0] *= self.scaling_coeff
         self._update_boxes()
 
     def shrink_horizontally(self):
+        """Decrease the horizontal scaling of the waveforms."""
         self.probe_scaling[0] /= self.scaling_coeff
         self._update_boxes()
 
     def extend_vertically(self):
+        """Increase the vertical scaling of the waveforms."""
         self.probe_scaling[1] *= self.scaling_coeff
         self._update_boxes()
 
     def shrink_vertically(self):
+        """Decrease the vertical scaling of the waveforms."""
         self.probe_scaling[1] /= self.scaling_coeff
         self._update_boxes()
 
@@ -709,10 +718,12 @@ class TraceView(ManualClusteringView):
         self.stacked.box_size = self.box_size * self.scaling
 
     def increase(self):
+        """Increase the scaling of the traces."""
         self.scaling *= self.scaling_coeff
         self._update_boxes()
 
     def decrease(self):
+        """Decrease the scaling of the traces."""
         self.scaling /= self.scaling_coeff
         self._update_boxes()
 
@@ -996,10 +1007,12 @@ class FeatureView(ManualClusteringView):
         self.actions.add(self.decrease)
 
     def increase(self):
+        """Increase the scaling of the features."""
         self.feature_scaling *= 1.2
         self.on_select()
 
     def decrease(self):
+        """Decrease the scaling of the features."""
         self.feature_scaling /= 1.2
         self.on_select()
 
@@ -1089,6 +1102,7 @@ class CorrelogramView(ManualClusteringView):
         self.set_bin_window(bin_size=bin_size, window_size=window_size)
 
     def set_bin_window(self, bin_size=None, window_size=None):
+        """Set the bin and window sizes."""
         bin_size = bin_size or self.bin_size
         window_size = window_size or self.window_size
         assert 1e-6 < bin_size < 1e3
@@ -1156,6 +1170,7 @@ class CorrelogramView(ManualClusteringView):
                                     )
 
     def toggle_normalization(self):
+        """Change the normalization of the correlograms."""
         self.uniform_normalization = not self.uniform_normalization
         self.on_select()
 
@@ -1167,12 +1182,12 @@ class CorrelogramView(ManualClusteringView):
         self.actions.add(self.set_window, alias='cw')
 
     def set_bin(self, bin_size):
-        """Set the correlogram bin size in milliseconds."""
+        """Set the correlogram bin size (in milliseconds)."""
         self.set_bin_window(bin_size=bin_size * 1e-3)
         self.on_select()
 
     def set_window(self, window_size):
-        """Set the correlogram window size in milliseconds."""
+        """Set the correlogram window size (in milliseconds)."""
         self.set_bin_window(window_size=window_size * 1e-3)
         self.on_select()
 
