@@ -175,17 +175,16 @@ class GUI(QMainWindow):
             self.resize(QSize(size[0], size[1]))
 
     def _set_default_actions(self):
-        self.default_actions = Actions(self, name='Default')
+        self.default_actions = Actions(self, name='Default', menu='&File')
 
-        @self.default_actions.add(shortcut='ctrl+q', menu='&File')
-        def exit():
-            self.close()
-
-        @self.default_actions.add(shortcut=('HelpContents', 'h'),
-                                  menu='&File')
+        @self.default_actions.add(shortcut=('HelpContents', 'h'))
         def show_all_shortcuts():
             for actions in self.actions:
                 actions.show_shortcuts()
+
+        @self.default_actions.add(shortcut='ctrl+q')
+        def exit():
+            self.close()
 
     # Events
     # -------------------------------------------------------------------------
