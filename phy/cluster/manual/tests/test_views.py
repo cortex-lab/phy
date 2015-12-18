@@ -53,6 +53,7 @@ def model():
     model.n_channels = n_channels
     model.n_spikes = n_spikes
     model.sample_rate = 20000.
+    model.duration = n_samples_t / float(model.sample_rate)
     model.spike_times = artificial_spike_samples(n_spikes) * 1.
     model.spike_times /= model.spike_times[-1]
     model.spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
@@ -187,11 +188,37 @@ def test_trace_view_no_spikes(qtbot):
 def test_trace_view_spikes(qtbot, model, tempdir):
     with _test_view('TraceView', model=model, tempdir=tempdir) as v:
         ac(v.stacked.box_size, (1., .08181), atol=1e-3)
+        assert v.time == .25
 
         v.go_to(.5)
+        assert v.time == .5
+
         v.go_to(-.5)
+        assert v.time == .25
+
         v.go_left()
+        assert v.time == .25
+
         v.go_right()
+        assert v.time == .35
+
+        # Change interval size.
+        v.set_interval((.25, .75))
+        ac(v.interval, (.25, .75))
+        v.widen()
+        ac(v.interval, (.225, .775))
+        v.narrow()
+        ac(v.interval, (.25, .75))
+
+        # Widen the max interval.
+        v.set_interval((0, model.duration))
+        v.widen()
+
+        # Change channel scaling.
+        bs = v.stacked.box_size
+        v.increase()
+        v.decrease()
+        ac(v.stacked.box_size, bs, atol=1e-3)
 
         # qtbot.stop()
 

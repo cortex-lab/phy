@@ -386,8 +386,10 @@ class TraceView(ManualClusteringView):
     default_shortcuts = {
         'go_left': 'alt+left',
         'go_right': 'alt+right',
-        'increase': 'alt+up',
         'decrease': 'alt+down',
+        'increase': 'alt+up',
+        'widen': 'ctrl+alt+left',
+        'narrow': 'ctrl+alt+right',
     }
 
     def __init__(self,
@@ -594,34 +596,59 @@ class TraceView(ManualClusteringView):
         self.actions.add(self.go_left)
         self.actions.add(self.increase)
         self.actions.add(self.decrease)
+        self.actions.add(self.widen)
+        self.actions.add(self.narrow)
 
     # Navigation
     # -------------------------------------------------------------------------
 
+    @property
+    def time(self):
+        """Time at the center of the window."""
+        return sum(self.interval) * .5
+
+    @property
+    def half_duration(self):
+        """Half of the duration of the current interval."""
+        a, b = self.interval
+        return (b - a) * .5
+
     def go_to(self, time):
+        """Go to a specific time (in seconds)."""
         start, end = self.interval
-        half_dur = (end - start) * .5
+        half_dur = self.half_duration
         self.set_interval((time - half_dur, time + half_dur))
 
     def shift(self, delay):
-        time = sum(self.interval) * .5
-        self.go_to(time + delay)
+        """Shift the interval by a given delay (in seconds)."""
+        self.go_to(self.time + delay)
 
     def go_right(self):
+        """Go to right."""
         start, end = self.interval
         delay = (end - start) * .2
         self.shift(delay)
 
     def go_left(self):
+        """Go to left."""
         start, end = self.interval
         delay = (end - start) * .2
         self.shift(-delay)
 
+    def widen(self):
+        """Increase the interval size."""
+        t, h = self.time, self.half_duration
+        h *= self.scaling_coeff
+        self.set_interval((t - h, t + h))
+
+    def narrow(self):
+        """Decrease the interval size."""
+        t, h = self.time, self.half_duration
+        h /= self.scaling_coeff
+        self.set_interval((t - h, t + h))
+
     # Channel scaling
     # -------------------------------------------------------------------------
-
-    # TODO: ctrl+alt+left/right to increase duration
-    # TODO: current interval, current central time
 
     def _update_boxes(self):
         self.stacked.box_size = self.box_size * self.scaling
