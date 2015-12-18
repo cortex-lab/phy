@@ -68,6 +68,7 @@ def default_wizard_functions(waveforms=None,
         mean_masks = mean(m)
         mean_waveforms = mean(w)
         q = max_waveform_amplitude(mean_masks, mean_waveforms)
+        q = np.asscalar(q)
         logger.debug("Computed cluster quality for %d: %.3f.",
                      cluster, q)
         return q
@@ -359,7 +360,10 @@ class ManualClustering(object):
         `select` event on the GUI."""
         logger.debug("Select clusters: %s.", ', '.join(map(str, cluster_ids)))
         if self.gui:
-            self.gui.emit('select', cluster_ids, self.selector)
+            self.gui.emit('select',
+                          cluster_ids=cluster_ids,
+                          selector=self.selector,
+                          )
 
     # Public methods
     # -------------------------------------------------------------------------
