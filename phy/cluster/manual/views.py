@@ -1027,6 +1027,12 @@ class FeatureView(ManualClusteringView):
                     self._plot_features(i, j, x_dim, y_dim, x, y,
                                         masks=masks,
                                         spike_clusters_rel=sc)
+
+                    # Add axes.
+                    self[i, j].lines(pos=[[-1, 0, +1, 0],
+                                          [0, -1, 0, +1]],
+                                     color=(.25, .25, .25, .5))
+
             # Add the boxes.
             self.grid.add_boxes(self, self.shape)
 
