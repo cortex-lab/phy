@@ -13,7 +13,7 @@ from numpy.testing import assert_equal as ae
 from numpy.testing import assert_allclose as ac
 from pytest import raises, yield_fixture
 
-from phy.io.array import _spikes_per_cluster
+from phy.io.array import _spikes_per_cluster, Selector
 from phy.io.mock import (artificial_waveforms,
                          artificial_features,
                          artificial_spike_clusters,
@@ -87,12 +87,14 @@ def _test_view(view_name, model=None, tempdir=None):
     # Select some spikes.
     spike_ids = np.arange(10)
     cluster_ids = np.unique(model.spike_clusters[spike_ids])
-    v.on_select(cluster_ids, spike_ids)
+    v.on_select(cluster_ids, spike_ids=spike_ids)
 
     # Select other spikes.
-    spike_ids = np.arange(2, 10)
-    cluster_ids = np.unique(model.spike_clusters[spike_ids])
-    v.on_select(cluster_ids, spike_ids)
+    cluster_ids = [0, 2]
+    sel = Selector(spike_clusters=model.spike_clusters,
+                   spikes_per_cluster=model.spikes_per_cluster,
+                   )
+    v.on_select(cluster_ids, selector=sel)
 
     yield v
 
