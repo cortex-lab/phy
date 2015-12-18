@@ -12,7 +12,7 @@ import math
 import numpy as np
 
 from .base import BaseInteract
-from .transform import Translate, Scale, TransformChain, pixels_to_ndc
+from .transform import Translate, Scale, pixels_to_ndc
 from phy.utils._types import _as_array
 
 
