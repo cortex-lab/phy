@@ -176,6 +176,7 @@ class Boxed(BaseInteract):
     def update_program(self, program):
         # Signal bounds (positions).
         box_bounds = _get_texture(self._box_bounds, NDC, self.n_boxes, [-1, 1])
+        # TODO OPTIM: set the texture at initialization and update the data
         program['u_box_bounds'] = Texture2D(box_bounds,
                                             internalformat='rgba32f')
         program['n_boxes'] = self.n_boxes
@@ -214,6 +215,15 @@ class Boxed(BaseInteract):
         assert len(val) == 2
         self.box_bounds = _get_boxes(self.box_pos, size=val,
                                      keep_aspect_ratio=self.keep_aspect_ratio)
+
+    def update_boxes(self, box_pos, box_size):
+        """Set the box bounds from specified box positions and sizes."""
+        assert box_pos.shape == (self.n_boxes, 2)
+        assert len(box_size) == 2
+        self.box_bounds = _get_boxes(box_pos,
+                                     size=box_size,
+                                     keep_aspect_ratio=self.keep_aspect_ratio,
+                                     )
 
 
 class Stacked(Boxed):
