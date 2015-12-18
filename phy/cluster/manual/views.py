@@ -140,6 +140,10 @@ class ManualClusteringView(View):
         self.shortcuts = self.default_shortcuts.copy()
         self.shortcuts.update(shortcuts or {})
 
+        # Message to show in the status bar.
+        self.status = None
+
+        # Keep track of the selected clusters and spikes.
         self.cluster_ids = None
         self.spike_ids = None
 
@@ -564,6 +568,9 @@ class TraceView(ManualClusteringView):
         traces = self._load_traces(interval)
         assert traces.shape[1] == self.n_channels
 
+        # Set the status message.
+        self.status = 'Interval: {:.3f}s - {:.3f}s'.format(start, end)
+
         # Determine the data bounds.
         m, M = traces.min(), traces.max()
         data_bounds = np.array([start, m, end, M])
@@ -919,6 +926,13 @@ class FeatureView(ManualClusteringView):
                                                 n_cols=self.n_cols,
                                                 best_channels_func=f)
 
+        # Set the status message.
+        n = self.n_cols
+        self.status = 'Channels: ' + ', '.join(map(str, (y_dim[0, i]
+                                               for i in range(1, n))))
+        self.status += '  -  '
+        self.status += ', '.join(map(str, (y_dim[i, 0] for i in range(1, n))))
+
         # Set a non-time attribute as y coordinate in the top-left subplot.
         attrs = sorted(self.attributes)
         attrs.remove('time')
@@ -1082,6 +1096,10 @@ class CorrelogramView(ManualClusteringView):
         ylim = [ccg.max()] if not self.uniform_normalization else None
 
         colors = _selected_clusters_colors(n_clusters)
+
+        # Set the status message.
+        b, w = self.bin_size * 1000, self.window_size * 1000
+        self.status = 'Bin: {:.1f}. Window: {:.1f}.'.format(b, w)
 
         self.grid.shape = (n_clusters, n_clusters)
         with self.building():
