@@ -72,7 +72,7 @@ def _test_view(view_name, model=None, tempdir=None):
 
     # Save a test GUI state JSON file in the tempdir.
     state = GUIState(config_dir=tempdir)
-    state.set_view_params('WaveformView1', box_size=(.1, .1))
+    state.set_view_params('WaveformView1', overlap=False, box_size=(.1, .1))
     state.set_view_params('TraceView1', box_size=(1., .01))
     state.set_view_params('FeatureView1', feature_scaling=.5)
     state.set_view_params('CorrelogramView1', uniform_normalization=True)
@@ -255,4 +255,6 @@ def test_correlogram_view(qtbot, model, tempdir):
     with _test_view('CorrelogramView', model=model, tempdir=tempdir) as v:
         v.toggle_normalization()
 
+        v.set_bin(1)
+        v.set_window(100)
         # qtbot.stop()
