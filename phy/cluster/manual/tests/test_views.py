@@ -143,6 +143,28 @@ def test_waveform_view(qtbot, model, tempdir):
         v.toggle_waveform_overlap()
         v.toggle_waveform_overlap()
 
+        # Box scaling.
+        bs = v.boxed.box_size
+        v.increase()
+        v.decrease()
+        ac(v.boxed.box_size, bs)
+
+        bs = v.boxed.box_size
+        v.widen()
+        v.narrow()
+        ac(v.boxed.box_size, bs)
+
+        # Probe scaling.
+        bp = v.boxed.box_pos
+        v.extend_horizontally()
+        v.shrink_horizontally()
+        ac(v.boxed.box_pos, bp)
+
+        bp = v.boxed.box_pos
+        v.extend_vertically()
+        v.shrink_vertically()
+        ac(v.boxed.box_pos, bp)
+
         # qtbot.stop()
 
 

@@ -11,6 +11,7 @@ from itertools import product
 
 import numpy as np
 from numpy.testing import assert_equal as ae
+from numpy.testing import assert_allclose as ac
 
 from ..base import BaseVisual
 from ..interact import Grid, Boxed, Stacked
@@ -118,6 +119,9 @@ def test_boxed_1(qtbot, canvas):
 
     ae(boxed.box_bounds, b)
     boxed.box_bounds = b
+
+    boxed.update_boxes(boxed.box_pos, boxed.box_size)
+    ac(boxed.box_bounds, b)
 
     # qtbot.stop()
 

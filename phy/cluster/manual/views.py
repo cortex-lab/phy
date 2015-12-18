@@ -223,6 +223,7 @@ class WaveformView(ManualClusteringView):
         # to these quantities.
         self.box_pos = np.array(self.boxed.box_pos)
         self.box_size = np.array(self.boxed.box_size)
+        self._update_boxes()
 
         # Waveforms.
         assert waveforms.ndim == 3
@@ -313,46 +314,44 @@ class WaveformView(ManualClusteringView):
     # Box scaling
     # -------------------------------------------------------------------------
 
-    def _update_box_size(self):
-        self.boxed.box_size = self.box_size * self.box_scaling
+    def _update_boxes(self):
+        self.boxed.update_boxes(self.box_pos * self.probe_scaling,
+                                self.box_size * self.box_scaling)
 
     def widen(self):
         self.box_scaling[0] *= self.box_coeff
-        self._update_box_size()
+        self._update_boxes()
 
     def narrow(self):
         self.box_scaling[0] /= self.box_coeff
-        self._update_box_size()
+        self._update_boxes()
 
     def increase(self):
         self.box_scaling[1] *= self.box_coeff
-        self._update_box_size()
+        self._update_boxes()
 
     def decrease(self):
         self.box_scaling[1] /= self.box_coeff
-        self._update_box_size()
+        self._update_boxes()
 
     # Probe scaling
     # -------------------------------------------------------------------------
 
-    def _update_box_pos(self):
-        self.boxed.box_pos = self.box_pos * self.probe_scaling
-
     def extend_horizontally(self):
         self.probe_scaling[0] *= self.box_coeff
-        self._update_box_pos()
+        self._update_boxes()
 
     def shrink_horizontally(self):
         self.probe_scaling[0] /= self.box_coeff
-        self._update_box_pos()
+        self._update_boxes()
 
     def extend_vertically(self):
         self.probe_scaling[1] *= self.box_coeff
-        self._update_box_pos()
+        self._update_boxes()
 
     def shrink_vertically(self):
         self.probe_scaling[1] /= self.box_coeff
-        self._update_box_pos()
+        self._update_boxes()
 
 
 class WaveformViewPlugin(IPlugin):
