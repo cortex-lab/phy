@@ -351,62 +351,40 @@ class LineVisual(BaseVisual):
 
     def __init__(self, color=None):
         super(LineVisual, self).__init__()
-        self.set_shader('simple')
+        self.set_shader('line')
         self.set_primitive_type('lines')
-        self.color = color or self._default_color
-
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
 
     @staticmethod
-    def validate(x0=None,
-                 y0=None,
-                 x1=None,
-                 y1=None,
-                 # color=None,
-                 data_bounds=None,
-                 ):
+    def validate(pos=None, color=None, data_bounds=None):
+        assert pos is not None
+        pos = np.asarray(pos)
+        assert pos.ndim == 2
+        n_lines = pos.shape[0]
+        assert pos.shape[1] == 4
+        pos = pos.astype(np.float32)
 
-        # TODO: single argument pos (n, 4) instead of x0 y0 etc.
-
-        # Get the number of lines.
-        n_lines = _get_length(x0, y0, x1, y1)
-        x0 = _validate_line_coord(x0, n_lines, -1)
-        y0 = _validate_line_coord(y0, n_lines, -1)
-        x1 = _validate_line_coord(x1, n_lines, +1)
-        y1 = _validate_line_coord(y1, n_lines, +1)
-
-        assert x0.shape == y0.shape == x1.shape == y1.shape == (n_lines, 1)
+        # Color.
+        color = _get_array(color, (n_lines, 4), LineVisual._default_color)
 
         # By default, we assume that the coordinates are in NDC.
         if data_bounds is None:
             data_bounds = NDC
-
-        # NOTE: currently, we don't support custom colors. We could do it
-        # by replacing the uniform by an attribute in the shaders.
-        # color = _get_array(color, (4,), LineVisual._default_color)
-        # assert len(color) == 4
-
         data_bounds = _get_data_bounds(data_bounds, length=n_lines)
         data_bounds = data_bounds.astype(np.float32)
         assert data_bounds.shape == (n_lines, 4)
 
-        return Bunch(x0=x0,
-                     y0=y0,
-                     x1=x1,
-                     y1=y1,
-                     # color=color,
-                     data_bounds=data_bounds,
-                     )
+        return Bunch(pos=pos, color=color, data_bounds=data_bounds)
 
     @staticmethod
-    def vertex_count(x0=None, y0=None, x1=None, y1=None, **kwargs):
+    def vertex_count(pos=None, **kwargs):
         """Take the output of validate() as input."""
-        return 2 * _get_length(x0, y0, x1, y1)
+        return pos.shape[0] * 2
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        pos = np.c_[data.x0, data.y0, data.x1, data.y1].astype(np.float32)
+        pos = data.pos
         assert pos.ndim == 2
         assert pos.shape[1] == 4
         assert pos.dtype == np.float32
@@ -424,5 +402,5 @@ class LineVisual(BaseVisual):
         self.program['a_position'] = pos_tr
 
         # Color.
-        # self.program['u_color'] = data.color
-        self.program['u_color'] = self.color
+        color = np.repeat(data.color, 2, axis=0).astype(np.float32)
+        self.program['a_color'] = color
