@@ -427,6 +427,7 @@ class WaveformViewPlugin(IPlugin):
 # -----------------------------------------------------------------------------
 
 class TraceView(ManualClusteringView):
+    n_samples_for_mean = 1000
     interval_duration = .5  # default duration of the interval
     shift_amount = .1
     scaling_coeff = 1.1
@@ -459,6 +460,10 @@ class TraceView(ManualClusteringView):
         self.n_samples, self.n_channels = traces.shape
         self.traces = traces
         self.duration = self.dt * self.n_samples
+
+        # Compute the mean traces in order to detrend the traces.
+        k = max(1, self.n_samples // self.n_samples_for_mean)
+        self.mean_traces = np.mean(traces[::k, :], axis=0).astype(traces.dtype)
 
         # Number of samples per spike.
         self.n_samples_per_spike = (n_samples_per_spike or
@@ -511,8 +516,7 @@ class TraceView(ManualClusteringView):
         traces = self.traces[i:j, :]
 
         # Detrend the traces.
-        m = np.mean(traces[::10, :], axis=0).astype(traces.dtype)
-        traces -= m
+        traces -= self.mean_traces
 
         # Create the plots.
         return traces
