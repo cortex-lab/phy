@@ -165,9 +165,16 @@ def test_panzoom_set_range():
         ac(pz.get_range(), bounds)
 
     _test_range(-1, -1, 1, 1)
+    ac(pz.zoom, (1, 1))
+
     _test_range(-.5, -.5, .5, .5)
+    ac(pz.zoom, (2, 2))
+
     _test_range(0, 0, 1, 1)
-    _test_range(-.5, 0, 0, 1)
+    ac(pz.zoom, (2, 2))
+
+    _test_range(-1, 0, 1, 1)
+    ac(pz.zoom, (1, 2))
 
 
 #------------------------------------------------------------------------------
