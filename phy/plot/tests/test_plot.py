@@ -112,8 +112,8 @@ def test_grid_hist(qtbot):
 def test_grid_lines(qtbot):
     view = View(layout='grid', shape=(1, 2))
 
-    view[0, 0].lines(y0=-.5, y1=-.5)
-    view[0, 1].lines(y0=+.5, y1=+.5)
+    view[0, 0].lines(pos=[-1, -.5, +1, -.5])
+    view[0, 1].lines(pos=[-1, +.5, +1, +.5])
 
     _show(qtbot, view)
 
