@@ -371,8 +371,8 @@ class WaveformViewPlugin(IPlugin):
         def on_close():
             # Save the box bounds.
             state.set_view_params(view,
-                                  box_scaling=view.box_scaling,
-                                  probe_scaling=view.probe_scaling)
+                                  box_scaling=tuple(view.box_scaling),
+                                  probe_scaling=tuple(view.probe_scaling))
 
 
 # -----------------------------------------------------------------------------
