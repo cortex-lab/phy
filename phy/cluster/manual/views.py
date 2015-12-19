@@ -18,7 +18,6 @@ from phy.gui import Actions
 from phy.plot import View, _get_linear_x
 from phy.plot.utils import _get_boxes
 from phy.stats import correlograms
-from phy.stats.clusters import mean, unmasked_channels, sorted_main_channels
 from phy.utils import IPlugin
 
 logger = logging.getLogger(__name__)
@@ -1086,15 +1085,16 @@ class FeatureViewPlugin(IPlugin):
         if fs:
             view.feature_scaling = fs
 
-        @view.set_best_channels_func
-        def best_channels(cluster_id):
-            """Select the best channels for a given cluster."""
-            # TODO: better perf with cluster stats and cache
-            spike_ids = model.spikes_per_cluster[cluster_id]
-            m = model.masks[spike_ids]
-            mean_masks = mean(m)
-            uch = unmasked_channels(mean_masks)
-            return sorted_main_channels(mean_masks, uch)
+        # TODO
+        # @view.set_best_channels_func
+        # def best_channels(cluster_id):
+        #     """Select the best channels for a given cluster."""
+        #     # TODO: better perf with cluster stats and cache
+        #     spike_ids = model.spikes_per_cluster[cluster_id]
+        #     m = model.masks[spike_ids]
+        #     mean_masks = mean(m)
+        #     uch = unmasked_channels(mean_masks)
+        #     return sorted_main_channels(mean_masks, uch)
 
         view.attach(gui)
 

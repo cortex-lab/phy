@@ -16,12 +16,15 @@ from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.stats.clusters import (mean,
-                                max_waveform_amplitude,
-                                mean_masked_features_distance,
+                                get_max_waveform_amplitude,
+                                get_mean_masked_features_distance,
+                                get_unmasked_channels,
+                                get_sorted_main_channels,
+                                ClusterStats,
                                 )
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table
-from phy.io.array import select_spikes, Selector
+from phy.io.array import Selector
 from phy.utils import IPlugin
 
 logger = logging.getLogger(__name__)
@@ -47,64 +50,60 @@ def _process_ups(ups):  # pragma: no cover
         raise NotImplementedError()
 
 
-def default_wizard_functions(waveforms=None,
-                             features=None,
-                             masks=None,
-                             n_features_per_channel=None,
-                             spikes_per_cluster=None,
-                             max_n_spikes_per_cluster=1000,
-                             ):
-    spc = spikes_per_cluster
-    nfc = n_features_per_channel
-    maxn = max_n_spikes_per_cluster
+# -----------------------------------------------------------------------------
+# Cluster statistics
+# -----------------------------------------------------------------------------
 
-    def max_waveform_amplitude_quality(cluster):
-        spike_ids = select_spikes(cluster_ids=[cluster],
-                                  max_n_spikes_per_cluster=maxn,
-                                  spikes_per_cluster=spc,
-                                  )
-        m = np.atleast_2d(masks[spike_ids])
-        w = np.atleast_3d(waveforms[spike_ids])
-        mean_masks = mean(m)
-        mean_waveforms = mean(w)
-        q = max_waveform_amplitude(mean_masks, mean_waveforms)
-        q = np.asscalar(q)
-        logger.debug("Computed cluster quality for %d: %.3f.",
-                     cluster, q)
-        return q
+def create_cluster_stats(model, selector=None, context=None,
+                         max_n_spikes_per_cluster=1000):
+    cs = ClusterStats(context=context)
+    ns = max_n_spikes_per_cluster
 
-    def mean_masked_features_similarity(c0, c1):
-        s0 = select_spikes(cluster_ids=[c0],
-                           max_n_spikes_per_cluster=maxn,
-                           spikes_per_cluster=spc,
-                           )
-        s1 = select_spikes(cluster_ids=[c1],
-                           max_n_spikes_per_cluster=maxn,
-                           spikes_per_cluster=spc,
-                           )
+    def select(cluster_id):
+        assert cluster_id >= 0
+        return selector.select_spikes([cluster_id],
+                                      max_n_spikes_per_cluster=ns)
 
-        f0 = features[s0]
-        m0 = np.atleast_2d(masks[s0])
+    @cs.add
+    def mean_masks(cluster_id):
+        spike_ids = select(cluster_id)
+        return (mean(model.masks[spike_ids]))
 
-        f1 = features[s1]
-        m1 = np.atleast_2d(masks[s1])
+    @cs.add
+    def mean_features(cluster_id):
+        spike_ids = select(cluster_id)
+        return (mean(model.features[spike_ids]))
 
-        mf0 = mean(f0)
-        mm0 = mean(m0)
+    @cs.add
+    def mean_waveforms(cluster_id):
+        spike_ids = select(cluster_id)
+        return (mean(model.waveforms[spike_ids]))
 
-        mf1 = mean(f1)
-        mm1 = mean(m1)
+    @cs.add
+    def best_channels(cluster_id):
+        mm = cs.mean_masks(cluster_id)
+        uch = get_unmasked_channels(mm)
+        return get_sorted_main_channels(mm, uch)
 
-        d = mean_masked_features_distance(mf0, mf1, mm0, mm1,
-                                          n_features_per_channel=nfc,
-                                          )
-        d = 1. / max(1e-10, d)  # From distance to similarity.
-        logger.log(5, "Computed cluster similarity for (%d, %d): %.3f.",
-                   c0, c1, d)
-        return d
+    @cs.add
+    def max_waveform_amplitude(cluster_id):
+        mm = cs.mean_masks(cluster_id)
+        mw = cs.mean_waveforms(cluster_id)
+        return np.asscalar(get_max_waveform_amplitude(mm, mw))
 
-    return (max_waveform_amplitude_quality,
-            mean_masked_features_similarity)
+    @cs.add
+    def mean_masked_features_score(cluster_0, cluster_1):
+        mf0 = cs.mean_features(cluster_0)
+        mf1 = cs.mean_features(cluster_1)
+        mm0 = cs.mean_masks(cluster_0)
+        mm1 = cs.mean_masks(cluster_1)
+        nfpc = model.n_features_per_channel
+        d = get_mean_masked_features_distance(mf0, mf1, mm0, mm1,
+                                              n_features_per_channel=nfpc)
+        s = 1. / max(1e-10, d)
+        return s
+
+    return cs
 
 
 # -----------------------------------------------------------------------------
@@ -562,24 +561,13 @@ class ManualClusteringPlugin(IPlugin):
                               )
         mc.attach(gui)
 
-        spc = mc.clustering.spikes_per_cluster
-        nfc = model.n_features_per_channel
-
-        q, s = default_wizard_functions(waveforms=model.waveforms,
-                                        features=model.features,
-                                        masks=model.masks,
-                                        n_features_per_channel=nfc,
-                                        spikes_per_cluster=spc,
-                                        )
-
-        ctx = getattr(gui, 'context', None)
-        if ctx:  # pragma: no cover
-            q, s = ctx.cache(q), ctx.cache(s)
-        else:
-            logger.warn("Context not available, unable to cache "
-                        "the wizard functions.")
+        # Create the cluster stats.
+        cs = create_cluster_stats(model,
+                                  selector=mc.selector,
+                                  context=getattr(gui, 'context', None))
+        mc.cluster_stats = cs
 
         # Add the quality column in the cluster view.
-        mc.cluster_view.add_column(q, name='quality')
+        mc.cluster_view.add_column(cs.max_waveform_amplitude, name='quality')
         mc.set_default_sort('quality')
-        mc.set_similarity_func(s)
+        mc.set_similarity_func(cs.mean_masked_features_score)
