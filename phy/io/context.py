@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from functools import wraps
 import logging
 import os
 import os.path as op
@@ -140,10 +141,15 @@ def _ensure_cache_dirs_exist(cache_dir, name):
         os.makedirs(dirpath)
 
 
+def _fullname(o):
+    """Return the fully-qualified name of an object."""
+    return o.__module__ + "." + o.__class__.__name__
+
+
 class Context(object):
     """Handle function cacheing and parallel map with ipyparallel."""
-    def __init__(self, cache_dir, ipy_view=None):
-
+    def __init__(self, cache_dir, ipy_view=None, verbose=0):
+        self.verbose = verbose
         # Make sure the cache directory exists.
         self.cache_dir = op.realpath(op.expanduser(cache_dir))
         if not op.exists(self.cache_dir):
@@ -152,6 +158,7 @@ class Context(object):
 
         self._set_memory(self.cache_dir)
         self.ipy_view = ipy_view if ipy_view else None
+        self._memcache = {}
 
     def _set_memory(self, cache_dir):
         # Try importing joblib.
@@ -159,7 +166,7 @@ class Context(object):
             from joblib import Memory
             self._memory = Memory(cachedir=self.cache_dir,
                                   mmap_mode=None,
-                                  verbose=0,
+                                  verbose=self.verbose,
                                   )
             logger.debug("Initialize joblib cache dir at `%s`.",
                          self.cache_dir)
@@ -180,12 +187,38 @@ class Context(object):
             # Dill is necessary because we need to serialize closures.
             value.use_dill()
 
-    def cache(self, f):
+    def cache(self, f=None, memcache=False):
         """Cache a function using the context's cache directory."""
+        if f is None:
+            return lambda _: self.cache(_, memcache=memcache)
         if self._memory is None:  # pragma: no cover
             logger.debug("Joblib is not installed: skipping cacheing.")
             return
-        return self._memory.cache(f)
+        disk_cached = self._memory.cache(f)
+        name = _fullname(f)
+        if memcache:
+            from joblib import hash
+            # Create the cache dictionary for the function.
+            if name not in self._memcache:
+                self._memcache[name] = {}
+
+            c = self._memcache[name]
+
+            @wraps(f)
+            def mem_cached(*args, **kwargs):
+                """Cache the function in memory."""
+                h = hash((args, kwargs))
+                if h in c:
+                    logger.debug("Retrieve `%s()` from the cache.", name)
+                    return c[h]
+                else:
+                    logger.debug("Compute `%s()`.", name)
+                    out = disk_cached(*args, **kwargs)
+                    c[h] = out
+                    return out
+            return mem_cached
+        else:
+            return disk_cached
 
     def map_dask_array(self, func, da, *args, **kwargs):
         """Map a function on the chunks of a dask array, and return a
