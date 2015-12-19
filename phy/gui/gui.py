@@ -142,6 +142,9 @@ class GUI(QMainWindow):
         self._set_name(name, subtitle)
         self._set_pos_size(position, size)
 
+        # Registered functions.
+        self._registered = {}
+
         # Mapping {name: menuBar}.
         self._menus = {}
 
@@ -202,6 +205,21 @@ class GUI(QMainWindow):
 
     def unconnect_(self, *args, **kwargs):
         self._event.unconnect(*args, **kwargs)
+
+    def register(self, func=None, name=None):
+        """Register a function for a given name."""
+        if func is None:
+            return lambda _: self.register(func=_, name=name)
+        name = name or func.__name__
+        self._registered[name] = func
+
+    def request(self, name, *args, **kwargs):
+        """Request the result of a possibly registered function."""
+        if name in self._registered:
+            return self._registered[name](*args, **kwargs)
+        else:
+            logger.debug("No registered function for `%s`.", name)
+            return None
 
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
