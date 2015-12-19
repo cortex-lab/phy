@@ -87,11 +87,22 @@ class ClusterStats(object):
         self.context = context
         self._stats = {}
 
-    def add(self, f, name=None):
+    def add(self, f=None, name=None, cache=None):
+        """Add a cluster statistic.
+
+        Parameters
+        ----------
+        f : function
+        name : str
+        cache : str
+            Can be `None` (no cache), `disk`, or `memory`. In the latter case
+            the function will also be cached on disk.
+
+        """
         if f is None:
-            return lambda _: self.add(_, name=name)
+            return lambda _: self.add(_, name=name, cache=cache)
         name = name or f.__name__
-        if self.context:
-            f = self.context.cache(f, memcache=True)
+        if cache and self.context:
+            f = self.context.cache(f, memcache=(cache == 'memory'))
         self._stats[name] = f
         setattr(self, name, f)

@@ -154,7 +154,7 @@ def test_cluster_stats(tempdir):
     context = Context(tempdir)
     cs = ClusterStats(context=context)
 
-    @cs.add
+    @cs.add(cache='memory')
     def f(x):
         return x * x
 
