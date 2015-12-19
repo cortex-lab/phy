@@ -14,7 +14,6 @@ from numpy.testing import assert_allclose as ac
 from pytest import raises
 
 from phy.gui import create_gui, GUIState
-from phy.io.array import Selector
 from phy.io.mock import artificial_traces
 from ..views import TraceView, _extract_wave, _selected_clusters_colors
 
@@ -189,13 +188,7 @@ def test_trace_view_spikes(qtbot, model, tempdir):
 
 def test_feature_view(qtbot, model, tempdir):
     with _test_view('FeatureView', model=model, tempdir=tempdir) as v:
-
         assert v.feature_scaling == .5
-
-        @v.set_best_channels_func
-        def best_channels(cluster_id):
-            return list(range(model.n_channels))
-
         v.add_attribute('sine', np.sin(np.linspace(-10., 10., model.n_spikes)))
 
         v.increase()

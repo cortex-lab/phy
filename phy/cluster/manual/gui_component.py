@@ -93,6 +93,15 @@ def create_cluster_stats(model, selector=None, context=None,
         return get_sorted_main_channels(mm, uch)
 
     @cs.add
+    def best_channels_multiple(cluster_ids):
+        best_channels = []
+        for cluster in cluster_ids:
+            channels = cs.best_channels(cluster)
+            best_channels.extend([ch for ch in channels
+                                  if ch not in best_channels])
+        return best_channels
+
+    @cs.add
     def max_waveform_amplitude(cluster_id):
         mm = cs.mean_masks(cluster_id)
         mw = cs.mean_waveforms(cluster_id)
