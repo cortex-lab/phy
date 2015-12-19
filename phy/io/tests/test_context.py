@@ -26,7 +26,7 @@ from phy.utils import Bunch
 # Fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture()
+@yield_fixture(scope='module')
 def ipy_client():
 
     def iptest_stdstreams_fileno():
