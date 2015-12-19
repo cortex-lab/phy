@@ -102,6 +102,15 @@ def test_gui_1(qtbot):
     gui.default_actions.exit()
 
 
+def test_gui_register(gui):
+    @gui.register
+    def hello(msg):
+        return 'hello ' + msg
+
+    assert gui.request('hello', 'world') == 'hello world'
+    assert gui.request('unknown') is None
+
+
 def test_gui_status_message(gui):
     assert gui.status_message == ''
     gui.status_message = ':hello world!'
