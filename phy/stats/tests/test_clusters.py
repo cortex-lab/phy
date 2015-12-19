@@ -12,17 +12,19 @@ from numpy.testing import assert_allclose as ac
 from pytest import yield_fixture
 
 from ..clusters import (mean,
-                        unmasked_channels,
-                        mean_probe_position,
-                        sorted_main_channels,
-                        mean_masked_features_distance,
-                        max_waveform_amplitude,
+                        get_unmasked_channels,
+                        get_mean_probe_position,
+                        get_sorted_main_channels,
+                        get_mean_masked_features_distance,
+                        get_max_waveform_amplitude,
+                        ClusterStats,
                         )
 from phy.electrode.mea import staggered_positions
 from phy.io.mock import (artificial_features,
                          artificial_masks,
                          artificial_waveforms,
                          )
+from phy.io.context import Context
 
 
 #------------------------------------------------------------------------------
@@ -86,7 +88,7 @@ def test_unmasked_channels(masks, n_channels):
     # Compute the mean masks.
     mean_masks = mean(masks)
     # Find the unmasked channels.
-    channels = unmasked_channels(mean_masks, threshold)
+    channels = get_unmasked_channels(mean_masks, threshold)
     # These are 0, 2, 4, etc.
     ae(channels, np.arange(0, n_channels, 2))
 
@@ -94,7 +96,7 @@ def test_unmasked_channels(masks, n_channels):
 def test_mean_probe_position(masks, site_positions):
     masks[:, ::2] *= .05
     mean_masks = mean(masks)
-    mean_pos = mean_probe_position(mean_masks, site_positions)
+    mean_pos = get_mean_probe_position(mean_masks, site_positions)
     assert mean_pos.shape == (2,)
     assert mean_pos[0] < 0
     assert mean_pos[1] > 0
@@ -104,7 +106,8 @@ def test_sorted_main_channels(masks):
     masks *= .05
     masks[:, [5, 7]] *= 20
     mean_masks = mean(masks)
-    channels = sorted_main_channels(mean_masks, unmasked_channels(mean_masks))
+    channels = get_sorted_main_channels(mean_masks,
+                                        get_unmasked_channels(mean_masks))
     assert np.all(np.in1d(channels, [5, 7]))
 
 
@@ -118,7 +121,7 @@ def test_max_waveform_amplitude(masks, waveforms):
     mean_waveforms = mean(waveforms)
     mean_masks = mean(masks)
 
-    amplitude = max_waveform_amplitude(mean_masks, mean_waveforms)
+    amplitude = get_max_waveform_amplitude(mean_masks, mean_waveforms)
     assert amplitude > 0
 
 
@@ -138,6 +141,22 @@ def test_mean_masked_features_distance(features,
 
     # Check the distance.
     d_expected = np.sqrt(n_features_per_channel) * shift
-    d_computed = mean_masked_features_distance(f0, f1, m0, m1,
-                                               n_features_per_channel)
+    d_computed = get_mean_masked_features_distance(f0, f1, m0, m1,
+                                                   n_features_per_channel)
     ac(d_expected, d_computed)
+
+
+#------------------------------------------------------------------------------
+# Test ClusterStats
+#------------------------------------------------------------------------------
+
+def test_cluster_stats(tempdir):
+    context = Context(tempdir)
+    cs = ClusterStats(context=context)
+
+    @cs.add
+    def f(x):
+        return x * x
+
+    assert cs.f(3) == 9
+    assert cs.f(3) == 9
