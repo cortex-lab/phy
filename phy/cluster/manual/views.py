@@ -347,7 +347,7 @@ class WaveformView(ManualClusteringView):
         cs = getattr(gui, 'cluster_stats', None)
         if cs:
             @gui.connect_
-            def on_select(cluster_ids):
+            def on_select(cluster_ids=None, selector=None, spike_ids=None):
                 best_channels = cs.best_channels_multiple(cluster_ids)
                 self.zoom_on_channels(best_channels)
 

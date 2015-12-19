@@ -11,7 +11,6 @@ import string
 import re
 from collections import defaultdict
 from functools import partial
-from inspect import getargspec
 
 
 #------------------------------------------------------------------------------
@@ -112,19 +111,13 @@ class EventEmitter(object):
         """Call all callback functions registered with an event.
 
         Any positional and keyword arguments can be passed here, and they will
-        be fowarded to the callback functions.
+        be forwarded to the callback functions.
 
         Return the list of callback return results.
 
         """
         res = []
         for callback in self._callbacks.get(event, []):
-            argspec = getargspec(callback)
-            if not argspec.keywords:
-                # Only keep the kwargs that are part of the callback's
-                # arg spec, unless the callback accepts `**kwargs`.
-                kwargs = {n: v for n, v in kwargs.items()
-                          if n in argspec.args}
             res.append(callback(*args, **kwargs))
         return res
 
