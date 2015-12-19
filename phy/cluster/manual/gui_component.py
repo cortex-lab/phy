@@ -106,6 +106,7 @@ def create_cluster_stats(model, selector=None, context=None,
         mm = cs.mean_masks(cluster_id)
         mw = cs.mean_waveforms(cluster_id)
         assert mw.ndim == 2
+        logger.debug("Computing the quality of cluster %d.", cluster_id)
         return np.asscalar(get_max_waveform_amplitude(mm, mw))
 
     @cs.add(cache='memory')
