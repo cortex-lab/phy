@@ -42,28 +42,17 @@ def _test_view(view_name, model=None, tempdir=None):
     state.set_view_params('CorrelogramView1', uniform_normalization=True)
     state.save()
 
-    # Create the selector.
-    selector = Selector(spike_clusters=model.spike_clusters,
-                        spikes_per_cluster=model.spikes_per_cluster,
-                        )
-
     # Create the GUI.
-    plugins = ['ManualClusteringPlugin', view_name + 'Plugin']
+    plugins = ['ManualClusteringPlugin',
+               view_name + 'Plugin']
     gui = create_gui(model=model, plugins=plugins, config_dir=tempdir)
     gui.show()
 
-    v = gui.list_views(view_name)[0]
+    gui.manual_clustering.select([])
+    gui.manual_clustering.select([0])
+    gui.manual_clustering.select([0, 2])
 
-    # Select some spikes.
-    spike_ids = np.arange(10)
-    cluster_ids = np.unique(model.spike_clusters[spike_ids])
-    v.on_select(cluster_ids, spike_ids=spike_ids)
-
-    # Select other spikes.
-    cluster_ids = [0, 2]
-    v.on_select(cluster_ids, selector=selector)
-
-    yield v
+    yield gui.list_views(view_name)[0]
 
     gui.close()
 

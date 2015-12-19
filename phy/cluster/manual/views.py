@@ -342,6 +342,19 @@ class WaveformView(ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(WaveformView, self).attach(gui)
+
+        # Zoom on the best channels when selecting clusters.
+        cs = getattr(gui, 'cluster_stats', None)
+        if cs:
+            @gui.connect_
+            def on_select(cluster_ids):
+                best_channels = set()
+                for cluster_id in cluster_ids:
+                    channels = cs.best_channels(cluster_id)
+                    for channel in channels:
+                        best_channels.add(channel)
+                self.zoom_on_channels(list(best_channels))
+
         self.actions.add(self.toggle_waveform_overlap)
 
         # Box scaling.
@@ -416,6 +429,8 @@ class WaveformView(ManualClusteringView):
 
     def zoom_on_channels(self, channels_rel):
         """Zoom on some channels."""
+        if channels_rel is None or not len(channels_rel):
+            return
         channels_rel = np.asarray(channels_rel, dtype=np.int32)
         assert 0 <= channels_rel.min() <= channels_rel.max() < self.n_channels
         # Bounds of the channels.
