@@ -213,6 +213,20 @@ def test_panzoom_pan_mouse(qtbot, canvas_pz, panzoom):
     # qtbot.stop()
 
 
+def test_panzoom_touch(qtbot, canvas_pz, panzoom):
+    c = canvas_pz
+    pz = panzoom
+
+    # Pan with mouse.
+    c.events.touch(type='pinch', pos=(0, 0), scale=1, last_scale=1)
+    c.events.touch(type='pinch', pos=(0, 0), scale=2, last_scale=1)
+    assert pz.zoom[0] >= 2
+    c.events.touch(type='end')
+
+    c.events.touch(type='touch', pos=(0.1, 0), last_pos=(0, 0))
+    assert pz.pan[0] >= 1
+
+
 def test_panzoom_pan_keyboard(qtbot, canvas_pz, panzoom):
     c = canvas_pz
     pz = panzoom
