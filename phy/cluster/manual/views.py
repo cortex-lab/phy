@@ -1085,16 +1085,10 @@ class FeatureViewPlugin(IPlugin):
         if fs:
             view.feature_scaling = fs
 
-        # TODO
-        # @view.set_best_channels_func
-        # def best_channels(cluster_id):
-        #     """Select the best channels for a given cluster."""
-        #     # TODO: better perf with cluster stats and cache
-        #     spike_ids = model.spikes_per_cluster[cluster_id]
-        #     m = model.masks[spike_ids]
-        #     mean_masks = mean(m)
-        #     uch = unmasked_channels(mean_masks)
-        #     return sorted_main_channels(mean_masks, uch)
+        # Attach the best_channels() function from the cluster stats.
+        cs = getattr(gui, 'cluster_stats', None)
+        if cs:
+            view.set_best_channels_func(cs.best_channels)
 
         view.attach(gui)
 
