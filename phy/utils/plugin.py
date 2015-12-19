@@ -108,6 +108,8 @@ def discover_plugins(dirs):
                 mod = imp.load_module(modname, file, path, descr)  # noqa
             except Exception as e:  # pragma: no cover
                 logger.exception(e)
+            finally:
+                file.close()
     return IPluginRegistry.plugins
 
 
