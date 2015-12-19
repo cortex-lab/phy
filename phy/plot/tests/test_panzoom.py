@@ -180,6 +180,13 @@ def test_panzoom_set_range():
     ac(pz.zoom, (1, 1))
 
 
+def test_panzoom_mouse_pos():
+    pz = PanZoom()
+    pz.zoom_delta((10, 10), (.5, .25))
+    pos = pz.get_mouse_pos((.01, -.01))
+    ac(pos, (.5, .25), atol=1e-3)
+
+
 #------------------------------------------------------------------------------
 # Test panzoom on canvas
 #------------------------------------------------------------------------------
