@@ -588,6 +588,10 @@ class ManualClusteringPlugin(IPlugin):
                                   context=getattr(gui, 'context', None))
         gui.cluster_stats = cs
 
+        @gui.register
+        def best_channels(cluster_ids):
+            return cs.best_channels_multiple(cluster_ids)
+
         # Add the quality column in the cluster view.
         mc.cluster_view.add_column(cs.max_waveform_amplitude, name='quality')
         mc.set_default_sort('quality')

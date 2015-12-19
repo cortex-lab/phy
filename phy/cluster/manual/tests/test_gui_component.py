@@ -82,10 +82,12 @@ def test_manual_clustering_plugin(qtbot, gui):
                   n_features_per_channel=2,
                   waveforms=np.zeros((3, 4, 1)),
                   features=np.zeros((3, 1, 2)),
-                  masks=np.zeros((3, 1)),
+                  masks=.75 * np.ones((3, 1)),
                   )
     state = Bunch()
     ManualClusteringPlugin().attach_to_gui(gui, model=model, state=state)
+
+    assert gui.request('best_channels', [0, 1]) == [0]
 
 
 def test_manual_clustering_edge_cases(manual_clustering):
