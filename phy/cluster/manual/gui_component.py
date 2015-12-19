@@ -361,7 +361,9 @@ class ManualClustering(object):
         clusters."""
         assert self.similarity_func
         selection = self.cluster_view.selected
-        cluster_id = self.cluster_view.selected[0]
+        if not len(selection):
+            return
+        cluster_id = selection[0]
         self._best = cluster_id
         self.similarity_view.set_rows([c for c in self.clustering.cluster_ids
                                        if c not in selection])
