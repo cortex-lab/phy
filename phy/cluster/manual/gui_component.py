@@ -86,7 +86,7 @@ def create_cluster_stats(model, selector=None, context=None,
         mw = mean(waveforms)
         return mw
 
-    @cs.add
+    @cs.add(cache='memory')
     def best_channels(cluster_id):
         mm = cs.mean_masks(cluster_id)
         uch = get_unmasked_channels(mm)
@@ -101,14 +101,14 @@ def create_cluster_stats(model, selector=None, context=None,
                                   if ch not in best_channels])
         return best_channels
 
-    @cs.add
+    @cs.add(cache='memory')
     def max_waveform_amplitude(cluster_id):
         mm = cs.mean_masks(cluster_id)
         mw = cs.mean_waveforms(cluster_id)
         assert mw.ndim == 2
         return np.asscalar(get_max_waveform_amplitude(mm, mw))
 
-    @cs.add
+    @cs.add(cache='memory')
     def mean_masked_features_score(cluster_0, cluster_1):
         mf0 = cs.mean_features(cluster_0)
         mf1 = cs.mean_features(cluster_1)
