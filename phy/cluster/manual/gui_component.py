@@ -67,17 +67,24 @@ def create_cluster_stats(model, selector=None, context=None,
     @cs.add
     def mean_masks(cluster_id):
         spike_ids = select(cluster_id)
-        return (mean(model.masks[spike_ids]))
+        masks = np.atleast_2d(model.masks[spike_ids])
+        assert masks.ndim == 2
+        return mean(masks)
 
     @cs.add
     def mean_features(cluster_id):
         spike_ids = select(cluster_id)
-        return (mean(model.features[spike_ids]))
+        features = np.atleast_2d(model.features[spike_ids])
+        assert features.ndim == 3
+        return mean(features)
 
     @cs.add
     def mean_waveforms(cluster_id):
         spike_ids = select(cluster_id)
-        return (mean(model.waveforms[spike_ids]))
+        waveforms = np.atleast_2d(model.waveforms[spike_ids])
+        assert waveforms.ndim == 3
+        mw = mean(waveforms)
+        return mw
 
     @cs.add
     def best_channels(cluster_id):
@@ -89,6 +96,7 @@ def create_cluster_stats(model, selector=None, context=None,
     def max_waveform_amplitude(cluster_id):
         mm = cs.mean_masks(cluster_id)
         mw = cs.mean_waveforms(cluster_id)
+        assert mw.ndim == 2
         return np.asscalar(get_max_waveform_amplitude(mm, mw))
 
     @cs.add
