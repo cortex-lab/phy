@@ -8,6 +8,7 @@
 
 import os
 import os.path as op
+import shutil
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
@@ -16,6 +17,7 @@ from six.moves import cPickle
 
 from ..context import (Context, ContextPlugin, Task,
                        _iter_chunks_dask, write_array, read_array,
+                       _fullname,
                        )
 from phy.utils import Bunch
 
@@ -24,7 +26,7 @@ from phy.utils import Bunch
 # Fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture(scope='module')
+@yield_fixture()
 def ipy_client():
 
     def iptest_stdstreams_fileno():
@@ -46,7 +48,7 @@ def ipy_client():
 
 @yield_fixture(scope='function')
 def context(tempdir):
-    ctx = Context('{}/cache/'.format(tempdir))
+    ctx = Context('{}/cache/'.format(tempdir), verbose=1)
     yield ctx
 
 
@@ -75,9 +77,6 @@ def temp_phy_user_dir(tempdir):
 
 def test_client_1(ipy_client):
     assert ipy_client.ids == [0, 1]
-
-
-def test_client_2(ipy_client):
     assert ipy_client[:].map_sync(lambda x: x * x, [1, 2, 3]) == [1, 4, 9]
 
 
@@ -123,6 +122,41 @@ def test_context_cache(context):
 
     # The second time, the cache is used.
     ae(f(x), x2)
+    assert len(_res) == 2
+
+
+def test_context_memmap(tempdir, context):
+
+    _res = []
+
+    @context.cache(memcache=True)
+    def f(x):
+        _res.append(x)
+        return x ** 2
+
+    # Compute the function a first time.
+    x = np.arange(10)
+    ae(f(x), x ** 2)
+    assert len(_res) == 1
+
+    # The second time, the memory cache is used.
+    ae(f(x), x ** 2)
+    assert len(_res) == 1
+
+    # We artificially clear the memory cache.
+    context._memcache[_fullname(f)].clear()
+
+    # This time, the result is loaded from disk.
+    ae(f(x), x ** 2)
+    assert len(_res) == 1
+
+    # Remove the cache directory.
+    assert context.cache_dir.startswith(tempdir)
+    shutil.rmtree(context.cache_dir)
+    context._memcache[_fullname(f)].clear()
+
+    # Now, the result is re-computed.
+    ae(f(x), x ** 2)
     assert len(_res) == 2
 
 
