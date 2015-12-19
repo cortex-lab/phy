@@ -139,6 +139,9 @@ def test_boxed_2(qtbot, canvas):
     boxed.box_pos *= .25
     boxed.box_size = [1, .1]
 
+    idx = boxed.get_closest_box((.5, .25))
+    assert idx == 4
+
     # qtbot.stop()
 
 

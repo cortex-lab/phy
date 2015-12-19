@@ -218,6 +218,13 @@ class Boxed(BaseInteract):
         self.box_bounds = _get_boxes(self.box_pos, size=val,
                                      keep_aspect_ratio=self.keep_aspect_ratio)
 
+    def get_closest_box(self, pos):
+        """Get the box closest to some position."""
+        pos = np.atleast_2d(pos)
+        d = np.sum((np.array(self.box_pos) - pos) ** 2, axis=1)
+        idx = np.argmin(d)
+        return idx
+
     def update_boxes(self, box_pos, box_size):
         """Set the box bounds from specified box positions and sizes."""
         assert box_pos.shape == (self.n_boxes, 2)

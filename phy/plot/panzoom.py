@@ -212,6 +212,14 @@ class PanZoom(BaseInteract):
             self._zoom[1] = max(self._zoom[1],
                                 1. / (self.ymax - self._pan[1]))
 
+    def get_mouse_pos(self, pos):
+        """Return the mouse coordinates in NDC, taking panzoom into account."""
+        position = np.asarray(self._normalize(pos))
+        zoom = np.asarray(self._zoom_aspect())
+        pan = np.asarray(self.pan)
+        mouse_pos = ((position / zoom) - pan)
+        return mouse_pos
+
     # Pan and zoom
     # -------------------------------------------------------------------------
 
@@ -412,6 +420,8 @@ class PanZoom(BaseInteract):
     def size(self):
         if self.canvas:
             return self.canvas.size
+        else:
+            return (1, 1)
 
     def attach(self, canvas):
         """Attach this interact to a canvas."""
