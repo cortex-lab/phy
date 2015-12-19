@@ -27,5 +27,5 @@ def canvas(qapp):
 
 @yield_fixture
 def canvas_pz(canvas):
-    PanZoom().attach(canvas)
+    PanZoom(enable_mouse_wheel=True).attach(canvas)
     yield canvas

@@ -8,6 +8,7 @@
 #------------------------------------------------------------------------------
 
 import math
+import sys
 
 import numpy as np
 
@@ -57,6 +58,7 @@ class PanZoom(BaseInteract):
                  constrain_bounds=None,
                  pan_var_name='u_pan',
                  zoom_var_name='u_zoom',
+                 enable_mouse_wheel=None,
                  ):
         if constrain_bounds:
             assert xmin is None
@@ -84,6 +86,14 @@ class PanZoom(BaseInteract):
         self._wheel_coeff = self._default_wheel_coeff
 
         self.enable_keyboard_pan = True
+
+        # Touch-related variables.
+        self._pinch = None
+        self._last_pinch_scale = None
+        if enable_mouse_wheel is None:
+            enable_mouse_wheel = sys.platform != 'darwin'
+        self.enable_mouse_wheel = enable_mouse_wheel
+
         self._zoom_to_pointer = True
         self._canvas_aspect = np.ones(2)
 
@@ -385,8 +395,33 @@ class PanZoom(BaseInteract):
                 c = np.sqrt(self.size[0]) * .03
                 self.zoom_delta((dx, dy), (x0, y0), c=c)
 
+    def on_touch(self, event):
+        if event.type == 'end':
+            self._pinch = None
+        elif event.type == 'pinch':
+            if event.scale in (1., self._last_pinch_scale):
+                self._pinch = None
+                return
+            self._last_pinch_scale = event.scale
+            x0, y0 = self._normalize(event.pos)
+            s = math.log(event.scale / event.last_scale)
+            c = np.sqrt(self.size[0]) * .05
+            self.zoom_delta((s, s),
+                            (x0, y0),
+                            c=c)
+            self._pinch = True
+        elif event.type == 'touch':
+            if self._pinch:
+                return
+            x0, y0 = self._normalize(np.array(event.pos).mean(axis=0))
+            x1, y1 = self._normalize(np.array(event.last_pos).mean(axis=0))
+            dx, dy = x0 - x1, y0 - y1
+            c = 5
+            self.pan_delta((c * dx, c * dy))
+
     def on_mouse_wheel(self, event):
         """Zoom with the mouse wheel."""
+        # NOTE: not called on OS X because of touchpad
         if event.modifiers:
             return
         dx = np.sign(event.delta[1]) * self._wheel_coeff
@@ -437,8 +472,11 @@ class PanZoom(BaseInteract):
 
         canvas.connect(self.on_resize)
         canvas.connect(self.on_mouse_move)
-        canvas.connect(self.on_mouse_wheel)
+        canvas.connect(self.on_touch)
         canvas.connect(self.on_key_press)
+
+        if self.enable_mouse_wheel:
+            canvas.connect(self.on_mouse_wheel)
 
         self._set_canvas_aspect()
 
