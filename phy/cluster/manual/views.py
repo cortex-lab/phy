@@ -784,9 +784,9 @@ class TraceViewPlugin(IPlugin):
 # Feature view
 # -----------------------------------------------------------------------------
 
-def _dimensions_matrix(x_channels, y_channels):
+def _dimensions_matrix(x_channels, y_channels, top_left_attribute=None):
     """Dimensions matrix."""
-    # time, depth     time,    (x, 0)     time,    (y, 0)     time, (z, 0)
+    # time, attr      time,    (x, 0)     time,    (y, 0)     time, (z, 0)
     # time, (x', 0)   (x', 0), (x, 0)     (x', 1), (y, 0)     (x', 2), (z, 0)
     # time, (y', 0)   (y', 0), (x, 1)     (y', 1), (y, 1)     (y', 2), (z, 1)
     # time, (z', 0)   (z', 0), (x, 2)     (z', 1), (y, 2)     (z', 2), (z, 2)
@@ -795,9 +795,8 @@ def _dimensions_matrix(x_channels, y_channels):
     assert len(y_channels) == n
     y_dim = {}
     x_dim = {}
-    # TODO: extra feature like probe depth
     x_dim[0, 0] = 'time'
-    y_dim[0, 0] = 'time'
+    y_dim[0, 0] = top_left_attribute or 'time'
 
     # Time in first column and first row.
     for i in range(1, n + 1):
@@ -812,27 +811,6 @@ def _dimensions_matrix(x_channels, y_channels):
             y_dim[i, j] = (y_channels[j - 1], i - 1)
 
     return x_dim, y_dim
-
-
-def _dimensions_for_clusters(cluster_ids, n_cols=None,
-                             best_channels_func=None):
-    """Return the dimension matrix for the selected clusters."""
-    n = len(cluster_ids)
-    if not n:
-        return {}, {}
-    best_channels_func = best_channels_func or (lambda _: range(n_cols))
-    x_channels = best_channels_func([cluster_ids[min(1, n - 1)]])
-    y_channels = best_channels_func([cluster_ids[0]])
-    y_channels = y_channels[:n_cols - 1]
-    # For the x axis, remove the channels that already are in
-    # the y axis.
-    x_channels = [c for c in x_channels if c not in y_channels]
-    # Now, select the right number of channels in the x axis.
-    x_channels = x_channels[:n_cols - 1]
-    # TODO: improve the choice of the channels here.
-    if len(x_channels) < n_cols - 1:
-        x_channels = y_channels  # pragma: no cover
-    return _dimensions_matrix(x_channels, y_channels)
 
 
 def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
@@ -907,9 +885,8 @@ class FeatureView(ManualClusteringView):
         self.attributes = {}
 
         self.add_attribute('time', spike_times)
-        self.best_channels_func = None
 
-    def add_attribute(self, name, values):
+    def add_attribute(self, name, values, top_left=True):
         """Add an attribute (aka extra feature).
 
         The values should be a 1D array with `n_spikes` elements.
@@ -920,6 +897,9 @@ class FeatureView(ManualClusteringView):
         assert values.shape == (self.n_spikes,)
         lim = values.min(), values.max()
         self.attributes[name] = (values, lim)
+        # Register the attribute to use in the top-left subplot.
+        if top_left:
+            self.top_left_attribute = name
 
     def _get_feature(self, dim, spike_ids=None):
         f = self.features[spike_ids]
@@ -996,9 +976,9 @@ class FeatureView(ManualClusteringView):
                            size=ms * np.ones(n_spikes),
                            )
 
-    def set_best_channels_func(self, func):
-        """Set a function `cluster_id => list of best channels`."""
-        self.best_channels_func = func
+    def _best_channels(self, cluster_ids):
+        channels = np.arange(min(self.n_channels - 1, self.n_cols - 1))
+        return channels, channels
 
     def on_select(self, cluster_ids=None, **kwargs):
         super(FeatureView, self).on_select(cluster_ids=cluster_ids,
@@ -1014,10 +994,9 @@ class FeatureView(ManualClusteringView):
                                      spike_ids,
                                      cluster_ids)
 
-        f = self.best_channels_func
-        x_dim, y_dim = _dimensions_for_clusters(cluster_ids,
-                                                n_cols=self.n_cols,
-                                                best_channels_func=f)
+        x_channels, y_channels = self._best_channels(cluster_ids)
+        x_dim, y_dim = _dimensions_matrix(x_channels, y_channels,
+                                          self.top_left_attribute)
 
         # Set the status message.
         n = self.n_cols
@@ -1098,11 +1077,6 @@ class FeatureViewPlugin(IPlugin):
         fs, = state.get_view_params('FeatureView', 'feature_scaling')
         if fs:
             view.feature_scaling = fs
-
-        # Attach the best_channels() function from the cluster stats.
-        cs = getattr(gui, 'cluster_stats', None)
-        if cs:
-            view.set_best_channels_func(cs.best_channels_multiple)
 
         @gui.connect_
         def on_close():
