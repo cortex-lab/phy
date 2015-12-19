@@ -84,6 +84,13 @@ def test_client_1(ipy_client):
 # Test utils and cache
 #------------------------------------------------------------------------------
 
+def test_fullname():
+    def myfunction(x):
+        return x
+
+    assert _fullname(myfunction) == 'phy.io.tests.test_context.myfunction'
+
+
 def test_read_write(tempdir):
     x = np.arange(10)
     write_array(op.join(tempdir, 'test.npy'), x)

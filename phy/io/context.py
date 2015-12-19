@@ -142,8 +142,8 @@ def _ensure_cache_dirs_exist(cache_dir, name):
 
 
 def _fullname(o):
-    """Return the fully-qualified name of an object."""
-    return o.__module__ + "." + o.__class__.__name__
+    """Return the fully-qualified name of a function."""
+    return o.__module__ + "." + o.__name__
 
 
 class Context(object):
