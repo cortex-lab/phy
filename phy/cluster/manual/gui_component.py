@@ -560,12 +560,13 @@ class ManualClusteringPlugin(IPlugin):
                               cluster_groups=model.cluster_groups,
                               )
         mc.attach(gui)
+        gui.manual_clustering = mc
 
         # Create the cluster stats.
         cs = create_cluster_stats(model,
                                   selector=mc.selector,
                                   context=getattr(gui, 'context', None))
-        mc.cluster_stats = cs
+        gui.cluster_stats = cs
 
         # Add the quality column in the cluster view.
         mc.cluster_view.add_column(cs.max_waveform_amplitude, name='quality')
