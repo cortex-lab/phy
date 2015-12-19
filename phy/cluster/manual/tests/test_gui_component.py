@@ -6,8 +6,6 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from operator import itemgetter
-
 from pytest import yield_fixture
 import numpy as np
 from numpy.testing import assert_array_equal as ae
@@ -17,12 +15,7 @@ from ..gui_component import (ManualClustering,
                              create_cluster_stats,
                              )
 from phy.gui import GUI
-from phy.io.array import _spikes_per_cluster, Selector
-from phy.io.mock import (artificial_waveforms,
-                         artificial_masks,
-                         artificial_features,
-                         artificial_spike_clusters,
-                         )
+from phy.io.array import Selector
 from phy.utils import Bunch
 
 
