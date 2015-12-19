@@ -17,7 +17,7 @@ def mean(x):
     return x.mean(axis=0)
 
 
-def get_unmasked_channels(mean_masks, min_mask=.1):
+def get_unmasked_channels(mean_masks, min_mask=.25):
     return np.nonzero(mean_masks > min_mask)[0]
 
 

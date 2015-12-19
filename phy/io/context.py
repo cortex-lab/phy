@@ -209,10 +209,10 @@ class Context(object):
                 """Cache the function in memory."""
                 h = hash((args, kwargs))
                 if h in c:
-                    logger.debug("Retrieve `%s()` from the cache.", name)
+                    # Retrieve the value from the memcache.
                     return c[h]
                 else:
-                    logger.debug("Compute `%s()`.", name)
+                    # Call and cache the function.
                     out = disk_cached(*args, **kwargs)
                     c[h] = out
                     return out

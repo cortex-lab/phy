@@ -348,12 +348,8 @@ class WaveformView(ManualClusteringView):
         if cs:
             @gui.connect_
             def on_select(cluster_ids):
-                best_channels = set()
-                for cluster_id in cluster_ids:
-                    channels = cs.best_channels(cluster_id)
-                    for channel in channels:
-                        best_channels.add(channel)
-                self.zoom_on_channels(list(best_channels))
+                best_channels = cs.best_channels_multiple(cluster_ids)
+                self.zoom_on_channels(best_channels)
 
         self.actions.add(self.toggle_waveform_overlap)
 
@@ -825,14 +821,15 @@ def _dimensions_for_clusters(cluster_ids, n_cols=None,
     if not n:
         return {}, {}
     best_channels_func = best_channels_func or (lambda _: range(n_cols))
-    x_channels = best_channels_func(cluster_ids[min(1, n - 1)])
-    y_channels = best_channels_func(cluster_ids[0])
+    x_channels = best_channels_func([cluster_ids[min(1, n - 1)]])
+    y_channels = best_channels_func([cluster_ids[0]])
     y_channels = y_channels[:n_cols - 1]
     # For the x axis, remove the channels that already are in
     # the y axis.
     x_channels = [c for c in x_channels if c not in y_channels]
     # Now, select the right number of channels in the x axis.
     x_channels = x_channels[:n_cols - 1]
+    # TODO: improve the choice of the channels here.
     if len(x_channels) < n_cols - 1:
         x_channels = y_channels  # pragma: no cover
     return _dimensions_matrix(x_channels, y_channels)
@@ -1096,6 +1093,8 @@ class FeatureViewPlugin(IPlugin):
                            spike_clusters=model.spike_clusters,
                            spike_times=model.spike_times,
                            )
+        view.attach(gui)
+
         fs, = state.get_view_params('FeatureView', 'feature_scaling')
         if fs:
             view.feature_scaling = fs
@@ -1103,9 +1102,7 @@ class FeatureViewPlugin(IPlugin):
         # Attach the best_channels() function from the cluster stats.
         cs = getattr(gui, 'cluster_stats', None)
         if cs:
-            view.set_best_channels_func(cs.best_channels)
-
-        view.attach(gui)
+            view.set_best_channels_func(cs.best_channels_multiple)
 
         @gui.connect_
         def on_close():
