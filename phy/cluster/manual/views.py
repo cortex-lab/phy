@@ -136,6 +136,17 @@ def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
     return color
 
 
+def _extend(channels, n=None):
+    channels = list(channels)
+    if n is None:
+        return channels
+    if len(channels) < n:
+        channels.extend([channels[-1]] * (n - len(channels)))
+    channels = channels[:n]
+    assert len(channels) == n
+    return channels
+
+
 # -----------------------------------------------------------------------------
 # Manual clustering view
 # -----------------------------------------------------------------------------
@@ -160,6 +171,9 @@ class ManualClusteringView(View):
         # Message to show in the status bar.
         self.status = None
 
+        # Attached GUI.
+        self.gui = None
+
         # Keep track of the selected clusters and spikes.
         self.cluster_ids = None
         self.spike_ids = None
@@ -180,6 +194,21 @@ class ManualClusteringView(View):
         self.cluster_ids = list(cluster_ids) if cluster_ids is not None else []
         self.spike_ids = np.asarray(spike_ids if spike_ids is not None else [])
 
+    def _best_channels(self, cluster_ids, n_channels_requested=None):
+        """Request best channels for a set of clusters."""
+        # Number of channels to find on each axis.
+        n = n_channels_requested or self.n_channels
+        # Request the best channels to the GUI.
+        channels = (self.gui.request('best_channels', cluster_ids)
+                    if self.gui else None)
+        # By default, select the first channels.
+        if channels is None or not len(channels):
+            return
+        assert len(channels)
+        # Repeat some channels if there aren't enough.
+        channels = _extend(channels, n)
+        return channels
+
     def attach(self, gui):
         """Attach the view to the GUI."""
 
@@ -188,6 +217,7 @@ class ManualClusteringView(View):
         self.panzoom.enable_keyboard_pan = False
 
         gui.add_view(self)
+        self.gui = gui
         gui.connect_(self.on_select)
         self.actions = Actions(gui,
                                name=self.__class__.__name__,
@@ -339,18 +369,14 @@ class WaveformView(ManualClusteringView):
                               data_bounds=self.data_bounds,
                               )
 
+        # Zoom on the best channels when selecting clusters.
+        channels = self._best_channels(cluster_ids)
+        if channels is not None:
+            self.zoom_on_channels(channels)
+
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(WaveformView, self).attach(gui)
-
-        # Zoom on the best channels when selecting clusters.
-        cs = getattr(gui, 'cluster_stats', None)
-        if cs:
-            @gui.connect_
-            def on_select(cluster_ids=None, selector=None, spike_ids=None):
-                best_channels = cs.best_channels_multiple(cluster_ids)
-                self.zoom_on_channels(best_channels)
-
         self.actions.add(self.toggle_waveform_overlap)
 
         # Box scaling.
@@ -784,29 +810,32 @@ class TraceViewPlugin(IPlugin):
 # Feature view
 # -----------------------------------------------------------------------------
 
-def _dimensions_matrix(x_channels, y_channels, top_left_attribute=None):
+def _dimensions_matrix(x_channels, y_channels, n_cols=None,
+                       top_left_attribute=None):
     """Dimensions matrix."""
     # time, attr      time,    (x, 0)     time,    (y, 0)     time, (z, 0)
     # time, (x', 0)   (x', 0), (x, 0)     (x', 1), (y, 0)     (x', 2), (z, 0)
     # time, (y', 0)   (y', 0), (x, 1)     (y', 1), (y, 1)     (y', 2), (z, 1)
     # time, (z', 0)   (z', 0), (x, 2)     (z', 1), (y, 2)     (z', 2), (z, 2)
 
-    n = len(x_channels)
-    assert len(y_channels) == n
+    assert n_cols > 0
+    assert len(x_channels) >= n_cols - 1
+    assert len(y_channels) >= n_cols - 1
+
     y_dim = {}
     x_dim = {}
     x_dim[0, 0] = 'time'
     y_dim[0, 0] = top_left_attribute or 'time'
 
     # Time in first column and first row.
-    for i in range(1, n + 1):
+    for i in range(1, n_cols):
         x_dim[0, i] = 'time'
         y_dim[0, i] = (x_channels[i - 1], 0)
         x_dim[i, 0] = 'time'
         y_dim[i, 0] = (y_channels[i - 1], 0)
 
-    for i in range(1, n + 1):
-        for j in range(1, n + 1):
+    for i in range(1, n_cols):
+        for j in range(1, n_cols):
             x_dim[i, j] = (x_channels[i - 1], j - 1)
             y_dim[i, j] = (y_channels[j - 1], i - 1)
 
@@ -976,10 +1005,6 @@ class FeatureView(ManualClusteringView):
                            size=ms * np.ones(n_spikes),
                            )
 
-    def _best_channels(self, cluster_ids):
-        channels = np.arange(min(self.n_channels - 1, self.n_cols - 1))
-        return channels, channels
-
     def on_select(self, cluster_ids=None, **kwargs):
         super(FeatureView, self).on_select(cluster_ids=cluster_ids,
                                            **kwargs)
@@ -994,14 +1019,23 @@ class FeatureView(ManualClusteringView):
                                      spike_ids,
                                      cluster_ids)
 
-        x_channels, y_channels = self._best_channels(cluster_ids)
+        # Select the channels to show.
+        n = self.n_cols - 1
+        channels = self._best_channels(cluster_ids, 2 * n)
+        channels = (channels if channels is not None
+                    else list(range(self.n_channels)))
+        channels = _extend(channels, 2 * n)
+        assert len(channels) == 2 * n
+        x_channels, y_channels = channels[:n], channels[n:]
+        # Select the dimensions.
+        tla = self.top_left_attribute
         x_dim, y_dim = _dimensions_matrix(x_channels, y_channels,
-                                          self.top_left_attribute)
+                                          n_cols=self.n_cols,
+                                          top_left_attribute=tla)
 
         # Set the status message.
-        n = self.n_cols
-        ch_i = ', '.join(map(str, (y_dim[0, i] for i in range(1, n))))
-        ch_j = ', '.join(map(str, (y_dim[i, 0] for i in range(1, n))))
+        ch_i = ', '.join(map(str, x_channels))
+        ch_j = ', '.join(map(str, y_channels))
         self.set_status('Channels: {} - {}'.format(ch_i, ch_j))
 
         # Set a non-time attribute as y coordinate in the top-left subplot.

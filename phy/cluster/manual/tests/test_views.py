@@ -15,7 +15,8 @@ from pytest import raises
 
 from phy.gui import create_gui, GUIState
 from phy.io.mock import artificial_traces
-from ..views import TraceView, _extract_wave, _selected_clusters_colors
+from ..views import (TraceView, _extract_wave, _selected_clusters_colors,
+                     _extend)
 
 
 #------------------------------------------------------------------------------
@@ -59,6 +60,15 @@ def _test_view(view_name, model=None, tempdir=None):
 #------------------------------------------------------------------------------
 # Test utils
 #------------------------------------------------------------------------------
+
+def test_extend():
+    l = list(range(5))
+    assert _extend(l) == l
+    assert _extend(l, 0) == []
+    assert _extend(l, 4) == list(range(4))
+    assert _extend(l, 5) == l
+    assert _extend(l, 6) == (l + [4])
+
 
 def test_extract_wave():
     traces = np.arange(30).reshape((6, 5))
