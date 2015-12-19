@@ -14,10 +14,10 @@ from numpy.testing import assert_array_equal as ae
 
 from ..gui_component import (ManualClustering,
                              ManualClusteringPlugin,
-                             default_wizard_functions,
+                             create_cluster_stats,
                              )
 from phy.gui import GUI
-from phy.io.array import _spikes_per_cluster
+from phy.io.array import _spikes_per_cluster, Selector
 from phy.io.mock import (artificial_waveforms,
                          artificial_masks,
                          artificial_features,
@@ -59,6 +59,24 @@ def gui(qtbot):
     gui.close()
     del gui
     qtbot.wait(5)
+
+
+#------------------------------------------------------------------------------
+# Test cluster stats
+#------------------------------------------------------------------------------
+
+def test_create_cluster_stats(model):
+    selector = Selector(spike_clusters=model.spike_clusters,
+                        spikes_per_cluster=model.spikes_per_cluster)
+    cs = create_cluster_stats(model, selector=selector)
+    assert cs.mean_masks(1).shape == (model.n_channels,)
+    assert cs.mean_features(1).shape == (model.n_channels,
+                                         model.n_features_per_channel)
+    assert cs.mean_waveforms(1).shape == (model.n_samples_waveforms,
+                                          model.n_channels)
+    assert 1 <= cs.best_channels(1).shape[0] <= model.n_channels
+    assert 0 < cs.max_waveform_amplitude(1) < 1
+    assert cs.mean_masked_features_score(1, 2) > 0
 
 
 #------------------------------------------------------------------------------
@@ -107,53 +125,6 @@ def test_manual_clustering_edge_cases(manual_clustering):
     mc.move([], 'ignored')
 
     mc.save()
-
-
-def test_manual_clustering_default_metrics(qtbot, gui):
-
-    n_spikes = 10
-    n_samples = 4
-    n_channels = 7
-    n_clusters = 3
-    npc = 2
-
-    sc = artificial_spike_clusters(n_spikes, n_clusters)
-    spc = _spikes_per_cluster(sc)
-
-    waveforms = artificial_waveforms(n_spikes, n_samples, n_channels)
-    features = artificial_features(n_spikes, n_channels, npc)
-    masks = artificial_masks(n_spikes, n_channels)
-
-    mc = ManualClustering(sc)
-
-    q, s = default_wizard_functions(waveforms=waveforms,
-                                    features=features,
-                                    masks=masks,
-                                    n_features_per_channel=npc,
-                                    spikes_per_cluster=spc,
-                                    )
-
-    @mc.add_column()
-    def quality(cluster):
-        return q(cluster)
-
-    mc.set_default_sort('quality', 'desc')
-    mc.set_similarity_func(s)
-
-    best = sorted([(c, q(c)) for c in spc], key=itemgetter(1))[-1][0]
-
-    similarity = [(d, s(best, d)) for d in spc if d != best]
-    match = sorted(similarity, key=itemgetter(1))[-1][0]
-
-    mc.attach(gui)
-
-    mc.cluster_view.next()
-    assert mc.cluster_view.selected == [best]
-
-    mc.similarity_view.next()
-
-    assert mc.similarity_view.selected == [match]
-    assert mc.selected == [best, match]
 
 
 def test_manual_clustering_skip(qtbot, gui, manual_clustering):
