@@ -248,6 +248,14 @@ class ManualClusteringView(View):
 # Waveform view
 # -----------------------------------------------------------------------------
 
+class ChannelClick(Event):
+    def __init__(self, type, channel_idx=None, key=None, button=None):
+        super(ChannelClick, self).__init__(type)
+        self.channel_idx = channel_idx
+        self.key = key
+        self.button = button
+
+
 class WaveformView(ManualClusteringView):
     max_n_spikes_per_cluster = 100
     normalization_percentile = .95
@@ -285,11 +293,15 @@ class WaveformView(ManualClusteringView):
         in channel_positions.
 
         """
+        self._key_pressed = None
+
         # Initialize the view.
         box_bounds = _get_boxes(channel_positions)
         super(WaveformView, self).__init__(layout='boxed',
                                            box_bounds=box_bounds,
                                            **kwargs)
+
+        self.events.add(channel_click=ChannelClick)
 
         # Box and probe scaling.
         self.box_scaling = np.array(box_scaling if box_scaling is not None
@@ -391,6 +403,15 @@ class WaveformView(ManualClusteringView):
         self.actions.add(self.extend_vertically)
         self.actions.add(self.shrink_vertically)
 
+        # We forward the event from VisPy to the phy GUI.
+        @self.connect
+        def on_channel_click(e):
+            gui.emit('channel_click',
+                     channel_idx=e.channel_idx,
+                     key=e.key,
+                     button=e.button,
+                     )
+
     def toggle_waveform_overlap(self):
         """Toggle the overlap of the waveforms."""
         self.overlap = not self.overlap
@@ -460,6 +481,25 @@ class WaveformView(ManualClusteringView):
         x0, y0 = b[:, :2].min(axis=0)
         x1, y1 = b[:, 2:].max(axis=0)
         self.panzoom.set_range((x0, y0, x1, y1), keep_aspect=True)
+
+    def on_key_press(self, event):
+        """Handle key press events."""
+        key = event.key
+        self._key_pressed = key
+
+    def on_mouse_press(self, e):
+        key = self._key_pressed
+        if 'Control' in e.modifiers or key in map(str, range(10)):
+            key = int(key.name) if key in map(str, range(10)) else None
+            # Get mouse position in NDC.
+            mouse_pos = self.panzoom.get_mouse_pos(e.pos)
+            channel_idx = self.boxed.get_closest_box(mouse_pos)
+            self.events.channel_click(channel_idx=channel_idx,
+                                      key=key,
+                                      button=e.button)
+
+    def on_key_release(self, event):
+        self._key_pressed = None
 
 
 class WaveformViewPlugin(IPlugin):
@@ -908,11 +948,14 @@ class FeatureView(ManualClusteringView):
         # Spike times.
         assert spike_times.shape == (self.n_spikes,)
 
+        # Channels to show.
+        self.x_channels = None
+        self.y_channels = None
+
         # Attributes: extra features. This is a dictionary
         # {name: (array, data_bounds)}
         # where each array is a `(n_spikes,)` array.
         self.attributes = {}
-
         self.add_attribute('time', spike_times)
 
     def add_attribute(self, name, values, top_left=True):
@@ -1005,6 +1048,21 @@ class FeatureView(ManualClusteringView):
                            size=ms * np.ones(n_spikes),
                            )
 
+    def _get_channel_dims(self, cluster_ids):
+        """Select the channels to show by default."""
+        n = self.n_cols - 1
+        channels = self._best_channels(cluster_ids, 2 * n)
+        channels = (channels if channels is not None
+                    else list(range(self.n_channels)))
+        channels = _extend(channels, 2 * n)
+        assert len(channels) == 2 * n
+        return channels[:n], channels[n:]
+
+    def clear_channels(self):
+        """Reset the dimensions."""
+        self.x_channels = self.y_channels = None
+        self.on_select()
+
     def on_select(self, cluster_ids=None, **kwargs):
         super(FeatureView, self).on_select(cluster_ids=cluster_ids,
                                            **kwargs)
@@ -1019,23 +1077,21 @@ class FeatureView(ManualClusteringView):
                                      spike_ids,
                                      cluster_ids)
 
-        # Select the channels to show.
-        n = self.n_cols - 1
-        channels = self._best_channels(cluster_ids, 2 * n)
-        channels = (channels if channels is not None
-                    else list(range(self.n_channels)))
-        channels = _extend(channels, 2 * n)
-        assert len(channels) == 2 * n
-        x_channels, y_channels = channels[:n], channels[n:]
         # Select the dimensions.
+        # TODO: toggle automatic selection of the channels
+        x_ch, y_ch = self._get_channel_dims(cluster_ids)
+        if self.x_channels is None:
+            self.x_channels = x_ch
+        if self.y_channels is None:
+            self.y_channels = y_ch
         tla = self.top_left_attribute
-        x_dim, y_dim = _dimensions_matrix(x_channels, y_channels,
+        x_dim, y_dim = _dimensions_matrix(self.x_channels, self.y_channels,
                                           n_cols=self.n_cols,
                                           top_left_attribute=tla)
 
         # Set the status message.
-        ch_i = ', '.join(map(str, x_channels))
-        ch_j = ', '.join(map(str, y_channels))
+        ch_i = ', '.join(map(str, self.x_channels))
+        ch_j = ', '.join(map(str, self.y_channels))
         self.set_status('Channels: {} - {}'.format(ch_i, ch_j))
 
         # Set a non-time attribute as y coordinate in the top-left subplot.
@@ -1078,6 +1134,25 @@ class FeatureView(ManualClusteringView):
         super(FeatureView, self).attach(gui)
         self.actions.add(self.increase)
         self.actions.add(self.decrease)
+        self.actions.add(self.clear_channels)
+
+        gui.connect_(self.on_channel_click)
+
+    def on_channel_click(self, channel_idx=None, key=None, button=None):
+        """Respond to the click on a channel."""
+        if key is None or not (1 <= key <= (self.n_cols - 1)):
+            return
+        # Get the axis from the pressed button (1, 2, etc.)
+        axis = 'x' if button == 1 else 'y'
+        # Get the existing channels.
+        channels = self.x_channels if axis == 'x' else self.y_channels
+        if channels is None:
+            return
+        assert len(channels) == self.n_cols - 1
+        assert 0 <= channel_idx < self.n_channels
+        # Update the channel.
+        channels[key - 1] = channel_idx
+        self.on_select()
 
     def increase(self):
         """Increase the scaling of the features."""

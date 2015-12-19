@@ -12,6 +12,7 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 from numpy.testing import assert_allclose as ac
 from pytest import raises
+from vispy.util import keys
 
 from phy.gui import create_gui, GUIState
 from phy.io.mock import artificial_traces
@@ -52,7 +53,9 @@ def _test_view(view_name, model=None, tempdir=None):
     gui.manual_clustering.select([0])
     gui.manual_clustering.select([0, 2])
 
-    yield gui.list_views(view_name)[0]
+    view = gui.list_views(view_name)[0]
+    view.gui = gui
+    yield view
 
     gui.close()
 
@@ -135,6 +138,19 @@ def test_waveform_view(qtbot, model, tempdir):
 
         v.zoom_on_channels([0, 2, 4])
 
+        # Simulate channel selection.
+        _clicked = []
+
+        @v.gui.connect_
+        def on_channel_click(channel_idx=None, button=None, key=None):
+            _clicked.append((channel_idx, button, key))
+
+        v.events.key_press(key=keys.Key('2'))
+        v.events.mouse_press(pos=(0., 0.), button=1)
+        v.events.key_release(key=keys.Key('2'))
+
+        assert _clicked == [(0, 1, 2)]
+
         # qtbot.stop()
 
 
@@ -203,6 +219,9 @@ def test_feature_view(qtbot, model, tempdir):
 
         v.increase()
         v.decrease()
+
+        v.on_channel_click(channel_idx=3, button=1, key=2)
+        v.clear_channels()
 
         # qtbot.stop()
 
