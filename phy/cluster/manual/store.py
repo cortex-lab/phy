@@ -90,8 +90,8 @@ def create_cluster_store(model, selector=None, context=None):
     # TODO: make this configurable.
     max_n_spikes_per_cluster = {
         'masks': 1000,
-        'features': 10000,
-        'background_features_masks': 10000,
+        'features': 1000,
+        'background_features_masks': 1000,
         'waveforms': 100,
         'waveform_lim': 1000,  # used to compute the waveform bounds
         'feature_lim': 1000,  # used to compute the waveform bounds
@@ -252,6 +252,8 @@ def create_cluster_store(model, selector=None, context=None):
         mm0 = cs.mean_masks(cluster_0)
         mm1 = cs.mean_masks(cluster_1)
         nfpc = model.n_features_per_channel
+        logger.debug("Computing the similarity of clusters %d, %d.",
+                     cluster_0, cluster_1)
         d = get_mean_masked_features_distance(mf0, mf1, mm0, mm1,
                                               n_features_per_channel=nfpc)
         s = 1. / max(1e-10, d)
