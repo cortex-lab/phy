@@ -79,6 +79,7 @@ def create_cluster_store(model, selector=None, context=None):
         'background_features_masks': 10000,
         'waveforms': 100,
         'waveform_lim': 1000,  # used to compute the waveform bounds
+        'feature_lim': 1000,  # used to compute the waveform bounds
         'mean_traces': 10000,
     }
 
@@ -125,6 +126,18 @@ def create_cluster_store(model, selector=None, context=None):
         features = np.atleast_2d(model.features[spike_ids])
         assert features.ndim == 3
         return spike_ids, features
+
+    @cs.add
+    def feature_lim(percentile=95):
+        """Return the 95% percentile of all feature amplitudes."""
+        # TODO: refactor with waveforms and _get_data_bounds
+        k = max(1, model.n_spikes // max_n_spikes_per_cluster['feature_lim'])
+        w = np.abs(model.features[::k])
+        n = w.shape[0]
+        w = w.reshape((n, -1))
+        w = w.max(axis=1)
+        m = np.percentile(w, percentile)
+        return m
 
     @cs.add
     def background_features_masks():
