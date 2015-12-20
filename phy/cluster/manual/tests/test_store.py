@@ -65,7 +65,9 @@ def test_create_cluster_store(model):
     assert cs.mean_features(1).shape == (nc, nfpc)
     assert cs.mean_waveforms(1).shape == (nsw, nc)
 
+    # Limits.
     assert 0 < cs.waveform_lim() < 1
+    assert cs.trace_lim().shape == (1, nc)
 
     # Statistics.
     assert 1 <= len(cs.best_channels(1)) <= nc
