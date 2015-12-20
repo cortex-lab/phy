@@ -59,10 +59,10 @@ def create_cluster_stats(model, selector=None, context=None,
     cs = ClusterStats(context=context)
     ns = max_n_spikes_per_cluster
 
-    def select(cluster_id):
+    def select(cluster_id, n=None):
         assert cluster_id >= 0
-        return selector.select_spikes([cluster_id],
-                                      max_n_spikes_per_cluster=ns)
+        n = n or ns
+        return selector.select_spikes([cluster_id], max_n_spikes_per_cluster=n)
 
     @cs.add
     def mean_masks(cluster_id):
@@ -80,7 +80,7 @@ def create_cluster_stats(model, selector=None, context=None,
 
     @cs.add
     def mean_waveforms(cluster_id):
-        spike_ids = select(cluster_id)
+        spike_ids = select(cluster_id, ns // 10)
         waveforms = np.atleast_2d(model.waveforms[spike_ids])
         assert waveforms.ndim == 3
         mw = mean(waveforms)
