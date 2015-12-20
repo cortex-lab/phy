@@ -78,7 +78,7 @@ def create_cluster_store(model, selector=None, context=None):
         'features': 10000,
         'waveforms': 100,
         'waveform_lim': 1000,  # used to compute the waveform bounds
-        'trace_lim': 10000,
+        'mean_traces': 10000,
     }
 
     def select(cluster_id, n=None):
@@ -214,8 +214,8 @@ def create_cluster_store(model, selector=None, context=None):
     # -------------------------------------------------------------------------
 
     @cs.add
-    def trace_lim():
-        n = max_n_spikes_per_cluster['trace_lim']
+    def mean_traces():
+        n = max_n_spikes_per_cluster['mean_traces']
         mt = model.traces[:n, model.channel_order].mean(axis=0)
         return mt.astype(model.traces.dtype)
 
