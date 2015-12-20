@@ -168,7 +168,6 @@ def create_cluster_store(model, selector=None, context=None):
         spike_ids = np.arange(0, model.n_spikes, k)
         assert spike_ids.shape == (features.shape[0],)
         assert features.ndim == 3
-        assert features.shape[0] <= n
         assert masks.ndim == 2
         assert masks.shape[0] == features.shape[0]
         return spike_ids, features, masks
