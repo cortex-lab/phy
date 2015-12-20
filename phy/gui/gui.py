@@ -216,7 +216,11 @@ class GUI(QMainWindow):
     def request(self, name, *args, **kwargs):
         """Request the result of a possibly registered function."""
         if name in self._registered:
-            return self._registered[name](*args, **kwargs)
+            obj = self._registered[name]
+            if hasattr(obj, '__call__'):
+                return obj(*args, **kwargs)
+            else:
+                return obj
         else:
             logger.debug("No registered function for `%s`.", name)
             return None
