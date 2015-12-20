@@ -250,9 +250,6 @@ class ChannelClick(Event):
 
 
 class WaveformView(ManualClusteringView):
-    # max_n_spikes_per_cluster = 100
-    # normalization_percentile = .95
-    # normalization_n_spikes = 1000
     overlap = False
     scaling_coeff = 1.1
 
@@ -535,7 +532,6 @@ class WaveformViewPlugin(IPlugin):
 # -----------------------------------------------------------------------------
 
 class TraceView(ManualClusteringView):
-    n_samples_for_mean = 10000
     interval_duration = .5  # default duration of the interval
     shift_amount = .1
     scaling_coeff = 1.1
@@ -553,10 +549,11 @@ class TraceView(ManualClusteringView):
                  sample_rate=None,
                  spike_times=None,
                  spike_clusters=None,
-                 masks=None,
+                 masks=None,  # full array of masks
                  channel_order=None,
                  n_samples_per_spike=None,
                  scaling=None,
+                 mean_traces=None,
                  **kwargs):
 
         # Sample rate.
@@ -578,12 +575,9 @@ class TraceView(ManualClusteringView):
         self.channel_order = (channel_order if channel_order is not None
                               else slice(None, None, None))
 
-        # Compute the mean traces in order to detrend the traces.
-        k = max(1, self.n_samples // self.n_samples_for_mean)
-        # NOTE: the virtual memory mapped traces only works on contiguous
-        # data so we cannot load ::k here.
-        self.mean_traces = self.traces[:k, self.channel_order].mean(axis=0)
-        self.mean_traces = self.mean_traces.astype(traces.dtype)
+        # Used to detrend the traces.
+        assert mean_traces.shape == (1, self.n_channels)
+        self.mean_traces = mean_traces
 
         # Number of samples per spike.
         self.n_samples_per_spike = (n_samples_per_spike or
@@ -848,6 +842,10 @@ class TraceView(ManualClusteringView):
 class TraceViewPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
         s, = state.get_view_params('TraceView', 'scaling')
+
+        cs = gui.request('cluster_store')
+        assert cs  # We need the cluster store to retrieve the data.
+
         view = TraceView(traces=model.traces,
                          sample_rate=model.sample_rate,
                          spike_times=model.spike_times,
@@ -855,6 +853,7 @@ class TraceViewPlugin(IPlugin):
                          masks=model.masks,
                          channel_order=model.channel_order,
                          scaling=s,
+                         mean_traces=cs.mean_traces(),
                          )
         view.attach(gui)
 

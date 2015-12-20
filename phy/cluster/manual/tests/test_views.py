@@ -167,9 +167,10 @@ def test_trace_view_no_spikes(qtbot):
     sample_rate = 2000.
 
     traces = artificial_traces(n_samples, n_channels)
+    mt = np.atleast_2d(traces.mean(axis=0))
 
     # Create the view.
-    v = TraceView(traces=traces, sample_rate=sample_rate)
+    v = TraceView(traces=traces, sample_rate=sample_rate, mean_traces=mt)
     _show(qtbot, v)
 
 
