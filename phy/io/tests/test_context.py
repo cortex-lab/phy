@@ -15,11 +15,10 @@ from numpy.testing import assert_array_equal as ae
 from pytest import yield_fixture, mark, raises
 from six.moves import cPickle
 
-from ..context import (Context, ContextPlugin, Task,
+from ..context import (Context, Task,
                        _iter_chunks_dask, write_array, read_array,
                        _fullname,
                        )
-from phy.utils import Bunch
 
 
 #------------------------------------------------------------------------------
@@ -175,13 +174,6 @@ def test_pickle_cache(tempdir, parallel_context):
         ctx = cPickle.load(f)
     assert isinstance(ctx, Context)
     assert ctx.cache_dir == parallel_context.cache_dir
-
-
-def test_context_plugin(tempdir):
-    gui = Bunch()
-    path = op.join(tempdir, 'model.ext')
-    ContextPlugin().attach_to_gui(gui, model=Bunch(path=path), state=Bunch())
-    assert op.dirname(path) + '/.phy' in gui.context.cache_dir
 
 
 #------------------------------------------------------------------------------
