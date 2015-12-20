@@ -76,6 +76,7 @@ def create_cluster_store(model, selector=None, context=None):
     max_n_spikes_per_cluster = {
         'masks': 1000,
         'features': 10000,
+        'background_features': 10000,
         'waveforms': 100,
         'waveform_lim': 1000,  # used to compute the waveform bounds
         'mean_traces': 10000,
@@ -123,6 +124,17 @@ def create_cluster_store(model, selector=None, context=None):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['features'])
         features = np.atleast_2d(model.features[spike_ids])
         assert features.ndim == 3
+        return spike_ids, features
+
+    @cs.add
+    def background_features():
+        n = max_n_spikes_per_cluster['background_features']
+        k = max(1, model.n_spikes // n)
+        features = model.features[::k]
+        spike_ids = np.arange(0, model.n_spikes, k)
+        assert spike_ids.shape == (features.shape[0],)
+        assert features.ndim == 3
+        assert features.shape[0] <= n
         return spike_ids, features
 
     @cs.add
