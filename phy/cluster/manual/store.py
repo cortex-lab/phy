@@ -27,7 +27,7 @@ logger = logging.getLogger(__name__)
 # Cluster statistics
 # -----------------------------------------------------------------------------
 
-class ClusterStats(object):
+class ClusterStore(object):
     def __init__(self, context=None):
         self.context = context
         self._stats = {}
@@ -55,22 +55,22 @@ class ClusterStats(object):
         return f
 
     def attach(self, gui):
-        gui.register(self, name='cluster_stats')
+        gui.register(self, name='cluster_store')
 
 
-class ClusterStatsPlugin(IPlugin):
+class ClusterStorePlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
         ctx = gui.request('context')
         selector = Selector(spike_clusters=model.spike_clusters,
                             spikes_per_cluster=model.spikes_per_cluster,
                             )
-        cs = create_cluster_stats(model, selector=selector, context=ctx)
+        cs = create_cluster_store(model, selector=selector, context=ctx)
         cs.attach(gui)
 
 
-def create_cluster_stats(model, selector=None, context=None,
+def create_cluster_store(model, selector=None, context=None,
                          max_n_spikes_per_cluster=1000):
-    cs = ClusterStats(context=context)
+    cs = ClusterStore(context=context)
     ns = max_n_spikes_per_cluster
 
     def select(cluster_id, n=None):

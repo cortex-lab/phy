@@ -384,7 +384,7 @@ class ManualClustering(object):
         gui.add_view(self.similarity_view, name='SimilarityView')
 
         # Add the quality column in the cluster view.
-        cs = gui.request('cluster_stats')
+        cs = gui.request('cluster_store')
         if cs:
             self.cluster_view.add_column(cs.max_waveform_amplitude,
                                          name='quality')

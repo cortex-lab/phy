@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from ..store import create_cluster_stats, ClusterStats
+from ..store import create_cluster_store, ClusterStore
 from phy.io import Context, Selector
 
 
@@ -14,10 +14,10 @@ from phy.io import Context, Selector
 # Test cluster stats
 #------------------------------------------------------------------------------
 
-def test_create_cluster_stats(model):
+def test_create_cluster_store(model):
     selector = Selector(spike_clusters=model.spike_clusters,
                         spikes_per_cluster=model.spikes_per_cluster)
-    cs = create_cluster_stats(model, selector=selector)
+    cs = create_cluster_store(model, selector=selector)
     assert cs.mean_masks(1).shape == (model.n_channels,)
     assert cs.mean_features(1).shape == (model.n_channels,
                                          model.n_features_per_channel)
@@ -28,9 +28,9 @@ def test_create_cluster_stats(model):
     assert cs.mean_masked_features_score(1, 2) > 0
 
 
-def test_cluster_stats(tempdir):
+def test_cluster_store(tempdir):
     context = Context(tempdir)
-    cs = ClusterStats(context=context)
+    cs = ClusterStore(context=context)
 
     @cs.add(cache='memory')
     def f(x):
