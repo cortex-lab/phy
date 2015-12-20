@@ -17,7 +17,6 @@ from ..clusters import (mean,
                         get_sorted_main_channels,
                         get_mean_masked_features_distance,
                         get_max_waveform_amplitude,
-                        ClusterStats,
                         )
 from phy.electrode.mea import staggered_positions
 from phy.io.mock import (artificial_features,
@@ -144,19 +143,3 @@ def test_mean_masked_features_distance(features,
     d_computed = get_mean_masked_features_distance(f0, f1, m0, m1,
                                                    n_features_per_channel)
     ac(d_expected, d_computed)
-
-
-#------------------------------------------------------------------------------
-# Test ClusterStats
-#------------------------------------------------------------------------------
-
-def test_cluster_stats(tempdir):
-    context = Context(tempdir)
-    cs = ClusterStats(context=context)
-
-    @cs.add(cache='memory')
-    def f(x):
-        return x * x
-
-    assert cs.f(3) == 9
-    assert cs.f(3) == 9
