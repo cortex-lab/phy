@@ -50,9 +50,11 @@ def _test_view(view_name, model=None, tempdir=None):
     gui = create_gui(model=model, plugins=plugins, config_dir=tempdir)
     gui.show()
 
-    gui.manual_clustering.select([])
-    gui.manual_clustering.select([0])
-    gui.manual_clustering.select([0, 2])
+    mc = gui.request('manual_clustering')
+    assert mc
+    mc.select([])
+    mc.select([0])
+    mc.select([0, 2])
 
     view = gui.list_views(view_name)[0]
     view.gui = gui
