@@ -76,35 +76,3 @@ def get_mean_masked_features_distance(mean_features_0,
     d_1 = mu_1 * omeg_1
 
     return np.linalg.norm(d_0 - d_1)
-
-
-#------------------------------------------------------------------------------
-# Cluster stats object
-#------------------------------------------------------------------------------
-
-class ClusterStats(object):
-    def __init__(self, context=None):
-        self.context = context
-        self._stats = {}
-
-    def add(self, f=None, name=None, cache=None):
-        """Add a cluster statistic.
-
-        Parameters
-        ----------
-        f : function
-        name : str
-        cache : str
-            Can be `None` (no cache), `disk`, or `memory`. In the latter case
-            the function will also be cached on disk.
-
-        """
-        if f is None:
-            return lambda _: self.add(_, name=name, cache=cache)
-        name = name or f.__name__
-        if cache and self.context:
-            f = self.context.cache(f, memcache=(cache == 'memory'))
-        assert f
-        self._stats[name] = f
-        setattr(self, name, f)
-        return f
