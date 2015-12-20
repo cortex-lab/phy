@@ -57,6 +57,8 @@ def model():
     n_features = 4
 
     model.n_channels = n_channels
+    # TODO: test with permutation and dead channels
+    model.channel_order = None
     model.n_spikes = n_spikes
     model.sample_rate = 20000.
     model.duration = n_samples_t / float(model.sample_rate)

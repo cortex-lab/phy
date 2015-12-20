@@ -536,7 +536,7 @@ class WaveformViewPlugin(IPlugin):
 # -----------------------------------------------------------------------------
 
 class TraceView(ManualClusteringView):
-    n_samples_for_mean = 1000
+    n_samples_for_mean = 10000
     interval_duration = .5  # default duration of the interval
     shift_amount = .1
     scaling_coeff = 1.1
@@ -555,6 +555,7 @@ class TraceView(ManualClusteringView):
                  spike_times=None,
                  spike_clusters=None,
                  masks=None,
+                 channel_order=None,
                  n_samples_per_spike=None,
                  scaling=None,
                  **kwargs):
@@ -566,14 +567,23 @@ class TraceView(ManualClusteringView):
 
         # Traces.
         assert len(traces.shape) == 2
-        self.n_samples, self.n_channels = traces.shape
+        self.n_samples, self.n_channels_traces = traces.shape
         self.traces = traces
         self.duration = self.dt * self.n_samples
 
+        # Channel ordering and dead channels.
+        # We do traces[..., channel_order] whenever we load traces
+        # so that the channels match those in masks.
+        self.n_channels = (self.n_channels_traces if channel_order is None
+                           else len(channel_order))
+        self.channel_order = (channel_order if channel_order is not None
+                              else slice(None, None, None))
+
         # Compute the mean traces in order to detrend the traces.
         k = max(1, self.n_samples // self.n_samples_for_mean)
-        # NOTE: only use the first 100000 samples for perf reasons.
-        self.mean_traces = traces[0:100000:k].mean(axis=0)
+        # NOTE: the virtual memory mapped traces only works on contiguous
+        # data so we cannot load ::k here.
+        self.mean_traces = self.traces[:k, self.channel_order].mean(axis=0)
         self.mean_traces = self.mean_traces.astype(traces.dtype)
 
         # Number of samples per spike.
@@ -624,7 +634,11 @@ class TraceView(ManualClusteringView):
 
         i, j = round(self.sample_rate * start), round(self.sample_rate * end)
         i, j = int(i), int(j)
-        traces = self.traces[i:j]
+
+        # We load the traces and select the requested channels.
+        assert self.traces.shape[1] == self.n_channels_traces
+        traces = self.traces[i:j, self.channel_order]
+        assert traces.shape[1] == self.n_channels
 
         # Detrend the traces.
         traces -= self.mean_traces
@@ -714,6 +728,8 @@ class TraceView(ManualClusteringView):
 
         # Load traces.
         traces = self._load_traces(interval)
+        # NOTE: once loaded, the traces do not contain the dead channels
+        # so there are `n_channels_order` channels here.
         assert traces.shape[1] == self.n_channels
 
         # Set the status message.
@@ -838,6 +854,7 @@ class TraceViewPlugin(IPlugin):
                          spike_times=model.spike_times,
                          spike_clusters=model.spike_clusters,
                          masks=model.masks,
+                         channel_order=model.channel_order,
                          scaling=s,
                          )
         view.attach(gui)
