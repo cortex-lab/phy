@@ -509,4 +509,3 @@ class ManualClusteringPlugin(IPlugin):
                               cluster_groups=model.cluster_groups,
                               )
         mc.attach(gui)
-        gui.manual_clustering = mc
