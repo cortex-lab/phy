@@ -50,11 +50,12 @@ def test_create_cluster_store(model):
     _check(cs.features(1), ns, nc, nfpc)
     _check(cs.waveforms(1), ns, nsw, nc)
 
-    _check(cs.features_masks(1), ns, nc * nfpc, 2)
+    # Waveforms masks.
     spike_ids, w, m = cs.waveforms_masks(1)
     _check((spike_ids, w), ns, nsw, nc)
     _check((spike_ids, m), ns, nc)
 
+    # Background feature masks.
     spike_ids, bgf, bgm = cs.background_features_masks()
     assert bgf.ndim == 3
     assert bgf.shape[1:] == (nc, nfpc)
@@ -63,9 +64,10 @@ def test_create_cluster_store(model):
     assert spike_ids.shape == (bgf.shape[0],) == (bgm.shape[0],)
 
     # Test concat multiple clusters.
-    spike_ids, fm = cs.features_masks([1, 2])
+    spike_ids, f, m = cs.features_masks([1, 2])
     assert len(spike_ids) == ns + ns2
-    assert fm.shape == (ns + ns2, nc * nfpc, 2)
+    assert f.shape == (ns + ns2, nc, nfpc)
+    assert m.shape == (ns + ns2, nc)
 
     # Test means.
     assert cs.mean_masks(1).shape == (nc,)
