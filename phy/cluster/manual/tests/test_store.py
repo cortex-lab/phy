@@ -19,21 +19,33 @@ def test_create_cluster_store(model):
                         spikes_per_cluster=model.spikes_per_cluster)
     cs = create_cluster_store(model, selector=selector)
 
-    nspk = len(model.spikes_per_cluster[1])
+    nc = model.n_channels
+    nfpc = model.n_features_per_channel
+    ns = len(model.spikes_per_cluster[1])
+    nsw = model.n_samples_waveforms
 
-    assert cs.masks(1).shape == (nspk, model.n_channels)
-    assert cs.features(1).shape == (nspk, model.n_channels,
-                                    model.n_features_per_channel)
-    assert cs.waveforms(1).shape == (nspk, model.n_samples_waveforms,
-                                     model.n_channels)
+    def _check(out, *shape):
+        spikes, arr = out
+        assert spikes.shape[0] == shape[0]
+        assert arr.shape == shape
 
-    assert cs.mean_masks(1).shape == (model.n_channels,)
-    assert cs.mean_features(1).shape == (model.n_channels,
-                                         model.n_features_per_channel)
-    assert cs.mean_waveforms(1).shape == (model.n_samples_waveforms,
-                                          model.n_channels)
+    def _check2(arr, *shape):
+        assert arr.shape == shape
 
-    assert 1 <= cs.best_channels(1).shape[0] <= model.n_channels
+    _check(cs.masks(1), ns, nc)
+    _check(cs.features(1), ns, nc, nfpc)
+    _check(cs.waveforms(1), ns, nsw, nc)
+
+    _check(cs.features_masks(1), ns, nc * nfpc, 2)
+    spike_ids, w, m = cs.waveforms_masks(1)
+    _check((spike_ids, w), ns, nsw, nc)
+    _check((spike_ids, m), ns, nc)
+
+    assert cs.mean_masks(1).shape == (nc,)
+    assert cs.mean_features(1).shape == (nc, nfpc)
+    assert cs.mean_waveforms(1).shape == (nsw, nc)
+
+    assert 1 <= cs.best_channels(1).shape[0] <= nc
     assert 0 < cs.max_waveform_amplitude(1) < 1
     assert cs.mean_masked_features_score(1, 2) > 0
 
