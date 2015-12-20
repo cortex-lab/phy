@@ -199,7 +199,7 @@ class ManualClusteringView(View):
         # Number of channels to find on each axis.
         n = n_channels_requested or self.n_channels
         # Request the best channels to the GUI.
-        cs = self.gui.request('cluster_stats') if self.gui else None
+        cs = self.gui.request('cluster_store') if self.gui else None
         channels = cs.best_channels_multiple(cluster_ids) if cs else None
         # By default, select the first channels.
         if channels is None or not len(channels):
