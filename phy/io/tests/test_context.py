@@ -158,7 +158,7 @@ def test_context_memmap(tempdir, context):
     assert len(_res) == 1
 
     # Remove the cache directory.
-    assert context.cache_dir.startswith(tempdir)
+    assert context.cache_dir.replace('/private', '').startswith(tempdir)
     shutil.rmtree(context.cache_dir)
     context._memcache[_fullname(f)].clear()
 

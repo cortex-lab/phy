@@ -4,3 +4,4 @@
 """Input/output."""
 
 from .context import Context
+from .array import Selector, select_spikes
