@@ -10,18 +10,9 @@
 from functools import partial
 import logging
 
-import numpy as np
-
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
-from phy.stats.clusters import (mean,
-                                get_max_waveform_amplitude,
-                                get_mean_masked_features_distance,
-                                get_unmasked_channels,
-                                get_sorted_main_channels,
-                                ClusterStats,
-                                )
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table
 from phy.io.array import Selector
@@ -48,80 +39,6 @@ def _process_ups(ups):  # pragma: no cover
         return up
     else:
         raise NotImplementedError()
-
-
-# -----------------------------------------------------------------------------
-# Cluster statistics
-# -----------------------------------------------------------------------------
-
-def create_cluster_stats(model, selector=None, context=None,
-                         max_n_spikes_per_cluster=1000):
-    cs = ClusterStats(context=context)
-    ns = max_n_spikes_per_cluster
-
-    def select(cluster_id, n=None):
-        assert cluster_id >= 0
-        n = n or ns
-        return selector.select_spikes([cluster_id], max_n_spikes_per_cluster=n)
-
-    @cs.add
-    def mean_masks(cluster_id):
-        spike_ids = select(cluster_id)
-        masks = np.atleast_2d(model.masks[spike_ids])
-        assert masks.ndim == 2
-        return mean(masks)
-
-    @cs.add
-    def mean_features(cluster_id):
-        spike_ids = select(cluster_id)
-        features = np.atleast_2d(model.features[spike_ids])
-        assert features.ndim == 3
-        return mean(features)
-
-    @cs.add
-    def mean_waveforms(cluster_id):
-        spike_ids = select(cluster_id, ns // 10)
-        waveforms = np.atleast_2d(model.waveforms[spike_ids])
-        assert waveforms.ndim == 3
-        mw = mean(waveforms)
-        return mw
-
-    @cs.add(cache='memory')
-    def best_channels(cluster_id):
-        mm = cs.mean_masks(cluster_id)
-        uch = get_unmasked_channels(mm)
-        return get_sorted_main_channels(mm, uch)
-
-    @cs.add
-    def best_channels_multiple(cluster_ids):
-        best_channels = []
-        for cluster in cluster_ids:
-            channels = cs.best_channels(cluster)
-            best_channels.extend([ch for ch in channels
-                                  if ch not in best_channels])
-        return best_channels
-
-    @cs.add(cache='memory')
-    def max_waveform_amplitude(cluster_id):
-        mm = cs.mean_masks(cluster_id)
-        mw = cs.mean_waveforms(cluster_id)
-        assert mw.ndim == 2
-        logger.debug("Computing the quality of cluster %d.", cluster_id)
-        return np.asscalar(get_max_waveform_amplitude(mm, mw))
-
-    @cs.add(cache='memory')
-    def mean_masked_features_score(cluster_0, cluster_1):
-        mf0 = cs.mean_features(cluster_0)
-        mf1 = cs.mean_features(cluster_1)
-        mm0 = cs.mean_masks(cluster_0)
-        mm1 = cs.mean_masks(cluster_1)
-        nfpc = model.n_features_per_channel
-        d = get_mean_masked_features_distance(mf0, mf1, mm0, mm1,
-                                              n_features_per_channel=nfpc)
-        s = 1. / max(1e-10, d)
-        return s
-
-    return cs
 
 
 # -----------------------------------------------------------------------------
@@ -228,6 +145,8 @@ class ManualClustering(object):
         # Create the cluster views.
         self._create_cluster_views()
         self._add_default_columns()
+
+        self.similarity_func = None
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -369,7 +288,8 @@ class ManualClustering(object):
     def _update_similarity_view(self):
         """Update the similarity view with matches for the specified
         clusters."""
-        assert self.similarity_func
+        if not self.similarity_func:
+            return
         selection = self.cluster_view.selected
         if not len(selection):
             return
@@ -582,17 +502,10 @@ class ManualClusteringPlugin(IPlugin):
         mc.attach(gui)
         gui.manual_clustering = mc
 
-        # Create the cluster stats.
-        cs = create_cluster_stats(model,
-                                  selector=mc.selector,
-                                  context=getattr(gui, 'context', None))
-        gui.cluster_stats = cs
-
-        @gui.register
-        def best_channels(cluster_ids):
-            return cs.best_channels_multiple(cluster_ids)
-
         # Add the quality column in the cluster view.
+        cs = gui.request('cluster_stats')
+        if not cs:
+            return
         mc.cluster_view.add_column(cs.max_waveform_amplitude, name='quality')
         mc.set_default_sort('quality')
         mc.set_similarity_func(cs.mean_masked_features_score)
