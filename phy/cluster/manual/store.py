@@ -116,8 +116,13 @@ def create_cluster_store(model, selector=None, context=None):
     def features_masks(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['features'])
         fm = np.atleast_3d(model.features_masks[spike_ids])
+        ns = fm.shape[0]
+        nc = model.n_channels
+        nfpc = model.n_features_per_channel
         assert fm.ndim == 3
-        return spike_ids, fm
+        f = fm[..., 0].reshape((ns, nc, nfpc))
+        m = fm[:, ::nfpc, 1]
+        return spike_ids, f, m
 
     @cs.add
     @concat
