@@ -72,18 +72,6 @@ def _extract_wave(traces, spk, mask, wave_len=None):
     return data, channels
 
 
-def _get_data_bounds(arr, n_spikes=None, percentile=None):
-    # TODO: move to cluster store.
-    n = arr.shape[0]
-    k = max(1, n // n_spikes) if n_spikes else 1
-    w = np.abs(arr[::k])
-    n = w.shape[0]
-    w = w.reshape((n, -1))
-    w = w.max(axis=1)
-    m = np.percentile(w, percentile)
-    return [-1, -m, +1, +m]
-
-
 def _get_spike_clusters_rel(spike_clusters, spike_ids, cluster_ids):
     # Relative spike clusters.
     # NOTE: the order of the clusters in cluster_ids matters.
@@ -1304,13 +1292,11 @@ class CorrelogramView(ManualClusteringView):
 
         return ccg
 
-    def on_select(self, cluster_ids=None, **kwargs):
-        super(CorrelogramView, self).on_select(cluster_ids=cluster_ids,
-                                               **kwargs)
-        cluster_ids, spike_ids = self.cluster_ids, self.spike_ids
+    def on_select(self, cluster_ids=None):
+        super(CorrelogramView, self).on_select(cluster_ids)
+        cluster_ids = self.cluster_ids
         n_clusters = len(cluster_ids)
-        n_spikes = len(spike_ids)
-        if n_spikes == 0:
+        if n_clusters == 0:
             return
 
         ccg = self._compute_correlograms(cluster_ids)
