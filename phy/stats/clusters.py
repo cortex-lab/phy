@@ -104,5 +104,7 @@ class ClusterStats(object):
         name = name or f.__name__
         if cache and self.context:
             f = self.context.cache(f, memcache=(cache == 'memory'))
+        assert f
         self._stats[name] = f
         setattr(self, name, f)
+        return f

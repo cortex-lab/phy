@@ -193,7 +193,7 @@ class Context(object):
             return lambda _: self.cache(_, memcache=memcache)
         if self._memory is None:  # pragma: no cover
             logger.debug("Joblib is not installed: skipping cacheing.")
-            return
+            return f
         disk_cached = self._memory.cache(f)
         name = _fullname(f)
         if memcache:
