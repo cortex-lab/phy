@@ -572,7 +572,9 @@ class TraceView(ManualClusteringView):
 
         # Compute the mean traces in order to detrend the traces.
         k = max(1, self.n_samples // self.n_samples_for_mean)
-        self.mean_traces = np.mean(traces[::k], axis=0).astype(traces.dtype)
+        # NOTE: only use the first 100000 samples for perf reasons.
+        self.mean_traces = traces[0:100000:k].mean(axis=0)
+        self.mean_traces = self.mean_traces.astype(traces.dtype)
 
         # Number of samples per spike.
         self.n_samples_per_spike = (n_samples_per_spike or
