@@ -77,14 +77,13 @@ def create_cluster_store(model, selector=None, context=None):
         'masks': 1000,
         'features': 10000,
         'waveforms': 100,
+        'waveform_lim': 1000,  # used to compute the waveform bounds
     }
+    # TODO: add trace mean
 
     def select(cluster_id, n=None):
         assert cluster_id >= 0
         return selector.select_spikes([cluster_id], max_n_spikes_per_cluster=n)
-
-    # Model data.
-    # -------------------------------------------------------------------------
 
     def concat(f):
         """Take a function accepting a single cluster, and return a function
@@ -98,6 +97,9 @@ def create_cluster_store(model, selector=None, context=None):
             spike_ids_l, data_l = zip(*(f(c) for c in cluster_ids))
             return np.hstack(spike_ids_l), np.vstack(data_l)
         return wrapped
+
+    # Model data.
+    # -------------------------------------------------------------------------
 
     @cs.add
     @concat
@@ -116,11 +118,6 @@ def create_cluster_store(model, selector=None, context=None):
         return spike_ids, fm
 
     @cs.add
-    def mean_masks(cluster_id):
-        # We access [1] because we return spike_ids, masks.
-        return mean(cs.masks(cluster_id)[1])
-
-    @cs.add
     @concat
     def features(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['features'])
@@ -129,16 +126,23 @@ def create_cluster_store(model, selector=None, context=None):
         return spike_ids, features
 
     @cs.add
-    def mean_features(cluster_id):
-        return mean(cs.features(cluster_id)[1])
-
-    @cs.add
     @concat
     def waveforms(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['waveforms'])
         waveforms = np.atleast_2d(model.waveforms[spike_ids])
         assert waveforms.ndim == 3
         return spike_ids, waveforms
+
+    @cs.add
+    def waveform_lim(percentile=95):
+        """Return the 95% percentile of all waveform amplitudes."""
+        k = max(1, model.n_spikes // max_n_spikes_per_cluster['waveform_lim'])
+        w = np.abs(model.waveforms[::k])
+        n = w.shape[0]
+        w = w.reshape((n, -1))
+        w = w.max(axis=1)
+        m = np.percentile(w, percentile)
+        return m
 
     @cs.add
     @concat
@@ -151,6 +155,18 @@ def create_cluster_store(model, selector=None, context=None):
         # Ensure that both arrays have the same number of channels.
         assert masks.shape[1] == waveforms.shape[2]
         return spike_ids, waveforms, masks
+
+    # Mean quantities.
+    # -------------------------------------------------------------------------
+
+    @cs.add
+    def mean_masks(cluster_id):
+        # We access [1] because we return spike_ids, masks.
+        return mean(cs.masks(cluster_id)[1])
+
+    @cs.add
+    def mean_features(cluster_id):
+        return mean(cs.features(cluster_id)[1])
 
     @cs.add
     def mean_waveforms(cluster_id):
