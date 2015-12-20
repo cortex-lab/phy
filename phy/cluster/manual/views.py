@@ -73,6 +73,7 @@ def _extract_wave(traces, spk, mask, wave_len=None):
 
 
 def _get_data_bounds(arr, n_spikes=None, percentile=None):
+    # TODO: move to cluster store.
     n = arr.shape[0]
     k = max(1, n // n_spikes) if n_spikes else 1
     w = np.abs(arr[::k])
@@ -181,21 +182,13 @@ class ManualClusteringView(View):
         super(ManualClusteringView, self).__init__(**kwargs)
         self.events.add(status=StatusEvent)
 
-    def on_select(self, cluster_ids=None, selector=None, spike_ids=None):
+    def on_select(self, cluster_ids=None):
         cluster_ids = (cluster_ids if cluster_ids is not None
                        else self.cluster_ids)
-        if spike_ids is None:
-            # Use the selector to select some or all of the spikes.
-            if selector:
-                ns = self.max_n_spikes_per_cluster
-                spike_ids = selector.select_spikes(cluster_ids, ns)
-            else:
-                spike_ids = self.spike_ids
         self.cluster_ids = list(cluster_ids) if cluster_ids is not None else []
-        self.spike_ids = np.asarray(spike_ids if spike_ids is not None else [])
 
     def _best_channels(self, cluster_ids, n_channels_requested=None):
-        """Request best channels for a set of clusters."""
+        """Return the best channels for a set of clusters."""
         # Number of channels to find on each axis.
         n = n_channels_requested or self.n_channels
         # Request the best channels to the GUI.
@@ -257,9 +250,9 @@ class ChannelClick(Event):
 
 
 class WaveformView(ManualClusteringView):
-    max_n_spikes_per_cluster = 100
-    normalization_percentile = .95
-    normalization_n_spikes = 1000
+    # max_n_spikes_per_cluster = 100
+    # normalization_percentile = .95
+    # normalization_n_spikes = 1000
     overlap = False
     scaling_coeff = 1.1
 
@@ -280,12 +273,13 @@ class WaveformView(ManualClusteringView):
     }
 
     def __init__(self,
-                 waveforms=None,
-                 masks=None,
+                 waveforms_masks=None,
                  spike_clusters=None,
                  channel_positions=None,
                  box_scaling=None,
                  probe_scaling=None,
+                 n_samples=None,
+                 waveform_lim=None,
                  **kwargs):
         """
 
@@ -294,6 +288,15 @@ class WaveformView(ManualClusteringView):
 
         """
         self._key_pressed = None
+
+        # Channel positions and n_channels.
+        assert channel_positions is not None
+        self.channel_positions = np.asarray(channel_positions)
+        self.n_channels = self.channel_positions.shape[0]
+
+        # Number of samples per waveform.
+        assert n_samples > 0
+        self.n_samples = n_samples
 
         # Initialize the view.
         box_bounds = _get_boxes(channel_positions)
@@ -316,43 +319,39 @@ class WaveformView(ManualClusteringView):
         self.box_size = np.array(self.boxed.box_size)
         self._update_boxes()
 
-        # Waveforms.
-        assert waveforms.ndim == 3
-        self.n_spikes, self.n_samples, self.n_channels = waveforms.shape
-        self.waveforms = waveforms
+        # Data: functions cluster_id => waveforms.
+        self.waveforms_masks = waveforms_masks
 
         # Waveform normalization.
-        self.data_bounds = _get_data_bounds(waveforms,
-                                            self.normalization_n_spikes,
-                                            self.normalization_percentile)
-
-        # Masks.
-        self.masks = masks
+        assert waveform_lim > 0
+        self.data_bounds = [-1, -waveform_lim, +1, +waveform_lim]
 
         # Spike clusters.
-        assert spike_clusters.shape == (self.n_spikes,)
         self.spike_clusters = spike_clusters
 
         # Channel positions.
         assert channel_positions.shape == (self.n_channels, 2)
         self.channel_positions = channel_positions
 
-    def on_select(self, cluster_ids=None, **kwargs):
-        super(WaveformView, self).on_select(cluster_ids=cluster_ids,
-                                            **kwargs)
-        cluster_ids, spike_ids = self.cluster_ids, self.spike_ids
+    def on_select(self, cluster_ids=None):
+        super(WaveformView, self).on_select(cluster_ids)
+        cluster_ids = self.cluster_ids
         n_clusters = len(cluster_ids)
-        n_spikes = len(spike_ids)
-        if n_spikes == 0:
+        if n_clusters == 0:
             return
+
+        # Load the waveform subset.
+        spike_ids, w, masks = self.waveforms_masks(cluster_ids)
+        n_spikes = len(spike_ids)
+        assert w.shape == (n_spikes, self.n_samples, self.n_channels)
+        assert masks.shape == (n_spikes, self.n_channels)
 
         # Relative spike clusters.
         spike_clusters_rel = _get_spike_clusters_rel(self.spike_clusters,
-                                                     spike_ids,
-                                                     cluster_ids)
+                                                     spike_ids, cluster_ids)
+        assert spike_clusters_rel.shape == (n_spikes,)
 
         # Fetch the waveforms.
-        w = self.waveforms[spike_ids]
         t = _get_linear_x(n_spikes, self.n_samples)
         # Overlap.
         if not self.overlap:
@@ -360,9 +359,6 @@ class WaveformView(ManualClusteringView):
                            (n_clusters - 1) / 2.)
             # The total width should not depend on the number of clusters.
             t /= n_clusters
-
-        # Depth as a function of the cluster index and masks.
-        masks = self.masks[spike_ids]
 
         # Plot all waveforms.
         # OPTIM: avoid the loop.
@@ -509,12 +505,15 @@ class WaveformViewPlugin(IPlugin):
                                            'probe_scaling',
                                            'overlap',
                                            )
-        view = WaveformView(waveforms=model.waveforms,
-                            masks=model.masks,
+        cs = gui.request('cluster_store')
+        assert cs  # We need the cluster store to retrieve the data.
+        view = WaveformView(waveforms_masks=cs.waveforms_masks,
                             spike_clusters=model.spike_clusters,
                             channel_positions=model.channel_positions,
+                            n_samples=model.n_samples_waveforms,
                             box_scaling=bs,
                             probe_scaling=ps,
+                            waveform_lim=cs.waveform_lim(),
                             )
         view.attach(gui)
 

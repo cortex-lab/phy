@@ -94,8 +94,8 @@ def create_cluster_store(model, selector=None, context=None):
             if not hasattr(cluster_ids, '__len__'):
                 return f(cluster_ids)
             # Concatenate the result of multiple clusters.
-            spike_ids_l, data_l = zip(*(f(c) for c in cluster_ids))
-            return np.hstack(spike_ids_l), np.vstack(data_l)
+            arrs = zip(*(f(c) for c in cluster_ids))
+            return tuple(np.concatenate(_, axis=0) for _ in arrs)
         return wrapped
 
     # Model data.
