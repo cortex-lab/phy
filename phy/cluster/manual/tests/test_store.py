@@ -55,6 +55,10 @@ def test_create_cluster_store(model):
     _check((spike_ids, w), ns, nsw, nc)
     _check((spike_ids, m), ns, nc)
 
+    spike_ids, bgf = cs.background_features()
+    assert bgf.ndim == 3
+    assert spike_ids.shape == (bgf.shape[0],)
+
     # Test concat multiple clusters.
     spike_ids, fm = cs.features_masks([1, 2])
     assert len(spike_ids) == ns + ns2
