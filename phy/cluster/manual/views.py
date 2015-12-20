@@ -177,7 +177,6 @@ class ManualClusteringView(View):
 
         # Keep track of the selected clusters and spikes.
         self.cluster_ids = None
-        self.spike_ids = None
 
         super(ManualClusteringView, self).__init__(**kwargs)
         self.events.add(status=StatusEvent)
@@ -757,9 +756,8 @@ class TraceView(ManualClusteringView):
         self.build()
         self.update()
 
-    def on_select(self, cluster_ids=None, **kwargs):
-        super(TraceView, self).on_select(cluster_ids=cluster_ids,
-                                         **kwargs)
+    def on_select(self, cluster_ids=None):
+        super(TraceView, self).on_select(cluster_ids)
         self.set_interval(self.interval, change_status=False)
 
     def attach(self, gui):
@@ -915,10 +913,6 @@ def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
 
 
 class FeatureView(ManualClusteringView):
-    max_n_spikes_per_cluster = 100000
-    normalization_percentile = .95
-    normalization_n_spikes = 1000
-    n_spikes_bg = 10000
     _default_marker_size = 3.
     _feature_scaling = 1.
 
@@ -928,17 +922,30 @@ class FeatureView(ManualClusteringView):
     }
 
     def __init__(self,
-                 features=None,
-                 masks=None,
+                 features_masks=None,  # function cluster_id => (spk, f, m)
+                 background_features_masks=None,  # (spk, f, m)
                  spike_times=None,
                  spike_clusters=None,
+                 n_channels=None,
+                 n_features_per_channel=None,
+                 feature_lim=None,
                  **kwargs):
 
-        assert len(features.shape) == 3
-        self.n_spikes, self.n_channels, self.n_features = features.shape
-        self.n_cols = self.n_features + 1
+        assert features_masks
+        self.features_masks = features_masks
+
+        # This is a tuple (spikes, features, masks).
+        self.background_features_masks = background_features_masks
+
+        self.n_features_per_channel = n_features_per_channel
+        assert n_channels > 0
+        self.n_channels = n_channels
+
+        self.n_spikes = spike_times.shape[0]
+        assert self.n_spikes >= 0
+
+        self.n_cols = self.n_features_per_channel + 1
         self.shape = (self.n_cols, self.n_cols)
-        self.features = features
 
         # Initialize the view.
         super(FeatureView, self).__init__(layout='grid',
@@ -946,17 +953,7 @@ class FeatureView(ManualClusteringView):
                                           **kwargs)
 
         # Feature normalization.
-        self.data_bounds = _get_data_bounds(features,
-                                            self.normalization_n_spikes,
-                                            self.normalization_percentile)
-
-        # Masks.
-        self.masks = masks
-
-        # Background spikes.
-        k = max(1, self.n_spikes // self.n_spikes_bg)
-        self.spike_ids_bg = slice(None, None, k)
-        self.masks_bg = self.masks[self.spike_ids_bg]
+        self.data_bounds = [-1, -feature_lim, +1, +feature_lim]
 
         # Spike clusters.
         assert spike_clusters.shape == (self.n_spikes,)
@@ -990,15 +987,12 @@ class FeatureView(ManualClusteringView):
         if top_left:
             self.top_left_attribute = name
 
-    def _get_feature(self, dim, spike_ids=None):
-        f = self.features[spike_ids]
-        assert f.ndim == 3
-
+    def _get_feature(self, dim, spike_ids, f):
         if dim in self.attributes:
             # Extra features like time.
             values, _ = self.attributes[dim]
             values = values[spike_ids]
-            assert values.shape == (f.shape[0],)
+            # assert values.shape == (f.shape[0],)
             return values
         else:
             assert len(dim) == 2
@@ -1034,8 +1028,7 @@ class FeatureView(ManualClusteringView):
         n_clusters = len(self.cluster_ids)
 
         # Retrieve the data bounds.
-        data_bounds = self._get_dim_bounds(x_dim[i, j],
-                                           y_dim[i, j])
+        data_bounds = self._get_dim_bounds(x_dim[i, j], y_dim[i, j])
 
         # Retrieve the masks and depth.
         mx, dx = _project_mask_depth(x_dim[i, j], masks,
@@ -1080,19 +1073,25 @@ class FeatureView(ManualClusteringView):
         self.x_channels = self.y_channels = None
         self.on_select()
 
-    def on_select(self, cluster_ids=None, **kwargs):
-        super(FeatureView, self).on_select(cluster_ids=cluster_ids,
-                                           **kwargs)
-        cluster_ids, spike_ids = self.cluster_ids, self.spike_ids
-        n_spikes = len(spike_ids)
-        if n_spikes == 0:
+    def on_select(self, cluster_ids=None):
+        super(FeatureView, self).on_select(cluster_ids)
+        cluster_ids = self.cluster_ids
+        n_clusters = len(cluster_ids)
+        if n_clusters == 0:
             return
 
-        # Get the masks for the selected spikes.
-        masks = self.masks[spike_ids]
-        sc = _get_spike_clusters_rel(self.spike_clusters,
-                                     spike_ids,
+        # Get the spikes, features, masks.
+        spike_ids, f, masks = self.features_masks(cluster_ids)
+        assert f.ndim == 3
+        assert masks.ndim == 2
+        assert spike_ids.shape[0] == f.shape[0] == masks.shape[0]
+
+        # Get the spike clusters.
+        sc = _get_spike_clusters_rel(self.spike_clusters, spike_ids,
                                      cluster_ids)
+
+        # Get the background features.
+        spike_ids_bg, features_bg, masks_bg = self.background_features_masks
 
         # Select the dimensions.
         # TODO: toggle automatic selection of the channels
@@ -1123,16 +1122,18 @@ class FeatureView(ManualClusteringView):
                 for j in range(self.n_cols):
 
                     # Retrieve the x and y values for the subplot.
-                    x = self._get_feature(x_dim[i, j], self.spike_ids)
-                    y = self._get_feature(y_dim[i, j], self.spike_ids)
+                    x = self._get_feature(x_dim[i, j], spike_ids, f)
+                    y = self._get_feature(y_dim[i, j], spike_ids, f)
 
                     # Retrieve the x and y values for the background spikes.
-                    x_bg = self._get_feature(x_dim[i, j], self.spike_ids_bg)
-                    y_bg = self._get_feature(y_dim[i, j], self.spike_ids_bg)
+                    x_bg = self._get_feature(x_dim[i, j], spike_ids_bg,
+                                             features_bg)
+                    y_bg = self._get_feature(y_dim[i, j], spike_ids_bg,
+                                             features_bg)
 
                     # Background features.
                     self._plot_features(i, j, x_dim, y_dim, x_bg, y_bg,
-                                        masks=self.masks_bg)
+                                        masks=masks_bg)
                     # Cluster features.
                     self._plot_features(i, j, x_dim, y_dim, x, y,
                                         masks=masks,
@@ -1192,11 +1193,16 @@ class FeatureView(ManualClusteringView):
 
 class FeatureViewPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
-
-        view = FeatureView(features=model.features,
-                           masks=model.masks,
+        cs = gui.request('cluster_store')
+        assert cs
+        bg = cs.background_features_masks()
+        view = FeatureView(features_masks=cs.features_masks,
+                           background_features_masks=bg,
                            spike_clusters=model.spike_clusters,
                            spike_times=model.spike_times,
+                           n_channels=model.n_channels,
+                           n_features_per_channel=model.n_features_per_channel,
+                           feature_lim=cs.feature_lim(),
                            )
         view.attach(gui)
 
