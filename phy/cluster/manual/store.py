@@ -11,6 +11,7 @@ import logging
 
 import numpy as np
 
+from phy.io.array import Selector
 from phy.stats.clusters import (mean,
                                 get_max_waveform_amplitude,
                                 get_mean_masked_features_distance,
@@ -59,11 +60,11 @@ class ClusterStats(object):
 
 class ClusterStatsPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
-        mc = gui.request('manual_clustering')
-        if not mc:
-            return
         ctx = gui.request('context')
-        cs = create_cluster_stats(model, selector=mc.selector, context=ctx)
+        selector = Selector(spike_clusters=model.spike_clusters,
+                            spikes_per_cluster=model.spikes_per_cluster,
+                            )
+        cs = create_cluster_stats(model, selector=selector, context=ctx)
         cs.attach(gui)
 
 
