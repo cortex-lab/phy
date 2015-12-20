@@ -563,8 +563,8 @@ class TraceView(ManualClusteringView):
                               else slice(None, None, None))
 
         # Used to detrend the traces.
-        assert mean_traces.shape == (1, self.n_channels)
-        self.mean_traces = mean_traces
+        self.mean_traces = np.atleast_2d(mean_traces)
+        assert self.mean_traces.shape == (1, self.n_channels)
 
         # Number of samples per spike.
         self.n_samples_per_spike = (n_samples_per_spike or
