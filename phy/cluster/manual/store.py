@@ -7,6 +7,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+from functools import wraps
 import logging
 
 import numpy as np
@@ -68,51 +69,92 @@ class ClusterStorePlugin(IPlugin):
         cs.attach(gui)
 
 
-def create_cluster_store(model, selector=None, context=None,
-                         max_n_spikes_per_cluster=1000):
+def create_cluster_store(model, selector=None, context=None):
     cs = ClusterStore(context=context)
-    ns = max_n_spikes_per_cluster
+
+    # TODO: make this configurable.
+    max_n_spikes_per_cluster = {
+        'masks': 1000,
+        'features': 10000,
+        'waveforms': 100,
+    }
 
     def select(cluster_id, n=None):
         assert cluster_id >= 0
-        n = n or ns
         return selector.select_spikes([cluster_id], max_n_spikes_per_cluster=n)
 
     # Model data.
     # -------------------------------------------------------------------------
 
+    def concat(f):
+        """Take a function accepting a single cluster, and return a function
+        accepting multiple clusters."""
+        @wraps(f)
+        def wrapped(cluster_ids):
+            # Single cluster.
+            if not hasattr(cluster_ids, '__len__'):
+                return f(cluster_ids)
+            # Concatenate the result of multiple clusters.
+            spike_ids_l, data_l = zip(*(f(c) for c in cluster_ids))
+            return np.hstack(spike_ids_l), np.vstack(data_l)
+        return wrapped
+
     @cs.add
+    @concat
     def masks(cluster_id):
-        spike_ids = select(cluster_id)
+        spike_ids = select(cluster_id, max_n_spikes_per_cluster['masks'])
         masks = np.atleast_2d(model.masks[spike_ids])
         assert masks.ndim == 2
-        return masks
+        return spike_ids, masks
+
+    @cs.add
+    @concat
+    def features_masks(cluster_id):
+        spike_ids = select(cluster_id, max_n_spikes_per_cluster['features'])
+        fm = np.atleast_3d(model.features_masks[spike_ids])
+        assert fm.ndim == 3
+        return spike_ids, fm
 
     @cs.add
     def mean_masks(cluster_id):
-        return mean(cs.masks(cluster_id))
+        # We access [1] because we return spike_ids, masks.
+        return mean(cs.masks(cluster_id)[1])
 
     @cs.add
+    @concat
     def features(cluster_id):
-        spike_ids = select(cluster_id)
+        spike_ids = select(cluster_id, max_n_spikes_per_cluster['features'])
         features = np.atleast_2d(model.features[spike_ids])
         assert features.ndim == 3
-        return features
+        return spike_ids, features
 
     @cs.add
     def mean_features(cluster_id):
-        return mean(cs.features(cluster_id))
+        return mean(cs.features(cluster_id)[1])
 
     @cs.add
+    @concat
     def waveforms(cluster_id):
-        spike_ids = select(cluster_id, ns // 10)
+        spike_ids = select(cluster_id, max_n_spikes_per_cluster['waveforms'])
         waveforms = np.atleast_2d(model.waveforms[spike_ids])
         assert waveforms.ndim == 3
-        return waveforms
+        return spike_ids, waveforms
+
+    @cs.add
+    @concat
+    def waveforms_masks(cluster_id):
+        spike_ids = select(cluster_id, max_n_spikes_per_cluster['waveforms'])
+        waveforms = np.atleast_2d(model.waveforms[spike_ids])
+        assert waveforms.ndim == 3
+        masks = np.atleast_2d(model.masks[spike_ids])
+        assert masks.ndim == 2
+        # Ensure that both arrays have the same number of channels.
+        assert masks.shape[1] == waveforms.shape[2]
+        return spike_ids, waveforms, masks
 
     @cs.add
     def mean_waveforms(cluster_id):
-        return mean(cs.waveforms(cluster_id))
+        return mean(cs.waveforms(cluster_id)[1])
 
     # Statistics.
     # -------------------------------------------------------------------------
