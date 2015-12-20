@@ -42,9 +42,6 @@ def test_create_cluster_store(model):
         assert spikes.shape[0] == shape[0]
         assert arr.shape == shape
 
-    def _check2(arr, *shape):
-        assert arr.shape == shape
-
     # Model data.
     _check(cs.masks(1), ns, nc)
     _check(cs.features(1), ns, nc, nfpc)

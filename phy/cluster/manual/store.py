@@ -25,6 +25,21 @@ logger = logging.getLogger(__name__)
 
 
 # -----------------------------------------------------------------------------
+# Utils
+# -----------------------------------------------------------------------------
+
+def _get_data_bounds(arr, n_spikes=None, percentile=None):
+    n = arr.shape[0]
+    k = max(1, n // n_spikes) if n_spikes else 1
+    arr = np.abs(arr[::k])
+    n = arr.shape[0]
+    arr = arr.reshape((n, -1))
+    arr = arr.max(axis=1)
+    m = np.percentile(arr, percentile)
+    return m
+
+
+# -----------------------------------------------------------------------------
 # Cluster statistics
 # -----------------------------------------------------------------------------
 
