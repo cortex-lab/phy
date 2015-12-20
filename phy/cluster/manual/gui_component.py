@@ -15,7 +15,6 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table
-from phy.io.array import Selector
 from phy.utils import IPlugin
 
 logger = logging.getLogger(__name__)
@@ -76,7 +75,7 @@ class ManualClustering(object):
     When this component is attached to a GUI, the GUI emits the following
     events:
 
-    select(cluster_ids, selector)
+    select(cluster_ids)
         when clusters are selected
     cluster(up)
         when a merge or split happens
@@ -134,13 +133,6 @@ class ManualClustering(object):
         self.cluster_meta = create_cluster_meta(cluster_groups)
         self._global_history = GlobalHistory(process_ups=_process_ups)
         self._register_logging()
-
-        # Create the spike selector.
-        sc = self.clustering.spike_clusters
-        spc = self.clustering.spikes_per_cluster
-        self.selector = Selector(spike_clusters=sc,
-                                 spikes_per_cluster=spc,
-                                 )
 
         # Create the cluster views.
         self._create_cluster_views()
@@ -304,10 +296,7 @@ class ManualClustering(object):
         `select` event on the GUI."""
         logger.debug("Select clusters: %s.", ', '.join(map(str, cluster_ids)))
         if self.gui:
-            self.gui.emit('select',
-                          cluster_ids=cluster_ids,
-                          selector=self.selector,
-                          )
+            self.gui.emit('select', cluster_ids)
 
     # Public methods
     # -------------------------------------------------------------------------
