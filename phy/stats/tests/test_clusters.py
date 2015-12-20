@@ -23,7 +23,6 @@ from phy.io.mock import (artificial_features,
                          artificial_masks,
                          artificial_waveforms,
                          )
-from phy.io.context import Context
 
 
 #------------------------------------------------------------------------------
