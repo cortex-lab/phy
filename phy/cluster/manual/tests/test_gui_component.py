@@ -12,10 +12,8 @@ from numpy.testing import assert_array_equal as ae
 
 from ..gui_component import (ManualClustering,
                              ManualClusteringPlugin,
-                             create_cluster_stats,
                              )
 from phy.gui import GUI
-from phy.io.array import Selector
 from phy.utils import Bunch
 
 
@@ -55,24 +53,6 @@ def gui(qtbot):
 
 
 #------------------------------------------------------------------------------
-# Test cluster stats
-#------------------------------------------------------------------------------
-
-def test_create_cluster_stats(model):
-    selector = Selector(spike_clusters=model.spike_clusters,
-                        spikes_per_cluster=model.spikes_per_cluster)
-    cs = create_cluster_stats(model, selector=selector)
-    assert cs.mean_masks(1).shape == (model.n_channels,)
-    assert cs.mean_features(1).shape == (model.n_channels,
-                                         model.n_features_per_channel)
-    assert cs.mean_waveforms(1).shape == (model.n_samples_waveforms,
-                                          model.n_channels)
-    assert 1 <= cs.best_channels(1).shape[0] <= model.n_channels
-    assert 0 < cs.max_waveform_amplitude(1) < 1
-    assert cs.mean_masked_features_score(1, 2) > 0
-
-
-#------------------------------------------------------------------------------
 # Test GUI component
 #------------------------------------------------------------------------------
 
@@ -86,8 +66,6 @@ def test_manual_clustering_plugin(qtbot, gui):
                   )
     state = Bunch()
     ManualClusteringPlugin().attach_to_gui(gui, model=model, state=state)
-
-    assert gui.request('best_channels', [0, 1]) == [0]
 
 
 def test_manual_clustering_edge_cases(manual_clustering):

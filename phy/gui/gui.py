@@ -207,14 +207,14 @@ class GUI(QMainWindow):
         self._event.unconnect(*args, **kwargs)
 
     def register(self, func=None, name=None):
-        """Register a function for a given name."""
+        """Register a object for a given name."""
         if func is None:
             return lambda _: self.register(func=_, name=name)
         name = name or func.__name__
         self._registered[name] = func
 
     def request(self, name, *args, **kwargs):
-        """Request the result of a possibly registered function."""
+        """Request the result of a possibly registered object."""
         if name in self._registered:
             obj = self._registered[name]
             if hasattr(obj, '__call__'):
@@ -222,7 +222,7 @@ class GUI(QMainWindow):
             else:
                 return obj
         else:
-            logger.debug("No registered function for `%s`.", name)
+            logger.debug("No registered object for `%s`.", name)
             return None
 
     def closeEvent(self, e):
