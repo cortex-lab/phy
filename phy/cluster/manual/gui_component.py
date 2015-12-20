@@ -374,6 +374,7 @@ class ManualClustering(object):
 
     def attach(self, gui):
         self.gui = gui
+        gui.register(self, name='manual_clustering')
 
         # Create the actions.
         self._create_actions(gui)
@@ -381,6 +382,14 @@ class ManualClustering(object):
         # Add the cluster views.
         gui.add_view(self.cluster_view, name='ClusterView')
         gui.add_view(self.similarity_view, name='SimilarityView')
+
+        # Add the quality column in the cluster view.
+        cs = gui.request('cluster_stats')
+        if cs:
+            self.cluster_view.add_column(cs.max_waveform_amplitude,
+                                         name='quality')
+            self.set_default_sort('quality')
+            self.set_similarity_func(cs.mean_masked_features_score)
 
         # Update the cluster views and selection when a cluster event occurs.
         self.gui.connect_(self.on_cluster)
@@ -501,11 +510,3 @@ class ManualClusteringPlugin(IPlugin):
                               )
         mc.attach(gui)
         gui.manual_clustering = mc
-
-        # Add the quality column in the cluster view.
-        cs = gui.request('cluster_stats')
-        if not cs:
-            return
-        mc.cluster_view.add_column(cs.max_waveform_amplitude, name='quality')
-        mc.set_default_sort('quality')
-        mc.set_similarity_func(cs.mean_masked_features_score)
