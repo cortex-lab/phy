@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
 from pytest import yield_fixture
 
 from phy.electrode.mea import staggered_positions
@@ -70,6 +71,12 @@ def model():
     model.masks = artificial_masks(n_spikes, n_channels)
     model.traces = artificial_traces(n_samples_t, n_channels)
     model.features = artificial_features(n_spikes, n_channels, n_features)
+
+    # features_masks array
+    f = model.features.reshape((n_spikes, -1))
+    m = np.repeat(model.masks, n_features, axis=1)
+    model.features_masks = np.dstack((f, m))
+
     model.spikes_per_cluster = _spikes_per_cluster(model.spike_clusters)
     model.n_features_per_channel = n_features
     model.n_samples_waveforms = n_samples_w
