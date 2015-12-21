@@ -301,11 +301,14 @@ class ManualClustering(object):
     # Public methods
     # -------------------------------------------------------------------------
 
-    def add_column(self, func=None, name=None, show=True):
+    def add_column(self, func=None, name=None, show=True, default=False):
         if func is None:
-            return lambda f: self.add_column(f, name=name, show=show)
+            return lambda f: self.add_column(f, name=name, show=show,
+                                             default=default)
         self.cluster_view.add_column(func, name=name, show=show)
         self.similarity_view.add_column(func, name=name, show=show)
+        if default:
+            self.set_default_sort(name)
 
     def set_default_sort(self, name, sort_dir='desc'):
         logger.debug("Set default sort `%s` %s.", name, sort_dir)

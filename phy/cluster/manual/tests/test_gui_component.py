@@ -149,7 +149,7 @@ def test_manual_clustering_split_2(gui, quality, similarity):
     mc = ManualClustering(spike_clusters)
     mc.attach(gui)
 
-    mc.add_column(quality, name='quality')
+    mc.add_column(quality, name='quality', default=True)
     mc.set_default_sort('quality', 'desc')
     mc.set_similarity_func(similarity)
 
