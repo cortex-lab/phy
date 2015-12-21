@@ -72,16 +72,6 @@ class ClusterStore(object):
         gui.register(self, name='cluster_store')
 
 
-class ClusterStorePlugin(IPlugin):
-    def attach_to_gui(self, gui, model=None, state=None):
-        ctx = gui.request('context')
-        selector = Selector(spike_clusters=model.spike_clusters,
-                            spikes_per_cluster=model.spikes_per_cluster,
-                            )
-        cs = create_cluster_store(model, selector=selector, context=ctx)
-        cs.attach(gui)
-
-
 def create_cluster_store(model, selector=None, context=None):
     cs = ClusterStore(context=context)
 
@@ -256,3 +246,14 @@ def create_cluster_store(model, selector=None, context=None):
         return mt.astype(model.traces.dtype)
 
     return cs
+
+
+class ClusterStorePlugin(IPlugin):
+    def attach_to_gui(self, gui, model=None, state=None):
+        ctx = gui.request('context')
+        assert ctx
+        selector = Selector(spike_clusters=model.spike_clusters,
+                            spikes_per_cluster=model.spikes_per_cluster,
+                            )
+        cs = create_cluster_store(model, selector=selector, context=ctx)
+        cs.attach(gui)
