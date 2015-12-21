@@ -215,3 +215,61 @@ The **cluster store** contains a library of functions computing data and statist
 The `create_cluster_store()` function creates a cluster store with a built-in library of functions that take the data from a model (for example, the `KwikModel` that works with the Kwik format).
 
 Use `gui.request('cluster_store')` to get the cluster store instance inside the `attach_to_gui(gui, model=None, state=None)` method of a GUI plugin.
+
+## GUI plugins
+
+You can create plugins to customize the manual clustering GUI. Here is a complete example showing how to change the quality and similarity measures. Put the following in `~/.phy/phy_config.py`:
+
+```python
+import numpy as np
+from phy import IPlugin
+
+# We write the plugin directly in the config file here, for simplicity.
+# When dealing with more plugins it is a better practice to put them
+# in separate files in ~/.phy/plugins/ or in your own repo that you can
+# refer to in c.Plugins.dirs = ['/path/to/myplugindir'].
+class MyPlugin(IPlugin):
+    def attach_to_gui(self, gui, model=None, state=None):
+
+        # The model contains the data, the state contains the parameters
+        # for that session.
+
+        # We can get GUI components with `gui.request(name)`.
+        # These are the two main components. There is also `context` to
+        # deal with the cache and parallel computing context.
+        mc = gui.request('manual_clustering')
+        cs = gui.request('cluster_store')
+
+        # We add a column in the cluster view and set it as the default.
+        # This will be automatically cached.
+        @mc.add_column(default=True)
+        def mymeasure(cluster_id):
+            # This function takes a cluster id as input and returns a scalar.
+
+            # We retrieve the spike_ids and waveforms for that cluster.
+            # spike_ids is a (n_spikes,) array.
+            # waveforms is a (n_spikes, n_samples, n_channels) array.
+            spike_ids, waveforms = cs.waveforms(cluster_id)
+            return waveforms.max()
+
+        # We set the similarity function.
+        @mc.set_similarity_func
+        def mysim(cluster_0, cluster_1):
+            # This function returns a score for every pair of clusters.
+
+            # Here we compute a distance between the mean masks.
+            m0 = cs.mean_masks(cluster_0)  # (n_channels,) array
+            m1 = cs.mean_masks(cluster_1)  # (n_channels,) array
+            distance = np.sum((m1 - m0) ** 2)
+
+            # We need to convert the distance to a score: higher = better
+            # similarity.
+            score = -distance
+            return score
+
+# Now we set the config object.
+c = get_config()
+
+# Here we say that we always want to load our plugin in the KwikGUI.
+c.KwikGUI.plugins = ['MyPlugin']
+```
