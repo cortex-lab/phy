@@ -250,4 +250,94 @@ To create a GUI plugin, just define a class deriving from `IPlugin` and implemen
 
 The **GUI state** is a special Python dictionary that holds info and parameters about a particular GUI session, like its position and size, the positions of the widgets, and other user preferences. This state is automatically persisted to disk (in JSON) in the config directory (passed as a parameter in the `create_gui()` function). By default, this is `~/.phy/gui_name/state.json`.
 
+The GUI state is a `Bunch` instance, which derives from `dict` to support the additional `bunch.name` syntax.
+
 Plugins can simply add fields to the GUI state and it will be persisted. There are special methods for GUI parameters: `state.save_gui_params()` and `state.load_gui_params()`.
+
+
+## Example
+
+In this example we'll create a graphical application that is launched with `phy some_subcommand` and that can accept user-defined plugins.
+
+### GUI application and CLI plugin
+
+First, write the following in `~/.phy/plugins/mygui.py`:
+
+```
+import click
+from phy import IPlugin
+from phy.gui import GUI, HTMLWidget, create_app, run_app, load_gui_plugins
+from phy.utils import Bunch
+
+
+class MyGUI(GUI):
+    def __init__(self, name, plugins=None):
+        super(MyGUI, self).__init__()
+
+        # We create a widget.
+        view = HTMLWidget()
+        view.set_body("Hello %s!" % name)
+        view.show()
+        self.add_view(view)
+
+        # We load all plugins attached to that GUI.
+        session = Bunch(name=name)
+        load_gui_plugins(self, plugins, session)
+
+
+class MyGUIPlugin(IPlugin):
+    def attach_to_cli(self, cli):
+
+        @cli.command(name='mygui')
+        @click.argument('name')
+        def mygui(name):
+
+            # Create the Qt application.
+            create_app()
+
+            # Show the GUI.
+            gui = MyGUI(name)
+            gui.show()
+
+            # Start the Qt event loop.
+            run_app()
+
+            # Close the GUI.
+            gui.close()
+            del gui
+```
+
+Now, you can call `phy mygui world` to open a GUI showing `Hello world!`.
+
+
+### Creating the plugin
+
+Now, let's create a plugin for the GUI. Create a file in `~/.phy/plugins/mygui_plugin.py` with the following:
+
+```
+from phy import IPlugin
+from phy.gui import Actions
+
+
+class MyGUIPlugin(IPlugin):
+    def attach_to_gui(self, gui, model=None, state=None):
+        actions = Actions(gui)
+
+        @actions.add(shortcut='a')
+        def myaction():
+            print("Hello %s!" % state.name)
+```
+
+### Activating the plugin
+
+Next, add the following line in `~/.phy/phy_config.py`:
+
+```
+c.MyGUI.plugins = ['MyGUIPlugin']
+```
+
+This is the list of the plugin names to activate automatically when creating a `MyGUI` instance. When you create a GUI from Python, you can also pass the list of plugins to activate as follows: `gui = MyGUI(name, plugins=[...])`.
+
+### Testing the plugin
+
+Finally, launch the GUI with `phy mygui world` and press `a` in the GUI. It should print `Hello world!` in the console.
