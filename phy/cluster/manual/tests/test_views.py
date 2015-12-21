@@ -44,7 +44,8 @@ def _test_view(view_name, model=None, tempdir=None):
     state.save()
 
     # Create the GUI.
-    plugins = ['ClusterStorePlugin',
+    plugins = ['ContextPlugin',
+               'ClusterStorePlugin',
                'ManualClusteringPlugin',
                view_name + 'Plugin']
     gui = create_gui(model=model, plugins=plugins, config_dir=tempdir)
