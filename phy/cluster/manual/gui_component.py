@@ -275,6 +275,7 @@ class ManualClustering(object):
 
     def _update_cluster_view(self):
         """Initialize the cluster view with cluster data."""
+        logger.log(5, "Update the cluster view.")
         self.cluster_view.set_rows(self.clustering.cluster_ids)
 
     def _update_similarity_view(self):
@@ -285,6 +286,7 @@ class ManualClustering(object):
         selection = self.cluster_view.selected
         if not len(selection):
             return
+        logger.log(5, "Update the similarity view.")
         cluster_id = selection[0]
         self._best = cluster_id
         self.similarity_view.set_rows([c for c in self.clustering.cluster_ids
@@ -305,12 +307,15 @@ class ManualClustering(object):
         if func is None:
             return lambda f: self.add_column(f, name=name, show=show,
                                              default=default)
+        name = name or func.__name__
+        assert name
         self.cluster_view.add_column(func, name=name, show=show)
         self.similarity_view.add_column(func, name=name, show=show)
         if default:
             self.set_default_sort(name)
 
     def set_default_sort(self, name, sort_dir='desc'):
+        assert name
         logger.debug("Set default sort `%s` %s.", name, sort_dir)
         # Set the default sort.
         self.cluster_view.set_default_sort(name, sort_dir)
@@ -321,6 +326,7 @@ class ManualClustering(object):
 
     def set_similarity_func(self, f):
         """Set the similarity function."""
+        logger.debug("Set similarity function `%s`.", f.__name__)
         self.similarity_func = f
 
     def on_cluster(self, up):
