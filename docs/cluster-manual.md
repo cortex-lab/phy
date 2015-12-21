@@ -150,6 +150,8 @@ The feature view shows the principal components of spikes across multiple dimens
 
 ### Trace view
 
+The trace view shows the continuous traces from multiple channels with spikes superimposed. The spikes are in white except those belonging to the selected clusters, which are in the colors of the clusters.
+
 ### Correlogram view
 
 The correlogram view computes and shows all pairwise correlograms of a set of clusters.
@@ -174,7 +176,7 @@ The main objects are the following:
 `mc.similarity_view`: the similarity view (derives from `Table`)
 `mc.actions`: the clustering actions (instance of `Actions`)
 
-In practice, you generally access this object from a GUI plugin, available in `session.manual_clustering`.
+Use `gui.request('manual_clustering')` to get the `ManualClustering` instance inside the `attach_to_gui(gui, model=None, state=None)` method of a GUI plugin.
 
 ### Cluster and similarity view
 
@@ -206,3 +208,10 @@ When the selection changes, the attached GUI raises the `select(cluster_ids, spi
 
 Other events are `cluster(up)` when a clustering action occurs, and `request_save(spike_clusters, cluster_groups)` when the user wants to save the results of the manual clustering session.
 
+## Cluster store
+
+The **cluster store** contains a library of functions computing data and statistics for every cluster. These functions are cached on disk and possibly in memory. A `ClusterStore` instance is initialized with a `Context` which provides the caching facilities. You can add new functions with the `add(f)` method/decorator.
+
+The `create_cluster_store()` function creates a cluster store with a built-in library of functions that take the data from a model (for example, the `KwikModel` that works with the Kwik format).
+
+Use `gui.request('cluster_store')` to get the cluster store instance inside the `attach_to_gui(gui, model=None, state=None)` method of a GUI plugin.
