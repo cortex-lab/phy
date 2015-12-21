@@ -143,7 +143,7 @@ def _ensure_cache_dirs_exist(cache_dir, name):
 
 def _fullname(o):
     """Return the fully-qualified name of a function."""
-    return o.__module__ + "." + o.__name__
+    return o.__module__ + "." + o.__name__ if o.__module__ else o.__name__
 
 
 class Context(object):
@@ -194,6 +194,7 @@ class Context(object):
         if self._memory is None:  # pragma: no cover
             logger.debug("Joblib is not installed: skipping cacheing.")
             return f
+        assert f
         disk_cached = self._memory.cache(f)
         name = _fullname(f)
         if memcache:
