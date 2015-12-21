@@ -46,7 +46,7 @@ class ClusterStore(object):
         self.context = context
         self._stats = {}
 
-    def add(self, f=None, name=None, cache=None):
+    def add(self, f=None, name=None, cache='disk'):
         """Add a cluster statistic.
 
         Parameters
