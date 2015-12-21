@@ -28,15 +28,13 @@ logger = logging.getLogger(__name__)
 # Utils
 # -----------------------------------------------------------------------------
 
-def _get_data_bounds(arr, n_spikes=None, percentile=None):
+def _get_data_lim(arr, n_spikes=None, percentile=None):
     n = arr.shape[0]
     k = max(1, n // n_spikes) if n_spikes else 1
     arr = np.abs(arr[::k])
     n = arr.shape[0]
     arr = arr.reshape((n, -1))
-    arr = arr.max(axis=1)
-    m = np.percentile(arr, percentile)
-    return m
+    return arr.max()
 
 
 # -----------------------------------------------------------------------------
@@ -148,16 +146,10 @@ def create_cluster_store(model, selector=None, context=None):
         return spike_ids, features
 
     @cs.add
-    def feature_lim(percentile=95):
-        """Return the 95% percentile of all feature amplitudes."""
-        # TODO: refactor with waveforms and _get_data_bounds
-        k = max(1, model.n_spikes // max_n_spikes_per_cluster['feature_lim'])
-        w = np.abs(model.features[::k])
-        n = w.shape[0]
-        w = w.reshape((n, -1))
-        w = w.max(axis=1)
-        m = np.percentile(w, percentile)
-        return m
+    def feature_lim():
+        """Return the max of a subset of the feature amplitudes."""
+        return _get_data_lim(model.features,
+                             max_n_spikes_per_cluster['feature_lim'])
 
     @cs.add
     def background_features_masks():
@@ -181,15 +173,10 @@ def create_cluster_store(model, selector=None, context=None):
         return spike_ids, waveforms
 
     @cs.add
-    def waveform_lim(percentile=95):
-        """Return the 95% percentile of all waveform amplitudes."""
-        k = max(1, model.n_spikes // max_n_spikes_per_cluster['waveform_lim'])
-        w = np.abs(model.waveforms[::k])
-        n = w.shape[0]
-        w = w.reshape((n, -1))
-        w = w.max(axis=1)
-        m = np.percentile(w, percentile)
-        return m
+    def waveform_lim():
+        """Return the max of a subset of the waveform amplitudes."""
+        return _get_data_lim(model.waveforms,
+                             max_n_spikes_per_cluster['waveform_lim'])
 
     @cs.add
     @concat
