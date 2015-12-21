@@ -160,7 +160,6 @@ The following method allows you to check how many views of each class there are:
 
 ```python
 >>> gui.view_count()
-{'canvas': 1, 'figurecanvasqtagg': 1, 'htmlwidget': 2}
 ```
 
 Use the following property to change the status bar:
@@ -183,7 +182,7 @@ The object `gs` is a JSON-serializable Python dictionary.
 
 ## Adding actions
 
-An **action** is a Python function that can be run by the user by clicking on a button or pressing a keyboard shortcut. You can create an `Actions` object to specify a list of actions attached to a GUI.
+An **action** is a Python function that the user can run from the menu bar or with a keyboard shortcut. You can create an `Actions` object to specify a list of actions attached to a GUI.
 
 ```python
 >>> from phy.gui import Actions
@@ -198,7 +197,7 @@ Now, if you press *Ctrl+H* in the GUI, you'll see `Hello world!` printed in the 
 
 Once an action is added, you can call it with `actions.hello()` where `hello` is the name of the action. By default, this is the name of the associated function, but you can also specify the name explicitly with the `name=...` keyword argument in `actions.add()`.
 
-You'll find more details about `actions.add()` in the API reference.
+You'll find more details about `actions.add()` in the API reference. For example, use the `menu='MenuName'` keyword argument to add the action to a menu in the menu bar.
 
 Every GUI comes with a `default_actions` property which implements actions always available in GUIs:
 
@@ -234,3 +233,21 @@ The GUI provides a convenient system to quickly execute actions without leaving 
 Now, pressing `:c 3-6 hello` followed by the `Enter` keystroke displays `Select [3, 4, 5, 6] with hello` in the console.
 
 By convention, multiple arguments are separated by spaces, sequences of numbers are given either with `2,3,5,7` or `3-6` for consecutive numbers. If an alias is not specified when adding the action, you can always use the full action's name.
+
+## GUI plugins
+
+To create a specific GUI, you implement functionality in components and create GUI plugins to allow users to activate these components in their GUI. You can also specify the list of default plugins.
+
+You create a GUI with the function `gui = create_gui(name, model=model, plugins=plugins)`. The model provides the data while the list of plugins defines the functionality of the GUI.
+
+Plugins create views and actions and have full control on the GUI. Also, they can register objects or functions with `gui.register(obj, name='my_object')`. Other plugins can then retrieve these objects with `gui.request(name)`. This is how plugins can communicate. This function returns `None` if the object is not available.
+
+Note that the order of how plugins are attached matters, since you can only request components that have been registered in the previously-attached  plugins.
+
+To create a GUI plugin, just define a class deriving from `IPlugin` and implementing `attach_to_gui(gui, model=None, state=None)`.
+
+## GUI state
+
+The **GUI state** is a special Python dictionary that holds info and parameters about a particular GUI session, like its position and size, the positions of the widgets, and other user preferences. This state is automatically persisted to disk (in JSON) in the config directory (passed as a parameter in the `create_gui()` function). By default, this is `~/.phy/gui_name/state.json`.
+
+Plugins can simply add fields to the GUI state and it will be persisted. There are special methods for GUI parameters: `state.save_gui_params()` and `state.load_gui_params()`.
