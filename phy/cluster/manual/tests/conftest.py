@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 import numpy as np
 from pytest import yield_fixture
 
@@ -46,8 +48,8 @@ def similarity():
     yield lambda c, d: c * 1.01 + d
 
 
-@yield_fixture(scope='session')
-def model():
+@yield_fixture
+def model(tempdir):
     model = Bunch()
 
     n_spikes = 51
@@ -57,6 +59,7 @@ def model():
     n_clusters = 3
     n_features = 4
 
+    model.path = op.join(tempdir, 'test')
     model.n_channels = n_channels
     # TODO: test with permutation and dead channels
     model.channel_order = None
