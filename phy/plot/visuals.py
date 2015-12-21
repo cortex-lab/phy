@@ -8,7 +8,6 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from vispy.gloo import Texture2D
 
 from .base import BaseVisual
 from .transform import Range, NDC
@@ -208,6 +207,12 @@ class PlotVisual(BaseVisual):
         pos[:, 1] = y.ravel()
         assert pos.shape == (n, 2)
 
+        # Generate the color attribute.
+        color = data.color
+        assert color.shape == (n_signals, 4)
+        color = np.repeat(color, n_samples, axis=0)
+        assert color.shape == (n, 4)
+
         # Generate signal index.
         signal_index = np.repeat(np.arange(n_signals), n_samples)
         signal_index = _get_array(signal_index, (n, 1)).astype(np.float32)
@@ -221,13 +226,9 @@ class PlotVisual(BaseVisual):
         # Position and depth.
         depth = np.repeat(data.depth, n_samples, axis=0)
         self.program['a_position'] = np.c_[pos_tr, depth]
-
+        self.program['a_color'] = color
         self.program['a_signal_index'] = signal_index
-        self.program['u_plot_colors'] = Texture2D(_get_texture(data.color,
-                                                  PlotVisual._default_color,
-                                                  n_signals,
-                                                  [0, 1]))
-        self.program['n_signals'] = n_signals
+        # self.program['n_signals'] = n_signals
 
 
 class HistogramVisual(BaseVisual):
