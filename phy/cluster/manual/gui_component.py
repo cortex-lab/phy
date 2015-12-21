@@ -10,6 +10,8 @@
 from functools import partial
 import logging
 
+import numpy as np
+
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
@@ -327,7 +329,13 @@ class ManualClustering(object):
     def set_similarity_func(self, f):
         """Set the similarity function."""
         logger.debug("Set similarity function `%s`.", f.__name__)
-        self.similarity_func = f
+
+        # Make sure the function returns a scalar.
+        def wrapped(cluster_0, cluster_1):
+            out = f(cluster_0, cluster_1)
+            return np.asscalar(out)
+
+        self.similarity_func = wrapped
 
     def on_cluster(self, up):
         """Update the cluster views after clustering actions."""
