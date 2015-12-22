@@ -255,6 +255,9 @@ class Table(HTMLWidget):
 
     def set_rows(self, ids):
         """Set the rows of the table."""
+        # NOTE: make sure we have integers and not np.generic objects.
+        assert all(isinstance(i, int) for i in ids)
+
         # Determine the sort column and dir to set after the rows.
         sort_col, sort_dir = self.current_sort
         default_sort_col, default_sort_dir = self.default_sort

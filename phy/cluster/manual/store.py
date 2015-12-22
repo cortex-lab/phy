@@ -20,7 +20,7 @@ from phy.stats.clusters import (mean,
                                 get_unmasked_channels,
                                 get_sorted_main_channels,
                                 )
-from phy.utils import IPlugin
+from phy.utils import IPlugin, _as_scalar, _as_scalars
 
 logger = logging.getLogger(__name__)
 
@@ -41,15 +41,8 @@ def _get_data_lim(arr, n_spikes=None, percentile=None):
 def get_closest_clusters(cluster_id, cluster_ids, sim_func, max_n=None):
     """Return a list of pairs `(cluster, similarity)` sorted by decreasing
     similarity to a given cluster."""
-
-    def _as_float(x):
-        """Ensure the value is a float."""
-        if isinstance(x, np.generic):
-            return np.asscalar(x)
-        return float(x)
-
-    l = [(candidate, _as_float(sim_func(cluster_id, candidate)))
-         for candidate in cluster_ids]
+    l = [(_as_scalar(candidate), _as_scalar(sim_func(cluster_id, candidate)))
+         for candidate in _as_scalars(cluster_ids)]
     l = sorted(l, key=itemgetter(1), reverse=True)
     return l[:max_n]
 
@@ -57,7 +50,7 @@ def get_closest_clusters(cluster_id, cluster_ids, sim_func, max_n=None):
 def _log(f):
     @wraps(f)
     def wrapped(*args, **kwargs):
-        logger.log(10, "Compute %s(%s).", f.__name__, str(args))
+        logger.log(5, "Compute %s(%s).", f.__name__, str(args))
         return f(*args, **kwargs)
     return wrapped
 
@@ -130,6 +123,7 @@ def create_cluster_store(model, selector=None, context=None):
     max_n_similar_clusters = 20
 
     def select(cluster_id, n=None):
+        assert isinstance(cluster_id, int)
         assert cluster_id >= 0
         return selector.select_spikes([cluster_id], max_n_spikes_per_cluster=n)
 
@@ -262,6 +256,7 @@ def create_cluster_store(model, selector=None, context=None):
 
     @cs.add(cache='memory')
     def most_similar_clusters(cluster_id):
+        assert isinstance(cluster_id, int)
         return get_closest_clusters(cluster_id, model.cluster_ids,
                                     cs.mean_masked_features_score,
                                     max_n_similar_clusters)

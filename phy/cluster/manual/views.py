@@ -173,6 +173,7 @@ class ManualClusteringView(View):
         cluster_ids = (cluster_ids if cluster_ids is not None
                        else self.cluster_ids)
         self.cluster_ids = list(cluster_ids) if cluster_ids is not None else []
+        self.cluster_ids = [int(c) for c in self.cluster_ids]
 
     def _best_channels(self, cluster_ids, n_channels_requested=None):
         """Return the best channels for a set of clusters."""
