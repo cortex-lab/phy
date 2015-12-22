@@ -148,7 +148,7 @@ def _fullname(o):
 
 class Context(object):
     """Handle function cacheing and parallel map with ipyparallel."""
-    def __init__(self, cache_dir, ipy_view=None, verbose=0):
+    def __init__(self, cache_dir, ipy_view=None, verbose=100):
         self.verbose = verbose
         # Make sure the cache directory exists.
         self.cache_dir = op.realpath(op.expanduser(cache_dir))
@@ -210,9 +210,11 @@ class Context(object):
                 """Cache the function in memory."""
                 h = hash((args, kwargs))
                 if h in c:
+                    logger.debug("Get %s(%s) from memcache.", name, str(args))
                     # Retrieve the value from the memcache.
                     return c[h]
                 else:
+                    logger.debug("Get %s(%s) from joblib.", name, str(args))
                     # Call and cache the function.
                     out = disk_cached(*args, **kwargs)
                     c[h] = out
@@ -327,8 +329,8 @@ class Context(object):
 class ContextPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
         # Create the computing context.
-        gui.register(Context(op.join(op.dirname(model.path), '.phy/')),
-                     name='context')
+        ctx = Context(op.join(op.dirname(model.path), '.phy/'))
+        gui.register(ctx, name='context')
 
 
 #------------------------------------------------------------------------------

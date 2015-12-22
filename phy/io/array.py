@@ -405,7 +405,7 @@ def select_spikes(cluster_ids=None,
     if not len(cluster_ids):
         return np.array([], dtype=np.int64)
     if max_n_spikes_per_cluster in (None, 0):
-        selection = {c: spikes_per_cluster[c] for c in cluster_ids}
+        selection = {c: spikes_per_cluster(c) for c in cluster_ids}
     else:
         assert max_n_spikes_per_cluster > 0
         selection = {}
@@ -415,7 +415,7 @@ def select_spikes(cluster_ids=None,
             # are more clusters.
             n = int(max_n_spikes_per_cluster * exp(-.1 * (n_clusters - 1)))
             n = max(1, n)
-            spikes = spikes_per_cluster[cluster]
+            spikes = spikes_per_cluster(cluster)
             selection[cluster] = regular_subset(spikes, n_spikes_max=n)
     return _flatten_per_cluster(selection)
 
@@ -428,6 +428,7 @@ class Selector(object):
                  spikes_per_cluster=None,
                  spike_ids=None,
                  ):
+        # NOTE: spikes_per_cluster is a function.
         self.spike_clusters = spike_clusters
         self.spikes_per_cluster = spikes_per_cluster
         self.n_spikes = len(spike_clusters)
