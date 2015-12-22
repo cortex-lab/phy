@@ -21,6 +21,7 @@ from phy.io.mock import (artificial_waveforms,
                          artificial_traces,
                          )
 from phy.utils import Bunch
+from phy.cluster.manual.store import get_closest_clusters
 
 
 #------------------------------------------------------------------------------
@@ -44,8 +45,9 @@ def quality():
 
 
 @yield_fixture
-def similarity():
-    yield lambda c, d: c * 1.01 + d
+def similarity(cluster_ids):
+    sim = lambda c, d: (c * 1.01 + d)
+    yield lambda c: get_closest_clusters(c, cluster_ids, sim)
 
 
 @yield_fixture
