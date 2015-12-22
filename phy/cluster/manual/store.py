@@ -54,6 +54,28 @@ def get_closest_clusters(cluster_id, cluster_ids, sim_func, max_n=None):
     return l[:max_n]
 
 
+def _log(f):
+    @wraps(f)
+    def wrapped(*args, **kwargs):
+        logger.log(10, "Compute %s(%s).", f.__name__, str(args))
+        return f(*args, **kwargs)
+    return wrapped
+
+
+def _concat(f):
+    """Take a function accepting a single cluster, and return a function
+    accepting multiple clusters."""
+    @wraps(f)
+    def wrapped(cluster_ids):
+        # Single cluster.
+        if not hasattr(cluster_ids, '__len__'):
+            return f(cluster_ids)
+        # Concatenate the result of multiple clusters.
+        arrs = zip(*(f(c) for c in cluster_ids))
+        return tuple(np.concatenate(_, axis=0) for _ in arrs)
+    return wrapped
+
+
 # -----------------------------------------------------------------------------
 # Cluster statistics
 # -----------------------------------------------------------------------------
@@ -63,7 +85,7 @@ class ClusterStore(object):
         self.context = context
         self._stats = {}
 
-    def add(self, f=None, name=None, cache='disk'):
+    def add(self, f=None, name=None, cache='disk', concat=None):
         """Add a cluster statistic.
 
         Parameters
@@ -76,11 +98,14 @@ class ClusterStore(object):
 
         """
         if f is None:
-            return lambda _: self.add(_, name=name, cache=cache)
+            return lambda _: self.add(_, name=name, cache=cache, concat=concat)
         name = name or f.__name__
         if cache and self.context:
+            f = _log(f)
             f = self.context.cache(f, memcache=(cache == 'memory'))
         assert f
+        if concat:
+            f = _concat(f)
         self._stats[name] = f
         setattr(self, name, f)
         return f
@@ -108,32 +133,18 @@ def create_cluster_store(model, selector=None, context=None):
         assert cluster_id >= 0
         return selector.select_spikes([cluster_id], max_n_spikes_per_cluster=n)
 
-    def concat(f):
-        """Take a function accepting a single cluster, and return a function
-        accepting multiple clusters."""
-        @wraps(f)
-        def wrapped(cluster_ids):
-            # Single cluster.
-            if not hasattr(cluster_ids, '__len__'):
-                return f(cluster_ids)
-            # Concatenate the result of multiple clusters.
-            arrs = zip(*(f(c) for c in cluster_ids))
-            return tuple(np.concatenate(_, axis=0) for _ in arrs)
-        return wrapped
-
     # Model data.
     # -------------------------------------------------------------------------
 
-    @cs.add
-    @concat
+    @cs.add(concat=True)
     def masks(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['masks'])
         masks = np.atleast_2d(model.masks[spike_ids])
         assert masks.ndim == 2
+        # print("m", cluster_id, spike_ids.shape, spike_ids[0], spike_ids[-1], masks.shape)
         return spike_ids, masks
 
-    @cs.add
-    @concat
+    @cs.add(concat=True)
     def features_masks(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['features'])
         fm = np.atleast_3d(model.features_masks[spike_ids])
@@ -145,8 +156,7 @@ def create_cluster_store(model, selector=None, context=None):
         m = fm[:, ::nfpc, 1]
         return spike_ids, f, m
 
-    @cs.add
-    @concat
+    @cs.add(concat=True)
     def features(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['features'])
         features = np.atleast_2d(model.features[spike_ids])
@@ -172,11 +182,12 @@ def create_cluster_store(model, selector=None, context=None):
         assert masks.shape[0] == features.shape[0]
         return spike_ids, features, masks
 
-    @cs.add
-    @concat
+    @cs.add(concat=True)
     def waveforms(cluster_id):
-        spike_ids = select(cluster_id, max_n_spikes_per_cluster['waveforms'])
+        spike_ids = select(cluster_id,
+                           max_n_spikes_per_cluster['waveforms'])
         waveforms = np.atleast_2d(model.waveforms[spike_ids])
+        # print("w", cluster_id, spike_ids.shape, spike_ids[0], spike_ids[-1], waveforms.shape)
         assert waveforms.ndim == 3
         return spike_ids, waveforms
 
@@ -186,10 +197,10 @@ def create_cluster_store(model, selector=None, context=None):
         return _get_data_lim(model.waveforms,
                              max_n_spikes_per_cluster['waveform_lim'])
 
-    @cs.add
-    @concat
+    @cs.add(concat=True)
     def waveforms_masks(cluster_id):
-        spike_ids = select(cluster_id, max_n_spikes_per_cluster['waveforms'])
+        spike_ids = select(cluster_id,
+                              max_n_spikes_per_cluster['waveforms'])
         waveforms = np.atleast_2d(model.waveforms[spike_ids])
         assert waveforms.ndim == 3
         masks = np.atleast_2d(model.masks[spike_ids])
@@ -237,7 +248,6 @@ def create_cluster_store(model, selector=None, context=None):
         mm = cs.mean_masks(cluster_id)
         mw = cs.mean_waveforms(cluster_id)
         assert mw.ndim == 2
-        logger.debug("Computing the quality of cluster %d.", cluster_id)
         return np.asscalar(get_max_waveform_amplitude(mm, mw))
 
     @cs.add(cache=None)
@@ -247,8 +257,6 @@ def create_cluster_store(model, selector=None, context=None):
         mm0 = cs.mean_masks(cluster_0)
         mm1 = cs.mean_masks(cluster_1)
         nfpc = model.n_features_per_channel
-        logger.debug("Computing the similarity of clusters %d, %d.",
-                     cluster_0, cluster_1)
         d = get_mean_masked_features_distance(mf0, mf1, mm0, mm1,
                                               n_features_per_channel=nfpc)
         s = 1. / max(1e-10, d)
@@ -275,9 +283,14 @@ def create_cluster_store(model, selector=None, context=None):
 class ClusterStorePlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
         ctx = gui.request('context')
+
+        def spikes_per_cluster(cluster_id):
+            mc = gui.request('manual_clustering')
+            return mc.clustering.spikes_per_cluster[cluster_id]
+
         assert ctx
         selector = Selector(spike_clusters=model.spike_clusters,
-                            spikes_per_cluster=model.spikes_per_cluster,
+                            spikes_per_cluster=spikes_per_cluster,
                             )
         cs = create_cluster_store(model, selector=selector, context=ctx)
         cs.attach(gui)

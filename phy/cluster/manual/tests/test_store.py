@@ -29,8 +29,9 @@ def test_cluster_store(tempdir):
 
 
 def test_create_cluster_store(model):
+    spc = lambda c: model.spikes_per_cluster[c]
     selector = Selector(spike_clusters=model.spike_clusters,
-                        spikes_per_cluster=model.spikes_per_cluster)
+                        spikes_per_cluster=spc)
     cs = create_cluster_store(model, selector=selector)
 
     nc = model.n_channels

@@ -357,10 +357,10 @@ def test_select_spikes():
         select_spikes()
     spikes = [2, 3, 5, 7, 11]
     sc = [2, 3, 3, 2, 2]
-    spc = {2: [2, 7, 11], 3: [3, 5], 5: []}
+    spc = lambda c: {2: [2, 7, 11], 3: [3, 5], 5: []}.get(c, None)
     ae(select_spikes([], spikes_per_cluster=spc), [])
     ae(select_spikes([2, 3, 5], spikes_per_cluster=spc), spikes)
-    ae(select_spikes([2, 5], spikes_per_cluster=spc), spc[2])
+    ae(select_spikes([2, 5], spikes_per_cluster=spc), spc(2))
 
     ae(select_spikes([2, 3, 5], 0, spikes_per_cluster=spc), spikes)
     ae(select_spikes([2, 3, 5], None, spikes_per_cluster=spc), spikes)
@@ -372,5 +372,5 @@ def test_select_spikes():
                    spike_ids=spikes,
                    )
     assert sel.select_spikes() is None
-    ae(sel.select_spikes([2, 5]), spc[2])
+    ae(sel.select_spikes([2, 5]), spc(2))
     ae(sel.select_spikes([2, 5], 2), [2])
