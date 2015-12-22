@@ -283,7 +283,8 @@ class ManualClustering(object):
     def _update_cluster_view(self):
         """Initialize the cluster view with cluster data."""
         logger.log(5, "Update the cluster view.")
-        self.cluster_view.set_rows(self.clustering.cluster_ids)
+        cluster_ids = [int(c) for c in self.clustering.cluster_ids]
+        self.cluster_view.set_rows(cluster_ids)
 
     def _update_similarity_view(self):
         """Update the similarity view with matches for the specified
@@ -297,9 +298,10 @@ class ManualClustering(object):
         logger.log(5, "Update the similarity view.")
         # This is a list of pairs (closest_cluster, similarity).
         self._best = cluster_id
-        self._similarity = {cl: s
+        self._similarity = {int(cl): s
                             for (cl, s) in self.similarity_func(cluster_id)}
-        self.similarity_view.set_rows([c for c in self.clustering.cluster_ids
+        self.similarity_view.set_rows([int(c)
+                                       for c in self.clustering.cluster_ids
                                        if c not in selection])
         self.similarity_view.sort_by('similarity', 'desc')
 

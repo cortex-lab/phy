@@ -45,6 +45,17 @@ def _is_list(obj):
     return isinstance(obj, list)
 
 
+def _as_scalar(obj):
+    if isinstance(obj, np.generic):
+        return np.asscalar(obj)
+    assert isinstance(obj, (int, float))
+    return obj
+
+
+def _as_scalars(arr):
+    return [_as_scalar(x) for x in arr]
+
+
 def _is_integer(x):
     return isinstance(x, integer_types + (np.generic,))
 
