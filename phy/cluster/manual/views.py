@@ -1084,10 +1084,8 @@ class FeatureView(ManualClusteringView):
         # Select the dimensions.
         # TODO: toggle automatic selection of the channels
         x_ch, y_ch = self._get_channel_dims(cluster_ids)
-        if self.x_channels is None:
-            self.x_channels = x_ch
-        if self.y_channels is None:
-            self.y_channels = y_ch
+        self.x_channels = x_ch
+        self.y_channels = y_ch
         tla = self.top_left_attribute
         x_dim, y_dim = _dimensions_matrix(self.x_channels, self.y_channels,
                                           n_cols=self.n_cols,
