@@ -9,6 +9,7 @@
 
 from functools import wraps
 import logging
+from operator import itemgetter
 
 import numpy as np
 
@@ -35,6 +36,15 @@ def _get_data_lim(arr, n_spikes=None, percentile=None):
     n = arr.shape[0]
     arr = arr.reshape((n, -1))
     return arr.max()
+
+
+def get_closest_clusters(cluster_id, cluster_ids, sim_func):
+    """Return a list of pairs `(cluster, similarity)` sorted by decreasing
+    similarity to a given cluster."""
+    l = [(candidate, sim_func(cluster_id, candidate))
+         for candidate in cluster_ids]
+    l = sorted(l, key=itemgetter(1), reverse=True)
+    return l
 
 
 # -----------------------------------------------------------------------------
@@ -222,7 +232,7 @@ def create_cluster_store(model, selector=None, context=None):
         logger.debug("Computing the quality of cluster %d.", cluster_id)
         return np.asscalar(get_max_waveform_amplitude(mm, mw))
 
-    @cs.add(cache='memory')
+    @cs.add(cache=None)
     def mean_masked_features_score(cluster_0, cluster_1):
         mf0 = cs.mean_features(cluster_0)
         mf1 = cs.mean_features(cluster_1)
@@ -235,6 +245,11 @@ def create_cluster_store(model, selector=None, context=None):
                                               n_features_per_channel=nfpc)
         s = 1. / max(1e-10, d)
         return s
+
+    @cs.add(cache='memory')
+    def most_similar_clusters(cluster_id):
+        return get_closest_clusters(cluster_id, model.cluster_ids,
+                                    cs.mean_masked_features_score)
 
     # Traces.
     # -------------------------------------------------------------------------
