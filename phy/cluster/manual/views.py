@@ -951,6 +951,7 @@ class FeatureView(ManualClusteringView):
         assert spike_times.shape == (self.n_spikes,)
 
         # Channels to show.
+        self.fixed_channels = False
         self.x_channels = None
         self.y_channels = None
 
@@ -1082,11 +1083,14 @@ class FeatureView(ManualClusteringView):
         spike_ids_bg, features_bg, masks_bg = self.background_features_masks
 
         # Select the dimensions.
-        # TODO: toggle automatic selection of the channels
-        x_ch, y_ch = self._get_channel_dims(cluster_ids)
-        self.x_channels = x_ch
-        self.y_channels = y_ch
+        # Choose the channels automatically unless fixed_channels is set.
+        if (not self.fixed_channels or self.x_channels is None or
+                self.y_channels is None):
+            self.x_channels, self.y_channels = self._get_channel_dims(
+                cluster_ids)
         tla = self.top_left_attribute
+        assert self.x_channels
+        assert self.y_channels
         x_dim, y_dim = _dimensions_matrix(self.x_channels, self.y_channels,
                                           n_cols=self.n_cols,
                                           top_left_attribute=tla)
@@ -1139,6 +1143,7 @@ class FeatureView(ManualClusteringView):
         self.actions.add(self.increase)
         self.actions.add(self.decrease)
         self.actions.add(self.clear_channels)
+        self.actions.add(self.toggle_automatic_channel_selection)
 
         gui.connect_(self.on_channel_click)
 
@@ -1156,7 +1161,13 @@ class FeatureView(ManualClusteringView):
         assert 0 <= channel_idx < self.n_channels
         # Update the channel.
         channels[key - 1] = channel_idx
+        self.fixed_channels = True
         self.on_select()
+
+    def toggle_automatic_channel_selection(self):
+        """Toggle the automatic selection of channels when the cluster
+        selection changes."""
+        self.fixed_channels = not self.fixed_channels
 
     def increase(self):
         """Increase the scaling of the features."""
