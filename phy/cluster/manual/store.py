@@ -141,7 +141,6 @@ def create_cluster_store(model, selector=None, context=None):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['masks'])
         masks = np.atleast_2d(model.masks[spike_ids])
         assert masks.ndim == 2
-        # print("m", cluster_id, spike_ids.shape, spike_ids[0], spike_ids[-1], masks.shape)
         return spike_ids, masks
 
     @cs.add(concat=True)
@@ -187,7 +186,6 @@ def create_cluster_store(model, selector=None, context=None):
         spike_ids = select(cluster_id,
                            max_n_spikes_per_cluster['waveforms'])
         waveforms = np.atleast_2d(model.waveforms[spike_ids])
-        # print("w", cluster_id, spike_ids.shape, spike_ids[0], spike_ids[-1], waveforms.shape)
         assert waveforms.ndim == 3
         return spike_ids, waveforms
 
@@ -200,7 +198,7 @@ def create_cluster_store(model, selector=None, context=None):
     @cs.add(concat=True)
     def waveforms_masks(cluster_id):
         spike_ids = select(cluster_id,
-                              max_n_spikes_per_cluster['waveforms'])
+                           max_n_spikes_per_cluster['waveforms'])
         waveforms = np.atleast_2d(model.waveforms[spike_ids])
         assert waveforms.ndim == 3
         masks = np.atleast_2d(model.masks[spike_ids])
