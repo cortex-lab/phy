@@ -282,6 +282,9 @@ class ClusterStorePlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
         ctx = gui.request('context')
 
+        # NOTE: we get the spikes_per_cluster from the Clustering instance.
+        # We need to access it from a function to avoid circular dependencies
+        # between the cluster store and manual clustering plugins.
         def spikes_per_cluster(cluster_id):
             mc = gui.request('manual_clustering')
             return mc.clustering.spikes_per_cluster[cluster_id]
