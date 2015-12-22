@@ -221,8 +221,11 @@ Use `gui.request('cluster_store')` to get the cluster store instance inside the 
 You can create plugins to customize the manual clustering GUI. Here is a complete example showing how to change the quality and similarity measures. Put the following in `~/.phy/phy_config.py`:
 
 ```python
+
 import numpy as np
 from phy import IPlugin
+from phy.cluster.manual import get_closest_clusters
+
 
 # We write the plugin directly in the config file here, for simplicity.
 # When dealing with more plugins it is a better practice to put them
@@ -231,9 +234,6 @@ from phy import IPlugin
 class MyPlugin(IPlugin):
     def attach_to_gui(self, gui, model=None, state=None):
 
-        # The model contains the data, the state contains the parameters
-        # for that session.
-
         # We can get GUI components with `gui.request(name)`.
         # These are the two main components. There is also `context` to
         # deal with the cache and parallel computing context.
@@ -241,8 +241,8 @@ class MyPlugin(IPlugin):
         cs = gui.request('cluster_store')
 
         # We add a column in the cluster view and set it as the default.
-        # This will be automatically cached.
         @mc.add_column(default=True)
+        @cs.add(cache='memory')
         def mymeasure(cluster_id):
             # This function takes a cluster id as input and returns a scalar.
 
@@ -252,8 +252,6 @@ class MyPlugin(IPlugin):
             spike_ids, waveforms = cs.waveforms(cluster_id)
             return waveforms.max()
 
-        # We set the similarity function.
-        @mc.set_similarity_func
         def mysim(cluster_0, cluster_1):
             # This function returns a score for every pair of clusters.
 
@@ -267,9 +265,23 @@ class MyPlugin(IPlugin):
             score = -distance
             return score
 
+        # We set the similarity function.
+        @mc.set_similarity_func
+        @cs.add(cache='memory')
+        def myclosest(cluster_id):
+            """This function returns the list of closest clusters as
+            a list of `(cluster, sim)` pairs.
+
+            By default, the 20 closest clusters are kept.
+
+            """
+            return get_closest_clusters(cluster_id, model.cluster_ids, mysim)
+
+
 # Now we set the config object.
 c = get_config()
 
 # Here we say that we always want to load our plugin in the KwikGUI.
 c.KwikGUI.plugins = ['MyPlugin']
+
 ```
