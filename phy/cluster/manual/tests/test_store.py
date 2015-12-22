@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
+
 from ..store import create_cluster_store, ClusterStore
 from phy.io import Context, Selector
 
@@ -81,3 +83,5 @@ def test_create_cluster_store(model):
     assert 1 <= len(cs.best_channels_multiple([1, 2])) <= nc
     assert 0 < cs.max_waveform_amplitude(1) < 1
     assert cs.mean_masked_features_score(1, 2) > 0
+
+    assert np.array(cs.most_similar_clusters(1)).shape == (3, 2)

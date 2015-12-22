@@ -69,6 +69,7 @@ def model(tempdir):
     model.spike_times = artificial_spike_samples(n_spikes) * 1.
     model.spike_times /= model.spike_times[-1]
     model.spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
+    model.cluster_ids = np.unique(model.spike_clusters)
     model.channel_positions = staggered_positions(n_channels)
     model.waveforms = artificial_waveforms(n_spikes, n_samples_w, n_channels)
     model.masks = artificial_masks(n_spikes, n_channels)
