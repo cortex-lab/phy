@@ -10,8 +10,6 @@
 from functools import partial
 import logging
 
-import numpy as np
-
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
@@ -140,6 +138,7 @@ class ManualClustering(object):
         self._create_cluster_views()
         self._add_default_columns()
 
+        self._similarity = {}
         self.similarity_func = None
 
     # Internal methods
@@ -193,7 +192,13 @@ class ManualClustering(object):
         self._best = None
 
         def similarity(cluster_id):
-            return self.similarity_func(cluster_id, self._best)
+            # NOTE: there is a dictionary with the similarity to the current
+            # best cluster. It is updated when the selection changes in the
+            # cluster view. This is a bit of a hack: the HTML table expects
+            # a function that returns a value for every row, but here we
+            # cache all  similarity view rows in self._similarity for
+            #  performance reasons.
+            return self._similarity.get(cluster_id, 0)
         self.similarity_view.add_column(similarity)
 
     def _create_actions(self, gui):
@@ -288,9 +293,12 @@ class ManualClustering(object):
         selection = self.cluster_view.selected
         if not len(selection):
             return
-        logger.log(5, "Update the similarity view.")
         cluster_id = selection[0]
+        logger.log(5, "Update the similarity view.")
+        # This is a list of pairs (closest_cluster, similarity).
         self._best = cluster_id
+        self._similarity = {cl: s
+                            for (cl, s) in self.similarity_func(cluster_id)}
         self.similarity_view.set_rows([c for c in self.clustering.cluster_ids
                                        if c not in selection])
         self.similarity_view.sort_by('similarity', 'desc')
@@ -327,15 +335,16 @@ class ManualClustering(object):
         self.cluster_view.sort_by(name, sort_dir)
 
     def set_similarity_func(self, f):
-        """Set the similarity function."""
+        """Set the similarity function.
+
+        This is a function that returns an ordered list of pairs
+        `(candidate, similarity)` for any given cluster. This list can have
+        a fixed number of elements for performance reasons (keeping the best
+        20 candidates for example).
+
+        """
         logger.debug("Set similarity function `%s`.", f.__name__)
-
-        # Make sure the function returns a scalar.
-        def wrapped(cluster_0, cluster_1):
-            out = f(cluster_0, cluster_1)
-            return np.asscalar(out)
-
-        self.similarity_func = wrapped
+        self.similarity_func = f
 
     def on_cluster(self, up):
         """Update the cluster views after clustering actions."""
@@ -395,7 +404,7 @@ class ManualClustering(object):
             self.cluster_view.add_column(cs.max_waveform_amplitude,
                                          name='quality')
             self.set_default_sort('quality')
-            self.set_similarity_func(cs.mean_masked_features_score)
+            self.set_similarity_func(cs.most_similar_clusters)
 
         # Update the cluster views and selection when a cluster event occurs.
         self.gui.connect_(self.on_cluster)

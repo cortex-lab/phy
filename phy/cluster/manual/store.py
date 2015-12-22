@@ -38,13 +38,20 @@ def _get_data_lim(arr, n_spikes=None, percentile=None):
     return arr.max()
 
 
-def get_closest_clusters(cluster_id, cluster_ids, sim_func):
+def get_closest_clusters(cluster_id, cluster_ids, sim_func, max_n=None):
     """Return a list of pairs `(cluster, similarity)` sorted by decreasing
     similarity to a given cluster."""
-    l = [(candidate, sim_func(cluster_id, candidate))
+
+    def _as_float(x):
+        """Ensure the value is a float."""
+        if isinstance(x, np.generic):
+            return np.asscalar(x)
+        return float(x)
+
+    l = [(candidate, _as_float(sim_func(cluster_id, candidate)))
          for candidate in cluster_ids]
     l = sorted(l, key=itemgetter(1), reverse=True)
-    return l
+    return l[:max_n]
 
 
 # -----------------------------------------------------------------------------
@@ -95,6 +102,7 @@ def create_cluster_store(model, selector=None, context=None):
         'feature_lim': 1000,  # used to compute the waveform bounds
         'mean_traces': 10000,
     }
+    max_n_similar_clusters = 20
 
     def select(cluster_id, n=None):
         assert cluster_id >= 0
@@ -249,7 +257,8 @@ def create_cluster_store(model, selector=None, context=None):
     @cs.add(cache='memory')
     def most_similar_clusters(cluster_id):
         return get_closest_clusters(cluster_id, model.cluster_ids,
-                                    cs.mean_masked_features_score)
+                                    cs.mean_masked_features_score,
+                                    max_n_similar_clusters)
 
     # Traces.
     # -------------------------------------------------------------------------
