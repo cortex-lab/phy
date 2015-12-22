@@ -148,7 +148,7 @@ def _fullname(o):
 
 class Context(object):
     """Handle function cacheing and parallel map with ipyparallel."""
-    def __init__(self, cache_dir, ipy_view=None, verbose=100):
+    def __init__(self, cache_dir, ipy_view=None, verbose=0):
         self.verbose = verbose
         # Make sure the cache directory exists.
         self.cache_dir = op.realpath(op.expanduser(cache_dir))
