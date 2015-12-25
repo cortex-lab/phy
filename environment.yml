@@ -18,5 +18,3 @@ dependencies:
   - dask
   - cython
   - click
-  - pip:
-    - klustakwik2

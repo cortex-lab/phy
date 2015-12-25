@@ -21,6 +21,7 @@ install:
   # Create the environment.
   - conda env create python=$TRAVIS_PYTHON_VERSION
   - source activate phy
+  - pip install klustakwik2
   # Dev requirements
   - pip install -r requirements-dev.txt
   - pip install -e .
