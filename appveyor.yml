@@ -9,16 +9,19 @@ environment:
       PYTHON_ARCH: "64"
 
 install:
-  # Install app from latest script
-  - "powershell iex ((new-object net.webclient).DownloadString('http://phy.cortexlab.net/install/latest.ps1'))"
-  - "SET PATH=%HOMEPATH%\\miniconda3;%HOMEPATH%\\miniconda3\\Scripts;%PATH%"
-
-  # We want to use the git version of phy, so let's uninstall the pip version
-  - "pip uninstall phy --yes"
-  - "pip install -r requirements-dev.txt"
-  - "python setup.py develop"
+  - pushd ~
+  - (new-object System.Net.WebClient).DownloadFile('https://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe', "$Home\miniconda3.exe")
+  - .\miniconda3.exe /RegisterPython=1 /S /D="$Home\miniconda3" | Out-Null
+  - $env:Path += ";$Home\miniconda3\;$Home\miniconda3\Scripts"
+  - conda config --set ssl_verify false
+  - conda env create python=3.5 -y
+  - source activate phy
+  - conda install -c kwikteam klustakwik2 -y
+  - conda config --set ssl_verify true
+  - pip install -e .
+  - popd
+  - pip install -r requirements-dev.txt
 build: false  # Not a C# project, build stuff at the test step instead.
-
 test_script:
   # Run the project tests
-  - py.test phy -m "not long"
+  - py.test phy
