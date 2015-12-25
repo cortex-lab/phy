@@ -9,7 +9,7 @@ environment:
       PYTHON_ARCH: "64"
 
 install:
-  - (new-object System.Net.WebClient).DownloadFile('http://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe', "$Home\miniconda3.exe")
+  - Invoke-WebRequest "http://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe" -OutFile "$Home\miniconda3.exe"
   - .\miniconda3.exe /RegisterPython=1 /S /D="$Home\miniconda3" | Out-Null
   - $env:Path += ";$Home\miniconda3\;$Home\miniconda3\Scripts"
   - conda config --set ssl_verify false
