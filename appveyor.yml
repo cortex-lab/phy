@@ -3,15 +3,15 @@
 
 environment:
   matrix:
-    - PYTHON: "C:\\Python35-conda64"
-      PYTHON_VERSION: "3.5"
+    - PYTHON: "C:\\Python34-conda64"
+      PYTHON_VERSION: "3.4"
       PYTHON_ARCH: "64"
 install:
   - ps: Start-FileDownload 'http://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe'
   - ps: .\Miniconda3-latest-Windows-x86_64.exe /RegisterPython=1 /S /D="$Home\miniconda3" | Out-Null
   - ps: $env:Path += ";$Home\miniconda3\;$Home\miniconda3\Scripts"
   - ps: conda config --set ssl_verify false
-  - ps: conda env create python=3.5
+  - ps: conda env create python=3.4
   - ps: activate phy
   - ps: conda install -c kwikteam klustakwik2 -y
   - ps: conda config --set ssl_verify true
