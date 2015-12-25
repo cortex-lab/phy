@@ -12,7 +12,7 @@ install:
   - ps: $env:Path += ";$Home\miniconda3\;$Home\miniconda3\Scripts"
   - ps: conda config --set ssl_verify false
   - ps: conda env create python=3.5
-  - ps: source activate phy
+  - ps: activate phy
   - ps: conda install -c kwikteam klustakwik2 -y
   - ps: conda config --set ssl_verify true
   - ps: pip install -r requirements-dev.txt
