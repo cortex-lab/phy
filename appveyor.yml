@@ -11,7 +11,7 @@ install:
   - ps: .\Miniconda3-latest-Windows-x86_64.exe /RegisterPython=1 /S /D="$Home\miniconda3" | Out-Null
   - ps: $env:Path += ";$Home\miniconda3\;$Home\miniconda3\Scripts"
   - ps: conda config --set ssl_verify false
-  - ps: conda env create python=3.5 -y
+  - ps: conda env create python=3.5
   - ps: source activate phy
   - ps: conda install -c kwikteam klustakwik2 -y
   - ps: conda config --set ssl_verify true
