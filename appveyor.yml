@@ -8,15 +8,15 @@ environment:
       PYTHON_ARCH: "64"
 install:
   - ps: Start-FileDownload 'http://repo.continuum.io/miniconda/Miniconda3-latest-Windows-x86_64.exe'
-  - .\Miniconda3-latest-Windows-x86_64.exe /RegisterPython=1 /S /D="$Home\miniconda3"
-  - $env:Path += ";$Home\miniconda3\;$Home\miniconda3\Scripts"
-  - conda config --set ssl_verify false
-  - conda env create python=3.5 -y
-  - source activate phy
-  - conda install -c kwikteam klustakwik2 -y
-  - conda config --set ssl_verify true
-  - pip install -r requirements-dev.txt
-  - pip install -e .
+  - ps: .\Miniconda3-latest-Windows-x86_64.exe /RegisterPython=1 /S /D="$Home\miniconda3" | Out-Null
+  - ps: $env:Path += ";$Home\miniconda3\;$Home\miniconda3\Scripts"
+  - ps: conda config --set ssl_verify false
+  - ps: conda env create python=3.5 -y
+  - ps: source activate phy
+  - ps: conda install -c kwikteam klustakwik2 -y
+  - ps: conda config --set ssl_verify true
+  - ps: pip install -r requirements-dev.txt
+  - ps: pip install -e .
 build: false  # Not a C# project, build stuff at the test step instead.
 test_script:
   # Run the project tests
