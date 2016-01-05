@@ -637,8 +637,12 @@ class TraceView(ManualClusteringView):
         spike_clusters = self.spike_clusters[a:b]
         n_spikes = len(spike_times)
         assert len(spike_clusters) == n_spikes
+        # TODO: make this cleaner
+        nc = (self.n_channels
+              if isinstance(self.channel_order, slice)
+              else len(self.channel_order))
         masks = (self.masks[a:b] if self.masks is not None
-                 else np.ones(n_spikes))
+                 else np.ones((n_spikes, nc)))
         return spike_times, spike_clusters, masks
 
     def _plot_traces(self, traces, start=None, data_bounds=None):
