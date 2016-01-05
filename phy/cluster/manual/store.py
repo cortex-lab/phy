@@ -133,7 +133,10 @@ def create_cluster_store(model, selector=None, context=None):
     @cs.add(concat=True)
     def masks(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['masks'])
-        masks = np.atleast_2d(model.masks[spike_ids])
+        if model.masks is None:
+            masks = np.ones((len(spike_ids), len(model.channel_order)))
+        else:
+            masks = np.atleast_2d(model.masks[spike_ids])
         assert masks.ndim == 2
         return spike_ids, masks
 
@@ -152,7 +155,13 @@ def create_cluster_store(model, selector=None, context=None):
     @cs.add(concat=True)
     def features(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['features'])
-        features = np.atleast_2d(model.features[spike_ids])
+        if model.features is None:
+            features = np.zeros((len(spike_ids),
+                                 len(model.channel_order),
+                                 model.n_features_per_channel,
+                                 ))
+        else:
+            features = np.atleast_2d(model.features[spike_ids])
         assert features.ndim == 3
         return spike_ids, features
 

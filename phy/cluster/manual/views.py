@@ -585,7 +585,8 @@ class TraceView(ManualClusteringView):
             self.spike_clusters = spike_clusters
 
             # Masks.
-            assert masks.shape == (self.n_spikes, self.n_channels)
+            if masks is not None:
+                assert masks.shape == (self.n_spikes, self.n_channels)
             self.masks = masks
         else:
             self.spike_times = self.spike_clusters = self.masks = None
@@ -622,7 +623,7 @@ class TraceView(ManualClusteringView):
         assert traces.shape[1] == self.n_channels
 
         # Detrend the traces.
-        traces -= self.mean_traces
+        traces = traces - self.mean_traces
 
         # Create the plots.
         return traces
@@ -632,7 +633,13 @@ class TraceView(ManualClusteringView):
         assert self.spike_times is not None
         # Keep the spikes in the interval.
         a, b = self.spike_times.searchsorted(interval)
-        return self.spike_times[a:b], self.spike_clusters[a:b], self.masks[a:b]
+        spike_times = self.spike_times[a:b]
+        spike_clusters = self.spike_clusters[a:b]
+        n_spikes = len(spike_times)
+        assert len(spike_clusters) == n_spikes
+        masks = (self.masks[a:b] if self.masks is not None
+                 else np.ones(n_spikes))
+        return spike_times, spike_clusters, masks
 
     def _plot_traces(self, traces, start=None, data_bounds=None):
         t = start + np.arange(traces.shape[0]) * self.dt
