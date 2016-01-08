@@ -40,9 +40,3 @@ def chdir_tempdir():
         os.chdir(tempdir)
         yield tempdir
     os.chdir(curdir)
-
-
-@yield_fixture
-def tempdir_bis():
-    with TemporaryDirectory() as tempdir:
-        yield tempdir
