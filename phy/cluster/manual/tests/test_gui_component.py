@@ -22,6 +22,19 @@ from phy.utils import Bunch
 #------------------------------------------------------------------------------
 
 @yield_fixture
+def gui(qtbot):
+    gui = GUI(position=(200, 100), size=(500, 500))
+    gui.state = Bunch()
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+    yield gui
+    qtbot.wait(5)
+    gui.close()
+    del gui
+    qtbot.wait(5)
+
+
+@yield_fixture
 def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
                       quality, similarity):
     spike_clusters = np.array(cluster_ids)
@@ -40,18 +53,6 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
     del mc
 
 
-@yield_fixture
-def gui(qtbot):
-    gui = GUI(position=(200, 100), size=(500, 500))
-    gui.show()
-    qtbot.waitForWindowShown(gui)
-    yield gui
-    qtbot.wait(5)
-    gui.close()
-    del gui
-    qtbot.wait(5)
-
-
 #------------------------------------------------------------------------------
 # Test GUI component
 #------------------------------------------------------------------------------
@@ -64,8 +65,7 @@ def test_manual_clustering_plugin(qtbot, gui):
                   features=np.zeros((3, 1, 2)),
                   masks=.75 * np.ones((3, 1)),
                   )
-    state = Bunch()
-    gui.register(model=model, state=state)
+    gui.register(model=model)
     ManualClusteringPlugin().attach_to_gui(gui)
 
 

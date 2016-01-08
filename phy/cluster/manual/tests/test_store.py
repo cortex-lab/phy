@@ -25,7 +25,7 @@ def test_cluster_store(tempdir):
         return x * x
 
     assert cs.f(3) == 9
-    assert cs.f(3) == 9
+    assert cs.get('f')(3) == 9
 
 
 def test_create_cluster_store(model):
