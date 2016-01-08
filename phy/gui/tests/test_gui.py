@@ -195,8 +195,8 @@ def test_create_gui_1(qapp, tempdir):
     _tmp = []
 
     class MyPlugin(IPlugin):
-        def attach_to_gui(self, gui, model=None, state=None):
-            _tmp.append(state.hello)
+        def attach_to_gui(self, gui):
+            _tmp.append(gui.state.hello)
 
     gui = create_gui(plugins=['MyPlugin'], config_dir=tempdir)
     assert gui
@@ -210,11 +210,11 @@ def test_create_gui_1(qapp, tempdir):
 
 
 def test_save_geometry_state(gui):
-    state = Bunch()
-    SaveGeometryStatePlugin().attach_to_gui(gui, state=state)
+    gui.state = Bunch()
+    SaveGeometryStatePlugin().attach_to_gui(gui)
     gui.close()
 
-    assert state.geometry_state['geometry']
-    assert state.geometry_state['state']
+    assert gui.state.geometry_state['geometry']
+    assert gui.state.geometry_state['state']
 
     gui.show()

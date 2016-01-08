@@ -470,7 +470,9 @@ class WaveformView(ManualClusteringView):
 
 
 class WaveformViewPlugin(IPlugin):
-    def attach_to_gui(self, gui, model=None, state=None):
+    def attach_to_gui(self, gui):
+        state = gui.state
+        model = gui.request('model')
         bs, ps, ov = state.get_view_params('WaveformView',
                                            'box_scaling',
                                            'probe_scaling',
@@ -810,7 +812,9 @@ class TraceView(ManualClusteringView):
 
 
 class TraceViewPlugin(IPlugin):
-    def attach_to_gui(self, gui, model=None, state=None):
+    def attach_to_gui(self, gui):
+        state = gui.state
+        model = gui.request('model')
         s, = state.get_view_params('TraceView', 'scaling')
 
         cs = gui.request('cluster_store')
@@ -1185,8 +1189,10 @@ class FeatureView(ManualClusteringView):
 
 
 class FeatureViewPlugin(IPlugin):
-    def attach_to_gui(self, gui, model=None, state=None):
+    def attach_to_gui(self, gui):
+        state = gui.state
         cs = gui.request('cluster_store')
+        model = gui.request('model')
         assert cs
         bg = cs.background_features_masks()
         view = FeatureView(features_masks=cs.features_masks,
@@ -1344,7 +1350,9 @@ class CorrelogramView(ManualClusteringView):
 
 
 class CorrelogramViewPlugin(IPlugin):
-    def attach_to_gui(self, gui, model=None, state=None):
+    def attach_to_gui(self, gui):
+        state = gui.state
+        model = gui.request('model')
         bs, ws, es, ne, un = state.get_view_params('CorrelogramView',
                                                    'bin_size',
                                                    'window_size',

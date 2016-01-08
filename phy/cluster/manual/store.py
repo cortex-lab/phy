@@ -302,8 +302,9 @@ def create_cluster_store(model, selector=None, context=None):
 
 
 class ClusterStorePlugin(IPlugin):
-    def attach_to_gui(self, gui, model=None, state=None):
+    def attach_to_gui(self, gui):
         ctx = gui.request('context')
+        model = gui.request('model')
 
         # NOTE: we get the spikes_per_cluster from the Clustering instance.
         # We need to access it from a function to avoid circular dependencies
