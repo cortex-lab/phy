@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from collections import defaultdict
 import logging
 import math
 from math import floor, exp
@@ -450,3 +451,55 @@ class Selector(object):
         return select_spikes(cluster_ids,
                              spikes_per_cluster=self.spikes_per_cluster,
                              max_n_spikes_per_cluster=ns)
+
+
+# -----------------------------------------------------------------------------
+# Accumulator
+# -----------------------------------------------------------------------------
+
+def _flatten(l):
+    return [item for sublist in l for item in sublist]
+
+
+class Accumulator(object):
+    """Accumulate arrays for concatenation."""
+    def __init__(self):
+        self._data = defaultdict(list)
+
+    def add(self, name, val):
+        """Add an array."""
+        self._data[name].append(val)
+
+    def get(self, name):
+        """Return the list of arrays for a given name."""
+        return _flatten(self._data[name])
+
+    @property
+    def names(self):
+        """List of names."""
+        return set(self._data)
+
+    def __getitem__(self, name):
+        """Concatenate all arrays with a given name."""
+        return np.concatenate(self._data[name], axis=0). \
+            astype(self._data[name][0].dtype)
+
+
+def _accumulate(data_list, no_concat=()):
+    """Concatenate a list of dicts `(name, array)`.
+
+    You can specify some names which arrays should not be concatenated.
+    This is necessary with lists of plots with different sizes.
+
+    """
+    acc = Accumulator()
+    for data in data_list:
+        for name, val in data.items():
+            acc.add(name, val)
+    out = {name: acc[name] for name in acc.names if name not in no_concat}
+
+    # Some variables should not be concatenated but should be kept as lists.
+    # This is when there can be several arrays of variable length (NumPy
+    # doesn't support ragged arrays).
+    out.update({name: acc.get(name) for name in no_concat})
+    return out

@@ -67,7 +67,7 @@ def test_plugin_1(no_native_plugins):
         pass
 
     assert IPluginRegistry.plugins == [(MyPlugin,)]
-    assert get_plugin('myplugin').__name__ == 'MyPlugin'
+    assert get_plugin('MyPlugin').__name__ == 'MyPlugin'
 
     with raises(ValueError):
         get_plugin('unknown')

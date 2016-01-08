@@ -49,9 +49,8 @@ class IPlugin(with_metaclass(IPluginRegistry)):
 
 def get_plugin(name):
     """Get a plugin class from its name."""
-    name = name.lower()
     for (plugin,) in IPluginRegistry.plugins:
-        if name in plugin.__name__.lower():
+        if name in plugin.__name__:
             return plugin
     raise ValueError("The plugin %s cannot be found." % name)
 
