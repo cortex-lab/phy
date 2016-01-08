@@ -14,13 +14,14 @@ from operator import itemgetter
 import numpy as np
 
 from phy.io.array import Selector
+from phy.plot.plot import _accumulate
 from phy.stats.clusters import (mean,
                                 get_max_waveform_amplitude,
                                 get_mean_masked_features_distance,
                                 get_unmasked_channels,
                                 get_sorted_main_channels,
                                 )
-from phy.utils import IPlugin, _as_scalar, _as_scalars
+from phy.utils import Bunch, IPlugin, _as_scalar, _as_scalars
 
 logger = logging.getLogger(__name__)
 
@@ -64,8 +65,7 @@ def _concat(f):
         if not hasattr(cluster_ids, '__len__'):
             return f(cluster_ids)
         # Concatenate the result of multiple clusters.
-        arrs = zip(*(f(c) for c in cluster_ids))
-        return tuple(np.concatenate(_, axis=0) for _ in arrs)
+        return Bunch(_accumulate([f(c) for c in cluster_ids]))
     return wrapped
 
 
@@ -127,6 +127,10 @@ def create_cluster_store(model, selector=None, context=None):
         assert cluster_id >= 0
         return selector.select_spikes([cluster_id], max_n_spikes_per_cluster=n)
 
+    def _get_data(**kwargs):
+        kwargs['spike_clusters'] = model.spike_clusters[kwargs['spike_ids']]
+        return Bunch(**kwargs)
+
     # Model data.
     # -------------------------------------------------------------------------
 
@@ -138,7 +142,9 @@ def create_cluster_store(model, selector=None, context=None):
         else:
             masks = np.atleast_2d(model.masks[spike_ids])
         assert masks.ndim == 2
-        return spike_ids, masks
+        return _get_data(spike_ids=spike_ids,
+                         masks=masks,
+                         )
 
     @cs.add(concat=True)
     def features_masks(cluster_id):
@@ -150,7 +156,10 @@ def create_cluster_store(model, selector=None, context=None):
         assert fm.ndim == 3
         f = fm[..., 0].reshape((ns, nc, nfpc))
         m = fm[:, ::nfpc, 1]
-        return spike_ids, f, m
+        return _get_data(spike_ids=spike_ids,
+                         features=f,
+                         masks=m,
+                         )
 
     @cs.add(concat=True)
     def features(cluster_id):
@@ -163,7 +172,9 @@ def create_cluster_store(model, selector=None, context=None):
         else:
             features = np.atleast_2d(model.features[spike_ids])
         assert features.ndim == 3
-        return spike_ids, features
+        return _get_data(spike_ids=spike_ids,
+                         features=features,
+                         )
 
     @cs.add
     def feature_lim():
@@ -182,7 +193,10 @@ def create_cluster_store(model, selector=None, context=None):
         assert features.ndim == 3
         assert masks.ndim == 2
         assert masks.shape[0] == features.shape[0]
-        return spike_ids, features, masks
+        return _get_data(spike_ids=spike_ids,
+                         features=features,
+                         masks=masks,
+                         )
 
     @cs.add(concat=True)
     def waveforms(cluster_id):
@@ -190,7 +204,9 @@ def create_cluster_store(model, selector=None, context=None):
                            max_n_spikes_per_cluster['waveforms'])
         waveforms = np.atleast_2d(model.waveforms[spike_ids])
         assert waveforms.ndim == 3
-        return spike_ids, waveforms
+        return _get_data(spike_ids=spike_ids,
+                         waveforms=waveforms,
+                         )
 
     @cs.add
     def waveform_lim():
@@ -208,7 +224,10 @@ def create_cluster_store(model, selector=None, context=None):
         assert masks.ndim == 2
         # Ensure that both arrays have the same number of channels.
         assert masks.shape[1] == waveforms.shape[2]
-        return spike_ids, waveforms, masks
+        return _get_data(spike_ids=spike_ids,
+                         waveforms=waveforms,
+                         masks=masks,
+                         )
 
     # Mean quantities.
     # -------------------------------------------------------------------------
@@ -216,15 +235,15 @@ def create_cluster_store(model, selector=None, context=None):
     @cs.add
     def mean_masks(cluster_id):
         # We access [1] because we return spike_ids, masks.
-        return mean(cs.masks(cluster_id)[1])
+        return mean(cs.masks(cluster_id).masks)
 
     @cs.add
     def mean_features(cluster_id):
-        return mean(cs.features(cluster_id)[1])
+        return mean(cs.features(cluster_id).features)
 
     @cs.add
     def mean_waveforms(cluster_id):
-        return mean(cs.waveforms(cluster_id)[1])
+        return mean(cs.waveforms(cluster_id).waveforms)
 
     # Statistics.
     # -------------------------------------------------------------------------

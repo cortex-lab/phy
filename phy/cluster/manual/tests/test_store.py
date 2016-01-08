@@ -40,23 +40,24 @@ def test_create_cluster_store(model):
     ns2 = len(model.spikes_per_cluster[2])
     nsw = model.n_samples_waveforms
 
-    def _check(out, *shape):
-        spikes, arr = out
+    def _check(out, name, *shape):
+        spikes = out.pop('spike_ids')
+        arr = out[name]
         assert spikes.shape[0] == shape[0]
         assert arr.shape == shape
 
     # Model data.
-    _check(cs.masks(1), ns, nc)
-    _check(cs.features(1), ns, nc, nfpc)
-    _check(cs.waveforms(1), ns, nsw, nc)
-
-    # Waveforms masks.
-    spike_ids, w, m = cs.waveforms_masks(1)
-    _check((spike_ids, w), ns, nsw, nc)
-    _check((spike_ids, m), ns, nc)
+    _check(cs.masks(1), 'masks', ns, nc)
+    _check(cs.features(1), 'features', ns, nc, nfpc)
+    _check(cs.waveforms(1), 'waveforms', ns, nsw, nc)
+    _check(cs.waveforms_masks(1), 'waveforms', ns, nsw, nc)
+    _check(cs.waveforms_masks(1), 'masks', ns, nc)
 
     # Background feature masks.
-    spike_ids, bgf, bgm = cs.background_features_masks()
+    data = cs.background_features_masks()
+    spike_ids = data.spike_ids
+    bgf = data.features
+    bgm = data.masks
     assert bgf.ndim == 3
     assert bgf.shape[1:] == (nc, nfpc)
     assert bgm.ndim == 2
@@ -64,7 +65,10 @@ def test_create_cluster_store(model):
     assert spike_ids.shape == (bgf.shape[0],) == (bgm.shape[0],)
 
     # Test concat multiple clusters.
-    spike_ids, f, m = cs.features_masks([1, 2])
+    data = cs.features_masks([1, 2])
+    spike_ids = data.spike_ids
+    f = data.features
+    m = data.masks
     assert len(spike_ids) == ns + ns2
     assert f.shape == (ns + ns2, nc, nfpc)
     assert m.shape == (ns + ns2, nc)
