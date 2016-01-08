@@ -402,11 +402,13 @@ class ManualClustering(object):
 
         # Add the quality column in the cluster view.
         cs = gui.request('cluster_store')
-        if cs:
-            self.cluster_view.add_column(cs.max_waveform_amplitude,
-                                         name='quality')
-            self.set_default_sort('quality')
-            self.set_similarity_func(cs.most_similar_clusters)
+        if cs and 'ClusterView' in gui.state:
+            # Names of the quality and similarity functions.
+            quality = gui.state.ClusterView.quality
+            similarity = gui.state.ClusterView.similarity
+            self.cluster_view.add_column(cs.get(quality), name=quality)
+            self.set_default_sort(quality)
+            self.set_similarity_func(cs.get(similarity))
 
         # Update the cluster views and selection when a cluster event occurs.
         self.gui.connect_(self.on_cluster)

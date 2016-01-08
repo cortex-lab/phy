@@ -14,6 +14,7 @@ from numpy.testing import assert_allclose as ac
 from pytest import raises
 from vispy.util import keys
 
+from phy.utils import Bunch
 from phy.gui import create_gui, GUIState
 from phy.io.mock import artificial_traces
 from ..views import (TraceView, _extract_wave, _selected_clusters_colors,
@@ -41,6 +42,9 @@ def _test_view(view_name, model=None, tempdir=None):
     state.set_view_params('TraceView1', box_size=(1., .01))
     state.set_view_params('FeatureView1', feature_scaling=.5)
     state.set_view_params('CorrelogramView1', uniform_normalization=True)
+    # quality and similarity functions for the cluster view.
+    state.ClusterView = Bunch(quality='max_waveform_amplitude',
+                              similarity='most_similar_clusters')
     state.save()
 
     # Create the GUI.
