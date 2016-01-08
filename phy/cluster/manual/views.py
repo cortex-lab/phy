@@ -72,17 +72,6 @@ def _extract_wave(traces, spk, mask, wave_len=None):
     return data, channels
 
 
-def _get_spike_clusters_rel(spike_clusters, spike_ids, cluster_ids):
-    # Relative spike clusters.
-    # NOTE: the order of the clusters in cluster_ids matters.
-    # It will influence the relative index of the clusters, which
-    # in return influence the depth.
-    spike_clusters = spike_clusters[spike_ids]
-    assert np.all(np.in1d(spike_clusters, cluster_ids))
-    spike_clusters_rel = _index_of(spike_clusters, cluster_ids)
-    return spike_clusters_rel
-
-
 def _get_depth(masks, spike_clusters_rel=None, n_clusters=None):
     """Return the OpenGL z-depth of vertices as a function of the
     mask and cluster index."""
@@ -147,7 +136,11 @@ class StatusEvent(Event):
 
 
 class ManualClusteringView(View):
-    max_n_spikes_per_cluster = None
+    """Base class for clustering views.
+
+    The views take their data with functions `cluster_ids: spike_ids, data`.
+
+    """
     default_shortcuts = {
     }
 
@@ -259,19 +252,12 @@ class WaveformView(ManualClusteringView):
 
     def __init__(self,
                  waveforms_masks=None,
-                 spike_clusters=None,
                  channel_positions=None,
                  box_scaling=None,
                  probe_scaling=None,
                  n_samples=None,
                  waveform_lim=None,
                  **kwargs):
-        """
-
-        The channel order in waveforms needs to correspond to the one
-        in channel_positions.
-
-        """
         self._key_pressed = None
 
         # Channel positions and n_channels.
@@ -311,14 +297,11 @@ class WaveformView(ManualClusteringView):
         assert waveform_lim > 0
         self.data_bounds = [-1, -waveform_lim, +1, +waveform_lim]
 
-        # Spike clusters.
-        self.spike_clusters = spike_clusters
-
         # Channel positions.
         assert channel_positions.shape == (self.n_channels, 2)
         self.channel_positions = channel_positions
 
-    def on_select(self, cluster_ids=None):
+    def on_select(self, cluster_ids=None, zoom_on_channels=True):
         super(WaveformView, self).on_select(cluster_ids)
         cluster_ids = self.cluster_ids
         n_clusters = len(cluster_ids)
@@ -326,14 +309,17 @@ class WaveformView(ManualClusteringView):
             return
 
         # Load the waveform subset.
-        spike_ids, w, masks = self.waveforms_masks(cluster_ids)
+        data = self.waveforms_masks(cluster_ids)
+        spike_ids = data.spike_ids
+        spike_clusters = data.spike_clusters
+        w = data.waveforms
+        masks = data.masks
         n_spikes = len(spike_ids)
         assert w.shape == (n_spikes, self.n_samples, self.n_channels)
         assert masks.shape == (n_spikes, self.n_channels)
 
         # Relative spike clusters.
-        spike_clusters_rel = _get_spike_clusters_rel(self.spike_clusters,
-                                                     spike_ids, cluster_ids)
+        spike_clusters_rel = _index_of(spike_clusters, cluster_ids)
         assert spike_clusters_rel.shape == (n_spikes,)
 
         # Fetch the waveforms.
@@ -364,7 +350,7 @@ class WaveformView(ManualClusteringView):
 
         # Zoom on the best channels when selecting clusters.
         channels = self._best_channels(cluster_ids)
-        if channels is not None:
+        if channels is not None and zoom_on_channels:
             self.zoom_on_channels(channels)
 
     def attach(self, gui):
@@ -396,7 +382,7 @@ class WaveformView(ManualClusteringView):
     def toggle_waveform_overlap(self):
         """Toggle the overlap of the waveforms."""
         self.overlap = not self.overlap
-        self.on_select()
+        self.on_select(zoom_on_channels=False)
 
     # Box scaling
     # -------------------------------------------------------------------------
@@ -493,7 +479,6 @@ class WaveformViewPlugin(IPlugin):
         cs = gui.request('cluster_store')
         assert cs  # We need the cluster store to retrieve the data.
         view = WaveformView(waveforms_masks=cs.waveforms_masks,
-                            spike_clusters=model.spike_clusters,
                             channel_positions=model.channel_positions,
                             n_samples=model.n_samples_waveforms,
                             box_scaling=bs,
@@ -908,14 +893,23 @@ class FeatureView(ManualClusteringView):
     }
 
     def __init__(self,
-                 features_masks=None,  # function cluster_id => (spk, f, m)
-                 background_features_masks=None,  # (spk, f, m)
+                 features_masks=None,
+                 background_features_masks=None,
                  spike_times=None,
-                 spike_clusters=None,
                  n_channels=None,
                  n_features_per_channel=None,
                  feature_lim=None,
                  **kwargs):
+        """
+        features_masks is a function :
+            `cluster_ids: Bunch(spike_ids,
+                                features,
+                                masks,
+                                spike_clusters,
+                                spike_times)`
+        background_features_masks is a Bunch(...) like above.
+
+        """
 
         assert features_masks
         self.features_masks = features_masks
@@ -927,7 +921,9 @@ class FeatureView(ManualClusteringView):
         assert n_channels > 0
         self.n_channels = n_channels
 
+        # Spike times.
         self.n_spikes = spike_times.shape[0]
+        assert spike_times.shape == (self.n_spikes,)
         assert self.n_spikes >= 0
 
         self.n_cols = self.n_features_per_channel + 1
@@ -941,15 +937,11 @@ class FeatureView(ManualClusteringView):
         # Feature normalization.
         self.data_bounds = [-1, -feature_lim, +1, +feature_lim]
 
-        # Spike clusters.
-        assert spike_clusters.shape == (self.n_spikes,)
-        self.spike_clusters = spike_clusters
-
-        # Spike times.
-        assert spike_times.shape == (self.n_spikes,)
+        # If this is True, the channels won't be automatically chosen
+        # when new clusters are selected.
+        self.fixed_channels = False
 
         # Channels to show.
-        self.fixed_channels = False
         self.x_channels = None
         self.y_channels = None
 
@@ -1068,17 +1060,23 @@ class FeatureView(ManualClusteringView):
             return
 
         # Get the spikes, features, masks.
-        spike_ids, f, masks = self.features_masks(cluster_ids)
+        data = self.features_masks(cluster_ids)
+        spike_ids = data.spike_ids
+        spike_clusters = data.spike_clusters
+        f = data.features
+        masks = data.masks
         assert f.ndim == 3
         assert masks.ndim == 2
         assert spike_ids.shape[0] == f.shape[0] == masks.shape[0]
 
         # Get the spike clusters.
-        sc = _get_spike_clusters_rel(self.spike_clusters, spike_ids,
-                                     cluster_ids)
+        sc = _index_of(spike_clusters, cluster_ids)
 
         # Get the background features.
-        spike_ids_bg, features_bg, masks_bg = self.background_features_masks
+        data_bg = self.background_features_masks
+        spike_ids_bg = data_bg.spike_ids
+        features_bg = data_bg.features
+        masks_bg = data_bg.masks
 
         # Select the dimensions.
         # Choose the channels automatically unless fixed_channels is set.
@@ -1193,7 +1191,6 @@ class FeatureViewPlugin(IPlugin):
         bg = cs.background_features_masks()
         view = FeatureView(features_masks=cs.features_masks,
                            background_features_masks=bg,
-                           spike_clusters=model.spike_clusters,
                            spike_times=model.spike_times,
                            n_channels=model.n_channels,
                            n_features_per_channel=model.n_features_per_channel,

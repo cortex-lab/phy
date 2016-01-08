@@ -48,7 +48,8 @@ class Accumulator(object):
 
     def __getitem__(self, name):
         """Concatenate all arrays with a given name."""
-        return np.vstack(self._data[name]).astype(np.float32)
+        return np.concatenate(self._data[name], axis=0). \
+            astype(self._data[name][0].dtype)
 
 
 def _accumulate(data_list, no_concat=()):
