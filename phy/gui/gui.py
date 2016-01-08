@@ -206,12 +206,14 @@ class GUI(QMainWindow):
     def unconnect_(self, *args, **kwargs):
         self._event.unconnect(*args, **kwargs)
 
-    def register(self, func=None, name=None):
+    def register(self, obj=None, name=None, **kwargs):
         """Register a object for a given name."""
-        if func is None:
-            return lambda _: self.register(func=_, name=name)
-        name = name or func.__name__
-        self._registered[name] = func
+        for n, o in kwargs.items():
+            self.register(o, n)
+        if obj is None:
+            return lambda _: self.register(obj=_, name=name)
+        name = name or obj.__name__
+        self._registered[name] = obj
 
     def request(self, name, *args, **kwargs):
         """Request the result of a possibly registered object."""
@@ -416,7 +418,8 @@ class GUIState(Bunch):
 
 
 class SaveGeometryStatePlugin(IPlugin):
-    def attach_to_gui(self, gui, state=None, model=None):
+    def attach_to_gui(self, gui):
+        state = gui.state
 
         @gui.connect_
         def on_close():
@@ -431,7 +434,7 @@ class SaveGeometryStatePlugin(IPlugin):
 
 def create_gui(name=None, subtitle=None, model=None,
                plugins=None, config_dir=None):
-    """Create a GUI with a model and a list of plugins.
+    """Create a GUI with a list of plugins.
 
     By default, the list of plugins is taken from the `c.TheGUI.plugins`
     parameter, where `TheGUI` is the name of the GUI class.
@@ -445,6 +448,9 @@ def create_gui(name=None, subtitle=None, model=None,
     state = GUIState(gui.name, config_dir=config_dir)
     gui.state = state
 
+    # Register the model.
+    gui.register(model=model)
+
     # If no plugins are specified, load the master config and
     # get the list of user plugins to attach to the GUI.
     plugins_conf = load_master_config()[name].plugins
@@ -454,7 +460,7 @@ def create_gui(name=None, subtitle=None, model=None,
     # Attach the plugins to the GUI.
     for plugin in plugins:
         logger.debug("Attach plugin `%s` to %s.", plugin, name)
-        get_plugin(plugin)().attach_to_gui(gui, state=state, model=model)
+        get_plugin(plugin)().attach_to_gui(gui)
 
     # Save the state to disk.
     @gui.connect_

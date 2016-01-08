@@ -65,7 +65,8 @@ def test_manual_clustering_plugin(qtbot, gui):
                   masks=.75 * np.ones((3, 1)),
                   )
     state = Bunch()
-    ManualClusteringPlugin().attach_to_gui(gui, model=model, state=state)
+    gui.register(model=model, state=state)
+    ManualClusteringPlugin().attach_to_gui(gui)
 
 
 def test_manual_clustering_edge_cases(manual_clustering):

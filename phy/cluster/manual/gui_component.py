@@ -518,8 +518,8 @@ class ManualClustering(object):
 
 
 class ManualClusteringPlugin(IPlugin):
-    def attach_to_gui(self, gui, model=None, state=None):
-
+    def attach_to_gui(self, gui):
+        model = gui.request('model')
         # Attach the manual clustering logic (wizard, merge, split,
         # undo stack) to the GUI.
         mc = ManualClustering(model.spike_clusters,
