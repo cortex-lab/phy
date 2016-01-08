@@ -538,7 +538,6 @@ class TraceView(ManualClusteringView):
                  spike_times=None,
                  spike_clusters=None,
                  masks=None,  # full array of masks
-                 channel_order=None,
                  n_samples_per_spike=None,
                  scaling=None,
                  mean_traces=None,
@@ -551,17 +550,9 @@ class TraceView(ManualClusteringView):
 
         # Traces.
         assert len(traces.shape) == 2
-        self.n_samples, self.n_channels_traces = traces.shape
+        self.n_samples, self.n_channels = traces.shape
         self.traces = traces
         self.duration = self.dt * self.n_samples
-
-        # Channel ordering and dead channels.
-        # We do traces[..., channel_order] whenever we load traces
-        # so that the channels match those in masks.
-        self.n_channels = (self.n_channels_traces if channel_order is None
-                           else len(channel_order))
-        self.channel_order = (channel_order if channel_order is not None
-                              else slice(None, None, None))
 
         # Used to detrend the traces.
         self.mean_traces = np.atleast_2d(mean_traces)
@@ -618,8 +609,8 @@ class TraceView(ManualClusteringView):
         i, j = int(i), int(j)
 
         # We load the traces and select the requested channels.
-        assert self.traces.shape[1] == self.n_channels_traces
-        traces = self.traces[i:j, self.channel_order]
+        assert self.traces.shape[1] == self.n_channels
+        traces = self.traces[i:j, :]
         assert traces.shape[1] == self.n_channels
 
         # Detrend the traces.
@@ -637,12 +628,8 @@ class TraceView(ManualClusteringView):
         spike_clusters = self.spike_clusters[a:b]
         n_spikes = len(spike_times)
         assert len(spike_clusters) == n_spikes
-        # TODO: make this cleaner
-        nc = (self.n_channels
-              if isinstance(self.channel_order, slice)
-              else len(self.channel_order))
         masks = (self.masks[a:b] if self.masks is not None
-                 else np.ones((n_spikes, nc)))
+                 else np.ones((n_spikes, self.n_channels)))
         return spike_times, spike_clusters, masks
 
     def _plot_traces(self, traces, start=None, data_bounds=None):
@@ -849,7 +836,6 @@ class TraceViewPlugin(IPlugin):
                          spike_times=model.spike_times,
                          spike_clusters=model.spike_clusters,
                          masks=model.masks,
-                         channel_order=model.channel_order,
                          scaling=s,
                          mean_traces=cs.mean_traces(),
                          )
