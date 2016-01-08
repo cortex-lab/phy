@@ -77,7 +77,7 @@ def test_create_cluster_store(model):
     # Limits.
     assert 0 < cs.waveform_lim() < 3
     assert 0 < cs.feature_lim() < 3
-    assert cs.mean_traces().shape == (1, nc)
+    assert cs.mean_traces().shape == (nc,)
 
     # Statistics.
     assert 1 <= len(cs.best_channels(1)) <= nc

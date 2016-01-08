@@ -134,7 +134,7 @@ def create_cluster_store(model, selector=None, context=None):
     def masks(cluster_id):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['masks'])
         if model.masks is None:
-            masks = np.ones((len(spike_ids), len(model.channel_order)))
+            masks = np.ones((len(spike_ids), model.n_channels))
         else:
             masks = np.atleast_2d(model.masks[spike_ids])
         assert masks.ndim == 2
@@ -157,7 +157,7 @@ def create_cluster_store(model, selector=None, context=None):
         spike_ids = select(cluster_id, max_n_spikes_per_cluster['features'])
         if model.features is None:
             features = np.zeros((len(spike_ids),
-                                 len(model.channel_order),
+                                 model.n_channels,
                                  model.n_features_per_channel,
                                  ))
         else:
@@ -276,7 +276,7 @@ def create_cluster_store(model, selector=None, context=None):
     @cs.add
     def mean_traces():
         n = max_n_spikes_per_cluster['mean_traces']
-        mt = model.traces[:n, model.channel_order].mean(axis=0)
+        mt = model.traces[:n, :].mean(axis=0)
         return mt.astype(model.traces.dtype)
 
     return cs
