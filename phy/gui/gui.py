@@ -432,7 +432,7 @@ class SaveGeometryStatePlugin(IPlugin):
             gui.restore_geometry_state(gs)
 
 
-def create_gui(name=None, subtitle=None, model=None,
+def create_gui(name=None, subtitle=None, model=None, state=None,
                plugins=None, config_dir=None):
     """Create a GUI with a list of plugins.
 
@@ -445,7 +445,12 @@ def create_gui(name=None, subtitle=None, model=None,
     plugins = plugins or []
 
     # Load the state.
-    state = GUIState(gui.name, config_dir=config_dir)
+    state = state or {}
+    # Ensure all dicts are Bunches.
+    for k in state.keys():
+        if isinstance(state[k], dict) and not isinstance(state[k], Bunch):
+            state[k] = Bunch(state[k])
+    state = GUIState(gui.name, config_dir=config_dir, **(state or {}))
     gui.state = state
 
     # Register the model.

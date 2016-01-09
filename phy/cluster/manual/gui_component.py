@@ -404,11 +404,13 @@ class ManualClustering(object):
         cs = gui.request('cluster_store')
         if cs and 'ClusterView' in gui.state:
             # Names of the quality and similarity functions.
-            quality = gui.state.ClusterView.quality
-            similarity = gui.state.ClusterView.similarity
-            self.cluster_view.add_column(cs.get(quality), name=quality)
-            self.set_default_sort(quality)
-            self.set_similarity_func(cs.get(similarity))
+            quality = gui.state.ClusterView.get('quality', None)
+            similarity = gui.state.ClusterView.get('similarity', None)
+            if quality:
+                self.cluster_view.add_column(cs.get(quality), name=quality)
+                self.set_default_sort(quality)
+            if similarity:
+                self.set_similarity_func(cs.get(similarity))
 
         # Update the cluster views and selection when a cluster event occurs.
         self.gui.connect_(self.on_cluster)
