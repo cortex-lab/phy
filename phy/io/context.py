@@ -329,8 +329,10 @@ class Context(object):
 class ContextPlugin(IPlugin):
     def attach_to_gui(self, gui):
         model = gui.request('model')
+        # Find the path.
+        path = getattr(model, 'path', '')
         # Create the computing context.
-        ctx = Context(op.join(op.dirname(model.path), '.phy/'))
+        ctx = Context(op.join(op.dirname(path), '.phy/'))
         gui.register(ctx, name='context')
 
 
