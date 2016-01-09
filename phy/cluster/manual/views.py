@@ -54,17 +54,14 @@ def _selected_clusters_colors(n_clusters=None):
     return colors[:n_clusters, ...] / 255.
 
 
-def _extract_wave(traces, spk, mask, wave_len=None):
+def _extract_wave(traces, start, end, mask, wave_len=None):
     n_samples, n_channels = traces.shape
-    if not (0 <= spk < n_samples):
-        raise ValueError()
     assert mask.shape == (n_channels,)
     channels = np.nonzero(mask > .1)[0]
     # There should be at least one non-masked channel.
     if not len(channels):
         return  # pragma: no cover
-    i = spk - wave_len // 2
-    j = spk + wave_len // 2
+    i, j = start, end
     a, b = max(0, i), min(j, n_samples - 1)
     data = traces[a:b, channels]
     data = _get_padded(data, i - a, i - a + wave_len)
@@ -631,17 +628,29 @@ class TraceView(ManualClusteringView):
                     traces=None, spike_times=None, spike_clusters=None,
                     masks=None, data_bounds=None):
 
-        wave_len = self.n_samples_per_spike
-        dur_spike = wave_len * self.dt
+        # Can be a tuple or a scalar.
+        if isinstance(self.n_samples_per_spike, tuple):
+            wave_len = sum(self.n_samples_per_spike)  # in samples
+            dur_spike = wave_len * self.dt  # in seconds
+            wave_start = self.n_samples_per_spike[0] * self.dt  # in seconds
+        else:
+            wave_len = self.n_samples_per_spike
+            dur_spike = wave_len * self.dt
+            wave_start = -dur_spike * .5
+
         trace_start = round(self.sample_rate * start)
 
         # Find the first x of the spike, relative to the start of
         # the interval
-        sample_rel = (round(spike_times[spike_idx] * self.sample_rate) -
+        spike_start = spike_times[spike_idx] + wave_start
+        spike_end = spike_times[spike_idx] + wave_start + dur_spike
+        sample_start = (round(spike_start * self.sample_rate) -
+                        trace_start)
+        sample_end = (round(spike_end * self.sample_rate) -
                       trace_start)
 
         # Extract the waveform from the traces.
-        w, ch = _extract_wave(traces, sample_rel,
+        w, ch = _extract_wave(traces, sample_start, sample_end,
                               masks[spike_idx], wave_len)
 
         # Determine the color as a function of the spike's cluster.
@@ -659,7 +668,7 @@ class TraceView(ManualClusteringView):
                                n_clusters=len(self.cluster_ids))
 
         # Generate the x coordinates of the waveform.
-        t0 = spike_times[spike_idx] - dur_spike / 2.
+        t0 = spike_times[spike_idx] + wave_start
         t = t0 + self.dt * np.arange(wave_len)
         t = np.tile(t, (len(ch), 1))
 
@@ -824,6 +833,7 @@ class TraceViewPlugin(IPlugin):
                          sample_rate=model.sample_rate,
                          spike_times=model.spike_times,
                          spike_clusters=model.spike_clusters,
+                         n_samples_per_spike=model.n_samples_waveforms,
                          masks=model.masks,
                          scaling=s,
                          mean_traces=cs.mean_traces(),
