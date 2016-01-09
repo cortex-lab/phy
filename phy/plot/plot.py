@@ -47,7 +47,7 @@ class View(BaseCanvas):
     """High-level plotting canvas."""
     _default_box_index = (0,)
 
-    def __init__(self, layout=None, shape=None, n_plots=None,
+    def __init__(self, layout=None, shape=None, n_plots=None, origin=None,
                  box_bounds=None, box_pos=None, box_size=None, **kwargs):
         if not kwargs.get('keys', None):
             kwargs['keys'] = None
@@ -68,7 +68,7 @@ class View(BaseCanvas):
 
         elif layout == 'stacked':
             self.n_plots = n_plots
-            self.stacked = Stacked(n_plots, margin=.1)
+            self.stacked = Stacked(n_plots, margin=.1, origin=origin)
             self.stacked.attach(self)
 
         self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)

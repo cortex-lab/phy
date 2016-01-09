@@ -526,6 +526,7 @@ class TraceView(ManualClusteringView):
                  masks=None,  # full array of masks
                  n_samples_per_spike=None,
                  scaling=None,
+                 origin=None,
                  mean_traces=None,
                  **kwargs):
 
@@ -570,6 +571,7 @@ class TraceView(ManualClusteringView):
 
         # Initialize the view.
         super(TraceView, self).__init__(layout='stacked',
+                                        origin=origin,
                                         n_plots=self.n_channels,
                                         **kwargs)
         # Box and probe scaling.
@@ -826,7 +828,7 @@ class TraceViewPlugin(IPlugin):
     def attach_to_gui(self, gui):
         state = gui.state
         model = gui.request('model')
-        s, = state.get_view_params('TraceView', 'scaling')
+        s, o = state.get_view_params('TraceView', 'scaling', 'origin')
 
         cs = gui.request('cluster_store')
         assert cs  # We need the cluster store to retrieve the data.
@@ -837,6 +839,7 @@ class TraceViewPlugin(IPlugin):
                          spike_clusters=model.spike_clusters,
                          n_samples_per_spike=model.n_samples_waveforms,
                          masks=model.masks,
+                         origin=o,
                          scaling=s,
                          mean_traces=cs.mean_traces(),
                          )

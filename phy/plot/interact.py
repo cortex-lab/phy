@@ -253,7 +253,7 @@ class Stacked(Boxed):
         Name of the GLSL variable with the box index.
 
     """
-    def __init__(self, n_boxes, margin=0, box_var=None):
+    def __init__(self, n_boxes, margin=0, box_var=None, origin=None):
 
         # The margin must be in [-1, 1]
         margin = np.clip(margin, -1, 1)
@@ -266,7 +266,8 @@ class Stacked(Boxed):
         b[:, 1] = np.linspace(-1, 1 - 2. / n_boxes + margin, n_boxes)
         b[:, 2] = 1
         b[:, 3] = np.linspace(-1 + 2. / n_boxes - margin, 1., n_boxes)
-        b = b[::-1, :]
+        if origin == 'upper':
+            b = b[::-1, :]
 
         super(Stacked, self).__init__(b, box_var=box_var,
                                       keep_aspect_ratio=False,
