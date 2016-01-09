@@ -133,9 +133,15 @@ def create_cluster_store(model):
 
     @cs.add(concat=True)
     def waveforms_masks(cluster_id):
+        w = get_waveforms(model.n_spikes_per_cluster)
+        m = get_masks(model.n_spikes_per_cluster)
+        mw = cs.mean_waveforms(cluster_id)[np.newaxis, ...]
+        mm = cs.mean_masks(cluster_id)[np.newaxis, ...]
         return _get_data(spike_ids=get_spike_ids(cluster_id),
-                         waveforms=get_waveforms(model.n_spikes_per_cluster),
-                         masks=get_masks(model.n_spikes_per_cluster),
+                         waveforms=w,
+                         masks=m,
+                         mean_waveforms=mw,
+                         mean_masks=mm,
                          )
 
     # Mean quantities.
@@ -312,6 +318,9 @@ def test_waveform_view(qtbot, tempdir):
 
         v.toggle_waveform_overlap()
         v.toggle_waveform_overlap()
+
+        v.toggle_show_means()
+        v.toggle_show_means()
 
         v.toggle_zoom_on_channels()
         v.toggle_zoom_on_channels()
