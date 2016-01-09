@@ -309,8 +309,12 @@ def test_selected_clusters_colors():
 def test_waveform_view(qtbot, tempdir):
     with _test_view('WaveformView', tempdir=tempdir) as v:
         ac(v.boxed.box_size, (.1818, .0909), atol=1e-2)
+
         v.toggle_waveform_overlap()
         v.toggle_waveform_overlap()
+
+        v.toggle_zoom_on_channels()
+        v.toggle_zoom_on_channels()
 
         # Box scaling.
         bs = v.boxed.box_size

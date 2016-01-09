@@ -233,6 +233,7 @@ class WaveformView(ManualClusteringView):
 
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
+        'toggle_zoom_on_channels': 'z',
 
         # Box scaling.
         'widen': 'ctrl+right',
@@ -256,6 +257,7 @@ class WaveformView(ManualClusteringView):
                  waveform_lim=None,
                  **kwargs):
         self._key_pressed = None
+        self.do_zoom_on_channels = True
 
         # Channel positions and n_channels.
         assert channel_positions is not None
@@ -263,8 +265,8 @@ class WaveformView(ManualClusteringView):
         self.n_channels = self.channel_positions.shape[0]
 
         # Number of samples per waveform.
-        if isinstance(n_samples, tuple):
-            n_samples = sum(n_samples)
+        n_samples = (sum(map(abs, n_samples)) if isinstance(n_samples, tuple)
+                     else n_samples)
         assert n_samples > 0
         self.n_samples = n_samples
 
@@ -300,7 +302,7 @@ class WaveformView(ManualClusteringView):
         assert channel_positions.shape == (self.n_channels, 2)
         self.channel_positions = channel_positions
 
-    def on_select(self, cluster_ids=None, zoom_on_channels=True):
+    def on_select(self, cluster_ids=None):
         super(WaveformView, self).on_select(cluster_ids)
         cluster_ids = self.cluster_ids
         n_clusters = len(cluster_ids)
@@ -349,13 +351,14 @@ class WaveformView(ManualClusteringView):
 
         # Zoom on the best channels when selecting clusters.
         channels = self._best_channels(cluster_ids)
-        if channels is not None and zoom_on_channels:
+        if channels is not None and self.do_zoom_on_channels:
             self.zoom_on_channels(channels)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(WaveformView, self).attach(gui)
         self.actions.add(self.toggle_waveform_overlap)
+        self.actions.add(self.toggle_zoom_on_channels)
 
         # Box scaling.
         self.actions.add(self.widen)
@@ -381,7 +384,12 @@ class WaveformView(ManualClusteringView):
     def toggle_waveform_overlap(self):
         """Toggle the overlap of the waveforms."""
         self.overlap = not self.overlap
-        self.on_select(zoom_on_channels=False)
+        tmp = self.do_zoom_on_channels
+        self.on_select()
+        self.do_zoom_on_channels = tmp
+
+    def toggle_zoom_on_channels(self):
+        self.do_zoom_on_channels = not self.do_zoom_on_channels
 
     # Box scaling
     # -------------------------------------------------------------------------
@@ -549,6 +557,12 @@ class TraceView(ManualClusteringView):
         self.n_samples_per_spike = (n_samples_per_spike or
                                     round(.002 * sample_rate))
 
+        # Can be a tuple or a scalar.
+        if not isinstance(self.n_samples_per_spike, tuple):
+            ns = self.n_samples_per_spike
+            self.n_samples_per_spike = (-ns // 2, ns // 2)
+        # Now n_samples_per_spike is a tuple.
+
         # Spike times.
         if spike_times is not None:
             spike_times = np.asarray(spike_times)
@@ -632,15 +646,9 @@ class TraceView(ManualClusteringView):
                     traces=None, spike_times=None, spike_clusters=None,
                     masks=None, data_bounds=None):
 
-        # Can be a tuple or a scalar.
-        if isinstance(self.n_samples_per_spike, tuple):
-            wave_len = sum(self.n_samples_per_spike)  # in samples
-            dur_spike = wave_len * self.dt  # in seconds
-            wave_start = self.n_samples_per_spike[0] * self.dt  # in seconds
-        else:
-            wave_len = self.n_samples_per_spike
-            dur_spike = wave_len * self.dt
-            wave_start = -dur_spike * .5
+        wave_len = sum(map(abs, self.n_samples_per_spike))  # in samples
+        dur_spike = wave_len * self.dt  # in seconds
+        wave_start = self.n_samples_per_spike[0] * self.dt  # in seconds
 
         trace_start = round(self.sample_rate * start)
 
