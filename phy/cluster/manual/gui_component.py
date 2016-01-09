@@ -398,7 +398,6 @@ class ManualClustering(object):
 
         # Add the cluster views.
         gui.add_view(self.cluster_view, name='ClusterView')
-        gui.add_view(self.similarity_view, name='SimilarityView')
 
         # Add the quality column in the cluster view.
         cs = gui.request('cluster_store')
@@ -411,6 +410,7 @@ class ManualClustering(object):
                 self.set_default_sort(quality)
             if similarity:
                 self.set_similarity_func(cs.get(similarity))
+                gui.add_view(self.similarity_view, name='SimilarityView')
 
         # Update the cluster views and selection when a cluster event occurs.
         self.gui.connect_(self.on_cluster)
