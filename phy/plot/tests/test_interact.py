@@ -150,7 +150,7 @@ def test_stacked_1(qtbot, canvas):
     n = 1000
     box_index = np.repeat(np.arange(6), n, axis=0)
 
-    stacked = Stacked(n_boxes=6, margin=-10)
+    stacked = Stacked(n_boxes=6, margin=-10, origin='upper')
     _create_visual(qtbot, canvas, stacked, box_index)
 
     # qtbot.stop()
