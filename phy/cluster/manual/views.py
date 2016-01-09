@@ -85,13 +85,13 @@ def _get_depth(masks, spike_clusters_rel=None, n_clusters=None):
     return depth
 
 
-def _get_color(masks, spike_clusters_rel=None, n_clusters=None):
+def _get_color(masks, spike_clusters_rel=None, n_clusters=None, alpha=.5):
     """Return the color of vertices as a function of the mask and
     cluster index."""
     n_spikes = masks.shape[0]
     # The transparency depends on whether the spike clusters are specified.
     # For background spikes, we use a smaller alpha.
-    alpha = .5 if spike_clusters_rel is not None else .25
+    alpha = alpha if spike_clusters_rel is not None else .25
     assert masks.shape == (n_spikes,)
     # Generate the colors.
     colors = _selected_clusters_colors(n_clusters)
@@ -234,6 +234,7 @@ class WaveformView(ManualClusteringView):
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
         'toggle_zoom_on_channels': 'z',
+        'toggle_show_means': 'm',
 
         # Box scaling.
         'widen': 'ctrl+right',
@@ -257,6 +258,7 @@ class WaveformView(ManualClusteringView):
                  waveform_lim=None,
                  **kwargs):
         self._key_pressed = None
+        self.do_show_means = False
         self.do_zoom_on_channels = True
 
         # Channel positions and n_channels.
@@ -302,6 +304,18 @@ class WaveformView(ManualClusteringView):
         assert channel_positions.shape == (self.n_channels, 2)
         self.channel_positions = channel_positions
 
+    def _get_data(self, cluster_ids):
+        d = self.waveforms_masks(cluster_ids)
+        d.alpha = .5
+        # Toggle waveform means.
+        if self.do_show_means:
+            d.waveforms = d.mean_waveforms
+            d.masks = d.mean_masks
+            d.spike_ids = np.arange(len(cluster_ids))
+            d.spike_clusters = np.array(cluster_ids)
+            d.alpha = 1.
+        return d
+
     def on_select(self, cluster_ids=None):
         super(WaveformView, self).on_select(cluster_ids)
         cluster_ids = self.cluster_ids
@@ -310,7 +324,8 @@ class WaveformView(ManualClusteringView):
             return
 
         # Load the waveform subset.
-        data = self.waveforms_masks(cluster_ids)
+        data = self._get_data(cluster_ids)
+        alpha = data.alpha
         spike_ids = data.spike_ids
         spike_clusters = data.spike_clusters
         w = data.waveforms
@@ -342,7 +357,9 @@ class WaveformView(ManualClusteringView):
                                    n_clusters=n_clusters)
                 color = _get_color(m,
                                    spike_clusters_rel=spike_clusters_rel,
-                                   n_clusters=n_clusters)
+                                   n_clusters=n_clusters,
+                                   alpha=alpha,
+                                   )
                 self[ch].plot(x=t, y=w[:, :, ch],
                               color=color,
                               depth=depth,
@@ -359,6 +376,7 @@ class WaveformView(ManualClusteringView):
         super(WaveformView, self).attach(gui)
         self.actions.add(self.toggle_waveform_overlap)
         self.actions.add(self.toggle_zoom_on_channels)
+        self.actions.add(self.toggle_show_means)
 
         # Box scaling.
         self.actions.add(self.widen)
@@ -390,6 +408,10 @@ class WaveformView(ManualClusteringView):
 
     def toggle_zoom_on_channels(self):
         self.do_zoom_on_channels = not self.do_zoom_on_channels
+
+    def toggle_show_means(self):
+        self.do_show_means = not self.do_show_means
+        self.on_select()
 
     # Box scaling
     # -------------------------------------------------------------------------
