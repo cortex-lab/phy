@@ -11,7 +11,6 @@ from contextlib import contextmanager
 import numpy as np
 from numpy.testing import assert_equal as ae
 from numpy.testing import assert_allclose as ac
-from pytest import raises
 from vispy.util import keys
 
 from phy.electrode.mea import staggered_positions
@@ -281,23 +280,18 @@ def test_extract_wave():
     traces = np.arange(30).reshape((6, 5))
     mask = np.array([0, 1, 1, .5, 0])
     wave_len = 4
+    hwl = wave_len // 2
 
-    with raises(ValueError):
-        _extract_wave(traces, -1, mask, wave_len)
-
-    with raises(ValueError):
-        _extract_wave(traces, 20, mask, wave_len)
-
-    ae(_extract_wave(traces, 0, mask, wave_len)[0],
+    ae(_extract_wave(traces, 0 - hwl, 0 + hwl, mask, wave_len)[0],
        [[0, 0, 0], [0, 0, 0], [1, 2, 3], [6, 7, 8]])
 
-    ae(_extract_wave(traces, 1, mask, wave_len)[0],
+    ae(_extract_wave(traces, 1 - hwl, 1 + hwl, mask, wave_len)[0],
        [[0, 0, 0], [1, 2, 3], [6, 7, 8], [11, 12, 13]])
 
-    ae(_extract_wave(traces, 2, mask, wave_len)[0],
+    ae(_extract_wave(traces, 2 - hwl, 2 + hwl, mask, wave_len)[0],
        [[1, 2, 3], [6, 7, 8], [11, 12, 13], [16, 17, 18]])
 
-    ae(_extract_wave(traces, 5, mask, wave_len)[0],
+    ae(_extract_wave(traces, 5 - hwl, 5 + hwl, mask, wave_len)[0],
        [[16, 17, 18], [21, 22, 23], [0, 0, 0], [0, 0, 0]])
 
 
