@@ -263,6 +263,8 @@ class WaveformView(ManualClusteringView):
         self.n_channels = self.channel_positions.shape[0]
 
         # Number of samples per waveform.
+        if isinstance(n_samples, tuple):
+            n_samples = sum(n_samples)
         assert n_samples > 0
         self.n_samples = n_samples
 
