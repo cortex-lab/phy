@@ -18,7 +18,7 @@ from phy.gui import Actions
 from phy.plot import View, _get_linear_x
 from phy.plot.utils import _get_boxes
 from phy.stats import correlograms
-from phy.utils import IPlugin
+from phy.utils import IPlugin, Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -165,20 +165,20 @@ class ManualClusteringView(View):
         self.cluster_ids = list(cluster_ids) if cluster_ids is not None else []
         self.cluster_ids = [int(c) for c in self.cluster_ids]
 
-    def _best_channels(self, cluster_ids, n_channels_requested=None):
-        """Return the best channels for a set of clusters."""
-        # Number of channels to find on each axis.
-        n = n_channels_requested or self.n_channels
-        # Request the best channels to the GUI.
-        cs = self.gui.request('cluster_store') if self.gui else None
-        channels = cs.best_channels_multiple(cluster_ids) if cs else None
-        # By default, select the first channels.
-        if channels is None or not len(channels):
-            return
-        assert len(channels)
-        # Repeat some channels if there aren't enough.
-        channels = _extend(channels, n)
-        return channels
+    # def _best_channels(self, cluster_ids, n_channels_requested=None):
+    #     """Return the best channels for a set of clusters."""
+    #     # Number of channels to find on each axis.
+    #     n = n_channels_requested or self.n_channels
+    #     # Request the best channels to the GUI.
+    #     cs = self.gui.request('cluster_store') if self.gui else None
+    #     channels = cs.best_channels_multiple(cluster_ids) if cs else None
+    #     # By default, select the first channels.
+    #     if channels is None or not len(channels):
+    #         return
+    #     assert len(channels)
+    #     # Repeat some channels if there aren't enough.
+    #     channels = _extend(channels, n)
+    #     return channels
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -189,6 +189,10 @@ class ManualClusteringView(View):
 
         gui.add_view(self)
         self.gui = gui
+
+        # Set the view state.
+        self.set_state(gui.state.get_view_state(self))
+
         gui.connect_(self.on_select)
         self.actions = Actions(gui,
                                name=self.__class__.__name__,
@@ -202,7 +206,35 @@ class ManualClusteringView(View):
         def on_status(e):
             gui.status_message = e.message
 
+        # Save the view state in the GUI state.
+        @gui.connect_
+        def on_close():
+            gui.state.update_view_state(self, self.state)
+
         self.show()
+
+    @property
+    def state(self):
+        """View state.
+
+        This Bunch will be automatically persisted in the GUI state when the
+        GUI is closed.
+
+        To be overriden.
+
+        """
+        return Bunch()
+
+    def set_state(self, state):
+        """Set the view state.
+
+        The passed object is the persisted `self.state` bunch.
+
+        May be overriden.
+
+        """
+        for k, v in state.items():
+            setattr(self, k, v)
 
     def set_status(self, message=None):
         message = message or self.status
@@ -228,7 +260,6 @@ class ChannelClick(Event):
 
 
 class WaveformView(ManualClusteringView):
-    overlap = False
     scaling_coeff = 1.1
 
     default_shortcuts = {
@@ -252,14 +283,16 @@ class WaveformView(ManualClusteringView):
     def __init__(self,
                  waveforms_masks=None,
                  channel_positions=None,
-                 box_scaling=None,
-                 probe_scaling=None,
                  n_samples=None,
                  waveform_lim=None,
+                 best_channels=None,
                  **kwargs):
         self._key_pressed = None
-        self.do_show_means = False
+        self._do_show_means = False
+        self._overlap = False
         self.do_zoom_on_channels = True
+
+        self.best_channels = best_channels or (lambda clusters: [])
 
         # Channel positions and n_channels.
         assert channel_positions is not None
@@ -281,11 +314,8 @@ class WaveformView(ManualClusteringView):
         self.events.add(channel_click=ChannelClick)
 
         # Box and probe scaling.
-        self.box_scaling = np.array(box_scaling if box_scaling is not None
-                                    else (1., 1.))
-        self.probe_scaling = np.array(probe_scaling
-                                      if probe_scaling is not None
-                                      else (1., 1.))
+        self._box_scaling = np.ones(2)
+        self._probe_scaling = np.ones(2)
 
         # Make a copy of the initial box pos and size. We'll apply the scaling
         # to these quantities.
@@ -367,9 +397,18 @@ class WaveformView(ManualClusteringView):
                               )
 
         # Zoom on the best channels when selecting clusters.
-        channels = self._best_channels(cluster_ids)
+        channels = self.best_channels(cluster_ids)
         if channels is not None and self.do_zoom_on_channels:
             self.zoom_on_channels(channels)
+
+    @property
+    def state(self):
+        return Bunch(box_scaling=tuple(self.box_scaling),
+                     probe_scaling=tuple(self.probe_scaling),
+                     overlap=self.overlap,
+                     do_show_means=self.do_show_means,
+                     do_zoom_on_channels=self.do_zoom_on_channels,
+                     )
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -399,19 +438,41 @@ class WaveformView(ManualClusteringView):
                      button=e.button,
                      )
 
-    def toggle_waveform_overlap(self):
-        """Toggle the overlap of the waveforms."""
-        self.overlap = not self.overlap
+    # Overlap
+    # -------------------------------------------------------------------------
+
+    @property
+    def overlap(self):
+        return self._overlap
+
+    @overlap.setter
+    def overlap(self, value):
+        self._overlap = value
+        # HACK: temporarily disable automatic zoom on channels when
+        # changing the overlap.
         tmp = self.do_zoom_on_channels
+        self.do_zoom_on_channels = False
         self.on_select()
         self.do_zoom_on_channels = tmp
 
-    def toggle_zoom_on_channels(self):
-        self.do_zoom_on_channels = not self.do_zoom_on_channels
+    def toggle_waveform_overlap(self):
+        """Toggle the overlap of the waveforms."""
+        self.overlap = not self.overlap
+
+    # Show means
+    # -------------------------------------------------------------------------
+
+    @property
+    def do_show_means(self):
+        return self._do_show_means
+
+    @do_show_means.setter
+    def do_show_means(self, value):
+        self._do_show_means = value
+        self.on_select()
 
     def toggle_show_means(self):
         self.do_show_means = not self.do_show_means
-        self.on_select()
 
     # Box scaling
     # -------------------------------------------------------------------------
@@ -420,51 +481,74 @@ class WaveformView(ManualClusteringView):
         self.boxed.update_boxes(self.box_pos * self.probe_scaling,
                                 self.box_size * self.box_scaling)
 
+    @property
+    def box_scaling(self):
+        return self._box_scaling
+
+    @box_scaling.setter
+    def box_scaling(self, value):
+        assert len(value) == 2
+        self._box_scaling = np.array(value)
+        self._update_boxes()
+
     def widen(self):
         """Increase the horizontal scaling of the waveforms."""
-        self.box_scaling[0] *= self.scaling_coeff
+        self._box_scaling[0] *= self.scaling_coeff
         self._update_boxes()
 
     def narrow(self):
         """Decrease the horizontal scaling of the waveforms."""
-        self.box_scaling[0] /= self.scaling_coeff
+        self._box_scaling[0] /= self.scaling_coeff
         self._update_boxes()
 
     def increase(self):
         """Increase the vertical scaling of the waveforms."""
-        self.box_scaling[1] *= self.scaling_coeff
+        self._box_scaling[1] *= self.scaling_coeff
         self._update_boxes()
 
     def decrease(self):
         """Decrease the vertical scaling of the waveforms."""
-        self.box_scaling[1] /= self.scaling_coeff
+        self._box_scaling[1] /= self.scaling_coeff
         self._update_boxes()
 
     # Probe scaling
     # -------------------------------------------------------------------------
 
+    @property
+    def probe_scaling(self):
+        return self._probe_scaling
+
+    @probe_scaling.setter
+    def probe_scaling(self, value):
+        assert len(value) == 2
+        self._probe_scaling = np.array(value)
+        self._update_boxes()
+
     def extend_horizontally(self):
         """Increase the horizontal scaling of the probe."""
-        self.probe_scaling[0] *= self.scaling_coeff
+        self._probe_scaling[0] *= self.scaling_coeff
         self._update_boxes()
 
     def shrink_horizontally(self):
         """Decrease the horizontal scaling of the waveforms."""
-        self.probe_scaling[0] /= self.scaling_coeff
+        self._probe_scaling[0] /= self.scaling_coeff
         self._update_boxes()
 
     def extend_vertically(self):
         """Increase the vertical scaling of the waveforms."""
-        self.probe_scaling[1] *= self.scaling_coeff
+        self._probe_scaling[1] *= self.scaling_coeff
         self._update_boxes()
 
     def shrink_vertically(self):
         """Decrease the vertical scaling of the waveforms."""
-        self.probe_scaling[1] /= self.scaling_coeff
+        self._probe_scaling[1] /= self.scaling_coeff
         self._update_boxes()
 
     # Navigation
     # -------------------------------------------------------------------------
+
+    def toggle_zoom_on_channels(self):
+        self.do_zoom_on_channels = not self.do_zoom_on_channels
 
     def zoom_on_channels(self, channels_rel):
         """Zoom on some channels."""
@@ -496,39 +580,6 @@ class WaveformView(ManualClusteringView):
 
     def on_key_release(self, event):
         self._key_pressed = None
-
-
-class WaveformViewPlugin(IPlugin):
-    def attach_to_gui(self, gui):
-        state = gui.state
-        model = gui.request('model')
-        bs, ps, ov = state.get_view_params('WaveformView',
-                                           'box_scaling',
-                                           'probe_scaling',
-                                           'overlap',
-                                           )
-        cs = gui.request('cluster_store')
-        assert cs  # We need the cluster store to retrieve the data.
-        view = WaveformView(waveforms_masks=cs.waveforms_masks,
-                            channel_positions=model.channel_positions,
-                            n_samples=model.n_samples_waveforms,
-                            box_scaling=bs,
-                            probe_scaling=ps,
-                            waveform_lim=cs.waveform_lim(),
-                            )
-        view.attach(gui)
-
-        if ov is not None:
-            view.overlap = ov
-
-        @gui.connect_
-        def on_close():
-            # Save the box bounds.
-            state.set_view_params(view,
-                                  box_scaling=tuple(view.box_scaling),
-                                  probe_scaling=tuple(view.probe_scaling),
-                                  overlap=view.overlap,
-                                  )
 
 
 # -----------------------------------------------------------------------------
@@ -948,6 +999,7 @@ class FeatureView(ManualClusteringView):
                  n_channels=None,
                  n_features_per_channel=None,
                  feature_lim=None,
+                 best_channels=None,
                  **kwargs):
         """
         features_masks is a function :
@@ -959,6 +1011,8 @@ class FeatureView(ManualClusteringView):
         background_features_masks is a Bunch(...) like above.
 
         """
+
+        self.best_channels = best_channels or (lambda clusters: [])
 
         assert features_masks
         self.features_masks = features_masks
@@ -1089,7 +1143,7 @@ class FeatureView(ManualClusteringView):
     def _get_channel_dims(self, cluster_ids):
         """Select the channels to show by default."""
         n = self.n_cols - 1
-        channels = self._best_channels(cluster_ids, 2 * n)
+        channels = self.best_channels(cluster_ids, 2 * n)
         channels = (channels if channels is not None
                     else list(range(self.n_channels)))
         channels = _extend(channels, 2 * n)
