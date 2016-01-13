@@ -11,8 +11,6 @@ from collections import defaultdict
 import logging
 import os.path as op
 
-from six import string_types
-
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  Qt, QSize, QMetaObject)
 from .actions import Actions, Snippets
@@ -433,8 +431,8 @@ class SaveGeometryStatePlugin(IPlugin):
             gui.restore_geometry_state(gs)
 
 
-def create_gui(name=None, subtitle=None, model=None, state=None,
-               plugins=None, config_dir=None):
+def create_gui(name=None, subtitle=None, model=None,
+               plugins=None, **state_kwargs):
     """Create a GUI with a list of plugins.
 
     By default, the list of plugins is taken from the `c.TheGUI.plugins`
@@ -445,17 +443,12 @@ def create_gui(name=None, subtitle=None, model=None, state=None,
     name = gui.name
     plugins = plugins or []
 
-    # Load the state.
-    state = state or {}
-    # Ensure all dicts are Bunches.
-    for k in state.keys():
-        if isinstance(state[k], dict) and not isinstance(state[k], Bunch):
-            state[k] = Bunch(state[k])
-    state = GUIState(gui.name, config_dir=config_dir, **(state or {}))
-    gui.state = state
+    # Create the state.
+    state = GUIState(gui.name, **state_kwargs)
 
-    # Register the model.
-    gui.register(model=model)
+    # Make the state and model accessible.
+    gui.state = state
+    gui.model = model
 
     # If no plugins are specified, load the master config and
     # get the list of user plugins to attach to the GUI.
