@@ -165,21 +165,6 @@ class ManualClusteringView(View):
         self.cluster_ids = list(cluster_ids) if cluster_ids is not None else []
         self.cluster_ids = [int(c) for c in self.cluster_ids]
 
-    # def _best_channels(self, cluster_ids, n_channels_requested=None):
-    #     """Return the best channels for a set of clusters."""
-    #     # Number of channels to find on each axis.
-    #     n = n_channels_requested or self.n_channels
-    #     # Request the best channels to the GUI.
-    #     cs = self.gui.request('cluster_store') if self.gui else None
-    #     channels = cs.best_channels_multiple(cluster_ids) if cs else None
-    #     # By default, select the first channels.
-    #     if channels is None or not len(channels):
-    #         return
-    #     assert len(channels)
-    #     # Repeat some channels if there aren't enough.
-    #     channels = _extend(channels, n)
-    #     return channels
-
     def attach(self, gui):
         """Attach the view to the GUI."""
 
@@ -606,8 +591,6 @@ class TraceView(ManualClusteringView):
                  spike_clusters=None,
                  masks=None,  # full array of masks
                  n_samples_per_spike=None,
-                 scaling=None,
-                 origin=None,
                  mean_traces=None,
                  **kwargs):
 
@@ -656,13 +639,15 @@ class TraceView(ManualClusteringView):
         else:
             self.spike_times = self.spike_clusters = self.masks = None
 
+        # Box and probe scaling.
+        self._scaling = 1.
+        self._origin = None
+
         # Initialize the view.
         super(TraceView, self).__init__(layout='stacked',
-                                        origin=origin,
+                                        origin=self.origin,
                                         n_plots=self.n_channels,
                                         **kwargs)
-        # Box and probe scaling.
-        self.scaling = scaling or 1.
 
         # Make a copy of the initial box pos and size. We'll apply the scaling
         # to these quantities.
@@ -840,6 +825,36 @@ class TraceView(ManualClusteringView):
         self.actions.add(self.widen)
         self.actions.add(self.narrow)
 
+    @property
+    def state(self):
+        return Bunch(scaling=self.scaling,
+                     origin=self.origin,
+                     )
+
+    # Scaling
+    # -------------------------------------------------------------------------
+
+    @property
+    def scaling(self):
+        return self._scaling
+
+    @scaling.setter
+    def scaling(self, value):
+        self._scaling = value
+        self._update_boxes()
+
+    # Origin
+    # -------------------------------------------------------------------------
+
+    @property
+    def origin(self):
+        return self._origin
+
+    @origin.setter
+    def origin(self, value):
+        self._origin = value
+        self._update_boxes()
+
     # Navigation
     # -------------------------------------------------------------------------
 
@@ -903,33 +918,6 @@ class TraceView(ManualClusteringView):
         """Decrease the scaling of the traces."""
         self.scaling /= self.scaling_coeff
         self._update_boxes()
-
-
-class TraceViewPlugin(IPlugin):
-    def attach_to_gui(self, gui):
-        state = gui.state
-        model = gui.request('model')
-        s, o = state.get_view_params('TraceView', 'scaling', 'origin')
-
-        cs = gui.request('cluster_store')
-        assert cs  # We need the cluster store to retrieve the data.
-
-        view = TraceView(traces=model.traces,
-                         sample_rate=model.sample_rate,
-                         spike_times=model.spike_times,
-                         spike_clusters=model.spike_clusters,
-                         n_samples_per_spike=model.n_samples_waveforms,
-                         masks=model.masks,
-                         origin=o,
-                         scaling=s,
-                         mean_traces=cs.mean_traces(),
-                         )
-        view.attach(gui)
-
-        @gui.connect_
-        def on_close():
-            # Save the box bounds.
-            state.set_view_params(view, scaling=view.scaling)
 
 
 # -----------------------------------------------------------------------------
