@@ -15,7 +15,6 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table
-from phy.utils import IPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -400,7 +399,8 @@ class ManualClustering(object):
         gui.add_view(self.cluster_view, name='ClusterView')
 
         # Add the quality column in the cluster view.
-        cs = gui.request('cluster_store')
+        # TODO
+        cs = gui.model.store
         if cs and 'ClusterView' in gui.state:
             # Names of the quality and similarity functions.
             quality = gui.state.ClusterView.get('quality', None)
@@ -519,14 +519,3 @@ class ManualClustering(object):
         groups = {c: self.cluster_meta.get('group', c) or 'unsorted'
                   for c in self.clustering.cluster_ids}
         self.gui.emit('request_save', spike_clusters, groups)
-
-
-class ManualClusteringPlugin(IPlugin):
-    def attach_to_gui(self, gui):
-        model = gui.request('model')
-        # Attach the manual clustering logic (wizard, merge, split,
-        # undo stack) to the GUI.
-        mc = ManualClustering(model.spike_clusters,
-                              cluster_groups=model.cluster_groups,
-                              )
-        mc.attach(gui)

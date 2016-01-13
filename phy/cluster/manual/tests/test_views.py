@@ -6,15 +6,14 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from contextlib import contextmanager
-
 import numpy as np
 from numpy.testing import assert_equal as ae
 from numpy.testing import assert_allclose as ac
 from vispy.util import keys
+from pytest import fixture
 
 from phy.electrode.mea import staggered_positions
-from phy.gui import create_gui, GUIState
+from phy.gui import create_gui
 from phy.io.array import _spikes_per_cluster
 from phy.io.mock import (artificial_waveforms,
                          artificial_features,
@@ -28,9 +27,16 @@ from phy.stats.clusters import (mean,
                                 get_unmasked_channels,
                                 get_sorted_main_channels,
                                 )
-from phy.utils import Bunch, IPlugin
-from ..views import (TraceView, _extract_wave, _selected_clusters_colors,
-                     _extend)
+from phy.utils import Bunch
+from ..gui_component import ManualClustering
+from ..views import (WaveformView,
+                     FeatureView,
+                     CorrelogramView,
+                     TraceView,
+                     _extract_wave,
+                     _selected_clusters_colors,
+                     _extend,
+                     )
 
 
 #------------------------------------------------------------------------------
@@ -48,7 +54,6 @@ def create_model():
     n_spikes_total = n_clusters * model.n_spikes_per_cluster
     n_features_per_channel = 4
 
-    model.path = ''
     model.n_channels = n_channels
     model.n_spikes = n_spikes_total
     model.sample_rate = 20000.
@@ -65,6 +70,9 @@ def create_model():
     model.n_features_per_channel = n_features_per_channel
     model.n_samples_waveforms = n_samples_waveforms
     model.cluster_groups = {c: None for c in range(n_clusters)}
+
+    # TODO: make this cleaner by abstracting the store away
+    model.store = create_cluster_store(model)
 
     return model
 
@@ -226,47 +234,39 @@ def _show(qtbot, view, stop=False):
     view.close()
 
 
-@contextmanager
-def _test_view(view_name, tempdir=None):
-
-    model = create_model()
-
-    class ClusterStorePlugin(IPlugin):
-        def attach_to_gui(self, gui):
-            cs = create_cluster_store(model)
-            cs.attach(gui)
-
+@fixture
+def state(tempdir):
     # Save a test GUI state JSON file in the tempdir.
-    state = GUIState(config_dir=tempdir)
-    state.set_view_params('WaveformView1', overlap=False, box_size=(.1, .1))
-    state.set_view_params('TraceView1', box_size=(1., .01))
-    state.set_view_params('FeatureView1', feature_scaling=.5)
-    state.set_view_params('CorrelogramView1', uniform_normalization=True)
+    state = Bunch()
+    state.WaveformView0 = Bunch(overlap=False)
+    state.TraceView0 = Bunch(box_size=(1., .01))
+    state.FeatureView0 = Bunch(feature_scaling=.5)
+    state.CorrelogramView0 = Bunch(uniform_normalization=True)
+
     # quality and similarity functions for the cluster view.
     state.ClusterView = Bunch(quality='max_waveform_amplitude',
                               similarity='most_similar_clusters')
-    state.save()
+    return state
 
-    # Create the GUI.
-    plugins = ['ContextPlugin',
-               'ClusterStorePlugin',
-               'ManualClusteringPlugin',
-               view_name + 'Plugin']
-    gui = create_gui(model=model, plugins=plugins, config_dir=tempdir)
+
+@fixture
+def gui(tempdir, state):
+    model = create_model()
+    gui = create_gui(model=model, config_dir=tempdir, **state)
+    mc = ManualClustering(model.spike_clusters,
+                          cluster_groups=model.cluster_groups,)
+    mc.attach(gui)
+    gui.register(manual_clustering=mc)
+    return gui
+
+
+def _select_clusters(gui):
     gui.show()
-
     mc = gui.request('manual_clustering')
     assert mc
     mc.select([])
     mc.select([0])
     mc.select([0, 2])
-
-    view = gui.list_views(view_name)[0]
-    view.gui = gui
-    view.model = model  # HACK
-    yield view
-
-    gui.close()
 
 
 #------------------------------------------------------------------------------
@@ -312,57 +312,66 @@ def test_selected_clusters_colors():
 # Test waveform view
 #------------------------------------------------------------------------------
 
-def test_waveform_view(qtbot, tempdir):
-    with _test_view('WaveformView', tempdir=tempdir) as v:
-        ac(v.boxed.box_size, (.1818, .0909), atol=1e-2)
+def test_waveform_view(qtbot, gui):
+    v = WaveformView(waveforms_masks=gui.model.store.waveforms_masks,
+                     channel_positions=gui.model.channel_positions,
+                     n_samples=gui.model.n_samples_waveforms,
+                     waveform_lim=gui.model.store.waveform_lim(),
+                     best_channels=(lambda clusters: [0, 1, 2]),
+                     )
+    v.attach(gui)
 
-        v.toggle_waveform_overlap()
-        v.toggle_waveform_overlap()
+    _select_clusters(gui)
 
-        v.toggle_show_means()
-        v.toggle_show_means()
+    ac(v.boxed.box_size, (.1818, .0909), atol=1e-2)
 
-        v.toggle_zoom_on_channels()
-        v.toggle_zoom_on_channels()
+    v.toggle_waveform_overlap()
+    v.toggle_waveform_overlap()
 
-        # Box scaling.
-        bs = v.boxed.box_size
-        v.increase()
-        v.decrease()
-        ac(v.boxed.box_size, bs)
+    v.toggle_show_means()
+    v.toggle_show_means()
 
-        bs = v.boxed.box_size
-        v.widen()
-        v.narrow()
-        ac(v.boxed.box_size, bs)
+    v.toggle_zoom_on_channels()
+    v.toggle_zoom_on_channels()
 
-        # Probe scaling.
-        bp = v.boxed.box_pos
-        v.extend_horizontally()
-        v.shrink_horizontally()
-        ac(v.boxed.box_pos, bp)
+    # Box scaling.
+    bs = v.boxed.box_size
+    v.increase()
+    v.decrease()
+    ac(v.boxed.box_size, bs)
 
-        bp = v.boxed.box_pos
-        v.extend_vertically()
-        v.shrink_vertically()
-        ac(v.boxed.box_pos, bp)
+    bs = v.boxed.box_size
+    v.widen()
+    v.narrow()
+    ac(v.boxed.box_size, bs)
 
-        v.zoom_on_channels([0, 2, 4])
+    # Probe scaling.
+    bp = v.boxed.box_pos
+    v.extend_horizontally()
+    v.shrink_horizontally()
+    ac(v.boxed.box_pos, bp)
 
-        # Simulate channel selection.
-        _clicked = []
+    bp = v.boxed.box_pos
+    v.extend_vertically()
+    v.shrink_vertically()
+    ac(v.boxed.box_pos, bp)
 
-        @v.gui.connect_
-        def on_channel_click(channel_idx=None, button=None, key=None):
-            _clicked.append((channel_idx, button, key))
+    v.zoom_on_channels([0, 2, 4])
 
-        v.events.key_press(key=keys.Key('2'))
-        v.events.mouse_press(pos=(0., 0.), button=1)
-        v.events.key_release(key=keys.Key('2'))
+    # Simulate channel selection.
+    _clicked = []
 
-        assert _clicked == [(0, 1, 2)]
+    @v.gui.connect_
+    def on_channel_click(channel_idx=None, button=None, key=None):
+        _clicked.append((channel_idx, button, key))
 
-        # qtbot.stop()
+    v.events.key_press(key=keys.Key('2'))
+    v.events.mouse_press(pos=(0., 0.), button=1)
+    v.events.key_release(key=keys.Key('2'))
+
+    assert _clicked == [(0, 1, 2)]
+
+    # qtbot.stop()
 
 
 #------------------------------------------------------------------------------
