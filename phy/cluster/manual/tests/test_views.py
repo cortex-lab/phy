@@ -313,11 +313,13 @@ def test_selected_clusters_colors():
 #------------------------------------------------------------------------------
 
 def test_waveform_view(qtbot, gui):
-    v = WaveformView(waveforms_masks=gui.model.store.waveforms_masks,
-                     channel_positions=gui.model.channel_positions,
-                     n_samples=gui.model.n_samples_waveforms,
-                     waveform_lim=gui.model.store.waveform_lim(),
-                     best_channels=gui.model.store.best_channels_multiple,
+    model = gui.model
+    cs = model.store
+    v = WaveformView(waveforms_masks=model.store.waveforms_masks,
+                     channel_positions=model.channel_positions,
+                     n_samples=model.n_samples_waveforms,
+                     waveform_lim=cs.waveform_lim(),
+                     best_channels=cs.best_channels_multiple,
                      )
     v.attach(gui)
 
