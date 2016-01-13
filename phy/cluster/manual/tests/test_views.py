@@ -239,7 +239,7 @@ def state(tempdir):
     # Save a test GUI state JSON file in the tempdir.
     state = Bunch()
     state.WaveformView0 = Bunch(overlap=False)
-    state.TraceView0 = Bunch(box_size=(1., .01))
+    state.TraceView0 = Bunch(scaling=1.)
     state.FeatureView0 = Bunch(feature_scaling=.5)
     state.CorrelogramView0 = Bunch(uniform_normalization=True)
 
@@ -391,42 +391,55 @@ def test_trace_view_no_spikes(qtbot):
     _show(qtbot, v)
 
 
-def test_trace_view_spikes(qtbot, tempdir):
-    with _test_view('TraceView', tempdir=tempdir) as v:
-        ac(v.stacked.box_size, (1., .08181), atol=1e-3)
-        assert v.time == .25
+def test_trace_view_spikes(qtbot, gui):
+    model = gui.model
+    cs = model.store
+    v = TraceView(traces=model.traces,
+                  sample_rate=model.sample_rate,
+                  spike_times=model.spike_times,
+                  spike_clusters=model.spike_clusters,
+                  n_samples_per_spike=model.n_samples_waveforms,
+                  masks=model.masks,
+                  mean_traces=cs.mean_traces(),
+                  )
+    v.attach(gui)
 
-        v.go_to(.5)
-        assert v.time == .5
+    _select_clusters(gui)
 
-        v.go_to(-.5)
-        assert v.time == .25
+    ac(v.stacked.box_size, (1., .08181), atol=1e-3)
+    assert v.time == .25
 
-        v.go_left()
-        assert v.time == .25
+    v.go_to(.5)
+    assert v.time == .5
 
-        v.go_right()
-        assert v.time == .35
+    v.go_to(-.5)
+    assert v.time == .25
 
-        # Change interval size.
-        v.set_interval((.25, .75))
-        ac(v.interval, (.25, .75))
-        v.widen()
-        ac(v.interval, (.225, .775))
-        v.narrow()
-        ac(v.interval, (.25, .75))
+    v.go_left()
+    assert v.time == .25
 
-        # Widen the max interval.
-        v.set_interval((0, v.model.duration))
-        v.widen()
+    v.go_right()
+    assert v.time == .35
 
-        # Change channel scaling.
-        bs = v.stacked.box_size
-        v.increase()
-        v.decrease()
-        ac(v.stacked.box_size, bs, atol=1e-3)
+    # Change interval size.
+    v.set_interval((.25, .75))
+    ac(v.interval, (.25, .75))
+    v.widen()
+    ac(v.interval, (.225, .775))
+    v.narrow()
+    ac(v.interval, (.25, .75))
 
-        # qtbot.stop()
+    # Widen the max interval.
+    v.set_interval((0, model.duration))
+    v.widen()
+
+    # Change channel scaling.
+    bs = v.stacked.box_size
+    v.increase()
+    v.decrease()
+    ac(v.stacked.box_size, bs, atol=1e-3)
+
+    # qtbot.stop()
 
 
 #------------------------------------------------------------------------------
