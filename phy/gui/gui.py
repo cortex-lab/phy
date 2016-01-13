@@ -248,12 +248,11 @@ class GUI(QMainWindow):
     # Views
     # -------------------------------------------------------------------------
 
-    def _get_view_name(self, view):
-        """The view name is the class name followed by 1, 2, or n."""
+    def _get_view_index(self, view):
+        """Index of a view in the GUI: 0 for the first view of a given
+        class, 1 for the next, and so on."""
         name = view.__class__.__name__
-        views = self.list_views(name)
-        n = len(views) + 1
-        return '{:s}{:d}'.format(name, n)
+        return len(self.list_views(name))
 
     def add_view(self,
                  view,
@@ -264,13 +263,16 @@ class GUI(QMainWindow):
                  floating=None):
         """Add a widget to the main window."""
 
-        name = name or self._get_view_name(view)
         # Set the name in the view.
-        view.__name__ = name
+        view.view_index = self._get_view_index(view)
+        # The view name is `<class_name><view_index>`, e.g. `MyView0`.
+        view.name = name or view.__class__.__name__ + str(view.view_index)
+
+        # Get the Qt canvas for VisPy and matplotlib views.
         widget = _try_get_vispy_canvas(view)
         widget = _try_get_matplotlib_canvas(widget)
 
-        dock_widget = _create_dock_widget(widget, name,
+        dock_widget = _create_dock_widget(widget, view.name,
                                           closable=closable,
                                           floatable=floatable,
                                           )
@@ -286,7 +288,7 @@ class GUI(QMainWindow):
 
         dock_widget.show()
         self.emit('add_view', view)
-        logger.log(5, "Add %s to GUI.", name)
+        logger.log(5, "Add %s to GUI.", view.name)
         return dock_widget
 
     def list_views(self, name='', is_visible=True):
@@ -294,7 +296,7 @@ class GUI(QMainWindow):
         children = self.findChildren(QWidget)
         return [child.view for child in children
                 if isinstance(child, QDockWidget) and
-                child.view.__name__.startswith(name) and
+                child.view.name.startswith(name) and
                 (child.isVisible() if is_visible else True) and
                 child.width() >= 10 and
                 child.height() >= 10
@@ -305,7 +307,7 @@ class GUI(QMainWindow):
         views = self.list_views()
         counts = defaultdict(lambda: 0)
         for view in views:
-            counts[view.__name__] += 1
+            counts[view.name] += 1
         return dict(counts)
 
     # Menu bar
@@ -385,16 +387,15 @@ class GUIState(Bunch):
         _ensure_dir_exists(op.join(self.config_dir, self.name))
         self.load()
 
-    def get_view_params(self, view_name, *names):
-        # TODO: how to choose view index
-        return [self.get(view_name + '1', Bunch()).get(name, None)
-                for name in names]
+    def get_view_state(self, view):
+        """Return the state of a view."""
+        return self.get(view.name, Bunch())
 
-    def set_view_params(self, view, **kwargs):
-        view_name = view if isinstance(view, string_types) else view.__name__
-        if view_name not in self:
-            self[view_name] = Bunch()
-        self[view_name].update(kwargs)
+    def update_view_state(self, view, state):
+        """Update the state of a view."""
+        if view.name not in self:
+            self[view.name] = Bunch()
+        self[view.name].update(state)
 
     @property
     def path(self):

@@ -178,12 +178,12 @@ def test_gui_geometry_state(qtbot):
 #------------------------------------------------------------------------------
 
 def test_gui_state_view():
-    view = Bunch(__name__='myview1')
+    view = Bunch(name='MyView0')
     state = GUIState()
-    state.set_view_params(view, hello='world')
-    state.get_view_params('unknown', 'hello') == [None]
-    state.get_view_params('myview', 'unknown') == [None]
-    state.get_view_params('myview', 'hello') == ['world']
+    state.update_view_state(view, dict(hello='world'))
+    assert not state.get_view_state(Bunch(name='MyView'))
+    assert not state.get_view_state(Bunch(name='MyView1'))
+    assert state.get_view_state(view) == Bunch(hello='world')
 
 
 def test_create_gui_1(qapp, tempdir):
