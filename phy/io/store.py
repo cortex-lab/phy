@@ -98,6 +98,3 @@ class ClusterStore(object):
 
     def get(self, name):
         return self._stats.get(name, None)
-
-    def attach(self, gui):
-        gui.register(self, name='cluster_store')
