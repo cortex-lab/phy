@@ -277,7 +277,7 @@ class WaveformView(ManualClusteringView):
         self._overlap = False
         self.do_zoom_on_channels = True
 
-        self.best_channels = best_channels or (lambda clusters: [])
+        self.best_channels = best_channels or (lambda clusters, n=None: [])
 
         # Channel positions and n_channels.
         assert channel_positions is not None
@@ -973,7 +973,6 @@ def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
 
 class FeatureView(ManualClusteringView):
     _default_marker_size = 3.
-    _feature_scaling = 1.
 
     default_shortcuts = {
         'increase': 'ctrl++',
@@ -999,8 +998,9 @@ class FeatureView(ManualClusteringView):
         background_features_masks is a Bunch(...) like above.
 
         """
+        self._scaling = 1.
 
-        self.best_channels = best_channels or (lambda clusters: [])
+        self.best_channels = best_channels or (lambda clusters, n=None: [])
 
         assert features_masks
         self.features_masks = features_masks
@@ -1042,20 +1042,8 @@ class FeatureView(ManualClusteringView):
         self.attributes = {}
         self.add_attribute('time', spike_times)
 
-    def add_attribute(self, name, values, top_left=True):
-        """Add an attribute (aka extra feature).
-
-        The values should be a 1D array with `n_spikes` elements.
-
-        By default, there is the `time` attribute.
-
-        """
-        assert values.shape == (self.n_spikes,)
-        lim = values.min(), values.max()
-        self.attributes[name] = (values, lim)
-        # Register the attribute to use in the top-left subplot.
-        if top_left:
-            self.top_left_attribute = name
+    # Internal methods
+    # -------------------------------------------------------------------------
 
     def _get_feature(self, dim, spike_ids, f):
         if dim in self.attributes:
@@ -1067,7 +1055,7 @@ class FeatureView(ManualClusteringView):
         else:
             assert len(dim) == 2
             ch, fet = dim
-            return f[:, ch, fet] * self._feature_scaling
+            return f[:, ch, fet] * self._scaling
 
     def _get_dim_bounds_single(self, dim):
         """Return the min and max of the bounds for a single dimension."""
@@ -1132,11 +1120,29 @@ class FeatureView(ManualClusteringView):
         """Select the channels to show by default."""
         n = self.n_cols - 1
         channels = self.best_channels(cluster_ids, 2 * n)
-        channels = (channels if channels is not None
+        channels = (channels if channels
                     else list(range(self.n_channels)))
         channels = _extend(channels, 2 * n)
         assert len(channels) == 2 * n
         return channels[:n], channels[n:]
+
+    # Public methods
+    # -------------------------------------------------------------------------
+
+    def add_attribute(self, name, values, top_left=True):
+        """Add an attribute (aka extra feature).
+
+        The values should be a 1D array with `n_spikes` elements.
+
+        By default, there is the `time` attribute.
+
+        """
+        assert values.shape == (self.n_spikes,)
+        lim = values.min(), values.max()
+        self.attributes[name] = (values, lim)
+        # Register the attribute to use in the top-left subplot.
+        if top_left:
+            self.top_left_attribute = name
 
     def clear_channels(self):
         """Reset the dimensions."""
@@ -1234,6 +1240,10 @@ class FeatureView(ManualClusteringView):
 
         gui.connect_(self.on_channel_click)
 
+    @property
+    def state(self):
+        return Bunch(scaling=self.scaling)
+
     def on_channel_click(self, channel_idx=None, key=None, button=None):
         """Respond to the click on a channel."""
         if key is None or not (1 <= key <= (self.n_cols - 1)):
@@ -1258,47 +1268,24 @@ class FeatureView(ManualClusteringView):
 
     def increase(self):
         """Increase the scaling of the features."""
-        self.feature_scaling *= 1.2
+        self.scaling *= 1.2
         self.on_select()
 
     def decrease(self):
         """Decrease the scaling of the features."""
-        self.feature_scaling /= 1.2
+        self.scaling /= 1.2
         self.on_select()
 
+    # Feature scaling
+    # -------------------------------------------------------------------------
+
     @property
-    def feature_scaling(self):
-        return self._feature_scaling
+    def scaling(self):
+        return self._scaling
 
-    @feature_scaling.setter
-    def feature_scaling(self, value):
-        self._feature_scaling = value
-
-
-class FeatureViewPlugin(IPlugin):
-    def attach_to_gui(self, gui):
-        state = gui.state
-        cs = gui.request('cluster_store')
-        model = gui.request('model')
-        assert cs
-        bg = cs.background_features_masks()
-        view = FeatureView(features_masks=cs.features_masks,
-                           background_features_masks=bg,
-                           spike_times=model.spike_times,
-                           n_channels=model.n_channels,
-                           n_features_per_channel=model.n_features_per_channel,
-                           feature_lim=cs.feature_lim(),
-                           )
-        view.attach(gui)
-
-        fs, = state.get_view_params('FeatureView', 'feature_scaling')
-        if fs:
-            view.feature_scaling = fs
-
-        @gui.connect_
-        def on_close():
-            # Save the box bounds.
-            state.set_view_params(view, feature_scaling=view.feature_scaling)
+    @scaling.setter
+    def scaling(self, value):
+        self._scaling = value
 
 
 # -----------------------------------------------------------------------------

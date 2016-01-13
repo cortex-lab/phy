@@ -446,20 +446,32 @@ def test_trace_view_spikes(qtbot, gui):
 # Test feature view
 #------------------------------------------------------------------------------
 
-def test_feature_view(qtbot, tempdir):
-    with _test_view('FeatureView', tempdir=tempdir) as v:
-        assert v.feature_scaling == .5
-        v.add_attribute('sine',
-                        np.sin(np.linspace(-10., 10., v.model.n_spikes)))
+def test_feature_view(qtbot, gui):
+    model = gui.model
+    cs = model.store
+    v = FeatureView(features_masks=cs.features_masks,
+                    background_features_masks=cs.background_features_masks(),
+                    spike_times=model.spike_times,
+                    n_channels=model.n_channels,
+                    n_features_per_channel=model.n_features_per_channel,
+                    feature_lim=cs.feature_lim(),
+                    )
+    v.attach(gui)
 
-        v.increase()
-        v.decrease()
+    _select_clusters(gui)
 
-        v.on_channel_click(channel_idx=3, button=1, key=2)
-        v.clear_channels()
-        v.toggle_automatic_channel_selection()
+    assert v.feature_scaling == .5
+    v.add_attribute('sine',
+                    np.sin(np.linspace(-10., 10., model.n_spikes)))
 
-        # qtbot.stop()
+    v.increase()
+    v.decrease()
+
+    v.on_channel_click(channel_idx=3, button=1, key=2)
+    v.clear_channels()
+    v.toggle_automatic_channel_selection()
+
+    # qtbot.stop()
 
 
 #------------------------------------------------------------------------------
