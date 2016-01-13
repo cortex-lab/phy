@@ -317,7 +317,7 @@ def test_waveform_view(qtbot, gui):
                      channel_positions=gui.model.channel_positions,
                      n_samples=gui.model.n_samples_waveforms,
                      waveform_lim=gui.model.store.waveform_lim(),
-                     best_channels=(lambda clusters: [0, 1, 2]),
+                     best_channels=gui.model.store.best_channels_multiple,
                      )
     v.attach(gui)
 
@@ -355,6 +355,14 @@ def test_waveform_view(qtbot, gui):
     v.extend_vertically()
     v.shrink_vertically()
     ac(v.boxed.box_pos, bp)
+
+    a, b = v.probe_scaling
+    v.probe_scaling = (a, b * 2)
+    ac(v.probe_scaling, (a, b * 2))
+
+    a, b = v.box_scaling
+    v.box_scaling = (a * 2, b)
+    ac(v.box_scaling, (a * 2, b))
 
     v.zoom_on_channels([0, 2, 4])
 
@@ -439,6 +447,9 @@ def test_trace_view_spikes(qtbot, gui):
     v.increase()
     v.decrease()
     ac(v.stacked.box_size, bs, atol=1e-3)
+
+    v.origin = 'upper'
+    assert v.origin == 'upper'
 
     # qtbot.stop()
     gui.close()
