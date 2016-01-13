@@ -372,6 +372,7 @@ def test_waveform_view(qtbot, gui):
     assert _clicked == [(0, 1, 2)]
 
     # qtbot.stop()
+    gui.close()
 
 
 #------------------------------------------------------------------------------
@@ -440,6 +441,7 @@ def test_trace_view_spikes(qtbot, gui):
     ac(v.stacked.box_size, bs, atol=1e-3)
 
     # qtbot.stop()
+    gui.close()
 
 
 #------------------------------------------------------------------------------
@@ -472,17 +474,26 @@ def test_feature_view(qtbot, gui):
     v.toggle_automatic_channel_selection()
 
     # qtbot.stop()
+    gui.close()
 
 
 #------------------------------------------------------------------------------
 # Test correlogram view
 #------------------------------------------------------------------------------
 
-def test_correlogram_view(qtbot, tempdir):
-    with _test_view('CorrelogramView', tempdir=tempdir) as v:
-        v.toggle_normalization()
+def test_correlogram_view(qtbot, gui):
+    model = gui.model
+    v = CorrelogramView(spike_times=model.spike_times,
+                        spike_clusters=model.spike_clusters,
+                        sample_rate=model.sample_rate,
+                        )
+    v.attach(gui)
+    _select_clusters(gui)
 
-        v.set_bin(1)
-        v.set_window(100)
+    v.toggle_normalization()
 
-        # qtbot.stop()
+    v.set_bin(1)
+    v.set_window(100)
+
+    # qtbot.stop()
+    gui.close()
