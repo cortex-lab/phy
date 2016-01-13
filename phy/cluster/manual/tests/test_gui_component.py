@@ -11,7 +11,6 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 
 from ..gui_component import (ManualClustering,
-                             ManualClusteringPlugin,
                              )
 from phy.gui import GUI
 from phy.utils import Bunch
@@ -56,18 +55,6 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
 #------------------------------------------------------------------------------
 # Test GUI component
 #------------------------------------------------------------------------------
-
-def test_manual_clustering_plugin(qtbot, gui):
-    model = Bunch(spike_clusters=[0, 1, 2],
-                  cluster_groups=None,
-                  n_features_per_channel=2,
-                  waveforms=np.zeros((3, 4, 1)),
-                  features=np.zeros((3, 1, 2)),
-                  masks=.75 * np.ones((3, 1)),
-                  )
-    gui.register(model=model)
-    ManualClusteringPlugin().attach_to_gui(gui)
-
 
 def test_manual_clustering_edge_cases(manual_clustering):
     mc = manual_clustering

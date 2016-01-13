@@ -399,8 +399,8 @@ class ManualClustering(object):
         gui.add_view(self.cluster_view, name='ClusterView')
 
         # Add the quality column in the cluster view.
-        # TODO
-        cs = gui.model.store
+        # TODO: access the model directly
+        cs = getattr(getattr(gui, 'model', None), 'store', None)
         if cs and 'ClusterView' in gui.state:
             # Names of the quality and similarity functions.
             quality = gui.state.ClusterView.get('quality', None)

@@ -18,7 +18,7 @@ from phy.gui import Actions
 from phy.plot import View, _get_linear_x
 from phy.plot.utils import _get_boxes
 from phy.stats import correlograms
-from phy.utils import IPlugin, Bunch
+from phy.utils import Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -1298,6 +1298,7 @@ class CorrelogramView(ManualClusteringView):
     bin_size = 1e-3
     window_size = 50e-3
     uniform_normalization = False
+
     default_shortcuts = {
         'go_left': 'alt+left',
         'go_right': 'alt+right',
@@ -1307,17 +1308,10 @@ class CorrelogramView(ManualClusteringView):
                  spike_times=None,
                  spike_clusters=None,
                  sample_rate=None,
-                 bin_size=None,
-                 window_size=None,
-                 excerpt_size=None,
-                 n_excerpts=None,
                  **kwargs):
 
         assert sample_rate > 0
         self.sample_rate = sample_rate
-
-        self.excerpt_size = excerpt_size or self.excerpt_size
-        self.n_excerpts = n_excerpts or self.n_excerpts
 
         self.spike_times = np.asarray(spike_times)
         self.n_spikes, = self.spike_times.shape
@@ -1332,7 +1326,8 @@ class CorrelogramView(ManualClusteringView):
         self.spike_clusters = spike_clusters
 
         # Set the default bin and window size.
-        self.set_bin_window(bin_size=bin_size, window_size=window_size)
+        self.set_bin_window(bin_size=self.bin_size,
+                            window_size=self.window_size)
 
     def set_bin_window(self, bin_size=None, window_size=None):
         """Set the bin and window sizes."""
@@ -1412,6 +1407,15 @@ class CorrelogramView(ManualClusteringView):
         self.actions.add(self.set_bin, alias='cb')
         self.actions.add(self.set_window, alias='cw')
 
+    @property
+    def state(self):
+        return Bunch(bin_size=self.bin_size,
+                     window_size=self.window_size,
+                     excerpt_size=self.excerpt_size,
+                     n_excerpts=self.n_excerpts,
+                     uniform_normalization=self.uniform_normalization,
+                     )
+
     def set_bin(self, bin_size):
         """Set the correlogram bin size (in milliseconds)."""
         self.set_bin_window(bin_size=bin_size * 1e-3)
@@ -1421,38 +1425,3 @@ class CorrelogramView(ManualClusteringView):
         """Set the correlogram window size (in milliseconds)."""
         self.set_bin_window(window_size=window_size * 1e-3)
         self.on_select()
-
-
-class CorrelogramViewPlugin(IPlugin):
-    def attach_to_gui(self, gui):
-        state = gui.state
-        model = gui.request('model')
-        bs, ws, es, ne, un = state.get_view_params('CorrelogramView',
-                                                   'bin_size',
-                                                   'window_size',
-                                                   'excerpt_size',
-                                                   'n_excerpts',
-                                                   'uniform_normalization',
-                                                   )
-
-        view = CorrelogramView(spike_times=model.spike_times,
-                               spike_clusters=model.spike_clusters,
-                               sample_rate=model.sample_rate,
-                               bin_size=bs,
-                               window_size=ws,
-                               excerpt_size=es,
-                               n_excerpts=ne,
-                               )
-        if un is not None:
-            view.uniform_normalization = un
-        view.attach(gui)
-
-        @gui.connect_
-        def on_close():
-            # Save the normalization.
-            un = view.uniform_normalization
-            state.set_view_params(view,
-                                  uniform_normalization=un,
-                                  bin_size=view.bin_size,
-                                  window_size=view.window_size,
-                                  )
