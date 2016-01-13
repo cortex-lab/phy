@@ -195,6 +195,9 @@ class ManualClusteringView(View):
         @gui.connect_
         def on_close():
             gui.state.update_view_state(self, self.state)
+            # NOTE: create_gui() already saves the state, but the event
+            # is registered *before* we add all views.
+            gui.state.save()
 
         self.show()
 
