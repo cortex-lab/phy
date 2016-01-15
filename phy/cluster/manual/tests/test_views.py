@@ -33,6 +33,7 @@ from ..views import (WaveformView,
                      FeatureView,
                      CorrelogramView,
                      TraceView,
+                     ScatterView,
                      _extract_wave,
                      _selected_clusters_colors,
                      _extend,
@@ -488,6 +489,27 @@ def test_feature_view(qtbot, gui):
 
     # qtbot.stop()
     gui.close()
+
+
+#------------------------------------------------------------------------------
+# Test scatter view
+#------------------------------------------------------------------------------
+
+def test_scatter_view(qtbot, gui):
+    n = 1000
+    v = ScatterView(coords=lambda c: Bunch(x=np.random.randn(n),
+                                           y=np.random.randn(n),
+                                           spike_ids=np.arange(n),
+                                           spike_clusters=np.ones(n).
+                                           astype(np.int32) * c[0],
+                                           ),
+                    bounds=[-3, -3, 3, 3],
+                    )
+    v.attach(gui)
+
+    _select_clusters(gui)
+
+    # qtbot.stop()
 
 
 #------------------------------------------------------------------------------
