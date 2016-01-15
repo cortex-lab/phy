@@ -1428,3 +1428,62 @@ class CorrelogramView(ManualClusteringView):
         """Set the correlogram window size (in milliseconds)."""
         self.set_bin_window(window_size=window_size * 1e-3)
         self.on_select()
+
+
+# -----------------------------------------------------------------------------
+# Scatter view
+# -----------------------------------------------------------------------------
+
+class ScatterView(ManualClusteringView):
+    _default_marker_size = 3.
+
+    def __init__(self,
+                 coords=None,  # function clusters: Bunch(x, y)
+                 bounds=None,
+                 **kwargs):
+
+        assert coords
+        self.coords = coords
+
+        # Initialize the view.
+        super(ScatterView, self).__init__(**kwargs)
+
+        # Feature normalization.
+        self.data_bounds = bounds
+
+    def on_select(self, cluster_ids=None):
+        super(ScatterView, self).on_select(cluster_ids)
+        cluster_ids = self.cluster_ids
+        n_clusters = len(cluster_ids)
+        if n_clusters == 0:
+            return
+
+        # Get the spike times and amplitudes
+        data = self.coords(cluster_ids)
+        spike_ids = data.spike_ids
+        spike_clusters = data.spike_clusters
+        x = data.x
+        y = data.y
+        n_spikes = len(spike_ids)
+        assert n_spikes > 0
+        assert spike_clusters.shape == (n_spikes,)
+        assert x.shape == (n_spikes,)
+        assert y.shape == (n_spikes,)
+
+        # Get the spike clusters.
+        sc = _index_of(spike_clusters, cluster_ids)
+
+        # Plot the amplitudes.
+        with self.building():
+            m = np.ones(n_spikes)
+            # Get the color of the markers.
+            color = _get_color(m, spike_clusters_rel=sc, n_clusters=n_clusters)
+            assert color.shape == (n_spikes, 4)
+            ms = (self._default_marker_size if sc is not None else 1.)
+
+            self.scatter(x=x,
+                         y=y,
+                         color=color,
+                         data_bounds=self.data_bounds,
+                         size=ms * np.ones(n_spikes),
+                         )
