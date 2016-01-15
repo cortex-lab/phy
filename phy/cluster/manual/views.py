@@ -1439,7 +1439,7 @@ class ScatterView(ManualClusteringView):
 
     def __init__(self,
                  coords=None,  # function clusters: Bunch(x, y)
-                 bounds=None,
+                 data_bounds=None,
                  **kwargs):
 
         assert coords
@@ -1449,7 +1449,7 @@ class ScatterView(ManualClusteringView):
         super(ScatterView, self).__init__(**kwargs)
 
         # Feature normalization.
-        self.data_bounds = bounds
+        self.data_bounds = data_bounds
 
     def on_select(self, cluster_ids=None):
         super(ScatterView, self).on_select(cluster_ids)

@@ -503,13 +503,14 @@ def test_scatter_view(qtbot, gui):
                                            spike_clusters=np.ones(n).
                                            astype(np.int32) * c[0],
                                            ),
-                    bounds=[-3, -3, 3, 3],
+                    data_bounds=[-3, -3, 3, 3],
                     )
     v.attach(gui)
 
     _select_clusters(gui)
 
     # qtbot.stop()
+    gui.close()
 
 
 #------------------------------------------------------------------------------
