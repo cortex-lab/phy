@@ -41,12 +41,10 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
     mc = ManualClustering(spike_clusters,
                           cluster_groups=cluster_groups,
                           shortcuts={'undo': 'ctrl+z'},
+                          quality=quality,
+                          similarity=similarity,
                           )
     mc.attach(gui)
-
-    mc.add_column(quality, name='quality')
-    mc.set_default_sort('quality', 'desc')
-    mc.set_similarity_func(similarity)
 
     yield mc
     del mc

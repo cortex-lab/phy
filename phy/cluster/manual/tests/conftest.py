@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import yield_fixture
+from pytest import fixture
 
 from phy.io.store import get_closest_clusters
 
@@ -15,23 +15,28 @@ from phy.io.store import get_closest_clusters
 # Fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture
+@fixture
 def cluster_ids():
-    yield [0, 1, 2, 10, 11, 20, 30]
-    #      i, g, N,  i,  g,  N, N
+    return [0, 1, 2, 10, 11, 20, 30]
+    #       i, g, N,  i,  g,  N, N
 
 
-@yield_fixture
+@fixture
 def cluster_groups():
-    yield {0: 'noise', 1: 'good', 10: 'mua', 11: 'good'}
+    return {0: 'noise', 1: 'good', 10: 'mua', 11: 'good'}
 
 
-@yield_fixture
+@fixture
 def quality():
-    yield lambda c: c
+    def quality(c):
+        return c
+    return quality
 
 
-@yield_fixture
+@fixture
 def similarity(cluster_ids):
     sim = lambda c, d: (c * 1.01 + d)
-    yield lambda c: get_closest_clusters(c, cluster_ids, sim)
+
+    def similarity(c):
+        return get_closest_clusters(c, cluster_ids, sim)
+    return similarity
