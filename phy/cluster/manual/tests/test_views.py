@@ -14,7 +14,7 @@ from pytest import fixture
 
 from phy.electrode.mea import staggered_positions
 from phy.gui import create_gui
-from phy.io.array import _spikes_per_cluster, get_closest_clusters
+from phy.io.array import _spikes_per_cluster, get_closest_clusters, _concat
 from phy.io.mock import (artificial_waveforms,
                          artificial_features,
                          artificial_masks,
@@ -63,6 +63,8 @@ def create_model():
                                      model.n_spikes_per_cluster)
     model.cluster_ids = np.unique(model.spike_clusters)
     model.channel_positions = staggered_positions(n_channels)
+
+    # TODO: remove and replace by functions
     model.traces = artificial_traces(n_samples_t, n_channels)
     model.masks = artificial_masks(n_spikes_total, n_channels)
 
@@ -70,15 +72,6 @@ def create_model():
     model.n_features_per_channel = n_features_per_channel
     model.n_samples_waveforms = n_samples_waveforms
     model.cluster_groups = {c: None for c in range(n_clusters)}
-
-    # TODO: make this cleaner by abstracting the store away
-    model.store = create_cluster_store(model)
-
-    return model
-
-
-def create_cluster_store(model):
-    cs = ClusterStore()
 
     def get_waveforms(n):
         return artificial_waveforms(n,
@@ -101,125 +94,128 @@ def create_cluster_store(model):
         kwargs['spike_clusters'] = model.spike_clusters[kwargs['spike_ids']]
         return Bunch(**kwargs)
 
-    @cs.add(concat=True)
+    @_concat
     def masks(cluster_id):
         return _get_data(spike_ids=get_spike_ids(cluster_id),
                          masks=get_masks(model.n_spikes_per_cluster))
+    # model.masks = masks
 
-    @cs.add(concat=True)
+    @_concat
     def features(cluster_id):
         return _get_data(spike_ids=get_spike_ids(cluster_id),
                          features=get_features(model.n_spikes_per_cluster))
+    model.features = features
 
-    @cs.add(concat=True)
+    @_concat
     def features_masks(cluster_id):
         return _get_data(spike_ids=get_spike_ids(cluster_id),
                          features=get_features(model.n_spikes_per_cluster),
                          masks=get_masks(model.n_spikes_per_cluster))
+    model.features_masks = features_masks
 
-    @cs.add
     def feature_lim():
         """Return the max of a subset of the feature amplitudes."""
         return 1
+    model.feature_lim = feature_lim
 
-    @cs.add
     def background_features_masks():
         f = get_features(model.n_spikes)
         m = model.masks
         return _get_data(spike_ids=np.arange(model.n_spikes),
                          features=f, masks=m)
+    model.background_features_masks = background_features_masks
 
-    @cs.add(concat=True)
     def waveforms(cluster_id):
         return _get_data(spike_ids=get_spike_ids(cluster_id),
                          waveforms=get_waveforms(model.n_spikes_per_cluster))
+    model.waveforms = waveforms
 
-    @cs.add
     def waveform_lim():
         """Return the max of a subset of the waveform amplitudes."""
         return 1
+    model.waveform_lim = waveform_lim
 
-    @cs.add(concat=True)
+    @_concat
     def waveforms_masks(cluster_id):
         w = get_waveforms(model.n_spikes_per_cluster)
         m = get_masks(model.n_spikes_per_cluster)
-        mw = cs.mean_waveforms(cluster_id)[np.newaxis, ...]
-        mm = cs.mean_masks(cluster_id)[np.newaxis, ...]
+        mw = mean_waveforms(cluster_id)[np.newaxis, ...]
+        mm = mean_masks(cluster_id)[np.newaxis, ...]
         return _get_data(spike_ids=get_spike_ids(cluster_id),
                          waveforms=w,
                          masks=m,
                          mean_waveforms=mw,
                          mean_masks=mm,
                          )
+    model.waveforms_masks = waveforms_masks
 
     # Mean quantities.
     # -------------------------------------------------------------------------
 
-    @cs.add
     def mean_masks(cluster_id):
         # We access [1] because we return spike_ids, masks.
-        return mean(cs.masks(cluster_id).masks)
+        return mean(masks(cluster_id).masks)
+    model.mean_masks = mean_masks
 
-    @cs.add
     def mean_features(cluster_id):
-        return mean(cs.features(cluster_id).features)
+        return mean(features(cluster_id).features)
+    model.mean_features = mean_features
 
-    @cs.add
     def mean_waveforms(cluster_id):
-        return mean(cs.waveforms(cluster_id).waveforms)
+        return mean(waveforms(cluster_id).waveforms)
+    model.mean_waveforms = mean_waveforms
 
     # Statistics.
     # -------------------------------------------------------------------------
 
-    @cs.add(cache='memory')
     def best_channels(cluster_id):
-        mm = cs.mean_masks(cluster_id)
+        mm = mean_masks(cluster_id)
         uch = get_unmasked_channels(mm)
         return get_sorted_main_channels(mm, uch)
+    model.best_channels = best_channels
 
-    @cs.add(cache='memory')
     def best_channels_multiple(cluster_ids):
-        best_channels = []
+        bc = []
         for cluster in cluster_ids:
-            channels = cs.best_channels(cluster)
-            best_channels.extend([ch for ch in channels
-                                  if ch not in best_channels])
-        return best_channels
+            channels = best_channels(cluster)
+            bc.extend([ch for ch in channels if ch not in bc])
+        return bc
+    model.best_channels_multiple = best_channels_multiple
 
-    @cs.add(cache='memory')
     def max_waveform_amplitude(cluster_id):
-        mm = cs.mean_masks(cluster_id)
-        mw = cs.mean_waveforms(cluster_id)
+        mm = mean_masks(cluster_id)
+        mw = mean_waveforms(cluster_id)
         assert mw.ndim == 2
         return np.asscalar(get_max_waveform_amplitude(mm, mw))
+    model.max_waveform_amplitude = max_waveform_amplitude
 
-    @cs.add(cache=None)
     def mean_masked_features_score(cluster_0, cluster_1):
-        mf0 = cs.mean_features(cluster_0)
-        mf1 = cs.mean_features(cluster_1)
-        mm0 = cs.mean_masks(cluster_0)
-        mm1 = cs.mean_masks(cluster_1)
+        mf0 = mean_features(cluster_0)
+        mf1 = mean_features(cluster_1)
+        mm0 = mean_masks(cluster_0)
+        mm1 = mean_masks(cluster_1)
         nfpc = model.n_features_per_channel
         d = get_mean_masked_features_distance(mf0, mf1, mm0, mm1,
                                               n_features_per_channel=nfpc)
         s = 1. / max(1e-10, d)
         return s
+    model.mean_masked_features_score = mean_masked_features_score
 
-    @cs.add(cache='memory')
     def most_similar_clusters(cluster_id):
         assert isinstance(cluster_id, int)
         return get_closest_clusters(cluster_id, model.cluster_ids,
-                                    cs.mean_masked_features_score)
+                                    mean_masked_features_score)
+    model.most_similar_clusters = most_similar_clusters
 
     # Traces.
     # -------------------------------------------------------------------------
 
-    @cs.add
     def mean_traces():
         mt = model.traces[:, :].mean(axis=0)
         return mt.astype(model.traces.dtype)
+    model.mean_traces = mean_traces
 
-    return cs
+    return model
 
 
 #------------------------------------------------------------------------------
@@ -314,12 +310,11 @@ def test_selected_clusters_colors():
 
 def test_waveform_view(qtbot, gui):
     model = gui.model
-    cs = model.store
-    v = WaveformView(waveforms_masks=model.store.waveforms_masks,
+    v = WaveformView(waveforms_masks=model.waveforms_masks,
                      channel_positions=model.channel_positions,
                      n_samples=model.n_samples_waveforms,
-                     waveform_lim=cs.waveform_lim(),
-                     best_channels=cs.best_channels_multiple,
+                     waveform_lim=model.waveform_lim(),
+                     best_channels=model.best_channels_multiple,
                      )
     v.attach(gui)
 
@@ -404,14 +399,13 @@ def test_trace_view_no_spikes(qtbot):
 
 def test_trace_view_spikes(qtbot, gui):
     model = gui.model
-    cs = model.store
     v = TraceView(traces=model.traces,
                   sample_rate=model.sample_rate,
                   spike_times=model.spike_times,
                   spike_clusters=model.spike_clusters,
                   n_samples_per_spike=model.n_samples_waveforms,
                   masks=model.masks,
-                  mean_traces=cs.mean_traces(),
+                  mean_traces=model.mean_traces(),
                   )
     v.attach(gui)
 
@@ -463,13 +457,13 @@ def test_trace_view_spikes(qtbot, gui):
 
 def test_feature_view(qtbot, gui):
     model = gui.model
-    cs = model.store
-    v = FeatureView(features_masks=cs.features_masks,
-                    background_features_masks=cs.background_features_masks(),
+    bfm = model.background_features_masks()
+    v = FeatureView(features_masks=model.features_masks,
+                    background_features_masks=bfm,
                     spike_times=model.spike_times,
                     n_channels=model.n_channels,
                     n_features_per_channel=model.n_features_per_channel,
-                    feature_lim=cs.feature_lim(),
+                    feature_lim=model.feature_lim(),
                     )
     v.attach(gui)
 
