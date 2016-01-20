@@ -119,9 +119,13 @@ class ManualClustering(object):
                  spike_clusters,
                  cluster_groups=None,
                  shortcuts=None,
+                 quality=None,
+                 similarity=None,
                  ):
 
         self.gui = None
+        self.quality = quality
+        self.similarity = similarity
 
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
@@ -399,18 +403,13 @@ class ManualClustering(object):
         gui.add_view(self.cluster_view, name='ClusterView')
 
         # Add the quality column in the cluster view.
-        # TODO: access the model directly
-        cs = getattr(getattr(gui, 'model', None), 'store', None)
-        if cs and 'ClusterView' in gui.state:
-            # Names of the quality and similarity functions.
-            quality = gui.state.ClusterView.get('quality', None)
-            similarity = gui.state.ClusterView.get('similarity', None)
-            if quality:
-                self.cluster_view.add_column(cs.get(quality), name=quality)
-                self.set_default_sort(quality)
-            if similarity:
-                self.set_similarity_func(cs.get(similarity))
-                gui.add_view(self.similarity_view, name='SimilarityView')
+        if self.quality:
+            self.cluster_view.add_column(self.quality,
+                                         name=self.quality.__name__)
+            self.set_default_sort(self.quality.__name__)
+        if self.similarity:
+            self.set_similarity_func(self.similarity)
+            gui.add_view(self.similarity_view, name='SimilarityView')
 
         # Update the cluster views and selection when a cluster event occurs.
         self.gui.connect_(self.on_cluster)
