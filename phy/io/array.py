@@ -7,13 +7,16 @@
 #------------------------------------------------------------------------------
 
 from collections import defaultdict
+from functools import wraps
 import logging
 import math
 from math import floor, exp
+from operator import itemgetter
 import os.path as op
 
 import numpy as np
 
+from phy.utils import Bunch, _as_scalar, _as_scalars
 from phy.utils._types import _as_array, _is_array_like
 
 logger = logging.getLogger(__name__)
@@ -187,6 +190,37 @@ def _in_polygon(points, polygon):
     assert polygon.ndim == 2
     path = Path(polygon, closed=True)
     return path.contains_points(points)
+
+
+def _get_data_lim(arr, n_spikes=None, percentile=None):
+    n = arr.shape[0]
+    k = max(1, n // n_spikes) if n_spikes else 1
+    arr = np.abs(arr[::k])
+    n = arr.shape[0]
+    arr = arr.reshape((n, -1))
+    return arr.max()
+
+
+def get_closest_clusters(cluster_id, cluster_ids, sim_func, max_n=None):
+    """Return a list of pairs `(cluster, similarity)` sorted by decreasing
+    similarity to a given cluster."""
+    l = [(_as_scalar(candidate), _as_scalar(sim_func(cluster_id, candidate)))
+         for candidate in _as_scalars(cluster_ids)]
+    l = sorted(l, key=itemgetter(1), reverse=True)
+    return l[:max_n]
+
+
+def _concat(f):
+    """Take a function accepting a single cluster, and return a function
+    accepting multiple clusters."""
+    @wraps(f)
+    def wrapped(cluster_ids):
+        # Single cluster.
+        if not hasattr(cluster_ids, '__len__'):
+            return f(cluster_ids)
+        # Concatenate the result of multiple clusters.
+        return Bunch(_accumulate([f(c) for c in cluster_ids]))
+    return wrapped
 
 
 # -----------------------------------------------------------------------------
