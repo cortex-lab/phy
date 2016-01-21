@@ -115,37 +115,25 @@ def create_model():
     def masks(cluster_id):
         return _get_data(spike_ids=get_spike_ids(cluster_id),
                          masks=get_masks(model.n_spikes_per_cluster))
-    # model.masks = masks
 
     @_concat
     def features(cluster_id):
         return _get_data(spike_ids=get_spike_ids(cluster_id),
-                         features=get_features(model.n_spikes_per_cluster))
-    model.features = features
-
-    @_concat
-    def features_masks(cluster_id):
-        return _get_data(spike_ids=get_spike_ids(cluster_id),
                          features=get_features(model.n_spikes_per_cluster),
                          masks=get_masks(model.n_spikes_per_cluster))
-    model.features_masks = features_masks
+    model.features = features
 
     def feature_lim():
         """Return the max of a subset of the feature amplitudes."""
         return 1
     model.feature_lim = feature_lim
 
-    def background_features_masks():
+    def background_features():
         f = get_features(model.n_spikes)
         m = all_masks
         return _get_data(spike_ids=np.arange(model.n_spikes),
                          features=f, masks=m)
-    model.background_features_masks = background_features_masks
-
-    def waveforms(cluster_id):
-        return _get_data(spike_ids=get_spike_ids(cluster_id),
-                         waveforms=get_waveforms(model.n_spikes_per_cluster))
-    model.waveforms = waveforms
+    model.background_features = background_features
 
     def waveform_lim():
         """Return the max of a subset of the waveform amplitudes."""
@@ -153,18 +141,14 @@ def create_model():
     model.waveform_lim = waveform_lim
 
     @_concat
-    def waveforms_masks(cluster_id):
+    def waveforms(cluster_id):
         w = get_waveforms(model.n_spikes_per_cluster)
         m = get_masks(model.n_spikes_per_cluster)
-        mw = mean_waveforms(cluster_id)[np.newaxis, ...]
-        mm = mean_masks(cluster_id)[np.newaxis, ...]
         return _get_data(spike_ids=get_spike_ids(cluster_id),
                          waveforms=w,
                          masks=m,
-                         mean_waveforms=mw,
-                         mean_masks=mm,
                          )
-    model.waveforms_masks = waveforms_masks
+    model.waveforms = waveforms
 
     # Mean quantities.
     # -------------------------------------------------------------------------
@@ -327,7 +311,7 @@ def test_selected_clusters_colors():
 
 def test_waveform_view(qtbot, gui):
     model = gui.model
-    v = WaveformView(waveforms_masks=model.waveforms_masks,
+    v = WaveformView(waveforms=model.waveforms,
                      channel_positions=model.channel_positions,
                      n_samples=model.n_samples_waveforms,
                      waveform_lim=model.waveform_lim(),
@@ -341,9 +325,6 @@ def test_waveform_view(qtbot, gui):
 
     v.toggle_waveform_overlap()
     v.toggle_waveform_overlap()
-
-    v.toggle_show_means()
-    v.toggle_show_means()
 
     v.toggle_zoom_on_channels()
     v.toggle_zoom_on_channels()
@@ -393,7 +374,7 @@ def test_waveform_view(qtbot, gui):
 
     assert _clicked == [(0, 1, 2)]
 
-    # qtbot.stop()
+    qtbot.stop()
     gui.close()
 
 
@@ -460,9 +441,9 @@ def test_trace_view(qtbot, gui):
 
 def test_feature_view(qtbot, gui):
     model = gui.model
-    bfm = model.background_features_masks()
-    v = FeatureView(features_masks=model.features_masks,
-                    background_features_masks=bfm,
+    bfm = model.background_features()
+    v = FeatureView(features=model.features,
+                    background_features=bfm,
                     spike_times=model.spike_times,
                     n_channels=model.n_channels,
                     n_features_per_channel=model.n_features_per_channel,
