@@ -253,7 +253,6 @@ class WaveformView(ManualClusteringView):
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
         'toggle_zoom_on_channels': 'z',
-        'toggle_show_means': 'm',
 
         # Box scaling.
         'widen': 'ctrl+right',
@@ -269,14 +268,13 @@ class WaveformView(ManualClusteringView):
     }
 
     def __init__(self,
-                 waveforms_masks=None,
+                 waveforms=None,
                  channel_positions=None,
                  n_samples=None,
                  waveform_lim=None,
                  best_channels=None,
                  **kwargs):
         self._key_pressed = None
-        self._do_show_means = False
         self._overlap = False
         self.do_zoom_on_channels = True
 
@@ -312,7 +310,7 @@ class WaveformView(ManualClusteringView):
         self._update_boxes()
 
         # Data: functions cluster_id => waveforms.
-        self.waveforms_masks = waveforms_masks
+        self.waveforms = waveforms
 
         # Waveform normalization.
         assert waveform_lim > 0
@@ -323,15 +321,8 @@ class WaveformView(ManualClusteringView):
         self.channel_positions = channel_positions
 
     def _get_data(self, cluster_ids):
-        d = self.waveforms_masks(cluster_ids)
+        d = self.waveforms(cluster_ids)
         d.alpha = .5
-        # Toggle waveform means.
-        if self.do_show_means:
-            d.waveforms = d.mean_waveforms
-            d.masks = d.mean_masks
-            d.spike_ids = np.arange(len(cluster_ids))
-            d.spike_clusters = np.array(cluster_ids)
-            d.alpha = 1.
         return d
 
     def on_select(self, cluster_ids=None):
@@ -394,7 +385,6 @@ class WaveformView(ManualClusteringView):
         return Bunch(box_scaling=tuple(self.box_scaling),
                      probe_scaling=tuple(self.probe_scaling),
                      overlap=self.overlap,
-                     do_show_means=self.do_show_means,
                      do_zoom_on_channels=self.do_zoom_on_channels,
                      )
 
@@ -403,7 +393,6 @@ class WaveformView(ManualClusteringView):
         super(WaveformView, self).attach(gui)
         self.actions.add(self.toggle_waveform_overlap)
         self.actions.add(self.toggle_zoom_on_channels)
-        self.actions.add(self.toggle_show_means)
 
         # Box scaling.
         self.actions.add(self.widen)
@@ -446,21 +435,6 @@ class WaveformView(ManualClusteringView):
     def toggle_waveform_overlap(self):
         """Toggle the overlap of the waveforms."""
         self.overlap = not self.overlap
-
-    # Show means
-    # -------------------------------------------------------------------------
-
-    @property
-    def do_show_means(self):
-        return self._do_show_means
-
-    @do_show_means.setter
-    def do_show_means(self, value):
-        self._do_show_means = value
-        self.on_select()
-
-    def toggle_show_means(self):
-        self.do_show_means = not self.do_show_means
 
     # Box scaling
     # -------------------------------------------------------------------------
@@ -947,8 +921,8 @@ class FeatureView(ManualClusteringView):
     }
 
     def __init__(self,
-                 features_masks=None,
-                 background_features_masks=None,
+                 features=None,
+                 background_features=None,
                  spike_times=None,
                  n_channels=None,
                  n_features_per_channel=None,
@@ -956,24 +930,24 @@ class FeatureView(ManualClusteringView):
                  best_channels=None,
                  **kwargs):
         """
-        features_masks is a function :
+        features is a function :
             `cluster_ids: Bunch(spike_ids,
                                 features,
                                 masks,
                                 spike_clusters,
                                 spike_times)`
-        background_features_masks is a Bunch(...) like above.
+        background_features is a Bunch(...) like above.
 
         """
         self._scaling = 1.
 
         self.best_channels = best_channels or (lambda clusters, n=None: [])
 
-        assert features_masks
-        self.features_masks = features_masks
+        assert features
+        self.features = features
 
         # This is a tuple (spikes, features, masks).
-        self.background_features_masks = background_features_masks
+        self.background_features = background_features
 
         self.n_features_per_channel = n_features_per_channel
         assert n_channels > 0
@@ -1124,7 +1098,7 @@ class FeatureView(ManualClusteringView):
             return
 
         # Get the spikes, features, masks.
-        data = self.features_masks(cluster_ids)
+        data = self.features(cluster_ids)
         spike_ids = data.spike_ids
         spike_clusters = data.spike_clusters
         f = data.features
@@ -1137,7 +1111,7 @@ class FeatureView(ManualClusteringView):
         sc = _index_of(spike_clusters, cluster_ids)
 
         # Get the background features.
-        data_bg = self.background_features_masks
+        data_bg = self.background_features
         spike_ids_bg = data_bg.spike_ids
         features_bg = data_bg.features
         masks_bg = data_bg.masks
