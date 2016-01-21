@@ -33,6 +33,7 @@ from ..views import (WaveformView,
                      CorrelogramView,
                      TraceView,
                      ScatterView,
+                     select_traces,
                      _extract_wave,
                      _selected_clusters_colors,
                      _extend,
@@ -64,9 +65,25 @@ def create_model():
     model.cluster_ids = np.unique(model.spike_clusters)
     model.channel_positions = staggered_positions(n_channels)
 
-    # TODO: remove and replace by functions
-    model.traces = artificial_traces(n_samples_t, n_channels)
-    model.masks = artificial_masks(n_spikes_total, n_channels)
+    all_traces = artificial_traces(n_samples_t, n_channels)
+    all_masks = artificial_masks(n_spikes_total, n_channels)
+
+    def traces(interval):
+        """Load traces and spikes in an interval."""
+        tr = select_traces(all_traces, interval,
+                           sample_rate=model.sample_rate,
+                           )
+        # Find spikes.
+        a, b = model.spike_times.searchsorted(interval)
+        st = model.spike_times[a:b]
+        sc = model.spike_clusters[a:b]
+        m = all_masks[a:b, :]
+        return Bunch(traces=tr,
+                     spike_times=st,
+                     spike_clusters=sc,
+                     masks=m,
+                     )
+    model.traces = traces
 
     model.spikes_per_cluster = _spikes_per_cluster(model.spike_clusters)
     model.n_features_per_channel = n_features_per_channel
@@ -120,7 +137,7 @@ def create_model():
 
     def background_features_masks():
         f = get_features(model.n_spikes)
-        m = model.masks
+        m = all_masks
         return _get_data(spike_ids=np.arange(model.n_spikes),
                          features=f, masks=m)
     model.background_features_masks = background_features_masks
@@ -211,8 +228,8 @@ def create_model():
     # -------------------------------------------------------------------------
 
     def mean_traces():
-        mt = model.traces[:, :].mean(axis=0)
-        return mt.astype(model.traces.dtype)
+        mt = all_traces.mean(axis=0)
+        return mt.astype(all_traces.dtype)
     model.mean_traces = mean_traces
 
     return model
@@ -384,27 +401,13 @@ def test_waveform_view(qtbot, gui):
 # Test trace view
 #------------------------------------------------------------------------------
 
-def test_trace_view_no_spikes(qtbot):
-    n_samples = 1000
-    n_channels = 12
-    sample_rate = 2000.
-
-    traces = artificial_traces(n_samples, n_channels)
-    mt = np.atleast_2d(traces.mean(axis=0))
-
-    # Create the view.
-    v = TraceView(traces=traces, sample_rate=sample_rate, mean_traces=mt)
-    _show(qtbot, v)
-
-
-def test_trace_view_spikes(qtbot, gui):
+def test_trace_view(qtbot, gui):
     model = gui.model
     v = TraceView(traces=model.traces,
                   sample_rate=model.sample_rate,
-                  spike_times=model.spike_times,
-                  spike_clusters=model.spike_clusters,
                   n_samples_per_spike=model.n_samples_waveforms,
-                  masks=model.masks,
+                  duration=model.duration,
+                  n_channels=model.n_channels,
                   mean_traces=model.mean_traces(),
                   )
     v.attach(gui)

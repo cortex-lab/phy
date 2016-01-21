@@ -574,6 +574,15 @@ class WaveformView(ManualClusteringView):
 # Trace view
 # -----------------------------------------------------------------------------
 
+def select_traces(traces, interval, sample_rate=None):
+    """Load traces in an interval (in seconds)."""
+    start, end = interval
+    i, j = round(sample_rate * start), round(sample_rate * end)
+    i, j = int(i), int(j)
+    traces = traces[i:j, :]
+    return traces
+
+
 class TraceView(ManualClusteringView):
     interval_duration = .5  # default duration of the interval
     shift_amount = .1
@@ -590,12 +599,14 @@ class TraceView(ManualClusteringView):
     def __init__(self,
                  traces=None,
                  sample_rate=None,
-                 spike_times=None,
-                 spike_clusters=None,
-                 masks=None,  # full array of masks
+                 duration=None,
+                 n_channels=None,
                  n_samples_per_spike=None,
                  mean_traces=None,
                  **kwargs):
+
+        # traces is a function interval => {traces, spike_times,
+        # spike_clusters, masks}
 
         # Sample rate.
         assert sample_rate > 0
@@ -603,10 +614,14 @@ class TraceView(ManualClusteringView):
         self.dt = 1. / self.sample_rate
 
         # Traces.
-        assert len(traces.shape) == 2
-        self.n_samples, self.n_channels = traces.shape
+        assert hasattr(traces, '__call__')
         self.traces = traces
-        self.duration = self.dt * self.n_samples
+
+        assert duration >= 0
+        self.duration = duration
+
+        assert n_channels >= 0
+        self.n_channels = n_channels
 
         # Used to detrend the traces.
         self.mean_traces = np.atleast_2d(mean_traces)
@@ -621,26 +636,6 @@ class TraceView(ManualClusteringView):
             ns = self.n_samples_per_spike
             self.n_samples_per_spike = (-ns // 2, ns // 2)
         # Now n_samples_per_spike is a tuple.
-
-        # Spike times.
-        if spike_times is not None:
-            spike_times = np.asarray(spike_times)
-            self.n_spikes = len(spike_times)
-            assert spike_times.shape == (self.n_spikes,)
-            self.spike_times = spike_times
-
-            # Spike clusters.
-            spike_clusters = (np.zeros(self.n_spikes) if spike_clusters is None
-                              else spike_clusters)
-            assert spike_clusters.shape == (self.n_spikes,)
-            self.spike_clusters = spike_clusters
-
-            # Masks.
-            if masks is not None:
-                assert masks.shape == (self.n_spikes, self.n_channels)
-            self.masks = masks
-        else:
-            self.spike_times = self.spike_clusters = self.masks = None
 
         # Box and probe scaling.
         self._scaling = 1.
@@ -662,38 +657,6 @@ class TraceView(ManualClusteringView):
 
     # Internal methods
     # -------------------------------------------------------------------------
-
-    def _load_traces(self, interval):
-        """Load traces in an interval (in seconds)."""
-
-        start, end = interval
-
-        i, j = round(self.sample_rate * start), round(self.sample_rate * end)
-        i, j = int(i), int(j)
-
-        # We load the traces and select the requested channels.
-        assert self.traces.shape[1] == self.n_channels
-        traces = self.traces[i:j, :]
-        assert traces.shape[1] == self.n_channels
-
-        # Detrend the traces.
-        traces = traces - self.mean_traces
-
-        # Create the plots.
-        return traces
-
-    def _load_spikes(self, interval):
-        """Return spike times, spike clusters, masks."""
-        assert self.spike_times is not None
-        # Keep the spikes in the interval.
-        a, b = self.spike_times.searchsorted(interval)
-        spike_times = self.spike_times[a:b]
-        spike_clusters = self.spike_clusters[a:b]
-        n_spikes = len(spike_times)
-        assert len(spike_clusters) == n_spikes
-        masks = (self.masks[a:b] if self.masks is not None
-                 else np.ones((n_spikes, self.n_channels)))
-        return spike_times, spike_clusters, masks
 
     def _plot_traces(self, traces, start=None, data_bounds=None):
         t = start + np.arange(traces.shape[0]) * self.dt
@@ -775,7 +738,12 @@ class TraceView(ManualClusteringView):
         start, end = interval
 
         # Load traces.
-        traces = self._load_traces(interval)
+        d = self.traces(interval)
+        traces = d.traces - self.mean_traces
+        spike_times = d.spike_times
+        spike_clusters = d.spike_clusters
+        masks = d.masks
+
         # NOTE: once loaded, the traces do not contain the dead channels
         # so there are `n_channels_order` channels here.
         assert traces.shape[1] == self.n_channels
@@ -794,11 +762,7 @@ class TraceView(ManualClusteringView):
         self._plot_traces(traces, start=start, data_bounds=data_bounds)
 
         # Display the spikes.
-        if self.spike_times is not None:
-            # Load the spikes.
-            spike_times, spike_clusters, masks = self._load_spikes(interval)
-
-            # Plot every spike.
+        if spike_times is not None:
             for i in range(len(spike_times)):
                 self._plot_spike(i,
                                  start=start,
