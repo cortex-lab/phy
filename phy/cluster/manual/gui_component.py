@@ -406,7 +406,8 @@ class ManualClustering(object):
         if self.quality:
             self.cluster_view.add_column(self.quality,
                                          name=self.quality.__name__)
-            self.set_default_sort(self.quality.__name__)
+        self.set_default_sort(self.quality.__name__
+                              if self.quality else 'n_spikes')
         if self.similarity:
             self.set_similarity_func(self.similarity)
             gui.add_view(self.similarity_view, name='SimilarityView')
