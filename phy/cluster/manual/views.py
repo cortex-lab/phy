@@ -55,9 +55,10 @@ def _selected_clusters_colors(n_clusters=None):
 
 
 def _extract_wave(traces, start, end, mask, wave_len=None):
+    mask_threshold = .5
     n_samples, n_channels = traces.shape
     assert mask.shape == (n_channels,)
-    channels = np.nonzero(mask > .1)[0]
+    channels = np.nonzero(mask > mask_threshold)[0]
     # There should be at least one non-masked channel.
     if not len(channels):
         return  # pragma: no cover
@@ -101,7 +102,7 @@ def _get_color(masks, spike_clusters_rel=None, n_clusters=None, alpha=.5):
         color = colors[spike_clusters_rel]
     else:
         # Fixed color when the spike clusters are not specified.
-        color = .5 * np.ones((n_spikes, 3))
+        color = np.ones((n_spikes, 3))
     hsv = rgb_to_hsv(color[:, :3])
     # Change the saturation and value as a function of the mask.
     hsv[:, 1] *= masks
@@ -576,7 +577,6 @@ class TraceView(ManualClusteringView):
                  duration=None,
                  n_channels=None,
                  n_samples_per_spike=None,
-                 mean_traces=None,
                  **kwargs):
 
         # traces is a function interval => {traces, spike_times,
@@ -596,10 +596,6 @@ class TraceView(ManualClusteringView):
 
         assert n_channels >= 0
         self.n_channels = n_channels
-
-        # Used to detrend the traces.
-        self.mean_traces = np.atleast_2d(mean_traces)
-        assert self.mean_traces.shape == (1, self.n_channels)
 
         # Number of samples per spike.
         self.n_samples_per_spike = (n_samples_per_spike or
@@ -634,7 +630,7 @@ class TraceView(ManualClusteringView):
 
     def _plot_traces(self, traces, start=None, data_bounds=None):
         t = start + np.arange(traces.shape[0]) * self.dt
-        gray = .4
+        gray = .3
         for ch in range(self.n_channels):
             self[ch].plot(t, traces[:, ch],
                           color=(gray, gray, gray, 1),
@@ -666,16 +662,15 @@ class TraceView(ManualClusteringView):
         # Determine the color as a function of the spike's cluster.
         clu = spike_clusters[spike_idx]
         if self.cluster_ids is None or clu not in self.cluster_ids:
-            gray = .9
-            color = (gray, gray, gray, 1)
+            sc = None
+            n_clusters = None
         else:
             clu_rel = self.cluster_ids.index(clu)
-            r, g, b = (_COLORMAP[clu_rel % len(_COLORMAP)] / 255.)
-            color = (r, g, b, 1.)
             sc = clu_rel * np.ones(len(ch), dtype=np.int32)
-            color = _get_color(masks[spike_idx, ch],
-                               spike_clusters_rel=sc,
-                               n_clusters=len(self.cluster_ids))
+            n_clusters = len(self.cluster_ids)
+        color = _get_color(masks[spike_idx, ch],
+                           spike_clusters_rel=sc,
+                           n_clusters=n_clusters)
 
         # Generate the x coordinates of the waveform.
         t0 = spike_times[spike_idx] + wave_start
@@ -713,7 +708,7 @@ class TraceView(ManualClusteringView):
 
         # Load traces.
         d = self.traces(interval)
-        traces = d.traces - self.mean_traces
+        traces = d.traces - np.mean(d.traces, axis=0)
         spike_times = d.spike_times
         spike_clusters = d.spike_clusters
         masks = d.masks

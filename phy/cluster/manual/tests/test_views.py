@@ -208,14 +208,6 @@ def create_model():
                                     mean_masked_features_score)
     model.most_similar_clusters = most_similar_clusters
 
-    # Traces.
-    # -------------------------------------------------------------------------
-
-    def mean_traces():
-        mt = all_traces.mean(axis=0)
-        return mt.astype(all_traces.dtype)
-    model.mean_traces = mean_traces
-
     return model
 
 
@@ -286,16 +278,16 @@ def test_extract_wave():
     hwl = wave_len // 2
 
     ae(_extract_wave(traces, 0 - hwl, 0 + hwl, mask, wave_len)[0],
-       [[0, 0, 0], [0, 0, 0], [1, 2, 3], [6, 7, 8]])
+       [[0, 0], [0, 0], [1, 2], [6, 7]])
 
     ae(_extract_wave(traces, 1 - hwl, 1 + hwl, mask, wave_len)[0],
-       [[0, 0, 0], [1, 2, 3], [6, 7, 8], [11, 12, 13]])
+       [[0, 0], [1, 2], [6, 7], [11, 12]])
 
     ae(_extract_wave(traces, 2 - hwl, 2 + hwl, mask, wave_len)[0],
-       [[1, 2, 3], [6, 7, 8], [11, 12, 13], [16, 17, 18]])
+       [[1, 2], [6, 7], [11, 12], [16, 17]])
 
     ae(_extract_wave(traces, 5 - hwl, 5 + hwl, mask, wave_len)[0],
-       [[16, 17, 18], [21, 22, 23], [0, 0, 0], [0, 0, 0]])
+       [[16, 17], [21, 22], [0, 0], [0, 0]])
 
 
 def test_selected_clusters_colors():
@@ -389,7 +381,6 @@ def test_trace_view(qtbot, gui):
                   n_samples_per_spike=model.n_samples_waveforms,
                   duration=model.duration,
                   n_channels=model.n_channels,
-                  mean_traces=model.mean_traces(),
                   )
     v.attach(gui)
 
