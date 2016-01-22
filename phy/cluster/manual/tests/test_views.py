@@ -183,45 +183,12 @@ def create_model():
         return bc
     model.best_channels_multiple = best_channels_multiple
 
-    def max_waveform_amplitude(cluster_id):
-        mm = mean_masks(cluster_id)
-        mw = mean_waveforms(cluster_id)
-        assert mw.ndim == 2
-        return np.asscalar(get_max_waveform_amplitude(mm, mw))
-    model.max_waveform_amplitude = max_waveform_amplitude
-
-    def mean_masked_features_score(cluster_0, cluster_1):
-        mf0 = mean_features(cluster_0)
-        mf1 = mean_features(cluster_1)
-        mm0 = mean_masks(cluster_0)
-        mm1 = mean_masks(cluster_1)
-        nfpc = model.n_features_per_channel
-        d = get_mean_masked_features_distance(mf0, mf1, mm0, mm1,
-                                              n_features_per_channel=nfpc)
-        s = 1. / max(1e-10, d)
-        return s
-    model.mean_masked_features_score = mean_masked_features_score
-
-    def most_similar_clusters(cluster_id):
-        assert isinstance(cluster_id, int)
-        return get_closest_clusters(cluster_id, model.cluster_ids,
-                                    mean_masked_features_score)
-    model.most_similar_clusters = most_similar_clusters
-
     return model
 
 
 #------------------------------------------------------------------------------
 # Utils
 #------------------------------------------------------------------------------
-
-def _show(qtbot, view, stop=False):
-    view.show()
-    qtbot.waitForWindowShown(view.native)
-    if stop:  # pragma: no cover
-        qtbot.stop()
-    view.close()
-
 
 @fixture
 def state(tempdir):
