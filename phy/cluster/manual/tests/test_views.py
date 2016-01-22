@@ -14,15 +14,13 @@ from pytest import fixture
 
 from phy.electrode.mea import staggered_positions
 from phy.gui import create_gui
-from phy.io.array import _spikes_per_cluster, get_closest_clusters, _concat
+from phy.io.array import _spikes_per_cluster, _concat
 from phy.io.mock import (artificial_waveforms,
                          artificial_features,
                          artificial_masks,
                          artificial_traces,
                          )
 from phy.stats.clusters import (mean,
-                                get_max_waveform_amplitude,
-                                get_mean_masked_features_distance,
                                 get_unmasked_channels,
                                 get_sorted_main_channels,
                                 )
