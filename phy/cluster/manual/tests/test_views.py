@@ -14,7 +14,7 @@ from pytest import fixture
 
 from phy.electrode.mea import staggered_positions
 from phy.gui import create_gui
-from phy.io.array import _spikes_per_cluster, _concat
+from phy.io.array import _spikes_in_clusters, _concat
 from phy.io.mock import (artificial_waveforms,
                          artificial_features,
                          artificial_masks,
@@ -83,7 +83,8 @@ def create_model():
                      )
     model.traces = traces
 
-    model.spikes_per_cluster = _spikes_per_cluster(model.spike_clusters)
+    sc = model.spike_clusters
+    model.spikes_per_cluster = lambda c: _spikes_in_clusters(sc, [c])
     model.n_features_per_channel = n_features_per_channel
     model.n_samples_waveforms = n_samples_waveforms
     model.cluster_groups = {c: None for c in range(n_clusters)}
@@ -208,6 +209,7 @@ def gui(tempdir, state):
     model = create_model()
     gui = create_gui(config_dir=tempdir, **state)
     mc = ManualClustering(model.spike_clusters,
+                          model.spikes_per_cluster,
                           cluster_groups=model.cluster_groups,)
     mc.attach(gui)
     gui.model = model
