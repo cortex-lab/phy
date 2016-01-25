@@ -14,7 +14,7 @@ from pytest import fixture
 
 from phy.electrode.mea import staggered_positions
 from phy.gui import create_gui
-from phy.io.array import _spikes_in_clusters, _concat
+from phy.io.array import _spikes_in_clusters, concat_per_cluster
 from phy.io.mock import (artificial_waveforms,
                          artificial_features,
                          artificial_masks,
@@ -110,12 +110,12 @@ def create_model():
         kwargs['spike_clusters'] = model.spike_clusters[kwargs['spike_ids']]
         return Bunch(**kwargs)
 
-    @_concat
+    @concat_per_cluster
     def masks(cluster_id):
         return _get_data(spike_ids=get_spike_ids(cluster_id),
                          masks=get_masks(model.n_spikes_per_cluster))
 
-    @_concat
+    @concat_per_cluster
     def features(cluster_id):
         return _get_data(spike_ids=get_spike_ids(cluster_id),
                          features=get_features(model.n_spikes_per_cluster),
@@ -139,7 +139,7 @@ def create_model():
         return 1
     model.waveform_lim = waveform_lim
 
-    @_concat
+    @concat_per_cluster
     def waveforms(cluster_id):
         w = get_waveforms(model.n_spikes_per_cluster)
         m = get_masks(model.n_spikes_per_cluster)
