@@ -394,7 +394,6 @@ class ManualClustering(object):
 
     def attach(self, gui):
         self.gui = gui
-        gui.register(self, name='manual_clustering')
 
         # Create the actions.
         self._create_actions(gui)

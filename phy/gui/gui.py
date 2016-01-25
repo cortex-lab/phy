@@ -204,27 +204,6 @@ class GUI(QMainWindow):
     def unconnect_(self, *args, **kwargs):
         self._event.unconnect(*args, **kwargs)
 
-    def register(self, obj=None, name=None, **kwargs):
-        """Register a object for a given name."""
-        for n, o in kwargs.items():
-            self.register(o, n)
-        if obj is None:
-            return lambda _: self.register(obj=_, name=name)
-        name = name or obj.__name__
-        self._registered[name] = obj
-
-    def request(self, name, *args, **kwargs):
-        """Request the result of a possibly registered object."""
-        if name in self._registered:
-            obj = self._registered[name]
-            if hasattr(obj, '__call__'):
-                return obj(*args, **kwargs)
-            else:
-                return obj
-        else:
-            logger.debug("No registered object for `%s`.", name)
-            return None
-
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
         if self._closed:
@@ -431,8 +410,7 @@ class SaveGeometryStatePlugin(IPlugin):
             gui.restore_geometry_state(gs)
 
 
-def create_gui(name=None, subtitle=None, model=None,
-               plugins=None, **state_kwargs):
+def create_gui(name=None, subtitle=None, plugins=None, **state_kwargs):
     """Create a GUI with a list of plugins.
 
     By default, the list of plugins is taken from the `c.TheGUI.plugins`
@@ -448,7 +426,6 @@ def create_gui(name=None, subtitle=None, model=None,
 
     # Make the state and model accessible.
     gui.state = state
-    gui.model = model
 
     # If no plugins are specified, load the master config and
     # get the list of user plugins to attach to the GUI.
