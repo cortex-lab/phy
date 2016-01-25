@@ -61,8 +61,6 @@ class UpdateInfo(Bunch):
             descendants=[],  # pairs of (old_cluster, new_cluster)
             metadata_changed=[],  # clusters with changed metadata
             metadata_value=None,  # new metadata value
-            old_spikes_per_cluster={},  # only for the affected clusters
-            new_spikes_per_cluster={},  # only for the affected clusters
             undo_state=None,  # returned during an undo: it contains
                               # information about the undone action
         )

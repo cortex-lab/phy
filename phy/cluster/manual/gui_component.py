@@ -117,6 +117,7 @@ class ManualClustering(object):
 
     def __init__(self,
                  spike_clusters,
+                 spikes_per_cluster,
                  cluster_groups=None,
                  shortcuts=None,
                  quality=None,
@@ -126,6 +127,9 @@ class ManualClustering(object):
         self.gui = None
         self.quality = quality
         self.similarity = similarity
+
+        assert hasattr(spikes_per_cluster, '__call__')
+        self.spikes_per_cluster = spikes_per_cluster
 
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
@@ -179,7 +183,7 @@ class ManualClustering(object):
         # Default columns.
         @self.add_column(name='n_spikes')
         def n_spikes(cluster_id):
-            return self.clustering.spike_counts[cluster_id]
+            return len(self.spikes_per_cluster(cluster_id))
 
         def skip(cluster_id):
             """Whether to skip that cluster."""

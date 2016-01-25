@@ -11,7 +11,6 @@ import numpy as np
 from phy.utils._types import _as_array, _is_array_like
 from phy.io.array import (_unique,
                           _spikes_in_clusters,
-                          _spikes_per_cluster,
                           )
 from ._utils import UpdateInfo
 from ._history import History
@@ -84,9 +83,7 @@ def _extend_assignment(spike_ids,
                                         extended_spike_clusters))
 
 
-def _assign_update_info(spike_ids,
-                        old_spike_clusters, old_spikes_per_cluster,
-                        new_spike_clusters, new_spikes_per_cluster):
+def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
     old_clusters = _unique(old_spike_clusters)
     new_clusters = _unique(new_spike_clusters)
     descendants = list(set(zip(old_spike_clusters,
@@ -96,8 +93,6 @@ def _assign_update_info(spike_ids,
                              added=list(new_clusters),
                              deleted=list(old_clusters),
                              descendants=descendants,
-                             old_spikes_per_cluster=old_spikes_per_cluster,
-                             new_spikes_per_cluster=new_spikes_per_cluster,
                              )
     return update_info
 
@@ -148,12 +143,6 @@ class Clustering(EventEmitter):
         information about the clusters.
     metadata_changed : list
         List of clusters with changed metadata (cluster group changes)
-    old_spikes_per_cluster : dict
-        Dictionary of `{cluster: spikes}` for the old clusters and
-        old clustering.
-    new_spikes_per_cluster : dict
-        Dictionary of `{cluster: spikes}` for the new clusters and
-        new clustering.
 
     """
 
@@ -164,8 +153,7 @@ class Clustering(EventEmitter):
         self._spike_clusters = _as_array(spike_clusters)
         self._n_spikes = len(self._spike_clusters)
         self._spike_ids = np.arange(self._n_spikes).astype(np.int64)
-        # Create the spikes per cluster structure.
-        self._update_all_spikes_per_cluster()
+        self._new_cluster_id = self._spike_clusters.max() + 1
         # Keep a copy of the original spike clusters assignment.
         self._spike_clusters_base = self._spike_clusters.copy()
 
@@ -177,7 +165,7 @@ class Clustering(EventEmitter):
         """
         self._undo_stack.clear()
         self._spike_clusters = self._spike_clusters_base
-        self._update_all_spikes_per_cluster()
+        self._new_cluster_id = self._spike_clusters.max() + 1
 
     @property
     def spike_clusters(self):
@@ -185,20 +173,9 @@ class Clustering(EventEmitter):
         return self._spike_clusters
 
     @property
-    def spikes_per_cluster(self):
-        """A dictionary `{cluster: spikes}`."""
-        return self._spikes_per_cluster
-
-    @property
     def cluster_ids(self):
         """Ordered list of ids of all non-empty clusters."""
-        return np.array(sorted(self._spikes_per_cluster))
-
-    @property
-    def spike_counts(self):
-        """Dictionary with the number of spikes in each cluster."""
-        return {cluster: len(self._spikes_per_cluster[cluster])
-                for cluster in self.cluster_ids}
+        return np.unique(self._spike_clusters)
 
     def new_cluster_id(self):
         """Generate a brand new cluster id.
@@ -233,13 +210,6 @@ class Clustering(EventEmitter):
     # Actions
     #--------------------------------------------------------------------------
 
-    def _update_all_spikes_per_cluster(self):
-        # Reset the new cluster id.
-        self._new_cluster_id = self._spike_clusters.max() + 1
-        # Update the spikes_per_cluster dict.
-        self._spikes_per_cluster = _spikes_per_cluster(self._spike_clusters,
-                                                       self._spike_ids)
-
     def _do_assign(self, spike_ids, new_spike_clusters):
         """Make spike-cluster assignments after the spike selection has
         been extended to full clusters."""
@@ -265,19 +235,10 @@ class Clustering(EventEmitter):
         if len(new_clusters) == 1:
             return self._do_merge(spike_ids, old_clusters, new_clusters[0])
 
-        old_spikes_per_cluster = {cluster: self._spikes_per_cluster[cluster]
-                                  for cluster in old_clusters}
-        new_spikes_per_cluster = _spikes_per_cluster(new_spike_clusters,
-                                                     spike_ids)
-        self._spikes_per_cluster.update(new_spikes_per_cluster)
-        # All old clusters are deleted.
-        for cluster in old_clusters:
-            del self._spikes_per_cluster[cluster]
-
         # We return the UpdateInfo structure.
         up = _assign_update_info(spike_ids,
-                                 old_spike_clusters, old_spikes_per_cluster,
-                                 new_spike_clusters, new_spikes_per_cluster)
+                                 old_spike_clusters,
+                                 new_spike_clusters)
 
         # We update the new cluster id (strictly increasing during a session).
         self._new_cluster_id = max(self._new_cluster_id, max(up.added) + 1)
@@ -290,21 +251,12 @@ class Clustering(EventEmitter):
 
         # Create the UpdateInfo instance here.
         descendants = [(cluster, to) for cluster in cluster_ids]
-        old_spc = {k: self._spikes_per_cluster[k] for k in cluster_ids}
-        new_spc = {to: spike_ids}
         up = UpdateInfo(description='merge',
                         spike_ids=spike_ids,
                         added=[to],
                         deleted=list(cluster_ids),
                         descendants=descendants,
-                        old_spikes_per_cluster=old_spc,
-                        new_spikes_per_cluster=new_spc,
                         )
-
-        # Update the spikes_per_cluster structure directly.
-        self._spikes_per_cluster[to] = spike_ids
-        for cluster in cluster_ids:
-            del self._spikes_per_cluster[cluster]
 
         # We update the new cluster id (strictly increasing during a session).
         self._new_cluster_id = max(max(up.added) + 1, self._new_cluster_id)

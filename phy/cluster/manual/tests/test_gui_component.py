@@ -12,6 +12,7 @@ from numpy.testing import assert_array_equal as ae
 
 from ..gui_component import (ManualClustering,
                              )
+from phy.io.array import _spikes_in_clusters
 from phy.gui import GUI
 from phy.utils import Bunch
 
@@ -37,8 +38,10 @@ def gui(qtbot):
 def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
                       quality, similarity):
     spike_clusters = np.array(cluster_ids)
+    spikes_per_cluster = lambda c: [c]
 
     mc = ManualClustering(spike_clusters,
+                          spikes_per_cluster,
                           cluster_groups=cluster_groups,
                           shortcuts={'undo': 'ctrl+z'},
                           quality=quality,
@@ -132,7 +135,8 @@ def test_manual_clustering_split(manual_clustering):
 def test_manual_clustering_split_2(gui, quality, similarity):
     spike_clusters = np.array([0, 0, 1])
 
-    mc = ManualClustering(spike_clusters)
+    mc = ManualClustering(spike_clusters,
+                          lambda c: _spikes_in_clusters(spike_clusters, [c]))
     mc.attach(gui)
 
     mc.add_column(quality, name='quality', default=True)
