@@ -424,7 +424,7 @@ def create_gui(name=None, subtitle=None, plugins=None, **state_kwargs):
     # Create the state.
     state = GUIState(gui.name, **state_kwargs)
 
-    # Make the state and model accessible.
+    # Make the state.
     gui.state = state
 
     # If no plugins are specified, load the master config and

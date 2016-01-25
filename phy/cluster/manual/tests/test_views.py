@@ -206,15 +206,18 @@ def state(tempdir):
 @fixture
 def gui(tempdir, state):
     model = create_model()
-    gui = create_gui(model=model, config_dir=tempdir, **state)
+    gui = create_gui(config_dir=tempdir, **state)
     mc = ManualClustering(model.spike_clusters,
                           cluster_groups=model.cluster_groups,)
     mc.attach(gui)
+    gui.model = model
+    gui.manual_clustering = mc
     return gui
 
 
 def _select_clusters(gui):
     gui.show()
+    mc = gui.manual_clustering
     assert mc
     mc.select([])
     mc.select([0])
