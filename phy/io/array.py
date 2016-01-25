@@ -210,7 +210,7 @@ def get_closest_clusters(cluster_id, cluster_ids, sim_func, max_n=None):
     return l[:max_n]
 
 
-def _concat(f):
+def concat_per_cluster(f):
     """Take a function accepting a single cluster, and return a function
     accepting multiple clusters."""
     @wraps(f)
