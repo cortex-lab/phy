@@ -210,13 +210,11 @@ def gui(tempdir, state):
     mc = ManualClustering(model.spike_clusters,
                           cluster_groups=model.cluster_groups,)
     mc.attach(gui)
-    gui.register(manual_clustering=mc)
     return gui
 
 
 def _select_clusters(gui):
     gui.show()
-    mc = gui.request('manual_clustering')
     assert mc
     mc.select([])
     mc.select([0])
