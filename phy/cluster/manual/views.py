@@ -572,7 +572,7 @@ def extract_spikes(traces, interval, sample_rate=None,
     a, b = spike_times.searchsorted(interval)
     st = spike_times[a:b]
     sc = spike_clusters[a:b]
-    m = all_masks[a:b, :]
+    m = all_masks[a:b]
     n = len(st)
     assert len(sc) == n
     assert m.shape[0] == n
@@ -643,12 +643,6 @@ class TraceView(ManualClusteringView):
         self._scaling = 1.
         self._origin = None
 
-        # Default data bounds.
-        # TODO: better way of finding data bounds for the traces.
-        tr = traces((0, 1))[0]
-        m, M = tr.min(), tr.max()
-        self.data_bounds = np.array([0, m, 1, M])
-
         # Initialize the view.
         super(TraceView, self).__init__(layout='stacked',
                                         origin=self.origin,
@@ -669,11 +663,14 @@ class TraceView(ManualClusteringView):
     def _plot_traces(self, traces):
         assert traces.shape[1] == self.n_channels
         t = self.interval[0] + np.arange(traces.shape[0]) * self.dt
+        t = np.tile(t, (self.n_channels, 1))
         gray = .3
-        for ch in range(self.n_channels):
-            self[ch].plot(t, traces[:, ch],
+        channels = np.arange(self.n_channels)
+        for ch in channels:
+            self[ch].plot(t[ch, :], traces[:, ch],
                           color=(gray, gray, gray, 1),
-                          data_bounds=self.data_bounds)
+                          data_bounds=self.data_bounds,
+                          )
 
     def _plot_spike(self, waveforms=None, channels=None, masks=None,
                     spike_time=None, spike_cluster=None, offset_samples=0,
@@ -732,16 +729,18 @@ class TraceView(ManualClusteringView):
         interval = self._restrict_interval(interval)
         self.interval = interval
         start, end = interval
-        # Update the data bounds on the x axis.
-        self.data_bounds[0] = start
-        self.data_bounds[2] = end
         # Set the status message.
         if change_status:
             self.set_status('Interval: {:.3f} s - {:.3f} s'.format(start, end))
 
-        # Plot the traces.
+        # Load the traces.
         all_traces = self.traces(interval)
         assert isinstance(all_traces, (tuple, list))
+        # Default data bounds.
+        m, M = all_traces[0].min(), all_traces[0].max()
+        self.data_bounds = np.array([start, m, end, M])
+
+        # Plot the traces.
         for traces in all_traces:
             self._plot_traces(traces)
 
