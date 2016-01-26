@@ -54,8 +54,7 @@ def _selected_clusters_colors(n_clusters=None):
     return colors[:n_clusters, ...] / 255.
 
 
-def _extract_wave(traces, start, mask, wave_len=None):
-    mask_threshold = .5
+def _extract_wave(traces, start, mask, wave_len=None, mask_threshold=.5):
     n_samples, n_channels = traces.shape
     assert mask.shape == (n_channels,)
     channels = np.nonzero(mask > mask_threshold)[0]
@@ -573,23 +572,25 @@ class TraceView(ManualClusteringView):
 
     def __init__(self,
                  traces=None,
+                 spikes=None,
                  sample_rate=None,
                  duration=None,
                  n_channels=None,
-                 n_samples_per_spike=None,
                  **kwargs):
 
-        # traces is a function interval => {traces, spike_times,
-        # spike_clusters, masks}
+        # traces is a function interval => [traces]
+        # spikes is a function interval => [Bunch(...)]
 
         # Sample rate.
         assert sample_rate > 0
         self.sample_rate = sample_rate
         self.dt = 1. / self.sample_rate
 
-        # Traces.
+        # Traces and spikes.
         assert hasattr(traces, '__call__')
         self.traces = traces
+        assert hasattr(spikes, '__call__')
+        self.spikes = spikes
 
         assert duration >= 0
         self.duration = duration
@@ -597,19 +598,15 @@ class TraceView(ManualClusteringView):
         assert n_channels >= 0
         self.n_channels = n_channels
 
-        # Number of samples per spike.
-        self.n_samples_per_spike = (n_samples_per_spike or
-                                    round(.002 * sample_rate))
-
-        # Can be a tuple or a scalar.
-        if not isinstance(self.n_samples_per_spike, tuple):
-            ns = self.n_samples_per_spike
-            self.n_samples_per_spike = (ns // 2, ns // 2)
-        # Now n_samples_per_spike is a tuple.
-
         # Box and probe scaling.
         self._scaling = 1.
         self._origin = None
+
+        # Default data bounds.
+        # TODO: better way of finding data bounds for the traces.
+        tr = traces((0, 1))[0]
+        m, M = tr.min(), tr.max()
+        self.data_bounds = np.array([0, m, 1, M])
 
         # Initialize the view.
         super(TraceView, self).__init__(layout='stacked',
@@ -628,59 +625,48 @@ class TraceView(ManualClusteringView):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _plot_traces(self, traces, start=None, data_bounds=None):
-        t = start + np.arange(traces.shape[0]) * self.dt
+    def _plot_traces(self, traces):
+        assert traces.shape[1] == self.n_channels
+        t = self.interval[0] + np.arange(traces.shape[0]) * self.dt
         gray = .3
         for ch in range(self.n_channels):
             self[ch].plot(t, traces[:, ch],
                           color=(gray, gray, gray, 1),
-                          data_bounds=data_bounds)
+                          data_bounds=self.data_bounds)
 
-    def _plot_spike(self, spike_idx, start=None,
-                    traces=None, spike_times=None, spike_clusters=None,
-                    masks=None, data_bounds=None):
+    def _plot_spike(self, waveforms=None, channels=None, masks=None,
+                    spike_time=None, spike_cluster=None, offset_samples=0,
+                    color=None):
 
-        sr = self.sample_rate
-        wave_len = sum(map(abs, self.n_samples_per_spike))  # in samples
-        wave_start = self.n_samples_per_spike[0] * self.dt  # in seconds
-        trace_start = round(sr * start)
+        n_samples, n_channels = waveforms.shape
+        assert len(channels) == n_channels
+        assert len(masks) == n_channels
+        sr = float(self.sample_rate)
 
-        # Find the first x of the spike, relative to the start of
-        # the interval
-        spike_start = spike_times[spike_idx] - wave_start  # in seconds
-        sample_start = round(spike_start * sr) - trace_start
-
-        # Extract the waveform from the traces.
-        w, ch = _extract_wave(traces, sample_start, masks[spike_idx], wave_len)
-
-        # w: (n_samples, n_unmasked_channels)
-        # ch: (n_unmasked_channels,) with the channel indices
-        # spike_start (abs in sec)
-        # n_samples_per_spike (bef > 0, aft > 0)
-        # color: int (cluster rel) or (rgba)
-        # data_bounds, start (of the traces subset, in seconds)
+        t0 = spike_time - offset_samples / sr
 
         # Determine the color as a function of the spike's cluster.
-        clu = spike_clusters[spike_idx]
-        if self.cluster_ids is None or clu not in self.cluster_ids:
-            sc = None
-            n_clusters = None
-        else:
-            clu_rel = self.cluster_ids.index(clu)
-            sc = clu_rel * np.ones(len(ch), dtype=np.int32)
-            n_clusters = len(self.cluster_ids)
-        color = _get_color(masks[spike_idx, ch],
-                           spike_clusters_rel=sc,
-                           n_clusters=n_clusters)
+        if color is None:
+            clu = spike_cluster
+            if self.cluster_ids is None or clu not in self.cluster_ids:
+                sc = None
+                n_clusters = None
+            else:
+                clu_rel = self.cluster_ids.index(clu)
+                sc = clu_rel * np.ones(n_channels, dtype=np.int32)
+                n_clusters = len(self.cluster_ids)
+            color = _get_color(masks,
+                               spike_clusters_rel=sc,
+                               n_clusters=n_clusters)
 
         # Generate the x coordinates of the waveform.
-        t = spike_start + self.dt * np.arange(wave_len)
-        t = np.tile(t, (len(ch), 1))  # (n_unmasked_channels, n_samples)
+        t = t0 + self.dt * np.arange(n_samples)
+        t = np.tile(t, (n_channels, 1))  # (n_unmasked_channels, n_samples)
 
         # The box index depends on the channel.
-        box_index = np.repeat(ch[:, np.newaxis], wave_len, axis=0)
-        self.plot(t, w.T, color=color, box_index=box_index,
-                  data_bounds=data_bounds)
+        box_index = np.repeat(channels[:, np.newaxis], n_samples, axis=0)
+        self.plot(t, waveforms.T, color=color, box_index=box_index,
+                  data_bounds=self.data_bounds)
 
     def _restrict_interval(self, interval):
         start, end = interval
@@ -705,42 +691,24 @@ class TraceView(ManualClusteringView):
         interval = self._restrict_interval(interval)
         self.interval = interval
         start, end = interval
-
-        # Load traces.
-        d = self.traces(interval)
-        traces = d.traces - np.mean(d.traces, axis=0)
-        spike_times = d.spike_times  # (n,)
-        spike_clusters = d.spike_clusters  # (n,)
-        masks = d.masks  # (n, n_channels)
-
-        # NOTE: once loaded, the traces do not contain the dead channels
-        # so there are `n_channels_order` channels here.
-        assert traces.shape[1] == self.n_channels
-
+        # Update the data bounds on the x axis.
+        self.data_bounds[0] = start
+        self.data_bounds[2] = end
         # Set the status message.
         if change_status:
             self.set_status('Interval: {:.3f} s - {:.3f} s'.format(start, end))
 
-        # Determine the data bounds.
-        m, M = traces.min(), traces.max()
-        data_bounds = np.array([start, m, end, M])
-
         # Plot the traces.
-        # OPTIM: avoid the loop and generate all channel traces in
-        # one pass with NumPy (but need to set a_box_index manually too).
-        self._plot_traces(traces, start=start, data_bounds=data_bounds)
+        all_traces = self.traces(interval)
+        assert isinstance(all_traces, (tuple, list))
+        for traces in all_traces:
+            self._plot_traces(traces)
 
-        # Display the spikes.
-        if spike_times is not None:
-            for i in range(len(spike_times)):
-                self._plot_spike(i,
-                                 start=start,
-                                 traces=traces,
-                                 spike_times=spike_times,
-                                 spike_clusters=spike_clusters,
-                                 masks=masks,
-                                 data_bounds=data_bounds,
-                                 )
+        # Plot the spikes.
+        spikes = self.spikes(interval)
+        assert isinstance(spikes, (tuple, list))
+        for spike in spikes:
+            self._plot_spike(**spike)
 
         self.build()
         self.update()
