@@ -651,8 +651,7 @@ class TraceView(ManualClusteringView):
         sample_start = round(spike_start * sr) - trace_start
 
         # Extract the waveform from the traces.
-        w, ch = _extract_wave(traces, sample_start,
-                              masks[spike_idx], wave_len)
+        w, ch = _extract_wave(traces, sample_start, masks[spike_idx], wave_len)
 
         # w: (n_samples, n_unmasked_channels)
         # ch: (n_unmasked_channels,) with the channel indices
