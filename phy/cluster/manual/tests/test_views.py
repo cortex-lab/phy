@@ -48,8 +48,8 @@ def create_model():
     n_samples_waveforms = 31
     n_samples_t = 20000
     n_channels = 11
-    n_clusters = 3
-    model.n_spikes_per_cluster = 51
+    n_clusters = 4
+    model.n_spikes_per_cluster = 50
     n_spikes_total = n_clusters * model.n_spikes_per_cluster
     n_features_per_channel = 4
 
@@ -57,11 +57,18 @@ def create_model():
     model.n_spikes = n_spikes_total
     model.sample_rate = 20000.
     model.duration = n_samples_t / float(model.sample_rate)
-    model.spike_times = np.linspace(0., model.duration, n_spikes_total)
+    model.spike_times = np.arange(0, model.duration, 100. / model.sample_rate)
     model.spike_clusters = np.repeat(np.arange(n_clusters),
                                      model.n_spikes_per_cluster)
+    assert len(model.spike_times) == len(model.spike_clusters)
     model.cluster_ids = np.unique(model.spike_clusters)
     model.channel_positions = staggered_positions(n_channels)
+
+    sc = model.spike_clusters
+    model.spikes_per_cluster = lambda c: _spikes_in_clusters(sc, [c])
+    model.n_features_per_channel = n_features_per_channel
+    model.n_samples_waveforms = n_samples_waveforms
+    model.cluster_groups = {c: None for c in range(n_clusters)}
 
     all_traces = artificial_traces(n_samples_t, n_channels)
     all_masks = artificial_masks(n_spikes_total, n_channels)
@@ -71,23 +78,50 @@ def create_model():
         tr = select_traces(all_traces, interval,
                            sample_rate=model.sample_rate,
                            )
+        return [tr]
+    model.traces = traces
+
+    def spikes_traces(interval):
+        # TODO OPTIM: we're loading the traces twice (model.traces and here)
+        traces = model.traces(interval)[0]
+
+        sr = model.sample_rate
+        ns = model.n_samples_waveforms
+        if not isinstance(ns, tuple):
+            ns = (ns // 2, ns // 2)
+        offset_samples = ns[0]
+        wave_len = ns[0] + ns[1]
+
         # Find spikes.
         a, b = model.spike_times.searchsorted(interval)
         st = model.spike_times[a:b]
         sc = model.spike_clusters[a:b]
         m = all_masks[a:b, :]
-        return Bunch(traces=tr,
-                     spike_times=st,
-                     spike_clusters=sc,
-                     masks=m,
-                     )
-    model.traces = traces
+        n = len(st)
+        assert len(sc) == n
+        assert m.shape[0] == n
 
-    sc = model.spike_clusters
-    model.spikes_per_cluster = lambda c: _spikes_in_clusters(sc, [c])
-    model.n_features_per_channel = n_features_per_channel
-    model.n_samples_waveforms = n_samples_waveforms
-    model.cluster_groups = {c: None for c in range(n_clusters)}
+        # Extract waveforms.
+        spikes = []
+        for i in range(n):
+            b = Bunch()
+            # Find the start of the waveform in the extracted traces.
+            sample_start = int(round((st[i] - interval[0]) * sr))
+            sample_start -= offset_samples
+            b.waveforms, b.channels = _extract_wave(traces,
+                                                    sample_start,
+                                                    m[i],
+                                                    wave_len)
+            # Masks on unmasked channels.
+            b.masks = m[i, b.channels]
+            b.spike_time = st[i]
+            b.spike_cluster = sc[i]
+            b.offset_samples = offset_samples
+
+            spikes.append(b)
+        return spikes
+
+    model.spikes_traces = spikes_traces
 
     def get_waveforms(n):
         return artificial_waveforms(n,
@@ -344,9 +378,10 @@ def test_waveform_view(qtbot, gui):
 
 def test_trace_view(qtbot, gui):
     model = gui.model
+
     v = TraceView(traces=model.traces,
+                  spikes=model.spikes_traces,
                   sample_rate=model.sample_rate,
-                  n_samples_per_spike=model.n_samples_waveforms,
                   duration=model.duration,
                   n_channels=model.n_channels,
                   )
