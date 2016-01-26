@@ -33,6 +33,7 @@ from ..views import (WaveformView,
                      ScatterView,
                      select_traces,
                      _extract_wave,
+                     extract_spikes,
                      _selected_clusters_colors,
                      _extend,
                      )
@@ -82,45 +83,15 @@ def create_model():
     model.traces = traces
 
     def spikes_traces(interval):
-        # TODO OPTIM: we're loading the traces twice (model.traces and here)
         traces = model.traces(interval)[0]
-
-        sr = model.sample_rate
-        ns = model.n_samples_waveforms
-        if not isinstance(ns, tuple):
-            ns = (ns // 2, ns // 2)
-        offset_samples = ns[0]
-        wave_len = ns[0] + ns[1]
-
-        # Find spikes.
-        a, b = model.spike_times.searchsorted(interval)
-        st = model.spike_times[a:b]
-        sc = model.spike_clusters[a:b]
-        m = all_masks[a:b, :]
-        n = len(st)
-        assert len(sc) == n
-        assert m.shape[0] == n
-
-        # Extract waveforms.
-        spikes = []
-        for i in range(n):
-            b = Bunch()
-            # Find the start of the waveform in the extracted traces.
-            sample_start = int(round((st[i] - interval[0]) * sr))
-            sample_start -= offset_samples
-            b.waveforms, b.channels = _extract_wave(traces,
-                                                    sample_start,
-                                                    m[i],
-                                                    wave_len)
-            # Masks on unmasked channels.
-            b.masks = m[i, b.channels]
-            b.spike_time = st[i]
-            b.spike_cluster = sc[i]
-            b.offset_samples = offset_samples
-
-            spikes.append(b)
-        return spikes
-
+        b = extract_spikes(traces, interval,
+                           sample_rate=model.sample_rate,
+                           spike_times=model.spike_times,
+                           spike_clusters=model.spike_clusters,
+                           all_masks=all_masks,
+                           n_samples_waveforms=model.n_samples_waveforms,
+                           )
+        return b
     model.spikes_traces = spikes_traces
 
     def get_waveforms(n):
