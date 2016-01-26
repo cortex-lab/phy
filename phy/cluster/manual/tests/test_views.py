@@ -245,16 +245,16 @@ def test_extract_wave():
     wave_len = 4
     hwl = wave_len // 2
 
-    ae(_extract_wave(traces, 0 - hwl, 0 + hwl, mask, wave_len)[0],
+    ae(_extract_wave(traces, 0 - hwl, mask, wave_len)[0],
        [[0, 0], [0, 0], [1, 2], [6, 7]])
 
-    ae(_extract_wave(traces, 1 - hwl, 1 + hwl, mask, wave_len)[0],
+    ae(_extract_wave(traces, 1 - hwl, mask, wave_len)[0],
        [[0, 0], [1, 2], [6, 7], [11, 12]])
 
-    ae(_extract_wave(traces, 2 - hwl, 2 + hwl, mask, wave_len)[0],
+    ae(_extract_wave(traces, 2 - hwl, mask, wave_len)[0],
        [[1, 2], [6, 7], [11, 12], [16, 17]])
 
-    ae(_extract_wave(traces, 5 - hwl, 5 + hwl, mask, wave_len)[0],
+    ae(_extract_wave(traces, 5 - hwl, mask, wave_len)[0],
        [[16, 17], [21, 22], [0, 0], [0, 0]])
 
 
