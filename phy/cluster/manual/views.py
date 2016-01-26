@@ -745,7 +745,7 @@ class TraceView(ManualClusteringView):
             self._plot_traces(traces)
 
         # Plot the spikes.
-        spikes = self.spikes(interval)
+        spikes = self.spikes(interval, all_traces)
         assert isinstance(spikes, (tuple, list))
         for spike in spikes:
             self._plot_spike(**spike)
