@@ -79,11 +79,11 @@ def create_model():
         tr = select_traces(all_traces, interval,
                            sample_rate=model.sample_rate,
                            )
-        return [tr]
+        return [Bunch(traces=tr)]
     model.traces = traces
 
     def spikes_traces(interval, traces):
-        traces = traces[0]
+        traces = traces[0].traces
         b = extract_spikes(traces, interval,
                            sample_rate=model.sample_rate,
                            spike_times=model.spike_times,
