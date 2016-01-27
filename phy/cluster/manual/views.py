@@ -1171,8 +1171,8 @@ class FeatureView(ManualClusteringView):
                                         spike_clusters_rel=sc)
 
                     # Add axes.
-                    self[i, j].lines(pos=[[-1, 0, +1, 0],
-                                          [0, -1, 0, +1]],
+                    self[i, j].lines(pos=[[-1., 0., +1., 0.],
+                                          [0., -1., 0., +1.]],
                                      color=(.25, .25, .25, .5))
 
             # Add the boxes.
