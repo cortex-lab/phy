@@ -78,7 +78,6 @@ class Grid(BaseInteract):
                 box_index.append([i, j])
         box_index = np.vstack(box_index)
         box_index = np.repeat(box_index, 8, axis=0)
-        box_index = box_index.astype(np.float32)
 
         boxes = LineVisual()
 
@@ -88,7 +87,7 @@ class Grid(BaseInteract):
 
         canvas.add_visual(boxes)
         boxes.set_data(pos=pos)
-        boxes.program['a_box_index'] = box_index
+        boxes.program['a_box_index'] = box_index.astype(np.float32)
 
     def update_program(self, program):
         program[self.shape_var] = self._shape
@@ -178,6 +177,7 @@ class Boxed(BaseInteract):
     def update_program(self, program):
         # Signal bounds (positions).
         box_bounds = _get_texture(self._box_bounds, NDC, self.n_boxes, [-1, 1])
+        box_bounds = box_bounds.astype(np.float32)
         # TODO OPTIM: set the texture at initialization and update the data
         program['u_box_bounds'] = Texture2D(box_bounds,
                                             internalformat='rgba32f')

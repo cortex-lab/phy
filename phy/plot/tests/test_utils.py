@@ -128,8 +128,8 @@ def test_get_boxes():
 
     positions = staggered_positions(8)
     boxes = _get_boxes(positions)
-    ae(boxes[:, 1], np.arange(.75, -1.1, -.25))
-    ae(boxes[:, 3], np.arange(1, -.76, -.25))
+    ac(boxes[:, 1], np.arange(.75, -1.1, -.25), atol=1e-6)
+    ac(boxes[:, 3], np.arange(1, -.76, -.25), atol=1e-7)
 
 
 def test_get_box_pos_size():

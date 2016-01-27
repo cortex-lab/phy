@@ -76,7 +76,7 @@ def _get_boxes(pos, size=None, margin=0, keep_aspect_ratio=True):
     """Generate non-overlapping boxes in NDC from a set of positions."""
 
     # Get x, y.
-    pos = np.asarray(pos, dtype=np.float32)
+    pos = np.asarray(pos, dtype=np.float64)
     x, y = pos.T
     x = x[:, np.newaxis]
     y = y[:, np.newaxis]
@@ -131,7 +131,7 @@ def _get_texture(arr, default, n_items, from_bounds):
         arr = np.tile(default, (n_items, 1))
     assert arr.shape == (n_items, n_cols)
     # Convert to 3D texture.
-    arr = arr[np.newaxis, ...].astype(np.float32)
+    arr = arr[np.newaxis, ...].astype(np.float64)
     assert arr.shape == (1, n_items, n_cols)
     # NOTE: we need to cast the texture to [0., 1.] (float texture).
     # This is easy as soon as we assume that the signal bounds are in
@@ -143,7 +143,6 @@ def _get_texture(arr, default, n_items, from_bounds):
     arr = (arr - m) / (M - m)
     assert np.all(arr >= 0)
     assert np.all(arr <= 1.)
-    arr = arr.astype(np.float32)
     return arr
 
 
@@ -152,7 +151,7 @@ def _get_array(val, shape, default=None):
     assert val is not None or default is not None
     if hasattr(val, '__len__') and len(val) == 0:  # pragma: no cover
         val = None
-    out = np.zeros(shape, dtype=np.float32)
+    out = np.zeros(shape, dtype=np.float64)
     # This solves `ValueError: could not broadcast input array from shape (n)
     # into shape (n, 1)`.
     if val is not None and isinstance(val, np.ndarray):
@@ -206,8 +205,8 @@ def _get_pos(x, y):
     assert x is not None
     assert y is not None
 
-    x = np.asarray(x, dtype=np.float32)
-    y = np.asarray(y, dtype=np.float32)
+    x = np.asarray(x, dtype=np.float64)
+    y = np.asarray(y, dtype=np.float64)
 
     # Validate the position.
     assert x.ndim == y.ndim == 1
@@ -220,7 +219,7 @@ def _get_index(n_items, item_size, n):
     """Prepare an index attribute for GPU uploading."""
     index = np.arange(n_items)
     index = np.repeat(index, item_size)
-    index = index.astype(np.float32)
+    index = index.astype(np.float64)
     assert index.shape == (n,)
     return index
 
