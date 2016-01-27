@@ -136,12 +136,13 @@ def test_manual_clustering_split_2(gui, quality, similarity):
     spike_clusters = np.array([0, 0, 1])
 
     mc = ManualClustering(spike_clusters,
-                          lambda c: _spikes_in_clusters(spike_clusters, [c]))
+                          lambda c: _spikes_in_clusters(spike_clusters, [c]),
+                          similarity=similarity,
+                          )
     mc.attach(gui)
 
     mc.add_column(quality, name='quality', default=True)
     mc.set_default_sort('quality', 'desc')
-    mc.set_similarity_func(similarity)
 
     mc.split([0])
     assert mc.selected == [2, 3]
