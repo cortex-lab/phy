@@ -305,6 +305,7 @@ class ManualClustering(object):
         if not len(selection):
             return
         cluster_id = selection[0]
+        cluster_ids = self.clustering.cluster_ids
         self._best = cluster_id
         logger.log(5, "Update the similarity view.")
         # This is a list of pairs (closest_cluster, similarity).
@@ -315,7 +316,7 @@ class ManualClustering(object):
         clusters_sim = OrderedDict([(int(cl), s) for (cl, s) in similarities])
         # List of similar clusters, remove non-existing ones.
         clusters = [c for c in clusters_sim.keys()
-                    if c in self.clustering.cluster_ids]
+                    if c in cluster_ids]
         # The similarity view will use these values.
         self._current_similarity_values = clusters_sim
         # Set the rows of the similarity view.
