@@ -9,7 +9,7 @@
 import numpy as np
 from pytest import raises
 
-from .._types import (Bunch, _is_integer, _is_list, _is_float,
+from .._types import (Bunch, _bunchify, _is_integer, _is_list, _is_float,
                       _as_list, _is_array_like, _as_array, _as_tuple,
                       )
 
@@ -25,6 +25,13 @@ def test_bunch():
     obj.b = 2
     assert obj['b'] == 2
     assert obj.copy() == obj
+
+
+def test_bunchify():
+    d = {'a': {'b': 0}}
+    b = _bunchify(d)
+    assert isinstance(b, Bunch)
+    assert isinstance(b['a'], Bunch)
 
 
 def test_number():

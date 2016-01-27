@@ -224,7 +224,7 @@ class SpikeDetector(Task):
         # Extract the spikes, masks, waveforms.
         if not self.ctx:
             return self.extract_spikes(traces, thresholds=thresholds)
-        else:
+        else:  # pragma: no cover  # skipped for now in the test suite
             import dask.array as da
 
             # Chunking parameters.
