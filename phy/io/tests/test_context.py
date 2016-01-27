@@ -131,11 +131,12 @@ def test_context_cache(context):
     assert len(_res) == 2
 
 
-def test_context_memmap(tempdir, context):
+def test_context_memcache(tempdir, context):
 
     _res = []
 
-    @context.cache(memcache=True)
+    @context.memcache
+    @context.cache
     def f(x):
         _res.append(x)
         return x ** 2

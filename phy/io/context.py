@@ -186,41 +186,38 @@ class Context(object):
             # Dill is necessary because we need to serialize closures.
             value.use_dill()
 
-    def cache(self, f=None, memcache=False):
+    def cache(self, f):
         """Cache a function using the context's cache directory."""
-        if f is None:
-            return lambda _: self.cache(_, memcache=memcache)
         if self._memory is None:  # pragma: no cover
             logger.debug("Joblib is not installed: skipping cacheing.")
             return f
         assert f
         disk_cached = self._memory.cache(f)
+        return disk_cached
+
+    def memcache(self, f):
+        from joblib import hash
         name = _fullname(f)
-        if memcache:
-            from joblib import hash
-            # Create the cache dictionary for the function.
-            if name not in self._memcache:
-                self._memcache[name] = {}
+        # Create the cache dictionary for the function.
+        if name not in self._memcache:
+            self._memcache[name] = {}
+        c = self._memcache[name]
 
-            c = self._memcache[name]
-
-            @wraps(f)
-            def mem_cached(*args, **kwargs):
-                """Cache the function in memory."""
-                h = hash((args, kwargs))
-                if h in c:
-                    logger.debug("Get %s(%s) from memcache.", name, str(args))
-                    # Retrieve the value from the memcache.
-                    return c[h]
-                else:
-                    logger.debug("Get %s(%s) from joblib.", name, str(args))
-                    # Call and cache the function.
-                    out = disk_cached(*args, **kwargs)
-                    c[h] = out
-                    return out
-            return mem_cached
-        else:
-            return disk_cached
+        @wraps(f)
+        def memcached(*args, **kwargs):
+            """Cache the function in memory."""
+            h = hash((args, kwargs))
+            if h in c:
+                logger.debug("Get %s(%s) from memcache.", name, str(args))
+                # Retrieve the value from the memcache.
+                return c[h]
+            else:
+                logger.debug("Get %s(%s) from joblib.", name, str(args))
+                # Call and cache the function.
+                out = f(*args, **kwargs)
+                c[h] = out
+                return out
+        return memcached
 
     def map_dask_array(self, func, da, *args, **kwargs):
         """Map a function on the chunks of a dask array, and return a
