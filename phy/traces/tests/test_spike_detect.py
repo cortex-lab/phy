@@ -158,20 +158,20 @@ def test_detect_simple(spike_detector, traces):
     # _plot(sd, traces, spike_samples, masks)
 
 
-# NOTE: skip for now to accelerate the test suite...
-def _test_detect_context(spike_detector, traces, parallel_context):  # noqa
-    sd = spike_detector
-    sd.set_context(parallel_context)
+# # NOTE: skip for now to accelerate the test suite...
+# def _test_detect_context(spike_detector, traces, parallel_context):  # noqa
+#     sd = spike_detector
+#     sd.set_context(parallel_context)
 
-    spike_samples, masks, _ = sd.detect(traces)
+#     spike_samples, masks, _ = sd.detect(traces)
 
-    n_channels = sd.n_channels
-    n_spikes = len(spike_samples)
+#     n_channels = sd.n_channels
+#     n_spikes = len(spike_samples)
 
-    assert spike_samples.dtype == np.int64
-    assert spike_samples.ndim == 1
+#     assert spike_samples.dtype == np.int64
+#     assert spike_samples.ndim == 1
 
-    assert masks.dtype == np.float32
-    assert masks.ndim == 2
-    assert masks.shape == (n_spikes, n_channels)
-    # _plot(sd, traces, spike_samples.compute(), masks.compute())
+#     assert masks.dtype == np.float32
+#     assert masks.ndim == 2
+#     assert masks.shape == (n_spikes, n_channels)
+#     # _plot(sd, traces, spike_samples.compute(), masks.compute())

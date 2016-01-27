@@ -192,7 +192,7 @@ def _in_polygon(points, polygon):
     return path.contains_points(points)
 
 
-def _get_data_lim(arr, n_spikes=None, percentile=None):
+def _get_data_lim(arr, n_spikes=None):
     n = arr.shape[0]
     k = max(1, n // n_spikes) if n_spikes else 1
     arr = np.abs(arr[::k])

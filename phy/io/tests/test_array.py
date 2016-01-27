@@ -18,6 +18,7 @@ from ..array import (_unique,
                      _spikes_in_clusters,
                      _spikes_per_cluster,
                      _flatten_per_cluster,
+                     _get_data_lim,
                      select_spikes,
                      Selector,
                      chunk_bounds,
@@ -125,6 +126,12 @@ def test_get_padded():
     ae(_get_padded(arr, 1, 2).ravel(), [2])
     ae(_get_padded(arr, 0, 5).ravel(), [1, 2, 3, 0, 0])
     ae(_get_padded(arr, -2, 3).ravel(), [0, 0, 1, 2, 3])
+
+
+def test_get_data_lim():
+    arr = np.random.rand(10, 5)
+    assert 0 < _get_data_lim(arr) < 1
+    assert 0 < _get_data_lim(arr, 2) < 1
 
 
 def test_unique():
