@@ -656,7 +656,8 @@ class TraceView(ManualClusteringView):
         self._update_boxes()
 
         # Initial interval.
-        self.set_interval((0., self.interval_duration))
+        self.interval = None
+        self.go_to(duration / 2.)
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -811,12 +812,14 @@ class TraceView(ManualClusteringView):
     @property
     def half_duration(self):
         """Half of the duration of the current interval."""
-        a, b = self.interval
-        return (b - a) * .5
+        if self.interval is not None:
+            a, b = self.interval
+            return (b - a) * .5
+        else:
+            return self.interval_duration * .5
 
     def go_to(self, time):
         """Go to a specific time (in seconds)."""
-        start, end = self.interval
         half_dur = self.half_duration
         self.set_interval((time - half_dur, time + half_dur))
 

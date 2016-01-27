@@ -361,10 +361,10 @@ def test_trace_view(qtbot, gui):
     _select_clusters(gui)
 
     ac(v.stacked.box_size, (1., .08181), atol=1e-3)
-    assert v.time == .25
-
-    v.go_to(.5)
     assert v.time == .5
+
+    v.go_to(.25)
+    assert v.time == .25
 
     v.go_to(-.5)
     assert v.time == .25
