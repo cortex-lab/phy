@@ -602,6 +602,7 @@ class TraceView(ManualClusteringView):
     interval_duration = .5  # default duration of the interval
     shift_amount = .1
     scaling_coeff = 1.1
+    default_trace_color = (.3, .3, .3, 1.)
     default_shortcuts = {
         'go_left': 'alt+left',
         'go_right': 'alt+right',
@@ -660,15 +661,15 @@ class TraceView(ManualClusteringView):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _plot_traces(self, traces):
+    def _plot_traces(self, traces=None, color=None):
         assert traces.shape[1] == self.n_channels
         t = self.interval[0] + np.arange(traces.shape[0]) * self.dt
         t = np.tile(t, (self.n_channels, 1))
-        gray = .3
+        color = color or self.default_trace_color
         channels = np.arange(self.n_channels)
         for ch in channels:
             self[ch].plot(t[ch, :], traces[:, ch],
-                          color=(gray, gray, gray, 1),
+                          color=color,
                           data_bounds=self.data_bounds,
                           )
 
@@ -737,12 +738,12 @@ class TraceView(ManualClusteringView):
         all_traces = self.traces(interval)
         assert isinstance(all_traces, (tuple, list))
         # Default data bounds.
-        m, M = all_traces[0].min(), all_traces[0].max()
+        m, M = all_traces[0].traces.min(), all_traces[0].traces.max()
         self.data_bounds = np.array([start, m, end, M])
 
         # Plot the traces.
         for traces in all_traces:
-            self._plot_traces(traces)
+            self._plot_traces(**traces)
 
         # Plot the spikes.
         spikes = self.spikes(interval, all_traces)
