@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import yield_fixture
+from pytest import yield_fixture, fixture
 import numpy as np
 from numpy.testing import assert_array_equal as ae
 
@@ -34,7 +34,7 @@ def gui(qtbot):
     qtbot.wait(5)
 
 
-@yield_fixture
+@fixture
 def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
                       quality, similarity):
     spike_clusters = np.array(cluster_ids)
@@ -49,8 +49,7 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
                           )
     mc.attach(gui)
 
-    yield mc
-    del mc
+    return mc
 
 
 #------------------------------------------------------------------------------
