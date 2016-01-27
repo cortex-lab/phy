@@ -38,7 +38,8 @@ def get_sorted_main_channels(mean_masks, unmasked_channels):
 # Wizard measures
 #------------------------------------------------------------------------------
 
-def get_max_waveform_amplitude(mean_masks, mean_waveforms):
+def get_waveform_amplitude(mean_masks, mean_waveforms):
+    """Return the amplitude of the waveforms on all channels."""
 
     assert mean_waveforms.ndim == 2
     n_samples, n_channels = mean_waveforms.shape
@@ -46,11 +47,12 @@ def get_max_waveform_amplitude(mean_masks, mean_waveforms):
     assert mean_masks.ndim == 1
     assert mean_masks.shape == (n_channels,)
 
-    mean_waveforms = mean_masks * mean_waveforms
+    mean_waveforms = mean_waveforms * mean_masks
+    assert mean_waveforms.shape == (n_samples, n_channels)
 
     # Amplitudes.
-    m, M = mean_waveforms.min(axis=1), mean_waveforms.max(axis=1)
-    return np.max(M - m)
+    m, M = mean_waveforms.min(axis=0), mean_waveforms.max(axis=0)
+    return M - m
 
 
 def get_mean_masked_features_distance(mean_features_0,

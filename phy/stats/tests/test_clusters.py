@@ -16,7 +16,7 @@ from ..clusters import (mean,
                         get_mean_probe_position,
                         get_sorted_main_channels,
                         get_mean_masked_features_distance,
-                        get_max_waveform_amplitude,
+                        get_waveform_amplitude,
                         )
 from phy.electrode.mea import staggered_positions
 from phy.io.mock import (artificial_features,
@@ -109,7 +109,7 @@ def test_sorted_main_channels(masks):
     assert np.all(np.in1d(channels, [5, 7]))
 
 
-def test_max_waveform_amplitude(masks, waveforms):
+def test_waveform_amplitude(masks, waveforms):
     waveforms *= .1
     masks *= .1
 
@@ -119,8 +119,9 @@ def test_max_waveform_amplitude(masks, waveforms):
     mean_waveforms = mean(waveforms)
     mean_masks = mean(masks)
 
-    amplitude = get_max_waveform_amplitude(mean_masks, mean_waveforms)
-    assert amplitude > 0
+    amplitude = get_waveform_amplitude(mean_masks, mean_waveforms)
+    assert np.all(amplitude >= 0)
+    assert amplitude.shape == (mean_waveforms.shape[1],)
 
 
 def test_mean_masked_features_distance(features,
