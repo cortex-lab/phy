@@ -107,9 +107,10 @@ class ScatterVisual(BaseVisual):
         data = self.validate(*args, **kwargs)
         self.data_range.from_bounds = data.data_bounds
         pos_tr = self.transforms.apply(data.pos)
-        self.program['a_position'] = np.c_[pos_tr, data.depth]
-        self.program['a_size'] = data.size
-        self.program['a_color'] = data.color
+        pos_tr = np.c_[pos_tr, data.depth]
+        self.program['a_position'] = pos_tr.astype(np.float32)
+        self.program['a_size'] = data.size.astype(np.float32)
+        self.program['a_color'] = data.color.astype(np.float32)
 
 
 def _as_list(arr):
@@ -179,7 +180,7 @@ class PlotVisual(BaseVisual):
         assert depth.shape == (n_signals, 1)
 
         data_bounds = _get_data_bounds(data_bounds, length=n_signals)
-        data_bounds = data_bounds.astype(np.float32)
+        data_bounds = data_bounds.astype(np.float64)
         assert data_bounds.shape == (n_signals, 4)
 
         return Bunch(x=x, y=y,
@@ -202,7 +203,7 @@ class PlotVisual(BaseVisual):
         y = np.concatenate(data.y) if len(data.y) else np.array([])
 
         # Generate the position array.
-        pos = np.empty((n, 2), dtype=np.float32)
+        pos = np.empty((n, 2), dtype=np.float64)
         pos[:, 0] = x.ravel()
         pos[:, 1] = y.ravel()
         assert pos.shape == (n, 2)
@@ -215,7 +216,7 @@ class PlotVisual(BaseVisual):
 
         # Generate signal index.
         signal_index = np.repeat(np.arange(n_signals), n_samples)
-        signal_index = _get_array(signal_index, (n, 1)).astype(np.float32)
+        signal_index = _get_array(signal_index, (n, 1))
         assert signal_index.shape == (n, 1)
 
         # Transform the positions.
@@ -225,10 +226,9 @@ class PlotVisual(BaseVisual):
 
         # Position and depth.
         depth = np.repeat(data.depth, n_samples, axis=0)
-        self.program['a_position'] = np.c_[pos_tr, depth]
-        self.program['a_color'] = color
-        self.program['a_signal_index'] = signal_index
-        # self.program['n_signals'] = n_signals
+        self.program['a_position'] = np.c_[pos_tr, depth].astype(np.float32)
+        self.program['a_color'] = color.astype(np.float32)
+        self.program['a_signal_index'] = signal_index.astype(np.float32)
 
 
 class HistogramVisual(BaseVisual):
@@ -248,7 +248,7 @@ class HistogramVisual(BaseVisual):
                  color=None,
                  ylim=None):
         assert hist is not None
-        hist = np.asarray(hist, np.float32)
+        hist = np.asarray(hist, np.float64)
         if hist.ndim == 1:
             hist = hist[None, :]
         assert hist.ndim == 2
@@ -295,18 +295,17 @@ class HistogramVisual(BaseVisual):
 
         # Set the transformed position.
         pos = np.vstack(_tesselate_histogram(row) for row in hist)
-        pos = pos.astype(np.float32)
         pos_tr = self.transforms.apply(pos)
         assert pos_tr.shape == (n, 2)
-        self.program['a_position'] = pos_tr
+        self.program['a_position'] = pos_tr.astype(np.float32)
 
         # Generate the hist index.
-        self.program['a_hist_index'] = _get_index(n_hists, n_bins * 6, n)
+        hist_index = _get_index(n_hists, n_bins * 6, n)
+        self.program['a_hist_index'] = hist_index.astype(np.float32)
 
         # Hist colors.
-        self.program['u_color'] = _get_texture(data.color,
-                                               self._default_color,
-                                               n_hists, [0, 1])
+        tex = _get_texture(data.color, self._default_color, n_hists, [0, 1])
+        self.program['u_color'] = tex.astype(np.float32)
         self.program['n_hists'] = n_hists
 
 
@@ -343,7 +342,6 @@ class LineVisual(BaseVisual):
         assert pos.ndim == 2
         n_lines = pos.shape[0]
         assert pos.shape[1] == 4
-        pos = pos.astype(np.float32)
 
         # Color.
         color = _get_array(color, (n_lines, 4), LineVisual._default_color)
@@ -352,7 +350,7 @@ class LineVisual(BaseVisual):
         if data_bounds is None:
             data_bounds = NDC
         data_bounds = _get_data_bounds(data_bounds, length=n_lines)
-        data_bounds = data_bounds.astype(np.float32)
+        data_bounds = data_bounds.astype(np.float64)
         assert data_bounds.shape == (n_lines, 4)
 
         return Bunch(pos=pos, color=color, data_bounds=data_bounds)
@@ -367,7 +365,7 @@ class LineVisual(BaseVisual):
         pos = data.pos
         assert pos.ndim == 2
         assert pos.shape[1] == 4
-        assert pos.dtype == np.float32
+        assert pos.dtype == np.float64
         n_lines = pos.shape[0]
         n_vertices = 2 * n_lines
         pos = pos.reshape((-1, 2))
@@ -379,8 +377,8 @@ class LineVisual(BaseVisual):
 
         # Position.
         assert pos_tr.shape == (n_vertices, 2)
-        self.program['a_position'] = pos_tr
+        self.program['a_position'] = pos_tr.astype(np.float32)
 
         # Color.
-        color = np.repeat(data.color, 2, axis=0).astype(np.float32)
-        self.program['a_color'] = color
+        color = np.repeat(data.color, 2, axis=0)
+        self.program['a_color'] = color.astype(np.float32)

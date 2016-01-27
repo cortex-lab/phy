@@ -119,8 +119,9 @@ def test_visual_2(qtbot, canvas, vertex_shader, fragment_shader):
             self.inserter.insert_vert(s, 'after_transforms')
 
         def set_data(self):
-            data = np.random.uniform(0, 20, (1000, 2)).astype(np.float32)
-            self.program['a_position'] = self.transforms.apply(data)
+            data = np.random.uniform(0, 20, (1000, 2))
+            pos = self.transforms.apply(data).astype(np.float32)
+            self.program['a_position'] = pos
 
     bounds = subplot_bounds(shape=(2, 3), index=(1, 2))
     canvas.transforms.add_on_gpu([Subplot((2, 3), (1, 2)),

@@ -139,7 +139,7 @@ class View(BaseCanvas):
             # so we can replace this with `if 'a_box_index' in visual.program`
             # after the next VisPy release.
             if 'a_box_index' in visual.program._code_variables:
-                visual.program['a_box_index'] = box_index
+                visual.program['a_box_index'] = box_index.astype(np.float32)
         self.update()
 
     @contextmanager

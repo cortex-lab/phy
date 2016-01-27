@@ -26,12 +26,11 @@ from ..transform import (_glslify, pixels_to_ndc,
 def _check_forward(transform, array, expected):
     transformed = transform.apply(array)
     if array is None or not len(array):
-        assert transformed == array
+        assert transformed is None or not len(transformed)
         return
     array = np.atleast_2d(array)
     if isinstance(array, np.ndarray):
         assert transformed.shape[1] == array.shape[1]
-        assert transformed.dtype == np.float32
     if not len(transformed):
         assert not len(expected)
     else:
@@ -39,6 +38,8 @@ def _check_forward(transform, array, expected):
 
 
 def _check(transform, array, expected):
+    array = np.array(array, dtype=np.float64)
+    expected = np.array(expected, dtype=np.float64)
     _check_forward(transform, array, expected)
     # Test the inverse transform if it is implemented.
     try:
@@ -176,7 +177,7 @@ def test_subplot_glsl():
 
 @yield_fixture
 def array():
-    yield np.array([[-1, 0], [1, 2]])
+    yield np.array([[-1., 0.], [1., 2.]])
 
 
 def test_transform_chain_empty(array):
@@ -234,14 +235,14 @@ def test_transform_chain_add():
     tc.add_on_cpu([Scale(.5)])
 
     tc_2 = TransformChain()
-    tc_2.add_on_cpu([Scale(2)])
+    tc_2.add_on_cpu([Scale(2.)])
 
-    ae((tc + tc_2).apply([3]), [[3]])
+    ae((tc + tc_2).apply([3.]), [[3.]])
 
 
 def test_transform_chain_inverse():
     tc = TransformChain()
     tc.add_on_cpu([Scale(.5), Translate((1, 0)), Scale(2)])
     tci = tc.inverse()
-    ae(tc.apply([[1, 0]]), [[3, 0]])
-    ae(tci.apply([[3, 0]]), [[1, 0]])
+    ae(tc.apply([[1., 0.]]), [[3., 0.]])
+    ae(tci.apply([[3., 0.]]), [[1., 0.]])
