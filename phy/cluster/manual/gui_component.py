@@ -7,6 +7,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+from collections import OrderedDict
 from functools import partial
 import logging
 
@@ -199,7 +200,6 @@ class ManualClustering(object):
             """Good column for color."""
             return self.cluster_meta.get('group', cluster_id) == 'good'
 
-        @self.similarity_view.add_column
         def similarity(cluster_id):
             # NOTE: there is a dictionary with the similarity to the current
             # best cluster. It is updated when the selection changes in the
@@ -207,6 +207,9 @@ class ManualClustering(object):
             # a function that returns a value for every row, but here we
             # cache all similarity view rows in self._current_similarity_values
             return self._current_similarity_values.get(cluster_id, 0)
+        if self.similarity:
+            self.similarity_view.add_column(similarity,
+                                            name=self.similarity.__name__)
 
     def _create_actions(self, gui):
         self.actions = Actions(gui,
@@ -307,17 +310,19 @@ class ManualClustering(object):
         # This is a list of pairs (closest_cluster, similarity).
         similarities = self.similarity(cluster_id)
         # We save the similarity values wrt the currently-selected clusters.
-        self._current_similarity_values = {int(cl): s
-                                           for (cl, s) in similarities}
-        clusters = list(map(int, self.clustering.cluster_ids))
+        # Note that we keep the order of the output of the self.similary()
+        # function.
+        clusters_sim = OrderedDict([(int(cl), s) for (cl, s) in similarities])
+        # List of similar clusters, remove non-existing ones.
+        clusters = [c for c in clusters_sim.keys()
+                    if c in self.clustering.cluster_ids]
         # The similarity view will use these values.
+        self._current_similarity_values = clusters_sim
+        # Set the rows of the similarity view.
+        # TODO: instead of the self._current_similarity_values hack,
+        # give the possibility to specify the values here (?).
         self.similarity_view.set_rows([c for c in clusters
-                                       if c not in selection and
-                                       c in self._current_similarity_values])
-        # The similarity name is always 'similarity' because we use
-        # a special function to retrieve the similarity values from the
-        # self._current_similarity_values dictionary.
-        self.similarity_view.sort_by('similarity', 'desc')
+                                       if c not in selection])
 
     def _emit_select(self, cluster_ids):
         """Choose spikes from the specified clusters and emit the
