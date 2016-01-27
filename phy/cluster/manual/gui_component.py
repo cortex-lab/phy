@@ -128,8 +128,8 @@ class ManualClustering(object):
                  ):
 
         self.gui = None
-        self.quality = quality
-        self.similarity = similarity
+        self.quality = quality  # function cluster => quality
+        self.similarity = similarity  # function cluster => [(cl, sim), ...]
 
         assert hasattr(spikes_per_cluster, '__call__')
         self.spikes_per_cluster = spikes_per_cluster
@@ -148,7 +148,8 @@ class ManualClustering(object):
         self._create_cluster_views()
         self._add_default_columns()
 
-        self._similarity = {}
+        self._best = None
+        self._current_similarity_values = {}
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -187,28 +188,25 @@ class ManualClustering(object):
         def n_spikes(cluster_id):
             return len(self.spikes_per_cluster(cluster_id))
 
+        @self.add_column(show=False)
         def skip(cluster_id):
             """Whether to skip that cluster."""
             return (self.cluster_meta.get('group', cluster_id)
                     in ('noise', 'mua'))
-        self.add_column(skip, show=False)
 
+        @self.add_column(show=False)
         def good(cluster_id):
             """Good column for color."""
             return self.cluster_meta.get('group', cluster_id) == 'good'
-        self.add_column(good, show=False)
 
-        self._best = None
-
+        @self.similarity_view.add_column
         def similarity(cluster_id):
             # NOTE: there is a dictionary with the similarity to the current
             # best cluster. It is updated when the selection changes in the
             # cluster view. This is a bit of a hack: the HTML table expects
             # a function that returns a value for every row, but here we
-            # cache all  similarity view rows in self._similarity for
-            #  performance reasons.
-            return self._similarity.get(cluster_id, 0)
-        self.similarity_view.add_column(similarity)
+            # cache all similarity view rows in self._current_similarity_values
+            return self._current_similarity_values.get(cluster_id, 0)
 
     def _create_actions(self, gui):
         self.actions = Actions(gui,
@@ -304,15 +302,21 @@ class ManualClustering(object):
         if not len(selection):
             return
         cluster_id = selection[0]
+        self._best = cluster_id
         logger.log(5, "Update the similarity view.")
         # This is a list of pairs (closest_cluster, similarity).
-        self._best = cluster_id
-        self._similarity = {int(cl): s
-                            for (cl, s) in self.similarity(cluster_id)}
+        similarities = self.similarity(cluster_id)
+        # We save the similarity values wrt the currently-selected clusters.
+        self._current_similarity_values = {int(cl): s
+                                           for (cl, s) in similarities}
         clusters = list(map(int, self.clustering.cluster_ids))
+        # The similarity view will use these values.
         self.similarity_view.set_rows([c for c in clusters
                                        if c not in selection and
-                                       c in self._similarity])
+                                       c in self._current_similarity_values])
+        # The similarity name is always 'similarity' because we use
+        # a special function to retrieve the similarity values from the
+        # self._current_similarity_values dictionary.
         self.similarity_view.sort_by('similarity', 'desc')
 
     def _emit_select(self, cluster_ids):
@@ -345,18 +349,6 @@ class ManualClustering(object):
         self._update_cluster_view()
         # Sort by the default sort.
         self.cluster_view.sort_by(name, sort_dir)
-
-    def set_similarity_func(self, f):
-        """Set the similarity function.
-
-        This is a function that returns an ordered list of pairs
-        `(candidate, similarity)` for any given cluster. This list can have
-        a fixed number of elements for performance reasons (keeping the best
-        20 candidates for example).
-
-        """
-        logger.debug("Set similarity function `%s`.", f.__name__)
-        self.similarity = f
 
     def on_cluster(self, up):
         """Update the cluster views after clustering actions."""
@@ -415,7 +407,6 @@ class ManualClustering(object):
         self.set_default_sort(self.quality.__name__
                               if self.quality else 'n_spikes')
         if self.similarity:
-            self.set_similarity_func(self.similarity)
             gui.add_view(self.similarity_view, name='SimilarityView')
 
         # Update the cluster views and selection when a cluster event occurs.
