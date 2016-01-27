@@ -149,7 +149,6 @@ class ManualClustering(object):
         self._add_default_columns()
 
         self._similarity = {}
-        self.similarity_func = None
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -299,7 +298,7 @@ class ManualClustering(object):
     def _update_similarity_view(self):
         """Update the similarity view with matches for the specified
         clusters."""
-        if not self.similarity_func:
+        if not self.similarity:
             return
         selection = self.cluster_view.selected
         if not len(selection):
@@ -309,10 +308,11 @@ class ManualClustering(object):
         # This is a list of pairs (closest_cluster, similarity).
         self._best = cluster_id
         self._similarity = {int(cl): s
-                            for (cl, s) in self.similarity_func(cluster_id)}
-        self.similarity_view.set_rows([int(c)
-                                       for c in self.clustering.cluster_ids
-                                       if c not in selection])
+                            for (cl, s) in self.similarity(cluster_id)}
+        clusters = list(map(int, self.clustering.cluster_ids))
+        self.similarity_view.set_rows([c for c in clusters
+                                       if c not in selection and
+                                       c in self._similarity])
         self.similarity_view.sort_by('similarity', 'desc')
 
     def _emit_select(self, cluster_ids):
@@ -356,7 +356,7 @@ class ManualClustering(object):
 
         """
         logger.debug("Set similarity function `%s`.", f.__name__)
-        self.similarity_func = f
+        self.similarity = f
 
     def on_cluster(self, up):
         """Update the cluster views after clustering actions."""
