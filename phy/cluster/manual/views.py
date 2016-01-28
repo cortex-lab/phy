@@ -1425,7 +1425,7 @@ class ScatterView(ManualClusteringView):
         if spike_clusters is not None:
             assert spike_clusters.shape == (n_spikes,)
             sc = _index_of(spike_clusters, cluster_ids)
-        else:  # pragma: no cover
+        else:  # pragma: no cover
             sc = None
 
         # Plot the amplitudes.
