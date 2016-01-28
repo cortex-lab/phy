@@ -1411,18 +1411,22 @@ class ScatterView(ManualClusteringView):
 
         # Get the spike times and amplitudes
         data = self.coords(cluster_ids)
+        if data is None:
+            return
         spike_ids = data.spike_ids
-        spike_clusters = data.spike_clusters
         x = data.x
         y = data.y
         n_spikes = len(spike_ids)
         assert n_spikes > 0
-        assert spike_clusters.shape == (n_spikes,)
         assert x.shape == (n_spikes,)
         assert y.shape == (n_spikes,)
 
-        # Get the spike clusters.
-        sc = _index_of(spike_clusters, cluster_ids)
+        spike_clusters = data.spike_clusters
+        if spike_clusters is not None:
+            assert spike_clusters.shape == (n_spikes,)
+            sc = _index_of(spike_clusters, cluster_ids)
+        else:  # pragma: no cover
+            sc = None
 
         # Plot the amplitudes.
         with self.building():
@@ -1430,7 +1434,8 @@ class ScatterView(ManualClusteringView):
             # Get the color of the markers.
             color = _get_color(m, spike_clusters_rel=sc, n_clusters=n_clusters)
             assert color.shape == (n_spikes, 4)
-            ms = (self._default_marker_size if sc is not None else 1.)
+            # ms = (self._default_marker_size if sc is not None else 1.)
+            ms = self._default_marker_size
 
             self.scatter(x=x,
                          y=y,
