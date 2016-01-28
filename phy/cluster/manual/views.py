@@ -115,6 +115,8 @@ def _extend(channels, n=None):
     channels = list(channels)
     if n is None:
         return channels
+    if not len(channels):
+        channels = [0]
     if len(channels) < n:
         channels.extend([channels[-1]] * (n - len(channels)))
     channels = channels[:n]
@@ -278,7 +280,7 @@ class WaveformView(ManualClusteringView):
         self._overlap = False
         self.do_zoom_on_channels = True
 
-        self.best_channels = best_channels or (lambda clusters, n=None: [])
+        self.best_channels = best_channels or (lambda clusters: [])
 
         # Channel positions and n_channels.
         assert channel_positions is not None
@@ -948,7 +950,7 @@ class FeatureView(ManualClusteringView):
         """
         self._scaling = 1.
 
-        self.best_channels = best_channels or (lambda clusters, n=None: [])
+        self.best_channels = best_channels or (lambda clusters=None: [])
 
         assert features
         self.features = features
@@ -1067,8 +1069,8 @@ class FeatureView(ManualClusteringView):
     def _get_channel_dims(self, cluster_ids):
         """Select the channels to show by default."""
         n = self.n_cols - 1
-        channels = self.best_channels(cluster_ids, 2 * n)
-        channels = (channels if channels
+        channels = self.best_channels(cluster_ids)
+        channels = (channels if channels is not None
                     else list(range(self.n_channels)))
         channels = _extend(channels, 2 * n)
         assert len(channels) == 2 * n
@@ -1119,9 +1121,10 @@ class FeatureView(ManualClusteringView):
 
         # Get the background features.
         data_bg = self.background_features
-        spike_ids_bg = data_bg.spike_ids
-        features_bg = data_bg.features
-        masks_bg = data_bg.masks
+        if data_bg is not None:
+            spike_ids_bg = data_bg.spike_ids
+            features_bg = data_bg.features
+            masks_bg = data_bg.masks
 
         # Select the dimensions.
         # Choose the channels automatically unless fixed_channels is set.
@@ -1156,15 +1159,18 @@ class FeatureView(ManualClusteringView):
                     x = self._get_feature(x_dim[i, j], spike_ids, f)
                     y = self._get_feature(y_dim[i, j], spike_ids, f)
 
-                    # Retrieve the x and y values for the background spikes.
-                    x_bg = self._get_feature(x_dim[i, j], spike_ids_bg,
-                                             features_bg)
-                    y_bg = self._get_feature(y_dim[i, j], spike_ids_bg,
-                                             features_bg)
+                    if data_bg is not None:
+                        # Retrieve the x and y values for the background
+                        # spikes.
+                        x_bg = self._get_feature(x_dim[i, j], spike_ids_bg,
+                                                 features_bg)
+                        y_bg = self._get_feature(y_dim[i, j], spike_ids_bg,
+                                                 features_bg)
 
-                    # Background features.
-                    self._plot_features(i, j, x_dim, y_dim, x_bg, y_bg,
-                                        masks=masks_bg)
+                        # Background features.
+                        self._plot_features(i, j, x_dim, y_dim, x_bg, y_bg,
+                                            masks=masks_bg)
+
                     # Cluster features.
                     self._plot_features(i, j, x_dim, y_dim, x, y,
                                         masks=masks,
