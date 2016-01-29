@@ -208,12 +208,10 @@ class Context(object):
             """Cache the function in memory."""
             h = hash((args, kwargs))
             if h in c:
-                logger.debug("Get %s(%s) from memcache.", name, str(args))
-                # Retrieve the value from the memcache.
+                # logger.debug("Get %s(%s) from memcache.", name, str(args))
                 return c[h]
             else:
-                logger.debug("Get %s(%s) from joblib.", name, str(args))
-                # Call and cache the function.
+                # logger.debug("Compute %s(%s).", name, str(args))
                 out = f(*args, **kwargs)
                 c[h] = out
                 return out
