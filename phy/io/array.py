@@ -214,12 +214,12 @@ def concat_per_cluster(f):
     """Take a function accepting a single cluster, and return a function
     accepting multiple clusters."""
     @wraps(f)
-    def wrapped(cluster_ids):
+    def wrapped(self, cluster_ids):
         # Single cluster.
         if not hasattr(cluster_ids, '__len__'):
-            return f(cluster_ids)
+            return f(self, cluster_ids)
         # Concatenate the result of multiple clusters.
-        return Bunch(_accumulate([f(c) for c in cluster_ids]))
+        return Bunch(_accumulate([f(self, c) for c in cluster_ids]))
     return wrapped
 
 
