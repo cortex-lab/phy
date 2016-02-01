@@ -41,6 +41,8 @@ class Controller(object):
         self._init_selector()
         self._init_context()
 
+        self.n_spikes = len(self.spike_times)
+
     # Internal methods
     # -------------------------------------------------------------------------
 
@@ -61,9 +63,10 @@ class Controller(object):
         self.sample_rate = None  # float
         self.duration = None  # float
 
-        self.all_masks = None
-        self.all_waveforms = None
-        self.all_features = None
+        self.all_masks = None  # (n_spikes, n_channels)
+        self.all_waveforms = None  # (n_spikes, n_samples, n_channels)
+        self.all_features = None  # (n_spikes, n_channels, n_features)
+        self.all_traces = None  # (n_samples_traces, n_channels)
 
     def _init_selector(self):
         self.selector = Selector(self.spikes_per_cluster)
