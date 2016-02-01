@@ -154,7 +154,7 @@ def test_waveform_view(qtbot, gui):
 
     assert _clicked == [(0, 1, 2)]
 
-    qtbot.stop()
+    # qtbot.stop()
     gui.close()
 
 
