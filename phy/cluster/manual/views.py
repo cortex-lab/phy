@@ -556,6 +556,7 @@ def select_traces(traces, interval, sample_rate=None):
     i, j = round(sample_rate * start), round(sample_rate * end)
     i, j = int(i), int(j)
     traces = traces[i:j, :]
+    traces = traces - np.mean(traces, axis=0)
     return traces
 
 
