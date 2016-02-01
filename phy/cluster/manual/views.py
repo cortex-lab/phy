@@ -115,7 +115,7 @@ def _extend(channels, n=None):
     channels = list(channels)
     if n is None:
         return channels
-    if not len(channels):
+    if not len(channels):  # pragma: no cover
         channels = [0]
     if len(channels) < n:
         channels.extend([channels[-1]] * (n - len(channels)))
@@ -339,7 +339,7 @@ class WaveformView(ManualClusteringView):
         alpha = data.alpha
         spike_ids = data.spike_ids
         spike_clusters = data.spike_clusters
-        w = data.waveforms
+        w = data.data
         masks = data.masks
         n_spikes = len(spike_ids)
         assert w.shape == (n_spikes, self.n_samples, self.n_channels)
@@ -1111,7 +1111,7 @@ class FeatureView(ManualClusteringView):
         data = self.features(cluster_ids)
         spike_ids = data.spike_ids
         spike_clusters = data.spike_clusters
-        f = data.features
+        f = data.data
         masks = data.masks
         assert f.ndim == 3
         assert masks.ndim == 2
@@ -1124,7 +1124,7 @@ class FeatureView(ManualClusteringView):
         data_bg = self.background_features
         if data_bg is not None:
             spike_ids_bg = data_bg.spike_ids
-            features_bg = data_bg.features
+            features_bg = data_bg.data
             masks_bg = data_bg.masks
 
         # Select the dimensions.

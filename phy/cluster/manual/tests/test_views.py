@@ -12,182 +12,14 @@ from numpy.testing import assert_allclose as ac
 from vispy.util import keys
 from pytest import fixture
 
-from phy.electrode.mea import staggered_positions
 from phy.gui import create_gui
-from phy.io.array import _spikes_in_clusters, concat_per_cluster
-from phy.io.mock import (artificial_waveforms,
-                         artificial_features,
-                         artificial_masks,
-                         artificial_traces,
-                         )
-from phy.stats.clusters import (mean,
-                                get_unmasked_channels,
-                                get_sorted_main_channels,
-                                )
 from phy.utils import Bunch
-from ..gui_component import ManualClustering
-from ..views import (WaveformView,
-                     FeatureView,
-                     CorrelogramView,
-                     TraceView,
-                     ScatterView,
-                     select_traces,
+from .conftest import MockController
+from ..views import (ScatterView,
                      _extract_wave,
-                     extract_spikes,
                      _selected_clusters_colors,
                      _extend,
                      )
-
-
-#------------------------------------------------------------------------------
-# Fixtures
-#------------------------------------------------------------------------------
-
-def create_model():
-    model = Bunch()
-
-    n_samples_waveforms = 31
-    n_samples_t = 20000
-    n_channels = 11
-    n_clusters = 4
-    model.n_spikes_per_cluster = 50
-    n_spikes_total = n_clusters * model.n_spikes_per_cluster
-    n_features_per_channel = 4
-
-    model.n_channels = n_channels
-    model.n_spikes = n_spikes_total
-    model.sample_rate = 20000.
-    model.duration = n_samples_t / float(model.sample_rate)
-    model.spike_times = np.arange(0, model.duration, 100. / model.sample_rate)
-    model.spike_clusters = np.repeat(np.arange(n_clusters),
-                                     model.n_spikes_per_cluster)
-    assert len(model.spike_times) == len(model.spike_clusters)
-    model.cluster_ids = np.unique(model.spike_clusters)
-    model.channel_positions = staggered_positions(n_channels)
-
-    sc = model.spike_clusters
-    model.spikes_per_cluster = lambda c: _spikes_in_clusters(sc, [c])
-    model.n_features_per_channel = n_features_per_channel
-    model.n_samples_waveforms = n_samples_waveforms
-    model.cluster_groups = {c: None for c in range(n_clusters)}
-
-    all_traces = artificial_traces(n_samples_t, n_channels)
-    all_masks = artificial_masks(n_spikes_total, n_channels)
-
-    def traces(interval):
-        """Load traces and spikes in an interval."""
-        tr = select_traces(all_traces, interval,
-                           sample_rate=model.sample_rate,
-                           )
-        return [Bunch(traces=tr)]
-    model.traces = traces
-
-    def spikes_traces(interval, traces):
-        traces = traces[0].traces
-        b = extract_spikes(traces, interval,
-                           sample_rate=model.sample_rate,
-                           spike_times=model.spike_times,
-                           spike_clusters=model.spike_clusters,
-                           all_masks=all_masks,
-                           n_samples_waveforms=model.n_samples_waveforms,
-                           )
-        return b
-    model.spikes_traces = spikes_traces
-
-    def get_waveforms(n):
-        return artificial_waveforms(n,
-                                    model.n_samples_waveforms,
-                                    model.n_channels)
-
-    def get_masks(n):
-        return artificial_masks(n, model.n_channels)
-
-    def get_features(n):
-        return artificial_features(n,
-                                   model.n_channels,
-                                   model.n_features_per_channel)
-
-    def get_spike_ids(cluster_id):
-        n = model.n_spikes_per_cluster
-        return np.arange(n) + n * cluster_id
-
-    def _get_data(**kwargs):
-        kwargs['spike_clusters'] = model.spike_clusters[kwargs['spike_ids']]
-        return Bunch(**kwargs)
-
-    @concat_per_cluster
-    def masks(cluster_id):
-        return _get_data(spike_ids=get_spike_ids(cluster_id),
-                         masks=get_masks(model.n_spikes_per_cluster))
-
-    @concat_per_cluster
-    def features(cluster_id):
-        return _get_data(spike_ids=get_spike_ids(cluster_id),
-                         features=get_features(model.n_spikes_per_cluster),
-                         masks=get_masks(model.n_spikes_per_cluster))
-    model.features = features
-
-    def feature_lim():
-        """Return the max of a subset of the feature amplitudes."""
-        return 1
-    model.feature_lim = feature_lim
-
-    def background_features():
-        f = get_features(model.n_spikes)
-        m = all_masks
-        return _get_data(spike_ids=np.arange(model.n_spikes),
-                         features=f, masks=m)
-    model.background_features = background_features
-
-    def waveform_lim():
-        """Return the max of a subset of the waveform amplitudes."""
-        return 1
-    model.waveform_lim = waveform_lim
-
-    @concat_per_cluster
-    def waveforms(cluster_id):
-        w = get_waveforms(model.n_spikes_per_cluster)
-        m = get_masks(model.n_spikes_per_cluster)
-        return _get_data(spike_ids=get_spike_ids(cluster_id),
-                         waveforms=w,
-                         masks=m,
-                         )
-    model.waveforms = waveforms
-
-    # Mean quantities.
-    # -------------------------------------------------------------------------
-
-    def mean_masks(cluster_id):
-        # We access [1] because we return spike_ids, masks.
-        return mean(masks(cluster_id).masks)
-    model.mean_masks = mean_masks
-
-    def mean_features(cluster_id):
-        return mean(features(cluster_id).features)
-    model.mean_features = mean_features
-
-    def mean_waveforms(cluster_id):
-        return mean(waveforms(cluster_id).waveforms)
-    model.mean_waveforms = mean_waveforms
-
-    # Statistics.
-    # -------------------------------------------------------------------------
-
-    def best_channels(cluster_id):
-        mm = mean_masks(cluster_id)
-        uch = get_unmasked_channels(mm)
-        return get_sorted_main_channels(mm, uch)
-    model.best_channels = best_channels
-
-    def best_channels_multiple(cluster_ids):
-        bc = []
-        for cluster in cluster_ids:
-            channels = best_channels(cluster)
-            bc.extend([ch for ch in channels if ch not in bc])
-        return bc
-    model.best_channels_multiple = best_channels_multiple
-
-    return model
 
 
 #------------------------------------------------------------------------------
@@ -202,29 +34,20 @@ def state(tempdir):
     state.TraceView0 = Bunch(scaling=1.)
     state.FeatureView0 = Bunch(feature_scaling=.5)
     state.CorrelogramView0 = Bunch(uniform_normalization=True)
-
-    # quality and similarity functions for the cluster view.
-    state.ClusterView = Bunch(quality='max_waveform_amplitude',
-                              similarity='most_similar_clusters')
     return state
 
 
 @fixture
 def gui(tempdir, state):
-    model = create_model()
     gui = create_gui(config_dir=tempdir, **state)
-    mc = ManualClustering(model.spike_clusters,
-                          model.spikes_per_cluster,
-                          cluster_groups=model.cluster_groups,)
-    mc.attach(gui)
-    gui.model = model
-    gui.manual_clustering = mc
+    gui.controller = MockController(tempdir)
+    gui.controller.set_manual_clustering(gui)
     return gui
 
 
 def _select_clusters(gui):
     gui.show()
-    mc = gui.manual_clustering
+    mc = gui.controller.manual_clustering
     assert mc
     mc.select([])
     mc.select([0])
@@ -275,15 +98,7 @@ def test_selected_clusters_colors():
 #------------------------------------------------------------------------------
 
 def test_waveform_view(qtbot, gui):
-    model = gui.model
-    v = WaveformView(waveforms=model.waveforms,
-                     channel_positions=model.channel_positions,
-                     n_samples=model.n_samples_waveforms,
-                     waveform_lim=model.waveform_lim(),
-                     best_channels=model.best_channels_multiple,
-                     )
-    v.attach(gui)
-
+    v = gui.controller.add_waveform_view(gui)
     _select_clusters(gui)
 
     ac(v.boxed.box_size, (.1818, .0909), atol=1e-2)
@@ -339,7 +154,7 @@ def test_waveform_view(qtbot, gui):
 
     assert _clicked == [(0, 1, 2)]
 
-    # qtbot.stop()
+    qtbot.stop()
     gui.close()
 
 
@@ -348,15 +163,7 @@ def test_waveform_view(qtbot, gui):
 #------------------------------------------------------------------------------
 
 def test_trace_view(qtbot, gui):
-    model = gui.model
-
-    v = TraceView(traces=model.traces,
-                  spikes=model.spikes_traces,
-                  sample_rate=model.sample_rate,
-                  duration=model.duration,
-                  n_channels=model.n_channels,
-                  )
-    v.attach(gui)
+    v = gui.controller.add_trace_view(gui)
 
     _select_clusters(gui)
 
@@ -384,7 +191,7 @@ def test_trace_view(qtbot, gui):
     ac(v.interval, (.25, .75))
 
     # Widen the max interval.
-    v.set_interval((0, model.duration))
+    v.set_interval((0, gui.controller.duration))
     v.widen()
 
     # Change channel scaling.
@@ -405,22 +212,12 @@ def test_trace_view(qtbot, gui):
 #------------------------------------------------------------------------------
 
 def test_feature_view(qtbot, gui):
-    model = gui.model
-    bfm = model.background_features()
-    v = FeatureView(features=model.features,
-                    background_features=bfm,
-                    spike_times=model.spike_times,
-                    n_channels=model.n_channels,
-                    n_features_per_channel=model.n_features_per_channel,
-                    feature_lim=model.feature_lim(),
-                    )
-    v.attach(gui)
-
+    v = gui.controller.add_feature_view(gui)
     _select_clusters(gui)
 
     assert v.feature_scaling == .5
     v.add_attribute('sine',
-                    np.sin(np.linspace(-10., 10., model.n_spikes)))
+                    np.sin(np.linspace(-10., 10., gui.controller.n_spikes)))
 
     v.increase()
     v.decrease()
@@ -460,12 +257,7 @@ def test_scatter_view(qtbot, gui):
 #------------------------------------------------------------------------------
 
 def test_correlogram_view(qtbot, gui):
-    model = gui.model
-    v = CorrelogramView(spike_times=model.spike_times,
-                        spike_clusters=model.spike_clusters,
-                        sample_rate=model.sample_rate,
-                        )
-    v.attach(gui)
+    v = gui.controller.add_correlogram_view(gui)
     _select_clusters(gui)
 
     v.toggle_normalization()
