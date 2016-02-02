@@ -192,7 +192,7 @@ class Context(object):
             logger.debug("Joblib is not installed: skipping cacheing.")
             return f
         assert f
-        disk_cached = self._memory.cache(f)
+        disk_cached = self._memory.cache(f, ignore=['self'])
         return disk_cached
 
     def memcache(self, f):
