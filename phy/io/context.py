@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 from functools import wraps
+import inspect
 import logging
 import os
 import os.path as op
@@ -192,7 +193,12 @@ class Context(object):
             logger.debug("Joblib is not installed: skipping cacheing.")
             return f
         assert f
-        disk_cached = self._memory.cache(f, ignore=['self'])
+        # NOTE: discard self in instance methods.
+        if 'self' in inspect.getargspec(f).args:
+            ignore = ['self']
+        else:
+            ignore = None
+        disk_cached = self._memory.cache(f, ignore=ignore)
         return disk_cached
 
     def memcache(self, f):
