@@ -211,9 +211,9 @@ class Controller(object):
                     for cluster_id in cluster_ids]
         return list(set(channels))
 
-    # def get_channels_by_amplitude(self, cluster_ids):
-    #     wa = self.get_waveforms_amplitude(cluster_ids[0])
-    #     return np.argsort(wa)[::-1].tolist()
+    def get_channels_by_amplitude(self, cluster_ids):
+        wa = self.get_waveforms_amplitude(cluster_ids[0])
+        return np.argsort(wa)[::-1].tolist()
 
     def get_best_channel_position(self, cluster_id):
         cha = self.get_best_channel(cluster_id)
@@ -276,7 +276,7 @@ class Controller(object):
                         n_channels=self.n_channels,
                         n_features_per_channel=self.n_features_per_channel,
                         feature_lim=self.get_feature_lim(),
-                        best_channels=self.get_best_channels,
+                        best_channels=self.get_channels_by_amplitude,
                         )
         v.attach(gui)
         return v
