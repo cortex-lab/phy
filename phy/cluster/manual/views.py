@@ -875,34 +875,41 @@ class TraceView(ManualClusteringView):
 # Feature view
 # -----------------------------------------------------------------------------
 
-def _dimensions_matrix(x_channels, y_channels, n_cols=None,
-                       top_left_attribute=None):
-    """Dimensions matrix."""
-    # time, attr      time,    (x, 0)     time,    (y, 0)     time, (z, 0)
-    # time, (x', 0)   (x', 0), (x, 0)     (x', 1), (y, 0)     (x', 2), (z, 0)
-    # time, (y', 0)   (y', 0), (x, 1)     (y', 1), (y, 1)     (y', 2), (z, 1)
-    # time, (z', 0)   (z', 0), (x, 2)     (z', 1), (y, 2)     (z', 2), (z, 2)
+def _dimensions_matrix(channels, n_cols=None, top_left_attribute=None):
+    """Dimension matrix."""
+    # time, attr     time,   (x, 0)     time,   (y, 0)     time,   (z, 0)
+    # time, (x, 1)   (x, 0), (x, 1)     (x, 0), (y, 0)     (x, 0), (z, 0)
+    # time, (y, 1)   (x, 1), (y, 1)     (y, 0), (y, 1)     (y, 0), (z, 0)
+    # time, (z, 1)   (x, 1), (z, 1)     (y, 1), (z, 1)     (z, 0), (z, 1)
 
     assert n_cols > 0
-    assert len(x_channels) >= n_cols - 1
-    assert len(y_channels) >= n_cols - 1
+    assert len(channels) >= n_cols - 1
 
     y_dim = {}
     x_dim = {}
     x_dim[0, 0] = 'time'
     y_dim[0, 0] = top_left_attribute or 'time'
 
-    # Time in first column and first row.
     for i in range(1, n_cols):
+        # First line.
         x_dim[0, i] = 'time'
-        y_dim[0, i] = (x_channels[i - 1], 0)
+        y_dim[0, i] = (channels[i - 1], 0)
+        # First column.
         x_dim[i, 0] = 'time'
-        y_dim[i, 0] = (y_channels[i - 1], 0)
+        y_dim[i, 0] = (channels[i - 1], 1)
+        # Diagonal.
+        x_dim[i, i] = (channels[i - 1], 0)
+        y_dim[i, i] = (channels[i - 1], 1)
 
     for i in range(1, n_cols):
-        for j in range(1, n_cols):
-            x_dim[i, j] = (x_channels[i - 1], j - 1)
-            y_dim[i, j] = (y_channels[j - 1], i - 1)
+        for j in range(i + 1, n_cols):
+            assert j > i
+            # Above the diagonal.
+            x_dim[i, j] = (channels[i - 1], 0)
+            y_dim[i, j] = (channels[j - 1], 0)
+            # Below the diagonal.
+            x_dim[j, i] = (channels[i - 1], 1)
+            y_dim[j, i] = (channels[j - 1], 1)
 
     return x_dim, y_dim
 
@@ -984,8 +991,7 @@ class FeatureView(ManualClusteringView):
         self.fixed_channels = False
 
         # Channels to show.
-        self.x_channels = None
-        self.y_channels = None
+        self.channels = None
 
         # Attributes: extra features. This is a dictionary
         # {name: (array, data_bounds)}
@@ -1006,6 +1012,7 @@ class FeatureView(ManualClusteringView):
         else:
             assert len(dim) == 2
             ch, fet = dim
+            assert fet < f.shape[2]
             return f[:, ch, fet] * self._scaling
 
     def _get_dim_bounds_single(self, dim):
@@ -1073,9 +1080,9 @@ class FeatureView(ManualClusteringView):
         channels = self.best_channels(cluster_ids)
         channels = (channels if channels is not None
                     else list(range(self.n_channels)))
-        channels = _extend(channels, 2 * n)
-        assert len(channels) == 2 * n
-        return channels[:n], channels[n:]
+        channels = _extend(channels, n)
+        assert len(channels) == n
+        return channels
 
     # Public methods
     # -------------------------------------------------------------------------
@@ -1097,7 +1104,7 @@ class FeatureView(ManualClusteringView):
 
     def clear_channels(self):
         """Reset the dimensions."""
-        self.x_channels = self.y_channels = None
+        self.channels = None
         self.on_select()
 
     def on_select(self, cluster_ids=None):
@@ -1129,21 +1136,17 @@ class FeatureView(ManualClusteringView):
 
         # Select the dimensions.
         # Choose the channels automatically unless fixed_channels is set.
-        if (not self.fixed_channels or self.x_channels is None or
-                self.y_channels is None):
-            self.x_channels, self.y_channels = self._get_channel_dims(
-                cluster_ids)
+        if (not self.fixed_channels or self.channels is None):
+            self.channels = self._get_channel_dims(cluster_ids)
         tla = self.top_left_attribute
-        assert self.x_channels
-        assert self.y_channels
-        x_dim, y_dim = _dimensions_matrix(self.x_channels, self.y_channels,
+        assert self.channels
+        x_dim, y_dim = _dimensions_matrix(self.channels,
                                           n_cols=self.n_cols,
                                           top_left_attribute=tla)
 
         # Set the status message.
-        ch_i = ', '.join(map(str, self.x_channels))
-        ch_j = ', '.join(map(str, self.y_channels))
-        self.set_status('Channels: {} - {}'.format(ch_i, ch_j))
+        ch = ', '.join(map(str, self.channels))
+        self.set_status('Channels: {}'.format(ch))
 
         # Set a non-time attribute as y coordinate in the top-left subplot.
         attrs = sorted(self.attributes)
@@ -1204,9 +1207,9 @@ class FeatureView(ManualClusteringView):
         if key is None or not (1 <= key <= (self.n_cols - 1)):
             return
         # Get the axis from the pressed button (1, 2, etc.)
-        axis = 'x' if button == 1 else 'y'
+        # axis = 'x' if button == 1 else 'y'
         # Get the existing channels.
-        channels = self.x_channels if axis == 'x' else self.y_channels
+        channels = self.channels
         if channels is None:
             return
         assert len(channels) == self.n_cols - 1
