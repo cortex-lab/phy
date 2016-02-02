@@ -143,7 +143,7 @@ class Controller(object):
         return mean(self.get_waveforms(cluster_id).data)
 
     def get_waveform_lim(self):
-        return 1
+        return self._data_lim(self.all_waveforms, 100)  # TODO
 
     def get_waveforms_amplitude(self, cluster_id):
         mm = self.get_mean_masks(cluster_id)
@@ -176,7 +176,7 @@ class Controller(object):
         return mean(self.get_features(cluster_id).data)
 
     def get_feature_lim(self):
-        return 1
+        return self._data_lim(self.all_features, 100)  # TODO
 
     # Traces
     # -------------------------------------------------------------------------
