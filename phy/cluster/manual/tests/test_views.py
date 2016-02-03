@@ -140,7 +140,6 @@ def test_waveform_view(qtbot, gui):
     ac(v.box_scaling, (a * 2, b))
 
     v.zoom_on_channels([0, 2, 4])
-    v.next_data()
 
     # Simulate channel selection.
     _clicked = []
@@ -154,6 +153,8 @@ def test_waveform_view(qtbot, gui):
     v.events.key_release(key=keys.Key('2'))
 
     assert _clicked == [(0, 1, 2)]
+
+    v.next_data()
 
     # qtbot.stop()
     gui.close()
