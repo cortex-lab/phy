@@ -134,13 +134,13 @@ class Controller(object):
     # Is cached in _init_context()
     @concat_per_cluster
     def get_waveforms(self, cluster_id):
-        return self._select_data(cluster_id,
-                                 self.all_waveforms,
-                                 100,  # TODO
-                                 )
+        return [self._select_data(cluster_id,
+                                  self.all_waveforms,
+                                  100,  # TODO
+                                  )]
 
     def get_mean_waveforms(self, cluster_id):
-        return mean(self.get_waveforms(cluster_id).data)
+        return mean(self.get_waveforms(cluster_id)[0].data)
 
     def get_waveform_lim(self):
         return self._data_lim(self.all_waveforms, 100)  # TODO
@@ -252,7 +252,6 @@ class Controller(object):
     def add_waveform_view(self, gui):
         v = WaveformView(waveforms=self.get_waveforms,
                          channel_positions=self.channel_positions,
-                         n_samples=self.n_samples_waveforms,
                          waveform_lim=self.get_waveform_lim(),
                          best_channels=self.get_best_channels,
                          )

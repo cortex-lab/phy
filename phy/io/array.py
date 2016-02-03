@@ -219,7 +219,15 @@ def concat_per_cluster(f):
         if not hasattr(cluster_ids, '__len__'):
             return f(self, cluster_ids)
         # Concatenate the result of multiple clusters.
-        return Bunch(_accumulate([f(self, c) for c in cluster_ids]))
+        l = [f(self, c) for c in cluster_ids]
+        # Handle the case where every function returns a list of Bunch.
+        if l and isinstance(l[0], list):
+            # We assume that all items have the same length.
+            n = len(l[0])
+            return [Bunch(_accumulate([item[i] for item in l]))
+                    for i in range(n)]
+        else:
+            return Bunch(_accumulate(l))
     return wrapped
 
 
@@ -502,8 +510,7 @@ class Accumulator(object):
 
     def __getitem__(self, name):
         """Concatenate all arrays with a given name."""
-        return np.concatenate(self._data[name], axis=0). \
-            astype(self._data[name][0].dtype)
+        return np.concatenate(self._data[name], axis=0)
 
 
 def _accumulate(data_list, no_concat=()):
