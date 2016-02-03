@@ -587,10 +587,11 @@ def extract_spikes(traces, interval, sample_rate=None,
         # Find the start of the waveform in the extracted traces.
         sample_start = int(round((st[i] - interval[0]) * sr))
         sample_start -= offset_samples
-        b.waveforms, b.channels = _extract_wave(traces,
-                                                sample_start,
-                                                m[i],
-                                                wave_len)
+        o = _extract_wave(traces, sample_start, m[i], wave_len)
+        if o is None:  # pragma: no cover
+            logger.debug("Unable to extract spike %d.", i)
+            continue
+        b.waveforms, b.channels = o
         # Masks on unmasked channels.
         b.masks = m[i, b.channels]
         b.spike_time = st[i]
