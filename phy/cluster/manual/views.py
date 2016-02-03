@@ -255,6 +255,7 @@ class WaveformView(ManualClusteringView):
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
         'toggle_zoom_on_channels': 'z',
+        'next_data': 'w',
 
         # Box scaling.
         'widen': 'ctrl+right',
@@ -272,13 +273,13 @@ class WaveformView(ManualClusteringView):
     def __init__(self,
                  waveforms=None,
                  channel_positions=None,
-                 n_samples=None,
                  waveform_lim=None,
                  best_channels=None,
                  **kwargs):
         self._key_pressed = None
         self._overlap = False
         self.do_zoom_on_channels = True
+        self.data_index = 0
 
         self.best_channels = best_channels or (lambda clusters: [])
 
@@ -286,12 +287,6 @@ class WaveformView(ManualClusteringView):
         assert channel_positions is not None
         self.channel_positions = np.asarray(channel_positions)
         self.n_channels = self.channel_positions.shape[0]
-
-        # Number of samples per waveform.
-        n_samples = (sum(map(abs, n_samples)) if isinstance(n_samples, tuple)
-                     else n_samples)
-        assert n_samples > 0
-        self.n_samples = n_samples
 
         # Initialize the view.
         box_bounds = _get_boxes(channel_positions)
@@ -322,11 +317,6 @@ class WaveformView(ManualClusteringView):
         assert channel_positions.shape == (self.n_channels, 2)
         self.channel_positions = channel_positions
 
-    def _get_data(self, cluster_ids):
-        d = self.waveforms(cluster_ids)
-        d.alpha = .5
-        return d
-
     def on_select(self, cluster_ids=None):
         super(WaveformView, self).on_select(cluster_ids)
         cluster_ids = self.cluster_ids
@@ -335,14 +325,18 @@ class WaveformView(ManualClusteringView):
             return
 
         # Load the waveform subset.
-        data = self._get_data(cluster_ids)
-        alpha = data.alpha
+        data = self.waveforms(cluster_ids)
+        # Take one element in the list.
+        data = data[self.data_index % len(data)]
+        alpha = data.get('alpha', .5)
         spike_ids = data.spike_ids
         spike_clusters = data.spike_clusters
         w = data.data
         masks = data.masks
         n_spikes = len(spike_ids)
-        assert w.shape == (n_spikes, self.n_samples, self.n_channels)
+        assert w.ndim == 3
+        n_samples = w.shape[1]
+        assert w.shape == (n_spikes, n_samples, self.n_channels)
         assert masks.shape == (n_spikes, self.n_channels)
 
         # Relative spike clusters.
@@ -350,7 +344,7 @@ class WaveformView(ManualClusteringView):
         assert spike_clusters_rel.shape == (n_spikes,)
 
         # Fetch the waveforms.
-        t = _get_linear_x(n_spikes, self.n_samples)
+        t = _get_linear_x(n_spikes, n_samples)
         # Overlap.
         if not self.overlap:
             t = t + 2.5 * (spike_clusters_rel[:, np.newaxis] -
@@ -407,6 +401,8 @@ class WaveformView(ManualClusteringView):
         self.actions.add(self.shrink_horizontally)
         self.actions.add(self.extend_vertically)
         self.actions.add(self.shrink_vertically)
+
+        self.actions.add(self.next_data)
 
         # We forward the event from VisPy to the phy GUI.
         @self.connect
@@ -510,6 +506,11 @@ class WaveformView(ManualClusteringView):
 
     # Navigation
     # -------------------------------------------------------------------------
+
+    def next_data(self):
+        """Show the next set of waveforms (if any)."""
+        self.data_index += 1
+        self.on_select()
 
     def toggle_zoom_on_channels(self):
         self.do_zoom_on_channels = not self.do_zoom_on_channels
