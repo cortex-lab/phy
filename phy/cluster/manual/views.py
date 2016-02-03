@@ -273,7 +273,7 @@ class WaveformView(ManualClusteringView):
     def __init__(self,
                  waveforms=None,
                  channel_positions=None,
-                 waveform_lim=None,
+                 waveform_lims=None,
                  best_channels=None,
                  **kwargs):
         self._key_pressed = None
@@ -310,8 +310,8 @@ class WaveformView(ManualClusteringView):
         self.waveforms = waveforms
 
         # Waveform normalization.
-        assert waveform_lim > 0
-        self.data_bounds = [-1, -waveform_lim, +1, +waveform_lim]
+        assert len(waveform_lims) == 2
+        self.data_bounds = [-1, waveform_lims[0], +1, waveform_lims[1]]
 
         # Channel positions.
         assert channel_positions.shape == (self.n_channels, 2)
@@ -1098,8 +1098,8 @@ class FeatureView(ManualClusteringView):
 
         """
         assert values.shape == (self.n_spikes,)
-        lim = values.min(), values.max()
-        self.attributes[name] = (values, lim)
+        lims = values.min(), values.max()
+        self.attributes[name] = (values, lims)
         # Register the attribute to use in the top-left subplot.
         if top_left:
             self.top_left_attribute = name

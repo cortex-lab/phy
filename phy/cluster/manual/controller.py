@@ -85,7 +85,7 @@ class Controller(object):
         self.get_mean_features = ctx.memcache(self.get_mean_features)
         self.get_mean_waveforms = ctx.memcache(self.get_mean_waveforms)
 
-        self.get_waveform_lim = ctx.cache(self.get_waveform_lim)
+        self.get_waveform_lims = ctx.cache(self.get_waveform_lims)
         self.get_feature_lim = ctx.cache(self.get_feature_lim)
 
         self.get_waveform_amplitude = ctx.memcache(ctx.cache(
@@ -142,8 +142,21 @@ class Controller(object):
     def get_mean_waveforms(self, cluster_id):
         return mean(self.get_waveforms(cluster_id)[0].data)
 
-    def get_waveform_lim(self):
-        return self._data_lim(self.all_waveforms, 100)  # TODO
+    def get_waveform_lims(self):
+        n_spikes = 100  # TODO
+        arr = self.all_waveforms
+        n = arr.shape[0]
+        k = max(1, n // n_spikes)
+        # Extract waveforms.
+        arr = arr[::k]
+        # Take the corresponding masks.
+        masks = self.all_masks[::k].copy()
+        arr = arr * masks[:, np.newaxis, :]
+        # NOTE: on some datasets, there are a few outliers that screw up
+        # the normalization. These parameters should be customizable.
+        m = np.percentile(arr, .05)
+        M = np.percentile(arr, 99.95)
+        return m, M
 
     def get_waveforms_amplitude(self, cluster_id):
         mm = self.get_mean_masks(cluster_id)
@@ -252,7 +265,7 @@ class Controller(object):
     def add_waveform_view(self, gui):
         v = WaveformView(waveforms=self.get_waveforms,
                          channel_positions=self.channel_positions,
-                         waveform_lim=self.get_waveform_lim(),
+                         waveform_lims=self.get_waveform_lims(),
                          best_channels=self.get_best_channels,
                          )
         v.attach(gui)

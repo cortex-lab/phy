@@ -510,7 +510,11 @@ class Accumulator(object):
 
     def __getitem__(self, name):
         """Concatenate all arrays with a given name."""
-        return np.concatenate(self._data[name], axis=0)
+        l = self._data[name]
+        # Process scalars: only return the first one and don't concatenate.
+        if len(l) and not hasattr(l[0], '__len__'):
+            return l[0]
+        return np.concatenate(l, axis=0)
 
 
 def _accumulate(data_list, no_concat=()):
