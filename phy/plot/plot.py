@@ -80,6 +80,7 @@ class View(BaseCanvas):
         """Reset the view."""
         self._items = OrderedDict()
         self.visuals = []
+        self.update()
 
     def _add_item(self, cls, *args, **kwargs):
         """Add a plot item."""

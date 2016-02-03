@@ -241,7 +241,7 @@ def test_scatter_view(qtbot, gui):
                                            spike_ids=np.arange(n),
                                            spike_clusters=np.ones(n).
                                            astype(np.int32) * c[0],
-                                           ),
+                                           ) if 2 not in c else None,
                     data_bounds=[-3, -3, 3, 3],
                     )
     v.attach(gui)

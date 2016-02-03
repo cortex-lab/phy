@@ -1416,6 +1416,7 @@ class ScatterView(ManualClusteringView):
         # Get the spike times and amplitudes
         data = self.coords(cluster_ids)
         if data is None:
+            self.clear()
             return
         spike_ids = data.spike_ids
         spike_clusters = data.spike_clusters
