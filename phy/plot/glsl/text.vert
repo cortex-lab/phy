@@ -3,6 +3,8 @@ attribute vec2 a_position;  // text position
 attribute float a_glyph_index;  // glyph index in the text
 attribute float a_quad_index;  // quad index in the glyph
 attribute float a_char_index;  // index of the glyph in the texture
+attribute float a_lengths;
+attribute float a_anchor;
 
 uniform vec2 u_glyph_size;  // (w, h)
 
@@ -24,6 +26,7 @@ void main() {
     // Position of the glyph.
     gl_Position = transform(a_position);
     gl_Position.xy = gl_Position.xy + vec2(a_glyph_index * w + dx * w, dy * h);
+    gl_Position.x += (a_anchor - .5) * a_lengths * w;
 
     // Index in the texture
     float i = floor(a_char_index / cols);
