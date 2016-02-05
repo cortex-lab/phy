@@ -10,7 +10,7 @@
 import numpy as np
 
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
-                       LineVisual,
+                       LineVisual, TextVisual,
                        )
 
 
@@ -175,3 +175,22 @@ def test_line_0(qtbot, canvas_pz):
     color = np.random.uniform(.5, .9, (n, 4))
     _test_visual(qtbot, canvas_pz, LineVisual(),
                  pos=pos, color=color, data_bounds=[-1, -1, 1, 1])
+
+
+#------------------------------------------------------------------------------
+# Test text visual
+#------------------------------------------------------------------------------
+
+def test_text_empty(qtbot, canvas):
+    pos = np.zeros((0, 2))
+    _test_visual(qtbot, canvas, TextVisual(), pos=pos, text=[])
+
+
+def test_text_0(qtbot, canvas_pz):
+    text = '0123456789'
+    text = [text[:n] for n in range(1, 11)]
+
+    pos = np.c_[np.linspace(-.5, .5, 10), np.linspace(-.5, .5, 10)]
+
+    _test_visual(qtbot, canvas_pz, TextVisual(),
+                 pos=pos, text=text)
