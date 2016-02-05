@@ -7,6 +7,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import gzip
 import os.path as op
 
 import numpy as np
@@ -313,6 +314,11 @@ class HistogramVisual(BaseVisual):
 
 
 class TextVisual(BaseVisual):
+    """Display strings at multiple locations.
+
+    Currently, the color, font family, and font size is not customizable.
+
+    """
     _default_color = (1., 1., 1., 1.)
 
     def __init__(self, color=None):
@@ -323,12 +329,13 @@ class TextVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
         # Load the font.
-        # TODO: compress the npy file with gzip
         curdir = op.realpath(op.dirname(__file__))
         font_name = 'SourceCodePro-Regular'
         font_size = 48
-        fn = '%s-%d.npy' % (font_name, font_size)
-        self._tex = np.load(op.join(curdir, 'static', fn))
+        # The font texture is gzipped.
+        fn = '%s-%d.npy.gz' % (font_name, font_size)
+        with gzip.open(op.join(curdir, 'static', fn), 'rb') as f:
+            self._tex = np.load(f)
         with open(op.join(curdir, 'static', 'chars.txt'), 'r') as f:
             self._chars = f.read()
 
