@@ -346,7 +346,8 @@ class TextVisual(BaseVisual):
         return [self._chars.index(char) for char in s]
 
     @staticmethod
-    def validate(pos=None, text=None, color=None, data_bounds=None):
+    def validate(pos=None, text=None, anchor=None,
+                 data_bounds=None):
         assert pos is not None
         pos = np.atleast_2d(pos)
         assert pos.ndim == 2
@@ -357,6 +358,11 @@ class TextVisual(BaseVisual):
             text = [text]
         assert len(text) == n_text
 
+        anchor = anchor if anchor is not None else 0.
+        if not hasattr(anchor, '__len__'):
+            anchor = [anchor] * n_text
+        assert len(anchor) == n_text
+
         # By default, we assume that the coordinates are in NDC.
         if data_bounds is None:
             data_bounds = NDC
@@ -365,7 +371,8 @@ class TextVisual(BaseVisual):
         data_bounds = data_bounds.astype(np.float64)
         assert data_bounds.shape == (n_text, 4)
 
-        return Bunch(pos=pos, text=text, data_bounds=data_bounds)
+        return Bunch(pos=pos, text=text, anchor=anchor,
+                     data_bounds=data_bounds)
 
     @staticmethod
     def vertex_count(pos=None, **kwargs):
@@ -400,16 +407,25 @@ class TextVisual(BaseVisual):
             a_glyph_index = np.concatenate([np.arange(n) for n in lengths])
         a_quad_index = np.arange(6)
 
+        a_anchor = data.anchor
+
         a_position = np.repeat(a_position, 6, axis=0)
         a_glyph_index = np.repeat(a_glyph_index, 6)
         a_quad_index = np.tile(a_quad_index, n_glyphs)
         a_char_index = np.repeat(a_char_index, 6)
 
+        a_anchor = np.repeat(a_anchor, lengths)
+        a_anchor = np.repeat(a_anchor, 6)
+
+        a_lengths = np.repeat(lengths, lengths)
+        a_lengths = np.repeat(a_lengths, 6)
+
         n_vertices = n_glyphs * 6
         assert a_position.shape == (n_vertices, 2)
         assert a_glyph_index.shape == (n_vertices,)
         assert a_quad_index.shape == (n_vertices,)
-        assert a_char_index.shape == (n_vertices,)
+        assert a_anchor.shape == (n_vertices,)
+        assert a_lengths.shape == (n_vertices,)
 
         # Transform the positions.
         data_bounds = data.data_bounds
@@ -424,6 +440,8 @@ class TextVisual(BaseVisual):
         self.program['a_glyph_index'] = a_glyph_index.astype(np.float32)
         self.program['a_quad_index'] = a_quad_index.astype(np.float32)
         self.program['a_char_index'] = a_char_index.astype(np.float32)
+        self.program['a_anchor'] = a_anchor.astype(np.float32)
+        self.program['a_lengths'] = a_lengths.astype(np.float32)
 
         self.program['u_glyph_size'] = glyph_size
         # TODO: color
