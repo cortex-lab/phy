@@ -4,6 +4,7 @@ include README.md
 recursive-include tests *
 recursive-include phy/electrode/probes *.prb
 recursive-include phy/plot/glsl *.vert *.frag *.glsl
+recursive-include phy/plot/static *.npy *.gz *.txt
 recursive-include phy/cluster/manual/static *.html *.css
 recursive-include phy/gui/static *.html *.css *.js
 recursive-exclude * __pycache__
