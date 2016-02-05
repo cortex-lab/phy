@@ -7,7 +7,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import os.path as op
+
 import numpy as np
+from vispy.gloo import Texture2D
 
 from .base import BaseVisual
 from .transform import Range, NDC
@@ -310,14 +313,110 @@ class HistogramVisual(BaseVisual):
 
 
 class TextVisual(BaseVisual):
-    def __init__(self):  # pragma: no cover
-        # TODO: this text visual
+    _default_color = (1., 1., 1., 1.)
+
+    def __init__(self, color=None):
         super(TextVisual, self).__init__()
         self.set_shader('text')
-        self.set_primitive_type('points')
+        self.set_primitive_type('triangles')
+        self.data_range = Range(NDC)
+        self.transforms.add_on_cpu(self.data_range)
 
-    def set_data(self):
-        pass
+        # Load the font.
+        # TODO: compress the npy file with gzip
+        curdir = op.realpath(op.dirname(__file__))
+        font_name = 'SourceCodePro-Regular'
+        font_size = 48
+        fn = '%s-%d.npy' % (font_name, font_size)
+        self._tex = np.load(op.join(curdir, 'static', fn))
+        with open(op.join(curdir, 'static', 'chars.txt'), 'r') as f:
+            self._chars = f.read()
+
+    def _get_glyph_indices(self, s):
+        return [self._chars.index(char) for char in s]
+
+    @staticmethod
+    def validate(pos=None, text=None, color=None, data_bounds=None):
+        assert pos is not None
+        pos = np.atleast_2d(pos)
+        assert pos.ndim == 2
+        assert pos.shape[1] == 2
+        n_text = pos.shape[0]
+
+        assert len(text) == n_text
+
+        # Color.
+        color = color if color is not None else TextVisual._default_color
+        assert len(color) == 4
+
+        # By default, we assume that the coordinates are in NDC.
+        if data_bounds is None:
+            data_bounds = NDC
+        data_bounds = _get_data_bounds(data_bounds)
+        data_bounds = data_bounds.astype(np.float64)
+        assert data_bounds.shape == (1, 4)
+
+        return Bunch(pos=pos, text=text, color=color, data_bounds=data_bounds)
+
+    @staticmethod
+    def vertex_count(pos=None, **kwargs):
+        """Take the output of validate() as input."""
+        # Total number of glyphs * 6 (6 vertices per glyph).
+        return sum(map(len, kwargs['text'])) * 6
+
+    def set_data(self, *args, **kwargs):
+        data = self.validate(*args, **kwargs)
+        pos = data.pos
+        assert pos.ndim == 2
+        assert pos.shape[1] == 2
+        assert pos.dtype == np.float64
+
+        # TODO: color
+
+        # Concatenate all strings.
+        text = data.text
+        lengths = list(map(len, text))
+        text = ''.join(text)
+        a_char_index = self._get_glyph_indices(text)
+        n_glyphs = len(a_char_index)
+
+        tex = self._tex
+        glyph_height = tex.shape[0] // 6
+        glyph_width = tex.shape[1] // 16
+        glyph_size = (glyph_width, glyph_height)
+
+        # Position of all glyphs.
+        a_position = np.repeat(pos, lengths, axis=0)
+        if not len(lengths):
+            a_glyph_index = np.zeros((0,))
+        else:
+            a_glyph_index = np.concatenate([np.arange(n) for n in lengths])
+        a_quad_index = np.arange(6)
+
+        a_position = np.repeat(a_position, 6, axis=0)
+        a_glyph_index = np.repeat(a_glyph_index, 6)
+        a_quad_index = np.tile(a_quad_index, n_glyphs)
+        a_char_index = np.repeat(a_char_index, 6)
+
+        n_vertices = n_glyphs * 6
+        assert a_position.shape == (n_vertices, 2)
+        assert a_glyph_index.shape == (n_vertices,)
+        assert a_quad_index.shape == (n_vertices,)
+        assert a_char_index.shape == (n_vertices,)
+
+        # Transform the positions.
+        self.data_range.from_bounds = data.data_bounds
+        pos_tr = self.transforms.apply(a_position)
+        assert pos_tr.shape == (n_vertices, 2)
+
+        self.program['a_position'] = a_position.astype(np.float32)
+        self.program['a_glyph_index'] = a_glyph_index.astype(np.float32)
+        self.program['a_quad_index'] = a_quad_index.astype(np.float32)
+        self.program['a_char_index'] = a_char_index.astype(np.float32)
+
+        self.program['u_glyph_size'] = glyph_size
+
+        self.program['u_tex'] = Texture2D(tex[::-1, :])
 
 
 class LineVisual(BaseVisual):
