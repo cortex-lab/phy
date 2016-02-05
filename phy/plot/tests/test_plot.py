@@ -118,6 +118,15 @@ def test_grid_lines(qtbot):
     _show(qtbot, view)
 
 
+def test_grid_text(qtbot):
+    view = View(layout='grid', shape=(2, 1))
+
+    view[0, 0].text(pos=(0, 0), text='Hello world!')
+    view[1, 0].text(pos=[[-.5, 0], [+.5, 0]], text=['|', ':)'])
+
+    _show(qtbot, view)
+
+
 def test_grid_complete(qtbot):
     view = View(layout='grid', shape=(2, 2))
     t = _get_linear_x(1, 1000).ravel()

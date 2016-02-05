@@ -18,7 +18,8 @@ from .interact import Grid, Boxed, Stacked
 from .panzoom import PanZoom
 from .transform import NDC
 from .utils import _get_array
-from .visuals import ScatterVisual, PlotVisual, HistogramVisual, LineVisual
+from .visuals import (ScatterVisual, PlotVisual, HistogramVisual,
+                      LineVisual, TextVisual)
 
 
 #------------------------------------------------------------------------------
@@ -112,6 +113,10 @@ class View(BaseCanvas):
     def hist(self, *args, **kwargs):
         """Add some histograms."""
         return self._add_item(HistogramVisual, *args, **kwargs)
+
+    def text(self, *args, **kwargs):
+        """Add text."""
+        return self._add_item(TextVisual, *args, **kwargs)
 
     def lines(self, *args, **kwargs):
         """Add some lines."""

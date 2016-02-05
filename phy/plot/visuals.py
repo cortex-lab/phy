@@ -11,6 +11,7 @@ import gzip
 import os.path as op
 
 import numpy as np
+from six import string_types
 from vispy.gloo import Texture2D
 
 from .base import BaseVisual
@@ -338,6 +339,8 @@ class TextVisual(BaseVisual):
             self._tex = np.load(f)
         with open(op.join(curdir, 'static', 'chars.txt'), 'r') as f:
             self._chars = f.read()
+        self.color = color if color is not None else self._default_color
+        assert len(self.color) == 4
 
     def _get_glyph_indices(self, s):
         return [self._chars.index(char) for char in s]
@@ -350,20 +353,19 @@ class TextVisual(BaseVisual):
         assert pos.shape[1] == 2
         n_text = pos.shape[0]
 
+        if isinstance(text, string_types):
+            text = [text]
         assert len(text) == n_text
-
-        # Color.
-        color = color if color is not None else TextVisual._default_color
-        assert len(color) == 4
 
         # By default, we assume that the coordinates are in NDC.
         if data_bounds is None:
             data_bounds = NDC
-        data_bounds = _get_data_bounds(data_bounds)
+        data_bounds = _get_data_bounds(data_bounds, pos)
+        assert data_bounds.shape[0] == n_text
         data_bounds = data_bounds.astype(np.float64)
-        assert data_bounds.shape == (1, 4)
+        assert data_bounds.shape == (n_text, 4)
 
-        return Bunch(pos=pos, text=text, color=color, data_bounds=data_bounds)
+        return Bunch(pos=pos, text=text, data_bounds=data_bounds)
 
     @staticmethod
     def vertex_count(pos=None, **kwargs):
@@ -377,8 +379,6 @@ class TextVisual(BaseVisual):
         assert pos.ndim == 2
         assert pos.shape[1] == 2
         assert pos.dtype == np.float64
-
-        # TODO: color
 
         # Concatenate all strings.
         text = data.text
@@ -412,7 +412,11 @@ class TextVisual(BaseVisual):
         assert a_char_index.shape == (n_vertices,)
 
         # Transform the positions.
-        self.data_range.from_bounds = data.data_bounds
+        data_bounds = data.data_bounds
+        data_bounds = np.repeat(data_bounds, lengths, axis=0)
+        data_bounds = np.repeat(data_bounds, 6, axis=0)
+        assert data_bounds.shape == (n_vertices, 4)
+        self.data_range.from_bounds = data_bounds
         pos_tr = self.transforms.apply(a_position)
         assert pos_tr.shape == (n_vertices, 2)
 
@@ -422,6 +426,7 @@ class TextVisual(BaseVisual):
         self.program['a_char_index'] = a_char_index.astype(np.float32)
 
         self.program['u_glyph_size'] = glyph_size
+        # TODO: color
 
         self.program['u_tex'] = Texture2D(tex[::-1, :])
 
