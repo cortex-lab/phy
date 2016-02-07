@@ -15,7 +15,7 @@ from six import string_types
 from vispy.gloo import Texture2D
 
 from .base import BaseVisual
-from .transform import Range, NDC, pixels_to_ndc
+from .transform import Range, NDC
 from .utils import (_tesselate_histogram,
                     _get_texture,
                     _get_array,
