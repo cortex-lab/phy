@@ -450,11 +450,7 @@ class TextVisual(BaseVisual):
 
 
 class LineVisual(BaseVisual):
-    """Lines.
-
-    Note: currently, all lines shall have the same color.
-
-    """
+    """Lines."""
     _default_color = (.3, .3, .3, 1.)
 
     def __init__(self, color=None):
@@ -511,3 +507,54 @@ class LineVisual(BaseVisual):
         # Color.
         color = np.repeat(data.color, 2, axis=0)
         self.program['a_color'] = color.astype(np.float32)
+
+
+class PolygonVisual(BaseVisual):
+    """Polygon."""
+    _default_color = (1., 1., 1., 1.)
+
+    def __init__(self):
+        super(PolygonVisual, self).__init__()
+        self.set_shader('simple')
+        self.set_primitive_type('line_loop')
+        self.data_range = Range(NDC)
+        self.transforms.add_on_cpu(self.data_range)
+
+    @staticmethod
+    def validate(pos=None, data_bounds=None):
+        assert pos is not None
+        pos = np.atleast_2d(pos)
+        assert pos.ndim == 2
+        assert pos.shape[1] == 2
+
+        # By default, we assume that the coordinates are in NDC.
+        if data_bounds is None:
+            data_bounds = NDC
+        data_bounds = _get_data_bounds(data_bounds)
+        data_bounds = data_bounds.astype(np.float64)
+        assert data_bounds.shape == (1, 4)
+
+        return Bunch(pos=pos, data_bounds=data_bounds)
+
+    @staticmethod
+    def vertex_count(pos=None, **kwargs):
+        """Take the output of validate() as input."""
+        return pos.shape[0]
+
+    def set_data(self, *args, **kwargs):
+        data = self.validate(*args, **kwargs)
+        pos = data.pos
+        assert pos.ndim == 2
+        assert pos.shape[1] == 2
+        assert pos.dtype == np.float64
+        n_vertices = pos.shape[0]
+
+        # Transform the positions.
+        self.data_range.from_bounds = data.data_bounds
+        pos_tr = self.transforms.apply(pos)
+
+        # Position.
+        assert pos_tr.shape == (n_vertices, 2)
+        self.program['a_position'] = pos_tr.astype(np.float32)
+
+        self.program['u_color'] = self._default_color

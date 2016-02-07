@@ -10,7 +10,7 @@
 import numpy as np
 
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
-                       LineVisual, TextVisual,
+                       LineVisual, PolygonVisual, TextVisual,
                        )
 
 
@@ -175,6 +175,23 @@ def test_line_0(qtbot, canvas_pz):
     color = np.random.uniform(.5, .9, (n, 4))
     _test_visual(qtbot, canvas_pz, LineVisual(),
                  pos=pos, color=color, data_bounds=[-1, -1, 1, 1])
+
+
+#------------------------------------------------------------------------------
+# Test polygon visual
+#------------------------------------------------------------------------------
+
+def test_polygon_empty(qtbot, canvas):
+    pos = np.zeros((0, 2))
+    _test_visual(qtbot, canvas, PolygonVisual(), pos=pos)
+
+
+def test_polygon_0(qtbot, canvas_pz):
+    n = 9
+    x = .5 * np.cos(np.linspace(0., 2 * np.pi, n))
+    y = .5 * np.sin(np.linspace(0., 2 * np.pi, n))
+    pos = np.c_[x, y]
+    _test_visual(qtbot, canvas_pz, PolygonVisual(), pos=pos)
 
 
 #------------------------------------------------------------------------------
