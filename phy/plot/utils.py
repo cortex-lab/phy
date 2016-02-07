@@ -13,6 +13,7 @@ import os.path as op
 import numpy as np
 from vispy import gloo
 
+
 from .transform import Range, NDC
 
 logger = logging.getLogger(__name__)
@@ -226,6 +227,49 @@ def _get_index(n_items, item_size, n):
 
 def _get_linear_x(n_signals, n_samples):
     return np.tile(np.linspace(-1., 1., n_samples), (n_signals, 1))
+
+
+#------------------------------------------------------------------------------
+# Interactive tools
+#------------------------------------------------------------------------------
+
+class Lasso(object):
+    def __init__(self):
+        self._points = []
+
+    def add(self, pos):
+        self._points.append(pos)
+
+    @property
+    def points(self):
+        l = self._points
+        # Close the loop.
+        if l:
+            l.append(l[0])
+        out = np.array(l)
+        assert out.ndim == 2
+        assert out.shape[1] == 2
+        return l
+
+    def clear(self):
+        self._points = []
+
+    def in_polygon(self, points):
+        pass
+
+    def attach(self, canvas):
+        canvas.connect(self.on_mouse_press)
+        from .visuals import PolygonVisual
+        self.visual = PolygonVisual()
+        canvas.add_visual(self.visual)
+
+    def on_mouse_press(self, e):
+        if 'Control' in e.modifiers:
+            if e.button == 1:
+                self.add(e.pos)
+            else:
+                self.clear()
+            self.visual.set_data(pos=self.points)
 
 
 #------------------------------------------------------------------------------
