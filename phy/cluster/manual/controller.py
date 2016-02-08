@@ -76,9 +76,10 @@ class Controller(object):
         self.context = Context(self.cache_dir)
         ctx = self.context
 
-        self.get_masks = ctx.cache(self.get_masks)
-        self.get_features = ctx.cache(self.get_features)
-        self.get_waveforms = ctx.cache(self.get_waveforms)
+        self.get_masks = concat_per_cluster(ctx.cache(self.get_masks))
+        self.get_features = concat_per_cluster(ctx.cache(self.get_features))
+        self.get_waveforms = concat_per_cluster(ctx.cache(self.get_waveforms))
+
         self.get_background_features = ctx.cache(self.get_background_features)
 
         self.get_mean_masks = ctx.memcache(self.get_mean_masks)
@@ -118,7 +119,6 @@ class Controller(object):
     # -------------------------------------------------------------------------
 
     # Is cached in _init_context()
-    @concat_per_cluster
     def get_masks(self, cluster_id):
         return self._select_data(cluster_id,
                                  self.all_masks,
@@ -132,7 +132,6 @@ class Controller(object):
     # -------------------------------------------------------------------------
 
     # Is cached in _init_context()
-    @concat_per_cluster
     def get_waveforms(self, cluster_id):
         return [self._select_data(cluster_id,
                                   self.all_waveforms,
@@ -168,7 +167,6 @@ class Controller(object):
     # -------------------------------------------------------------------------
 
     # Is cached in _init_context()
-    @concat_per_cluster
     def get_features(self, cluster_id):
         return self._select_data(cluster_id,
                                  self.all_features,
