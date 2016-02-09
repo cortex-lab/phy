@@ -103,6 +103,13 @@ class Grid(BaseInteract):
         boxes.set_data(pos=pos)
         boxes.program['a_box_index'] = box_index.astype(np.float32)
 
+    def get_closest_box(self, pos):
+        x, y = pos
+        rows, cols = self.shape
+        j = np.clip(int(cols * (1. + x) / 2.), 0, cols - 1)
+        i = np.clip(int(rows * (1. - y) / 2.), 0, rows - 1)
+        return i, j
+
     def update_program(self, program):
         program[self.shape_var] = self._shape
         # Only set the default box index if necessary.
@@ -219,6 +226,13 @@ class Boxed(BaseInteract):
         assert val.shape == (self.n_boxes, 4)
         self._box_bounds = val
         self.update()
+
+    def get_closest_box(self, pos):
+        pos = np.atleast_2d(pos)
+        d = np.sum((pos - self.box_pos) ** 2, axis=0)
+        i = np.argmin(d)
+        assert 0 <= i < self.n_boxes
+        return i
 
     @property
     def box_pos(self):
