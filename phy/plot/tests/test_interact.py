@@ -82,6 +82,15 @@ def test_grid_interact():
     ac(grid.imap([[0.875, -0.75]], (3, 7)), [[0., 0.]])
 
 
+def test_grid_closest_box():
+    grid = Grid((3, 7))
+    ac(grid.get_closest_box((0., 0.)), (1, 3))
+    ac(grid.get_closest_box((-1., +1.)), (0, 0))
+    ac(grid.get_closest_box((+1., -1.)), (2, 6))
+    ac(grid.get_closest_box((-1., -1.)), (2, 0))
+    ac(grid.get_closest_box((+1., +1.)), (0, 6))
+
+
 def test_grid_1(qtbot, canvas):
 
     n = 1000
@@ -111,6 +120,10 @@ def test_grid_2(qtbot, canvas):
 
     # qtbot.stop()
 
+
+#------------------------------------------------------------------------------
+# Test boxed
+#------------------------------------------------------------------------------
 
 def test_boxed_1(qtbot, canvas):
 
@@ -167,6 +180,21 @@ def test_boxed_interact():
     ac(boxed.imap([[.875, .875]], 7), [[0., 0.]])
 
 
+def test_boxed_closest_box():
+    b = np.array([[-.5, -.5, 0., 0.],
+                  [0., 0., +.5, +.5]])
+    boxed = Boxed(box_bounds=b)
+
+    ac(boxed.get_closest_box((-1, -1)), 0)
+    ac(boxed.get_closest_box((-0.001, 0)), 0)
+    ac(boxed.get_closest_box((+0.001, 0)), 1)
+    ac(boxed.get_closest_box((-1, +1)), 0)
+
+
+#------------------------------------------------------------------------------
+# Test stacked
+#------------------------------------------------------------------------------
+
 def test_stacked_1(qtbot, canvas):
 
     n = 1000
@@ -176,3 +204,13 @@ def test_stacked_1(qtbot, canvas):
     _create_visual(qtbot, canvas, stacked, box_index)
 
     # qtbot.stop()
+
+
+def test_stacked_closest_box():
+    stacked = Stacked(n_boxes=4, origin='upper')
+    ac(stacked.get_closest_box((-.5, .9)), 0)
+    ac(stacked.get_closest_box((+.5, -.9)), 3)
+
+    stacked = Stacked(n_boxes=4, origin='lower')
+    ac(stacked.get_closest_box((-.5, .9)), 3)
+    ac(stacked.get_closest_box((+.5, -.9)), 0)
