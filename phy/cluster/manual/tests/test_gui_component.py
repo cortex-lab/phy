@@ -146,7 +146,7 @@ def test_manual_clustering_split_2(gui, quality, similarity):
     mc.set_default_sort('quality', 'desc')
 
     mc.split([0])
-    assert mc.selected == [2, 3]
+    assert mc.selected == [3, 2]
 
 
 def test_manual_clustering_split_lasso(tempdir, qtbot):

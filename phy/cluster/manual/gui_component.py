@@ -375,7 +375,13 @@ class ManualClustering(object):
             self.cluster_view.select(clusters_0)
             self.similarity_view.select(clusters_1)
         elif up.added:
-            self.select(up.added)
+            if up.description == 'assign':
+                # NOTE: we reverse the order such that the last selected
+                # cluster (with a new color) is the split cluster.
+                added = up.added[::-1]
+            else:
+                added = up.added
+            self.select(added)
             if similar:
                 self.similarity_view.next()
         elif up.metadata_changed:
