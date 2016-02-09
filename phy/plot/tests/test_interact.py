@@ -73,6 +73,15 @@ def _create_visual(qtbot, canvas, interact, box_index):
 # Test grid
 #------------------------------------------------------------------------------
 
+def test_grid_interact():
+    grid = Grid((4, 8))
+    ac(grid.map([0., 0.], (0, 0)), [[-0.875, 0.75]])
+    ac(grid.map([0., 0.], (1, 3)), [[-0.125, 0.25]])
+    ac(grid.map([0., 0.], (3, 7)), [[0.875, -0.75]])
+
+    ac(grid.imap([[0.875, -0.75]], (3, 7)), [[0., 0.]])
+
+
 def test_grid_1(qtbot, canvas):
 
     n = 1000
@@ -143,6 +152,19 @@ def test_boxed_2(qtbot, canvas):
     assert idx == 4
 
     # qtbot.stop()
+
+
+def test_boxed_interact():
+
+    n = 8
+    b = np.zeros((n, 4))
+    b[:, 0] = b[:, 1] = np.linspace(-1., 1. - 1. / 4., n)
+    b[:, 2] = b[:, 3] = np.linspace(-1. + 1. / 4., 1., n)
+
+    boxed = Boxed(box_bounds=b)
+    ac(boxed.map([0., 0.], 0), [[-.875, -.875]])
+    ac(boxed.map([0., 0.], 7), [[.875, .875]])
+    ac(boxed.imap([[.875, .875]], 7), [[0., 0.]])
 
 
 def test_stacked_1(qtbot, canvas):

@@ -43,20 +43,34 @@ class Grid(BaseInteract):
         self.box_var = box_var or 'a_box_index'
         self.shape_var = shape_var
         self._shape = shape
+        ms = 1 - self.margin
+        mc = 1 - self.margin
+        self._transforms = [Scale((ms, ms)),
+                            Clip([-mc, -mc, +mc, +mc]),
+                            Subplot(self.shape_var, self.box_var),
+                            ]
 
     def attach(self, canvas):
         super(Grid, self).attach(canvas)
-        ms = 1 - self.margin
-        mc = 1 - self.margin
-        canvas.transforms.add_on_gpu([Scale((ms, ms)),
-                                      Clip([-mc, -mc, +mc, +mc]),
-                                      Subplot(self.shape_var, self.box_var),
-                                      ])
+        canvas.transforms.add_on_gpu(self._transforms)
         canvas.inserter.insert_vert("""
                                     attribute vec2 {};
                                     uniform vec2 {};
                                     """.format(self.box_var, self.shape_var),
                                     'header')
+
+    def map(self, arr, box=None):
+        assert box is not None
+        assert len(box) == 2
+        arr = self._transforms[0].apply(arr)
+        arr = Subplot(self.shape, box).apply(arr)
+        return arr
+
+    def imap(self, arr, box=None):
+        assert box is not None
+        arr = Subplot(self.shape, box).inverse().apply(arr)
+        arr = self._transforms[0].inverse().apply(arr)
+        return arr
 
     def add_boxes(self, canvas, shape=None):
         shape = shape or self.shape
@@ -157,10 +171,11 @@ class Boxed(BaseInteract):
         assert self._box_bounds.shape[1] == 4
 
         self.n_boxes = len(self._box_bounds)
+        self._transforms = [Range(NDC, 'box_bounds')]
 
     def attach(self, canvas):
         super(Boxed, self).attach(canvas)
-        canvas.transforms.add_on_gpu([Range(NDC, 'box_bounds')])
+        canvas.transforms.add_on_gpu(self._transforms)
         canvas.inserter.insert_vert("""
             #include "utils.glsl"
             attribute float {};
@@ -173,6 +188,15 @@ class Boxed(BaseInteract):
                                             n_boxes);
             box_bounds = (2 * box_bounds - 1);  // See hack in Python.
             """.format(self.box_var), 'before_transforms')
+
+    def map(self, arr, box=None):
+        assert box is not None
+        assert 0 <= box < len(self.box_bounds)
+        return Range(NDC, self.box_bounds[box]).apply(arr)
+
+    def imap(self, arr, box=None):
+        assert 0 <= box < len(self.box_bounds)
+        return Range(NDC, self.box_bounds[box]).inverse().apply(arr)
 
     def update_program(self, program):
         # Signal bounds (positions).
