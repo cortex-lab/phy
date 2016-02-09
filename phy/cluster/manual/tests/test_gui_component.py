@@ -9,12 +9,14 @@
 from pytest import yield_fixture, fixture
 import numpy as np
 from numpy.testing import assert_array_equal as ae
+from vispy.util import keys
 
 from ..gui_component import (ManualClustering,
                              )
 from phy.io.array import _spikes_in_clusters
-from phy.gui import GUI
+from phy.gui import GUI, create_gui
 from phy.utils import Bunch
+from .conftest import MockController
 
 
 #------------------------------------------------------------------------------
@@ -145,6 +147,43 @@ def test_manual_clustering_split_2(gui, quality, similarity):
 
     mc.split([0])
     assert mc.selected == [2, 3]
+
+
+def test_manual_clustering_split_lasso(tempdir, qtbot):
+    gui = create_gui(config_dir=tempdir)
+    gui.controller = MockController(tempdir)
+    gui.controller.set_manual_clustering(gui)
+    mc = gui.controller.manual_clustering
+
+    gui.controller = MockController(tempdir)
+    view = gui.controller.add_feature_view(gui)
+
+    gui.show()
+
+    # Select one cluster.
+    mc.select(0)
+
+    # Simulate a lasso.
+    ev = view.events
+    ev.mouse_press(pos=(190, 10), button=1, modifiers=(keys.CONTROL,))
+    ev.mouse_press(pos=(200, 10), button=1, modifiers=(keys.CONTROL,))
+    ev.mouse_press(pos=(200, 30), button=1, modifiers=(keys.CONTROL,))
+    ev.mouse_press(pos=(190, 30), button=1, modifiers=(keys.CONTROL,))
+
+    ups = []
+
+    @mc.clustering.connect
+    def on_cluster(up):
+        ups.append(up)
+
+    mc.split()
+    up = ups[0]
+    assert up.description == 'assign'
+    assert up.added == [4, 5]
+    assert up.deleted == [0]
+
+    # qtbot.stop()
+    gui.close()
 
 
 def test_manual_clustering_move_1(manual_clustering):

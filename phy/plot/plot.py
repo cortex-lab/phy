@@ -196,6 +196,7 @@ class Lasso(object):
 
     def add(self, pos):
         self._points.append(pos)
+        self.update_visual()
 
     @property
     def polygon(self):
@@ -210,6 +211,8 @@ class Lasso(object):
 
     def clear(self):
         self._points = []
+        self.box = None
+        self.update_visual()
 
     @property
     def count(self):
@@ -258,4 +261,3 @@ class Lasso(object):
             else:
                 self.clear()
                 self.box = None
-            self.update_visual()
