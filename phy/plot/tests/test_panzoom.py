@@ -112,6 +112,17 @@ def test_panzoom_basic_pan_zoom():
     assert pz.zoom[1] > 3 * pz.zoom[0]
 
 
+def test_panzoom_map():
+    pz = PanZoom()
+    pz.pan = (1., -1.)
+    ac(pz.map([0., 0.]), [[1., -1.]])
+
+    pz.zoom = (2., .5)
+    ac(pz.map([0., 0.]), [[2., -.5]])
+
+    ac(pz.imap([2., -.5]), [[0., 0.]])
+
+
 def test_panzoom_constraints_x():
     pz = PanZoom()
     pz.xmin, pz.xmax = -2, 2

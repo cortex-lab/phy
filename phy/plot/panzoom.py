@@ -99,6 +99,8 @@ class PanZoom(BaseInteract):
 
         # Will be set when attached to a canvas.
         self.canvas = None
+        self._translate = Translate(self.pan_var_name)
+        self._scale = Scale(self.zoom_var_name)
 
     # Various properties
     # -------------------------------------------------------------------------
@@ -463,8 +465,7 @@ class PanZoom(BaseInteract):
         super(PanZoom, self).attach(canvas)
         canvas.panzoom = self
 
-        canvas.transforms.add_on_gpu([Translate(self.pan_var_name),
-                                      Scale(self.zoom_var_name)])
+        canvas.transforms.add_on_gpu([self._translate, self._scale])
         # Add the variable declarations.
         vs = ('uniform vec2 {};\n'.format(self.pan_var_name) +
               'uniform vec2 {};\n'.format(self.zoom_var_name))
@@ -479,6 +480,16 @@ class PanZoom(BaseInteract):
             canvas.connect(self.on_mouse_wheel)
 
         self._set_canvas_aspect()
+
+    def map(self, arr):
+        arr = Translate(self.pan).apply(arr)
+        arr = Scale(self.zoom).apply(arr)
+        return arr
+
+    def imap(self, arr):
+        arr = Scale(self.zoom).inverse().apply(arr)
+        arr = Translate(self.pan).inverse().apply(arr)
+        return arr
 
     def update_program(self, program):
         program[self.pan_var_name] = self._pan
