@@ -188,6 +188,8 @@ def _in_polygon(points, polygon):
     polygon = _as_array(polygon)
     assert points.ndim == 2
     assert polygon.ndim == 2
+    if len(polygon):
+        polygon = np.vstack((polygon, polygon[0]))
     path = Path(polygon, closed=True)
     return path.contains_points(points)
 

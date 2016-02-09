@@ -23,7 +23,6 @@ from .utils import (_tesselate_histogram,
                     _get_pos,
                     _get_index,
                     )
-from phy.io.array import _in_polygon
 from phy.utils import Bunch
 
 
@@ -350,9 +349,10 @@ class TextVisual(BaseVisual):
     def validate(pos=None, text=None, anchor=None,
                  data_bounds=None):
 
+        if text is None:
+            text = []
         if isinstance(text, string_types):
             text = [text]
-
         if pos is None:
             pos = np.zeros((len(text), 2))
 
@@ -516,11 +516,11 @@ class LineVisual(BaseVisual):
 
 class PolygonVisual(BaseVisual):
     """Polygon."""
-    _default_color = (1., 1., 1., 1.)
+    _default_color = (.5, .5, .5, 1.)
 
     def __init__(self):
         super(PolygonVisual, self).__init__()
-        self.set_shader('simple')
+        self.set_shader('polygon')
         self.set_primitive_type('line_loop')
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
@@ -563,55 +563,3 @@ class PolygonVisual(BaseVisual):
         self.program['a_position'] = pos_tr.astype(np.float32)
 
         self.program['u_color'] = self._default_color
-
-
-#------------------------------------------------------------------------------
-# Interactive tools
-#------------------------------------------------------------------------------
-
-class Lasso(object):
-    def __init__(self):
-        self._points = []
-
-    def add(self, pos):
-        self._points.append(pos)
-
-    @property
-    def polygon(self):
-        l = self._points
-        # # Close the loop.
-        # if l:
-        #     l.append(l[0])
-        out = np.array(l, dtype=np.float64)
-        out = np.reshape(out, (out.size // 2, 2))
-        assert out.ndim == 2
-        assert out.shape[1] == 2
-        return out
-
-    def clear(self):
-        self._points = []
-
-    @property
-    def count(self):
-        return len(self._points)
-
-    def in_polygon(self, pos):
-        return _in_polygon(pos, self.polygon)
-
-    def attach(self, canvas):
-        canvas.connect(self.on_mouse_press)
-        from .visuals import PolygonVisual
-        self.visual = PolygonVisual()
-        canvas.add_visual(self.visual)
-        self.visual.set_data(pos=self.polygon)
-        self.canvas = canvas
-
-    def on_mouse_press(self, e):
-        if 'Control' in e.modifiers:
-            if e.button == 1:
-                pos = self.canvas.panzoom.get_mouse_pos(e.pos)
-                self.add(pos)
-            else:
-                self.clear()
-            self.visual.set_data(pos=self.polygon)
-            self.canvas.update()

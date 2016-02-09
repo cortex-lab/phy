@@ -8,9 +8,12 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+from numpy.testing import assert_array_equal as ae
+from vispy.util import keys
 
 from ..panzoom import PanZoom
 from ..plot import View
+from ..transform import NDC
 from ..utils import _get_linear_x
 
 
@@ -56,6 +59,10 @@ def test_simple_view(qtbot):
     view.scatter(x, y)
     _show(qtbot, view)
 
+
+#------------------------------------------------------------------------------
+# Test visuals in grid
+#------------------------------------------------------------------------------
 
 def test_grid_scatter(qtbot):
     view = View(layout='grid', shape=(2, 3))
@@ -140,6 +147,10 @@ def test_grid_complete(qtbot):
     _show(qtbot, view)
 
 
+#------------------------------------------------------------------------------
+# Test other interact
+#------------------------------------------------------------------------------
+
 def test_stacked_complete(qtbot):
     view = View(layout='stacked', n_plots=3)
 
@@ -170,5 +181,72 @@ def test_boxed_complete(qtbot):
     view[1].plot(t, np.sin(20 * t), color=(1, 0, 0, 1))
     view[2].hist(np.random.rand(5, 10),
                  color=np.random.uniform(.4, .9, size=(5, 4)))
+
+    _show(qtbot, view)
+
+
+#------------------------------------------------------------------------------
+# Test lasso
+#------------------------------------------------------------------------------
+
+def test_lasso_simple(qtbot):
+    view = View(enable_lasso=True, keys='interactive')
+    n = 1000
+
+    x = np.random.randn(n)
+    y = np.random.randn(n)
+
+    view.scatter(x, y)
+
+    l = view.lasso
+    ev = view.events
+    ev.mouse_press(pos=(0, 0), button=1, modifiers=(keys.CONTROL,))
+    l.add((+1, -1))
+    l.add((+1, +1))
+    l.add((-1, +1))
+    assert l.count == 4
+    assert l.polygon.shape == (4, 2)
+    b = [[-1, -1], [+1, -1], [+1, +1], [-1, +1]]
+    ae(l.in_polygon(b), [False, False, True, True])
+
+    ev.mouse_press(pos=(0, 0), button=2, modifiers=(keys.CONTROL,))
+    assert l.count == 0
+
+    _show(qtbot, view)
+
+
+def test_lasso_grid(qtbot):
+    view = View(layout='grid', shape=(1, 2),
+                enable_lasso=True, keys='interactive')
+    x, y = np.meshgrid(np.linspace(-1., 1., 20), np.linspace(-1., 1., 20))
+    x, y = x.ravel(), y.ravel()
+    view[0, 1].scatter(x, y, data_bounds=NDC)
+
+    l = view.lasso
+    ev = view.events
+
+    # Square selection in the left panel.
+    ev.mouse_press(pos=(100, 100), button=1, modifiers=(keys.CONTROL,))
+    assert l.box == (0, 0)
+    ev.mouse_press(pos=(200, 100), button=1, modifiers=(keys.CONTROL,))
+    ev.mouse_press(pos=(200, 200), button=1, modifiers=(keys.CONTROL,))
+    ev.mouse_press(pos=(100, 200), button=1, modifiers=(keys.CONTROL,))
+    assert l.box == (0, 0)
+
+    # Clear.
+    ev.mouse_press(pos=(100, 200), button=2, modifiers=(keys.CONTROL,))
+    assert l.box is None
+
+    # Square selection in the right panel.
+    ev.mouse_press(pos=(500, 100), button=1, modifiers=(keys.CONTROL,))
+    assert l.box == (0, 1)
+    ev.mouse_press(pos=(700, 100), button=1, modifiers=(keys.CONTROL,))
+    ev.mouse_press(pos=(700, 300), button=1, modifiers=(keys.CONTROL,))
+    ev.mouse_press(pos=(500, 300), button=1, modifiers=(keys.CONTROL,))
+    assert l.box == (0, 1)
+
+    ind = l.in_polygon(np.c_[x, y])
+    view[0, 1].scatter(x[ind], y[ind], color=(1., 0., 0., 1.),
+                       data_bounds=NDC)
 
     _show(qtbot, view)
