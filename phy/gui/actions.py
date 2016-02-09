@@ -100,7 +100,7 @@ def _show_shortcuts(shortcuts, name=None):
     for name in sorted(shortcuts):
         shortcut = _get_shortcut_string(shortcuts[name])
         if not name.startswith('_'):
-            print('{0:<40}: {1:s}'.format(name, shortcut))
+            print('- {0:<40}: {1:s}'.format(name, shortcut))
 
 
 # -----------------------------------------------------------------------------
