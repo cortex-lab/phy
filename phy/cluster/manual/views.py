@@ -938,6 +938,7 @@ class FeatureView(ManualClusteringView):
     default_shortcuts = {
         'increase': 'ctrl++',
         'decrease': 'ctrl+-',
+        'toggle_automatic_channel_selection': 'c',
     }
 
     def __init__(self,
