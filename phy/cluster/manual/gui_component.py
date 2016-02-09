@@ -11,6 +11,8 @@ from collections import OrderedDict
 from functools import partial
 import logging
 
+import numpy as np
+
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
@@ -448,11 +450,12 @@ class ManualClustering(object):
         self.clustering.merge(cluster_ids)
         self._global_history.action(self.clustering)
 
-    def split(self, spike_ids):
+    def split(self, spike_ids=None):
         """Split the selected spikes (NOT IMPLEMENTED YET)."""
+        if spike_ids is None:
+            spike_ids = np.concatenate(self.gui.emit('request_split'))
         if len(spike_ids) == 0:
             return
-        # TODO: connect to request_split emitted by view
         self.clustering.split(spike_ids)
         self._global_history.action(self.clustering)
 

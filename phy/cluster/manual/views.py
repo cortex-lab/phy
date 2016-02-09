@@ -16,6 +16,7 @@ from vispy.util.event import Event
 from phy.io.array import _index_of, _get_padded, get_excerpts
 from phy.gui import Actions
 from phy.plot import View, _get_linear_x
+from phy.plot.transform import Range
 from phy.plot.utils import _get_boxes
 from phy.stats import correlograms
 from phy.utils import Bunch
@@ -983,6 +984,7 @@ class FeatureView(ManualClusteringView):
         # Initialize the view.
         super(FeatureView, self).__init__(layout='grid',
                                           shape=self.shape,
+                                          enable_lasso=True,
                                           **kwargs)
 
         # Feature normalization.
@@ -1199,6 +1201,7 @@ class FeatureView(ManualClusteringView):
         self.actions.add(self.toggle_automatic_channel_selection)
 
         gui.connect_(self.on_channel_click)
+        gui.connect_(self.on_request_split)
 
     @property
     def state(self):
@@ -1220,6 +1223,33 @@ class FeatureView(ManualClusteringView):
         channels[key - 1] = channel_idx
         self.fixed_channels = True
         self.on_select()
+
+    def on_request_split(self):
+        """Return the spikes enclosed by the lasso."""
+        if self.lasso.count < 3:
+            return []
+        tla = self.top_left_attribute
+        assert self.channels
+        x_dim, y_dim = _dimensions_matrix(self.channels,
+                                          n_cols=self.n_cols,
+                                          top_left_attribute=tla)
+        data = self.features(self.cluster_ids)
+        spike_ids = data.spike_ids
+        f = data.data
+        i, j = self.lasso.box
+
+        # TODO: refactor and load all features.
+        x = self._get_feature(x_dim[i, j], spike_ids, f)
+        y = self._get_feature(y_dim[i, j], spike_ids, f)
+        pos = np.c_[x, y]
+
+        # Retrieve the data bounds.
+        data_bounds = self._get_dim_bounds(x_dim[i, j], y_dim[i, j])
+        pos = Range(from_bounds=data_bounds).apply(pos)
+
+        ind = self.lasso.in_polygon(pos)
+        self.lasso.clear()
+        return spike_ids[ind]
 
     def toggle_automatic_channel_selection(self):
         """Toggle the automatic selection of channels when the cluster
