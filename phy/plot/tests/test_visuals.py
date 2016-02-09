@@ -8,12 +8,9 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from numpy.testing import assert_array_equal as ae
-from vispy.util import keys
 
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
                        LineVisual, PolygonVisual, TextVisual,
-                       Lasso,
                        )
 
 
@@ -197,33 +194,6 @@ def test_polygon_0(qtbot, canvas_pz):
     _test_visual(qtbot, canvas_pz, PolygonVisual(), pos=pos)
 
 
-def test_lasso(qtbot, canvas_pz):
-    v = TextVisual()
-    canvas_pz.add_visual(v)
-    v.set_data(text="Hello")
-
-    l = Lasso()
-    l.attach(canvas_pz)
-    canvas_pz.show()
-    qtbot.waitForWindowShown(canvas_pz.native)
-
-    ev = canvas_pz.events
-    ev.mouse_press(pos=(0, 0), button=1, modifiers=(keys.CONTROL,))
-    l.add((+1, -1))
-    l.add((+1, +1))
-    l.add((-1, +1))
-    assert l.count == 4
-    assert l.polygon.shape == (4, 2)
-    b = [[-1, -1], [+1, -1], [+1, +1], [-1, +1]]
-    ae(l.in_polygon(b), [False, False, True, True])
-
-    ev.mouse_press(pos=(0, 0), button=2, modifiers=(keys.CONTROL,))
-    assert l.count == 0
-
-    # qtbot.stop()
-    canvas_pz.close()
-
-
 #------------------------------------------------------------------------------
 # Test text visual
 #------------------------------------------------------------------------------
@@ -231,6 +201,7 @@ def test_lasso(qtbot, canvas_pz):
 def test_text_empty(qtbot, canvas):
     pos = np.zeros((0, 2))
     _test_visual(qtbot, canvas, TextVisual(), pos=pos, text=[])
+    _test_visual(qtbot, canvas, TextVisual())
 
 
 def test_text_0(qtbot, canvas_pz):

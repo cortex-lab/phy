@@ -227,13 +227,6 @@ class Boxed(BaseInteract):
         self._box_bounds = val
         self.update()
 
-    def get_closest_box(self, pos):
-        pos = np.atleast_2d(pos)
-        d = np.sum((pos - self.box_pos) ** 2, axis=0)
-        i = np.argmin(d)
-        assert 0 <= i < self.n_boxes
-        return i
-
     @property
     def box_pos(self):
         box_pos, _ = _get_box_pos_size(self._box_bounds)
