@@ -42,11 +42,8 @@ def _check(transform, array, expected):
     expected = np.array(expected, dtype=np.float64)
     _check_forward(transform, array, expected)
     # Test the inverse transform if it is implemented.
-    try:
-        inv = transform.inverse()
-        _check_forward(inv, expected, array)
-    except NotImplementedError:
-        pass
+    inv = transform.inverse()
+    _check_forward(inv, expected, array)
 
 
 #------------------------------------------------------------------------------

@@ -132,9 +132,10 @@ class BaseTransform(object):
 
 
 class Translate(BaseTransform):
-    def apply(self, arr):
+    def apply(self, arr, value=None):
         assert isinstance(arr, np.ndarray)
-        return arr + np.asarray(self.value)
+        value = value if value is not None else self.value
+        return arr + np.asarray(value)
 
     def glsl(self, var):
         assert var
@@ -149,8 +150,9 @@ class Translate(BaseTransform):
 
 
 class Scale(BaseTransform):
-    def apply(self, arr):
-        return arr * np.asarray(self.value)
+    def apply(self, arr, value=None):
+        value = value if value is not None else self.value
+        return arr * np.asarray(value)
 
     def glsl(self, var):
         assert var
@@ -169,14 +171,15 @@ class Range(BaseTransform):
         self.from_bounds = from_bounds if from_bounds is not None else NDC
         self.to_bounds = to_bounds if to_bounds is not None else NDC
 
-    def apply(self, arr):
-        self.from_bounds = np.asarray(self.from_bounds)
-        self.to_bounds = np.asarray(self.to_bounds)
-
-        f0 = np.asarray(self.from_bounds[..., :2])
-        f1 = np.asarray(self.from_bounds[..., 2:])
-        t0 = np.asarray(self.to_bounds[..., :2])
-        t1 = np.asarray(self.to_bounds[..., 2:])
+    def apply(self, arr, from_bounds=None, to_bounds=None):
+        from_bounds = np.asarray(from_bounds if from_bounds is not None
+                                 else self.from_bounds)
+        to_bounds = np.asarray(to_bounds if to_bounds is not None
+                               else self.to_bounds)
+        f0 = from_bounds[..., :2]
+        f1 = from_bounds[..., 2:]
+        t0 = to_bounds[..., :2]
+        t1 = to_bounds[..., 2:]
 
         return t0 + (t1 - t0) * (arr - f0) / (f1 - f0)
 
@@ -200,11 +203,12 @@ class Clip(BaseTransform):
         super(Clip, self).__init__()
         self.bounds = bounds or NDC
 
-    def apply(self, arr):
-        index = ((arr[:, 0] >= self.bounds[0]) &
-                 (arr[:, 1] >= self.bounds[1]) &
-                 (arr[:, 0] <= self.bounds[2]) &
-                 (arr[:, 1] <= self.bounds[3]))
+    def apply(self, arr, bounds=None):
+        bounds = bounds if bounds is not None else self.bounds
+        index = ((arr[:, 0] >= bounds[0]) &
+                 (arr[:, 1] >= bounds[1]) &
+                 (arr[:, 0] <= bounds[2]) &
+                 (arr[:, 1] <= bounds[3]))
         return arr[index, ...]
 
     def glsl(self, var):
@@ -219,6 +223,9 @@ class Clip(BaseTransform):
                 discard;
             }}
         """.format(bounds=bounds, var=var)
+
+    def inverse(self):
+        return self
 
 
 class Subplot(Range):
