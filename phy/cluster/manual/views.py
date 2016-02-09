@@ -1234,7 +1234,7 @@ class FeatureView(ManualClusteringView):
         x_dim, y_dim = _dimensions_matrix(self.channels,
                                           n_cols=self.n_cols,
                                           top_left_attribute=tla)
-        data = self.features(self.cluster_ids)
+        data = self.features(self.cluster_ids, load_all=True)
         spike_ids = data.spike_ids
         f = data.data
         i, j = self.lasso.box
@@ -1242,7 +1242,7 @@ class FeatureView(ManualClusteringView):
         # TODO: refactor and load all features.
         x = self._get_feature(x_dim[i, j], spike_ids, f)
         y = self._get_feature(y_dim[i, j], spike_ids, f)
-        pos = np.c_[x, y]
+        pos = np.c_[x, y].astype(np.float64)
 
         # Retrieve the data bounds.
         data_bounds = self._get_dim_bounds(x_dim[i, j], y_dim[i, j])

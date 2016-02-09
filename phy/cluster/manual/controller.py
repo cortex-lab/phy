@@ -167,10 +167,10 @@ class Controller(object):
     # -------------------------------------------------------------------------
 
     # Is cached in _init_context()
-    def get_features(self, cluster_id):
+    def get_features(self, cluster_id, load_all=False):
         return self._select_data(cluster_id,
                                  self.all_features,
-                                 1000,  # TODO
+                                 1000 if not load_all else None,  # TODO
                                  )
 
     def get_background_features(self):
