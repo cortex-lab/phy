@@ -631,7 +631,7 @@ class TraceView(ManualClusteringView):
 
         # Sample rate.
         assert sample_rate > 0
-        self.sample_rate = sample_rate
+        self.sample_rate = float(sample_rate)
         self.dt = 1. / self.sample_rate
 
         # Traces and spikes.
@@ -716,6 +716,10 @@ class TraceView(ManualClusteringView):
 
     def _restrict_interval(self, interval):
         start, end = interval
+        # Round the times to full samples to avoid subsampling shifts
+        # in the traces.
+        start = int(round(start * self.sample_rate)) / self.sample_rate
+        end = int(round(end * self.sample_rate)) / self.sample_rate
         # Restrict the interval to the boundaries of the traces.
         if start < 0:
             end += (-start)
@@ -1302,7 +1306,7 @@ class CorrelogramView(ManualClusteringView):
                  **kwargs):
 
         assert sample_rate > 0
-        self.sample_rate = sample_rate
+        self.sample_rate = float(sample_rate)
 
         self.spike_times = np.asarray(spike_times)
         self.n_spikes, = self.spike_times.shape
