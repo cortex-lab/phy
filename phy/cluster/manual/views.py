@@ -7,7 +7,10 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+import inspect
+from itertools import product
 import logging
+import re
 
 import numpy as np
 from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
@@ -883,41 +886,30 @@ class TraceView(ManualClusteringView):
 # -----------------------------------------------------------------------------
 
 def _dimensions_matrix(channels, n_cols=None, top_left_attribute=None):
-    """Dimension matrix."""
-    # time, attr     time,   (x, 0)     time,   (y, 0)     time,   (z, 0)
-    # time, (x, 1)   (x, 0), (x, 1)     (x, 0), (y, 0)     (x, 0), (z, 0)
-    # time, (y, 1)   (x, 1), (y, 1)     (y, 0), (y, 1)     (y, 0), (z, 0)
-    # time, (z, 1)   (x, 1), (z, 1)     (y, 1), (z, 1)     (z, 0), (z, 1)
+    """
+    time,x0 y0,x0   x1,x0   y1,x0
+    x0,y0   time,y0 x1,y0   y1,y0
+    x0,x1   y0,x1   time,x1 y1,x1
+    x0,y1   y0,y1   x1,y1   time,y1
+    """
+    # Generate the dimensions matrix from the docstring.
+    ds = inspect.getdoc(_dimensions_matrix).strip()
+    x, y = channels[:2]
 
-    assert n_cols > 0
-    assert len(channels) >= n_cols - 1
+    def _get_dim(d):
+        if d == 'time':
+            return d
+        assert re.match(r'[xy][01]', d)
+        c = x if d[0] == 'x' else y
+        f = int(d[1])
+        return c, f
 
-    y_dim = {}
-    x_dim = {}
-    x_dim[0, 0] = 'time'
-    y_dim[0, 0] = top_left_attribute or 'time'
-
-    for i in range(1, n_cols):
-        # First line.
-        x_dim[0, i] = 'time'
-        y_dim[0, i] = (channels[i - 1], 0)
-        # First column.
-        x_dim[i, 0] = 'time'
-        y_dim[i, 0] = (channels[i - 1], 1)
-        # Diagonal.
-        x_dim[i, i] = (channels[i - 1], 0)
-        y_dim[i, i] = (channels[i - 1], 1)
-
-    for i in range(1, n_cols):
-        for j in range(i + 1, n_cols):
-            assert j > i
-            # Above the diagonal.
-            x_dim[i, j] = (channels[i - 1], 0)
-            y_dim[i, j] = (channels[j - 1], 0)
-            # Below the diagonal.
-            x_dim[j, i] = (channels[i - 1], 1)
-            y_dim[j, i] = (channels[j - 1], 1)
-
+    dims = [[_.split(',') for _ in re.split(r' +', line.strip())]
+            for line in ds.splitlines()]
+    x_dim = {(i, j): _get_dim(dims[i][j][0])
+             for i, j in product(range(4), range(4))}
+    y_dim = {(i, j): _get_dim(dims[i][j][1])
+             for i, j in product(range(4), range(4))}
     return x_dim, y_dim
 
 
@@ -983,7 +975,7 @@ class FeatureView(ManualClusteringView):
         assert spike_times.shape == (self.n_spikes,)
         assert self.n_spikes >= 0
 
-        self.n_cols = self.n_features_per_channel + 1
+        self.n_cols = 4
         self.shape = (self.n_cols, self.n_cols)
 
         # Initialize the view.
@@ -1085,7 +1077,7 @@ class FeatureView(ManualClusteringView):
 
     def _get_channel_dims(self, cluster_ids):
         """Select the channels to show by default."""
-        n = self.n_cols - 1
+        n = 2
         channels = self.best_channels(cluster_ids)
         channels = (channels if channels is not None
                     else list(range(self.n_channels)))
@@ -1214,18 +1206,14 @@ class FeatureView(ManualClusteringView):
 
     def on_channel_click(self, channel_idx=None, key=None, button=None):
         """Respond to the click on a channel."""
-        if key is None or not (1 <= key <= (self.n_cols - 1)):
-            return
-        # Get the axis from the pressed button (1, 2, etc.)
-        # axis = 'x' if button == 1 else 'y'
-        # Get the existing channels.
         channels = self.channels
         if channels is None:
             return
-        assert len(channels) == self.n_cols - 1
+        assert len(channels) == 2
         assert 0 <= channel_idx < self.n_channels
-        # Update the channel.
-        channels[key - 1] = channel_idx
+        # Get the axis from the pressed button (1, 2, etc.)
+        # axis = 'x' if button == 1 else 'y'
+        channels[0 if button == 1 else 1] = channel_idx
         self.fixed_channels = True
         self.on_select()
 
