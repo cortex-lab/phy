@@ -79,22 +79,19 @@ class Controller(object):
         self.get_masks = concat_per_cluster(ctx.cache(self.get_masks))
         self.get_features = concat_per_cluster(ctx.cache(self.get_features))
         self.get_waveforms = concat_per_cluster(ctx.cache(self.get_waveforms))
-
         self.get_background_features = ctx.cache(self.get_background_features)
 
         self.get_mean_masks = ctx.memcache(self.get_mean_masks)
         self.get_mean_features = ctx.memcache(self.get_mean_features)
         self.get_mean_waveforms = ctx.memcache(self.get_mean_waveforms)
 
-        self.get_waveform_lims = ctx.cache(self.get_waveform_lims)
-        self.get_feature_lim = ctx.cache(self.get_feature_lim)
+        self.get_waveform_lims = ctx.memcache(self.get_waveform_lims)
+        self.get_feature_lim = ctx.memcache(self.get_feature_lim)
 
-        self.get_waveform_amplitude = ctx.memcache(ctx.cache(
-            self.get_waveforms_amplitude))
-        self.get_best_channel_position = ctx.memcache(
-            self.get_best_channel_position)
-        self.get_close_clusters = ctx.memcache(ctx.cache(
-            self.get_close_clusters))
+        self.get_close_clusters = ctx.memcache(
+            self.get_close_clusters)
+        self.get_probe_depth = ctx.memcache(
+            self.get_probe_depth)
 
         self.spikes_per_cluster = ctx.memcache(self.spikes_per_cluster)
 
