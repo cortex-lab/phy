@@ -235,10 +235,10 @@ class Context(object):
             """Cache the function in memory."""
             h = hash((args, kwargs))
             if h in cache:
-                logger.debug("Get %s(%s) from memcache.", name, str(args))
+                # logger.debug("Get %s(%s) from memcache.", name, str(args))
                 return cache[h]
             else:
-                logger.debug("Compute %s(%s).", name, str(args))
+                # logger.debug("Compute %s(%s).", name, str(args))
                 out = f(*args, **kwargs)
                 cache[h] = out
                 return out
