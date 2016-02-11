@@ -136,7 +136,6 @@ def test_context_memcache(tempdir, context):
     _res = []
 
     @context.memcache
-    @context.cache
     def f(x):
         _res.append(x)
         return x ** 2
@@ -151,20 +150,13 @@ def test_context_memcache(tempdir, context):
     assert len(_res) == 1
 
     # We artificially clear the memory cache.
-    context._memcache[_fullname(f)].clear()
+    context.save_memcache()
+    del context._memcache[_fullname(f)]
+    context.load_memcache(_fullname(f))
 
     # This time, the result is loaded from disk.
     ae(f(x), x ** 2)
     assert len(_res) == 1
-
-    # Remove the cache directory.
-    assert context.cache_dir.replace('/private', '').startswith(tempdir)
-    shutil.rmtree(context.cache_dir)
-    context._memcache[_fullname(f)].clear()
-
-    # Now, the result is re-computed.
-    ae(f(x), x ** 2)
-    assert len(_res) == 2
 
 
 def test_pickle_cache(tempdir, parallel_context):
