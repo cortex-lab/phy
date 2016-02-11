@@ -165,10 +165,10 @@ def test_manual_clustering_split_lasso(tempdir, qtbot):
 
     # Simulate a lasso.
     ev = view.events
-    ev.mouse_press(pos=(190, 10), button=1, modifiers=(keys.CONTROL,))
-    ev.mouse_press(pos=(200, 10), button=1, modifiers=(keys.CONTROL,))
-    ev.mouse_press(pos=(200, 30), button=1, modifiers=(keys.CONTROL,))
-    ev.mouse_press(pos=(190, 30), button=1, modifiers=(keys.CONTROL,))
+    ev.mouse_press(pos=(210, 10), button=1, modifiers=(keys.CONTROL,))
+    ev.mouse_press(pos=(280, 10), button=1, modifiers=(keys.CONTROL,))
+    ev.mouse_press(pos=(280, 30), button=1, modifiers=(keys.CONTROL,))
+    ev.mouse_press(pos=(210, 30), button=1, modifiers=(keys.CONTROL,))
 
     ups = []
 
