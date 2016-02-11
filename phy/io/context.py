@@ -14,7 +14,7 @@ import os.path as op
 
 from traitlets.config.configurable import Configurable
 import numpy as np
-from six.moves.cPickle import dump
+from six.moves.cPickle import dump, load
 from six import string_types
 try:
     from dask.array import Array
@@ -156,6 +156,11 @@ class Context(object):
             logger.debug("Create cache directory `%s`.", self.cache_dir)
             os.makedirs(self.cache_dir)
 
+        # Ensure the memcache directory exists.
+        path = op.join(self.cache_dir, 'memcache')
+        if not op.exists(path):
+            os.mkdir(path)
+
         self._set_memory(self.cache_dir)
         self.ipy_view = ipy_view if ipy_view else None
         self._memcache = {}
@@ -201,25 +206,41 @@ class Context(object):
         disk_cached = self._memory.cache(f, ignore=ignore)
         return disk_cached
 
+    def load_memcache(self, name):
+        # Load the memcache from disk, if it exists.
+        path = op.join(self.cache_dir, 'memcache', name + '.pkl')
+        if op.exists(path):
+            logger.debug("Load memcache for `%s`.", name)
+            with open(path, 'rb') as fd:
+                cache = load(fd)
+        else:
+            cache = {}
+        self._memcache[name] = cache
+        return cache
+
+    def save_memcache(self):
+        for name, cache in self._memcache.items():
+            path = op.join(self.cache_dir, 'memcache', name + '.pkl')
+            logger.debug("Save memcache for `%s`.", name)
+            with open(path, 'wb') as fd:
+                dump(cache, fd)
+
     def memcache(self, f):
         from joblib import hash
         name = _fullname(f)
-        # Create the cache dictionary for the function.
-        if name not in self._memcache:
-            self._memcache[name] = {}
-        c = self._memcache[name]
+        cache = self.load_memcache(name)
 
         @wraps(f)
         def memcached(*args, **kwargs):
             """Cache the function in memory."""
             h = hash((args, kwargs))
-            if h in c:
-                # logger.debug("Get %s(%s) from memcache.", name, str(args))
-                return c[h]
+            if h in cache:
+                logger.debug("Get %s(%s) from memcache.", name, str(args))
+                return cache[h]
             else:
-                # logger.debug("Compute %s(%s).", name, str(args))
+                logger.debug("Compute %s(%s).", name, str(args))
                 out = f(*args, **kwargs)
-                c[h] = out
+                cache[h] = out
                 return out
         return memcached
 
