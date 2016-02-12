@@ -11,7 +11,6 @@ from collections import OrderedDict
 import json
 import logging
 import os.path as op
-from operator import itemgetter
 
 from six import text_type
 
@@ -263,21 +262,29 @@ class Table(HTMLWidget):
         """Set the rows of the table."""
         # NOTE: make sure we have integers and not np.generic objects.
         assert all(isinstance(i, int) for i in ids)
+
+        # Determine the sort column and dir to set after the rows.
+        sort_col, sort_dir = self.current_sort
         default_sort_col, default_sort_dir = self.default_sort
+
+        sort_col = sort_col or default_sort_col
+        sort_dir = sort_dir or default_sort_dir or 'desc'
 
         # Set the rows.
         logger.log(5, "Set %d rows in the table.", len(ids))
         items = [self._get_row(id) for id in ids]
-
-        # Optionally sort the rows before passing them to the widget.
-        if default_sort_col:
-            items = sorted(items, key=itemgetter(default_sort_col),
-                           reverse=(default_sort_dir == 'desc'))
-
+        # Sort the rows before passing them to the widget.
+        # if sort_col:
+        #     items = sorted(items, key=itemgetter(sort_col),
+        #                    reverse=(sort_dir == 'desc'))
         data = _create_json_dict(items=items,
                                  cols=self.column_names,
                                  )
         self.eval_js('table.setData({});'.format(data))
+
+        # Sort.
+        if sort_col:
+            self.sort_by(sort_col, sort_dir)
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
