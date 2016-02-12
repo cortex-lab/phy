@@ -24,6 +24,7 @@ var Table = function (el) {
     this.selected = [];
     this.headers = {};  // {name: th} mapping
     this.rows = {};  // {id: tr} mapping
+    this.cols = [];
 
     var thead = document.createElement("thead");
     this.el.appendChild(thead);
@@ -37,6 +38,7 @@ Table.prototype.setHeaders = function(data) {
 
     var that = this;
     var keys = data.cols;
+    this.cols = data.cols;
 
     var thead = this.el.getElementsByTagName("thead")[0];
     clear(thead);
@@ -148,9 +150,9 @@ Table.prototype.sortBy = function(header, dir) {
         throw "The column `" + header + "` doesn't exist."
 
     // Remove all sort classes.
-    for (var i = 0; i < this.headers.length; i++) {
-        this.headers[i].classList.remove('sort-up');
-        this.headers[i].classList.remove('sort-down');
+    for (var i = 0; i < this.cols.length; i++) {
+        var name = this.cols[i];
+        this.headers[name].classList = "";
     }
 
     // Add sort.
@@ -158,6 +160,7 @@ Table.prototype.sortBy = function(header, dir) {
     if (dir == 'desc') {
         this.tablesort.sortTable(this.headers[header]);
     }
+
 };
 
 Table.prototype.currentSort = function() {
