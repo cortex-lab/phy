@@ -50,6 +50,7 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
                           similarity=similarity,
                           )
     mc.attach(gui)
+    mc.set_default_sort(quality.__name__)
 
     return mc
 

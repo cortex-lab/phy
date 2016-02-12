@@ -306,5 +306,5 @@ class Controller(object):
                               cluster_groups=self.cluster_groups,
                               )
         self.manual_clustering = mc
-        mc.add_column(self.get_probe_depth)
+        mc.add_column(self.get_probe_depth, name='probe_depth')
         mc.attach(gui)

@@ -417,9 +417,15 @@ class ManualClustering(object):
         # Add the quality column in the cluster view.
         if self.quality:
             self.cluster_view.add_column(self.quality,
-                                         name=self.quality.__name__)
-        self.set_default_sort(self.quality.__name__
-                              if self.quality else 'n_spikes')
+                                         name=self.quality.__name__,
+                                         )
+
+        # Update the cluster view and sort by n_spikes at the beginning.
+        self._update_cluster_view()
+        # if not self.quality:
+        #     self.cluster_view.sort_by('n_spikes', 'desc')
+
+        # Add the similarity view if there is a similarity function.
         if self.similarity:
             gui.add_view(self.similarity_view, name='SimilarityView')
 
