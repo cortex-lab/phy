@@ -152,15 +152,15 @@ Table.prototype.sortBy = function(header, dir) {
     // Remove all sort classes.
     for (var i = 0; i < this.cols.length; i++) {
         var name = this.cols[i];
-        this.headers[name].classList = "";
+        this.headers[name].classList.remove("sort-up");
+        this.headers[name].classList.remove("sort-down");
     }
+
+    var order = (dir == 'asc') ? "sort-up" : "sort-down";
+    this.headers[header].classList.add(order);
 
     // Add sort.
     this.tablesort.sortTable(this.headers[header]);
-    if (dir == 'desc') {
-        this.tablesort.sortTable(this.headers[header]);
-    }
-
 };
 
 Table.prototype.currentSort = function() {
