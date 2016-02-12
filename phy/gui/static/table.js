@@ -11,38 +11,35 @@ function isFloat(n) {
     return n === Number(n) && n % 1 !== 0;
 }
 
+function clear(e) {
+    while (e.firstChild) {
+        e.removeChild(e.firstChild);
+    }
+}
+
 
 // Table class.
-
 var Table = function (el) {
     this.el = el;
     this.selected = [];
     this.headers = {};  // {name: th} mapping
     this.rows = {};  // {id: tr} mapping
-    this.tablesort = null;
+
+    var thead = document.createElement("thead");
+    this.el.appendChild(thead);
+
+    var tbody = document.createElement("tbody");
+    this.el.appendChild(tbody);
 };
 
-Table.prototype.setData = function(data) {
-    /*
-    data.cols: list of column names
-    data.items: list of rows (each row is an object {col: value})
-     */
-    // if (data.items.length == 0) return;
-
-    // Reinitialize the state.
-    this.selected = [];
+Table.prototype.setHeaders = function(data) {
     this.rows = {};
 
     var that = this;
     var keys = data.cols;
 
-    // Clear the table.
-    while (this.el.firstChild) {
-        this.el.removeChild(this.el.firstChild);
-    }
-
-    var thead = document.createElement("thead");
-    var tbody = document.createElement("tbody");
+    var thead = this.el.getElementsByTagName("thead")[0];
+    clear(thead);
 
     // Header.
     var tr = document.createElement("tr");
@@ -54,6 +51,27 @@ Table.prototype.setData = function(data) {
         this.headers[key] = th;
     }
     thead.appendChild(tr);
+
+    // Enable the tablesort plugin.
+    this.tablesort = new Tablesort(this.el);
+}
+
+Table.prototype.setData = function(data) {
+    /*
+    data.cols: list of column names
+    data.items: list of rows (each row is an object {col: value})
+     */
+    // if (data.items.length == 0) return;
+
+    // Reinitialize the state.
+    this.selected = [];
+    this.rows = {};
+    var keys = data.cols;
+    var that = this;
+
+    // Clear the table body.
+    var tbody = this.el.getElementsByTagName("tbody")[0];
+    clear(tbody);
     this.nrows = data.items.length;
 
     // Data rows.
@@ -114,12 +132,6 @@ Table.prototype.setData = function(data) {
         tbody.appendChild(tr);
         this.rows[data.items[i].id] = tr;
     }
-
-    this.el.appendChild(thead);
-    this.el.appendChild(tbody);
-
-    // Enable the tablesort plugin.
-    this.tablesort = new Tablesort(this.el);
 };
 
 Table.prototype.rowId = function(i) {
