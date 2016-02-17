@@ -17,7 +17,6 @@ from phy.utils._types import _as_tuple
 from .base import BaseCanvas
 from .interact import Grid, Boxed, Stacked
 from .panzoom import PanZoom
-from .transform import NDC
 from .utils import _get_array
 from .visuals import (ScatterVisual, PlotVisual, HistogramVisual,
                       LineVisual, TextVisual, PolygonVisual)
