@@ -82,7 +82,8 @@ class View(BaseCanvas):
         else:
             self.interact = None
 
-        self.panzoom = PanZoom(aspect=None, constrain_bounds=NDC)
+        self.panzoom = PanZoom(aspect=None,
+                               constrain_bounds=[-2, -2, +2, +2])
         self.panzoom.attach(self)
 
         if enable_lasso:
