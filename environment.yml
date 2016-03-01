@@ -18,6 +18,7 @@ dependencies:
   - joblib
   - cython
   - click
+  - dask
   - cloudpickle
   - toolz
   - dill
