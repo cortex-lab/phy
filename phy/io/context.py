@@ -330,7 +330,7 @@ class Context(object):
         path = self._get_path(name, location)
         if not op.exists(path):
             logger.debug("The file `%s` doesn't exist.", path)
-            return
+            return {}
         return _load_json(path)
 
     def __getstate__(self):

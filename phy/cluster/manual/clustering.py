@@ -146,14 +146,18 @@ class Clustering(EventEmitter):
 
     """
 
-    def __init__(self, spike_clusters):
+    def __init__(self, spike_clusters, new_cluster_id=None):
         super(Clustering, self).__init__()
         self._undo_stack = History(base_item=(None, None, None))
         # Spike -> cluster mapping.
         self._spike_clusters = _as_array(spike_clusters)
         self._n_spikes = len(self._spike_clusters)
         self._spike_ids = np.arange(self._n_spikes).astype(np.int64)
-        self._new_cluster_id = self._spike_clusters.max() + 1
+        self._new_cluster_id_0 = (new_cluster_id or
+                                  self._spike_clusters.max() + 1)
+        self._new_cluster_id = self._new_cluster_id_0
+        assert self._new_cluster_id >= 0
+        assert np.all(self._spike_clusters < self._new_cluster_id)
         # Keep a copy of the original spike clusters assignment.
         self._spike_clusters_base = self._spike_clusters.copy()
 
@@ -165,7 +169,7 @@ class Clustering(EventEmitter):
         """
         self._undo_stack.clear()
         self._spike_clusters = self._spike_clusters_base
-        self._new_cluster_id = self._spike_clusters.max() + 1
+        self._new_cluster_id = self._new_cluster_id_0
 
     @property
     def spike_clusters(self):

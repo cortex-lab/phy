@@ -299,12 +299,28 @@ class Controller(object):
     # GUI methods
     # -------------------------------------------------------------------------
 
+    def similarity(self, cluster_id):
+        return self.get_close_clusters(cluster_id)
+
     def set_manual_clustering(self, gui):
+        # Load the new cluster id.
+        new_cluster_id = self.context.load('new_cluster_id'). \
+            get('new_cluster_id', None)
         mc = ManualClustering(self.spike_clusters,
                               self.spikes_per_cluster,
-                              similarity=self.get_close_clusters,
+                              similarity=self.similarity,
                               cluster_groups=self.cluster_groups,
+                              new_cluster_id=new_cluster_id,
                               )
+
+        # Save the new cluster id on disk.
+        @mc.clustering.connect
+        def on_cluster(up):
+            new_cluster_id = mc.clustering.new_cluster_id()
+            logger.debug("Save the new cluster id: %d", new_cluster_id)
+            self.context.save('new_cluster_id',
+                              dict(new_cluster_id=new_cluster_id))
+
         self.manual_clustering = mc
         mc.add_column(self.get_probe_depth, name='probe_depth')
         mc.attach(gui)
