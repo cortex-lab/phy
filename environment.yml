@@ -3,7 +3,8 @@ channels:
   - kwikteam
 dependencies:
   - python
-  - numpy=1.9
+  - pip
+  - numpy
   - vispy
   - matplotlib
   - scipy
@@ -15,6 +16,8 @@ dependencies:
   - six
   - ipyparallel
   - joblib
-  - dask
   - cython
   - click
+  - cloudpickle
+  - toolz
+  - dill
