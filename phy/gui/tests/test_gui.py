@@ -162,7 +162,7 @@ def test_gui_geometry_state(tempdir, qtbot):
 
 
 #------------------------------------------------------------------------------
-# Test GUI plugin
+# Test GUI state
 #------------------------------------------------------------------------------
 
 def test_gui_state_view(tempdir):
@@ -175,7 +175,6 @@ def test_gui_state_view(tempdir):
 
 
 def test_save_geometry_state(tempdir, gui):
-    gui.state = GUIState(config_dir=tempdir)
     SaveGeometryStatePlugin().attach_to_gui(gui)
     gui.close()
 
