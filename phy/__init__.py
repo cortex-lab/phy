@@ -17,7 +17,7 @@ from six import StringIO
 from .io.datasets import download_file, download_sample_data
 from .utils.config import load_master_config
 from .utils._misc import _git_version
-from .utils.plugin import IPlugin, get_plugin, get_all_plugins
+from .utils.plugin import IPlugin, get_plugin, discover_plugins
 
 
 #------------------------------------------------------------------------------

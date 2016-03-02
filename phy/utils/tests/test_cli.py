@@ -63,7 +63,7 @@ def test_cli_plugins(temp_user_dir, runner):
     # NOTE: make the import after the temp_user_dir fixture, to avoid
     # loading any user plugin affecting the CLI.
     from ..cli import phy, load_cli_plugins
-    load_cli_plugins(phy)
+    load_cli_plugins(phy, user_dir=temp_user_dir)
 
     # The plugin should have added a new command.
     result = runner.invoke(phy, ['--help'])

@@ -25,7 +25,8 @@ except ImportError:  # pragma: no cover
                     "Install it with `conda install dask`.")
 
 from .array import read_array, write_array
-from phy.utils import (Bunch, _save_json, _load_json, _ensure_dir_exists,)
+from phy.utils import (Bunch, _save_json, _load_json,
+                       _ensure_dir_exists, _fullname,)
 from phy.utils.config import phy_user_dir
 
 logger = logging.getLogger(__name__)
@@ -139,11 +140,6 @@ def _ensure_cache_dirs_exist(cache_dir, name):
     dirpath = op.join(cache_dir, name)
     if not op.exists(dirpath):
         os.makedirs(dirpath)
-
-
-def _fullname(o):
-    """Return the fully-qualified name of a function."""
-    return o.__module__ + "." + o.__name__ if o.__module__ else o.__name__
 
 
 class Context(object):
