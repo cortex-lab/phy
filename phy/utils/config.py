@@ -9,6 +9,7 @@
 import logging
 import os
 import os.path as op
+from textwrap import dedent
 
 from traitlets.config import (Config,
                               PyFileConfigLoader,
@@ -41,6 +42,7 @@ def _load_config(path):
     path = op.realpath(path)
     dirpath, filename = op.split(path)
     file_ext = op.splitext(path)[1]
+    logger.debug("Load config file `%s`.", path)
     if file_ext == '.py':
         config = PyFileConfigLoader(filename, dirpath,
                                     log=logger).load_config()
@@ -50,15 +52,35 @@ def _load_config(path):
     return config
 
 
+def _default_config(user_dir=None):
+    path = op.join(user_dir or '~/.phy/', 'plugins/')
+    return dedent("""
+    # You can also put your plugins in ~/.phy/plugins/.
+
+    from phy import IPlugin
+
+    class MyPlugin(IPlugin):
+        def attach_to_cli(self, cli):
+            pass
+
+
+    c = get_config()
+    c.Plugins.dirs = ['{}']
+    """.format(path))
+
+
 def load_master_config(user_dir=None):
-    """Load a master Config file from `~/.phy/phy_config.py|json`."""
+    """Load a master Config file from `~/.phy/phy_config.py`."""
     user_dir = user_dir or phy_user_dir()
-    c = Config()
-    paths = [op.join(user_dir, 'phy_config.json'),
-             op.join(user_dir, 'phy_config.py')]
-    for path in paths:
-        c.update(_load_config(path))
-    return c
+    path = op.join(user_dir, 'phy_config.py')
+    # Create a default config file if necessary.
+    if not op.exists(path):
+        _ensure_dir_exists(op.dirname(path))
+        logger.debug("Creating default phy config file at `%s`.", path)
+        with open(path, 'w') as f:
+            f.write(_default_config(user_dir=user_dir))
+    assert op.exists(path)
+    return _load_config(path)
 
 
 def save_config(path, config):

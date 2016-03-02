@@ -17,7 +17,8 @@ from traceback import format_exception
 import click
 
 from phy import (add_default_handler, DEBUG, _Formatter, _logger_fmt,
-                 __version_git__)
+                 __version_git__, discover_plugins)
+from phy.utils import _fullname
 
 logger = logging.getLogger(__name__)
 
@@ -73,21 +74,22 @@ def phy(ctx):
 # CLI plugins
 #------------------------------------------------------------------------------
 
-def load_cli_plugins(cli):
+def load_cli_plugins(cli, user_dir=None):
     """Load all plugins and attach them to a CLI object."""
     from .config import load_master_config
-    from .plugin import get_all_plugins
 
-    config = load_master_config()
-    plugins = get_all_plugins(config)
+    config = load_master_config(user_dir=user_dir)
+    plugins = discover_plugins(config.Plugins.dirs)
 
-    # TODO: try/except to avoid crashing if a plugin is broken.
     for plugin in plugins:
         if not hasattr(plugin, 'attach_to_cli'):  # pragma: no cover
             continue
-        logger.debug("Attach plugin `%s` to CLI.", plugin.__name__)
+        logger.debug("Attach plugin `%s` to CLI.", _fullname(plugin))
         # NOTE: plugin is a class, so we need to instantiate it.
-        plugin().attach_to_cli(cli)
+        try:
+            plugin().attach_to_cli(cli)
+        except Exception as e:
+            logger.error("Error when loading plugin `%s`: %s", plugin, e)
 
 
 # Load all plugins when importing this module.

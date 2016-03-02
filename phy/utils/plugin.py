@@ -18,7 +18,7 @@ import os.path as op
 
 from six import with_metaclass
 
-from . import config
+from ._misc import _fullname
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +32,10 @@ class IPluginRegistry(type):
 
     def __init__(cls, name, bases, attrs):
         if name != 'IPlugin':
-            logger.debug("Register plugin `%s`.", name)
-            plugin_tuple = (cls,)
-            if plugin_tuple not in IPluginRegistry.plugins:
-                IPluginRegistry.plugins.append(plugin_tuple)
+            logger.debug("Register plugin `%s`.", _fullname(cls))
+            if _fullname(cls) not in (_fullname(_)
+                                      for _ in IPluginRegistry.plugins):
+                IPluginRegistry.plugins.append(cls)
 
 
 class IPlugin(with_metaclass(IPluginRegistry)):
@@ -49,7 +49,7 @@ class IPlugin(with_metaclass(IPluginRegistry)):
 
 def get_plugin(name):
     """Get a plugin class from its name."""
-    for (plugin,) in IPluginRegistry.plugins:
+    for plugin in IPluginRegistry.plugins:
         if name in plugin.__name__:
             return plugin
     raise ValueError("The plugin %s cannot be found." % name)
@@ -110,22 +110,3 @@ def discover_plugins(dirs):
             finally:
                 file.close()
     return IPluginRegistry.plugins
-
-
-def _builtin_plugins_dir():
-    return op.realpath(op.join(op.dirname(__file__), '../plugins/'))
-
-
-def _user_plugins_dir():
-    return op.expanduser(op.join(config.phy_user_dir(), 'plugins/'))
-
-
-def get_all_plugins(config=None):
-    """Load all builtin and user plugins."""
-    # By default, builtin and default user plugin.
-    dirs = [_builtin_plugins_dir(), _user_plugins_dir()]
-    # Add Plugins.dirs from the optionally-passed config object.
-    if config and isinstance(config.Plugins.dirs, list):
-        dirs += config.Plugins.dirs
-    logger.debug("Discovering plugins in: %s.", ', '.join(dirs))
-    return [plugin for (plugin,) in discover_plugins(dirs)]

@@ -105,6 +105,11 @@ def _save_json(path, data):
 # Various Python utility functions
 #------------------------------------------------------------------------------
 
+def _fullname(o):
+    """Return the fully-qualified name of a function."""
+    return o.__module__ + "." + o.__name__ if o.__module__ else o.__name__
+
+
 def _read_python(path):
     path = op.realpath(op.expanduser(path))
     assert op.exists(path)
