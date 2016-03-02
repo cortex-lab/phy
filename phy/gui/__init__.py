@@ -4,6 +4,6 @@
 """GUI routines."""
 
 from .qt import require_qt, create_app, run_app
-from .gui import GUI, GUIState, create_gui
+from .gui import GUI, GUIState
 from .actions import Actions
 from .widgets import HTMLWidget, Table

@@ -6,18 +6,15 @@
 # Imports
 #------------------------------------------------------------------------------
 
-import os.path as op
-
 from pytest import raises
 
 from ..qt import Qt, QApplication, QWidget
 from ..gui import (GUI, GUIState,
-                   create_gui,
                    _try_get_matplotlib_canvas,
                    _try_get_vispy_canvas,
                    SaveGeometryStatePlugin,
                    )
-from phy.utils import IPlugin, Bunch, _save_json, _ensure_dir_exists
+from phy.utils import Bunch
 from phy.utils._color import _random_color
 
 
@@ -56,15 +53,15 @@ def test_matplotlib_view():
 # Test GUI
 #------------------------------------------------------------------------------
 
-def test_gui_noapp():
+def test_gui_noapp(tempdir):
     if not QApplication.instance():
         with raises(RuntimeError):  # pragma: no cover
-            GUI()
+            GUI(config_dir=tempdir)
 
 
-def test_gui_1(qtbot):
+def test_gui_1(tempdir, qtbot):
 
-    gui = GUI(position=(200, 100), size=(100, 100))
+    gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir)
     qtbot.addWidget(gui)
 
     assert gui.name == 'GUI'
@@ -115,9 +112,9 @@ def test_gui_status_message(gui):
     assert gui.status_message == ''
 
 
-def test_gui_geometry_state(qtbot):
+def test_gui_geometry_state(tempdir, qtbot):
     _gs = []
-    gui = GUI(size=(100, 100))
+    gui = GUI(size=(100, 100), config_dir=tempdir)
     qtbot.addWidget(gui)
 
     gui.add_view(_create_canvas(), 'view1')
@@ -140,7 +137,7 @@ def test_gui_geometry_state(qtbot):
     gui.close()
 
     # Recreate the GUI with the saved state.
-    gui = GUI()
+    gui = GUI(config_dir=tempdir)
 
     gui.add_view(_create_canvas(), 'view1')
     gui.add_view(_create_canvas(), 'view2')
@@ -168,40 +165,17 @@ def test_gui_geometry_state(qtbot):
 # Test GUI plugin
 #------------------------------------------------------------------------------
 
-def test_gui_state_view():
+def test_gui_state_view(tempdir):
     view = Bunch(name='MyView0')
-    state = GUIState()
+    state = GUIState(config_dir=tempdir)
     state.update_view_state(view, dict(hello='world'))
     assert not state.get_view_state(Bunch(name='MyView'))
     assert not state.get_view_state(Bunch(name='MyView1'))
     assert state.get_view_state(view) == Bunch(hello='world')
 
 
-def test_create_gui_1(qapp, tempdir):
-
-    _ensure_dir_exists(op.join(tempdir, 'GUI/'))
-    path = op.join(tempdir, 'GUI/state.json')
-    _save_json(path, {'hello': 'world'})
-
-    _tmp = []
-
-    class MyGUIPlugin(IPlugin):
-        def attach_to_gui(self, gui):
-            _tmp.append(gui.state.hello)
-
-    gui = create_gui(plugins=['MyGUIPlugin'], config_dir=tempdir)
-    assert gui
-    assert _tmp == ['world']
-    gui.state.hello = 'dolly'
-    gui.state.save()
-
-    assert GUIState(config_dir=tempdir).hello == 'dolly'
-
-    gui.close()
-
-
-def test_save_geometry_state(gui):
-    gui.state = Bunch()
+def test_save_geometry_state(tempdir, gui):
+    gui.state = GUIState(config_dir=tempdir)
     SaveGeometryStatePlugin().attach_to_gui(gui)
     gui.close()
 
