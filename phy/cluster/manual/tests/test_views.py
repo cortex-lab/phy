@@ -12,7 +12,7 @@ from numpy.testing import assert_allclose as ac
 from vispy.util import keys
 from pytest import fixture
 
-from phy.gui import create_gui
+from phy.gui import GUI
 from phy.utils import Bunch
 from .conftest import MockController
 from ..views import (ScatterView,
@@ -39,7 +39,7 @@ def state(tempdir):
 
 @fixture
 def gui(tempdir, state):
-    gui = create_gui(config_dir=tempdir, **state)
+    gui = GUI(config_dir=tempdir, **state)
     gui.controller = MockController(tempdir)
     gui.controller.set_manual_clustering(gui)
     return gui

@@ -14,8 +14,7 @@ from vispy.util import keys
 from ..gui_component import (ManualClustering,
                              )
 from phy.io.array import _spikes_in_clusters
-from phy.gui import GUI, create_gui
-from phy.utils import Bunch
+from phy.gui import GUI
 from .conftest import MockController
 
 
@@ -24,9 +23,8 @@ from .conftest import MockController
 #------------------------------------------------------------------------------
 
 @yield_fixture
-def gui(qtbot):
-    gui = GUI(position=(200, 100), size=(500, 500))
-    gui.state = Bunch()
+def gui(tempdir, qtbot):
+    gui = GUI(position=(200, 100), size=(500, 500), config_dir=tempdir)
     gui.show()
     qtbot.waitForWindowShown(gui)
     yield gui
@@ -151,7 +149,7 @@ def test_manual_clustering_split_2(gui, quality, similarity):
 
 
 def test_manual_clustering_split_lasso(tempdir, qtbot):
-    gui = create_gui(config_dir=tempdir)
+    gui = GUI(config_dir=tempdir)
     gui.controller = MockController(tempdir)
     gui.controller.set_manual_clustering(gui)
     mc = gui.controller.manual_clustering
