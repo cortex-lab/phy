@@ -185,11 +185,11 @@ def test_create_gui_1(qapp, tempdir):
 
     _tmp = []
 
-    class MyPlugin(IPlugin):
+    class MyGUIPlugin(IPlugin):
         def attach_to_gui(self, gui):
             _tmp.append(gui.state.hello)
 
-    gui = create_gui(plugins=['MyPlugin'], config_dir=tempdir)
+    gui = create_gui(plugins=['MyGUIPlugin'], config_dir=tempdir)
     assert gui
     assert _tmp == ['world']
     gui.state.hello = 'dolly'
