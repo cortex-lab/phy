@@ -18,7 +18,7 @@ from phy.utils.event import EventEmitter
 from phy.utils import (Bunch, _bunchify,
                        _load_json, _save_json,
                        _ensure_dir_exists, phy_user_dir,)
-from phy.utils.plugin import IPlugin
+from phy.utils.plugin import IPlugin, get_plugin
 
 logger = logging.getLogger(__name__)
 
@@ -98,6 +98,9 @@ def _get_dock_position(position):
             'top': Qt.TopDockWidgetArea,
             'bottom': Qt.BottomDockWidgetArea,
             }[position or 'right']
+
+
+_DEFAULT_PLUGINS = ('SaveGeometryStatePlugin',)
 
 
 class GUI(QMainWindow):
@@ -353,6 +356,16 @@ class GUI(QMainWindow):
             self.restoreGeometry((gs['geometry']))
         if gs.get('state', None):
             self.restoreState((gs['state']))
+
+    # Plugins
+    # -------------------------------------------------------------------------
+
+    def attach_plugins(self, plugins=None):
+        """Attach specified plugins."""
+        plugins = list(_DEFAULT_PLUGINS) + (plugins or [])
+        for plugin in plugins:
+            get_plugin(plugin)().attach_to_gui(self)
+        return self
 
 
 # -----------------------------------------------------------------------------
