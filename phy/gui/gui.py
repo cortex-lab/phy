@@ -423,10 +423,12 @@ class SaveGeometryStatePlugin(IPlugin):
 
         @gui.connect_
         def on_close():
+            logger.debug("Save geometry state.")
             gs = gui.save_geometry_state()
             state['geometry_state'] = gs
 
         @gui.connect_
         def on_show():
+            logger.debug("Load geometry state.")
             gs = state.get('geometry_state', None)
             gui.restore_geometry_state(gs)
