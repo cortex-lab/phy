@@ -19,6 +19,7 @@ from phy.cluster.manual.views import (WaveformView,
                                       select_traces,
                                       extract_spikes,
                                       )
+from phy.gui import GUI
 from phy.io.array import _get_data_lim, concat_per_cluster
 from phy.io import Context, Selector
 from phy.stats.clusters import (mean,
@@ -324,3 +325,23 @@ class Controller(object):
         self.manual_clustering = mc
         mc.add_column(self.get_probe_depth, name='probe_depth')
         mc.attach(gui)
+
+    def create_gui(self, name=None, subtitle=None,
+                   plugins=None, config_dir=None):
+        """Create a manual clustering GUI."""
+        gui = GUI(name=name, subtitle=subtitle, config_dir=config_dir)
+        self.set_manual_clustering(gui)
+
+        # Add views.
+        self.add_correlogram_view(gui)
+        if self.all_features is not None:
+            self.add_feature_view(gui)
+        if self.all_waveforms is not None:
+            self.add_waveform_view(gui)
+        if self.all_traces is not None:
+            self.add_trace_view(gui)
+
+        # Attach the specified plugins.
+        gui.attach_plugins(plugins)
+
+        return gui
