@@ -15,10 +15,10 @@ from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  Qt, QSize, QMetaObject)
 from .actions import Actions, Snippets
 from phy.utils.event import EventEmitter
-from phy.utils import (load_master_config, Bunch, _bunchify,
+from phy.utils import (Bunch, _bunchify,
                        _load_json, _save_json,
                        _ensure_dir_exists, phy_user_dir,)
-from phy.utils.plugin import get_plugin, IPlugin
+from phy.utils.plugin import IPlugin
 
 logger = logging.getLogger(__name__)
 
@@ -124,6 +124,7 @@ class GUI(QMainWindow):
                  size=None,
                  name=None,
                  subtitle=None,
+                 **kwargs
                  ):
         # HACK to ensure that closeEvent is called only twice (seems like a
         # Qt bug).
@@ -162,6 +163,14 @@ class GUI(QMainWindow):
 
         # Create and attach snippets.
         self.snippets = Snippets(self)
+
+        # Create the state.
+        self.state = GUIState(self.name, **kwargs)
+
+        # Save the state to disk when closing the GUI.
+        @self.connect_
+        def on_close():
+            self.state.save()
 
     def _set_name(self, name, subtitle):
         if name is None:
@@ -408,39 +417,3 @@ class SaveGeometryStatePlugin(IPlugin):
         def on_show():
             gs = state.get('geometry_state', None)
             gui.restore_geometry_state(gs)
-
-
-def create_gui(name=None, subtitle=None, plugins=None, **state_kwargs):
-    """Create a GUI with a list of plugins.
-
-    By default, the list of plugins is taken from the `c.TheGUI.plugins`
-    parameter, where `TheGUI` is the name of the GUI class.
-
-    """
-    gui = GUI(name=name, subtitle=subtitle)
-    name = gui.name
-    plugins = plugins or []
-
-    # Create the state.
-    state = GUIState(gui.name, **state_kwargs)
-
-    # Make the state.
-    gui.state = state
-
-    # If no plugins are specified, load the master config and
-    # get the list of user plugins to attach to the GUI.
-    plugins_conf = load_master_config()[name].plugins
-    plugins_conf = plugins_conf if isinstance(plugins_conf, list) else []
-    plugins.extend(plugins_conf)
-
-    # Attach the plugins to the GUI.
-    for plugin in plugins:
-        logger.debug("Attach plugin `%s` to %s.", plugin, name)
-        get_plugin(plugin)().attach_to_gui(gui)
-
-    # Save the state to disk.
-    @gui.connect_
-    def on_close():
-        state.save()
-
-    return gui

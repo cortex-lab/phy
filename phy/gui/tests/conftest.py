@@ -17,8 +17,8 @@ from ..gui import GUI
 #------------------------------------------------------------------------------
 
 @yield_fixture
-def gui(qapp):
-    gui = GUI(position=(200, 100), size=(100, 100))
+def gui(tempdir, qapp):
+    gui = GUI(position=(200, 100), size=(100, 100), config_dir=tempdir)
     yield gui
     gui.close()
 
