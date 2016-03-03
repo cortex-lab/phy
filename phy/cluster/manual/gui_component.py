@@ -465,7 +465,7 @@ class ManualClustering(object):
         self._global_history.action(self.clustering)
 
     def split(self, spike_ids=None):
-        """Split the selected spikes (NOT IMPLEMENTED YET)."""
+        """Split the selected spikes."""
         if spike_ids is None:
             spike_ids = self.gui.emit('request_split')
             spike_ids = np.concatenate(spike_ids).astype(np.int64)
