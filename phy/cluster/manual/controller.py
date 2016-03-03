@@ -42,6 +42,7 @@ class Controller(EventEmitter):
 
     init()
     create_gui(gui)
+    add_view(gui, view)
 
     """
     # responsible for the cache
@@ -282,7 +283,7 @@ class Controller(EventEmitter):
 
     def _add_view(self, gui, view):
         view.attach(gui)
-        self.emit('add_view', view)
+        self.emit('add_view', gui, view)
         return view
 
     def add_waveform_view(self, gui):
