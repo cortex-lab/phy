@@ -280,14 +280,18 @@ class Controller(EventEmitter):
     # View methods
     # -------------------------------------------------------------------------
 
+    def _add_view(self, gui, view):
+        view.attach(gui)
+        self.emit('add_view', view)
+        return view
+
     def add_waveform_view(self, gui):
         v = WaveformView(waveforms=self.get_waveforms,
                          channel_positions=self.channel_positions,
                          waveform_lims=self.get_waveform_lims(),
                          best_channels=self.get_best_channels,
                          )
-        v.attach(gui)
-        return v
+        return self._add_view(gui, v)
 
     def add_trace_view(self, gui):
         v = TraceView(traces=self.get_traces,
@@ -296,8 +300,7 @@ class Controller(EventEmitter):
                       duration=self.duration,
                       n_channels=self.n_channels,
                       )
-        v.attach(gui)
-        return v
+        return self._add_view(gui, v)
 
     def add_feature_view(self, gui):
         v = FeatureView(features=self.get_features,
@@ -308,16 +311,14 @@ class Controller(EventEmitter):
                         feature_lim=self.get_feature_lim(),
                         best_channels=self.get_channels_by_amplitude,
                         )
-        v.attach(gui)
-        return v
+        return self._add_view(gui, v)
 
     def add_correlogram_view(self, gui):
         v = CorrelogramView(spike_times=self.spike_times,
                             spike_clusters=self.spike_clusters,
                             sample_rate=self.sample_rate,
                             )
-        v.attach(gui)
-        return v
+        return self._add_view(gui, v)
 
     # GUI methods
     # -------------------------------------------------------------------------
