@@ -12,7 +12,6 @@ from ..qt import Qt, QApplication, QWidget
 from ..gui import (GUI, GUIState,
                    _try_get_matplotlib_canvas,
                    _try_get_vispy_canvas,
-                   SaveGeometryStatePlugin,
                    )
 from phy.utils import Bunch
 from phy.utils._color import _random_color
@@ -96,6 +95,11 @@ def test_gui_1(tempdir, qtbot):
     view.close()
     assert _close == [1, 0]
 
+    gui.close()
+
+    assert gui.state.geometry_state['geometry']
+    assert gui.state.geometry_state['state']
+
     gui.default_actions.exit()
 
 
@@ -172,13 +176,3 @@ def test_gui_state_view(tempdir):
     assert not state.get_view_state(Bunch(name='MyView'))
     assert not state.get_view_state(Bunch(name='MyView1'))
     assert state.get_view_state(view) == Bunch(hello='world')
-
-
-def test_save_geometry_state(tempdir, gui):
-    SaveGeometryStatePlugin().attach_to_gui(gui)
-    gui.close()
-
-    assert gui.state.geometry_state['geometry']
-    assert gui.state.geometry_state['state']
-
-    gui.show()
