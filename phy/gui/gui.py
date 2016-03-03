@@ -165,12 +165,16 @@ class GUI(QMainWindow):
 
         # Create the state.
         self.state = GUIState(self.name, **kwargs)
-        gs = self.state.get('geometry_state', None)
-        self.restore_geometry_state(gs)
+
+        @self.connect_
+        def on_show():
+            logger.debug("Load the geometry state.")
+            gs = self.state.get('geometry_state', None)
+            self.restore_geometry_state(gs)
 
         @self.connect_
         def on_close():
-            logger.debug("Save geometry state.")
+            logger.debug("Save the geometry state.")
             gs = self.save_geometry_state()
             self.state['geometry_state'] = gs
             # Save the state to disk when closing the GUI.
@@ -353,7 +357,6 @@ class GUI(QMainWindow):
         """
         if not gs:
             return
-        logger.debug("Load geometry state.")
         if gs.get('geometry', None):
             self.restoreGeometry((gs['geometry']))
         if gs.get('state', None):
