@@ -18,7 +18,6 @@ from phy.utils.event import EventEmitter
 from phy.utils import (Bunch, _bunchify,
                        _load_json, _save_json,
                        _ensure_dir_exists, phy_user_dir,)
-from phy.utils.plugin import IPlugin, get_plugin
 
 logger = logging.getLogger(__name__)
 
@@ -100,9 +99,6 @@ def _get_dock_position(position):
             }[position or 'right']
 
 
-_DEFAULT_PLUGINS = ('SaveGeometryStatePlugin',)
-
-
 class GUI(QMainWindow):
     """A Qt main window holding docking Qt or VisPy widgets.
 
@@ -169,10 +165,15 @@ class GUI(QMainWindow):
 
         # Create the state.
         self.state = GUIState(self.name, **kwargs)
+        gs = self.state.get('geometry_state', None)
+        self.restore_geometry_state(gs)
 
-        # Save the state to disk when closing the GUI.
         @self.connect_
         def on_close():
+            logger.debug("Save geometry state.")
+            gs = self.save_geometry_state()
+            self.state['geometry_state'] = gs
+            # Save the state to disk when closing the GUI.
             self.state.save()
 
     def _set_name(self, name, subtitle):
@@ -352,24 +353,15 @@ class GUI(QMainWindow):
         """
         if not gs:
             return
+        logger.debug("Load geometry state.")
         if gs.get('geometry', None):
             self.restoreGeometry((gs['geometry']))
         if gs.get('state', None):
             self.restoreState((gs['state']))
 
-    # Plugins
-    # -------------------------------------------------------------------------
-
-    def attach_plugins(self, plugins=None):
-        """Attach specified plugins."""
-        plugins = list(_DEFAULT_PLUGINS) + (plugins or [])
-        for plugin in plugins:
-            get_plugin(plugin)().attach_to_gui(self)
-        return self
-
 
 # -----------------------------------------------------------------------------
-# GUI state, creator, plugins
+# GUI state, creator
 # -----------------------------------------------------------------------------
 
 class GUIState(Bunch):
@@ -415,20 +407,3 @@ class GUIState(Bunch):
         logger.debug("Save the GUI state to `%s`.", self.path)
         _save_json(self.path, {k: v for k, v in self.items()
                                if k not in ('config_dir', 'name')})
-
-
-class SaveGeometryStatePlugin(IPlugin):
-    def attach_to_gui(self, gui):
-        state = gui.state
-
-        @gui.connect_
-        def on_close():
-            logger.debug("Save geometry state.")
-            gs = gui.save_geometry_state()
-            state['geometry_state'] = gs
-
-        @gui.connect_
-        def on_show():
-            logger.debug("Load geometry state.")
-            gs = state.get('geometry_state', None)
-            gui.restore_geometry_state(gs)
