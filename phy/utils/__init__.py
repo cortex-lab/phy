@@ -11,6 +11,6 @@ from .event import EventEmitter, ProgressReporter
 from .plugin import IPlugin, get_plugin
 from .config import( _ensure_dir_exists,
                     load_master_config,
-                    phy_user_dir,
+                    phy_config_dir,
                     load_config,
                     )

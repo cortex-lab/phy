@@ -74,11 +74,11 @@ def phy(ctx):
 # CLI plugins
 #------------------------------------------------------------------------------
 
-def load_cli_plugins(cli, user_dir=None):
+def load_cli_plugins(cli, config_dir=None):
     """Load all plugins and attach them to a CLI object."""
     from .config import load_master_config
 
-    config = load_master_config(user_dir=user_dir)
+    config = load_master_config(config_dir=config_dir)
     plugins = discover_plugins(config.Plugins.dirs)
 
     for plugin in plugins:
@@ -88,7 +88,7 @@ def load_cli_plugins(cli, user_dir=None):
         # NOTE: plugin is a class, so we need to instantiate it.
         try:
             plugin().attach_to_cli(cli)
-        except Exception as e:
+        except Exception as e:  # pragma: no cover
             logger.error("Error when loading plugin `%s`: %s", plugin, e)
 
 

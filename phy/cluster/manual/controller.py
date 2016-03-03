@@ -25,7 +25,7 @@ from phy.io import Context, Selector
 from phy.stats.clusters import (mean,
                                 get_waveform_amplitude,
                                 )
-from phy.utils import Bunch
+from phy.utils import Bunch, load_master_config, get_plugin, EventEmitter
 
 logger = logging.getLogger(__name__)
 
@@ -34,15 +34,37 @@ logger = logging.getLogger(__name__)
 # Kwik GUI
 #------------------------------------------------------------------------------
 
-class Controller(object):
-    """Take data out of the model and feeds it to views."""
+class Controller(EventEmitter):
+    """Take data out of the model and feeds it to views.
+
+    Events
+    ------
+
+    init()
+    create_gui(gui)
+
+    """
     # responsible for the cache
-    def __init__(self):
+    def __init__(self, plugins=None, config_dir=None):
+        super(Controller, self).__init__()
+        self.config_dir = config_dir
         self._init_data()
         self._init_selector()
         self._init_context()
 
         self.n_spikes = len(self.spike_times)
+
+        # Attach the plugins.
+        plugins = plugins or []
+        config = load_master_config(config_dir=config_dir)
+        c = config.get(self.__class__.__name__)
+        default_plugins = c.plugins if c else []
+        if len(default_plugins):
+            plugins = default_plugins + plugins
+        for plugin in plugins:
+            get_plugin(plugin)().attach_to_controller(self)
+
+        self.emit('init')
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -327,10 +349,13 @@ class Controller(object):
         mc.attach(gui)
 
     def create_gui(self, name=None, subtitle=None,
-                   plugins=None, config_dir=None):
+                   plugins=None, config_dir=None, **kwargs):
         """Create a manual clustering GUI."""
-        gui = GUI(name=name, subtitle=subtitle, config_dir=config_dir)
+        config_dir = config_dir or self.config_dir
+        gui = GUI(name=name, subtitle=subtitle,
+                  config_dir=config_dir, **kwargs)
         self.set_manual_clustering(gui)
+        gui.controller = self
 
         # Add views.
         self.add_correlogram_view(gui)
@@ -341,7 +366,6 @@ class Controller(object):
         if self.all_traces is not None:
             self.add_trace_view(gui)
 
-        # Attach the specified plugins.
-        gui.attach_plugins(plugins)
+        self.emit('create_gui', gui)
 
         return gui

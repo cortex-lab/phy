@@ -27,7 +27,7 @@ except ImportError:  # pragma: no cover
 from .array import read_array, write_array
 from phy.utils import (Bunch, _save_json, _load_json,
                        _ensure_dir_exists, _fullname,)
-from phy.utils.config import phy_user_dir
+from phy.utils.config import phy_config_dir
 
 logger = logging.getLogger(__name__)
 
@@ -312,7 +312,7 @@ class Context(object):
         if location == 'local':
             return op.join(self.cache_dir, name + '.json')
         elif location == 'global':
-            return op.join(phy_user_dir(), name + '.json')
+            return op.join(phy_config_dir(), name + '.json')
 
     def save(self, name, data, location='local'):
         """Save a dictionary in a JSON file within the cache directory."""

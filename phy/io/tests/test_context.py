@@ -60,13 +60,13 @@ def parallel_context(tempdir, ipy_client, request):
 
 
 @yield_fixture
-def temp_phy_user_dir(tempdir):
+def temp_phy_config_dir(tempdir):
     """Use a temporary phy user directory."""
     import phy.io.context
-    f = phy.io.context.phy_user_dir
-    phy.io.context.phy_user_dir = lambda: tempdir
+    f = phy.io.context.phy_config_dir
+    phy.io.context.phy_config_dir = lambda: tempdir
     yield
-    phy.io.context.phy_user_dir = f
+    phy.io.context.phy_config_dir = f
 
 
 #------------------------------------------------------------------------------
@@ -95,7 +95,7 @@ def test_read_write(tempdir):
     ae(read_array(op.join(tempdir, 'test.npy')), x)
 
 
-def test_context_load_save(tempdir, context, temp_phy_user_dir):
+def test_context_load_save(tempdir, context, temp_phy_config_dir):
     assert not context.load('unexisting')
 
     context.save('a/hello', {'text': 'world'})

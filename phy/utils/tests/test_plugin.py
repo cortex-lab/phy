@@ -32,30 +32,6 @@ def no_native_plugins():
     IPluginRegistry.plugins = plugins
 
 
-@yield_fixture(params=[(False, 'my_plugins/plugin.py'),
-                       (True, 'plugins/plugin.py'),
-                       ])
-def plugin(no_native_plugins, temp_user_dir, request):
-    path = op.join(temp_user_dir, request.param[1])
-    contents = """
-        from phy import IPlugin
-        class MyPlugin(IPlugin):
-            pass
-    """
-    _write_text(path, contents)
-    yield temp_user_dir, request.param[0], request.param[1]
-
-
-def _write_my_plugins_dir_in_config(temp_user_dir):
-    # Now, we specify the path to the plugin in the phy config file.
-    config_contents = """
-       c = get_config()
-       c.Plugins.dirs = [r'%s']
-    """
-    _write_text(op.join(temp_user_dir, 'phy_config.py'),
-                config_contents % op.join(temp_user_dir, 'my_plugins/'))
-
-
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------

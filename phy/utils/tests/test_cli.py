@@ -25,9 +25,9 @@ def runner():
     yield CliRunner()
 
 
-def test_cli_empty(temp_user_dir, runner):
+def test_cli_empty(temp_config_dir, runner):
 
-    # NOTE: make the import after the temp_user_dir fixture, to avoid
+    # NOTE: make the import after the temp_config_dir fixture, to avoid
     # loading any user plugin affecting the CLI.
     from ..cli import phy, load_cli_plugins
     load_cli_plugins(phy)
@@ -44,7 +44,7 @@ def test_cli_empty(temp_user_dir, runner):
     assert result.output.startswith('Usage: phy')
 
 
-def test_cli_plugins(temp_user_dir, runner):
+def test_cli_plugins(temp_config_dir, runner):
 
     # Write a CLI plugin.
     cli_plugin = """
@@ -57,13 +57,13 @@ def test_cli_plugins(temp_user_dir, runner):
                 def hello():
                     click.echo("hello world")
     """
-    path = op.join(temp_user_dir, 'plugins/hello.py')
+    path = op.join(temp_config_dir, 'plugins/hello.py')
     _write_text(path, cli_plugin)
 
-    # NOTE: make the import after the temp_user_dir fixture, to avoid
+    # NOTE: make the import after the temp_config_dir fixture, to avoid
     # loading any user plugin affecting the CLI.
     from ..cli import phy, load_cli_plugins
-    load_cli_plugins(phy, user_dir=temp_user_dir)
+    load_cli_plugins(phy, config_dir=temp_config_dir)
 
     # The plugin should have added a new command.
     result = runner.invoke(phy, ['--help'])

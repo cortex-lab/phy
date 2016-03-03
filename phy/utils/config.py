@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # Config
 #------------------------------------------------------------------------------
 
-def phy_user_dir():
+def phy_config_dir():
     """Return the absolute path to the phy user directory."""
     return op.expanduser('~/.phy/')
 
@@ -52,8 +52,8 @@ def load_config(path):
     return config
 
 
-def _default_config(user_dir=None):
-    path = op.join(user_dir or '~/.phy/', 'plugins/')
+def _default_config(config_dir=None):
+    path = op.join(config_dir or '~/.phy/', 'plugins/')
     return dedent("""
     # You can also put your plugins in ~/.phy/plugins/.
 
@@ -69,16 +69,16 @@ def _default_config(user_dir=None):
     """.format(path))
 
 
-def load_master_config(user_dir=None):
+def load_master_config(config_dir=None):
     """Load a master Config file from `~/.phy/phy_config.py`."""
-    user_dir = user_dir or phy_user_dir()
-    path = op.join(user_dir, 'phy_config.py')
+    config_dir = config_dir or phy_config_dir()
+    path = op.join(config_dir, 'phy_config.py')
     # Create a default config file if necessary.
     if not op.exists(path):
         _ensure_dir_exists(op.dirname(path))
         logger.debug("Creating default phy config file at `%s`.", path)
         with open(path, 'w') as f:
-            f.write(_default_config(user_dir=user_dir))
+            f.write(_default_config(config_dir=config_dir))
     assert op.exists(path)
     return load_config(path)
 

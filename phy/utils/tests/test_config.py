@@ -26,8 +26,8 @@ from ..config import (_ensure_dir_exists,
 # Test config
 #------------------------------------------------------------------------------
 
-def test_phy_user_dir():
-    assert _config.phy_user_dir().endswith('.phy/')
+def test_phy_config_dir():
+    assert _config.phy_config_dir().endswith('.phy/')
 
 
 def test_ensure_dir_exists(tempdir):
@@ -36,8 +36,8 @@ def test_ensure_dir_exists(tempdir):
     assert op.isdir(path)
 
 
-def test_temp_user_dir(temp_user_dir):
-    assert _config.phy_user_dir() == temp_user_dir
+def test_temp_config_dir(temp_config_dir):
+    assert _config.phy_config_dir() == temp_config_dir
 
 
 #------------------------------------------------------------------------------
@@ -98,13 +98,13 @@ def test_load_config(config):
     assert configurable.my_var == 1.0
 
 
-def test_load_master_config(temp_user_dir):
+def test_load_master_config(temp_config_dir):
     # Create a config file in the temporary user directory.
     config_contents = dedent("""
        c = get_config()
        c.MyConfigurable.my_var = 1.0
        """)
-    with open(op.join(temp_user_dir, 'phy_config.py'), 'w') as f:
+    with open(op.join(temp_config_dir, 'phy_config.py'), 'w') as f:
         f.write(config_contents)
 
     # Load the master config file.
