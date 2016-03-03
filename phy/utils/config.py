@@ -35,7 +35,7 @@ def _ensure_dir_exists(path):
     assert op.exists(path) and op.isdir(path)
 
 
-def _load_config(path):
+def load_config(path):
     """Load a Python or JSON config file."""
     if not op.exists(path):
         return Config()
@@ -80,7 +80,7 @@ def load_master_config(user_dir=None):
         with open(path, 'w') as f:
             f.write(_default_config(user_dir=user_dir))
     assert op.exists(path)
-    return _load_config(path)
+    return load_config(path)
 
 
 def save_config(path, config):
