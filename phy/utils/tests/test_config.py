@@ -16,7 +16,7 @@ from traitlets.config import Configurable
 from .. import config as _config
 from .._misc import _write_text
 from ..config import (_ensure_dir_exists,
-                      _load_config,
+                      load_config,
                       load_master_config,
                       save_config,
                       )
@@ -86,7 +86,7 @@ def test_load_config(config):
 
     assert MyConfigurable().my_var == 0.0
 
-    c = _load_config(config)
+    c = load_config(config)
     assert c.MyConfigurable.my_var == 1.0
 
     # Create a new MyConfigurable instance.
@@ -117,5 +117,5 @@ def test_save_config(tempdir):
     path = op.join(tempdir, 'config.json')
     save_config(path, c)
 
-    c1 = _load_config(path)
+    c1 = load_config(path)
     assert c1.A.b == 3.

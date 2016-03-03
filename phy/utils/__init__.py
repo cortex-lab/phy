@@ -9,4 +9,8 @@ from ._types import (_is_array_like, _as_array, _as_tuple, _as_list,
                      Bunch, _is_list, _bunchify)
 from .event import EventEmitter, ProgressReporter
 from .plugin import IPlugin, get_plugin
-from .config import _ensure_dir_exists, load_master_config, phy_user_dir
+from .config import( _ensure_dir_exists,
+                    load_master_config,
+                    phy_user_dir,
+                    load_config,
+                    )
