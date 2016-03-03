@@ -150,11 +150,9 @@ def test_manual_clustering_split_2(gui, quality, similarity):
 
 def test_manual_clustering_split_lasso(tempdir, qtbot):
     gui = GUI(config_dir=tempdir)
-    gui.controller = MockController(tempdir)
+    gui.controller = MockController(config_dir=tempdir)
     gui.controller.set_manual_clustering(gui)
     mc = gui.controller.manual_clustering
-
-    gui.controller = MockController(tempdir)
     view = gui.controller.add_feature_view(gui)
 
     gui.show()

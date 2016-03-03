@@ -54,12 +54,8 @@ def similarity(cluster_ids):
 
 
 class MockController(Controller):
-    def __init__(self, tempdir):
-        self.tempdir = tempdir
-        super(MockController, self).__init__()
-
     def _init_data(self):
-        self.cache_dir = self.tempdir
+        self.cache_dir = self.config_dir
         self.n_samples_waveforms = 31
         self.n_samples_t = 20000
         self.n_channels = 11

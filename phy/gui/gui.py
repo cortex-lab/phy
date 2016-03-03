@@ -17,7 +17,7 @@ from .actions import Actions, Snippets
 from phy.utils.event import EventEmitter
 from phy.utils import (Bunch, _bunchify,
                        _load_json, _save_json,
-                       _ensure_dir_exists, phy_user_dir,)
+                       _ensure_dir_exists, phy_config_dir,)
 
 logger = logging.getLogger(__name__)
 
@@ -374,7 +374,7 @@ class GUIState(Bunch):
     def __init__(self, name='GUI', config_dir=None, **kwargs):
         super(GUIState, self).__init__(**kwargs)
         self.name = name
-        self.config_dir = config_dir or phy_user_dir()
+        self.config_dir = config_dir or phy_config_dir()
         _ensure_dir_exists(op.join(self.config_dir, self.name))
         self.load()
 
