@@ -52,6 +52,7 @@ class Controller(EventEmitter):
         self._init_data()
         self._init_selector()
         self._init_context()
+        self._set_manual_clustering()
 
         self.n_spikes = len(self.spike_times)
 
@@ -118,6 +119,28 @@ class Controller(EventEmitter):
             self.get_probe_depth)
 
         self.spikes_per_cluster = ctx.memcache(self.spikes_per_cluster)
+
+    def _set_manual_clustering(self):
+        # Load the new cluster id.
+        new_cluster_id = self.context.load('new_cluster_id'). \
+            get('new_cluster_id', None)
+        mc = ManualClustering(self.spike_clusters,
+                              self.spikes_per_cluster,
+                              similarity=self.similarity,
+                              cluster_groups=self.cluster_groups,
+                              new_cluster_id=new_cluster_id,
+                              )
+
+        # Save the new cluster id on disk.
+        @mc.clustering.connect
+        def on_cluster(up):
+            new_cluster_id = mc.clustering.new_cluster_id()
+            logger.debug("Save the new cluster id: %d", new_cluster_id)
+            self.context.save('new_cluster_id',
+                              dict(new_cluster_id=new_cluster_id))
+
+        self.manual_clustering = mc
+        mc.add_column(self.get_probe_depth, name='probe_depth')
 
     def _select_spikes(self, cluster_id, n_max=None):
         assert isinstance(cluster_id, int)
@@ -327,37 +350,16 @@ class Controller(EventEmitter):
     def similarity(self, cluster_id):
         return self.get_close_clusters(cluster_id)
 
-    def set_manual_clustering(self, gui):
-        # Load the new cluster id.
-        new_cluster_id = self.context.load('new_cluster_id'). \
-            get('new_cluster_id', None)
-        mc = ManualClustering(self.spike_clusters,
-                              self.spikes_per_cluster,
-                              similarity=self.similarity,
-                              cluster_groups=self.cluster_groups,
-                              new_cluster_id=new_cluster_id,
-                              )
-
-        # Save the new cluster id on disk.
-        @mc.clustering.connect
-        def on_cluster(up):
-            new_cluster_id = mc.clustering.new_cluster_id()
-            logger.debug("Save the new cluster id: %d", new_cluster_id)
-            self.context.save('new_cluster_id',
-                              dict(new_cluster_id=new_cluster_id))
-
-        self.manual_clustering = mc
-        mc.add_column(self.get_probe_depth, name='probe_depth')
-        mc.attach(gui)
-
     def create_gui(self, name=None, subtitle=None,
                    plugins=None, config_dir=None, **kwargs):
         """Create a manual clustering GUI."""
         config_dir = config_dir or self.config_dir
         gui = GUI(name=name, subtitle=subtitle,
                   config_dir=config_dir, **kwargs)
-        self.set_manual_clustering(gui)
         gui.controller = self
+
+        # Attach the ManualClustering component to the GUI.
+        self.manual_clustering.attach(gui)
 
         # Add views.
         self.add_correlogram_view(gui)

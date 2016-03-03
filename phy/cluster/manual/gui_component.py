@@ -467,7 +467,8 @@ class ManualClustering(object):
     def split(self, spike_ids=None):
         """Split the selected spikes (NOT IMPLEMENTED YET)."""
         if spike_ids is None:
-            spike_ids = np.concatenate(self.gui.emit('request_split'))
+            spike_ids = self.gui.emit('request_split')
+            spike_ids = np.concatenate(spike_ids).astype(np.int64)
         if len(spike_ids) == 0:
             return
         self.clustering.split(spike_ids)
