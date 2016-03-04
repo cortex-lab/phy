@@ -128,7 +128,7 @@ def test_grid_lines(qtbot):
 def test_grid_text(qtbot):
     view = View(layout='grid', shape=(2, 1))
 
-    view[0, 0].text(pos=(0, 0), text='Hello world!', anchor=0.)
+    view[0, 0].text(pos=(0, 0), text='Hello world!', anchor=(0., 0.))
     view[1, 0].text(pos=[[-.5, 0], [+.5, 0]], text=['|', ':)'])
 
     _show(qtbot, view)
