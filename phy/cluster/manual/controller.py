@@ -351,7 +351,9 @@ class Controller(EventEmitter):
         return self.get_close_clusters(cluster_id)
 
     def create_gui(self, name=None, subtitle=None,
-                   plugins=None, config_dir=None, **kwargs):
+                   plugins=None, config_dir=None,
+                   add_default_views=True,
+                   **kwargs):
         """Create a manual clustering GUI."""
         config_dir = config_dir or self.config_dir
         gui = GUI(name=name, subtitle=subtitle,
@@ -362,13 +364,14 @@ class Controller(EventEmitter):
         self.manual_clustering.attach(gui)
 
         # Add views.
-        self.add_correlogram_view(gui)
-        if self.all_features is not None:
-            self.add_feature_view(gui)
-        if self.all_waveforms is not None:
-            self.add_waveform_view(gui)
-        if self.all_traces is not None:
-            self.add_trace_view(gui)
+        if add_default_views:
+            self.add_correlogram_view(gui)
+            if self.all_features is not None:
+                self.add_feature_view(gui)
+            if self.all_waveforms is not None:
+                self.add_waveform_view(gui)
+            if self.all_traces is not None:
+                self.add_trace_view(gui)
 
         self.emit('create_gui', gui)
 

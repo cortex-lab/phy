@@ -39,7 +39,7 @@ def state(tempdir):
 @fixture
 def gui(tempdir, state):
     controller = MockController(config_dir=tempdir)
-    return controller.create_gui(**state)
+    return controller.create_gui(add_default_views=False, **state)
 
 
 def _select_clusters(gui):

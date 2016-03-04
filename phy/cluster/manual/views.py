@@ -374,6 +374,9 @@ class WaveformView(ManualClusteringView):
                               depth=depth,
                               data_bounds=self.data_bounds,
                               )
+                # Add channel labels.
+                self[ch].text(pos=[[t[0, 0], 0.]], text=str(ch),
+                              anchor=[-1., -.25])
 
         # Zoom on the best channels when selecting clusters.
         channels = self.best_channels(cluster_ids)
