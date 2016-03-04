@@ -94,6 +94,7 @@ class ScatterVisual(BaseVisual):
         if pos is None:
             x, y = _get_pos(x, y)
             pos = np.c_[x, y]
+        pos = np.asarray(pos)
         assert pos.ndim == 2
         assert pos.shape[1] == 2
         n = pos.shape[0]
@@ -363,10 +364,12 @@ class TextVisual(BaseVisual):
         n_text = pos.shape[0]
         assert len(text) == n_text
 
-        anchor = anchor if anchor is not None else 0.
-        if not hasattr(anchor, '__len__'):
-            anchor = [anchor] * n_text
-        assert len(anchor) == n_text
+        anchor = anchor if anchor is not None else (0., 0.)
+        anchor = np.atleast_2d(anchor)
+        if anchor.shape[0] == 1:
+            anchor = np.repeat(anchor, n_text, axis=0)
+        assert anchor.ndim == 2
+        assert anchor.shape == (n_text, 2)
 
         # By default, we assume that the coordinates are in NDC.
         if data_bounds is None:
@@ -419,8 +422,8 @@ class TextVisual(BaseVisual):
         a_quad_index = np.tile(a_quad_index, n_glyphs)
         a_char_index = np.repeat(a_char_index, 6)
 
-        a_anchor = np.repeat(a_anchor, lengths)
-        a_anchor = np.repeat(a_anchor, 6)
+        a_anchor = np.repeat(a_anchor, lengths, axis=0)
+        a_anchor = np.repeat(a_anchor, 6, axis=0)
 
         a_lengths = np.repeat(lengths, lengths)
         a_lengths = np.repeat(a_lengths, 6)
@@ -429,7 +432,7 @@ class TextVisual(BaseVisual):
         assert a_position.shape == (n_vertices, 2)
         assert a_glyph_index.shape == (n_vertices,)
         assert a_quad_index.shape == (n_vertices,)
-        assert a_anchor.shape == (n_vertices,)
+        assert a_anchor.shape == (n_vertices, 2)
         assert a_lengths.shape == (n_vertices,)
 
         # Transform the positions.

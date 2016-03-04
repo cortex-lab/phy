@@ -9,6 +9,7 @@
 
 import numpy as np
 
+from ..transform import NDC
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
                        LineVisual, PolygonVisual, TextVisual,
                        )
@@ -212,3 +213,25 @@ def test_text_0(qtbot, canvas_pz):
 
     _test_visual(qtbot, canvas_pz, TextVisual(),
                  pos=pos, text=text)
+
+
+def test_text_1(qtbot, canvas_pz):
+    c = canvas_pz
+
+    text = ['--x--'] * 5
+    pos = [[0, 0], [-.5, +.5], [+.5, +.5], [-.5, -.5], [+.5, -.5]]
+    anchor = [[0, 0], [-1, +1], [+1, +1], [-1, -1], [+1, -1]]
+
+    v = TextVisual()
+    c.add_visual(v)
+    v.set_data(pos=pos, text=text, anchor=anchor, data_bounds=NDC)
+
+    v = ScatterVisual()
+    c.add_visual(v)
+    v.set_data(pos=pos, data_bounds=NDC)
+
+    c.show()
+    qtbot.waitForWindowShown(c.native)
+
+    # qtbot.stop()
+    c.close()
