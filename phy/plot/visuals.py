@@ -333,7 +333,7 @@ class TextVisual(BaseVisual):
         # Load the font.
         curdir = op.realpath(op.dirname(__file__))
         font_name = 'SourceCodePro-Regular'
-        font_size = 48
+        font_size = 32
         # The font texture is gzipped.
         fn = '%s-%d.npy.gz' % (font_name, font_size)
         with gzip.open(op.join(curdir, 'static', fn), 'rb') as f:
