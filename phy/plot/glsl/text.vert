@@ -26,7 +26,7 @@ void main() {
     // Position of the glyph.
     gl_Position = transform(a_position);
     gl_Position.xy = gl_Position.xy + vec2(a_glyph_index * w + dx * w, dy * h);
-    gl_Position.xy += (a_anchor - .5) * vec2(a_lengths * w, h);
+    gl_Position.xy += (a_anchor - 1.) * .5 * vec2(a_lengths * w, h);
 
     // Index in the texture
     float i = floor(a_char_index / cols);
