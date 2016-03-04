@@ -26,7 +26,10 @@ void main() {
     // Position of the glyph.
     gl_Position = transform(a_position);
     gl_Position.xy = gl_Position.xy + vec2(a_glyph_index * w + dx * w, dy * h);
+    // Anchor: the part in [-1, 1] is relative to the text size.
     gl_Position.xy += (a_anchor - 1.) * .5 * vec2(a_lengths * w, h);
+    // NOTE: The part beyond [-1, 1] is absolute, so that texts stay aligned.
+    gl_Position.xy += (a_anchor - clamp(a_anchor, -1., 1.));
 
     // Index in the texture
     float i = floor(a_char_index / cols);
