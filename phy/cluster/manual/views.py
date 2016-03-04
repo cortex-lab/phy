@@ -376,7 +376,7 @@ class WaveformView(ManualClusteringView):
                               )
                 # Add channel labels.
                 self[ch].text(pos=[[t[0, 0], 0.]], text=str(ch),
-                              anchor=[-1.5, -.25],
+                              anchor=[-1.01, -.25],
                               data_bounds=self.data_bounds,
                               )
 
@@ -1076,13 +1076,22 @@ class FeatureView(ManualClusteringView):
         # The marker size is smaller for background spikes.
         ms = (self._default_marker_size
               if spike_clusters_rel is not None else 1.)
-        self[i, j].scatter(x=x,
-                           y=y,
+        self[i, j].scatter(x=x, y=y,
                            color=color,
                            depth=d,
                            data_bounds=data_bounds,
                            size=ms * np.ones(n_spikes),
                            )
+        if i == (self.n_cols - 1):
+            self[i, j].text(pos=[0., -1.],
+                            text=str(x_dim[i, j]),
+                            anchor=[0., -1.04],
+                            )
+        if j == 0:
+            self[i, j].text(pos=[-1., 0.],
+                            text=str(y_dim[i, j]),
+                            anchor=[-1.03, 0.],
+                            )
 
     def _get_channel_dims(self, cluster_ids):
         """Select the channels to show by default."""

@@ -390,7 +390,7 @@ class TextVisual(BaseVisual):
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        pos = data.pos
+        pos = data.pos.astype(np.float64)
         assert pos.ndim == 2
         assert pos.shape[1] == 2
         assert pos.dtype == np.float64
