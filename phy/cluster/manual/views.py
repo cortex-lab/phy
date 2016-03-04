@@ -1396,6 +1396,12 @@ class CorrelogramView(ManualClusteringView):
                                     color=color,
                                     ylim=ylim,
                                     )
+                    # Cluster labels.
+                    if i == (n_clusters - 1):
+                        self[i, j].text(pos=[0., -1.],
+                                        text=str(cluster_ids[j]),
+                                        anchor=[0., -1.04],
+                                        )
 
     def toggle_normalization(self):
         """Change the normalization of the correlograms."""
