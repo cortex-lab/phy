@@ -179,7 +179,7 @@ class Controller(EventEmitter):
     def get_waveforms(self, cluster_id):
         return [self._select_data(cluster_id,
                                   self.all_waveforms,
-                                  100,  # TODO
+                                  50,  # TODO
                                   )]
 
     def get_mean_waveforms(self, cluster_id):
