@@ -376,7 +376,9 @@ class WaveformView(ManualClusteringView):
                               )
                 # Add channel labels.
                 self[ch].text(pos=[[t[0, 0], 0.]], text=str(ch),
-                              anchor=[-1., -.25])
+                              anchor=[-1.5, -.25],
+                              data_bounds=self.data_bounds,
+                              )
 
         # Zoom on the best channels when selecting clusters.
         channels = self.best_channels(cluster_ids)
@@ -677,13 +679,16 @@ class TraceView(ManualClusteringView):
     def _plot_traces(self, traces=None, color=None):
         assert traces.shape[1] == self.n_channels
         t = self.interval[0] + np.arange(traces.shape[0]) * self.dt
-        t = np.tile(t, (self.n_channels, 1))
         color = color or self.default_trace_color
         channels = np.arange(self.n_channels)
         for ch in channels:
-            self[ch].plot(t[ch, :], traces[:, ch],
+            self[ch].plot(t, traces[:, ch],
                           color=color,
                           data_bounds=self.data_bounds,
+                          )
+            # Add channel labels.
+            self[ch].text(pos=[-1, 0.], text=str(ch),
+                          anchor=[+1., -.1],
                           )
 
     def _plot_spike(self, waveforms=None, channels=None, masks=None,
