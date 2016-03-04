@@ -1083,8 +1083,9 @@ class FeatureView(ManualClusteringView):
                            size=ms * np.ones(n_spikes),
                            )
         if i == (self.n_cols - 1):
+            dim = x_dim[i, j] if j < (self.n_cols - 1) else x_dim[i, 0]
             self[i, j].text(pos=[0., -1.],
-                            text=str(x_dim[i, j]),
+                            text=str(dim),
                             anchor=[0., -1.04],
                             )
         if j == 0:
