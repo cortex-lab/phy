@@ -687,8 +687,9 @@ class TraceView(ManualClusteringView):
                           data_bounds=self.data_bounds,
                           )
             # Add channel labels.
-            self[ch].text(pos=[-1, 0.], text=str(ch),
+            self[ch].text(pos=[t[0], traces[0, ch]], text=str(ch),
                           anchor=[+1., -.1],
+                          data_bounds=self.data_bounds,
                           )
 
     def _plot_spike(self, waveforms=None, channels=None, masks=None,

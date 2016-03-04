@@ -444,7 +444,7 @@ class TextVisual(BaseVisual):
         pos_tr = self.transforms.apply(a_position)
         assert pos_tr.shape == (n_vertices, 2)
 
-        self.program['a_position'] = a_position.astype(np.float32)
+        self.program['a_position'] = pos_tr.astype(np.float32)
         self.program['a_glyph_index'] = a_glyph_index.astype(np.float32)
         self.program['a_quad_index'] = a_quad_index.astype(np.float32)
         self.program['a_char_index'] = a_char_index.astype(np.float32)
