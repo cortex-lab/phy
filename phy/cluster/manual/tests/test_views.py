@@ -173,13 +173,13 @@ def test_trace_view(qtbot, gui):
     assert v.time == .25
 
     v.go_to(-.5)
-    assert v.time == .25
+    assert v.time == .125
 
     v.go_left()
-    assert v.time == .25
+    assert v.time == .125
 
     v.go_right()
-    assert v.time == .35
+    assert v.time == .175
 
     # Change interval size.
     v.set_interval((.25, .75))

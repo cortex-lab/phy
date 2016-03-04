@@ -375,7 +375,8 @@ class WaveformView(ManualClusteringView):
                               data_bounds=self.data_bounds,
                               )
                 # Add channel labels.
-                self[ch].text(pos=[[t[0, 0], 0.]], text=str(ch),
+                self[ch].text(pos=[[t[0, 0], 0.]],
+                              text=str(ch),
                               anchor=[-1.01, -.25],
                               data_bounds=self.data_bounds,
                               )
@@ -613,7 +614,7 @@ def extract_spikes(traces, interval, sample_rate=None,
 
 
 class TraceView(ManualClusteringView):
-    interval_duration = .5  # default duration of the interval
+    interval_duration = .25  # default duration of the interval
     shift_amount = .1
     scaling_coeff = 1.1
     default_trace_color = (.3, .3, .3, 1.)
@@ -676,7 +677,7 @@ class TraceView(ManualClusteringView):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _plot_traces(self, traces=None, color=None):
+    def _plot_traces(self, traces=None, color=None, show_labels=True):
         assert traces.shape[1] == self.n_channels
         t = self.interval[0] + np.arange(traces.shape[0]) * self.dt
         color = color or self.default_trace_color
@@ -686,11 +687,13 @@ class TraceView(ManualClusteringView):
                           color=color,
                           data_bounds=self.data_bounds,
                           )
-            # Add channel labels.
-            self[ch].text(pos=[t[0], traces[0, ch]], text=str(ch),
-                          anchor=[+1., -.1],
-                          data_bounds=self.data_bounds,
-                          )
+            if show_labels:
+                # Add channel labels.
+                self[ch].text(pos=[t[0], traces[0, ch]],
+                              text=str(ch),
+                              anchor=[+1., -.1],
+                              data_bounds=self.data_bounds,
+                              )
 
     def _plot_spike(self, waveforms=None, channels=None, masks=None,
                     spike_time=None, spike_cluster=None, offset_samples=0,
@@ -765,8 +768,9 @@ class TraceView(ManualClusteringView):
         self.data_bounds = np.array([start, m, end, M])
 
         # Plot the traces.
-        for traces in all_traces:
-            self._plot_traces(**traces)
+        for i, traces in enumerate(all_traces):
+            # Only show labels for the first set of traces.
+            self._plot_traces(show_labels=(i == 0), **traces)
 
         # Plot the spikes.
         spikes = self.spikes(interval, all_traces)
