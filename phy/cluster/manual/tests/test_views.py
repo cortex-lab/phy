@@ -174,7 +174,7 @@ def test_trace_view(qtbot, gui):
     assert v.time == .175
 
     # Change interval size.
-    v.set_interval((.25, .75))
+    v.interval = (.25, .75)
     ac(v.interval, (.25, .75))
     v.widen()
     ac(v.interval, (.225, .775))
