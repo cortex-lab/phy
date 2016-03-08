@@ -619,7 +619,7 @@ class TraceView(ManualClusteringView):
         self._update_boxes()
 
         # Initial interval.
-        self.interval = None
+        self._interval = None
         self.go_to(duration / 2.)
 
     # Internal methods
@@ -627,7 +627,7 @@ class TraceView(ManualClusteringView):
 
     def _plot_traces(self, traces=None, color=None, show_labels=True):
         assert traces.shape[1] == self.n_channels
-        t = self.interval[0] + np.arange(traces.shape[0]) * self.dt
+        t = self._interval[0] + np.arange(traces.shape[0]) * self.dt
         color = color or self.default_trace_color
         channels = np.arange(self.n_channels)
         for ch in channels:
@@ -688,7 +688,7 @@ class TraceView(ManualClusteringView):
         """Display the traces and spikes in a given interval."""
         self.clear()
         interval = self._restrict_interval(interval)
-        self.interval = interval
+        self._interval = interval
         start, end = interval
         # Set the status message.
         if change_status:
@@ -720,7 +720,7 @@ class TraceView(ManualClusteringView):
 
     def on_select(self, cluster_ids=None):
         super(TraceView, self).on_select(cluster_ids)
-        self.set_interval(self.interval, change_status=False)
+        self.set_interval(self._interval, change_status=False)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -738,6 +738,7 @@ class TraceView(ManualClusteringView):
     def state(self):
         return Bunch(scaling=self.scaling,
                      origin=self.origin,
+                     interval=self._interval,
                      )
 
     # Scaling
@@ -770,13 +771,21 @@ class TraceView(ManualClusteringView):
     @property
     def time(self):
         """Time at the center of the window."""
-        return sum(self.interval) * .5
+        return sum(self._interval) * .5
+
+    @property
+    def interval(self):
+        return self._interval
+
+    @interval.setter
+    def interval(self, value):
+        self.set_interval(value)
 
     @property
     def half_duration(self):
         """Half of the duration of the current interval."""
-        if self.interval is not None:
-            a, b = self.interval
+        if self._interval is not None:
+            a, b = self._interval
             return (b - a) * .5
         else:
             return self.interval_duration * .5
@@ -792,13 +801,13 @@ class TraceView(ManualClusteringView):
 
     def go_right(self):
         """Go to right."""
-        start, end = self.interval
+        start, end = self._interval
         delay = (end - start) * .2
         self.shift(delay)
 
     def go_left(self):
         """Go to left."""
-        start, end = self.interval
+        start, end = self._interval
         delay = (end - start) * .2
         self.shift(-delay)
 
