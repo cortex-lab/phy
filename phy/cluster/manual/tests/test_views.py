@@ -16,7 +16,6 @@ from phy.utils import Bunch
 from .conftest import MockController
 from ..views import (ScatterView,
                      _extract_wave,
-                     _selected_clusters_colors,
                      _extend,
                      )
 
@@ -81,13 +80,6 @@ def test_extract_wave():
 
     ae(_extract_wave(traces, 5 - hwl, mask, wave_len)[0],
        [[16, 17], [21, 22], [0, 0], [0, 0]])
-
-
-def test_selected_clusters_colors():
-    assert _selected_clusters_colors().shape[0] > 10
-    assert _selected_clusters_colors(0).shape[0] == 0
-    assert _selected_clusters_colors(1).shape[0] == 1
-    assert _selected_clusters_colors(100).shape[0] == 100
 
 
 #------------------------------------------------------------------------------

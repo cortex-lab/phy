@@ -13,7 +13,6 @@ import logging
 import re
 
 import numpy as np
-from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
 from vispy.util.event import Event
 
 from phy.io.array import _index_of, _get_padded, get_excerpts
@@ -23,6 +22,7 @@ from phy.plot.transform import Range
 from phy.plot.utils import _get_boxes
 from phy.stats import correlograms
 from phy.utils import Bunch
+from phy.utils._color import _spike_colors, ColorSelector
 
 logger = logging.getLogger(__name__)
 
@@ -30,36 +30,6 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 # Utils
 # -----------------------------------------------------------------------------
-
-# Default color map for the selected clusters.
-_COLORMAP = np.array([[8, 146, 252],
-                      [255, 2, 2],
-                      [240, 253, 2],
-                      [228, 31, 228],
-                      [2, 217, 2],
-                      [255, 147, 2],
-                      [212, 150, 70],
-                      [205, 131, 201],
-                      [201, 172, 36],
-                      [150, 179, 62],
-                      [95, 188, 122],
-                      [129, 173, 190],
-                      [231, 107, 119],
-                      ])
-
-
-def _selected_clusters_colors(n_clusters=None):
-    if n_clusters is None:
-        n_clusters = _COLORMAP.shape[0]
-    if n_clusters > _COLORMAP.shape[0]:
-        colors = np.tile(_COLORMAP, (1 + n_clusters // _COLORMAP.shape[0], 1))
-    else:
-        colors = _COLORMAP
-    out = colors[:n_clusters, ...] / 255.
-    if n_clusters is not None:
-        assert out.shape == (n_clusters, 3)
-    return out
-
 
 def _extract_wave(traces, start, mask, wave_len=None, mask_threshold=.5):
     n_samples, n_channels = traces.shape
@@ -90,37 +60,6 @@ def _get_depth(masks, spike_clusters_rel=None, n_clusters=None):
     depth[masks <= 0.25] = 0
     assert depth.shape == (n_spikes,)
     return depth
-
-
-def _get_color(masks, spike_clusters_rel=None, n_clusters=None, alpha=.5):
-    """Return the color of vertices as a function of the mask and
-    cluster index."""
-    n_spikes = masks.shape[0]
-    # The transparency depends on whether the spike clusters are specified.
-    # For background spikes, we use a smaller alpha.
-    alpha = alpha if spike_clusters_rel is not None else .25
-    assert masks.shape == (n_spikes,)
-    # Generate the colors.
-    if n_clusters is None:
-        if spike_clusters_rel is None:
-            n_clusters = _COLORMAP.shape[0]
-        else:
-            n_clusters = spike_clusters_rel.max() + 1
-    colors = _selected_clusters_colors(n_clusters)
-    # Color as a function of the mask.
-    if spike_clusters_rel is not None:
-        assert spike_clusters_rel.shape == (n_spikes,)
-        color = colors[spike_clusters_rel]
-    else:
-        # Fixed color when the spike clusters are not specified.
-        color = np.ones((n_spikes, 3))
-    hsv = rgb_to_hsv(color[:, :3])
-    # Change the saturation and value as a function of the mask.
-    hsv[:, 1] *= masks
-    hsv[:, 2] *= .5 * (1. + masks)
-    color = hsv_to_rgb(hsv)
-    color = np.c_[color, alpha * np.ones((n_spikes, 1))]
-    return color
 
 
 def _extend(channels, n=None):
@@ -372,11 +311,10 @@ class WaveformView(ManualClusteringView):
                 depth = _get_depth(m,
                                    spike_clusters_rel=spike_clusters_rel,
                                    n_clusters=n_clusters)
-                color = _get_color(m,
-                                   spike_clusters_rel=spike_clusters_rel,
-                                   n_clusters=n_clusters,
-                                   alpha=alpha,
-                                   )
+                color = _spike_colors(spike_clusters_rel,
+                                      masks=m,
+                                      alpha=alpha,
+                                      )
                 self[ch].plot(x=t, y=w[:, :, ch],
                               color=color,
                               depth=depth,
@@ -667,6 +605,8 @@ class TraceView(ManualClusteringView):
         self._scaling = 1.
         self._origin = None
 
+        self._color_selector = ColorSelector()
+
         # Initialize the view.
         super(TraceView, self).__init__(layout='stacked',
                                         origin=self.origin,
@@ -713,21 +653,6 @@ class TraceView(ManualClusteringView):
         sr = float(self.sample_rate)
 
         t0 = spike_time - offset_samples / sr
-
-        # Determine the color as a function of the spike's cluster.
-        if color is None:
-            # TODO: improve all of this.
-            clu = spike_cluster
-            if self.cluster_ids is None or clu not in self.cluster_ids:
-                k = len(self.cluster_ids) if self.cluster_ids else 0
-                clu_rel = k + (clu % max(_COLORMAP.shape[0] - k, 0))
-                sc = clu_rel * np.ones(n_channels, dtype=np.int32)
-            else:
-                clu_rel = self.cluster_ids.index(clu)
-                sc = clu_rel * np.ones(n_channels, dtype=np.int32)
-            color = _get_color(masks,
-                               spike_clusters_rel=sc,
-                               )
 
         # Generate the x coordinates of the waveform.
         t = t0 + self.dt * np.arange(n_samples)
@@ -784,8 +709,11 @@ class TraceView(ManualClusteringView):
         # Plot the spikes.
         spikes = self.spikes(interval, all_traces)
         assert isinstance(spikes, (tuple, list))
+
         for spike in spikes:
-            self._plot_spike(**spike)
+            color = self._color_selector.get(spike.spike_cluster,
+                                             self.cluster_ids)
+            self._plot_spike(color=color, **spike)
 
         self.build()
         self.update()
@@ -1082,7 +1010,7 @@ class FeatureView(ManualClusteringView):
         m = np.maximum(mx, my)
 
         # Get the color of the markers.
-        color = _get_color(m, spike_clusters_rel=sc, n_clusters=n_clusters)
+        color = _spike_colors(sc, masks=m)
         assert color.shape == (n_spikes, 4)
 
         # Create the scatter plot for the current subplot.
@@ -1263,7 +1191,6 @@ class FeatureView(ManualClusteringView):
         f = data.data
         i, j = self.lasso.box
 
-        # TODO: refactor and load all features.
         x = self._get_feature(x_dim[i, j], spike_ids, f)
         y = self._get_feature(y_dim[i, j], spike_ids, f)
         pos = np.c_[x, y].astype(np.float64)
@@ -1396,15 +1323,14 @@ class CorrelogramView(ManualClusteringView):
         ccg = self._compute_correlograms(cluster_ids)
         ylim = [ccg.max()] if not self.uniform_normalization else None
 
-        colors = _selected_clusters_colors(n_clusters)
+        colors = _spike_colors(np.arange(n_clusters), alpha=1.)
 
         self.grid.shape = (n_clusters, n_clusters)
         with self.building():
             for i in range(n_clusters):
                 for j in range(n_clusters):
                     hist = ccg[i, j, :]
-                    color = colors[i] if i == j else np.ones(3)
-                    color = np.hstack((color, [1]))
+                    color = colors[i] if i == j else np.ones(4)
                     self[i, j].hist(hist,
                                     color=color,
                                     ylim=ylim,
@@ -1498,7 +1424,7 @@ class ScatterView(ManualClusteringView):
         with self.building():
             m = np.ones(n_spikes)
             # Get the color of the markers.
-            color = _get_color(m, spike_clusters_rel=sc, n_clusters=n_clusters)
+            color = _spike_colors(sc, masks=m)
             assert color.shape == (n_spikes, 4)
             ms = (self._default_marker_size if sc is not None else 1.)
 
