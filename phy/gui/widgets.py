@@ -62,7 +62,7 @@ class WebPage(QWebPage):
         logger.debug("[%d] %s", line, msg)  # pragma: no cover
 
 
-def _to_py(obj):
+def _to_py(obj):  # pragma: no cover
     if isinstance(obj, QVariant):
         return obj.toPyObject()
     elif isinstance(obj, QPyNullVariant):
