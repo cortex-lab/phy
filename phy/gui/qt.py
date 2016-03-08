@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 from PyQt4.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
-                          QVariant, QEventLoop, QTimer,
+                          QVariant, QPyNullVariant, QEventLoop, QTimer,
                           pyqtSignal, pyqtSlot, QSize, QUrl)
 from PyQt4.QtGui import (QKeySequence, QAction, QStatusBar,  # noqa
                          QMainWindow, QDockWidget, QWidget,

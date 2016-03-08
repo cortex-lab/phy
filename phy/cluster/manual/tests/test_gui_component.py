@@ -148,6 +148,16 @@ def test_manual_clustering_split_2(gui, quality, similarity):
     assert mc.selected == [3, 2]
 
 
+def test_manual_clustering_state(tempdir, qtbot, gui, manual_clustering):
+    mc = manual_clustering
+    cv = mc.cluster_view
+    cv.sort_by('id')
+    gui.close()
+    assert cv.state['sort_by'] == ('id', 'asc')
+    cv.set_state(cv.state)
+    assert cv.state['sort_by'] == ('id', 'asc')
+
+
 def test_manual_clustering_split_lasso(tempdir, qtbot):
     controller = MockController(config_dir=tempdir)
     gui = controller.create_gui()

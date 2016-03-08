@@ -14,9 +14,9 @@ import os.path as op
 
 from six import text_type
 
-from .qt import (QWebView, QWebPage, QUrl, QWebSettings, QVariant,
-                 pyqtSlot,
-                 _wait_signal,
+from .qt import (QWebView, QWebPage, QUrl, QWebSettings,
+                 QVariant, QPyNullVariant,
+                 pyqtSlot, _wait_signal,
                  )
 from phy.utils import EventEmitter
 from phy.utils._misc import _CustomEncoder
@@ -60,6 +60,19 @@ _PAGE_TEMPLATE = """
 class WebPage(QWebPage):
     def javaScriptConsoleMessage(self, msg, line, source):
         logger.debug("[%d] %s", line, msg)  # pragma: no cover
+
+
+def _to_py(obj):
+    if isinstance(obj, QVariant):
+        return obj.toPyObject()
+    elif isinstance(obj, QPyNullVariant):
+        return None
+    elif isinstance(obj, list):
+        return [_to_py(_) for _ in obj]
+    elif isinstance(obj, tuple):
+        return tuple(_to_py(_) for _ in obj)
+    else:
+        return obj
 
 
 class HTMLWidget(QWebView):
@@ -174,7 +187,7 @@ class HTMLWidget(QWebView):
             return
         logger.log(5, "Evaluate Javascript: `%s`.", expr)
         out = self.page().mainFrame().evaluateJavaScript(expr)
-        return out.toPyObject() if isinstance(out, QVariant) else out
+        return _to_py(out)
 
     @pyqtSlot(str, str)
     def _emit_from_js(self, name, arg_json):
