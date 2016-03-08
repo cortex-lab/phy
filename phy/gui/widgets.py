@@ -15,7 +15,7 @@ import os.path as op
 from six import text_type
 
 from .qt import (QWebView, QWebPage, QUrl, QWebSettings,
-                 QVariant, QPyNullVariant,
+                 QVariant, QPyNullVariant, QString,
                  pyqtSlot, _wait_signal,
                  )
 from phy.utils import EventEmitter
@@ -65,6 +65,8 @@ class WebPage(QWebPage):
 def _to_py(obj):  # pragma: no cover
     if isinstance(obj, QVariant):
         return obj.toPyObject()
+    elif isinstance(obj, QString):
+        return unicode(obj)
     elif isinstance(obj, QPyNullVariant):
         return None
     elif isinstance(obj, list):

@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 from PyQt4.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
-                          QVariant, QEventLoop, QTimer,
+                          QVariant, QEventLoop, QTimer, QString,
                           pyqtSignal, pyqtSlot, QSize, QUrl)
 try:
     from PyQt4.QtCore import QPyNullVariant  # noqa
