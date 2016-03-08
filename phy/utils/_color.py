@@ -6,11 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from colorsys import hsv_to_rgb
-
 import numpy as np
 from numpy.random import uniform
-from matplotlib.colors import hsv_to_rgb, rgb_to_hsv
+from matplotlib.colors import rgb_to_hsv, hsv_to_rgb
 
 
 #------------------------------------------------------------------------------
@@ -63,7 +61,6 @@ _COLORMAP = np.array([[8, 146, 252],
 
 def _apply_color_masks(color, masks=None, alpha=None):
     alpha = alpha or .5
-    color = np.atleast_2d(color)
     hsv = rgb_to_hsv(color[:, :3])
     # Change the saturation and value as a function of the mask.
     if masks is not None:
@@ -82,7 +79,10 @@ def _colormap(i):
 
 def _spike_colors(spike_clusters, masks=None, alpha=None):
     n = len(_COLORMAP)
-    c = _COLORMAP[np.mod(spike_clusters, n), :] / 255.
+    if spike_clusters is not None:
+        c = _COLORMAP[np.mod(spike_clusters, n), :] / 255.
+    else:
+        c = np.ones((masks.shape[0], 3))
     c = _apply_color_masks(c, masks=masks, alpha=alpha)
     return c
 
