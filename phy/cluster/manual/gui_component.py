@@ -55,6 +55,15 @@ class ClusterView(Table):
                         }
                         ''')
 
+    @property
+    def state(self):
+        return {'sort_by': self.current_sort}
+
+    def set_state(self, state):
+        sort_by = state.get('sort_by', None)
+        if sort_by:
+            self.sort_by(*sort_by)
+
 
 class ManualClustering(object):
     """Component that brings manual clustering facilities to a GUI:
@@ -430,6 +439,18 @@ class ManualClustering(object):
         # Add the similarity view if there is a similarity function.
         if self.similarity:
             gui.add_view(self.similarity_view, name='SimilarityView')
+
+        # Set the view state.
+        cv = self.cluster_view
+        cv.set_state(gui.state.get_view_state(cv))
+
+        # Save the view state in the GUI state.
+        @gui.connect_
+        def on_close():
+            gui.state.update_view_state(cv, cv.state)
+            # NOTE: create_gui() already saves the state, but the event
+            # is registered *before* we add all views.
+            gui.state.save()
 
         # Update the cluster views and selection when a cluster event occurs.
         self.gui.connect_(self.on_cluster)
