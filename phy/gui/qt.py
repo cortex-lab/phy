@@ -19,12 +19,16 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 from PyQt4.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
-                          QVariant, QEventLoop, QTimer, QString,
+                          QVariant, QEventLoop, QTimer,
                           pyqtSignal, pyqtSlot, QSize, QUrl)
 try:
     from PyQt4.QtCore import QPyNullVariant  # noqa
 except:  # pragma: no cover
     QPyNullVariant = None
+try:
+    from PyQt4.QtCore import QString  # noqa
+except:  # pragma: no cover
+    QString = None
 from PyQt4.QtGui import (QKeySequence, QAction, QStatusBar,  # noqa
                          QMainWindow, QDockWidget, QWidget,
                          QMessageBox, QApplication, QMenuBar,

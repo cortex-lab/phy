@@ -65,8 +65,8 @@ class WebPage(QWebPage):
 def _to_py(obj):  # pragma: no cover
     if isinstance(obj, QVariant):
         return obj.toPyObject()
-    elif isinstance(obj, QString):
-        return unicode(obj)
+    elif QString and isinstance(obj, QString):
+        return text_type(obj)
     elif isinstance(obj, QPyNullVariant):
         return None
     elif isinstance(obj, list):
