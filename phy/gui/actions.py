@@ -114,7 +114,7 @@ def _alias(name):
 
 
 @require_qt
-def _create_qaction(gui, name, callback, shortcut, docstring=None):
+def _create_qaction(gui, name, callback, shortcut, docstring=None, alias=''):
     # Create the QAction instance.
     action = QAction(name.capitalize().replace('_', ' '), gui)
 
@@ -127,6 +127,7 @@ def _create_qaction(gui, name, callback, shortcut, docstring=None):
         sequence = [sequence]
     action.setShortcuts(sequence)
     assert docstring
+    docstring += ' (alias: {})'.format(alias)
     action.setStatusTip(docstring)
     action.setWhatsThis(docstring)
     return action
@@ -176,8 +177,11 @@ class Actions(object):
         docstring = re.sub(r'[\s]{2,}', ' ', docstring)
 
         # Create and register the action.
-        action = _create_qaction(self.gui, name, callback, shortcut,
-                                 docstring=docstring)
+        action = _create_qaction(self.gui, name, callback,
+                                 shortcut,
+                                 docstring=docstring,
+                                 alias=alias,
+                                 )
         action_obj = Bunch(qaction=action, name=name, alias=alias,
                            shortcut=shortcut, callback=callback, menu=menu)
         if verbose and not name.startswith('_'):
