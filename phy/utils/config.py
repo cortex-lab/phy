@@ -53,7 +53,7 @@ def load_config(path):
 
 
 def _default_config(config_dir=None):
-    path = op.join(config_dir or '~/.phy/', 'plugins/')
+    path = op.join(config_dir or op.join('~', '.phy'), 'plugins/')
     return dedent("""
     # You can also put your plugins in ~/.phy/plugins/.
 
@@ -65,7 +65,7 @@ def _default_config(config_dir=None):
 
 
     c = get_config()
-    c.Plugins.dirs = ['{}']
+    c.Plugins.dirs = [r'{}']
     """.format(path))
 
 
