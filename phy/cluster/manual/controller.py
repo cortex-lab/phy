@@ -45,6 +45,15 @@ class Controller(EventEmitter):
     add_view(gui, view)
 
     """
+
+    n_spikes_waveforms = 100
+    n_spikes_waveforms_lim = 100
+    n_spikes_masks = 100
+    n_spikes_features = 5000
+    n_spikes_background_features = 5000
+    n_spikes_features_lim = 100
+    n_spikes_close_clusters = 100
+
     # responsible for the cache
     def __init__(self, plugins=None, config_dir=None):
         super(Controller, self).__init__()
@@ -166,7 +175,7 @@ class Controller(EventEmitter):
     def get_masks(self, cluster_id):
         return self._select_data(cluster_id,
                                  self.all_masks,
-                                 100,  # TODO
+                                 self.n_spikes_masks,
                                  )
 
     def get_mean_masks(self, cluster_id):
@@ -179,14 +188,14 @@ class Controller(EventEmitter):
     def get_waveforms(self, cluster_id):
         return [self._select_data(cluster_id,
                                   self.all_waveforms,
-                                  50,  # TODO
+                                  self.n_spikes_waveforms,
                                   )]
 
     def get_mean_waveforms(self, cluster_id):
         return mean(self.get_waveforms(cluster_id)[0].data)
 
     def get_waveform_lims(self):
-        n_spikes = 100  # TODO
+        n_spikes = self.n_spikes_waveforms_lim
         arr = self.all_waveforms
         n = arr.shape[0]
         k = max(1, n // n_spikes)
@@ -214,11 +223,12 @@ class Controller(EventEmitter):
     def get_features(self, cluster_id, load_all=False):
         return self._select_data(cluster_id,
                                  self.all_features,
-                                 1000 if not load_all else None,  # TODO
+                                 (self.n_spikes_features
+                                  if not load_all else None),
                                  )
 
     def get_background_features(self):
-        k = max(1, int(self.n_spikes // 1000))
+        k = max(1, int(self.n_spikes // self.n_spikes_background_features))
         spike_ids = slice(None, None, k)
         b = Bunch()
         b.data = self.all_features[spike_ids]
@@ -231,7 +241,7 @@ class Controller(EventEmitter):
         return mean(self.get_features(cluster_id).data)
 
     def get_feature_lim(self):
-        return self._data_lim(self.all_features, 100)  # TODO
+        return self._data_lim(self.all_features, self.n_spikes_features_lim)
 
     # Traces
     # -------------------------------------------------------------------------
@@ -295,7 +305,7 @@ class Controller(EventEmitter):
         assert dist.shape == (len(clusters),)
         # Closest clusters.
         ind = np.argsort(dist)
-        ind = ind[:100]  # TODO
+        ind = ind[:self.n_spikes_close_clusters]
         return [(int(clusters[i]), float(dist[i])) for i in ind]
 
     def spikes_per_cluster(self, cluster_id):
