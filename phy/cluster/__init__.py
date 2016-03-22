@@ -3,5 +3,4 @@
 
 """Automatic and manual clustering facilities."""
 
-from . import algorithms
 from . import manual
