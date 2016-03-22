@@ -216,19 +216,6 @@ def test_read_write(tempdir):
     ae(read_array(path, mmap_mode='r'), arr)
 
 
-def test_read_write_dask(tempdir):
-    from dask.array import from_array
-    arr = np.arange(10).astype(np.float32)
-
-    arr_da = from_array(arr, ((5, 5),))
-
-    path = op.join(tempdir, 'test.npy')
-
-    write_array(path, arr_da)
-    ae(read_array(path), arr)
-    ae(read_array(path, mmap_mode='r'), arr)
-
-
 #------------------------------------------------------------------------------
 # Test virtual concatenation
 #------------------------------------------------------------------------------

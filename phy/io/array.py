@@ -250,18 +250,6 @@ def write_array(path, arr):
     """Write an array to a .npy file."""
     file_ext = op.splitext(path)[1]
     if file_ext == '.npy':
-        try:
-            # Save a dask array into a .npy file chunk-by-chunk.
-            from dask.array import Array, store
-            if isinstance(arr, Array):
-                f = np.memmap(path, mode='w+',
-                              dtype=arr.dtype, shape=arr.shape)
-                store(arr, f)
-                del f
-        except ImportError:  # pragma: no cover
-            # We'll save the dask array normally: it works but it is less
-            # efficient since we need to load everything in memory.
-            pass
         return np.save(path, arr)
     raise NotImplementedError("The file extension `{}` ".format(file_ext) +
                               "is not currently supported.")
