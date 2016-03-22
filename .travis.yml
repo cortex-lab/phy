@@ -2,7 +2,6 @@ language: python
 sudo: false
 python:
   - "2.7"
-  - "3.4"
   - "3.5"
 before_install:
   - pip install codecov
@@ -21,7 +20,6 @@ install:
   # Create the environment.
   - conda env create python=$TRAVIS_PYTHON_VERSION
   - source activate phy
-  - pip install klustakwik2
   # Dev requirements
   - pip install -r requirements-dev.txt
   - pip install -e .
