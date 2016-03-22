@@ -257,6 +257,8 @@ def test_concatenate_virtual_arrays_2():
     arrs = [np.zeros((2, 2)), np.ones((3, 2))]
     c = _concatenate_virtual_arrays(arrs)
     assert c.shape == (5, 2)
+    ae(c[:, :], np.vstack((np.zeros((2, 2)), np.ones((3, 2)))))
+    ae(c[0:4, 0], [0, 0, 1, 1])
 
 
 #------------------------------------------------------------------------------
