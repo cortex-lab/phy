@@ -66,16 +66,6 @@ if '--debug' in sys.argv:  # pragma: no cover
     sys.argv.remove('--debug')
 
 
-# Force dask to use the synchronous scheduler: we'll use ipyparallel
-# manually for parallel processing.
-try:
-    import dask.async
-    from dask import set_options
-    set_options(get=dask.async.get_sync)
-except ImportError:  # pragma: no cover
-    logger.debug("dask is not available.")
-
-
 def test():  # pragma: no cover
     """Run the full testing suite of phy."""
     import pytest
