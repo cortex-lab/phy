@@ -27,6 +27,7 @@ from ..array import (_unique,
                      data_chunk,
                      grouped_mean,
                      get_excerpts,
+                     _concatenate_virtual_arrays,
                      _range_from_slice,
                      _pad,
                      _get_padded,
@@ -226,6 +227,36 @@ def test_read_write_dask(tempdir):
     write_array(path, arr_da)
     ae(read_array(path), arr)
     ae(read_array(path, mmap_mode='r'), arr)
+
+
+#------------------------------------------------------------------------------
+# Test virtual concatenation
+#------------------------------------------------------------------------------
+
+def test_concatenate_virtual_arrays_1():
+    arrs = [np.arange(5), np.arange(10, 12), np.array([0])]
+    c = _concatenate_virtual_arrays(arrs)
+    assert c.shape == (8,)
+    assert c._get_recording(3) == 0
+    assert c._get_recording(5) == 1
+
+    ae(c[:], [0, 1, 2, 3, 4, 10, 11, 0])
+    ae(c[0], [0])
+    ae(c[4], [4])
+    ae(c[5], [10])
+    ae(c[6], [11])
+
+    ae(c[4:6], [4, 10])
+
+    ae(c[:6], [0, 1, 2, 3, 4, 10])
+    ae(c[4:], [4, 10, 11, 0])
+    ae(c[4:-1], [4, 10, 11])
+
+
+def test_concatenate_virtual_arrays_2():
+    arrs = [np.zeros((2, 2)), np.ones((3, 2))]
+    c = _concatenate_virtual_arrays(arrs)
+    assert c.shape == (5, 2)
 
 
 #------------------------------------------------------------------------------

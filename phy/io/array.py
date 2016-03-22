@@ -268,6 +268,127 @@ def write_array(path, arr):
 
 
 # -----------------------------------------------------------------------------
+# Virtual concatenation
+# -----------------------------------------------------------------------------
+
+def _start_stop(item):
+    """Find the start and stop indices of a __getitem__ item.
+
+    This is used only by ConcatenatedArrays.
+
+    Only two cases are supported currently:
+
+    * Single integer.
+    * Contiguous slice in the first dimension only.
+
+    """
+    if isinstance(item, tuple):
+        item = item[0]
+    if isinstance(item, slice):
+        # Slice.
+        if item.step not in (None, 1):
+            return NotImplementedError()
+        return item.start, item.stop
+    elif isinstance(item, (list, np.ndarray)):
+        # List or array of indices.
+        return np.min(item), np.max(item)
+    else:
+        # Integer.
+        return item, item + 1
+
+
+def _fill_index(arr, item):
+    if isinstance(item, tuple):
+        item = (slice(None, None, None),) + item[1:]
+        return arr[item]
+    else:
+        return arr
+
+
+class ConcatenatedArrays(object):
+    """This object represents a concatenation of several memory-mapped
+    arrays."""
+    def __init__(self, arrs, cols=None):
+        assert isinstance(arrs, list)
+        self.arrs = arrs
+        # Reordering of the columns.
+        self.cols = cols
+        self.offsets = np.concatenate([[0], np.cumsum([arr.shape[0]
+                                                       for arr in arrs])],
+                                      axis=0)
+        self.dtype = arrs[0].dtype if arrs else None
+
+    @property
+    def shape(self):
+        if self.arrs[0].ndim == 1:
+            return (self.offsets[-1],)
+        ncols = (len(self.cols) if self.cols is not None
+                 else self.arrs[0].shape[1])
+        return (self.offsets[-1], ncols)
+
+    def _get_recording(self, index):
+        """Return the recording that contains a given index."""
+        assert index >= 0
+        recs = np.nonzero((index - self.offsets[:-1]) >= 0)[0]
+        if len(recs) == 0:
+            # If the index is greater than the total size,
+            # return the last recording.
+            return len(self.arrs) - 1
+        # Return the last recording such that the index is greater than
+        # its offset.
+        return recs[-1]
+
+    def __getitem__(self, item):
+        cols = self.cols if self.cols is not None else slice(None, None, None)
+        # Get the start and stop indices of the requested item.
+        start, stop = _start_stop(item)
+        # Return the concatenation of all arrays.
+        if start is None and stop is None:
+            return np.concatenate(self.arrs, axis=0)[..., cols]
+        if start is None:
+            start = 0
+        if stop is None:
+            stop = self.offsets[-1]
+        if stop < 0:
+            stop = self.offsets[-1] + stop
+        # Get the recording indices of the first and last item.
+        rec_start = self._get_recording(start)
+        rec_stop = self._get_recording(stop)
+        assert 0 <= rec_start <= rec_stop < len(self.arrs)
+        # Find the start and stop relative to the arrays.
+        start_rel = start - self.offsets[rec_start]
+        stop_rel = stop - self.offsets[rec_stop]
+        # Single array case.
+        if rec_start == rec_stop:
+            # Apply the rest of the index.
+            return _fill_index(self.arrs[rec_start][start_rel:stop_rel],
+                               item)[..., cols]
+        chunk_start = self.arrs[rec_start][start_rel:]
+        chunk_stop = self.arrs[rec_stop][:stop_rel]
+        # Concatenate all chunks.
+        l = [chunk_start]
+        if rec_stop - rec_start >= 2:
+            logger.warn("Loading a full virtual array: this might be slow "
+                        "and something might be wrong.")
+            l += [self.arrs[r][...] for r in range(rec_start + 1,
+                                                   rec_stop)]
+        l += [chunk_stop]
+        # Apply the rest of the index.
+        return _fill_index(np.concatenate(l, axis=0), item)[..., cols]
+
+    def __len__(self):
+        return self.shape[0]
+
+
+def _concatenate_virtual_arrays(arrs, cols=None):
+    """Return a virtual concatenate of several NumPy arrays."""
+    n = len(arrs)
+    if n == 0:
+        return None
+    return ConcatenatedArrays(arrs, cols)
+
+
+# -----------------------------------------------------------------------------
 # Chunking functions
 # -----------------------------------------------------------------------------
 
