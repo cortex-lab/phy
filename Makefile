@@ -24,7 +24,7 @@ lint:
 	flake8 phy
 
 test: lint
-	py.test
+	python setup.py test
 
 coverage:
 	coverage --html
@@ -38,3 +38,17 @@ unit-tests: lint
 integration-tests: lint
 	python setup.py test -a tests
 
+apidoc:
+	python tools/api.py
+
+build:
+	python setup.py sdist --formats=zip
+
+upload:
+	python setup.py sdist --formats=zip upload
+
+release-test:
+	python tools/release.py release_test
+
+release:
+	python tools/release.py release

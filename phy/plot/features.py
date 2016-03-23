@@ -618,7 +618,7 @@ class FeatureView(BaseSpikeCanvas):
         """Handle key press events."""
         coeff = .25
         if 'Alt' in event.modifiers:
-            if event.key == '+' or event.key == '=':
+            if event.key == '+':
                 self.marker_size += coeff
             if event.key == '-':
                 self.marker_size -= coeff
