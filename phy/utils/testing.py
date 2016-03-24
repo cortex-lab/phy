@@ -6,13 +6,15 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from contextlib import contextmanager
+from cProfile import Profile
+import functools
+import logging
+import os
+import os.path as op
 import sys
 import time
-from contextlib import contextmanager
 from timeit import default_timer
-from cProfile import Profile
-import os.path as op
-import functools
 
 from numpy.testing import assert_array_equal as ae
 from numpy.testing import assert_allclose as ac
@@ -20,8 +22,9 @@ from six import StringIO
 from six.moves import builtins
 
 from ._types import _is_array_like
-from .logging import info
-from .settings import _ensure_dir_exists
+from .config import _ensure_dir_exists
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -39,6 +42,23 @@ def captured_output():
         sys.stdout, sys.stderr = old_out, old_err
 
 
+@contextmanager
+def captured_logging(name=None):
+    buffer = StringIO()
+    logger = logging.getLogger(name)
+    handlers = logger.handlers
+    for handler in logger.handlers:
+        logger.removeHandler(handler)
+    handler = logging.StreamHandler(buffer)
+    handler.setLevel(logging.DEBUG)
+    logger.addHandler(handler)
+    yield buffer
+    buffer.flush()
+    logger.removeHandler(handler)
+    for handler in handlers:
+        logger.addHandler(handler)
+
+
 def _assert_equal(d_0, d_1):
     """Check that two objects are equal."""
     # Compare arrays.
@@ -49,10 +69,9 @@ def _assert_equal(d_0, d_1):
             ac(d_0, d_1)
     # Compare dicts recursively.
     elif isinstance(d_0, dict):
-        assert sorted(d_0) == sorted(d_1)
-        for (k_0, k_1) in zip(sorted(d_0), sorted(d_1)):
-            assert k_0 == k_1
-            _assert_equal(d_0[k_0], d_1[k_1])
+        assert set(d_0) == set(d_1)
+        for k_0 in d_0:
+            _assert_equal(d_0[k_0], d_1[k_0])
     else:
         # General comparison.
         assert d_0 == d_1
@@ -67,10 +86,10 @@ def benchmark(name='', repeats=1):
     start = default_timer()
     yield
     duration = (default_timer() - start) * 1000.
-    info("{} took {:.6f}ms.".format(name, duration / repeats))
+    logger.info("%s took %.6fms.", name, duration / repeats)
 
 
-class ContextualProfile(Profile):
+class ContextualProfile(Profile):  # pragma: no cover
     def __init__(self, *args, **kwds):
         super(ContextualProfile, self).__init__(*args, **kwds)
         self.enable_count = 0
@@ -116,7 +135,7 @@ class ContextualProfile(Profile):
         self.disable_by_count()
 
 
-def _enable_profiler(line_by_line=False):
+def _enable_profiler(line_by_line=False):  # pragma: no cover
     if 'profile' in builtins.__dict__:
         return builtins.__dict__['profile']
     if line_by_line:
@@ -136,13 +155,13 @@ def _profile(prof, statement, glob, loc):
     # Capture stdout.
     old_stdout = sys.stdout
     sys.stdout = output = StringIO()
-    try:
+    try:  # pragma: no cover
         from line_profiler import LineProfiler
         if isinstance(prof, LineProfiler):
             prof.print_stats()
         else:
             prof.print_stats('cumulative')
-    except ImportError:
+    except ImportError:  # pragma: no cover
         prof.print_stats('cumulative')
     sys.stdout = old_stdout
     stats = output.getvalue()
@@ -156,47 +175,21 @@ def _profile(prof, statement, glob, loc):
 # Testing VisPy canvas
 #------------------------------------------------------------------------------
 
-def _frame(canvas):
-    canvas.update()
-    canvas.app.process_events()
-    time.sleep(1. / 60.)
-
-
-def show_test(canvas, n_frames=2):
+def show_test(canvas):
     """Show a VisPy canvas for a fraction of second."""
-    with canvas as c:
-        show_test_run(c, n_frames)
+    with canvas:
+        # Interactive mode for tests.
+        if 'PYTEST_INTERACT' in os.environ:  # pragma: no cover
+            while not canvas._closed:
+                canvas.update()
+                canvas.app.process_events()
+                time.sleep(1. / 60)
+        else:
+            canvas.update()
+            canvas.app.process_events()
 
 
-def show_test_start(canvas):
-    """This is the __enter__ of with canvas."""
-    canvas.show()
-    canvas._backend._vispy_warmup()
-
-
-def show_test_run(canvas, n_frames=2):
-    """Display frames of a canvas."""
-    if n_frames == 0:
-        while not canvas._closed:
-            _frame(canvas)
-    else:
-        for _ in range(n_frames):
-            _frame(canvas)
-            if canvas._closed:
-                return
-
-
-def show_test_stop(canvas):
-    """This is the __exit__ of with canvas."""
-    # ensure all GL calls are complete
-    if not canvas._closed:
-        canvas._backend._vispy_set_current()
-        canvas.context.finish()
-        canvas.close()
-    time.sleep(0.025)  # ensure window is really closed/destroyed
-
-
-def show_colored_canvas(color, n_frames=5):
+def show_colored_canvas(color):
     """Show a transient VisPy canvas with a uniform background color."""
     from vispy import app, gloo
     c = app.Canvas()
@@ -205,4 +198,4 @@ def show_colored_canvas(color, n_frames=5):
     def on_draw(e):
         gloo.clear(color)
 
-    show_test(c, n_frames=n_frames)
+    show_test(c)

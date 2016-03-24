@@ -6,39 +6,66 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from ....utils.logging import set_level, debug
-from .._utils import ClusterMetadataUpdater, UpdateInfo
-from ....io.kwik.model import ClusterMetadata
+import logging
+
+from pytest import raises
+
+from .._utils import (ClusterMeta, UpdateInfo,
+                      _update_cluster_selection, create_cluster_meta)
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
 
-def setup():
-    set_level('debug')
+def test_create_cluster_meta():
+    cluster_groups = {2: 3,
+                      3: 3,
+                      5: 1,
+                      7: 2,
+                      }
+    meta = create_cluster_meta(cluster_groups)
+    assert meta.group(2) == 3
+    assert meta.group(3) == 3
+    assert meta.group(5) == 1
+    assert meta.group(7) == 2
+    assert meta.group(8) is None
 
 
-def teardown():
-    set_level('info')
+def test_metadata_history_simple():
+    """Test ClusterMeta history."""
+
+    meta = ClusterMeta()
+    meta.add_field('group')
+
+    meta.set('group', 2, 2)
+    assert meta.get('group', 2) == 2
+
+    meta.undo()
+    assert meta.get('group', 2) is None
+
+    meta.redo()
+    assert meta.get('group', 2) == 2
+
+    with raises(AssertionError):
+        assert meta.to_dict('grou') is None
+    assert meta.to_dict('group') == {2: 2}
 
 
-def test_metadata_history():
-    """Test ClusterMetadataUpdater history."""
+def test_metadata_history_complex():
+    """Test ClusterMeta history."""
+
+    meta = ClusterMeta()
+    meta.add_field('group', 3)
+    meta.add_field('color', 0)
 
     data = {2: {'group': 2, 'color': 7}, 4: {'group': 5}}
+    meta.from_dict(data)
 
-    base_meta = ClusterMetadata(data=data)
-
-    @base_meta.default
-    def group(cluster):
-        return 3
-
-    @base_meta.default
-    def color(cluster):
-        return 0
-
-    meta = ClusterMetadataUpdater(base_meta)
+    assert meta.group(2) == 2
+    assert meta.group([4, 2]) == [5, 2]
 
     # Values set in 'data'.
     assert meta.group(2) == 2
@@ -57,19 +84,19 @@ def test_metadata_history():
     meta.redo()
 
     # Action 1.
-    info = meta.set_group(2, 20)
+    info = meta.set('group', 2, 20)
     assert meta.group(2) == 20
     assert info.description == 'metadata_group'
     assert info.metadata_changed == [2]
 
     # Action 2.
-    info = meta.set_color(3, 30)
+    info = meta.set('color', 3, 30)
     assert meta.color(3) == 30
     assert info.description == 'metadata_color'
     assert info.metadata_changed == [3]
 
     # Action 3.
-    info = meta.set_color(2, 40)
+    info = meta.set('color', 2, 40)
     assert meta.color(2) == 40
     assert info.description == 'metadata_color'
     assert info.metadata_changed == [2]
@@ -113,8 +140,56 @@ def test_metadata_history():
     assert info is None
 
 
+def test_metadata_descendants():
+    """Test ClusterMeta history."""
+
+    data = {0: {'group': 0},
+            1: {'group': 1},
+            2: {'group': 2},
+            3: {'group': 3},
+            }
+
+    meta = ClusterMeta()
+
+    meta.add_field('group', 3)
+    meta.from_dict(data)
+
+    meta.set_from_descendants([])
+    assert meta.group(4) == 3
+
+    meta.set_from_descendants([(0, 4)])
+    assert meta.group(4) == 0
+
+    # Reset to default.
+    meta.set('group', 4, 3)
+    meta.set_from_descendants([(1, 4)])
+    assert meta.group(4) == 1
+
+    meta.set_from_descendants([(1, 5), (2, 5)])
+    # This is the default value because the parents have different values.
+    assert meta.group(5) == 3
+
+    meta.set('group', 3, 2)
+    meta.set_from_descendants([(2, 6), (3, 6), (10, 10)])
+    assert meta.group(6) == 2
+
+    # If the value of the new cluster is non-default, it should not
+    # be changed by set_from_descendants.
+    meta.set_from_descendants([(3, 2)])
+    assert meta.group(2) == 2
+
+
+def test_update_cluster_selection():
+    clusters = [1, 2, 3]
+    up = UpdateInfo(deleted=[2], added=[4, 0])
+    assert _update_cluster_selection(clusters, up) == [1, 3, 4, 0]
+
+
 def test_update_info():
-    debug(UpdateInfo(deleted=range(5), added=[5], description='merge'))
-    debug(UpdateInfo(deleted=range(5), added=[5], description='assign'))
-    debug(UpdateInfo(deleted=range(5), added=[5],
-                     description='assign', history='undo'))
+    logger.debug(UpdateInfo())
+    logger.debug(UpdateInfo(description='hello'))
+    logger.debug(UpdateInfo(deleted=range(5), added=[5], description='merge'))
+    logger.debug(UpdateInfo(deleted=range(5), added=[5], description='assign'))
+    logger.debug(UpdateInfo(deleted=range(5), added=[5],
+                            description='assign', history='undo'))
+    logger.debug(UpdateInfo(metadata_changed=[2, 3], description='metadata'))

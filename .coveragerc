@@ -4,3 +4,12 @@ source = phy
 omit =
     */phy/ext/*
     */phy/utils/tempdir.py
+    */default_settings.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    raise AssertionError
+    raise NotImplementedError
+    pass
+    return

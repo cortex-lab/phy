@@ -50,11 +50,12 @@ setup(
     packages=_package_tree('phy'),
     package_dir={'phy': 'phy'},
     package_data={
-        'phy': ['*.vert', '*.frag', '*.glsl', '*.html', '*.css', '*.prb'],
+        'phy': ['*.vert', '*.frag', '*.glsl', '*.npy', '*.gz', '*.txt',
+                '*.html', '*.css', '*.js', '*.prb'],
     },
     entry_points={
         'console_scripts': [
-            'phy=phy.scripts.phy_script:main',
+            'phy = phy.utils.cli:phy'
         ],
     },
     include_package_data=True,

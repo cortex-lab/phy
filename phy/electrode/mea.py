@@ -25,7 +25,7 @@ def _edges_to_adjacency_list(edges):
     """Convert a list of edges into an adjacency list."""
     adj = {}
     for i, j in edges:
-        if i in adj:
+        if i in adj:  # pragma: no cover
             ni = adj[i]
         else:
             ni = adj[i] = set()
@@ -36,6 +36,18 @@ def _edges_to_adjacency_list(edges):
         ni.add(j)
         nj.add(i)
     return adj
+
+
+def _adjacency_subset(adjacency, subset):
+    return {c: [v for v in vals if v in subset]
+            for (c, vals) in adjacency.items() if c in subset}
+
+
+def _remap_adjacency(adjacency, mapping):
+    remapped = {}
+    for key, vals in adjacency.items():
+        remapped[mapping[key]] = [mapping[i] for i in vals]
+    return remapped
 
 
 def _probe_positions(probe, group):
@@ -52,13 +64,6 @@ def _probe_channels(probe, group):
 
     """
     return probe['channel_groups'][group]['channels']
-
-
-def _probe_all_channels(probe):
-    """Return the list of channels in the probe."""
-    cgs = probe['channel_groups'].values()
-    cg_channels = [cg['channels'] for cg in cgs]
-    return sorted(set(itertools.chain(*cg_channels)))
 
 
 def _probe_adjacency_list(probe):
@@ -87,7 +92,7 @@ def load_probe(name):
         path = op.join(curdir, 'probes/{}.prb'.format(name))
     if not op.exists(path):
         raise IOError("The probe `{}` cannot be found.".format(name))
-    return _read_python(path)
+    return MEA(probe=_read_python(path))
 
 
 def list_probes():
@@ -120,21 +125,22 @@ class MEA(object):
                  ):
         self._probe = probe
         self._channels = channels
-        if positions is not None:
-            assert self.n_channels == positions.shape[0]
+        self._check_positions(positions)
         self._positions = positions
         # This is a mapping {channel: list of neighbors}.
         if adjacency is None and probe is not None:
             adjacency = _probe_adjacency_list(probe)
             self.channels_per_group = _channels_per_group(probe)
         self._adjacency = adjacency
+        if probe:
+            # Select the first channel group.
+            cg = sorted(self._probe['channel_groups'].keys())[0]
+            self.change_channel_group(cg)
 
     def _check_positions(self, positions):
         if positions is None:
             return
         positions = _as_array(positions)
-        if self.n_channels is None:
-            self.n_channels = positions.shape[0]
         if positions.shape[0] != self.n_channels:
             raise ValueError("'positions' "
                              "(shape {0:s})".format(str(positions.shape)) +
@@ -146,11 +152,6 @@ class MEA(object):
     def positions(self):
         """Channel positions in the current channel group."""
         return self._positions
-
-    @positions.setter
-    def positions(self, value):
-        self._check_positions(value)
-        self._positions = value
 
     @property
     def channels(self):
@@ -166,10 +167,6 @@ class MEA(object):
     def adjacency(self):
         """Adjacency graph in the current channel group."""
         return self._adjacency
-
-    @adjacency.setter
-    def adjacency(self, value):
-        self._adjacency = value
 
     def change_channel_group(self, group):
         """Change the current channel group."""

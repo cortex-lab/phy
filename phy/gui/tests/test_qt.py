@@ -6,41 +6,79 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from pytest import mark
+from pytest import raises
 
-from ..qt import (QtWebKit, QtGui,
-                  qt_app,
-                  _set_qt_widget_position_size,
+from ..qt import (QMessageBox, Qt, QWebView, QTimer,
+                  _button_name_from_enum,
+                  _button_enum_from_name,
                   _prompt,
+                  _wait_signal,
+                  require_qt,
+                  create_app,
+                  QApplication,
                   )
-from ...utils.logging import set_level
-
-
-# Skip these tests in "make test-quick".
-pytestmark = mark.long
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
 
-def setup():
-    set_level('debug')
+def test_require_qt_with_app():
+
+    @require_qt
+    def f():
+        pass
+
+    if not QApplication.instance():
+        with raises(RuntimeError):  # pragma: no cover
+            f()
 
 
-def teardown():
-    set_level('info')
+def test_require_qt_without_app(qapp):
+
+    @require_qt
+    def f():
+        pass
+
+    # This should not raise an error.
+    f()
 
 
-def test_wrap(qtbot):
+def test_qt_app(qtbot):
+    create_app()
+    view = QWebView()
+    qtbot.addWidget(view)
+    view.close()
 
-    view = QtWebKit.QWebView()
+
+def test_wait_signal(qtbot):
+    x = []
+
+    def f():
+        x.append(0)
+
+    timer = QTimer()
+    timer.setInterval(100)
+    timer.setSingleShot(True)
+    timer.timeout.connect(f)
+    timer.start()
+
+    assert x == []
+
+    with _wait_signal(timer.timeout):
+        pass
+    assert x == [0]
+
+
+def test_web_view(qtbot):
+
+    view = QWebView()
 
     def _assert(text):
         html = view.page().mainFrame().toHtml()
         assert html == '<html><head></head><body>' + text + '</body></html>'
 
-    _set_qt_widget_position_size(view, size=(100, 100))
+    view.resize(100, 100)
     view.setHtml("hello")
     qtbot.addWidget(view)
     qtbot.waitForWindowShown(view)
@@ -51,8 +89,8 @@ def test_wrap(qtbot):
     _assert('world')
     view.close()
 
-    view = QtWebKit.QWebView()
-    _set_qt_widget_position_size(view, size=(100, 100))
+    view = QWebView()
+    view.resize(100, 100)
     view.show()
     qtbot.addWidget(view)
 
@@ -61,13 +99,13 @@ def test_wrap(qtbot):
     view.close()
 
 
-@mark.skipif()
-def test_prompt():
-    with qt_app():
-        w = QtGui.QWidget()
-        w.show()
-        result = _prompt(w,
-                         "How are you doing?",
-                         buttons=['save', 'cancel', 'close'],
-                         )
-        print(result)
+def test_prompt(qtbot):
+
+    assert _button_name_from_enum(QMessageBox.Save) == 'save'
+    assert _button_enum_from_name('save') == QMessageBox.Save
+
+    box = _prompt("How are you doing?",
+                  buttons=['save', 'cancel', 'close'],
+                  )
+    qtbot.mouseClick(box.buttons()[0], Qt.LeftButton)
+    assert 'save' in str(box.clickedButton().text()).lower()

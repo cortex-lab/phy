@@ -31,8 +31,29 @@ class Bunch(dict):
         return Bunch(super(Bunch, self).copy())
 
 
+def _bunchify(b):
+    """Ensure all dict elements are Bunch."""
+    assert isinstance(b, dict)
+    b = Bunch(b)
+    for k in b:
+        if isinstance(b[k], dict):
+            b[k] = Bunch(b[k])
+    return b
+
+
 def _is_list(obj):
     return isinstance(obj, list)
+
+
+def _as_scalar(obj):
+    if isinstance(obj, np.generic):
+        return np.asscalar(obj)
+    assert isinstance(obj, (int, float))
+    return obj
+
+
+def _as_scalars(arr):
+    return [_as_scalar(x) for x in arr]
 
 
 def _is_integer(x):
@@ -43,17 +64,14 @@ def _is_float(x):
     return isinstance(x, (float, np.float32, np.float64))
 
 
-def _as_int(x):
-    if isinstance(x, integer_types):
-        return x
-    x = np.asscalar(x)
-    return x
-
-
 def _as_list(obj):
     """Ensure an object is a list."""
-    if isinstance(obj, string_types):
+    if obj is None:
+        return None
+    elif isinstance(obj, string_types):
         return [obj]
+    elif isinstance(obj, tuple):
+        return list(obj)
     elif not hasattr(obj, '__len__'):
         return [obj]
     else:
@@ -70,6 +88,8 @@ def _as_array(arr, dtype=None):
     Avoid a copy if possible.
 
     """
+    if arr is None:
+        return None
     if isinstance(arr, np.ndarray) and dtype is None:
         return arr
     if isinstance(arr, integer_types + (float,)):
@@ -88,8 +108,6 @@ def _as_tuple(item):
     """Ensure an item is a tuple."""
     if item is None:
         return None
-    # elif hasattr(item, '__len__'):
-    #     return tuple(item)
     elif not isinstance(item, tuple):
         return (item,)
     else:

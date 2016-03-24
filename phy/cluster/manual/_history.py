@@ -94,7 +94,7 @@ class History(object):
     def back(self):
         """Go back in history if possible.
 
-        Return the current item after going back.
+        Return the undone item.
 
         """
         if self._index <= 0:

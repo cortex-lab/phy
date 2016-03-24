@@ -3,11 +3,7 @@
 
 """GUI routines."""
 
-from .qt import start_qt_app, run_qt_app, qt_app, enable_qt
-from .dock import DockWindow
-
-from .base import (BaseViewModel,
-                   HTMLViewModel,
-                   WidgetCreator,
-                   BaseGUI,
-                   )
+from .qt import require_qt, create_app, run_app
+from .gui import GUI, GUIState
+from .actions import Actions
+from .widgets import HTMLWidget, Table

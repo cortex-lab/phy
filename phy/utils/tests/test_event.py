@@ -20,6 +20,9 @@ def test_event_system():
 
     _list = []
 
+    with raises(ValueError):
+        ev.connect(lambda x: x)
+
     @ev.connect(set_method=True)
     def on_my_event(arg, kwarg=None):
         _list.append((arg, kwarg))
@@ -62,6 +65,7 @@ def test_progress_reporter():
     pr.value_max = 10
     pr.value = 0
     pr.value = 5
+    assert pr.value == 5
     assert pr.progress == .5
     assert not pr.is_complete()
     pr.value = 10
@@ -89,7 +93,8 @@ def test_progress_reporter():
 def test_progress_message():
     """Test messages with the progress reporter."""
     pr = ProgressReporter()
-    pr.set_progress_message("The progress is {progress}%. ({hello})")
+    pr.reset(5)
+    pr.set_progress_message("The progress is {progress}%. ({hello:d})")
     pr.set_complete_message("Finished {hello}.")
 
     pr.value_max = 10
@@ -97,6 +102,10 @@ def test_progress_message():
     print()
     pr.value = 5
     print()
-    pr.increment(hello='hello world')
+    pr.increment()
+    print()
+    pr.increment(hello='hello')
+    print()
+    pr.increment(hello=3)
     print()
     pr.value = 10

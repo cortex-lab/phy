@@ -1,0 +1,66 @@
+
+th.sort-header::-moz-selection { background:transparent; }
+th.sort-header::selection  { background:transparent; }
+th.sort-header { cursor:pointer; }
+
+table {
+    border-collapse: collapse;
+}
+
+table td {
+    padding: 5px 10px;
+    margin: 0;
+}
+
+table th.sort-header:after {
+    content: "\25B2";
+    margin-left: 5px;
+    margin-right: 15px;
+    visibility: hidden;
+}
+
+table th.sort-header:hover:after {
+    visibility: visible;
+}
+
+table th.sort-up:after {
+    content: "\25BC";
+}
+table th.sort-down:after {
+    content: "\25B2";
+}
+
+table th.sort-up:after,
+table th.sort-down:after,
+table th.sort-down:hover:after {
+    visibility: visible;
+}
+
+table tr { cursor:pointer; }
+
+table tr:hover {
+    background-color: #222;
+}
+
+table tr:hover th {
+    background-color: #000;
+}
+
+table tr.selected td {
+    background-color: #444;
+}
+
+table tr.pinned {
+    background-color: #888;
+}
+
+table tr[data-skip='true'] {
+    color: #888;
+}
+
+table tr, table td {
+            user-select: none; /* CSS3 (little to no support) */
+        -ms-user-select: none; /* IE 10+ */
+       -moz-user-select: none; /* Gecko (Firefox) */
+    -webkit-user-select: none; /* Webkit (Safari, Chrome) */
+}

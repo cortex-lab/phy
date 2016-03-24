@@ -1,18 +1,24 @@
+contrib
 data
 doc
+phy-doc
 docker
 experimental
 htmlcov
 format
 wiki
+.cache
 .idea
 .ipynb_checkpoints
 .*fuse*
 *.orig
+*.log*
 .eggs
+.profile
 __pycache__
-
+_old
 *.py[cod]
+*~
 .coverage*
 *credentials
 

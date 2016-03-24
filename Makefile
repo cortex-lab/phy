@@ -1,14 +1,3 @@
-help:
-	@echo "clean - remove all build, test, coverage and Python artifacts"
-	@echo "clean-build - remove build artifacts"
-	@echo "clean-pyc - remove Python file artifacts"
-	@echo "lint - check style with flake8"
-	@echo "test - run tests quickly with the default Python"
-	@echo "release - package and upload a release"
-	@echo "apidoc - build API doc"
-
-clean: clean-build clean-pyc
-
 clean-build:
 	rm -fr build/
 	rm -fr dist/
@@ -20,21 +9,22 @@ clean-pyc:
 	find . -name '*~' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -fr {} +
 
+clean: clean-build clean-pyc
+
 lint:
 	flake8 phy
 
 test: lint
-	py.test
+	py.test --cov-report term-missing --cov=phy phy
 
 coverage:
 	coverage --html
 
-test-quick: lint
-	python setup.py test -a "-m \"not long\" phy"
+apidoc:
+	python tools/api.py
 
-unit-tests: lint
-	python setup.py test -a phy
+build:
+	python setup.py sdist --formats=zip
 
-integration-tests: lint
-	python setup.py test -a tests
-
+upload:
+	python setup.py sdist --formats=zip upload

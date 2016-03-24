@@ -1,11 +1,28 @@
 # -*- coding: utf-8 -*-
 # flake8: noqa
 
-"""Interactive and static visualization of data."""
+"""VisPy plotting."""
 
-from ._panzoom import PanZoom, PanZoomGrid
-from ._vispy_utils import BaseSpikeCanvas, BaseSpikeVisual
-from .waveforms import WaveformView, WaveformVisual, plot_waveforms
-from .features import FeatureView, FeatureVisual, plot_features
-from .traces import TraceView, TraceView, plot_traces
-from .ccg import CorrelogramView, CorrelogramView, plot_correlograms
+
+#------------------------------------------------------------------------------
+# Imports
+#------------------------------------------------------------------------------
+
+import os.path as op
+
+from vispy import config
+
+from .plot import View  # noqa
+from .transform import Translate, Scale, Range, Subplot, NDC
+from .panzoom import PanZoom
+from .utils import _get_linear_x
+
+
+#------------------------------------------------------------------------------
+# Add the `glsl/ path` for shader include
+#------------------------------------------------------------------------------
+
+curdir = op.dirname(op.realpath(__file__))
+glsl_path = op.join(curdir, 'glsl')
+if not config['include_path']:
+    config['include_path'] = [glsl_path]

@@ -3,4 +3,4 @@
 
 """Statistics functions."""
 
-from .ccg import pairwise_correlograms
+from .ccg import correlograms

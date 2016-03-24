@@ -25,13 +25,13 @@ def bandpass_filter(rate=None, low=None, high=None, order=None):
                          'pass')
 
 
-def apply_filter(x, filter=None):
+def apply_filter(x, filter=None, axis=0):
     """Apply a filter to an array."""
     x = _as_array(x)
-    if x.shape[0] == 0:
+    if x.shape[axis] == 0:
         return x
     b, a = filter
-    return signal.filtfilt(b, a, x, axis=0)
+    return signal.filtfilt(b, a, x, axis=axis)
 
 
 class Filter(object):

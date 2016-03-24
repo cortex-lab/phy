@@ -1,0 +1,14 @@
+site_name: phy
+pages:
+- Home: 'index.md'
+- FAQ: 'faq.md'
+- Installation: 'install.md'
+- GUI: 'gui.md'
+- Plotting: 'plot.md'
+- Configuration and plugin system: 'config.md'
+- Command-line interface: 'cli.md'
+- Data utilities: 'io.md'
+- Manual clustering: 'cluster-manual.md'
+- Analysis functions: 'analysis.md'
+- API reference: 'api.md'
+theme: readthedocs

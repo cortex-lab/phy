@@ -11,32 +11,13 @@ import base64
 import json
 import os.path as op
 import os
-import sys
 import subprocess
-from inspect import getargspec
+from textwrap import dedent
 
 import numpy as np
-from six import string_types, exec_
-from six.moves import builtins, cPickle
+from six import string_types, text_type, exec_
 
 from ._types import _is_integer
-
-
-#------------------------------------------------------------------------------
-# Pickle utility functions
-#------------------------------------------------------------------------------
-
-def _load_pickle(path):
-    path = op.realpath(op.expanduser(path))
-    assert op.exists(path)
-    with open(path, 'rb') as f:
-        return cPickle.load(f)
-
-
-def _save_pickle(path, data):
-    path = op.realpath(op.expanduser(path))
-    with open(path, 'wb') as f:
-        cPickle.dump(data, f, protocol=2)
 
 
 #------------------------------------------------------------------------------
@@ -50,14 +31,15 @@ def _encode_qbytearray(arr):
 
 
 def _decode_qbytearray(data_b64):
-    from phy.gui.qt import QtCore
+    from phy.gui.qt import QByteArray
     encoded = base64.b64decode(data_b64)
-    out = QtCore.QByteArray.fromBase64(encoded)
+    out = QByteArray.fromBase64(encoded)
     return out
 
 
 class _CustomEncoder(json.JSONEncoder):
     def default(self, obj):
+        from phy.gui.qt import QString
         if isinstance(obj, np.ndarray):
             obj_contiguous = np.ascontiguousarray(obj)
             data_b64 = base64.b64encode(obj_contiguous.data).decode('utf8')
@@ -68,7 +50,9 @@ class _CustomEncoder(json.JSONEncoder):
             return {'__qbytearray__': _encode_qbytearray(obj)}
         elif isinstance(obj, np.generic):
             return np.asscalar(obj)
-        return super(_CustomEncoder, self).default(obj)
+        elif isinstance(obj, QString):  # pragma: no cover
+            return text_type(obj)
+        return super(_CustomEncoder, self).default(obj)  # pragma: no cover
 
 
 def _json_custom_hook(d):
@@ -117,12 +101,17 @@ def _save_json(path, data):
     data = _stringify_keys(data)
     path = op.realpath(op.expanduser(path))
     with open(path, 'w') as f:
-        json.dump(data, f, cls=_CustomEncoder, indent=2)
+        json.dump(data, f, cls=_CustomEncoder, indent=2, sort_keys=True)
 
 
 #------------------------------------------------------------------------------
 # Various Python utility functions
 #------------------------------------------------------------------------------
+
+def _fullname(o):
+    """Return the fully-qualified name of a function."""
+    return o.__module__ + "." + o.__name__ if o.__module__ else o.__name__
+
 
 def _read_python(path):
     path = op.realpath(op.expanduser(path))
@@ -135,57 +124,15 @@ def _read_python(path):
     return metadata
 
 
-def _fun_arg_count(f):
-    """Return the number of arguments of a function.
-
-    WARNING: with methods, only works if the first argument is named 'self'.
-
-    """
-    args = getargspec(f).args
-    if args and args[0] == 'self':
-        args = args[1:]
-    return len(args)
-
-
-def _is_in_ipython():
-    return '__IPYTHON__' in dir(builtins)
-
-
-def _is_interactive():
-    """Determine whether the user has requested interactive mode."""
-    # The Python interpreter sets sys.flags correctly, so use them!
-    if sys.flags.interactive:
-        return True
-
-    # IPython does not set sys.flags when -i is specified, so first
-    # check it if it is already imported.
-    if '__IPYTHON__' not in dir(builtins):
-        return False
-
-    # Then we check the application singleton and determine based on
-    # a variable it sets.
-    try:
-        from IPython.config.application import Application as App
-        return App.initialized() and App.instance().interact
-    except (ImportError, AttributeError):
-        return False
-
-
-def _show_shortcut(shortcut):
-    if isinstance(shortcut, string_types):
-        return shortcut
-    elif isinstance(shortcut, tuple):
-        return ', '.join(shortcut)
-
-
-def _show_shortcuts(shortcuts, name=''):
-    print()
-    if name:
-        name = ' for ' + name
-    print('Keyboard shortcuts' + name)
-    for name in sorted(shortcuts):
-        print('{0:<40}: {1:s}'.format(name, _show_shortcut(shortcuts[name])))
-    print()
+def _write_text(path, contents):
+    contents = dedent(contents)
+    dir_path = op.dirname(path)
+    if not op.exists(dir_path):
+        os.mkdir(dir_path)
+    assert op.isdir(dir_path)
+    assert not op.exists(path)
+    with open(path, 'w') as f:
+        f.write(contents)
 
 
 def _git_version():
@@ -199,7 +146,7 @@ def _git_version():
                     '--always', '--tags'],
                    stderr=fnull).strip().decode('ascii'))
         return version
-    except (OSError, subprocess.CalledProcessError):
+    except (OSError, subprocess.CalledProcessError):  # pragma: no cover
         return ""
     finally:
         os.chdir(curdir)
