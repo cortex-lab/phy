@@ -26,7 +26,7 @@ from .utils.plugin import IPlugin, get_plugin, discover_plugins
 
 __author__ = 'Kwik team'
 __email__ = 'cyrille.rossant at gmail.com'
-__version__ = '0.3.0.dev0'
+__version__ = '1.0.0'
 __version_git__ = __version__ + _git_version()
 
 
