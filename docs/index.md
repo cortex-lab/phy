@@ -1,13 +1,13 @@
 # phy documentation
 
-phy is an **electrophysiology data analysis library**. It provides spike sorting and analysis routines for extracellular multielectrode recordings, as well as generic components to build command-line and graphical applications. Overall, phy lets you build custom data analysis applications, for example, a manual clustering GUI.
+**phy** is an open source neurophysiological data analysis package in Python. It provides features for sorting, analyzing, and visualizing extracellular recordings made with high-density multielectrode arrays containing hundreds to thousands of recording sites.
 
-phy is entirely agnostic to file formats and processing workflows. As such, it can be easily integrated with any existing system.
+phy provides format-agnostic APIs to build graphical applications for analysis and visualization of ephys data. There are a few of such applications in [**phycontrib**](https://github.com/kwikteam/phy-contrib/).
 
 ## List of components
 
-* GUI
-* Plotting
+* Qt-based GUIs
+* High-level GPU-accelerated plotting with VisPy
 * Configuration and plugin system
 * Command-line interface
 * Manual clustering routines
