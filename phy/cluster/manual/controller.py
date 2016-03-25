@@ -330,6 +330,7 @@ class Controller(EventEmitter):
     def add_trace_view(self, gui):
         v = TraceView(traces=self.get_traces,
                       spikes=self.get_spikes_traces,
+                      cluster_groups=self.cluster_groups,
                       sample_rate=self.sample_rate,
                       duration=self.duration,
                       n_channels=self.n_channels,

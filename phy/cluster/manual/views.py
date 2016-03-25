@@ -576,6 +576,7 @@ class TraceView(ManualClusteringView):
     def __init__(self,
                  traces=None,
                  spikes=None,
+                 cluster_groups=None,
                  sample_rate=None,
                  duration=None,
                  n_channels=None,
@@ -600,6 +601,8 @@ class TraceView(ManualClusteringView):
 
         assert n_channels >= 0
         self.n_channels = n_channels
+
+        self.cluster_groups = cluster_groups
 
         # Box and probe scaling.
         self._scaling = 1.
@@ -643,13 +646,11 @@ class TraceView(ManualClusteringView):
                               data_bounds=self.data_bounds,
                               )
 
-    def _plot_spike(self, waveforms=None, channels=None, masks=None,
-                    spike_time=None, spike_cluster=None, offset_samples=0,
-                    color=None):
+    def _plot_spike(self, waveforms=None, channels=None, spike_time=None,
+                    offset_samples=0, color=None):
 
         n_samples, n_channels = waveforms.shape
         assert len(channels) == n_channels
-        assert len(masks) == n_channels
         sr = float(self.sample_rate)
 
         t0 = spike_time - offset_samples / sr
@@ -711,9 +712,20 @@ class TraceView(ManualClusteringView):
         assert isinstance(spikes, (tuple, list))
 
         for spike in spikes:
-            color = self._color_selector.get(spike.spike_cluster,
-                                             self.cluster_ids)
-            self._plot_spike(color=color, **spike)
+            clu = spike.spike_cluster
+            cg = self.cluster_groups[clu]
+            # Skip ignored spikes.
+            if cg in ('noise', 'mua'):
+                continue
+            color = self._color_selector.get(clu,
+                                             cluster_ids=self.cluster_ids,
+                                             )
+            self._plot_spike(color=color,
+                             waveforms=spike.waveforms,
+                             channels=spike.channels,
+                             spike_time=spike.spike_time,
+                             offset_samples=spike.offset_samples,
+                             )
 
         self.build()
         self.update()
