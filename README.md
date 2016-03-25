@@ -1,7 +1,6 @@
 # phy project
 
 [![Build Status](https://img.shields.io/travis/kwikteam/phy.svg)](https://travis-ci.org/kwikteam/phy)
-[![Build Status](https://img.shields.io/appveyor/ci/kwikteam/phy.svg)](https://ci.appveyor.com/project/kwikteam/phy/)
 [![codecov.io](https://img.shields.io/codecov/c/github/kwikteam/phy.svg)](http://codecov.io/github/kwikteam/phy?branch=master)
 [![Documentation Status](https://readthedocs.org/projects/phy/badge/?version=latest)](https://readthedocs.org/projects/phy/?badge=latest)
 [![PyPI release](https://img.shields.io/pypi/v/phy.svg)](https://pypi.python.org/pypi/phy)
@@ -26,13 +25,34 @@ phy doesn't provide any I/O code. It only provides Python routines to process an
 
 The [phy-contrib](https://github.com/kwikteam/phy-contrib) repo contains a set of plugins with integrated GUIs that work with dedicated automatic clustering software. Currently it provides:
 
-* **KwikGUI**: a manual sorting GUI that works with data processed with **klusta**, an automatic clustering package.
+* **KwikGUI**: a manual sorting GUI that works with data processed with [**klusta**](http://klusta.readthedocs.org/en/latest/), an automatic clustering package.
 * **TemplateGUI**: a manual sorting GUI that works with data processed with **Spyking Circus** and **KiloSort** (not released yet), which are template-matching-based spike sorting algorithms.
 
 
-## Getting started
+## Installation
 
-You will find installation instructions and a quick start guide in the [documentation](http://phy.readthedocs.org/en/latest/) (work in progress).
+**Note**: the installation instructions will be simplified soon.
+
+1. Make sure that you have [**miniconda**](http://conda.pydata.org/miniconda.html) installed. You can choose the Python 3.5 64-bit version for your operating system (Linux, Windows, or OS X).
+2. **Download the [environment file](https://raw.githubusercontent.com/kwikteam/phy/master/environment.yml).**
+3. **Open a terminal** (on Windows, `cmd`, not Powershell) in the directory where you saved the file and type:
+
+    ```bash
+    conda env create -n phy
+    source activate phy  # omit the `source` on Windows
+    pip install phy phycontrib
+    ```
+4. **Done**! Now, to use phy, you have to first type `source activate phy` in a terminal (omit the `source` on Windows), and then call `phy`.
+
+
+### Updating the software
+
+To get the latest version of the software, open a terminal and type:
+
+```
+source activate phy  # omit the `source` on Windows
+pip install phy phycontrib --upgrade
+```
 
 
 ## Links

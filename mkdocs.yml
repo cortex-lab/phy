@@ -1,8 +1,6 @@
 site_name: phy
 pages:
 - Home: 'index.md'
-- FAQ: 'faq.md'
-- Installation: 'install.md'
 - GUI: 'gui.md'
 - Plotting: 'plot.md'
 - Configuration and plugin system: 'config.md'
@@ -10,5 +8,6 @@ pages:
 - Data utilities: 'io.md'
 - Manual clustering: 'cluster-manual.md'
 - Analysis functions: 'analysis.md'
+- FAQ: 'faq.md'
 - API reference: 'api.md'
 theme: readthedocs
