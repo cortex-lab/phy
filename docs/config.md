@@ -4,7 +4,7 @@ phy uses part of the **traitlets** package for its config system. **This is stil
 
 ## Configuration file
 
-It is in `~/.phy/phy_config.py`. It is a regular Python file. It should begin with `c = get_config()` with no import (this function is injected in the namespace automatically by the config system).
+The configuration file is a Python file stored at `~/.phy/phy_config.py`. It should always begin with `c = get_config()` with no import (this function is automatically injected in the namespace by the config system).
 
 Then, you can set configuration options as follows:
 
@@ -21,11 +21,9 @@ Here are two common methods:
 
 Here is a minimal plugin template:
 
-```python
+```
 from phy import IPlugin
 
 class MyPlugin(IPlugin):
     pass
 ```
-
-We'll see in the next sections what methods you can implement in your plugins, and how to use them in your applications.
