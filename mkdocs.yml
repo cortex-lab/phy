@@ -8,6 +8,5 @@ pages:
 - Data utilities: 'io.md'
 - Manual clustering: 'cluster-manual.md'
 - Analysis functions: 'analysis.md'
-- FAQ: 'faq.md'
 - API reference: 'api.md'
 theme: readthedocs
