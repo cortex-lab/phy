@@ -64,7 +64,7 @@ def _iter_plugin_files(dirs):
         plugin_dir = op.realpath(op.expanduser(plugin_dir))
         if not op.exists(plugin_dir):
             continue
-        for subdir, dirs, files in os.walk(plugin_dir):
+        for subdir, dirs, files in os.walk(plugin_dir, followlinks=True):
             # Skip test folders.
             base = op.basename(subdir)
             if 'test' in base or '__' in base:  # pragma: no cover
