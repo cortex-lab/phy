@@ -77,7 +77,7 @@ class ManualClustering(object):
     ----------
 
     spike_clusters : ndarray
-    spikes_per_clusters : function `cluster_id -> spike_ids`
+    spikes_per_cluster : function `cluster_id -> spike_ids`
     cluster_groups : dictionary
     shortcuts : dict
     quality: func

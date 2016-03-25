@@ -8,8 +8,6 @@ phy provides format-agnostic APIs to build graphical applications for analysis a
 
 * Qt-based GUIs
 * High-level GPU-accelerated plotting with VisPy
+* Manual clustering routines
 * Configuration and plugin system
 * Command-line interface
-* Manual clustering routines
-* Analysis functions
-* Utilities

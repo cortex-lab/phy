@@ -64,24 +64,17 @@ array([3, 4, 5])
 ```
 
 ```python
->>> clustering.spike_counts
-{3: 1, 4: 1, 5: 3}
-```
-
-```python
 >>> for key, val in up.items():
 ...     print(key, "=", val)
-undo_state = None
-description = merge
-metadata_value = None
-spike_ids = [0 1 2]
-old_spikes_per_cluster = {0: array([0]), 1: array([1]), 2: array([2])}
-descendants = [(0, 5), (1, 5), (2, 5)]
-added = [5]
-new_spikes_per_cluster = {5: array([0, 1, 2])}
-history = None
-metadata_changed = []
 deleted = [0, 1, 2]
+added = [5]
+descendants = [(0, 5), (1, 5), (2, 5)]
+spike_ids = [0 1 2]
+metadata_value = None
+description = merge
+metadata_changed = []
+undo_state = None
+history = None
 ```
 
 ## Cluster metadata
@@ -156,6 +149,10 @@ The trace view shows the continuous traces from multiple channels with spikes su
 
 The correlogram view computes and shows all pairwise correlograms of a set of clusters.
 
+### Scatter view
+
+The scatter view accepts a `n_spikes`-long array `y` and displays a scatter plot `(t, y)` for a selection of spikes belonging to the selected clusters.
+
 ## Manual clustering GUI component
 
 The `ManualClustering` component encapsulates all the logic for a manual clustering GUI:
@@ -166,17 +163,15 @@ The `ManualClustering` component encapsulates all the logic for a manual cluster
 * clustering actions: merge, split, undo stack
 * moving clusters to groups
 
-Create an object with `mc = ManualClustering(spike_clusters)`. Then you can attach it to a GUI to bring manual clustering facilities to the GUI: `mc.attach(gui)`. This adds the manual clustering actions and the two tables to the GUI: the cluster view and the similarity view.
+Create an object with `mc = ManualClustering(spike_clusters, spikes_per_cluster)` where `spike_clusters` is an array and `spikes_per_cluster` is a function `cluster => spikes`. Then you can attach it to a GUI to bring manual clustering facilities to the GUI: `mc.attach(gui)`. This adds the manual clustering actions and the two tables to the GUI: the cluster view and the similarity view.
 
 The main objects are the following:
 
-`mc.clustering`: a `Clustering` instance
-`mc.cluster_meta`: a `ClusterMeta` instance
-`mc.cluster_view`: the cluster view (derives from `Table`)
-`mc.similarity_view`: the similarity view (derives from `Table`)
-`mc.actions`: the clustering actions (instance of `Actions`)
-
-Use `gui.request('manual_clustering')` to get the `ManualClustering` instance inside the `attach_to_gui(gui, model=None, state=None)` method of a GUI plugin.
+* `mc.clustering`: a `Clustering` instance
+* `mc.cluster_meta`: a `ClusterMeta` instance
+* `mc.cluster_view`: the cluster view (derives from `Table`)
+* `mc.similarity_view`: the similarity view (derives from `Table`)
+* `mc.actions`: the clustering actions (instance of `Actions`)
 
 ### Cluster and similarity view
 
@@ -195,7 +190,6 @@ The similarity view has an additional column compared to the cluster view: `simi
 See also the following methods:
 
 * `mc.set_default_sort(name)`: set a column as default sort in the quality cluster view
-* `mc.set_similarity_func(func)`: set a similarity function for the similarity view
 
 ### Cluster selection
 
@@ -207,81 +201,3 @@ The `ManualClustering` instance is responsible for the selection of the clusters
 When the selection changes, the attached GUI raises the `select(cluster_ids, spike_ids)` event.
 
 Other events are `cluster(up)` when a clustering action occurs, and `request_save(spike_clusters, cluster_groups)` when the user wants to save the results of the manual clustering session.
-
-## Cluster store
-
-The **cluster store** contains a library of functions computing data and statistics for every cluster. These functions are cached on disk and possibly in memory. A `ClusterStore` instance is initialized with a `Context` which provides the caching facilities. You can add new functions with the `add(f)` method/decorator.
-
-The `create_cluster_store()` function creates a cluster store with a built-in library of functions that take the data from a model (for example, the `KwikModel` that works with the Kwik format).
-
-Use `gui.request('cluster_store')` to get the cluster store instance inside the `attach_to_gui(gui, model=None, state=None)` method of a GUI plugin.
-
-## GUI plugins
-
-You can create plugins to customize the manual clustering GUI. Here is a complete example showing how to change the quality and similarity measures. Put the following in `~/.phy/phy_config.py`:
-
-```python
-
-import numpy as np
-from phy import IPlugin
-from phy.cluster.manual import get_closest_clusters
-
-
-# We write the plugin directly in the config file here, for simplicity.
-# When dealing with more plugins it is a better practice to put them
-# in separate files in ~/.phy/plugins/ or in your own repo that you can
-# refer to in c.Plugins.dirs = ['/path/to/myplugindir'].
-class MyPlugin(IPlugin):
-    def attach_to_gui(self, gui, model=None, state=None):
-
-        # We can get GUI components with `gui.request(name)`.
-        # These are the two main components. There is also `context` to
-        # deal with the cache and parallel computing context.
-        mc = gui.request('manual_clustering')
-        cs = gui.request('cluster_store')
-
-        # We add a column in the cluster view and set it as the default.
-        @mc.add_column(default=True)
-        @cs.add(cache='memory')
-        def mymeasure(cluster_id):
-            # This function takes a cluster id as input and returns a scalar.
-
-            # We retrieve the spike_ids and waveforms for that cluster.
-            # spike_ids is a (n_spikes,) array.
-            # waveforms is a (n_spikes, n_samples, n_channels) array.
-            spike_ids, waveforms = cs.waveforms(cluster_id)
-            return waveforms.max()
-
-        def mysim(cluster_0, cluster_1):
-            # This function returns a score for every pair of clusters.
-
-            # Here we compute a distance between the mean masks.
-            m0 = cs.mean_masks(cluster_0)  # (n_channels,) array
-            m1 = cs.mean_masks(cluster_1)  # (n_channels,) array
-            distance = np.sum((m1 - m0) ** 2)
-
-            # We need to convert the distance to a score: higher = better
-            # similarity.
-            score = -distance
-            return score
-
-        # We set the similarity function.
-        @mc.set_similarity_func
-        @cs.add(cache='memory')
-        def myclosest(cluster_id):
-            """This function returns the list of closest clusters as
-            a list of `(cluster, sim)` pairs.
-
-            By default, the 20 closest clusters are kept.
-
-            """
-            return get_closest_clusters(cluster_id, model.cluster_ids, mysim)
-
-
-# Now we set the config object.
-c = get_config()
-
-# Here we say that we always want to load our plugin in the KwikGUI.
-c.KwikGUI.plugins = ['MyPlugin']
-
-```
