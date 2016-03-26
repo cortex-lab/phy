@@ -15,9 +15,12 @@ from matplotlib.colors import rgb_to_hsv, hsv_to_rgb
 # Random colors
 #------------------------------------------------------------------------------
 
-def _random_color():
+def _random_color(h_range=(0., 1.),
+                  s_range=(.5, 1.),
+                  v_range=(.5, 1.),
+                  ):
     """Generate a random RGB color."""
-    h, s, v = uniform(0., 1.), uniform(.5, 1.), uniform(.5, 1.)
+    h, s, v = uniform(*h_range), uniform(*s_range), uniform(*v_range)
     r, g, b = hsv_to_rgb((h, s, v))
     return r, g, b
 
@@ -107,7 +110,7 @@ class ColorSelector(object):
         else:
             if clu in self._colors:
                 return self._colors[clu]
-            color = _random_color()
+            color = _random_color(v_range=(.1, .5))
             color = tuple(color) + (alpha,)
             self._colors[clu] = color
         assert len(color) == 4
