@@ -177,7 +177,7 @@ def test_trace_view(qtbot, gui):
     v.interval = (.25, .75)
     ac(v.interval, (.25, .75))
     v.widen()
-    ac(v.interval, (.225, .775))
+    ac(v.interval, (.125, .875))
     v.narrow()
     ac(v.interval, (.25, .75))
 

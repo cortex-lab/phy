@@ -16,6 +16,7 @@ import numpy as np
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
+from phy.gui.qt import _show_box
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table
 
@@ -491,6 +492,10 @@ class ManualClustering(object):
             spike_ids = self.gui.emit('request_split')
             spike_ids = np.concatenate(spike_ids).astype(np.int64)
         if len(spike_ids) == 0:
+            msg = ("You first need to select spikes in the feature "
+                   "view with a few Ctrl+Click around the spikes "
+                   "that you want to split.")
+            _show_box(self.gui.dialog(msg))
             return
         self.clustering.split(spike_ids)
         self._global_history.action(self.clustering)

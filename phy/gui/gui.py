@@ -12,7 +12,7 @@ import logging
 import os.path as op
 
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
-                 Qt, QSize, QMetaObject)
+                 QMessageBox, Qt, QSize, QMetaObject)
 from .actions import Actions, Snippets
 from phy.utils.event import EventEmitter
 from phy.utils import (Bunch, _bunchify,
@@ -312,6 +312,12 @@ class GUI(QMainWindow):
         if name not in self._menus:
             self._menus[name] = self.menuBar().addMenu(name)
         return self._menus[name]
+
+    def dialog(self, message):
+        """Show a message in a dialog box."""
+        box = QMessageBox()
+        box.setText(message)
+        return box
 
     # Status bar
     # -------------------------------------------------------------------------

@@ -8,7 +8,7 @@
 
 from pytest import raises
 
-from ..qt import Qt, QApplication, QWidget
+from ..qt import Qt, QApplication, QWidget, QMessageBox
 from ..gui import (GUI, GUIState,
                    _try_get_matplotlib_canvas,
                    _try_get_vispy_canvas,
@@ -72,6 +72,8 @@ def test_gui_1(tempdir, qtbot):
     gui.unconnect_(on_show)
     qtbot.keyPress(gui, Qt.Key_Control)
     qtbot.keyRelease(gui, Qt.Key_Control)
+
+    assert isinstance(gui.dialog("Hello"), QMessageBox)
 
     view = gui.add_view(_create_canvas(), floating=True, closable=True)
     gui.add_view(_create_canvas())
