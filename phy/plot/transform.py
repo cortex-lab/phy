@@ -173,9 +173,9 @@ class Range(BaseTransform):
 
     def apply(self, arr, from_bounds=None, to_bounds=None):
         from_bounds = np.asarray(from_bounds if from_bounds is not None
-                                 else self.from_bounds)
+                                 else self.from_bounds, dtype=np.float64)
         to_bounds = np.asarray(to_bounds if to_bounds is not None
-                               else self.to_bounds)
+                               else self.to_bounds, dtype=np.float64)
         f0 = from_bounds[..., :2]
         f1 = from_bounds[..., 2:]
         t0 = to_bounds[..., :2]
