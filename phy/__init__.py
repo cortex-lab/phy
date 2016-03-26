@@ -18,6 +18,7 @@ from .io.datasets import download_file, download_sample_data
 from .utils.config import load_master_config
 from .utils._misc import _git_version
 from .utils.plugin import IPlugin, get_plugin, discover_plugins
+from .utils.testing import _enable_profiler
 
 
 #------------------------------------------------------------------------------
@@ -64,6 +65,15 @@ DEBUG = False
 if '--debug' in sys.argv:  # pragma: no cover
     DEBUG = True
     sys.argv.remove('--debug')
+
+
+# Add `profile` in the builtins.
+if '--lprof' in sys.argv or '--prof' in sys.argv:  # pragma: no cover
+    _enable_profiler('--lprof' in sys.argv)
+    if '--prof' in sys.argv:
+        sys.argv.remove('--prof')
+    if '--lprof' in sys.argv:
+        sys.argv.remove('--lprof')
 
 
 def test():  # pragma: no cover
