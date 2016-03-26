@@ -181,7 +181,11 @@ class Range(BaseTransform):
         t0 = to_bounds[..., :2]
         t1 = to_bounds[..., 2:]
 
-        return t0 + (t1 - t0) * (arr - f0) / (f1 - f0)
+        out = arr.copy()
+        out -= f0
+        out *= (t1 - t0) / (f1 - f0)
+        out += t0
+        return out
 
     def glsl(self, var):
         assert var
