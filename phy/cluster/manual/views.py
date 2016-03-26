@@ -230,6 +230,7 @@ class WaveformView(ManualClusteringView):
         self._key_pressed = None
         self._overlap = False
         self.do_zoom_on_channels = True
+        self.do_show_labels = True
         self.data_index = 0
 
         self.best_channels = best_channels or (lambda clusters: [])
@@ -320,12 +321,13 @@ class WaveformView(ManualClusteringView):
                               depth=depth,
                               data_bounds=self.data_bounds,
                               )
-                # Add channel labels.
-                self[ch].text(pos=[[t[0, 0], 0.]],
-                              text=str(ch),
-                              anchor=[-1.01, -.25],
-                              data_bounds=self.data_bounds,
-                              )
+                if self.do_show_labels:
+                    # Add channel labels.
+                    self[ch].text(pos=[[t[0, 0], 0.]],
+                                  text=str(ch),
+                                  anchor=[-1.01, -.25],
+                                  data_bounds=self.data_bounds,
+                                  )
 
         # Zoom on the best channels when selecting clusters.
         channels = self.best_channels(cluster_ids)
@@ -338,6 +340,7 @@ class WaveformView(ManualClusteringView):
                      probe_scaling=tuple(self.probe_scaling),
                      overlap=self.overlap,
                      do_zoom_on_channels=self.do_zoom_on_channels,
+                     do_show_labels=self.do_show_labels,
                      )
 
     def attach(self, gui):
@@ -345,6 +348,7 @@ class WaveformView(ManualClusteringView):
         super(WaveformView, self).attach(gui)
         self.actions.add(self.toggle_waveform_overlap)
         self.actions.add(self.toggle_zoom_on_channels)
+        self.actions.add(self.toggle_show_labels)
 
         # Box scaling.
         self.actions.add(self.widen)
@@ -471,6 +475,10 @@ class WaveformView(ManualClusteringView):
     def toggle_zoom_on_channels(self):
         self.do_zoom_on_channels = not self.do_zoom_on_channels
 
+    def toggle_show_labels(self):
+        self.do_show_labels = not self.do_show_labels
+        self.on_select()
+
     def zoom_on_channels(self, channels_rel):
         """Zoom on some channels."""
         if channels_rel is None or not len(channels_rel):
@@ -591,6 +599,8 @@ class TraceView(ManualClusteringView):
                  duration=None,
                  n_channels=None,
                  **kwargs):
+
+        self.do_show_labels = True
 
         # traces is a function interval => [traces]
         # spikes is a function interval => [Bunch(...)]
@@ -715,7 +725,8 @@ class TraceView(ManualClusteringView):
         # Plot the traces.
         for i, traces in enumerate(all_traces):
             # Only show labels for the first set of traces.
-            self._plot_traces(show_labels=(i == 0), **traces)
+            self._plot_traces(show_labels=self.do_show_labels and (i == 0),
+                              **traces)
 
         # Plot the spikes.
         spikes = self.spikes(interval, all_traces)
@@ -744,12 +755,14 @@ class TraceView(ManualClusteringView):
         self.actions.add(self.decrease)
         self.actions.add(self.widen)
         self.actions.add(self.narrow)
+        self.actions.add(self.toggle_show_labels)
 
     @property
     def state(self):
         return Bunch(scaling=self.scaling,
                      origin=self.origin,
                      interval=self._interval,
+                     do_show_labels=self.do_show_labels,
                      )
 
     # Scaling
@@ -833,6 +846,10 @@ class TraceView(ManualClusteringView):
         t, h = self.time, self.half_duration
         h /= self.scaling_coeff_x
         self.set_interval((t - h, t + h))
+
+    def toggle_show_labels(self):
+        self.do_show_labels = not self.do_show_labels
+        self.on_select()
 
     # Channel scaling
     # -------------------------------------------------------------------------
