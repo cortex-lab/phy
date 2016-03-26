@@ -481,7 +481,17 @@ class WaveformView(ManualClusteringView):
         b = self.boxed.box_bounds[channels_rel]
         x0, y0 = b[:, :2].min(axis=0)
         x1, y1 = b[:, 2:].max(axis=0)
-        self.panzoom.set_range((x0, y0, x1, y1), keep_aspect=True)
+        # Center of the new range.
+        cx = (x0 + x1) * .5
+        cy = (y0 + y1) * .5
+        # Previous range.
+        px0, py0, px1, py1 = self.panzoom.get_range()
+        # Half-size of the previous range.
+        dx = (px1 - px0) * .5
+        dy = (py1 - py0) * .5
+        # New range.
+        new_range = (cx - dx, cy - dy, cx + dx, cy + dy)
+        self.panzoom.set_range(new_range, keep_aspect=True)
 
     def on_key_press(self, event):
         """Handle key press events."""
