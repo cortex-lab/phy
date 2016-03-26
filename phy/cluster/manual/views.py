@@ -562,7 +562,8 @@ def extract_spikes(traces, interval, sample_rate=None,
 class TraceView(ManualClusteringView):
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
-    scaling_coeff = 1.1
+    scaling_coeff_x = 1.5
+    scaling_coeff_y = 1.1
     default_trace_color = (.3, .3, .3, 1.)
     default_shortcuts = {
         'go_left': 'alt+left',
@@ -814,13 +815,13 @@ class TraceView(ManualClusteringView):
     def widen(self):
         """Increase the interval size."""
         t, h = self.time, self.half_duration
-        h *= self.scaling_coeff
+        h *= self.scaling_coeff_x
         self.set_interval((t - h, t + h))
 
     def narrow(self):
         """Decrease the interval size."""
         t, h = self.time, self.half_duration
-        h /= self.scaling_coeff
+        h /= self.scaling_coeff_x
         self.set_interval((t - h, t + h))
 
     # Channel scaling
@@ -831,12 +832,12 @@ class TraceView(ManualClusteringView):
 
     def increase(self):
         """Increase the scaling of the traces."""
-        self.scaling *= self.scaling_coeff
+        self.scaling *= self.scaling_coeff_y
         self._update_boxes()
 
     def decrease(self):
         """Decrease the scaling of the traces."""
-        self.scaling /= self.scaling_coeff
+        self.scaling /= self.scaling_coeff_y
         self._update_boxes()
 
 
