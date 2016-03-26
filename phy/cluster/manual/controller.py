@@ -46,6 +46,8 @@ class Controller(EventEmitter):
 
     """
 
+    gui_name = ''
+
     n_spikes_waveforms = 100
     n_spikes_waveforms_lim = 100
     n_spikes_masks = 100
@@ -68,7 +70,7 @@ class Controller(EventEmitter):
         # Attach the plugins.
         plugins = plugins or []
         config = load_master_config(config_dir=config_dir)
-        c = config.get(self.__class__.__name__)
+        c = config.get(self.gui_name or self.__class__.__name__)
         default_plugins = c.plugins if c else []
         if len(default_plugins):
             plugins = default_plugins + plugins
@@ -366,7 +368,8 @@ class Controller(EventEmitter):
                    **kwargs):
         """Create a manual clustering GUI."""
         config_dir = config_dir or self.config_dir
-        gui = GUI(name=name, subtitle=subtitle,
+        gui = GUI(name=name or self.gui_name,
+                  subtitle=subtitle,
                   config_dir=config_dir, **kwargs)
         gui.controller = self
 

@@ -26,12 +26,12 @@ Here is an example. Create a file in `~/.phy/plugins/hello.py` and write the fol
 from phy import IPlugin
 import click
 
-
 class MyPlugin(IPlugin):
     def attach_to_cli(self, cli):
         @cli.command('hello')
         @click.argument('name')
         def hello(name):
+            """Display a greeting message."""
             print("Hello %s!" % name)
 ```
 
@@ -40,21 +40,9 @@ Then, type the following in a system shell:
 ```bash
 $ phy
 Usage: phy [OPTIONS] COMMAND [ARGS]...
-
-  By default, the `phy` command does nothing. Add subcommands with plugins
-  using `attach_to_cli()` and the `click` library.
-
-Options:
-  --version   Show the version and exit.
-  -h, --help  Show this message and exit.
-
+[...]
 Commands:
-  hello
-
-$ phy hello
-Usage: phy hello [OPTIONS] NAME
-
-Error: Missing argument "name".
+  hello          Display a greeting message.
 
 $ phy hello world
 Hello world!
