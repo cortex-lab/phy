@@ -469,8 +469,13 @@ class WaveformView(ManualClusteringView):
 
     def next_data(self):
         """Show the next set of waveforms (if any)."""
+        # HACK: temporarily disable automatic zoom on channels when
+        # changing the data.
+        tmp = self.do_zoom_on_channels
+        self.do_zoom_on_channels = False
         self.data_index += 1
         self.on_select()
+        self.do_zoom_on_channels = tmp
 
     def toggle_zoom_on_channels(self):
         self.do_zoom_on_channels = not self.do_zoom_on_channels
