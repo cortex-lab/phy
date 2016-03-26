@@ -100,7 +100,9 @@ class ScatterVisual(BaseVisual):
         n = pos.shape[0]
 
         # Validate the data.
-        color = _get_array(color, (n, 4), ScatterVisual._default_color)
+        color = _get_array(color, (n, 4),
+                           ScatterVisual._default_color,
+                           dtype=np.float32)
         size = _get_array(size, (n, 1), ScatterVisual._default_marker_size)
         depth = _get_array(depth, (n, 1), 0)
         data_bounds = _get_data_bounds(data_bounds, pos)
@@ -179,7 +181,10 @@ class PlotVisual(BaseVisual):
             ymax = [_max(_) for _ in y]
             data_bounds = np.c_[xmin, ymin, xmax, ymax]
 
-        color = _get_array(color, (n_signals, 4), PlotVisual._default_color)
+        color = _get_array(color, (n_signals, 4),
+                           PlotVisual._default_color,
+                           dtype=np.float32,
+                           )
         assert color.shape == (n_signals, 4)
 
         depth = _get_array(depth, (n_signals, 1), 0)
@@ -261,7 +266,10 @@ class HistogramVisual(BaseVisual):
         n_hists, n_bins = hist.shape
 
         # Validate the data.
-        color = _get_array(color, (n_hists, 4), HistogramVisual._default_color)
+        color = _get_array(color, (n_hists, 4),
+                           HistogramVisual._default_color,
+                           dtype=np.float32,
+                           )
 
         # Validate ylim.
         if ylim is None:
