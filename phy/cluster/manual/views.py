@@ -714,11 +714,9 @@ class TraceView(ManualClusteringView):
         for spike in spikes:
             clu = spike.spike_cluster
             cg = self.cluster_groups[clu]
-            # Skip ignored spikes.
-            if cg in ('noise', 'mua'):
-                continue
             color = self._color_selector.get(clu,
                                              cluster_ids=self.cluster_ids,
+                                             cluster_group=cg,
                                              )
             self._plot_spike(color=color,
                              waveforms=spike.waveforms,

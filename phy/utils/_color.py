@@ -98,9 +98,11 @@ class ColorSelector(object):
     def __init__(self):
         self._colors = {}
 
-    def get(self, clu, cluster_ids=None, alpha=None):
+    def get(self, clu, cluster_ids=None, cluster_group=None, alpha=None):
         alpha = alpha or .5
-        if cluster_ids and clu in cluster_ids:
+        if cluster_group in ('noise', 'mua'):
+            color = (.5,) * 4
+        elif cluster_ids and clu in cluster_ids:
             i = cluster_ids.index(clu)
             color = _colormap(i)
             color = tuple(color) + (alpha,)
