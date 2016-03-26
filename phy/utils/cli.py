@@ -62,8 +62,10 @@ def _run_cmd(cmd, ctx, glob, loc):  # pragma: no cover
         _enable_pdb()
     if ctx.obj['ipython']:
         from IPython import start_ipython
-        args_ipy = ['-i', '-c="{}"'.format(cmd), '--gui=qt']
-        return start_ipython(args_ipy, user_ns={})
+        args_ipy = ['-i', '--gui=qt']
+        ns = glob.copy()
+        ns.update(loc)
+        return start_ipython(args_ipy, user_ns=ns)
     # Profiling. The builtin `profile` is added in __init__.
     prof = __builtins__.get('profile', None)
     if prof:
