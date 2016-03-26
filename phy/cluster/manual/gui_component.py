@@ -157,7 +157,8 @@ class ManualClustering(object):
         # Create Clustering and ClusterMeta.
         self.clustering = Clustering(spike_clusters,
                                      new_cluster_id=new_cluster_id)
-        self.cluster_meta = create_cluster_meta(cluster_groups)
+        self.cluster_groups = cluster_groups or {}
+        self.cluster_meta = create_cluster_meta(self.cluster_groups)
         self._global_history = GlobalHistory(process_ups=_process_ups)
         self._register_logging()
 
@@ -189,6 +190,10 @@ class ManualClustering(object):
 
         @self.cluster_meta.connect  # noqa
         def on_cluster(up):
+            # Update the original dictionary when groups change.
+            for clu in up.metadata_changed:
+                self.cluster_groups[clu] = up.metadata_value
+
             if up.history:
                 logger.info(up.history.title() + " move.")
             else:
