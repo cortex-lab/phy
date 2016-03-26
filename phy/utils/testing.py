@@ -171,6 +171,14 @@ def _profile(prof, statement, glob, loc):
         f.write(stats)
 
 
+def _enable_pdb():  # pragma: no cover
+    from IPython.core import ultratb
+    sys.excepthook = ultratb.FormattedTB(mode='Verbose',
+                                         color_scheme='Linux',
+                                         call_pdb=1,
+                                         )
+
+
 #------------------------------------------------------------------------------
 # Testing VisPy canvas
 #------------------------------------------------------------------------------
