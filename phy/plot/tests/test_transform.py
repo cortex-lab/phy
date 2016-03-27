@@ -11,9 +11,10 @@ from textwrap import dedent
 
 import numpy as np
 from numpy.testing import assert_equal as ae
+from numpy.testing import assert_allclose as ac
 from pytest import yield_fixture
 
-from ..transform import (_glslify, pixels_to_ndc,
+from ..transform import (_glslify, pixels_to_ndc, _normalize,
                          Translate, Scale, Range, Clip, Subplot,
                          TransformChain,
                          )
@@ -58,6 +59,12 @@ def test_glslify():
 
 def test_pixels_to_ndc():
     assert list(pixels_to_ndc((0, 0), size=(10, 10))) == [-1, 1]
+
+
+def test_normalize():
+    m, M = 0., 10.
+    arr = np.linspace(0., 10., 10)
+    ac(_normalize(arr, m, M), np.linspace(-1., 1., 10))
 
 
 #------------------------------------------------------------------------------
