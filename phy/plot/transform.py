@@ -72,6 +72,15 @@ def _inverse(value):
         return 1. / value
 
 
+def _normalize(arr, m, M):
+    d = float(M - m)
+    b = 2. / d
+    a = -1 - m / d
+    arr *= b
+    arr += a
+    return arr
+
+
 def subplot_bounds(shape=None, index=None):
     i, j = index
     n_rows, n_cols = shape
@@ -93,6 +102,7 @@ def subplot_bounds_glsl(shape=None, index=None):
     y0 = '+1.0 - 2.0 * ({i}.x + 1) / {s}.x'.format(s=shape, i=index)
     x1 = '-1.0 + 2.0 * ({i}.y + 1) / {s}.y'.format(s=shape, i=index)
     y1 = '+1.0 - 2.0 * ({i}.x) / {s}.x'.format(s=shape, i=index)
+
     return 'vec4({x0}, {y0}, {x1}, {y1})'.format(x0=x0, y0=y0, x1=x1, y1=y1)
 
 
