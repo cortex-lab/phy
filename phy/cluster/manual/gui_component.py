@@ -60,9 +60,9 @@ class ClusterView(Table):
         return {'sort_by': self.current_sort}
 
     def set_state(self, state):
-        sort_by = state.get('sort_by', None)
+        sort_by, order = state.get('sort_by', (None, None))
         if sort_by:
-            self.sort_by(*sort_by)
+            self.sort_by(sort_by, order)
 
 
 class ManualClustering(object):
