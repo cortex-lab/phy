@@ -485,14 +485,15 @@ class ManualClustering(object):
         self.clustering.merge(cluster_ids)
         self._global_history.action(self.clustering)
 
-    def split(self, spike_ids=None):
+    def split(self, spike_ids=None, spike_clusters_rel=0):
         """Split the selected spikes."""
         if spike_ids is None:
             spike_ids = self.gui.emit('request_split')
             spike_ids = np.concatenate(spike_ids).astype(np.int64)
         if len(spike_ids) == 0:
             return
-        self.clustering.split(spike_ids)
+        self.clustering.split(spike_ids,
+                              spike_clusters_rel=spike_clusters_rel)
         self._global_history.action(self.clustering)
 
     # Move actions

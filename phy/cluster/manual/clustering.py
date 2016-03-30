@@ -397,7 +397,7 @@ class Clustering(EventEmitter):
         self.emit('cluster', up)
         return up
 
-    def split(self, spike_ids):
+    def split(self, spike_ids, spike_clusters_rel=0):
         """Split a number of spikes into a new cluster.
 
         This is equivalent to an `assign()` to a single new cluster.
@@ -406,7 +406,9 @@ class Clustering(EventEmitter):
         ----------
 
         spike_ids : array-like
-            Array of spike ids to merge.
+            Array of spike ids to split.
+        spike_clusters_rel : array-like (or None)
+            Array of relative spike clusters.
 
         Returns
         -------
@@ -422,7 +424,7 @@ class Clustering(EventEmitter):
 
         """
         # self.assign() accepts relative numbers as second argument.
-        return self.assign(spike_ids, 0)
+        return self.assign(spike_ids, spike_clusters_rel)
 
     def undo(self):
         """Undo the last cluster assignment operation.

@@ -362,8 +362,9 @@ class Controller(EventEmitter):
     def similarity(self, cluster_id):
         return self.get_close_clusters(cluster_id)
 
-    def create_gui(self, name=None, subtitle=None,
-                   plugins=None, config_dir=None,
+    def create_gui(self, name=None,
+                   subtitle=None,
+                   config_dir=None,
                    add_default_views=True,
                    **kwargs):
         """Create a manual clustering GUI."""
