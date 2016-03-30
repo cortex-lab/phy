@@ -25,7 +25,8 @@ logger = logging.getLogger(__name__)
 
 def phy_config_dir():
     """Return the absolute path to the phy user directory."""
-    return op.expanduser('~/.phy/')
+    home = op.realpath(op.expanduser('~'))
+    return op.join(home, '.phy')
 
 
 def _ensure_dir_exists(path):

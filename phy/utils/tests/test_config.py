@@ -27,7 +27,7 @@ from ..config import (_ensure_dir_exists,
 #------------------------------------------------------------------------------
 
 def test_phy_config_dir():
-    assert _config.phy_config_dir().endswith('.phy/')
+    assert _config.phy_config_dir().endswith('.phy')
 
 
 def test_ensure_dir_exists(tempdir):
