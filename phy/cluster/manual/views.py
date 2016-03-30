@@ -224,7 +224,6 @@ class WaveformView(ManualClusteringView):
     def __init__(self,
                  waveforms=None,
                  channel_positions=None,
-                 waveform_lims=None,
                  best_channels=None,
                  **kwargs):
         self._key_pressed = None
@@ -262,8 +261,7 @@ class WaveformView(ManualClusteringView):
         self.waveforms = waveforms
 
         # Waveform normalization.
-        assert len(waveform_lims) == 2
-        self.data_bounds = [-1, waveform_lims[0], +1, waveform_lims[1]]
+        self.data_bounds = [-1, -1, +1, +1]
 
         # Channel positions.
         assert channel_positions.shape == (self.n_channels, 2)

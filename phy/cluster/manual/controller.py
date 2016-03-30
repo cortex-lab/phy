@@ -22,6 +22,7 @@ from phy.cluster.manual.views import (WaveformView,
 from phy.gui import GUI
 from phy.io.array import _get_data_lim, concat_per_cluster
 from phy.io import Context, Selector
+from phy.plot.transform import _normalize
 from phy.stats.clusters import (mean,
                                 get_waveform_amplitude,
                                 )
@@ -189,10 +190,13 @@ class Controller(EventEmitter):
 
     # Is cached in _init_context()
     def get_waveforms(self, cluster_id):
-        return [self._select_data(cluster_id,
-                                  self.all_waveforms,
-                                  self.n_spikes_waveforms,
-                                  )]
+        data = self._select_data(cluster_id,
+                                 self.all_waveforms,
+                                 self.n_spikes_waveforms,
+                                 )
+        # Cache the normalized waveforms.
+        m, M = self.get_waveform_lims()
+        return _normalize(data.data, m, M)
 
     def get_mean_waveforms(self, cluster_id):
         return mean(self.get_waveforms(cluster_id)[0].data)
@@ -325,7 +329,6 @@ class Controller(EventEmitter):
     def add_waveform_view(self, gui):
         v = WaveformView(waveforms=self.get_waveforms,
                          channel_positions=self.channel_positions,
-                         waveform_lims=self.get_waveform_lims(),
                          best_channels=self.get_best_channels,
                          )
         return self._add_view(gui, v)
