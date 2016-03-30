@@ -151,6 +151,11 @@ def _get_array(val, shape, default=None, dtype=np.float64):
     assert val is not None or default is not None
     if hasattr(val, '__len__') and len(val) == 0:  # pragma: no cover
         val = None
+    # Do nothing if the array is already correct.
+    if (isinstance(val, np.ndarray) and
+            val.shape == shape and
+            val.dtype == dtype):
+        return val
     out = np.zeros(shape, dtype=dtype)
     # This solves `ValueError: could not broadcast input array from shape (n)
     # into shape (n, 1)`.
