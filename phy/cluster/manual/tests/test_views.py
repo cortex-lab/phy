@@ -98,6 +98,9 @@ def test_waveform_view(qtbot, gui):
     v.toggle_zoom_on_channels()
     v.toggle_zoom_on_channels()
 
+    v.toggle_show_labels()
+    assert not v.do_show_labels
+
     # Box scaling.
     bs = v.boxed.box_size
     v.increase()
@@ -177,13 +180,16 @@ def test_trace_view(qtbot, gui):
     v.interval = (.25, .75)
     ac(v.interval, (.25, .75))
     v.widen()
-    ac(v.interval, (.225, .775))
+    ac(v.interval, (.125, .875))
     v.narrow()
     ac(v.interval, (.25, .75))
 
     # Widen the max interval.
     v.set_interval((0, gui.controller.duration))
     v.widen()
+
+    v.toggle_show_labels()
+    assert not v.do_show_labels
 
     # Change channel scaling.
     bs = v.stacked.box_size

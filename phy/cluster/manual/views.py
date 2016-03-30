@@ -230,6 +230,7 @@ class WaveformView(ManualClusteringView):
         self._key_pressed = None
         self._overlap = False
         self.do_zoom_on_channels = True
+        self.do_show_labels = True
         self.data_index = 0
 
         self.best_channels = best_channels or (lambda clusters: [])
@@ -320,12 +321,13 @@ class WaveformView(ManualClusteringView):
                               depth=depth,
                               data_bounds=self.data_bounds,
                               )
-                # Add channel labels.
-                self[ch].text(pos=[[t[0, 0], 0.]],
-                              text=str(ch),
-                              anchor=[-1.01, -.25],
-                              data_bounds=self.data_bounds,
-                              )
+                if self.do_show_labels:
+                    # Add channel labels.
+                    self[ch].text(pos=[[t[0, 0], 0.]],
+                                  text=str(ch),
+                                  anchor=[-1.01, -.25],
+                                  data_bounds=self.data_bounds,
+                                  )
 
         # Zoom on the best channels when selecting clusters.
         channels = self.best_channels(cluster_ids)
@@ -338,6 +340,7 @@ class WaveformView(ManualClusteringView):
                      probe_scaling=tuple(self.probe_scaling),
                      overlap=self.overlap,
                      do_zoom_on_channels=self.do_zoom_on_channels,
+                     do_show_labels=self.do_show_labels,
                      )
 
     def attach(self, gui):
@@ -345,6 +348,7 @@ class WaveformView(ManualClusteringView):
         super(WaveformView, self).attach(gui)
         self.actions.add(self.toggle_waveform_overlap)
         self.actions.add(self.toggle_zoom_on_channels)
+        self.actions.add(self.toggle_show_labels)
 
         # Box scaling.
         self.actions.add(self.widen)
@@ -465,11 +469,20 @@ class WaveformView(ManualClusteringView):
 
     def next_data(self):
         """Show the next set of waveforms (if any)."""
+        # HACK: temporarily disable automatic zoom on channels when
+        # changing the data.
+        tmp = self.do_zoom_on_channels
+        self.do_zoom_on_channels = False
         self.data_index += 1
         self.on_select()
+        self.do_zoom_on_channels = tmp
 
     def toggle_zoom_on_channels(self):
         self.do_zoom_on_channels = not self.do_zoom_on_channels
+
+    def toggle_show_labels(self):
+        self.do_show_labels = not self.do_show_labels
+        self.on_select()
 
     def zoom_on_channels(self, channels_rel):
         """Zoom on some channels."""
@@ -481,7 +494,17 @@ class WaveformView(ManualClusteringView):
         b = self.boxed.box_bounds[channels_rel]
         x0, y0 = b[:, :2].min(axis=0)
         x1, y1 = b[:, 2:].max(axis=0)
-        self.panzoom.set_range((x0, y0, x1, y1), keep_aspect=True)
+        # Center of the new range.
+        cx = (x0 + x1) * .5
+        cy = (y0 + y1) * .5
+        # Previous range.
+        px0, py0, px1, py1 = self.panzoom.get_range()
+        # Half-size of the previous range.
+        dx = (px1 - px0) * .5
+        dy = (py1 - py0) * .5
+        # New range.
+        new_range = (cx - dx, cy - dy, cx + dx, cy + dy)
+        self.panzoom.set_range(new_range, keep_aspect=True)
 
     def on_key_press(self, event):
         """Handle key press events."""
@@ -562,7 +585,8 @@ def extract_spikes(traces, interval, sample_rate=None,
 class TraceView(ManualClusteringView):
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
-    scaling_coeff = 1.1
+    scaling_coeff_x = 1.5
+    scaling_coeff_y = 1.1
     default_trace_color = (.3, .3, .3, 1.)
     default_shortcuts = {
         'go_left': 'alt+left',
@@ -576,10 +600,13 @@ class TraceView(ManualClusteringView):
     def __init__(self,
                  traces=None,
                  spikes=None,
+                 cluster_groups=None,
                  sample_rate=None,
                  duration=None,
                  n_channels=None,
                  **kwargs):
+
+        self.do_show_labels = True
 
         # traces is a function interval => [traces]
         # spikes is a function interval => [Bunch(...)]
@@ -600,6 +627,8 @@ class TraceView(ManualClusteringView):
 
         assert n_channels >= 0
         self.n_channels = n_channels
+
+        self.cluster_groups = cluster_groups
 
         # Box and probe scaling.
         self._scaling = 1.
@@ -643,13 +672,11 @@ class TraceView(ManualClusteringView):
                               data_bounds=self.data_bounds,
                               )
 
-    def _plot_spike(self, waveforms=None, channels=None, masks=None,
-                    spike_time=None, spike_cluster=None, offset_samples=0,
-                    color=None):
+    def _plot_spike(self, waveforms=None, channels=None, spike_time=None,
+                    offset_samples=0, color=None):
 
         n_samples, n_channels = waveforms.shape
         assert len(channels) == n_channels
-        assert len(masks) == n_channels
         sr = float(self.sample_rate)
 
         t0 = spike_time - offset_samples / sr
@@ -704,16 +731,26 @@ class TraceView(ManualClusteringView):
         # Plot the traces.
         for i, traces in enumerate(all_traces):
             # Only show labels for the first set of traces.
-            self._plot_traces(show_labels=(i == 0), **traces)
+            self._plot_traces(show_labels=self.do_show_labels and (i == 0),
+                              **traces)
 
         # Plot the spikes.
         spikes = self.spikes(interval, all_traces)
         assert isinstance(spikes, (tuple, list))
 
         for spike in spikes:
-            color = self._color_selector.get(spike.spike_cluster,
-                                             self.cluster_ids)
-            self._plot_spike(color=color, **spike)
+            clu = spike.spike_cluster
+            cg = self.cluster_groups[clu]
+            color = self._color_selector.get(clu,
+                                             cluster_ids=self.cluster_ids,
+                                             cluster_group=cg,
+                                             )
+            self._plot_spike(color=color,
+                             waveforms=spike.waveforms,
+                             channels=spike.channels,
+                             spike_time=spike.spike_time,
+                             offset_samples=spike.offset_samples,
+                             )
 
         self.build()
         self.update()
@@ -733,12 +770,14 @@ class TraceView(ManualClusteringView):
         self.actions.add(self.decrease)
         self.actions.add(self.widen)
         self.actions.add(self.narrow)
+        self.actions.add(self.toggle_show_labels)
 
     @property
     def state(self):
         return Bunch(scaling=self.scaling,
                      origin=self.origin,
                      interval=self._interval,
+                     do_show_labels=self.do_show_labels,
                      )
 
     # Scaling
@@ -814,14 +853,18 @@ class TraceView(ManualClusteringView):
     def widen(self):
         """Increase the interval size."""
         t, h = self.time, self.half_duration
-        h *= self.scaling_coeff
+        h *= self.scaling_coeff_x
         self.set_interval((t - h, t + h))
 
     def narrow(self):
         """Decrease the interval size."""
         t, h = self.time, self.half_duration
-        h /= self.scaling_coeff
+        h /= self.scaling_coeff_x
         self.set_interval((t - h, t + h))
+
+    def toggle_show_labels(self):
+        self.do_show_labels = not self.do_show_labels
+        self.on_select()
 
     # Channel scaling
     # -------------------------------------------------------------------------
@@ -831,12 +874,12 @@ class TraceView(ManualClusteringView):
 
     def increase(self):
         """Increase the scaling of the traces."""
-        self.scaling *= self.scaling_coeff
+        self.scaling *= self.scaling_coeff_y
         self._update_boxes()
 
     def decrease(self):
         """Decrease the scaling of the traces."""
-        self.scaling /= self.scaling_coeff
+        self.scaling /= self.scaling_coeff_y
         self._update_boxes()
 
 

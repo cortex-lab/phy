@@ -11,6 +11,7 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from vispy.util import keys
 
+from .. import gui_component
 from ..gui_component import (ManualClustering,
                              )
 from phy.io.array import _spikes_in_clusters
@@ -24,6 +25,9 @@ from .conftest import MockController
 
 @yield_fixture
 def gui(tempdir, qtbot):
+    # NOTE: mock patch show box exec_
+    gui_component._show_box = lambda _: _
+
     gui = GUI(position=(200, 100), size=(500, 500), config_dir=tempdir)
     gui.show()
     qtbot.waitForWindowShown(gui)

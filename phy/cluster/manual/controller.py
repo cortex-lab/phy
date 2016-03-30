@@ -137,6 +137,7 @@ class Controller(EventEmitter):
             get('new_cluster_id', None)
         mc = ManualClustering(self.spike_clusters,
                               self.spikes_per_cluster,
+                              best_channel=self.get_best_channel,
                               similarity=self.similarity,
                               cluster_groups=self.cluster_groups,
                               new_cluster_id=new_cluster_id,
@@ -151,7 +152,7 @@ class Controller(EventEmitter):
                               dict(new_cluster_id=new_cluster_id))
 
         self.manual_clustering = mc
-        mc.add_column(self.get_probe_depth, name='probe_depth')
+        mc.add_column(self.get_probe_depth, name='depth')
 
     def _select_spikes(self, cluster_id, n_max=None):
         assert isinstance(cluster_id, int)
@@ -332,6 +333,7 @@ class Controller(EventEmitter):
     def add_trace_view(self, gui):
         v = TraceView(traces=self.get_traces,
                       spikes=self.get_spikes_traces,
+                      cluster_groups=self.cluster_groups,
                       sample_rate=self.sample_rate,
                       duration=self.duration,
                       n_channels=self.n_channels,

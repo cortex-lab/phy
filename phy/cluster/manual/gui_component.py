@@ -16,6 +16,7 @@ import numpy as np
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
+from phy.gui.qt import _show_box
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table
 
@@ -134,6 +135,7 @@ class ManualClustering(object):
                  spike_clusters,
                  spikes_per_cluster,
                  cluster_groups=None,
+                 best_channel=None,
                  shortcuts=None,
                  quality=None,
                  similarity=None,
@@ -143,6 +145,7 @@ class ManualClustering(object):
         self.gui = None
         self.quality = quality  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
+        self.best_channel = best_channel  # function cluster_id => channel_id
 
         assert hasattr(spikes_per_cluster, '__call__')
         self.spikes_per_cluster = spikes_per_cluster
@@ -154,7 +157,8 @@ class ManualClustering(object):
         # Create Clustering and ClusterMeta.
         self.clustering = Clustering(spike_clusters,
                                      new_cluster_id=new_cluster_id)
-        self.cluster_meta = create_cluster_meta(cluster_groups)
+        self.cluster_groups = cluster_groups or {}
+        self.cluster_meta = create_cluster_meta(self.cluster_groups)
         self._global_history = GlobalHistory(process_ups=_process_ups)
         self._register_logging()
 
@@ -186,6 +190,10 @@ class ManualClustering(object):
 
         @self.cluster_meta.connect  # noqa
         def on_cluster(up):
+            # Update the original dictionary when groups change.
+            for clu in up.metadata_changed:
+                self.cluster_groups[clu] = up.metadata_value
+
             if up.history:
                 logger.info(up.history.title() + " move.")
             else:
@@ -201,6 +209,8 @@ class ManualClustering(object):
         @self.add_column(name='n_spikes')
         def n_spikes(cluster_id):
             return len(self.spikes_per_cluster(cluster_id))
+
+        self.add_column(self.best_channel, name='channel')
 
         @self.add_column(show=False)
         def skip(cluster_id):
@@ -491,6 +501,10 @@ class ManualClustering(object):
             spike_ids = self.gui.emit('request_split')
             spike_ids = np.concatenate(spike_ids).astype(np.int64)
         if len(spike_ids) == 0:
+            msg = ("You first need to select spikes in the feature "
+                   "view with a few Ctrl+Click around the spikes "
+                   "that you want to split.")
+            _show_box(self.gui.dialog(msg))
             return
         self.clustering.split(spike_ids,
                               spike_clusters_rel=spike_clusters_rel)
