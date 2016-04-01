@@ -105,16 +105,20 @@ class ScatterVisual(BaseVisual):
                            dtype=np.float32)
         size = _get_array(size, (n, 1), ScatterVisual._default_marker_size)
         depth = _get_array(depth, (n, 1), 0)
-        data_bounds = _get_data_bounds(data_bounds, pos)
-        assert data_bounds.shape[0] == n
+        if data_bounds is not None:
+            data_bounds = _get_data_bounds(data_bounds, pos)
+            assert data_bounds.shape[0] == n
 
         return Bunch(pos=pos, color=color, size=size,
                      depth=depth, data_bounds=data_bounds)
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        self.data_range.from_bounds = data.data_bounds
-        pos_tr = self.transforms.apply(data.pos)
+        if data.data_bounds is not None:
+            self.data_range.from_bounds = data.data_bounds
+            pos_tr = self.transforms.apply(data.pos)
+        else:
+            pos_tr = data.pos
         pos_tr = np.c_[pos_tr, data.depth]
         self.program['a_position'] = pos_tr.astype(np.float32)
         self.program['a_size'] = data.size.astype(np.float32)
@@ -174,12 +178,12 @@ class PlotVisual(BaseVisual):
 
         n_signals = len(x)
 
-        if data_bounds is None:
-            xmin = [_min(_) for _ in x]
-            ymin = [_min(_) for _ in y]
-            xmax = [_max(_) for _ in x]
-            ymax = [_max(_) for _ in y]
-            data_bounds = np.c_[xmin, ymin, xmax, ymax]
+        # if data_bounds is None:
+        #     xmin = [_min(_) for _ in x]
+        #     ymin = [_min(_) for _ in y]
+        #     xmax = [_max(_) for _ in x]
+        #     ymax = [_max(_) for _ in y]
+        #     data_bounds = np.c_[xmin, ymin, xmax, ymax]
 
         color = _get_array(color, (n_signals, 4),
                            PlotVisual._default_color,
@@ -190,9 +194,10 @@ class PlotVisual(BaseVisual):
         depth = _get_array(depth, (n_signals, 1), 0)
         assert depth.shape == (n_signals, 1)
 
-        data_bounds = _get_data_bounds(data_bounds, length=n_signals)
-        data_bounds = data_bounds.astype(np.float64)
-        assert data_bounds.shape == (n_signals, 4)
+        if data_bounds is not None:
+            data_bounds = _get_data_bounds(data_bounds, length=n_signals)
+            data_bounds = data_bounds.astype(np.float64)
+            assert data_bounds.shape == (n_signals, 4)
 
         return Bunch(x=x, y=y,
                      color=color, depth=depth,
@@ -231,13 +236,14 @@ class PlotVisual(BaseVisual):
         assert signal_index.shape == (n, 1)
 
         # Transform the positions.
-        data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
-        self.data_range.from_bounds = data_bounds
-        pos_tr = self.transforms.apply(pos)
+        if data.data_bounds is not None:
+            data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
+            self.data_range.from_bounds = data_bounds
+            pos = self.transforms.apply(pos)
 
         # Position and depth.
         depth = np.repeat(data.depth, n_samples, axis=0)
-        self.program['a_position'] = np.c_[pos_tr, depth].astype(np.float32)
+        self.program['a_position'] = np.c_[pos, depth].astype(np.float32)
         self.program['a_color'] = color.astype(np.float32)
         self.program['a_signal_index'] = signal_index.astype(np.float32)
 
