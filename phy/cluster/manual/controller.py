@@ -196,7 +196,8 @@ class Controller(EventEmitter):
                                  )
         # Cache the normalized waveforms.
         m, M = self.get_waveform_lims()
-        return _normalize(data.data, m, M)
+        data.data = _normalize(data.data, m, M)
+        return [data]
 
     def get_mean_waveforms(self, cluster_id):
         return mean(self.get_waveforms(cluster_id)[0].data)

@@ -261,7 +261,7 @@ class WaveformView(ManualClusteringView):
         self.waveforms = waveforms
 
         # Waveform normalization.
-        self.data_bounds = [-1, -1, +1, +1]
+        # self.data_bounds = [-1, -1, +1, +1]
 
         # Channel positions.
         assert channel_positions.shape == (self.n_channels, 2)
@@ -317,7 +317,7 @@ class WaveformView(ManualClusteringView):
                 self[ch].plot(x=t, y=w[:, :, ch],
                               color=color,
                               depth=depth,
-                              data_bounds=self.data_bounds,
+                              # data_bounds=self.data_bounds,
                               )
                 if self.do_show_labels:
                     # Add channel labels.
@@ -686,7 +686,8 @@ class TraceView(ManualClusteringView):
         # The box index depends on the channel.
         box_index = np.repeat(channels[:, np.newaxis], n_samples, axis=0)
         self.plot(t, waveforms.T, color=color, box_index=box_index,
-                  data_bounds=self.data_bounds)
+                  # data_bounds=self.data_bounds,
+                  )
 
     def _restrict_interval(self, interval):
         start, end = interval
@@ -985,7 +986,7 @@ class FeatureView(ManualClusteringView):
                                           **kwargs)
 
         # Feature normalization.
-        self.data_bounds = [-1, -feature_lim, +1, +feature_lim]
+        # self.data_bounds = [-1, -feature_lim, +1, +feature_lim]
 
         # If this is True, the channels won't be automatically chosen
         # when new clusters are selected.
@@ -1023,7 +1024,8 @@ class FeatureView(ManualClusteringView):
             y0, y1 = self.attributes[dim][1]
         else:
             # Features: the data bounds were computed in the constructor.
-            _, y0, _, y1 = self.data_bounds
+            # _, y0, _, y1 = self.data_bounds
+            y0, y1 = -1., 1.
         return y0, y1
 
     def _get_dim_bounds(self, x_dim, y_dim):
@@ -1045,7 +1047,7 @@ class FeatureView(ManualClusteringView):
         n_clusters = len(self.cluster_ids)
 
         # Retrieve the data bounds.
-        data_bounds = self._get_dim_bounds(x_dim[i, j], y_dim[i, j])
+        # data_bounds = self._get_dim_bounds(x_dim[i, j], y_dim[i, j])
 
         # Retrieve the masks and depth.
         mx, dx = _project_mask_depth(x_dim[i, j], masks,
@@ -1070,7 +1072,7 @@ class FeatureView(ManualClusteringView):
         self[i, j].scatter(x=x, y=y,
                            color=color,
                            depth=d,
-                           data_bounds=data_bounds,
+                           # data_bounds=data_bounds,
                            size=ms * np.ones(n_spikes),
                            )
         if i == (self.n_cols - 1):
@@ -1246,8 +1248,8 @@ class FeatureView(ManualClusteringView):
         pos = np.c_[x, y].astype(np.float64)
 
         # Retrieve the data bounds.
-        data_bounds = self._get_dim_bounds(x_dim[i, j], y_dim[i, j])
-        pos = Range(from_bounds=data_bounds).apply(pos)
+        # data_bounds = self._get_dim_bounds(x_dim[i, j], y_dim[i, j])
+        # pos = Range(from_bounds=data_bounds).apply(pos)
 
         ind = self.lasso.in_polygon(pos)
         self.lasso.clear()
@@ -1433,7 +1435,7 @@ class ScatterView(ManualClusteringView):
 
     def __init__(self,
                  coords=None,  # function clusters: Bunch(x, y)
-                 data_bounds=None,
+                 # data_bounds=None,
                  **kwargs):
 
         assert coords
@@ -1443,7 +1445,7 @@ class ScatterView(ManualClusteringView):
         super(ScatterView, self).__init__(**kwargs)
 
         # Feature normalization.
-        self.data_bounds = data_bounds
+        # self.data_bounds = data_bounds
 
     def on_select(self, cluster_ids=None):
         super(ScatterView, self).on_select(cluster_ids)
@@ -1481,6 +1483,6 @@ class ScatterView(ManualClusteringView):
             self.scatter(x=x,
                          y=y,
                          color=color,
-                         data_bounds=self.data_bounds,
+                         # data_bounds=self.data_bounds,
                          size=ms * np.ones(n_spikes),
                          )

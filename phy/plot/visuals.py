@@ -386,12 +386,12 @@ class TextVisual(BaseVisual):
         assert anchor.shape == (n_text, 2)
 
         # By default, we assume that the coordinates are in NDC.
-        if data_bounds is None:
-            data_bounds = NDC
-        data_bounds = _get_data_bounds(data_bounds, pos)
-        assert data_bounds.shape[0] == n_text
-        data_bounds = data_bounds.astype(np.float64)
-        assert data_bounds.shape == (n_text, 4)
+        if data_bounds is not None:
+            # data_bounds = NDC
+            data_bounds = _get_data_bounds(data_bounds, pos)
+            assert data_bounds.shape[0] == n_text
+            data_bounds = data_bounds.astype(np.float64)
+            assert data_bounds.shape == (n_text, 4)
 
         return Bunch(pos=pos, text=text, anchor=anchor,
                      data_bounds=data_bounds)
@@ -450,13 +450,16 @@ class TextVisual(BaseVisual):
         assert a_lengths.shape == (n_vertices,)
 
         # Transform the positions.
-        data_bounds = data.data_bounds
-        data_bounds = np.repeat(data_bounds, lengths, axis=0)
-        data_bounds = np.repeat(data_bounds, 6, axis=0)
-        assert data_bounds.shape == (n_vertices, 4)
-        self.data_range.from_bounds = data_bounds
-        pos_tr = self.transforms.apply(a_position)
-        assert pos_tr.shape == (n_vertices, 2)
+        if data.data_bounds is not None:
+            data_bounds = data.data_bounds
+            data_bounds = np.repeat(data_bounds, lengths, axis=0)
+            data_bounds = np.repeat(data_bounds, 6, axis=0)
+            assert data_bounds.shape == (n_vertices, 4)
+            self.data_range.from_bounds = data_bounds
+            pos_tr = self.transforms.apply(a_position)
+            assert pos_tr.shape == (n_vertices, 2)
+        else:
+            pos_tr = a_position
 
         self.program['a_position'] = pos_tr.astype(np.float32)
         self.program['a_glyph_index'] = a_glyph_index.astype(np.float32)
