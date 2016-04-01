@@ -686,7 +686,7 @@ class TraceView(ManualClusteringView):
         # The box index depends on the channel.
         box_index = np.repeat(channels[:, np.newaxis], n_samples, axis=0)
         self.plot(t, waveforms.T, color=color, box_index=box_index,
-                  # data_bounds=self.data_bounds,
+                  data_bounds=self.data_bounds,
                   )
 
     def _restrict_interval(self, interval):

@@ -229,11 +229,14 @@ class Controller(EventEmitter):
 
     # Is cached in _init_context()
     def get_features(self, cluster_id, load_all=False):
-        return self._select_data(cluster_id,
+        data = self._select_data(cluster_id,
                                  self.all_features,
                                  (self.n_spikes_features
                                   if not load_all else None),
                                  )
+        m = self.get_feature_lim()
+        data.data = _normalize(data.data, -m, +m)
+        return data
 
     def get_background_features(self):
         k = max(1, int(self.n_spikes // self.n_spikes_background_features))
