@@ -191,9 +191,12 @@ class Range(BaseTransform):
         t0 = to_bounds[..., :2]
         t1 = to_bounds[..., 2:]
 
+        d = (f1 - f0)
+        d[d == 0] = 1
+
         out = arr.copy()
         out -= f0
-        out *= (t1 - t0) / (f1 - f0)
+        out *= (t1 - t0) / d
         out += t0
         return out
 
