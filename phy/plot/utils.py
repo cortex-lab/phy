@@ -163,7 +163,7 @@ def _get_array(val, shape, default=None, dtype=np.float64):
     if val is not None and isinstance(val, np.ndarray):
         if val.size == out.size:
             val = val.reshape(out.shape)
-    out[...] = val if val is not None else default
+    out.flat[:] = val if val is not None else default
     assert out.shape == shape
     return out
 

@@ -357,6 +357,7 @@ class UniformPlotVisual(BaseVisual):
     @staticmethod
     def validate(x=None,
                  y=None,
+                 masks=None,
                  data_bounds='auto',
                  ):
 
@@ -374,6 +375,9 @@ class UniformPlotVisual(BaseVisual):
 
         n_signals = len(x)
 
+        masks = _get_array(masks, (n_signals, 1), 1., np.float32)
+        assert masks.shape == (n_signals, 1)
+
         if isinstance(data_bounds, string_types) and data_bounds == 'auto':
             xmin = [_min(_) for _ in x]
             ymin = [_min(_) for _ in y]
@@ -386,7 +390,7 @@ class UniformPlotVisual(BaseVisual):
             data_bounds = data_bounds.astype(np.float64)
             assert data_bounds.shape == (n_signals, 4)
 
-        return Bunch(x=x, y=y,
+        return Bunch(x=x, y=y, masks=masks,
                      data_bounds=data_bounds,
                      )
 
@@ -416,6 +420,9 @@ class UniformPlotVisual(BaseVisual):
         signal_index = _get_array(signal_index, (n, 1))
         assert signal_index.shape == (n, 1)
 
+        # Masks.
+        masks = np.repeat(data.masks, n_samples)
+
         # Transform the positions.
         if data.data_bounds is not None:
             data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
@@ -425,6 +432,7 @@ class UniformPlotVisual(BaseVisual):
         # Position and depth.
         self.program['a_position'] = pos.astype(np.float32)
         self.program['a_signal_index'] = signal_index.astype(np.float32)
+        self.program['a_mask'] = masks.astype(np.float32)
 
         self.program['u_color'] = self.color
         self.program['u_depth'] = self.depth

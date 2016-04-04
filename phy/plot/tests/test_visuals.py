@@ -176,7 +176,10 @@ def test_uniform_plot_1(qtbot, canvas_pz):
     y = .2 * np.random.randn(10)
     _test_visual(qtbot, canvas_pz,
                  UniformPlotVisual(depth=1.),
-                 y=y, data_bounds=None,
+                 y=y,
+                 masks=.5,
+                 data_bounds=None,
+                 stop=True,
                  )
 
 
@@ -185,7 +188,9 @@ def test_uniform_plot_list(qtbot, canvas_pz):
 
     _test_visual(qtbot, canvas_pz,
                  UniformPlotVisual(color=(1., 0., 0., 1.)),
-                 y=y)
+                 y=y,
+                 masks=[.1, .9],
+                 )
 
 
 #------------------------------------------------------------------------------
