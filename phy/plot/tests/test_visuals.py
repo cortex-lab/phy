@@ -97,11 +97,12 @@ def test_uniform_scatter_custom(qtbot, canvas_pz):
     pos = .2 * np.random.randn(n, 2)
 
     _test_visual(qtbot, canvas_pz,
-                 UniformScatterVisual(color=_random_color() + (1.,),
+                 UniformScatterVisual(color=_random_color() + (.5,),
                                       size=10.,
                                       depth=1.,
                                       ),
                  pos=pos,
+                 masks=np.linspace(0., 1., n),
                  data_bounds=None,
                  )
 
@@ -179,7 +180,6 @@ def test_uniform_plot_1(qtbot, canvas_pz):
                  y=y,
                  masks=.5,
                  data_bounds=None,
-                 stop=True,
                  )
 
 

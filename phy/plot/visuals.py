@@ -178,6 +178,7 @@ class UniformScatterVisual(BaseVisual):
     def validate(x=None,
                  y=None,
                  pos=None,
+                 masks=None,
                  data_bounds='auto',
                  ):
         if pos is None:
@@ -188,12 +189,16 @@ class UniformScatterVisual(BaseVisual):
         assert pos.shape[1] == 2
         n = pos.shape[0]
 
+        masks = _get_array(masks, (n, 1), 1., np.float32)
+        assert masks.shape == (n, 1)
+
         # Validate the data.
         if data_bounds is not None:
             data_bounds = _get_data_bounds(data_bounds, pos)
             assert data_bounds.shape[0] == n
 
         return Bunch(pos=pos,
+                     masks=masks,
                      data_bounds=data_bounds,
                      )
 
@@ -204,7 +209,11 @@ class UniformScatterVisual(BaseVisual):
             pos_tr = self.transforms.apply(data.pos)
         else:
             pos_tr = data.pos
+
+        masks = data.masks
+
         self.program['a_position'] = pos_tr.astype(np.float32)
+        self.program['a_mask'] = masks.astype(np.float32)
 
         self.program['u_size'] = self.marker_size
         self.program['u_depth'] = self.depth

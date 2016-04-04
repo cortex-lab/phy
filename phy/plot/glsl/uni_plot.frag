@@ -1,4 +1,4 @@
-#include "color-space.glsl"
+#include "utils.glsl"
 
 uniform vec4 u_color;
 varying float v_signal_index;
@@ -10,8 +10,5 @@ void main() {
     if (fract(v_signal_index) > 0.)
         discard;
 
-    vec3 hsv = rgb_to_hsv(u_color.rgb);
-    hsv.y *= v_mask;
-    hsv.z *= (1. + v_mask) * .5;
-    gl_FragColor = vec4(hsv_to_rgb(hsv), u_color.a);
+    gl_FragColor = apply_mask(u_color, v_mask);
 }
