@@ -9,7 +9,6 @@
 
 import numpy as np
 
-from ..transform import NDC
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
                        LineVisual, PolygonVisual, TextVisual,
                        UniformPlotVisual, UniformScatterVisual,
@@ -103,6 +102,7 @@ def test_uniform_scatter_custom(qtbot, canvas_pz):
                                       depth=1.,
                                       ),
                  pos=pos,
+                 data_bounds=None,
                  )
 
 
@@ -176,7 +176,8 @@ def test_uniform_plot_1(qtbot, canvas_pz):
     y = .2 * np.random.randn(10)
     _test_visual(qtbot, canvas_pz,
                  UniformPlotVisual(depth=1.),
-                 y=y)
+                 y=y, data_bounds=None,
+                 )
 
 
 def test_uniform_plot_list(qtbot, canvas_pz):
@@ -286,11 +287,11 @@ def test_text_1(qtbot, canvas_pz):
 
     v = TextVisual()
     c.add_visual(v)
-    v.set_data(pos=pos, text=text, anchor=anchor, data_bounds=NDC)
+    v.set_data(pos=pos, text=text, anchor=anchor, data_bounds=None)
 
     v = ScatterVisual()
     c.add_visual(v)
-    v.set_data(pos=pos, data_bounds=NDC)
+    v.set_data(pos=pos, data_bounds=None)
 
     c.show()
     qtbot.waitForWindowShown(c.native)

@@ -11,6 +11,7 @@ import logging
 import os.path as op
 
 import numpy as np
+from six import string_types
 from vispy import gloo
 
 from .transform import Range, NDC
@@ -176,7 +177,8 @@ def _check_data_bounds(data_bounds):
 
 def _get_data_bounds(data_bounds, pos=None, length=None):
     """"Prepare data bounds, possibly using min/max of the data."""
-    if data_bounds is None:
+    if data_bounds is None or (isinstance(data_bounds, string_types) and
+                               data_bounds == 'auto'):
         if pos is not None and len(pos):
             m, M = pos.min(axis=0), pos.max(axis=0)
             data_bounds = [m[0], m[1], M[0], M[1]]

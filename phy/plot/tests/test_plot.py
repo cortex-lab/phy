@@ -118,6 +118,23 @@ def test_grid_plot(qtbot):
     _show(qtbot, view)
 
 
+def test_grid_plot_uniform(qtbot):
+    view = View(layout='grid', shape=(1, 2))
+    n_plots, n_samples = 5, 50
+
+    x = _get_linear_x(n_plots, n_samples)
+    y = np.random.randn(n_plots, n_samples)
+
+    view[0, 0].plot(x, y,
+                    uniform=True)
+    view[0, 1].plot(x, y,
+                    color=(1., 1., 0., .5),
+                    uniform=True,
+                    )
+
+    _show(qtbot, view)
+
+
 def test_grid_hist(qtbot):
     view = View(layout='grid', shape=(3, 3))
 

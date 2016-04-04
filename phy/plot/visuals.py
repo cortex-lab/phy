@@ -34,7 +34,7 @@ DEFAULT_COLOR = (0.03, 0.57, 0.98, .75)
 
 
 #------------------------------------------------------------------------------
-# Visuals
+# Scatter visuals
 #------------------------------------------------------------------------------
 
 class ScatterVisual(BaseVisual):
@@ -88,7 +88,7 @@ class ScatterVisual(BaseVisual):
                  color=None,
                  size=None,
                  depth=None,
-                 data_bounds=None,
+                 data_bounds='auto',
                  ):
         if pos is None:
             x, y = _get_pos(x, y)
@@ -178,7 +178,7 @@ class UniformScatterVisual(BaseVisual):
     def validate(x=None,
                  y=None,
                  pos=None,
-                 data_bounds=None,
+                 data_bounds='auto',
                  ):
         if pos is None:
             x, y = _get_pos(x, y)
@@ -210,6 +210,10 @@ class UniformScatterVisual(BaseVisual):
         self.program['u_depth'] = self.depth
         self.program['u_color'] = self.color
 
+
+#------------------------------------------------------------------------------
+# Plot visuals
+#------------------------------------------------------------------------------
 
 def _as_list(arr):
     if isinstance(arr, np.ndarray):
@@ -247,7 +251,7 @@ class PlotVisual(BaseVisual):
                  y=None,
                  color=None,
                  depth=None,
-                 data_bounds=None,
+                 data_bounds='auto',
                  ):
 
         assert y is not None
@@ -264,12 +268,12 @@ class PlotVisual(BaseVisual):
 
         n_signals = len(x)
 
-        # if data_bounds is None:
-        #     xmin = [_min(_) for _ in x]
-        #     ymin = [_min(_) for _ in y]
-        #     xmax = [_max(_) for _ in x]
-        #     ymax = [_max(_) for _ in y]
-        #     data_bounds = np.c_[xmin, ymin, xmax, ymax]
+        if isinstance(data_bounds, string_types) and data_bounds == 'auto':
+            xmin = [_min(_) for _ in x]
+            ymin = [_min(_) for _ in y]
+            xmax = [_max(_) for _ in x]
+            ymax = [_max(_) for _ in y]
+            data_bounds = np.c_[xmin, ymin, xmax, ymax]
 
         color = _get_array(color, (n_signals, 4),
                            PlotVisual._default_color,
@@ -353,7 +357,7 @@ class UniformPlotVisual(BaseVisual):
     @staticmethod
     def validate(x=None,
                  y=None,
-                 data_bounds=None,
+                 data_bounds='auto',
                  ):
 
         assert y is not None
@@ -369,6 +373,13 @@ class UniformPlotVisual(BaseVisual):
         assert [len(_) for _ in x] == [len(_) for _ in y]
 
         n_signals = len(x)
+
+        if isinstance(data_bounds, string_types) and data_bounds == 'auto':
+            xmin = [_min(_) for _ in x]
+            ymin = [_min(_) for _ in y]
+            xmax = [_max(_) for _ in x]
+            ymax = [_max(_) for _ in y]
+            data_bounds = np.c_[xmin, ymin, xmax, ymax]
 
         if data_bounds is not None:
             data_bounds = _get_data_bounds(data_bounds, length=n_signals)
@@ -418,6 +429,10 @@ class UniformPlotVisual(BaseVisual):
         self.program['u_color'] = self.color
         self.program['u_depth'] = self.depth
 
+
+#------------------------------------------------------------------------------
+# Other visuals
+#------------------------------------------------------------------------------
 
 class HistogramVisual(BaseVisual):
     _default_color = DEFAULT_COLOR
@@ -533,7 +548,8 @@ class TextVisual(BaseVisual):
 
     @staticmethod
     def validate(pos=None, text=None, anchor=None,
-                 data_bounds=None):
+                 data_bounds='auto',
+                 ):
 
         if text is None:
             text = []
@@ -556,9 +572,7 @@ class TextVisual(BaseVisual):
         assert anchor.ndim == 2
         assert anchor.shape == (n_text, 2)
 
-        # By default, we assume that the coordinates are in NDC.
         if data_bounds is not None:
-            # data_bounds = NDC
             data_bounds = _get_data_bounds(data_bounds, pos)
             assert data_bounds.shape[0] == n_text
             data_bounds = data_bounds.astype(np.float64)
@@ -657,7 +671,9 @@ class LineVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
     @staticmethod
-    def validate(pos=None, color=None, data_bounds=None):
+    def validate(pos=None, color=None,
+                 data_bounds=None,
+                 ):
         assert pos is not None
         pos = np.atleast_2d(pos)
         assert pos.ndim == 2
@@ -717,7 +733,9 @@ class PolygonVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
     @staticmethod
-    def validate(pos=None, data_bounds=None):
+    def validate(pos=None,
+                 data_bounds=None,
+                 ):
         assert pos is not None
         pos = np.atleast_2d(pos)
         assert pos.ndim == 2
