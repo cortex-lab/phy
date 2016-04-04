@@ -12,6 +12,7 @@ import numpy as np
 from ..transform import NDC
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
                        LineVisual, PolygonVisual, TextVisual,
+                       UniformPlotVisual,
                        )
 
 
@@ -117,12 +118,42 @@ def test_plot_2(qtbot, canvas_pz):
 
 def test_plot_list(qtbot, canvas_pz):
     y = [np.random.randn(i) for i in (5, 20)]
-
     c = np.random.uniform(.5, 1, size=(2, 4))
     c[:, 3] = .5
 
     _test_visual(qtbot, canvas_pz, PlotVisual(),
                  y=y, color=c)
+
+
+#------------------------------------------------------------------------------
+# Test uniform plot visual
+#------------------------------------------------------------------------------
+
+def test_uniform_plot_empty(qtbot, canvas):
+    y = np.zeros((1, 0))
+    _test_visual(qtbot, canvas, UniformPlotVisual(),
+                 y=y)
+
+
+def test_uniform_plot_0(qtbot, canvas_pz):
+    y = np.zeros((1, 10))
+    _test_visual(qtbot, canvas_pz, UniformPlotVisual(),
+                 y=y)
+
+
+def test_uniform_plot_1(qtbot, canvas_pz):
+    y = .2 * np.random.randn(10)
+    _test_visual(qtbot, canvas_pz,
+                 UniformPlotVisual(depth=1.),
+                 y=y)
+
+
+def test_uniform_plot_list(qtbot, canvas_pz):
+    y = [np.random.randn(i) for i in (5, 20)]
+
+    _test_visual(qtbot, canvas_pz,
+                 UniformPlotVisual(color=(1., 0., 0., 1.)),
+                 y=y)
 
 
 #------------------------------------------------------------------------------

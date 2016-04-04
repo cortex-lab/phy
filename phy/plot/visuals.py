@@ -248,6 +248,91 @@ class PlotVisual(BaseVisual):
         self.program['a_signal_index'] = signal_index.astype(np.float32)
 
 
+class UniformPlotVisual(BaseVisual):
+    _default_color = DEFAULT_COLOR
+    _default_depth = 0.
+    allow_list = ('x', 'y')
+
+    def __init__(self, color=None, depth=None):
+        super(UniformPlotVisual, self).__init__()
+
+        self.set_shader('uni_plot')
+        self.set_primitive_type('line_strip')
+        self.color = color or self._default_color
+        self.depth = depth or self._default_depth
+
+        self.data_range = Range(NDC)
+        self.transforms.add_on_cpu(self.data_range)
+
+    @staticmethod
+    def validate(x=None,
+                 y=None,
+                 data_bounds=None,
+                 ):
+
+        assert y is not None
+        y = _as_list(y)
+
+        if x is None:
+            x = [np.linspace(-1., 1., len(_)) for _ in y]
+        x = _as_list(x)
+
+        # Remove empty elements.
+        assert len(x) == len(y)
+
+        assert [len(_) for _ in x] == [len(_) for _ in y]
+
+        n_signals = len(x)
+
+        if data_bounds is not None:
+            data_bounds = _get_data_bounds(data_bounds, length=n_signals)
+            data_bounds = data_bounds.astype(np.float64)
+            assert data_bounds.shape == (n_signals, 4)
+
+        return Bunch(x=x, y=y,
+                     data_bounds=data_bounds,
+                     )
+
+    @staticmethod
+    def vertex_count(y=None, **kwargs):
+        """Take the output of validate() as input."""
+        return y.size if isinstance(y, np.ndarray) else sum(len(_) for _ in y)
+
+    def set_data(self, *args, **kwargs):
+        data = self.validate(*args, **kwargs)
+
+        assert isinstance(data.y, list)
+        n_signals = len(data.y)
+        n_samples = [len(_) for _ in data.y]
+        n = sum(n_samples)
+        x = np.concatenate(data.x) if len(data.x) else np.array([])
+        y = np.concatenate(data.y) if len(data.y) else np.array([])
+
+        # Generate the position array.
+        pos = np.empty((n, 2), dtype=np.float64)
+        pos[:, 0] = x.ravel()
+        pos[:, 1] = y.ravel()
+        assert pos.shape == (n, 2)
+
+        # Generate signal index.
+        signal_index = np.repeat(np.arange(n_signals), n_samples)
+        signal_index = _get_array(signal_index, (n, 1))
+        assert signal_index.shape == (n, 1)
+
+        # Transform the positions.
+        if data.data_bounds is not None:
+            data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
+            self.data_range.from_bounds = data_bounds
+            pos = self.transforms.apply(pos)
+
+        # Position and depth.
+        self.program['a_position'] = pos.astype(np.float32)
+        self.program['a_signal_index'] = signal_index.astype(np.float32)
+
+        self.program['u_color'] = self.color
+        self.program['u_depth'] = self.depth
+
+
 class HistogramVisual(BaseVisual):
     _default_color = DEFAULT_COLOR
 
