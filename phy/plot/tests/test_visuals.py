@@ -12,8 +12,9 @@ import numpy as np
 from ..transform import NDC
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
                        LineVisual, PolygonVisual, TextVisual,
-                       UniformPlotVisual,
+                       UniformPlotVisual, UniformScatterVisual,
                        )
+from phy.utils._color import _random_color
 
 
 #------------------------------------------------------------------------------
@@ -41,20 +42,14 @@ def test_scatter_empty(qtbot, canvas):
 
 
 def test_scatter_markers(qtbot, canvas_pz):
-    c = canvas_pz
 
     n = 100
     x = .2 * np.random.randn(n)
     y = .2 * np.random.randn(n)
 
-    v = ScatterVisual(marker='vbar')
-    c.add_visual(v)
-    v.set_data(x=x, y=y)
-
-    c.show()
-    qtbot.waitForWindowShown(c.native)
-
-    # qtbot.stop()
+    _test_visual(qtbot, canvas_pz,
+                 ScatterVisual(marker='vbar'),
+                 x=x, y=y)
 
 
 def test_scatter_custom(qtbot, canvas_pz):
@@ -73,6 +68,42 @@ def test_scatter_custom(qtbot, canvas_pz):
 
     _test_visual(qtbot, canvas_pz, ScatterVisual(),
                  pos=pos, color=c, size=s)
+
+
+#------------------------------------------------------------------------------
+# Test uniform scatter visual
+#------------------------------------------------------------------------------
+
+def test_uniform_scatter_empty(qtbot, canvas):
+    _test_visual(qtbot, canvas, UniformScatterVisual(),
+                 x=np.zeros(0), y=np.zeros(0))
+
+
+def test_uniform_scatter_markers(qtbot, canvas_pz):
+
+    n = 100
+    x = .2 * np.random.randn(n)
+    y = .2 * np.random.randn(n)
+
+    _test_visual(qtbot, canvas_pz,
+                 UniformScatterVisual(marker='vbar'),
+                 x=x, y=y)
+
+
+def test_uniform_scatter_custom(qtbot, canvas_pz):
+
+    n = 100
+
+    # Random position.
+    pos = .2 * np.random.randn(n, 2)
+
+    _test_visual(qtbot, canvas_pz,
+                 UniformScatterVisual(color=_random_color() + (1.,),
+                                      size=10.,
+                                      depth=1.,
+                                      ),
+                 pos=pos,
+                 )
 
 
 #------------------------------------------------------------------------------

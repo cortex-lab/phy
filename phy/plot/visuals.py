@@ -65,7 +65,6 @@ class ScatterVisual(BaseVisual):
 
     def __init__(self, marker=None):
         super(ScatterVisual, self).__init__()
-        self.n_points = None
 
         # Set the marker type.
         self.marker = marker or self._default_marker
@@ -123,6 +122,93 @@ class ScatterVisual(BaseVisual):
         self.program['a_position'] = pos_tr.astype(np.float32)
         self.program['a_size'] = data.size.astype(np.float32)
         self.program['a_color'] = data.color.astype(np.float32)
+
+
+class UniformScatterVisual(BaseVisual):
+    _default_marker_size = 10.
+    _default_marker = 'disc'
+    _default_color = DEFAULT_COLOR
+    _default_depth = 0.
+    _supported_markers = (
+        'arrow',
+        'asterisk',
+        'chevron',
+        'clover',
+        'club',
+        'cross',
+        'diamond',
+        'disc',
+        'ellipse',
+        'hbar',
+        'heart',
+        'infinity',
+        'pin',
+        'ring',
+        'spade',
+        'square',
+        'tag',
+        'triangle',
+        'vbar',
+    )
+
+    def __init__(self, marker=None, color=None, depth=None, size=None):
+        super(UniformScatterVisual, self).__init__()
+
+        # Set the marker type.
+        self.marker = marker or self._default_marker
+        assert self.marker in self._supported_markers
+
+        self.set_shader('uni_scatter')
+        self.fragment_shader = self.fragment_shader.replace('%MARKER',
+                                                            self.marker)
+
+        self.color = color or self._default_color
+        self.depth = depth or self._default_depth
+        self.marker_size = size or self._default_marker_size
+
+        self.set_primitive_type('points')
+        self.data_range = Range(NDC)
+        self.transforms.add_on_cpu(self.data_range)
+
+    @staticmethod
+    def vertex_count(x=None, y=None, pos=None, **kwargs):
+        return y.size if y is not None else len(pos)
+
+    @staticmethod
+    def validate(x=None,
+                 y=None,
+                 pos=None,
+                 data_bounds=None,
+                 ):
+        if pos is None:
+            x, y = _get_pos(x, y)
+            pos = np.c_[x, y]
+        pos = np.asarray(pos)
+        assert pos.ndim == 2
+        assert pos.shape[1] == 2
+        n = pos.shape[0]
+
+        # Validate the data.
+        if data_bounds is not None:
+            data_bounds = _get_data_bounds(data_bounds, pos)
+            assert data_bounds.shape[0] == n
+
+        return Bunch(pos=pos,
+                     data_bounds=data_bounds,
+                     )
+
+    def set_data(self, *args, **kwargs):
+        data = self.validate(*args, **kwargs)
+        if data.data_bounds is not None:
+            self.data_range.from_bounds = data.data_bounds
+            pos_tr = self.transforms.apply(data.pos)
+        else:
+            pos_tr = data.pos
+        self.program['a_position'] = pos_tr.astype(np.float32)
+
+        self.program['u_size'] = self.marker_size
+        self.program['u_depth'] = self.depth
+        self.program['u_color'] = self.color
 
 
 def _as_list(arr):
