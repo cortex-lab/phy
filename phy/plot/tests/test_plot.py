@@ -60,6 +60,21 @@ def test_simple_view(qtbot):
     _show(qtbot, view)
 
 
+def test_uniform_scatter(qtbot):
+    view = View()
+    n = 1000
+
+    x = np.random.randn(n)
+    y = np.random.randn(n)
+
+    view.scatter(x, y,
+                 uniform=True,
+                 color=(1., 1., 0., .5),
+                 size=40,
+                 )
+    _show(qtbot, view)
+
+
 #------------------------------------------------------------------------------
 # Test visuals in grid
 #------------------------------------------------------------------------------
