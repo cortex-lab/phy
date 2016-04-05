@@ -8,7 +8,7 @@
 # -----------------------------------------------------------------------------
 
 import inspect
-from functools import partial, wraps
+from functools import partial
 import logging
 import re
 import sys
@@ -63,7 +63,6 @@ def _wrap_callback_args(f, docstring=None):  # pragma: no cover
     The user can write function arguments as if it was a snippet.
 
     """
-    @wraps(f)
     def wrapped(checked, *args):
         if args:
             return f(*args)
