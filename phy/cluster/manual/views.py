@@ -270,19 +270,6 @@ class WaveformView(ManualClusteringView):
         assert w.shape == (n_spikes, n_samples, self.n_channels)
         assert masks.shape == (n_spikes, self.n_channels)
 
-        # Relative spike clusters.
-        spike_clusters_rel = _index_of(spike_clusters, cluster_ids)
-        assert spike_clusters_rel.shape == (n_spikes,)
-
-        # Fetch the waveforms.
-        t = _get_linear_x(n_spikes, n_samples)
-        # Overlap.
-        if not self.overlap:
-            t = t + 2.5 * (spike_clusters_rel[:, np.newaxis] -
-                           (n_clusters - 1) / 2.)
-            # The total width should not depend on the number of clusters.
-            t /= n_clusters
-
         # Plot all waveforms.
         # OPTIM: avoid the loop.
         with self.building():
@@ -331,11 +318,13 @@ class WaveformView(ManualClusteringView):
                           uniform=True,
                           )
                 # Add channel labels.
-                self[ch].text(pos=[[t[0, 0], 0.]],
-                              text=str(ch),
-                              anchor=[-1.01, -.25],
-                              data_bounds=None,
-                              )
+                for ch in range(self.n_channels):
+                    self[ch].text(pos=[t[0, 0], 0.],
+                                  # TODO: use real channel labels.
+                                  text=str(ch),
+                                  anchor=[-1.01, -.25],
+                                  data_bounds=None,
+                                  )
 
         # Zoom on the best channels when selecting clusters.
         channels = self.best_channels(cluster_ids)
@@ -715,6 +704,14 @@ class TraceView(ManualClusteringView):
                   data_bounds=self.data_bounds,
                   )
 
+    def _plot_labels(self, traces):
+        for ch in range(self.n_channels):
+            self[ch].text(pos=[self._interval[0], traces[0, ch]],
+                          text=str(ch),
+                          anchor=[+1., -.1],
+                          data_bounds=self.data_bounds,
+                          )
+
     def _restrict_interval(self, interval):
         start, end = interval
         # Round the times to full samples to avoid subsampling shifts
@@ -755,8 +752,7 @@ class TraceView(ManualClusteringView):
         # Plot the traces.
         for i, traces in enumerate(all_traces):
             # Only show labels for the first set of traces.
-            self._plot_traces(show_labels=self.do_show_labels and (i == 0),
-                              **traces)
+            self._plot_traces(**traces)
 
         # Plot the spikes.
         spikes = self.spikes(interval, all_traces)
