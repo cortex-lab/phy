@@ -318,13 +318,14 @@ class WaveformView(ManualClusteringView):
                           uniform=True,
                           )
                 # Add channel labels.
-                for ch in range(self.n_channels):
-                    self[ch].text(pos=[t[0, 0], 0.],
-                                  # TODO: use real channel labels.
-                                  text=str(ch),
-                                  anchor=[-1.01, -.25],
-                                  data_bounds=None,
-                                  )
+                if i == 0:
+                    for ch in range(self.n_channels):
+                        self[ch].text(pos=[t[0, 0], 0.],
+                                      # TODO: use real channel labels.
+                                      text=str(ch),
+                                      anchor=[-1.01, -.25],
+                                      data_bounds=None,
+                                      )
 
         # Zoom on the best channels when selecting clusters.
         channels = self.best_channels(cluster_ids)
