@@ -430,13 +430,17 @@ class UniformPlotVisual(BaseVisual):
         assert signal_index.shape == (n, 1)
 
         # Masks.
-        masks = np.repeat(data.masks, n_samples)
+        masks = np.repeat(data.masks, n_samples, axis=0)
 
         # Transform the positions.
         if data.data_bounds is not None:
             data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
             self.data_range.from_bounds = data_bounds
             pos = self.transforms.apply(pos)
+
+        assert pos.shape == (n, 2)
+        assert signal_index.shape == (n, 1)
+        assert masks.shape == (n, 1)
 
         # Position and depth.
         self.program['a_position'] = pos.astype(np.float32)
@@ -645,11 +649,6 @@ class TextVisual(BaseVisual):
         a_lengths = np.repeat(a_lengths, 6)
 
         n_vertices = n_glyphs * 6
-        assert a_position.shape == (n_vertices, 2)
-        assert a_glyph_index.shape == (n_vertices,)
-        assert a_quad_index.shape == (n_vertices,)
-        assert a_anchor.shape == (n_vertices, 2)
-        assert a_lengths.shape == (n_vertices,)
 
         # Transform the positions.
         if data.data_bounds is not None:
@@ -662,6 +661,13 @@ class TextVisual(BaseVisual):
             assert pos_tr.shape == (n_vertices, 2)
         else:
             pos_tr = a_position
+
+        assert pos_tr.shape == (n_vertices, 2)
+        assert a_glyph_index.shape == (n_vertices,)
+        assert a_quad_index.shape == (n_vertices,)
+        assert a_char_index.shape == (n_vertices,)
+        assert a_anchor.shape == (n_vertices, 2)
+        assert a_lengths.shape == (n_vertices,)
 
         self.program['a_position'] = pos_tr.astype(np.float32)
         self.program['a_glyph_index'] = a_glyph_index.astype(np.float32)
