@@ -32,6 +32,7 @@ except:  # pragma: no cover
 from PyQt4.QtGui import (QKeySequence, QAction, QStatusBar,  # noqa
                          QMainWindow, QDockWidget, QWidget,
                          QMessageBox, QApplication, QMenuBar,
+                         QInputDialog,
                          )
 from PyQt4.QtWebKit import QWebView, QWebPage, QWebSettings   # noqa
 
@@ -66,6 +67,10 @@ def _prompt(message, buttons=('yes', 'no'), title='Question'):
 
 def _show_box(box):  # pragma: no cover
     return _button_name_from_enum(box.exec_())
+
+
+def _input_dialog(title, sentence):
+    return QInputDialog.getText(None, title, sentence)
 
 
 @contextmanager

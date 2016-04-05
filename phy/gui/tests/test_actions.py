@@ -142,6 +142,18 @@ def test_actions_gui(qtbot, gui, actions):
     assert 'g\n' in stdout.getvalue()
 
 
+def test_actions_dialog(qtbot, gui, actions):
+    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+
+    @actions.add(shortcut='a')
+    def hello(arg):
+        pass
+
+    # qtbot.stop()
+
+
 def test_actions_disable(qtbot, gui, actions):
     qtbot.addWidget(gui)
     gui.show()
