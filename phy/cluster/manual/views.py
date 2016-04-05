@@ -18,7 +18,6 @@ from vispy.util.event import Event
 from phy.io.array import _index_of, _get_padded, get_excerpts
 from phy.gui import Actions
 from phy.plot import View, _get_linear_x
-from phy.plot.transform import Range
 from phy.plot.utils import _get_boxes
 from phy.stats import correlograms
 from phy.utils import Bunch
@@ -675,21 +674,12 @@ class TraceView(ManualClusteringView):
                   box_index=box_index,
                   uniform=True,
                   )
-        if show_labels:
-            for ch in range(self.n_channels):
-                # Add channel labels.
-                self[ch].text(pos=[t[0, 0], traces[ch, 0]],
-                              text=str(ch),
-                              anchor=[+1., -.1],
-                              data_bounds=self.data_bounds,
-                              )
 
     def _plot_spike(self, waveforms=None, channels=None, spike_time=None,
                     offset_samples=0, color=None):
 
         n_samples, n_channels = waveforms.shape
         assert len(channels) == n_channels
-        assert len(masks) == n_channels
         sr = float(self.sample_rate)
 
         t0 = spike_time - offset_samples / sr
@@ -758,7 +748,6 @@ class TraceView(ManualClusteringView):
         # Plot the spikes.
         spikes = self.spikes(interval, all_traces)
         assert isinstance(spikes, (tuple, list))
-
         for spike in spikes:
             clu = spike.spike_cluster
             cg = self.cluster_groups[clu]
@@ -772,6 +761,9 @@ class TraceView(ManualClusteringView):
                              spike_time=spike.spike_time,
                              offset_samples=spike.offset_samples,
                              )
+
+        # Plot the labels.
+        self._plot_labels(all_traces[0].traces)
 
         self.build()
         self.update()
