@@ -128,7 +128,6 @@ class UniformScatterVisual(BaseVisual):
     _default_marker_size = 10.
     _default_marker = 'disc'
     _default_color = DEFAULT_COLOR
-    _default_depth = 0.
     _supported_markers = (
         'arrow',
         'asterisk',
@@ -151,7 +150,7 @@ class UniformScatterVisual(BaseVisual):
         'vbar',
     )
 
-    def __init__(self, marker=None, color=None, depth=None, size=None):
+    def __init__(self, marker=None, color=None, size=None):
         super(UniformScatterVisual, self).__init__()
 
         # Set the marker type.
@@ -163,7 +162,6 @@ class UniformScatterVisual(BaseVisual):
                                                             self.marker)
 
         self.color = color or self._default_color
-        self.depth = depth or self._default_depth
         self.marker_size = size or self._default_marker_size
 
         self.set_primitive_type('points')
@@ -216,8 +214,8 @@ class UniformScatterVisual(BaseVisual):
         self.program['a_mask'] = masks.astype(np.float32)
 
         self.program['u_size'] = self.marker_size
-        self.program['u_depth'] = self.depth
         self.program['u_color'] = self.color
+        self.program['u_mask_max'] = _max(masks)
 
 
 #------------------------------------------------------------------------------

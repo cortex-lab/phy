@@ -99,7 +99,6 @@ def test_uniform_scatter_custom(qtbot, canvas_pz):
     _test_visual(qtbot, canvas_pz,
                  UniformScatterVisual(color=_random_color() + (.5,),
                                       size=10.,
-                                      depth=1.,
                                       ),
                  pos=pos,
                  masks=np.linspace(0., 1., n),
@@ -145,7 +144,8 @@ def test_plot_2(qtbot, canvas_pz):
     _test_visual(qtbot, canvas_pz, PlotVisual(),
                  y=y, depth=depth,
                  data_bounds=[-1, -50, 1, 50],
-                 color=c)
+                 color=c,
+                 )
 
 
 def test_plot_list(qtbot, canvas_pz):
