@@ -349,7 +349,6 @@ class PlotVisual(BaseVisual):
 
 class UniformPlotVisual(BaseVisual):
     _default_color = DEFAULT_COLOR
-    _default_depth = 0.
     allow_list = ('x', 'y')
 
     def __init__(self, color=None, depth=None):
@@ -358,7 +357,6 @@ class UniformPlotVisual(BaseVisual):
         self.set_shader('uni_plot')
         self.set_primitive_type('line_strip')
         self.color = color or self._default_color
-        self.depth = depth or self._default_depth
 
         self.data_range = Range(NDC)
         self.transforms.add_on_cpu(self.data_range)
@@ -448,7 +446,7 @@ class UniformPlotVisual(BaseVisual):
         self.program['a_mask'] = masks.astype(np.float32)
 
         self.program['u_color'] = self.color
-        self.program['u_depth'] = self.depth
+        self.program['u_mask_max'] = _max(masks)
 
 
 #------------------------------------------------------------------------------

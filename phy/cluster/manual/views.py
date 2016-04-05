@@ -321,6 +321,9 @@ class WaveformView(ManualClusteringView):
 
                 # Get the spike masks.
                 m = masks[idx, :].reshape((n_spikes_clu * self.n_channels, 1))
+                # NOTE: we add the cluster index which is used for the
+                # computation of the depth on the GPU.
+                m += i
 
                 color = tuple(_colormap(i)) + (alpha,)
                 assert len(color) == 4
