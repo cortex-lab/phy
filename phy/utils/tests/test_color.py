@@ -35,6 +35,7 @@ def test_colormap():
                          alpha=1.).shape == (4, 4)
     assert _spike_colors([0, 1, 10, 1000],
                          masks=np.linspace(0., 1., 4)).shape == (4, 4)
+    assert _spike_colors(masks=np.linspace(0., 1., 4)).shape == (4, 4)
 
 
 def test_color_selector():
