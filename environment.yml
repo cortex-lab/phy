@@ -1,16 +1,15 @@
 name: phy
-channels:
-  - kwikteam
 dependencies:
-  - python
-  - numpy=1.9
-  - vispy
+  - python=3.5
+  - numpy
   - matplotlib
   - scipy
   - h5py
   - pyqt
-  - requests
-  - traitlets
-  - six
-  - joblib
-  - click
+  - pip:
+    - vispy
+    - requests
+    - traitlets
+    - six
+    - joblib
+    - click
