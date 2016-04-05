@@ -50,7 +50,7 @@ def _make_class(cls, **kwargs):
     # The class name contains a hash of the custom parameters.
     name = cls.__name__ + '_' + _hash(kwargs)
     if name not in _CLASSES:
-        logger.debug("Create class %s %s.", name, kwargs)
+        logger.log(5, "Create class %s %s.", name, kwargs)
         cls = type(name, (cls,), kwargs)
         _CLASSES[name] = cls
     return _CLASSES[name]
@@ -135,7 +135,6 @@ class View(BaseCanvas):
     def _plot_uniform(self, *args, **kwargs):
         cls = _make_class(UniformPlotVisual,
                           _default_color=kwargs.pop('color', None),
-                          _default_depth=kwargs.pop('depth', None),
                           )
         return self._add_item(cls, *args, **kwargs)
 
@@ -150,7 +149,6 @@ class View(BaseCanvas):
                           _default_marker=kwargs.pop('marker', None),
                           _default_marker_size=kwargs.pop('size', None),
                           _default_color=kwargs.pop('color', None),
-                          _default_depth=kwargs.pop('depth', None),
                           )
         return self._add_item(cls, *args, **kwargs)
 

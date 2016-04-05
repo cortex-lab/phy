@@ -327,7 +327,6 @@ class WaveformView(ManualClusteringView):
 
                 color = tuple(_colormap(i)) + (alpha,)
                 assert len(color) == 4
-                depth = 0  # TODO: on the GPU in the visual, depend on mask
 
                 # Generate the box index (one number per channel).
                 box_index = np.arange(self.n_channels)
@@ -345,7 +344,6 @@ class WaveformView(ManualClusteringView):
                 self.plot(x=t,
                           y=wave,
                           color=color,
-                          depth=depth,
                           masks=m,
                           box_index=box_index,
                           data_bounds=None,
@@ -946,21 +944,6 @@ def _dimensions_matrix(channels, n_cols=None, top_left_attribute=None):
     return x_dim, y_dim
 
 
-def _project_mask_depth(dim, masks, spike_clusters_rel=None, n_clusters=None):
-    """Return the mask and depth vectors for a given dimension."""
-    n_spikes = masks.shape[0]
-    if isinstance(dim, tuple):
-        ch, fet = dim
-        m = masks[:, ch]
-        d = _get_depth(m,
-                       spike_clusters_rel=spike_clusters_rel,
-                       n_clusters=n_clusters)
-    else:
-        m = np.ones(n_spikes)
-        d = np.zeros(n_spikes)
-    return m, d
-
-
 class FeatureView(ManualClusteringView):
     _default_marker_size = 3.
 
@@ -1007,6 +990,8 @@ class FeatureView(ManualClusteringView):
         self.n_spikes = spike_times.shape[0]
         assert spike_times.shape == (self.n_spikes,)
         assert self.n_spikes >= 0
+        self.spike_times = spike_times
+        self.duration = spike_times.max()
 
         self.n_cols = 4
         self.shape = (self.n_cols, self.n_cols)
@@ -1017,9 +1002,6 @@ class FeatureView(ManualClusteringView):
                                           enable_lasso=True,
                                           **kwargs)
 
-        # Feature normalization.
-        # self.data_bounds = [-1, -feature_lim, +1, +feature_lim]
-
         # If this is True, the channels won't be automatically chosen
         # when new clusters are selected.
         self.fixed_channels = False
@@ -1028,20 +1010,21 @@ class FeatureView(ManualClusteringView):
         self.channels = None
 
         # Attributes: extra features. This is a dictionary
-        # {name: (array, data_bounds)}
+        # {name: array}
         # where each array is a `(n_spikes,)` array.
         self.attributes = {}
-        self.add_attribute('time', spike_times)
+        self.top_left_attribute = None
 
     # Internal methods
     # -------------------------------------------------------------------------
 
     def _get_feature(self, dim, spike_ids, f):
-        if dim in self.attributes:
-            # Extra features like time.
-            values, _ = self.attributes[dim]
+        if dim == 'time':
+            return -1. + (2. / self.duration) * self.spike_times[spike_ids]
+        elif dim in self.attributes:
+            # Extra features.
+            values = self.attributes[dim]
             values = values[spike_ids]
-            # assert values.shape == (f.shape[0],)
             return values
         else:
             assert len(dim) == 2
@@ -1049,71 +1032,48 @@ class FeatureView(ManualClusteringView):
             assert fet < f.shape[2]
             return f[:, ch, fet] * self._scaling
 
-    def _get_dim_bounds_single(self, dim):
-        """Return the min and max of the bounds for a single dimension."""
-        if dim in self.attributes:
-            # Attribute: the data bounds were computed in add_attribute().
-            y0, y1 = self.attributes[dim][1]
-        else:
-            # Features: the data bounds were computed in the constructor.
-            # _, y0, _, y1 = self.data_bounds
-            y0, y1 = -1., 1.
-        return y0, y1
-
-    def _get_dim_bounds(self, x_dim, y_dim):
-        """Return the data bounds of a subplot, as a function of the
-        two x-y dimensions."""
-        x0, x1 = self._get_dim_bounds_single(x_dim)
-        y0, y1 = self._get_dim_bounds_single(y_dim)
-        return [x0, y0, x1, y1]
-
     def _plot_features(self, i, j, x_dim, y_dim, x, y,
-                       masks=None, spike_clusters_rel=None):
+                       masks=None, clu_idx=None):
         """Plot the features in a subplot."""
         assert x.shape == y.shape
         n_spikes = x.shape[0]
 
-        sc = spike_clusters_rel
-        if sc is not None:
-            assert sc.shape == (n_spikes,)
-        n_clusters = len(self.cluster_ids)
+        if clu_idx is not None:
+            color = tuple(_colormap(clu_idx)) + (.5,)
+        else:
+            color = (1., 1., 1., .5)
+        assert len(color) == 4
 
-        # Retrieve the data bounds.
-        # data_bounds = self._get_dim_bounds(x_dim[i, j], y_dim[i, j])
+        # Find the masks for the given subplot channel.
+        if isinstance(x_dim[i, j], tuple):
+            ch, fet = x_dim[i, j]
+            # NOTE: we add the cluster relative index for the computation
+            # of the depth on the GPU.
+            m = masks[:, ch] + (clu_idx or 0)
+        else:
+            m = np.ones(n_spikes)
 
-        # Retrieve the masks and depth.
-        mx, dx = _project_mask_depth(x_dim[i, j], masks,
-                                     spike_clusters_rel=sc,
-                                     n_clusters=n_clusters)
-        my, dy = _project_mask_depth(y_dim[i, j], masks,
-                                     spike_clusters_rel=sc,
-                                     n_clusters=n_clusters)
-        assert mx.shape == my.shape == dx.shape == dy.shape == (n_spikes,)
+        # Marker size, smaller for background features.
+        size = self._default_marker_size if clu_idx is not None else 1.
 
-        d = np.maximum(dx, dy)
-        m = np.maximum(mx, my)
-
-        # Get the color of the markers.
-        color = _spike_colors(sc, masks=m)
-        assert color.shape == (n_spikes, 4)
-
-        # Create the scatter plot for the current subplot.
-        # The marker size is smaller for background spikes.
-        ms = (self._default_marker_size
-              if spike_clusters_rel is not None else 1.)
         self[i, j].scatter(x=x, y=y,
                            color=color,
-                           depth=d,
-                           size=ms * np.ones(n_spikes),
+                           masks=m,
+                           size=size,
                            data_bounds=None,
+                           uniform=True,
                            )
-        if i == (self.n_cols - 1):
-            dim = x_dim[i, j] if j < (self.n_cols - 1) else x_dim[i, 0]
-            self[i, j].text(pos=[0., -1.],
-                            text=str(dim),
-                            anchor=[0., -1.04],
-                            data_bounds=None,
-                            )
+        if i == 0:
+            # HACK: call this when i=0 (first line) but plot the text
+            # in the last subplot line. This is because we skip i > j
+            # in the subplot loop.
+            i0 = (self.n_cols - 1)
+            dim = x_dim[i0, j] if j < (self.n_cols - 1) else x_dim[i0, 0]
+            self[i0, j].text(pos=[0., -1.],
+                             text=str(dim),
+                             anchor=[0., -1.04],
+                             data_bounds=None,
+                             )
         if j == 0:
             self[i, j].text(pos=[-1., 0.],
                             text=str(y_dim[i, j]),
@@ -1139,12 +1099,11 @@ class FeatureView(ManualClusteringView):
 
         The values should be a 1D array with `n_spikes` elements.
 
-        By default, there is the `time` attribute.
+        NOTE: the values should be normalized by the caller.
 
         """
         assert values.shape == (self.n_spikes,)
-        lims = values.min(), values.max()
-        self.attributes[name] = (values, lims)
+        self.attributes[name] = values
         # Register the attribute to use in the top-left subplot.
         if top_left:
             self.top_left_attribute = name
@@ -1164,15 +1123,11 @@ class FeatureView(ManualClusteringView):
         # Get the spikes, features, masks.
         data = self.features(cluster_ids)
         spike_ids = data.spike_ids
-        spike_clusters = data.spike_clusters
         f = data.data
         masks = data.masks
         assert f.ndim == 3
         assert masks.ndim == 2
         assert spike_ids.shape[0] == f.shape[0] == masks.shape[0]
-
-        # Get the spike clusters.
-        sc = _index_of(spike_clusters, cluster_ids)
 
         # Get the background features.
         data_bg = self.background_features
@@ -1197,7 +1152,7 @@ class FeatureView(ManualClusteringView):
 
         # Set a non-time attribute as y coordinate in the top-left subplot.
         attrs = sorted(self.attributes)
-        attrs.remove('time')
+        # attrs.remove('time')
         if attrs:
             y_dim[0, 0] = attrs[0]
 
@@ -1205,6 +1160,9 @@ class FeatureView(ManualClusteringView):
         with self.building():
             for i in range(self.n_cols):
                 for j in range(self.n_cols):
+                    # Skip lower-diagonal subplots.
+                    if i > j:
+                        continue
 
                     # Retrieve the x and y values for the subplot.
                     x = self._get_feature(x_dim[i, j], spike_ids, f)
@@ -1220,12 +1178,18 @@ class FeatureView(ManualClusteringView):
 
                         # Background features.
                         self._plot_features(i, j, x_dim, y_dim, x_bg, y_bg,
-                                            masks=masks_bg)
+                                            masks=masks_bg,
+                                            )
 
                     # Cluster features.
-                    self._plot_features(i, j, x_dim, y_dim, x, y,
-                                        masks=masks,
-                                        spike_clusters_rel=sc)
+                    for clu_idx, clu in enumerate(cluster_ids):
+                        # TODO: compute this only once, outside the loop.
+                        idx = data.spike_clusters == clu
+                        self._plot_features(i, j, x_dim, y_dim,
+                                            x[idx], y[idx],
+                                            masks=masks[idx],
+                                            clu_idx=clu_idx,
+                                            )
 
                     # Add axes.
                     self[i, j].lines(pos=[[-1., 0., +1., 0.],
@@ -1280,10 +1244,6 @@ class FeatureView(ManualClusteringView):
         x = self._get_feature(x_dim[i, j], spike_ids, f)
         y = self._get_feature(y_dim[i, j], spike_ids, f)
         pos = np.c_[x, y].astype(np.float64)
-
-        # Retrieve the data bounds.
-        # data_bounds = self._get_dim_bounds(x_dim[i, j], y_dim[i, j])
-        # pos = Range(from_bounds=data_bounds).apply(pos)
 
         ind = self.lasso.in_polygon(pos)
         self.lasso.clear()
