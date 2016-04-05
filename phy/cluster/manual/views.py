@@ -670,11 +670,6 @@ class TraceView(ManualClusteringView):
         color = color or self.default_trace_color
 
         t = self._interval[0] + np.arange(n_samples) * self.dt
-        # Normalize time.
-        a = (2. / (t[-1] - t[0]))
-        b = -1. - a * t[0]
-        self._normalization = (a, b)
-        t = a * t + b
         t = np.tile(t, (n_ch, 1))
         box_index = np.repeat(np.arange(n_ch)[:, np.newaxis],
                               n_samples,
@@ -686,7 +681,7 @@ class TraceView(ManualClusteringView):
 
         self.plot(t, traces,
                   color=color,
-                  data_bounds=None,
+                  data_bounds=self.data_bounds,
                   box_index=box_index,
                   uniform=True,
                   )
@@ -696,7 +691,7 @@ class TraceView(ManualClusteringView):
                 self[ch].text(pos=[t[0, 0], traces[ch, 0]],
                               text=str(ch),
                               anchor=[+1., -.1],
-                              data_bounds=None,
+                              data_bounds=self.data_bounds,
                               )
 
     def _plot_spike(self, waveforms=None, channels=None, spike_time=None,
@@ -711,15 +706,13 @@ class TraceView(ManualClusteringView):
 
         # Generate the x coordinates of the waveform.
         t = t0 + self.dt * np.arange(n_samples)
-        a, b = self._normalization
-        t = a * t + b
         t = np.tile(t, (n_channels, 1))  # (n_unmasked_channels, n_samples)
 
         # The box index depends on the channel.
         box_index = np.repeat(channels[:, np.newaxis], n_samples, axis=0)
         self.plot(t, waveforms.T, color=color,
                   box_index=box_index,
-                  data_bounds=None,
+                  data_bounds=self.data_bounds,
                   )
 
     def _restrict_interval(self, interval):
@@ -756,6 +749,8 @@ class TraceView(ManualClusteringView):
         # Load the traces.
         all_traces = self.traces(interval)
         assert isinstance(all_traces, (tuple, list))
+        m, M = all_traces[0].traces.min(), all_traces[0].traces.max()
+        self.data_bounds = np.array([start, m, end, M])
 
         # Plot the traces.
         for i, traces in enumerate(all_traces):
