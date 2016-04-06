@@ -121,6 +121,8 @@ class Controller(EventEmitter):
         self.get_mean_masks = ctx.memcache(self.get_mean_masks)
         self.get_mean_features = ctx.memcache(self.get_mean_features)
         self.get_mean_waveforms = ctx.memcache(self.get_mean_waveforms)
+        self.get_waveforms_amplitude = ctx.memcache(
+            self.get_waveforms_amplitude)
 
         self.get_waveform_lims = ctx.memcache(self.get_waveform_lims)
         self.get_feature_lim = ctx.memcache(self.get_feature_lim)
