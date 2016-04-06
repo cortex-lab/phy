@@ -539,8 +539,10 @@ def select_traces(traces, interval, sample_rate=None):
 
 def extract_spikes(traces, interval, sample_rate=None,
                    spike_times=None, spike_clusters=None,
+                   cluster_groups=None,
                    all_masks=None,
                    n_samples_waveforms=None):
+    cluster_groups = cluster_groups or {}
     sr = sample_rate
     ns = n_samples_waveforms
     if not isinstance(ns, tuple):
@@ -573,6 +575,7 @@ def extract_spikes(traces, interval, sample_rate=None,
         b.masks = m[i, b.channels]
         b.spike_time = st[i]
         b.spike_cluster = sc[i]
+        b.cluster_group = cluster_groups.get(b.spike_cluster, None)
         b.offset_samples = offset_samples
 
         spikes.append(b)
@@ -597,7 +600,6 @@ class TraceView(ManualClusteringView):
     def __init__(self,
                  traces=None,
                  spikes=None,
-                 cluster_groups=None,
                  sample_rate=None,
                  duration=None,
                  n_channels=None,
@@ -624,8 +626,6 @@ class TraceView(ManualClusteringView):
 
         assert n_channels >= 0
         self.n_channels = n_channels
-
-        self.cluster_groups = cluster_groups
 
         # Box and probe scaling.
         self._scaling = 1.
@@ -756,7 +756,7 @@ class TraceView(ManualClusteringView):
         assert isinstance(spikes, (tuple, list))
         for spike in spikes:
             clu = spike.spike_cluster
-            cg = self.cluster_groups[clu]
+            cg = spike.cluster_group
             color = self._color_selector.get(clu,
                                              cluster_ids=self.cluster_ids,
                                              cluster_group=cg,

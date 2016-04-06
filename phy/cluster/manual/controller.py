@@ -272,6 +272,7 @@ class Controller(EventEmitter):
                            sample_rate=self.sample_rate,
                            spike_times=self.spike_times,
                            spike_clusters=self.spike_clusters,
+                           cluster_groups=self.cluster_groups,
                            all_masks=self.all_masks,
                            n_samples_waveforms=self.n_samples_waveforms,
                            )
@@ -342,7 +343,6 @@ class Controller(EventEmitter):
     def add_trace_view(self, gui):
         v = TraceView(traces=self.get_traces,
                       spikes=self.get_spikes_traces,
-                      cluster_groups=self.cluster_groups,
                       sample_rate=self.sample_rate,
                       duration=self.duration,
                       n_channels=self.n_channels,
