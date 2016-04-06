@@ -171,7 +171,7 @@ class Controller(EventEmitter):
         b.masks = self.all_masks[spike_ids]
         return b
 
-    def _data_lim(self, arr, n_max):
+    def _data_lim(self, arr, n_max=None):
         return _get_data_lim(arr, n_spikes=n_max)
 
     # Masks
