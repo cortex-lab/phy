@@ -1,0 +1,20 @@
+name: phy
+channels:
+  - kwikteam
+dependencies:
+  - python
+  - numpy
+  - matplotlib
+  - scipy
+  - h5py
+  - pyqt
+  - klustakwik2
+  - pip:
+    - klusta
+    - vispy
+    - requests
+    - traitlets
+    - six
+    - joblib
+    - click
+    - tqdm

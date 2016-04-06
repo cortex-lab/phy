@@ -34,7 +34,7 @@ The [phy-contrib](https://github.com/kwikteam/phy-contrib) repo contains a set o
 **Note**: the installation instructions will be simplified soon.
 
 1. Make sure that you have [**miniconda**](http://conda.pydata.org/miniconda.html) installed. You can choose the Python 3.5 64-bit version for your operating system (Linux, Windows, or OS X).
-2. **Download the [environment file](https://raw.githubusercontent.com/kwikteam/phy/master/environment.yml).**
+2. **Download the [environment file](https://raw.githubusercontent.com/kwikteam/phy/master/installer/environment.yml).**
 3. **Open a terminal** (on Windows, `cmd`, not Powershell) in the directory where you saved the file and type:
 
     ```bash
