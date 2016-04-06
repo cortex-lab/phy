@@ -237,7 +237,7 @@ class Controller(EventEmitter):
                                   if not load_all else None),
                                  )
         m = self.get_feature_lim()
-        data.data = _normalize(data.data, -m, +m)
+        data.data = _normalize(data.data.copy(), -m, +m)
         return data
 
     def get_background_features(self):

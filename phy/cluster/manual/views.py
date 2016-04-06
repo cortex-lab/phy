@@ -317,7 +317,7 @@ class WaveformView(ManualClusteringView):
                           uniform=True,
                           )
                 # Add channel labels.
-                if i == 0:
+                if self.do_show_labels and i == 0:
                     for ch in range(self.n_channels):
                         self[ch].text(pos=[t[0, 0], 0.],
                                       # TODO: use real channel labels.
@@ -651,7 +651,7 @@ class TraceView(ManualClusteringView):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _plot_traces(self, traces=None, color=None, show_labels=True):
+    def _plot_traces(self, traces=None, color=None):
         traces = traces.T
         n_samples = traces.shape[1]
         n_ch = self.n_channels
@@ -769,7 +769,8 @@ class TraceView(ManualClusteringView):
                              )
 
         # Plot the labels.
-        self._plot_labels(all_traces[0].traces)
+        if self.do_show_labels:
+            self._plot_labels(all_traces[0].traces)
 
         self.build()
         self.update()
