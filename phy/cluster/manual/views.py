@@ -592,7 +592,7 @@ class TraceView(ManualClusteringView):
     shift_amount = .1
     scaling_coeff_x = 1.5
     scaling_coeff_y = 1.1
-    default_trace_color = (.3, .3, .3, 1.)
+    default_trace_color = (.75, .75, .75, .75)
     default_shortcuts = {
         'go_left': 'alt+left',
         'go_right': 'alt+right',
