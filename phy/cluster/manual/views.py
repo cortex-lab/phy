@@ -288,6 +288,11 @@ class WaveformView(ManualClusteringView):
 
                 # Get the spike masks.
                 m = masks[idx, :].reshape((n_spikes_clu * self.n_channels, 1))
+                # HACK: on the GPU, we get the actual masks with fract(masks)
+                # since we add the relative cluster index. We need to ensure
+                # that the masks is never 1.0, otherwise it is interpreted as
+                # 0.
+                m *= .999
                 # NOTE: we add the cluster index which is used for the
                 # computation of the depth on the GPU.
                 m += i
