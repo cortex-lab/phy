@@ -60,7 +60,7 @@ class MockController(Controller):
         self.n_samples_t = 20000
         self.n_channels = 11
         self.n_clusters = 4
-        self.n_spikes_per_cluster = 50
+        self.n_spikes_per_cluster = 200
         n_spikes_total = self.n_clusters * self.n_spikes_per_cluster
         n_features_per_channel = 4
 
@@ -68,7 +68,9 @@ class MockController(Controller):
         self.n_spikes = n_spikes_total
         self.sample_rate = 20000.
         self.duration = self.n_samples_t / float(self.sample_rate)
-        self.spike_times = np.arange(0, self.duration, 100. / self.sample_rate)
+        self.spike_times = np.arange(0, self.duration,
+                                     5000. / (self.sample_rate *
+                                              self.n_spikes_per_cluster))
         self.spike_clusters = np.repeat(np.arange(self.n_clusters),
                                         self.n_spikes_per_cluster)
         assert len(self.spike_times) == len(self.spike_clusters)
