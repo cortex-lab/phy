@@ -1045,9 +1045,9 @@ class FeatureView(ManualClusteringView):
             ch, fet = x_dim[i, j]
             # NOTE: we add the cluster relative index for the computation
             # of the depth on the GPU.
-            m = masks[:, ch] + (clu_idx or 0)
+            m = masks[:, ch] * .999 + (clu_idx or 0)
         else:
-            m = np.ones(n_spikes)
+            m = np.ones(n_spikes) * .999 + (clu_idx or 0)
 
         # Marker size, smaller for background features.
         size = self._default_marker_size if clu_idx is not None else 1.
