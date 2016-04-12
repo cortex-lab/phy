@@ -506,7 +506,7 @@ class WaveformView(ManualClusteringView):
         dy = (py1 - py0) * .5
         # New range.
         new_range = (cx - dx, cy - dy, cx + dx, cy + dy)
-        self.panzoom.set_range(new_range, keep_aspect=True)
+        self.panzoom.set_range(new_range)
 
     def on_key_press(self, event):
         """Handle key press events."""
