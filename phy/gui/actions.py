@@ -7,6 +7,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+import inspect
 from functools import partial
 import logging
 import re
@@ -15,7 +16,7 @@ import traceback
 
 from six import string_types, PY3
 
-from .qt import QKeySequence, QAction, require_qt
+from .qt import QKeySequence, QAction, require_qt, _input_dialog
 from phy.utils import Bunch
 
 logger = logging.getLogger(__name__)
@@ -54,6 +55,31 @@ def _parse_list(s):
 def _parse_snippet(s):
     """Parse an entire snippet command."""
     return list(map(_parse_list, s.split(' ')))
+
+
+def _wrap_callback_args(f, docstring=None):  # pragma: no cover
+    """Display a Qt dialog when a function has arguments.
+
+    The user can write function arguments as if it was a snippet.
+
+    """
+    def wrapped(checked, *args):
+        if args:
+            return f(*args)
+        f_args = inspect.getargspec(f).args
+        if 'self' in f_args:
+            f_args.remove('self')
+        # If the function doesn't expect arguments, just execute it.
+        if not f_args:
+            return f()
+        # If there are args, need to display the dialog.
+        s, ok = _input_dialog(f.__name__, docstring)
+        if not ok or not s:
+            return
+        # Parse user-supplied arguments and call the function.
+        args = _parse_snippet(s)
+        return f(*args)
+    return wrapped
 
 
 # -----------------------------------------------------------------------------
@@ -118,10 +144,12 @@ def _create_qaction(gui, name, callback, shortcut, docstring=None, alias=''):
     # Create the QAction instance.
     action = QAction(name.capitalize().replace('_', ' '), gui)
 
-    def wrapped(checked, *args, **kwargs):  # pragma: no cover
-        return callback(*args, **kwargs)
+    # Show an input dialog if there are args.
+    callback = _wrap_callback_args(callback,
+                                   docstring=docstring,
+                                   )
 
-    action.triggered.connect(wrapped)
+    action.triggered.connect(callback)
     sequence = _get_qkeysequence(shortcut)
     if not isinstance(sequence, (tuple, list)):
         sequence = [sequence]
