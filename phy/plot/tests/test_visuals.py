@@ -9,10 +9,11 @@
 
 import numpy as np
 
-from ..transform import NDC
 from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
                        LineVisual, PolygonVisual, TextVisual,
+                       UniformPlotVisual, UniformScatterVisual,
                        )
+from phy.utils._color import _random_color
 
 
 #------------------------------------------------------------------------------
@@ -40,20 +41,14 @@ def test_scatter_empty(qtbot, canvas):
 
 
 def test_scatter_markers(qtbot, canvas_pz):
-    c = canvas_pz
 
     n = 100
     x = .2 * np.random.randn(n)
     y = .2 * np.random.randn(n)
 
-    v = ScatterVisual(marker='vbar')
-    c.add_visual(v)
-    v.set_data(x=x, y=y)
-
-    c.show()
-    qtbot.waitForWindowShown(c.native)
-
-    # qtbot.stop()
+    _test_visual(qtbot, canvas_pz,
+                 ScatterVisual(marker='vbar'),
+                 x=x, y=y)
 
 
 def test_scatter_custom(qtbot, canvas_pz):
@@ -72,6 +67,43 @@ def test_scatter_custom(qtbot, canvas_pz):
 
     _test_visual(qtbot, canvas_pz, ScatterVisual(),
                  pos=pos, color=c, size=s)
+
+
+#------------------------------------------------------------------------------
+# Test uniform scatter visual
+#------------------------------------------------------------------------------
+
+def test_uniform_scatter_empty(qtbot, canvas):
+    _test_visual(qtbot, canvas, UniformScatterVisual(),
+                 x=np.zeros(0), y=np.zeros(0))
+
+
+def test_uniform_scatter_markers(qtbot, canvas_pz):
+
+    n = 100
+    x = .2 * np.random.randn(n)
+    y = .2 * np.random.randn(n)
+
+    _test_visual(qtbot, canvas_pz,
+                 UniformScatterVisual(marker='vbar'),
+                 x=x, y=y)
+
+
+def test_uniform_scatter_custom(qtbot, canvas_pz):
+
+    n = 100
+
+    # Random position.
+    pos = .2 * np.random.randn(n, 2)
+
+    _test_visual(qtbot, canvas_pz,
+                 UniformScatterVisual(color=_random_color() + (.5,),
+                                      size=10.,
+                                      ),
+                 pos=pos,
+                 masks=np.linspace(0., 1., n),
+                 data_bounds=None,
+                 )
 
 
 #------------------------------------------------------------------------------
@@ -112,17 +144,53 @@ def test_plot_2(qtbot, canvas_pz):
     _test_visual(qtbot, canvas_pz, PlotVisual(),
                  y=y, depth=depth,
                  data_bounds=[-1, -50, 1, 50],
-                 color=c)
+                 color=c,
+                 )
 
 
 def test_plot_list(qtbot, canvas_pz):
     y = [np.random.randn(i) for i in (5, 20)]
-
     c = np.random.uniform(.5, 1, size=(2, 4))
     c[:, 3] = .5
 
     _test_visual(qtbot, canvas_pz, PlotVisual(),
                  y=y, color=c)
+
+
+#------------------------------------------------------------------------------
+# Test uniform plot visual
+#------------------------------------------------------------------------------
+
+def test_uniform_plot_empty(qtbot, canvas):
+    y = np.zeros((1, 0))
+    _test_visual(qtbot, canvas, UniformPlotVisual(),
+                 y=y)
+
+
+def test_uniform_plot_0(qtbot, canvas_pz):
+    y = np.zeros((1, 10))
+    _test_visual(qtbot, canvas_pz, UniformPlotVisual(),
+                 y=y)
+
+
+def test_uniform_plot_1(qtbot, canvas_pz):
+    y = .2 * np.random.randn(10)
+    _test_visual(qtbot, canvas_pz,
+                 UniformPlotVisual(),
+                 y=y,
+                 masks=.5,
+                 data_bounds=None,
+                 )
+
+
+def test_uniform_plot_list(qtbot, canvas_pz):
+    y = [np.random.randn(i) for i in (5, 20)]
+
+    _test_visual(qtbot, canvas_pz,
+                 UniformPlotVisual(color=(1., 0., 0., 1.)),
+                 y=y,
+                 masks=[.1, .9],
+                 )
 
 
 #------------------------------------------------------------------------------
@@ -224,11 +292,11 @@ def test_text_1(qtbot, canvas_pz):
 
     v = TextVisual()
     c.add_visual(v)
-    v.set_data(pos=pos, text=text, anchor=anchor, data_bounds=NDC)
+    v.set_data(pos=pos, text=text, anchor=anchor, data_bounds=None)
 
     v = ScatterVisual()
     c.add_visual(v)
-    v.set_data(pos=pos, data_bounds=NDC)
+    v.set_data(pos=pos, data_bounds=None)
 
     c.show()
     qtbot.waitForWindowShown(c.native)

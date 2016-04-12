@@ -296,6 +296,7 @@ class BaseCanvas(Canvas):
         """Draw all visuals."""
         gloo.clear()
         for visual in self.visuals:
+            logger.log(5, "Draw visual `%s`.", visual)
             visual.on_draw()
 
 

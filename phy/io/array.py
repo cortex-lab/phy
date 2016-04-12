@@ -296,7 +296,7 @@ def _fill_index(arr, item):
 class ConcatenatedArrays(object):
     """This object represents a concatenation of several memory-mapped
     arrays."""
-    def __init__(self, arrs, cols=None):
+    def __init__(self, arrs, cols=None, scaling=None):
         assert isinstance(arrs, list)
         self.arrs = arrs
         # Reordering of the columns.
@@ -305,6 +305,17 @@ class ConcatenatedArrays(object):
                                                        for arr in arrs])],
                                       axis=0)
         self.dtype = arrs[0].dtype if arrs else None
+
+        if scaling is None:
+            return
+
+        # Multiply the output of a function by some scaling.
+        def _wrap(f):
+            def wrapped(*args):
+                return f(*args) * self.scaling
+            return wrapped
+
+        self.__getitem__ = _wrap(self.__getitem__)
 
     @property
     def shape(self):
@@ -368,12 +379,12 @@ class ConcatenatedArrays(object):
         return self.shape[0]
 
 
-def _concatenate_virtual_arrays(arrs, cols=None):
+def _concatenate_virtual_arrays(arrs, cols=None, scaling=None):
     """Return a virtual concatenate of several NumPy arrays."""
     n = len(arrs)
     if n == 0:
         return None
-    return ConcatenatedArrays(arrs, cols)
+    return ConcatenatedArrays(arrs, cols, scaling=scaling)
 
 
 # -----------------------------------------------------------------------------

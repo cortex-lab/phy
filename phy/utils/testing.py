@@ -166,7 +166,11 @@ def _profile(prof, statement, glob, loc):
     sys.stdout = old_stdout
     stats = output.getvalue()
     # Stop capture.
-    stats_file = op.join(dir, 'stats.txt')
+    if 'Line' in prof.__class__.__name__:  # pragma: no cover
+        fn = 'lstats.txt'
+    else:
+        fn = 'stats.txt'
+    stats_file = op.join(dir, fn)
     with open(stats_file, 'w') as f:
         f.write(stats)
 

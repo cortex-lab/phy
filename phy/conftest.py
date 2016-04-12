@@ -20,8 +20,8 @@ from phy.utils.tempdir import TemporaryDirectory
 # Common fixtures
 #------------------------------------------------------------------------------
 
-logging.getLogger().setLevel(logging.DEBUG)
-add_default_handler('DEBUG')
+logging.getLogger().setLevel(10)
+add_default_handler(5)
 
 # Fix the random seed in the tests.
 np.random.seed(2015)

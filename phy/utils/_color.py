@@ -80,7 +80,7 @@ def _colormap(i):
     return _COLORMAP[i % n] / 255.
 
 
-def _spike_colors(spike_clusters, masks=None, alpha=None):
+def _spike_colors(spike_clusters=None, masks=None, alpha=None):
     n = len(_COLORMAP)
     if spike_clusters is not None:
         c = _COLORMAP[np.mod(spike_clusters, n), :] / 255.

@@ -22,6 +22,7 @@ from phy.cluster.manual.views import (WaveformView,
 from phy.gui import GUI
 from phy.io.array import _get_data_lim, concat_per_cluster
 from phy.io import Context, Selector
+from phy.plot.transform import _normalize
 from phy.stats.clusters import (mean,
                                 get_waveform_amplitude,
                                 )
@@ -120,6 +121,8 @@ class Controller(EventEmitter):
         self.get_mean_masks = ctx.memcache(self.get_mean_masks)
         self.get_mean_features = ctx.memcache(self.get_mean_features)
         self.get_mean_waveforms = ctx.memcache(self.get_mean_waveforms)
+        self.get_waveforms_amplitude = ctx.memcache(
+            self.get_waveforms_amplitude)
 
         self.get_waveform_lims = ctx.memcache(self.get_waveform_lims)
         self.get_feature_lim = ctx.memcache(self.get_feature_lim)
@@ -168,7 +171,7 @@ class Controller(EventEmitter):
         b.masks = self.all_masks[spike_ids]
         return b
 
-    def _data_lim(self, arr, n_max):
+    def _data_lim(self, arr, n_max=None):
         return _get_data_lim(arr, n_spikes=n_max)
 
     # Masks
@@ -189,10 +192,14 @@ class Controller(EventEmitter):
 
     # Is cached in _init_context()
     def get_waveforms(self, cluster_id):
-        return [self._select_data(cluster_id,
-                                  self.all_waveforms,
-                                  self.n_spikes_waveforms,
-                                  )]
+        data = self._select_data(cluster_id,
+                                 self.all_waveforms,
+                                 self.n_spikes_waveforms,
+                                 )
+        # Cache the normalized waveforms.
+        m, M = self.get_waveform_lims()
+        data.data = _normalize(data.data, m, M)
+        return [data]
 
     def get_mean_waveforms(self, cluster_id):
         return mean(self.get_waveforms(cluster_id)[0].data)
@@ -224,11 +231,14 @@ class Controller(EventEmitter):
 
     # Is cached in _init_context()
     def get_features(self, cluster_id, load_all=False):
-        return self._select_data(cluster_id,
+        data = self._select_data(cluster_id,
                                  self.all_features,
                                  (self.n_spikes_features
                                   if not load_all else None),
                                  )
+        m = self.get_feature_lim()
+        data.data = _normalize(data.data.copy(), -m, +m)
+        return data
 
     def get_background_features(self):
         k = max(1, int(self.n_spikes // self.n_spikes_background_features))
@@ -262,6 +272,7 @@ class Controller(EventEmitter):
                            sample_rate=self.sample_rate,
                            spike_times=self.spike_times,
                            spike_clusters=self.spike_clusters,
+                           cluster_groups=self.cluster_groups,
                            all_masks=self.all_masks,
                            n_samples_waveforms=self.n_samples_waveforms,
                            )
@@ -325,7 +336,6 @@ class Controller(EventEmitter):
     def add_waveform_view(self, gui):
         v = WaveformView(waveforms=self.get_waveforms,
                          channel_positions=self.channel_positions,
-                         waveform_lims=self.get_waveform_lims(),
                          best_channels=self.get_best_channels,
                          )
         return self._add_view(gui, v)
@@ -333,7 +343,6 @@ class Controller(EventEmitter):
     def add_trace_view(self, gui):
         v = TraceView(traces=self.get_traces,
                       spikes=self.get_spikes_traces,
-                      cluster_groups=self.cluster_groups,
                       sample_rate=self.sample_rate,
                       duration=self.duration,
                       n_channels=self.n_channels,

@@ -9,6 +9,9 @@
 
 from collections import OrderedDict
 from contextlib import contextmanager
+import hashlib
+import json
+import logging
 
 import numpy as np
 
@@ -19,7 +22,11 @@ from .interact import Grid, Boxed, Stacked
 from .panzoom import PanZoom
 from .utils import _get_array
 from .visuals import (ScatterVisual, PlotVisual, HistogramVisual,
-                      LineVisual, TextVisual, PolygonVisual)
+                      LineVisual, TextVisual, PolygonVisual,
+                      UniformScatterVisual, UniformPlotVisual,
+                      )
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -28,16 +35,25 @@ from .visuals import (ScatterVisual, PlotVisual, HistogramVisual,
 
 # NOTE: we ensure that we only create every type *once*, so that
 # View._items has only one key for any class.
-_SCATTER_CLASSES = {}
+_CLASSES = {}
 
 
-def _make_scatter_class(marker):
-    """Return a temporary ScatterVisual class with a given marker."""
-    name = 'ScatterVisual' + marker.title()
-    if name not in _SCATTER_CLASSES:
-        cls = type(name, (ScatterVisual,), {'_default_marker': marker})
-        _SCATTER_CLASSES[name] = cls
-    return _SCATTER_CLASSES[name]
+def _hash(obj):
+    s = json.dumps(obj, sort_keys=True, ensure_ascii=True).encode('utf-8')
+    return hashlib.sha256(s).hexdigest()[:8]
+
+
+def _make_class(cls, **kwargs):
+    """Return a custom Visual class with given parameters."""
+    kwargs = {k: (v if v is not None else getattr(cls, k, None))
+              for k, v in kwargs.items()}
+    # The class name contains a hash of the custom parameters.
+    name = cls.__name__ + '_' + _hash(kwargs)
+    if name not in _CLASSES:
+        logger.log(5, "Create class %s %s.", name, kwargs)
+        cls = type(name, (cls,), kwargs)
+        _CLASSES[name] = cls
+    return _CLASSES[name]
 
 
 #------------------------------------------------------------------------------
@@ -116,14 +132,33 @@ class View(BaseCanvas):
         self._items[cls].append(data)
         return data
 
+    def _plot_uniform(self, *args, **kwargs):
+        cls = _make_class(UniformPlotVisual,
+                          _default_color=kwargs.pop('color', None),
+                          )
+        return self._add_item(cls, *args, **kwargs)
+
     def plot(self, *args, **kwargs):
         """Add a line plot."""
+        if kwargs.pop('uniform', None):
+            return self._plot_uniform(*args, **kwargs)
         return self._add_item(PlotVisual, *args, **kwargs)
+
+    def _scatter_uniform(self, *args, **kwargs):
+        cls = _make_class(UniformScatterVisual,
+                          _default_marker=kwargs.pop('marker', None),
+                          _default_marker_size=kwargs.pop('size', None),
+                          _default_color=kwargs.pop('color', None),
+                          )
+        return self._add_item(cls, *args, **kwargs)
 
     def scatter(self, *args, **kwargs):
         """Add a scatter plot."""
-        cls = _make_scatter_class(kwargs.pop('marker',
-                                             ScatterVisual._default_marker))
+        if kwargs.pop('uniform', None):
+            return self._scatter_uniform(*args, **kwargs)
+        cls = _make_class(ScatterVisual,
+                          _default_marker=kwargs.pop('marker', None),
+                          )
         return self._add_item(cls, *args, **kwargs)
 
     def hist(self, *args, **kwargs):

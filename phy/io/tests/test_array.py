@@ -222,7 +222,7 @@ def test_read_write(tempdir):
 
 def test_concatenate_virtual_arrays_1():
     arrs = [np.arange(5), np.arange(10, 12), np.array([0])]
-    c = _concatenate_virtual_arrays(arrs)
+    c = _concatenate_virtual_arrays(arrs, scaling=1)
     assert c.shape == (8,)
     assert c._get_recording(3) == 0
     assert c._get_recording(5) == 1

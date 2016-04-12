@@ -34,7 +34,7 @@ DEFAULT_COLOR = (0.03, 0.57, 0.98, .75)
 
 
 #------------------------------------------------------------------------------
-# Visuals
+# Scatter visuals
 #------------------------------------------------------------------------------
 
 class ScatterVisual(BaseVisual):
@@ -65,7 +65,6 @@ class ScatterVisual(BaseVisual):
 
     def __init__(self, marker=None):
         super(ScatterVisual, self).__init__()
-        self.n_points = None
 
         # Set the marker type.
         self.marker = marker or self._default_marker
@@ -89,7 +88,7 @@ class ScatterVisual(BaseVisual):
                  color=None,
                  size=None,
                  depth=None,
-                 data_bounds=None,
+                 data_bounds='auto',
                  ):
         if pos is None:
             x, y = _get_pos(x, y)
@@ -100,24 +99,128 @@ class ScatterVisual(BaseVisual):
         n = pos.shape[0]
 
         # Validate the data.
-        color = _get_array(color, (n, 4), ScatterVisual._default_color)
+        color = _get_array(color, (n, 4),
+                           ScatterVisual._default_color,
+                           dtype=np.float32)
         size = _get_array(size, (n, 1), ScatterVisual._default_marker_size)
         depth = _get_array(depth, (n, 1), 0)
-        data_bounds = _get_data_bounds(data_bounds, pos)
-        assert data_bounds.shape[0] == n
+        if data_bounds is not None:
+            data_bounds = _get_data_bounds(data_bounds, pos)
+            assert data_bounds.shape[0] == n
 
         return Bunch(pos=pos, color=color, size=size,
                      depth=depth, data_bounds=data_bounds)
 
     def set_data(self, *args, **kwargs):
         data = self.validate(*args, **kwargs)
-        self.data_range.from_bounds = data.data_bounds
-        pos_tr = self.transforms.apply(data.pos)
+        if data.data_bounds is not None:
+            self.data_range.from_bounds = data.data_bounds
+            pos_tr = self.transforms.apply(data.pos)
+        else:
+            pos_tr = data.pos
         pos_tr = np.c_[pos_tr, data.depth]
         self.program['a_position'] = pos_tr.astype(np.float32)
         self.program['a_size'] = data.size.astype(np.float32)
         self.program['a_color'] = data.color.astype(np.float32)
 
+
+class UniformScatterVisual(BaseVisual):
+    _default_marker_size = 10.
+    _default_marker = 'disc'
+    _default_color = DEFAULT_COLOR
+    _supported_markers = (
+        'arrow',
+        'asterisk',
+        'chevron',
+        'clover',
+        'club',
+        'cross',
+        'diamond',
+        'disc',
+        'ellipse',
+        'hbar',
+        'heart',
+        'infinity',
+        'pin',
+        'ring',
+        'spade',
+        'square',
+        'tag',
+        'triangle',
+        'vbar',
+    )
+
+    def __init__(self, marker=None, color=None, size=None):
+        super(UniformScatterVisual, self).__init__()
+
+        # Set the marker type.
+        self.marker = marker or self._default_marker
+        assert self.marker in self._supported_markers
+
+        self.set_shader('uni_scatter')
+        self.fragment_shader = self.fragment_shader.replace('%MARKER',
+                                                            self.marker)
+
+        self.color = color or self._default_color
+        self.marker_size = size or self._default_marker_size
+
+        self.set_primitive_type('points')
+        self.data_range = Range(NDC)
+        self.transforms.add_on_cpu(self.data_range)
+
+    @staticmethod
+    def vertex_count(x=None, y=None, pos=None, **kwargs):
+        return y.size if y is not None else len(pos)
+
+    @staticmethod
+    def validate(x=None,
+                 y=None,
+                 pos=None,
+                 masks=None,
+                 data_bounds='auto',
+                 ):
+        if pos is None:
+            x, y = _get_pos(x, y)
+            pos = np.c_[x, y]
+        pos = np.asarray(pos)
+        assert pos.ndim == 2
+        assert pos.shape[1] == 2
+        n = pos.shape[0]
+
+        masks = _get_array(masks, (n, 1), 1., np.float32)
+        assert masks.shape == (n, 1)
+
+        # Validate the data.
+        if data_bounds is not None:
+            data_bounds = _get_data_bounds(data_bounds, pos)
+            assert data_bounds.shape[0] == n
+
+        return Bunch(pos=pos,
+                     masks=masks,
+                     data_bounds=data_bounds,
+                     )
+
+    def set_data(self, *args, **kwargs):
+        data = self.validate(*args, **kwargs)
+        if data.data_bounds is not None:
+            self.data_range.from_bounds = data.data_bounds
+            pos_tr = self.transforms.apply(data.pos)
+        else:
+            pos_tr = data.pos
+
+        masks = data.masks
+
+        self.program['a_position'] = pos_tr.astype(np.float32)
+        self.program['a_mask'] = masks.astype(np.float32)
+
+        self.program['u_size'] = self.marker_size
+        self.program['u_color'] = self.color
+        self.program['u_mask_max'] = _max(masks)
+
+
+#------------------------------------------------------------------------------
+# Plot visuals
+#------------------------------------------------------------------------------
 
 def _as_list(arr):
     if isinstance(arr, np.ndarray):
@@ -155,7 +258,7 @@ class PlotVisual(BaseVisual):
                  y=None,
                  color=None,
                  depth=None,
-                 data_bounds=None,
+                 data_bounds='auto',
                  ):
 
         assert y is not None
@@ -172,22 +275,26 @@ class PlotVisual(BaseVisual):
 
         n_signals = len(x)
 
-        if data_bounds is None:
+        if isinstance(data_bounds, string_types) and data_bounds == 'auto':
             xmin = [_min(_) for _ in x]
             ymin = [_min(_) for _ in y]
             xmax = [_max(_) for _ in x]
             ymax = [_max(_) for _ in y]
             data_bounds = np.c_[xmin, ymin, xmax, ymax]
 
-        color = _get_array(color, (n_signals, 4), PlotVisual._default_color)
+        color = _get_array(color, (n_signals, 4),
+                           PlotVisual._default_color,
+                           dtype=np.float32,
+                           )
         assert color.shape == (n_signals, 4)
 
         depth = _get_array(depth, (n_signals, 1), 0)
         assert depth.shape == (n_signals, 1)
 
-        data_bounds = _get_data_bounds(data_bounds, length=n_signals)
-        data_bounds = data_bounds.astype(np.float64)
-        assert data_bounds.shape == (n_signals, 4)
+        if data_bounds is not None:
+            data_bounds = _get_data_bounds(data_bounds, length=n_signals)
+            data_bounds = data_bounds.astype(np.float64)
+            assert data_bounds.shape == (n_signals, 4)
 
         return Bunch(x=x, y=y,
                      color=color, depth=depth,
@@ -226,16 +333,123 @@ class PlotVisual(BaseVisual):
         assert signal_index.shape == (n, 1)
 
         # Transform the positions.
-        data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
-        self.data_range.from_bounds = data_bounds
-        pos_tr = self.transforms.apply(pos)
+        if data.data_bounds is not None:
+            data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
+            self.data_range.from_bounds = data_bounds
+            pos = self.transforms.apply(pos)
 
         # Position and depth.
         depth = np.repeat(data.depth, n_samples, axis=0)
-        self.program['a_position'] = np.c_[pos_tr, depth].astype(np.float32)
+        self.program['a_position'] = np.c_[pos, depth].astype(np.float32)
         self.program['a_color'] = color.astype(np.float32)
         self.program['a_signal_index'] = signal_index.astype(np.float32)
 
+
+class UniformPlotVisual(BaseVisual):
+    _default_color = DEFAULT_COLOR
+    allow_list = ('x', 'y')
+
+    def __init__(self, color=None, depth=None):
+        super(UniformPlotVisual, self).__init__()
+
+        self.set_shader('uni_plot')
+        self.set_primitive_type('line_strip')
+        self.color = color or self._default_color
+
+        self.data_range = Range(NDC)
+        self.transforms.add_on_cpu(self.data_range)
+
+    @staticmethod
+    def validate(x=None,
+                 y=None,
+                 masks=None,
+                 data_bounds='auto',
+                 ):
+
+        assert y is not None
+        y = _as_list(y)
+
+        if x is None:
+            x = [np.linspace(-1., 1., len(_)) for _ in y]
+        x = _as_list(x)
+
+        # Remove empty elements.
+        assert len(x) == len(y)
+
+        assert [len(_) for _ in x] == [len(_) for _ in y]
+
+        n_signals = len(x)
+
+        masks = _get_array(masks, (n_signals, 1), 1., np.float32)
+        assert masks.shape == (n_signals, 1)
+
+        if isinstance(data_bounds, string_types) and data_bounds == 'auto':
+            xmin = [_min(_) for _ in x]
+            ymin = [_min(_) for _ in y]
+            xmax = [_max(_) for _ in x]
+            ymax = [_max(_) for _ in y]
+            data_bounds = np.c_[xmin, ymin, xmax, ymax]
+
+        if data_bounds is not None:
+            data_bounds = _get_data_bounds(data_bounds, length=n_signals)
+            data_bounds = data_bounds.astype(np.float64)
+            assert data_bounds.shape == (n_signals, 4)
+
+        return Bunch(x=x, y=y, masks=masks,
+                     data_bounds=data_bounds,
+                     )
+
+    @staticmethod
+    def vertex_count(y=None, **kwargs):
+        """Take the output of validate() as input."""
+        return y.size if isinstance(y, np.ndarray) else sum(len(_) for _ in y)
+
+    def set_data(self, *args, **kwargs):
+        data = self.validate(*args, **kwargs)
+
+        assert isinstance(data.y, list)
+        n_signals = len(data.y)
+        n_samples = [len(_) for _ in data.y]
+        n = sum(n_samples)
+        x = np.concatenate(data.x) if len(data.x) else np.array([])
+        y = np.concatenate(data.y) if len(data.y) else np.array([])
+
+        # Generate the position array.
+        pos = np.empty((n, 2), dtype=np.float64)
+        pos[:, 0] = x.ravel()
+        pos[:, 1] = y.ravel()
+        assert pos.shape == (n, 2)
+
+        # Generate signal index.
+        signal_index = np.repeat(np.arange(n_signals), n_samples)
+        signal_index = _get_array(signal_index, (n, 1))
+        assert signal_index.shape == (n, 1)
+
+        # Masks.
+        masks = np.repeat(data.masks, n_samples, axis=0)
+
+        # Transform the positions.
+        if data.data_bounds is not None:
+            data_bounds = np.repeat(data.data_bounds, n_samples, axis=0)
+            self.data_range.from_bounds = data_bounds
+            pos = self.transforms.apply(pos)
+
+        assert pos.shape == (n, 2)
+        assert signal_index.shape == (n, 1)
+        assert masks.shape == (n, 1)
+
+        # Position and depth.
+        self.program['a_position'] = pos.astype(np.float32)
+        self.program['a_signal_index'] = signal_index.astype(np.float32)
+        self.program['a_mask'] = masks.astype(np.float32)
+
+        self.program['u_color'] = self.color
+        self.program['u_mask_max'] = _max(masks)
+
+
+#------------------------------------------------------------------------------
+# Other visuals
+#------------------------------------------------------------------------------
 
 class HistogramVisual(BaseVisual):
     _default_color = DEFAULT_COLOR
@@ -261,7 +475,10 @@ class HistogramVisual(BaseVisual):
         n_hists, n_bins = hist.shape
 
         # Validate the data.
-        color = _get_array(color, (n_hists, 4), HistogramVisual._default_color)
+        color = _get_array(color, (n_hists, 4),
+                           HistogramVisual._default_color,
+                           dtype=np.float32,
+                           )
 
         # Validate ylim.
         if ylim is None:
@@ -348,7 +565,8 @@ class TextVisual(BaseVisual):
 
     @staticmethod
     def validate(pos=None, text=None, anchor=None,
-                 data_bounds=None):
+                 data_bounds='auto',
+                 ):
 
         if text is None:
             text = []
@@ -371,13 +589,11 @@ class TextVisual(BaseVisual):
         assert anchor.ndim == 2
         assert anchor.shape == (n_text, 2)
 
-        # By default, we assume that the coordinates are in NDC.
-        if data_bounds is None:
-            data_bounds = NDC
-        data_bounds = _get_data_bounds(data_bounds, pos)
-        assert data_bounds.shape[0] == n_text
-        data_bounds = data_bounds.astype(np.float64)
-        assert data_bounds.shape == (n_text, 4)
+        if data_bounds is not None:
+            data_bounds = _get_data_bounds(data_bounds, pos)
+            assert data_bounds.shape[0] == n_text
+            data_bounds = data_bounds.astype(np.float64)
+            assert data_bounds.shape == (n_text, 4)
 
         return Bunch(pos=pos, text=text, anchor=anchor,
                      data_bounds=data_bounds)
@@ -429,20 +645,25 @@ class TextVisual(BaseVisual):
         a_lengths = np.repeat(a_lengths, 6)
 
         n_vertices = n_glyphs * 6
-        assert a_position.shape == (n_vertices, 2)
-        assert a_glyph_index.shape == (n_vertices,)
-        assert a_quad_index.shape == (n_vertices,)
-        assert a_anchor.shape == (n_vertices, 2)
-        assert a_lengths.shape == (n_vertices,)
 
         # Transform the positions.
-        data_bounds = data.data_bounds
-        data_bounds = np.repeat(data_bounds, lengths, axis=0)
-        data_bounds = np.repeat(data_bounds, 6, axis=0)
-        assert data_bounds.shape == (n_vertices, 4)
-        self.data_range.from_bounds = data_bounds
-        pos_tr = self.transforms.apply(a_position)
+        if data.data_bounds is not None:
+            data_bounds = data.data_bounds
+            data_bounds = np.repeat(data_bounds, lengths, axis=0)
+            data_bounds = np.repeat(data_bounds, 6, axis=0)
+            assert data_bounds.shape == (n_vertices, 4)
+            self.data_range.from_bounds = data_bounds
+            pos_tr = self.transforms.apply(a_position)
+            assert pos_tr.shape == (n_vertices, 2)
+        else:
+            pos_tr = a_position
+
         assert pos_tr.shape == (n_vertices, 2)
+        assert a_glyph_index.shape == (n_vertices,)
+        assert a_quad_index.shape == (n_vertices,)
+        assert a_char_index.shape == (n_vertices,)
+        assert a_anchor.shape == (n_vertices, 2)
+        assert a_lengths.shape == (n_vertices,)
 
         self.program['a_position'] = pos_tr.astype(np.float32)
         self.program['a_glyph_index'] = a_glyph_index.astype(np.float32)
@@ -469,7 +690,9 @@ class LineVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
     @staticmethod
-    def validate(pos=None, color=None, data_bounds=None):
+    def validate(pos=None, color=None,
+                 data_bounds=None,
+                 ):
         assert pos is not None
         pos = np.atleast_2d(pos)
         assert pos.ndim == 2
@@ -529,7 +752,9 @@ class PolygonVisual(BaseVisual):
         self.transforms.add_on_cpu(self.data_range)
 
     @staticmethod
-    def validate(pos=None, data_bounds=None):
+    def validate(pos=None,
+                 data_bounds=None,
+                 ):
         assert pos is not None
         pos = np.atleast_2d(pos)
         assert pos.ndim == 2

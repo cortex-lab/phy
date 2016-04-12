@@ -11,6 +11,7 @@ import logging
 import os.path as op
 
 import numpy as np
+from six import string_types
 from vispy import gloo
 
 from .transform import Range, NDC
@@ -146,18 +147,23 @@ def _get_texture(arr, default, n_items, from_bounds):
     return arr
 
 
-def _get_array(val, shape, default=None):
+def _get_array(val, shape, default=None, dtype=np.float64):
     """Ensure an object is an array with the specified shape."""
     assert val is not None or default is not None
     if hasattr(val, '__len__') and len(val) == 0:  # pragma: no cover
         val = None
-    out = np.zeros(shape, dtype=np.float64)
+    # Do nothing if the array is already correct.
+    if (isinstance(val, np.ndarray) and
+            val.shape == shape and
+            val.dtype == dtype):
+        return val
+    out = np.zeros(shape, dtype=dtype)
     # This solves `ValueError: could not broadcast input array from shape (n)
     # into shape (n, 1)`.
     if val is not None and isinstance(val, np.ndarray):
         if val.size == out.size:
             val = val.reshape(out.shape)
-    out[...] = val if val is not None else default
+    out.flat[:] = val if val is not None else default
     assert out.shape == shape
     return out
 
@@ -171,7 +177,8 @@ def _check_data_bounds(data_bounds):
 
 def _get_data_bounds(data_bounds, pos=None, length=None):
     """"Prepare data bounds, possibly using min/max of the data."""
-    if data_bounds is None:
+    if data_bounds is None or (isinstance(data_bounds, string_types) and
+                               data_bounds == 'auto'):
         if pos is not None and len(pos):
             m, M = pos.min(axis=0), pos.max(axis=0)
             data_bounds = [m[0], m[1], M[0], M[1]]
