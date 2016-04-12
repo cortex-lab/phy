@@ -520,15 +520,15 @@ class ManualClustering(object):
         self.cluster_meta.set('group', cluster_ids, group)
         self._global_history.action(self.cluster_meta)
 
-    def move_best(self, group):
+    def move_best(self, group=None):
         """Move all selected best clusters to a group."""
         self.move(self.cluster_view.selected, group)
 
-    def move_similar(self, group):
+    def move_similar(self, group=None):
         """Move all selected similar clusters to a group."""
         self.move(self.similarity_view.selected, group)
 
-    def move_all(self, group):
+    def move_all(self, group=None):
         """Move all selected clusters to a group."""
         self.move(self.selected, group)
 

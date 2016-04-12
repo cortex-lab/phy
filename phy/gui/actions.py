@@ -75,7 +75,7 @@ def _wrap_callback_args(f, docstring=None):  # pragma: no cover
         if (len(f_args) - len(argspec.defaults or ())) == 0:
             return f()
         # If there are args, need to display the dialog.
-        s, ok = _input_dialog(f.__name__, docstring)
+        s, ok = _input_dialog(getattr(f, '__name__', 'action'), docstring)
         if not ok or not s:
             return
         # Parse user-supplied arguments and call the function.
