@@ -216,8 +216,9 @@ class Controller(EventEmitter):
         arr = arr * masks[:, np.newaxis, :]
         # NOTE: on some datasets, there are a few outliers that screw up
         # the normalization. These parameters should be customizable.
-        m = np.percentile(arr, .05)
-        M = np.percentile(arr, 99.95)
+        a = .05
+        m = np.percentile(arr, a)
+        M = np.percentile(arr, 100 - a)
         return m, M
 
     def get_waveforms_amplitude(self, cluster_id):

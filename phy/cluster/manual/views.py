@@ -212,7 +212,7 @@ class WaveformView(ManualClusteringView):
         self._key_pressed = None
         self._overlap = False
         self.do_zoom_on_channels = True
-        self.do_show_labels = True
+        self.do_show_labels = False
         self.data_index = 0
 
         self.best_channels = best_channels or (lambda clusters: [])
@@ -223,7 +223,7 @@ class WaveformView(ManualClusteringView):
         self.n_channels = self.channel_positions.shape[0]
 
         # Initialize the view.
-        box_bounds = _get_boxes(channel_positions)
+        box_bounds = _get_boxes(channel_positions, margin=.1)
         super(WaveformView, self).__init__(layout='boxed',
                                            box_bounds=box_bounds,
                                            **kwargs)
@@ -484,7 +484,10 @@ class WaveformView(ManualClusteringView):
 
     def toggle_show_labels(self):
         self.do_show_labels = not self.do_show_labels
+        tmp = self.do_zoom_on_channels
+        self.do_zoom_on_channels = False
         self.on_select()
+        self.do_zoom_on_channels = tmp
 
     def zoom_on_channels(self, channels_rel):
         """Zoom on some channels."""
@@ -610,7 +613,7 @@ class TraceView(ManualClusteringView):
                  n_channels=None,
                  **kwargs):
 
-        self.do_show_labels = True
+        self.do_show_labels = False
 
         # traces is a function interval => [traces]
         # spikes is a function interval => [Bunch(...)]
