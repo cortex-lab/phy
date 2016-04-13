@@ -60,10 +60,17 @@ def _default_config(config_dir=None):
 
     from phy import IPlugin
 
-    class MyPlugin(IPlugin):
-        def attach_to_cli(self, cli):
-            pass
+    try:
+        import phycontrib
+    except:
+        pass
 
+    # Plugin example:
+    #
+    # class MyPlugin(IPlugin):
+    #     def attach_to_cli(self, cli):
+    #         # you can create phy subcommands here with click
+    #         pass
 
     c = get_config()
     c.Plugins.dirs = [r'{}']
