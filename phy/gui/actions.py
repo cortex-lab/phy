@@ -66,7 +66,10 @@ def _wrap_callback_args(f, docstring=None):  # pragma: no cover
     def wrapped(checked, *args):
         if args:
             return f(*args)
-        argspec = inspect.getargspec(f)
+        if isinstance(f, partial):
+            argspec = inspect.getargspec(f.func)
+        else:
+            argspec = inspect.getargspec(f)
         f_args = argspec.args
         if 'self' in f_args:
             f_args.remove('self')
