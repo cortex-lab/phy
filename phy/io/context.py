@@ -93,22 +93,19 @@ class Context(object):
                 dump(cache, fd)
 
     def memcache(self, f):
-        from joblib import hash
         name = _fullname(f)
         cache = self.load_memcache(name)
 
         @wraps(f)
-        def memcached(*args, **kwargs):
+        def memcached(*args):
             """Cache the function in memory."""
-            h = hash((args, kwargs))
-            if h in cache:
-                # logger.debug("Get %s(%s) from memcache.", name, str(args))
-                return cache[h]
-            else:
-                # logger.debug("Compute %s(%s).", name, str(args))
-                out = f(*args, **kwargs)
+            # The arguments need to be hashable. Much faster than using hash().
+            h = args
+            out = cache.get(h, None)
+            if out is None:
+                out = f(*args)
                 cache[h] = out
-                return out
+            return out
         return memcached
 
     def _get_path(self, name, location):

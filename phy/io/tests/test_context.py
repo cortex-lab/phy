@@ -99,7 +99,7 @@ def test_context_memcache(tempdir, context):
         return x ** 2
 
     # Compute the function a first time.
-    x = np.arange(10)
+    x = 10
     ae(f(x), x ** 2)
     assert len(_res) == 1
 
