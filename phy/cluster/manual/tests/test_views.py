@@ -91,8 +91,6 @@ def test_waveform_view(qtbot, gui):
     v = gui.controller.add_waveform_view(gui)
     _select_clusters(gui)
 
-    ac(v.boxed.box_size, (.1818, .0909), atol=1e-2)
-
     v.toggle_waveform_overlap()
     v.toggle_waveform_overlap()
 
@@ -100,7 +98,7 @@ def test_waveform_view(qtbot, gui):
     v.toggle_zoom_on_channels()
 
     v.toggle_show_labels()
-    assert not v.do_show_labels
+    assert v.do_show_labels
 
     # Box scaling.
     bs = v.boxed.box_size
@@ -190,7 +188,7 @@ def test_trace_view(qtbot, gui):
     v.widen()
 
     v.toggle_show_labels()
-    assert not v.do_show_labels
+    assert v.do_show_labels
 
     # Change channel scaling.
     bs = v.stacked.box_size
