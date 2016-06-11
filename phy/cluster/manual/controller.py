@@ -149,6 +149,11 @@ class Controller(EventEmitter):
         # Save the new cluster id on disk.
         @mc.clustering.connect
         def on_cluster(up):
+
+            # HACK: Update data structures.
+            self.cluster_ids = mc.clustering.cluster_ids
+            self.spike_clusters = mc.clustering.spike_clusters
+
             new_cluster_id = mc.clustering.new_cluster_id()
             logger.debug("Save the new cluster id: %d", new_cluster_id)
             self.context.save('new_cluster_id',
