@@ -564,7 +564,9 @@ def regular_subset(spikes, n_spikes_max=None, offset=0):
 
 def select_spikes(cluster_ids=None,
                   max_n_spikes_per_cluster=None,
-                  spikes_per_cluster=None):
+                  spikes_per_cluster=None,
+                  batch_size=None,
+                  ):
     """Return a selection of spikes belonging to the specified clusters."""
     assert _is_array_like(cluster_ids)
     if not len(cluster_ids):
@@ -581,7 +583,13 @@ def select_spikes(cluster_ids=None,
             n = int(max_n_spikes_per_cluster * exp(-.1 * (n_clusters - 1)))
             n = max(1, n)
             spikes = spikes_per_cluster(cluster)
-            selection[cluster] = regular_subset(spikes, n_spikes_max=n)
+            # Regular subselection.
+            if batch_size is None or len(spikes) <= max(batch_size, n):
+                spikes = regular_subset(spikes, n_spikes_max=n)
+            else:
+                # Batch selections of spikes.
+                spikes = get_excerpts(spikes, n // batch_size, batch_size)
+            selection[cluster] = spikes
     return _flatten_per_cluster(selection)
 
 
@@ -593,7 +601,9 @@ class Selector(object):
         self.spikes_per_cluster = spikes_per_cluster
 
     def select_spikes(self, cluster_ids=None,
-                      max_n_spikes_per_cluster=None):
+                      max_n_spikes_per_cluster=None,
+                      batch_size=None,
+                      ):
         if cluster_ids is None or not len(cluster_ids):
             return None
         ns = max_n_spikes_per_cluster
@@ -601,7 +611,9 @@ class Selector(object):
         # Select a subset of the spikes.
         return select_spikes(cluster_ids,
                              spikes_per_cluster=self.spikes_per_cluster,
-                             max_n_spikes_per_cluster=ns)
+                             max_n_spikes_per_cluster=ns,
+                             batch_size=batch_size,
+                             )
 
 
 # -----------------------------------------------------------------------------
