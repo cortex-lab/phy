@@ -331,7 +331,7 @@ class Table(HTMLWidget):
     @property
     def selected(self):
         """Currently selected rows."""
-        return [int(_) for _ in self.eval_js('table.selected')]
+        return [int(_) for _ in self.eval_js('table.selected') or ()]
 
     @property
     def current_sort(self):
