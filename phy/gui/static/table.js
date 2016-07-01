@@ -190,7 +190,14 @@ Table.prototype.select = function(ids, do_emit) {
     // Add the class.
     for (var i = 0; i < ids.length; i++) {
         ids[i] = parseInt(String(ids[i]));
-        this.rows[ids[i]].classList.add('selected');
+        var row = this.rows[ids[i]];
+        if (row) {
+            row.classList.add('selected');
+        }
+        else {
+            console.log("Skipping cluster " + String(ids[i]) +
+                        " which doesn't exist.");
+        }
     }
 
     this.selected = ids;
