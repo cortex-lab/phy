@@ -272,6 +272,7 @@ class WaveformView(ManualClusteringView):
         # Plot all waveforms.
         # OPTIM: avoid the loop.
         with self.building():
+            already_shown = set()
             for i, cl in enumerate(cluster_ids):
 
                 # Select the spikes corresponding to a given cluster.
@@ -326,8 +327,12 @@ class WaveformView(ManualClusteringView):
                           uniform=True,
                           )
                 # Add channel labels.
-                if self.do_show_labels and i == 0:
+                if self.do_show_labels:
                     for ch in unmasked:
+                        # Skip labels that have already been shown.
+                        if ch in already_shown:
+                            continue
+                        already_shown.add(ch)
                         self[ch].text(pos=[t[0, 0], 0.],
                                       # TODO: use real channel labels.
                                       text=str(ch),
