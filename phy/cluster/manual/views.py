@@ -610,8 +610,8 @@ class TraceView(ManualClusteringView):
         'go_right': 'alt+right',
         'decrease': 'alt+down',
         'increase': 'alt+up',
-        'widen': 'ctrl+alt+left',
-        'narrow': 'ctrl+alt+right',
+        'widen': 'alt+-',
+        'narrow': 'alt++',
     }
 
     def __init__(self,
@@ -745,12 +745,12 @@ class TraceView(ManualClusteringView):
 
     def set_interval(self, interval, change_status=True):
         """Display the traces and spikes in a given interval."""
+        interval = self._restrict_interval(interval)
         if interval == self._interval:
             return
-        self.clear()
-        interval = self._restrict_interval(interval)
         self._interval = interval
         start, end = interval
+        self.clear()
 
         # OPTIM: normalize time manually into [-1.0, 1.0].
         def _normalize_time(t):
