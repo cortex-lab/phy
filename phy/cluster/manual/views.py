@@ -278,8 +278,13 @@ class WaveformView(ManualClusteringView):
                 idx = spike_clusters == cl
                 n_spikes_clu = idx.sum()  # number of spikes in the cluster.
 
+                # Find the unmasked channels for those spikes.
+                unmasked = np.nonzero(np.mean(masks[idx, :], axis=0) > .1)[0]
+                n_unmasked = len(unmasked)
+                assert n_unmasked > 0
+
                 # Find the x coordinates.
-                t = _get_linear_x(n_spikes_clu * self.n_channels, n_samples)
+                t = _get_linear_x(n_spikes_clu * n_unmasked, n_samples)
                 if not self.overlap:
                     t = t + 2.5 * (i - (n_clusters - 1) / 2.)
                     # The total width should not depend on the number of
@@ -287,7 +292,7 @@ class WaveformView(ManualClusteringView):
                     t /= n_clusters
 
                 # Get the spike masks.
-                m = masks[idx, :].reshape((n_spikes_clu * self.n_channels, 1))
+                m = masks[idx, :][:, unmasked].reshape((-1, 1))
                 # HACK: on the GPU, we get the actual masks with fract(masks)
                 # since we add the relative cluster index. We need to ensure
                 # that the masks is never 1.0, otherwise it is interpreted as
@@ -301,17 +306,16 @@ class WaveformView(ManualClusteringView):
                 assert len(color) == 4
 
                 # Generate the box index (one number per channel).
-                box_index = np.arange(self.n_channels)
+                box_index = unmasked
                 box_index = np.repeat(box_index, n_samples)
                 box_index = np.tile(box_index, n_spikes_clu)
-                assert box_index.shape == (n_spikes_clu * self.n_channels *
+                assert box_index.shape == (n_spikes_clu * n_unmasked *
                                            n_samples)
 
                 # Generate the waveform array.
-                wave = w[idx, :, :]
+                wave = w[idx, :, :][:, :, unmasked]
                 wave = np.transpose(wave, (0, 2, 1))
-                wave = wave.reshape((n_spikes_clu * self.n_channels,
-                                     n_samples))
+                wave = wave.reshape((n_spikes_clu * n_unmasked, n_samples))
 
                 self.plot(x=t,
                           y=wave,
@@ -323,7 +327,7 @@ class WaveformView(ManualClusteringView):
                           )
                 # Add channel labels.
                 if self.do_show_labels and i == 0:
-                    for ch in range(self.n_channels):
+                    for ch in unmasked:
                         self[ch].text(pos=[t[0, 0], 0.],
                                       # TODO: use real channel labels.
                                       text=str(ch),
