@@ -163,13 +163,15 @@ class Controller(EventEmitter):
         self.manual_clustering = mc
         mc.add_column(self.get_probe_depth, name='depth')
 
-    def _select_spikes(self, cluster_id, n_max=None):
+    def _select_spikes(self, cluster_id, n_max=None, batch_size=None):
         assert isinstance(cluster_id, int)
         assert cluster_id >= 0
-        return self.selector.select_spikes([cluster_id], n_max)
+        return self.selector.select_spikes([cluster_id], n_max,
+                                           batch_size=batch_size)
 
-    def _select_data(self, cluster_id, arr, n_max=None):
-        spike_ids = self._select_spikes(cluster_id, n_max)
+    def _select_data(self, cluster_id, arr, n_max=None, batch_size=None):
+        spike_ids = self._select_spikes(cluster_id, n_max,
+                                        batch_size=batch_size)
         b = Bunch()
         b.data = arr[spike_ids]
         b.spike_ids = spike_ids
@@ -201,6 +203,7 @@ class Controller(EventEmitter):
         data = self._select_data(cluster_id,
                                  self.all_waveforms,
                                  self.n_spikes_waveforms,
+                                 batch_size=10,
                                  )
         # Cache the normalized waveforms.
         m, M = self.get_waveform_lims()
