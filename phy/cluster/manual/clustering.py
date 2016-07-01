@@ -179,7 +179,7 @@ class Clustering(EventEmitter):
     @property
     def cluster_ids(self):
         """Ordered list of ids of all non-empty clusters."""
-        return np.unique(self._spike_clusters)
+        return _unique(self._spike_clusters)
 
     def new_cluster_id(self):
         """Generate a brand new cluster id.
