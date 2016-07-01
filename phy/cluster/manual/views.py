@@ -736,6 +736,8 @@ class TraceView(ManualClusteringView):
 
     def set_interval(self, interval, change_status=True):
         """Display the traces and spikes in a given interval."""
+        if interval == self._interval:
+            return
         self.clear()
         interval = self._restrict_interval(interval)
         self._interval = interval
