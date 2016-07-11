@@ -280,6 +280,7 @@ class WaveformView(ManualClusteringView):
                 n_spikes_clu = idx.sum()  # number of spikes in the cluster.
 
                 # Find the unmasked channels for those spikes.
+                # TODO: make the threshold a parameter
                 unmasked = np.nonzero(np.mean(masks[idx, :], axis=0) > .1)[0]
                 n_unmasked = len(unmasked)
                 assert n_unmasked > 0
@@ -317,6 +318,22 @@ class WaveformView(ManualClusteringView):
                 wave = w[idx, :, :][:, :, unmasked]
                 wave = np.transpose(wave, (0, 2, 1))
                 wave = wave.reshape((n_spikes_clu * n_unmasked, n_samples))
+
+                # Show marks for masked channels.
+                masked = sorted(set(range(self.n_channels)) - set(unmasked))
+                tm = _get_linear_x(len(masked), 2)
+                bim = np.repeat(masked, 2)
+                if not self.overlap:
+                    tm = tm + 2.5 * (i - (n_clusters - 1) / 2.)
+                    # The total width should not depend on the number of
+                    # clusters.
+                    tm /= n_clusters
+
+                self.plot(x=tm,
+                          y=np.zeros((len(masked), 2)),
+                          color=(.5, .5, .5, .5),
+                          box_index=bim,
+                          )
 
                 self.plot(x=t,
                           y=wave,
