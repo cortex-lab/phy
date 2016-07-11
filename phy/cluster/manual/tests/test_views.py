@@ -188,7 +188,7 @@ def test_trace_view(qtbot, gui):
     v.widen()
 
     v.toggle_show_labels()
-    v.widen()
+    v.go_right()
     assert v.do_show_labels
 
     # Change channel scaling.
