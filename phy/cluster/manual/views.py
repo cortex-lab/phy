@@ -261,6 +261,7 @@ class WaveformView(ManualClusteringView):
         alpha = data.get('alpha', .5)
         spike_ids = data.spike_ids
         spike_clusters = data.spike_clusters
+        mask_threshold = data.mask_threshold
         w = data.data
         masks = data.masks
         n_spikes = len(spike_ids)
@@ -280,8 +281,8 @@ class WaveformView(ManualClusteringView):
                 n_spikes_clu = idx.sum()  # number of spikes in the cluster.
 
                 # Find the unmasked channels for those spikes.
-                # TODO: make the threshold a parameter
-                unmasked = np.nonzero(np.mean(masks[idx, :], axis=0) > .1)[0]
+                unmasked = np.nonzero(np.mean(masks[idx, :], axis=0) >
+                                      mask_threshold)[0]
                 n_unmasked = len(unmasked)
                 assert n_unmasked > 0
 

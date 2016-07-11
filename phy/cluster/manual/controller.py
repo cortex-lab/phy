@@ -56,6 +56,7 @@ class Controller(EventEmitter):
     n_spikes_background_features = 5000
     n_spikes_features_lim = 100
     n_spikes_close_clusters = 100
+    waveform_mask_treshold = .1
 
     # responsible for the cache
     def __init__(self, plugins=None, config_dir=None):
@@ -205,6 +206,7 @@ class Controller(EventEmitter):
                                  self.n_spikes_waveforms,
                                  batch_size=10,
                                  )
+        data['mask_threshold'] = self.waveform_mask_treshold
         # Cache the normalized waveforms.
         m, M = self.get_waveform_lims()
         data.data = _normalize(data.data, m, M)
