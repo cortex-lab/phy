@@ -15,11 +15,10 @@ import re
 import numpy as np
 from vispy.util.event import Event
 
-from phy.io.array import _get_padded, get_excerpts
+from phy.io.array import _get_padded
 from phy.gui import Actions
 from phy.plot import View, _get_linear_x
 from phy.plot.utils import _get_boxes
-from phy.stats import correlograms
 from phy.utils import Bunch
 from phy.utils._color import _spike_colors, ColorSelector, _colormap
 
@@ -1308,8 +1307,6 @@ class FeatureView(ManualClusteringView):
 # -----------------------------------------------------------------------------
 
 class CorrelogramView(ManualClusteringView):
-    excerpt_size = 1000
-    n_excerpts = 100
     bin_size = 1e-3
     window_size = 50e-3
     uniform_normalization = False
@@ -1319,26 +1316,20 @@ class CorrelogramView(ManualClusteringView):
         'go_right': 'alt+right',
     }
 
-    def __init__(self,
-                 spike_times=None,
-                 spike_clusters=None,
+    def __init__(self, correlograms=None,
                  sample_rate=None,
                  **kwargs):
 
         assert sample_rate > 0
         self.sample_rate = float(sample_rate)
 
-        self.spike_times = np.asarray(spike_times)
-        self.n_spikes, = self.spike_times.shape
-
         # Initialize the view.
         super(CorrelogramView, self).__init__(layout='grid',
                                               shape=(1, 1),
                                               **kwargs)
 
-        # Spike clusters.
-        assert spike_clusters.shape == (self.n_spikes,)
-        self.spike_clusters = spike_clusters
+        # Function clusters => CCGs.
+        self.correlograms = correlograms
 
         # Set the default bin and window size.
         self.set_bin_window(bin_size=self.bin_size,
@@ -1357,27 +1348,6 @@ class CorrelogramView(ManualClusteringView):
         b, w = self.bin_size * 1000, self.window_size * 1000
         self.set_status('Bin: {:.1f} ms. Window: {:.1f} ms.'.format(b, w))
 
-    def _compute_correlograms(self, cluster_ids):
-
-        # Keep spikes belonging to the selected clusters.
-        ind = np.nonzero(np.in1d(self.spike_clusters, cluster_ids))[0]
-        ind = get_excerpts(ind,
-                           excerpt_size=self.excerpt_size,
-                           n_excerpts=self.n_excerpts)
-
-        st = self.spike_times[ind]
-        sc = self.spike_clusters[ind]
-
-        # Compute all pairwise correlograms.
-        ccg = correlograms(st, sc,
-                           cluster_ids=cluster_ids,
-                           sample_rate=self.sample_rate,
-                           bin_size=self.bin_size,
-                           window_size=self.window_size,
-                           )
-
-        return ccg
-
     def on_select(self, cluster_ids=None):
         super(CorrelogramView, self).on_select(cluster_ids)
         cluster_ids = self.cluster_ids
@@ -1385,7 +1355,10 @@ class CorrelogramView(ManualClusteringView):
         if n_clusters == 0:
             return
 
-        ccg = self._compute_correlograms(cluster_ids)
+        ccg = self.correlograms(tuple(cluster_ids),
+                                self.bin_size,
+                                self.window_size,
+                                )
         ylim = [ccg.max()] if not self.uniform_normalization else None
 
         colors = _spike_colors(np.arange(n_clusters), alpha=1.)
@@ -1424,8 +1397,6 @@ class CorrelogramView(ManualClusteringView):
     def state(self):
         return Bunch(bin_size=self.bin_size,
                      window_size=self.window_size,
-                     excerpt_size=self.excerpt_size,
-                     n_excerpts=self.n_excerpts,
                      uniform_normalization=self.uniform_normalization,
                      )
 
@@ -1475,7 +1446,7 @@ class ScatterView(ManualClusteringView):
         with self.building():
             for i, cl in enumerate(cluster_ids):
                 # Skip non-existing clusters.
-                if i >= len(data):
+                if i >= len(data):  # pragma: no cover
                     continue
                 d = data[i]
                 spike_ids = d.spike_ids

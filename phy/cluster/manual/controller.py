@@ -20,12 +20,13 @@ from phy.cluster.manual.views import (WaveformView,
                                       extract_spikes,
                                       )
 from phy.gui import GUI
-from phy.io.array import _get_data_lim, concat_per_cluster
+from phy.io.array import _get_data_lim, concat_per_cluster, get_excerpts
 from phy.io import Context, Selector
 from phy.plot.transform import _normalize
 from phy.stats.clusters import (mean,
                                 get_waveform_amplitude,
                                 )
+from phy.stats.ccg import correlograms
 from phy.utils import Bunch, load_master_config, get_plugin, EventEmitter
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,8 @@ class Controller(EventEmitter):
     n_spikes_background_features = 5000
     n_spikes_features_lim = 100
     n_spikes_close_clusters = 100
+    n_excerpts_correlograms = 1000
+    excerpt_size_correlograms = 100
     # Channels with a mean mask lower than this won't be shown in the
     # waveform view:
     waveform_mask_threshold = .1
@@ -135,6 +138,7 @@ class Controller(EventEmitter):
             self.get_close_clusters)
         self.get_probe_depth = ctx.memcache(
             self.get_probe_depth)
+        self.get_correlograms = ctx.memcache(self.get_correlograms)
 
         self.spikes_per_cluster = ctx.memcache(self.spikes_per_cluster)
 
@@ -341,6 +345,27 @@ class Controller(EventEmitter):
     def spikes_per_cluster(self, cluster_id):
         return np.nonzero(self.spike_clusters == cluster_id)[0]
 
+    def get_correlograms(self, cluster_ids, bin_size, window_size):
+
+        # Keep spikes belonging to the selected clusters.
+        ind = np.nonzero(np.in1d(self.spike_clusters, cluster_ids))[0]
+        ind = get_excerpts(ind,
+                           excerpt_size=self.excerpt_size_correlograms,
+                           n_excerpts=self.n_excerpts_correlograms)
+
+        st = self.spike_times[ind]
+        sc = self.spike_clusters[ind]
+
+        # Compute all pairwise correlograms.
+        ccg = correlograms(st, sc,
+                           cluster_ids=cluster_ids,
+                           sample_rate=self.sample_rate,
+                           bin_size=bin_size,
+                           window_size=window_size,
+                           )
+
+        return ccg
+
     # View methods
     # -------------------------------------------------------------------------
 
@@ -377,8 +402,7 @@ class Controller(EventEmitter):
         return self._add_view(gui, v)
 
     def add_correlogram_view(self, gui):
-        v = CorrelogramView(spike_times=self.spike_times,
-                            spike_clusters=self.spike_clusters,
+        v = CorrelogramView(correlograms=self.get_correlograms,
                             sample_rate=self.sample_rate,
                             )
         return self._add_view(gui, v)
