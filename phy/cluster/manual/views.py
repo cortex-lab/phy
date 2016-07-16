@@ -1477,10 +1477,14 @@ class ScatterView(ManualClusteringView):
         if data is None:
             self.clear()
             return
+        assert isinstance(data, list)
 
         # Plot the amplitudes.
         with self.building():
             for i, cl in enumerate(cluster_ids):
+                # Skip non-existing clusters.
+                if i >= len(data):
+                    continue
                 d = data[i]
                 spike_ids = d.spike_ids
                 x = d.x
