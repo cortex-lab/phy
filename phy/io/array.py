@@ -16,7 +16,7 @@ import os.path as op
 
 import numpy as np
 
-from phy.utils import Bunch, _as_scalar, _as_scalars
+from phy.utils import _as_scalar, _as_scalars
 from phy.utils._types import _as_array, _is_array_like
 
 logger = logging.getLogger(__name__)
@@ -220,16 +220,8 @@ def concat_per_cluster(f):
         # Single cluster.
         if not hasattr(cluster_ids, '__len__'):
             return f(cluster_ids, **kwargs)
-        # Concatenate the result of multiple clusters.
-        l = [f(c, **kwargs) for c in cluster_ids]
-        # Handle the case where every function returns a list of Bunch.
-        if l and isinstance(l[0], list):
-            # We assume that all items have the same length.
-            n = len(l[0])
-            return [Bunch(_accumulate([item[i] for item in l]))
-                    for i in range(n)]
-        else:
-            return Bunch(_accumulate(l))
+        # Return the list of cluster-dependent objects.
+        return [f(c, **kwargs) for c in cluster_ids]
     return wrapped
 
 

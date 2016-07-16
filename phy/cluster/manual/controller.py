@@ -178,7 +178,6 @@ class Controller(EventEmitter):
         b = Bunch()
         b.data = arr[spike_ids]
         b.spike_ids = spike_ids
-        b.spike_clusters = self.spike_clusters[spike_ids]
         b.masks = self.all_masks[spike_ids]
         return b
 

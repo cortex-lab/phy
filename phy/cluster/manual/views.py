@@ -15,7 +15,7 @@ import re
 import numpy as np
 from vispy.util.event import Event
 
-from phy.io.array import _index_of, _get_padded, get_excerpts
+from phy.io.array import _get_padded, get_excerpts
 from phy.gui import Actions
 from phy.plot import View, _get_linear_x
 from phy.plot.utils import _get_boxes
@@ -256,32 +256,28 @@ class WaveformView(ManualClusteringView):
 
         # Load the waveform subset.
         data = self.waveforms(cluster_ids)
-        # Take one element in the list.
-        data = data[self.data_index % len(data)]
-        alpha = data.get('alpha', .5)
-        spike_ids = data.spike_ids
-        spike_clusters = data.spike_clusters
-        mask_threshold = data.mask_threshold
-        w = data.data
-        masks = data.masks
-        n_spikes = len(spike_ids)
-        assert w.ndim == 3
-        n_samples = w.shape[1]
-        assert w.shape == (n_spikes, n_samples, self.n_channels)
-        assert masks.shape == (n_spikes, self.n_channels)
 
         # Plot all waveforms.
-        # OPTIM: avoid the loop.
         with self.building():
             already_shown = set()
             for i, cl in enumerate(cluster_ids):
+                # Select one cluster.
+                d = data[i]
 
-                # Select the spikes corresponding to a given cluster.
-                idx = spike_clusters == cl
-                n_spikes_clu = idx.sum()  # number of spikes in the cluster.
+                # Select the current set of waveforms to display.
+                d = d[self.data_index % len(d)]
+
+                alpha = d.get('alpha', .5)
+                mask_threshold = d.mask_threshold
+                w = d.data
+                masks = d.masks
+                n_samples = w.shape[1]
+
+                n_spikes_clu = w.shape[0]
+                assert masks.shape[0] == n_spikes_clu
 
                 # Find the unmasked channels for those spikes.
-                unmasked = np.nonzero(np.mean(masks[idx, :], axis=0) >
+                unmasked = np.nonzero(np.mean(masks, axis=0) >
                                       mask_threshold)[0]
                 n_unmasked = len(unmasked)
                 assert n_unmasked > 0
@@ -295,7 +291,7 @@ class WaveformView(ManualClusteringView):
                     t /= n_clusters
 
                 # Get the spike masks.
-                m = masks[idx, :][:, unmasked].reshape((-1, 1))
+                m = masks[:, unmasked].reshape((-1, 1))
                 # HACK: on the GPU, we get the actual masks with fract(masks)
                 # since we add the relative cluster index. We need to ensure
                 # that the masks is never 1.0, otherwise it is interpreted as
@@ -313,10 +309,10 @@ class WaveformView(ManualClusteringView):
                 box_index = np.repeat(box_index, n_samples)
                 box_index = np.tile(box_index, n_spikes_clu)
                 assert box_index.shape == (n_spikes_clu * n_unmasked *
-                                           n_samples)
+                                           n_samples,)
 
                 # Generate the waveform array.
-                wave = w[idx, :, :][:, :, unmasked]
+                wave = w[:, :, unmasked]
                 wave = np.transpose(wave, (0, 2, 1))
                 wave = wave.reshape((n_spikes_clu * n_unmasked, n_samples))
 
@@ -1150,12 +1146,6 @@ class FeatureView(ManualClusteringView):
 
         # Get the spikes, features, masks.
         data = self.features(cluster_ids)
-        spike_ids = data.spike_ids
-        f = data.data
-        masks = data.masks
-        assert f.ndim == 3
-        assert masks.ndim == 2
-        assert spike_ids.shape[0] == f.shape[0] == masks.shape[0]
 
         # Get the background features.
         data_bg = self.background_features
@@ -1163,7 +1153,6 @@ class FeatureView(ManualClusteringView):
             spike_ids_bg = data_bg.spike_ids
             features_bg = data_bg.data
             masks_bg = data_bg.masks
-
         # Select the dimensions.
         # Choose the channels automatically unless fixed_channels is set.
         if (not self.fixed_channels or self.channels is None):
@@ -1192,10 +1181,6 @@ class FeatureView(ManualClusteringView):
                     if i > j:
                         continue
 
-                    # Retrieve the x and y values for the subplot.
-                    x = self._get_feature(x_dim[i, j], spike_ids, f)
-                    y = self._get_feature(y_dim[i, j], spike_ids, f)
-
                     if data_bg is not None:
                         # Retrieve the x and y values for the background
                         # spikes.
@@ -1211,11 +1196,19 @@ class FeatureView(ManualClusteringView):
 
                     # Cluster features.
                     for clu_idx, clu in enumerate(cluster_ids):
-                        # TODO: compute this only once, outside the loop.
-                        idx = data.spike_clusters == clu
+
+                        d = data[clu_idx]
+                        f = d.data
+                        masks = d.masks
+                        spike_ids = d.spike_ids
+
+                        # Retrieve the x and y values for the subplot.
+                        x = self._get_feature(x_dim[i, j], spike_ids, f)
+                        y = self._get_feature(y_dim[i, j], spike_ids, f)
+
                         self._plot_features(i, j, x_dim, y_dim,
-                                            x[idx], y[idx],
-                                            masks=masks[idx],
+                                            x, y,
+                                            masks=masks,
                                             clu_idx=clu_idx,
                                             )
 
@@ -1265,13 +1258,19 @@ class FeatureView(ManualClusteringView):
                                           n_cols=self.n_cols,
                                           top_left_attribute=tla)
         data = self.features(self.cluster_ids, load_all=True)
-        spike_ids = data.spike_ids
-        f = data.data
-        i, j = self.lasso.box
 
-        x = self._get_feature(x_dim[i, j], spike_ids, f)
-        y = self._get_feature(y_dim[i, j], spike_ids, f)
-        pos = np.c_[x, y].astype(np.float64)
+        # Concatenate the points from all selected clusters.
+        assert isinstance(data, list)
+        pos = []
+        for d in data:
+            spike_ids = d.spike_ids
+            f = d.data
+            i, j = self.lasso.box
+
+            x = self._get_feature(x_dim[i, j], spike_ids, f)
+            y = self._get_feature(y_dim[i, j], spike_ids, f)
+            pos.append(np.c_[x, y].astype(np.float64))
+        pos = np.vstack(pos)
 
         ind = self.lasso.in_polygon(pos)
         self.lasso.clear()
@@ -1478,29 +1477,20 @@ class ScatterView(ManualClusteringView):
         if data is None:
             self.clear()
             return
-        spike_ids = data.spike_ids
-        spike_clusters = data.spike_clusters
-        x = data.x
-        y = data.y
-        n_spikes = len(spike_ids)
-        assert n_spikes > 0
-        assert spike_clusters.shape == (n_spikes,)
-        assert x.shape == (n_spikes,)
-        assert y.shape == (n_spikes,)
-
-        # Get the spike clusters.
-        sc = _index_of(spike_clusters, cluster_ids)
 
         # Plot the amplitudes.
         with self.building():
-            m = np.ones(n_spikes)
-            # Get the color of the markers.
-            color = _spike_colors(sc, masks=m)
-            assert color.shape == (n_spikes, 4)
-            ms = (self._default_marker_size if sc is not None else 1.)
+            for i, cl in enumerate(cluster_ids):
+                d = data[i]
+                spike_ids = d.spike_ids
+                x = d.x
+                y = d.y
+                n_spikes = len(spike_ids)
+                assert n_spikes > 0
+                assert x.shape == (n_spikes,)
+                assert y.shape == (n_spikes,)
 
-            self.scatter(x=x,
-                         y=y,
-                         color=color,
-                         size=ms * np.ones(n_spikes),
-                         )
+                self.scatter(x=x, y=y,
+                             color=tuple(_colormap(i)) + (.5,),
+                             size=self._default_marker_size,
+                             )

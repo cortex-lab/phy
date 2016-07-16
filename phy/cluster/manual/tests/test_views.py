@@ -233,12 +233,12 @@ def test_feature_view(qtbot, gui):
 
 def test_scatter_view(qtbot, gui):
     n = 1000
-    v = ScatterView(coords=lambda c: Bunch(x=np.random.randn(n),
-                                           y=np.random.randn(n),
-                                           spike_ids=np.arange(n),
-                                           spike_clusters=np.ones(n).
-                                           astype(np.int32) * c[0],
-                                           ) if 2 not in c else None,
+    v = ScatterView(coords=lambda c: [Bunch(x=np.random.randn(n),
+                                            y=np.random.randn(n),
+                                            spike_ids=np.arange(n),
+                                            spike_clusters=np.ones(n).
+                                            astype(np.int32) * c[0],
+                                            )] if 2 not in c else None,
                     # data_bounds=[-3, -3, 3, 3],
                     )
     v.attach(gui)
