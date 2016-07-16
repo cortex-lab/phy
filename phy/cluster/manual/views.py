@@ -1308,7 +1308,7 @@ class FeatureView(ManualClusteringView):
 # -----------------------------------------------------------------------------
 
 class CorrelogramView(ManualClusteringView):
-    excerpt_size = 10000
+    excerpt_size = 1000
     n_excerpts = 100
     bin_size = 1e-3
     window_size = 50e-3
@@ -1360,21 +1360,13 @@ class CorrelogramView(ManualClusteringView):
     def _compute_correlograms(self, cluster_ids):
 
         # Keep spikes belonging to the selected clusters.
-        ind = np.in1d(self.spike_clusters, cluster_ids)
+        ind = np.nonzero(np.in1d(self.spike_clusters, cluster_ids))[0]
+        ind = get_excerpts(ind,
+                           excerpt_size=self.excerpt_size,
+                           n_excerpts=self.n_excerpts)
+
         st = self.spike_times[ind]
         sc = self.spike_clusters[ind]
-
-        # Take excerpts of the spikes.
-        n_spikes_total = len(st)
-        st = get_excerpts(st, excerpt_size=self.excerpt_size,
-                          n_excerpts=self.n_excerpts)
-        sc = get_excerpts(sc, excerpt_size=self.excerpt_size,
-                          n_excerpts=self.n_excerpts)
-        n_spikes_exerpts = len(st)
-        logger.log(5, "Computing correlograms for clusters %s (%d/%d spikes).",
-                   ', '.join(map(str, cluster_ids)),
-                   n_spikes_exerpts, n_spikes_total,
-                   )
 
         # Compute all pairwise correlograms.
         ccg = correlograms(st, sc,
