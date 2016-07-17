@@ -324,7 +324,12 @@ class WaveformLoader(object):
             # TODO: vectorize filtering?
             w = self._filter(w, axis=0)
             assert w.shape == (self._n_samples_extract, nc)
-            waveforms[i, :, channels] = w.T
+
+            # NOTE: this makes no sense... :(
+            try:
+                waveforms[i, :, channels] = w
+            except ValueError:
+                waveforms[i, :, channels] = w.T
 
         # Remove the margin.
         margin_before, margin_after = self._filter_margin
