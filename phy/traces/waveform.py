@@ -290,12 +290,13 @@ class WaveformLoader(object):
         n_spikes = len(spike_ids)
 
         # Initialize the array.
-        shape = (n_spikes, self._n_samples_extract, self.n_channels)
+        # NOTE: last dimension is time to simplify things.
+        shape = (n_spikes, self.n_channels, self._n_samples_extract)
         waveforms = np.zeros(shape, dtype=np.float32)
 
         # No traces: return null arrays.
         if self.n_samples_trace == 0:
-            return waveforms
+            return np.transpose(waveforms, (0, 2, 1))
 
         # Load all spikes.
         for i, spike_id in enumerate(spike_ids):
@@ -315,31 +316,31 @@ class WaveformLoader(object):
                 nc = self.n_channels
 
             # Extract the waveforms on the unmasked channels.
-            # try:
-            w = self._load_at(time, channels)
-            # except ValueError as e:  # pragma: no cover
-            #     logger.warn("Error while loading waveform: %s", str(e))
-            #     continue
+            try:
+                w = self._load_at(time, channels)
+            except ValueError as e:  # pragma: no cover
+                logger.warn("Error while loading waveform: %s", str(e))
+                continue
 
-            # TODO: vectorize filtering?
-            w = self._filter(w, axis=0)
             assert w.shape == (self._n_samples_extract, nc)
 
-            # NOTE: this makes no sense... :(
-            try:
-                waveforms[i, :, channels] = w
-            except ValueError:
-                waveforms[i, :, channels] = w.T
+            waveforms[i, channels, :] = w.T
+
+        waveforms_f = waveforms.reshape((-1, self._n_samples_extract))
+        waveforms_f = self._filter(waveforms_f, axis=1)
+        waveforms_f = waveforms_f.reshape((n_spikes, self.n_channels,
+                                           self._n_samples_extract))
 
         # Remove the margin.
         margin_before, margin_after = self._filter_margin
         if margin_after > 0:
             assert margin_before >= 0
-            waveforms = waveforms[:, margin_before:-margin_after, :]
+            waveforms_f = waveforms_f[:, :, margin_before:-margin_after]
 
-        assert waveforms.shape == (n_spikes,
-                                   self.n_samples_waveforms,
-                                   self.n_channels,
-                                   )
+        assert waveforms_f.shape == (n_spikes,
+                                     self.n_channels,
+                                     self.n_samples_waveforms,
+                                     )
 
-        return waveforms
+        # NOTE: we transpose before returning the array.
+        return np.transpose(waveforms_f, (0, 2, 1))
