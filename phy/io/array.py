@@ -30,15 +30,15 @@ def _range_from_slice(myslice, start=None, stop=None, step=None, length=None):
     """Convert a slice to an array of integers."""
     assert isinstance(myslice, slice)
     # Find 'step'.
-    step = step if step is not None else myslice.step
+    step = myslice.step if myslice.step is not None else step
     if step is None:
         step = 1
     # Find 'start'.
-    start = start if start is not None else myslice.start
+    start = myslice.start if myslice.start is not None else start
     if start is None:
         start = 0
     # Find 'stop' as a function of length if 'stop' is unspecified.
-    stop = stop if stop is not None else myslice.stop
+    stop = myslice.stop if myslice.stop is not None else stop
     if length is not None:
         stop_inferred = floor(start + step * length)
         if stop is not None and stop < stop_inferred:

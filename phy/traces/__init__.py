@@ -4,4 +4,4 @@
 """Spike detection, waveform extraction."""
 
 from .filter import Filter, Whitening
-from .waveform import WaveformLoader, WaveformExtractor, SpikeLoader
+from .waveform import WaveformLoader, WaveformExtractor
