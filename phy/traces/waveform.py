@@ -306,7 +306,7 @@ class WaveformLoader(object):
             # Find unmasked channels.
             if (self._masks is not None and
                     self._mask_threshold is not None):
-                channels = self._masks[spike_id] >= 0
+                channels = self._masks[spike_id] >= self._mask_threshold
                 channels = np.nonzero(channels)[0]
                 if len(channels):
                     assert channels[-1] < self.n_channels
@@ -326,8 +326,11 @@ class WaveformLoader(object):
 
             waveforms[i, channels, :] = w.T
 
+        # Filter the waveforms.
         waveforms_f = waveforms.reshape((-1, self._n_samples_extract))
-        waveforms_f = self._filter(waveforms_f, axis=1)
+        # Only filter the non-zero waveforms.
+        unmasked = waveforms_f.max(axis=1) != 0
+        waveforms_f[unmasked] = self._filter(waveforms_f[unmasked], axis=1)
         waveforms_f = waveforms_f.reshape((n_spikes, self.n_channels,
                                            self._n_samples_extract))
 
