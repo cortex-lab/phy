@@ -205,6 +205,8 @@ class WaveformLoader(object):
         self.n_spikes = len(spike_samples)
 
         self._masks = masks
+        if masks is not None:
+            assert self._masks.shape == (self.n_spikes, self.n_channels)
         self._mask_threshold = mask_threshold
 
         # Define filter.
@@ -232,6 +234,10 @@ class WaveformLoader(object):
         self._n_samples_extract = (self.n_samples_waveforms +
                                    sum(self._filter_margin))
 
+        self.dtype = np.float32
+        self.shape = (self.n_spikes, self._n_samples_extract, self.n_channels)
+        self.ndim = 3
+
     @property
     def traces(self):
         """Raw traces."""
@@ -248,6 +254,8 @@ class WaveformLoader(object):
 
     def _load_at(self, time, channels=None):
         """Load a waveform at a given time."""
+        if channels is None:
+            channels = slice(None, None, None)
         time = int(time)
         time_o = time
         ns = self.n_samples_trace
@@ -256,8 +264,7 @@ class WaveformLoader(object):
         slice_extract = _slice(time_o,
                                self.n_samples_before_after,
                                self._filter_margin)
-        extract = self._traces[slice_extract,
-                               channels or slice(None, None, None)]
+        extract = self._traces[slice_extract, channels]
 
         # Pad the extracted chunk if needed.
         if slice_extract.start <= 0:
@@ -298,23 +305,25 @@ class WaveformLoader(object):
             # Find unmasked channels.
             if (self._masks is not None and
                     self._mask_threshold is not None):
-                channels = self._masks[spike_id, :] > self._mask_threshold
+                channels = self._masks[spike_id] > self._mask_threshold
+                # channels = np.nonzero(channels)[0]
+                # nc = len(channels)
                 nc = channels.sum()
             else:
                 channels = slice(None, None, None)
                 nc = self.n_channels
 
             # Extract the waveforms on the unmasked channels.
-            try:
-                w = self._load_at(time, channels)
-            except ValueError as e:  # pragma: no cover
-                logger.warn("Error while loading waveform: %s", str(e))
-                continue
+            # try:
+            w = self._load_at(time, channels)
+            # except ValueError as e:  # pragma: no cover
+            #     logger.warn("Error while loading waveform: %s", str(e))
+            #     continue
 
             # TODO: vectorize filtering?
             w = self._filter(w, axis=0)
             assert w.shape == (self._n_samples_extract, nc)
-            waveforms[i, channels] = w
+            waveforms[i, :, channels].flat = w.ravel()
 
         # Remove the margin.
         margin_before, margin_after = self._filter_margin
