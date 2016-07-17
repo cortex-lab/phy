@@ -8,7 +8,7 @@
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import raises, fixture
+from pytest import raises
 
 from phy.io.mock import (artificial_traces,
                          artificial_spike_samples,
@@ -18,7 +18,6 @@ from ..waveform import (_slice,
                         WaveformLoader,
                         WaveformExtractor,
                         )
-from ..filter import bandpass_filter, apply_filter
 
 
 #------------------------------------------------------------------------------
