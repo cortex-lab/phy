@@ -74,6 +74,8 @@ def _inverse(value):
 
 def _normalize(arr, m, M):
     d = float(M - m)
+    if d == 0:
+        return arr
     b = 2. / d
     a = -1 - m / d
     arr *= b

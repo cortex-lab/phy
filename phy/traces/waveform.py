@@ -264,7 +264,7 @@ class WaveformLoader(object):
         slice_extract = _slice(time_o,
                                self.n_samples_before_after,
                                self._filter_margin)
-        extract = self._traces[slice_extract, channels]
+        extract = self._traces[slice_extract][:, channels].astype(np.float32)
 
         # Pad the extracted chunk if needed.
         if slice_extract.start <= 0:
@@ -305,10 +305,11 @@ class WaveformLoader(object):
             # Find unmasked channels.
             if (self._masks is not None and
                     self._mask_threshold is not None):
-                channels = self._masks[spike_id] > self._mask_threshold
-                # channels = np.nonzero(channels)[0]
-                # nc = len(channels)
-                nc = channels.sum()
+                channels = self._masks[spike_id] >= 0
+                channels = np.nonzero(channels)[0]
+                if len(channels):
+                    assert channels[-1] < self.n_channels
+                nc = len(channels)
             else:
                 channels = slice(None, None, None)
                 nc = self.n_channels
@@ -323,7 +324,7 @@ class WaveformLoader(object):
             # TODO: vectorize filtering?
             w = self._filter(w, axis=0)
             assert w.shape == (self._n_samples_extract, nc)
-            waveforms[i, :, channels].flat = w.ravel()
+            waveforms[i, :, channels] = w.T
 
         # Remove the margin.
         margin_before, margin_after = self._filter_margin

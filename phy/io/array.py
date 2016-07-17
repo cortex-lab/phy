@@ -352,8 +352,9 @@ class ConcatenatedArrays(object):
         # Single array case.
         if rec_start == rec_stop:
             # Apply the rest of the index.
-            return _fill_index(self.arrs[rec_start][start_rel:stop_rel],
-                               item)[..., cols]
+            out = _fill_index(self.arrs[rec_start][start_rel:stop_rel], item)
+            out = out[..., cols]
+            return out
         chunk_start = self.arrs[rec_start][start_rel:]
         chunk_stop = self.arrs[rec_stop][:stop_rel]
         # Concatenate all chunks.
