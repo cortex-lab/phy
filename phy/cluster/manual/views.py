@@ -267,18 +267,16 @@ class WaveformView(ManualClusteringView):
                 d = d[self.data_index % len(d)]
 
                 alpha = d.get('alpha', .5)
-                mask_threshold = d.mask_threshold
-                w = d.data
+                # mask_threshold = d.mask_threshold
+                wave = d.data
                 masks = d.masks
-                n_samples = w.shape[1]
 
-                n_spikes_clu = w.shape[0]
+                n_spikes_clu, n_samples, n_unmasked = wave.shape
                 assert masks.shape[0] == n_spikes_clu
 
                 # Find the unmasked channels for those spikes.
-                unmasked = np.nonzero(np.mean(masks, axis=0) >
-                                      mask_threshold)[0]
-                n_unmasked = len(unmasked)
+                unmasked = d.get('channels', np.arange(self.n_channels))
+                assert n_unmasked == len(unmasked)
                 assert n_unmasked > 0
 
                 # Find the x coordinates.
@@ -311,7 +309,6 @@ class WaveformView(ManualClusteringView):
                                            n_samples,)
 
                 # Generate the waveform array.
-                wave = w[:, :, unmasked]
                 wave = np.transpose(wave, (0, 2, 1))
                 wave = wave.reshape((n_spikes_clu * n_unmasked, n_samples))
 

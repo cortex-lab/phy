@@ -211,10 +211,15 @@ class Controller(EventEmitter):
                                  self.n_spikes_waveforms,
                                  batch_size=10,
                                  )
-        data['mask_threshold'] = self.waveform_mask_threshold
+        # data.mask_threshold = self.waveform_mask_threshold
+        # Sparsify the waveforms.
+        w = data.data
+        channels = np.nonzero(w.mean(axis=1).mean(axis=0))[0]
+        w = w[:, :, channels]
+        data.channels = channels
         # Cache the normalized waveforms.
         m, M = self.get_waveform_lims()
-        data.data = _normalize(data.data, m, M)
+        data.data = _normalize(w, m, M)
         return [data]
 
     def get_mean_waveforms(self, cluster_id):
