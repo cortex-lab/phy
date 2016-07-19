@@ -225,7 +225,6 @@ class GUI(QMainWindow):
         """Qt slot when the window is closed."""
         if self._closed:
             return
-        self._closed = True
         res = self.emit('close')
         # Discard the close event if False is returned by one of the callback
         # functions.
@@ -233,6 +232,7 @@ class GUI(QMainWindow):
             e.ignore()
             return
         super(GUI, self).closeEvent(e)
+        self._closed = True
 
     def show(self):
         """Show the window."""
