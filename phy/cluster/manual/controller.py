@@ -267,6 +267,8 @@ class Controller(EventEmitter):
         spike_ids = slice(None, None, k)
         b = Bunch()
         b.data = self.all_features[spike_ids]
+        m = self.get_feature_lim()
+        b.data = _normalize(b.data.copy(), -m, +m)
         b.spike_ids = spike_ids
         b.spike_clusters = self.spike_clusters[spike_ids]
         b.masks = self.all_masks[spike_ids]
