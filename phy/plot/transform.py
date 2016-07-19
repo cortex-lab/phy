@@ -77,7 +77,7 @@ def _normalize(arr, m, M):
     if d == 0:
         return arr
     b = 2. / d
-    a = -1 - m / d
+    a = -1 - 2. * m / d
     arr *= b
     arr += a
     return arr
