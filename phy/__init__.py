@@ -67,6 +67,18 @@ if '--debug' in sys.argv:  # pragma: no cover
     sys.argv.remove('--debug')
 
 
+PDB = False
+if '--pdb' in sys.argv:  # pragma: no cover
+    PDB = True
+    sys.argv.remove('--pdb')
+
+
+IPYTHON = False
+if '--ipython' in sys.argv:  # pragma: no cover
+    IPYTHON = True
+    sys.argv.remove('--ipython')
+
+
 # Add `profile` in the builtins.
 if '--lprof' in sys.argv or '--prof' in sys.argv:  # pragma: no cover
     _enable_profiler('--lprof' in sys.argv)
