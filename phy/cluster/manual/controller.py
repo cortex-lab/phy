@@ -82,7 +82,16 @@ class Controller(EventEmitter):
         if len(default_plugins):
             plugins = default_plugins + plugins
         for plugin in plugins:
-            get_plugin(plugin)().attach_to_controller(self)
+            try:
+                p = get_plugin(plugin)()
+            except ValueError:  # pragma: no cover
+                logger.warn("The plugin %s couldn't be found.", plugin)
+                continue
+            try:
+                p.attach_to_controller(self)
+            except Exception as e:  # pragma: no cover
+                logger.warn("An error occurred when attaching plugin %s: %s.",
+                            plugin, e)
 
         self.emit('init')
 
