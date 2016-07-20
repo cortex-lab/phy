@@ -177,9 +177,12 @@ def _profile(prof, statement, glob, loc):
 
 def _enable_pdb():  # pragma: no cover
     from IPython.core import ultratb
+    logger.debug("Enabling debugger.")
+    from PyQt4.QtCore import pyqtRemoveInputHook
+    pyqtRemoveInputHook()
     sys.excepthook = ultratb.FormattedTB(mode='Verbose',
                                          color_scheme='Linux',
-                                         call_pdb=1,
+                                         call_pdb=True,
                                          )
 
 
