@@ -66,15 +66,23 @@ def _wrap_callback_args(f, docstring=None):  # pragma: no cover
     def wrapped(checked, *args):
         if args:
             return f(*args)
-        argspec = inspect.getargspec(f)
+        if isinstance(f, partial):
+            argspec = inspect.getargspec(f.func)
+        else:
+            argspec = inspect.getargspec(f)
         f_args = argspec.args
         if 'self' in f_args:
             f_args.remove('self')
-        # If the function expects arguments without defaults, we need
-        # to display the dialog. Otherwise we can just execute the action.
-        if (len(f_args) - len(argspec.defaults or ())) == 0:
+        # Remove arguments with defaults from the list.
+        f_args = f_args[:-len(argspec.defaults or ())]
+        # Remove arguments supplied in a partial.
+        if isinstance(f, partial):
+            f_args = f_args[len(f.args):]
+            f_args = [arg for arg in f_args if arg not in f.keywords]
+        # If there are no remaining args, we can just run the fu nction.
+        if not f_args:
             return f()
-        # If there are args, need to display the dialog.
+        # There are args, need to display the dialog.
         s, ok = _input_dialog(getattr(f, '__name__', 'action'), docstring)
         if not ok or not s:
             return
