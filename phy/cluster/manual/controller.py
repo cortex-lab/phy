@@ -128,8 +128,6 @@ class Controller(EventEmitter):
         self.context = Context(self.cache_dir)
         ctx = self.context
 
-        self.get_channel_noise = ctx.cache(self.get_channel_noise)
-
         self.get_masks = concat_per_cluster(ctx.cache(self.get_masks))
         self.get_features = concat_per_cluster(ctx.cache(self.get_features))
         self.get_waveforms = concat_per_cluster(ctx.cache(self.get_waveforms))
@@ -315,10 +313,6 @@ class Controller(EventEmitter):
                            n_samples_waveforms=self.n_samples_waveforms,
                            )
         return b
-
-    def get_channel_noise(self):
-        ex = get_excerpts(self.all_traces, n_excerpts=100, excerpt_size=100)
-        return ex.std(axis=0)
 
     # Cluster statistics
     # -------------------------------------------------------------------------
