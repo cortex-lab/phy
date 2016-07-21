@@ -257,14 +257,17 @@ class WaveformView(ManualClusteringView):
         # Plot all waveforms.
         with self.building():
             already_shown = set()
-            for i, cl in enumerate(cluster_ids):
-                # Select one cluster.
-                d = data[i]
+            for i, d in enumerate(data):
 
                 alpha = d.get('alpha', .5)
                 # mask_threshold = d.mask_threshold
                 wave = d.data
                 masks = d.masks
+                # By default, this is 0, 1, 2 for the first 3 clusters.
+                # But it can be customized when displaying several sets
+                # of waveforms per cluster.
+                pos_idx = d.get('pos_idx', i)  # 0, 1, 2, ...
+                n_idx = d.get('n_idx', len(data))  # max of all pos_idx minus 1
 
                 n_spikes_clu, n_samples, n_unmasked = wave.shape
                 assert masks.shape[0] == n_spikes_clu
@@ -277,10 +280,10 @@ class WaveformView(ManualClusteringView):
                 # Find the x coordinates.
                 t = _get_linear_x(n_spikes_clu * n_unmasked, n_samples)
                 if not self.overlap:
-                    t = t + 2.5 * (i - (n_clusters - 1) / 2.)
+                    t = t + 2.5 * (pos_idx - (n_idx - 1) / 2.)
                     # The total width should not depend on the number of
                     # clusters.
-                    t /= n_clusters
+                    t /= n_idx
 
                 # Get the spike masks.
                 m = masks[:, unmasked].reshape((-1, 1))
@@ -291,9 +294,9 @@ class WaveformView(ManualClusteringView):
                 m *= .999
                 # NOTE: we add the cluster index which is used for the
                 # computation of the depth on the GPU.
-                m += i
+                m += pos_idx
 
-                color = tuple(_colormap(i)) + (alpha,)
+                color = tuple(_colormap(pos_idx)) + (alpha,)
                 assert len(color) == 4
 
                 # Generate the box index (one number per channel).
@@ -312,10 +315,10 @@ class WaveformView(ManualClusteringView):
                 tm = _get_linear_x(len(masked), 2)
                 bim = np.repeat(masked, 2)
                 if not self.overlap:
-                    tm = tm + 2.5 * (i - (n_clusters - 1) / 2.)
+                    tm = tm + 2.5 * (pos_idx - (n_idx - 1) / 2.)
                     # The total width should not depend on the number of
                     # clusters.
-                    tm /= n_clusters
+                    tm /= n_idx
 
                 self.plot(x=tm,
                           y=np.zeros((len(masked), 2)),
