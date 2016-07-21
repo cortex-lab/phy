@@ -221,7 +221,11 @@ def concat_per_cluster(f):
         if not hasattr(cluster_ids, '__len__'):
             return f(cluster_ids, **kwargs)
         # Return the list of cluster-dependent objects.
-        return [f(c, **kwargs) for c in cluster_ids]
+        out = [f(c, **kwargs) for c in cluster_ids]
+        # Flatten list of lists.
+        if all(isinstance(_, list) for _ in out):
+            out = _flatten(out)
+        return out
     return wrapped
 
 

@@ -266,8 +266,7 @@ class WaveformView(ManualClusteringView):
                 # By default, this is 0, 1, 2 for the first 3 clusters.
                 # But it can be customized when displaying several sets
                 # of waveforms per cluster.
-                pos_idx = d.get('pos_idx', i)  # 0, 1, 2, ...
-                n_idx = d.get('n_idx', len(data))  # max of all pos_idx minus 1
+                pos_idx = cluster_ids.index(d.cluster_id)  # 0, 1, 2, ...
 
                 n_spikes_clu, n_samples, n_unmasked = wave.shape
                 assert masks.shape[0] == n_spikes_clu
@@ -280,10 +279,10 @@ class WaveformView(ManualClusteringView):
                 # Find the x coordinates.
                 t = _get_linear_x(n_spikes_clu * n_unmasked, n_samples)
                 if not self.overlap:
-                    t = t + 2.5 * (pos_idx - (n_idx - 1) / 2.)
+                    t = t + 2.5 * (pos_idx - (n_clusters - 1) / 2.)
                     # The total width should not depend on the number of
                     # clusters.
-                    t /= n_idx
+                    t /= n_clusters
 
                 # Get the spike masks.
                 m = masks[:, unmasked].reshape((-1, 1))
@@ -309,22 +308,6 @@ class WaveformView(ManualClusteringView):
                 # Generate the waveform array.
                 wave = np.transpose(wave, (0, 2, 1))
                 wave = wave.reshape((n_spikes_clu * n_unmasked, n_samples))
-
-                # Show marks for masked channels.
-                masked = sorted(set(range(self.n_channels)) - set(unmasked))
-                tm = _get_linear_x(len(masked), 2)
-                bim = np.repeat(masked, 2)
-                if not self.overlap:
-                    tm = tm + 2.5 * (pos_idx - (n_idx - 1) / 2.)
-                    # The total width should not depend on the number of
-                    # clusters.
-                    tm /= n_idx
-
-                self.plot(x=tm,
-                          y=np.zeros((len(masked), 2)),
-                          color=(.5, .5, .5, .5),
-                          box_index=bim,
-                          )
 
                 self.plot(x=t,
                           y=wave,
