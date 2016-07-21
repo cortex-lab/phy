@@ -74,7 +74,8 @@ def _wrap_callback_args(f, docstring=None):  # pragma: no cover
         if 'self' in f_args:
             f_args.remove('self')
         # Remove arguments with defaults from the list.
-        f_args = f_args[:-len(argspec.defaults or ())]
+        if len(argspec.defaults or ()):
+            f_args = f_args[:-len(argspec.defaults)]
         # Remove arguments supplied in a partial.
         if isinstance(f, partial):
             f_args = f_args[len(f.args):]
