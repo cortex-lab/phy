@@ -515,6 +515,8 @@ class ManualClustering(object):
 
     def move(self, cluster_ids, group):
         """Move clusters to a group."""
+        if not hasattr(cluster_ids, '__len__'):
+            cluster_ids = [cluster_ids]
         if len(cluster_ids) == 0:
             return
         self.cluster_meta.set('group', cluster_ids, group)
