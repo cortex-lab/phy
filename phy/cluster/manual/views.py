@@ -188,7 +188,6 @@ class WaveformView(ManualClusteringView):
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
         'toggle_zoom_on_channels': 'z',
-        'next_data': 'w',
 
         # Box scaling.
         'widen': 'ctrl+right',
@@ -212,7 +211,6 @@ class WaveformView(ManualClusteringView):
         self._overlap = False
         self.do_zoom_on_channels = True
         self.do_show_labels = False
-        self.data_index = 0
 
         self.best_channels = best_channels or (lambda clusters: [])
 
@@ -262,9 +260,6 @@ class WaveformView(ManualClusteringView):
             for i, cl in enumerate(cluster_ids):
                 # Select one cluster.
                 d = data[i]
-
-                # Select the current set of waveforms to display.
-                d = d[self.data_index % len(d)]
 
                 alpha = d.get('alpha', .5)
                 # mask_threshold = d.mask_threshold
@@ -383,8 +378,6 @@ class WaveformView(ManualClusteringView):
         self.actions.add(self.extend_vertically)
         self.actions.add(self.shrink_vertically)
 
-        self.actions.add(self.next_data)
-
         # We forward the event from VisPy to the phy GUI.
         @self.connect
         def on_channel_click(e):
@@ -487,16 +480,6 @@ class WaveformView(ManualClusteringView):
 
     # Navigation
     # -------------------------------------------------------------------------
-
-    def next_data(self):
-        """Show the next set of waveforms (if any)."""
-        # HACK: temporarily disable automatic zoom on channels when
-        # changing the data.
-        tmp = self.do_zoom_on_channels
-        self.do_zoom_on_channels = False
-        self.data_index += 1
-        self.on_select()
-        self.do_zoom_on_channels = tmp
 
     def toggle_zoom_on_channels(self):
         self.do_zoom_on_channels = not self.do_zoom_on_channels
