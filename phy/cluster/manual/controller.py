@@ -57,8 +57,8 @@ class Controller(EventEmitter):
     n_spikes_background_features = 5000
     n_spikes_features_lim = 100
     n_spikes_close_clusters = 100
-    n_excerpts_correlograms = 1000
-    excerpt_size_correlograms = 100
+    n_excerpts_correlograms = 100
+    excerpt_size_correlograms = 1000
     # Channels with a mean mask lower than this won't be shown in the
     # waveform view:
     waveform_mask_threshold = .1
@@ -366,9 +366,10 @@ class Controller(EventEmitter):
 
         # Keep spikes belonging to the selected clusters.
         ind = np.nonzero(np.in1d(self.spike_clusters, cluster_ids))[0]
+        ne = self.n_excerpts_correlograms * len(cluster_ids)
         ind = get_excerpts(ind,
                            excerpt_size=self.excerpt_size_correlograms,
-                           n_excerpts=self.n_excerpts_correlograms)
+                           n_excerpts=ne)
 
         st = self.spike_times[ind]
         sc = self.spike_clusters[ind]
