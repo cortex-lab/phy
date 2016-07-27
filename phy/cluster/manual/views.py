@@ -1418,6 +1418,7 @@ class ScatterView(ManualClusteringView):
                 spike_ids = d.spike_ids
                 x = d.x
                 y = d.y
+                data_bounds = d.get('data_bounds', None)
                 n_spikes = len(spike_ids)
                 assert n_spikes > 0
                 assert x.shape == (n_spikes,)
@@ -1426,4 +1427,5 @@ class ScatterView(ManualClusteringView):
                 self.scatter(x=x, y=y,
                              color=tuple(_colormap(i)) + (.5,),
                              size=self._default_marker_size,
+                             data_bounds=data_bounds,
                              )
