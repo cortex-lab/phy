@@ -126,6 +126,7 @@ class Controller(EventEmitter):
 
         self.get_waveform_lims = ctx.memcache(self.get_waveform_lims)
         self.get_feature_lim = ctx.memcache(self.get_feature_lim)
+        self.get_trace_lim = ctx.memcache(self.get_trace_lim)
 
         self.get_close_clusters = ctx.memcache(
             self.get_close_clusters)
@@ -269,7 +270,10 @@ class Controller(EventEmitter):
         tr = select_traces(self.all_traces, interval,
                            sample_rate=self.sample_rate,
                            )
-        return [Bunch(traces=tr)]
+        return [Bunch(traces=tr * (1. / self.get_trace_lim()))]
+
+    def get_trace_lim(self):
+        return self._data_lim(self.all_traces[:10000])
 
     def get_spikes_traces(self, interval, traces):
         # NOTE: we extract the spikes from the first traces array.
