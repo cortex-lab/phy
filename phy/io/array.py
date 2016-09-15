@@ -200,7 +200,7 @@ def _get_data_lim(arr, n_spikes=None):
     arr = np.abs(arr[::k])
     n = arr.shape[0]
     arr = arr.reshape((n, -1))
-    return arr.max()
+    return arr.max() or 1.
 
 
 def get_closest_clusters(cluster_id, cluster_ids, sim_func, max_n=None):
