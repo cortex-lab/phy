@@ -202,7 +202,7 @@ def test_manual_clustering_move_1(manual_clustering):
     mc.select([20])
     assert mc.selected == [20]
 
-    mc.move('noise', [20])
+    mc.move('noise')
     assert mc.selected == [11]
 
     mc.undo()
