@@ -88,7 +88,7 @@ def test_manual_clustering_edge_cases(manual_clustering):
     assert mc.selected == [0]
 
     # Move.
-    mc.move([], 'ignored')
+    mc.move('ignored', [])
 
     mc.save()
 
@@ -202,7 +202,7 @@ def test_manual_clustering_move_1(manual_clustering):
     mc.select([20])
     assert mc.selected == [20]
 
-    mc.move([20], 'noise')
+    mc.move('noise', [20])
     assert mc.selected == [11]
 
     mc.undo()
@@ -220,7 +220,7 @@ def test_manual_clustering_move_2(manual_clustering):
 
     assert mc.selected == [20, 10]
 
-    mc.move(10, 'noise')
+    mc.move('noise', 10)
     assert mc.selected == [20, 2]
 
     mc.undo()
