@@ -5,7 +5,7 @@ dependencies:
   - matplotlib
   - scipy
   - h5py
-  - pyqt
+  - pyqt=4
   - pip:
     - vispy
     - requests

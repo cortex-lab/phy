@@ -1,16 +1,14 @@
 name: phy
-channels:
-  - kwikteam
 dependencies:
   - python
   - numpy
   - matplotlib
   - scipy
   - h5py
-  - pyqt
-  - klustakwik2
+  - pyqt=4
   - pip:
     - klusta
+    - klustakwik2
     - vispy
     - requests
     - traitlets
