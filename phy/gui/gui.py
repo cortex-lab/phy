@@ -296,6 +296,11 @@ class GUI(QMainWindow):
                 child.height() >= 10
                 ]
 
+    def get_view(self, name):
+        """Return a view from its name."""
+        views = self.list_views(name)
+        return views[0] if views else None
+
     def view_count(self):
         """Return the number of opened views."""
         views = self.list_views()
