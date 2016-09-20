@@ -211,6 +211,7 @@ class WaveformView(ManualClusteringView):
         self._overlap = False
         self.do_zoom_on_channels = True
         self.do_show_labels = False
+        self.filtered_tags = ()
 
         self.best_channels = best_channels or (lambda clusters: [])
 
@@ -258,7 +259,9 @@ class WaveformView(ManualClusteringView):
         with self.building():
             already_shown = set()
             for i, d in enumerate(data):
-
+                if (self.filtered_tags and
+                        d.get('tag') not in self.filtered_tags):
+                    continue
                 alpha = d.get('alpha', .5)
                 # mask_threshold = d.mask_threshold
                 wave = d.data
@@ -476,6 +479,13 @@ class WaveformView(ManualClusteringView):
         self.do_zoom_on_channels = False
         self.on_select()
         self.do_zoom_on_channels = tmp
+
+    def filter_by_tag(self, tag=None):
+        if tag:
+            self.filtered_tags = (tag,)
+        else:
+            self.filtered_tags = ()
+        self.on_select()
 
     def zoom_on_channels(self, channels_rel):
         """Zoom on some channels."""
