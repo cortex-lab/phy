@@ -513,8 +513,10 @@ class ManualClustering(object):
     # Move actions
     # -------------------------------------------------------------------------
 
-    def move(self, cluster_ids, group):
+    def move(self, group, cluster_ids=None):
         """Move clusters to a group."""
+        if cluster_ids is None:
+            cluster_ids = self.selected
         if not hasattr(cluster_ids, '__len__'):
             cluster_ids = [cluster_ids]
         if len(cluster_ids) == 0:
@@ -524,15 +526,15 @@ class ManualClustering(object):
 
     def move_best(self, group=None):
         """Move all selected best clusters to a group."""
-        self.move(self.cluster_view.selected, group)
+        self.move(group, self.cluster_view.selected)
 
     def move_similar(self, group=None):
         """Move all selected similar clusters to a group."""
-        self.move(self.similarity_view.selected, group)
+        self.move(group, self.similarity_view.selected)
 
     def move_all(self, group=None):
         """Move all selected clusters to a group."""
-        self.move(self.selected, group)
+        self.move(group, self.selected)
 
     # Wizard actions
     # -------------------------------------------------------------------------
