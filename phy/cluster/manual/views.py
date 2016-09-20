@@ -485,7 +485,10 @@ class WaveformView(ManualClusteringView):
             self.filtered_tags = (tag,)
         else:
             self.filtered_tags = ()
+        tmp = self.do_zoom_on_channels
+        self.do_zoom_on_channels = False
         self.on_select()
+        self.do_zoom_on_channels = tmp
 
     def zoom_on_channels(self, channels_rel):
         """Zoom on some channels."""
