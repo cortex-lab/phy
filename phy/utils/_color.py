@@ -112,7 +112,7 @@ class ColorSelector(object):
         else:
             if clu in self._colors:
                 return self._colors[clu]
-            color = _random_color(v_range=(.1, .5))
+            color = _random_color(v_range=(.3, .6))
             color = tuple(color) + (alpha,)
             self._colors[clu] = color
         assert len(color) == 4
