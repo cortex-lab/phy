@@ -188,6 +188,7 @@ class WaveformView(ManualClusteringView):
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
         'toggle_zoom_on_channels': 'z',
+        'toggle_show_labels': 'ctrl+l',
 
         # Box scaling.
         'widen': 'ctrl+right',
@@ -602,6 +603,7 @@ class TraceView(ManualClusteringView):
         'go_right': 'alt+right',
         'decrease': 'alt+down',
         'increase': 'alt+up',
+        'toggle_show_labels': 'alt+l',
         'widen': 'alt+-',
         'narrow': 'alt++',
     }
@@ -735,10 +737,13 @@ class TraceView(ManualClusteringView):
     # Public methods
     # -------------------------------------------------------------------------
 
-    def set_interval(self, interval, change_status=True):
+    def set_interval(self, interval=None, change_status=True,
+                     force_update=False):
         """Display the traces and spikes in a given interval."""
+        if interval is None:
+            interval = self._interval
         interval = self._restrict_interval(interval)
-        if interval == self._interval:
+        if not force_update and interval == self._interval:
             return
         self._interval = interval
         start, end = interval
@@ -895,7 +900,7 @@ class TraceView(ManualClusteringView):
 
     def toggle_show_labels(self):
         self.do_show_labels = not self.do_show_labels
-        self.on_select()
+        self.set_interval(force_update=True)
 
     # Channel scaling
     # -------------------------------------------------------------------------
