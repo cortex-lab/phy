@@ -59,9 +59,6 @@ class Controller(EventEmitter):
     n_spikes_close_clusters = 100
     n_excerpts_correlograms = 100
     excerpt_size_correlograms = 1000
-    # Channels with a mean mask lower than this won't be shown in the
-    # waveform view:
-    waveform_mask_threshold = .1
 
     # responsible for the cache
     def __init__(self, plugins=None, config_dir=None):
@@ -220,7 +217,6 @@ class Controller(EventEmitter):
                                  self.n_spikes_waveforms,
                                  batch_size=10,
                                  )
-        # data.mask_threshold = self.waveform_mask_threshold
         # Sparsify the waveforms.
         w = data.data
         channels = np.nonzero(w.mean(axis=1).mean(axis=0))[0]

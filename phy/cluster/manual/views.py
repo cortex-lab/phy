@@ -264,7 +264,6 @@ class WaveformView(ManualClusteringView):
                         d.get('tag') not in self.filtered_tags):
                     continue
                 alpha = d.get('alpha', .5)
-                # mask_threshold = d.mask_threshold
                 wave = d.data
                 masks = d.masks
                 # By default, this is 0, 1, 2 for the first 3 clusters.
