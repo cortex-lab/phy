@@ -262,7 +262,7 @@ class WaveformView(ManualClusteringView):
             for i, d in enumerate(data):
                 if (self.filtered_tags and
                         d.get('tag') not in self.filtered_tags):
-                    continue
+                    continue  # pragma: no cover
                 alpha = d.get('alpha', .5)
                 wave = d.data
                 masks = d.masks
@@ -481,10 +481,8 @@ class WaveformView(ManualClusteringView):
         self.do_zoom_on_channels = tmp
 
     def filter_by_tag(self, tag=None):
-        if tag:
-            self.filtered_tags = (tag,)
-        else:
-            self.filtered_tags = ()
+        """Only show elements with a given tag."""
+        self.filtered_tags = (tag,) if tag else ()
         tmp = self.do_zoom_on_channels
         self.do_zoom_on_channels = False
         self.on_select()

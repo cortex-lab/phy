@@ -224,7 +224,7 @@ def concat_per_cluster(f):
         out = [f(c, **kwargs) for c in cluster_ids]
         # Flatten list of lists.
         if all(isinstance(_, list) for _ in out):
-            out = _flatten(out)
+            out = _flatten(out)  # pragma: no cover
         return out
     return wrapped
 

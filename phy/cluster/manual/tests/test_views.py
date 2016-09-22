@@ -132,6 +132,8 @@ def test_waveform_view(qtbot, gui):
 
     v.zoom_on_channels([0, 2, 4])
 
+    v.filter_by_tag('test')
+
     # Simulate channel selection.
     _clicked = []
 
