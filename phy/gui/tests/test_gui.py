@@ -80,6 +80,7 @@ def test_gui_1(tempdir, qtbot):
     view.setFloating(False)
     gui.show()
 
+    assert gui.get_view('Canvas')
     assert len(gui.list_views('Canvas')) == 2
 
     # Check that the close_widget event is fired when the gui widget is

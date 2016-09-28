@@ -15,11 +15,10 @@ import re
 import numpy as np
 from vispy.util.event import Event
 
-from phy.io.array import _index_of, _get_padded, get_excerpts
+from phy.io.array import _get_padded
 from phy.gui import Actions
 from phy.plot import View, _get_linear_x
 from phy.plot.utils import _get_boxes
-from phy.stats import correlograms
 from phy.utils import Bunch
 from phy.utils._color import _spike_colors, ColorSelector, _colormap
 
@@ -189,7 +188,7 @@ class WaveformView(ManualClusteringView):
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
         'toggle_zoom_on_channels': 'z',
-        'next_data': 'w',
+        'toggle_show_labels': 'ctrl+l',
 
         # Box scaling.
         'widen': 'ctrl+right',
@@ -213,7 +212,7 @@ class WaveformView(ManualClusteringView):
         self._overlap = False
         self.do_zoom_on_channels = True
         self.do_show_labels = False
-        self.data_index = 0
+        self.filtered_tags = ()
 
         self.best_channels = best_channels or (lambda clusters: [])
 
@@ -256,38 +255,40 @@ class WaveformView(ManualClusteringView):
 
         # Load the waveform subset.
         data = self.waveforms(cluster_ids)
-        # Take one element in the list.
-        data = data[self.data_index % len(data)]
-        alpha = data.get('alpha', .5)
-        spike_ids = data.spike_ids
-        spike_clusters = data.spike_clusters
-        w = data.data
-        masks = data.masks
-        n_spikes = len(spike_ids)
-        assert w.ndim == 3
-        n_samples = w.shape[1]
-        assert w.shape == (n_spikes, n_samples, self.n_channels)
-        assert masks.shape == (n_spikes, self.n_channels)
 
         # Plot all waveforms.
-        # OPTIM: avoid the loop.
         with self.building():
-            for i, cl in enumerate(cluster_ids):
+            already_shown = set()
+            for i, d in enumerate(data):
+                if (self.filtered_tags and
+                        d.get('tag') not in self.filtered_tags):
+                    continue  # pragma: no cover
+                alpha = d.get('alpha', .5)
+                wave = d.data
+                masks = d.masks
+                # By default, this is 0, 1, 2 for the first 3 clusters.
+                # But it can be customized when displaying several sets
+                # of waveforms per cluster.
+                pos_idx = cluster_ids.index(d.cluster_id)  # 0, 1, 2, ...
 
-                # Select the spikes corresponding to a given cluster.
-                idx = spike_clusters == cl
-                n_spikes_clu = idx.sum()  # number of spikes in the cluster.
+                n_spikes_clu, n_samples, n_unmasked = wave.shape
+                assert masks.shape[0] == n_spikes_clu
+
+                # Find the unmasked channels for those spikes.
+                unmasked = d.get('channels', np.arange(self.n_channels))
+                assert n_unmasked == len(unmasked)
+                assert n_unmasked > 0
 
                 # Find the x coordinates.
-                t = _get_linear_x(n_spikes_clu * self.n_channels, n_samples)
+                t = _get_linear_x(n_spikes_clu * n_unmasked, n_samples)
                 if not self.overlap:
-                    t = t + 2.5 * (i - (n_clusters - 1) / 2.)
+                    t = t + 2.5 * (pos_idx - (n_clusters - 1) / 2.)
                     # The total width should not depend on the number of
                     # clusters.
                     t /= n_clusters
 
                 # Get the spike masks.
-                m = masks[idx, :].reshape((n_spikes_clu * self.n_channels, 1))
+                m = masks[:, unmasked].reshape((-1, 1))
                 # HACK: on the GPU, we get the actual masks with fract(masks)
                 # since we add the relative cluster index. We need to ensure
                 # that the masks is never 1.0, otherwise it is interpreted as
@@ -295,23 +296,21 @@ class WaveformView(ManualClusteringView):
                 m *= .999
                 # NOTE: we add the cluster index which is used for the
                 # computation of the depth on the GPU.
-                m += i
+                m += pos_idx
 
-                color = tuple(_colormap(i)) + (alpha,)
+                color = tuple(_colormap(pos_idx)) + (alpha,)
                 assert len(color) == 4
 
                 # Generate the box index (one number per channel).
-                box_index = np.arange(self.n_channels)
+                box_index = unmasked
                 box_index = np.repeat(box_index, n_samples)
                 box_index = np.tile(box_index, n_spikes_clu)
-                assert box_index.shape == (n_spikes_clu * self.n_channels *
-                                           n_samples)
+                assert box_index.shape == (n_spikes_clu * n_unmasked *
+                                           n_samples,)
 
                 # Generate the waveform array.
-                wave = w[idx, :, :]
                 wave = np.transpose(wave, (0, 2, 1))
-                wave = wave.reshape((n_spikes_clu * self.n_channels,
-                                     n_samples))
+                wave = wave.reshape((n_spikes_clu * n_unmasked, n_samples))
 
                 self.plot(x=t,
                           y=wave,
@@ -322,8 +321,12 @@ class WaveformView(ManualClusteringView):
                           uniform=True,
                           )
                 # Add channel labels.
-                if self.do_show_labels and i == 0:
-                    for ch in range(self.n_channels):
+                if self.do_show_labels:
+                    for ch in unmasked:
+                        # Skip labels that have already been shown.
+                        if ch in already_shown:
+                            continue
+                        already_shown.add(ch)
                         self[ch].text(pos=[t[0, 0], 0.],
                                       # TODO: use real channel labels.
                                       text=str(ch),
@@ -363,8 +366,6 @@ class WaveformView(ManualClusteringView):
         self.actions.add(self.shrink_horizontally)
         self.actions.add(self.extend_vertically)
         self.actions.add(self.shrink_vertically)
-
-        self.actions.add(self.next_data)
 
         # We forward the event from VisPy to the phy GUI.
         @self.connect
@@ -469,21 +470,19 @@ class WaveformView(ManualClusteringView):
     # Navigation
     # -------------------------------------------------------------------------
 
-    def next_data(self):
-        """Show the next set of waveforms (if any)."""
-        # HACK: temporarily disable automatic zoom on channels when
-        # changing the data.
-        tmp = self.do_zoom_on_channels
-        self.do_zoom_on_channels = False
-        self.data_index += 1
-        self.on_select()
-        self.do_zoom_on_channels = tmp
-
     def toggle_zoom_on_channels(self):
         self.do_zoom_on_channels = not self.do_zoom_on_channels
 
     def toggle_show_labels(self):
         self.do_show_labels = not self.do_show_labels
+        tmp = self.do_zoom_on_channels
+        self.do_zoom_on_channels = False
+        self.on_select()
+        self.do_zoom_on_channels = tmp
+
+    def filter_by_tag(self, tag=None):
+        """Only show elements with a given tag."""
+        self.filtered_tags = (tag,) if tag else ()
         tmp = self.do_zoom_on_channels
         self.do_zoom_on_channels = False
         self.on_select()
@@ -601,8 +600,9 @@ class TraceView(ManualClusteringView):
         'go_right': 'alt+right',
         'decrease': 'alt+down',
         'increase': 'alt+up',
-        'widen': 'ctrl+alt+left',
-        'narrow': 'ctrl+alt+right',
+        'toggle_show_labels': 'alt+l',
+        'widen': 'alt+-',
+        'narrow': 'alt++',
     }
 
     def __init__(self,
@@ -734,12 +734,17 @@ class TraceView(ManualClusteringView):
     # Public methods
     # -------------------------------------------------------------------------
 
-    def set_interval(self, interval, change_status=True):
+    def set_interval(self, interval=None, change_status=True,
+                     force_update=False):
         """Display the traces and spikes in a given interval."""
-        self.clear()
+        if interval is None:
+            interval = self._interval
         interval = self._restrict_interval(interval)
+        if not force_update and interval == self._interval:
+            return
         self._interval = interval
         start, end = interval
+        self.clear()
 
         # OPTIM: normalize time manually into [-1.0, 1.0].
         def _normalize_time(t):
@@ -892,7 +897,7 @@ class TraceView(ManualClusteringView):
 
     def toggle_show_labels(self):
         self.do_show_labels = not self.do_show_labels
-        self.on_select()
+        self.set_interval(force_update=True)
 
     # Channel scaling
     # -------------------------------------------------------------------------
@@ -1121,12 +1126,6 @@ class FeatureView(ManualClusteringView):
 
         # Get the spikes, features, masks.
         data = self.features(cluster_ids)
-        spike_ids = data.spike_ids
-        f = data.data
-        masks = data.masks
-        assert f.ndim == 3
-        assert masks.ndim == 2
-        assert spike_ids.shape[0] == f.shape[0] == masks.shape[0]
 
         # Get the background features.
         data_bg = self.background_features
@@ -1134,7 +1133,6 @@ class FeatureView(ManualClusteringView):
             spike_ids_bg = data_bg.spike_ids
             features_bg = data_bg.data
             masks_bg = data_bg.masks
-
         # Select the dimensions.
         # Choose the channels automatically unless fixed_channels is set.
         if (not self.fixed_channels or self.channels is None):
@@ -1163,10 +1161,6 @@ class FeatureView(ManualClusteringView):
                     if i > j:
                         continue
 
-                    # Retrieve the x and y values for the subplot.
-                    x = self._get_feature(x_dim[i, j], spike_ids, f)
-                    y = self._get_feature(y_dim[i, j], spike_ids, f)
-
                     if data_bg is not None:
                         # Retrieve the x and y values for the background
                         # spikes.
@@ -1182,11 +1176,19 @@ class FeatureView(ManualClusteringView):
 
                     # Cluster features.
                     for clu_idx, clu in enumerate(cluster_ids):
-                        # TODO: compute this only once, outside the loop.
-                        idx = data.spike_clusters == clu
+
+                        d = data[clu_idx]
+                        f = d.data
+                        masks = d.masks
+                        spike_ids = d.spike_ids
+
+                        # Retrieve the x and y values for the subplot.
+                        x = self._get_feature(x_dim[i, j], spike_ids, f)
+                        y = self._get_feature(y_dim[i, j], spike_ids, f)
+
                         self._plot_features(i, j, x_dim, y_dim,
-                                            x[idx], y[idx],
-                                            masks=masks[idx],
+                                            x, y,
+                                            masks=masks,
                                             clu_idx=clu_idx,
                                             )
 
@@ -1236,13 +1238,19 @@ class FeatureView(ManualClusteringView):
                                           n_cols=self.n_cols,
                                           top_left_attribute=tla)
         data = self.features(self.cluster_ids, load_all=True)
-        spike_ids = data.spike_ids
-        f = data.data
-        i, j = self.lasso.box
 
-        x = self._get_feature(x_dim[i, j], spike_ids, f)
-        y = self._get_feature(y_dim[i, j], spike_ids, f)
-        pos = np.c_[x, y].astype(np.float64)
+        # Concatenate the points from all selected clusters.
+        assert isinstance(data, list)
+        pos = []
+        for d in data:
+            spike_ids = d.spike_ids
+            f = d.data
+            i, j = self.lasso.box
+
+            x = self._get_feature(x_dim[i, j], spike_ids, f)
+            y = self._get_feature(y_dim[i, j], spike_ids, f)
+            pos.append(np.c_[x, y].astype(np.float64))
+        pos = np.vstack(pos)
 
         ind = self.lasso.in_polygon(pos)
         self.lasso.clear()
@@ -1280,8 +1288,6 @@ class FeatureView(ManualClusteringView):
 # -----------------------------------------------------------------------------
 
 class CorrelogramView(ManualClusteringView):
-    excerpt_size = 10000
-    n_excerpts = 100
     bin_size = 1e-3
     window_size = 50e-3
     uniform_normalization = False
@@ -1291,26 +1297,20 @@ class CorrelogramView(ManualClusteringView):
         'go_right': 'alt+right',
     }
 
-    def __init__(self,
-                 spike_times=None,
-                 spike_clusters=None,
+    def __init__(self, correlograms=None,
                  sample_rate=None,
                  **kwargs):
 
         assert sample_rate > 0
         self.sample_rate = float(sample_rate)
 
-        self.spike_times = np.asarray(spike_times)
-        self.n_spikes, = self.spike_times.shape
-
         # Initialize the view.
         super(CorrelogramView, self).__init__(layout='grid',
                                               shape=(1, 1),
                                               **kwargs)
 
-        # Spike clusters.
-        assert spike_clusters.shape == (self.n_spikes,)
-        self.spike_clusters = spike_clusters
+        # Function clusters => CCGs.
+        self.correlograms = correlograms
 
         # Set the default bin and window size.
         self.set_bin_window(bin_size=self.bin_size,
@@ -1329,35 +1329,6 @@ class CorrelogramView(ManualClusteringView):
         b, w = self.bin_size * 1000, self.window_size * 1000
         self.set_status('Bin: {:.1f} ms. Window: {:.1f} ms.'.format(b, w))
 
-    def _compute_correlograms(self, cluster_ids):
-
-        # Keep spikes belonging to the selected clusters.
-        ind = np.in1d(self.spike_clusters, cluster_ids)
-        st = self.spike_times[ind]
-        sc = self.spike_clusters[ind]
-
-        # Take excerpts of the spikes.
-        n_spikes_total = len(st)
-        st = get_excerpts(st, excerpt_size=self.excerpt_size,
-                          n_excerpts=self.n_excerpts)
-        sc = get_excerpts(sc, excerpt_size=self.excerpt_size,
-                          n_excerpts=self.n_excerpts)
-        n_spikes_exerpts = len(st)
-        logger.log(5, "Computing correlograms for clusters %s (%d/%d spikes).",
-                   ', '.join(map(str, cluster_ids)),
-                   n_spikes_exerpts, n_spikes_total,
-                   )
-
-        # Compute all pairwise correlograms.
-        ccg = correlograms(st, sc,
-                           cluster_ids=cluster_ids,
-                           sample_rate=self.sample_rate,
-                           bin_size=self.bin_size,
-                           window_size=self.window_size,
-                           )
-
-        return ccg
-
     def on_select(self, cluster_ids=None):
         super(CorrelogramView, self).on_select(cluster_ids)
         cluster_ids = self.cluster_ids
@@ -1365,7 +1336,10 @@ class CorrelogramView(ManualClusteringView):
         if n_clusters == 0:
             return
 
-        ccg = self._compute_correlograms(cluster_ids)
+        ccg = self.correlograms(tuple(cluster_ids),
+                                self.bin_size,
+                                self.window_size,
+                                )
         ylim = [ccg.max()] if not self.uniform_normalization else None
 
         colors = _spike_colors(np.arange(n_clusters), alpha=1.)
@@ -1404,8 +1378,6 @@ class CorrelogramView(ManualClusteringView):
     def state(self):
         return Bunch(bin_size=self.bin_size,
                      window_size=self.window_size,
-                     excerpt_size=self.excerpt_size,
-                     n_excerpts=self.n_excerpts,
                      uniform_normalization=self.uniform_normalization,
                      )
 
@@ -1449,29 +1421,26 @@ class ScatterView(ManualClusteringView):
         if data is None:
             self.clear()
             return
-        spike_ids = data.spike_ids
-        spike_clusters = data.spike_clusters
-        x = data.x
-        y = data.y
-        n_spikes = len(spike_ids)
-        assert n_spikes > 0
-        assert spike_clusters.shape == (n_spikes,)
-        assert x.shape == (n_spikes,)
-        assert y.shape == (n_spikes,)
-
-        # Get the spike clusters.
-        sc = _index_of(spike_clusters, cluster_ids)
+        assert isinstance(data, list)
 
         # Plot the amplitudes.
         with self.building():
-            m = np.ones(n_spikes)
-            # Get the color of the markers.
-            color = _spike_colors(sc, masks=m)
-            assert color.shape == (n_spikes, 4)
-            ms = (self._default_marker_size if sc is not None else 1.)
+            for i, cl in enumerate(cluster_ids):
+                # Skip non-existing clusters.
+                if i >= len(data):  # pragma: no cover
+                    continue
+                d = data[i]
+                spike_ids = d.spike_ids
+                x = d.x
+                y = d.y
+                data_bounds = d.get('data_bounds', None)
+                n_spikes = len(spike_ids)
+                assert n_spikes > 0
+                assert x.shape == (n_spikes,)
+                assert y.shape == (n_spikes,)
 
-            self.scatter(x=x,
-                         y=y,
-                         color=color,
-                         size=ms * np.ones(n_spikes),
-                         )
+                self.scatter(x=x, y=y,
+                             color=tuple(_colormap(i)) + (.5,),
+                             size=self._default_marker_size,
+                             data_bounds=data_bounds,
+                             )

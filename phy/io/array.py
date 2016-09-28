@@ -16,7 +16,7 @@ import os.path as op
 
 import numpy as np
 
-from phy.utils import Bunch, _as_scalar, _as_scalars
+from phy.utils import _as_scalar, _as_scalars
 from phy.utils._types import _as_array, _is_array_like
 
 logger = logging.getLogger(__name__)
@@ -30,15 +30,15 @@ def _range_from_slice(myslice, start=None, stop=None, step=None, length=None):
     """Convert a slice to an array of integers."""
     assert isinstance(myslice, slice)
     # Find 'step'.
-    step = step if step is not None else myslice.step
+    step = myslice.step if myslice.step is not None else step
     if step is None:
         step = 1
     # Find 'start'.
-    start = start if start is not None else myslice.start
+    start = myslice.start if myslice.start is not None else start
     if start is None:
         start = 0
     # Find 'stop' as a function of length if 'stop' is unspecified.
-    stop = stop if stop is not None else myslice.stop
+    stop = myslice.stop if myslice.stop is not None else stop
     if length is not None:
         stop_inferred = floor(start + step * length)
         if stop is not None and stop < stop_inferred:
@@ -220,16 +220,12 @@ def concat_per_cluster(f):
         # Single cluster.
         if not hasattr(cluster_ids, '__len__'):
             return f(cluster_ids, **kwargs)
-        # Concatenate the result of multiple clusters.
-        l = [f(c, **kwargs) for c in cluster_ids]
-        # Handle the case where every function returns a list of Bunch.
-        if l and isinstance(l[0], list):
-            # We assume that all items have the same length.
-            n = len(l[0])
-            return [Bunch(_accumulate([item[i] for item in l]))
-                    for i in range(n)]
-        else:
-            return Bunch(_accumulate(l))
+        # Return the list of cluster-dependent objects.
+        out = [f(c, **kwargs) for c in cluster_ids]
+        # Flatten list of lists.
+        if all(isinstance(_, list) for _ in out):
+            out = _flatten(out)  # pragma: no cover
+        return out
     return wrapped
 
 
@@ -360,8 +356,9 @@ class ConcatenatedArrays(object):
         # Single array case.
         if rec_start == rec_stop:
             # Apply the rest of the index.
-            return _fill_index(self.arrs[rec_start][start_rel:stop_rel],
-                               item)[..., cols]
+            out = _fill_index(self.arrs[rec_start][start_rel:stop_rel], item)
+            out = out[..., cols]
+            return out
         chunk_start = self.arrs[rec_start][start_rel:]
         chunk_stop = self.arrs[rec_stop][:stop_rel]
         # Concatenate all chunks.
@@ -564,7 +561,9 @@ def regular_subset(spikes, n_spikes_max=None, offset=0):
 
 def select_spikes(cluster_ids=None,
                   max_n_spikes_per_cluster=None,
-                  spikes_per_cluster=None):
+                  spikes_per_cluster=None,
+                  batch_size=None,
+                  ):
     """Return a selection of spikes belonging to the specified clusters."""
     assert _is_array_like(cluster_ids)
     if not len(cluster_ids):
@@ -581,7 +580,13 @@ def select_spikes(cluster_ids=None,
             n = int(max_n_spikes_per_cluster * exp(-.1 * (n_clusters - 1)))
             n = max(1, n)
             spikes = spikes_per_cluster(cluster)
-            selection[cluster] = regular_subset(spikes, n_spikes_max=n)
+            # Regular subselection.
+            if batch_size is None or len(spikes) <= max(batch_size, n):
+                spikes = regular_subset(spikes, n_spikes_max=n)
+            else:
+                # Batch selections of spikes.
+                spikes = get_excerpts(spikes, n // batch_size, batch_size)
+            selection[cluster] = spikes
     return _flatten_per_cluster(selection)
 
 
@@ -593,7 +598,9 @@ class Selector(object):
         self.spikes_per_cluster = spikes_per_cluster
 
     def select_spikes(self, cluster_ids=None,
-                      max_n_spikes_per_cluster=None):
+                      max_n_spikes_per_cluster=None,
+                      batch_size=None,
+                      ):
         if cluster_ids is None or not len(cluster_ids):
             return None
         ns = max_n_spikes_per_cluster
@@ -601,7 +608,9 @@ class Selector(object):
         # Select a subset of the spikes.
         return select_spikes(cluster_ids,
                              spikes_per_cluster=self.spikes_per_cluster,
-                             max_n_spikes_per_cluster=ns)
+                             max_n_spikes_per_cluster=ns,
+                             batch_size=batch_size,
+                             )
 
 
 # -----------------------------------------------------------------------------

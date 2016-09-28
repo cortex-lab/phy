@@ -8,16 +8,16 @@
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import raises, yield_fixture
+from pytest import raises
 
-from phy.io.mock import artificial_traces, artificial_spike_samples
-from phy.utils import Bunch
+from phy.io.mock import (artificial_traces,
+                         artificial_spike_samples,
+                         artificial_masks,
+                         )
 from ..waveform import (_slice,
                         WaveformLoader,
                         WaveformExtractor,
-                        SpikeLoader,
                         )
-from ..filter import bandpass_filter, apply_filter
 
 
 #------------------------------------------------------------------------------
@@ -118,124 +118,58 @@ def test_slice():
 # Tests loader
 #------------------------------------------------------------------------------
 
-@yield_fixture(params=[(None, None), (-1, 2)])
-def waveform_loader(request):
-    scale_factor, dc_offset = request.param
-
+def waveform_loader(do_filter=False, mask_threshold=None):
     n_samples_trace, n_channels = 1000, 5
     h = 10
     n_samples_waveforms = 2 * h
     n_spikes = n_samples_trace // (2 * n_samples_waveforms)
+    sample_rate = 2000.
 
     traces = artificial_traces(n_samples_trace, n_channels)
     spike_samples = artificial_spike_samples(n_spikes,
                                              max_isi=2 * n_samples_waveforms)
-
-    with raises(ValueError):
-        WaveformLoader(traces)
+    masks = artificial_masks(n_spikes, n_channels)
 
     loader = WaveformLoader(traces=traces,
+                            spike_samples=spike_samples,
+                            masks=masks,
+                            mask_threshold=mask_threshold,
                             n_samples_waveforms=n_samples_waveforms,
-                            scale_factor=scale_factor,
-                            dc_offset=dc_offset,
+                            filter_order=3 if do_filter else None,
+                            sample_rate=sample_rate,
                             )
-    b = Bunch(loader=loader,
-              n_samples_waveforms=n_samples_waveforms,
-              n_spikes=n_spikes,
-              spike_samples=spike_samples,
-              )
-    yield b
+    return loader
 
 
-def test_loader_edge_case():
-    wl = WaveformLoader(n_samples_waveforms=3)
-    wl.traces = np.random.rand(0, 2)
-    wl[0]
-
-
-def test_loader_simple(waveform_loader):
-    b = waveform_loader
-    spike_samples = b.spike_samples
-    loader = b.loader
+def test_loader_simple():
+    loader = waveform_loader()
+    spike_samples = loader.spike_samples
     traces = loader.traces
-    dc_offset = loader.dc_offset or 0
-    scale_factor = loader.scale_factor or 1
     n_samples_traces, n_channels = traces.shape
-    n_samples_waveforms = b.n_samples_waveforms
+    n_samples_waveforms = loader.n_samples_waveforms
     h = n_samples_waveforms // 2
 
-    assert loader.offset == 0
-    assert loader.dc_offset in (dc_offset, None)
-    assert loader.scale_factor in (scale_factor, None)
-
-    def _transform(arr):
-        return (arr - dc_offset) * scale_factor
-
-    waveforms = loader[spike_samples[10:20]]
+    waveforms = loader[10:20]
     assert waveforms.shape == (10, n_samples_waveforms, n_channels)
     t = spike_samples[15]
     w1 = waveforms[5, ...]
-    w2 = _transform(traces[t - h:t + h, :])
+    w2 = traces[t - h:t + h, :]
     assert np.allclose(w1, w2)
-
-    sl = SpikeLoader(loader, spike_samples)
-    assert np.allclose(sl[15], w2)
+    assert np.allclose(loader[15], w2)
 
 
 def test_edges():
-    n_samples_trace, n_channels = 100, 10
-    n_samples_waveforms = 20
+    loader = waveform_loader(do_filter=True)
+    ns = loader.n_samples_waveforms + sum(loader._filter_margin)
+    nc = loader.n_channels
 
-    traces = artificial_traces(n_samples_trace, n_channels)
-
-    # Filter.
-    b_filter = bandpass_filter(rate=1000,
-                               low=50,
-                               high=200,
-                               order=3)
-    filter_margin = 10
-
-    # Create a loader.
-    loader = WaveformLoader(traces,
-                            n_samples_waveforms=n_samples_waveforms,
-                            filter=lambda x: apply_filter(x, b_filter),
-                            filter_margin=filter_margin)
-
-    # Invalid time.
-    with raises(ValueError):
-        loader._load_at(200000)
-
-    ns = n_samples_waveforms + filter_margin
-    assert loader._load_at(0).shape == (ns, n_channels)
-    assert loader._load_at(5).shape == (ns, n_channels)
-    assert loader._load_at(n_samples_trace - 5).shape == (ns, n_channels)
-    assert loader._load_at(n_samples_trace - 1).shape == (ns, n_channels)
+    assert loader._load_at(0).shape == (ns, nc)
+    assert loader._load_at(5).shape == (ns, nc)
+    assert loader._load_at(loader.n_samples_trace - 5).shape == (ns, nc)
+    assert loader._load_at(loader.n_samples_trace - 1).shape == (ns, nc)
 
 
-def test_loader_channels():
-    n_samples_trace, n_channels = 1000, 10
-    n_samples_waveforms = 20
-
-    traces = artificial_traces(n_samples_trace, n_channels)
-
-    # Create a loader.
-    loader = WaveformLoader(traces, n_samples_waveforms=n_samples_waveforms)
-    loader.traces = traces
-    channels = [2, 5, 7]
-    loader.channels = channels
-    assert loader.channels == channels
-    assert loader[500].shape == (1, n_samples_waveforms, 3)
-    assert loader[[500, 501, 600, 300]].shape == (4, n_samples_waveforms, 3)
-
-    # Test edge effects.
-    assert loader[3].shape == (1, n_samples_waveforms, 3)
-    assert loader[995].shape == (1, n_samples_waveforms, 3)
-
-    with raises(NotImplementedError):
-        loader[500:510]
-
-
-def test_loader_filter():
+def test_loader_filter_1():
     traces = np.c_[np.arange(20), np.arange(20, 40)].astype(np.int32)
     n_samples_trace, n_channels = traces.shape
     h = 3
@@ -243,12 +177,25 @@ def test_loader_filter():
     def my_filter(x, axis=0):
         return x * x
 
-    loader = WaveformLoader(traces,
+    loader = WaveformLoader(spike_samples=np.arange(20),
                             n_samples_waveforms=(h, h),
-                            filter=my_filter,
-                            filter_margin=2)
+                            )
+    loader.traces = traces
+    loader._filter = my_filter
 
     t = 10
     waveform_filtered = loader[t]
     traces_filtered = my_filter(traces)
     assert np.allclose(waveform_filtered, traces_filtered[t - h:t + h, :])
+
+
+def test_loader_filter_2():
+    loader = waveform_loader(do_filter=True, mask_threshold=.1)
+    ns = loader.n_samples_waveforms
+    nc = loader.n_channels
+
+    with raises(ValueError):
+        loader._load_at(-10)
+
+    assert loader[0].shape == (1, ns, nc)
+    assert loader[:].shape == (loader.n_spikes, ns, nc)

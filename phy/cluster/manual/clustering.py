@@ -153,6 +153,7 @@ class Clustering(EventEmitter):
         self._spike_clusters = _as_array(spike_clusters)
         self._n_spikes = len(self._spike_clusters)
         self._spike_ids = np.arange(self._n_spikes).astype(np.int64)
+        self._update_cluster_ids()
         self._new_cluster_id_0 = (new_cluster_id or
                                   self._spike_clusters.max() + 1)
         self._new_cluster_id = self._new_cluster_id_0
@@ -179,7 +180,7 @@ class Clustering(EventEmitter):
     @property
     def cluster_ids(self):
         """Ordered list of ids of all non-empty clusters."""
-        return _unique(self._spike_clusters)
+        return self._cluster_ids
 
     def new_cluster_id(self):
         """Generate a brand new cluster id.
@@ -213,6 +214,10 @@ class Clustering(EventEmitter):
 
     # Actions
     #--------------------------------------------------------------------------
+
+    def _update_cluster_ids(self):
+        # Update the list of non-empty cluster ids.
+        self._cluster_ids = _unique(self._spike_clusters)
 
     def _do_assign(self, spike_ids, new_spike_clusters):
         """Make spike-cluster assignments after the spike selection has
@@ -249,6 +254,7 @@ class Clustering(EventEmitter):
 
         # We make the assignments.
         self._spike_clusters[spike_ids] = new_spike_clusters
+        self._update_cluster_ids()
         return up
 
     def _do_merge(self, spike_ids, cluster_ids, to):
@@ -267,6 +273,8 @@ class Clustering(EventEmitter):
 
         # Assign the clusters.
         self.spike_clusters[spike_ids] = to
+        # Update the list of non-empty cluster ids.
+        self._update_cluster_ids()
         return up
 
     def merge(self, cluster_ids, to=None):

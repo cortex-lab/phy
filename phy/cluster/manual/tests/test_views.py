@@ -132,6 +132,8 @@ def test_waveform_view(qtbot, gui):
 
     v.zoom_on_channels([0, 2, 4])
 
+    v.filter_by_tag('test')
+
     # Simulate channel selection.
     _clicked = []
 
@@ -144,8 +146,6 @@ def test_waveform_view(qtbot, gui):
     v.events.key_release(key=keys.Key('2'))
 
     assert _clicked == [(0, 1, 2)]
-
-    v.next_data()
 
     # qtbot.stop()
     gui.close()
@@ -188,6 +188,7 @@ def test_trace_view(qtbot, gui):
     v.widen()
 
     v.toggle_show_labels()
+    v.go_right()
     assert v.do_show_labels
 
     # Change channel scaling.
@@ -232,12 +233,12 @@ def test_feature_view(qtbot, gui):
 
 def test_scatter_view(qtbot, gui):
     n = 1000
-    v = ScatterView(coords=lambda c: Bunch(x=np.random.randn(n),
-                                           y=np.random.randn(n),
-                                           spike_ids=np.arange(n),
-                                           spike_clusters=np.ones(n).
-                                           astype(np.int32) * c[0],
-                                           ) if 2 not in c else None,
+    v = ScatterView(coords=lambda c: [Bunch(x=np.random.randn(n),
+                                            y=np.random.randn(n),
+                                            spike_ids=np.arange(n),
+                                            spike_clusters=np.ones(n).
+                                            astype(np.int32) * c[0],
+                                            )] if 2 not in c else None,
                     # data_bounds=[-3, -3, 3, 3],
                     )
     v.attach(gui)

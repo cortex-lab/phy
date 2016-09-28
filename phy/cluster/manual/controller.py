@@ -20,12 +20,13 @@ from phy.cluster.manual.views import (WaveformView,
                                       extract_spikes,
                                       )
 from phy.gui import GUI
-from phy.io.array import _get_data_lim, concat_per_cluster
+from phy.io.array import _get_data_lim, concat_per_cluster, get_excerpts
 from phy.io import Context, Selector
 from phy.plot.transform import _normalize
 from phy.stats.clusters import (mean,
                                 get_waveform_amplitude,
                                 )
+from phy.stats.ccg import correlograms
 from phy.utils import Bunch, load_master_config, get_plugin, EventEmitter
 
 logger = logging.getLogger(__name__)
@@ -56,6 +57,8 @@ class Controller(EventEmitter):
     n_spikes_background_features = 5000
     n_spikes_features_lim = 100
     n_spikes_close_clusters = 100
+    n_excerpts_correlograms = 100
+    excerpt_size_correlograms = 1000
 
     # responsible for the cache
     def __init__(self, plugins=None, config_dir=None):
@@ -76,7 +79,16 @@ class Controller(EventEmitter):
         if len(default_plugins):
             plugins = default_plugins + plugins
         for plugin in plugins:
-            get_plugin(plugin)().attach_to_controller(self)
+            try:
+                p = get_plugin(plugin)()
+            except ValueError:  # pragma: no cover
+                logger.warn("The plugin %s couldn't be found.", plugin)
+                continue
+            try:
+                p.attach_to_controller(self)
+            except Exception as e:  # pragma: no cover
+                logger.warn("An error occurred when attaching plugin %s: %s.",
+                            plugin, e)
 
         self.emit('init')
 
@@ -132,6 +144,7 @@ class Controller(EventEmitter):
             self.get_close_clusters)
         self.get_probe_depth = ctx.memcache(
             self.get_probe_depth)
+        self.get_correlograms = ctx.memcache(self.get_correlograms)
 
         self.spikes_per_cluster = ctx.memcache(self.spikes_per_cluster)
 
@@ -163,17 +176,18 @@ class Controller(EventEmitter):
         self.manual_clustering = mc
         mc.add_column(self.get_probe_depth, name='depth')
 
-    def _select_spikes(self, cluster_id, n_max=None):
+    def _select_spikes(self, cluster_id, n_max=None, batch_size=None):
         assert isinstance(cluster_id, int)
         assert cluster_id >= 0
-        return self.selector.select_spikes([cluster_id], n_max)
+        return self.selector.select_spikes([cluster_id], n_max,
+                                           batch_size=batch_size)
 
-    def _select_data(self, cluster_id, arr, n_max=None):
-        spike_ids = self._select_spikes(cluster_id, n_max)
+    def _select_data(self, cluster_id, arr, n_max=None, batch_size=None):
+        spike_ids = self._select_spikes(cluster_id, n_max,
+                                        batch_size=batch_size)
         b = Bunch()
         b.data = arr[spike_ids]
         b.spike_ids = spike_ids
-        b.spike_clusters = self.spike_clusters[spike_ids]
         b.masks = self.all_masks[spike_ids]
         return b
 
@@ -201,14 +215,21 @@ class Controller(EventEmitter):
         data = self._select_data(cluster_id,
                                  self.all_waveforms,
                                  self.n_spikes_waveforms,
+                                 batch_size=10,
                                  )
+        # Sparsify the waveforms.
+        w = data.data
+        channels = np.nonzero(w.mean(axis=1).mean(axis=0))[0]
+        w = w[:, :, channels]
+        data.channels = channels
         # Cache the normalized waveforms.
         m, M = self.get_waveform_lims()
-        data.data = _normalize(data.data, m, M)
-        return [data]
+        data.data = _normalize(w, m, M)
+        data.cluster_id = cluster_id
+        return data
 
     def get_mean_waveforms(self, cluster_id):
-        return mean(self.get_waveforms(cluster_id)[0].data)
+        return mean(self.get_waveforms(cluster_id).data)
 
     def get_waveform_lims(self):
         n_spikes = self.n_spikes_waveforms_lim
@@ -252,6 +273,8 @@ class Controller(EventEmitter):
         spike_ids = slice(None, None, k)
         b = Bunch()
         b.data = self.all_features[spike_ids]
+        m = self.get_feature_lim()
+        b.data = _normalize(b.data.copy(), -m, +m)
         b.spike_ids = spike_ids
         b.spike_clusters = self.spike_clusters[spike_ids]
         b.masks = self.all_masks[spike_ids]
@@ -335,6 +358,28 @@ class Controller(EventEmitter):
     def spikes_per_cluster(self, cluster_id):
         return np.nonzero(self.spike_clusters == cluster_id)[0]
 
+    def get_correlograms(self, cluster_ids, bin_size, window_size):
+
+        # Keep spikes belonging to the selected clusters.
+        ind = np.nonzero(np.in1d(self.spike_clusters, cluster_ids))[0]
+        ne = self.n_excerpts_correlograms * len(cluster_ids)
+        ind = get_excerpts(ind,
+                           excerpt_size=self.excerpt_size_correlograms,
+                           n_excerpts=ne)
+
+        st = self.spike_times[ind]
+        sc = self.spike_clusters[ind]
+
+        # Compute all pairwise correlograms.
+        ccg = correlograms(st, sc,
+                           cluster_ids=cluster_ids,
+                           sample_rate=self.sample_rate,
+                           bin_size=bin_size,
+                           window_size=window_size,
+                           )
+
+        return ccg
+
     # View methods
     # -------------------------------------------------------------------------
 
@@ -371,8 +416,7 @@ class Controller(EventEmitter):
         return self._add_view(gui, v)
 
     def add_correlogram_view(self, gui):
-        v = CorrelogramView(spike_times=self.spike_times,
-                            spike_clusters=self.spike_clusters,
+        v = CorrelogramView(correlograms=self.get_correlograms,
                             sample_rate=self.sample_rate,
                             )
         return self._add_view(gui, v)

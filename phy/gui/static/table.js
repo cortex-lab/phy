@@ -113,7 +113,7 @@ Table.prototype.setData = function(data) {
                     that.select(that.selected.concat([id]));
                 }
             }
-            else if (evt.shiftKey) {
+            else if (evt.shiftKey && that.selected.length > 0) {
                 var clicked_idx = that.rows[id].rowIndex;
                 var sel_idx = that.rows[that.selected[0]].rowIndex;
                 if (sel_idx == undefined) return;
@@ -188,15 +188,25 @@ Table.prototype.select = function(ids, do_emit) {
     }
 
     // Add the class.
+    // Like ids, but without the non-existing ids.
+    var ids_exist = [];
     for (var i = 0; i < ids.length; i++) {
         ids[i] = parseInt(String(ids[i]));
-        this.rows[ids[i]].classList.add('selected');
+        var row = this.rows[ids[i]];
+        if (row) {
+            row.classList.add('selected');
+            ids_exist.push(ids[i]);
+        }
+        else {
+            console.log("Skipping cluster " + String(ids[i]) +
+                        " which doesn't exist.");
+        }
     }
 
-    this.selected = ids;
+    this.selected = ids_exist;
 
     if (do_emit)
-        emit("select", ids);
+        emit("select", ids_exist);
 };
 
 Table.prototype.clear = function() {

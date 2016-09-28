@@ -17,7 +17,9 @@ from traceback import format_exception
 import click
 from six import exec_
 
-from phy import (add_default_handler, DEBUG, _Formatter, _logger_fmt,
+from phy import (add_default_handler,
+                 DEBUG, PDB, IPYTHON,
+                 _Formatter, _logger_fmt,
                  __version_git__, discover_plugins)
 from phy.utils import _fullname
 from phy.utils.testing import _enable_pdb, _enable_profiler, _profile
@@ -58,9 +60,9 @@ def _add_log_file(filename):
 
 def _run_cmd(cmd, ctx, glob, loc):  # pragma: no cover
     """Run a command with optionally a debugger, IPython, or profiling."""
-    if ctx.obj['pdb']:
+    if PDB:
         _enable_pdb()
-    if ctx.obj['ipython']:
+    if IPYTHON:
         from IPython import start_ipython
         args_ipy = ['-i', '--gui=qt']
         ns = glob.copy()
@@ -79,18 +81,12 @@ def _run_cmd(cmd, ctx, glob, loc):  # pragma: no cover
 #------------------------------------------------------------------------------
 
 @click.group()
-@click.option('--pdb', default=False, is_flag=True)
-@click.option('--ipython', default=False, is_flag=True)
 @click.version_option(version=__version_git__)
 @click.help_option('-h', '--help')
 @click.pass_context
 def phy(ctx, pdb=None, ipython=None, prof=None, lprof=None):
     """By default, the `phy` command does nothing. Add subcommands with plugins
     using `attach_to_cli()` and the `click` library."""
-    ctx.obj = {}
-
-    ctx.obj['pdb'] = pdb
-    ctx.obj['ipython'] = ipython
 
     # Create a `phy.log` log file with DEBUG level in the current directory.
     _add_log_file(op.join(os.getcwd(), 'phy.log'))
