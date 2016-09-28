@@ -204,6 +204,18 @@ class GUI(QMainWindow):
             for actions in self.actions:
                 actions.show_shortcuts()
 
+        @self.default_actions.add(shortcut='?')
+        def about():  # pragma: no cover
+            """Display an about dialog."""
+            from phy import __version_git__
+            msg = "phy {} v{}".format(self.name, __version_git__)
+            try:
+                from phycontrib import __version__
+                msg += "\nphycontrib v{}".format(__version__)
+            except ImportError:
+                pass
+            QMessageBox.about(self, "About", msg)
+
         @self.default_actions.add(shortcut='ctrl+q')
         def exit():
             """Close the GUI."""
