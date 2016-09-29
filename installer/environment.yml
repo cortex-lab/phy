@@ -5,6 +5,7 @@ dependencies:
   - matplotlib
   - scipy
   - h5py
+  - cython
   - pyqt=4
   - pip:
     - klusta
