@@ -87,9 +87,7 @@ def _run_cmd(cmd, ctx, glob, loc):  # pragma: no cover
 def phy(ctx, pdb=None, ipython=None, prof=None, lprof=None):
     """By default, the `phy` command does nothing. Add subcommands with plugins
     using `attach_to_cli()` and the `click` library."""
-
-    # Create a `phy.log` log file with DEBUG level in the current directory.
-    _add_log_file(op.join(os.getcwd(), 'phy.log'))
+    pass
 
 
 #------------------------------------------------------------------------------
