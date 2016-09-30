@@ -11,9 +11,13 @@
 import os.path as op
 
 from click.testing import CliRunner
+import logging
 from pytest import yield_fixture
 
-from .._misc import _write_text
+from ..cli import _add_log_file
+from .._misc import _write_text, _read_text
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -74,3 +78,10 @@ def test_cli_plugins(temp_config_dir, runner):
     result = runner.invoke(phy, ['hello'])
     assert result.exit_code == 0
     assert result.output == 'hello world\n'
+
+
+def test_add_log_file(tempdir):
+    filename = op.join(tempdir, 'phy.log')
+    _add_log_file(filename)
+    logger.debug("test!")
+    assert _read_text(filename).endswith("test!\n")
