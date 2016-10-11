@@ -408,21 +408,16 @@ class ManualClustering(object):
         elif up.metadata_changed:
             # Select next in similarity view if all moved are in that view.
             if set(up.metadata_changed) <= set(similar):
-
-                # Update the cluster view, and select the clusters that
-                # were selected before the action.
-                selected = self.similarity_view.selected
+                next_cluster = self.similarity_view.get_next_id()
                 self._update_similarity_view()
-                self.similarity_view.select(selected, do_emit=False)
-                self.similarity_view.next()
+                if next_cluster is not None:
+                    self.similarity_view.select([next_cluster])
             # Otherwise, select next in cluster view.
             else:
-                # Update the cluster view, and select the clusters that
-                # were selected before the action.
-                selected = self.cluster_view.selected
+                next_cluster = self.cluster_view.get_next_id()
                 self._update_cluster_view()
-                self.cluster_view.select(selected, do_emit=False)
-                self.cluster_view.next()
+                if next_cluster is not None:
+                    self.cluster_view.select([next_cluster])
                 if similar:
                     self.similarity_view.next()
 

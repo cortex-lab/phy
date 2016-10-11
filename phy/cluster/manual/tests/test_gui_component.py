@@ -319,13 +319,13 @@ def test_manual_clustering_action_move_3(manual_clustering):
     assert mc.selected == [30, 20]
     mc.actions.move_all_to_noise()
 
-    assert mc.selected == [11, 2]
+    assert mc.selected == [20, 11]
     mc.actions.move_all_to_mua()
 
-    assert mc.selected == [1]
+    assert mc.selected == [11, 2]
     mc.actions.move_all_to_good()
 
-    assert mc.selected == [1]
+    assert mc.selected == [2, 11]
 
     mc.cluster_meta.get('group', 30) == 'noise'
     mc.cluster_meta.get('group', 20) == 'noise'
