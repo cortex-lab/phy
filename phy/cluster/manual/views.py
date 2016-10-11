@@ -1416,14 +1416,14 @@ class ScatterView(ManualClusteringView):
         if n_clusters == 0:
             return
 
-        # Get the spike times and amplitudes
+        # Get the x and y coordinates.
         data = self.coords(cluster_ids)
         if data is None:
             self.clear()
             return
         assert isinstance(data, list)
 
-        # Plot the amplitudes.
+        # Plot the points.
         with self.building():
             for i, cl in enumerate(cluster_ids):
                 # Skip non-existing clusters.
@@ -1433,7 +1433,7 @@ class ScatterView(ManualClusteringView):
                 spike_ids = d.spike_ids
                 x = d.x
                 y = d.y
-                data_bounds = d.get('data_bounds', None)
+                data_bounds = d.get('data_bounds', 'auto')
                 n_spikes = len(spike_ids)
                 assert n_spikes > 0
                 assert x.shape == (n_spikes,)
