@@ -308,11 +308,13 @@ class Table(HTMLWidget):
 
     def get_next_id(self):
         """Get the next non-skipped row id."""
-        return int(self.eval_js('table.get_next_id();'))
+        next_id = self.eval_js('table.get_next_id();')
+        return int(next_id) if next_id is not None else None
 
     def get_previous_id(self):
         """Get the previous non-skipped row id."""
-        return int(self.eval_js('table.get_previous_id();'))
+        previous_id = self.eval_js('table.get_previous_id();')
+        return int(previous_id) if previous_id is not None else None
 
     def next(self):
         """Select the next non-skipped row."""
