@@ -440,8 +440,9 @@ class ManualClustering(object):
                              cluster, next_cluster)
                 # If there is not, fallback on the next cluster in the list.
                 if next_cluster is None:
-                    next_cluster = self.cluster_view.get_next_id()
-                if next_cluster is not None:
+                    self.cluster_view.select([cluster], do_emit=False)
+                    self.cluster_view.next()
+                else:
                     self.cluster_view.select([next_cluster])
                 if similar:
                     self.similarity_view.next()

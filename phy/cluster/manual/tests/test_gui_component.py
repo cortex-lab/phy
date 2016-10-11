@@ -132,7 +132,12 @@ def test_manual_clustering_merge_move(manual_clustering):
     mc.merge()
     assert mc.selected == [31]
 
-    mc.move('noise')
+    mc.move('good')
+    assert mc.selected == [2]
+
+    mc.cluster_view.select([30])
+
+    mc.move('good')
     assert mc.selected == [2]
 
 
@@ -217,13 +222,13 @@ def test_manual_clustering_move_1(manual_clustering):
     assert mc.selected == [20]
 
     mc.move('noise')
-    assert mc.selected == [30]
+    assert mc.selected == [11]
 
     mc.undo()
     assert mc.selected == [20]
 
     mc.redo()
-    assert mc.selected == [30]
+    assert mc.selected == [11]
 
 
 def test_manual_clustering_move_2(manual_clustering):
@@ -293,7 +298,7 @@ def test_manual_clustering_action_move_1(qtbot, manual_clustering):
     assert mc.selected == [11]
     mc.actions.move_best_to_good()
 
-    assert mc.selected == [11]
+    assert mc.selected == [2]
 
     mc.cluster_meta.get('group', 30) == 'noise'
     mc.cluster_meta.get('group', 20) == 'mua'
