@@ -137,12 +137,17 @@ Table.prototype.setData = function(data) {
 };
 
 Table.prototype.rowId = function(i) {
-    return this.el.rows[i].dataset.id;
+    return parseInt(String(this.el.rows[i].dataset.id));
 };
 
 Table.prototype.isRowSkipped = function(i) {
     return this.el.rows[i].dataset.skip == 'true';
 };
+
+Table.prototype.isSelected = function(i) {
+    // Return whether a row index is currently selected.
+    return this.selected.indexOf(this.rowId(i)) >= 0;
+}
 
 Table.prototype.sortBy = function(header, dir) {
     dir = typeof dir !== 'undefined' ? dir : 'asc';
@@ -246,7 +251,8 @@ Table.prototype.rowIterator = function(id, doSkip) {
         next: function () {
             if (this.i == undefined) this.i = 0;
             for (var i = this.i + 1; i < this.n; i++) {
-                if (!doSkip || !that.isRowSkipped(i)) {
+                // Skip selected items.
+                if ((!doSkip || !that.isRowSkipped(i)) && !that.isSelected(i)) {
                     this.i = i;
                     return this.row();
                 }
