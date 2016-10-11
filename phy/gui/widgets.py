@@ -306,6 +306,14 @@ class Table(HTMLWidget):
         logger.log(5, "Sort by `%s` %s.", name, sort_dir)
         self.eval_js('table.sortBy("{}", "{}");'.format(name, sort_dir))
 
+    def get_next_id(self):
+        """Get the next non-skipped row id."""
+        return int(self.eval_js('table.get_next_id();'))
+
+    def get_previous_id(self):
+        """Get the previous non-skipped row id."""
+        return int(self.eval_js('table.get_previous_id();'))
+
     def next(self):
         """Select the next non-skipped row."""
         self.eval_js('table.next();')

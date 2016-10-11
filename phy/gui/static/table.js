@@ -256,22 +256,32 @@ Table.prototype.rowIterator = function(id, doSkip) {
     };
 };
 
-Table.prototype.next = function() {
+Table.prototype.get_next_id = function() {
     // TODO: what to do when doing next() while several items are selected.
     var id = this.selected[0];
     var iterator = this.rowIterator(id);
     var row = iterator.next();
-    this.select([row.dataset.id]);
     row.scrollIntoView(false);
-    return;
+    return row.dataset.id;
 };
 
-Table.prototype.previous = function() {
+Table.prototype.get_previous_id = function() {
     // TODO: what to do when doing previous() while several items are selected.
     var id = this.selected[0];
     var iterator = this.rowIterator(id);
     var row = iterator.previous();
-    this.select([row.dataset.id]);
     row.scrollIntoView(false);
+    return row.dataset.id;
+};
+
+Table.prototype.next = function() {
+    var id = this.get_next_id();
+    this.select([id]);
+    return;
+};
+
+Table.prototype.previous = function() {
+    var id = this.get_previous_id();
+    this.select([id]);
     return;
 };

@@ -107,6 +107,7 @@ def test_table_default_sort(qtbot):
     table.set_rows(range(10))
 
     assert table.default_sort == ('count', 'asc')
+    assert table.get_next_id() == 9
     table.next()
     assert table.selected == [9]
 
@@ -146,6 +147,7 @@ def test_table_nav_edge_0(qtbot, table):
 def test_table_nav_edge_1(qtbot, table):
     # The last item is skipped.
     table.set_rows([3, 4])
+    assert table.get_previous_id() == 3
     table.previous()
     assert table.selected == [3]
 
