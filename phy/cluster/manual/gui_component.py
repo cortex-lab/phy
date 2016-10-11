@@ -160,6 +160,23 @@ class ManualClustering(object):
         self.cluster_groups = cluster_groups or {}
         self.cluster_meta = create_cluster_meta(self.cluster_groups)
         self._global_history = GlobalHistory(process_ups=_process_ups)
+
+        self.cluster_meta.add_field('next_cluster')
+
+        @self.clustering.connect
+        def on_cluster(up):
+            """Register the next cluster in the list before the cluster
+            view is updated."""
+            if not up.added:
+                return
+            cluster = up.added[0]
+            next_cluster = self.cluster_view.get_next_id()
+            logger.debug("Register next_cluster to %d: %s",
+                         cluster, next_cluster)
+            self.cluster_meta.set('next_cluster', [cluster], next_cluster,
+                                  add_to_stack=False)
+
+        # NOTE: global on_cluster() occurs here.
         self._register_logging()
 
         # Create the cluster views.
@@ -408,14 +425,22 @@ class ManualClustering(object):
         elif up.metadata_changed:
             # Select next in similarity view if all moved are in that view.
             if set(up.metadata_changed) <= set(similar):
-                next_cluster = self.similarity_view.get_next_id()
                 self._update_similarity_view()
+                next_cluster = self.similarity_view.get_next_id()
                 if next_cluster is not None:
                     self.similarity_view.select([next_cluster])
             # Otherwise, select next in cluster view.
             else:
-                next_cluster = self.cluster_view.get_next_id()
                 self._update_cluster_view()
+                # Determine if there is a next cluster set from a
+                # previous clustering action.
+                cluster = up.metadata_changed[0]
+                next_cluster = self.cluster_meta.get('next_cluster', cluster)
+                logger.debug("Get next_cluster for %d: %s.",
+                             cluster, next_cluster)
+                # If there is not, fallback on the next cluster in the list.
+                if next_cluster is None:
+                    next_cluster = self.cluster_view.get_next_id()
                 if next_cluster is not None:
                     self.cluster_view.select([next_cluster])
                 if similar:

@@ -122,6 +122,20 @@ def test_manual_clustering_merge(manual_clustering):
     assert mc.selected == [31, 11]
 
 
+def test_manual_clustering_merge_move(manual_clustering):
+    """Check that merge then move selects the next cluster in the original
+    cluster view, not the updated cluster view."""
+    mc = manual_clustering
+
+    mc.cluster_view.select([20, 11])
+
+    mc.merge()
+    assert mc.selected == [31]
+
+    mc.move('noise')
+    assert mc.selected == [2]
+
+
 def test_manual_clustering_split(manual_clustering):
     mc = manual_clustering
 
@@ -203,13 +217,13 @@ def test_manual_clustering_move_1(manual_clustering):
     assert mc.selected == [20]
 
     mc.move('noise')
-    assert mc.selected == [11]
+    assert mc.selected == [30]
 
     mc.undo()
     assert mc.selected == [20]
 
     mc.redo()
-    assert mc.selected == [11]
+    assert mc.selected == [30]
 
 
 def test_manual_clustering_move_2(manual_clustering):
@@ -221,13 +235,13 @@ def test_manual_clustering_move_2(manual_clustering):
     assert mc.selected == [20, 10]
 
     mc.move('noise', 10)
-    assert mc.selected == [20, 2]
+    assert mc.selected == [20, 30]
 
     mc.undo()
     assert mc.selected == [20, 10]
 
     mc.redo()
-    assert mc.selected == [20, 2]
+    assert mc.selected == [20, 30]
 
 
 #------------------------------------------------------------------------------
@@ -279,7 +293,7 @@ def test_manual_clustering_action_move_1(qtbot, manual_clustering):
     assert mc.selected == [11]
     mc.actions.move_best_to_good()
 
-    assert mc.selected == [2]
+    assert mc.selected == [11]
 
     mc.cluster_meta.get('group', 30) == 'noise'
     mc.cluster_meta.get('group', 20) == 'mua'
@@ -303,7 +317,7 @@ def test_manual_clustering_action_move_2(manual_clustering):
     assert mc.selected == [30, 2]
     mc.actions.move_similar_to_good()
 
-    assert mc.selected == [30, 1]
+    assert mc.selected == [30, 2]
 
     mc.cluster_meta.get('group', 20) == 'noise'
     mc.cluster_meta.get('group', 11) == 'mua'
@@ -319,13 +333,13 @@ def test_manual_clustering_action_move_3(manual_clustering):
     assert mc.selected == [30, 20]
     mc.actions.move_all_to_noise()
 
-    assert mc.selected == [20, 11]
+    assert mc.selected == [11, 2]
     mc.actions.move_all_to_mua()
 
-    assert mc.selected == [11, 2]
+    assert mc.selected == [1]
     mc.actions.move_all_to_good()
 
-    assert mc.selected == [2, 11]
+    assert mc.selected == [1]
 
     mc.cluster_meta.get('group', 30) == 'noise'
     mc.cluster_meta.get('group', 20) == 'noise'
