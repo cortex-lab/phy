@@ -104,6 +104,8 @@ class ManualClustering(object):
         'merge': 'g',
         'split': 'k',
 
+        'label': 'l',
+
         # Move.
         'move_best_to_noise': 'alt+n',
         'move_best_to_mua': 'alt+m',
@@ -207,16 +209,22 @@ class ManualClustering(object):
 
         @self.cluster_meta.connect  # noqa
         def on_cluster(up):
-            # Update the original dictionary when groups change.
-            for clu in up.metadata_changed:
-                self.cluster_groups[clu] = up.metadata_value
-
+            # Log changes.
             if up.history:
                 logger.info(up.history.title() + " move.")
             else:
-                logger.info("Move clusters %s to %s.",
+                logger.info("Change %s for clusters %s to %s.",
+                            up.description,
                             ', '.join(map(str, up.metadata_changed)),
                             up.metadata_value)
+
+            # Skip cluster metadata other than groups.
+            if up.description != 'metadata_group':
+                return
+
+            # Update the original dictionary when groups change.
+            for clu in up.metadata_changed:
+                self.cluster_groups[clu] = up.metadata_value
 
             if self.gui:
                 self.gui.emit('cluster', up)
@@ -281,6 +289,10 @@ class ManualClustering(object):
                              name='move_all_to_' + group,
                              docstring='Move all selected clusters to %s.' %
                              group)
+        self.actions.separator()
+
+        # Label.
+        self.actions.add(self.label, alias='l')
         self.actions.separator()
 
         # Others.
@@ -534,16 +546,20 @@ class ManualClustering(object):
     # Move actions
     # -------------------------------------------------------------------------
 
-    def move(self, group, cluster_ids=None):
-        """Move clusters to a group."""
+    def label(self, name, value, cluster_ids=None):
+        """Assign a label to clusters."""
         if cluster_ids is None:
             cluster_ids = self.selected
         if not hasattr(cluster_ids, '__len__'):
             cluster_ids = [cluster_ids]
         if len(cluster_ids) == 0:
             return
-        self.cluster_meta.set('group', cluster_ids, group)
+        self.cluster_meta.set(name, cluster_ids, value)
         self._global_history.action(self.cluster_meta)
+
+    def move(self, group, cluster_ids=None):
+        """Move clusters to a group."""
+        self.label('group', group, cluster_ids=cluster_ids)
 
     def move_best(self, group=None):
         """Move all selected best clusters to a group."""
@@ -600,4 +616,12 @@ class ManualClustering(object):
         spike_clusters = self.clustering.spike_clusters
         groups = {c: self.cluster_meta.get('group', c) or 'unsorted'
                   for c in self.clustering.cluster_ids}
-        self.gui.emit('request_save', spike_clusters, groups)
+        # List of label names assigned to clusters.
+        fields = [f for f in self.cluster_meta.fields if f != 'group']
+        # List of tuples (field_name, dictionary).
+        labels = [(field, {c: self.cluster_meta.get(field, c)
+                           for c in self.clustering.cluster_ids})
+                  for field in fields
+                  if field != 'next_cluster']
+        # TODO: add option in add_field to declare a field unsavable.
+        self.gui.emit('request_save', spike_clusters, groups, *labels)

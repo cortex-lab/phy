@@ -40,6 +40,8 @@ def test_controller_1(qtbot, tempdir):
     assert controller.hello == 'world'
 
     controller.manual_clustering.select([2, 3])
+    assert controller.get_mean_features(2) is not None
+    assert len(controller.spikes_per_cluster(2)) > 0
 
     # qtbot.stop()
     gui.close()
