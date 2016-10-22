@@ -337,6 +337,7 @@ def test_manual_clustering_action_move_3(manual_clustering):
 
     assert mc.selected == [30, 20]
     mc.actions.move_all_to_noise()
+    mc.next()
 
     assert mc.selected == [11, 2]
     mc.actions.move_all_to_mua()

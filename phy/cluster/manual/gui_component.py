@@ -456,8 +456,6 @@ class ManualClustering(object):
                     self.cluster_view.next()
                 else:
                     self.cluster_view.select([next_cluster])
-                if similar:
-                    self.similarity_view.next()
 
     def attach(self, gui):
         self.gui = gui
