@@ -215,6 +215,18 @@ def test_manual_clustering_split_lasso(tempdir, qtbot):
     gui.close()
 
 
+def test_manual_clustering_label(manual_clustering):
+    mc = manual_clustering
+
+    mc.select([20])
+    mc.label("my_field", 3.14)
+
+    mc.save()
+
+    assert 'my_field' in mc.fields
+    assert mc.get_labels('my_field')[20] == 3.14
+
+
 def test_manual_clustering_move_1(manual_clustering):
     mc = manual_clustering
 

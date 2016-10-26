@@ -544,6 +544,16 @@ class ManualClustering(object):
     # Move actions
     # -------------------------------------------------------------------------
 
+    @property
+    def fields(self):
+        """Tuple of label fields."""
+        return tuple(f for f in self.cluster_meta.fields if f != 'group')
+
+    def get_labels(self, field):
+        """Return the labels of all clusters, for a given field."""
+        return {c: self.cluster_meta.get(field, c)
+                for c in self.clustering.cluster_ids}
+
     def label(self, name, value, cluster_ids=None):
         """Assign a label to clusters."""
         if cluster_ids is None:
@@ -614,12 +624,9 @@ class ManualClustering(object):
         spike_clusters = self.clustering.spike_clusters
         groups = {c: self.cluster_meta.get('group', c) or 'unsorted'
                   for c in self.clustering.cluster_ids}
-        # List of label names assigned to clusters.
-        fields = [f for f in self.cluster_meta.fields if f != 'group']
         # List of tuples (field_name, dictionary).
-        labels = [(field, {c: self.cluster_meta.get(field, c)
-                           for c in self.clustering.cluster_ids})
-                  for field in fields
+        labels = [(field, self.get_labels(field))
+                  for field in self.fields
                   if field != 'next_cluster']
         # TODO: add option in add_field to declare a field unsavable.
         self.gui.emit('request_save', spike_clusters, groups, *labels)
