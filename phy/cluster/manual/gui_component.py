@@ -229,6 +229,12 @@ class ManualClustering(object):
             if self.gui:
                 self.gui.emit('cluster', up)
 
+    def _add_field_column(self, field):
+        """Add a column for a given label field."""
+        @self.add_column(name=field)
+        def get_my_label(cluster_id):
+            return self.cluster_meta.get(field, cluster_id)
+
     def _add_default_columns(self):
         # Default columns.
         @self.add_column(name='n_spikes')
@@ -247,6 +253,10 @@ class ManualClustering(object):
         def good(cluster_id):
             """Good column for color."""
             return self.cluster_meta.get('group', cluster_id) == 'good'
+
+        # Add columns for labels.
+        for field in self.fields:
+            self._add_field_column(field)
 
         def similarity(cluster_id):
             # NOTE: there is a dictionary with the similarity to the current
@@ -547,7 +557,8 @@ class ManualClustering(object):
     @property
     def fields(self):
         """Tuple of label fields."""
-        return tuple(f for f in self.cluster_meta.fields if f != 'group')
+        return tuple(f for f in self.cluster_meta.fields
+                     if f not in ('group', 'next_cluster'))
 
     def get_labels(self, field):
         """Return the labels of all clusters, for a given field."""
@@ -625,8 +636,6 @@ class ManualClustering(object):
         groups = {c: self.cluster_meta.get('group', c) or 'unsorted'
                   for c in self.clustering.cluster_ids}
         # List of tuples (field_name, dictionary).
-        labels = [(field, self.get_labels(field))
-                  for field in self.fields
-                  if field != 'next_cluster']
+        labels = [(field, self.get_labels(field)) for field in self.fields]
         # TODO: add option in add_field to declare a field unsavable.
         self.gui.emit('request_save', spike_clusters, groups, *labels)
