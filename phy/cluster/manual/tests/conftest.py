@@ -76,6 +76,7 @@ class MockController(Controller):
         assert len(self.spike_times) == len(self.spike_clusters)
         self.cluster_ids = np.unique(self.spike_clusters)
         self.channel_positions = staggered_positions(self.n_channels)
+        self.channel_order = np.arange(self.n_channels)
 
         sc = self.spike_clusters
         self.spikes_per_cluster = lambda c: _spikes_in_clusters(sc, [c])
