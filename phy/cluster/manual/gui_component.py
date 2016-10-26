@@ -547,7 +547,7 @@ class ManualClustering(object):
     def label(self, name, value, cluster_ids=None):
         """Assign a label to clusters."""
         if cluster_ids is None:
-            cluster_ids = self.selected
+            cluster_ids = self.cluster_view.selected
         if not hasattr(cluster_ids, '__len__'):
             cluster_ids = [cluster_ids]
         if len(cluster_ids) == 0:
