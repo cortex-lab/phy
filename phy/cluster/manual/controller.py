@@ -106,6 +106,7 @@ class Controller(EventEmitter):
         self.cluster_ids = None
 
         self.channel_positions = None  # (n_channels, 2) array
+        self.channel_order = None
         self.n_samples_waveforms = None  # int > 0
         self.n_channels = None  # int > 0
         self.n_features_per_channel = None  # int > 0
@@ -391,6 +392,7 @@ class Controller(EventEmitter):
     def add_waveform_view(self, gui):
         v = WaveformView(waveforms=self.get_waveforms,
                          channel_positions=self.channel_positions,
+                         channel_order=self.channel_order,
                          best_channels=self.get_best_channels,
                          )
         return self._add_view(gui, v)
@@ -402,6 +404,7 @@ class Controller(EventEmitter):
                       duration=self.duration,
                       n_channels=self.n_channels,
                       channel_positions=self.channel_positions,
+                      channel_order=self.channel_order,
                       )
         return self._add_view(gui, v)
 
