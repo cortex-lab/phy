@@ -611,6 +611,7 @@ class TraceView(ManualClusteringView):
                  sample_rate=None,
                  duration=None,
                  n_channels=None,
+                 channel_positions=None,
                  **kwargs):
 
         self.do_show_labels = False
@@ -634,6 +635,14 @@ class TraceView(ManualClusteringView):
 
         assert n_channels >= 0
         self.n_channels = n_channels
+
+        if channel_positions is None:
+            channel_positions = np.c_[np.arange(n_channels),
+                                      np.zeros(n_channels)]
+        assert channel_positions.shape == (n_channels, 2)
+        self.channel_positions = channel_positions
+
+        self.channel_vertical_order = np.argsort(channel_positions[:, 1])
 
         # Box and probe scaling.
         self._scaling = 1.
@@ -669,7 +678,9 @@ class TraceView(ManualClusteringView):
         t = self._interval[0] + np.arange(n_samples) * self.dt
         t = self._normalize_time(t)
         t = np.tile(t, (n_ch, 1))
-        box_index = np.repeat(np.arange(n_ch)[:, np.newaxis],
+        # Display the channels in vertical order.
+        order = self.channel_vertical_order
+        box_index = np.repeat(order[:, np.newaxis],
                               n_samples,
                               axis=1)
 
@@ -699,7 +710,8 @@ class TraceView(ManualClusteringView):
         t = np.tile(t, (n_channels, 1))  # (n_unmasked_channels, n_samples)
 
         # The box index depends on the channel.
-        box_index = np.repeat(channels[:, np.newaxis], n_samples, axis=0)
+        c = self.channel_vertical_order[channels]
+        box_index = np.repeat(c[:, np.newaxis], n_samples, axis=0)
         self.plot(t, waveforms.T, color=color,
                   box_index=box_index,
                   data_bounds=None,

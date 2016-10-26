@@ -401,6 +401,7 @@ class Controller(EventEmitter):
                       sample_rate=self.sample_rate,
                       duration=self.duration,
                       n_channels=self.n_channels,
+                      channel_positions=self.channel_positions,
                       )
         return self._add_view(gui, v)
 
