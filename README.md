@@ -18,7 +18,7 @@
 * **phy.gui**: a generic API for creating desktop applications with PyQt.
 * **phy.plot**: a generic API for creating high-performance plots with VisPy (using the graphics processor via OpenGL)
 
-phy doesn't provide any I/O code. It only provides Python routines to process and visualize data.
+phy targets developers and doesn't provide any I/O code. It only provides Python routines to process and visualize data.
 
 
 ## phy-contrib
@@ -57,7 +57,8 @@ pip install phy phycontrib --upgrade
 
 ## Links
 
-* [Documentation](http://phy.readthedocs.org/en/latest/) (work in progress)
+* [User documentation of the Template GUI](http://phy-contrib.readthedocs.io/en/latest/template-gui/)
+* [Developer documentation](http://phy.readthedocs.org/en/latest/) (work in progress)
 * [Mailing list](https://groups.google.com/forum/#!forum/phy-users)
 * [Sample data repository](http://phy.cortexlab.net/data/) (work in progress)
 
