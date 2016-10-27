@@ -229,7 +229,7 @@ class ManualClustering(object):
             if self.gui:
                 self.gui.emit('cluster', up)
 
-    def _add_field_column(self, field):
+    def _add_field_column(self, field):  # pragma: no cover
         """Add a column for a given label field."""
         @self.add_column(name=field)
         def get_my_label(cluster_id):
@@ -255,7 +255,7 @@ class ManualClustering(object):
             return self.cluster_meta.get('group', cluster_id) == 'good'
 
         # Add columns for labels.
-        for field in self.fields:
+        for field in self.fields:  # pragma: no cover
             self._add_field_column(field)
 
         def similarity(cluster_id):

@@ -355,7 +355,7 @@ class Controller(EventEmitter):
         ind = ind[:self.n_spikes_close_clusters]
         return [(int(clusters[i]), float(dist[i])) for i in ind]
 
-    def spikes_per_cluster(self, cluster_id):
+    def spikes_per_cluster(self, cluster_id):  # pragma: no cover
         return np.nonzero(self.spike_clusters == cluster_id)[0]
 
     def get_correlograms(self, cluster_ids, bin_size, window_size):
