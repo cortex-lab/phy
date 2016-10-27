@@ -206,6 +206,7 @@ class WaveformView(ManualClusteringView):
     def __init__(self,
                  waveforms=None,
                  channel_positions=None,
+                 channel_order=None,
                  best_channels=None,
                  **kwargs):
         self._key_pressed = None
@@ -245,6 +246,11 @@ class WaveformView(ManualClusteringView):
         # Channel positions.
         assert channel_positions.shape == (self.n_channels, 2)
         self.channel_positions = channel_positions
+
+        channel_order = (channel_order if channel_order is not None
+                         else np.arange(self.n_channels))
+        assert channel_order.shape == (self.n_channels,)
+        self.channel_order = channel_order
 
     def on_select(self, cluster_ids=None):
         super(WaveformView, self).on_select(cluster_ids)
@@ -327,9 +333,9 @@ class WaveformView(ManualClusteringView):
                         if ch in already_shown:
                             continue
                         already_shown.add(ch)
+                        ch_label = '%d' % self.channel_order[ch]
                         self[ch].text(pos=[t[0, 0], 0.],
-                                      # TODO: use real channel labels.
-                                      text=str(ch),
+                                      text=ch_label,
                                       anchor=[-1.01, -.25],
                                       data_bounds=None,
                                       )
@@ -611,6 +617,8 @@ class TraceView(ManualClusteringView):
                  sample_rate=None,
                  duration=None,
                  n_channels=None,
+                 channel_positions=None,
+                 channel_order=None,
                  **kwargs):
 
         self.do_show_labels = False
@@ -634,6 +642,20 @@ class TraceView(ManualClusteringView):
 
         assert n_channels >= 0
         self.n_channels = n_channels
+
+        channel_positions = (channel_positions
+                             if channel_positions is not None
+                             else np.c_[np.arange(n_channels),
+                                        np.zeros(n_channels)])
+        assert channel_positions.shape == (n_channels, 2)
+        self.channel_positions = channel_positions
+
+        channel_order = (channel_order if channel_order is not None
+                         else np.arange(n_channels))
+        assert channel_order.shape == (n_channels,)
+        self.channel_order = channel_order
+
+        self.channel_vertical_order = np.argsort(channel_positions[:, 1])
 
         # Box and probe scaling.
         self._scaling = 1.
@@ -669,7 +691,9 @@ class TraceView(ManualClusteringView):
         t = self._interval[0] + np.arange(n_samples) * self.dt
         t = self._normalize_time(t)
         t = np.tile(t, (n_ch, 1))
-        box_index = np.repeat(np.arange(n_ch)[:, np.newaxis],
+        # Display the channels in vertical order.
+        order = self.channel_vertical_order
+        box_index = np.repeat(order[:, np.newaxis],
                               n_samples,
                               axis=1)
 
@@ -699,7 +723,8 @@ class TraceView(ManualClusteringView):
         t = np.tile(t, (n_channels, 1))  # (n_unmasked_channels, n_samples)
 
         # The box index depends on the channel.
-        box_index = np.repeat(channels[:, np.newaxis], n_samples, axis=0)
+        c = self.channel_vertical_order[channels]
+        box_index = np.repeat(c[:, np.newaxis], n_samples, axis=0)
         self.plot(t, waveforms.T, color=color,
                   box_index=box_index,
                   data_bounds=None,
@@ -707,11 +732,13 @@ class TraceView(ManualClusteringView):
 
     def _plot_labels(self, traces):
         for ch in range(self.n_channels):
-            self[ch].text(pos=[-1., traces[0, ch]],
-                          text=str(ch),
-                          anchor=[+1., -.1],
-                          data_bounds=None,
-                          )
+            ch_label = '%d' % self.channel_order[ch]
+            och = self.channel_vertical_order[ch]
+            self[och].text(pos=[-1., traces[0, ch]],
+                           text=ch_label,
+                           anchor=[+1., -.1],
+                           data_bounds=None,
+                           )
 
     def _restrict_interval(self, interval):
         start, end = interval
