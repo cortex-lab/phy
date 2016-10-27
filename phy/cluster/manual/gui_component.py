@@ -104,6 +104,8 @@ class ManualClustering(object):
         'merge': 'g',
         'split': 'k',
 
+        'label': 'l',
+
         # Move.
         'move_best_to_noise': 'alt+n',
         'move_best_to_mua': 'alt+m',
@@ -160,6 +162,23 @@ class ManualClustering(object):
         self.cluster_groups = cluster_groups or {}
         self.cluster_meta = create_cluster_meta(self.cluster_groups)
         self._global_history = GlobalHistory(process_ups=_process_ups)
+
+        self.cluster_meta.add_field('next_cluster')
+
+        @self.clustering.connect
+        def on_cluster(up):
+            """Register the next cluster in the list before the cluster
+            view is updated."""
+            if not up.added:
+                return
+            cluster = up.added[0]
+            next_cluster = self.cluster_view.get_next_id()
+            logger.debug("Register next_cluster to %d: %s",
+                         cluster, next_cluster)
+            self.cluster_meta.set('next_cluster', [cluster], next_cluster,
+                                  add_to_stack=False)
+
+        # NOTE: global on_cluster() occurs here.
         self._register_logging()
 
         # Create the cluster views.
@@ -190,19 +209,31 @@ class ManualClustering(object):
 
         @self.cluster_meta.connect  # noqa
         def on_cluster(up):
+            # Log changes.
+            if up.history:
+                logger.info(up.history.title() + " move.")
+            else:
+                logger.info("Change %s for clusters %s to %s.",
+                            up.description,
+                            ', '.join(map(str, up.metadata_changed)),
+                            up.metadata_value)
+
+            # Skip cluster metadata other than groups.
+            if up.description != 'metadata_group':
+                return
+
             # Update the original dictionary when groups change.
             for clu in up.metadata_changed:
                 self.cluster_groups[clu] = up.metadata_value
 
-            if up.history:
-                logger.info(up.history.title() + " move.")
-            else:
-                logger.info("Move clusters %s to %s.",
-                            ', '.join(map(str, up.metadata_changed)),
-                            up.metadata_value)
-
             if self.gui:
                 self.gui.emit('cluster', up)
+
+    def _add_field_column(self, field):  # pragma: no cover
+        """Add a column for a given label field."""
+        @self.add_column(name=field)
+        def get_my_label(cluster_id):
+            return self.cluster_meta.get(field, cluster_id)
 
     def _add_default_columns(self):
         # Default columns.
@@ -222,6 +253,10 @@ class ManualClustering(object):
         def good(cluster_id):
             """Good column for color."""
             return self.cluster_meta.get('group', cluster_id) == 'good'
+
+        # Add columns for labels.
+        for field in self.fields:  # pragma: no cover
+            self._add_field_column(field)
 
         def similarity(cluster_id):
             # NOTE: there is a dictionary with the similarity to the current
@@ -264,6 +299,10 @@ class ManualClustering(object):
                              name='move_all_to_' + group,
                              docstring='Move all selected clusters to %s.' %
                              group)
+        self.actions.separator()
+
+        # Label.
+        self.actions.add(self.label, alias='l')
         self.actions.separator()
 
         # Others.
@@ -408,23 +447,25 @@ class ManualClustering(object):
         elif up.metadata_changed:
             # Select next in similarity view if all moved are in that view.
             if set(up.metadata_changed) <= set(similar):
-
-                # Update the cluster view, and select the clusters that
-                # were selected before the action.
-                selected = self.similarity_view.selected
                 self._update_similarity_view()
-                self.similarity_view.select(selected, do_emit=False)
-                self.similarity_view.next()
+                next_cluster = self.similarity_view.get_next_id()
+                if next_cluster is not None:
+                    self.similarity_view.select([next_cluster])
             # Otherwise, select next in cluster view.
             else:
-                # Update the cluster view, and select the clusters that
-                # were selected before the action.
-                selected = self.cluster_view.selected
                 self._update_cluster_view()
-                self.cluster_view.select(selected, do_emit=False)
-                self.cluster_view.next()
-                if similar:
-                    self.similarity_view.next()
+                # Determine if there is a next cluster set from a
+                # previous clustering action.
+                cluster = up.metadata_changed[0]
+                next_cluster = self.cluster_meta.get('next_cluster', cluster)
+                logger.debug("Get next_cluster for %d: %s.",
+                             cluster, next_cluster)
+                # If there is not, fallback on the next cluster in the list.
+                if next_cluster is None:
+                    self.cluster_view.select([cluster], do_emit=False)
+                    self.cluster_view.next()
+                else:
+                    self.cluster_view.select([next_cluster])
 
     def attach(self, gui):
         self.gui = gui
@@ -513,16 +554,31 @@ class ManualClustering(object):
     # Move actions
     # -------------------------------------------------------------------------
 
-    def move(self, group, cluster_ids=None):
-        """Move clusters to a group."""
+    @property
+    def fields(self):
+        """Tuple of label fields."""
+        return tuple(f for f in self.cluster_meta.fields
+                     if f not in ('group', 'next_cluster'))
+
+    def get_labels(self, field):
+        """Return the labels of all clusters, for a given field."""
+        return {c: self.cluster_meta.get(field, c)
+                for c in self.clustering.cluster_ids}
+
+    def label(self, name, value, cluster_ids=None):
+        """Assign a label to clusters."""
         if cluster_ids is None:
-            cluster_ids = self.selected
+            cluster_ids = self.cluster_view.selected
         if not hasattr(cluster_ids, '__len__'):
             cluster_ids = [cluster_ids]
         if len(cluster_ids) == 0:
             return
-        self.cluster_meta.set('group', cluster_ids, group)
+        self.cluster_meta.set(name, cluster_ids, value)
         self._global_history.action(self.cluster_meta)
+
+    def move(self, group, cluster_ids=None):
+        """Move clusters to a group."""
+        self.label('group', group, cluster_ids=cluster_ids)
 
     def move_best(self, group=None):
         """Move all selected best clusters to a group."""
@@ -579,4 +635,7 @@ class ManualClustering(object):
         spike_clusters = self.clustering.spike_clusters
         groups = {c: self.cluster_meta.get('group', c) or 'unsorted'
                   for c in self.clustering.cluster_ids}
-        self.gui.emit('request_save', spike_clusters, groups)
+        # List of tuples (field_name, dictionary).
+        labels = [(field, self.get_labels(field)) for field in self.fields]
+        # TODO: add option in add_field to declare a field unsavable.
+        self.gui.emit('request_save', spike_clusters, groups, *labels)

@@ -38,8 +38,8 @@ def test_metadata_history_simple():
     """Test ClusterMeta history."""
 
     meta = ClusterMeta()
-    meta.add_field('group')
 
+    # The 'group' field is automatically created.
     meta.set('group', 2, 2)
     assert meta.get('group', 2) == 2
 

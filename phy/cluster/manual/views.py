@@ -1257,7 +1257,7 @@ class FeatureView(ManualClusteringView):
 
     def on_request_split(self):
         """Return the spikes enclosed by the lasso."""
-        if self.lasso.count < 3:
+        if self.lasso.count < 3:  # pragma: no cover
             return []
         tla = self.top_left_attribute
         assert self.channels

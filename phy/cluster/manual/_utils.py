@@ -139,6 +139,9 @@ class ClusterMeta(EventEmitter):
 
     def set(self, field, clusters, value, add_to_stack=True):
         """Set the value of one of several clusters."""
+        # Add the field if it doesn't exist.
+        if field not in self._fields:
+            self.add_field(field)
         assert field in self._fields
 
         clusters = _as_list(clusters)

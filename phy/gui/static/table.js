@@ -137,12 +137,17 @@ Table.prototype.setData = function(data) {
 };
 
 Table.prototype.rowId = function(i) {
-    return this.el.rows[i].dataset.id;
+    return parseInt(String(this.el.rows[i].dataset.id));
 };
 
 Table.prototype.isRowSkipped = function(i) {
     return this.el.rows[i].dataset.skip == 'true';
 };
+
+Table.prototype.isSelected = function(i) {
+    // Return whether a row index is currently selected.
+    return this.selected.indexOf(this.rowId(i)) >= 0;
+}
 
 Table.prototype.sortBy = function(header, dir) {
     dir = typeof dir !== 'undefined' ? dir : 'asc';
@@ -246,7 +251,8 @@ Table.prototype.rowIterator = function(id, doSkip) {
         next: function () {
             if (this.i == undefined) this.i = 0;
             for (var i = this.i + 1; i < this.n; i++) {
-                if (!doSkip || !that.isRowSkipped(i)) {
+                // Skip selected items.
+                if ((!doSkip || !that.isRowSkipped(i)) && !that.isSelected(i)) {
                     this.i = i;
                     return this.row();
                 }
@@ -256,22 +262,32 @@ Table.prototype.rowIterator = function(id, doSkip) {
     };
 };
 
-Table.prototype.next = function() {
+Table.prototype.get_next_id = function() {
     // TODO: what to do when doing next() while several items are selected.
     var id = this.selected[0];
     var iterator = this.rowIterator(id);
     var row = iterator.next();
-    this.select([row.dataset.id]);
     row.scrollIntoView(false);
-    return;
+    return row.dataset.id;
 };
 
-Table.prototype.previous = function() {
+Table.prototype.get_previous_id = function() {
     // TODO: what to do when doing previous() while several items are selected.
     var id = this.selected[0];
     var iterator = this.rowIterator(id);
     var row = iterator.previous();
-    this.select([row.dataset.id]);
     row.scrollIntoView(false);
+    return row.dataset.id;
+};
+
+Table.prototype.next = function() {
+    var id = this.get_next_id();
+    this.select([id]);
+    return;
+};
+
+Table.prototype.previous = function() {
+    var id = this.get_previous_id();
+    this.select([id]);
     return;
 };

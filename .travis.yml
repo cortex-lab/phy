@@ -18,6 +18,7 @@ install:
   - conda update -q conda
   - conda info -a
   # Create the environment.
+  - conda install pyyaml
   - conda env create python=$TRAVIS_PYTHON_VERSION
   - source activate phy
   # Dev requirements

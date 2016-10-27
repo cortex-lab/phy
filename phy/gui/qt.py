@@ -70,7 +70,7 @@ def _show_box(box):  # pragma: no cover
 
 
 def _input_dialog(title, sentence):
-    return QInputDialog.getText(None, title, sentence)
+    return QInputDialog.getText(None, title, sentence)  # pragma: no cover
 
 
 @contextmanager
