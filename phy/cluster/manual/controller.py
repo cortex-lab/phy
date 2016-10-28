@@ -221,6 +221,9 @@ class Controller(EventEmitter):
         # Sparsify the waveforms.
         w = data.data
         channels = np.nonzero(w.mean(axis=1).mean(axis=0))[0]
+        # FIX when the waveforms are null because of absent raw data.
+        if not len(channels):  # pragma: no cover
+            channels = np.nonzero(self.get_mean_masks(cluster_id) > 0)[0]
         w = w[:, :, channels]
         data.channels = channels
         # Cache the normalized waveforms.

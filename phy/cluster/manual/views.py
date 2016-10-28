@@ -655,6 +655,7 @@ class TraceView(ManualClusteringView):
         assert channel_order.shape == (n_channels,)
         self.channel_order = channel_order
 
+        # Double argsort for inverse permutation.
         self.channel_vertical_order = \
             np.argsort(np.argsort(channel_positions[:, 1]))
 
