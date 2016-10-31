@@ -1096,21 +1096,25 @@ class FeatureView(ManualClusteringView):
                            data_bounds=None,
                            uniform=True,
                            )
-        if i == 0:
-            # HACK: call this when i=0 (first line) but plot the text
-            # in the last subplot line. This is because we skip i > j
-            # in the subplot loop.
-            i0 = (self.n_cols - 1)
-            dim = x_dim[i0, j] if j < (self.n_cols - 1) else x_dim[i0, 0]
-            self[i0, j].text(pos=[0., -1.],
-                             text=str(dim),
-                             anchor=[0., -1.04],
-                             data_bounds=None,
-                             )
-        if j == 0:
+
+    def _plot_labels(self, x_dim, y_dim):
+        """Plot feature labels along left and bottom edge of subplots"""
+        dimlabels = []
+        for k in range(0, self.n_cols):
+            dimlabels.append(str(y_dim[(k, k)]))
+
+        j = 0
+        for i in range(0, self.n_cols):
             self[i, j].text(pos=[-1., 0.],
-                            text=str(y_dim[i, j]),
+                            text=dimlabels[i],
                             anchor=[-1.03, 0.],
+                            data_bounds=None,
+                            )
+        i = self.n_cols - 1
+        for j in range(0, self.n_cols):
+            self[i, j].text(pos=[0., -1.],
+                            text=dimlabels[j],
+                            anchor=[0., -1.04],
                             data_bounds=None,
                             )
 
@@ -1184,6 +1188,7 @@ class FeatureView(ManualClusteringView):
 
         # Plot all features.
         with self.building():
+            self._plot_labels(x_dim, y_dim)
             for i in range(self.n_cols):
                 for j in range(self.n_cols):
                     # Skip lower-diagonal subplots.
