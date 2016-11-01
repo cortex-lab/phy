@@ -1099,20 +1099,22 @@ class FeatureView(ManualClusteringView):
 
     def _plot_labels(self, x_dim, y_dim):
         """Plot feature labels along left and bottom edge of subplots"""
-        j = 0
-        for i in range(0, self.n_cols):
-            self[i, j].text(pos=[-1., 0.],
-                            text=str(y_dim[i, i]),
+
+        # iterate simultaneously over kth row in left column and kth column in bottom row:
+        for k in range(0, self.n_cols):
+            label = str(y_dim[k, k])
+            # left edge of subplots:
+            self[k, 0].text(pos=[-1., 0.],
+                            text=label,
                             anchor=[-1.03, 0.],
                             data_bounds=None,
                             )
-        i = self.n_cols - 1
-        for j in range(0, self.n_cols):
-            self[i, j].text(pos=[0., -1.],
-                            text=str(y_dim[j, j]),
-                            anchor=[0., -1.04],
-                            data_bounds=None,
-                            )
+            # bottom edge of subplots:
+            self[self.n_cols-1, k].text(pos=[0., -1.],
+                                   text=label,
+                                   anchor=[0., -1.04],
+                                   data_bounds=None,
+                                   )
 
     def _get_channel_dims(self, cluster_ids):
         """Select the channels to show by default."""
