@@ -1102,7 +1102,7 @@ class FeatureView(ManualClusteringView):
 
         # iterate simultaneously over kth row in left column and
         # kth column in bottom row:
-        br = self.n_cols - 1 # bottom row
+        br = self.n_cols - 1  # bottom row
         for k in range(0, self.n_cols):
             label = str(y_dim[k, k])
             # left edge of left column of subplots:
