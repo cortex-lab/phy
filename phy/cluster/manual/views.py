@@ -1102,14 +1102,14 @@ class FeatureView(ManualClusteringView):
         j = 0
         for i in range(0, self.n_cols):
             self[i, j].text(pos=[-1., 0.],
-                            text=str(y_dim[(i, i)]),
+                            text=str(y_dim[i, i]),
                             anchor=[-1.03, 0.],
                             data_bounds=None,
                             )
         i = self.n_cols - 1
         for j in range(0, self.n_cols):
             self[i, j].text(pos=[0., -1.],
-                            text=str(y_dim[(j, j)]),
+                            text=str(y_dim[j, j]),
                             anchor=[0., -1.04],
                             data_bounds=None,
                             )
