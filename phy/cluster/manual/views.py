@@ -1102,20 +1102,21 @@ class FeatureView(ManualClusteringView):
 
         # iterate simultaneously over kth row in left column and
         # kth column in bottom row:
+        br = self.n_cols - 1 # bottom row
         for k in range(0, self.n_cols):
             label = str(y_dim[k, k])
-            # left edge of subplots:
+            # left edge of left column of subplots:
             self[k, 0].text(pos=[-1., 0.],
                             text=label,
                             anchor=[-1.03, 0.],
                             data_bounds=None,
                             )
-            # bottom edge of subplots:
-            self[self.n_cols-1, k].text(pos=[0., -1.],
-                                        text=label,
-                                        anchor=[0., -1.04],
-                                        data_bounds=None,
-                                        )
+            # bottom edge of bottom row of subplots:
+            self[br, k].text(pos=[0., -1.],
+                             text=label,
+                             anchor=[0., -1.04],
+                             data_bounds=None,
+                             )
 
     def _get_channel_dims(self, cluster_ids):
         """Select the channels to show by default."""
