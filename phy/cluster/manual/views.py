@@ -1096,23 +1096,27 @@ class FeatureView(ManualClusteringView):
                            data_bounds=None,
                            uniform=True,
                            )
-        if i == 0:
-            # HACK: call this when i=0 (first line) but plot the text
-            # in the last subplot line. This is because we skip i > j
-            # in the subplot loop.
-            i0 = (self.n_cols - 1)
-            dim = x_dim[i0, j] if j < (self.n_cols - 1) else x_dim[i0, 0]
-            self[i0, j].text(pos=[0., -1.],
-                             text=str(dim),
-                             anchor=[0., -1.04],
-                             data_bounds=None,
-                             )
-        if j == 0:
-            self[i, j].text(pos=[-1., 0.],
-                            text=str(y_dim[i, j]),
+
+    def _plot_labels(self, x_dim, y_dim):
+        """Plot feature labels along left and bottom edge of subplots"""
+
+        # iterate simultaneously over kth row in left column and
+        # kth column in bottom row:
+        br = self.n_cols - 1  # bottom row
+        for k in range(0, self.n_cols):
+            label = str(y_dim[k, k])
+            # left edge of left column of subplots:
+            self[k, 0].text(pos=[-1., 0.],
+                            text=label,
                             anchor=[-1.03, 0.],
                             data_bounds=None,
                             )
+            # bottom edge of bottom row of subplots:
+            self[br, k].text(pos=[0., -1.],
+                             text=label,
+                             anchor=[0., -1.04],
+                             data_bounds=None,
+                             )
 
     def _get_channel_dims(self, cluster_ids):
         """Select the channels to show by default."""
@@ -1184,6 +1188,7 @@ class FeatureView(ManualClusteringView):
 
         # Plot all features.
         with self.building():
+            self._plot_labels(x_dim, y_dim)
             for i in range(self.n_cols):
                 for j in range(self.n_cols):
                     # Skip lower-diagonal subplots.
