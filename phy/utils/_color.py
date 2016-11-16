@@ -21,7 +21,7 @@ def _random_color(h_range=(0., 1.),
                   ):
     """Generate a random RGB color."""
     h, s, v = uniform(*h_range), uniform(*s_range), uniform(*v_range)
-    r, g, b = hsv_to_rgb(np.array([h, s, v])).flat
+    r, g, b = hsv_to_rgb(np.array([[[h, s, v]]])).flat
     return r, g, b
 
 
