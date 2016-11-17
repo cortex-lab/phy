@@ -16,10 +16,7 @@ import responses
 from pytest import raises, yield_fixture
 
 from ..datasets import (download_file,
-                        download_test_data,
-                        download_sample_data,
                         _check_md5_of_url,
-                        _BASE_URL,
                         _validate_output_dir,
                         )
 from phy.utils.testing import captured_logging
@@ -163,40 +160,3 @@ def test_download_file(tempdir, mock_urls):
 
     if assert_succeeds:
         _check(data)
-
-
-@responses.activate
-def test_download_sample_data(tempdir):
-    name = 'hybrid_10sec.dat'
-    url = _BASE_URL['cortexlab'] + name
-
-    _add_mock_response(url, _DATA.tostring())
-    _add_mock_response(url + '.md5', _CHECKSUM)
-
-    download_sample_data(name, tempdir)
-    with open(op.join(tempdir, name), 'rb') as f:
-        data = f.read()
-    ae(np.fromstring(data, np.float32), _DATA)
-
-    # Warning.
-    download_sample_data(name + '_', tempdir)
-
-    responses.reset()
-
-
-@responses.activate
-def test_dat_file(tempdir):
-    data = np.random.randint(size=(20000, 4),
-                             low=-100, high=100).astype(np.int16)
-    fn = 'test-4ch-1s.dat'
-    _add_mock_response(_BASE_URL['github'] + 'test/' + fn,
-                       data.tostring())
-
-    path = download_test_data(fn, tempdir)
-    with open(path, 'rb') as f:
-        arr = np.fromfile(f, dtype=np.int16).reshape((-1, 4))
-    assert arr.shape == (20000, 4)
-
-    assert download_test_data(fn, tempdir) == path
-
-    responses.reset()
