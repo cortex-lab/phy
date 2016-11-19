@@ -220,7 +220,7 @@ class Controller(EventEmitter):
                                  )
         # Sparsify the waveforms.
         w = data.data
-        channels = np.nonzero(self.get_mean_masks(cluster_id) > 0)[0]
+        channels = np.arange(self.n_channels)
         w = w[:, :, channels]
         data.channels = channels
         # Cache the normalized waveforms.
@@ -253,7 +253,7 @@ class Controller(EventEmitter):
         mm = self.get_mean_masks(cluster_id)
         mw = self.get_mean_waveforms(cluster_id)
         assert mw.ndim == 2
-        return get_waveform_amplitude(mm[mm > 0], mw)
+        return get_waveform_amplitude(mm, mw)
 
     # Features
     # -------------------------------------------------------------------------
