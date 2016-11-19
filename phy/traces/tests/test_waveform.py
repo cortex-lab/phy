@@ -12,7 +12,6 @@ from pytest import raises
 
 from phy.io.mock import (artificial_traces,
                          artificial_spike_samples,
-                         artificial_masks,
                          )
 from ..waveform import (_slice,
                         WaveformLoader,
@@ -128,12 +127,9 @@ def waveform_loader(do_filter=False, mask_threshold=None):
     traces = artificial_traces(n_samples_trace, n_channels)
     spike_samples = artificial_spike_samples(n_spikes,
                                              max_isi=2 * n_samples_waveforms)
-    masks = artificial_masks(n_spikes, n_channels)
 
     loader = WaveformLoader(traces=traces,
                             spike_samples=spike_samples,
-                            masks=masks,
-                            mask_threshold=mask_threshold,
                             n_samples_waveforms=n_samples_waveforms,
                             filter_order=3 if do_filter else None,
                             sample_rate=sample_rate,
@@ -180,6 +176,8 @@ def test_loader_filter_1():
     loader = WaveformLoader(spike_samples=np.arange(20),
                             n_samples_waveforms=(h, h),
                             )
+    assert loader[0].shape == (1, 2 * h, loader.n_channels)
+
     loader.traces = traces
     loader._filter = my_filter
 
@@ -190,7 +188,7 @@ def test_loader_filter_1():
 
 
 def test_loader_filter_2():
-    loader = waveform_loader(do_filter=True, mask_threshold=.1)
+    loader = waveform_loader(do_filter=True)
     ns = loader.n_samples_waveforms
     nc = loader.n_channels
 
@@ -199,3 +197,11 @@ def test_loader_filter_2():
 
     assert loader[0].shape == (1, ns, nc)
     assert loader[:].shape == (loader.n_spikes, ns, nc)
+
+
+def test_loader_filter_3():
+    loader = waveform_loader()
+    ns = loader.n_samples_waveforms
+
+    w = loader.get([0], channels=[0])
+    assert w.shape == (1, ns, 1)

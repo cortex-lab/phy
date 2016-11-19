@@ -186,8 +186,6 @@ class WaveformLoader(object):
                  traces=None,
                  sample_rate=None,
                  spike_samples=None,
-                 masks=None,
-                 mask_threshold=None,
                  filter_order=None,
                  n_samples_waveforms=None,
                  ):
@@ -203,11 +201,6 @@ class WaveformLoader(object):
         assert spike_samples is not None
         self._spike_samples = spike_samples
         self.n_spikes = len(spike_samples)
-
-        self._masks = masks
-        if masks is not None:
-            assert self._masks.shape == (self.n_spikes, self.n_channels)
-        self._mask_threshold = mask_threshold
 
         # Define filter.
         if filter_order:
@@ -275,7 +268,7 @@ class WaveformLoader(object):
         assert extract.shape[0] == self._n_samples_extract
         return extract
 
-    def __getitem__(self, spike_ids):
+    def get(self, spike_ids, channels=None):
         """Load the waveforms of the specified spikes."""
         if isinstance(spike_ids, slice):
             spike_ids = _range_from_slice(spike_ids,
@@ -284,6 +277,13 @@ class WaveformLoader(object):
                                           )
         if not hasattr(spike_ids, '__len__'):
             spike_ids = [spike_ids]
+        if channels is None:
+            channels = slice(None, None, None)
+            nc = self.n_channels
+        else:
+            channels = np.asarray(channels, dtype=np.int32)
+            assert np.all(channels < self.n_channels)
+            nc = len(channels)
 
         # Ensure a list of time samples are being requested.
         spike_ids = _as_array(spike_ids)
@@ -291,7 +291,7 @@ class WaveformLoader(object):
 
         # Initialize the array.
         # NOTE: last dimension is time to simplify things.
-        shape = (n_spikes, self.n_channels, self._n_samples_extract)
+        shape = (n_spikes, nc, self._n_samples_extract)
         waveforms = np.zeros(shape, dtype=np.float32)
 
         # No traces: return null arrays.
@@ -303,18 +303,6 @@ class WaveformLoader(object):
             assert 0 <= spike_id < self.n_spikes
             time = self._spike_samples[spike_id]
 
-            # Find unmasked channels.
-            if (self._masks is not None and
-                    self._mask_threshold is not None):
-                channels = self._masks[spike_id] >= self._mask_threshold
-                channels = np.nonzero(channels)[0]
-                if len(channels):
-                    assert channels[-1] < self.n_channels
-                nc = len(channels)
-            else:
-                channels = slice(None, None, None)
-                nc = self.n_channels
-
             # Extract the waveforms on the unmasked channels.
             try:
                 w = self._load_at(time, channels)
@@ -324,14 +312,14 @@ class WaveformLoader(object):
 
             assert w.shape == (self._n_samples_extract, nc)
 
-            waveforms[i, channels, :] = w.T
+            waveforms[i, :, :] = w.T
 
         # Filter the waveforms.
         waveforms_f = waveforms.reshape((-1, self._n_samples_extract))
         # Only filter the non-zero waveforms.
         unmasked = waveforms_f.max(axis=1) != 0
         waveforms_f[unmasked] = self._filter(waveforms_f[unmasked], axis=1)
-        waveforms_f = waveforms_f.reshape((n_spikes, self.n_channels,
+        waveforms_f = waveforms_f.reshape((n_spikes, nc,
                                            self._n_samples_extract))
 
         # Remove the margin.
@@ -341,9 +329,12 @@ class WaveformLoader(object):
             waveforms_f = waveforms_f[:, :, margin_before:-margin_after]
 
         assert waveforms_f.shape == (n_spikes,
-                                     self.n_channels,
+                                     nc,
                                      self.n_samples_waveforms,
                                      )
 
         # NOTE: we transpose before returning the array.
         return np.transpose(waveforms_f, (0, 2, 1))
+
+    def __getitem__(self, spike_ids):
+        return self.get(spike_ids)
