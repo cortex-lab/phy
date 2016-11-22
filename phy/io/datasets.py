@@ -46,7 +46,6 @@ def _save_stream(r, path):
                 downloaded += len(chunk)
                 if i % 100 == 0:
                     pr.value = downloaded
-    assert ((size == downloaded) if size else True)
     pr.set_complete()
 
 
