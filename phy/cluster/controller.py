@@ -224,7 +224,6 @@ class Controller(EventEmitter):
             get('new_cluster_id', None)
         mc = ClusterPicker(self.spike_clusters,
                            self.spikes_per_cluster,
-                           best_channel=self.get_best_channel,
                            similarity=self.similarity,
                            cluster_groups=self.cluster_groups,
                            new_cluster_id=new_cluster_id,

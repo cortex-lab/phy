@@ -137,7 +137,6 @@ class ClusterPicker(object):
                  spike_clusters,
                  spikes_per_cluster,
                  cluster_groups=None,
-                 best_channel=None,
                  shortcuts=None,
                  quality=None,
                  similarity=None,
@@ -147,7 +146,6 @@ class ClusterPicker(object):
         self.gui = None
         self.quality = quality  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
-        self.best_channel = best_channel  # function cluster_id => channel_id
 
         assert hasattr(spikes_per_cluster, '__call__')
         self.spikes_per_cluster = spikes_per_cluster
@@ -240,8 +238,6 @@ class ClusterPicker(object):
         @self.add_column(name='n_spikes')
         def n_spikes(cluster_id):
             return len(self.spikes_per_cluster(cluster_id))
-
-        self.add_column(self.best_channel, name='channel')
 
         @self.add_column(show=False)
         def skip(cluster_id):
