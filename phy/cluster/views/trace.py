@@ -110,7 +110,7 @@ class TraceView(ManualClusteringView):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _plot_traces(self, traces=None, color=None):
+    def _plot_traces(self, traces, color=None):
         traces = traces.T
         n_samples = traces.shape[1]
         n_ch = self.n_channels
@@ -212,16 +212,13 @@ class TraceView(ManualClusteringView):
             self.set_status('Interval: {:.3f} s - {:.3f} s'.format(start, end))
 
         # Load the traces.
-        all_traces = self.traces(interval)
-        assert isinstance(all_traces, (tuple, list))
+        traces = self.traces(interval)
 
         # Plot the traces.
-        for i, traces in enumerate(all_traces):
-            # Only show labels for the first set of traces.
-            self._plot_traces(**traces)
+        self._plot_traces(traces.data, color=traces.color)
 
         # Plot the spikes.
-        spikes = self.spikes(interval, all_traces)
+        spikes = self.spikes(interval, traces)
         assert isinstance(spikes, (tuple, list))
         for spike in spikes:
             clu = spike.spike_cluster
@@ -239,7 +236,7 @@ class TraceView(ManualClusteringView):
 
         # Plot the labels.
         if self.do_show_labels:
-            self._plot_labels(all_traces[0].traces)
+            self._plot_labels(traces.data)
 
         self.build()
         self.update()
