@@ -142,7 +142,7 @@ class ClusterPicker(object):
                  ):
 
         self.gui = None
-        self.quality = quality  # function cluster => quality
+        self.quality = quality or self.n_spikes  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
 
         # Load default shortcuts, and override with any user shortcuts.
@@ -240,6 +240,9 @@ class ClusterPicker(object):
             """Good column for color."""
             return self.cluster_meta.get('group', cluster_id) == 'good'
 
+        # Default columns.
+        self.add_column(self.n_spikes)
+
         # Add columns for labels.
         for field in self.fields:  # pragma: no cover
             self._add_field_column(field)
@@ -254,6 +257,9 @@ class ClusterPicker(object):
         if self.similarity:
             self.similarity_view.add_column(similarity,
                                             name=self.similarity.__name__)
+
+    def n_spikes(self, cluster_id):
+        return len(self.clustering.spikes_per_cluster[cluster_id])
 
     def _create_actions(self, gui):
         self.actions = Actions(gui,
@@ -453,7 +459,7 @@ class ClusterPicker(object):
                 else:
                     self.cluster_view.select([next_cluster])
 
-    def attach(self, gui):
+    def attach(self, gui, context=None):
         self.gui = gui
 
         # Create the actions.
@@ -478,6 +484,15 @@ class ClusterPicker(object):
         # Set the view state.
         cv = self.cluster_view
         cv.set_state(gui.state.get_view_state(cv))
+
+        # Save the new cluster id on disk.
+        @self.clustering.connect
+        def on_cluster(up):
+            new_cluster_id = self.clustering.new_cluster_id()
+            logger.debug("Save the new cluster id: %d", new_cluster_id)
+            if context:
+                context.save('new_cluster_id',
+                             dict(new_cluster_id=new_cluster_id))
 
         # Save the view state in the GUI state.
         @gui.connect_
