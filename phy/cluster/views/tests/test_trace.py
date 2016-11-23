@@ -11,7 +11,6 @@ from numpy.testing import assert_allclose as ac
 
 from phy.gui import GUI
 from phy.io.mock import (artificial_traces,
-                         artificial_spike_samples,
                          artificial_spike_clusters,
                          )
 from phy.utils import Bunch
