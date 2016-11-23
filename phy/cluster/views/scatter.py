@@ -39,20 +39,10 @@ class ScatterView(ManualClusteringView):
         if n_clusters == 0:
             return
 
-        # Get the x and y coordinates.
-        data = self.coords(cluster_ids)
-        if data is None:
-            self.clear()
-            return
-        assert isinstance(data, list)
-
         # Plot the points.
         with self.building():
-            for i, cl in enumerate(cluster_ids):
-                # Skip non-existing clusters.
-                if i >= len(data):  # pragma: no cover
-                    continue
-                d = data[i]
+            for i, cluster_id in enumerate(cluster_ids):
+                d = self.coords(cluster_id)
                 spike_ids = d.spike_ids
                 x = d.x
                 y = d.y

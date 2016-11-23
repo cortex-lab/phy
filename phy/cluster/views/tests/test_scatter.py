@@ -8,28 +8,33 @@
 
 import numpy as np
 
+from phy.gui import GUI
 from phy.utils import Bunch
 from ..scatter import ScatterView
-from .conftest import _select_clusters
 
 
 #------------------------------------------------------------------------------
 # Test scatter view
 #------------------------------------------------------------------------------
 
-def test_scatter_view(qtbot, gui):
+def test_scatter_view(qtbot):
     n = 1000
-    v = ScatterView(coords=lambda c: [Bunch(x=np.random.randn(n),
-                                            y=np.random.randn(n),
-                                            spike_ids=np.arange(n),
-                                            spike_clusters=np.ones(n).
-                                            astype(np.int32) * c[0],
-                                            )] if 2 not in c else None,
+    v = ScatterView(coords=lambda c: Bunch(x=np.random.randn(n),
+                                           y=np.random.randn(n),
+                                           spike_ids=np.arange(n),
+                                           )
                     # data_bounds=[-3, -3, 3, 3],
                     )
+    gui = GUI()
+    gui.show()
     v.attach(gui)
 
-    _select_clusters(gui)
+    # qtbot.waitForWindowShown(gui)
+
+    v.on_select([])
+    v.on_select([0])
+    v.on_select([0, 2, 3])
+    v.on_select([0, 2])
 
     # qtbot.stop()
     gui.close()
