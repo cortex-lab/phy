@@ -16,11 +16,10 @@ from phy.cluster.views import (WaveformView,
                                TraceView,
                                FeatureView,
                                CorrelogramView,
-                               select_traces,
-                               extract_spikes,
                                )
 from phy.gui import GUI
-from phy.io.array import _get_data_lim, concat_per_cluster, get_excerpts
+from phy.io.array import (_get_data_lim, concat_per_cluster, get_excerpts,
+                          _get_padded)
 from phy.io import Context, Selector
 from phy.plot.transform import _normalize
 from phy.stats.clusters import (mean,
@@ -35,6 +34,76 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 # Kwik GUI
 #------------------------------------------------------------------------------
+
+def select_traces(traces, interval, sample_rate=None):
+    """Load traces in an interval (in seconds)."""
+    start, end = interval
+    i, j = round(sample_rate * start), round(sample_rate * end)
+    i, j = int(i), int(j)
+    traces = traces[i:j, :]
+    traces = traces - np.mean(traces, axis=0)
+    return traces
+
+
+def _extract_wave(traces, start, mask, wave_len=None, mask_threshold=.5):
+    n_samples, n_channels = traces.shape
+    assert mask.shape == (n_channels,)
+    channels = np.nonzero(mask > mask_threshold)[0]
+    # There should be at least one non-masked channel.
+    if not len(channels):
+        return  # pragma: no cover
+    i, j = start, start + wave_len
+    a, b = max(0, i), min(j, n_samples - 1)
+    data = traces[a:b, channels]
+    data = _get_padded(data, i - a, i - a + wave_len)
+    assert data.shape == (wave_len, len(channels))
+    return data, channels
+
+
+def extract_spikes(traces, interval, sample_rate=None,
+                   spike_times=None, spike_clusters=None,
+                   cluster_groups=None,
+                   all_masks=None,
+                   n_samples_waveforms=None):
+    cluster_groups = cluster_groups or {}
+    sr = sample_rate
+    ns = n_samples_waveforms
+    if not isinstance(ns, tuple):
+        ns = (ns // 2, ns // 2)
+    offset_samples = ns[0]
+    wave_len = ns[0] + ns[1]
+
+    # Find spikes.
+    a, b = spike_times.searchsorted(interval)
+    st = spike_times[a:b]
+    sc = spike_clusters[a:b]
+    m = all_masks[a:b]
+    n = len(st)
+    assert len(sc) == n
+    assert m.shape[0] == n
+
+    # Extract waveforms.
+    spikes = []
+    for i in range(n):
+        b = Bunch()
+        # Find the start of the waveform in the extracted traces.
+        sample_start = int(round((st[i] - interval[0]) * sr))
+        sample_start -= offset_samples
+        o = _extract_wave(traces, sample_start, m[i], wave_len)
+        if o is None:  # pragma: no cover
+            logger.debug("Unable to extract spike %d.", i)
+            continue
+        b.waveforms, b.channels = o
+        # Masks on unmasked channels.
+        b.masks = m[i, b.channels]
+        b.spike_time = st[i]
+        b.spike_cluster = sc[i]
+        b.cluster_group = cluster_groups.get(b.spike_cluster, None)
+        b.offset_samples = offset_samples
+
+        spikes.append(b)
+    return spikes
+
 
 class Controller(EventEmitter):
     """Take data out of the model and feeds it to views.
