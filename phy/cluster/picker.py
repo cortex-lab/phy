@@ -470,8 +470,6 @@ class ClusterPicker(object):
 
         # Update the cluster view and sort by n_spikes at the beginning.
         self._update_cluster_view()
-        # if not self.quality:
-        #     self.cluster_view.sort_by('n_spikes', 'desc')
 
         # Add the similarity view if there is a similarity function.
         if self.similarity:

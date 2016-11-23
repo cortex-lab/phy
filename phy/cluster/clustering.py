@@ -11,6 +11,7 @@ import numpy as np
 from phy.utils._types import _as_array, _is_array_like
 from phy.io.array import (_unique,
                           _spikes_in_clusters,
+                          _spikes_per_cluster,
                           )
 from ._utils import UpdateInfo
 from ._history import History
@@ -161,6 +162,7 @@ class Clustering(EventEmitter):
         assert np.all(self._spike_clusters < self._new_cluster_id)
         # Keep a copy of the original spike clusters assignment.
         self._spike_clusters_base = self._spike_clusters.copy()
+        self._spikes_per_cluster = _spikes_per_cluster(self._spike_clusters)
 
     def reset(self):
         """Reset the clustering to the original clustering.
@@ -176,6 +178,11 @@ class Clustering(EventEmitter):
     def spike_clusters(self):
         """A n_spikes-long vector containing the cluster ids of all spikes."""
         return self._spike_clusters
+
+    @property
+    def spikes_per_cluster(self):
+        """A dictionary {cluster_id: spike_ids}."""
+        return self._spikes_per_cluster
 
     @property
     def cluster_ids(self):
@@ -218,6 +225,8 @@ class Clustering(EventEmitter):
     def _update_cluster_ids(self):
         # Update the list of non-empty cluster ids.
         self._cluster_ids = _unique(self._spike_clusters)
+        # TODO: optimize this.
+        self._spikes_per_cluster = _spikes_per_cluster(self._spike_clusters)
 
     def _do_assign(self, spike_ids, new_spike_clusters):
         """Make spike-cluster assignments after the spike selection has
