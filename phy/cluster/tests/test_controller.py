@@ -39,7 +39,7 @@ def test_controller_1(qtbot, tempdir):
     # Ensure that the plugin has been loaded.
     assert controller.hello == 'world'
 
-    controller.manual_clustering.select([2, 3])
+    controller.picker.select([2, 3])
     assert controller.get_mean_features(2) is not None
     assert len(controller.spikes_per_cluster(2)) > 0
 

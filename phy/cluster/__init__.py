@@ -5,5 +5,5 @@
 
 from ._utils import ClusterMeta
 from .clustering import Clustering
-from .gui_component import ManualClustering
+from .picker import ClusterPicker
 from .views import WaveformView, TraceView, FeatureView, CorrelogramView

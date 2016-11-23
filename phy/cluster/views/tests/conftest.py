@@ -35,7 +35,7 @@ def gui(tempdir, state):
 
 def _select_clusters(gui):
     gui.show()
-    mc = gui.controller.manual_clustering
+    mc = gui.controller.picker
     assert mc
     mc.select([])
     mc.select([0])

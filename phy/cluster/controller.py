@@ -11,7 +11,7 @@ import logging
 
 import numpy as np
 
-from phy.cluster.gui_component import ManualClustering
+from phy.cluster.picker import ClusterPicker
 from phy.cluster.views import (WaveformView,
                                TraceView,
                                FeatureView,
@@ -136,7 +136,7 @@ class Controller(EventEmitter):
         self._init_data()
         self._init_selector()
         self._init_context()
-        self._set_manual_clustering()
+        self._set_picker()
 
         self.n_spikes = len(self.spike_times)
 
@@ -218,17 +218,17 @@ class Controller(EventEmitter):
 
         self.spikes_per_cluster = ctx.memcache(self.spikes_per_cluster)
 
-    def _set_manual_clustering(self):
+    def _set_picker(self):
         # Load the new cluster id.
         new_cluster_id = self.context.load('new_cluster_id'). \
             get('new_cluster_id', None)
-        mc = ManualClustering(self.spike_clusters,
-                              self.spikes_per_cluster,
-                              best_channel=self.get_best_channel,
-                              similarity=self.similarity,
-                              cluster_groups=self.cluster_groups,
-                              new_cluster_id=new_cluster_id,
-                              )
+        mc = ClusterPicker(self.spike_clusters,
+                           self.spikes_per_cluster,
+                           best_channel=self.get_best_channel,
+                           similarity=self.similarity,
+                           cluster_groups=self.cluster_groups,
+                           new_cluster_id=new_cluster_id,
+                           )
 
         # Save the new cluster id on disk.
         @mc.clustering.connect
@@ -243,7 +243,7 @@ class Controller(EventEmitter):
             self.context.save('new_cluster_id',
                               dict(new_cluster_id=new_cluster_id))
 
-        self.manual_clustering = mc
+        self.picker = mc
         mc.add_column(self.get_probe_depth, name='depth')
 
     def _select_spikes(self, cluster_id, n_max=None, batch_size=None):
@@ -512,8 +512,8 @@ class Controller(EventEmitter):
                   config_dir=config_dir, **kwargs)
         gui.controller = self
 
-        # Attach the ManualClustering component to the GUI.
-        self.manual_clustering.attach(gui)
+        # Attach the ClusterPicker component to the GUI.
+        self.picker.attach(gui)
 
         # Add views.
         if add_default_views:

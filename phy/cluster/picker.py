@@ -66,7 +66,7 @@ class ClusterView(Table):
             self.sort_by(sort_by, order)
 
 
-class ManualClustering(object):
+class ClusterPicker(object):
     """Component that brings manual clustering facilities to a GUI:
 
     * Clustering instance: merge, split, undo, redo
