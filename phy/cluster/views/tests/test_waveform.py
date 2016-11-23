@@ -6,19 +6,45 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import numpy as np
 from numpy.testing import assert_allclose as ac
 from vispy.util import keys
 
-from .conftest import _select_clusters
+from phy.electrode.mea import staggered_positions
+from phy.gui import GUI
+from phy.io.mock import artificial_waveforms
+from phy.utils import Bunch
+
+from ..waveform import WaveformView
 
 
 #------------------------------------------------------------------------------
 # Test waveform view
 #------------------------------------------------------------------------------
 
-def test_waveform_view(qtbot, gui):
-    v = gui.controller.add_waveform_view(gui)
-    _select_clusters(gui)
+def test_waveform_view(qtbot):
+    nc = 5
+
+    def get_waveforms(cluster_id):
+        return Bunch(data=artificial_waveforms(10, 20, nc),
+                     channel_ids=np.arange(nc),
+                     )
+
+    channel_positions = staggered_positions(nc)
+
+    v = WaveformView(waveforms=get_waveforms,
+                     channel_positions=channel_positions,
+                     )
+    gui = GUI()
+    gui.show()
+    v.attach(gui)
+
+    # qtbot.waitForWindowShown(gui)
+
+    v.on_select([])
+    v.on_select([0])
+    v.on_select([0, 2, 3])
+    v.on_select([0, 2])
 
     v.toggle_waveform_overlap()
     v.toggle_waveform_overlap()
@@ -26,6 +52,7 @@ def test_waveform_view(qtbot, gui):
     v.toggle_zoom_on_channels()
     v.toggle_zoom_on_channels()
 
+    v.toggle_show_labels()
     v.toggle_show_labels()
     assert v.do_show_labels
 
@@ -60,8 +87,6 @@ def test_waveform_view(qtbot, gui):
     ac(v.box_scaling, (a * 2, b))
 
     v.zoom_on_channels([0, 2, 4])
-
-    v.filter_by_tag('test')
 
     # Simulate channel selection.
     _clicked = []

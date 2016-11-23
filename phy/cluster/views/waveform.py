@@ -12,6 +12,7 @@ import logging
 import numpy as np
 from vispy.util.event import Event
 
+from phy.io.array import _flatten
 from phy.plot import _get_linear_x
 from phy.plot.utils import _get_boxes
 from phy.utils import Bunch
@@ -66,7 +67,7 @@ class WaveformView(ManualClusteringView):
         self.do_show_labels = False
         self.filtered_tags = ()
 
-        self.best_channels = best_channels or (lambda clusters: [])
+        self.best_channels = best_channels or (lambda cluster_id: [])
 
         # Channel positions and n_channels.
         assert channel_positions is not None
@@ -110,34 +111,30 @@ class WaveformView(ManualClusteringView):
         if n_clusters == 0:
             return
 
-        # Load the waveform subset.
-        data = self.waveforms(cluster_ids)
-
         # Plot all waveforms.
         with self.building():
             already_shown = set()
-            for i, d in enumerate(data):
-                if (self.filtered_tags and
-                        d.get('tag') not in self.filtered_tags):
-                    continue  # pragma: no cover
-                alpha = d.get('alpha', .5)
+            for pos_idx, cluster_id in enumerate(cluster_ids):
+                # if (self.filtered_tags and
+                #         d.get('tag') not in self.filtered_tags):
+                #     continue  # pragma: no cover
+                d = self.waveforms(cluster_id)
                 wave = d.data
-                masks = d.masks
+                alpha = d.get('alpha', .5)
+                channel_ids = d.channel_ids
+                n_channels = len(channel_ids)
+                masks = d.get('masks', np.ones((wave.shape[0], n_channels)))
                 # By default, this is 0, 1, 2 for the first 3 clusters.
                 # But it can be customized when displaying several sets
                 # of waveforms per cluster.
-                pos_idx = cluster_ids.index(d.cluster_id)  # 0, 1, 2, ...
+                # pos_idx = cluster_ids.index(d.cluster_id)  # 0, 1, 2, ...
 
-                n_spikes_clu, n_samples, n_unmasked = wave.shape
-                assert masks.shape[0] == n_spikes_clu
-
-                # Find the unmasked channels for those spikes.
-                unmasked = d.get('channels', np.arange(self.n_channels))
-                assert n_unmasked == len(unmasked)
-                assert n_unmasked > 0
+                n_spikes_clu, n_samples = wave.shape[:2]
+                assert wave.shape[2] == n_channels
+                assert masks.shape == (n_spikes_clu, n_channels)
 
                 # Find the x coordinates.
-                t = _get_linear_x(n_spikes_clu * n_unmasked, n_samples)
+                t = _get_linear_x(n_spikes_clu * n_channels, n_samples)
                 if not self.overlap:
                     t = t + 2.5 * (pos_idx - (n_clusters - 1) / 2.)
                     # The total width should not depend on the number of
@@ -145,12 +142,12 @@ class WaveformView(ManualClusteringView):
                     t /= n_clusters
 
                 # Get the spike masks.
-                m = masks[:, unmasked].reshape((-1, 1))
+                m = masks
                 # HACK: on the GPU, we get the actual masks with fract(masks)
                 # since we add the relative cluster index. We need to ensure
                 # that the masks is never 1.0, otherwise it is interpreted as
                 # 0.
-                m *= .999
+                m *= .99999
                 # NOTE: we add the cluster index which is used for the
                 # computation of the depth on the GPU.
                 m += pos_idx
@@ -159,15 +156,16 @@ class WaveformView(ManualClusteringView):
                 assert len(color) == 4
 
                 # Generate the box index (one number per channel).
-                box_index = unmasked
+                box_index = channel_ids
                 box_index = np.repeat(box_index, n_samples)
                 box_index = np.tile(box_index, n_spikes_clu)
-                assert box_index.shape == (n_spikes_clu * n_unmasked *
+                assert box_index.shape == (n_spikes_clu *
+                                           n_channels *
                                            n_samples,)
 
                 # Generate the waveform array.
                 wave = np.transpose(wave, (0, 2, 1))
-                wave = wave.reshape((n_spikes_clu * n_unmasked, n_samples))
+                wave = wave.reshape((n_spikes_clu * n_channels, n_samples))
 
                 self.plot(x=t,
                           y=wave,
@@ -179,7 +177,7 @@ class WaveformView(ManualClusteringView):
                           )
                 # Add channel labels.
                 if self.do_show_labels:
-                    for ch in unmasked:
+                    for ch in channel_ids:
                         # Skip labels that have already been shown.
                         if ch in already_shown:
                             continue
@@ -192,9 +190,10 @@ class WaveformView(ManualClusteringView):
                                       )
 
         # Zoom on the best channels when selecting clusters.
-        channels = self.best_channels(cluster_ids)
-        if channels is not None and self.do_zoom_on_channels:
-            self.zoom_on_channels(channels)
+        channel_ids = sorted(set(_flatten(self.best_channels(cluster_id)
+                                          for cluster_id in cluster_ids)))
+        if channel_ids is not None and self.do_zoom_on_channels:
+            self.zoom_on_channels(channel_ids)
 
     @property
     def state(self):
@@ -332,14 +331,6 @@ class WaveformView(ManualClusteringView):
 
     def toggle_show_labels(self):
         self.do_show_labels = not self.do_show_labels
-        tmp = self.do_zoom_on_channels
-        self.do_zoom_on_channels = False
-        self.on_select()
-        self.do_zoom_on_channels = tmp
-
-    def filter_by_tag(self, tag=None):
-        """Only show elements with a given tag."""
-        self.filtered_tags = (tag,) if tag else ()
         tmp = self.do_zoom_on_channels
         self.do_zoom_on_channels = False
         self.on_select()
