@@ -7,20 +7,44 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
-from .conftest import _select_clusters
+
+from phy.gui import GUI
+from phy.io.mock import (artificial_features,
+                         artificial_spike_samples,
+                         )
+from phy.utils import Bunch
+
+from ..feature import FeatureView
 
 
 #------------------------------------------------------------------------------
 # Test feature view
 #------------------------------------------------------------------------------
 
-def test_feature_view(qtbot, gui):
-    v = gui.controller.add_feature_view(gui)
-    _select_clusters(gui)
+def test_feature_view(qtbot):
+    nc = 5
+    ns = 50
 
-    assert v.feature_scaling == .5
-    v.add_attribute('sine',
-                    np.sin(np.linspace(-10., 10., gui.controller.n_spikes)))
+    def get_features(cluster_id):
+        return Bunch(data=artificial_features(ns, nc, 4),
+                     )
+
+    v = FeatureView(features=get_features,
+                    n_channels=nc,
+                    spike_times=artificial_spike_samples(ns) / 1000.,
+                    )
+    gui = GUI()
+    gui.show()
+    v.attach(gui)
+
+    # qtbot.waitForWindowShown(gui)
+
+    v.on_select([])
+    v.on_select([0])
+    v.on_select([0, 2, 3])
+    v.on_select([0, 2])
+
+    v.add_attribute('sine', np.sin(np.linspace(-10., 10., ns)))
 
     v.increase()
     v.decrease()

@@ -81,7 +81,6 @@ class FeatureView(ManualClusteringView):
                  spike_times=None,
                  n_channels=None,
                  n_features_per_channel=None,
-                 feature_lim=None,
                  best_channels=None,
                  **kwargs):
         """
@@ -246,9 +245,6 @@ class FeatureView(ManualClusteringView):
         if n_clusters == 0:
             return
 
-        # Get the spikes, features, masks.
-        data = self.features(cluster_ids)
-
         # Get the background features.
         data_bg = self.background_features
         if data_bg is not None:
@@ -278,32 +274,37 @@ class FeatureView(ManualClusteringView):
         # Plot all features.
         with self.building():
             self._plot_labels(x_dim, y_dim)
-            for i in range(self.n_cols):
-                for j in range(self.n_cols):
-                    # Skip lower-diagonal subplots.
-                    if i > j:
-                        continue
 
-                    if data_bg is not None:
-                        # Retrieve the x and y values for the background
-                        # spikes.
-                        x_bg = self._get_feature(x_dim[i, j], spike_ids_bg,
-                                                 features_bg)
-                        y_bg = self._get_feature(y_dim[i, j], spike_ids_bg,
-                                                 features_bg)
+            # Cluster features.
+            for clu_idx, cluster_id in enumerate(cluster_ids):
 
-                        # Background features.
-                        self._plot_features(i, j, x_dim, y_dim, x_bg, y_bg,
-                                            masks=masks_bg,
-                                            )
+                # Get the spikes, features, masks.
+                # TODO: this returns a dict {(i, j): array}
+                d = self.features(cluster_id)
 
-                    # Cluster features.
-                    for clu_idx, clu in enumerate(cluster_ids):
+                f = d.data
+                ns, nc = f.shape[:2]
+                masks = d.get('masks', np.ones(f.shape[:2]))
+                spike_ids = d.get('spike_ids', np.arange(ns))
 
-                        d = data[clu_idx]
-                        f = d.data
-                        masks = d.masks
-                        spike_ids = d.spike_ids
+                for i in range(self.n_cols):
+                    for j in range(self.n_cols):
+                        # Skip lower-diagonal subplots.
+                        if i > j:
+                            continue
+
+                        if data_bg is not None:
+                            # Retrieve the x and y values for the background
+                            # spikes.
+                            x_bg = self._get_feature(x_dim[i, j], spike_ids_bg,
+                                                     features_bg)
+                            y_bg = self._get_feature(y_dim[i, j], spike_ids_bg,
+                                                     features_bg)
+
+                            # Background features.
+                            self._plot_features(i, j, x_dim, y_dim, x_bg, y_bg,
+                                                masks=masks_bg,
+                                                )
 
                         # Retrieve the x and y values for the subplot.
                         x = self._get_feature(x_dim[i, j], spike_ids, f)
@@ -315,10 +316,11 @@ class FeatureView(ManualClusteringView):
                                             clu_idx=clu_idx,
                                             )
 
-                    # Add axes.
-                    self[i, j].lines(pos=[[-1., 0., +1., 0.],
-                                          [0., -1., 0., +1.]],
-                                     color=(.25, .25, .25, .5))
+                        # Add axes.
+                        if clu_idx == 0:
+                            self[i, j].lines(pos=[[-1., 0., +1., 0.],
+                                                  [0., -1., 0., +1.]],
+                                             color=(.25, .25, .25, .5))
 
             # Add the boxes.
             self.grid.add_boxes(self, self.shape)
