@@ -11,14 +11,14 @@ import logging
 
 import numpy as np
 
-from phy.cluster.manual.gui_component import ManualClustering
-from phy.cluster.manual.views import (WaveformView,
-                                      TraceView,
-                                      FeatureView,
-                                      CorrelogramView,
-                                      select_traces,
-                                      extract_spikes,
-                                      )
+from phy.cluster.gui_component import ManualClustering
+from phy.cluster.views import (WaveformView,
+                               TraceView,
+                               FeatureView,
+                               CorrelogramView,
+                               select_traces,
+                               extract_spikes,
+                               )
 from phy.gui import GUI
 from phy.io.array import _get_data_lim, concat_per_cluster, get_excerpts
 from phy.io import Context, Selector

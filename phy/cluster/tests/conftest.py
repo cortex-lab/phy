@@ -10,7 +10,7 @@ from pytest import fixture
 
 import numpy as np
 
-from phy.cluster.manual.controller import Controller
+from phy.cluster.controller import Controller
 from phy.electrode.mea import staggered_positions
 from phy.io.array import (get_closest_clusters,
                           _spikes_in_clusters,
