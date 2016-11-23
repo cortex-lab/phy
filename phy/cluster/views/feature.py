@@ -14,6 +14,7 @@ import re
 
 import numpy as np
 
+from phy.io.array import _flatten
 from phy.utils import Bunch
 from phy.utils._color import _colormap
 from .base import ManualClusteringView
@@ -209,12 +210,13 @@ class FeatureView(ManualClusteringView):
     def _get_channel_dims(self, cluster_ids):
         """Select the channels to show by default."""
         n = 2
-        channels = self.best_channels(cluster_ids)
-        channels = (channels if channels is not None
-                    else list(range(self.n_channels)))
-        channels = _extend(channels, n)
-        assert len(channels) == n
-        return channels
+        channel_ids = sorted(set(_flatten(self.best_channels(cluster_id)
+                                          for cluster_id in cluster_ids)))
+        channel_ids = (channel_ids if channel_ids is not None
+                       else list(range(self.n_channel_ids)))
+        channel_ids = _extend(channel_ids, n)
+        assert len(channel_ids) == n
+        return channel_ids
 
     # Public methods
     # -------------------------------------------------------------------------
