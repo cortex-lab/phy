@@ -78,7 +78,6 @@ class ClusterPicker(object):
     ----------
 
     spike_clusters : ndarray
-    spikes_per_cluster : function `cluster_id -> spike_ids`
     cluster_groups : dictionary
     shortcuts : dict
     quality: func
@@ -135,7 +134,6 @@ class ClusterPicker(object):
 
     def __init__(self,
                  spike_clusters,
-                 spikes_per_cluster,
                  cluster_groups=None,
                  shortcuts=None,
                  quality=None,
@@ -146,9 +144,6 @@ class ClusterPicker(object):
         self.gui = None
         self.quality = quality  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
-
-        assert hasattr(spikes_per_cluster, '__call__')
-        self.spikes_per_cluster = spikes_per_cluster
 
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
@@ -234,11 +229,6 @@ class ClusterPicker(object):
             return self.cluster_meta.get(field, cluster_id)
 
     def _add_default_columns(self):
-        # Default columns.
-        @self.add_column(name='n_spikes')
-        def n_spikes(cluster_id):
-            return len(self.spikes_per_cluster(cluster_id))
-
         @self.add_column(show=False)
         def skip(cluster_id):
             """Whether to skip that cluster."""

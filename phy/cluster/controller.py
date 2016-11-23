@@ -223,7 +223,6 @@ class Controller(EventEmitter):
         new_cluster_id = self.context.load('new_cluster_id'). \
             get('new_cluster_id', None)
         mc = ClusterPicker(self.spike_clusters,
-                           self.spikes_per_cluster,
                            similarity=self.similarity,
                            cluster_groups=self.cluster_groups,
                            new_cluster_id=new_cluster_id,

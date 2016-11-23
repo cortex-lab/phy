@@ -14,7 +14,6 @@ from vispy.util import keys
 from .. import picker as _picker
 from ..picker import (ClusterPicker,
                       )
-from phy.io.array import _spikes_in_clusters
 from phy.gui import GUI
 from .conftest import MockController
 
@@ -42,10 +41,8 @@ def gui(tempdir, qtbot):
 def picker(qtbot, gui, cluster_ids, cluster_groups,
            quality, similarity):
     spike_clusters = np.array(cluster_ids)
-    spikes_per_cluster = lambda c: [c]
 
     mc = ClusterPicker(spike_clusters,
-                       spikes_per_cluster,
                        cluster_groups=cluster_groups,
                        shortcuts={'undo': 'ctrl+z'},
                        quality=quality,
@@ -159,7 +156,6 @@ def test_picker_split_2(gui, quality, similarity):
     spike_clusters = np.array([0, 0, 1])
 
     mc = ClusterPicker(spike_clusters,
-                       lambda c: _spikes_in_clusters(spike_clusters, [c]),
                        similarity=similarity,
                        )
     mc.attach(gui)
