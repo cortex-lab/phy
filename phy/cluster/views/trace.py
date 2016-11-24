@@ -12,7 +12,6 @@ import logging
 import numpy as np
 
 from phy.utils import Bunch
-from phy.utils._color import ColorSelector
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)
@@ -21,6 +20,16 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 # Trace view
 # -----------------------------------------------------------------------------
+
+def select_traces(traces, interval, sample_rate=None):
+    """Load traces in an interval (in seconds)."""
+    start, end = interval
+    i, j = round(sample_rate * start), round(sample_rate * end)
+    i, j = int(i), int(j)
+    traces = traces[i:j, :]
+    # traces = traces - np.mean(traces, axis=0)
+    return traces
+
 
 class TraceView(ManualClusteringView):
     interval_duration = .25  # default duration of the interval
@@ -40,7 +49,6 @@ class TraceView(ManualClusteringView):
 
     def __init__(self,
                  traces=None,
-                 spikes=None,
                  sample_rate=None,
                  duration=None,
                  n_channels=None,
@@ -61,8 +69,6 @@ class TraceView(ManualClusteringView):
         # Traces and spikes.
         assert hasattr(traces, '__call__')
         self.traces = traces
-        assert hasattr(spikes, '__call__')
-        self.spikes = spikes
 
         assert duration >= 0
         self.duration = duration
@@ -89,8 +95,6 @@ class TraceView(ManualClusteringView):
         # Box and probe scaling.
         self._scaling = 1.
         self._origin = None
-
-        self._color_selector = ColorSelector()
 
         # Initialize the view.
         super(TraceView, self).__init__(layout='stacked',
@@ -137,22 +141,24 @@ class TraceView(ManualClusteringView):
                   uniform=True,
                   )
 
-    def _plot_spike(self, waveforms=None, channels=None, spike_time=None,
-                    offset_samples=0, color=None):
-
+    def _plot_waveforms(self, waveforms=None,
+                        channel_ids=None,
+                        start_time=None,
+                        color=None,
+                        ):
+        # The spike time corresponds to the first sample of the waveform.
         n_samples, n_channels = waveforms.shape
-        assert len(channels) == n_channels
-        sr = float(self.sample_rate)
-
-        t0 = spike_time - offset_samples / sr
+        c = self.channel_vertical_order
+        if channel_ids is not None:
+            assert len(channel_ids) == n_channels
+            c = c[channel_ids]
 
         # Generate the x coordinates of the waveform.
-        t = t0 + self.dt * np.arange(n_samples)
+        t = start_time + self.dt * np.arange(n_samples)
         t = self._normalize_time(t)
         t = np.tile(t, (n_channels, 1))  # (n_unmasked_channels, n_samples)
 
         # The box index depends on the channel.
-        c = self.channel_vertical_order[channels]
         box_index = np.repeat(c[:, np.newaxis], n_samples, axis=0)
         self.plot(t, waveforms.T, color=color,
                   box_index=box_index,
@@ -218,21 +224,14 @@ class TraceView(ManualClusteringView):
         self._plot_traces(traces.data, color=traces.color)
 
         # Plot the spikes.
-        spikes = self.spikes(interval, traces)
-        assert isinstance(spikes, (tuple, list))
-        for spike in spikes:
-            clu = spike.spike_cluster
-            cg = spike.cluster_group
-            color = self._color_selector.get(clu,
-                                             cluster_ids=self.cluster_ids,
-                                             cluster_group=cg,
-                                             )
-            self._plot_spike(color=color,
-                             waveforms=spike.waveforms,
-                             channels=spike.channels,
-                             spike_time=spike.spike_time,
-                             offset_samples=spike.offset_samples,
-                             )
+        waveforms = traces.waveforms
+        assert isinstance(waveforms, list)
+        for w in waveforms:
+            self._plot_waveforms(waveforms=w.data,
+                                 color=w.color,
+                                 channel_ids=w.get('channel_ids', None),
+                                 start_time=w.start_time,
+                                 )
 
         # Plot the labels.
         if self.do_show_labels:

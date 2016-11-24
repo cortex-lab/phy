@@ -14,47 +14,50 @@ from phy.io.mock import (artificial_traces,
                          artificial_spike_clusters,
                          )
 from phy.utils import Bunch
+from phy.utils._color import ColorSelector
 
-from ...controller import extract_spikes
-from ..trace import TraceView
+from ..trace import TraceView, select_traces
 
 
 #------------------------------------------------------------------------------
 # Test trace view
 #------------------------------------------------------------------------------
 
-def test_trace_view(qtbot):
+def test_trace_view(tempdir, qtbot):
     nc = 5
-    ns = 10
-    sr = 1000
+    ns = 9
+    sr = 1000.
     duration = 1.
     st = np.linspace(0.1, .9, ns)
     sc = artificial_spike_clusters(ns, nc)
-    m = np.ones((ns, nc))
+    traces = 10 * artificial_traces(int(round(duration * sr)), nc)
+    cs = ColorSelector()
 
     def get_traces(interval):
-        return Bunch(data=artificial_traces(int(duration * sr), nc),
-                     color=(1.,) * 4,
-                     )
-
-    def get_spikes(interval, traces):
-        b = extract_spikes(traces.data,
-                           interval,
-                           sample_rate=sr,
-                           spike_times=st,
-                           spike_clusters=sc,
-                           all_masks=m,
-                           n_samples_waveforms=50,
-                           )
-        return b
+        out = Bunch(data=select_traces(traces, interval, sample_rate=sr),
+                    color=(.75,) * 4,
+                    )
+        a, b = st.searchsorted(interval)
+        out.waveforms = []
+        k = 20
+        for i in range(a, b):
+            t = st[i]
+            c = sc[i]
+            s = int(round(t * sr))
+            d = Bunch(data=traces[s - k:s + k, :],
+                      start_time=t - k / sr,
+                      color=cs.get(c),
+                      cluster_id=c,
+                      )
+            out.waveforms.append(d)
+        return out
 
     v = TraceView(traces=get_traces,
-                  spikes=get_spikes,
                   n_channels=nc,
                   sample_rate=sr,
                   duration=duration,
                   )
-    gui = GUI()
+    gui = GUI(config_dir=tempdir)
     gui.show()
     v.attach(gui)
 
@@ -94,7 +97,7 @@ def test_trace_view(qtbot):
     v.widen()
 
     v.toggle_show_labels()
-    v.toggle_show_labels()
+    # v.toggle_show_labels()
     v.go_right()
     assert v.do_show_labels
 
