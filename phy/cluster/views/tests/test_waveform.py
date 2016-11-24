@@ -55,7 +55,6 @@ def test_waveform_view(qtbot):
 
     v.toggle_show_labels()
     v.toggle_show_labels()
-    assert v.do_show_labels
 
     # Box scaling.
     bs = v.boxed.box_size
