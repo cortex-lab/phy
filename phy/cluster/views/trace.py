@@ -221,7 +221,7 @@ class TraceView(ManualClusteringView):
         traces = self.traces(interval)
 
         # Plot the traces.
-        self._plot_traces(traces.data, color=traces.color)
+        self._plot_traces(traces.data, color=traces.get('color', None))
 
         # Plot the spikes.
         waveforms = traces.waveforms

@@ -10,5 +10,5 @@
 from .correlogram import CorrelogramView  # noqa
 from .feature import FeatureView  # noqa
 from .scatter import ScatterView  # noqa
-from .trace import TraceView  # noqa
+from .trace import TraceView, select_traces  # noqa
 from .waveform import WaveformView  # noqa
