@@ -28,6 +28,7 @@ def test_scatter_view(qtbot):
     gui = GUI()
     gui.show()
     v.attach(gui)
+    qtbot.addWidget(gui)
 
     # qtbot.waitForWindowShown(gui)
 

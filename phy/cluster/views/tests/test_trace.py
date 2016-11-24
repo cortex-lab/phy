@@ -60,6 +60,7 @@ def test_trace_view(tempdir, qtbot):
     gui = GUI(config_dir=tempdir)
     gui.show()
     v.attach(gui)
+    qtbot.addWidget(gui)
 
     # qtbot.waitForWindowShown(gui)
 
