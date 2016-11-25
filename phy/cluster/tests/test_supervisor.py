@@ -11,9 +11,9 @@ import numpy as np
 from numpy.testing import assert_array_equal as ae
 from vispy.util import keys
 
-from .. import picker as _picker
-from ..picker import (ClusterPicker,
-                      )
+from .. import supervisor as _supervisor
+from ..supervisor import (Supervisor,
+                          )
 from phy.gui import GUI
 
 
@@ -24,7 +24,7 @@ from phy.gui import GUI
 @yield_fixture
 def gui(tempdir, qtbot):
     # NOTE: mock patch show box exec_
-    _picker._show_box = lambda _: _
+    _supervisor._show_box = lambda _: _
 
     gui = GUI(position=(200, 100), size=(500, 500), config_dir=tempdir)
     gui.show()
@@ -37,16 +37,16 @@ def gui(tempdir, qtbot):
 
 
 @fixture
-def picker(qtbot, gui, cluster_ids, cluster_groups,
-           quality, similarity):
+def supervisor(qtbot, gui, cluster_ids, cluster_groups,
+               quality, similarity):
     spike_clusters = np.array(cluster_ids)
 
-    mc = ClusterPicker(spike_clusters,
-                       cluster_groups=cluster_groups,
-                       shortcuts={'undo': 'ctrl+z'},
-                       quality=quality,
-                       similarity=similarity,
-                       )
+    mc = Supervisor(spike_clusters,
+                    cluster_groups=cluster_groups,
+                    shortcuts={'undo': 'ctrl+z'},
+                    quality=quality,
+                    similarity=similarity,
+                    )
     mc.attach(gui)
     mc.set_default_sort(quality.__name__)
 
@@ -57,8 +57,8 @@ def picker(qtbot, gui, cluster_ids, cluster_groups,
 # Test GUI component
 #------------------------------------------------------------------------------
 
-def test_picker_edge_cases(picker):
-    mc = picker
+def test_supervisor_edge_cases(supervisor):
+    mc = supervisor
 
     # Empty selection at first.
     ae(mc.clustering.cluster_ids, [0, 1, 2, 10, 11, 20, 30])
@@ -89,8 +89,8 @@ def test_picker_edge_cases(picker):
     mc.save()
 
 
-def test_picker_skip(qtbot, gui, picker):
-    mc = picker
+def test_supervisor_skip(qtbot, gui, supervisor):
+    mc = supervisor
 
     # yield [0, 1, 2, 10, 11, 20, 30]
     # #      i, g, N,  i,  g,  N, N
@@ -101,8 +101,8 @@ def test_picker_skip(qtbot, gui, picker):
         assert mc.selected == [clu]
 
 
-def test_picker_merge(picker):
-    mc = picker
+def test_supervisor_merge(supervisor):
+    mc = supervisor
 
     mc.cluster_view.select([30])
     mc.similarity_view.select([20])
@@ -118,10 +118,10 @@ def test_picker_merge(picker):
     assert mc.selected == [31, 11]
 
 
-def test_picker_merge_move(picker):
+def test_supervisor_merge_move(supervisor):
     """Check that merge then move selects the next cluster in the original
     cluster view, not the updated cluster view."""
-    mc = picker
+    mc = supervisor
 
     mc.cluster_view.select([20, 11])
 
@@ -137,8 +137,8 @@ def test_picker_merge_move(picker):
     assert mc.selected == [2]
 
 
-def test_picker_split(picker):
-    mc = picker
+def test_supervisor_split(supervisor):
+    mc = supervisor
 
     mc.select([1, 2])
     mc.split([1, 2])
@@ -151,12 +151,12 @@ def test_picker_split(picker):
     assert mc.selected == [31]
 
 
-def test_picker_split_2(gui, quality, similarity):
+def test_supervisor_split_2(gui, quality, similarity):
     spike_clusters = np.array([0, 0, 1])
 
-    mc = ClusterPicker(spike_clusters,
-                       similarity=similarity,
-                       )
+    mc = Supervisor(spike_clusters,
+                    similarity=similarity,
+                    )
     mc.attach(gui)
 
     mc.add_column(quality, name='quality', default=True)
@@ -166,8 +166,8 @@ def test_picker_split_2(gui, quality, similarity):
     assert mc.selected == [3, 2]
 
 
-def test_picker_state(tempdir, qtbot, gui, picker):
-    mc = picker
+def test_supervisor_state(tempdir, qtbot, gui, supervisor):
+    mc = supervisor
     cv = mc.cluster_view
     cv.sort_by('id')
     gui.close()
@@ -176,10 +176,10 @@ def test_picker_state(tempdir, qtbot, gui, picker):
     assert cv.state['sort_by'] == ('id', 'asc')
 
 
-def _test_picker_split_lasso(tempdir, qtbot, picker):
+def _test_supervisor_split_lasso(tempdir, qtbot, supervisor):
     # TODO
     gui = GUI()
-    mc = picker
+    mc = supervisor
     view = gui.list_views('FeatureView', is_visible=False)[0]
 
     gui.show()
@@ -210,8 +210,8 @@ def _test_picker_split_lasso(tempdir, qtbot, picker):
     gui.close()
 
 
-def test_picker_label(picker):
-    mc = picker
+def test_supervisor_label(supervisor):
+    mc = supervisor
 
     mc.select([20])
     mc.label("my_field", 3.14)
@@ -222,8 +222,8 @@ def test_picker_label(picker):
     assert mc.get_labels('my_field')[20] == 3.14
 
 
-def test_picker_move_1(picker):
-    mc = picker
+def test_supervisor_move_1(supervisor):
+    mc = supervisor
 
     mc.select([20])
     assert mc.selected == [20]
@@ -238,8 +238,8 @@ def test_picker_move_1(picker):
     assert mc.selected == [11]
 
 
-def test_picker_move_2(picker):
-    mc = picker
+def test_supervisor_move_2(supervisor):
+    mc = supervisor
 
     mc.select([20])
     mc.similarity_view.select([10])
@@ -260,8 +260,8 @@ def test_picker_move_2(picker):
 # Test shortcuts
 #------------------------------------------------------------------------------
 
-def test_picker_action_reset(qtbot, picker):
-    mc = picker
+def test_supervisor_action_reset(qtbot, supervisor):
+    mc = supervisor
 
     mc.actions.select([10, 11])
 
@@ -278,8 +278,8 @@ def test_picker_action_reset(qtbot, picker):
     assert mc.selected == [30, 20]
 
 
-def test_picker_action_nav(qtbot, picker):
-    mc = picker
+def test_supervisor_action_nav(qtbot, supervisor):
+    mc = supervisor
 
     mc.actions.reset()
     assert mc.selected == [30]
@@ -291,8 +291,8 @@ def test_picker_action_nav(qtbot, picker):
     assert mc.selected == [30]
 
 
-def test_picker_action_move_1(qtbot, picker):
-    mc = picker
+def test_supervisor_action_move_1(qtbot, supervisor):
+    mc = supervisor
 
     mc.actions.next()
 
@@ -314,8 +314,8 @@ def test_picker_action_move_1(qtbot, picker):
     # qtbot.stop()
 
 
-def test_picker_action_move_2(picker):
-    mc = picker
+def test_supervisor_action_move_2(supervisor):
+    mc = supervisor
 
     mc.select([30])
     mc.similarity_view.select([20])
@@ -336,8 +336,8 @@ def test_picker_action_move_2(picker):
     mc.cluster_meta.get('group', 2) == 'good'
 
 
-def test_picker_action_move_3(picker):
-    mc = picker
+def test_supervisor_action_move_3(supervisor):
+    mc = supervisor
 
     mc.select([30])
     mc.similarity_view.select([20])
