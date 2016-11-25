@@ -7,14 +7,11 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-import inspect
-from itertools import product
 import logging
 import re
 
 import numpy as np
 
-from phy.io.array import _flatten
 from phy.utils import Bunch
 from phy.utils._color import _colormap
 from .base import ManualClusteringView
@@ -39,32 +36,59 @@ def _extend(channels, n=None):
     return channels
 
 
-def _dimensions_matrix(channels, n_cols=None, top_left_attribute=None):
-    """
-    time,x0 y0,x0   x1,x0   y1,x0
-    x0,y0   time,y0 x1,y0   y1,y0
-    x0,x1   y0,x1   time,x1 y1,x1
-    x0,y1   y0,y1   x1,y1   time,y1
-    """
-    # Generate the dimensions matrix from the docstring.
-    ds = inspect.getdoc(_dimensions_matrix).strip()
-    x, y = channels[:2]
+def _get_default_grid():
+    s = """
+    time,0A 1A,0A   0B,0A   1B,0A
+    0A,1A   time,1A 0B,1A   1B,1A
+    0A,0B   1A,0B   time,0B 1B,0B
+    0A,1B   1A,1B   0B,1B   time,1B
+    """.strip()
+    dims = [[_ for _ in re.split(' +', line.strip())]
+            for line in s.splitlines()]
+    return dims
 
-    def _get_dim(d):
-        if d == 'time':
-            return d
-        assert re.match(r'[xy][01]', d)
-        c = x if d[0] == 'x' else y
-        f = int(d[1])
-        return c, f
 
-    dims = [[_.split(',') for _ in re.split(r' +', line.strip())]
-            for line in ds.splitlines()]
-    x_dim = {(i, j): _get_dim(dims[i][j][0])
-             for i, j in product(range(4), range(4))}
-    y_dim = {(i, j): _get_dim(dims[i][j][1])
-             for i, j in product(range(4), range(4))}
-    return x_dim, y_dim
+def _get_axis_data(bunch, dim=None, channel_ids=None, attributes=None):
+    """data is returned by the features() function.
+    dim is the string specifying the dimensions to extract for the data.
+    Return a tuple (x, y)."""
+    masks = bunch.get('masks', None)
+    if masks is None:
+        masks = np.ones(bunch.data.shape[:2])
+    s = 'ABCDEFGHIJ'
+    # TODO: attributes
+    dim_x, dim_y = dim.split(',')
+    # Channel relative index.
+    cx, cy = int(dim_x[:-1]), int(dim_y[:-1])
+    # Principal component: A=0, B=1, etc.
+    dx, dy = s.index(dim_x[-1]), s.index(dim_y[-1])
+    return Bunch(x=bunch.data[:, cx, dx],
+                 y=bunch.data[:, cy, dy],
+                 channels_x=channel_ids[cx],
+                 channels_y=channel_ids[cy],
+                 masks_x=masks[:, cx],
+                 masks_y=masks[:, cy],
+                 masks=np.maximum(masks[:, cx], masks[:, cy]),
+                 )
+
+
+def _get_point_color(clu_idx=None):
+    if clu_idx is not None:
+        color = tuple(_colormap(clu_idx)) + (.5,)
+    else:
+        color = (1., 1., 1., .5)
+    assert len(color) == 4
+    return color
+
+
+def _get_point_size(clu_idx=None):
+    return FeatureView._default_marker_size if clu_idx is not None else 1.
+
+
+def _get_point_masks(masks=None, clu_idx=None):
+    # NOTE: we add the cluster relative index for the computation
+    # of the depth on the GPU.
+    return masks * .99999 + (clu_idx or 0)
 
 
 class FeatureView(ManualClusteringView):
@@ -78,45 +102,29 @@ class FeatureView(ManualClusteringView):
 
     def __init__(self,
                  features=None,
-                 background_features=None,
-                 spike_times=None,
-                 n_channels=None,
-                 n_features_per_channel=None,
-                 best_channels=None,
+                 attributes=None,
                  **kwargs):
-        """
-        features is a function :
-            `cluster_ids: Bunch(spike_ids,
-                                features,
-                                masks,
-                                spike_clusters,
-                                spike_times)`
-        background_features is a Bunch(...) like above.
-
-        """
         self._scaling = 1.
-
-        self.best_channels = best_channels or (lambda clusters=None: [])
 
         assert features
         self.features = features
 
-        # This is a tuple (spikes, features, masks).
-        self.background_features = background_features
-
-        self.n_features_per_channel = n_features_per_channel
-        assert n_channels > 0
-        self.n_channels = n_channels
-
-        # Spike times.
-        self.n_spikes = spike_times.shape[0]
-        assert spike_times.shape == (self.n_spikes,)
-        assert self.n_spikes >= 0
-        self.spike_times = spike_times
-        self.duration = spike_times.max()
-
         self.n_cols = 4
         self.shape = (self.n_cols, self.n_cols)
+
+        self.grid_dim = _get_default_grid()  # [i][j] = '..,..'
+
+        # If this is True, the channels won't be automatically chosen
+        # when new clusters are selected.
+        self.fixed_channels = False
+
+        # Channels being shown.
+        self.channel_ids = None
+
+        # Attributes: extra features. This is a dictionary
+        # {name: array}
+        # where each array is a `(n_spikes,)` array.
+        self.attributes = attributes or {}
 
         # Initialize the view.
         super(FeatureView, self).__init__(layout='grid',
@@ -124,99 +132,85 @@ class FeatureView(ManualClusteringView):
                                           enable_lasso=True,
                                           **kwargs)
 
-        # If this is True, the channels won't be automatically chosen
-        # when new clusters are selected.
-        self.fixed_channels = False
-
-        # Channels to show.
-        self.channels = None
-
-        # Attributes: extra features. This is a dictionary
-        # {name: array}
-        # where each array is a `(n_spikes,)` array.
-        self.attributes = {}
-        self.top_left_attribute = None
-
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _get_feature(self, dim, spike_ids, f):
-        if dim == 'time':
-            return -1. + (2. / self.duration) * self.spike_times[spike_ids]
-        elif dim in self.attributes:
-            # Extra features.
-            values = self.attributes[dim]
-            values = values[spike_ids]
-            return values
-        else:
-            assert len(dim) == 2
-            ch, fet = dim
-            assert fet < f.shape[2]
-            return f[:, ch, fet] * self._scaling
-
-    def _plot_features(self, i, j, x_dim, y_dim, x, y,
-                       masks=None, clu_idx=None):
-        """Plot the features in a subplot."""
-        assert x.shape == y.shape
-        n_spikes = x.shape[0]
-
-        if clu_idx is not None:
-            color = tuple(_colormap(clu_idx)) + (.5,)
-        else:
-            color = (1., 1., 1., .5)
-        assert len(color) == 4
-
-        # Find the masks for the given subplot channel.
-        if isinstance(x_dim[i, j], tuple):
-            ch, fet = x_dim[i, j]
-            # NOTE: we add the cluster relative index for the computation
-            # of the depth on the GPU.
-            m = masks[:, ch] * .999 + (clu_idx or 0)
-        else:
-            m = np.ones(n_spikes) * .999 + (clu_idx or 0)
-
-        # Marker size, smaller for background features.
-        size = self._default_marker_size if clu_idx is not None else 1.
-
-        self[i, j].scatter(x=x, y=y,
-                           color=color,
-                           masks=m,
-                           size=size,
-                           data_bounds=None,
-                           uniform=True,
-                           )
-
-    def _plot_labels(self, x_dim, y_dim):
+    def _plot_labels(self):
         """Plot feature labels along left and bottom edge of subplots"""
-
         # iterate simultaneously over kth row in left column and
         # kth column in bottom row:
         br = self.n_cols - 1  # bottom row
         for k in range(0, self.n_cols):
-            label = str(y_dim[k, k])
+            dim_x, dim_y = self.grid_dim[k][k].split(',')
             # left edge of left column of subplots:
             self[k, 0].text(pos=[-1., 0.],
-                            text=label,
+                            text=dim_y,
                             anchor=[-1.03, 0.],
                             data_bounds=None,
                             )
             # bottom edge of bottom row of subplots:
             self[br, k].text(pos=[0., -1.],
-                             text=label,
+                             text=dim_x,
                              anchor=[0., -1.04],
                              data_bounds=None,
                              )
 
-    def _get_channel_dims(self, cluster_ids):
-        """Select the channels to show by default."""
-        n = 2
-        channel_ids = sorted(set(_flatten(self.best_channels(cluster_id)
-                                          for cluster_id in cluster_ids)))
-        channel_ids = (channel_ids if channel_ids is not None
-                       else list(range(self.n_channel_ids)))
-        channel_ids = _extend(channel_ids, n)
-        assert len(channel_ids) == n
-        return channel_ids
+    def _iter_subplots(self):
+        """Yield (i, j, dim)."""
+        for i in range(self.n_cols):
+            for j in range(self.n_cols):
+                # Skip lower-diagonal subplots.
+                if i > j:
+                    continue
+                yield i, j, self.grid_dim[i][j]
+
+    def _plot_background(self, bunch):
+        """Plot the background features."""
+        s = self.scaling
+        for i, j, dim in self._iter_subplots():
+            if 'time' in dim:
+                continue
+            bgp = _get_axis_data(bunch,
+                                 dim=dim,
+                                 channel_ids=self.channel_ids,
+                                 )
+
+            self[i, j].scatter(x=s * bgp.x, y=s * bgp.y,
+                               color=_get_point_color(),
+                               size=_get_point_size(),
+                               masks=_get_point_masks(masks=bgp.masks),
+                               uniform=True,
+                               # data_bounds=None,
+                               )
+
+    def _plot_features(self, bunchs):
+        """Plot the features."""
+        s = self.scaling
+        for clu_idx, cluster_id in enumerate(self.cluster_ids):
+            bunch = bunchs[clu_idx]
+
+            for i, j, dim in self._iter_subplots():
+                if 'time' in dim:
+                    continue
+                p = _get_axis_data(bunch,
+                                   dim=dim,
+                                   channel_ids=self.channel_ids,
+                                   )
+
+                self[i, j].scatter(x=s * p.x, y=s * p.y,
+                                   color=_get_point_color(clu_idx),
+                                   size=_get_point_size(clu_idx),
+                                   masks=_get_point_masks(clu_idx=clu_idx,
+                                                          masks=p.masks),
+                                   uniform=True,
+                                   # data_bounds=None,
+                                   )
+
+    def _plot_axes(self):
+        for i, j, dim in self._iter_subplots():
+            self[i, j].lines(pos=[[-1., 0., +1., 0.],
+                                  [0., -1., 0., +1.]],
+                             color=(.25, .25, .25, .5))
 
     # Public methods
     # -------------------------------------------------------------------------
@@ -237,7 +231,7 @@ class FeatureView(ManualClusteringView):
 
     def clear_channels(self):
         """Reset the dimensions."""
-        self.channels = None
+        self.channel_ids = None
         self.on_select()
 
     def on_select(self, cluster_ids=None):
@@ -247,84 +241,26 @@ class FeatureView(ManualClusteringView):
         if n_clusters == 0:
             return
 
-        # Get the background features.
-        data_bg = self.background_features
-        if data_bg is not None:
-            spike_ids_bg = data_bg.spike_ids
-            features_bg = data_bg.data
-            masks_bg = data_bg.masks
-        # Select the dimensions.
+        bunchs = [self.features(cluster_id) for cluster_id in cluster_ids]
+        # Choose the channels based on the first selected cluster.
+        channel_ids = list(bunchs[0].channel_ids)
+        assert len(channel_ids)
+
         # Choose the channels automatically unless fixed_channels is set.
-        if (not self.fixed_channels or self.channels is None):
-            self.channels = self._get_channel_dims(cluster_ids)
-        tla = self.top_left_attribute
-        assert self.channels
-        x_dim, y_dim = _dimensions_matrix(self.channels,
-                                          n_cols=self.n_cols,
-                                          top_left_attribute=tla)
+        if (not self.fixed_channels or self.channel_ids is None):
+            self.channel_ids = channel_ids
+        assert len(self.channel_ids)
 
         # Set the status message.
-        ch = ', '.join(map(str, self.channels))
+        ch = ', '.join(map(str, self.channel_ids))
         self.set_status('Channels: {}'.format(ch))
-
-        # Set a non-time attribute as y coordinate in the top-left subplot.
-        attrs = sorted(self.attributes)
-        # attrs.remove('time')
-        if attrs:
-            y_dim[0, 0] = attrs[0]
 
         # Plot all features.
         with self.building():
-            self._plot_labels(x_dim, y_dim)
-
-            # Cluster features.
-            for clu_idx, cluster_id in enumerate(cluster_ids):
-
-                # Get the spikes, features, masks.
-                # TODO: this returns a dict {(i, j): array}
-                d = self.features(cluster_id)
-
-                f = d.data
-                ns, nc = f.shape[:2]
-                masks = d.get('masks', np.ones(f.shape[:2]))
-                spike_ids = d.get('spike_ids', np.arange(ns))
-
-                for i in range(self.n_cols):
-                    for j in range(self.n_cols):
-                        # Skip lower-diagonal subplots.
-                        if i > j:
-                            continue
-
-                        if data_bg is not None:
-                            # Retrieve the x and y values for the background
-                            # spikes.
-                            x_bg = self._get_feature(x_dim[i, j], spike_ids_bg,
-                                                     features_bg)
-                            y_bg = self._get_feature(y_dim[i, j], spike_ids_bg,
-                                                     features_bg)
-
-                            # Background features.
-                            self._plot_features(i, j, x_dim, y_dim, x_bg, y_bg,
-                                                masks=masks_bg,
-                                                )
-
-                        # Retrieve the x and y values for the subplot.
-                        x = self._get_feature(x_dim[i, j], spike_ids, f)
-                        y = self._get_feature(y_dim[i, j], spike_ids, f)
-
-                        self._plot_features(i, j, x_dim, y_dim,
-                                            x, y,
-                                            masks=masks,
-                                            clu_idx=clu_idx,
-                                            )
-
-                        # Add axes.
-                        if clu_idx == 0:
-                            self[i, j].lines(pos=[[-1., 0., +1., 0.],
-                                                  [0., -1., 0., +1.]],
-                                             color=(.25, .25, .25, .5))
-
-            # Add the boxes.
+            self._plot_background(self.features(channel_ids=self.channel_ids))
+            self._plot_axes()
+            self._plot_features(bunchs)
+            self._plot_labels()
             self.grid.add_boxes(self, self.shape)
 
     def attach(self, gui):
@@ -344,7 +280,7 @@ class FeatureView(ManualClusteringView):
 
     def on_channel_click(self, channel_idx=None, key=None, button=None):
         """Respond to the click on a channel."""
-        channels = self.channels
+        channels = self.channel_ids
         if channels is None:
             return
         assert len(channels) == 2
@@ -359,44 +295,27 @@ class FeatureView(ManualClusteringView):
         """Return the spikes enclosed by the lasso."""
         if self.lasso.count < 3:  # pragma: no cover
             return []
-        tla = self.top_left_attribute
-        assert self.channels
-        x_dim, y_dim = _dimensions_matrix(self.channels,
-                                          n_cols=self.n_cols,
-                                          top_left_attribute=tla)
-        data = self.features(self.cluster_ids, load_all=True)
-
-        # Concatenate the points from all selected clusters.
-        assert isinstance(data, list)
-        pos = []
-        for d in data:
-            spike_ids = d.spike_ids
-            f = d.data
-            i, j = self.lasso.box
-
-            x = self._get_feature(x_dim[i, j], spike_ids, f)
-            y = self._get_feature(y_dim[i, j], spike_ids, f)
-            pos.append(np.c_[x, y].astype(np.float64))
-        pos = np.vstack(pos)
-
-        ind = self.lasso.in_polygon(pos)
-        self.lasso.clear()
-        return spike_ids[ind]
+        assert len(self.channel_ids)
+        # TODO
+        #
+        # # Concatenate the points from all selected clusters.
+        # assert isinstance(data, list)
+        # pos = []
+        # for d in data:
+        #     i, j = self.lasso.box
+        #
+        #     pos.append(np.c_[x, y].astype(np.float64))
+        # pos = np.vstack(pos)
+        #
+        # ind = self.lasso.in_polygon(pos)
+        # self.lasso.clear()
+        # return spike_ids[ind]
+        return
 
     def toggle_automatic_channel_selection(self):
         """Toggle the automatic selection of channels when the cluster
         selection changes."""
         self.fixed_channels = not self.fixed_channels
-
-    def increase(self):
-        """Increase the scaling of the features."""
-        self.scaling *= 1.2
-        self.on_select()
-
-    def decrease(self):
-        """Decrease the scaling of the features."""
-        self.scaling /= 1.2
-        self.on_select()
 
     # Feature scaling
     # -------------------------------------------------------------------------
@@ -408,3 +327,13 @@ class FeatureView(ManualClusteringView):
     @scaling.setter
     def scaling(self, value):
         self._scaling = value
+
+    def increase(self):
+        """Increase the scaling of the features."""
+        self.scaling *= 1.2
+        self.on_select()
+
+    def decrease(self):
+        """Decrease the scaling of the features."""
+        self.scaling /= 1.2
+        self.on_select()

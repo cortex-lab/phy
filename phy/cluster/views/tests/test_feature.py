@@ -10,7 +10,6 @@ import numpy as np
 
 from phy.gui import GUI
 from phy.io.mock import (artificial_features,
-                         artificial_spike_samples,
                          )
 from phy.utils import Bunch
 
@@ -24,28 +23,29 @@ from ..feature import FeatureView
 def test_feature_view(qtbot):
     nc = 5
     ns = 50
+    features = artificial_features(ns, nc, 4)
 
-    def get_features(cluster_id):
-        return Bunch(data=artificial_features(ns, nc, 4),
+    def get_features(cluster_id=None, n_spikes=None, channel_ids=None):
+        return Bunch(data=features,
+                     channel_ids=np.arange(nc),
                      )
 
     v = FeatureView(features=get_features,
-                    n_channels=nc,
-                    spike_times=artificial_spike_samples(ns) / 1000.,
                     )
     gui = GUI()
     gui.show()
     v.attach(gui)
     qtbot.addWidget(gui)
 
-    # qtbot.waitForWindowShown(gui)
+    qtbot.waitForWindowShown(gui)
 
     v.on_select([])
     v.on_select([0])
     v.on_select([0, 2, 3])
     v.on_select([0, 2])
 
-    v.add_attribute('sine', np.sin(np.linspace(-10., 10., ns)))
+    qtbot.stop()
+    return
 
     v.increase()
     v.decrease()
