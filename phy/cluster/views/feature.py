@@ -50,6 +50,12 @@ def _get_default_grid():
     return dims
 
 
+def _get_data_bounds(px, py):
+    xmin, xmax = px.get('lim', None) or (px.data.min(), px.data.max())
+    ymin, ymax = py.get('lim', None) or (py.data.min(), py.data.max())
+    return (xmin, ymin, xmax, ymax)
+
+
 def _get_point_color(clu_idx=None):
     if clu_idx is not None:
         color = tuple(_colormap(clu_idx)) + (.5,)
@@ -70,7 +76,9 @@ def _get_point_masks(masks=None, clu_idx=None):
     return masks * .99999 + (clu_idx or 0)
 
 
-def _get_masks_max(mx, my):
+def _get_masks_max(px, py):
+    mx = px.get('masks', None)
+    my = py.get('masks', None)
     if mx is None or my is None:
         return None
     return np.maximum(mx, my)
@@ -89,7 +97,7 @@ class FeatureView(ManualClusteringView):
                  features=None,
                  attributes=None,
                  **kwargs):
-        self._scaling = 1.
+        self._scaling = None
 
         assert features
         self.features = features
@@ -116,6 +124,8 @@ class FeatureView(ManualClusteringView):
                                           shape=self.shape,
                                           enable_lasso=True,
                                           **kwargs)
+
+        # We unzoom a bit to show the labels.
         self.panzoom.zoom = .9
 
     # Internal methods
@@ -140,11 +150,14 @@ class FeatureView(ManualClusteringView):
             return dim
 
     def _get_axis_data(self, bunch, dim, cluster_id=None):
-        """data is returned by the features() function.
+        """Extract the points from the data on a given dimension.
+
+        bunch is returned by the features() function.
         dim is the string specifying the dimensions to extract for the data.
+
         """
         if dim in self.attributes:
-            return Bunch(data=self.attributes[dim](cluster_id))
+            return self.attributes[dim](cluster_id)
         masks = bunch.get('masks', None)
         assert dim not in self.attributes  # This is called only on PC data.
         s = 'ABCDEFGHIJ'
@@ -158,44 +171,26 @@ class FeatureView(ManualClusteringView):
                      masks=masks,
                      )
 
-    def _plot_background(self):
-        """Plot the background features."""
-        s = self.scaling
-        bunch = self.features(channel_ids=self.channel_ids)
-        for i, j, dim_x, dim_y in self._iter_subplots():
-            # Get data for x axis.
-            dx = self._get_axis_data(bunch, dim_x)
-            dy = self._get_axis_data(bunch, dim_y)
-            masks = _get_masks_max(dx.get('masks', None),
-                                   dy.get('masks', None))
-            self[i, j].uscatter(x=s * dx.data, y=s * dy.data,
-                                color=_get_point_color(),
-                                size=_get_point_size(),
-                                masks=_get_point_masks(masks=masks),
-                                # data_bounds=None,
-                                )
+    def _get_scaled(self, p):
+        if p.get('lim', None) is not None:
+            return p.data
+        return self.scaling * p.data
 
-    def _plot_features(self, bunchs):
-        """Plot the features."""
-        s = self.scaling
-        for clu_idx, cluster_id in enumerate(self.cluster_ids):
-            bunch = bunchs[clu_idx]
-            # NOTE: the columns in bunch.data are ordered by decreasing quality
-            # of the associated channels. The channels corresponding to each
-            # column are given in bunch.channel_ids in the same order.
-
-            for i, j, dim_x, dim_y in self._iter_subplots():
-                px = self._get_axis_data(bunch, dim_x, cluster_id)
-                py = self._get_axis_data(bunch, dim_y, cluster_id)
-                masks = _get_masks_max(px.get('masks', None),
-                                       py.get('masks', None))
-                self[i, j].uscatter(x=s * px.data, y=s * py.data,
-                                    color=_get_point_color(clu_idx),
-                                    size=_get_point_size(clu_idx),
-                                    masks=_get_point_masks(clu_idx=clu_idx,
-                                                           masks=masks),
-                                    # data_bounds=None,
-                                    )
+    def _plot_points(self, i, j, dim_x, dim_y, bunch, clu_idx=None):
+        cluster_id = self.cluster_ids[clu_idx] if clu_idx is not None else None
+        px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
+        py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id)
+        x = self._get_scaled(px)
+        y = self._get_scaled(py)
+        data_bounds = _get_data_bounds(px, py)
+        masks = _get_masks_max(px, py)
+        self[i, j].uscatter(x=x, y=y,
+                            color=_get_point_color(clu_idx),
+                            size=_get_point_size(clu_idx),
+                            masks=_get_point_masks(clu_idx=clu_idx,
+                                                   masks=masks),
+                            data_bounds=data_bounds,
+                            )
 
     def _plot_labels(self):
         """Plot feature labels along left and bottom edge of subplots"""
@@ -259,9 +254,28 @@ class FeatureView(ManualClusteringView):
 
         # Plot all features.
         with self.building():
-            self._plot_background()
             self._plot_axes()
-            self._plot_features(bunchs)
+
+            # NOTE: the columns in bunch.data are ordered by decreasing quality
+            # of the associated channels. The channels corresponding to each
+            # column are given in bunch.channel_ids in the same order.
+
+            # Get the background data.
+            background = self.features(channel_ids=self.channel_ids)
+
+            # Find the initial scaling.
+            if self._scaling is None:
+                self._scaling = 1. / background.data.median()
+
+            for i, j, dim_x, dim_y in self._iter_subplots():
+                # Plot the background points.
+                self._plot_points(i, j, dim_x, dim_y, background)
+
+                # Plot each cluster's data.
+                for clu_idx, bunch in enumerate(bunchs):
+                    self._plot_points(i, j, dim_x, dim_y, bunch,
+                                      clu_idx=clu_idx)
+
             self._plot_labels()
             self.grid.add_boxes(self, self.shape)
 
@@ -324,7 +338,7 @@ class FeatureView(ManualClusteringView):
 
     @property
     def scaling(self):
-        return self._scaling
+        return self._scaling or 1.
 
     @scaling.setter
     def scaling(self, value):

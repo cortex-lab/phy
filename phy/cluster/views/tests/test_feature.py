@@ -39,7 +39,9 @@ def test_feature_view(qtbot):
                      )
 
     def get_time(cluster_id=None):
-        return spike_times[get_spike_ids(cluster_id)]
+        return Bunch(data=spike_times[get_spike_ids(cluster_id)],
+                     lim=(0., 1.),
+                     )
 
     v = FeatureView(features=get_features,
                     attributes={'time': get_time},
@@ -49,22 +51,21 @@ def test_feature_view(qtbot):
     v.attach(gui)
     qtbot.addWidget(gui)
 
-    qtbot.waitForWindowShown(gui)
-
     v.on_select([])
     v.on_select([0])
     v.on_select([0, 2, 3])
     v.on_select([0, 2])
 
-    qtbot.stop()
-    return
+    # qtbot.waitForWindowShown(gui)
+    # qtbot.stop()
+    # return
 
     v.increase()
     v.decrease()
 
-    v.on_channel_click(channel_idx=3, button=1, key=2)
-    v.clear_channels()
-    v.toggle_automatic_channel_selection()
+    # v.on_channel_click(channel_idx=3, button=1, key=2)
+    # v.clear_channels()
+    # v.toggle_automatic_channel_selection()
 
     # qtbot.stop()
     gui.close()
