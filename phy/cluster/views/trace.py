@@ -134,12 +134,11 @@ class TraceView(ManualClusteringView):
         assert traces.shape == (n_ch, n_samples)
         assert box_index.shape == (n_ch, n_samples)
 
-        self.plot(t, traces,
-                  color=color,
-                  data_bounds=None,
-                  box_index=box_index,
-                  uniform=True,
-                  )
+        self.uplot(t, traces,
+                   color=color,
+                   data_bounds=None,
+                   box_index=box_index,
+                   )
 
     def _plot_waveforms(self, waveforms=None,
                         channel_ids=None,

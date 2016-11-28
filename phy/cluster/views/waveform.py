@@ -167,14 +167,13 @@ class WaveformView(ManualClusteringView):
                 wave = np.transpose(wave, (0, 2, 1))
                 wave = wave.reshape((n_spikes_clu * n_channels, n_samples))
 
-                self.plot(x=t,
-                          y=wave,
-                          color=color,
-                          masks=m,
-                          box_index=box_index,
-                          data_bounds=None,
-                          uniform=True,
-                          )
+                self.uplot(x=t,
+                           y=wave,
+                           color=color,
+                           masks=m,
+                           box_index=box_index,
+                           data_bounds=None,
+                           )
                 # Add channel labels.
                 if self.do_show_labels:
                     for ch in channel_ids:
