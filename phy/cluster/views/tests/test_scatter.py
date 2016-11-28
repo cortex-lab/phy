@@ -21,9 +21,7 @@ def test_scatter_view(qtbot):
     n = 1000
     v = ScatterView(coords=lambda c: Bunch(x=np.random.randn(n),
                                            y=np.random.randn(n),
-                                           spike_ids=np.arange(n),
                                            )
-                    # data_bounds=[-3, -3, 3, 3],
                     )
     gui = GUI()
     gui.show()

@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 class ScatterView(ManualClusteringView):
-    _default_marker_size = 3.
+    _default_marker_size = 5.
 
     def __init__(self,
                  coords=None,  # function clusters: Bunch(x, y)
@@ -43,14 +43,11 @@ class ScatterView(ManualClusteringView):
         with self.building():
             for i, cluster_id in enumerate(cluster_ids):
                 d = self.coords(cluster_id)
-                spike_ids = d.spike_ids
                 x = d.x
                 y = d.y
                 data_bounds = d.get('data_bounds', 'auto')
-                n_spikes = len(spike_ids)
-                assert n_spikes > 0
-                assert x.shape == (n_spikes,)
-                assert y.shape == (n_spikes,)
+                assert x.ndim == y.ndim == 1
+                assert x.shape == y.shape
 
                 self.scatter(x=x, y=y,
                              color=tuple(_colormap(i)) + (.5,),
