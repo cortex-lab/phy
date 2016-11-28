@@ -37,6 +37,8 @@ def _extend(channels, n=None):
 
 
 def _get_default_grid():
+    """In the grid specification, 0 corresponds to the best channel, 1
+    to the second best, and so on. A, B, C refer to the PC components."""
     s = """
     time,0A 1A,0A   0B,0A   1B,0A
     0A,1A   time,1A 0B,1A   1B,1A
@@ -46,30 +48,6 @@ def _get_default_grid():
     dims = [[_ for _ in re.split(' +', line.strip())]
             for line in s.splitlines()]
     return dims
-
-
-def _get_axis_data(bunch, dim=None, channel_ids=None, attributes=None):
-    """data is returned by the features() function.
-    dim is the string specifying the dimensions to extract for the data.
-    Return a tuple (x, y)."""
-    masks = bunch.get('masks', None)
-    if masks is None:
-        masks = np.ones(bunch.data.shape[:2])
-    s = 'ABCDEFGHIJ'
-    # TODO: attributes
-    dim_x, dim_y = dim.split(',')
-    # Channel relative index.
-    cx, cy = int(dim_x[:-1]), int(dim_y[:-1])
-    # Principal component: A=0, B=1, etc.
-    dx, dy = s.index(dim_x[-1]), s.index(dim_y[-1])
-    return Bunch(x=bunch.data[:, cx, dx],
-                 y=bunch.data[:, cy, dy],
-                 channels_x=channel_ids[cx],
-                 channels_y=channel_ids[cy],
-                 masks_x=masks[:, cx],
-                 masks_y=masks[:, cy],
-                 masks=np.maximum(masks[:, cx], masks[:, cy]),
-                 )
 
 
 def _get_point_color(clu_idx=None):
@@ -86,14 +64,21 @@ def _get_point_size(clu_idx=None):
 
 
 def _get_point_masks(masks=None, clu_idx=None):
+    masks = masks if masks is not None else 1.
     # NOTE: we add the cluster relative index for the computation
     # of the depth on the GPU.
     return masks * .99999 + (clu_idx or 0)
 
 
-class FeatureView(ManualClusteringView):
-    _default_marker_size = 3.
+def _get_masks_max(mx, my):
+    if mx is None or my is None:
+        return None
+    return np.maximum(mx, my)
 
+
+class FeatureView(ManualClusteringView):
+
+    _default_marker_size = 5.
     default_shortcuts = {
         'increase': 'ctrl++',
         'decrease': 'ctrl+-',
@@ -131,29 +116,10 @@ class FeatureView(ManualClusteringView):
                                           shape=self.shape,
                                           enable_lasso=True,
                                           **kwargs)
+        self.panzoom.zoom = .9
 
     # Internal methods
     # -------------------------------------------------------------------------
-
-    def _plot_labels(self):
-        """Plot feature labels along left and bottom edge of subplots"""
-        # iterate simultaneously over kth row in left column and
-        # kth column in bottom row:
-        br = self.n_cols - 1  # bottom row
-        for k in range(0, self.n_cols):
-            dim_x, dim_y = self.grid_dim[k][k].split(',')
-            # left edge of left column of subplots:
-            self[k, 0].text(pos=[-1., 0.],
-                            text=dim_y,
-                            anchor=[-1.03, 0.],
-                            data_bounds=None,
-                            )
-            # bottom edge of bottom row of subplots:
-            self[br, k].text(pos=[0., -1.],
-                             text=dim_x,
-                             anchor=[0., -1.04],
-                             data_bounds=None,
-                             )
 
     def _iter_subplots(self):
         """Yield (i, j, dim)."""
@@ -162,72 +128,108 @@ class FeatureView(ManualClusteringView):
                 # Skip lower-diagonal subplots.
                 if i > j:
                     continue
-                yield i, j, self.grid_dim[i][j]
+                dim = self.grid_dim[i][j]
+                dim_x, dim_y = dim.split(',')
+                yield i, j, dim_x, dim_y
 
-    def _plot_background(self, bunch):
+    def _get_axis_label(self, dim):
+        """Return the channel id from a dimension, if applicable."""
+        if dim[:-1].isdecimal():
+            return str(self.channel_ids[int(dim[:-1])]) + dim[-1]
+        else:
+            return dim
+
+    def _get_axis_data(self, bunch, dim, cluster_id=None):
+        """data is returned by the features() function.
+        dim is the string specifying the dimensions to extract for the data.
+        """
+        if dim in self.attributes:
+            return Bunch(data=self.attributes[dim](cluster_id))
+        masks = bunch.get('masks', None)
+        assert dim not in self.attributes  # This is called only on PC data.
+        s = 'ABCDEFGHIJ'
+        # Channel relative index.
+        c = int(dim[:-1])
+        # Principal component: A=0, B=1, etc.
+        d = s.index(dim[-1])
+        if masks is not None:
+            masks = masks[:, c]
+        return Bunch(data=bunch.data[:, c, d],
+                     masks=masks,
+                     )
+
+    def _plot_background(self):
         """Plot the background features."""
         s = self.scaling
-        for i, j, dim in self._iter_subplots():
-            if 'time' in dim:
-                continue
-            bgp = _get_axis_data(bunch,
-                                 dim=dim,
-                                 channel_ids=self.channel_ids,
-                                 )
-
-            self[i, j].scatter(x=s * bgp.x, y=s * bgp.y,
-                               color=_get_point_color(),
-                               size=_get_point_size(),
-                               masks=_get_point_masks(masks=bgp.masks),
-                               uniform=True,
-                               # data_bounds=None,
-                               )
+        bunch = self.features(channel_ids=self.channel_ids)
+        for i, j, dim_x, dim_y in self._iter_subplots():
+            # Get data for x axis.
+            dx = self._get_axis_data(bunch, dim_x)
+            dy = self._get_axis_data(bunch, dim_y)
+            masks = _get_masks_max(dx.get('masks', None),
+                                   dy.get('masks', None))
+            self[i, j].uscatter(x=s * dx.data, y=s * dy.data,
+                                color=_get_point_color(),
+                                size=_get_point_size(),
+                                masks=_get_point_masks(masks=masks),
+                                # data_bounds=None,
+                                )
 
     def _plot_features(self, bunchs):
         """Plot the features."""
         s = self.scaling
         for clu_idx, cluster_id in enumerate(self.cluster_ids):
             bunch = bunchs[clu_idx]
+            # NOTE: the columns in bunch.data are ordered by decreasing quality
+            # of the associated channels. The channels corresponding to each
+            # column are given in bunch.channel_ids in the same order.
 
-            for i, j, dim in self._iter_subplots():
-                if 'time' in dim:
-                    continue
-                p = _get_axis_data(bunch,
-                                   dim=dim,
-                                   channel_ids=self.channel_ids,
-                                   )
+            for i, j, dim_x, dim_y in self._iter_subplots():
+                px = self._get_axis_data(bunch, dim_x, cluster_id)
+                py = self._get_axis_data(bunch, dim_y, cluster_id)
+                masks = _get_masks_max(px.get('masks', None),
+                                       py.get('masks', None))
+                self[i, j].uscatter(x=s * px.data, y=s * py.data,
+                                    color=_get_point_color(clu_idx),
+                                    size=_get_point_size(clu_idx),
+                                    masks=_get_point_masks(clu_idx=clu_idx,
+                                                           masks=masks),
+                                    # data_bounds=None,
+                                    )
 
-                self[i, j].scatter(x=s * p.x, y=s * p.y,
-                                   color=_get_point_color(clu_idx),
-                                   size=_get_point_size(clu_idx),
-                                   masks=_get_point_masks(clu_idx=clu_idx,
-                                                          masks=p.masks),
-                                   uniform=True,
-                                   # data_bounds=None,
-                                   )
+    def _plot_labels(self):
+        """Plot feature labels along left and bottom edge of subplots"""
+        # iterate simultaneously over kth row in left column and
+        # kth column in bottom row:
+        br = self.n_cols - 1  # bottom row
+        for k in range(0, self.n_cols):
+            dim_x, dim_y = self.grid_dim[k][k].split(',')
+            # Get the channel ids corresponding to the relative channel indices
+            # specified in the dimensions. Channel 0 corresponds to the first
+            # best channel for the selected cluster, and so on.
+            dim_x = self._get_axis_label(dim_x)
+            dim_y = self._get_axis_label(dim_y)
+            # Left edge of left column of subplots.
+            self[k, 0].text(pos=[-1., 0.],
+                            text=dim_y,
+                            anchor=[-1.03, 0.],
+                            data_bounds=None,
+                            )
+            # Bottom edge of bottom row of subplots.
+            self[br, k].text(pos=[0., -1.],
+                             text=dim_x,
+                             anchor=[0., -1.04],
+                             data_bounds=None,
+                             )
 
     def _plot_axes(self):
-        for i, j, dim in self._iter_subplots():
+        for i, j, dim_x, dim_y in self._iter_subplots():
             self[i, j].lines(pos=[[-1., 0., +1., 0.],
                                   [0., -1., 0., +1.]],
                              color=(.25, .25, .25, .5))
 
     # Public methods
     # -------------------------------------------------------------------------
-
-    def add_attribute(self, name, values, top_left=True):
-        """Add an attribute (aka extra feature).
-
-        The values should be a 1D array with `n_spikes` elements.
-
-        NOTE: the values should be normalized by the caller.
-
-        """
-        assert values.shape == (self.n_spikes,)
-        self.attributes[name] = values
-        # Register the attribute to use in the top-left subplot.
-        if top_left:
-            self.top_left_attribute = name
 
     def clear_channels(self):
         """Reset the dimensions."""
@@ -257,7 +259,7 @@ class FeatureView(ManualClusteringView):
 
         # Plot all features.
         with self.building():
-            self._plot_background(self.features(channel_ids=self.channel_ids))
+            self._plot_background()
             self._plot_axes()
             self._plot_features(bunchs)
             self._plot_labels()
