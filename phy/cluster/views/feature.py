@@ -272,7 +272,7 @@ class FeatureView(ManualClusteringView):
 
             # Find the initial scaling.
             if self._scaling is None:
-                self._scaling = 1. / background.data.median()
+                self._scaling = 1. / np.median(background.data)
 
             for i, j, dim_x, dim_y in self._iter_subplots():
                 # Plot the background points.
