@@ -50,9 +50,16 @@ def _get_default_grid():
     return dims
 
 
+def _get_sym_lim(data):
+    """Get symmetric data bounds."""
+    m, M = data.min(), data.max()
+    mm = max(abs(m), abs(M))
+    return -mm, mm
+
+
 def _get_data_bounds(px, py):
-    xmin, xmax = px.get('lim', None) or (px.data.min(), px.data.max())
-    ymin, ymax = py.get('lim', None) or (py.data.min(), py.data.max())
+    xmin, xmax = px.get('lim', None) or _get_sym_lim(px.data)
+    ymin, ymax = py.get('lim', None) or _get_sym_lim(py.data)
     return (xmin, ymin, xmax, ymax)
 
 
@@ -60,7 +67,7 @@ def _get_point_color(clu_idx=None):
     if clu_idx is not None:
         color = tuple(_colormap(clu_idx)) + (.5,)
     else:
-        color = (1., 1., 1., .5)
+        color = (.5,) * 4
     assert len(color) == 4
     return color
 
