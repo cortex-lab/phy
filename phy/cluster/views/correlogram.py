@@ -71,7 +71,7 @@ class CorrelogramView(ManualClusteringView):
         if n_clusters == 0:
             return
 
-        ccg = self.correlograms(tuple(cluster_ids),
+        ccg = self.correlograms(cluster_ids,
                                 self.bin_size,
                                 self.window_size,
                                 )
