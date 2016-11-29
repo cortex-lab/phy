@@ -155,8 +155,8 @@ class Clustering(EventEmitter):
         self._n_spikes = len(self._spike_clusters)
         self._spike_ids = np.arange(self._n_spikes).astype(np.int64)
         self._update_cluster_ids()
-        self._new_cluster_id_0 = (new_cluster_id or
-                                  self._spike_clusters.max() + 1)
+        self._new_cluster_id_0 = int(new_cluster_id or
+                                     self._spike_clusters.max() + 1)
         self._new_cluster_id = self._new_cluster_id_0
         assert self._new_cluster_id >= 0
         assert np.all(self._spike_clusters < self._new_cluster_id)

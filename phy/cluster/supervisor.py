@@ -488,6 +488,11 @@ class Supervisor(EventEmitter):
                 context.save('new_cluster_id',
                              dict(new_cluster_id=new_cluster_id))
 
+        # The GUI emits the select event too.
+        @self.connect
+        def on_select(cluster_ids):
+            gui.emit('select', cluster_ids)
+
         # Save the view state in the GUI state.
         @gui.connect_
         def on_close():
