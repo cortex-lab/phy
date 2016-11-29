@@ -93,6 +93,7 @@ class Context(object):
                 dump(cache, fd)
 
     def memcache(self, f):
+        """Cache a function in memory using an internal dictionary."""
         name = _fullname(f)
         cache = self.load_memcache(name)
 
