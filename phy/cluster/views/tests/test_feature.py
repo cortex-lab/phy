@@ -59,7 +59,7 @@ def test_feature_view(qtbot, tempdir):
     v.increase()
     v.decrease()
 
-    v.on_channel_click(channel_idx=3, button=1, key=2)
+    v.on_channel_click(channel_id=3, button=1, key=2)
     v.clear_channels()
     v.toggle_automatic_channel_selection()
 

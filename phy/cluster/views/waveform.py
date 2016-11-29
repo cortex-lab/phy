@@ -26,10 +26,20 @@ logger = logging.getLogger(__name__)
 # Waveform view
 # -----------------------------------------------------------------------------
 
+def _get_box_bounds(bunchs, channel_ids):
+    cp = {}
+    for d in bunchs:
+        cp.update({cid: pos
+                   for cid, pos in zip(d.channel_ids,
+                                       d.channel_positions)})
+    box_pos = np.stack([cp[cid] for cid in channel_ids])
+    return _get_boxes(box_pos, margin=.1)
+
+
 class ChannelClick(Event):
-    def __init__(self, type, channel_idx=None, key=None, button=None):
+    def __init__(self, type, channel_id=None, key=None, button=None):
         super(ChannelClick, self).__init__(type)
-        self.channel_idx = channel_idx
+        self.channel_id = channel_id
         self.key = key
         self.button = button
 
@@ -60,6 +70,7 @@ class WaveformView(ManualClusteringView):
         self._key_pressed = None
         self._overlap = False
         self.do_show_labels = False
+        self.channel_ids = None
         self.filtered_tags = ()
 
         # Initialize the view.
@@ -82,6 +93,81 @@ class WaveformView(ManualClusteringView):
         # Data: functions cluster_id => waveforms.
         self.waveforms = waveforms
 
+    def _plot_labels(self, channel_ids, n_clusters):
+        # Add channel labels.
+        if self.do_show_labels:
+            # Label positions.
+            if not self.overlap:
+                x = -1 - 2.5 * (n_clusters - 1) / 2.
+                x /= n_clusters
+            else:
+                x = -1.
+            for i, ch in enumerate(channel_ids):
+                self[i].text(pos=[x, 0.],
+                             text=str(ch),
+                             anchor=[-1.01, -.25],
+                             data_bounds=None,
+                             )
+
+    def _plot_waveforms(self, bunchs, channel_ids):
+        n_clusters = len(bunchs)
+        for pos_idx, d in enumerate(bunchs):
+            wave = d.data
+            alpha = d.get('alpha', .5)
+            channel_ids_loc = d.channel_ids
+            n_channels = len(channel_ids_loc)
+            masks = d.get('masks', np.ones((wave.shape[0], n_channels)))
+            # By default, this is 0, 1, 2 for the first 3 clusters.
+            # But it can be customized when displaying several sets
+            # of waveforms per cluster.
+            # pos_idx = cluster_ids.index(d.cluster_id)  # 0, 1, 2, ...
+
+            n_spikes_clu, n_samples = wave.shape[:2]
+            assert wave.shape[2] == n_channels
+            assert masks.shape == (n_spikes_clu, n_channels)
+
+            # Find the x coordinates.
+            t = _get_linear_x(n_spikes_clu * n_channels, n_samples)
+            if not self.overlap:
+                t = t + 2.5 * (pos_idx - (n_clusters - 1) / 2.)
+                # The total width should not depend on the number of
+                # clusters.
+                t /= n_clusters
+
+            # Get the spike masks.
+            m = masks
+            # HACK: on the GPU, we get the actual masks with fract(masks)
+            # since we add the relative cluster index. We need to ensure
+            # that the masks is never 1.0, otherwise it is interpreted as
+            # 0.
+            m *= .99999
+            # NOTE: we add the cluster index which is used for the
+            # computation of the depth on the GPU.
+            m += pos_idx
+
+            color = tuple(_colormap(pos_idx)) + (alpha,)
+            assert len(color) == 4
+
+            # Generate the box index (one number per channel).
+            box_index = _index_of(channel_ids_loc, channel_ids)
+            box_index = np.repeat(box_index, n_samples)
+            box_index = np.tile(box_index, n_spikes_clu)
+            assert box_index.shape == (n_spikes_clu *
+                                       n_channels *
+                                       n_samples,)
+
+            # Generate the waveform array.
+            wave = np.transpose(wave, (0, 2, 1))
+            wave = wave.reshape((n_spikes_clu * n_channels, n_samples))
+
+            self.uplot(x=t,
+                       y=wave,
+                       color=color,
+                       masks=m,
+                       box_index=box_index,
+                       data_bounds=None,
+                       )
+
     def on_select(self, cluster_ids=None):
         super(WaveformView, self).on_select(cluster_ids)
         cluster_ids = self.cluster_ids
@@ -93,91 +179,18 @@ class WaveformView(ManualClusteringView):
                   for cluster_id in cluster_ids]
         # All channel ids appearing in all selected clusters.
         channel_ids = sorted(set(_flatten([d.channel_ids for d in bunchs])))
-        cp = {}
-        for d in bunchs:
-            cp.update({cid: pos
-                       for cid, pos in zip(d.channel_ids,
-                                           d.channel_positions)})
-        box_pos = np.stack([cp[cid] for cid in channel_ids])
-        box_bounds = _get_boxes(box_pos, margin=.1)
+        box_bounds = _get_box_bounds(bunchs, channel_ids)
+        self.channel_ids = channel_ids
 
-        # Plot all waveforms.
+        # Update the box bounds as a function of the selected channels.
         self.boxed.box_bounds = box_bounds
-
         self.box_pos = np.array(self.boxed.box_pos)
         self.box_size = np.array(self.boxed.box_size)
         self._update_boxes()
 
         with self.building():
-            already_shown = set()
-            for pos_idx, d in enumerate(bunchs):
-                wave = d.data
-                alpha = d.get('alpha', .5)
-                channel_ids_loc = d.channel_ids
-                n_channels = len(channel_ids_loc)
-                masks = d.get('masks', np.ones((wave.shape[0], n_channels)))
-                # By default, this is 0, 1, 2 for the first 3 clusters.
-                # But it can be customized when displaying several sets
-                # of waveforms per cluster.
-                # pos_idx = cluster_ids.index(d.cluster_id)  # 0, 1, 2, ...
-
-                n_spikes_clu, n_samples = wave.shape[:2]
-                assert wave.shape[2] == n_channels
-                assert masks.shape == (n_spikes_clu, n_channels)
-
-                # Find the x coordinates.
-                t = _get_linear_x(n_spikes_clu * n_channels, n_samples)
-                if not self.overlap:
-                    t = t + 2.5 * (pos_idx - (n_clusters - 1) / 2.)
-                    # The total width should not depend on the number of
-                    # clusters.
-                    t /= n_clusters
-
-                # Get the spike masks.
-                m = masks
-                # HACK: on the GPU, we get the actual masks with fract(masks)
-                # since we add the relative cluster index. We need to ensure
-                # that the masks is never 1.0, otherwise it is interpreted as
-                # 0.
-                m *= .99999
-                # NOTE: we add the cluster index which is used for the
-                # computation of the depth on the GPU.
-                m += pos_idx
-
-                color = tuple(_colormap(pos_idx)) + (alpha,)
-                assert len(color) == 4
-
-                # Generate the box index (one number per channel).
-                box_index = _index_of(channel_ids_loc, channel_ids)
-                box_index = np.repeat(box_index, n_samples)
-                box_index = np.tile(box_index, n_spikes_clu)
-                assert box_index.shape == (n_spikes_clu *
-                                           n_channels *
-                                           n_samples,)
-
-                # Generate the waveform array.
-                wave = np.transpose(wave, (0, 2, 1))
-                wave = wave.reshape((n_spikes_clu * n_channels, n_samples))
-
-                self.uplot(x=t,
-                           y=wave,
-                           color=color,
-                           masks=m,
-                           box_index=box_index,
-                           data_bounds=None,
-                           )
-                # Add channel labels.
-                if self.do_show_labels:
-                    for ch in channel_ids:
-                        # Skip labels that have already been shown.
-                        if ch in already_shown:
-                            continue
-                        already_shown.add(ch)
-                        self[ch].text(pos=[t[0, 0], 0.],
-                                      text=str(ch),
-                                      anchor=[-1.01, -.25],
-                                      data_bounds=None,
-                                      )
+            self._plot_waveforms(bunchs, channel_ids)
+            self._plot_labels(channel_ids, n_clusters)
 
     @property
     def state(self):
@@ -209,7 +222,7 @@ class WaveformView(ManualClusteringView):
         @self.connect
         def on_channel_click(e):
             gui.emit('channel_click',
-                     channel_idx=e.channel_idx,
+                     channel_id=e.channel_id,
                      key=e.key,
                      button=e.button,
                      )
@@ -319,7 +332,8 @@ class WaveformView(ManualClusteringView):
             # Get mouse position in NDC.
             mouse_pos = self.panzoom.get_mouse_pos(e.pos)
             channel_idx = self.boxed.get_closest_box(mouse_pos)
-            self.events.channel_click(channel_idx=channel_idx,
+            channel_id = self.channel_ids[channel_idx]
+            self.events.channel_click(channel_id=channel_id,
                                       key=key,
                                       button=e.button)
 

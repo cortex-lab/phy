@@ -301,16 +301,15 @@ class FeatureView(ManualClusteringView):
     def state(self):
         return Bunch(scaling=self.scaling)
 
-    def on_channel_click(self, channel_idx=None, key=None, button=None):
+    def on_channel_click(self, channel_id=None, key=None, button=None):
         """Respond to the click on a channel."""
         channels = self.channel_ids
         if channels is None:
             return
-        assert len(channels) == 2
-        assert 0 <= channel_idx < self.n_channels
+        assert len(channels) >= 2
         # Get the axis from the pressed button (1, 2, etc.)
         # axis = 'x' if button == 1 else 'y'
-        channels[0 if button == 1 else 1] = channel_idx
+        channels[0 if button == 1 else 1] = channel_id
         self.fixed_channels = True
         self.on_select()
 
