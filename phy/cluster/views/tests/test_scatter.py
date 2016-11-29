@@ -17,13 +17,13 @@ from ..scatter import ScatterView
 # Test scatter view
 #------------------------------------------------------------------------------
 
-def test_scatter_view(qtbot):
+def test_scatter_view(qtbot, tempdir):
     n = 1000
     v = ScatterView(coords=lambda c: Bunch(x=np.random.randn(n),
                                            y=np.random.randn(n),
                                            )
                     )
-    gui = GUI()
+    gui = GUI(config_dir=tempdir)
     gui.show()
     v.attach(gui)
     qtbot.addWidget(gui)

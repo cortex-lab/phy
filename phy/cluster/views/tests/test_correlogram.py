@@ -17,7 +17,7 @@ from ..correlogram import CorrelogramView
 # Test correlogram view
 #------------------------------------------------------------------------------
 
-def test_correlogram_view(qtbot):
+def test_correlogram_view(qtbot, tempdir):
 
     nc = 5
     ns = 50
@@ -28,7 +28,7 @@ def test_correlogram_view(qtbot):
     v = CorrelogramView(correlograms=get_correlograms,
                         sample_rate=100.,
                         )
-    gui = GUI()
+    gui = GUI(config_dir=tempdir)
     gui.show()
     v.attach(gui)
     qtbot.addWidget(gui)
