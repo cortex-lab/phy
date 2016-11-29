@@ -16,7 +16,7 @@ import numpy as np
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
-from phy.gui.qt import _show_box
+from phy.utils import EventEmitter
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table
 
@@ -66,7 +66,7 @@ class ClusterView(Table):
             self.sort_by(sort_by, order)
 
 
-class Supervisor(object):
+class Supervisor(EventEmitter):
     """Component that brings manual clustering facilities to a GUI:
 
     * Clustering instance: merge, split, undo, redo
@@ -140,8 +140,7 @@ class Supervisor(object):
                  similarity=None,
                  new_cluster_id=None,
                  ):
-
-        self.gui = None
+        super(Supervisor, self).__init__()
         self.quality = quality or self.n_spikes  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
 
@@ -197,8 +196,7 @@ class Supervisor(object):
             else:
                 logger.info("Assigned %s spikes.", len(up.spike_ids))
 
-            if self.gui:
-                self.gui.emit('cluster', up)
+            self.emit('cluster', up)
 
         @self.cluster_meta.connect  # noqa
         def on_cluster(up):
@@ -219,8 +217,7 @@ class Supervisor(object):
             for clu in up.metadata_changed:
                 self.cluster_groups[clu] = up.metadata_value
 
-            if self.gui:
-                self.gui.emit('cluster', up)
+            self.emit('cluster', up)
 
     def _add_field_column(self, field):  # pragma: no cover
         """Add a column for a given label field."""
@@ -383,8 +380,7 @@ class Supervisor(object):
         """Choose spikes from the specified clusters and emit the
         `select` event on the GUI."""
         logger.debug("Select clusters: %s.", ', '.join(map(str, cluster_ids)))
-        if self.gui:
-            self.gui.emit('select', cluster_ids)
+        self.emit('select', cluster_ids)
 
     # Public methods
     # -------------------------------------------------------------------------
@@ -460,8 +456,6 @@ class Supervisor(object):
                     self.cluster_view.select([next_cluster])
 
     def attach(self, gui, context=None):
-        self.gui = gui
-
         # Create the actions.
         self._create_actions(gui)
 
@@ -503,7 +497,7 @@ class Supervisor(object):
             gui.state.save()
 
         # Update the cluster views and selection when a cluster event occurs.
-        self.gui.connect_(self.on_cluster)
+        self.connect(self.on_cluster)
         return self
 
     # Selection actions
@@ -538,13 +532,13 @@ class Supervisor(object):
     def split(self, spike_ids=None, spike_clusters_rel=0):
         """Split the selected spikes."""
         if spike_ids is None:
-            spike_ids = self.gui.emit('request_split')
+            spike_ids = self.emit('request_split')
             spike_ids = np.concatenate(spike_ids).astype(np.int64)
         if len(spike_ids) == 0:
             msg = ("You first need to select spikes in the feature "
                    "view with a few Ctrl+Click around the spikes "
                    "that you want to split.")
-            _show_box(self.gui.dialog(msg))
+            self.emit('error', msg)
             return
         self.clustering.split(spike_ids,
                               spike_clusters_rel=spike_clusters_rel)
@@ -637,4 +631,4 @@ class Supervisor(object):
         # List of tuples (field_name, dictionary).
         labels = [(field, self.get_labels(field)) for field in self.fields]
         # TODO: add option in add_field to declare a field unsavable.
-        self.gui.emit('request_save', spike_clusters, groups, *labels)
+        self.emit('request_save', spike_clusters, groups, *labels)
