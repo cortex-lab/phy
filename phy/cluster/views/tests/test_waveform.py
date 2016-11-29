@@ -22,25 +22,21 @@ from ..waveform import WaveformView
 # Test waveform view
 #------------------------------------------------------------------------------
 
-def test_waveform_view(qtbot):
+def test_waveform_view(qtbot, tempdir):
     nc = 5
 
     def get_waveforms(cluster_id):
         return Bunch(data=artificial_waveforms(10, 20, nc),
                      channel_ids=np.arange(nc),
+                     channel_positions=staggered_positions(nc),
                      )
-
-    channel_positions = staggered_positions(nc)
 
     v = WaveformView(waveforms=get_waveforms,
-                     channel_positions=channel_positions,
                      )
-    gui = GUI()
+    gui = GUI(config_dir=tempdir)
     gui.show()
     v.attach(gui)
     qtbot.addWidget(gui)
-
-    # qtbot.waitForWindowShown(gui)
 
     v.on_select([])
     v.on_select([0])
@@ -49,9 +45,6 @@ def test_waveform_view(qtbot):
 
     v.toggle_waveform_overlap()
     v.toggle_waveform_overlap()
-
-    v.toggle_zoom_on_channels()
-    v.toggle_zoom_on_channels()
 
     v.toggle_show_labels()
     v.toggle_show_labels()
@@ -85,8 +78,6 @@ def test_waveform_view(qtbot):
     a, b = v.box_scaling
     v.box_scaling = (a * 2, b)
     ac(v.box_scaling, (a * 2, b))
-
-    v.zoom_on_channels([0, 2, 4])
 
     # Simulate channel selection.
     _clicked = []

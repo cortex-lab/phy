@@ -12,7 +12,7 @@ import logging
 import numpy as np
 from vispy.util.event import Event
 
-from phy.io.array import _flatten
+from phy.io.array import _flatten, _index_of
 from phy.plot import _get_linear_x
 from phy.plot.utils import _get_boxes
 from phy.utils import Bunch
@@ -39,7 +39,6 @@ class WaveformView(ManualClusteringView):
 
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
-        'toggle_zoom_on_channels': 'z',
         'toggle_show_labels': 'ctrl+l',
 
         # Box scaling.
@@ -57,52 +56,31 @@ class WaveformView(ManualClusteringView):
 
     def __init__(self,
                  waveforms=None,
-                 channel_positions=None,
-                 channel_order=None,
-                 best_channels=None,
                  **kwargs):
         self._key_pressed = None
         self._overlap = False
-        self.do_zoom_on_channels = True
         self.do_show_labels = False
         self.filtered_tags = ()
 
-        self.best_channels = best_channels or (lambda cluster_id: [])
-
-        # Channel positions and n_channels.
-        assert channel_positions is not None
-        self.channel_positions = np.asarray(channel_positions)
-        self.n_channels = self.channel_positions.shape[0]
-
         # Initialize the view.
-        box_bounds = _get_boxes(channel_positions, margin=.1)
         super(WaveformView, self).__init__(layout='boxed',
-                                           box_bounds=box_bounds,
+                                           box_pos=[[0., 0.]],
                                            **kwargs)
 
         self.events.add(channel_click=ChannelClick)
 
         # Box and probe scaling.
+        self.boxed.margin = .1
         self._box_scaling = np.ones(2)
         self._probe_scaling = np.ones(2)
 
-        # Make a copy of the initial box pos and size. We'll apply the scaling
-        # to these quantities.
         self.box_pos = np.array(self.boxed.box_pos)
         self.box_size = np.array(self.boxed.box_size)
         self._update_boxes()
+        self.panzoom.zoom = .9
 
         # Data: functions cluster_id => waveforms.
         self.waveforms = waveforms
-
-        # Channel positions.
-        assert channel_positions.shape == (self.n_channels, 2)
-        self.channel_positions = channel_positions
-
-        channel_order = (channel_order if channel_order is not None
-                         else np.arange(self.n_channels))
-        assert channel_order.shape == (self.n_channels,)
-        self.channel_order = channel_order
 
     def on_select(self, cluster_ids=None):
         super(WaveformView, self).on_select(cluster_ids)
@@ -111,18 +89,32 @@ class WaveformView(ManualClusteringView):
         if n_clusters == 0:
             return
 
+        bunchs = [self.waveforms(cluster_id)
+                  for cluster_id in cluster_ids]
+        # All channel ids appearing in all selected clusters.
+        channel_ids = sorted(set(_flatten([d.channel_ids for d in bunchs])))
+        cp = {}
+        for d in bunchs:
+            cp.update({cid: pos
+                       for cid, pos in zip(d.channel_ids,
+                                           d.channel_positions)})
+        box_pos = np.stack([cp[cid] for cid in channel_ids])
+        box_bounds = _get_boxes(box_pos, margin=.1)
+
         # Plot all waveforms.
+        self.boxed.box_bounds = box_bounds
+
+        self.box_pos = np.array(self.boxed.box_pos)
+        self.box_size = np.array(self.boxed.box_size)
+        self._update_boxes()
+
         with self.building():
             already_shown = set()
-            for pos_idx, cluster_id in enumerate(cluster_ids):
-                # if (self.filtered_tags and
-                #         d.get('tag') not in self.filtered_tags):
-                #     continue  # pragma: no cover
-                d = self.waveforms(cluster_id)
+            for pos_idx, d in enumerate(bunchs):
                 wave = d.data
                 alpha = d.get('alpha', .5)
-                channel_ids = d.channel_ids
-                n_channels = len(channel_ids)
+                channel_ids_loc = d.channel_ids
+                n_channels = len(channel_ids_loc)
                 masks = d.get('masks', np.ones((wave.shape[0], n_channels)))
                 # By default, this is 0, 1, 2 for the first 3 clusters.
                 # But it can be customized when displaying several sets
@@ -156,7 +148,7 @@ class WaveformView(ManualClusteringView):
                 assert len(color) == 4
 
                 # Generate the box index (one number per channel).
-                box_index = channel_ids
+                box_index = _index_of(channel_ids_loc, channel_ids)
                 box_index = np.repeat(box_index, n_samples)
                 box_index = np.tile(box_index, n_spikes_clu)
                 assert box_index.shape == (n_spikes_clu *
@@ -181,25 +173,17 @@ class WaveformView(ManualClusteringView):
                         if ch in already_shown:
                             continue
                         already_shown.add(ch)
-                        ch_label = '%d' % self.channel_order[ch]
                         self[ch].text(pos=[t[0, 0], 0.],
-                                      text=ch_label,
+                                      text=str(ch),
                                       anchor=[-1.01, -.25],
                                       data_bounds=None,
                                       )
-
-        # Zoom on the best channels when selecting clusters.
-        channel_ids = sorted(set(_flatten(self.best_channels(cluster_id)
-                                          for cluster_id in cluster_ids)))
-        if channel_ids is not None and self.do_zoom_on_channels:
-            self.zoom_on_channels(channel_ids)
 
     @property
     def state(self):
         return Bunch(box_scaling=tuple(self.box_scaling),
                      probe_scaling=tuple(self.probe_scaling),
                      overlap=self.overlap,
-                     do_zoom_on_channels=self.do_zoom_on_channels,
                      do_show_labels=self.do_show_labels,
                      )
 
@@ -207,7 +191,6 @@ class WaveformView(ManualClusteringView):
         """Attach the view to the GUI."""
         super(WaveformView, self).attach(gui)
         self.actions.add(self.toggle_waveform_overlap)
-        self.actions.add(self.toggle_zoom_on_channels)
         self.actions.add(self.toggle_show_labels)
 
         # Box scaling.
@@ -241,12 +224,7 @@ class WaveformView(ManualClusteringView):
     @overlap.setter
     def overlap(self, value):
         self._overlap = value
-        # HACK: temporarily disable automatic zoom on channels when
-        # changing the overlap.
-        tmp = self.do_zoom_on_channels
-        self.do_zoom_on_channels = False
         self.on_select()
-        self.do_zoom_on_channels = tmp
 
     def toggle_waveform_overlap(self):
         """Toggle the overlap of the waveforms."""
@@ -325,37 +303,9 @@ class WaveformView(ManualClusteringView):
     # Navigation
     # -------------------------------------------------------------------------
 
-    def toggle_zoom_on_channels(self):
-        self.do_zoom_on_channels = not self.do_zoom_on_channels
-
     def toggle_show_labels(self):
         self.do_show_labels = not self.do_show_labels
-        tmp = self.do_zoom_on_channels
-        self.do_zoom_on_channels = False
         self.on_select()
-        self.do_zoom_on_channels = tmp
-
-    def zoom_on_channels(self, channels_rel):
-        """Zoom on some channels."""
-        if channels_rel is None or not len(channels_rel):
-            return
-        channels_rel = np.asarray(channels_rel, dtype=np.int32)
-        assert 0 <= channels_rel.min() <= channels_rel.max() < self.n_channels
-        # Bounds of the channels.
-        b = self.boxed.box_bounds[channels_rel]
-        x0, y0 = b[:, :2].min(axis=0)
-        x1, y1 = b[:, 2:].max(axis=0)
-        # Center of the new range.
-        cx = (x0 + x1) * .5
-        cy = (y0 + y1) * .5
-        # Previous range.
-        px0, py0, px1, py1 = self.panzoom.get_range()
-        # Half-size of the previous range.
-        dx = (px1 - px0) * .5
-        dy = (py1 - py0) * .5
-        # New range.
-        new_range = (cx - dx, cy - dy, cx + dx, cy + dy)
-        self.panzoom.set_range(new_range)
 
     def on_key_press(self, event):
         """Handle key press events."""
