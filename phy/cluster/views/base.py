@@ -61,7 +61,7 @@ class ManualClusteringView(View):
         self.cluster_ids = list(cluster_ids) if cluster_ids is not None else []
         self.cluster_ids = [int(c) for c in self.cluster_ids]
 
-    def attach(self, gui):
+    def attach(self, gui, name=None):
         """Attach the view to the GUI."""
 
         # Disable keyboard pan so that we can use arrows as global shortcuts
@@ -76,7 +76,7 @@ class ManualClusteringView(View):
 
         gui.connect_(self.on_select)
         self.actions = Actions(gui,
-                               name=self.__class__.__name__,
+                               name=name or self.__class__.__name__,
                                menu=self.__class__.__name__,
                                default_shortcuts=self.shortcuts)
 
