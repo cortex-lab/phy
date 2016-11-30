@@ -56,7 +56,7 @@ class TraceView(ManualClusteringView):
                  channel_order=None,
                  **kwargs):
 
-        self.do_show_labels = False
+        self.do_show_labels = None
 
         # traces is a function interval => [traces]
         # spikes is a function interval => [Bunch(...)]
@@ -114,7 +114,7 @@ class TraceView(ManualClusteringView):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    def _plot_traces(self, traces, color=None):
+    def _plot_traces(self, traces, color=None, data_bounds=None):
         traces = traces.T
         n_samples = traces.shape[1]
         n_ch = self.n_channels
@@ -122,7 +122,6 @@ class TraceView(ManualClusteringView):
         color = color or self.default_trace_color
 
         t = self._interval[0] + np.arange(n_samples) * self.dt
-        t = self._normalize_time(t)
         t = np.tile(t, (n_ch, 1))
         # Display the channels in vertical order.
         order = self.channel_vertical_order
@@ -136,7 +135,7 @@ class TraceView(ManualClusteringView):
 
         self.uplot(t, traces,
                    color=color,
-                   data_bounds=None,
+                   data_bounds=data_bounds,
                    box_index=box_index,
                    )
 
@@ -144,6 +143,7 @@ class TraceView(ManualClusteringView):
                         channel_ids=None,
                         start_time=None,
                         color=None,
+                        data_bounds=None,
                         ):
         # The spike time corresponds to the first sample of the waveform.
         n_samples, n_channels = waveforms.shape
@@ -154,24 +154,23 @@ class TraceView(ManualClusteringView):
 
         # Generate the x coordinates of the waveform.
         t = start_time + self.dt * np.arange(n_samples)
-        t = self._normalize_time(t)
         t = np.tile(t, (n_channels, 1))  # (n_unmasked_channels, n_samples)
 
         # The box index depends on the channel.
         box_index = np.repeat(c[:, np.newaxis], n_samples, axis=0)
         self.plot(t, waveforms.T, color=color,
                   box_index=box_index,
-                  data_bounds=None,
+                  data_bounds=data_bounds,
                   )
 
-    def _plot_labels(self, traces):
+    def _plot_labels(self, traces, data_bounds=None):
         for ch in range(self.n_channels):
             ch_label = '%d' % self.channel_order[ch]
             och = self.channel_vertical_order[ch]
-            self[och].text(pos=[-1., traces[0, ch]],
+            self[och].text(pos=[data_bounds[0], np.median(traces[:, ch])],
                            text=ch_label,
                            anchor=[+1., -.1],
-                           data_bounds=None,
+                           data_bounds=data_bounds,
                            )
 
     def _restrict_interval(self, interval):
@@ -207,11 +206,6 @@ class TraceView(ManualClusteringView):
         start, end = interval
         self.clear()
 
-        # OPTIM: normalize time manually into [-1.0, 1.0].
-        def _normalize_time(t):
-            return -1. + (2. / float(end - start)) * (t - start)
-        self._normalize_time = _normalize_time
-
         # Set the status message.
         if change_status:
             self.set_status('Interval: {:.3f} s - {:.3f} s'.format(start, end))
@@ -219,8 +213,15 @@ class TraceView(ManualClusteringView):
         # Load the traces.
         traces = self.traces(interval)
 
+        # Find the data bounds.
+        ymin, ymax = traces.data.min(), traces.data.max()
+        data_bounds = (start, ymin, end, ymax)
+
         # Plot the traces.
-        self._plot_traces(traces.data, color=traces.get('color', None))
+        self._plot_traces(traces.data,
+                          color=traces.get('color', None),
+                          data_bounds=data_bounds,
+                          )
 
         # Plot the spikes.
         waveforms = traces.waveforms
@@ -230,11 +231,12 @@ class TraceView(ManualClusteringView):
                                  color=w.color,
                                  channel_ids=w.get('channel_ids', None),
                                  start_time=w.start_time,
+                                 data_bounds=data_bounds,
                                  )
 
         # Plot the labels.
         if self.do_show_labels:
-            self._plot_labels(traces.data)
+            self._plot_labels(traces.data, data_bounds=data_bounds)
 
         self.build()
         self.update()
