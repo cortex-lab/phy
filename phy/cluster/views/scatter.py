@@ -9,6 +9,8 @@
 
 import logging
 
+import numpy as np
+
 from phy.utils._color import _colormap
 from .base import ManualClusteringView
 
@@ -39,13 +41,24 @@ class ScatterView(ManualClusteringView):
         if n_clusters == 0:
             return
 
+        # Retrieve the data.
+        ds = [self.coords(cluster_id) for cluster_id in cluster_ids]
+
+        # Compute the data bounds.
+        data_bounds = ds[0].get('data_bounds', None)
+        if data_bounds is None:
+            xmin = np.min([d.x.min() for d in ds])
+            ymin = np.min([d.y.min() for d in ds])
+            xmax = np.max([d.x.max() for d in ds])
+            ymax = np.max([d.y.max() for d in ds])
+            data_bounds = (xmin, ymin, xmax, ymax)
+
         # Plot the points.
         with self.building():
-            for i, cluster_id in enumerate(cluster_ids):
-                d = self.coords(cluster_id)
+            for i, cluster_id in enumerate(ds):
+                d = ds[i]
                 x = d.x
                 y = d.y
-                data_bounds = d.get('data_bounds', 'auto')
                 assert x.ndim == y.ndim == 1
                 assert x.shape == y.shape
 

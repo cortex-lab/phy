@@ -28,8 +28,6 @@ def test_scatter_view(qtbot, tempdir):
     v.attach(gui)
     qtbot.addWidget(gui)
 
-    # qtbot.waitForWindowShown(gui)
-
     v.on_select([])
     v.on_select([0])
     v.on_select([0, 2, 3])
