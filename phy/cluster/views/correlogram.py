@@ -51,6 +51,8 @@ class CorrelogramView(ManualClusteringView):
         self.set_bin_window(bin_size=self.bin_size,
                             window_size=self.window_size)
 
+        self.panzoom.zoom = .9
+
     def set_bin_window(self, bin_size=None, window_size=None):
         """Set the bin and window sizes."""
         bin_size = bin_size or self.bin_size
@@ -64,6 +66,37 @@ class CorrelogramView(ManualClusteringView):
         b, w = self.bin_size * 1000, self.window_size * 1000
         self.set_status('Bin: {:.1f} ms. Window: {:.1f} ms.'.format(b, w))
 
+    def _iter_subplots(self, n_clusters):
+        for i in range(n_clusters):
+            for j in range(n_clusters):
+                yield i, j
+
+    def _plot_correlograms(self, ccg):
+        n_clusters = ccg.shape[0]
+        ylim = [ccg.max()] if not self.uniform_normalization else None
+        colors = _spike_colors(np.arange(n_clusters), alpha=1.)
+        for i, j in self._iter_subplots(n_clusters):
+            hist = ccg[i, j, :]
+            color = colors[i] if i == j else np.ones(4)
+            self[i, j].hist(hist,
+                            color=color,
+                            ylim=ylim,
+                            )
+
+    def _plot_labels(self, cluster_ids):
+        n = len(cluster_ids)
+        for k in range(n):
+            self[k, 0].text(pos=[-1., 0.],
+                            text=str(cluster_ids[k]),
+                            anchor=[-1.04, 0.],
+                            data_bounds=None,
+                            )
+            self[n - 1, k].text(pos=[0., -1.],
+                                text=str(cluster_ids[k]),
+                                anchor=[0., -1.04],
+                                data_bounds=None,
+                                )
+
     def on_select(self, cluster_ids=None):
         super(CorrelogramView, self).on_select(cluster_ids)
         cluster_ids = self.cluster_ids
@@ -75,27 +108,11 @@ class CorrelogramView(ManualClusteringView):
                                 self.bin_size,
                                 self.window_size,
                                 )
-        ylim = [ccg.max()] if not self.uniform_normalization else None
-
-        colors = _spike_colors(np.arange(n_clusters), alpha=1.)
 
         self.grid.shape = (n_clusters, n_clusters)
         with self.building():
-            for i in range(n_clusters):
-                for j in range(n_clusters):
-                    hist = ccg[i, j, :]
-                    color = colors[i] if i == j else np.ones(4)
-                    self[i, j].hist(hist,
-                                    color=color,
-                                    ylim=ylim,
-                                    )
-                    # Cluster labels.
-                    if i == (n_clusters - 1):
-                        self[i, j].text(pos=[0., -1.],
-                                        text=str(cluster_ids[j]),
-                                        anchor=[0., -1.04],
-                                        data_bounds=None,
-                                        )
+            self._plot_correlograms(ccg)
+            self._plot_labels(cluster_ids)
 
     def toggle_normalization(self):
         """Change the normalization of the correlograms."""
