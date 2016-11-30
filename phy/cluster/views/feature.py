@@ -206,7 +206,8 @@ class FeatureView(ManualClusteringView):
         # kth column in bottom row:
         br = self.n_cols - 1  # bottom row
         for k in range(0, self.n_cols):
-            dim_x, dim_y = self.grid_dim[k][k].split(',')
+            dim_x, _ = self.grid_dim[0][k].split(',')
+            _, dim_y = self.grid_dim[k][br].split(',')
             # Get the channel ids corresponding to the relative channel indices
             # specified in the dimensions. Channel 0 corresponds to the first
             # best channel for the selected cluster, and so on.
@@ -248,7 +249,13 @@ class FeatureView(ManualClusteringView):
         if n_clusters == 0:
             return
 
-        bunchs = [self.features(cluster_id) for cluster_id in cluster_ids]
+        # Get the feature data.
+        # Specify the channel ids if these are fixed, otherwise
+        # choose the first cluster's best channels.
+        c = self.channel_ids if self.fixed_channels else None
+        bunchs = [self.features(cluster_id, channel_ids=c)
+                  for cluster_id in cluster_ids]
+
         # Choose the channels based on the first selected cluster.
         channel_ids = list(bunchs[0].channel_ids)
         assert len(channel_ids)
@@ -258,9 +265,8 @@ class FeatureView(ManualClusteringView):
             self.channel_ids = channel_ids
         assert len(self.channel_ids)
 
-        # Set the status message.
-        ch = ', '.join(map(str, self.channel_ids))
-        self.set_status('Channels: {}'.format(ch))
+        # Get the background data.
+        background = self.features(channel_ids=self.channel_ids)
 
         # Plot all features.
         with self.building():
@@ -269,9 +275,6 @@ class FeatureView(ManualClusteringView):
             # NOTE: the columns in bunch.data are ordered by decreasing quality
             # of the associated channels. The channels corresponding to each
             # column are given in bunch.channel_ids in the same order.
-
-            # Get the background data.
-            background = self.features(channel_ids=self.channel_ids)
 
             # Find the initial scaling.
             if self._scaling in (None, np.inf):
@@ -316,8 +319,11 @@ class FeatureView(ManualClusteringView):
         # Get the axis from the pressed button (1, 2, etc.)
         # axis = 'x' if button == 1 else 'y'
         channels[0 if button == 1 else 1] = channel_id
+        # Fix the channels temporarily.
+        fc = self.fixed_channels
         self.fixed_channels = True
         self.on_select()
+        self.fixed_channels = fc
 
     def on_request_split(self):
         """Return the spikes enclosed by the lasso."""
