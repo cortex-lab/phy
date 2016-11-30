@@ -126,9 +126,6 @@ class FeatureView(ManualClusteringView):
                                           enable_lasso=True,
                                           **kwargs)
 
-        # We unzoom a bit to show the labels.
-        self.panzoom.zoom = .9
-
     # Internal methods
     # -------------------------------------------------------------------------
 

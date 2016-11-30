@@ -53,6 +53,8 @@ class ManualClusteringView(View):
         self.cluster_ids = None
 
         super(ManualClusteringView, self).__init__(**kwargs)
+        self.panzoom._default_zoom = .9
+        self.panzoom.reset()
         self.events.add(status=StatusEvent)
 
     def on_select(self, cluster_ids=None):

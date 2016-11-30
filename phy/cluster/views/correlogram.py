@@ -51,8 +51,6 @@ class CorrelogramView(ManualClusteringView):
         self.set_bin_window(bin_size=self.bin_size,
                             window_size=self.window_size)
 
-        self.panzoom.zoom = .9
-
     def set_bin_window(self, bin_size=None, window_size=None):
         """Set the bin and window sizes."""
         bin_size = bin_size or self.bin_size

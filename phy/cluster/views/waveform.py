@@ -88,7 +88,6 @@ class WaveformView(ManualClusteringView):
         self.box_pos = np.array(self.boxed.box_pos)
         self.box_size = np.array(self.boxed.box_size)
         self._update_boxes()
-        self.panzoom.zoom = .9
 
         # Data: functions cluster_id => waveforms.
         self.waveforms = waveforms
