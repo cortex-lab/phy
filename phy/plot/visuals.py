@@ -88,7 +88,7 @@ class ScatterVisual(BaseVisual):
                  color=None,
                  size=None,
                  depth=None,
-                 data_bounds='auto',
+                 data_bounds=None,
                  ):
         if pos is None:
             x, y = _get_pos(x, y)
@@ -177,7 +177,7 @@ class UniformScatterVisual(BaseVisual):
                  y=None,
                  pos=None,
                  masks=None,
-                 data_bounds='auto',
+                 data_bounds=None,
                  ):
         if pos is None:
             x, y = _get_pos(x, y)
@@ -258,7 +258,7 @@ class PlotVisual(BaseVisual):
                  y=None,
                  color=None,
                  depth=None,
-                 data_bounds='auto',
+                 data_bounds=None,
                  ):
 
         assert y is not None
@@ -363,7 +363,7 @@ class UniformPlotVisual(BaseVisual):
     def validate(x=None,
                  y=None,
                  masks=None,
-                 data_bounds='auto',
+                 data_bounds=None,
                  ):
 
         assert y is not None
@@ -565,7 +565,7 @@ class TextVisual(BaseVisual):
 
     @staticmethod
     def validate(pos=None, text=None, anchor=None,
-                 data_bounds='auto',
+                 data_bounds=None,
                  ):
 
         if text is None:
