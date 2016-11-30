@@ -33,9 +33,11 @@ def test_feature_view(qtbot, tempdir):
     def get_spike_ids(cluster_id):
         return (spc[cluster_id] if cluster_id is not None else np.arange(ns))
 
-    def get_features(cluster_id=None, n_spikes=None, channel_ids=None):
+    def get_features(cluster_id=None, channel_ids=None):
         return Bunch(data=features[get_spike_ids(cluster_id)],
-                     channel_ids=np.arange(nc)[::-1],
+                     channel_ids=(channel_ids
+                                  if channel_ids is not None
+                                  else np.arange(nc)[::-1]),
                      )
 
     def get_time(cluster_id=None):

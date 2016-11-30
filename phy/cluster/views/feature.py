@@ -57,12 +57,6 @@ def _get_sym_lim(data):
     return -mm, mm
 
 
-def _get_data_bounds(px, py):
-    xmin, xmax = px.get('lim', None) or _get_sym_lim(px.data)
-    ymin, ymax = py.get('lim', None) or _get_sym_lim(py.data)
-    return (xmin, ymin, xmax, ymax)
-
-
 def _get_point_color(clu_idx=None):
     if clu_idx is not None:
         color = tuple(_colormap(clu_idx)) + (.5,)
@@ -178,25 +172,32 @@ class FeatureView(ManualClusteringView):
                      masks=masks,
                      )
 
-    def _get_scaled(self, p):
-        if p.get('lim', None) is not None:
-            return p.data
-        return self.scaling * p.data
+    def _get_axis_bounds(self, dim, bunch, values):
+        """Return the min/max of an axis."""
+        if dim in self.attributes:
+            # Attribute: specified lim, or compute the min/max.
+            vmin, vmax = bunch.get('lim', (None, None))
+            if vmin is None:
+                vmin = values.min()
+            if vmax is None:
+                vmax = values.max()
+            return vmin, vmax
+        # PC dimensions: use the common scaling.
+        return (-1. / self.scaling, +1. / self.scaling)
 
     def _plot_points(self, i, j, dim_x, dim_y, bunch, clu_idx=None):
         cluster_id = self.cluster_ids[clu_idx] if clu_idx is not None else None
         px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
         py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id)
-        x = self._get_scaled(px)
-        y = self._get_scaled(py)
-        data_bounds = _get_data_bounds(px, py)
+        xmin, xmax = self._get_axis_bounds(dim_x, bunch, px.data)
+        ymin, ymax = self._get_axis_bounds(dim_y, bunch, py.data)
         masks = _get_masks_max(px, py)
-        self[i, j].uscatter(x=x, y=y,
+        self[i, j].uscatter(x=px.data, y=py.data,
                             color=_get_point_color(clu_idx),
                             size=_get_point_size(clu_idx),
                             masks=_get_point_masks(clu_idx=clu_idx,
                                                    masks=masks),
-                            data_bounds=data_bounds,
+                            data_bounds=(xmin, ymin, xmax, ymax),
                             )
 
     def _plot_labels(self):
@@ -228,7 +229,9 @@ class FeatureView(ManualClusteringView):
         for i, j, dim_x, dim_y in self._iter_subplots():
             self[i, j].lines(pos=[[-1., 0., +1., 0.],
                                   [0., -1., 0., +1.]],
-                             color=(.25, .25, .25, .5))
+                             color=(.25, .25, .25, .5),
+                             data_bounds=None,
+                             )
 
     # Public methods
     # -------------------------------------------------------------------------
@@ -271,8 +274,11 @@ class FeatureView(ManualClusteringView):
             background = self.features(channel_ids=self.channel_ids)
 
             # Find the initial scaling.
-            if self._scaling is None:
-                self._scaling = 1. / np.median(background.data)
+            if self._scaling in (None, np.inf):
+                m = np.median(np.abs(background.data))
+                if m < 1e-9:
+                    m = 1.
+                self._scaling = .1 / m
 
             for i, j, dim_x, dim_y in self._iter_subplots():
                 # Plot the background points.
