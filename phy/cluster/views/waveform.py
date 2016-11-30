@@ -7,6 +7,7 @@
 # Imports
 # -----------------------------------------------------------------------------
 
+from collections import defaultdict
 import logging
 
 import numpy as np
@@ -34,6 +35,24 @@ def _get_box_bounds(bunchs, channel_ids):
                                        d.channel_positions)})
     box_pos = np.stack([cp[cid] for cid in channel_ids])
     return _get_boxes(box_pos, margin=.1)
+
+
+def _get_clu_offsets(bunchs):
+    # Count the number of clusters per channel to determine the x offset
+    # of clusters when overlap=False.
+    n_clu_per_channel = defaultdict(int)
+    offsets = []
+
+    # Determine the offset.
+    for bunch in bunchs:
+        # For very cluster, find the largest existing offset of its channels.
+        offset = max(n_clu_per_channel[ch] for ch in bunch.channel_ids)
+        offsets.append(offset)
+        # Increase the offsets of all channels in the cluster.
+        for ch in bunch.channel_ids:
+            n_clu_per_channel[ch] += 1
+
+    return offsets
 
 
 class ChannelClick(Event):
@@ -109,22 +128,24 @@ class WaveformView(ManualClusteringView):
                              )
 
     def _plot_waveforms(self, bunchs, channel_ids):
-        n_clusters = len(bunchs)
         # Initialize the box scaling the first time.
         if self.box_scaling[1] == 1.:
             M = np.max([np.max(np.abs(b.data)) for b in bunchs])
             self.box_scaling[1] = 1. / M
             self._update_boxes()
-        for pos_idx, d in enumerate(bunchs):
+        clu_offsets = _get_clu_offsets(bunchs)
+        max_clu_offsets = max(clu_offsets) + 1
+        for i, d in enumerate(bunchs):
             wave = d.data
             alpha = d.get('alpha', .5)
             channel_ids_loc = d.channel_ids
+
             n_channels = len(channel_ids_loc)
             masks = d.get('masks', np.ones((wave.shape[0], n_channels)))
             # By default, this is 0, 1, 2 for the first 3 clusters.
             # But it can be customized when displaying several sets
             # of waveforms per cluster.
-            # pos_idx = cluster_ids.index(d.cluster_id)  # 0, 1, 2, ...
+            # i = cluster_ids.index(d.cluster_id)  # 0, 1, 2, ...
 
             n_spikes_clu, n_samples = wave.shape[:2]
             assert wave.shape[2] == n_channels
@@ -133,10 +154,13 @@ class WaveformView(ManualClusteringView):
             # Find the x coordinates.
             t = _get_linear_x(n_spikes_clu * n_channels, n_samples)
             if not self.overlap:
-                t = t + 2.5 * (pos_idx - (n_clusters - 1) / 2.)
+
+                # Determine the cluster offset.
+                offset = clu_offsets[i]
+                t = t + 2.5 * (offset - (max_clu_offsets - 1) / 2.)
                 # The total width should not depend on the number of
                 # clusters.
-                t /= n_clusters
+                t /= max_clu_offsets
 
             # Get the spike masks.
             m = masks
@@ -147,9 +171,9 @@ class WaveformView(ManualClusteringView):
             m *= .99999
             # NOTE: we add the cluster index which is used for the
             # computation of the depth on the GPU.
-            m += pos_idx
+            m += i
 
-            color = tuple(_colormap(pos_idx)) + (alpha,)
+            color = tuple(_colormap(i)) + (alpha,)
             assert len(color) == 4
 
             # Generate the box index (one number per channel).
