@@ -69,7 +69,7 @@ class WaveformView(ManualClusteringView):
                  **kwargs):
         self._key_pressed = None
         self._overlap = False
-        self.do_show_labels = False
+        self.do_show_labels = True
         self.channel_ids = None
         self.filtered_tags = ()
 
@@ -111,6 +111,11 @@ class WaveformView(ManualClusteringView):
 
     def _plot_waveforms(self, bunchs, channel_ids):
         n_clusters = len(bunchs)
+        # Initialize the box scaling the first time.
+        if self.box_scaling[1] == 1.:
+            M = np.max([np.max(np.abs(b.data)) for b in bunchs])
+            self.box_scaling[1] = 1. / M
+            self._update_boxes()
         for pos_idx, d in enumerate(bunchs):
             wave = d.data
             alpha = d.get('alpha', .5)
@@ -175,8 +180,10 @@ class WaveformView(ManualClusteringView):
         if n_clusters == 0:
             return
 
+        # Retrieve the waveform data.
         bunchs = [self.waveforms(cluster_id)
                   for cluster_id in cluster_ids]
+
         # All channel ids appearing in all selected clusters.
         channel_ids = sorted(set(_flatten([d.channel_ids for d in bunchs])))
         box_bounds = _get_box_bounds(bunchs, channel_ids)
