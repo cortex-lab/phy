@@ -493,6 +493,10 @@ class Supervisor(EventEmitter):
         def on_select(cluster_ids):
             gui.emit('select', cluster_ids)
 
+        @self.connect
+        def on_request_split():
+            return gui.emit('request_split', single=True)
+
         # Save the view state in the GUI state.
         @gui.connect_
         def on_close():
@@ -537,8 +541,9 @@ class Supervisor(EventEmitter):
     def split(self, spike_ids=None, spike_clusters_rel=0):
         """Split the selected spikes."""
         if spike_ids is None:
-            spike_ids = self.emit('request_split')
-            spike_ids = np.concatenate(spike_ids).astype(np.int64)
+            spike_ids = self.emit('request_split', single=True)
+            assert spike_ids.dtype == np.int64
+            assert spike_ids.ndim == 1
         if len(spike_ids) == 0:
             msg = ("You first need to select spikes in the feature "
                    "view with a few Ctrl+Click around the spikes "
