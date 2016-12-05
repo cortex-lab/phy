@@ -42,6 +42,26 @@ def test_event_system():
     assert _list == [('a', None), ('b', 'c')]
 
 
+def test_event_single():
+    ev = EventEmitter()
+
+    l = []
+
+    @ev.connect
+    def on_test():
+        l.append(0)
+
+    @ev.connect  # noqa
+    def on_test():
+        l.append(1)
+
+    ev.emit('test')
+    assert l == [0, 1]
+
+    ev.emit('test', single=True)
+    assert l == [0, 1, 1]
+
+
 #------------------------------------------------------------------------------
 # Test progress reporter
 #------------------------------------------------------------------------------

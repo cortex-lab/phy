@@ -116,8 +116,14 @@ class EventEmitter(object):
         Return the list of callback return results.
 
         """
+        callbacks = self._callbacks.get(event, [])
+        # Call the last callback if this is a single event.
+        single = kwargs.pop('single', None)
+        if single and callbacks:
+            return callbacks[-1](*args, **kwargs)
+        # Otherwise, return the list of callback outputs.
         res = []
-        for callback in self._callbacks.get(event, []):
+        for callback in callbacks:
             res.append(callback(*args, **kwargs))
         return res
 
