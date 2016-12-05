@@ -14,6 +14,7 @@ import numpy as np
 
 from phy.utils import Bunch
 from phy.utils._color import _colormap
+from phy.plot.transform import Range
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)
@@ -22,19 +23,6 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 # Feature view
 # -----------------------------------------------------------------------------
-
-def _extend(channels, n=None):
-    channels = list(channels)
-    if n is None:
-        return channels
-    if not len(channels):  # pragma: no cover
-        channels = [0]
-    if len(channels) < n:
-        channels.extend([channels[-1]] * (n - len(channels)))
-    channels = channels[:n]
-    assert len(channels) == n
-    return channels
-
 
 def _get_default_grid():
     """In the grid specification, 0 corresponds to the best channel, 1
@@ -48,13 +36,6 @@ def _get_default_grid():
     dims = [[_ for _ in re.split(' +', line.strip())]
             for line in s.splitlines()]
     return dims
-
-
-def _get_sym_lim(data):
-    """Get symmetric data bounds."""
-    m, M = data.min(), data.max()
-    mm = max(abs(m), abs(M))
-    return -mm, mm
 
 
 def _get_point_color(clu_idx=None):
@@ -276,8 +257,7 @@ class FeatureView(ManualClusteringView):
             # Find the initial scaling.
             if self._scaling in (None, np.inf):
                 m = np.median(np.abs(background.data))
-                if m < 1e-9:
-                    m = 1.
+                m = m if m > 1e-9 else 1.
                 self._scaling = .1 / m
 
             for i, j, dim_x, dim_y in self._iter_subplots():
@@ -324,24 +304,44 @@ class FeatureView(ManualClusteringView):
 
     def on_request_split(self):
         """Return the spikes enclosed by the lasso."""
-        if self.lasso.count < 3:  # pragma: no cover
-            return []
+        if (self.lasso.count < 3 or
+                not len(self.cluster_ids)):  # pragma: no cover
+            return np.array([], dtype=np.int64)
         assert len(self.channel_ids)
-        # TODO
-        #
-        # # Concatenate the points from all selected clusters.
-        # assert isinstance(data, list)
-        # pos = []
-        # for d in data:
-        #     i, j = self.lasso.box
-        #
-        #     pos.append(np.c_[x, y].astype(np.float64))
-        # pos = np.vstack(pos)
-        #
-        # ind = self.lasso.in_polygon(pos)
-        # self.lasso.clear()
-        # return spike_ids[ind]
-        return
+
+        # Get the dimensions of the lassoed subplot.
+        i, j = self.lasso.box
+        dim = self.grid_dim[i][j]
+        dim_x, dim_y = dim.split(',')
+
+        # Get all points from all clusters.
+        pos = []
+        spike_ids = []
+
+        for cluster_id in self.cluster_ids:
+            # Load all spikes.
+            bunch = self.features(cluster_id,
+                                  channel_ids=self.channel_ids,
+                                  load_all=True)
+            px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
+            py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id)
+            points = np.c_[px.data, py.data]
+
+            # Normalize the points.
+            xmin, xmax = self._get_axis_bounds(dim_x, bunch, px.data)
+            ymin, ymax = self._get_axis_bounds(dim_y, bunch, py.data)
+            r = Range((xmin, ymin, xmax, ymax))
+            points = r.apply(points)
+
+            pos.append(points)
+            spike_ids.append(bunch.spike_ids)
+        pos = np.vstack(pos)
+        spike_ids = np.concatenate(spike_ids)
+
+        # Find lassoed spikes.
+        ind = self.lasso.in_polygon(pos)
+        self.lasso.clear()
+        return np.unique(spike_ids[ind])
 
     def toggle_automatic_channel_selection(self):
         """Toggle the automatic selection of channels when the cluster

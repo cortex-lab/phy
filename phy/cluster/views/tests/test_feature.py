@@ -9,6 +9,7 @@
 import numpy as np
 
 from phy.gui import GUI
+from phy.gui.qt import Qt, QPoint
 from phy.io.array import _spikes_per_cluster
 from phy.io.mock import (artificial_features,
                          artificial_spike_clusters,
@@ -33,8 +34,14 @@ def test_feature_view(qtbot, tempdir):
     def get_spike_ids(cluster_id):
         return (spc[cluster_id] if cluster_id is not None else np.arange(ns))
 
-    def get_features(cluster_id=None, channel_ids=None):
-        return Bunch(data=features[get_spike_ids(cluster_id)],
+    def get_features(cluster_id=None, channel_ids=None, spike_ids=None,
+                     load_all=None):
+        if load_all:
+            spike_ids = spc[cluster_id]
+        else:
+            spike_ids = get_spike_ids(cluster_id)
+        return Bunch(data=features[spike_ids],
+                     spike_ids=spike_ids,
                      channel_ids=(channel_ids
                                   if channel_ids is not None
                                   else np.arange(nc)[::-1]),
@@ -64,6 +71,24 @@ def test_feature_view(qtbot, tempdir):
     v.on_channel_click(channel_id=3, button=1, key=2)
     v.clear_channels()
     v.toggle_automatic_channel_selection()
+
+    # Split without selection.
+    spike_ids = v.on_request_split()
+    assert len(spike_ids) == 0
+
+    # Draw a lasso.
+    def _click(x, y):
+        qtbot.mouseClick(v.native, Qt.LeftButton, pos=QPoint(x, y),
+                         modifier=Qt.ControlModifier)
+
+    _click(10, 10)
+    _click(10, 100)
+    _click(100, 100)
+    _click(100, 10)
+
+    # Split lassoed points.
+    spike_ids = v.on_request_split()
+    assert len(spike_ids) > 0
 
     # qtbot.stop()
     gui.close()
