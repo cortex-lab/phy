@@ -497,7 +497,10 @@ def _spikes_per_cluster(spike_clusters, spike_ids=None):
         return {}
     if spike_ids is None:
         spike_ids = np.arange(len(spike_clusters)).astype(np.int64)
-    rel_spikes = np.argsort(spike_clusters)
+    # NOTE: this sort method is stable, so spike ids are increasing
+    # among any cluster. Therefore we don't have to sort again down here,
+    # when creating the spikes_in_clusters dictionary.
+    rel_spikes = np.argsort(spike_clusters, kind='mergesort')
     abs_spikes = spike_ids[rel_spikes]
     spike_clusters = spike_clusters[rel_spikes]
 
@@ -508,9 +511,11 @@ def _spikes_per_cluster(spike_clusters, spike_ids=None):
     idx = np.nonzero(diff > 0)[0]
     clusters = spike_clusters[idx]
 
-    spikes_in_clusters = {clusters[i]: np.sort(abs_spikes[idx[i]:idx[i + 1]])
+    # NOTE: we don't have to sort abs_spikes[...] here because the argsort
+    # using 'mergesort' above is stable.
+    spikes_in_clusters = {clusters[i]: abs_spikes[idx[i]:idx[i + 1]]
                           for i in range(len(clusters) - 1)}
-    spikes_in_clusters[clusters[-1]] = np.sort(abs_spikes[idx[-1]:])
+    spikes_in_clusters[clusters[-1]] = abs_spikes[idx[-1]:]
 
     return spikes_in_clusters
 
