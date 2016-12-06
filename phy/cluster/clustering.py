@@ -162,7 +162,6 @@ class Clustering(EventEmitter):
         assert np.all(self._spike_clusters < self._new_cluster_id)
         # Keep a copy of the original spike clusters assignment.
         self._spike_clusters_base = self._spike_clusters.copy()
-        self._spikes_per_cluster = _spikes_per_cluster(self._spike_clusters)
 
     def reset(self):
         """Reset the clustering to the original clustering.
