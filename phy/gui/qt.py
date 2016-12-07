@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 from PyQt4.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
-                          QVariant, QEventLoop, QTimer, QPoint,
+                          QVariant, QEventLoop, QTimer, QPoint, QTimer,
                           pyqtSignal, pyqtSlot, QSize, QUrl)
 try:
     from PyQt4.QtCore import QPyNullVariant  # noqa
@@ -87,6 +87,14 @@ def _wait_signal(signal, timeout=None):
     loop.exec_()
 
 
+@contextmanager
+def busy_cursor():
+    """Context manager displaying a busy cursor during a long command."""
+    create_app().setOverrideCursor(Qt.WaitCursor)
+    yield
+    create_app().restoreOverrideCursor()
+
+
 # -----------------------------------------------------------------------------
 # Qt app
 # -----------------------------------------------------------------------------
@@ -125,6 +133,36 @@ def run_app():  # pragma: no cover
     """Run the Qt application."""
     global QT_APP
     return QT_APP.exit(QT_APP.exec_())
+
+
+class AsyncCaller(object):
+    """Call a Python function after a delay."""
+    def __init__(self, delay=10):
+        self._delay = delay
+        self._timer = None
+
+    def _create_timer(self, f):
+        self._timer = QTimer()
+        self._timer.timeout.connect(f)
+        self._timer.setSingleShot(True)
+
+    def set(self, f):
+        """Call a function after a delay, unless another function is set
+        in the meantime."""
+        self.stop()
+        self._create_timer(f)
+        self.start()
+
+    def start(self):
+        """Start the timer and call the function after a delay."""
+        if self._timer:
+            self._timer.start(self._delay)
+
+    def stop(self):
+        """Stop the current timer if there is one and cancel the async call."""
+        if self._timer:
+            self._timer.stop()
+            self._timer.deleteLater()
 
 
 # -----------------------------------------------------------------------------
