@@ -18,7 +18,10 @@ from ..array import (_unique,
                      _spikes_in_clusters,
                      _spikes_per_cluster,
                      _flatten_per_cluster,
+                     get_closest_clusters,
                      _get_data_lim,
+                     _flatten,
+                     _start_stop,
                      select_spikes,
                      Selector,
                      chunk_bounds,
@@ -33,6 +36,7 @@ from ..array import (_unique,
                      _get_padded,
                      read_array,
                      write_array,
+                     _accumulate,
                      )
 from phy.utils._types import _as_array
 from phy.utils.testing import _assert_equal as ae
@@ -202,6 +206,22 @@ def test_in_polygon():
     ae(idx, idx_expected)
 
 
+def test_flatten():
+    assert _flatten([[0, 1], [2]]) == [0, 1, 2]
+
+
+def test_start_stop():
+    assert _start_stop(slice(0, 3, None)) == (0, 3)
+    with raises(NotImplementedError):
+        _start_stop(slice(0, 3, 2))
+    assert _start_stop([0, 1, 2]) == (0, 2)
+
+
+def test_get_closest_clusters():
+    out = get_closest_clusters(1, [0, 1, 2], lambda c, d: (d - c))
+    assert [_ for _, __ in out] == [2, 1, 0]
+
+
 #------------------------------------------------------------------------------
 # Test read/save
 #------------------------------------------------------------------------------
@@ -224,6 +244,7 @@ def test_concatenate_virtual_arrays_1():
     arrs = [np.arange(5), np.arange(10, 12), np.array([0])]
     c = _concatenate_virtual_arrays(arrs, scaling=1)
     assert c.shape == (8,)
+    assert len(c) == 8
     assert c._get_recording(3) == 0
     assert c._get_recording(5) == 1
 
@@ -246,6 +267,12 @@ def test_concatenate_virtual_arrays_2():
     assert c.shape == (5, 2)
     ae(c[:, :], np.vstack((np.zeros((2, 2)), np.ones((3, 2)))))
     ae(c[0:4, 0], [0, 0, 1, 1])
+
+
+def test_concatenate_virtual_arrays_3():
+    arrs = [np.zeros((2, 2)), np.ones((3, 2))]
+    c = _concatenate_virtual_arrays(arrs, scaling=2)
+    ae(c[3], 2 * np.ones((1, 2)))
 
 
 #------------------------------------------------------------------------------
@@ -379,7 +406,7 @@ def test_grouped_mean():
     ae(grouped_mean(arr, spike_clusters), [20, 30, 50])
 
 
-def test_select_spikes():
+def test_select_spikes_1():
     with raises(AssertionError):
         select_spikes()
     spikes = [2, 3, 5, 7, 11]
@@ -393,7 +420,35 @@ def test_select_spikes():
     ae(select_spikes([2, 3, 5], 1, spikes_per_cluster=spc), [2, 3])
     ae(select_spikes([2, 5], 2, spikes_per_cluster=spc), [2])
 
+
+def test_select_spikes_2():
+    spc = lambda c: {2: [2, 7, 11], 3: [3, 5], 5: []}.get(c, None)
+
     sel = Selector(spc)
     assert sel.select_spikes() is None
     ae(sel.select_spikes([2, 5]), spc(2))
     ae(sel.select_spikes([2, 5], 2), [2])
+
+
+def test_select_spikes_3():
+    s = select_spikes([0], max_n_spikes_per_cluster=4,
+                      spikes_per_cluster=lambda x: np.arange(10),
+                      batch_size=2)
+    ae(s, [0, 1, 8, 9])
+
+
+#------------------------------------------------------------------------------
+# Test accumulator
+#------------------------------------------------------------------------------
+
+def test_accumulator():
+    acc = _accumulate([{'a': np.arange(3), 'b': np.arange(3) * 10,
+                        'c': 0},
+                       {'a': np.arange(3, 5), 'b': np.arange(3, 5) * 10,
+                        'c': 1},
+                       ])
+    ae(acc['a'], np.arange(5))
+    ae(acc['b'], np.arange(5) * 10)
+    # NOTE: in case of scalars, we take the first one and discard the others.
+    # We don't concatenate them.
+    assert acc['c'] == 0

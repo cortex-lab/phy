@@ -209,24 +209,8 @@ def get_closest_clusters(cluster_id, cluster_ids, sim_func, max_n=None):
     l = [(_as_scalar(candidate), _as_scalar(sim_func(cluster_id, candidate)))
          for candidate in _as_scalars(cluster_ids)]
     l = sorted(l, key=itemgetter(1), reverse=True)
+    max_n = None or len(l)
     return l[:max_n]
-
-
-def concat_per_cluster(f):
-    """Take a function accepting a single cluster, and return a function
-    accepting multiple clusters."""
-    @wraps(f)
-    def wrapped(cluster_ids, **kwargs):
-        # Single cluster.
-        if not hasattr(cluster_ids, '__len__'):
-            return f(cluster_ids, **kwargs)
-        # Return the list of cluster-dependent objects.
-        out = [f(c, **kwargs) for c in cluster_ids]
-        # Flatten list of lists.
-        if all(isinstance(_, list) for _ in out):
-            out = _flatten(out)  # pragma: no cover
-        return out
-    return wrapped
 
 
 # -----------------------------------------------------------------------------
@@ -271,7 +255,7 @@ def _start_stop(item):
     if isinstance(item, slice):
         # Slice.
         if item.step not in (None, 1):
-            return NotImplementedError()
+            raise NotImplementedError()
         return item.start, item.stop
     elif isinstance(item, (list, np.ndarray)):
         # List or array of indices.
@@ -301,17 +285,7 @@ class ConcatenatedArrays(object):
                                                        for arr in arrs])],
                                       axis=0)
         self.dtype = arrs[0].dtype if arrs else None
-
-        if scaling is None:
-            return
-
-        # Multiply the output of a function by some scaling.
-        def _wrap(f):
-            def wrapped(*args):
-                return f(*args) * self.scaling
-            return wrapped
-
-        self.__getitem__ = _wrap(self.__getitem__)
+        self.scaling = scaling
 
     @property
     def shape(self):
@@ -325,7 +299,7 @@ class ConcatenatedArrays(object):
         """Return the recording that contains a given index."""
         assert index >= 0
         recs = np.nonzero((index - self.offsets[:-1]) >= 0)[0]
-        if len(recs) == 0:
+        if len(recs) == 0:  # pragma: no cover
             # If the index is greater than the total size,
             # return the last recording.
             return len(self.arrs) - 1
@@ -333,7 +307,7 @@ class ConcatenatedArrays(object):
         # its offset.
         return recs[-1]
 
-    def __getitem__(self, item):
+    def _get(self, item):
         cols = self.cols if self.cols is not None else slice(None, None, None)
         # Get the start and stop indices of the requested item.
         start, stop = _start_stop(item)
@@ -372,16 +346,21 @@ class ConcatenatedArrays(object):
         # Apply the rest of the index.
         return _fill_index(np.concatenate(l, axis=0), item)[..., cols]
 
+    def __getitem__(self, item):
+        out = self._get(item)
+        assert out is not None
+        if self.scaling is not None and self.scaling != 1:
+            out *= self.scaling
+        return out
+
     def __len__(self):
         return self.shape[0]
 
 
 def _concatenate_virtual_arrays(arrs, cols=None, scaling=None):
     """Return a virtual concatenate of several NumPy arrays."""
-    n = len(arrs)
-    if n == 0:
-        return None
-    return ConcatenatedArrays(arrs, cols, scaling=scaling)
+    return None if not len(arrs) else ConcatenatedArrays(arrs, cols,
+                                                         scaling=scaling)
 
 
 # -----------------------------------------------------------------------------
@@ -634,10 +613,6 @@ class Accumulator(object):
     def add(self, name, val):
         """Add an array."""
         self._data[name].append(val)
-
-    def get(self, name):
-        """Return the list of arrays for a given name."""
-        return _flatten(self._data[name])
 
     @property
     def names(self):
