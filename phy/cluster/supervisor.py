@@ -139,8 +139,10 @@ class Supervisor(EventEmitter):
                  quality=None,
                  similarity=None,
                  new_cluster_id=None,
+                 context=None,
                  ):
         super(Supervisor, self).__init__()
+        self.context = context
         self.quality = quality or self.n_spikes  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
 
@@ -149,8 +151,14 @@ class Supervisor(EventEmitter):
         self.shortcuts.update(shortcuts or {})
 
         # Create Clustering and ClusterMeta.
+        # Load the cached spikes_per_cluster array.
+        spc = context.load('spikes_per_cluster') if context else None
         self.clustering = Clustering(spike_clusters,
+                                     spikes_per_cluster=spc,
                                      new_cluster_id=new_cluster_id)
+        # Cache the spikes_per_cluster array.
+        self._save_spikes_per_cluster()
+
         self.cluster_groups = cluster_groups or {}
         self.cluster_meta = create_cluster_meta(self.cluster_groups)
         self._global_history = GlobalHistory(process_ups=_process_ups)
@@ -182,6 +190,13 @@ class Supervisor(EventEmitter):
 
     # Internal methods
     # -------------------------------------------------------------------------
+
+    def _save_spikes_per_cluster(self):
+        if self.context:
+            self.context.save('spikes_per_cluster',
+                              self.clustering.spikes_per_cluster,
+                              kind='pickle',
+                              )
 
     def _register_logging(self):
         # Log the actions.
@@ -455,7 +470,7 @@ class Supervisor(EventEmitter):
                 else:
                     self.cluster_view.select([next_cluster])
 
-    def attach(self, gui, context=None):
+    def attach(self, gui):
         # Create the actions.
         self._create_actions(gui)
 
@@ -483,10 +498,10 @@ class Supervisor(EventEmitter):
         @self.clustering.connect
         def on_cluster(up):
             new_cluster_id = self.clustering.new_cluster_id()
-            if context:
+            if self.context:
                 logger.debug("Save the new cluster id: %d.", new_cluster_id)
-                context.save('new_cluster_id',
-                             dict(new_cluster_id=new_cluster_id))
+                self.context.save('new_cluster_id',
+                                  dict(new_cluster_id=new_cluster_id))
 
         # The GUI emits the select event too.
         @self.connect
@@ -642,3 +657,5 @@ class Supervisor(EventEmitter):
         labels = [(field, self.get_labels(field)) for field in self.fields]
         # TODO: add option in add_field to declare a field unsavable.
         self.emit('request_save', spike_clusters, groups, *labels)
+        # Cache the spikes_per_cluster array.
+        self._save_spikes_per_cluster()
