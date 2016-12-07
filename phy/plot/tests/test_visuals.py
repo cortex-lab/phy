@@ -13,6 +13,7 @@ from ..visuals import (ScatterVisual, PlotVisual, HistogramVisual,
                        LineVisual, PolygonVisual, TextVisual,
                        UniformPlotVisual, UniformScatterVisual,
                        )
+from ..transform import NDC
 from phy.utils._color import _random_color
 
 
@@ -48,7 +49,7 @@ def test_scatter_markers(qtbot, canvas_pz):
 
     _test_visual(qtbot, canvas_pz,
                  ScatterVisual(marker='vbar'),
-                 x=x, y=y)
+                 x=x, y=y, data_bounds='auto')
 
 
 def test_scatter_custom(qtbot, canvas_pz):
@@ -86,7 +87,7 @@ def test_uniform_scatter_markers(qtbot, canvas_pz):
 
     _test_visual(qtbot, canvas_pz,
                  UniformScatterVisual(marker='vbar'),
-                 x=x, y=y)
+                 x=x, y=y, data_bounds='auto')
 
 
 def test_uniform_scatter_custom(qtbot, canvas_pz):
@@ -125,7 +126,7 @@ def test_plot_0(qtbot, canvas_pz):
 def test_plot_1(qtbot, canvas_pz):
     y = .2 * np.random.randn(10)
     _test_visual(qtbot, canvas_pz, PlotVisual(),
-                 y=y)
+                 y=y, data_bounds='auto')
 
 
 def test_plot_2(qtbot, canvas_pz):
@@ -179,7 +180,17 @@ def test_uniform_plot_1(qtbot, canvas_pz):
                  UniformPlotVisual(),
                  y=y,
                  masks=.5,
-                 data_bounds=None,
+                 data_bounds=NDC,
+                 )
+
+
+def test_uniform_plot_2(qtbot, canvas_pz):
+    y = .2 * np.random.randn(10)
+    _test_visual(qtbot, canvas_pz,
+                 UniformPlotVisual(),
+                 y=y,
+                 masks=.5,
+                 data_bounds='auto',
                  )
 
 
@@ -274,6 +285,10 @@ def test_text_empty(qtbot, canvas):
 
 
 def test_text_0(qtbot, canvas_pz):
+    _test_visual(qtbot, canvas_pz, TextVisual(), text='hello')
+
+
+def test_text_1(qtbot, canvas_pz):
     text = '0123456789'
     text = [text[:n] for n in range(1, 11)]
 
@@ -283,7 +298,7 @@ def test_text_0(qtbot, canvas_pz):
                  pos=pos, text=text)
 
 
-def test_text_1(qtbot, canvas_pz):
+def test_text_2(qtbot, canvas_pz):
     c = canvas_pz
 
     text = ['--x--'] * 5
@@ -292,7 +307,7 @@ def test_text_1(qtbot, canvas_pz):
 
     v = TextVisual()
     c.add_visual(v)
-    v.set_data(pos=pos, text=text, anchor=anchor, data_bounds=None)
+    v.set_data(pos=pos, text=text, anchor=anchor, data_bounds=NDC)
 
     v = ScatterVisual()
     c.add_visual(v)
