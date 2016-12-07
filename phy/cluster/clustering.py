@@ -240,11 +240,16 @@ class Clustering(EventEmitter):
         if to_add:
             for clu, spk in to_add.items():
                 self._spikes_per_cluster[clu] = spk
-        # Otherwise recompute the entire spikes_per_cluster array.
-        if not self._spikes_per_cluster:
+        # If spikes_per_cluster is invalid, recompute the entire
+        # spikes_per_cluster array.
+        coherent = np.all(np.in1d(self._cluster_ids,
+                                  sorted(self._spikes_per_cluster),
+                                  ))
+        if not coherent:
             logger.debug("Recompute spikes_per_cluster manually: "
                          "this is long.")
-            self._spikes_per_cluster = _spikes_per_cluster(self._spike_clusters)  # noqa
+            sc = self._spike_clusters
+            self._spikes_per_cluster = _spikes_per_cluster(sc)
 
     def _do_assign(self, spike_ids, new_spike_clusters):
         """Make spike-cluster assignments after the spike selection has
