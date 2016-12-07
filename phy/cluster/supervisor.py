@@ -147,6 +147,9 @@ class Supervisor(EventEmitter):
         self.quality = quality or self.n_spikes  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
 
+        self._best = None
+        self._current_similarity_values = {}
+
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
         self.shortcuts.update(shortcuts or {})
@@ -181,13 +184,6 @@ class Supervisor(EventEmitter):
 
         # NOTE: global on_cluster() occurs here.
         self._register_logging()
-
-        # Create the cluster views.
-        self._create_cluster_views()
-        self._add_default_columns()
-
-        self._best = None
-        self._current_similarity_values = {}
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -476,6 +472,12 @@ class Supervisor(EventEmitter):
                     self.cluster_view.select([next_cluster])
 
     def attach(self, gui):
+        # Create the cluster views.
+        self._create_cluster_views()
+        self._add_default_columns()
+
+        self.emit('create_cluster_views')
+
         # Create the actions.
         self._create_actions(gui)
 
@@ -527,6 +529,9 @@ class Supervisor(EventEmitter):
 
         # Update the cluster views and selection when a cluster event occurs.
         self.connect(self.on_cluster)
+
+        self.emit('attach_gui', gui)
+
         return self
 
     # Selection actions
