@@ -60,6 +60,8 @@ def test_enable_depth_mask(qtbot, canvas):
 
 
 def test_get_data_bounds():
+    ae(_get_data_bounds(None), [[-1., -1., 1., 1.]])
+
     db0 = np.array([[0, 1, 4, 5],
                     [0, 1, 4, 5],
                     [0, 1, 4, 5]])
