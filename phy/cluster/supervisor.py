@@ -451,8 +451,8 @@ class Supervisor(EventEmitter):
         elif up.metadata_changed:
             # Select next in similarity view if all moved are in that view.
             if set(up.metadata_changed) <= set(similar):
-                self._update_similarity_view()
                 next_cluster = self.similarity_view.get_next_id()
+                self._update_similarity_view()
                 if next_cluster is not None:
                     self.similarity_view.select([next_cluster])
             # Otherwise, select next in cluster view.
