@@ -36,6 +36,7 @@ from ..array import (_unique,
                      _get_padded,
                      read_array,
                      write_array,
+                     Accumulator,
                      _accumulate,
                      )
 from phy.utils._types import _as_array
@@ -441,7 +442,14 @@ def test_select_spikes_3():
 # Test accumulator
 #------------------------------------------------------------------------------
 
-def test_accumulator():
+def test_accumulator_1():
+    acc = Accumulator()
+    acc.add('a', [0])
+    acc.add('a', [1])
+    assert acc.get('a') == [0, 1]
+
+
+def test_accumulator_2():
     acc = _accumulate([{'a': np.arange(3), 'b': np.arange(3) * 10,
                         'c': 0},
                        {'a': np.arange(3, 5), 'b': np.arange(3, 5) * 10,

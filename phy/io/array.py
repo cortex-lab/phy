@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 from collections import defaultdict
-from functools import wraps
 import logging
 import math
 from math import floor, exp
@@ -618,6 +617,10 @@ class Accumulator(object):
     def names(self):
         """List of names."""
         return set(self._data)
+
+    def get(self, name):
+        """Return the list of arrays for a given name."""
+        return _flatten(self._data[name])
 
     def __getitem__(self, name):
         """Concatenate all arrays with a given name."""
