@@ -9,11 +9,11 @@
 from pytest import yield_fixture, fixture
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from vispy.util import keys
 
 from .. import supervisor as _supervisor
 from ..supervisor import (Supervisor,
                           )
+from phy.io import Context
 from phy.gui import GUI
 
 
@@ -38,7 +38,8 @@ def gui(tempdir, qtbot):
 
 @fixture
 def supervisor(qtbot, gui, cluster_ids, cluster_groups,
-               quality, similarity):
+               quality, similarity,
+               tempdir):
     spike_clusters = np.array(cluster_ids)
 
     mc = Supervisor(spike_clusters,
@@ -46,6 +47,7 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
                     shortcuts={'undo': 'ctrl+z'},
                     quality=quality,
                     similarity=similarity,
+                    context=Context(tempdir),
                     )
     mc.attach(gui)
     mc.set_default_sort(quality.__name__)
@@ -176,40 +178,6 @@ def test_supervisor_state(tempdir, qtbot, gui, supervisor):
     assert cv.state['sort_by'] == ('id', 'asc')
 
 
-def _test_supervisor_split_lasso(tempdir, qtbot, supervisor):
-    # TODO
-    gui = GUI()
-    mc = supervisor
-    view = gui.list_views('FeatureView', is_visible=False)[0]
-
-    gui.show()
-
-    # Select one cluster.
-    mc.select(0)
-
-    # Simulate a lasso.
-    ev = view.events
-    ev.mouse_press(pos=(210, 1), button=1, modifiers=(keys.CONTROL,))
-    ev.mouse_press(pos=(320, 1), button=1, modifiers=(keys.CONTROL,))
-    ev.mouse_press(pos=(320, 30), button=1, modifiers=(keys.CONTROL,))
-    ev.mouse_press(pos=(210, 30), button=1, modifiers=(keys.CONTROL,))
-
-    ups = []
-
-    @mc.clustering.connect
-    def on_cluster(up):
-        ups.append(up)
-
-    mc.split()
-    up = ups[0]
-    assert up.description == 'assign'
-    assert up.added == [4, 5]
-    assert up.deleted == [0]
-
-    # qtbot.stop()
-    gui.close()
-
-
 def test_supervisor_label(supervisor):
     mc = supervisor
 
@@ -227,6 +195,8 @@ def test_supervisor_move_1(supervisor):
 
     mc.select([20])
     assert mc.selected == [20]
+
+    assert not mc.move('', '')
 
     mc.move('noise')
     assert mc.selected == [11]
