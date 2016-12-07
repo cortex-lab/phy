@@ -11,7 +11,7 @@ from pytest import raises
 
 from .._types import (Bunch, _bunchify, _is_integer, _is_list, _is_float,
                       _as_list, _is_array_like, _as_array, _as_tuple,
-                      _as_scalar,
+                      _as_scalar, _as_scalars,
                       )
 
 
@@ -75,6 +75,8 @@ def test_as_scalar():
     assert _as_scalar(1) == 1
     assert _as_scalar(np.ones(1)[0]) == 1.
     assert type(_as_scalar(np.ones(1)[0])) == float
+
+    assert _as_scalars(np.arange(3)) == [0, 1, 2]
 
 
 def test_array():

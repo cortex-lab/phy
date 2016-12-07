@@ -40,6 +40,10 @@ def test_colormap():
 
 def test_color_selector():
     sel = ColorSelector()
-    assert len(sel.get(0)) == 4
+    c = sel.get(0)
+    assert len(c) == 4
     assert len(sel.get(0, [1, 0])) == 4
     assert sel.get(0, cluster_group='noise') == (.5,) * 4
+
+    assert sel.get(0) == c
+    assert sel.get(1) != c
