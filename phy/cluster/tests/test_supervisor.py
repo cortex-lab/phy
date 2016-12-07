@@ -247,13 +247,13 @@ def test_supervisor_move_2(supervisor):
     assert mc.selected == [20, 10]
 
     mc.move('noise', 10)
-    assert mc.selected == [20, 30]
+    assert mc.selected == [20, 2]
 
     mc.undo()
     assert mc.selected == [20, 10]
 
     mc.redo()
-    assert mc.selected == [20, 30]
+    assert mc.selected == [20, 2]
 
 
 #------------------------------------------------------------------------------
@@ -329,7 +329,7 @@ def test_supervisor_action_move_2(supervisor):
     assert mc.selected == [30, 2]
     mc.actions.move_similar_to_good()
 
-    assert mc.selected == [30, 2]
+    assert mc.selected == [30, 1]
 
     mc.cluster_meta.get('group', 20) == 'noise'
     mc.cluster_meta.get('group', 11) == 'mua'
