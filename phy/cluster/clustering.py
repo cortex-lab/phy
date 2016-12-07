@@ -151,14 +151,18 @@ class Clustering(EventEmitter):
 
     """
 
-    def __init__(self, spike_clusters, new_cluster_id=None):
+    def __init__(self, spike_clusters, new_cluster_id=None,
+                 spikes_per_cluster=None):
         super(Clustering, self).__init__()
         self._undo_stack = History(base_item=(None, None, None))
         # Spike -> cluster mapping.
         self._spike_clusters = _as_array(spike_clusters)
+        self._spikes_per_cluster = {}
         self._n_spikes = len(self._spike_clusters)
         self._spike_ids = np.arange(self._n_spikes).astype(np.int64)
-        self._update_cluster_ids()
+        # We can pass the precomputed spikes_per_cluster dictionary for
+        # performance reasons.
+        self._update_cluster_ids(to_add=spikes_per_cluster)
         self._new_cluster_id_0 = int(new_cluster_id or
                                      self._spike_clusters.max() + 1)
         self._new_cluster_id = self._new_cluster_id_0
@@ -231,13 +235,13 @@ class Clustering(EventEmitter):
         # Clusters to remove.
         if to_remove is not None:
             for clu in to_remove:
-                self._spikes_per_cluster.pop(clu)
+                self._spikes_per_cluster.pop(clu, None)
         # Clusters to add.
-        if to_add is not None:
+        if to_add:
             for clu, spk in to_add.items():
                 self._spikes_per_cluster[clu] = spk
         # Otherwise recompute the entire spikes_per_cluster array.
-        if to_remove is None and to_add is None:
+        if not self._spikes_per_cluster:
             logger.debug("Recompute spikes_per_cluster manually: "
                          "this is long.")
             self._spikes_per_cluster = _spikes_per_cluster(self._spike_clusters)  # noqa
