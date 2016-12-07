@@ -8,7 +8,7 @@
 
 import numpy as np
 
-from phy.gui import GUI
+from phy.gui import GUI, GUIState
 from phy.gui.qt import Qt, QPoint
 from phy.io.array import _spikes_per_cluster
 from phy.io.mock import (artificial_features,
@@ -42,6 +42,7 @@ def test_feature_view(qtbot, tempdir):
             spike_ids = get_spike_ids(cluster_id)
         return Bunch(data=features[spike_ids],
                      spike_ids=spike_ids,
+                     masks=np.random.rand(ns, nc),
                      channel_ids=(channel_ids
                                   if channel_ids is not None
                                   else np.arange(nc)[::-1]),
@@ -55,6 +56,9 @@ def test_feature_view(qtbot, tempdir):
     v = FeatureView(features=get_features,
                     attributes={'time': get_time},
                     )
+
+    v.set_state(GUIState(scaling=None))
+
     gui = GUI(config_dir=tempdir)
     gui.show()
     v.attach(gui)
@@ -64,6 +68,9 @@ def test_feature_view(qtbot, tempdir):
     v.on_select([0])
     v.on_select([0, 2, 3])
     v.on_select([0, 2])
+
+    gui.emit('select', [0, 2])
+    qtbot.wait(10)
 
     v.increase()
     v.decrease()
