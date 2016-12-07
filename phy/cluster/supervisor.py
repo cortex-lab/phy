@@ -476,10 +476,10 @@ class Supervisor(EventEmitter):
         self._create_cluster_views()
         self._add_default_columns()
 
-        self.emit('create_cluster_views')
-
         # Create the actions.
         self._create_actions(gui)
+
+        self.emit('create_cluster_views')
 
         # Add the cluster views.
         gui.add_view(self.cluster_view, name='ClusterView')
@@ -595,7 +595,11 @@ class Supervisor(EventEmitter):
                 for c in self.clustering.cluster_ids}
 
     def label(self, name, value, cluster_ids=None):
-        """Assign a label to clusters."""
+        """Assign a label to clusters.
+
+        Example: `quality 3`
+
+        """
         if cluster_ids is None:
             cluster_ids = self.cluster_view.selected
         if not hasattr(cluster_ids, '__len__'):
@@ -606,7 +610,11 @@ class Supervisor(EventEmitter):
         self._global_history.action(self.cluster_meta)
 
     def move(self, group, cluster_ids=None):
-        """Assign a group to some clusters.."""
+        """Assign a group to some clusters.
+
+        Example: `good`
+
+        """
         if isinstance(cluster_ids, string_types):
             logger.warn("The list of clusters should be a list of integers, "
                         "not a string.")
@@ -669,7 +677,9 @@ class Supervisor(EventEmitter):
         groups = {c: self.cluster_meta.get('group', c) or 'unsorted'
                   for c in self.clustering.cluster_ids}
         # List of tuples (field_name, dictionary).
-        labels = [(field, self.get_labels(field)) for field in self.fields]
+        labels = [(field, self.get_labels(field))
+                  for field in self.cluster_meta.fields
+                  if field not in ('next_cluster')]
         # TODO: add option in add_field to declare a field unsavable.
         self.emit('request_save', spike_clusters, groups, *labels)
         # Cache the spikes_per_cluster array.
