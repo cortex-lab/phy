@@ -37,7 +37,7 @@ class ManualClusteringView(View):
     """
     default_shortcuts = {
     }
-    _callback_delay = 50
+    _callback_delay = 10
 
     def __init__(self, shortcuts=None, **kwargs):
 

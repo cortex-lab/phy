@@ -64,8 +64,6 @@ class ChannelClick(Event):
 
 
 class WaveformView(ManualClusteringView):
-    _callback_delay = 50
-
     scaling_coeff = 1.1
 
     default_shortcuts = {
