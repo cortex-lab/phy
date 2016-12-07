@@ -21,6 +21,7 @@ def test_scatter_view(qtbot, tempdir):
     n = 1000
     v = ScatterView(coords=lambda c: Bunch(x=np.random.randn(n),
                                            y=np.random.randn(n),
+                                           data_bounds=None,
                                            )
                     )
     gui = GUI(config_dir=tempdir)

@@ -349,7 +349,7 @@ class ConcatenatedArrays(object):
         out = self._get(item)
         assert out is not None
         if self.scaling is not None and self.scaling != 1:
-            out *= self.scaling
+            out = out * self.scaling
         return out
 
     def __len__(self):

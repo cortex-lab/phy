@@ -39,7 +39,7 @@ class ScatterView(ManualClusteringView):
         return [self.coords(cluster_id) for cluster_id in cluster_ids]
 
     def _get_data_bounds(self, bunchs):
-        if not bunchs:
+        if not bunchs:  # pragma: no cover
             return NDC
         data_bounds = bunchs[0].get('data_bounds', None)
         if data_bounds is None:

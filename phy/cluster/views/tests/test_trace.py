@@ -47,6 +47,7 @@ def test_trace_view(tempdir, qtbot):
             d = Bunch(data=traces[s - k:s + k, :],
                       start_time=t - k / sr,
                       color=cs.get(c),
+                      channel_ids=np.arange(5),
                       cluster_id=c,
                       )
             out.waveforms.append(d)
