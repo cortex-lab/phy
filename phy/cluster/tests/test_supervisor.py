@@ -139,7 +139,7 @@ def test_supervisor_merge_move(supervisor):
     assert mc.selected == [2]
 
 
-def test_supervisor_split(supervisor):
+def test_supervisor_split_0(supervisor):
     mc = supervisor
 
     mc.select([1, 2])
@@ -150,6 +150,18 @@ def test_supervisor_split(supervisor):
     assert mc.selected == [1, 2]
 
     mc.redo()
+    assert mc.selected == [31]
+
+
+def test_supervisor_split_1(gui, supervisor):
+    mc = supervisor
+    mc.select([1, 2])
+
+    @gui.connect_
+    def on_request_split():
+        return mc.clustering.spikes_in_clusters([1, 2])
+
+    mc.split()
     assert mc.selected == [31]
 
 

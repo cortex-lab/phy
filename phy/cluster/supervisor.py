@@ -567,6 +567,7 @@ class Supervisor(EventEmitter):
         """Split the selected spikes."""
         if spike_ids is None:
             spike_ids = self.emit('request_split', single=True)
+            spike_ids = np.asarray(spike_ids, dtype=np.int64)
             assert spike_ids.dtype == np.int64
             assert spike_ids.ndim == 1
         if len(spike_ids) == 0:
