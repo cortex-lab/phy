@@ -12,6 +12,7 @@ import logging
 from vispy.util.event import Event
 
 from phy.gui import Actions
+from phy.gui.qt import AsyncCaller, busy_cursor
 from phy.plot import View
 from phy.utils import Bunch
 
@@ -36,6 +37,7 @@ class ManualClusteringView(View):
     """
     default_shortcuts = {
     }
+    _callback_delay = 50
 
     def __init__(self, shortcuts=None, **kwargs):
 
@@ -76,7 +78,19 @@ class ManualClusteringView(View):
         # Set the view state.
         self.set_state(gui.state.get_view_state(self))
 
-        gui.connect_(self.on_select)
+        # Call on_select() asynchronously after a delay, and set a busy
+        # cursor.
+        self.async_caller = AsyncCaller(delay=self._callback_delay)
+
+        @gui.connect_
+        def on_select(cluster_ids):
+            # Call this function after a delay unless there is another
+            # cluster selection in the meantime.
+            @self.async_caller.set
+            def update_view():
+                with busy_cursor():
+                    self.on_select(cluster_ids)
+
         self.actions = Actions(gui,
                                name=name or self.__class__.__name__,
                                menu=self.__class__.__name__,

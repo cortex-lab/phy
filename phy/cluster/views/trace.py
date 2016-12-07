@@ -32,6 +32,8 @@ def select_traces(traces, interval, sample_rate=None):
 
 
 class TraceView(ManualClusteringView):
+    _callback_delay = 100
+
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
     scaling_coeff_x = 1.5

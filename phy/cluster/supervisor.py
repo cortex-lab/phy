@@ -483,8 +483,8 @@ class Supervisor(EventEmitter):
         @self.clustering.connect
         def on_cluster(up):
             new_cluster_id = self.clustering.new_cluster_id()
-            logger.debug("Save the new cluster id: %d", new_cluster_id)
             if context:
+                logger.debug("Save the new cluster id: %d.", new_cluster_id)
                 context.save('new_cluster_id',
                              dict(new_cluster_id=new_cluster_id))
 
