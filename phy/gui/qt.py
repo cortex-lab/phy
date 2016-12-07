@@ -69,8 +69,9 @@ def _show_box(box):  # pragma: no cover
     return _button_name_from_enum(box.exec_())
 
 
-def _input_dialog(title, sentence):
-    return QInputDialog.getText(None, title, sentence)  # pragma: no cover
+def _input_dialog(title, sentence, text=None):
+    return QInputDialog.getText(None, title, sentence,
+                                text=text)  # pragma: no cover
 
 
 @contextmanager

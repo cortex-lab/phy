@@ -84,7 +84,13 @@ def _wrap_callback_args(f, docstring=None):  # pragma: no cover
         if not f_args:
             return f()
         # There are args, need to display the dialog.
-        s, ok = _input_dialog(getattr(f, '__name__', 'action'), docstring)
+        # Extract Example: `...` in the docstring to put a predefined text
+        # in the input dialog.
+        r = re.search('Example: `([^`]+)`', docstring)
+        docstring_ = docstring[:r.start()].strip() if r else docstring
+        text = r.group(1) if r else None
+        s, ok = _input_dialog(getattr(f, '__name__', 'action'),
+                              docstring_, text)
         if not ok or not s:
             return
         # Parse user-supplied arguments and call the function.
@@ -212,7 +218,7 @@ class Actions(object):
 
         # Set the status tip from the function's docstring.
         docstring = docstring or callback.__doc__ or name
-        docstring = re.sub(r'[\s]{2,}', ' ', docstring)
+        docstring = re.sub(r'[ \t\r\f\v]{2,}', ' ', docstring.strip())
 
         # Create and register the action.
         action = _create_qaction(self.gui, name, callback,
