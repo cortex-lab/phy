@@ -133,11 +133,19 @@ class CorrelogramView(ManualClusteringView):
                      )
 
     def set_bin(self, bin_size):
-        """Set the correlogram bin size (in milliseconds)."""
+        """Set the correlogram bin size (in milliseconds).
+
+        Example: `1`
+
+        """
         self.set_bin_window(bin_size=bin_size * 1e-3)
         self.on_select()
 
     def set_window(self, window_size):
-        """Set the correlogram window size (in milliseconds)."""
+        """Set the correlogram window size (in milliseconds).
+
+        Example: `100`
+
+        """
         self.set_bin_window(window_size=window_size * 1e-3)
         self.on_select()
