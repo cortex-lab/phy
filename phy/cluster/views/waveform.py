@@ -235,16 +235,20 @@ class WaveformView(ManualClusteringView):
         super(WaveformView, self).attach(gui)
         self.actions.add(self.toggle_waveform_overlap)
         self.actions.add(self.toggle_show_labels)
+        self.actions.separator()
 
         # Box scaling.
         self.actions.add(self.widen)
         self.actions.add(self.narrow)
+        self.actions.separator()
         self.actions.add(self.increase)
         self.actions.add(self.decrease)
+        self.actions.separator()
 
         # Probe scaling.
         self.actions.add(self.extend_horizontally)
         self.actions.add(self.shrink_horizontally)
+        self.actions.separator()
         self.actions.add(self.extend_vertically)
         self.actions.add(self.shrink_vertically)
 

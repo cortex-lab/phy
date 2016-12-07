@@ -276,6 +276,7 @@ class FeatureView(ManualClusteringView):
         super(FeatureView, self).attach(gui)
         self.actions.add(self.increase)
         self.actions.add(self.decrease)
+        self.actions.separator()
         self.actions.add(self.clear_channels)
         self.actions.add(self.toggle_automatic_channel_selection)
 

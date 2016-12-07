@@ -121,6 +121,7 @@ class CorrelogramView(ManualClusteringView):
         """Attach the view to the GUI."""
         super(CorrelogramView, self).attach(gui)
         self.actions.add(self.toggle_normalization, shortcut='n')
+        self.actions.separator()
         self.actions.add(self.set_bin, alias='cb')
         self.actions.add(self.set_window, alias='cw')
 

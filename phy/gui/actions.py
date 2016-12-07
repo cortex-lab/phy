@@ -194,7 +194,6 @@ class Actions(object):
     def add(self, callback=None, name=None, shortcut=None, alias=None,
             docstring=None, menu=None, verbose=True):
         """Add an action with a keyboard shortcut."""
-        # TODO: add menu_name option and create menu bar
         if callback is None:
             # Allow to use either add(func) or @add or @add(...).
             return partial(self.add, name=name, shortcut=shortcut,

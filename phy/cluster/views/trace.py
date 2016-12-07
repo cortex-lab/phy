@@ -249,13 +249,17 @@ class TraceView(ManualClusteringView):
         """Attach the view to the GUI."""
         super(TraceView, self).attach(gui)
         self.actions.add(self.go_to, alias='tg')
+        self.actions.separator()
         self.actions.add(self.shift, alias='ts')
         self.actions.add(self.go_right)
         self.actions.add(self.go_left)
+        self.actions.separator()
         self.actions.add(self.increase)
         self.actions.add(self.decrease)
+        self.actions.separator()
         self.actions.add(self.widen)
         self.actions.add(self.narrow)
+        self.actions.separator()
         self.actions.add(self.toggle_show_labels)
 
     @property

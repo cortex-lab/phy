@@ -223,6 +223,8 @@ class GUI(QMainWindow):
             """Close the GUI."""
             self.close()
 
+        self.default_actions.separator()
+
     # Events
     # -------------------------------------------------------------------------
 

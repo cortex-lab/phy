@@ -12,6 +12,7 @@ from functools import partial
 import logging
 
 import numpy as np
+from six import string_types
 
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
@@ -283,6 +284,10 @@ class Supervisor(EventEmitter):
         self.actions.add(self.select, alias='c')
         self.actions.separator()
 
+        self.actions.add(self.undo)
+        self.actions.add(self.redo)
+        self.actions.separator()
+
         # Clustering.
         self.actions.add(self.merge, alias='g')
         self.actions.add(self.split, alias='k')
@@ -290,6 +295,7 @@ class Supervisor(EventEmitter):
 
         # Move.
         self.actions.add(self.move)
+        self.actions.separator()
 
         for group in ('noise', 'mua', 'good'):
             self.actions.add(partial(self.move_best, group),
@@ -303,24 +309,23 @@ class Supervisor(EventEmitter):
                              name='move_all_to_' + group,
                              docstring='Move all selected clusters to %s.' %
                              group)
-        self.actions.separator()
+            self.actions.separator()
 
         # Label.
         self.actions.add(self.label, alias='l')
-        self.actions.separator()
 
         # Others.
-        self.actions.add(self.undo)
-        self.actions.add(self.redo)
-        self.actions.add(self.save)
+        self.actions.add(self.save, menu='&File')
 
         # Wizard.
         self.actions.add(self.reset, menu='&Wizard')
+        self.actions.separator(menu='&Wizard')
         self.actions.add(self.next, menu='&Wizard')
         self.actions.add(self.previous, menu='&Wizard')
+        self.actions.separator(menu='&Wizard')
         self.actions.add(self.next_best, menu='&Wizard')
         self.actions.add(self.previous_best, menu='&Wizard')
-        self.actions.separator()
+        self.actions.separator(menu='&Wizard')
 
     def _create_cluster_views(self):
         # Create the cluster view.
@@ -595,7 +600,11 @@ class Supervisor(EventEmitter):
         self._global_history.action(self.cluster_meta)
 
     def move(self, group, cluster_ids=None):
-        """Move clusters to a group."""
+        """Assign a group to some clusters.."""
+        if isinstance(cluster_ids, string_types):
+            logger.warn("The list of clusters should be a list of integers, "
+                        "not a string.")
+            return
         self.label('group', group, cluster_ids=cluster_ids)
 
     def move_best(self, group=None):
