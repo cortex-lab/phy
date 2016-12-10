@@ -26,6 +26,16 @@ logger = logging.getLogger(__name__)
 # Context
 #------------------------------------------------------------------------------
 
+def _cache_methods(obj, memcached, cached):
+    for name in memcached:
+        f = getattr(obj, name)
+        setattr(obj, name, obj.context.memcache(f))
+
+    for name in cached:
+        f = getattr(obj, name)
+        setattr(obj, name, obj.context.cache(f))
+
+
 class Context(object):
     """Handle function cacheing and parallel map with ipyparallel."""
     def __init__(self, cache_dir, ipy_view=None, verbose=0):

@@ -31,6 +31,49 @@ def select_traces(traces, interval, sample_rate=None):
     return traces
 
 
+def _iter_spike_waveforms(interval=None,
+                          traces_interval=None,
+                          model=None,
+                          supervisor=None,
+                          half_width=None,
+                          get_best_channels=None,
+                          show_all_spikes=False,
+                          color_selector=None,
+                          ):
+    m = model
+    p = supervisor
+    cs = color_selector
+    sr = m.sample_rate
+    a, b = m.spike_times.searchsorted(interval)
+    s0, s1 = int(round(interval[0] * sr)), int(round(interval[1] * sr))
+    k = half_width
+    for i in range(a, b):
+        t = m.spike_times[i]
+        c = m.spike_clusters[i]
+        # Skip non-selected spikes if requested.
+        if (not show_all_spikes and c not in supervisor.selected):
+            continue
+        cg = p.cluster_meta.get('group', c)
+        channel_ids = get_best_channels(c)
+        s = int(round(t * sr)) - s0
+        # Skip partial spikes.
+        if s - k < 0 or s + k >= (s1 - s0):
+            continue
+        color = cs.get(c, cluster_ids=p.selected, cluster_group=cg)
+        n = m.n_samples_templates
+        # Extract the waveform.
+        wave = Bunch(data=traces_interval[s - k:s + n - k, channel_ids],
+                     channel_ids=channel_ids,
+                     start_time=(s + s0 - k) / sr,
+                     color=color,
+                     spike_id=i,
+                     spike_time=t,
+                     spike_cluster=c,
+                     cluster_group=cg,
+                     )
+        yield wave
+
+
 class TraceView(ManualClusteringView):
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
