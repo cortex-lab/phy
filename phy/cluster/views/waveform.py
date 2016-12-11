@@ -85,11 +85,13 @@ class WaveformView(ManualClusteringView):
 
     def __init__(self,
                  waveforms=None,
+                 channel_labels=None,
                  **kwargs):
         self._key_pressed = None
         self._overlap = False
         self.do_show_labels = True
         self.channel_ids = None
+        self.channel_labels = channel_labels
         self.filtered_tags = ()
 
         # Initialize the view.
@@ -111,7 +113,7 @@ class WaveformView(ManualClusteringView):
         # Data: functions cluster_id => waveforms.
         self.waveforms = waveforms
 
-    def _plot_labels(self, channel_ids, n_clusters):
+    def _plot_labels(self, channel_ids, n_clusters, channel_labels=None):
         # Add channel labels.
         if self.do_show_labels:
             # Label positions.
@@ -121,8 +123,10 @@ class WaveformView(ManualClusteringView):
             else:
                 x = -1.
             for i, ch in enumerate(channel_ids):
+                label = (self.channel_labels[i]
+                         if self.channel_labels is not None else ch)
                 self[i].text(pos=[x, 0.],
-                             text=str(ch),
+                             text=str(label),
                              anchor=[-1.01, -.25],
                              data_bounds=None,
                              )
