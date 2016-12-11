@@ -209,7 +209,7 @@ class TraceView(ManualClusteringView):
         for ch in range(self.n_channels):
             ch_label = '%d' % self.channel_order[ch]
             och = self.channel_vertical_order[ch]
-            self[och].text(pos=[data_bounds[0], np.median(traces[:, ch])],
+            self[och].text(pos=[data_bounds[0], traces[0, ch]],
                            text=ch_label,
                            anchor=[+1., -.1],
                            data_bounds=data_bounds,
