@@ -95,7 +95,7 @@ class TraceView(ManualClusteringView):
                  duration=None,
                  n_channels=None,
                  channel_positions=None,
-                 channel_order=None,
+                 channel_labels=None,
                  **kwargs):
 
         self.do_show_labels = None
@@ -125,10 +125,10 @@ class TraceView(ManualClusteringView):
         assert channel_positions.shape == (n_channels, 2)
         self.channel_positions = channel_positions
 
-        channel_order = (channel_order if channel_order is not None
-                         else np.arange(n_channels))
-        assert channel_order.shape == (n_channels,)
-        self.channel_order = channel_order
+        channel_labels = (channel_labels if channel_labels is not None
+                          else np.arange(n_channels))
+        assert channel_labels.shape == (n_channels,)
+        self.channel_labels = channel_labels
 
         # Double argsort for inverse permutation.
         self.channel_vertical_order = \
@@ -207,7 +207,7 @@ class TraceView(ManualClusteringView):
 
     def _plot_labels(self, traces, data_bounds=None):
         for ch in range(self.n_channels):
-            ch_label = '%d' % self.channel_order[ch]
+            ch_label = '%d' % self.channel_labels[ch]
             och = self.channel_vertical_order[ch]
             self[och].text(pos=[data_bounds[0], traces[0, ch]],
                            text=ch_label,
