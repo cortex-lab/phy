@@ -57,7 +57,7 @@ def _iter_spike_waveforms(interval=None,
         channel_ids = get_best_channels(c)
         s = int(round(t * sr)) - s0
         # Skip partial spikes.
-        if s - k < 0 or s + k >= (s1 - s0):
+        if s - k < 0 or s + k >= (s1 - s0):  # pragma: no cover
             continue
         color = cs.get(c, cluster_ids=p.selected, cluster_group=cg)
         # Extract the waveform.

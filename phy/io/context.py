@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 # Context
 #------------------------------------------------------------------------------
 
-def _cache_methods(obj, memcached, cached):
+def _cache_methods(obj, memcached, cached):  # pragma: no cover
     for name in memcached:
         f = getattr(obj, name)
         setattr(obj, name, obj.context.memcache(f))

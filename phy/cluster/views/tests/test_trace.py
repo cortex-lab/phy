@@ -16,7 +16,7 @@ from phy.io.mock import (artificial_traces,
 from phy.utils import Bunch
 from phy.utils._color import ColorSelector
 
-from ..trace import TraceView, select_traces
+from ..trace import TraceView, select_traces, _iter_spike_waveforms
 
 
 #------------------------------------------------------------------------------
@@ -27,11 +27,25 @@ def test_trace_view(tempdir, qtbot):
     nc = 5
     ns = 9
     sr = 1000.
+    ch = list(range(nc))
     duration = 1.
     st = np.linspace(0.1, .9, ns)
     sc = artificial_spike_clusters(ns, nc)
     traces = 10 * artificial_traces(int(round(duration * sr)), nc)
     cs = ColorSelector()
+
+    m = Bunch(spike_times=st, spike_clusters=sc, sample_rate=sr)
+    s = Bunch(cluster_meta={}, selected=[0])
+
+    sw = _iter_spike_waveforms(interval=[0., 1.],
+                               traces_interval=traces,
+                               model=m,
+                               supervisor=s,
+                               half_width=ns // 2,
+                               get_best_channels=lambda cluster_id: ch,
+                               color_selector=cs,
+                               )
+    assert len(list(sw))
 
     def get_traces(interval):
         out = Bunch(data=select_traces(traces, interval, sample_rate=sr),
