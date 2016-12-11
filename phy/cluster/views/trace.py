@@ -60,9 +60,8 @@ def _iter_spike_waveforms(interval=None,
         if s - k < 0 or s + k >= (s1 - s0):
             continue
         color = cs.get(c, cluster_ids=p.selected, cluster_group=cg)
-        n = m.n_samples_templates
         # Extract the waveform.
-        wave = Bunch(data=traces_interval[s - k:s + n - k, channel_ids],
+        wave = Bunch(data=traces_interval[s - k:s + k, channel_ids],
                      channel_ids=channel_ids,
                      start_time=(s + s0 - k) / sr,
                      color=color,
