@@ -252,6 +252,12 @@ class Supervisor(EventEmitter):
         # Default columns.
         self.add_column(self.n_spikes)
 
+        @self.add_column
+        def group(cluster_id):
+            g = self.cluster_meta.get('group', cluster_id)
+            g = g or 'unsorted'
+            return g
+
         # Add columns for labels.
         for field in self.fields:  # pragma: no cover
             self._add_field_column(field)
