@@ -35,7 +35,7 @@ def _iter_spike_waveforms(interval=None,
                           traces_interval=None,
                           model=None,
                           supervisor=None,
-                          half_width=None,
+                          n_samples_waveforms=None,
                           get_best_channels=None,
                           show_all_spikes=False,
                           color_selector=None,
@@ -46,7 +46,8 @@ def _iter_spike_waveforms(interval=None,
     sr = m.sample_rate
     a, b = m.spike_times.searchsorted(interval)
     s0, s1 = int(round(interval[0] * sr)), int(round(interval[1] * sr))
-    k = half_width
+    ns = n_samples_waveforms
+    k = ns // 2
     for i in range(a, b):
         t = m.spike_times[i]
         c = m.spike_clusters[i]
@@ -61,7 +62,7 @@ def _iter_spike_waveforms(interval=None,
             continue
         color = cs.get(c, cluster_ids=p.selected, cluster_group=cg)
         # Extract the waveform.
-        wave = Bunch(data=traces_interval[s - k:s + k, channel_ids],
+        wave = Bunch(data=traces_interval[s - k:s + ns - k, channel_ids],
                      channel_ids=channel_ids,
                      start_time=(s + s0 - k) / sr,
                      color=color,
@@ -70,6 +71,7 @@ def _iter_spike_waveforms(interval=None,
                      spike_cluster=c,
                      cluster_group=cg,
                      )
+        assert wave.data.shape[0] == ns
         yield wave
 
 

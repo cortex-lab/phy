@@ -41,7 +41,7 @@ def test_trace_view(tempdir, qtbot):
                                traces_interval=traces,
                                model=m,
                                supervisor=s,
-                               half_width=ns // 2,
+                               n_samples_waveforms=ns,
                                get_best_channels=lambda cluster_id: ch,
                                color_selector=cs,
                                )
