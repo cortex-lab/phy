@@ -229,7 +229,7 @@ class FeatureView(ManualClusteringView):
         # Get the feature data.
         # Specify the channel ids if these are fixed, otherwise
         # choose the first cluster's best channels.
-        c = self.channel_ids if self.fixed_channels else None
+        c = self.channel_ids[:2] if self.fixed_channels else None
         bunchs = [self.features(cluster_id, channel_ids=c)
                   for cluster_id in cluster_ids]
 
@@ -243,7 +243,7 @@ class FeatureView(ManualClusteringView):
         assert len(self.channel_ids)
 
         # Get the background data.
-        background = self.features(channel_ids=self.channel_ids)
+        background = self.features(channel_ids=self.channel_ids[:2])
 
         # Plot all features.
         with self.building():
@@ -295,7 +295,19 @@ class FeatureView(ManualClusteringView):
         assert len(channels) >= 2
         # Get the axis from the pressed button (1, 2, etc.)
         # axis = 'x' if button == 1 else 'y'
-        channels[0 if button == 1 else 1] = channel_id
+        d = 0 if button == 1 else 1
+        # Change the first or second best channel.
+        old = channels[d]
+        # Avoid updating the view if the channel doesn't change.
+        if channel_id == old:
+            return
+        channels[d] = channel_id
+        # Ensure that the first two channels are different.
+        if channels[1 - d] == channel_id:
+            channels[1 - d] = old
+        assert channels[0] != channels[1]
+        logger.debug("Choose channels %d and %d in feature view.",
+                     *channels[:2])
         # Fix the channels temporarily.
         fc = self.fixed_channels
         self.fixed_channels = True
