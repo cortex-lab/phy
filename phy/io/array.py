@@ -546,8 +546,10 @@ def select_spikes(cluster_ids=None,
                   max_n_spikes_per_cluster=None,
                   spikes_per_cluster=None,
                   batch_size=None,
+                  subset=None,
                   ):
     """Return a selection of spikes belonging to the specified clusters."""
+    subset = subset or 'regular'
     assert _is_array_like(cluster_ids)
     if not len(cluster_ids):
         return np.array([], dtype=np.int64)
@@ -562,14 +564,21 @@ def select_spikes(cluster_ids=None,
             # are more clusters.
             n = int(max_n_spikes_per_cluster * exp(-.1 * (n_clusters - 1)))
             n = max(1, n)
-            spikes = spikes_per_cluster(cluster)
-            # Regular subselection.
-            if batch_size is None or len(spikes) <= max(batch_size, n):
-                spikes = regular_subset(spikes, n_spikes_max=n)
-            else:
-                # Batch selections of spikes.
-                spikes = get_excerpts(spikes, n // batch_size, batch_size)
-            selection[cluster] = spikes
+            spike_ids = spikes_per_cluster(cluster)
+            if subset == 'regular':
+                # Regular subselection.
+                if batch_size is None or len(spike_ids) <= max(batch_size, n):
+                    spike_ids = regular_subset(spike_ids, n_spikes_max=n)
+                else:
+                    # Batch selections of spikes.
+                    spike_ids = get_excerpts(spike_ids,
+                                             n // batch_size,
+                                             batch_size)
+            elif subset == 'random' and len(spike_ids) > n:
+                # Random subselection.
+                spike_ids = np.random.choice(spike_ids, n, replace=False)
+                spike_ids = np.unique(spike_ids)
+            selection[cluster] = spike_ids
     return _flatten_per_cluster(selection)
 
 
@@ -583,6 +592,7 @@ class Selector(object):
     def select_spikes(self, cluster_ids=None,
                       max_n_spikes_per_cluster=None,
                       batch_size=None,
+                      subset=None,
                       ):
         if cluster_ids is None or not len(cluster_ids):
             return None
@@ -593,6 +603,7 @@ class Selector(object):
                              spikes_per_cluster=self.spikes_per_cluster,
                              max_n_spikes_per_cluster=ns,
                              batch_size=batch_size,
+                             subset=subset,
                              )
 
 

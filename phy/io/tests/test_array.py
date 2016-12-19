@@ -434,8 +434,19 @@ def test_select_spikes_2():
 def test_select_spikes_3():
     s = select_spikes([0], max_n_spikes_per_cluster=4,
                       spikes_per_cluster=lambda x: np.arange(10),
-                      batch_size=2)
+                      batch_size=2,
+                      )
     ae(s, [0, 1, 8, 9])
+
+
+def test_select_spikes_random():
+    s = select_spikes([1], max_n_spikes_per_cluster=2,
+                      spikes_per_cluster=lambda c: {0: [0, 1],
+                                                    1: [2, 3, 4]}[c],
+                      subset='random',
+                      )
+    assert len(s) == 2
+    assert np.all(np.in1d(s, [2, 3, 4]))
 
 
 #------------------------------------------------------------------------------
