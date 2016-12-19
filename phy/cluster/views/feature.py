@@ -67,6 +67,8 @@ def _get_masks_max(px, py):
 
 
 class FeatureView(ManualClusteringView):
+    _callback_delay = 20
+
     _default_marker_size = 5.
     default_shortcuts = {
         'increase': 'ctrl++',
