@@ -96,7 +96,6 @@ class TraceView(ManualClusteringView):
                  sample_rate=None,
                  duration=None,
                  n_channels=None,
-                 channel_positions=None,
                  channel_labels=None,
                  **kwargs):
 
@@ -120,21 +119,10 @@ class TraceView(ManualClusteringView):
         assert n_channels >= 0
         self.n_channels = n_channels
 
-        channel_positions = (channel_positions
-                             if channel_positions is not None
-                             else np.c_[np.arange(n_channels),
-                                        np.zeros(n_channels)])
-        assert channel_positions.shape == (n_channels, 2)
-        self.channel_positions = channel_positions
-
         channel_labels = (channel_labels if channel_labels is not None
                           else np.arange(n_channels))
         assert channel_labels.shape == (n_channels,)
         self.channel_labels = channel_labels
-
-        # Double argsort for inverse permutation.
-        self.channel_vertical_order = \
-            np.argsort(np.argsort(channel_positions[:, 1]))
 
         # Box and probe scaling.
         self._scaling = 1.
@@ -167,9 +155,7 @@ class TraceView(ManualClusteringView):
 
         t = self._interval[0] + np.arange(n_samples) * self.dt
         t = np.tile(t, (n_ch, 1))
-        # Display the channels in vertical order.
-        order = self.channel_vertical_order
-        box_index = np.repeat(order[:, np.newaxis],
+        box_index = np.repeat(np.arange(n_ch)[:, np.newaxis],
                               n_samples,
                               axis=1)
 
@@ -191,17 +177,13 @@ class TraceView(ManualClusteringView):
                         ):
         # The spike time corresponds to the first sample of the waveform.
         n_samples, n_channels = waveforms.shape
-        c = self.channel_vertical_order
-        if channel_ids is not None:
-            assert len(channel_ids) == n_channels
-            c = c[channel_ids]
 
         # Generate the x coordinates of the waveform.
         t = start_time + self.dt * np.arange(n_samples)
         t = np.tile(t, (n_channels, 1))  # (n_unmasked_channels, n_samples)
 
         # The box index depends on the channel.
-        box_index = np.repeat(c[:, np.newaxis], n_samples, axis=0)
+        box_index = np.repeat(channel_ids[:, np.newaxis], n_samples, axis=0)
         self.plot(t, waveforms.T, color=color,
                   box_index=box_index,
                   data_bounds=data_bounds,
@@ -210,12 +192,11 @@ class TraceView(ManualClusteringView):
     def _plot_labels(self, traces, data_bounds=None):
         for ch in range(self.n_channels):
             ch_label = '%d' % self.channel_labels[ch]
-            och = self.channel_vertical_order[ch]
-            self[och].text(pos=[data_bounds[0], traces[0, ch]],
-                           text=ch_label,
-                           anchor=[+1., -.1],
-                           data_bounds=data_bounds,
-                           )
+            self[ch].text(pos=[data_bounds[0], traces[0, ch]],
+                          text=ch_label,
+                          anchor=[+1., -.1],
+                          data_bounds=data_bounds,
+                          )
 
     def _restrict_interval(self, interval):
         start, end = interval
