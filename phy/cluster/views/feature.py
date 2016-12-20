@@ -151,15 +151,13 @@ class FeatureView(ManualClusteringView):
                      masks=masks,
                      )
 
-    def _get_axis_bounds(self, dim, bunch, values):
+    def _get_axis_bounds(self, dim, bunch):
         """Return the min/max of an axis."""
         if dim in self.attributes:
             # Attribute: specified lim, or compute the min/max.
-            vmin, vmax = bunch.get('lim', (None, None))
-            if vmin is None:
-                vmin = values.min()
-            if vmax is None:
-                vmax = values.max()
+            vmin, vmax = bunch['lim']
+            assert vmin is not None
+            assert vmax is not None
             return vmin, vmax
         # PC dimensions: use the common scaling.
         return (-1. / self.scaling, +1. / self.scaling)
@@ -168,8 +166,8 @@ class FeatureView(ManualClusteringView):
         cluster_id = self.cluster_ids[clu_idx] if clu_idx is not None else None
         px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
         py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id)
-        xmin, xmax = self._get_axis_bounds(dim_x, bunch, px.data)
-        ymin, ymax = self._get_axis_bounds(dim_y, bunch, py.data)
+        xmin, xmax = self._get_axis_bounds(dim_x, px)
+        ymin, ymax = self._get_axis_bounds(dim_y, py)
         masks = _get_masks_max(px, py)
         self[i, j].uscatter(x=px.data, y=py.data,
                             color=_get_point_color(clu_idx),
@@ -342,8 +340,8 @@ class FeatureView(ManualClusteringView):
             points = np.c_[px.data, py.data]
 
             # Normalize the points.
-            xmin, xmax = self._get_axis_bounds(dim_x, bunch, px.data)
-            ymin, ymax = self._get_axis_bounds(dim_y, bunch, py.data)
+            xmin, xmax = self._get_axis_bounds(dim_x, px)
+            ymin, ymax = self._get_axis_bounds(dim_y, py)
             r = Range((xmin, ymin, xmax, ymax))
             points = r.apply(points)
 
