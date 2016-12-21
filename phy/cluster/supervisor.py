@@ -329,6 +329,13 @@ class Supervisor(EventEmitter):
         self.actions.add(self.previous_best, menu='&Wizard')
         self.actions.separator(menu='&Wizard')
 
+    def _emit_select(self, cluster_ids, **kwargs):
+        """Choose spikes from the specified clusters and emit the
+        `select` event on the GUI."""
+        logger.debug("Select cluster(s): %s.",
+                     ', '.join(map(str, cluster_ids)))
+        self.emit('select', cluster_ids, **kwargs)
+
     def _create_cluster_views(self):
         # Create the cluster view.
         self.cluster_view = ClusterView()
@@ -340,18 +347,18 @@ class Supervisor(EventEmitter):
 
         # Selection in the cluster view.
         @self.cluster_view.connect_
-        def on_select(cluster_ids):
+        def on_select(cluster_ids, **kwargs):
             # Emit GUI.select when the selection changes in the cluster view.
-            self._emit_select(cluster_ids)
+            self._emit_select(cluster_ids, **kwargs)
             # Pin the clusters and update the similarity view.
             self._update_similarity_view()
 
         # Selection in the similarity view.
         @self.similarity_view.connect_  # noqa
-        def on_select(cluster_ids):
+        def on_select(cluster_ids, **kwargs):
             # Select the clusters from both views.
             cluster_ids = self.cluster_view.selected + cluster_ids
-            self._emit_select(cluster_ids)
+            self._emit_select(cluster_ids, **kwargs)
 
         # Save the current selection when an action occurs.
         def on_request_undo_state(up):
@@ -398,12 +405,6 @@ class Supervisor(EventEmitter):
         self.similarity_view.set_rows([c for c in clusters
                                        if c not in selection])
 
-    def _emit_select(self, cluster_ids):
-        """Choose spikes from the specified clusters and emit the
-        `select` event on the GUI."""
-        logger.debug("Select clusters: %s.", ', '.join(map(str, cluster_ids)))
-        self.emit('select', cluster_ids)
-
     # Public methods
     # -------------------------------------------------------------------------
 
@@ -442,8 +443,9 @@ class Supervisor(EventEmitter):
             # Select the clusters that were selected before the undone
             # action.
             clusters_0, clusters_1 = up.undo_state[0]['selection']
-            self.cluster_view.select(clusters_0)
-            self.similarity_view.select(clusters_1)
+            # Select rows in the tables.
+            self.cluster_view.select(clusters_0, up=up)
+            self.similarity_view.select(clusters_1, up=up)
         elif up.added:
             if up.description == 'assign':
                 # NOTE: we reverse the order such that the last selected
@@ -451,7 +453,8 @@ class Supervisor(EventEmitter):
                 added = up.added[::-1]
             else:
                 added = up.added
-            self.select(added)
+            # Select the new clusters in the cluster view.
+            self.cluster_view.select(added, up=up)
             if similar:
                 self.similarity_view.next()
         elif up.metadata_changed:
@@ -460,6 +463,7 @@ class Supervisor(EventEmitter):
                 next_cluster = self.similarity_view.get_next_id()
                 self._update_similarity_view()
                 if next_cluster is not None:
+                    # Select the cluster in the similarity view.
                     self.similarity_view.select([next_cluster])
             # Otherwise, select next in cluster view.
             else:
@@ -518,8 +522,8 @@ class Supervisor(EventEmitter):
 
         # The GUI emits the select event too.
         @self.connect
-        def on_select(cluster_ids):
-            gui.emit('select', cluster_ids)
+        def on_select(cluster_ids, **kwargs):
+            gui.emit('select', cluster_ids, **kwargs)
 
         @self.connect
         def on_request_split():
