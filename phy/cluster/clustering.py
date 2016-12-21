@@ -77,6 +77,9 @@ def _extend_assignment(spike_ids,
 
     # We take their clusters.
     extended_spike_clusters = old_spike_clusters[extended_spike_ids]
+    # Use relative numbers in extended_spike_clusters.
+    _, extended_spike_clusters = np.unique(extended_spike_clusters,
+                                           return_inverse=True)
     # Generate new cluster numbers.
     k = new_spike_clusters.max() + 1
     extended_spike_clusters += (k - extended_spike_clusters.min())

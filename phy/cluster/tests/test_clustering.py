@@ -413,6 +413,16 @@ def test_clustering_assign():
     _assert_is_checkpoint(4)
 
 
+def test_clustering_new_id():
+    spike_clusters = 10 * np.ones(6, dtype=np.int32)
+    spike_clusters[2:4] = 20
+    spike_clusters[4:6] = 30
+    clustering = Clustering(spike_clusters)
+    clustering.split(list(range(1, 5)))
+    ae(clustering.spike_clusters, [32, 31, 31, 31, 31, 33])
+    assert clustering.new_cluster_id() == 34
+
+
 def test_clustering_long():
     n_spikes = 1000
     n_clusters = 10
