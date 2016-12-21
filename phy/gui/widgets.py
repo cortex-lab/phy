@@ -326,10 +326,10 @@ class Table(HTMLWidget):
         """Select the previous non-skipped row."""
         self.eval_js('table.previous();')
 
-    def select(self, ids, do_emit=False, **kwargs):
+    def select(self, ids, do_emit=True, **kwargs):
         """Select some rows in the table.
 
-        By default, the `select` event is not raised, unless `do_emit=True`.
+        By default, the `select` event is raised, unless `do_emit=False`.
 
         """
         # Select the rows without emiting the event.

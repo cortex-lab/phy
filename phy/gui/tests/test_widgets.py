@@ -175,20 +175,6 @@ def test_table_nav_0(qtbot, table):
     # qtbot.stop()
 
 
-def test_table_nav_1(qtbot, table):
-    _sel = []
-
-    @table.connect_
-    def on_select(items):
-        _sel.append(items)
-
-    # Must pass do_emit=True to emit the select event.
-    table.select([1], do_emit=True)
-    assert _sel == [[1]]
-
-    assert table.selected == [1]
-
-
 def test_table_sort(qtbot, table):
     table.select([1])
 
