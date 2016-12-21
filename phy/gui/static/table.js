@@ -181,6 +181,7 @@ Table.prototype.currentSort = function() {
 };
 
 Table.prototype.select = function(ids, do_emit) {
+    // do_emit is true by default.
     do_emit = typeof do_emit !== 'undefined' ? do_emit : true;
 
     ids = uniq(ids);
