@@ -448,9 +448,9 @@ class Supervisor(EventEmitter):
             self.similarity_view.select(clusters_1, up=up)
         elif up.added:
             if up.description == 'assign':
-                # NOTE: we reverse the order such that the last selected
+                # NOTE: we change the order such that the last selected
                 # cluster (with a new color) is the split cluster.
-                added = up.added[::-1]
+                added = list(up.added[1:]) + [up.added[0]]
             else:
                 added = up.added
             # Select the new clusters in the cluster view.
