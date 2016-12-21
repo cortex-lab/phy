@@ -164,7 +164,7 @@ def test_table_nav_0(qtbot, table):
     _sel = []
 
     @table.connect_
-    def on_select(items):
+    def on_select(items, **kwargs):
         _sel.append(items)
 
     table.eval_js('table.select([1]);')

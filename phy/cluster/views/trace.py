@@ -266,8 +266,8 @@ class TraceView(ManualClusteringView):
         self.build()
         self.update()
 
-    def on_select(self, cluster_ids=None):
-        super(TraceView, self).on_select(cluster_ids)
+    def on_select(self, cluster_ids=None, **kwargs):
+        super(TraceView, self).on_select(cluster_ids, **kwargs)
         self.set_interval(self._interval, change_status=False)
 
     def attach(self, gui):

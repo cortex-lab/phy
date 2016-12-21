@@ -219,17 +219,25 @@ class FeatureView(ManualClusteringView):
         self.channel_ids = None
         self.on_select()
 
-    def on_select(self, cluster_ids=None):
-        super(FeatureView, self).on_select(cluster_ids)
+    def on_select(self, cluster_ids=None, **kwargs):
+        super(FeatureView, self).on_select(cluster_ids, **kwargs)
         cluster_ids = self.cluster_ids
         n_clusters = len(cluster_ids)
         if n_clusters == 0:
             return
 
+        # Determine whether the channels should be fixed or not.
+        added = kwargs.get('up', {}).get('added', None)
+        # Fix the channels if the view updates after a cluster event
+        # and there are new clusters.
+        fixed_channels = (self.fixed_channels or
+                          kwargs.get('fixed_channels', None) or
+                          added is not None)
+
         # Get the feature data.
         # Specify the channel ids if these are fixed, otherwise
         # choose the first cluster's best channels.
-        c = self.channel_ids[:2] if self.fixed_channels else None
+        c = self.channel_ids[:2] if fixed_channels else None
         bunchs = [self.features(cluster_id, channel_ids=c)
                   for cluster_id in cluster_ids]
 
@@ -238,7 +246,7 @@ class FeatureView(ManualClusteringView):
         assert len(channel_ids)
 
         # Choose the channels automatically unless fixed_channels is set.
-        if (not self.fixed_channels or self.channel_ids is None):
+        if (not fixed_channels or self.channel_ids is None):
             self.channel_ids = channel_ids
         assert len(self.channel_ids)
 
@@ -309,10 +317,7 @@ class FeatureView(ManualClusteringView):
         logger.debug("Choose channels %d and %d in feature view.",
                      *channels[:2])
         # Fix the channels temporarily.
-        fc = self.fixed_channels
-        self.fixed_channels = True
-        self.on_select()
-        self.fixed_channels = fc
+        self.on_select(fixed_channels=True)
 
     def on_request_split(self):
         """Return the spikes enclosed by the lasso."""

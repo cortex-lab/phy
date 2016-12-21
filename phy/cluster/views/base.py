@@ -59,7 +59,7 @@ class ManualClusteringView(View):
         self.panzoom.reset()
         self.events.add(status=StatusEvent)
 
-    def on_select(self, cluster_ids=None):
+    def on_select(self, cluster_ids=None, **kwargs):
         cluster_ids = (cluster_ids if cluster_ids is not None
                        else self.cluster_ids)
         self.cluster_ids = list(cluster_ids) if cluster_ids is not None else []
@@ -83,13 +83,13 @@ class ManualClusteringView(View):
         self.async_caller = AsyncCaller(delay=self._callback_delay)
 
         @gui.connect_
-        def on_select(cluster_ids):
+        def on_select(cluster_ids, **kwargs):
             # Call this function after a delay unless there is another
             # cluster selection in the meantime.
             @self.async_caller.set
             def update_view():
                 with busy_cursor():
-                    self.on_select(cluster_ids)
+                    self.on_select(cluster_ids, **kwargs)
 
         self.actions = Actions(gui,
                                name=name or self.__class__.__name__,

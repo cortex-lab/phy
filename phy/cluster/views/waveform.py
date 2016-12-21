@@ -200,8 +200,8 @@ class WaveformView(ManualClusteringView):
                        data_bounds=None,
                        )
 
-    def on_select(self, cluster_ids=None):
-        super(WaveformView, self).on_select(cluster_ids)
+    def on_select(self, cluster_ids=None, **kwargs):
+        super(WaveformView, self).on_select(cluster_ids, **kwargs)
         cluster_ids = self.cluster_ids
         n_clusters = len(cluster_ids)
         if n_clusters == 0:
