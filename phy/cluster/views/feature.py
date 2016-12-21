@@ -142,7 +142,14 @@ class FeatureView(ManualClusteringView):
         assert dim not in self.attributes  # This is called only on PC data.
         s = 'ABCDEFGHIJ'
         # Channel relative index.
-        c = int(dim[:-1])
+        c_rel = int(dim[:-1])
+        # Get the channel_id from the currently-selected channels.
+        channel_id = self.channel_ids[c_rel]
+        # Skup the plot if the channel id is not displayed.
+        if channel_id not in bunch.channel_ids:  # pragma: no cover
+            return None
+        # Get the column index of the current channel in data.
+        c = list(bunch.channel_ids).index(channel_id)
         # Principal component: A=0, B=1, etc.
         d = s.index(dim[-1])
         if masks is not None:
@@ -166,6 +173,9 @@ class FeatureView(ManualClusteringView):
         cluster_id = self.cluster_ids[clu_idx] if clu_idx is not None else None
         px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
         py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id)
+        # Skip empty data.
+        if px is None or py is None:
+            return
         xmin, xmax = self._get_axis_bounds(dim_x, px)
         ymin, ymax = self._get_axis_bounds(dim_y, py)
         masks = _get_masks_max(px, py)
@@ -237,7 +247,7 @@ class FeatureView(ManualClusteringView):
         # Get the feature data.
         # Specify the channel ids if these are fixed, otherwise
         # choose the first cluster's best channels.
-        c = self.channel_ids[:2] if fixed_channels else None
+        c = self.channel_ids if fixed_channels else None
         bunchs = [self.features(cluster_id, channel_ids=c)
                   for cluster_id in cluster_ids]
 
@@ -251,7 +261,7 @@ class FeatureView(ManualClusteringView):
         assert len(self.channel_ids)
 
         # Get the background data.
-        background = self.features(channel_ids=self.channel_ids[:2])
+        background = self.features(channel_ids=self.channel_ids)
 
         # Plot all features.
         with self.building():
