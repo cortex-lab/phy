@@ -7,7 +7,6 @@
 #------------------------------------------------------------------------------
 
 from collections import defaultdict
-from functools import wraps
 import logging
 import math
 from math import floor, exp
@@ -209,24 +208,8 @@ def get_closest_clusters(cluster_id, cluster_ids, sim_func, max_n=None):
     l = [(_as_scalar(candidate), _as_scalar(sim_func(cluster_id, candidate)))
          for candidate in _as_scalars(cluster_ids)]
     l = sorted(l, key=itemgetter(1), reverse=True)
+    max_n = None or len(l)
     return l[:max_n]
-
-
-def concat_per_cluster(f):
-    """Take a function accepting a single cluster, and return a function
-    accepting multiple clusters."""
-    @wraps(f)
-    def wrapped(cluster_ids, **kwargs):
-        # Single cluster.
-        if not hasattr(cluster_ids, '__len__'):
-            return f(cluster_ids, **kwargs)
-        # Return the list of cluster-dependent objects.
-        out = [f(c, **kwargs) for c in cluster_ids]
-        # Flatten list of lists.
-        if all(isinstance(_, list) for _ in out):
-            out = _flatten(out)  # pragma: no cover
-        return out
-    return wrapped
 
 
 # -----------------------------------------------------------------------------
@@ -271,7 +254,7 @@ def _start_stop(item):
     if isinstance(item, slice):
         # Slice.
         if item.step not in (None, 1):
-            return NotImplementedError()
+            raise NotImplementedError()
         return item.start, item.stop
     elif isinstance(item, (list, np.ndarray)):
         # List or array of indices.
@@ -301,17 +284,7 @@ class ConcatenatedArrays(object):
                                                        for arr in arrs])],
                                       axis=0)
         self.dtype = arrs[0].dtype if arrs else None
-
-        if scaling is None:
-            return
-
-        # Multiply the output of a function by some scaling.
-        def _wrap(f):
-            def wrapped(*args):
-                return f(*args) * self.scaling
-            return wrapped
-
-        self.__getitem__ = _wrap(self.__getitem__)
+        self.scaling = scaling
 
     @property
     def shape(self):
@@ -325,7 +298,7 @@ class ConcatenatedArrays(object):
         """Return the recording that contains a given index."""
         assert index >= 0
         recs = np.nonzero((index - self.offsets[:-1]) >= 0)[0]
-        if len(recs) == 0:
+        if len(recs) == 0:  # pragma: no cover
             # If the index is greater than the total size,
             # return the last recording.
             return len(self.arrs) - 1
@@ -333,7 +306,7 @@ class ConcatenatedArrays(object):
         # its offset.
         return recs[-1]
 
-    def __getitem__(self, item):
+    def _get(self, item):
         cols = self.cols if self.cols is not None else slice(None, None, None)
         # Get the start and stop indices of the requested item.
         start, stop = _start_stop(item)
@@ -372,16 +345,21 @@ class ConcatenatedArrays(object):
         # Apply the rest of the index.
         return _fill_index(np.concatenate(l, axis=0), item)[..., cols]
 
+    def __getitem__(self, item):
+        out = self._get(item)
+        assert out is not None
+        if self.scaling is not None and self.scaling != 1:
+            out = out * self.scaling
+        return out
+
     def __len__(self):
         return self.shape[0]
 
 
 def _concatenate_virtual_arrays(arrs, cols=None, scaling=None):
     """Return a virtual concatenate of several NumPy arrays."""
-    n = len(arrs)
-    if n == 0:
-        return None
-    return ConcatenatedArrays(arrs, cols, scaling=scaling)
+    return None if not len(arrs) else ConcatenatedArrays(arrs, cols,
+                                                         scaling=scaling)
 
 
 # -----------------------------------------------------------------------------
@@ -497,7 +475,10 @@ def _spikes_per_cluster(spike_clusters, spike_ids=None):
         return {}
     if spike_ids is None:
         spike_ids = np.arange(len(spike_clusters)).astype(np.int64)
-    rel_spikes = np.argsort(spike_clusters)
+    # NOTE: this sort method is stable, so spike ids are increasing
+    # among any cluster. Therefore we don't have to sort again down here,
+    # when creating the spikes_in_clusters dictionary.
+    rel_spikes = np.argsort(spike_clusters, kind='mergesort')
     abs_spikes = spike_ids[rel_spikes]
     spike_clusters = spike_clusters[rel_spikes]
 
@@ -508,9 +489,11 @@ def _spikes_per_cluster(spike_clusters, spike_ids=None):
     idx = np.nonzero(diff > 0)[0]
     clusters = spike_clusters[idx]
 
-    spikes_in_clusters = {clusters[i]: np.sort(abs_spikes[idx[i]:idx[i + 1]])
+    # NOTE: we don't have to sort abs_spikes[...] here because the argsort
+    # using 'mergesort' above is stable.
+    spikes_in_clusters = {clusters[i]: abs_spikes[idx[i]:idx[i + 1]]
                           for i in range(len(clusters) - 1)}
-    spikes_in_clusters[clusters[-1]] = np.sort(abs_spikes[idx[-1]:])
+    spikes_in_clusters[clusters[-1]] = abs_spikes[idx[-1]:]
 
     return spikes_in_clusters
 
@@ -563,8 +546,10 @@ def select_spikes(cluster_ids=None,
                   max_n_spikes_per_cluster=None,
                   spikes_per_cluster=None,
                   batch_size=None,
+                  subset=None,
                   ):
     """Return a selection of spikes belonging to the specified clusters."""
+    subset = subset or 'regular'
     assert _is_array_like(cluster_ids)
     if not len(cluster_ids):
         return np.array([], dtype=np.int64)
@@ -579,14 +564,21 @@ def select_spikes(cluster_ids=None,
             # are more clusters.
             n = int(max_n_spikes_per_cluster * exp(-.1 * (n_clusters - 1)))
             n = max(1, n)
-            spikes = spikes_per_cluster(cluster)
-            # Regular subselection.
-            if batch_size is None or len(spikes) <= max(batch_size, n):
-                spikes = regular_subset(spikes, n_spikes_max=n)
-            else:
-                # Batch selections of spikes.
-                spikes = get_excerpts(spikes, n // batch_size, batch_size)
-            selection[cluster] = spikes
+            spike_ids = spikes_per_cluster(cluster)
+            if subset == 'regular':
+                # Regular subselection.
+                if batch_size is None or len(spike_ids) <= max(batch_size, n):
+                    spike_ids = regular_subset(spike_ids, n_spikes_max=n)
+                else:
+                    # Batch selections of spikes.
+                    spike_ids = get_excerpts(spike_ids,
+                                             n // batch_size,
+                                             batch_size)
+            elif subset == 'random' and len(spike_ids) > n:
+                # Random subselection.
+                spike_ids = np.random.choice(spike_ids, n, replace=False)
+                spike_ids = np.unique(spike_ids)
+            selection[cluster] = spike_ids
     return _flatten_per_cluster(selection)
 
 
@@ -600,6 +592,7 @@ class Selector(object):
     def select_spikes(self, cluster_ids=None,
                       max_n_spikes_per_cluster=None,
                       batch_size=None,
+                      subset=None,
                       ):
         if cluster_ids is None or not len(cluster_ids):
             return None
@@ -610,6 +603,7 @@ class Selector(object):
                              spikes_per_cluster=self.spikes_per_cluster,
                              max_n_spikes_per_cluster=ns,
                              batch_size=batch_size,
+                             subset=subset,
                              )
 
 
@@ -630,14 +624,14 @@ class Accumulator(object):
         """Add an array."""
         self._data[name].append(val)
 
-    def get(self, name):
-        """Return the list of arrays for a given name."""
-        return _flatten(self._data[name])
-
     @property
     def names(self):
         """List of names."""
         return set(self._data)
+
+    def get(self, name):
+        """Return the list of arrays for a given name."""
+        return _flatten(self._data[name])
 
     def __getitem__(self, name):
         """Concatenate all arrays with a given name."""

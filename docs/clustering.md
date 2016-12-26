@@ -1,6 +1,6 @@
 # Manual clustering
 
-The `phy.cluster.manual` package provides manual clustering routines. The components can be used independently in a modular way.
+The `phy.cluster` package provides manual clustering routines. The components can be used independently in a modular way.
 
 ## Clustering
 
@@ -84,7 +84,7 @@ The `ClusterMeta` class implement the logic of assigning metadata to every clust
 Here is an example.
 
 ```python
->>> from phy.cluster.manual import ClusterMeta
+>>> from phy.cluster import ClusterMeta
 >>> cm = ClusterMeta()
 ```
 

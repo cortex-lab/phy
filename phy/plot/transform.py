@@ -27,9 +27,9 @@ def _wrap_apply(f):
             return arr
         arr = np.atleast_2d(arr)
         assert arr.ndim == 2
-        assert arr.dtype == np.float64
+        assert arr.dtype in (np.float32, np.float64)
         out = f(arr, **kwargs)
-        assert out.dtype == np.float64
+        assert out.dtype == arr.dtype
         out = np.atleast_2d(out)
         assert out.ndim == 2
         assert out.shape[1] == arr.shape[1]
@@ -74,7 +74,7 @@ def _inverse(value):
 
 def _normalize(arr, m, M):
     d = float(M - m)
-    if d == 0:
+    if abs(d) < 1e-9:
         return arr
     b = 2. / d
     a = -1 - 2. * m / d

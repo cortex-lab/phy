@@ -138,6 +138,8 @@ class GUI(QMainWindow):
                             )
 
         self._set_name(name, subtitle)
+        position = position or (200, 200)
+        size = size or (800, 600)
         self._set_pos_size(position, size)
 
         # Registered functions.
@@ -220,6 +222,8 @@ class GUI(QMainWindow):
         def exit():
             """Close the GUI."""
             self.close()
+
+        self.default_actions.separator()
 
     # Events
     # -------------------------------------------------------------------------

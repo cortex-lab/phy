@@ -65,6 +65,7 @@ def test_normalize():
     m, M = 0., 10.
     arr = np.linspace(0., 10., 10)
     ac(_normalize(arr, m, M), np.linspace(-1., 1., 10))
+    ac(_normalize(arr, m, m), arr)
 
 
 #------------------------------------------------------------------------------
@@ -82,10 +83,14 @@ def test_types():
 
 def test_translate_cpu():
     _check(Translate([1, 2]), [3, 4], [[4, 6]])
+    _check(Translate([1, 2]).inverse(), [4, 6], [[3, 4]])
+    _check(Translate(np.array([[1, 2]])).inverse(), [4, 6], [[3, 4]])
 
 
 def test_scale_cpu():
     _check(Scale([-1, 2]), [3, 4], [[-3, 8]])
+    _check(Scale([-1, 2]).inverse(), [-3, 8], [[3, 4]])
+    _check(Scale(np.array([[-1, 2]])).inverse(), [-3, 8], [[3, 4]])
 
 
 def test_range_cpu():
@@ -140,12 +145,13 @@ def test_subplot_cpu():
 #------------------------------------------------------------------------------
 
 def test_translate_glsl():
-    t = Translate('u_translate').glsl('x')
-    assert 'x = x + u_translate' in t
+    assert 'x = x + u_translate' in Translate('u_translate').glsl('x')
+    assert 'x + -u_translate' in Translate('u_translate').inverse().glsl('x')
 
 
 def test_scale_glsl():
     assert 'x = x * u_scale' in Scale('u_scale').glsl('x')
+    assert 'x = x * 1.0 / u_scale' in Scale('u_scale').inverse().glsl('x')
 
 
 def test_range_glsl():

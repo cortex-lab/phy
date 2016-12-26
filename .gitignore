@@ -19,6 +19,7 @@ __pycache__
 _old
 *.py[cod]
 *~
+*!
 .coverage*
 *credentials
 tags

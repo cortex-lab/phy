@@ -12,10 +12,13 @@ import subprocess
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import raises
+from pytest import raises, mark
 from six import string_types
 
-from .._misc import (_git_version, _load_json, _save_json, _read_python,
+from .._misc import (_git_version,
+                     _load_json, _save_json,
+                     _load_pickle, _save_pickle,
+                     _read_python,
                      _write_text,
                      _encode_qbytearray, _decode_qbytearray,
                      )
@@ -61,14 +64,17 @@ def test_json_simple(tempdir):
         _load_json(path + '_bis')
 
 
-def test_json_numpy(tempdir):
+@mark.parametrize('kind', ['json', 'pickle'])
+def test_json_numpy(tempdir, kind):
     arr = np.arange(10).reshape((2, 5)).astype(np.float32)
     d = {'a': arr, 'b': arr.ravel()[0]}
 
     path = op.join(tempdir, 'test')
-    _save_json(path, d)
+    f = _save_json if kind == 'json' else _save_pickle
+    f(path, d)
 
-    d_bis = _load_json(path)
+    f = _load_json if kind == 'json' else _load_pickle
+    d_bis = f(path)
     arr_bis = d_bis['a']
 
     assert arr_bis.dtype == arr.dtype

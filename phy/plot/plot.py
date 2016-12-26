@@ -132,7 +132,7 @@ class View(BaseCanvas):
         self._items[cls].append(data)
         return data
 
-    def _plot_uniform(self, *args, **kwargs):
+    def uplot(self, *args, **kwargs):
         cls = _make_class(UniformPlotVisual,
                           _default_color=kwargs.pop('color', None),
                           )
@@ -140,11 +140,9 @@ class View(BaseCanvas):
 
     def plot(self, *args, **kwargs):
         """Add a line plot."""
-        if kwargs.pop('uniform', None):
-            return self._plot_uniform(*args, **kwargs)
         return self._add_item(PlotVisual, *args, **kwargs)
 
-    def _scatter_uniform(self, *args, **kwargs):
+    def uscatter(self, *args, **kwargs):
         cls = _make_class(UniformScatterVisual,
                           _default_marker=kwargs.pop('marker', None),
                           _default_marker_size=kwargs.pop('size', None),
@@ -154,8 +152,6 @@ class View(BaseCanvas):
 
     def scatter(self, *args, **kwargs):
         """Add a scatter plot."""
-        if kwargs.pop('uniform', None):
-            return self._scatter_uniform(*args, **kwargs)
         cls = _make_class(ScatterVisual,
                           _default_marker=kwargs.pop('marker', None),
                           )

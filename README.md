@@ -14,7 +14,7 @@
 
 **phy** contains the following subpackages:
 
-* **phy.cluster.manual**: an API for manual sorting, used to create graphical interfaces for neurophysiological data
+* **phy.cluster**: an API for manual sorting, used to create graphical interfaces for neurophysiological data
 * **phy.gui**: a generic API for creating desktop applications with PyQt.
 * **phy.plot**: a generic API for creating high-performance plots with VisPy (using the graphics processor via OpenGL)
 

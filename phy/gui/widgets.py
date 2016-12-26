@@ -107,6 +107,7 @@ class HTMLWidget(QWebView):
                         };
                         </script>''')
         self._pending_js_eval = []
+        self._built = None
 
     # Events
     # -------------------------------------------------------------------------
@@ -170,9 +171,10 @@ class HTMLWidget(QWebView):
             static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
             base_url = QUrl().fromLocalFile(static_dir)
             self.setHtml(html, base_url)
+        self._built = True
 
     def is_built(self):
-        return self.html() != '<html><head></head><body></body></html>'
+        return self._built
 
     # Javascript methods
     # -------------------------------------------------------------------------
@@ -324,10 +326,17 @@ class Table(HTMLWidget):
         """Select the previous non-skipped row."""
         self.eval_js('table.previous();')
 
-    def select(self, ids, do_emit=True):
-        """Select some rows."""
-        do_emit = str(do_emit).lower()
-        self.eval_js('table.select({}, {});'.format(dumps(ids), do_emit))
+    def select(self, ids, do_emit=True, **kwargs):
+        """Select some rows in the table.
+
+        By default, the `select` event is raised, unless `do_emit=False`.
+
+        """
+        # Select the rows without emiting the event.
+        self.eval_js('table.select({}, false);'.format(dumps(ids)))
+        if do_emit:
+            # Emit the event manually if needed.
+            self.emit('select', ids, **kwargs)
 
     @property
     def default_sort(self):

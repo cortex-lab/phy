@@ -10,7 +10,7 @@ import os.path as op
 
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from pytest import yield_fixture
+from pytest import fixture, yield_fixture
 from six.moves import cPickle
 
 from ..array import write_array, read_array
@@ -21,10 +21,10 @@ from ..context import Context, _fullname
 # Fixtures
 #------------------------------------------------------------------------------
 
-@yield_fixture(scope='function')
+@fixture(scope='function')
 def context(tempdir):
     ctx = Context('{}/cache/'.format(tempdir), verbose=1)
-    yield ctx
+    return ctx
 
 
 @yield_fixture
@@ -43,7 +43,7 @@ def temp_phy_config_dir(tempdir):
 
 def test_fullname():
     def myfunction(x):
-        return x
+        return
 
     assert _fullname(myfunction) == 'phy.io.tests.test_context.myfunction'
 
@@ -62,6 +62,12 @@ def test_context_load_save(tempdir, context, temp_phy_config_dir):
 
     context.save('a/hello', {'text': 'world!'}, location='global')
     assert context.load('a/hello', location='global')['text'] == 'world!'
+
+
+def test_context_load_save_pickle(tempdir, context, temp_phy_config_dir):
+    arr = np.random.rand(10, 10)
+    context.save('arr', arr, kind='pickle')
+    ae(context.load('arr'), arr)
 
 
 def test_context_cache(context):
@@ -87,6 +93,36 @@ def test_context_cache(context):
     # The second time, the cache is used.
     ae(f(x), x2)
     assert len(_res) == 2
+
+
+def test_context_cache_method(tempdir, context):
+    class A(object):
+        def __init__(self, ctx):
+            self.f = ctx.cache(self.f)
+            self._l = []
+
+        def f(self, x):
+            self._l.append(x)
+            return x
+
+    a = A(context)
+    assert not a._l
+
+    # First call: the function is executed.
+    assert a.f(3) == 3
+    assert a._l == [3]
+
+    # Second call: the function is not executed.
+    assert a.f(3) == 3
+    assert a._l == [3]
+
+    # Recreate the context.
+    context = Context('{}/cache/'.format(tempdir), verbose=1)
+    # Recreate the class.
+    a = A(context)
+    assert a.f(3) == 3
+    # The function is not called after reinitialization of the object.
+    assert not a._l
 
 
 def test_context_memcache(tempdir, context):

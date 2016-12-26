@@ -9,14 +9,12 @@
 from pytest import yield_fixture, fixture
 import numpy as np
 from numpy.testing import assert_array_equal as ae
-from vispy.util import keys
 
-from .. import gui_component
-from ..gui_component import (ManualClustering,
-                             )
-from phy.io.array import _spikes_in_clusters
+from .. import supervisor as _supervisor
+from ..supervisor import (Supervisor,
+                          )
+from phy.io import Context
 from phy.gui import GUI
-from .conftest import MockController
 
 
 #------------------------------------------------------------------------------
@@ -26,7 +24,7 @@ from .conftest import MockController
 @yield_fixture
 def gui(tempdir, qtbot):
     # NOTE: mock patch show box exec_
-    gui_component._show_box = lambda _: _
+    _supervisor._show_box = lambda _: _
 
     gui = GUI(position=(200, 100), size=(500, 500), config_dir=tempdir)
     gui.show()
@@ -39,18 +37,18 @@ def gui(tempdir, qtbot):
 
 
 @fixture
-def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
-                      quality, similarity):
+def supervisor(qtbot, gui, cluster_ids, cluster_groups,
+               quality, similarity,
+               tempdir):
     spike_clusters = np.array(cluster_ids)
-    spikes_per_cluster = lambda c: [c]
 
-    mc = ManualClustering(spike_clusters,
-                          spikes_per_cluster,
-                          cluster_groups=cluster_groups,
-                          shortcuts={'undo': 'ctrl+z'},
-                          quality=quality,
-                          similarity=similarity,
-                          )
+    mc = Supervisor(spike_clusters,
+                    cluster_groups=cluster_groups,
+                    shortcuts={'undo': 'ctrl+z'},
+                    quality=quality,
+                    similarity=similarity,
+                    context=Context(tempdir),
+                    )
     mc.attach(gui)
     mc.set_default_sort(quality.__name__)
 
@@ -61,8 +59,8 @@ def manual_clustering(qtbot, gui, cluster_ids, cluster_groups,
 # Test GUI component
 #------------------------------------------------------------------------------
 
-def test_manual_clustering_edge_cases(manual_clustering):
-    mc = manual_clustering
+def test_supervisor_edge_cases(supervisor):
+    mc = supervisor
 
     # Empty selection at first.
     ae(mc.clustering.cluster_ids, [0, 1, 2, 10, 11, 20, 30])
@@ -93,8 +91,8 @@ def test_manual_clustering_edge_cases(manual_clustering):
     mc.save()
 
 
-def test_manual_clustering_skip(qtbot, gui, manual_clustering):
-    mc = manual_clustering
+def test_supervisor_skip(qtbot, gui, supervisor):
+    mc = supervisor
 
     # yield [0, 1, 2, 10, 11, 20, 30]
     # #      i, g, N,  i,  g,  N, N
@@ -105,8 +103,8 @@ def test_manual_clustering_skip(qtbot, gui, manual_clustering):
         assert mc.selected == [clu]
 
 
-def test_manual_clustering_merge(manual_clustering):
-    mc = manual_clustering
+def test_supervisor_merge(supervisor):
+    mc = supervisor
 
     mc.cluster_view.select([30])
     mc.similarity_view.select([20])
@@ -122,10 +120,10 @@ def test_manual_clustering_merge(manual_clustering):
     assert mc.selected == [31, 11]
 
 
-def test_manual_clustering_merge_move(manual_clustering):
+def test_supervisor_merge_move(supervisor):
     """Check that merge then move selects the next cluster in the original
     cluster view, not the updated cluster view."""
-    mc = manual_clustering
+    mc = supervisor
 
     mc.cluster_view.select([20, 11])
 
@@ -141,8 +139,8 @@ def test_manual_clustering_merge_move(manual_clustering):
     assert mc.selected == [2]
 
 
-def test_manual_clustering_split(manual_clustering):
-    mc = manual_clustering
+def test_supervisor_split_0(supervisor):
+    mc = supervisor
 
     mc.select([1, 2])
     mc.split([1, 2])
@@ -155,13 +153,24 @@ def test_manual_clustering_split(manual_clustering):
     assert mc.selected == [31]
 
 
-def test_manual_clustering_split_2(gui, quality, similarity):
+def test_supervisor_split_1(gui, supervisor):
+    mc = supervisor
+    mc.select([1, 2])
+
+    @gui.connect_
+    def on_request_split():
+        return mc.clustering.spikes_in_clusters([1, 2])
+
+    mc.split()
+    assert mc.selected == [31]
+
+
+def test_supervisor_split_2(gui, quality, similarity):
     spike_clusters = np.array([0, 0, 1])
 
-    mc = ManualClustering(spike_clusters,
-                          lambda c: _spikes_in_clusters(spike_clusters, [c]),
-                          similarity=similarity,
-                          )
+    mc = Supervisor(spike_clusters,
+                    similarity=similarity,
+                    )
     mc.attach(gui)
 
     mc.add_column(quality, name='quality', default=True)
@@ -171,8 +180,8 @@ def test_manual_clustering_split_2(gui, quality, similarity):
     assert mc.selected == [3, 2]
 
 
-def test_manual_clustering_state(tempdir, qtbot, gui, manual_clustering):
-    mc = manual_clustering
+def test_supervisor_state(tempdir, qtbot, gui, supervisor):
+    mc = supervisor
     cv = mc.cluster_view
     cv.sort_by('id')
     gui.close()
@@ -181,42 +190,8 @@ def test_manual_clustering_state(tempdir, qtbot, gui, manual_clustering):
     assert cv.state['sort_by'] == ('id', 'asc')
 
 
-def test_manual_clustering_split_lasso(tempdir, qtbot):
-    controller = MockController(config_dir=tempdir)
-    gui = controller.create_gui()
-    mc = controller.manual_clustering
-    view = gui.list_views('FeatureView', is_visible=False)[0]
-
-    gui.show()
-
-    # Select one cluster.
-    mc.select(0)
-
-    # Simulate a lasso.
-    ev = view.events
-    ev.mouse_press(pos=(210, 1), button=1, modifiers=(keys.CONTROL,))
-    ev.mouse_press(pos=(320, 1), button=1, modifiers=(keys.CONTROL,))
-    ev.mouse_press(pos=(320, 30), button=1, modifiers=(keys.CONTROL,))
-    ev.mouse_press(pos=(210, 30), button=1, modifiers=(keys.CONTROL,))
-
-    ups = []
-
-    @mc.clustering.connect
-    def on_cluster(up):
-        ups.append(up)
-
-    mc.split()
-    up = ups[0]
-    assert up.description == 'assign'
-    assert up.added == [4, 5]
-    assert up.deleted == [0]
-
-    # qtbot.stop()
-    gui.close()
-
-
-def test_manual_clustering_label(manual_clustering):
-    mc = manual_clustering
+def test_supervisor_label(supervisor):
+    mc = supervisor
 
     mc.select([20])
     mc.label("my_field", 3.14)
@@ -227,11 +202,13 @@ def test_manual_clustering_label(manual_clustering):
     assert mc.get_labels('my_field')[20] == 3.14
 
 
-def test_manual_clustering_move_1(manual_clustering):
-    mc = manual_clustering
+def test_supervisor_move_1(supervisor):
+    mc = supervisor
 
     mc.select([20])
     assert mc.selected == [20]
+
+    assert not mc.move('', '')
 
     mc.move('noise')
     assert mc.selected == [11]
@@ -243,8 +220,8 @@ def test_manual_clustering_move_1(manual_clustering):
     assert mc.selected == [11]
 
 
-def test_manual_clustering_move_2(manual_clustering):
-    mc = manual_clustering
+def test_supervisor_move_2(supervisor):
+    mc = supervisor
 
     mc.select([20])
     mc.similarity_view.select([10])
@@ -252,21 +229,21 @@ def test_manual_clustering_move_2(manual_clustering):
     assert mc.selected == [20, 10]
 
     mc.move('noise', 10)
-    assert mc.selected == [20, 30]
+    assert mc.selected == [20, 2]
 
     mc.undo()
     assert mc.selected == [20, 10]
 
     mc.redo()
-    assert mc.selected == [20, 30]
+    assert mc.selected == [20, 2]
 
 
 #------------------------------------------------------------------------------
 # Test shortcuts
 #------------------------------------------------------------------------------
 
-def test_manual_clustering_action_reset(qtbot, manual_clustering):
-    mc = manual_clustering
+def test_supervisor_action_reset(qtbot, supervisor):
+    mc = supervisor
 
     mc.actions.select([10, 11])
 
@@ -283,8 +260,8 @@ def test_manual_clustering_action_reset(qtbot, manual_clustering):
     assert mc.selected == [30, 20]
 
 
-def test_manual_clustering_action_nav(qtbot, manual_clustering):
-    mc = manual_clustering
+def test_supervisor_action_nav(qtbot, supervisor):
+    mc = supervisor
 
     mc.actions.reset()
     assert mc.selected == [30]
@@ -296,8 +273,8 @@ def test_manual_clustering_action_nav(qtbot, manual_clustering):
     assert mc.selected == [30]
 
 
-def test_manual_clustering_action_move_1(qtbot, manual_clustering):
-    mc = manual_clustering
+def test_supervisor_action_move_1(qtbot, supervisor):
+    mc = supervisor
 
     mc.actions.next()
 
@@ -319,8 +296,8 @@ def test_manual_clustering_action_move_1(qtbot, manual_clustering):
     # qtbot.stop()
 
 
-def test_manual_clustering_action_move_2(manual_clustering):
-    mc = manual_clustering
+def test_supervisor_action_move_2(supervisor):
+    mc = supervisor
 
     mc.select([30])
     mc.similarity_view.select([20])
@@ -334,15 +311,15 @@ def test_manual_clustering_action_move_2(manual_clustering):
     assert mc.selected == [30, 2]
     mc.actions.move_similar_to_good()
 
-    assert mc.selected == [30, 2]
+    assert mc.selected == [30, 1]
 
     mc.cluster_meta.get('group', 20) == 'noise'
     mc.cluster_meta.get('group', 11) == 'mua'
     mc.cluster_meta.get('group', 2) == 'good'
 
 
-def test_manual_clustering_action_move_3(manual_clustering):
-    mc = manual_clustering
+def test_supervisor_action_move_3(supervisor):
+    mc = supervisor
 
     mc.select([30])
     mc.similarity_view.select([20])

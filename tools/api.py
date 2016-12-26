@@ -315,7 +315,6 @@ if __name__ == '__main__':
     package = 'phy'
     subpackages = [
                    'cluster',
-                   'cluster.manual',
                    'electrode',
                    'gui',
                    'io',

@@ -9,7 +9,7 @@
 import os.path as op
 from textwrap import dedent
 
-from pytest import yield_fixture
+from pytest import fixture
 from traitlets import Float
 from traitlets.config import Configurable
 
@@ -44,7 +44,7 @@ def test_temp_config_dir(temp_config_dir):
 # Config tests
 #------------------------------------------------------------------------------
 
-@yield_fixture
+@fixture
 def py_config(tempdir):
     # Create and load a config file.
     config_contents = """
@@ -53,10 +53,10 @@ def py_config(tempdir):
        """
     path = op.join(tempdir, 'config.py')
     _write_text(path, config_contents)
-    yield path
+    return path
 
 
-@yield_fixture
+@fixture
 def json_config(tempdir):
     # Create and load a config file.
     config_contents = """
@@ -68,10 +68,10 @@ def json_config(tempdir):
     """
     path = op.join(tempdir, 'config.json')
     _write_text(path, config_contents)
-    yield path
+    return path
 
 
-@yield_fixture(params=['python', 'json'])
+@fixture(params=['python', 'json'])
 def config(py_config, json_config, request):
     if request.param == 'python':
         yield py_config
@@ -80,6 +80,8 @@ def config(py_config, json_config, request):
 
 
 def test_load_config(config):
+
+    assert load_config() is not None
 
     class MyConfigurable(Configurable):
         my_var = Float(0.0, config=True)

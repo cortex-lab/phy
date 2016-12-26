@@ -153,6 +153,9 @@ class Boxed(BaseInteract):
         Name of the GLSL variable with the box index.
 
     """
+
+    margin = 0
+
     def __init__(self,
                  box_bounds=None,
                  box_pos=None,
@@ -172,12 +175,14 @@ class Boxed(BaseInteract):
             # This will find a good box size automatically if it is not
             # specified.
             box_bounds = _get_boxes(box_pos, size=box_size,
-                                    keep_aspect_ratio=self.keep_aspect_ratio)
+                                    keep_aspect_ratio=self.keep_aspect_ratio,
+                                    margin=self.margin,
+                                    )
 
         self._box_bounds = np.atleast_2d(box_bounds)
         assert self._box_bounds.shape[1] == 4
-
         self.n_boxes = len(self._box_bounds)
+
         self._transforms = [Range(NDC, 'box_bounds')]
 
     def attach(self, canvas):
@@ -223,8 +228,9 @@ class Boxed(BaseInteract):
 
     @box_bounds.setter
     def box_bounds(self, val):
-        assert val.shape == (self.n_boxes, 4)
-        self._box_bounds = val
+        self._box_bounds = np.atleast_2d(val)
+        assert self._box_bounds.shape[1] == 4
+        self.n_boxes = self._box_bounds.shape[0]
         self.update()
 
     @property
@@ -234,8 +240,8 @@ class Boxed(BaseInteract):
 
     @box_pos.setter
     def box_pos(self, val):
-        assert val.shape == (self.n_boxes, 2)
         self.box_bounds = _get_boxes(val, size=self.box_size,
+                                     margin=self.margin,
                                      keep_aspect_ratio=self.keep_aspect_ratio)
 
     @property
@@ -247,6 +253,7 @@ class Boxed(BaseInteract):
     def box_size(self, val):
         assert len(val) == 2
         self.box_bounds = _get_boxes(self.box_pos, size=val,
+                                     margin=self.margin,
                                      keep_aspect_ratio=self.keep_aspect_ratio)
 
     def get_closest_box(self, pos):

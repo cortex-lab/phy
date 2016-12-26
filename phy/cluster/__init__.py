@@ -1,6 +1,9 @@
 # -*- coding: utf-8 -*-
 # flake8: noqa
 
-"""Automatic and manual clustering facilities."""
+"""Manual clustering facilities."""
 
-from . import manual
+from ._utils import ClusterMeta
+from .clustering import Clustering
+from .supervisor import Supervisor
+from .views import WaveformView, TraceView, FeatureView, CorrelogramView

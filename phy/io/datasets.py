@@ -12,7 +12,6 @@ import os
 import os.path as op
 
 from phy.utils.event import ProgressReporter
-from phy.utils.config import phy_config_dir, _ensure_dir_exists
 
 logger = logging.getLogger(__name__)
 
@@ -20,13 +19,6 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 # Utility functions
 #------------------------------------------------------------------------------
-
-_BASE_URL = {
-    'cortexlab': 'http://phy.cortexlab.net/data/samples/',
-    'github': 'https://raw.githubusercontent.com/kwikteam/phy-data/master/',
-    'local': 'http://localhost:8000/',
-}
-
 
 def _remote_file_size(path):
     import requests
@@ -54,7 +46,6 @@ def _save_stream(r, path):
                 downloaded += len(chunk)
                 if i % 100 == 0:
                     pr.value = downloaded
-    assert ((size == downloaded) if size else True)
     pr.set_complete()
 
 
@@ -145,40 +136,3 @@ def download_file(url, output_path):
             raise RuntimeError("The checksum of the downloaded file "
                                "doesn't match the provided checksum.")
     return
-
-
-def download_test_data(name, config_dir=None, force=False):
-    """Download a test file."""
-    config_dir = config_dir or phy_config_dir()
-    dir = op.join(config_dir, 'test_data')
-    _ensure_dir_exists(dir)
-    path = op.join(dir, name)
-    if not force and op.exists(path):
-        return path
-    url = _BASE_URL['github'] + 'test/' + name
-    download_file(url, output_path=path)
-    return path
-
-
-def download_sample_data(filename, output_dir=None, base='cortexlab'):
-    """Download a sample dataset.
-
-    Parameters
-    ----------
-
-    filename : str
-        Name of the sample dataset to download.
-    output_dir : str
-        The directory where to save the file.
-    base : str
-        The id of the base URL. Can be `'cortexlab'` or `'github'`.
-
-    """
-    output_dir = _validate_output_dir(output_dir)
-    url = _BASE_URL[base] + filename
-    output_path = op.join(output_dir, filename)
-    try:
-        download_file(url, output_path=output_path)
-    except Exception as e:
-        logger.warn("An error occurred while downloading `%s` to `%s`: %s",
-                    url, output_path, str(e))

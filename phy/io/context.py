@@ -15,6 +15,7 @@ import os.path as op
 from six.moves.cPickle import dump, load
 
 from phy.utils import (_save_json, _load_json,
+                       _load_pickle, _save_pickle,
                        _ensure_dir_exists, _fullname,)
 from phy.utils.config import phy_config_dir
 
@@ -24,6 +25,16 @@ logger = logging.getLogger(__name__)
 #------------------------------------------------------------------------------
 # Context
 #------------------------------------------------------------------------------
+
+def _cache_methods(obj, memcached, cached):  # pragma: no cover
+    for name in memcached:
+        f = getattr(obj, name)
+        setattr(obj, name, obj.context.memcache(f))
+
+    for name in cached:
+        f = getattr(obj, name)
+        setattr(obj, name, obj.context.cache(f))
+
 
 class Context(object):
     """Handle function cacheing and parallel map with ipyparallel."""
@@ -66,7 +77,7 @@ class Context(object):
             return f
         assert f
         # NOTE: discard self in instance methods.
-        if 'self' in inspect.getargspec(f).args:  # noqa
+        if 'self' in inspect.getargspec(f).args:
             ignore = ['self']
         else:
             ignore = None
@@ -93,6 +104,7 @@ class Context(object):
                 dump(cache, fd)
 
     def memcache(self, f):
+        """Cache a function in memory using an internal dictionary."""
         name = _fullname(f)
         cache = self.load_memcache(name)
 
@@ -108,26 +120,33 @@ class Context(object):
             return out
         return memcached
 
-    def _get_path(self, name, location):
+    def _get_path(self, name, location, file_ext='.json'):
         if location == 'local':
-            return op.join(self.cache_dir, name + '.json')
+            return op.join(self.cache_dir, name + file_ext)
         elif location == 'global':
-            return op.join(phy_config_dir(), name + '.json')
+            return op.join(phy_config_dir(), name + file_ext)
 
-    def save(self, name, data, location='local'):
+    def save(self, name, data, location='local', kind='json'):
         """Save a dictionary in a JSON file within the cache directory."""
-        path = self._get_path(name, location)
+        file_ext = '.json' if kind == 'json' else '.pkl'
+        path = self._get_path(name, location, file_ext=file_ext)
         _ensure_dir_exists(op.dirname(path))
         logger.debug("Save data to `%s`.", path)
-        _save_json(path, data)
+        if kind == 'json':
+            _save_json(path, data)
+        else:
+            _save_pickle(path, data)
 
     def load(self, name, location='local'):
         """Load saved data from the cache directory."""
-        path = self._get_path(name, location)
-        if not op.exists(path):
-            logger.debug("The file `%s` doesn't exist.", path)
-            return {}
-        return _load_json(path)
+        path = self._get_path(name, location, file_ext='.json')
+        if op.exists(path):
+            return _load_json(path)
+        path = self._get_path(name, location, file_ext='.pkl')
+        if op.exists(path):
+            return _load_pickle(path)
+        logger.debug("The file `%s` doesn't exist.", path)
+        return {}
 
     def __getstate__(self):
         """Make sure that this class is picklable."""

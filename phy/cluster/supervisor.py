@@ -12,11 +12,12 @@ from functools import partial
 import logging
 
 import numpy as np
+from six import string_types
 
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
-from phy.gui.qt import _show_box
+from phy.utils import EventEmitter
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table
 
@@ -66,7 +67,7 @@ class ClusterView(Table):
             self.sort_by(sort_by, order)
 
 
-class ManualClustering(object):
+class Supervisor(EventEmitter):
     """Component that brings manual clustering facilities to a GUI:
 
     * Clustering instance: merge, split, undo, redo
@@ -78,7 +79,6 @@ class ManualClustering(object):
     ----------
 
     spike_clusters : ndarray
-    spikes_per_cluster : function `cluster_id -> spike_ids`
     cluster_groups : dictionary
     shortcuts : dict
     quality: func
@@ -135,30 +135,34 @@ class ManualClustering(object):
 
     def __init__(self,
                  spike_clusters,
-                 spikes_per_cluster,
                  cluster_groups=None,
-                 best_channel=None,
                  shortcuts=None,
                  quality=None,
                  similarity=None,
                  new_cluster_id=None,
+                 context=None,
                  ):
-
-        self.gui = None
-        self.quality = quality  # function cluster => quality
+        super(Supervisor, self).__init__()
+        self.context = context
+        self.quality = quality or self.n_spikes  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
-        self.best_channel = best_channel  # function cluster_id => channel_id
 
-        assert hasattr(spikes_per_cluster, '__call__')
-        self.spikes_per_cluster = spikes_per_cluster
+        self._best = None
+        self._current_similarity_values = {}
 
         # Load default shortcuts, and override with any user shortcuts.
         self.shortcuts = self.default_shortcuts.copy()
         self.shortcuts.update(shortcuts or {})
 
         # Create Clustering and ClusterMeta.
+        # Load the cached spikes_per_cluster array.
+        spc = context.load('spikes_per_cluster') if context else None
         self.clustering = Clustering(spike_clusters,
+                                     spikes_per_cluster=spc,
                                      new_cluster_id=new_cluster_id)
+        # Cache the spikes_per_cluster array.
+        self._save_spikes_per_cluster()
+
         self.cluster_groups = cluster_groups or {}
         self.cluster_meta = create_cluster_meta(self.cluster_groups)
         self._global_history = GlobalHistory(process_ups=_process_ups)
@@ -181,15 +185,15 @@ class ManualClustering(object):
         # NOTE: global on_cluster() occurs here.
         self._register_logging()
 
-        # Create the cluster views.
-        self._create_cluster_views()
-        self._add_default_columns()
-
-        self._best = None
-        self._current_similarity_values = {}
-
     # Internal methods
     # -------------------------------------------------------------------------
+
+    def _save_spikes_per_cluster(self):
+        if self.context:
+            self.context.save('spikes_per_cluster',
+                              self.clustering.spikes_per_cluster,
+                              kind='pickle',
+                              )
 
     def _register_logging(self):
         # Log the actions.
@@ -204,8 +208,7 @@ class ManualClustering(object):
             else:
                 logger.info("Assigned %s spikes.", len(up.spike_ids))
 
-            if self.gui:
-                self.gui.emit('cluster', up)
+            self.emit('cluster', up)
 
         @self.cluster_meta.connect  # noqa
         def on_cluster(up):
@@ -226,8 +229,7 @@ class ManualClustering(object):
             for clu in up.metadata_changed:
                 self.cluster_groups[clu] = up.metadata_value
 
-            if self.gui:
-                self.gui.emit('cluster', up)
+            self.emit('cluster', up)
 
     def _add_field_column(self, field):  # pragma: no cover
         """Add a column for a given label field."""
@@ -236,13 +238,6 @@ class ManualClustering(object):
             return self.cluster_meta.get(field, cluster_id)
 
     def _add_default_columns(self):
-        # Default columns.
-        @self.add_column(name='n_spikes')
-        def n_spikes(cluster_id):
-            return len(self.spikes_per_cluster(cluster_id))
-
-        self.add_column(self.best_channel, name='channel')
-
         @self.add_column(show=False)
         def skip(cluster_id):
             """Whether to skip that cluster."""
@@ -253,6 +248,15 @@ class ManualClustering(object):
         def good(cluster_id):
             """Good column for color."""
             return self.cluster_meta.get('group', cluster_id) == 'good'
+
+        # Default columns.
+        self.add_column(self.n_spikes)
+
+        @self.add_column
+        def group(cluster_id):
+            g = self.cluster_meta.get('group', cluster_id)
+            g = g or 'unsorted'
+            return g
 
         # Add columns for labels.
         for field in self.fields:  # pragma: no cover
@@ -269,6 +273,9 @@ class ManualClustering(object):
             self.similarity_view.add_column(similarity,
                                             name=self.similarity.__name__)
 
+    def n_spikes(self, cluster_id):
+        return len(self.clustering.spikes_per_cluster[cluster_id])
+
     def _create_actions(self, gui):
         self.actions = Actions(gui,
                                name='Clustering',
@@ -279,6 +286,10 @@ class ManualClustering(object):
         self.actions.add(self.select, alias='c')
         self.actions.separator()
 
+        self.actions.add(self.undo)
+        self.actions.add(self.redo)
+        self.actions.separator()
+
         # Clustering.
         self.actions.add(self.merge, alias='g')
         self.actions.add(self.split, alias='k')
@@ -286,6 +297,7 @@ class ManualClustering(object):
 
         # Move.
         self.actions.add(self.move)
+        self.actions.separator()
 
         for group in ('noise', 'mua', 'good'):
             self.actions.add(partial(self.move_best, group),
@@ -299,24 +311,30 @@ class ManualClustering(object):
                              name='move_all_to_' + group,
                              docstring='Move all selected clusters to %s.' %
                              group)
-        self.actions.separator()
+            self.actions.separator()
 
         # Label.
         self.actions.add(self.label, alias='l')
-        self.actions.separator()
 
         # Others.
-        self.actions.add(self.undo)
-        self.actions.add(self.redo)
-        self.actions.add(self.save)
+        self.actions.add(self.save, menu='&File')
 
         # Wizard.
         self.actions.add(self.reset, menu='&Wizard')
+        self.actions.separator(menu='&Wizard')
         self.actions.add(self.next, menu='&Wizard')
         self.actions.add(self.previous, menu='&Wizard')
+        self.actions.separator(menu='&Wizard')
         self.actions.add(self.next_best, menu='&Wizard')
         self.actions.add(self.previous_best, menu='&Wizard')
-        self.actions.separator()
+        self.actions.separator(menu='&Wizard')
+
+    def _emit_select(self, cluster_ids, **kwargs):
+        """Choose spikes from the specified clusters and emit the
+        `select` event on the GUI."""
+        logger.debug("Select cluster(s): %s.",
+                     ', '.join(map(str, cluster_ids)))
+        self.emit('select', cluster_ids, **kwargs)
 
     def _create_cluster_views(self):
         # Create the cluster view.
@@ -329,18 +347,18 @@ class ManualClustering(object):
 
         # Selection in the cluster view.
         @self.cluster_view.connect_
-        def on_select(cluster_ids):
+        def on_select(cluster_ids, **kwargs):
             # Emit GUI.select when the selection changes in the cluster view.
-            self._emit_select(cluster_ids)
+            self._emit_select(cluster_ids, **kwargs)
             # Pin the clusters and update the similarity view.
             self._update_similarity_view()
 
         # Selection in the similarity view.
         @self.similarity_view.connect_  # noqa
-        def on_select(cluster_ids):
+        def on_select(cluster_ids, **kwargs):
             # Select the clusters from both views.
             cluster_ids = self.cluster_view.selected + cluster_ids
-            self._emit_select(cluster_ids)
+            self._emit_select(cluster_ids, **kwargs)
 
         # Save the current selection when an action occurs.
         def on_request_undo_state(up):
@@ -387,13 +405,6 @@ class ManualClustering(object):
         self.similarity_view.set_rows([c for c in clusters
                                        if c not in selection])
 
-    def _emit_select(self, cluster_ids):
-        """Choose spikes from the specified clusters and emit the
-        `select` event on the GUI."""
-        logger.debug("Select clusters: %s.", ', '.join(map(str, cluster_ids)))
-        if self.gui:
-            self.gui.emit('select', cluster_ids)
-
     # Public methods
     # -------------------------------------------------------------------------
 
@@ -432,24 +443,27 @@ class ManualClustering(object):
             # Select the clusters that were selected before the undone
             # action.
             clusters_0, clusters_1 = up.undo_state[0]['selection']
-            self.cluster_view.select(clusters_0)
-            self.similarity_view.select(clusters_1)
+            # Select rows in the tables.
+            self.cluster_view.select(clusters_0, up=up)
+            self.similarity_view.select(clusters_1, up=up)
         elif up.added:
             if up.description == 'assign':
-                # NOTE: we reverse the order such that the last selected
+                # NOTE: we change the order such that the last selected
                 # cluster (with a new color) is the split cluster.
-                added = up.added[::-1]
+                added = list(up.added[1:]) + [up.added[0]]
             else:
                 added = up.added
-            self.select(added)
+            # Select the new clusters in the cluster view.
+            self.cluster_view.select(added, up=up)
             if similar:
                 self.similarity_view.next()
         elif up.metadata_changed:
             # Select next in similarity view if all moved are in that view.
             if set(up.metadata_changed) <= set(similar):
-                self._update_similarity_view()
                 next_cluster = self.similarity_view.get_next_id()
+                self._update_similarity_view()
                 if next_cluster is not None:
+                    # Select the cluster in the similarity view.
                     self.similarity_view.select([next_cluster])
             # Otherwise, select next in cluster view.
             else:
@@ -468,10 +482,14 @@ class ManualClustering(object):
                     self.cluster_view.select([next_cluster])
 
     def attach(self, gui):
-        self.gui = gui
+        # Create the cluster views.
+        self._create_cluster_views()
+        self._add_default_columns()
 
         # Create the actions.
         self._create_actions(gui)
+
+        self.emit('create_cluster_views')
 
         # Add the cluster views.
         gui.add_view(self.cluster_view, name='ClusterView')
@@ -484,8 +502,6 @@ class ManualClustering(object):
 
         # Update the cluster view and sort by n_spikes at the beginning.
         self._update_cluster_view()
-        # if not self.quality:
-        #     self.cluster_view.sort_by('n_spikes', 'desc')
 
         # Add the similarity view if there is a similarity function.
         if self.similarity:
@@ -494,6 +510,24 @@ class ManualClustering(object):
         # Set the view state.
         cv = self.cluster_view
         cv.set_state(gui.state.get_view_state(cv))
+
+        # Save the new cluster id on disk.
+        @self.clustering.connect
+        def on_cluster(up):
+            new_cluster_id = self.clustering.new_cluster_id()
+            if self.context:
+                logger.debug("Save the new cluster id: %d.", new_cluster_id)
+                self.context.save('new_cluster_id',
+                                  dict(new_cluster_id=new_cluster_id))
+
+        # The GUI emits the select event too.
+        @self.connect
+        def on_select(cluster_ids, **kwargs):
+            gui.emit('select', cluster_ids, **kwargs)
+
+        @self.connect
+        def on_request_split():
+            return gui.emit('request_split', single=True)
 
         # Save the view state in the GUI state.
         @gui.connect_
@@ -504,7 +538,10 @@ class ManualClustering(object):
             gui.state.save()
 
         # Update the cluster views and selection when a cluster event occurs.
-        self.gui.connect_(self.on_cluster)
+        self.connect(self.on_cluster)
+
+        self.emit('attach_gui', gui)
+
         return self
 
     # Selection actions
@@ -539,13 +576,15 @@ class ManualClustering(object):
     def split(self, spike_ids=None, spike_clusters_rel=0):
         """Split the selected spikes."""
         if spike_ids is None:
-            spike_ids = self.gui.emit('request_split')
-            spike_ids = np.concatenate(spike_ids).astype(np.int64)
+            spike_ids = self.emit('request_split', single=True)
+            spike_ids = np.asarray(spike_ids, dtype=np.int64)
+            assert spike_ids.dtype == np.int64
+            assert spike_ids.ndim == 1
         if len(spike_ids) == 0:
             msg = ("You first need to select spikes in the feature "
                    "view with a few Ctrl+Click around the spikes "
                    "that you want to split.")
-            _show_box(self.gui.dialog(msg))
+            self.emit('error', msg)
             return
         self.clustering.split(spike_ids,
                               spike_clusters_rel=spike_clusters_rel)
@@ -566,7 +605,11 @@ class ManualClustering(object):
                 for c in self.clustering.cluster_ids}
 
     def label(self, name, value, cluster_ids=None):
-        """Assign a label to clusters."""
+        """Assign a label to clusters.
+
+        Example: `quality 3`
+
+        """
         if cluster_ids is None:
             cluster_ids = self.cluster_view.selected
         if not hasattr(cluster_ids, '__len__'):
@@ -577,7 +620,15 @@ class ManualClustering(object):
         self._global_history.action(self.cluster_meta)
 
     def move(self, group, cluster_ids=None):
-        """Move clusters to a group."""
+        """Assign a group to some clusters.
+
+        Example: `good`
+
+        """
+        if isinstance(cluster_ids, string_types):
+            logger.warn("The list of clusters should be a list of integers, "
+                        "not a string.")
+            return
         self.label('group', group, cluster_ids=cluster_ids)
 
     def move_best(self, group=None):
@@ -636,6 +687,10 @@ class ManualClustering(object):
         groups = {c: self.cluster_meta.get('group', c) or 'unsorted'
                   for c in self.clustering.cluster_ids}
         # List of tuples (field_name, dictionary).
-        labels = [(field, self.get_labels(field)) for field in self.fields]
+        labels = [(field, self.get_labels(field))
+                  for field in self.cluster_meta.fields
+                  if field not in ('next_cluster')]
         # TODO: add option in add_field to declare a field unsavable.
-        self.gui.emit('request_save', spike_clusters, groups, *labels)
+        self.emit('request_save', spike_clusters, groups, *labels)
+        # Cache the spikes_per_cluster array.
+        self._save_spikes_per_cluster()

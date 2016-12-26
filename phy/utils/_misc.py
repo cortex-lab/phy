@@ -104,6 +104,18 @@ def _save_json(path, data):
         json.dump(data, f, cls=_CustomEncoder, indent=2, sort_keys=True)
 
 
+def _load_pickle(path):
+    """Load a pickle file using joblib."""
+    from joblib import load
+    return load(path)
+
+
+def _save_pickle(path, data):
+    """Save data to a pickle file using joblib."""
+    from joblib import dump
+    return dump(data, path)
+
+
 #------------------------------------------------------------------------------
 # Various Python utility functions
 #------------------------------------------------------------------------------

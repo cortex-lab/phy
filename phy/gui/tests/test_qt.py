@@ -16,6 +16,8 @@ from ..qt import (QMessageBox, Qt, QWebView, QTimer,
                   require_qt,
                   create_app,
                   QApplication,
+                  busy_cursor,
+                  AsyncCaller,
                   )
 
 
@@ -109,3 +111,32 @@ def test_prompt(qtbot):
                   )
     qtbot.mouseClick(box.buttons()[0], Qt.LeftButton)
     assert 'save' in str(box.clickedButton().text()).lower()
+
+
+def test_busy_cursor(qtbot):
+    with busy_cursor():
+        pass
+
+
+def test_async_caller(qtbot):
+    ac = AsyncCaller(delay=10)
+
+    _l = []
+
+    @ac.set
+    def f():
+        _l.append(0)
+
+    assert not _l
+
+    qtbot.wait(20)
+
+    assert _l == [0]
+
+    @ac.set
+    def g():
+        _l.append(0)
+
+    qtbot.wait(20)
+
+    assert _l == [0, 0]

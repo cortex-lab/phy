@@ -219,6 +219,8 @@ def test_clustering_merge():
     spike_clusters = artificial_spike_clusters(n_spikes, n_clusters)
 
     clustering = Clustering(spike_clusters)
+    spk0 = clustering.spikes_per_cluster[0]
+    spk1 = clustering.spikes_per_cluster[1]
 
     checkpoints = {}
 
@@ -244,6 +246,8 @@ def test_clustering_merge():
     info = clustering.merge([0, 1], 11)
     _checkpoint()
     _assert_spikes([11])
+    ae(clustering.spikes_per_cluster[11], np.sort(np.r_[spk0, spk1]))
+    assert 0 not in clustering.spikes_per_cluster
     assert info.added == [11]
     assert info.deleted == [0, 1]
     _assert_is_checkpoint(1)
@@ -265,6 +269,7 @@ def test_clustering_merge():
     assert info.history == 'undo'
     assert info.undo_state == ['hello']
     _assert_is_checkpoint(1)
+    ae(clustering.spikes_per_cluster[11], np.sort(np.r_[spk0, spk1]))
 
     # Redo.
     info = clustering.redo()
@@ -406,6 +411,16 @@ def test_clustering_assign():
     _checkpoint(4)
     assert len(info.deleted) >= 2
     _assert_is_checkpoint(4)
+
+
+def test_clustering_new_id():
+    spike_clusters = 10 * np.ones(6, dtype=np.int32)
+    spike_clusters[2:4] = 20
+    spike_clusters[4:6] = 30
+    clustering = Clustering(spike_clusters)
+    clustering.split(list(range(1, 5)))
+    ae(clustering.spike_clusters, [32, 31, 31, 31, 31, 33])
+    assert clustering.new_cluster_id() == 34
 
 
 def test_clustering_long():

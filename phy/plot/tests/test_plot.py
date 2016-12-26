@@ -67,11 +67,10 @@ def test_uniform_scatter(qtbot):
     x = np.random.randn(n)
     y = np.random.randn(n)
 
-    view.scatter(x, y,
-                 uniform=True,
-                 color=(1., 1., 0., .5),
-                 size=40,
-                 )
+    view.uscatter(x, y,
+                  color=(1., 1., 0., .5),
+                  size=40,
+                  )
     _show(qtbot, view)
 
 
@@ -125,12 +124,8 @@ def test_grid_plot_uniform(qtbot):
     x = _get_linear_x(n_plots, n_samples)
     y = np.random.randn(n_plots, n_samples)
 
-    view[0, 0].plot(x, y,
-                    uniform=True)
-    view[0, 1].plot(x, y,
-                    color=(1., 1., 0., .5),
-                    uniform=True,
-                    )
+    view[0, 0].uplot(x, y)
+    view[0, 1].uplot(x, y, color=(1., 1., 0., .5))
 
     _show(qtbot, view)
 

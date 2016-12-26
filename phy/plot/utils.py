@@ -48,7 +48,7 @@ def _binary_search(f, xmin, xmax, eps=1e-9):
 
 
 def _get_box_size(x, y, ar=.5, margin=0):
-    logger.debug("Get box size for %d points.", len(x))
+    logger.log(5, "Get box size for %d points.", len(x))
     # Deal with degenerate x case.
     xmin, xmax = x.min(), x.max()
     if xmin == xmax:

@@ -36,9 +36,9 @@ def _ensure_dir_exists(path):
     assert op.exists(path) and op.isdir(path)
 
 
-def load_config(path):
+def load_config(path=None):
     """Load a Python or JSON config file."""
-    if not op.exists(path):
+    if not path or not op.exists(path):
         return Config()
     path = op.realpath(path)
     dirpath, filename = op.split(path)

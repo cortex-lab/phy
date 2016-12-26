@@ -6,15 +6,20 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import logging
+
 import numpy as np
 
 from phy.utils._types import _as_array, _is_array_like
 from phy.io.array import (_unique,
                           _spikes_in_clusters,
+                          _spikes_per_cluster,
                           )
 from ._utils import UpdateInfo
 from ._history import History
 from phy.utils.event import EventEmitter
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -72,6 +77,9 @@ def _extend_assignment(spike_ids,
 
     # We take their clusters.
     extended_spike_clusters = old_spike_clusters[extended_spike_ids]
+    # Use relative numbers in extended_spike_clusters.
+    _, extended_spike_clusters = np.unique(extended_spike_clusters,
+                                           return_inverse=True)
     # Generate new cluster numbers.
     k = new_spike_clusters.max() + 1
     extended_spike_clusters += (k - extended_spike_clusters.min())
@@ -146,16 +154,20 @@ class Clustering(EventEmitter):
 
     """
 
-    def __init__(self, spike_clusters, new_cluster_id=None):
+    def __init__(self, spike_clusters, new_cluster_id=None,
+                 spikes_per_cluster=None):
         super(Clustering, self).__init__()
         self._undo_stack = History(base_item=(None, None, None))
         # Spike -> cluster mapping.
         self._spike_clusters = _as_array(spike_clusters)
+        self._spikes_per_cluster = {}
         self._n_spikes = len(self._spike_clusters)
         self._spike_ids = np.arange(self._n_spikes).astype(np.int64)
-        self._update_cluster_ids()
-        self._new_cluster_id_0 = (new_cluster_id or
-                                  self._spike_clusters.max() + 1)
+        # We can pass the precomputed spikes_per_cluster dictionary for
+        # performance reasons.
+        self._update_cluster_ids(to_add=spikes_per_cluster)
+        self._new_cluster_id_0 = int(new_cluster_id or
+                                     self._spike_clusters.max() + 1)
         self._new_cluster_id = self._new_cluster_id_0
         assert self._new_cluster_id >= 0
         assert np.all(self._spike_clusters < self._new_cluster_id)
@@ -176,6 +188,11 @@ class Clustering(EventEmitter):
     def spike_clusters(self):
         """A n_spikes-long vector containing the cluster ids of all spikes."""
         return self._spike_clusters
+
+    @property
+    def spikes_per_cluster(self):
+        """A dictionary {cluster_id: spike_ids}."""
+        return self._spikes_per_cluster
 
     @property
     def cluster_ids(self):
@@ -215,9 +232,27 @@ class Clustering(EventEmitter):
     # Actions
     #--------------------------------------------------------------------------
 
-    def _update_cluster_ids(self):
+    def _update_cluster_ids(self, to_remove=None, to_add=None):
         # Update the list of non-empty cluster ids.
         self._cluster_ids = _unique(self._spike_clusters)
+        # Clusters to remove.
+        if to_remove is not None:
+            for clu in to_remove:
+                self._spikes_per_cluster.pop(clu, None)
+        # Clusters to add.
+        if to_add:
+            for clu, spk in to_add.items():
+                self._spikes_per_cluster[clu] = spk
+        # If spikes_per_cluster is invalid, recompute the entire
+        # spikes_per_cluster array.
+        coherent = np.all(np.in1d(self._cluster_ids,
+                                  sorted(self._spikes_per_cluster),
+                                  ))
+        if not coherent:
+            logger.debug("Recompute spikes_per_cluster manually: "
+                         "this is long.")
+            sc = self._spike_clusters
+            self._spikes_per_cluster = _spikes_per_cluster(sc)
 
     def _do_assign(self, spike_ids, new_spike_clusters):
         """Make spike-cluster assignments after the spike selection has
@@ -254,7 +289,9 @@ class Clustering(EventEmitter):
 
         # We make the assignments.
         self._spike_clusters[spike_ids] = new_spike_clusters
-        self._update_cluster_ids()
+        # OPTIM: we update spikes_per_cluster manually.
+        new_spc = _spikes_per_cluster(new_spike_clusters, spike_ids)
+        self._update_cluster_ids(to_remove=old_clusters, to_add=new_spc)
         return up
 
     def _do_merge(self, spike_ids, cluster_ids, to):
@@ -274,7 +311,9 @@ class Clustering(EventEmitter):
         # Assign the clusters.
         self.spike_clusters[spike_ids] = to
         # Update the list of non-empty cluster ids.
-        self._update_cluster_ids()
+        # OPTIM: we update spikes_per_cluster manually.
+        self._update_cluster_ids(to_remove=cluster_ids,
+                                 to_add={to: spike_ids})
         return up
 
     def merge(self, cluster_ids, to=None):

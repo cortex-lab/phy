@@ -45,6 +45,7 @@ class PanZoom(BaseInteract):
     """
 
     _default_zoom_coeff = 1.5
+    _default_zoom = 1.
     _default_wheel_coeff = .1
     _arrows = ('Left', 'Right', 'Up', 'Down')
     _pm = ('+', '-')
@@ -373,7 +374,7 @@ class PanZoom(BaseInteract):
     def reset(self):
         """Reset the view."""
         self.pan = (0., 0.)
-        self.zoom = 1.
+        self.zoom = self._default_zoom
         self.update()
 
     def on_resize(self, event):
