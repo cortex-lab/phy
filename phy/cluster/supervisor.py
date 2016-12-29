@@ -554,6 +554,9 @@ class Supervisor(EventEmitter):
         # the snippet: `:c 1 2 3` instead of `:c 1,2,3`.
         if cluster_ids and isinstance(cluster_ids[0], (tuple, list)):
             cluster_ids = list(cluster_ids[0]) + list(cluster_ids[1:])
+        # Remove non-existing clusters from the selection.
+        cluster_ids = list(np.intersect1d(cluster_ids,
+                                          self.clustering.cluster_ids))
         # Update the cluster view selection.
         self.cluster_view.select(cluster_ids)
 
