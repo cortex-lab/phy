@@ -173,10 +173,10 @@ class FeatureView(ManualClusteringView):
         cluster_id = self.cluster_ids[clu_idx] if clu_idx is not None else None
         px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
         py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id)
-        assert px.data.shape == py.data.shape
         # Skip empty data.
         if px is None or py is None:
             return
+        assert px.data.shape == py.data.shape
         xmin, xmax = self._get_axis_bounds(dim_x, px)
         ymin, ymax = self._get_axis_bounds(dim_y, py)
         masks = _get_masks_max(px, py)
