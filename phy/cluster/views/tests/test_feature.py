@@ -48,7 +48,7 @@ def test_feature_view(qtbot, tempdir):
                                   else np.arange(nc)[::-1]),
                      )
 
-    def get_time(cluster_id=None):
+    def get_time(cluster_id=None, load_all=None):
         return Bunch(data=spike_times[get_spike_ids(cluster_id)],
                      lim=(0., 1.),
                      )

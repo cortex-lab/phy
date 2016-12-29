@@ -129,7 +129,7 @@ class FeatureView(ManualClusteringView):
         else:
             return dim
 
-    def _get_axis_data(self, bunch, dim, cluster_id=None):
+    def _get_axis_data(self, bunch, dim, cluster_id=None, load_all=None):
         """Extract the points from the data on a given dimension.
 
         bunch is returned by the features() function.
@@ -137,7 +137,7 @@ class FeatureView(ManualClusteringView):
 
         """
         if dim in self.attributes:
-            return self.attributes[dim](cluster_id)
+            return self.attributes[dim](cluster_id, load_all=load_all)
         masks = bunch.get('masks', None)
         assert dim not in self.attributes  # This is called only on PC data.
         s = 'ABCDEFGHIJ'
@@ -173,6 +173,7 @@ class FeatureView(ManualClusteringView):
         cluster_id = self.cluster_ids[clu_idx] if clu_idx is not None else None
         px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
         py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id)
+        assert px.data.shape == py.data.shape
         # Skip empty data.
         if px is None or py is None:
             return
@@ -350,8 +351,10 @@ class FeatureView(ManualClusteringView):
             bunch = self.features(cluster_id,
                                   channel_ids=self.channel_ids,
                                   load_all=True)
-            px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
-            py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id)
+            px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id,
+                                     load_all=True)
+            py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id,
+                                     load_all=True)
             points = np.c_[px.data, py.data]
 
             # Normalize the points.
