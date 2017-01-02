@@ -332,6 +332,9 @@ class Supervisor(EventEmitter):
     def _emit_select(self, cluster_ids, **kwargs):
         """Choose spikes from the specified clusters and emit the
         `select` event on the GUI."""
+        # Remove non-existing clusters from the selection.
+        cluster_ids = list(np.intersect1d(cluster_ids,
+                                          self.clustering.cluster_ids))
         logger.debug("Select cluster(s): %s.",
                      ', '.join(map(str, cluster_ids)))
         self.emit('select', cluster_ids, **kwargs)
