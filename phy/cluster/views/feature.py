@@ -125,7 +125,8 @@ class FeatureView(ManualClusteringView):
     def _get_axis_label(self, dim):
         """Return the channel id from a dimension, if applicable."""
         if dim[:-1].isdecimal():
-            return str(self.channel_ids[int(dim[:-1])]) + dim[-1]
+            n = len(self.channel_ids)
+            return str(self.channel_ids[int(dim[:-1]) % n]) + dim[-1]
         else:
             return dim
 
@@ -144,7 +145,7 @@ class FeatureView(ManualClusteringView):
         # Channel relative index.
         c_rel = int(dim[:-1])
         # Get the channel_id from the currently-selected channels.
-        channel_id = self.channel_ids[c_rel]
+        channel_id = self.channel_ids[c_rel % len(self.channel_ids)]
         # Skup the plot if the channel id is not displayed.
         if channel_id not in bunch.channel_ids:  # pragma: no cover
             return None
@@ -310,6 +311,9 @@ class FeatureView(ManualClusteringView):
         """Respond to the click on a channel."""
         channels = self.channel_ids
         if channels is None:
+            return
+        if len(channels) == 1:
+            self.on_select()
             return
         assert len(channels) >= 2
         # Get the axis from the pressed button (1, 2, etc.)
