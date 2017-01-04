@@ -18,23 +18,18 @@ logger = logging.getLogger(__name__)
 # PyQt import
 # -----------------------------------------------------------------------------
 
-from PyQt4.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
+from PyQt5.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
                           QVariant, QEventLoop, QTimer, QPoint, QTimer,
-                          pyqtSignal, pyqtSlot, QSize, QUrl)
-try:
-    from PyQt4.QtCore import QPyNullVariant  # noqa
-except:  # pragma: no cover
-    QPyNullVariant = None
-try:
-    from PyQt4.QtCore import QString  # noqa
-except:  # pragma: no cover
-    QString = None
-from PyQt4.QtGui import (QKeySequence, QAction, QStatusBar,  # noqa
-                         QMainWindow, QDockWidget, QWidget,
-                         QMessageBox, QApplication, QMenuBar,
-                         QInputDialog,
-                         )
-from PyQt4.QtWebKit import QWebView, QWebPage, QWebSettings   # noqa
+                          pyqtSignal, pyqtSlot, QSize, QUrl,
+                          )
+from PyQt5.QtGui import QKeySequence  # noqa
+from PyQt5.QtWebKit import QWebSettings   # noqa
+from PyQt5.QtWebKitWidgets import QWebView, QWebPage   # noqa
+from PyQt5.QtWidgets import (QAction, QStatusBar,  # noqa
+                             QMainWindow, QDockWidget, QWidget,
+                             QMessageBox, QApplication, QMenuBar,
+                             QInputDialog,
+                             )
 
 
 # -----------------------------------------------------------------------------
@@ -172,7 +167,7 @@ class AsyncCaller(object):
 
 def _debug_trace():  # pragma: no cover
     """Set a tracepoint in the Python debugger that works with Qt."""
-    from PyQt4.QtCore import pyqtRemoveInputHook
+    from PyQt5.QtCore import pyqtRemoveInputHook
     from pdb import set_trace
     pyqtRemoveInputHook()
     set_trace()
