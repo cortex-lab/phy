@@ -66,6 +66,12 @@ def _get_masks_max(px, py):
     return np.maximum(mx, my)
 
 
+def _uniq(seq):
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
+
+
 class FeatureView(ManualClusteringView):
     _callback_delay = 20
 
@@ -329,6 +335,8 @@ class FeatureView(ManualClusteringView):
         if channels[1 - d] == channel_id:
             channels[1 - d] = old
         assert channels[0] != channels[1]
+        # Remove duplicate channels.
+        self.channel_ids = _uniq(channels)
         logger.debug("Choose channels %d and %d in feature view.",
                      *channels[:2])
         # Fix the channels temporarily.
@@ -396,9 +404,9 @@ class FeatureView(ManualClusteringView):
     def increase(self):
         """Increase the scaling of the features."""
         self.scaling *= 1.2
-        self.on_select()
+        self.on_select(fixed_channels=True)
 
     def decrease(self):
         """Decrease the scaling of the features."""
         self.scaling /= 1.2
-        self.on_select()
+        self.on_select(fixed_channels=True)
