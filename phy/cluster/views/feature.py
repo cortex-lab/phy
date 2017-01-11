@@ -11,6 +11,7 @@ import logging
 import re
 
 import numpy as np
+from six import u
 
 from phy.utils import Bunch
 from phy.utils._color import _colormap
@@ -130,7 +131,7 @@ class FeatureView(ManualClusteringView):
 
     def _get_axis_label(self, dim):
         """Return the channel id from a dimension, if applicable."""
-        if dim[:-1].isdecimal():
+        if u(dim[:-1]).isdecimal():
             n = len(self.channel_ids)
             return str(self.channel_ids[int(dim[:-1]) % n]) + dim[-1]
         else:
