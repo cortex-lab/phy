@@ -11,6 +11,7 @@ import logging
 import re
 
 import numpy as np
+from six import u
 
 from phy.utils import Bunch
 from phy.utils._color import _colormap
@@ -64,6 +65,12 @@ def _get_masks_max(px, py):
     if mx is None or my is None:
         return None
     return np.maximum(mx, my)
+
+
+def _uniq(seq):
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
 
 
 class FeatureView(ManualClusteringView):
@@ -124,12 +131,13 @@ class FeatureView(ManualClusteringView):
 
     def _get_axis_label(self, dim):
         """Return the channel id from a dimension, if applicable."""
-        if dim[:-1].isdecimal():
-            return str(self.channel_ids[int(dim[:-1])]) + dim[-1]
+        if u(dim[:-1]).isdecimal():
+            n = len(self.channel_ids)
+            return str(self.channel_ids[int(dim[:-1]) % n]) + dim[-1]
         else:
             return dim
 
-    def _get_axis_data(self, bunch, dim, cluster_id=None):
+    def _get_axis_data(self, bunch, dim, cluster_id=None, load_all=None):
         """Extract the points from the data on a given dimension.
 
         bunch is returned by the features() function.
@@ -137,14 +145,14 @@ class FeatureView(ManualClusteringView):
 
         """
         if dim in self.attributes:
-            return self.attributes[dim](cluster_id)
+            return self.attributes[dim](cluster_id, load_all=load_all)
         masks = bunch.get('masks', None)
         assert dim not in self.attributes  # This is called only on PC data.
         s = 'ABCDEFGHIJ'
         # Channel relative index.
         c_rel = int(dim[:-1])
         # Get the channel_id from the currently-selected channels.
-        channel_id = self.channel_ids[c_rel]
+        channel_id = self.channel_ids[c_rel % len(self.channel_ids)]
         # Skup the plot if the channel id is not displayed.
         if channel_id not in bunch.channel_ids:  # pragma: no cover
             return None
@@ -176,6 +184,7 @@ class FeatureView(ManualClusteringView):
         # Skip empty data.
         if px is None or py is None:
             return
+        assert px.data.shape == py.data.shape
         xmin, xmax = self._get_axis_bounds(dim_x, px)
         ymin, ymax = self._get_axis_bounds(dim_y, py)
         masks = _get_masks_max(px, py)
@@ -310,6 +319,9 @@ class FeatureView(ManualClusteringView):
         channels = self.channel_ids
         if channels is None:
             return
+        if len(channels) == 1:
+            self.on_select()
+            return
         assert len(channels) >= 2
         # Get the axis from the pressed button (1, 2, etc.)
         # axis = 'x' if button == 1 else 'y'
@@ -324,6 +336,8 @@ class FeatureView(ManualClusteringView):
         if channels[1 - d] == channel_id:
             channels[1 - d] = old
         assert channels[0] != channels[1]
+        # Remove duplicate channels.
+        self.channel_ids = _uniq(channels)
         logger.debug("Choose channels %d and %d in feature view.",
                      *channels[:2])
         # Fix the channels temporarily.
@@ -350,8 +364,10 @@ class FeatureView(ManualClusteringView):
             bunch = self.features(cluster_id,
                                   channel_ids=self.channel_ids,
                                   load_all=True)
-            px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id)
-            py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id)
+            px = self._get_axis_data(bunch, dim_x, cluster_id=cluster_id,
+                                     load_all=True)
+            py = self._get_axis_data(bunch, dim_y, cluster_id=cluster_id,
+                                     load_all=True)
             points = np.c_[px.data, py.data]
 
             # Normalize the points.
@@ -389,9 +405,9 @@ class FeatureView(ManualClusteringView):
     def increase(self):
         """Increase the scaling of the features."""
         self.scaling *= 1.2
-        self.on_select()
+        self.on_select(fixed_channels=True)
 
     def decrease(self):
         """Decrease the scaling of the features."""
         self.scaling /= 1.2
-        self.on_select()
+        self.on_select(fixed_channels=True)

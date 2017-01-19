@@ -7,6 +7,7 @@
 #------------------------------------------------------------------------------
 
 import numpy as np
+import pytest
 
 from phy.gui import GUI, GUIState
 from phy.gui.qt import Qt, QPoint
@@ -23,8 +24,9 @@ from ..feature import FeatureView
 # Test feature view
 #------------------------------------------------------------------------------
 
-def test_feature_view(qtbot, tempdir):
-    nc = 5
+@pytest.mark.parametrize('n_channels', [5, 1])
+def test_feature_view(qtbot, tempdir, n_channels):
+    nc = n_channels
     ns = 500
     features = artificial_features(ns, nc, 4)
     spike_clusters = artificial_spike_clusters(ns, 4)
@@ -48,7 +50,7 @@ def test_feature_view(qtbot, tempdir):
                                   else np.arange(nc)[::-1]),
                      )
 
-    def get_time(cluster_id=None):
+    def get_time(cluster_id=None, load_all=None):
         return Bunch(data=spike_times[get_spike_ids(cluster_id)],
                      lim=(0., 1.),
                      )

@@ -59,6 +59,12 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
 # Test GUI component
 #------------------------------------------------------------------------------
 
+def test_supervisor_order(supervisor):
+    mc = supervisor
+    mc.select([1, 0])
+    assert mc.selected == [1, 0]
+
+
 def test_supervisor_edge_cases(supervisor):
     mc = supervisor
 

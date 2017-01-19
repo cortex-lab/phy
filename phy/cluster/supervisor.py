@@ -329,9 +329,15 @@ class Supervisor(EventEmitter):
         self.actions.add(self.previous_best, menu='&Wizard')
         self.actions.separator(menu='&Wizard')
 
+    def _keep_existing_clusters(self, cluster_ids):
+        return [c for c in cluster_ids
+                if c in self.clustering.cluster_ids]
+
     def _emit_select(self, cluster_ids, **kwargs):
         """Choose spikes from the specified clusters and emit the
         `select` event on the GUI."""
+        # Remove non-existing clusters from the selection.
+        cluster_ids = self._keep_existing_clusters(cluster_ids)
         logger.debug("Select cluster(s): %s.",
                      ', '.join(map(str, cluster_ids)))
         self.emit('select', cluster_ids, **kwargs)
@@ -554,6 +560,8 @@ class Supervisor(EventEmitter):
         # the snippet: `:c 1 2 3` instead of `:c 1,2,3`.
         if cluster_ids and isinstance(cluster_ids[0], (tuple, list)):
             cluster_ids = list(cluster_ids[0]) + list(cluster_ids[1:])
+        # Remove non-existing clusters from the selection.
+        cluster_ids = self._keep_existing_clusters(cluster_ids)
         # Update the cluster view selection.
         self.cluster_view.select(cluster_ids)
 
