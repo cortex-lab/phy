@@ -98,6 +98,7 @@ def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
                                new_spike_clusters)))
     update_info = UpdateInfo(description='assign',
                              spike_ids=spike_ids,
+                             spike_clusters=new_spike_clusters,
                              added=list(new_clusters),
                              deleted=list(old_clusters),
                              descendants=descendants,

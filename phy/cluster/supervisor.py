@@ -173,7 +173,7 @@ class Supervisor(EventEmitter):
         def on_cluster(up):
             """Register the next cluster in the list before the cluster
             view is updated."""
-            if not up.added:
+            if not up.added or not hasattr(self, 'cluster_view'):
                 return
             cluster = up.added[0]
             next_cluster = self.cluster_view.get_next_id()
@@ -572,13 +572,13 @@ class Supervisor(EventEmitter):
     # Clustering actions
     # -------------------------------------------------------------------------
 
-    def merge(self, cluster_ids=None):
+    def merge(self, cluster_ids=None, to=None):
         """Merge the selected clusters."""
         if cluster_ids is None:
             cluster_ids = self.selected
         if len(cluster_ids or []) <= 1:
             return
-        self.clustering.merge(cluster_ids)
+        self.clustering.merge(cluster_ids, to=to)
         self._global_history.action(self.clustering)
 
     def split(self, spike_ids=None, spike_clusters_rel=0):
