@@ -31,9 +31,6 @@ logger = logging.getLogger(__name__)
 # Set up logging with the CLI tool
 #------------------------------------------------------------------------------
 
-add_default_handler(level='DEBUG' if DEBUG else 'INFO')
-
-
 def exceptionHandler(exception_type, exception, traceback):  # pragma: no cover
     logger.error("An error has occurred (%s): %s",
                  exception_type.__name__, exception)
@@ -87,7 +84,7 @@ def _run_cmd(cmd, ctx, glob, loc):  # pragma: no cover
 def phy(ctx, pdb=None, ipython=None, prof=None, lprof=None):
     """By default, the `phy` command does nothing. Add subcommands with plugins
     using `attach_to_cli()` and the `click` library."""
-    pass
+    add_default_handler(level='DEBUG' if DEBUG else 'INFO')
 
 
 #------------------------------------------------------------------------------
