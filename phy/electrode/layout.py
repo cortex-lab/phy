@@ -23,7 +23,7 @@ def _iter_channel(positions):
     xmin, ymin = boxes[:, :2].min(axis=0)
     xmax, ymax = boxes[:, 2:].max(axis=0)
     x = boxes[:, [0, 2]].mean(axis=1)
-    y = boxes[:, [1, 3]].mean(axis=1)
+    y = - boxes[:, [1, 3]].mean(axis=1)
     positions = np.c_[x, y]
     tr = [margin, margin, size - margin, size - margin]
     positions = Range(NDC, tr).apply(positions)
@@ -32,8 +32,8 @@ def _iter_channel(positions):
 
 
 def _disk(x, y, r, c):
-    return '''<circle cx=""%.5f%%" cy=""%.5f%%"
-                      r="%d" fill="%s" />''' % (x, y, r, c)
+    return ('<circle cx="%.5f%%" cy="%.5f%%" '
+            'r="%d" fill="%s" />') % (x, y, r, c)
 
 
 def _iter_disks(positions, channel_ids=None):
@@ -44,11 +44,10 @@ def _iter_disks(positions, channel_ids=None):
         yield _disk(x, y, r, c)
 
 
-def _probe_layout(positions, channel_ids):
+def probe_layout(positions, channel_ids):
     contents = '\n'.join(_iter_disks(positions, channel_ids))
-    print(contents)
     return """
-    <svg style="background: red; width:100%; height:100%;">
+    <svg style="background: black; width:100%; height:100%;">
       {}
     </svg>
     """.format(contents)
