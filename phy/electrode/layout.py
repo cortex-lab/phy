@@ -19,7 +19,7 @@ from phy.plot.utils import _get_boxes
 def _iter_channel(positions):
     size = 100
     margin = 10
-    boxes = _get_boxes(positions, keep_aspect_ratio=True)
+    boxes = _get_boxes(positions, keep_aspect_ratio=False)
     xmin, ymin = boxes[:, :2].min(axis=0)
     xmax, ymax = boxes[:, 2:].max(axis=0)
     x = boxes[:, [0, 2]].mean(axis=1)
