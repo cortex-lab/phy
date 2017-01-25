@@ -28,9 +28,9 @@ class ProbeView(HTMLWidget):
     def on_select(self, cluster_ids, **kwargs):
         if not len(cluster_ids):
             return
-        # TODO: consider all clusters with colors.
-        channel_ids = self.best_channels(cluster_ids[0])
-        self.set_body(probe_layout(self.positions, channel_ids))
+        cluster_channels = {i: self.best_channels(cl)
+                            for i, cl in enumerate(cluster_ids)}
+        self.set_body(probe_layout(self.positions, cluster_channels))
         self.rebuild()
 
     def attach(self, gui):
