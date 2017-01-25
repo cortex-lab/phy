@@ -9,7 +9,7 @@
 
 import logging
 
-from phy.electrode.layout import _probe_layout
+from phy.electrode.layout import probe_layout
 from phy.gui import HTMLWidget
 
 logger = logging.getLogger(__name__)
@@ -25,15 +25,15 @@ class ProbeView(HTMLWidget):
         self.positions = positions
         self.best_channels = best_channels
 
-    def attach(self, gui):
-        @gui.connect_
-        def on_select(cluster_ids, **kwargs):
-            if not len(cluster_ids):
-                return
-            # TODO: consider all clusters with colors.
-            channel_ids = self.best_channels(cluster_ids[0])
-            self.set_body(_probe_layout(self.positions, channel_ids))
-            self.rebuild()
+    def on_select(self, cluster_ids, **kwargs):
+        if not len(cluster_ids):
+            return
+        # TODO: consider all clusters with colors.
+        channel_ids = self.best_channels(cluster_ids[0])
+        self.set_body(probe_layout(self.positions, channel_ids))
+        self.rebuild()
 
+    def attach(self, gui):
+        gui.connect_(self.on_select)
         self.show()
         gui.add_view(self)
