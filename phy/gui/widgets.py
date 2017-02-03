@@ -156,21 +156,24 @@ class HTMLWidget(QWebView):
         """Return the full HTML source of the widget."""
         return self.page().mainFrame().toHtml()
 
+    def rebuild(self):
+        styles = '\n\n'.join(self._styles)
+        html = _PAGE_TEMPLATE.format(title=self.title,
+                                     styles=styles,
+                                     header=self._header,
+                                     body=self._body,
+                                     )
+        logger.log(5, "Set HTML: %s", html)
+        static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
+        base_url = QUrl().fromLocalFile(static_dir)
+        self.setHtml(html, base_url)
+
     def build(self):
         """Build the full HTML source."""
         if self.is_built():  # pragma: no cover
             return
         with _wait_signal(self.loadFinished, 20):
-            styles = '\n\n'.join(self._styles)
-            html = _PAGE_TEMPLATE.format(title=self.title,
-                                         styles=styles,
-                                         header=self._header,
-                                         body=self._body,
-                                         )
-            logger.log(5, "Set HTML: %s", html)
-            static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
-            base_url = QUrl().fromLocalFile(static_dir)
-            self.setHtml(html, base_url)
+            self.rebuild()
         self._built = True
 
     def is_built(self):
