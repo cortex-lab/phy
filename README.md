@@ -55,6 +55,14 @@ pip install phy phycontrib --upgrade
 ```
 
 
+### Installing the development version
+
+```
+source activate phy  # omit the `source` on Windows
+pip install git+https://github.com/kwikteam/phy git+https://github.com/kwikteam/phycontrib --upgrade
+```
+
+
 ## Links
 
 * [User documentation of the Template GUI](http://phy-contrib.readthedocs.io/en/latest/template-gui/)
