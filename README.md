@@ -59,7 +59,7 @@ pip install phy phycontrib --upgrade
 
 ```
 source activate phy  # omit the `source` on Windows
-pip install git+https://github.com/kwikteam/phy git+https://github.com/kwikteam/phycontrib --upgrade
+pip install git+https://github.com/kwikteam/phy git+https://github.com/kwikteam/phy-contrib --upgrade
 ```
 
 
