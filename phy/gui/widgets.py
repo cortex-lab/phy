@@ -14,10 +14,7 @@ import os.path as op
 
 from six import text_type
 
-from .qt import (WebView, QUrl, QWebEnginePage,
-                 QVariant,
-                 pyqtSlot, _wait_signal,
-                 )
+from .qt import WebView, QUrl, QVariant, pyqtSlot, _wait_signal
 from phy.utils import EventEmitter
 from phy.utils._misc import _CustomEncoder
 
