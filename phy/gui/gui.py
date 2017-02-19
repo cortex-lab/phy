@@ -41,7 +41,7 @@ def _try_get_matplotlib_canvas(view):
     # Get the Qt widget from a matplotlib figure.
     try:
         from matplotlib.pyplot import Figure
-        from matplotlib.backends.backend_qt4agg import FigureCanvasQTAgg
+        from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
         if isinstance(view, Figure):
             view = FigureCanvasQTAgg(view)
     except ImportError:  # pragma: no cover
