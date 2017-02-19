@@ -23,8 +23,10 @@ from PyQt5.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
                           pyqtSignal, pyqtSlot, QSize, QUrl,
                           )
 from PyQt5.QtGui import QKeySequence  # noqa
-from PyQt5.QtWebKit import QWebSettings   # noqa
-from PyQt5.QtWebKitWidgets import QWebView, QWebPage   # noqa
+from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
+                                      QWebEnginePage,
+                                      # QWebSettings,
+                                      )
 from PyQt5.QtWidgets import (QAction, QStatusBar,  # noqa
                              QMainWindow, QDockWidget, QWidget,
                              QMessageBox, QApplication, QMenuBar,
@@ -159,6 +161,24 @@ class AsyncCaller(object):
         if self._timer:
             self._timer.stop()
             self._timer.deleteLater()
+
+
+class WebView(QWebEngineView):
+    def set_html_sync(self, html):
+        self.html = None
+        self.loadFinished.connect(self._loadFinished)
+        self.setHtml(html)
+        while self.html is None:
+            app = QApplication.instance()
+            app.processEvents(QEventLoop.ExcludeUserInputEvents |
+                              QEventLoop.ExcludeSocketNotifiers |
+                              QEventLoop.WaitForMoreEvents)
+
+    def _callable(self, data):
+        self.html = data
+
+    def _loadFinished(self, result):
+        self.page().toHtml(self._callable)
 
 
 # -----------------------------------------------------------------------------

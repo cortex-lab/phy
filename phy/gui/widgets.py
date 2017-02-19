@@ -14,7 +14,7 @@ import os.path as op
 
 from six import text_type
 
-from .qt import (QWebView, QWebPage, QUrl, QWebSettings,
+from .qt import (QWebEngineView, QWebEnginePage, QUrl,
                  QVariant,
                  pyqtSlot, _wait_signal,
                  )
@@ -57,7 +57,7 @@ _PAGE_TEMPLATE = """
 """
 
 
-class WebPage(QWebPage):
+class WebPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, msg, line, source):
         logger.debug("[%d] %s", line, msg)  # plragma: no cover
 
@@ -73,7 +73,7 @@ def _to_py(obj):  # plragma: no cover
         return obj
 
 
-class HTMLWidget(QWebView):
+class HTMLWidget(QWebEngineView):
     """An HTML widget that is displayed with Qt.
 
     Python methods can be called from Javascript with `widget.the_method()`.
@@ -86,10 +86,10 @@ class HTMLWidget(QWebView):
 
     def __init__(self):
         super(HTMLWidget, self).__init__()
-        self.settings().setAttribute(
-            QWebSettings.LocalContentCanAccessRemoteUrls, True)
-        self.settings().setAttribute(
-            QWebSettings.DeveloperExtrasEnabled, True)
+        # self.settings().setAttribute(
+        #     QWebSettings.LocalContentCanAccessRemoteUrls, True)
+        # self.settings().setAttribute(
+        #     QWebSettings.DeveloperExtrasEnabled, True)
         self.setPage(WebPage())
         self._obj = None
         self._styles = [_DEFAULT_STYLES]

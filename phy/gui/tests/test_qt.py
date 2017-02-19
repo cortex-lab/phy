@@ -8,7 +8,7 @@
 
 from pytest import raises
 
-from ..qt import (QMessageBox, Qt, QWebView, QTimer,
+from ..qt import (QMessageBox, Qt, QWebEngineView, QTimer,
                   _button_name_from_enum,
                   _button_enum_from_name,
                   _prompt,
@@ -16,6 +16,7 @@ from ..qt import (QMessageBox, Qt, QWebView, QTimer,
                   require_qt,
                   create_app,
                   QApplication,
+                  WebView,
                   busy_cursor,
                   AsyncCaller,
                   )
@@ -48,7 +49,7 @@ def test_require_qt_without_app(qapp):
 
 def test_qt_app(qtbot):
     create_app()
-    view = QWebView()
+    view = QWebEngineView()
     qtbot.addWidget(view)
     view.close()
 
@@ -74,29 +75,30 @@ def test_wait_signal(qtbot):
 
 def test_web_view(qtbot):
 
-    view = QWebView()
+    view = WebView()
 
     def _assert(text):
-        html = view.page().mainFrame().toHtml()
-        assert html == '<html><head></head><body>' + text + '</body></html>'
+        assert view.html == '<html><head></head><body>%s</body></html>' % text
 
     view.resize(100, 100)
-    view.setHtml("hello")
+    view.set_html_sync("hello")
     qtbot.addWidget(view)
     qtbot.waitForWindowShown(view)
     view.show()
     _assert('hello')
+    return
 
-    view.setHtml("world")
+    view.set_html_sync("world")
     _assert('world')
     view.close()
 
-    view = QWebView()
+    view = QWebEngineView()
+    view._loaded = False
     view.resize(100, 100)
     view.show()
     qtbot.addWidget(view)
 
-    view.setHtml("finished")
+    view.set_html_sync("finished")
     _assert('finished')
     view.close()
 
