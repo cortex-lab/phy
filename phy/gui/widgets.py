@@ -14,7 +14,7 @@ import os.path as op
 
 from six import text_type
 
-from .qt import (QWebEngineView, QWebEnginePage, QUrl,
+from .qt import (WebView, QUrl, QWebEnginePage,
                  QVariant,
                  pyqtSlot, _wait_signal,
                  )
@@ -57,12 +57,7 @@ _PAGE_TEMPLATE = """
 """
 
 
-class WebPage(QWebEnginePage):
-    def javaScriptConsoleMessage(self, msg, line, source):
-        logger.debug("[%d] %s", line, msg)  # plragma: no cover
-
-
-def _to_py(obj):  # plragma: no cover
+def _to_py(obj):  # pragma: no cover
     if isinstance(obj, QVariant):
         return obj.toPyObject()
     elif isinstance(obj, list):
@@ -73,7 +68,7 @@ def _to_py(obj):  # plragma: no cover
         return obj
 
 
-class HTMLWidget(QWebEngineView):
+class HTMLWidget(WebView):
     """An HTML widget that is displayed with Qt.
 
     Python methods can be called from Javascript with `widget.the_method()`.
@@ -90,7 +85,7 @@ class HTMLWidget(QWebEngineView):
         #     QWebSettings.LocalContentCanAccessRemoteUrls, True)
         # self.settings().setAttribute(
         #     QWebSettings.DeveloperExtrasEnabled, True)
-        self.setPage(WebPage())
+        # self.setPage(QWebEnginePage())
         self._obj = None
         self._styles = [_DEFAULT_STYLES]
         self._header = ''
@@ -150,7 +145,7 @@ class HTMLWidget(QWebEngineView):
 
     def html(self):
         """Return the full HTML source of the widget."""
-        return self.page().mainFrame().toHtml()
+        return self.page().toHtml()
 
     def rebuild(self):
         styles = '\n\n'.join(self._styles)
@@ -180,7 +175,7 @@ class HTMLWidget(QWebEngineView):
 
     def add_to_js(self, name, var):
         """Add an object to Javascript."""
-        frame = self.page().mainFrame()
+        frame = self.page()
         frame.addToJavaScriptWindowObject(name, var)
 
     def eval_js(self, expr):
@@ -189,7 +184,7 @@ class HTMLWidget(QWebEngineView):
             self._pending_js_eval.append(expr)
             return
         logger.log(5, "Evaluate Javascript: `%s`.", expr)
-        out = self.page().mainFrame().evaluateJavaScript(expr)
+        out = self.page().runJavaScript(expr)
         return _to_py(out)
 
     @pyqtSlot(str, str)

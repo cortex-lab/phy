@@ -180,6 +180,9 @@ class WebView(QWebEngineView):
     def _loadFinished(self, result):
         self.page().toHtml(self._callable)
 
+    def javaScriptConsoleMessage(self, msg, line, source):
+        logger.debug("[%d] %s", line, msg)  # plragma: no cover
+
 
 # -----------------------------------------------------------------------------
 # Testing utilities
