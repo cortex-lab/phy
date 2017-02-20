@@ -14,7 +14,7 @@ import os.path as op
 
 from six import text_type
 
-from .qt import WebView, QUrl, QVariant, pyqtSlot, _wait_signal
+from .qt import WebView, QUrl, QVariant, pyqtSlot, _wait_signal, QWebChannel
 from phy.utils import EventEmitter
 from phy.utils._misc import _CustomEncoder
 
@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 # HTML widget
 # -----------------------------------------------------------------------------
 
-_DEFAULT_STYLES = """
+_DEFAULT_STYLE = """
     html, body, table {
         background-color: black;
         color: white;
@@ -40,9 +40,6 @@ _PAGE_TEMPLATE = """
 <html>
 <head>
     <title>{title:s}</title>
-    <style>
-    {styles:s}
-    </style>
     {header:s}
 </head>
 <body>
@@ -65,37 +62,79 @@ def _to_py(obj):  # pragma: no cover
         return obj
 
 
+class HTMLBuilder(object):
+    def __init__(self, title=''):
+        self.title = title
+        self.headers = []
+        self.body = []
+        self.add_style(_DEFAULT_STYLE)
+
+    def add_style(self, s):
+        self.add_header('<style>\n{}\n</style>'.format(s))
+
+    def add_style_src(self, filename):
+        self.add_header(('<link rel="stylesheet" type="text/css" '
+                         'href="{}" />').format(filename))
+
+    def add_script(self, s):
+        self.add_header('<script>{}</script>'.format(s))
+
+    def add_script_src(self, filename):
+        self.add_header('<script src="{}"></script>'.format(filename))
+
+    def add_header(self, s):
+        self.headers.append(s)
+
+    def set_body(self, body):
+        self.body = [body]
+
+    def add_to_body(self, s):
+        self.body.append(s)
+
+    def _build_html(self):
+        header = '\n'.join(self.headers)
+        body = '\n'.join(self.body)
+        html = _PAGE_TEMPLATE.format(title=self.title,
+                                     header=header,
+                                     body=body,
+                                     )
+        return html
+
+    @property
+    def html(self):
+        return self._build_html()
+
+
 class HTMLWidget(WebView):
-    """An HTML widget that is displayed with Qt.
-
-    Python methods can be called from Javascript with `widget.the_method()`.
-    They must be decorated with `pyqtSlot(str)` or similar, depending on
-    the parameters.
-
-    """
-    title = 'Widget'
-    body = ''
-
-    def __init__(self):
+    """An HTML widget that is displayed with Qt."""
+    def __init__(self, title=''):
         super(HTMLWidget, self).__init__()
-        # self.settings().setAttribute(
-        #     QWebSettings.LocalContentCanAccessRemoteUrls, True)
-        # self.settings().setAttribute(
-        #     QWebSettings.DeveloperExtrasEnabled, True)
-        # self.setPage(QWebEnginePage())
-        self._obj = None
-        self._styles = [_DEFAULT_STYLES]
-        self._header = ''
-        self._body = ''
-        self.add_to_js('widget', self)
         self._event = EventEmitter()
-        self.add_header('''<script>
-                        var emit = function (name, arg) {
+
+        self.channel = QWebChannel(self.page())
+        self.page().setWebChannel(self.channel)
+        self.channel.registerObject('widget', self)
+
+        self.builder = HTMLBuilder(title=title)
+        self.builder.add_script_src('qrc:///qtwebchannel/qwebchannel.js')
+        self.builder.add_script('''
+            function onWidgetReady(callback) {
+                document.addEventListener("DOMContentLoaded", function() {
+                    new QWebChannel(qt.webChannelTransport, function(channel) {
+                        var widget = channel.objects.widget;
+
+                        widget.emit = function(name, arg) {
                             widget._emit_from_js(name, JSON.stringify(arg));
-                        };
-                        </script>''')
-        self._pending_js_eval = []
-        self._built = None
+                        }
+
+                        callback(widget);
+                    });
+                });
+            };
+        ''')
+
+    def build(self):
+        self.set_html_sync(self.builder.html)
 
     # Events
     # -------------------------------------------------------------------------
@@ -109,93 +148,16 @@ class HTMLWidget(WebView):
     def unconnect_(self, *args, **kwargs):
         self._event.unconnect(*args, **kwargs)
 
-    # Headers
-    # -------------------------------------------------------------------------
-
-    def add_styles(self, s):
-        """Add CSS styles."""
-        self._styles.append(s)
-
-    def add_style_src(self, filename):
-        """Link a CSS file."""
-        self.add_header(('<link rel="stylesheet" type="text/css" '
-                         'href="{}" />').format(filename))
-
-    def add_script_src(self, filename):
-        """Link a JS script."""
-        self.add_header('<script src="{}"></script>'.format(filename))
-
-    def add_header(self, h):
-        """Add HTML code to the header."""
-        self._header += (h + '\n')
-
-    # HTML methods
-    # -------------------------------------------------------------------------
-
-    def set_body(self, s):
-        """Set the HTML body."""
-        self._body = s
-
-    def add_body(self, s):
-        """Add HTML code to the body."""
-        self._body += '\n' + s + '\n'
-
-    def html(self):
-        """Return the full HTML source of the widget."""
-        return self.page().toHtml()
-
-    def rebuild(self):
-        styles = '\n\n'.join(self._styles)
-        html = _PAGE_TEMPLATE.format(title=self.title,
-                                     styles=styles,
-                                     header=self._header,
-                                     body=self._body,
-                                     )
-        logger.log(5, "Set HTML: %s", html)
-        static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
-        base_url = QUrl().fromLocalFile(static_dir)
-        self.setHtml(html, base_url)
-
-    def build(self):
-        """Build the full HTML source."""
-        if self.is_built():  # pragma: no cover
-            return
-        with _wait_signal(self.loadFinished, 20):
-            self.rebuild()
-        self._built = True
-
-    def is_built(self):
-        return self._built
-
     # Javascript methods
     # -------------------------------------------------------------------------
 
-    def add_to_js(self, name, var):
-        """Add an object to Javascript."""
-        frame = self.page()
-        frame.addToJavaScriptWindowObject(name, var)
-
-    def eval_js(self, expr):
+    def eval_js(self, expr, callback):
         """Evaluate a Javascript expression."""
-        if not self.is_built():
-            self._pending_js_eval.append(expr)
-            return
-        logger.log(5, "Evaluate Javascript: `%s`.", expr)
-        out = self.page().runJavaScript(expr)
-        return _to_py(out)
+        self.page().runJavaScript(expr, callback)
 
     @pyqtSlot(str, str)
     def _emit_from_js(self, name, arg_json):
         self.emit(text_type(name), json.loads(text_type(arg_json)))
-
-    def show(self):
-        self.build()
-        super(HTMLWidget, self).show()
-        # Call the pending JS eval calls after the page has been built.
-        assert self.is_built()
-        for expr in self._pending_js_eval:
-            self.eval_js(expr)
-        self._pending_js_eval = []
 
 
 # -----------------------------------------------------------------------------

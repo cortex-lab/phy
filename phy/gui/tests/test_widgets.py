@@ -42,19 +42,26 @@ def table(qtbot):
 
 def test_widget_empty(qtbot):
     widget = HTMLWidget()
+    widget.build()
     widget.show()
-    # qtbot.waitForWindowShown(widget)
+    qtbot.addWidget(widget)
+    qtbot.waitForWindowShown(widget)
+    widget.close()
     # qtbot.stop()
 
 
 def test_widget_html(qtbot):
     widget = HTMLWidget()
-    widget.add_styles('html, body, p {background-color: purple;}')
-    widget.add_header('<!-- comment -->')
-    widget.set_body('Hello world!')
+    widget.builder.add_style('html, body, p {background-color: purple;}')
+    widget.builder.add_header('<!-- comment -->')
+    widget.builder.set_body('Hello world!')
+    widget.build()
     widget.show()
-    # qtbot.waitForWindowShown(widget)
-    assert 'Hello world!' in widget.html()
+    qtbot.addWidget(widget)
+    qtbot.waitForWindowShown(widget)
+    assert 'Hello world!' in widget.html
+    widget.close()
+    # qtbot.stop()
 
 
 def test_widget_javascript_1(qtbot):

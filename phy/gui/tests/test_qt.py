@@ -80,8 +80,6 @@ def test_web_view(qtbot):
     def _assert(text):
         assert view.html == '<html><head></head><body>%s</body></html>' % text
 
-    view.move(100, 100)
-    view.resize(300, 200)
     view.set_html_sync('hello')
     qtbot.addWidget(view)
     view.show()

@@ -173,6 +173,11 @@ class AsyncCaller(object):
 
 
 class WebView(QWebEngineView):
+    def __init__(self, *args):
+        super(WebView, self).__init__(*args)
+        self.move(100, 100)
+        self.resize(300, 200)
+
     def set_html_sync(self, html):
         self.html = None
         self.loadFinished.connect(self._loadFinished)
