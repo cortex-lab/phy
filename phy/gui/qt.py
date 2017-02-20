@@ -11,6 +11,7 @@ from functools import wraps
 import logging
 import os.path as op
 import sys
+from timeit import default_timer
 
 logger = logging.getLogger(__name__)
 
@@ -173,7 +174,9 @@ class AsyncCaller(object):
 
 
 def block(until_true):
-    while not until_true():
+    t0 = default_timer()
+    timeout = .2
+    while not until_true() and (default_timer() - t0 < timeout):
         app = QApplication.instance()
         app.processEvents(QEventLoop.ExcludeUserInputEvents |
                           QEventLoop.ExcludeSocketNotifiers |

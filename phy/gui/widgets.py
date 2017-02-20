@@ -215,7 +215,7 @@ class Table(HTMLWidget):
         self._default_sort = (None, None)
         self.build()
         # Make sure the table is fully loaded at initialization.
-        block(lambda: self.eval_js('(typeof window.table !== "undefined")',
+        block(lambda: self.eval_js('(typeof(window.table) !== "undefined")',
                                    sync=True))
         self.add_column(lambda _: _, name='id')
 
@@ -248,7 +248,7 @@ class Table(HTMLWidget):
         # Update the headers in the widget.
         data = _create_json_dict(cols=self.column_names,
                                  )
-        self.eval_js('table.setHeaders({});'.format(data))
+        self.eval_js('window.table.setHeaders({});'.format(data))
 
         return func
 
@@ -284,7 +284,7 @@ class Table(HTMLWidget):
         data = _create_json_dict(items=items,
                                  cols=self.column_names,
                                  )
-        self.eval_js('table.setData({});'.format(data))
+        self.eval_js('window.table.setData({});'.format(data))
 
         # Sort.
         if sort_col:
@@ -293,25 +293,26 @@ class Table(HTMLWidget):
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
         logger.log(5, "Sort by `%s` %s.", name, sort_dir)
-        self.eval_js('table.sortBy("{}", "{}");'.format(name, sort_dir))
+        self.eval_js('window.table.sortBy("{}", "{}");'.format(name, sort_dir))
 
     def get_next_id(self):
         """Get the next non-skipped row id."""
-        next_id = self.eval_js('table.get_next_id();', sync=True)
+        next_id = self.eval_js('window.table.get_next_id();', sync=True)
         return int(next_id) if next_id is not None else None
 
     def get_previous_id(self):
         """Get the previous non-skipped row id."""
-        previous_id = self.eval_js('table.get_previous_id();', sync=True)
+        previous_id = self.eval_js('window.table.get_previous_id();',
+                                   sync=True)
         return int(previous_id) if previous_id is not None else None
 
     def next(self):
         """Select the next non-skipped row."""
-        self.eval_js('table.next();')
+        self.eval_js('window.table.next();', sync=True)
 
     def previous(self):
         """Select the previous non-skipped row."""
-        self.eval_js('table.previous();')
+        self.eval_js('window.table.previous();', sync=True)
 
     def select(self, ids, do_emit=True, **kwargs):
         """Select some rows in the table.
@@ -320,7 +321,8 @@ class Table(HTMLWidget):
 
         """
         # Select the rows without emiting the event.
-        self.eval_js('table.select({}, false);'.format(dumps(ids)))
+        self.eval_js('window.table.select({}, false);'.format(dumps(ids)),
+                     sync=True)
         if do_emit:
             # Emit the event manually if needed.
             self.emit('select', ids, **kwargs)
@@ -337,11 +339,11 @@ class Table(HTMLWidget):
     @property
     def selected(self):
         """Currently selected rows."""
-        return [int(_) for _ in self.eval_js('table.selected',
+        return [int(_) for _ in self.eval_js('window.table.selected',
                                              sync=True) or ()]
 
     @property
     def current_sort(self):
         """Current sort: a tuple `(name, dir)`."""
-        return tuple(self.eval_js('table.currentSort()',
+        return tuple(self.eval_js('window.table.currentSort()',
                                   sync=True) or (None, None))
