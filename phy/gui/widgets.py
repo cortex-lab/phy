@@ -14,7 +14,7 @@ import os.path as op
 
 from six import text_type
 
-from .qt import WebView, QUrl, QVariant, pyqtSlot, _wait_signal, QWebChannel
+from .qt import WebView, QWebChannel, QVariant, pyqtSlot, block
 from phy.utils import EventEmitter
 from phy.utils._misc import _CustomEncoder
 
@@ -33,6 +33,25 @@ _DEFAULT_STYLE = """
         font-size: 12pt;
         margin: 5px 10px;
     }
+"""
+
+
+_DEFAULT_SCRIPT = """
+    function onWidgetReady(callback) {
+        document.addEventListener("DOMContentLoaded", function() {
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                var widget = channel.objects.widget;
+
+                widget.emit = function(name, arg) {
+                    widget._emit_from_js(name, JSON.stringify(arg));
+                };
+                window.emit = widget.emit;
+                window.widget = widget;
+
+                callback(widget);
+            });
+        });
+    };
 """
 
 
@@ -117,21 +136,7 @@ class HTMLWidget(WebView):
 
         self.builder = HTMLBuilder(title=title)
         self.builder.add_script_src('qrc:///qtwebchannel/qwebchannel.js')
-        self.builder.add_script('''
-            function onWidgetReady(callback) {
-                document.addEventListener("DOMContentLoaded", function() {
-                    new QWebChannel(qt.webChannelTransport, function(channel) {
-                        var widget = channel.objects.widget;
-
-                        widget.emit = function(name, arg) {
-                            widget._emit_from_js(name, JSON.stringify(arg));
-                        }
-
-                        callback(widget);
-                    });
-                });
-            };
-        ''')
+        self.builder.add_script(_DEFAULT_SCRIPT)
 
     def build(self):
         self.set_html_sync(self.builder.html)
@@ -151,9 +156,29 @@ class HTMLWidget(WebView):
     # Javascript methods
     # -------------------------------------------------------------------------
 
-    def eval_js(self, expr, callback):
+    def eval_js(self, expr, callback=None):
         """Evaluate a Javascript expression."""
-        self.page().runJavaScript(expr, callback)
+        self._js_done = False
+        self._js_result = None
+
+        def _callback(res):
+            self._js_done = True
+            self._js_result = res
+
+        if callback:
+            self.page().runJavaScript(expr, callback)
+            return
+
+        # Synchronous execution.
+        self.page().runJavaScript(expr, _callback)
+
+        block(lambda: self._js_done is False)
+
+        res = self._js_result
+        self._js_done = False
+        self._js_result = None
+
+        return res
 
     @pyqtSlot(str, str)
     def _emit_from_js(self, name, arg_json):

@@ -8,6 +8,7 @@
 
 from pytest import yield_fixture, raises
 
+from phy.utils.testing import captured_logging
 from ..widgets import HTMLWidget, Table
 
 
@@ -46,8 +47,8 @@ def test_widget_empty(qtbot):
     widget.show()
     qtbot.addWidget(widget)
     qtbot.waitForWindowShown(widget)
-    widget.close()
     # qtbot.stop()
+    widget.close()
 
 
 def test_widget_html(qtbot):
@@ -60,23 +61,33 @@ def test_widget_html(qtbot):
     qtbot.addWidget(widget)
     qtbot.waitForWindowShown(widget)
     assert 'Hello world!' in widget.html
-    widget.close()
     # qtbot.stop()
+    widget.close()
 
 
 def test_widget_javascript_1(qtbot):
     widget = HTMLWidget()
-    widget.eval_js('number = 1;')
+    widget.eval_js('var number = 1;')
     widget.show()
-    # qtbot.waitForWindowShown(widget)
+    qtbot.addWidget(widget)
+    qtbot.waitForWindowShown(widget)
 
     assert widget.eval_js('number') == 1
+
+    # Test logging from JS.
+    with captured_logging() as buf:
+        widget.eval_js('console.log("hello world!");')
+    assert 'hello world!' in buf.getvalue().lower()
+
+    # qtbot.stop()
+    widget.close()
 
 
 def test_widget_javascript_2(qtbot):
     widget = HTMLWidget()
     widget.show()
-    # qtbot.waitForWindowShown(widget)
+    qtbot.addWidget(widget)
+    qtbot.waitForWindowShown(widget)
     _out = []
 
     @widget.connect_
@@ -89,6 +100,7 @@ def test_widget_javascript_2(qtbot):
     widget.unconnect_(on_test)
 
     # qtbot.stop()
+    widget.close()
 
 
 #------------------------------------------------------------------------------
