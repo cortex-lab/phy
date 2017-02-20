@@ -90,7 +90,7 @@ def _wait_signal(signal, timeout=None):
     yield
 
     if timeout is not None:
-        QTimer.singleShot(timeout, loop.quit)
+        QTimer.singleShot(timeout, loop.quit)  # pragma: no cover
     loop.exec_()
 
 
@@ -172,8 +172,8 @@ class AsyncCaller(object):
             self._timer.deleteLater()
 
 
-def block(while_true):
-    while while_true():
+def block(until_true):
+    while not until_true():
         app = QApplication.instance()
         app.processEvents(QEventLoop.ExcludeUserInputEvents |
                           QEventLoop.ExcludeSocketNotifiers |
@@ -200,7 +200,7 @@ class WebView(QWebEngineView):
         static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
         base_url = QUrl().fromLocalFile(static_dir)
         self.page().setHtml(html, base_url)
-        block(lambda: self.html is None)
+        block(lambda: self.html is not None)
 
     def _callable(self, data):
         self.html = data

@@ -74,7 +74,13 @@ def test_widget_javascript_1(qtbot):
     qtbot.addWidget(widget)
     qtbot.waitForWindowShown(widget)
 
-    assert widget.eval_js('number') == 1
+    _out = []
+
+    def _callback(res):
+        _out.append(res)
+
+    widget.eval_js('number', _callback)
+    block(lambda: _out == [1])
 
     # Test logging from JS.
     with captured_logging() as buf:
@@ -87,26 +93,28 @@ def test_widget_javascript_1(qtbot):
 
 def test_widget_javascript_2(qtbot):
     widget = HTMLWidget()
-    widget.build()
-    widget.show()
-    qtbot.addWidget(widget)
-    qtbot.waitForWindowShown(widget)
+    widget.builder.add_script("var l = [1, 2];")
+    widget.builder.add_script('''
+        onWidgetReady(function() {
+            window.emit("test", l);
+        });
+    ''')
+
     _out = []
 
     @widget.connect_
     def on_test(arg):
         _out.append(arg)
 
-    widget.eval_js('''
-        onWidgetReady(function() {
-            window.emit("test", [1, 2]);
-        });
-    ''')
-    # Wait for the assertion to be true.
-    block(lambda: _out == [[1, 2]])
+    widget.build()
+    widget.show()
+    qtbot.addWidget(widget)
+    qtbot.waitForWindowShown(widget)
+
+    widget.block_until_loaded()
+    assert _out == [[1, 2]]
 
     widget.unconnect_(on_test)
-
     # qtbot.stop()
     widget.close()
 

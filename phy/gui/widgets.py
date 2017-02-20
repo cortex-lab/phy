@@ -84,7 +84,7 @@ class HTMLBuilder(object):
     def __init__(self, title=''):
         self.title = title
         self.headers = []
-        self.body = []
+        self.body = ''
         self.add_style(_DEFAULT_STYLE)
 
     def add_style(self, s):
@@ -104,17 +104,13 @@ class HTMLBuilder(object):
         self.headers.append(s)
 
     def set_body(self, body):
-        self.body = [body]
-
-    def add_to_body(self, s):
-        self.body.append(s)
+        self.body = body
 
     def _build_html(self):
         header = '\n'.join(self.headers)
-        body = '\n'.join(self.body)
         html = _PAGE_TEMPLATE.format(title=self.title,
                                      header=header,
-                                     body=body,
+                                     body=self.body,
                                      )
         return html
 
@@ -139,6 +135,9 @@ class HTMLWidget(WebView):
 
     def build(self):
         self.set_html_sync(self.builder.html)
+
+    def block_until_loaded(self):
+        block(lambda: self.eval_js("typeof(window.widget) !== 'undefined'"))
 
     # Events
     # -------------------------------------------------------------------------
@@ -171,7 +170,7 @@ class HTMLWidget(WebView):
         # Synchronous execution.
         self.page().runJavaScript(expr, _callback)
 
-        block(lambda: self._js_done is False)
+        block(lambda: self._js_done)
 
         res = self._js_result
         self._js_done = False
@@ -226,7 +225,7 @@ class Table(HTMLWidget):
         self._default_sort = (None, None)
         self.build()
         # Make sure the table is fully loaded at initialization.
-        block(lambda: self.eval_js('(typeof window.table === "undefined")'))
+        block(lambda: self.eval_js('(typeof window.table !== "undefined")'))
         self.add_column(lambda _: _, name='id')
 
     def add_column(self, func, name=None, show=True):
