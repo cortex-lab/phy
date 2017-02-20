@@ -172,9 +172,25 @@ class AsyncCaller(object):
             self._timer.deleteLater()
 
 
+def block(while_true):
+    while while_true():
+        app = QApplication.instance()
+        app.processEvents(QEventLoop.ExcludeUserInputEvents |
+                          QEventLoop.ExcludeSocketNotifiers |
+                          QEventLoop.WaitForMoreEvents)
+
+
+class WebPage(QWebEnginePage):
+    def javaScriptConsoleMessage(self, level, msg, line, source):
+        super(WebPage, self).javaScriptConsoleMessage(level, msg, line, source)
+        logger.debug("[JS-%04d] %s", line, msg)
+
+
 class WebView(QWebEngineView):
     def __init__(self, *args):
         super(WebView, self).__init__(*args)
+        self._page = WebPage()
+        self.setPage(self._page)
         self.move(100, 100)
         self.resize(300, 200)
 
@@ -184,20 +200,13 @@ class WebView(QWebEngineView):
         static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
         base_url = QUrl().fromLocalFile(static_dir)
         self.page().setHtml(html, base_url)
-        while self.html is None:
-            app = QApplication.instance()
-            app.processEvents(QEventLoop.ExcludeUserInputEvents |
-                              QEventLoop.ExcludeSocketNotifiers |
-                              QEventLoop.WaitForMoreEvents)
+        block(lambda: self.html is None)
 
     def _callable(self, data):
         self.html = data
 
     def _loadFinished(self, result):
         self.page().toHtml(self._callable)
-
-    def javaScriptConsoleMessage(self, msg, line, source):
-        logger.debug("[%d] %s", line, msg)  # plragma: no cover
 
 
 # -----------------------------------------------------------------------------
