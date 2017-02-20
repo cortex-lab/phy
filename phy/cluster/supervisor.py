@@ -345,11 +345,11 @@ class Supervisor(EventEmitter):
     def _create_cluster_views(self):
         # Create the cluster view.
         self.cluster_view = ClusterView()
-        self.cluster_view.build()
+        # self.cluster_view.build()
 
         # Create the similarity view.
         self.similarity_view = ClusterView()
-        self.similarity_view.build()
+        # self.similarity_view.build()
 
         # Selection in the cluster view.
         @self.cluster_view.connect_

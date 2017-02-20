@@ -209,9 +209,9 @@ class Table(HTMLWidget):
 
     def __init__(self, title=''):
         super(Table, self).__init__(title=title)
-        self._set_builder()
         self._columns = OrderedDict()
         self._default_sort = (None, None)
+        self._set_builder()
         self.build()
         # Make sure the table is fully loaded at initialization.
         block(lambda: self.eval_js('(typeof(window.table) !== "undefined")'))
@@ -223,13 +223,13 @@ class Table(HTMLWidget):
         b.add_script_src('tablesort.min.js')
         b.add_script_src('tablesort.number.js')
         b.add_script_src('table.js')
-        b.set_body('<table id="{}" class="sort"></table>'.format(
-                   self._table_id))
         b.add_script('''
             onWidgetReady(function() {
                 window.table = new Table(document.getElementById("%s"));
             });
         ''' % self._table_id)
+        b.set_body('<table id="{}" class="sort"></table>'.format(
+                   self._table_id))
 
     def add_column(self, func, name=None, show=True):
         """Add a column function which takes an id as argument and
