@@ -39,6 +39,9 @@ from PyQt5.QtWidgets import (QAction, QStatusBar,  # noqa
                              QInputDialog,
                              )
 
+# Enable high DPI support.
+QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+
 
 # -----------------------------------------------------------------------------
 # Utility functions
