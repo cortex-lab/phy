@@ -9,6 +9,7 @@
 from contextlib import contextmanager
 from functools import wraps
 import logging
+import os.path as op
 import sys
 
 logger = logging.getLogger(__name__)
@@ -18,15 +19,20 @@ logger = logging.getLogger(__name__)
 # PyQt import
 # -----------------------------------------------------------------------------
 
+# BUG FIX on Ubuntu, otherwise the canvas is all black:
+# https://riverbankcomputing.com/pipermail/pyqt/2014-January/033681.html
+from OpenGL import GL  # noqa
+
 from PyQt5.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
                           QVariant, QEventLoop, QTimer, QPoint, QTimer,
                           pyqtSignal, pyqtSlot, QSize, QUrl,
                           )
-from PyQt5.QtGui import QKeySequence  # noqa
+from PyQt5.QtGui import QKeySequence, QColor  # noqa
 from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
                                       QWebEnginePage,
                                       # QWebSettings,
                                       )
+from PyQt5.QtWebChannel import QWebChannel  # noqa
 from PyQt5.QtWidgets import (QAction, QStatusBar,  # noqa
                              QMainWindow, QDockWidget, QWidget,
                              QMessageBox, QApplication, QMenuBar,
@@ -167,7 +173,9 @@ class WebView(QWebEngineView):
     def set_html_sync(self, html):
         self.html = None
         self.loadFinished.connect(self._loadFinished)
-        self.setHtml(html)
+        static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
+        base_url = QUrl().fromLocalFile(static_dir)
+        self.page().setHtml(html, base_url)
         while self.html is None:
             app = QApplication.instance()
             app.processEvents(QEventLoop.ExcludeUserInputEvents |

@@ -80,26 +80,16 @@ def test_web_view(qtbot):
     def _assert(text):
         assert view.html == '<html><head></head><body>%s</body></html>' % text
 
-    view.resize(100, 100)
-    view.set_html_sync("hello")
+    view.move(300, 300)
+    view.resize(600, 400)
+    view.set_html_sync('hello')
     qtbot.addWidget(view)
-    qtbot.waitForWindowShown(view)
     view.show()
+    qtbot.waitForWindowShown(view)
     _assert('hello')
-    return
 
     view.set_html_sync("world")
     _assert('world')
-    view.close()
-
-    view = QWebEngineView()
-    view._loaded = False
-    view.resize(100, 100)
-    view.show()
-    qtbot.addWidget(view)
-
-    view.set_html_sync("finished")
-    _assert('finished')
     view.close()
 
 
