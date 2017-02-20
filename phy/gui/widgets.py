@@ -208,19 +208,25 @@ class Table(HTMLWidget):
 
     _table_id = 'the-table'
 
-    def __init__(self):
-        super(Table, self).__init__()
-        self.add_style_src('table.css')
-        self.add_script_src('tablesort.min.js')
-        self.add_script_src('tablesort.number.js')
-        self.add_script_src('table.js')
-        self.set_body('<table id="{}" class="sort"></table>'.format(
-                      self._table_id))
-        self.add_body('''<script>
-                      var table = new Table(document.getElementById("{}"));
-                      </script>'''.format(self._table_id))
+    def __init__(self, title=''):
+        super(Table, self).__init__(title=title)
+        b = self.builder
+        b.add_style_src('table.css')
+        b.add_script_src('tablesort.min.js')
+        b.add_script_src('tablesort.number.js')
+        b.add_script_src('table.js')
+        b.set_body('<table id="{}" class="sort"></table>'.format(
+                   self._table_id))
+        b.add_script('''
+            onWidgetReady(function() {
+                window.table = new Table(document.getElementById("%s"));
+            });
+        ''' % self._table_id)
         self._columns = OrderedDict()
         self._default_sort = (None, None)
+        self.build()
+        # Make sure the table is fully loaded at initialization.
+        block(lambda: self.eval_js('(typeof window.table === "undefined")'))
         self.add_column(lambda _: _, name='id')
 
     def add_column(self, func, name=None, show=True):

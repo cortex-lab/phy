@@ -183,7 +183,7 @@ def block(while_true):
 class WebPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, msg, line, source):
         super(WebPage, self).javaScriptConsoleMessage(level, msg, line, source)
-        logger.debug("[JS-%04d] %s", line, msg)
+        logger.debug("[JS-%02d] %s", line, msg)
 
 
 class WebView(QWebEngineView):

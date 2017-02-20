@@ -21,7 +21,8 @@ from ..widgets import HTMLWidget, Table
 def table(qtbot):
     table = Table()
     table.show()
-    # qtbot.waitForWindowShown(table)
+    qtbot.addWidget(table)
+    qtbot.waitForWindowShown(table)
 
     def count(id):
         return 10000.5 - 10 * id
@@ -114,14 +115,20 @@ def test_widget_javascript_2(qtbot):
 # Test table
 #------------------------------------------------------------------------------
 
-def test_table_current_sort():
-    assert Table().current_sort == (None, None)
+def test_table_current_sort(qtbot):
+    table = Table()
+    table.show()
+    qtbot.addWidget(table)
+    qtbot.waitForWindowShown(table)
+    assert table.current_sort == (None, None)
+    table.close()
 
 
 def test_table_default_sort(qtbot):
     table = Table()
     table.show()
-    # qtbot.waitForWindowShown(table)
+    qtbot.addWidget(table)
+    qtbot.waitForWindowShown(table)
 
     with raises(ValueError):
         table.add_column(lambda _: _)
