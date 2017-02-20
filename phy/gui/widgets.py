@@ -137,7 +137,8 @@ class HTMLWidget(WebView):
         self.set_html_sync(self.builder.html)
 
     def block_until_loaded(self):
-        block(lambda: self.eval_js("typeof(window.widget) !== 'undefined'"))
+        block(lambda: self.eval_js("typeof(window.widget) !== 'undefined'",
+                                   sync=True))
 
     # Events
     # -------------------------------------------------------------------------
@@ -154,22 +155,22 @@ class HTMLWidget(WebView):
     # Javascript methods
     # -------------------------------------------------------------------------
 
-    def eval_js(self, expr, callback=None):
+    def eval_js(self, expr, callback=None, sync=False):
         """Evaluate a Javascript expression."""
+        if not sync:
+            return self.page().runJavaScript(expr, callback or (lambda _: _))
         self._js_done = False
         self._js_result = None
 
-        def _callback(res):
+        assert not callback
+
+        def callback(res):
             self._js_done = True
             self._js_result = res
 
-        if callback:
-            self.page().runJavaScript(expr, callback)
-            return
+        self.page().runJavaScript(expr, callback)
 
         # Synchronous execution.
-        self.page().runJavaScript(expr, _callback)
-
         block(lambda: self._js_done)
 
         res = self._js_result
@@ -209,6 +210,16 @@ class Table(HTMLWidget):
 
     def __init__(self, title=''):
         super(Table, self).__init__(title=title)
+        self._set_builder()
+        self._columns = OrderedDict()
+        self._default_sort = (None, None)
+        self.build()
+        # Make sure the table is fully loaded at initialization.
+        block(lambda: self.eval_js('(typeof window.table !== "undefined")',
+                                   sync=True))
+        self.add_column(lambda _: _, name='id')
+
+    def _set_builder(self):
         b = self.builder
         b.add_style_src('table.css')
         b.add_script_src('tablesort.min.js')
@@ -221,12 +232,6 @@ class Table(HTMLWidget):
                 window.table = new Table(document.getElementById("%s"));
             });
         ''' % self._table_id)
-        self._columns = OrderedDict()
-        self._default_sort = (None, None)
-        self.build()
-        # Make sure the table is fully loaded at initialization.
-        block(lambda: self.eval_js('(typeof window.table !== "undefined")'))
-        self.add_column(lambda _: _, name='id')
 
     def add_column(self, func, name=None, show=True):
         """Add a column function which takes an id as argument and
@@ -292,12 +297,12 @@ class Table(HTMLWidget):
 
     def get_next_id(self):
         """Get the next non-skipped row id."""
-        next_id = self.eval_js('table.get_next_id();')
+        next_id = self.eval_js('table.get_next_id();', sync=True)
         return int(next_id) if next_id is not None else None
 
     def get_previous_id(self):
         """Get the previous non-skipped row id."""
-        previous_id = self.eval_js('table.get_previous_id();')
+        previous_id = self.eval_js('table.get_previous_id();', sync=True)
         return int(previous_id) if previous_id is not None else None
 
     def next(self):
@@ -332,9 +337,11 @@ class Table(HTMLWidget):
     @property
     def selected(self):
         """Currently selected rows."""
-        return [int(_) for _ in self.eval_js('table.selected') or ()]
+        return [int(_) for _ in self.eval_js('table.selected',
+                                             sync=True) or ()]
 
     @property
     def current_sort(self):
         """Current sort: a tuple `(name, dir)`."""
-        return tuple(self.eval_js('table.currentSort()') or (None, None))
+        return tuple(self.eval_js('table.currentSort()',
+                                  sync=True) or (None, None))

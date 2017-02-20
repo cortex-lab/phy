@@ -69,7 +69,8 @@ def test_widget_html(qtbot):
 
 def test_widget_javascript_1(qtbot):
     widget = HTMLWidget()
-    widget.eval_js('var number = 1;')
+    widget.builder.add_script('var number = 1;')
+    widget.build()
     widget.show()
     qtbot.addWidget(widget)
     qtbot.waitForWindowShown(widget)
@@ -84,7 +85,7 @@ def test_widget_javascript_1(qtbot):
 
     # Test logging from JS.
     with captured_logging() as buf:
-        widget.eval_js('console.log("hello world!");')
+        widget.eval_js('console.log("hello world!");', sync=True)
     assert 'hello world!' in buf.getvalue().lower()
 
     # qtbot.stop()
@@ -197,10 +198,10 @@ def test_table_nav_0(qtbot, table):
     table.select([4])
 
     table.next()
-    assert table.selected == [5]
+    block(lambda: table.selected == [5])
 
     table.previous()
-    assert table.selected == [3]
+    block(lambda: table.selected == [3])
 
     _sel = []
 
@@ -209,7 +210,7 @@ def test_table_nav_0(qtbot, table):
         _sel.append(items)
 
     table.eval_js('table.select([1]);')
-    assert _sel == [[1]]
+    block(lambda: _sel == [[1]])
 
     assert table.selected == [1]
 

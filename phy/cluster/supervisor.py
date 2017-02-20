@@ -49,13 +49,13 @@ def _process_ups(ups):  # pragma: no cover
 # -----------------------------------------------------------------------------
 
 class ClusterView(Table):
-    def __init__(self):
-        super(ClusterView, self).__init__()
-        self.add_styles('''
-                        table tr[data-good='true'] {
-                            color: #86D16D;
-                        }
-                        ''')
+    def _set_builder(self):
+        super(ClusterView, self)._set_builder()
+        self.builder.add_style('''
+                               table tr[data-good='true'] {
+                                   color: #86D16D;
+                               }
+                               ''')
 
     @property
     def state(self):
