@@ -9,6 +9,7 @@
 from pytest import yield_fixture, raises
 
 from phy.utils.testing import captured_logging
+from ..qt import block
 from ..widgets import HTMLWidget, Table
 
 
@@ -85,6 +86,7 @@ def test_widget_javascript_1(qtbot):
 
 def test_widget_javascript_2(qtbot):
     widget = HTMLWidget()
+    widget.build()
     widget.show()
     qtbot.addWidget(widget)
     qtbot.waitForWindowShown(widget)
@@ -94,8 +96,13 @@ def test_widget_javascript_2(qtbot):
     def on_test(arg):
         _out.append(arg)
 
-    widget.eval_js('emit("test", [1, 2]);')
-    assert _out == [[1, 2]]
+    widget.eval_js('''
+        onWidgetReady(function() {
+            window.emit("test", [1, 2]);
+        });
+    ''')
+    # Wait for the assertion to be true.
+    block(lambda: _out == [[1, 2]])
 
     widget.unconnect_(on_test)
 

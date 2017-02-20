@@ -10,7 +10,6 @@
 from collections import OrderedDict
 import json
 import logging
-import os.path as op
 
 from six import text_type
 
