@@ -80,12 +80,12 @@ def test_widget_javascript_1(qtbot):
     def _callback(res):
         _out.append(res)
 
-    widget.eval_js('number', _callback)
+    widget.eval_js('number', _callback, sync=False)
     block(lambda: _out == [1])
 
     # Test logging from JS.
     with captured_logging() as buf:
-        widget.eval_js('console.log("hello world!");', sync=True)
+        widget.eval_js('console.log("hello world!");')
     assert 'hello world!' in buf.getvalue().lower()
 
     # qtbot.stop()
