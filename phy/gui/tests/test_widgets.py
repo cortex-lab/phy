@@ -7,7 +7,7 @@
 #------------------------------------------------------------------------------
 
 from random import random
-from pytest import yield_fixture, raises
+from pytest import yield_fixture
 
 from phy.utils.testing import captured_logging
 from ..qt import block

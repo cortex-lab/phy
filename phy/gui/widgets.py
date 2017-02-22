@@ -12,7 +12,7 @@ import logging
 
 from six import text_type
 
-from .qt import WebView, QWebChannel, QVariant, pyqtSlot, block, _abs_path
+from .qt import WebView, QWebChannel, pyqtSlot, block, _abs_path
 from phy.utils import EventEmitter
 from phy.utils._misc import _CustomEncoder, _read_text
 
