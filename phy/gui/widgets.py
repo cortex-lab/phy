@@ -7,15 +7,14 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-from collections import OrderedDict
 import json
 import logging
 
 from six import text_type
 
-from .qt import WebView, QWebChannel, QVariant, pyqtSlot, block
+from .qt import WebView, QWebChannel, QVariant, pyqtSlot, block, _abs_path
 from phy.utils import EventEmitter
-from phy.utils._misc import _CustomEncoder
+from phy.utils._misc import _CustomEncoder, _read_text
 
 logger = logging.getLogger(__name__)
 
@@ -41,10 +40,10 @@ _DEFAULT_SCRIPT = """
             new QWebChannel(qt.webChannelTransport, function(channel) {
                 var widget = channel.objects.widget;
 
-                widget.emit = function(name, arg) {
+                widget.emitPy = function(name, arg) {
                     widget._emit_from_js(name, JSON.stringify(arg));
                 };
-                window.emit = widget.emit;
+                window.emit = widget.emitPy;
                 window.widget = widget;
 
                 callback(widget);
@@ -69,15 +68,10 @@ _PAGE_TEMPLATE = """
 """
 
 
-def _to_py(obj):  # pragma: no cover
-    if isinstance(obj, QVariant):
-        return obj.toPyObject()
-    elif isinstance(obj, list):
-        return [_to_py(_) for _ in obj]
-    elif isinstance(obj, tuple):
-        return tuple(_to_py(_) for _ in obj)
-    else:
-        return obj
+def _uniq(seq):
+    seen = set()
+    seen_add = seen.add
+    return [x for x in seq if not (x in seen or seen_add(x))]
 
 
 class HTMLBuilder(object):
@@ -102,6 +96,10 @@ class HTMLBuilder(object):
 
     def add_header(self, s):
         self.headers.append(s)
+
+    def set_body_src(self, filename):
+        path = _abs_path(filename)
+        self.set_body(_read_text(path))
 
     def set_body(self, body):
         self.body = body
@@ -191,154 +189,83 @@ def dumps(o):
     return json.dumps(o, cls=_CustomEncoder)
 
 
-def _create_json_dict(**kwargs):
-    d = {}
-    # Remove None elements.
-    for k, v in kwargs.items():
-        if v is not None:
-            d[k] = v
-    # The custom encoder serves for NumPy scalars that are non
-    # JSON-serializable (!!).
-    return dumps(d)
-
-
 class Table(HTMLWidget):
     """A sortable table with support for selection."""
 
-    _table_id = 'the-table'
-
-    def __init__(self, title=''):
+    def __init__(self, columns, data=None, title=''):
         super(Table, self).__init__(title=title)
-        self._columns = OrderedDict()
-        self._default_sort = (None, None)
-        self._set_builder()
-        self.build()
-        # Make sure the table is fully loaded at initialization.
-        block(lambda: self.eval_js('(typeof(window.table) !== "undefined")'))
-        self.add_column(lambda _: _, name='id')
-
-    def _set_builder(self):
+        self.columns = columns
         b = self.builder
-        b.add_style_src('table.css')
-        b.add_script_src('tablesort.min.js')
-        b.add_script_src('tablesort.number.js')
-        b.add_script_src('table.js')
-        b.add_script('''
-            onWidgetReady(function() {
-                window.table = new Table(document.getElementById("%s"));
+        b.set_body_src('index.html')
+        data_json = dumps(data)
+        columns_json = dumps(columns)
+        b.body += '''
+        <script>
+            var data = %s;
+
+            var options = {
+              valueNames: %s.concat(["_meta"]),
+              columns: %s,
+            };
+
+            var table = new Table('table', options, data);
+
+            // Connect the JS "select" event to the Python event.
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                var widget = channel.objects.widget;
+                table.onEvent("select", function (id) {
+                    widget._emit_from_js("select", [id]);
+                });
             });
-        ''' % self._table_id)
-        b.set_body('<table id="{}" class="sort"></table>'.format(
-                   self._table_id))
-
-    def add_column(self, func, name=None, show=True):
-        """Add a column function which takes an id as argument and
-        returns a value."""
-        assert func
-        name = name or func.__name__
-        if name == '<lambda>':
-            raise ValueError("Please provide a valid name for " + name)
-        d = {'func': func,
-             'show': show,
-             }
-        self._columns[name] = d
-
-        # Update the headers in the widget.
-        data = _create_json_dict(cols=self.column_names,
-                                 )
-        self.eval_js('window.table.setHeaders({});'.format(data))
-
-        return func
-
-    @property
-    def column_names(self):
-        """List of column names."""
-        return [name for (name, d) in self._columns.items()
-                if d.get('show', True)]
-
-    def _get_row(self, id):
-        """Create a row dictionary for a given object id."""
-        return {name: d['func'](id) for (name, d) in self._columns.items()}
-
-    def set_rows(self, ids):
-        """Set the rows of the table."""
-        # NOTE: make sure we have integers and not np.generic objects.
-        assert all(isinstance(i, int) for i in ids)
-
-        # Determine the sort column and dir to set after the rows.
-        sort_col, sort_dir = self.current_sort
-        default_sort_col, default_sort_dir = self.default_sort
-
-        sort_col = sort_col or default_sort_col
-        sort_dir = sort_dir or default_sort_dir or 'desc'
-
-        # Set the rows.
-        logger.log(5, "Set %d rows in the table.", len(ids))
-        items = [self._get_row(id) for id in ids]
-        # Sort the rows before passing them to the widget.
-        # if sort_col:
-        #     items = sorted(items, key=itemgetter(sort_col),
-        #                    reverse=(sort_dir == 'desc'))
-        data = _create_json_dict(items=items,
-                                 cols=self.column_names,
-                                 )
-        self.eval_js('window.table.setData({});'.format(data))
-
-        # Sort.
-        if sort_col:
-            self.sort_by(sort_col, sort_dir)
+        </script>
+        ''' % (data_json, columns_json, columns_json)
+        self.build()
+        block(lambda: self.eval_js('(typeof(table) !== "undefined")'))
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
         logger.log(5, "Sort by `%s` %s.", name, sort_dir)
-        self.eval_js('window.table.sortBy("{}", "{}");'.format(name, sort_dir))
+        self.eval_js('table.sort_("{}", "{}");'.format(name, sort_dir))
 
     def get_next_id(self):
         """Get the next non-skipped row id."""
-        next_id = self.eval_js('window.table.get_next_id();')
+        next_id = self.eval_js('table.getSiblingId(undefined, "next");')
         return int(next_id) if next_id is not None else None
 
     def get_previous_id(self):
         """Get the previous non-skipped row id."""
-        previous_id = self.eval_js('window.table.get_previous_id();')
-        return int(previous_id) if previous_id is not None else None
+        prev_id = self.eval_js('table.getSiblingId(undefined, "previous");')
+        return int(prev_id) if prev_id is not None else None
 
     def next(self):
         """Select the next non-skipped row."""
-        self.eval_js('window.table.next();')
+        self.eval_js('table.moveToSibling(undefined, "next");')
 
     def previous(self):
         """Select the previous non-skipped row."""
-        self.eval_js('window.table.previous();')
+        self.eval_js('table.moveToSibling(undefined, "previous");')
 
-    def select(self, ids, do_emit=True, **kwargs):
-        """Select some rows in the table.
+    def select(self, ids):
+        """Select some rows in the table."""
+        ids = _uniq(ids)
+        self.eval_js('table.select_({});'.format(dumps(ids)))
 
-        By default, the `select` event is raised, unless `do_emit=False`.
+    def add(self, objects):
+        self.eval_js('table.add_({});'.format(dumps(objects)))
 
-        """
-        # Select the rows without emiting the event.
-        self.eval_js('window.table.select({}, false);'.format(dumps(ids)))
-        if do_emit:
-            # Emit the event manually if needed.
-            self.emit('select', ids, **kwargs)
+    def change(self, objects):
+        self.eval_js('table.change_({});'.format(dumps(objects)))
 
-    @property
-    def default_sort(self):
-        """Default sort as a pair `(name, dir)`."""
-        return self._default_sort
-
-    def set_default_sort(self, name, sort_dir='desc'):
-        """Set the default sort column."""
-        self._default_sort = name, sort_dir
+    def remove(self, ids):
+        self.eval_js('table.remove_({});'.format(dumps(ids)))
 
     @property
     def selected(self):
         """Currently selected rows."""
-        return [int(_) for _ in self.eval_js('window.table.selected') or ()]
+        return [int(_) for _ in self.eval_js('table.selected()') or ()]
 
     @property
     def current_sort(self):
         """Current sort: a tuple `(name, dir)`."""
-        return tuple(self.eval_js('window.table.currentSort()') or
-                     (None, None))
+        sort = self.eval_js('table._currentSort()')
+        return None if not sort else tuple(sort)

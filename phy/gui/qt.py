@@ -183,6 +183,11 @@ def block(until_true):
                           QEventLoop.WaitForMoreEvents)
 
 
+def _abs_path(rel_path):
+    static_dir = op.join(op.abspath(op.dirname(__file__)), 'static/')
+    return op.join(static_dir, rel_path)
+
+
 class WebPage(QWebEnginePage):
     def javaScriptConsoleMessage(self, level, msg, line, source):
         super(WebPage, self).javaScriptConsoleMessage(level, msg, line, source)
@@ -195,7 +200,7 @@ class WebView(QWebEngineView):
         self._page = WebPage()
         self.setPage(self._page)
         self.move(100, 100)
-        self.resize(300, 200)
+        self.resize(400, 400)
 
     def set_html_sync(self, html):
         self.html = None
