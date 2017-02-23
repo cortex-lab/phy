@@ -10,6 +10,8 @@
 import logging
 
 import numpy as np
+from phy.plot.transform import NDC, Range
+from vispy.util.event import Event
 
 from phy.utils import Bunch
 from .base import ManualClusteringView
@@ -75,6 +77,14 @@ def _iter_spike_waveforms(interval=None,
         yield wave
 
 
+class SpikeClick(Event):
+    def __init__(self, type, channel_id=None, spike_id=None, cluster_id=None):
+        super(SpikeClick, self).__init__(type)
+        self.channel_id = channel_id
+        self.spike_id = spike_id
+        self.cluster_id = cluster_id
+
+
 class TraceView(ManualClusteringView):
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
@@ -100,6 +110,7 @@ class TraceView(ManualClusteringView):
                  **kwargs):
 
         self.do_show_labels = None
+        self._key_pressed = None
 
         # traces is a function interval => [traces]
         # spikes is a function interval => [Bunch(...)]
@@ -142,6 +153,9 @@ class TraceView(ManualClusteringView):
         # Initial interval.
         self._interval = None
         self.go_to(duration / 2.)
+
+        self._waveform_times = []
+        self.events.add(spike_click=SpikeClick)
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -242,6 +256,10 @@ class TraceView(ManualClusteringView):
         ymin, ymax = traces.data.min(), traces.data.max()
         data_bounds = (start, ymin, end, ymax)
 
+        # Used for spike click.
+        self._data_bounds = data_bounds
+        self._waveform_times = []
+
         # Plot the traces.
         self._plot_traces(traces.data,
                           color=traces.get('color', None),
@@ -258,6 +276,11 @@ class TraceView(ManualClusteringView):
                                  start_time=w.start_time,
                                  data_bounds=data_bounds,
                                  )
+            self._waveform_times.append((w.start_time,
+                                         w.spike_id,
+                                         w.spike_cluster,
+                                         w.get('channel_ids', None),
+                                         ))
 
         # Plot the labels.
         if self.do_show_labels:
@@ -268,7 +291,8 @@ class TraceView(ManualClusteringView):
 
     def on_select(self, cluster_ids=None, **kwargs):
         super(TraceView, self).on_select(cluster_ids, **kwargs)
-        self.set_interval(self._interval, change_status=False)
+        self.set_interval(self._interval, change_status=False,
+                          force_update=kwargs.get('force_update', None))
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -286,6 +310,17 @@ class TraceView(ManualClusteringView):
         self.actions.add(self.narrow)
         self.actions.separator()
         self.actions.add(self.toggle_show_labels)
+
+        # We forward the event from VisPy to the phy GUI.
+        @self.connect
+        def on_spike_click(e):
+            logger.log(5, "Spike click on channel %s, spike %s, cluster %s.",
+                       e.channel_id, e.spike_id, e.cluster_id)
+            gui.emit('spike_click',
+                     channel_id=e.channel_id,
+                     spike_id=e.spike_id,
+                     cluster_id=e.cluster_id,
+                     )
 
     @property
     def state(self):
@@ -396,3 +431,40 @@ class TraceView(ManualClusteringView):
         """Decrease the scaling of the traces."""
         self.scaling /= self.scaling_coeff_y
         self._update_boxes()
+
+    # Spike selection
+    # -------------------------------------------------------------------------
+
+    def on_key_press(self, event):
+        """Handle key press events."""
+        key = event.key
+        self._key_pressed = key
+
+    def on_mouse_press(self, e):
+        key = self._key_pressed
+        if 'Control' in e.modifiers or key in map(str, range(10)):
+            key = int(key.name) if key in map(str, range(10)) else None
+            # Get mouse position in NDC.
+            mouse_pos = self.panzoom.get_mouse_pos(e.pos)
+            channel_id = self.stacked.get_closest_box(mouse_pos)
+            # Find the spike and cluster closest to the mouse.
+            db = self._data_bounds
+            # Get the information about the displayed spikes.
+            if not self._waveform_times:
+                return
+            # Get the time coordinate of the mouse position.
+            mouse_time = Range(NDC, db).apply(mouse_pos)[0][0]
+            # Get the closest spike id.
+            times, spike_ids, spike_clusters, channel_ids = \
+                zip(*(_ for _ in self._waveform_times if channel_id in _[3]))
+            i = np.argmin(np.abs(np.array(times) - mouse_time))
+            # Raise the spike_click event.
+            spike_id = spike_ids[i]
+            cluster_id = spike_clusters[i]
+            self.events.spike_click(channel_id=channel_id,
+                                    spike_id=spike_id,
+                                    cluster_id=cluster_id
+                                    )
+
+    def on_key_release(self, event):
+        self._key_pressed = None
