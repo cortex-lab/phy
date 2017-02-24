@@ -8,6 +8,7 @@
 
 import numpy as np
 from numpy.testing import assert_allclose as ac
+from vispy.util import keys
 
 from phy.gui import GUI
 from phy.io.mock import (artificial_traces,
@@ -62,7 +63,8 @@ def test_trace_view(tempdir, qtbot):
                       start_time=t - k / sr,
                       color=cs.get(c),
                       channel_ids=np.arange(5),
-                      cluster_id=c,
+                      spike_id=i,
+                      spike_cluster=c,
                       )
             out.waveforms.append(d)
         return out
@@ -125,6 +127,19 @@ def test_trace_view(tempdir, qtbot):
 
     v.origin = 'upper'
     assert v.origin == 'upper'
+
+    # Simulate spike selection.
+    _clicked = []
+
+    @v.gui.connect_
+    def on_spike_click(channel_id=None, spike_id=None, cluster_id=None):
+        _clicked.append((channel_id, spike_id, cluster_id))
+
+    v.events.key_press(key=keys.Key('Control'))
+    v.events.mouse_press(pos=(400., 200.), button=1, modifiers=(keys.CONTROL,))
+    v.events.key_release(key=keys.Key('Control'))
+
+    assert _clicked == [(3, 4, 1)]
 
     # qtbot.stop()
     gui.close()
