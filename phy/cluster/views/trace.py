@@ -158,8 +158,10 @@ class TraceView(ManualClusteringView):
         self._waveform_times = []
         self.events.add(spike_click=SpikeClick)
 
-    def _permute_channels(self, x):
-        return self._channel_perm[x] if self._channel_perm is not None else x
+    def _permute_channels(self, x, inv=False):
+        cp = self._channel_perm
+        cp = np.argsort(cp) if inv and cp is not None else cp
+        return cp[x] if cp is not None else x
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -454,7 +456,8 @@ class TraceView(ManualClusteringView):
             key = int(key.name) if key in map(str, range(10)) else None
             # Get mouse position in NDC.
             mouse_pos = self.panzoom.get_mouse_pos(e.pos)
-            channel_id = self.stacked.get_closest_box(mouse_pos)
+            box_id = self.stacked.get_closest_box(mouse_pos)
+            channel_id = self._permute_channels(box_id, inv=True)
             # Find the spike and cluster closest to the mouse.
             db = self._data_bounds
             # Get the information about the displayed spikes.

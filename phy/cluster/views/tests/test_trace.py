@@ -140,7 +140,7 @@ def test_trace_view(tempdir, qtbot):
     v.events.mouse_press(pos=(400., 200.), button=1, modifiers=(keys.CONTROL,))
     v.events.key_release(key=keys.Key('Control'))
 
-    assert _clicked == [(3, 4, 1)]
+    assert _clicked == [(1, 4, 1)]
 
     # qtbot.stop()
     gui.close()
