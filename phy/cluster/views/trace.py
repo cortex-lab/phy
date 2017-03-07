@@ -106,7 +106,7 @@ class TraceView(ManualClusteringView):
                  sample_rate=None,
                  duration=None,
                  n_channels=None,
-                 channel_labels=None,
+                 channel_vertical_order=None,
                  **kwargs):
 
         self.do_show_labels = None
@@ -130,10 +130,11 @@ class TraceView(ManualClusteringView):
         assert n_channels >= 0
         self.n_channels = n_channels
 
-        channel_labels = (channel_labels if channel_labels is not None
-                          else np.arange(n_channels))
-        assert channel_labels.shape == (n_channels,)
-        self.channel_labels = channel_labels
+        assert (channel_vertical_order is None or
+                channel_vertical_order.shape == (n_channels,))
+        self._channel_perm = channel_vertical_order
+        if self._channel_perm is not None:
+            self._channel_perm = np.argsort(self._channel_perm)
 
         # Box and probe scaling.
         self._scaling = 1.
@@ -157,6 +158,9 @@ class TraceView(ManualClusteringView):
         self._waveform_times = []
         self.events.add(spike_click=SpikeClick)
 
+    def _permute_channels(self, x):
+        return self._channel_perm[x] if self._channel_perm is not None else x
+
     # Internal methods
     # -------------------------------------------------------------------------
 
@@ -169,7 +173,9 @@ class TraceView(ManualClusteringView):
 
         t = self._interval[0] + np.arange(n_samples) * self.dt
         t = np.tile(t, (n_ch, 1))
-        box_index = np.repeat(np.arange(n_ch)[:, np.newaxis],
+
+        box_index = self._permute_channels(np.arange(n_ch))
+        box_index = np.repeat(box_index[:, np.newaxis],
                               n_samples,
                               axis=1)
 
@@ -197,7 +203,8 @@ class TraceView(ManualClusteringView):
         t = np.tile(t, (n_channels, 1))  # (n_unmasked_channels, n_samples)
 
         # The box index depends on the channel.
-        box_index = np.repeat(channel_ids[:, np.newaxis], n_samples, axis=0)
+        box_index = self._permute_channels(channel_ids)
+        box_index = np.repeat(box_index[:, np.newaxis], n_samples, axis=0)
         self.plot(t, waveforms.T, color=color,
                   box_index=box_index,
                   data_bounds=data_bounds,
@@ -205,8 +212,9 @@ class TraceView(ManualClusteringView):
 
     def _plot_labels(self, traces, data_bounds=None):
         for ch in range(self.n_channels):
-            ch_label = '%d' % self.channel_labels[ch]
-            self[ch].text(pos=[data_bounds[0], traces[0, ch]],
+            bi = self._permute_channels(ch)
+            ch_label = '%d' % ch
+            self[bi].text(pos=[data_bounds[0], traces[0, ch]],
                           text=ch_label,
                           anchor=[+1., -.1],
                           data_bounds=data_bounds,
