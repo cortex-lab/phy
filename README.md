@@ -33,7 +33,7 @@ The [phy-contrib](https://github.com/kwikteam/phy-contrib) repo contains a set o
 
 **Note**: the installation instructions will be simplified soon.
 
-1. Make sure that you have [**miniconda**](http://conda.pydata.org/miniconda.html) installed. You can choose the Python 3.5 64-bit version for your operating system (Linux, Windows, or OS X).
+1. Make sure that you have [**miniconda**](http://conda.pydata.org/miniconda.html) installed. You can choose the Python 3.6 64-bit version for your operating system (Linux, Windows, or OS X).
 2. **Download the [environment file](https://raw.githubusercontent.com/kwikteam/phy/master/installer/environment.yml).**
 3. **Open a terminal** (on Windows, `cmd`, not Powershell) in the directory where you saved the file and type:
 
@@ -56,6 +56,8 @@ pip install phy phycontrib --upgrade
 
 
 ### Installing the development version
+
+You first need to [download and install git](https://git-scm.com/download/). Then, use the regular command line terminal (*not* the git shell) and type the following:
 
 ```
 source activate phy  # omit the `source` on Windows
