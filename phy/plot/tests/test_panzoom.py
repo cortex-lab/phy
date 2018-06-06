@@ -235,7 +235,7 @@ def test_panzoom_touch(qtbot, canvas_pz, panzoom):
     c.events.touch(type='end')
 
     c.events.touch(type='touch', pos=(0.1, 0), last_pos=(0, 0))
-    assert pz.pan[0] >= 1
+    assert pz.pan[0] >= .5
 
 
 def test_panzoom_pan_keyboard(qtbot, canvas_pz, panzoom):

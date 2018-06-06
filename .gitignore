@@ -16,6 +16,7 @@ wiki
 .eggs
 .profile
 __pycache__
+.pytest_cache
 _old
 *.py[cod]
 *~
