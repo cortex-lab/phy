@@ -22,7 +22,7 @@ from ..widgets import HTMLWidget, Table
 def table(qtbot):
     columns = ["id", "count"]
     data = [{"id": i,
-             "count": int(random() * 100),
+             "count": 100 - 10 * i,
              "_meta": "mask" if i in (2, 3, 5) else None,
              } for i in range(10)]
     table = Table(columns, data)
@@ -161,22 +161,29 @@ def test_table_nav_0(qtbot, table):
 
     table.eval_js('table.emit("select", [1]);')
 
-    print(table.selected)
-    # assert table.selected == [1]
+    assert table.selected == [1]
 
     # qtbot.stop()
 
 
 def test_table_sort(qtbot, table):
     table.select([1])
+    table.next()
+    table.next()
+    assert table.selected == [6]
 
     # Sort by count decreasing, and check that 0 (count 100) comes before
     # 1 (count 90). This checks that sorting works with number).
-    # table.sort_by('count', 'desc')
+    table.sort_by('count', 'asc')
+
+    assert table.current_sort == ('count', 'asc')
+    assert table.selected == [6]
+    assert table.get_ids() == list(range(9, -1, -1))
 
     table.next()
     assert table.selected == [4]
-    # print(table.current_sort)
-    # assert table.current_sort == ('count', 'desc')
+
+    table.sort_by('count', 'desc')
+    assert table.get_ids() == list(range(10))
 
     # qtbot.stop()

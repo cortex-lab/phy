@@ -192,9 +192,9 @@ def dumps(o):
 class Table(HTMLWidget):
     """A sortable table with support for selection."""
 
-    def __init__(self, columns, data=None, title=''):
+    def __init__(self, columns=None, data=None, title=''):
         super(Table, self).__init__(title=title)
-        self.columns = columns
+        self.columns = columns or []
         b = self.builder
         b.set_body_src('index.html')
         data_json = dumps(data)
@@ -226,6 +226,11 @@ class Table(HTMLWidget):
         """Sort by a given variable."""
         logger.log(5, "Sort by `%s` %s.", name, sort_dir)
         self.eval_js('table.sort_("{}", "{}");'.format(name, sort_dir))
+
+    def get_ids(self):
+        """Get the list of ids."""
+        ids = self.eval_js('table._getIds();')
+        return ids
 
     def get_next_id(self):
         """Get the next non-skipped row id."""
