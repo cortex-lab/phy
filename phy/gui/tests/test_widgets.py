@@ -187,3 +187,17 @@ def test_table_sort(qtbot, table):
     assert table.get_ids() == list(range(10))
 
     # qtbot.stop()
+
+
+def test_table_add(qtbot, table):
+    assert table.get_ids() == list(range(10))
+
+    table.add({"id": 100, "count": 1000})
+    assert table.get_ids() == list(range(10)) + [100]
+
+    table.remove([0, 1])
+    assert table.get_ids() == list(range(2, 10)) + [100]
+
+    assert table.get(100)['count'] == 1000
+    table.change([{"id": 100, "count": 2000}])
+    assert table.get(100)['count'] == 2000

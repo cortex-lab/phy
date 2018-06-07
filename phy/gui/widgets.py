@@ -195,6 +195,7 @@ class Table(HTMLWidget):
     def __init__(self, columns=None, data=None, title=''):
         super(Table, self).__init__(title=title)
         self.columns = columns or []
+        data = data or []
         b = self.builder
         b.set_body_src('index.html')
         data_json = dumps(data)
@@ -254,6 +255,9 @@ class Table(HTMLWidget):
         """Select some rows in the table."""
         ids = _uniq(ids)
         self.eval_js('table.select_({});'.format(dumps(ids)))
+
+    def get(self, id):
+        return self.eval_js('table.get("id", {})[0]["_values"]'.format(id))
 
     def add(self, objects):
         self.eval_js('table.add_({});'.format(dumps(objects)))
