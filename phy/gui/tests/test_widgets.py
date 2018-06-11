@@ -194,12 +194,26 @@ def test_table_sort(qtbot, table):
 def test_table_add_change_remove(qtbot, table):
     assert table.get_ids() == list(range(10))
 
-    table.add({"id": 100, "count": 1000})
+    table.add({'id': 100, 'count': 1000})
     assert table.get_ids() == list(range(10)) + [100]
 
     table.remove([0, 1])
     assert table.get_ids() == list(range(2, 10)) + [100]
 
     assert table.get(100)['count'] == 1000
-    table.change([{"id": 100, "count": 2000}])
+    table.change([{'id': 100, 'count': 2000}])
     assert table.get(100)['count'] == 2000
+
+
+def test_table_change_and_sort_1(qtbot, table):
+    table.change([{'id': 5, 'count': 1000}])
+    assert table.get_ids() == list(range(10))
+
+
+def test_table_change_and_sort_2(qtbot, table):
+    table.sort_by('count', 'asc')
+    assert table.get_ids() == list(range(9, -1, -1))
+
+    # Check that the table is automatically resorted after a change.
+    table.change([{'id': 5, 'count': 1000}])
+    assert table.get_ids() == [9, 8, 7, 6, 4, 3, 2, 1, 0, 5]
