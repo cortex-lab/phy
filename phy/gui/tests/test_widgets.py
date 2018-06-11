@@ -122,6 +122,22 @@ def test_widget_javascript_2(qtbot):
 # Test table
 #------------------------------------------------------------------------------
 
+def test_table_empty_1(qtbot):
+    table = Table()
+    table.show()
+    qtbot.addWidget(table)
+    qtbot.waitForWindowShown(table)
+    table.close()
+
+
+def test_table_invalid_column(qtbot):
+    table = Table(data=[{'id': 0, 'a': 'b'}], columns=['id', 'u'])
+    table.show()
+    qtbot.addWidget(table)
+    qtbot.waitForWindowShown(table)
+    table.close()
+
+
 def test_table_1(qtbot, table):
     table.select([1, 2])
     assert table.selected == [1, 2]

@@ -194,7 +194,7 @@ class Table(HTMLWidget):
 
     def __init__(self, columns=None, data=None, title=''):
         super(Table, self).__init__(title=title)
-        self.columns = columns or []
+        columns = columns or ['id']
         data = data or []
         b = self.builder
         b.set_body_src('index.html')
@@ -220,6 +220,7 @@ class Table(HTMLWidget):
             });
         </script>
         ''' % (data_json, columns_json, columns_json)
+        self.columns = columns
         self.build()
         block(lambda: self.eval_js('(typeof(table) !== "undefined")'))
 
