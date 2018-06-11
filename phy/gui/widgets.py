@@ -229,6 +229,10 @@ class Table(HTMLWidget):
         logger.log(5, "Sort by `%s` %s.", name, sort_dir)
         self.eval_js('table.sort_("{}", "{}");'.format(name, sort_dir))
 
+    def filter(self, text=''):
+        logger.log(5, "Filter table with `%s`.", text)
+        self.eval_js('table.filter_("{}");'.format(text))
+
     def get_ids(self):
         """Get the list of ids."""
         ids = self.eval_js('table._getIds();')

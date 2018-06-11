@@ -233,3 +233,14 @@ def test_table_change_and_sort_2(qtbot, table):
     # Check that the table is automatically resorted after a change.
     table.change([{'id': 5, 'count': 1000}])
     assert table.get_ids() == [9, 8, 7, 6, 4, 3, 2, 1, 0, 5]
+
+
+def test_table_filter(qtbot, table):
+    table.filter("id == 5")
+    assert table.get_ids() == [5]
+
+    table.filter("count == 80")
+    assert table.get_ids() == [2]
+
+    table.filter()
+    assert table.get_ids() == list(range(10))
