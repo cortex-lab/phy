@@ -6,7 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from random import random
+import os.path as op
 from pytest import yield_fixture
 
 from phy.utils.testing import captured_logging
@@ -52,6 +52,8 @@ def test_widget_empty(qtbot):
 def test_widget_html(qtbot):
     widget = HTMLWidget()
     widget.builder.add_style('html, body, p {background-color: purple;}')
+    path = op.join(op.dirname(__file__), '../static/styles.min.css')
+    widget.builder.add_style_src(path)
     widget.builder.add_header('<!-- comment -->')
     widget.builder.set_body('Hello world!')
     widget.build()
@@ -189,7 +191,7 @@ def test_table_sort(qtbot, table):
     # qtbot.stop()
 
 
-def test_table_add(qtbot, table):
+def test_table_add_change_remove(qtbot, table):
     assert table.get_ids() == list(range(10))
 
     table.add({"id": 100, "count": 1000})
