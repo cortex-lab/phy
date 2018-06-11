@@ -35,21 +35,24 @@ _DEFAULT_STYLE = """
 
 
 _DEFAULT_SCRIPT = """
-    function onWidgetReady(callback) {
-        document.addEventListener("DOMContentLoaded", function() {
-            new QWebChannel(qt.webChannelTransport, function(channel) {
-                var widget = channel.objects.widget;
+    document.addEventListener("DOMContentLoaded", function() {
+        new QWebChannel(qt.webChannelTransport, function(channel) {
+            var widget = channel.objects.widget;
 
-                widget.emitPy = function(name, arg) {
-                    widget._emit_from_js(name, JSON.stringify(arg));
-                };
-                window.emit = widget.emitPy;
-                window.widget = widget;
-
-                callback(widget);
+            // All phy_events emitted from JS are relayed to
+            // Python's _emit_from_js().
+            document.addEventListener("phy_event", function(e) {
+                console.debug("Emit from JS global: " +
+                              e.detail.name + " " + e.detail.data);
+                widget._emit_from_js(e.detail.name,
+                                     JSON.stringify(e.detail.data));
             });
+
+            window.widget = widget;
+
+            //callback(widget);
         });
-    };
+    });
 """
 
 
@@ -141,6 +144,7 @@ class HTMLWidget(WebView):
     # -------------------------------------------------------------------------
 
     def emit(self, *args, **kwargs):
+        logger.log(5, "Emit from Python")
         return self._event.emit(*args, **kwargs)
 
     def connect_(self, *args, **kwargs):
@@ -178,6 +182,7 @@ class HTMLWidget(WebView):
 
     @pyqtSlot(str, str)
     def _emit_from_js(self, name, arg_json):
+        logger.debug("Emit from Python %s %s.", name, arg_json)
         self.emit(text_type(name), json.loads(text_type(arg_json)))
 
 
@@ -211,13 +216,6 @@ class Table(HTMLWidget):
 
             var table = new Table('table', options, data);
 
-            // Connect the JS "select" event to the Python event.
-            new QWebChannel(qt.webChannelTransport, function(channel) {
-                var widget = channel.objects.widget;
-                table.onEvent("select", function (id) {
-                    widget._emit_from_js("select", [id]);
-                });
-            });
         </script>
         ''' % (data_json, columns_json, columns_json)
         self.columns = columns
@@ -259,7 +257,7 @@ class Table(HTMLWidget):
     def select(self, ids):
         """Select some rows in the table."""
         ids = _uniq(ids)
-        self.eval_js('table.select_({});'.format(dumps(ids)))
+        self.eval_js('table.select({});'.format(dumps(ids)))
 
     def get(self, id):
         return self.eval_js('table.get("id", {})[0]["_values"]'.format(id))
