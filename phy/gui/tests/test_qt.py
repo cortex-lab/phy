@@ -92,6 +92,17 @@ def test_web_view(qtbot):
     view.close()
 
 
+def test_javascript(qtbot):
+    view = WebView()
+    with qtbot.capture_exceptions() as exceptions:
+        view.set_html_sync('<script>console.error("Test.");</script>')
+    qtbot.addWidget(view)
+    view.show()
+    qtbot.waitForWindowShown(view)
+    assert len(exceptions) >= 1
+    view.close()
+
+
 def test_prompt(qtbot):
 
     assert _button_name_from_enum(QMessageBox.Save) == 'save'
