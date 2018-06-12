@@ -42,6 +42,23 @@ def test_event_system():
     assert _list == [('a', None), ('b', 'c')]
 
 
+def test_event_silent():
+    ev = EventEmitter()
+
+    _list = []
+
+    @ev.connect()
+    def on_test(x):
+        _list.append(x)
+
+    ev.emit('test', 1)
+    assert _list == [1]
+
+    with ev.silent():
+        ev.emit('test', 1)
+    assert _list == [1]
+
+
 def test_event_single():
     ev = EventEmitter()
 

@@ -7,6 +7,7 @@ from __future__ import print_function
 # Imports
 #------------------------------------------------------------------------------
 
+from contextlib import contextmanager
 import string
 import re
 from collections import defaultdict
@@ -44,6 +45,7 @@ class EventEmitter(object):
 
     def __init__(self):
         self._reset()
+        self._is_silent = False
 
     def _reset(self):
         """Remove all registered callbacks."""
@@ -64,6 +66,15 @@ class EventEmitter(object):
         if not hasattr(self, event):
             setattr(self, event,
                     lambda *args, **kwargs: self.emit(event, *args, **kwargs))
+
+    @contextmanager
+    def silent(self):
+        """Prevent all callbacks to be called if events are raised
+        in the context manager.
+        """
+        self._is_silent = not(self._is_silent)
+        yield
+        self._is_silent = not(self._is_silent)
 
     def connect(self, func=None, event=None, set_method=False):
         """Register a callback function to a given event.
@@ -116,6 +127,8 @@ class EventEmitter(object):
         Return the list of callback return results.
 
         """
+        if self._is_silent:
+            return
         callbacks = self._callbacks.get(event, [])
         # Call the last callback if this is a single event.
         single = kwargs.pop('single', None)
