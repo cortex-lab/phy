@@ -90,13 +90,15 @@ def test_widget_javascript_1(qtbot):
     widget.close()
 
 
-def _test_widget_javascript_2(qtbot):
+def test_widget_javascript_2(qtbot):
     # TODO: onWidgetReady
     widget = HTMLWidget()
     widget.builder.add_script("var l = [1, 2];")
     widget.builder.add_script('''
-        onWidgetReady(function() {
-            window.emit("test", l);
+        onWidgetReady(function (widget) {
+            var event = new CustomEvent("phy_event",
+                {detail: {name: "test", data: {"hello": "world"}}});
+            document.dispatchEvent(event);
         });
     ''')
 
@@ -112,7 +114,7 @@ def _test_widget_javascript_2(qtbot):
     qtbot.waitForWindowShown(widget)
 
     widget.block_until_loaded()
-    assert _out == [[1, 2]]
+    assert _out == [{'hello': 'world'}]
 
     widget.unconnect_(on_test)
     # qtbot.stop()

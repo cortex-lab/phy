@@ -35,22 +35,31 @@ _DEFAULT_STYLE = """
 
 
 _DEFAULT_SCRIPT = """
-    document.addEventListener("DOMContentLoaded", function() {
-        new QWebChannel(qt.webChannelTransport, function(channel) {
+    window._onWidgetReady_callbacks = [];
+
+    onWidgetReady = function (callback) {
+        window._onWidgetReady_callbacks.push(callback);
+    };
+
+    document.addEventListener("DOMContentLoaded", function () {
+        new QWebChannel(qt.webChannelTransport, function (channel) {
             var widget = channel.objects.widget;
+            window.widget = widget;
 
             // All phy_events emitted from JS are relayed to
             // Python's _emit_from_js().
-            document.addEventListener("phy_event", function(e) {
+            document.addEventListener("phy_event", function (e) {
                 console.debug("Emit from JS global: " +
                               e.detail.name + " " + e.detail.data);
                 widget._emit_from_js(e.detail.name,
                                      JSON.stringify(e.detail.data));
             });
 
-            window.widget = widget;
+            // Callbacks on the widget.
+            for (let callback of window._onWidgetReady_callbacks) {
+                callback(widget);
+            }
 
-            //callback(widget);
         });
     });
 """
