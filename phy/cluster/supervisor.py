@@ -17,7 +17,7 @@ from six import string_types
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
-from phy.utils import EventEmitter
+from phy.utils import EventEmitter, Bunch
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table
 
@@ -42,6 +42,108 @@ def _process_ups(ups):  # pragma: no cover
         return up
     else:
         raise NotImplementedError()
+
+
+# -----------------------------------------------------------------------------
+# Action flow
+# -----------------------------------------------------------------------------
+
+class ActionFlow(object):
+    """Keep track of all actions and state changes, and defines how selections change
+    after an action."""
+    def __init__(self):
+        self._flow = []
+
+    def _add(self, type, **kwargs):
+        obj = Bunch(type=type, **kwargs)
+        self._flow.append(obj)
+        return obj
+
+    def add_state(
+            self, cluster_ids=None, similar=None,
+            next_cluster=None, next_similar=None):
+        state = Bunch(
+            cluster_ids=cluster_ids, similar=similar,
+            next_cluster=next_cluster, next_similar=next_similar)
+        return self._add('state', **state)
+
+    def _add_action(self, name, **kwargs):
+        action = self._add('action', name=name, **kwargs)
+        state = self.state_after(action)
+        return self._add(state.pop('type'), **state)
+
+    def add_merge(self, cluster_ids=None, to=None):
+        return self._add_action('merge', cluster_ids=cluster_ids, to=to)
+
+    def add_split(self, old_cluster_ids=None, new_cluster_ids=None):
+        return self._add_action(
+            'split', old_cluster_ids=old_cluster_ids, new_cluster_ids=new_cluster_ids)
+
+    def add_move(self, cluster_ids=None, group=None):
+        return self._add_action(
+            'move', cluster_ids=cluster_ids, group=group)
+
+    def add_undo(self, up=None):
+        return self._add_action('undo', up=up)
+
+    def add_redo(self, up=None):
+        return self._add_action('redo', up=up)
+
+    def current(self):
+        if self._flow:
+            return self._flow[-1]
+
+    def state_after(self, action):
+        state = getattr(self, '_state_after_%s' % action.name)(action)
+        state.cluster_ids = state.get('cluster_ids', [])
+        state.similar = state.get('similar', [])
+        state.next_cluster = state.get('next_cluster', None)
+        state.next_similar = state.get('next_similar', None)
+        return state
+
+    def _previous_state(self, obj):
+        i = self._flow.index(obj)
+        if i == 0:
+            return
+        previous = self._flow[i - 1]
+        assert previous.type == 'state'
+        return previous
+
+    def _last_undo(self):
+        for obj in self._flow[::-1]:
+            if obj.type == 'action' and obj.name == 'undo':
+                return obj
+
+    def _state_after_merge(self, action):
+        previous_state = self._previous_state(action)
+        similar = previous_state.next_similar
+        return Bunch(type='state', cluster_ids=[action.to], similar=[similar])
+
+    def _state_after_split(self, action):
+        return Bunch(type='state', cluster_ids=action.new_cluster_ids)
+
+    def _state_after_move(self, action):
+        state = self._previous_state(action)
+        moved_clusters = set(action.cluster_ids)
+        # If all moved clusters are in the cluster view, then move to the next
+        # cluster in the cluster view.
+        if moved_clusters <= set(state.cluster_ids):
+            return Bunch(type='state', cluster_ids=[state.next_cluster], similar='next')
+        # Otherwise, select the next one in the similarity view.
+        elif moved_clusters <= set(state.similar):
+            return Bunch(type='state', cluster_ids=state.cluster_ids,
+                         similar=[state.next_similar])
+
+    def _state_after_undo(self, action):
+        return self._previous_state(action)
+
+    def _state_after_redo(self, action):
+        undo = self._last_undo()
+        if undo:
+            return self._previous_state(undo)
+
+    def to_json(self):
+        return
 
 
 # -----------------------------------------------------------------------------

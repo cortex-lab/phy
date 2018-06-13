@@ -12,6 +12,7 @@ from numpy.testing import assert_array_equal as ae
 
 from .. import supervisor as _supervisor
 from ..supervisor import (Supervisor,
+                          ActionFlow,
                           )
 from phy.io import Context
 from phy.gui import GUI
@@ -53,6 +54,43 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
     mc.set_default_sort(quality.__name__)
 
     return mc
+
+
+#------------------------------------------------------------------------------
+# Test action flow
+#------------------------------------------------------------------------------
+
+def test_action_flow_merge():
+    af = ActionFlow()
+    af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
+    af.add_merge(cluster_ids=[0, 100], to=1000)
+
+    s = af.current()
+    assert s.type == 'state'
+    assert s.cluster_ids == [1000]
+    assert s.similar == [101]
+
+
+def test_action_flow_split():
+    af = ActionFlow()
+    af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
+    af.add_split(old_cluster_ids=[0, 100], new_cluster_ids=[1000, 1001])
+
+    s = af.current()
+    assert s.type == 'state'
+    assert s.cluster_ids == [1000, 1001]
+    assert s.similar == []
+
+
+def test_action_flow_move():
+    af = ActionFlow()
+    af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
+    af.add_move(cluster_ids=[0], group='good')
+
+    s = af.current()
+    assert s.type == 'state'
+    assert s.cluster_ids == [2]
+    assert s.similar == 'next'
 
 
 #------------------------------------------------------------------------------
