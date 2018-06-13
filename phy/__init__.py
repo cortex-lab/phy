@@ -32,7 +32,7 @@ __version_git__ = __version__ + _git_version()
 
 
 # Set a null handler on the root logger
-logger = logging.getLogger()
+logger = logging.getLogger('phy')
 logger.setLevel(logging.DEBUG)
 logger.addHandler(logging.NullHandler())
 
