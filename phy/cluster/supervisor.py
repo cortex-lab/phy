@@ -159,22 +159,32 @@ class ActionFlow(EventEmitter):
 
 
 # -----------------------------------------------------------------------------
-# Clustering GUI component
+# Cluster view and similarity view
 # -----------------------------------------------------------------------------
 
 class ClusterView(Table):
-    def __init__(self, columns=None, data=None, title=''):
-        HTMLWidget.__init__(self, title=title)
-        self.builder.add_style('''
-                               table tr[data-group='good'] {
-                                   color: #86D16D;
-                               }
-                               ''')
-        assert columns
+    def __init__(self, data=None):
+        HTMLWidget.__init__(self, title='ClusterView')
+        self._set_styles()
+
+        # TODO: custom columns
+        columns = ['id', 'n_spikes']
         assert columns[0] == 'id'
+
         # Allow to have <tr data_group="good"> etc. which allows for CSS styling.
         value_names = columns + [{'data': ['group']}]
         self._init_table(columns=columns, value_names=value_names, data=data)
+
+    def _set_styles(self):
+        self.builder.add_style('''
+            table tr[data-group='good'] {
+                color: #86D16D;
+            }
+
+            table tr[data-group='mua'], table tr[data-group='noise'] {
+                color: #888;
+            }
+            ''')
 
     @property
     def state(self):
@@ -188,6 +198,13 @@ class ClusterView(Table):
 
 class SimilarityView(ClusterView):
     """Must connect request_similar_clusters."""
+    def __init__(self, data=None):
+        HTMLWidget.__init__(self, title='SimilarityView')
+        self._set_styles()
+        columns = ['id', 'n_spikes', 'similarity']
+        value_names = columns + [{'data': ['group']}]
+        self._init_table(columns=columns, value_names=value_names, data=data)
+
     def reset(self, cluster_id):
         similar = self.emit('request_similar_clusters', cluster_id)
         # Clear the table.
@@ -196,38 +213,11 @@ class SimilarityView(ClusterView):
             self.add(similar[0])
 
 
-class Supervisor(EventEmitter):
-    """Component that brings manual clustering facilities to a GUI:
+# -----------------------------------------------------------------------------
+# ActionCreator
+# -----------------------------------------------------------------------------
 
-    * Clustering instance: merge, split, undo, redo
-    * ClusterMeta instance: change cluster metadata (e.g. group)
-    * Selection
-    * Many manual clustering-related actions, snippets, shortcuts, etc.
-
-    Parameters
-    ----------
-
-    spike_clusters : ndarray
-    cluster_groups : dictionary
-    shortcuts : dict
-    quality: func
-    similarity: func
-
-    GUI events
-    ----------
-
-    When this component is attached to a GUI, the GUI emits the following
-    events:
-
-    select(cluster_ids)
-        when clusters are selected
-    cluster(up)
-        when a merge or split happens
-    request_save(spike_clusters, cluster_groups)
-        when a save is requested by the user
-
-    """
-
+class ActionCreator(EventEmitter):
     default_shortcuts = {
         # Clustering.
         'merge': 'g',
@@ -262,10 +252,103 @@ class Supervisor(EventEmitter):
         'redo': ('ctrl+shift+z', 'ctrl+y'),
     }
 
+    def add(self, name, **kwargs):
+        self.actions.add(partial(self.emit, 'action', name), name=name, **kwargs)
+
+    def separator(self, **kwargs):
+        self.actions.separator(**kwargs)
+
+    def attach(self, gui):
+        self.actions = Actions(gui,
+                               name='Clustering',
+                               menu='&Clustering',
+                               default_shortcuts=self.default_shortcuts)
+
+        # Selection.
+        self.add('select', alias='c', docstring='Select some clusters.')
+        self.separator()
+
+        self.add('undo', docstring='Undo the last action.')
+        self.add('redo', docstring='Redo the last undone action.')
+        self.separator()
+
+        # Clustering.
+        self.add('merge', alias='g', docstring='Merge the selected clusters.')
+        self.add('split', alias='k', docstring='Create a new cluster out of the selected spikes')
+        self.separator()
+
+        # Move.
+        self.add('move', docstring='Move some clusters to a group.')
+        self.separator()
+
+        for group in ('noise', 'mua', 'good'):
+            self.add('move_best_to_' + group,
+                     docstring='Move the best clusters to %s.' % group)
+            self.add('move_similar_to_' + group,
+                     docstring='Move the similar clusters to %s.' %
+                     group)
+            self.add('move_all_to_' + group,
+                     docstring='Move all selected clusters to %s.' %
+                     group)
+            self.separator()
+
+        # Label.
+        self.add('label', alias='l', docstring='Label the selected clusters.')
+
+        # Others.
+        self.add('save', menu='&File', docstring='Save all pending changes.')
+
+        # Wizard.
+        self.add('reset', menu='&Wizard', docstring='Reset the wizard.')
+        self.separator(menu='&Wizard')
+        self.add('next', menu='&Wizard', docstring='Select the next similar cluster.')
+        self.add('previous', menu='&Wizard', docstring='Select the previous similar cluster.')
+        self.separator(menu='&Wizard')
+        self.add('next_best', menu='&Wizard', docstring='Select the next best cluster.')
+        self.add('previous_best', menu='&Wizard', docstring='Select the previous best cluster.')
+        self.separator(menu='&Wizard')
+
+
+# -----------------------------------------------------------------------------
+# Clustering GUI component
+# -----------------------------------------------------------------------------
+
+class Supervisor(EventEmitter):
+    """Component that brings manual clustering facilities to a GUI:
+
+    * Clustering instance: merge, split, undo, redo
+    * ClusterMeta instance: change cluster metadata (e.g. group)
+    * Selection
+    * Many manual clustering-related actions, snippets, shortcuts, etc.
+
+    Parameters
+    ----------
+
+    spike_clusters : ndarray
+    cluster_groups : dictionary
+    quality: func
+    similarity: func
+    new_cluster_id: func
+    context: Context instance
+
+    GUI events
+    ----------
+
+    When this component is attached to a GUI, the GUI emits the following
+    events:
+
+    select(cluster_ids)
+        when clusters are selected
+    cluster(up)
+        when a merge or split happens
+    request_save(spike_clusters, cluster_groups)
+        when a save is requested by the user
+
+    """
+
     def __init__(self,
-                 spike_clusters,
+                 spike_clusters=None,
                  cluster_groups=None,
-                 shortcuts=None,
                  quality=None,
                  similarity=None,
                  new_cluster_id=None,
@@ -276,13 +359,6 @@ class Supervisor(EventEmitter):
         self.quality = quality or self.n_spikes  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
 
-        self._best = None
-        self._current_similarity_values = {}
-
-        # Load default shortcuts, and override with any user shortcuts.
-        self.shortcuts = self.default_shortcuts.copy()
-        self.shortcuts.update(shortcuts or {})
-
         # Create Clustering and ClusterMeta.
         # Load the cached spikes_per_cluster array.
         spc = context.load('spikes_per_cluster') if context else None
@@ -292,392 +368,196 @@ class Supervisor(EventEmitter):
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
 
-        self.cluster_groups = cluster_groups or {}
-        self.cluster_meta = create_cluster_meta(self.cluster_groups)
+        # Create the ClusterMeta instance.
+        self.cluster_meta = create_cluster_meta(cluster_groups or {})
+
+        # Create the GlobalHistory instance.
         self._global_history = GlobalHistory(process_ups=_process_ups)
 
-        self.cluster_meta.add_field('next_cluster')
+        # Create the Action Flow instance.
+        self.action_flow = ActionFlow()
 
-        @self.clustering.connect
-        def on_cluster(up):
-            """Register the next cluster in the list before the cluster
-            view is updated."""
-            if not up.added or not hasattr(self, 'cluster_view'):
-                return
-            cluster = up.added[0]
-            next_cluster = self.cluster_view.get_next_id()
-            logger.debug("Register next_cluster to %d: %s",
-                         cluster, next_cluster)
-            self.cluster_meta.set('next_cluster', [cluster], next_cluster,
-                                  add_to_stack=False)
+        # Create The Action Creator instance.
+        self.action_creator = ActionCreator()
+        self.action_creator.connect(self._on_action, event='action')
 
-        # NOTE: global on_cluster() occurs here.
-        self._register_logging()
+        self._create_views()
+        # Save the next cluster in ClusterMeta.
+        # self.cluster_meta.add_field('next_cluster')
+        # self.clustering.connect(self._register_next_cluster, event='on_cluster')
+
+        # Log the actions.
+        self.clustering.connect(self._log_action, event='cluster')
+        self.cluster_meta.connect(self._log_action_meta, event='cluster')
+
+        # Raise the global cluster event.
+        self.clustering.connect(partial(self.emit, 'cluster'), event='cluster')
+        self.cluster_meta.connect(partial(self.emit, 'cluster'), event='cluster')
 
     # Internal methods
     # -------------------------------------------------------------------------
 
+    # def _register_next_cluster(self, up):
+    #     """Register the next cluster in the list before the cluster
+    #     view is updated."""
+    #     if not up.added or not hasattr(self, 'cluster_view'):
+    #         return
+    #     cluster = up.added[0]
+    #     next_cluster = self.cluster_view.get_next_id()
+    #     logger.debug("Register next_cluster to %d: %s", cluster, next_cluster)
+    #     self.cluster_meta.set('next_cluster', [cluster], next_cluster, add_to_stack=False)
+
     def _save_spikes_per_cluster(self):
+        if not self.context:
+            return
+        self.context.save('spikes_per_cluster',
+                          self.clustering.spikes_per_cluster,
+                          kind='pickle',
+                          )
+
+    def _log_action(self, up):
+        if up.history:
+            logger.info(up.history.title() + " cluster assign.")
+        elif up.description == 'merge':
+            logger.info("Merge clusters %s to %s.",
+                        ', '.join(map(str, up.deleted)),
+                        up.added[0])
+        else:
+            logger.info("Assigned %s spikes.", len(up.spike_ids))
+        #self.emit('cluster', up)
+
+    def _log_action_meta(self, up):
+        if up.history:
+            logger.info(up.history.title() + " move.")
+        else:
+            logger.info("Change %s for clusters %s to %s.",
+                        up.description,
+                        ', '.join(map(str, up.metadata_changed)),
+                        up.metadata_value)
+
+        # Skip cluster metadata other than groups.
+        if up.description != 'metadata_group':
+            return
+
+    def _save_new_cluster_id(self, up):
+        # Save the new cluster id on disk.
+        new_cluster_id = self.clustering.new_cluster_id()
         if self.context:
-            self.context.save('spikes_per_cluster',
-                              self.clustering.spikes_per_cluster,
-                              kind='pickle',
-                              )
+            logger.debug("Save the new cluster id: %d.", new_cluster_id)
+            self.context.save('new_cluster_id',
+                              dict(new_cluster_id=new_cluster_id))
 
-    def _register_logging(self):
-        # Log the actions.
-        @self.clustering.connect
-        def on_cluster(up):
-            if up.history:
-                logger.info(up.history.title() + " cluster assign.")
-            elif up.description == 'merge':
-                logger.info("Merge clusters %s to %s.",
-                            ', '.join(map(str, up.deleted)),
-                            up.added[0])
-            else:
-                logger.info("Assigned %s spikes.", len(up.spike_ids))
-
-            self.emit('cluster', up)
-
-        @self.cluster_meta.connect  # noqa
-        def on_cluster(up):
-            # Log changes.
-            if up.history:
-                logger.info(up.history.title() + " move.")
-            else:
-                logger.info("Change %s for clusters %s to %s.",
-                            up.description,
-                            ', '.join(map(str, up.metadata_changed)),
-                            up.metadata_value)
-
-            # Skip cluster metadata other than groups.
-            if up.description != 'metadata_group':
-                return
-
-            # Update the original dictionary when groups change.
-            for clu in up.metadata_changed:
-                self.cluster_groups[clu] = up.metadata_value
-
-            self.emit('cluster', up)
-
-    def _add_field_column(self, field):  # pragma: no cover
-        """Add a column for a given label field."""
-        @self.add_column(name=field)
-        def get_my_label(cluster_id):
-            return self.cluster_meta.get(field, cluster_id)
-
-    def _add_default_columns(self):
-        @self.add_column(show=False)
-        def skip(cluster_id):
-            """Whether to skip that cluster."""
-            return (self.cluster_meta.get('group', cluster_id)
-                    in ('noise', 'mua'))
-
-        @self.add_column(show=False)
-        def good(cluster_id):
-            """Good column for color."""
-            return self.cluster_meta.get('group', cluster_id) == 'good'
-
-        # Default columns.
-        self.add_column(self.n_spikes)
-
-        @self.add_column
-        def group(cluster_id):
-            g = self.cluster_meta.get('group', cluster_id)
-            g = g or 'unsorted'
-            return g
-
-        # Add columns for labels.
-        for field in self.fields:  # pragma: no cover
-            self._add_field_column(field)
-
-        def similarity(cluster_id):
-            # NOTE: there is a dictionary with the similarity to the current
-            # best cluster. It is updated when the selection changes in the
-            # cluster view. This is a bit of a hack: the HTML table expects
-            # a function that returns a value for every row, but here we
-            # cache all similarity view rows in self._current_similarity_values
-            return self._current_similarity_values.get(cluster_id, 0)
-        if self.similarity:
-            self.similarity_view.add_column(similarity,
-                                            name=self.similarity.__name__)
+    def _save_gui_state(self, gui):
+        gui.state.update_view_state(self.cluster_view, self.cluster_view.state)
+        # NOTE: create_gui() already saves the state, but the event
+        # is registered *before* we add all views.
+        gui.state.save()
 
     def n_spikes(self, cluster_id):
         return len(self.clustering.spikes_per_cluster[cluster_id])
 
-    def _create_actions(self, gui):
-        self.actions = Actions(gui,
-                               name='Clustering',
-                               menu='&Clustering',
-                               default_shortcuts=self.shortcuts)
+    def _get_similar_clusters(self, cluster_id):
+        sim = self.similarity(cluster_id)
+        data = [dict(similarity=s, **self._get_cluster_info(c))
+                for c, s in sim]
+        return data
 
-        # Selection.
-        self.actions.add(self.select, alias='c')
-        self.actions.separator()
+    def _get_cluster_info(self, cluster_id):
+        return {'id': cluster_id,
+                'n_spikes': self.n_spikes(cluster_id),
+                'quality': self.quality(cluster_id),
+        }
 
-        self.actions.add(self.undo)
-        self.actions.add(self.redo)
-        self.actions.separator()
+    def _create_views(self):
+        data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
+        self.cluster_view = ClusterView(data)
+        self.cluster_view.connect_(self._clusters_selected, event='select')
 
-        # Clustering.
-        self.actions.add(self.merge, alias='g')
-        self.actions.add(self.split, alias='k')
-        self.actions.separator()
+        self.similarity_view = SimilarityView()
+        self.similarity_view.connect_(self._get_similar_clusters, event='request_similar_clusters')
+        self.similarity_view.connect_(self._clusters_selected, event='select')
 
-        # Move.
-        self.actions.add(self.move)
-        self.actions.separator()
+    def _clusters_added(self, cluster_ids):
+        data = [self._get_cluster_info(cluster_id) for cluster_id in cluster_ids]
+        self.cluster_view.add(data)
+        self.similarity_view.add(data)
 
-        for group in ('noise', 'mua', 'good'):
-            self.actions.add(partial(self.move_best, group),
-                             name='move_best_to_' + group,
-                             docstring='Move the best clusters to %s.' % group)
-            self.actions.add(partial(self.move_similar, group),
-                             name='move_similar_to_' + group,
-                             docstring='Move the similar clusters to %s.' %
-                             group)
-            self.actions.add(partial(self.move_all, group),
-                             name='move_all_to_' + group,
-                             docstring='Move all selected clusters to %s.' %
-                             group)
-            self.actions.separator()
+    def _clusters_removed(self, cluster_ids):
+        self.cluster_view.remove(cluster_ids)
+        self.similarity_view.remove(cluster_ids)
 
-        # Label.
-        self.actions.add(self.label, alias='l')
+    def _cluster_groups_changed(self, cluster_ids):
+        data = [{'id': cluster_id, 'group': self.cluster_meta.get('group', cluster_id)}
+                for cluster_id in cluster_ids]
+        self.cluster_view.change(data)
+        self.similarity_view.change(data)
 
-        # Others.
-        self.actions.add(self.save, menu='&File')
+    def _clusters_selected(self, data):
+        cluster_ids, next_cluster = data
+        #self.action_flow.add_state
+        dict(
+            #cluster_ids=self.cluster_view.selected,
+            #similar=self.similarity_view.selected,
+            #next_cluster=self.cluster_view.get_next_id(),
+            #next_similar=self.similarity_view.get_next_id(),
+        )
+        #self.emit('select', self.selected)
 
-        # Wizard.
-        self.actions.add(self.reset, menu='&Wizard')
-        self.actions.separator(menu='&Wizard')
-        self.actions.add(self.next, menu='&Wizard')
-        self.actions.add(self.previous, menu='&Wizard')
-        self.actions.separator(menu='&Wizard')
-        self.actions.add(self.next_best, menu='&Wizard')
-        self.actions.add(self.previous_best, menu='&Wizard')
-        self.actions.separator(menu='&Wizard')
+    def _similar_selected(self, cluster_ids):
+        #self.action_flow.add_state
+        dict(
+            #cluster_ids=self.cluster_view.selected,
+            #similar=self.similarity_view.selected,
+            #next_cluster=self.cluster_view.get_next_id(),
+            #next_similar=self.similarity_view.get_next_id(),
+        )
+        #self.emit('select', self.selected)
 
-    def _keep_existing_clusters(self, cluster_ids):
-        return [c for c in cluster_ids
-                if c in self.clustering.cluster_ids]
+    def _on_action(self, name):
+        return getattr(self, name)()
 
-    def _emit_select(self, cluster_ids, **kwargs):
-        """Choose spikes from the specified clusters and emit the
-        `select` event on the GUI."""
-        # Remove non-existing clusters from the selection.
-        cluster_ids = self._keep_existing_clusters(cluster_ids)
-        logger.debug("Select cluster(s): %s.",
-                     ', '.join(map(str, cluster_ids)))
-        self.emit('select', cluster_ids, **kwargs)
-
-    def _create_cluster_views(self):
-        # Create the cluster view.
-        self.cluster_view = ClusterView()
-        # self.cluster_view.build()
-
-        # Create the similarity view.
-        self.similarity_view = ClusterView()
-        # self.similarity_view.build()
-
-        # Selection in the cluster view.
-        @self.cluster_view.connect_
-        def on_select(cluster_ids, **kwargs):
-            # Emit GUI.select when the selection changes in the cluster view.
-            self._emit_select(cluster_ids, **kwargs)
-            # Pin the clusters and update the similarity view.
-            self._update_similarity_view()
-
-        # Selection in the similarity view.
-        @self.similarity_view.connect_  # noqa
-        def on_select(cluster_ids, **kwargs):
-            # Select the clusters from both views.
-            cluster_ids = self.cluster_view.selected + cluster_ids
-            self._emit_select(cluster_ids, **kwargs)
-
-        # Save the current selection when an action occurs.
-        def on_request_undo_state(up):
-            return {'selection': (self.cluster_view.selected,
-                                  self.similarity_view.selected)}
-
-        self.clustering.connect(on_request_undo_state)
-        self.cluster_meta.connect(on_request_undo_state)
-
-        self._update_cluster_view()
-
-    def _update_cluster_view(self):
-        """Initialize the cluster view with cluster data."""
-        logger.log(5, "Update the cluster view.")
-        cluster_ids = [int(c) for c in self.clustering.cluster_ids]
-        self.cluster_view.set_rows(cluster_ids)
-
-    def _update_similarity_view(self):
-        """Update the similarity view with matches for the specified
-        clusters."""
-        if not self.similarity:
+    def _select_after_action(self):
+        state = self.action_flow.current()
+        if not state.type == 'state':
             return
-        selection = self.cluster_view.selected
-        if not len(selection):
-            return
-        cluster_id = selection[0]
-        cluster_ids = self.clustering.cluster_ids
-        self._best = cluster_id
-        logger.log(5, "Update the similarity view.")
-        # This is a list of pairs (closest_cluster, similarity).
-        similarities = self.similarity(cluster_id)
-        # We save the similarity values wrt the currently-selected clusters.
-        # Note that we keep the order of the output of the self.similary()
-        # function.
-        clusters_sim = OrderedDict([(int(cl), s) for (cl, s) in similarities])
-        # List of similar clusters, remove non-existing ones.
-        clusters = [c for c in clusters_sim.keys()
-                    if c in cluster_ids]
-        # The similarity view will use these values.
-        self._current_similarity_values = clusters_sim
-        # Set the rows of the similarity view.
-        # TODO: instead of the self._current_similarity_values hack,
-        # give the possibility to specify the values here (?).
-        self.similarity_view.set_rows([c for c in clusters
-                                       if c not in selection])
+        if state.cluster_ids:
+            self.cluster_view.select(state.cluster_ids)
+        if state.similar:
+            self.similarity_view.select(state.similar)
 
-    # Public methods
-    # -------------------------------------------------------------------------
+    def _after_action(self, up):
+        # Update the views with the old and new clusters.
+        self._clusters_added(up.added)
+        self._clusters_removed(up.removed)
 
-    def add_column(self, func=None, name=None, show=True, default=False):
-        if func is None:
-            return lambda f: self.add_column(f, name=name, show=show,
-                                             default=default)
-        name = name or func.__name__
-        assert name
-        self.cluster_view.add_column(func, name=name, show=show)
-        self.similarity_view.add_column(func, name=name, show=show)
-        if default:
-            self.set_default_sort(name)
+        # Prepare the next selection after the action.
+        if up.description == 'merge':
+            self.action_flow.add_merge(up.removed, up.added[0])
+        elif up.description == 'assign':
+            self.action_flow.add_split(old_cluster_ids=up.removed,
+                                       new_cluster_ids=up.added)
+        elif up.description == 'metadata_changed':
+            self._cluster_groups_changed(up.metadata_changed)
+            self.action_flow.add_move(up.metadata_changed, up.metadata_value)
+        elif up.description == 'undo':
+            self.action_flow.add_undo(up)
+        elif up.description == 'redo':
+            self.action_flow.add_redo(up)
 
-    def set_default_sort(self, name, sort_dir='desc'):
-        assert name
-        logger.debug("Set default sort `%s` %s.", name, sort_dir)
-        # Set the default sort.
-        self.cluster_view.set_default_sort(name, sort_dir)
-        # Reset the cluster view.
-        self._update_cluster_view()
-        # Sort by the default sort.
-        self.cluster_view.sort_by(name, sort_dir)
+        # Raise
+        self.emit('cluster', up)
 
-    def on_cluster(self, up):
-        """Update the cluster views after clustering actions."""
-
-        similar = self.similarity_view.selected
-
-        # Reinitialize the cluster view if clusters have changed.
-        if up.added:
-            self._update_cluster_view()
-
-        # Select all new clusters in view 1.
-        if up.history == 'undo':
-            # Select the clusters that were selected before the undone
-            # action.
-            clusters_0, clusters_1 = up.undo_state[0]['selection']
-            # Select rows in the tables.
-            self.cluster_view.select(clusters_0, up=up)
-            self.similarity_view.select(clusters_1, up=up)
-        elif up.added:
-            if up.description == 'assign':
-                # NOTE: we change the order such that the last selected
-                # cluster (with a new color) is the split cluster.
-                added = list(up.added[1:]) + [up.added[0]]
-            else:
-                added = up.added
-            # Select the new clusters in the cluster view.
-            self.cluster_view.select(added, up=up)
-            if similar:
-                self.similarity_view.next()
-        elif up.metadata_changed:
-            # Select next in similarity view if all moved are in that view.
-            if set(up.metadata_changed) <= set(similar):
-                next_cluster = self.similarity_view.get_next_id()
-                self._update_similarity_view()
-                if next_cluster is not None:
-                    # Select the cluster in the similarity view.
-                    self.similarity_view.select([next_cluster])
-            # Otherwise, select next in cluster view.
-            else:
-                self._update_cluster_view()
-                # Determine if there is a next cluster set from a
-                # previous clustering action.
-                cluster = up.metadata_changed[0]
-                next_cluster = self.cluster_meta.get('next_cluster', cluster)
-                logger.debug("Get next_cluster for %d: %s.",
-                             cluster, next_cluster)
-                # If there is not, fallback on the next cluster in the list.
-                if next_cluster is None:
-                    self.cluster_view.select([cluster], do_emit=False)
-                    self.cluster_view.next()
-                else:
-                    self.cluster_view.select([next_cluster])
+        # Make the new selection.
+        self._select_after_action()
 
     def attach(self, gui):
-        # Create the cluster views.
-        self._create_cluster_views()
-        self._add_default_columns()
+        self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view))
+        gui.add_view(self.cluster_view)
 
-        # Create the actions.
-        self._create_actions(gui)
+        gui.add_view(self.similarity_view)
 
-        self.emit('create_cluster_views')
-
-        # Add the cluster views.
-        gui.add_view(self.cluster_view, name='ClusterView')
-
-        # Add the quality column in the cluster view.
-        if self.quality:
-            self.cluster_view.add_column(self.quality,
-                                         name=self.quality.__name__,
-                                         )
-
-        # Update the cluster view and sort by n_spikes at the beginning.
-        self._update_cluster_view()
-
-        # Add the similarity view if there is a similarity function.
-        if self.similarity:
-            gui.add_view(self.similarity_view, name='SimilarityView')
-
-        # Set the view state.
-        cv = self.cluster_view
-        cv.set_state(gui.state.get_view_state(cv))
-
-        # Save the new cluster id on disk.
-        @self.clustering.connect
-        def on_cluster(up):
-            new_cluster_id = self.clustering.new_cluster_id()
-            if self.context:
-                logger.debug("Save the new cluster id: %d.", new_cluster_id)
-                self.context.save('new_cluster_id',
-                                  dict(new_cluster_id=new_cluster_id))
-
-        # The GUI emits the select event too.
-        @self.connect
-        def on_select(cluster_ids, **kwargs):
-            gui.emit('select', cluster_ids, **kwargs)
-
-        @self.connect
-        def on_request_split():
-            return gui.emit('request_split', single=True)
-
-        # Save the view state in the GUI state.
-        @gui.connect_
-        def on_close():
-            gui.state.update_view_state(cv, cv.state)
-            # NOTE: create_gui() already saves the state, but the event
-            # is registered *before* we add all views.
-            gui.state.save()
-
-        # Update the cluster views and selection when a cluster event occurs.
-        self.connect(self.on_cluster)
-
-        self.emit('attach_gui', gui)
-
-        return self
+        self.action_creator.attach(gui)
+        # TODO: gui should raise events too
 
     # Selection actions
     # -------------------------------------------------------------------------
@@ -690,7 +570,7 @@ class Supervisor(EventEmitter):
         if cluster_ids and isinstance(cluster_ids[0], (tuple, list)):
             cluster_ids = list(cluster_ids[0]) + list(cluster_ids[1:])
         # Remove non-existing clusters from the selection.
-        cluster_ids = self._keep_existing_clusters(cluster_ids)
+        #cluster_ids = self._keep_existing_clusters(cluster_ids)
         # Update the cluster view selection.
         self.cluster_view.select(cluster_ids)
 

@@ -15,6 +15,7 @@ from ..supervisor import (Supervisor,
                           ActionFlow,
                           ClusterView,
                           SimilarityView,
+                          ActionCreator,
                           )
 from phy.io import Context
 from phy.gui import GUI
@@ -47,14 +48,11 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
 
     mc = Supervisor(spike_clusters,
                     cluster_groups=cluster_groups,
-                    shortcuts={'undo': 'ctrl+z'},
                     quality=quality,
                     similarity=similarity,
                     context=Context(tempdir),
                     )
     mc.attach(gui)
-    mc.set_default_sort(quality.__name__)
-
     return mc
 
 
@@ -143,15 +141,15 @@ def test_action_flow_move_similar():
 #------------------------------------------------------------------------------
 
 def test_cluster_view_1(qtbot, gui):
-    columns = ['id', 'n_spikes']
     data = [{"id": i,
              "n_spikes": 100 - 10 * i,
              "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
+             "is_masked": i in (2, 3, 5),
              } for i in range(10)]
-    cv = ClusterView(data=data, columns=columns)
+    cv = ClusterView(data)
     cv.sort_by('n_spikes', 'asc')
     gui.add_view(cv)
-    # qtbot.stop()
+    #qtbot.stop()
     assert cv.state == {'current_sort': ('n_spikes', 'asc')}
 
     cv.set_state({'current_sort': ('id', 'desc')})
@@ -159,12 +157,11 @@ def test_cluster_view_1(qtbot, gui):
 
 
 def test_similarity_view_1(qtbot, gui):
-    columns = ['id', 'n_spikes']
     data = [{"id": i,
              "n_spikes": 100 - 10 * i,
              "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
              } for i in range(10)]
-    sv = SimilarityView(data=data, columns=columns)
+    sv = SimilarityView(data)
     gui.add_view(sv)
 
     @sv.connect_
@@ -176,13 +173,30 @@ def test_similarity_view_1(qtbot, gui):
 
 
 #------------------------------------------------------------------------------
+# Test ActionCreator
+#------------------------------------------------------------------------------
+
+def test_action_creator_1(qtbot, gui):
+    ac = ActionCreator()
+    ac.attach(gui)
+    gui.show()
+    # qtbot.stop()
+
+
+#------------------------------------------------------------------------------
 # Test GUI component
 #------------------------------------------------------------------------------
 
-def test_supervisor_order(supervisor):
+def test_supervisor_block(qtbot, supervisor):
+    supervisor.cluster_view.select([0])
+
+
+def test_supervisor_order(qtbot, supervisor):
     mc = supervisor
-    mc.select([1, 0])
-    assert mc.selected == [1, 0]
+    qtbot.stop()
+
+    #mc.select([1, 0])
+    #assert mc.selected == [1, 0]
 
 
 def test_supervisor_edge_cases(supervisor):
