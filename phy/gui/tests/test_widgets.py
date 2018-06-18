@@ -63,6 +63,7 @@ def test_widget_html(qtbot):
     qtbot.addWidget(widget)
     qtbot.waitForWindowShown(widget)
     assert 'Hello world!' in widget.html
+    assert widget.view_source()
     # qtbot.stop()
     widget.close()
 
