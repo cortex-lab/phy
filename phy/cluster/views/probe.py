@@ -30,8 +30,7 @@ class ProbeView(HTMLWidget):
             return
         cluster_channels = {i: self.best_channels(cl)
                             for i, cl in enumerate(cluster_ids)}
-        self.set_body(probe_layout(self.positions, cluster_channels))
-        self.rebuild()
+        self.builder.set_body(probe_layout(self.positions, cluster_channels))
 
     def attach(self, gui):
         gui.connect_(self.on_select)
