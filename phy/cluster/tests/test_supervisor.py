@@ -13,6 +13,7 @@ from numpy.testing import assert_array_equal as ae
 from .. import supervisor as _supervisor
 from ..supervisor import (Supervisor,
                           ActionFlow,
+                          ClusterView,
                           )
 from phy.io import Context
 from phy.gui import GUI
@@ -134,6 +135,22 @@ def test_action_flow_move_similar():
     assert s.type == 'state'
     assert s.cluster_ids == [0]
     assert s.similar == [101]
+
+
+#------------------------------------------------------------------------------
+# Test cluster and similarity views
+#------------------------------------------------------------------------------
+
+def test_cluster_view_1(qtbot, gui):
+    columns = ['id', 'n_spikes']
+    data = [{"id": i,
+             "n_spikes": 100 - 10 * i,
+             "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
+             } for i in range(10)]
+    cv = ClusterView(data=data, columns=columns)
+    cv.sort_by('n_spikes', 'asc')
+    gui.add_view(cv)
+    qtbot.stop()
 
 
 #------------------------------------------------------------------------------

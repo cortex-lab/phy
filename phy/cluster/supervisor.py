@@ -19,7 +19,7 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.utils import EventEmitter, Bunch
 from phy.gui.actions import Actions
-from phy.gui.widgets import Table
+from phy.gui.widgets import Table, HTMLWidget
 
 logger = logging.getLogger(__name__)
 
@@ -163,22 +163,36 @@ class ActionFlow(EventEmitter):
 # -----------------------------------------------------------------------------
 
 class ClusterView(Table):
-    def _set_builder(self):
-        super(ClusterView, self)._set_builder()
+    def __init__(self, columns=None, data=None, title=''):
+        HTMLWidget.__init__(self, title=title)
         self.builder.add_style('''
-                               table tr[data-good='true'] {
+                               table tr[data-group='good'] {
                                    color: #86D16D;
                                }
                                ''')
+        assert columns
+        assert columns[0] == 'id'
+        # Allow to have <tr data_group="good"> etc. which allows for CSS styling.
+        value_names = columns + [{'data': ['group']}]
+        self._init_table(columns=columns, value_names=value_names, data=data)
 
     @property
     def state(self):
-        return {'sort_by': self.current_sort}
+        return {'current_sort': self.current_sort}
 
     def set_state(self, state):
-        sort_by, order = state.get('sort_by', (None, None))
+        sort_by, sort_dir = state.get('current_sort', (None, None))
         if sort_by:
-            self.sort_by(sort_by, order)
+            self.sort_by(sort_by, sort_dir)
+
+
+class SimilarityView(ClusterView):
+    """Must connect request_similar_clusters."""
+    def reset(self, cluster_id):
+        similar = self.emit('request_similar_clusters', cluster_id)
+        # Clear the table.
+        self.remove(self.get_ids())
+        self.add(similar)
 
 
 class Supervisor(EventEmitter):
