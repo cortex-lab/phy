@@ -181,6 +181,8 @@ def block(until_true):
         app.processEvents(QEventLoop.ExcludeUserInputEvents |
                           QEventLoop.ExcludeSocketNotifiers |
                           QEventLoop.WaitForMoreEvents)
+    if not until_true():
+        raise RuntimeError("The condition failed.")
 
 
 def _abs_path(rel_path):

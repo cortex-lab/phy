@@ -9,6 +9,7 @@
 
 import json
 import logging
+from random import randint
 
 from six import text_type
 
@@ -32,9 +33,13 @@ _DEFAULT_STYLE = """
         margin: 5px 10px;
     }
 
-   table tr[data-is_masked='true'] {
-       color: #888;
-   }
+    input.search {
+        width: 100% !important;
+    }
+
+    table tr[data-is_masked='true'] {
+        color: #888;
+    }
 """
 
 
@@ -178,17 +183,18 @@ class HTMLWidget(WebView):
             return self.page().runJavaScript(expr, callback or (lambda _: _))
         self._js_done = False
         self._js_result = None
+        token = randint(0, 1e9)
 
         assert not callback
 
         def callback(res):
-            self._js_done = True
+            self._js_done = token
             self._js_result = res
 
         self.page().runJavaScript(expr, callback)
 
         # Synchronous execution.
-        block(lambda: self._js_done)
+        block(lambda: self._js_done == token)
 
         res = self._js_result
         self._js_done = False

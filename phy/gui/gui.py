@@ -286,7 +286,7 @@ class GUI(QMainWindow):
                                           closable=closable,
                                           floatable=floatable,
                                           )
-        self.addDockWidget(_get_dock_position(position), dock_widget)
+        self.addDockWidget(_get_dock_position(position), dock_widget, Qt.Horizontal)
         if floating is not None:
             dock_widget.setFloating(floating)
         dock_widget.view = view
@@ -410,7 +410,7 @@ class GUIState(Bunch):
 
     def get_view_state(self, view):
         """Return the state of a view."""
-        return self.get(view.name, Bunch())
+        return self.get(getattr(view, 'name', ''), Bunch())
 
     def update_view_state(self, view, state):
         """Update the state of a view."""
