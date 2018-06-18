@@ -14,6 +14,7 @@ from .. import supervisor as _supervisor
 from ..supervisor import (Supervisor,
                           ActionFlow,
                           ClusterView,
+                          SimilarityView,
                           )
 from phy.io import Context
 from phy.gui import GUI
@@ -150,7 +151,28 @@ def test_cluster_view_1(qtbot, gui):
     cv = ClusterView(data=data, columns=columns)
     cv.sort_by('n_spikes', 'asc')
     gui.add_view(cv)
-    qtbot.stop()
+    # qtbot.stop()
+    assert cv.state == {'current_sort': ('n_spikes', 'asc')}
+
+    cv.set_state({'current_sort': ('id', 'desc')})
+    assert cv.state == {'current_sort': ('id', 'desc')}
+
+
+def test_similarity_view_1(qtbot, gui):
+    columns = ['id', 'n_spikes']
+    data = [{"id": i,
+             "n_spikes": 100 - 10 * i,
+             "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
+             } for i in range(10)]
+    sv = SimilarityView(data=data, columns=columns)
+    gui.add_view(sv)
+
+    @sv.connect_
+    def on_request_similar_clusters(cluster_id):
+        return [{'id': id} for id in (100 + cluster_id, 110 + cluster_id, 102 + cluster_id)]
+
+    sv.reset(5)
+    assert sv.get_ids() == [105, 115, 107]
 
 
 #------------------------------------------------------------------------------

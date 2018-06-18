@@ -192,7 +192,8 @@ class SimilarityView(ClusterView):
         similar = self.emit('request_similar_clusters', cluster_id)
         # Clear the table.
         self.remove(self.get_ids())
-        self.add(similar)
+        if similar:
+            self.add(similar[0])
 
 
 class Supervisor(EventEmitter):
