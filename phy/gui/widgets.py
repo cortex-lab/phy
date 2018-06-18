@@ -149,6 +149,9 @@ class HTMLWidget(WebView):
     def block_until_loaded(self):
         block(lambda: self.eval_js("typeof(window.widget) !== 'undefined'"))
 
+    def view_source(self):
+        return self.eval_js("document.getElementsByTagName('html')[0].innerHTML")
+
     # Events
     # -------------------------------------------------------------------------
 
@@ -191,7 +194,7 @@ class HTMLWidget(WebView):
 
     @pyqtSlot(str, str)
     def _emit_from_js(self, name, arg_json):
-        logger.debug("Emit from Python %s %s.", name, arg_json)
+        logger.log(5, "Emit from Python %s %s.", name, arg_json)
         self.emit(text_type(name), json.loads(text_type(arg_json)))
 
 
@@ -206,30 +209,44 @@ def dumps(o):
 class Table(HTMLWidget):
     """A sortable table with support for selection."""
 
-    def __init__(self, columns=None, data=None, title=''):
+    def __init__(self, columns=None, value_names=None, data=None, title=''):
         super(Table, self).__init__(title=title)
+        self._init_table(columns=columns, value_names=value_names, data=data)
+
+    def _init_table(self, columns=None, value_names=None, data=None):
         columns = columns or ['id']
+        value_names = value_names or columns
         data = data or []
+
         b = self.builder
         b.set_body_src('index.html')
-        data_json = dumps(data)
-        columns_json = dumps(columns)
+
+        self.data = data
+        self.columns = columns
+        self.value_names = value_names
+
+        self.emit('pre_build')
+
+        data_json = dumps(self.data)
+        columns_json = dumps(self.columns)
+        value_names_json = dumps(self.value_names)
+
         b.body += '''
         <script>
             var data = %s;
 
             var options = {
-              valueNames: %s.concat(["_meta"]),
+              valueNames: %s,
               columns: %s,
             };
 
             var table = new Table('table', options, data);
 
         </script>
-        ''' % (data_json, columns_json, columns_json)
-        self.columns = columns
+        ''' % (data_json, value_names_json, columns_json)
         self.build()
         block(lambda: self.eval_js('(typeof(table) !== "undefined")'))
+        self.emit('ready')
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""

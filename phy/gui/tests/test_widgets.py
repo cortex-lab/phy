@@ -23,9 +23,9 @@ def table(qtbot):
     columns = ["id", "count"]
     data = [{"id": i,
              "count": 100 - 10 * i,
-             "_meta": "mask" if i in (2, 3, 5) else None,
+             "is_masked": True if i in (2, 3, 5) else False,
              } for i in range(10)]
-    table = Table(columns, data)
+    table = Table(columns=columns, data=data)
     table.show()
     qtbot.addWidget(table)
     qtbot.waitForWindowShown(table)
