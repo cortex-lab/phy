@@ -31,6 +31,10 @@ _DEFAULT_STYLE = """
         font-size: 12pt;
         margin: 5px 10px;
     }
+
+   table tr[data-is_masked='true'] {
+       color: #888;
+   }
 """
 
 
