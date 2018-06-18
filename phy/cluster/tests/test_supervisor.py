@@ -60,6 +60,10 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
 # Test action flow
 #------------------------------------------------------------------------------
 
+def test_action_flow_1():
+    assert ActionFlow()._previous_state(None) is None
+
+
 def test_action_flow_merge():
     af = ActionFlow()
     af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
@@ -69,6 +73,17 @@ def test_action_flow_merge():
     assert s.type == 'state'
     assert s.cluster_ids == [1000]
     assert s.similar == [101]
+
+    af.add_undo()
+    su = af.current()
+    assert su.type == 'state'
+    assert su.cluster_ids == [0]
+    assert su.similar == [100]
+    assert su.next_cluster == 2
+    assert su.next_similar == 101
+
+    af.add_redo()
+    assert af.current() == s
 
 
 def test_action_flow_split():
@@ -82,7 +97,7 @@ def test_action_flow_split():
     assert s.similar == []
 
 
-def test_action_flow_move():
+def test_action_flow_move_clusters_1():
     af = ActionFlow()
     af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
     af.add_move(cluster_ids=[0], group='good')
@@ -90,7 +105,35 @@ def test_action_flow_move():
     s = af.current()
     assert s.type == 'state'
     assert s.cluster_ids == [2]
-    assert s.similar == 'next'
+    # No connection to request_next_similar, so no next similar cluster.
+    assert s.similar == []
+
+
+def test_action_flow_move_clusters_2():
+    af = ActionFlow()
+
+    @af.connect
+    def on_request_next_similar(cluster_id):
+        return 1234
+
+    af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
+    af.add_move(cluster_ids=[0], group='good')
+
+    s = af.current()
+    assert s.type == 'state'
+    assert s.cluster_ids == [2]
+    assert s.similar == [1234]
+
+
+def test_action_flow_move_similar():
+    af = ActionFlow()
+    af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
+    af.add_move(cluster_ids=[100], group='good')
+
+    s = af.current()
+    assert s.type == 'state'
+    assert s.cluster_ids == [0]
+    assert s.similar == [101]
 
 
 #------------------------------------------------------------------------------

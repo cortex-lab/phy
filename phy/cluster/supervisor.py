@@ -48,29 +48,29 @@ def _process_ups(ups):  # pragma: no cover
 # Action flow
 # -----------------------------------------------------------------------------
 
-class ActionFlow(object):
+class ActionFlow(EventEmitter):
     """Keep track of all actions and state changes, and defines how selections change
     after an action."""
     def __init__(self):
+        super(ActionFlow, self).__init__()
         self._flow = []
-
-    def _add(self, type, **kwargs):
-        obj = Bunch(type=type, **kwargs)
-        self._flow.append(obj)
-        return obj
 
     def add_state(
             self, cluster_ids=None, similar=None,
             next_cluster=None, next_similar=None):
         state = Bunch(
+            type='state',
             cluster_ids=cluster_ids, similar=similar,
             next_cluster=next_cluster, next_similar=next_similar)
-        return self._add('state', **state)
+        self._flow.append(state)
+        return state
 
     def _add_action(self, name, **kwargs):
-        action = self._add('action', name=name, **kwargs)
+        action = Bunch(type='action', name=name, **kwargs)
+        self._flow.append(action)
         state = self.state_after(action)
-        return self._add(state.pop('type'), **state)
+        self._flow.append(state)
+        return state
 
     def add_merge(self, cluster_ids=None, to=None):
         return self._add_action('merge', cluster_ids=cluster_ids, to=to)
@@ -102,12 +102,16 @@ class ActionFlow(object):
         return state
 
     def _previous_state(self, obj):
-        i = self._flow.index(obj)
+        try:
+            i = self._flow.index(obj)
+        except ValueError:
+            return
         if i == 0:
             return
-        previous = self._flow[i - 1]
-        assert previous.type == 'state'
-        return previous
+        for k in range(1, 10):
+            previous = self._flow[i - k]
+            if previous.type == 'state':
+                return previous
 
     def _last_undo(self):
         for obj in self._flow[::-1]:
@@ -128,14 +132,22 @@ class ActionFlow(object):
         # If all moved clusters are in the cluster view, then move to the next
         # cluster in the cluster view.
         if moved_clusters <= set(state.cluster_ids):
-            return Bunch(type='state', cluster_ids=[state.next_cluster], similar='next')
+            # Request the next similar cluster to the next best cluster.
+            next_similar = self.emit('request_next_similar', cluster_id=state.next_cluster)
+            if next_similar:
+                return Bunch(type='state',
+                             cluster_ids=[state.next_cluster],
+                             similar=[next_similar[0]])
+            else:
+                return Bunch(type='state',
+                             cluster_ids=[state.next_cluster])
         # Otherwise, select the next one in the similarity view.
         elif moved_clusters <= set(state.similar):
             return Bunch(type='state', cluster_ids=state.cluster_ids,
                          similar=[state.next_similar])
 
     def _state_after_undo(self, action):
-        return self._previous_state(action)
+        return self._previous_state(self._previous_state(action))
 
     def _state_after_redo(self, action):
         undo = self._last_undo()
