@@ -38,7 +38,8 @@ def _block(until_true):
         app = QApplication.instance()
         app.processEvents(QEventLoop.ExcludeUserInputEvents |
                           QEventLoop.ExcludeSocketNotifiers |
-                          QEventLoop.WaitForMoreEvents)
+                          QEventLoop.WaitForMoreEvents,
+                          int(timeout * 1000))
     if not until_true():
         raise RuntimeError("Timeout in _block().")
 
@@ -69,6 +70,12 @@ def test_qt_app(qtbot):
     view = QWebEngineView()
     qtbot.addWidget(view)
     view.close()
+
+
+def test_block(qtbot):
+    create_app()
+    with raises(RuntimeError):
+        _block(lambda: False)
 
 
 def test_wait_signal(qtbot):

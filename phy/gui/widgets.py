@@ -9,11 +9,10 @@
 
 import json
 import logging
-from random import randint
 
 from six import text_type
 
-from .qt import WebView, QWebChannel, pyqtSlot, block, _abs_path
+from .qt import WebView, QWebChannel, pyqtSlot, _abs_path
 from phy.utils import EventEmitter
 from phy.utils._misc import _CustomEncoder, _read_text
 
@@ -153,13 +152,11 @@ class HTMLWidget(WebView):
         self.builder.add_script(_DEFAULT_SCRIPT)
 
     def build(self):
-        self.set_html_sync(self.builder.html)
+        self.set_html(self.builder.html)
 
-    def block_until_loaded(self):
-        block(lambda: self.eval_js("typeof(window.widget) !== 'undefined'"))
-
-    def view_source(self):
-        return self.eval_js("document.getElementsByTagName('html')[0].innerHTML")
+    def view_source(self, callback=None):
+        return self.eval_js("document.getElementsByTagName('html')[0].innerHTML",
+                            callback=callback)
 
     # Events
     # -------------------------------------------------------------------------
@@ -177,30 +174,9 @@ class HTMLWidget(WebView):
     # Javascript methods
     # -------------------------------------------------------------------------
 
-    def eval_js(self, expr, callback=None, sync=True):
+    def eval_js(self, expr, callback=None):
         """Evaluate a Javascript expression."""
-        if not sync:
-            return self.page().runJavaScript(expr, callback or (lambda _: _))
-        self._js_done = False
-        self._js_result = None
-        token = randint(0, 1e9)
-
-        assert not callback
-
-        def callback(res):
-            self._js_done = token
-            self._js_result = res
-
-        self.page().runJavaScript(expr, callback)
-
-        # Synchronous execution.
-        block(lambda: self._js_done == token)
-
-        res = self._js_result
-        self._js_done = False
-        self._js_result = None
-
-        return res
+        return self.page().runJavaScript(expr, callback or (lambda _: _))
 
     @pyqtSlot(str, str)
     def _emit_from_js(self, name, arg_json):
@@ -255,8 +231,6 @@ class Table(HTMLWidget):
         </script>
         ''' % (data_json, value_names_json, columns_json)
         self.build()
-        block(lambda: self.eval_js('(typeof(table) !== "undefined")'))
-        self.emit('ready')
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
@@ -267,20 +241,17 @@ class Table(HTMLWidget):
         logger.log(5, "Filter table with `%s`.", text)
         self.eval_js('table.filter_("{}");'.format(text))
 
-    def get_ids(self):
+    def get_ids(self, callback=None):
         """Get the list of ids."""
-        ids = self.eval_js('table._getIds();')
-        return ids
+        self.eval_js('table._getIds();', callback=callback)
 
-    def get_next_id(self):
+    def get_next_id(self, callback=None):
         """Get the next non-skipped row id."""
-        next_id = self.eval_js('table.getSiblingId(undefined, "next");')
-        return int(next_id) if next_id is not None else None
+        self.eval_js('table.getSiblingId(undefined, "next");', callback=callback)
 
-    def get_previous_id(self):
+    def get_previous_id(self, callback=None):
         """Get the previous non-skipped row id."""
-        prev_id = self.eval_js('table.getSiblingId(undefined, "previous");')
-        return int(prev_id) if prev_id is not None else None
+        self.eval_js('table.getSiblingId(undefined, "previous");', callback=callback)
 
     def next(self):
         """Select the next non-skipped row."""
@@ -295,8 +266,8 @@ class Table(HTMLWidget):
         ids = _uniq(ids)
         self.eval_js('table.select({});'.format(dumps(ids)))
 
-    def get(self, id):
-        return self.eval_js('table.get("id", {})[0]["_values"]'.format(id))
+    def get(self, id, callback=None):
+        self.eval_js('table.get("id", {})[0]["_values"]'.format(id), callback=callback)
 
     def add(self, objects):
         self.eval_js('table.add_({});'.format(dumps(objects)))
@@ -307,13 +278,10 @@ class Table(HTMLWidget):
     def remove(self, ids):
         self.eval_js('table.remove_({});'.format(dumps(ids)))
 
-    @property
-    def selected(self):
+    def get_selected(self, callback=None):
         """Currently selected rows."""
-        return [int(_) for _ in self.eval_js('table.selected()') or ()]
+        self.eval_js('table.selected()', callback=callback)
 
-    @property
-    def current_sort(self):
+    def get_current_sort(self, callback=None):
         """Current sort: a tuple `(name, dir)`."""
-        sort = self.eval_js('table._currentSort()')
-        return None if not sort else tuple(sort)
+        self.eval_js('table._currentSort()', callback=callback)

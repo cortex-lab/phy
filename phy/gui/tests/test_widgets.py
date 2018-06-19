@@ -6,11 +6,12 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from functools import partial
 import os.path as op
 from pytest import yield_fixture
 
 from phy.utils.testing import captured_logging
-from ..qt import block
+from .test_qt import _block
 from ..widgets import HTMLWidget, Table
 
 
@@ -62,8 +63,14 @@ def test_widget_html(qtbot):
     widget.show()
     qtbot.addWidget(widget)
     qtbot.waitForWindowShown(widget)
-    assert 'Hello world!' in widget.html
-    assert widget.view_source()
+
+    _block(lambda: 'Hello world!' in str(widget.html))
+
+    _out = []
+
+    widget.view_source(lambda x: _out.append(x))
+    _block(lambda: _out[0].startswith('<head>') if _out else None)
+
     # qtbot.stop()
     widget.close()
 
@@ -81,13 +88,13 @@ def test_widget_javascript_1(qtbot):
     def _callback(res):
         _out.append(res)
 
-    widget.eval_js('number', _callback, sync=False)
-    block(lambda: _out == [1])
+    widget.eval_js('number', _callback)
+    _block(lambda: _out == [1])
 
     # Test logging from JS.
     with captured_logging() as buf:
         widget.eval_js('console.log("hello world!");')
-    assert 'hello world!' in buf.getvalue().lower()
+        _block(lambda: 'hello world!' in buf.getvalue().lower())
 
     # qtbot.stop()
     widget.close()
@@ -116,8 +123,7 @@ def test_widget_javascript_2(qtbot):
     qtbot.addWidget(widget)
     qtbot.waitForWindowShown(widget)
 
-    widget.block_until_loaded()
-    assert _out == [{'hello': 'world'}]
+    _block(lambda: _out == [{'hello': 'world'}])
 
     widget.unconnect_(on_test)
     # qtbot.stop()
@@ -127,6 +133,12 @@ def test_widget_javascript_2(qtbot):
 #------------------------------------------------------------------------------
 # Test table
 #------------------------------------------------------------------------------
+
+def _assert(f, expected):
+    _out = []
+    f(lambda x: _out.append(x))
+    _block(lambda: _out == [expected])
+
 
 def test_table_empty_1(qtbot):
     table = Table()
@@ -144,43 +156,44 @@ def test_table_invalid_column(qtbot):
     table.close()
 
 
+def test_table_0(qtbot, table):
+    _assert(table.get_selected, [])
+
+
 def test_table_1(qtbot, table):
     table.select([1, 2])
-    assert table.selected == [1, 2]
-    # qtbot.stop()
+    _assert(table.get_selected, [1, 2])
 
 
 def test_table_duplicates(qtbot, table):
     table.select([1, 1])
-    assert table.selected == [1]
-    # qtbot.stop()
+    _assert(table.get_selected, [1])
 
 
 def test_table_nav_first(qtbot, table):
     table.next()
-    assert table.selected == [0]
-    assert table.get_next_id() == 1
+    _assert(table.get_selected, [0])
+    _assert(table.get_next_id, 1)
 
 
 def test_table_nav_last(qtbot, table):
     table.previous()
-    assert table.selected == [0]
-    assert table.get_previous_id() is None
+    _assert(table.get_selected, [0])
+    _assert(table.get_previous_id, None)
 
 
 def test_table_nav_0(qtbot, table):
     table.select([4])
 
     table.next()
-    assert table.selected == [6]
+    _assert(table.get_selected, [6])
 
     table.previous()
-    assert table.selected == [4]
+    _assert(table.get_selected, [4])
 
 
 def test_table_nav_1(qtbot, table):
     _sel = []
-    assert table.selected == []
 
     @table.connect_
     def on_some_event(items, **kwargs):
@@ -188,68 +201,64 @@ def test_table_nav_1(qtbot, table):
 
     table.eval_js('table.emit("some_event", 123);')
 
-    assert _sel == [123]
-
-    # qtbot.stop()
+    _block(lambda: _sel == [123])
 
 
 def test_table_sort(qtbot, table):
     table.select([1])
     table.next()
     table.next()
-    assert table.selected == [6]
+    _assert(table.get_selected, [6])
 
     # Sort by count decreasing, and check that 0 (count 100) comes before
     # 1 (count 90). This checks that sorting works with number).
     table.sort_by('count', 'asc')
 
-    assert table.current_sort == ('count', 'asc')
-    assert table.selected == [6]
-    assert table.get_ids() == list(range(9, -1, -1))
+    _assert(table.get_current_sort, ['count', 'asc'])
+    _assert(table.get_selected, [6])
+    _assert(table.get_ids, list(range(9, -1, -1)))
 
     table.next()
-    assert table.selected == [4]
+    _assert(table.get_selected, [4])
 
     table.sort_by('count', 'desc')
-    assert table.get_ids() == list(range(10))
-
-    # qtbot.stop()
+    _assert(table.get_ids, list(range(10)))
 
 
 def test_table_add_change_remove(qtbot, table):
-    assert table.get_ids() == list(range(10))
+    _assert(table.get_ids, list(range(10)))
 
     table.add({'id': 100, 'count': 1000})
-    assert table.get_ids() == list(range(10)) + [100]
+    _assert(table.get_ids, list(range(10)) + [100])
 
     table.remove([0, 1])
-    assert table.get_ids() == list(range(2, 10)) + [100]
+    _assert(table.get_ids, list(range(2, 10)) + [100])
 
-    assert table.get(100)['count'] == 1000
+    _assert(partial(table.get, 100), {'id': 100, 'count': 1000})
     table.change([{'id': 100, 'count': 2000}])
-    assert table.get(100)['count'] == 2000
+    _assert(partial(table.get, 100), {'id': 100, 'count': 2000})
 
 
 def test_table_change_and_sort_1(qtbot, table):
     table.change([{'id': 5, 'count': 1000}])
-    assert table.get_ids() == list(range(10))
+    _assert(table.get_ids, list(range(10)))
 
 
 def test_table_change_and_sort_2(qtbot, table):
     table.sort_by('count', 'asc')
-    assert table.get_ids() == list(range(9, -1, -1))
+    _assert(table.get_ids, list(range(9, -1, -1)))
 
     # Check that the table is automatically resorted after a change.
     table.change([{'id': 5, 'count': 1000}])
-    assert table.get_ids() == [9, 8, 7, 6, 4, 3, 2, 1, 0, 5]
+    _assert(table.get_ids, [9, 8, 7, 6, 4, 3, 2, 1, 0, 5])
 
 
 def test_table_filter(qtbot, table):
     table.filter("id == 5")
-    assert table.get_ids() == [5]
+    _assert(table.get_ids, [5])
 
     table.filter("count == 80")
-    assert table.get_ids() == [2]
+    _assert(table.get_ids, [2])
 
     table.filter()
-    assert table.get_ids() == list(range(10))
+    _assert(table.get_ids, list(range(10)))
