@@ -278,6 +278,9 @@ class Table(HTMLWidget):
     def remove(self, ids):
         self.eval_js('table.remove_({});'.format(dumps(ids)))
 
+    def remove_all(self):
+        self.eval_js('table.remove_all();')
+
     def get_selected(self, callback=None):
         """Currently selected rows."""
         self.eval_js('table.selected()', callback=callback)

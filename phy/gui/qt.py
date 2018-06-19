@@ -27,6 +27,7 @@ from OpenGL import GL  # noqa
 from PyQt5.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
                           QVariant, QEventLoop, QTimer, QPoint, QTimer,
                           pyqtSignal, pyqtSlot, QSize, QUrl,
+                          qInstallMessageHandler,
                           )
 from PyQt5.QtGui import QKeySequence, QColor  # noqa
 from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
