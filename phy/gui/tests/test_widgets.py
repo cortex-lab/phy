@@ -232,6 +232,11 @@ def test_table_sort(qtbot, table):
     _assert(table.get_ids, list(range(10)))
 
 
+def test_table_remove_all(qtbot, table):
+    table.remove_all()
+    _assert(table.get_ids, [])
+
+
 def test_table_add_change_remove(qtbot, table):
     _assert(table.get_ids, list(range(10)))
 
