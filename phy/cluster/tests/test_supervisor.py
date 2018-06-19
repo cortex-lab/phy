@@ -19,6 +19,16 @@ from ..supervisor import (Supervisor,
                           )
 from phy.io import Context
 from phy.gui import GUI
+from phy.gui.qt import qInstallMessageHandler
+from phy.gui.tests.test_qt import _block
+from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
+
+
+def handler(msg_type, msg_log_context, msg_string):
+    pass
+
+
+qInstallMessageHandler(handler)
 
 
 #------------------------------------------------------------------------------
@@ -53,6 +63,8 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
                     context=Context(tempdir),
                     )
     mc.attach(gui)
+    _wait_until_table_ready(mc.cluster_view)
+    _wait_until_table_ready(mc.similarity_view)
     return mc
 
 
@@ -62,6 +74,25 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
 
 def test_action_flow_1():
     assert ActionFlow()._previous_state(None) is None
+
+
+def test_action_flow_2():
+    af = ActionFlow()
+    af.update_current_state(cluster_ids=[0])
+    assert af.current().cluster_ids == [0]
+
+
+def test_action_flow_3():
+    af = ActionFlow()
+
+    af.add_state(cluster_ids=[0], similar=[100], next_similar=101)
+    assert af.current().next_cluster is None
+
+    af.update_current_state(next_cluster=1000)
+    assert af.current().next_cluster == 1000
+
+    af.update_current_state(cluster_ids=[1])
+    assert af.current().cluster_ids == [0]
 
 
 def test_action_flow_merge():
@@ -147,13 +178,14 @@ def test_cluster_view_1(qtbot, gui):
              "is_masked": i in (2, 3, 5),
              } for i in range(10)]
     cv = ClusterView(data)
-    cv.sort_by('n_spikes', 'asc')
+    _wait_until_table_ready(cv)
     gui.add_view(cv)
-    #qtbot.stop()
-    assert cv.state == {'current_sort': ('n_spikes', 'asc')}
+
+    cv.sort_by('n_spikes', 'asc')
+    _assert(cv.get_state, {'current_sort': ('n_spikes', 'asc')})
 
     cv.set_state({'current_sort': ('id', 'desc')})
-    assert cv.state == {'current_sort': ('id', 'desc')}
+    _assert(cv.get_state, {'current_sort': ('id', 'desc')})
 
 
 def test_similarity_view_1(qtbot, gui):
@@ -162,6 +194,7 @@ def test_similarity_view_1(qtbot, gui):
              "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
              } for i in range(10)]
     sv = SimilarityView(data)
+    _wait_until_table_ready(sv)
     gui.add_view(sv)
 
     @sv.connect_
@@ -169,7 +202,7 @@ def test_similarity_view_1(qtbot, gui):
         return [{'id': id} for id in (100 + cluster_id, 110 + cluster_id, 102 + cluster_id)]
 
     sv.reset(5)
-    assert sv.get_ids() == [105, 115, 107]
+    _assert(sv.get_ids, [105, 115, 107])
 
 
 #------------------------------------------------------------------------------
@@ -187,16 +220,26 @@ def test_action_creator_1(qtbot, gui):
 # Test GUI component
 #------------------------------------------------------------------------------
 
+def _assert_selected(supervisor, sel):
+    cluster_ids = []
+    similar = []
+    supervisor.cluster_view.get_selected(lambda c: cluster_ids.append(c))
+    supervisor.similarity_view.get_selected(lambda s: similar.append(s))
+    _block(lambda: len(cluster_ids) > 0 and len(similar) > 0)
+    assert cluster_ids[0] + similar[0] == sel
+
+
 def test_supervisor_block(qtbot, supervisor):
+    _wait_until_table_ready(supervisor.cluster_view)
     supervisor.cluster_view.select([0])
 
 
 def test_supervisor_order(qtbot, supervisor):
+    _wait_until_table_ready(supervisor.cluster_view)
     mc = supervisor
-    qtbot.stop()
 
-    #mc.select([1, 0])
-    #assert mc.selected == [1, 0]
+    mc.select([1, 0])
+    _assert_selected(mc, [1, 0])
 
 
 def test_supervisor_edge_cases(supervisor):

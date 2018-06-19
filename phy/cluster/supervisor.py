@@ -7,7 +7,6 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-from collections import OrderedDict
 from functools import partial
 import logging
 
@@ -64,6 +63,18 @@ class ActionFlow(EventEmitter):
             next_cluster=next_cluster, next_similar=next_similar)
         self._flow.append(state)
         return state
+
+    def update_current_state(
+            self, cluster_ids=None, similar=None,
+            next_cluster=None, next_similar=None):
+        state = self.current()
+        if not state or state.type != 'state':
+            state = self.add_state()
+        state.cluster_ids = state.cluster_ids if state.cluster_ids is not None else cluster_ids
+        state.similar = state.similar if state.similar is not None else similar
+        state.next_cluster = state.next_cluster if state.next_cluster is not None else next_cluster
+        state.next_similar = state.next_similar if state.next_similar is not None else next_similar
+        self._flow[-1] = state
 
     def _add_action(self, name, **kwargs):
         action = Bunch(type='action', name=name, **kwargs)
@@ -186,9 +197,8 @@ class ClusterView(Table):
             }
             ''')
 
-    @property
-    def state(self):
-        return {'current_sort': self.current_sort}
+    def get_state(self, callback=None):
+        self.get_current_sort(lambda sort: callback({'current_sort': tuple(sort)}))
 
     def set_state(self, state):
         sort_by, sort_dir = state.get('current_sort', (None, None))
@@ -208,7 +218,7 @@ class SimilarityView(ClusterView):
     def reset(self, cluster_id):
         similar = self.emit('request_similar_clusters', cluster_id)
         # Clear the table.
-        self.remove(self.get_ids())
+        self.remove_all()
         if similar:
             self.add(similar[0])
 
@@ -397,16 +407,6 @@ class Supervisor(EventEmitter):
     # Internal methods
     # -------------------------------------------------------------------------
 
-    # def _register_next_cluster(self, up):
-    #     """Register the next cluster in the list before the cluster
-    #     view is updated."""
-    #     if not up.added or not hasattr(self, 'cluster_view'):
-    #         return
-    #     cluster = up.added[0]
-    #     next_cluster = self.cluster_view.get_next_id()
-    #     logger.debug("Register next_cluster to %d: %s", cluster, next_cluster)
-    #     self.cluster_meta.set('next_cluster', [cluster], next_cluster, add_to_stack=False)
-
     def _save_spikes_per_cluster(self):
         if not self.context:
             return
@@ -466,7 +466,7 @@ class Supervisor(EventEmitter):
         return {'id': cluster_id,
                 'n_spikes': self.n_spikes(cluster_id),
                 'quality': self.quality(cluster_id),
-        }
+                }
 
     def _create_views(self):
         data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
@@ -475,7 +475,7 @@ class Supervisor(EventEmitter):
 
         self.similarity_view = SimilarityView()
         self.similarity_view.connect_(self._get_similar_clusters, event='request_similar_clusters')
-        self.similarity_view.connect_(self._clusters_selected, event='select')
+        self.similarity_view.connect_(self._similar_selected, event='select')
 
     def _clusters_added(self, cluster_ids):
         data = [self._get_cluster_info(cluster_id) for cluster_id in cluster_ids]
@@ -492,26 +492,19 @@ class Supervisor(EventEmitter):
         self.cluster_view.change(data)
         self.similarity_view.change(data)
 
-    def _clusters_selected(self, data):
-        cluster_ids, next_cluster = data
-        #self.action_flow.add_state
-        dict(
-            #cluster_ids=self.cluster_view.selected,
-            #similar=self.similarity_view.selected,
-            #next_cluster=self.cluster_view.get_next_id(),
-            #next_similar=self.similarity_view.get_next_id(),
-        )
-        #self.emit('select', self.selected)
+    def _clusters_selected(self, cluster_ids):
+        self.action_flow.update_current_state(cluster_ids=cluster_ids)
+        self.cluster_view.get_next_id(
+            lambda next_cluster: self.action_flow.update_current_state(next_cluster=next_cluster))
+        self.similarity_view.get_selected(
+            lambda similar: self.emit('select', cluster_ids + similar))
 
-    def _similar_selected(self, cluster_ids):
-        #self.action_flow.add_state
-        dict(
-            #cluster_ids=self.cluster_view.selected,
-            #similar=self.similarity_view.selected,
-            #next_cluster=self.cluster_view.get_next_id(),
-            #next_similar=self.similarity_view.get_next_id(),
-        )
-        #self.emit('select', self.selected)
+    def _similar_selected(self, similar):
+        self.action_flow.update_current_state(similar=similar)
+        self.similarity_view.get_next_id(
+            lambda next_similar: self.action_flow.update_current_state(next_similar=next_similar))
+        self.cluster_view.get_selected(
+            lambda cluster_ids: self.emit('select', cluster_ids + similar))
 
     def _on_action(self, name):
         return getattr(self, name)()
@@ -573,10 +566,6 @@ class Supervisor(EventEmitter):
         #cluster_ids = self._keep_existing_clusters(cluster_ids)
         # Update the cluster view selection.
         self.cluster_view.select(cluster_ids)
-
-    @property
-    def selected(self):
-        return self.cluster_view.selected + self.similarity_view.selected
 
     # Clustering actions
     # -------------------------------------------------------------------------
