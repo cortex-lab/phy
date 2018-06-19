@@ -11,7 +11,7 @@ from functools import wraps
 import logging
 import os.path as op
 import sys
-from timeit import default_timer
+#from timeit import default_timer
 
 logger = logging.getLogger(__name__)
 
@@ -173,18 +173,6 @@ class AsyncCaller(object):
             self._timer.deleteLater()
 
 
-def block(until_true):
-    t0 = default_timer()
-    timeout = .2
-    while not until_true() and (default_timer() - t0 < timeout):
-        app = QApplication.instance()
-        app.processEvents(QEventLoop.ExcludeUserInputEvents |
-                          QEventLoop.ExcludeSocketNotifiers |
-                          QEventLoop.WaitForMoreEvents)
-    if not until_true():
-        raise RuntimeError("The condition failed.")
-
-
 def _abs_path(rel_path):
     static_dir = op.join(op.abspath(op.dirname(__file__)), 'static/')
     return op.join(static_dir, rel_path)
@@ -208,16 +196,18 @@ class WebView(QWebEngineView):
         self.move(100, 100)
         self.resize(400, 400)
 
-    def set_html_sync(self, html):
+    def set_html(self, html, callback=None):
         self.html = None
+        self._callback = callback
         self.loadFinished.connect(self._loadFinished)
         static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
         base_url = QUrl().fromLocalFile(static_dir)
         self.page().setHtml(html, base_url)
-        block(lambda: self.html is not None)
 
     def _callable(self, data):
         self.html = data
+        if self._callback:
+            self._callback(self.html)
 
     def _loadFinished(self, result):
         self.page().toHtml(self._callable)
