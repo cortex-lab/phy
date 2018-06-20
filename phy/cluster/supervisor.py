@@ -18,7 +18,7 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.utils import EventEmitter, Bunch
 from phy.gui.actions import Actions
-from phy.gui.widgets import Table, HTMLWidget
+from phy.gui.widgets import Table, HTMLWidget, _uniq
 
 logger = logging.getLogger(__name__)
 
@@ -179,12 +179,16 @@ class ClusterView(Table):
         self._set_styles()
 
         # TODO: custom columns
-        columns = ['id', 'n_spikes']
+        columns = ['id', 'n_spikes', 'quality']
         assert columns[0] == 'id'
 
         # Allow to have <tr data_group="good"> etc. which allows for CSS styling.
         value_names = columns + [{'data': ['group']}]
         self._init_table(columns=columns, value_names=value_names, data=data)
+
+        @self.connect_
+        def on_ready():
+            self.sort_by('quality', 'desc')
 
     def _set_styles(self):
         self.builder.add_style('''
@@ -211,9 +215,13 @@ class SimilarityView(ClusterView):
     def __init__(self, data=None):
         HTMLWidget.__init__(self, title='SimilarityView')
         self._set_styles()
-        columns = ['id', 'n_spikes', 'similarity']
+        columns = ['id', 'n_spikes', 'quality', 'similarity']
         value_names = columns + [{'data': ['group']}]
         self._init_table(columns=columns, value_names=value_names, data=data)
+
+        @self.connect_
+        def on_ready():
+            self.sort_by('similarity', 'desc')
 
     def reset(self, cluster_ids):
         if not len(cluster_ids):
@@ -464,9 +472,12 @@ class Supervisor(EventEmitter):
         return data
 
     def _get_cluster_info(self, cluster_id):
+        group = self.cluster_meta.get('group', cluster_id)
         return {'id': cluster_id,
                 'n_spikes': self.n_spikes(cluster_id),
                 'quality': self.quality(cluster_id),
+                'group': group,
+                'is_masked': group in ('noise', 'mua'),
                 }
 
     def _create_views(self):
@@ -572,13 +583,35 @@ class Supervisor(EventEmitter):
         # Update the cluster view selection.
         self.cluster_view.select(cluster_ids)
 
+    def get_selected(self, callback=None):
+        """Get the selected clusters in the cluster and similarity views.
+        Asynchronous operation."""
+        _out_c = []
+        _out_s = []
+
+        def _callback_after_both():
+            if callback and _out_c and _out_s:
+                selected = _out_c[0] + _out_s[0]
+                callback(_uniq(selected))
+
+        @self.cluster_view.get_selected
+        def _get_cluster_ids(cluster_ids):
+            _out_c.append(cluster_ids)
+            _callback_after_both()
+
+        @self.similarity_view.get_selected
+        def _get_similar(similar):
+            _out_s.append(similar)
+            _callback_after_both()
+
+
     # Clustering actions
     # -------------------------------------------------------------------------
 
     def merge(self, cluster_ids=None, to=None):
         """Merge the selected clusters."""
         if cluster_ids is None:
-            cluster_ids = self.selected
+            return self.get_selected(lambda cl: self.merge(cluster_ids=cl, to=to))
         if len(cluster_ids or []) <= 1:
             return
         self.clustering.merge(cluster_ids, to=to)
@@ -622,7 +655,8 @@ class Supervisor(EventEmitter):
 
         """
         if cluster_ids is None:
-            cluster_ids = self.cluster_view.selected
+            return self.cluster_view.get_selected(
+                lambda cl: self.label(name, value, cluster_ids=cl))
         if not hasattr(cluster_ids, '__len__'):
             cluster_ids = [cluster_ids]
         if len(cluster_ids) == 0:
@@ -644,15 +678,15 @@ class Supervisor(EventEmitter):
 
     def move_best(self, group=None):
         """Move all selected best clusters to a group."""
-        self.move(group, self.cluster_view.selected)
+        self.cluster_view.get_selected(lambda cl: self.move(group, cl))
 
     def move_similar(self, group=None):
         """Move all selected similar clusters to a group."""
-        self.move(group, self.similarity_view.selected)
+        self.similarity_view.get_selected(lambda cl: self.move(group, cl))
 
     def move_all(self, group=None):
         """Move all selected clusters to a group."""
-        self.move(group, self.selected)
+        self.get_selected(lambda cl: self.move(group, cl))
 
     # Wizard actions
     # -------------------------------------------------------------------------
