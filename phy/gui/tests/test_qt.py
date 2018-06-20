@@ -6,13 +6,10 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from timeit import default_timer
-
 from pytest import raises
 
 from phy.utils.testing import captured_logging
 from ..qt import (QMessageBox, Qt, QWebEngineView, QTimer,
-                  QEventLoop,
                   _button_name_from_enum,
                   _button_enum_from_name,
                   _prompt,
@@ -23,24 +20,13 @@ from ..qt import (QMessageBox, Qt, QWebEngineView, QTimer,
                   WebView,
                   busy_cursor,
                   AsyncCaller,
+                  _block,
                   )
 
 
 #------------------------------------------------------------------------------
 # Tests
 #------------------------------------------------------------------------------
-
-def _block(until_true):
-    t0 = default_timer()
-    timeout = .5
-
-    while not until_true() and (default_timer() - t0 < timeout):
-        app = QApplication.instance()
-        app.processEvents(QEventLoop.AllEvents,
-                          int(timeout * 1000))
-    if not until_true():
-        raise RuntimeError("Timeout in _block().")
-
 
 def test_require_qt_with_app():
 

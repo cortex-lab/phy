@@ -9,10 +9,11 @@
 
 import json
 import logging
+from functools import partial
 
 from six import text_type
 
-from .qt import WebView, QWebChannel, pyqtSlot, _abs_path
+from .qt import WebView, QWebChannel, pyqtSlot, _abs_path, _block
 from phy.utils import EventEmitter
 from phy.utils._misc import _CustomEncoder, _read_text
 
@@ -92,6 +93,34 @@ def _uniq(seq):
     seen = set()
     seen_add = seen.add
     return [x for x in seq if not (x in seen or seen_add(x))]
+
+
+class Barrier(object):
+    def __init__(self):
+        self._keys = []
+        self._results = {}
+        self._callback_after_all = None
+
+    def _callback(self, key, *args, **kwargs):
+        self._results[key] = (args, kwargs)
+        if self._callback_after_all and self.have_all_finished():
+            self._callback_after_all()
+
+    def __call__(self, key):
+        self._keys.append(key)
+        return partial(self._callback, key)
+
+    def have_all_finished(self):
+        return set(self._keys) == set(self._results.keys())
+
+    def wait(self):
+        _block(self.have_all_finished)
+
+    def after_all_finished(self, callback):
+        self._callback_after_all = callback
+
+    def result(self, key):
+        return self._results.get(key, None)
 
 
 class HTMLBuilder(object):
@@ -279,7 +308,10 @@ class Table(HTMLWidget):
         self.eval_js('table.remove_({});'.format(dumps(ids)))
 
     def remove_all(self):
-        self.eval_js('table.remove_all();')
+        self.eval_js('table.removeAll();')
+
+    def remove_all_and_add(self, objects):
+        self.eval_js('table.removeAllAndAdd({});'.format(dumps(objects)))
 
     def get_selected(self, callback=None):
         """Currently selected rows."""

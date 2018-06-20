@@ -12,12 +12,28 @@ from pytest import yield_fixture
 
 from phy.utils.testing import captured_logging
 from .test_qt import _block
-from ..widgets import HTMLWidget, Table
+from ..widgets import HTMLWidget, Table, Barrier
 
 
 #------------------------------------------------------------------------------
 # Fixtures
 #------------------------------------------------------------------------------
+
+def _assert(f, expected):
+    _out = []
+    f(lambda x: _out.append(x))
+    _block(lambda: _out == [expected])
+
+
+def _wait_until_table_ready(qtbot, table):
+    b = Barrier()
+    table.connect_(b(1), event='ready')
+
+    table.show()
+    qtbot.addWidget(table)
+    qtbot.waitForWindowShown(table)
+    b.wait()
+
 
 @yield_fixture
 def table(qtbot):
@@ -32,6 +48,7 @@ def table(qtbot):
     table.show()
     qtbot.addWidget(table)
     qtbot.waitForWindowShown(table)
+    _wait_until_table_ready(qtbot, table)
 
     yield table
 
@@ -134,24 +151,21 @@ def test_widget_javascript_2(qtbot):
 # Test table
 #------------------------------------------------------------------------------
 
-def _assert(f, expected):
-    _out = []
-    f(lambda x: _out.append(x))
-    _block(lambda: _out == [expected])
+def test_barrier_1(qtbot, table):
+    table.select([1])
 
+    b = Barrier()
+    table.get_selected(b(1))
+    table.get_next_id(b(2))
+    assert not b.have_all_finished()
 
-def _wait_until_table_ready(qtbot, table):
-    _out = []
+    @b.after_all_finished
+    def after():
+        assert b.result(1)[0][0] == [1]
+        assert b.result(2)[0][0] == 4
 
-    @table.connect_
-    def on_ready():
-        _out.append(True)
-
-    table.show()
-    qtbot.addWidget(table)
-    qtbot.waitForWindowShown(table)
-
-    _block(lambda: _out == [True])
+    b.wait()
+    assert b.result(1) and b.result(2)
 
 
 def test_table_empty_1(qtbot):
@@ -240,6 +254,11 @@ def test_table_sort(qtbot, table):
 def test_table_remove_all(qtbot, table):
     table.remove_all()
     _assert(table.get_ids, [])
+
+
+def test_table_remove_all_and_add(qtbot, table):
+    table.remove_all_and_add({"id": 1000})
+    _assert(table.get_ids, [1000])
 
 
 def test_table_add_change_remove(qtbot, table):

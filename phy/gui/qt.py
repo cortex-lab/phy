@@ -11,7 +11,7 @@ from functools import wraps
 import logging
 import os.path as op
 import sys
-#from timeit import default_timer
+from timeit import default_timer
 
 logger = logging.getLogger(__name__)
 
@@ -102,6 +102,20 @@ def busy_cursor():
     create_app().setOverrideCursor(Qt.WaitCursor)
     yield
     create_app().restoreOverrideCursor()
+
+
+def _block(until_true):
+    if until_true():
+        return
+    t0 = default_timer()
+    timeout = .5
+
+    while not until_true() and (default_timer() - t0 < timeout):
+        app = QApplication.instance()
+        app.processEvents(QEventLoop.AllEvents,
+                          int(timeout * 1000))
+    if not until_true():
+        raise RuntimeError("Timeout in _block().")
 
 
 # -----------------------------------------------------------------------------
