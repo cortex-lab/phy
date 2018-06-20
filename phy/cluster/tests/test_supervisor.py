@@ -63,8 +63,8 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
                     context=Context(tempdir),
                     )
     mc.attach(gui)
-    _wait_until_table_ready(mc.cluster_view)
-    _wait_until_table_ready(mc.similarity_view)
+    _wait_until_table_ready(qtbot, mc.cluster_view)
+    #_wait_until_table_ready(qtbot, mc.similarity_view)
     return mc
 
 
@@ -178,8 +178,7 @@ def test_cluster_view_1(qtbot, gui):
              "is_masked": i in (2, 3, 5),
              } for i in range(10)]
     cv = ClusterView(data)
-    _wait_until_table_ready(cv)
-    gui.add_view(cv)
+    _wait_until_table_ready(qtbot, cv)
 
     cv.sort_by('n_spikes', 'asc')
     _assert(cv.get_state, {'current_sort': ('n_spikes', 'asc')})
@@ -194,8 +193,7 @@ def test_similarity_view_1(qtbot, gui):
              "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
              } for i in range(10)]
     sv = SimilarityView(data)
-    _wait_until_table_ready(sv)
-    gui.add_view(sv)
+    _wait_until_table_ready(qtbot, sv)
 
     @sv.connect_
     def on_request_similar_clusters(cluster_id):
@@ -224,22 +222,20 @@ def _assert_selected(supervisor, sel):
     cluster_ids = []
     similar = []
     supervisor.cluster_view.get_selected(lambda c: cluster_ids.append(c))
+    _block(lambda: len(cluster_ids) > 0 and len(cluster_ids[0]) > 0)
     supervisor.similarity_view.get_selected(lambda s: similar.append(s))
-    _block(lambda: len(cluster_ids) > 0 and len(similar) > 0)
+    _block(lambda: len(similar) > 0)
     assert cluster_ids[0] + similar[0] == sel
 
 
-def test_supervisor_block(qtbot, supervisor):
-    _wait_until_table_ready(supervisor.cluster_view)
+def test_supervisor_select(qtbot, supervisor):
     supervisor.cluster_view.select([0])
+    _assert_selected(supervisor, [0])
 
 
 def test_supervisor_order(qtbot, supervisor):
-    _wait_until_table_ready(supervisor.cluster_view)
-    mc = supervisor
-
-    mc.select([1, 0])
-    _assert_selected(mc, [1, 0])
+    supervisor.select([1, 0])
+    _assert_selected(supervisor, [1, 0])
 
 
 def test_supervisor_edge_cases(supervisor):

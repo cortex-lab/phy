@@ -215,12 +215,15 @@ class SimilarityView(ClusterView):
         value_names = columns + [{'data': ['group']}]
         self._init_table(columns=columns, value_names=value_names, data=data)
 
-    def reset(self, cluster_id):
-        similar = self.emit('request_similar_clusters', cluster_id)
+    def reset(self, cluster_ids):
+        if not len(cluster_ids):
+            return
+        similar = self.emit('request_similar_clusters', cluster_ids[-1])
         # Clear the table.
         self.remove_all()
         if similar:
-            self.add(similar[0])
+            self.add([cl for cl in similar[0] if cl['id'] not in cluster_ids])
+        return similar
 
 
 # -----------------------------------------------------------------------------
@@ -391,10 +394,8 @@ class Supervisor(EventEmitter):
         self.action_creator = ActionCreator()
         self.action_creator.connect(self._on_action, event='action')
 
+        # Create the cluster view and similarity view.
         self._create_views()
-        # Save the next cluster in ClusterMeta.
-        # self.cluster_meta.add_field('next_cluster')
-        # self.clustering.connect(self._register_next_cluster, event='on_cluster')
 
         # Log the actions.
         self.clustering.connect(self._log_action, event='cluster')
@@ -478,28 +479,32 @@ class Supervisor(EventEmitter):
         self.similarity_view.connect_(self._similar_selected, event='select')
 
     def _clusters_added(self, cluster_ids):
+        logger.debug("Clusters added: %s", cluster_ids)
         data = [self._get_cluster_info(cluster_id) for cluster_id in cluster_ids]
         self.cluster_view.add(data)
         self.similarity_view.add(data)
 
     def _clusters_removed(self, cluster_ids):
+        logger.debug("Clusters removed: %s", cluster_ids)
         self.cluster_view.remove(cluster_ids)
         self.similarity_view.remove(cluster_ids)
 
     def _cluster_groups_changed(self, cluster_ids):
+        logger.debug("Cluster groups changed: %s", cluster_ids)
         data = [{'id': cluster_id, 'group': self.cluster_meta.get('group', cluster_id)}
                 for cluster_id in cluster_ids]
         self.cluster_view.change(data)
         self.similarity_view.change(data)
 
     def _clusters_selected(self, cluster_ids):
+        logger.debug("Clusters selected: %s", cluster_ids)
         self.action_flow.update_current_state(cluster_ids=cluster_ids)
         self.cluster_view.get_next_id(
             lambda next_cluster: self.action_flow.update_current_state(next_cluster=next_cluster))
-        self.similarity_view.get_selected(
-            lambda similar: self.emit('select', cluster_ids + similar))
+        self.similarity_view.reset(cluster_ids)
 
     def _similar_selected(self, similar):
+        logger.debug("Similar clusters selected: %s", similar)
         self.action_flow.update_current_state(similar=similar)
         self.similarity_view.get_next_id(
             lambda next_similar: self.action_flow.update_current_state(next_similar=next_similar))
@@ -654,7 +659,7 @@ class Supervisor(EventEmitter):
 
     def reset(self):
         """Reset the wizard."""
-        self._update_cluster_view()
+        # TODO
         self.cluster_view.next()
 
     def next_best(self):
@@ -667,10 +672,8 @@ class Supervisor(EventEmitter):
 
     def next(self):
         """Select the next cluster."""
-        if not self.selected:
-            self.cluster_view.next()
-        else:
-            self.similarity_view.next()
+        self.cluster_view.get_selected(
+            lambda _: self.cluster_view.next() if not len(_) else self.similarity_view.next())
 
     def previous(self):
         """Select the previous cluster."""
