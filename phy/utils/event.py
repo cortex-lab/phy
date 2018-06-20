@@ -8,10 +8,13 @@ from __future__ import print_function
 #------------------------------------------------------------------------------
 
 from contextlib import contextmanager
+import logging
 import string
 import re
 from collections import defaultdict
 from functools import partial
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -129,6 +132,7 @@ class EventEmitter(object):
         """
         if self._is_silent:
             return
+        logger.debug("Emit event %s", event)
         callbacks = self._callbacks.get(event, [])
         # Call the last callback if this is a single event.
         single = kwargs.pop('single', None)
