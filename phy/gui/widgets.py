@@ -282,18 +282,19 @@ class Table(HTMLWidget):
         """Get the previous non-skipped row id."""
         self.eval_js('table.getSiblingId(undefined, "previous");', callback=callback)
 
-    def next(self):
+    def next(self, callback=None):
         """Select the next non-skipped row."""
-        self.eval_js('table.moveToSibling(undefined, "next");')
+        self.eval_js('table.moveToSibling(undefined, "next");', callback=callback)
 
-    def previous(self):
+    def previous(self, callback=None):
         """Select the previous non-skipped row."""
-        self.eval_js('table.moveToSibling(undefined, "previous");')
+        self.eval_js('table.moveToSibling(undefined, "previous");', callback=callback)
 
-    def select(self, ids):
+    def select(self, ids, callback=None):
         """Select some rows in the table."""
         ids = _uniq(ids)
-        self.eval_js('table.select({});'.format(dumps(ids)))
+        f = (lambda _: callback(ids)) if callback else None
+        self.eval_js('table.select({});'.format(dumps(ids)), callback=f)
 
     def get(self, id, callback=None):
         self.eval_js('table.get("id", {})[0]["_values"]'.format(id), callback=callback)
