@@ -19,8 +19,9 @@ from ..supervisor import (Supervisor,
                           )
 from phy.io import Context
 from phy.gui import GUI
+from phy.gui.widgets import Barrier
 from phy.gui.qt import qInstallMessageHandler
-from phy.gui.tests.test_qt import _block
+#from phy.gui.tests.test_qt import _block
 from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
 
 
@@ -63,9 +64,21 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
                     context=Context(tempdir),
                     )
     mc.attach(gui)
-    _wait_until_table_ready(qtbot, mc.cluster_view)
-    #_wait_until_table_ready(qtbot, mc.similarity_view)
+    b = Barrier()
+    mc.cluster_view.connect_(b('cluster_view'), event='ready')
+    mc.similarity_view.connect_(b('similarity_view'), event='ready')
+    b.wait()
     return mc
+
+
+def _assert_selected(supervisor, sel):
+    assert supervisor.get_selected() == sel
+
+
+def _wait_after_action(supervisor):
+    b = Barrier()
+    supervisor.connect(b('cluster'), event='cluster')
+    b.wait()
 
 
 #------------------------------------------------------------------------------
@@ -199,7 +212,7 @@ def test_similarity_view_1(qtbot, gui):
     def on_request_similar_clusters(cluster_id):
         return [{'id': id} for id in (100 + cluster_id, 110 + cluster_id, 102 + cluster_id)]
 
-    sv.reset(5)
+    sv.reset([5])
     _assert(sv.get_ids, [105, 115, 107])
 
 
@@ -218,19 +231,17 @@ def test_action_creator_1(qtbot, gui):
 # Test GUI component
 #------------------------------------------------------------------------------
 
-def _assert_selected(supervisor, sel):
-    cluster_ids = []
-    similar = []
-    supervisor.cluster_view.get_selected(lambda c: cluster_ids.append(c))
-    _block(lambda: len(cluster_ids) > 0 and len(cluster_ids[0]) > 0)
-    supervisor.similarity_view.get_selected(lambda s: similar.append(s))
-    _block(lambda: len(similar) > 0)
-    assert cluster_ids[0] + similar[0] == sel
-
-
-def test_supervisor_select(qtbot, supervisor):
+def test_supervisor_select_1(qtbot, supervisor):
     supervisor.cluster_view.select([0])
     _assert_selected(supervisor, [0])
+
+
+def test_supervisor_select_2(qtbot, supervisor):
+    supervisor.cluster_view.next()
+    b = Barrier()
+    supervisor.cluster_view.get_selected(b(1))
+    b.wait()
+    assert b.result(1)[0][0] == [30]
 
 
 def test_supervisor_order(qtbot, supervisor):
@@ -280,13 +291,23 @@ def test_supervisor_skip(qtbot, gui, supervisor):
         _assert_selected(supervisor, [clu])
 
 
-def test_supervisor_merge(supervisor):
+def test_supervisor_merge_1(qtbot, supervisor):
 
-    supervisor.cluster_view.select([30])
-    supervisor.similarity_view.select([20])
+    b = Barrier()
+    supervisor.cluster_view.select([30], b(1))
+    b.wait()
+    assert b.result(1)[0][0] == [30]
+
+    b = Barrier()
+    supervisor.similarity_view.select([20], b(2))
+    b.wait()
+    assert b.result(2)[0][0] == [20]
+
     _assert_selected(supervisor, [30, 20])
 
     supervisor.merge()
+    _wait_after_action(supervisor)
+
     _assert_selected(supervisor, [31, 11])
 
     supervisor.undo()

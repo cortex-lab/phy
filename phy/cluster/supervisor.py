@@ -18,7 +18,7 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.utils import EventEmitter, Bunch
 from phy.gui.actions import Actions
-from phy.gui.widgets import Table, HTMLWidget, _uniq
+from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 
 logger = logging.getLogger(__name__)
 
@@ -61,6 +61,7 @@ class ActionFlow(EventEmitter):
             type='state',
             cluster_ids=cluster_ids, similar=similar,
             next_cluster=next_cluster, next_similar=next_similar)
+        logger.debug("New state %s %s", state.cluster_ids, state.similar)
         self._flow.append(state)
         return state
 
@@ -74,6 +75,7 @@ class ActionFlow(EventEmitter):
         state.similar = state.similar if state.similar is not None else similar
         state.next_cluster = state.next_cluster if state.next_cluster is not None else next_cluster
         state.next_similar = state.next_similar if state.next_similar is not None else next_similar
+        logger.debug("Update current state %s %s", state.cluster_ids, state.similar)
         self._flow[-1] = state
 
     def _add_action(self, name, **kwargs):
@@ -102,7 +104,9 @@ class ActionFlow(EventEmitter):
 
     def current(self):
         if self._flow:
-            return self._flow[-1]
+            obj = self._flow[-1]
+            logger.log(5, "Current state: %s", obj)
+            return obj
 
     def state_after(self, action):
         state = getattr(self, '_state_after_%s' % action.name)(action)
@@ -166,7 +170,8 @@ class ActionFlow(EventEmitter):
             return self._previous_state(undo)
 
     def to_json(self):
-        return
+        # TODO
+        return {}
 
 
 # -----------------------------------------------------------------------------
@@ -228,9 +233,11 @@ class SimilarityView(ClusterView):
             return
         similar = self.emit('request_similar_clusters', cluster_ids[-1])
         # Clear the table.
-        self.remove_all()
         if similar:
-            self.add([cl for cl in similar[0] if cl['id'] not in cluster_ids])
+            self.remove_all_and_add(
+                [cl for cl in similar[0] if cl['id'] not in cluster_ids])
+        else:
+            self.remove_all()
         return similar
 
 
@@ -463,12 +470,15 @@ class Supervisor(EventEmitter):
         gui.state.save()
 
     def n_spikes(self, cluster_id):
-        return len(self.clustering.spikes_per_cluster[cluster_id])
+        return len(self.clustering.spikes_per_cluster.get(cluster_id, []))
 
     def _get_similar_clusters(self, cluster_id):
         sim = self.similarity(cluster_id)
+        # Only keep existing clusters.
+        clusters_set = set(self.clustering.cluster_ids)
         data = [dict(similarity=s, **self._get_cluster_info(c))
-                for c, s in sim]
+                for c, s in sim
+                if c in clusters_set]
         return data
 
     def _get_cluster_info(self, cluster_id):
@@ -483,11 +493,15 @@ class Supervisor(EventEmitter):
     def _create_views(self):
         data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
         self.cluster_view = ClusterView(data)
+        # Update the action flow and similarity view when selection changes.
         self.cluster_view.connect_(self._clusters_selected, event='select')
 
         self.similarity_view = SimilarityView()
         self.similarity_view.connect_(self._get_similar_clusters, event='request_similar_clusters')
         self.similarity_view.connect_(self._similar_selected, event='select')
+
+        # Change the state after every clustering action, according to the action flow.
+        self.connect(self._after_action, event='cluster')
 
     def _clusters_added(self, cluster_ids):
         logger.debug("Clusters added: %s", cluster_ids)
@@ -509,41 +523,47 @@ class Supervisor(EventEmitter):
 
     def _clusters_selected(self, cluster_ids):
         logger.debug("Clusters selected: %s", cluster_ids)
-        self.action_flow.update_current_state(cluster_ids=cluster_ids)
+        self.action_flow.add_state(cluster_ids=cluster_ids)
         self.cluster_view.get_next_id(
             lambda next_cluster: self.action_flow.update_current_state(next_cluster=next_cluster))
         self.similarity_view.reset(cluster_ids)
 
     def _similar_selected(self, similar):
         logger.debug("Similar clusters selected: %s", similar)
-        self.action_flow.update_current_state(similar=similar)
+        self.action_flow.add_state(similar=similar)
+        self.cluster_view.get_selected(
+            lambda cluster_ids: self.action_flow.update_current_state(cluster_ids=cluster_ids))
         self.similarity_view.get_next_id(
             lambda next_similar: self.action_flow.update_current_state(next_similar=next_similar))
-        self.cluster_view.get_selected(
-            lambda cluster_ids: self.emit('select', cluster_ids + similar))
+        #self.cluster_view.get_selected(
+        #    lambda cluster_ids: self.emit('select', cluster_ids + similar))
 
     def _on_action(self, name):
+        """Bind the 'action' event raised by ActionCreator to methods of this class."""
         return getattr(self, name)()
 
     def _select_after_action(self):
         state = self.action_flow.current()
-        if not state.type == 'state':
+        if state.type != 'state':
             return
+
+        def _select_similar(_):
+            if state.similar:
+                self.similarity_view.select(state.similar)
+
         if state.cluster_ids:
-            self.cluster_view.select(state.cluster_ids)
-        if state.similar:
-            self.similarity_view.select(state.similar)
+            self.cluster_view.select(state.cluster_ids, callback=_select_similar)
 
     def _after_action(self, up):
         # Update the views with the old and new clusters.
         self._clusters_added(up.added)
-        self._clusters_removed(up.removed)
+        self._clusters_removed(up.deleted)
 
         # Prepare the next selection after the action.
         if up.description == 'merge':
-            self.action_flow.add_merge(up.removed, up.added[0])
+            self.action_flow.add_merge(up.deleted, up.added[0])
         elif up.description == 'assign':
-            self.action_flow.add_split(old_cluster_ids=up.removed,
+            self.action_flow.add_split(old_cluster_ids=up.deleted,
                                        new_cluster_ids=up.added)
         elif up.description == 'metadata_changed':
             self._cluster_groups_changed(up.metadata_changed)
@@ -553,8 +573,7 @@ class Supervisor(EventEmitter):
         elif up.description == 'redo':
             self.action_flow.add_redo(up)
 
-        # Raise
-        self.emit('cluster', up)
+        #self.emit('cluster', up)
 
         # Make the new selection.
         self._select_after_action()
@@ -562,11 +581,10 @@ class Supervisor(EventEmitter):
     def attach(self, gui):
         self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view))
         gui.add_view(self.cluster_view)
-
         gui.add_view(self.similarity_view)
 
         self.action_creator.attach(gui)
-        # TODO: gui should raise events too
+        # TODO: gui should raise events too?
 
     # Selection actions
     # -------------------------------------------------------------------------
@@ -585,25 +603,30 @@ class Supervisor(EventEmitter):
 
     def get_selected(self, callback=None):
         """Get the selected clusters in the cluster and similarity views.
-        Asynchronous operation."""
-        _out_c = []
-        _out_s = []
+        Asynchronous operation if no callback is passed, otherwise synchronous."""
+        if callback is None:
+            b = Barrier()
+            self.cluster_view.get_selected(b('cluster_view'))
+            b.wait()
+            cluster_ids = b.result('cluster_view')[0][0]
 
+            b = Barrier()
+            self.similarity_view.get_selected(b('similarity_view'))
+            b.wait()
+            similar = b.result('similarity_view')[0][0]
+
+            return _uniq(cluster_ids + similar)
+
+        b = Barrier()
+        self.cluster_view.get_selected(b('cluster_view'))
+        self.similarity_view.get_selected(b('similarity_view'))
+
+        @b.after_all_finished
         def _callback_after_both():
-            if callback and _out_c and _out_s:
-                selected = _out_c[0] + _out_s[0]
-                callback(_uniq(selected))
-
-        @self.cluster_view.get_selected
-        def _get_cluster_ids(cluster_ids):
-            _out_c.append(cluster_ids)
-            _callback_after_both()
-
-        @self.similarity_view.get_selected
-        def _get_similar(similar):
-            _out_s.append(similar)
-            _callback_after_both()
-
+            cluster_ids = b.result('cluster_view')[0][0]
+            similar = b.result('similarity_view')[0][0]
+            selected = _uniq(cluster_ids + similar)
+            callback(selected)
 
     # Clustering actions
     # -------------------------------------------------------------------------
@@ -707,7 +730,7 @@ class Supervisor(EventEmitter):
     def next(self):
         """Select the next cluster."""
         self.cluster_view.get_selected(
-            lambda _: self.cluster_view.next() if not len(_) else self.similarity_view.next())
+            lambda _: self.cluster_view.next() if len(_) == 0 else self.similarity_view.next())
 
     def previous(self):
         """Select the previous cluster."""
