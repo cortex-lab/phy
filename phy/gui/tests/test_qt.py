@@ -32,13 +32,11 @@ from ..qt import (QMessageBox, Qt, QWebEngineView, QTimer,
 
 def _block(until_true):
     t0 = default_timer()
-    timeout = .2
+    timeout = .5
 
     while not until_true() and (default_timer() - t0 < timeout):
         app = QApplication.instance()
-        app.processEvents(QEventLoop.ExcludeUserInputEvents |
-                          QEventLoop.ExcludeSocketNotifiers |
-                          QEventLoop.WaitForMoreEvents,
+        app.processEvents(QEventLoop.AllEvents,
                           int(timeout * 1000))
     if not until_true():
         raise RuntimeError("Timeout in _block().")

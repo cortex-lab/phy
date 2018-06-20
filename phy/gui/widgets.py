@@ -151,8 +151,8 @@ class HTMLWidget(WebView):
         self.builder.add_script_src('qrc:///qtwebchannel/qwebchannel.js')
         self.builder.add_script(_DEFAULT_SCRIPT)
 
-    def build(self):
-        self.set_html(self.builder.html)
+    def build(self, callback=None):
+        self.set_html(self.builder.html, callback=callback)
 
     def view_source(self, callback=None):
         return self.eval_js("document.getElementsByTagName('html')[0].innerHTML",
@@ -230,7 +230,7 @@ class Table(HTMLWidget):
 
         </script>
         ''' % (data_json, value_names_json, columns_json)
-        self.build()
+        self.build(lambda html: self.emit('ready'))
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""

@@ -140,18 +140,23 @@ def _assert(f, expected):
     _block(lambda: _out == [expected])
 
 
-def _wait_until_table_ready(table):
+def _wait_until_table_ready(qtbot, table):
     _out = []
-    table.eval_js('typeof table !== undefined', lambda x: _out.append(x))
+
+    @table.connect_
+    def on_ready():
+        _out.append(True)
+
+    table.show()
+    qtbot.addWidget(table)
+    qtbot.waitForWindowShown(table)
+
     _block(lambda: _out == [True])
 
 
 def test_table_empty_1(qtbot):
     table = Table()
-    table.show()
-    qtbot.addWidget(table)
-    qtbot.waitForWindowShown(table)
-    _wait_until_table_ready(table)
+    _wait_until_table_ready(qtbot, table)
     table.close()
 
 
