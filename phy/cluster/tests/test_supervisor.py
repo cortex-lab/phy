@@ -138,7 +138,7 @@ def test_action_flow_split():
     s = af.current()
     assert s.type == 'state'
     assert s.cluster_ids == [1000, 1001]
-    assert s.similar == []
+    assert s.similar is None
 
 
 def test_action_flow_move_clusters_1():
@@ -150,7 +150,7 @@ def test_action_flow_move_clusters_1():
     assert s.type == 'state'
     assert s.cluster_ids == [2]
     # No connection to request_next_similar, so no next similar cluster.
-    assert s.similar == []
+    assert s.similar is None
 
 
 def test_action_flow_move_clusters_2():
@@ -244,7 +244,7 @@ def test_supervisor_select_2(qtbot, supervisor):
     assert b.result(1)[0][0] == [30]
 
 
-def test_supervisor_order(qtbot, supervisor):
+def test_supervisor_select_order(qtbot, supervisor):
     supervisor.select([1, 0])
     _assert_selected(supervisor, [1, 0])
 
@@ -317,21 +317,23 @@ def test_supervisor_merge_1(qtbot, supervisor):
     _assert_selected(supervisor, [31, 11])
 
 
-def test_supervisor_merge_move(supervisor):
+def test_supervisor_merge_move(qtbot, supervisor):
     """Check that merge then move selects the next cluster in the original
     cluster view, not the updated cluster view."""
 
     supervisor.cluster_view.select([20, 11])
+    _assert_selected(supervisor, [20, 11])
 
     supervisor.merge()
+    _wait_after_action(supervisor)
     _assert_selected(supervisor, [31])
 
     supervisor.move('good')
-    _assert_selected(supervisor, [2])
-
-    supervisor.cluster_view.select([30])
+    _wait_after_action(supervisor)
+    _assert_selected(supervisor, [30])
 
     supervisor.move('good')
+    _wait_after_action(supervisor)
     _assert_selected(supervisor, [2])
 
 

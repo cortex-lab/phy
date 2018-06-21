@@ -17,6 +17,7 @@ from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.utils import EventEmitter, Bunch
+from phy.utils._types import _is_integer
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 
@@ -43,6 +44,12 @@ def _process_ups(ups):  # pragma: no cover
         raise NotImplementedError()
 
 
+def _assert_all_ints(l):
+    if not (l is None or l == [] or all(_is_integer(_) for _ in l)):
+        import pdb
+        pdb.set_trace()
+
+
 # -----------------------------------------------------------------------------
 # Action flow
 # -----------------------------------------------------------------------------
@@ -54,14 +61,33 @@ class ActionFlow(EventEmitter):
         super(ActionFlow, self).__init__()
         self._flow = []
 
-    def add_state(
-            self, cluster_ids=None, similar=None,
-            next_cluster=None, next_similar=None):
-        state = Bunch(
-            type='state',
-            cluster_ids=cluster_ids, similar=similar,
-            next_cluster=next_cluster, next_similar=next_similar)
-        logger.debug("New state %s %s", state.cluster_ids, state.similar)
+    def _make_state(
+            self, cluster_ids=None, similar=None, next_cluster=None, next_similar=None,
+            state=None):
+
+        # Get or create the Bunch instance.
+        state = state or Bunch(type='state')
+
+        if state.get('cluster_ids', None) is None:
+            state.cluster_ids = cluster_ids
+        if state.get('similar', None) is None:
+            state.similar = similar
+        if state.get('next_cluster', None) is None:
+            state.next_cluster = next_cluster
+        if state.get('next_similar', None) is None:
+            state.next_similar = next_similar
+
+        _assert_all_ints(state.cluster_ids)
+        _assert_all_ints(state.similar)
+
+        logger.debug("New state %s %s %s %s",
+                     state.cluster_ids, state.next_cluster,
+                     state.similar, state.next_similar)
+
+        return state
+
+    def add_state(self, state=None, **kwargs):
+        state = state or self._make_state(**kwargs)
         self._flow.append(state)
         return state
 
@@ -70,18 +96,18 @@ class ActionFlow(EventEmitter):
             next_cluster=None, next_similar=None):
         state = self.current()
         if not state or state.type != 'state':
-            state = self.add_state()
-        state.cluster_ids = state.cluster_ids if state.cluster_ids is not None else cluster_ids
-        state.similar = state.similar if state.similar is not None else similar
-        state.next_cluster = state.next_cluster if state.next_cluster is not None else next_cluster
-        state.next_similar = state.next_similar if state.next_similar is not None else next_similar
-        logger.debug("Update current state %s %s", state.cluster_ids, state.similar)
+            state = self._make_state()
+            self.add_state(state)
+        self._make_state(cluster_ids=cluster_ids, similar=similar,
+                         next_cluster=next_cluster, next_similar=next_similar,
+                         state=state)
         self._flow[-1] = state
 
     def _add_action(self, name, **kwargs):
         action = Bunch(type='action', name=name, **kwargs)
         self._flow.append(action)
         state = self.state_after(action)
+        logger.debug("New action %s %s", name, kwargs)
         self._flow.append(state)
         return state
 
@@ -109,12 +135,7 @@ class ActionFlow(EventEmitter):
             return obj
 
     def state_after(self, action):
-        state = getattr(self, '_state_after_%s' % action.name)(action)
-        state.cluster_ids = state.get('cluster_ids', [])
-        state.similar = state.get('similar', [])
-        state.next_cluster = state.get('next_cluster', None)
-        state.next_similar = state.get('next_similar', None)
-        return state
+        return getattr(self, '_state_after_%s' % action.name)(action)
 
     def _previous_state(self, obj):
         try:
@@ -136,30 +157,34 @@ class ActionFlow(EventEmitter):
     def _state_after_merge(self, action):
         previous_state = self._previous_state(action)
         similar = previous_state.next_similar
-        return Bunch(type='state', cluster_ids=[action.to], similar=[similar])
+        return self._make_state(
+            cluster_ids=[action.to],
+            similar=[similar] if similar is not None else None,
+        )
 
     def _state_after_split(self, action):
-        return Bunch(type='state', cluster_ids=action.new_cluster_ids)
+        return self._make_state(cluster_ids=action.new_cluster_ids)
 
     def _state_after_move(self, action):
         state = self._previous_state(action)
+        next_state = self._make_state()
         moved_clusters = set(action.cluster_ids)
         # If all moved clusters are in the cluster view, then move to the next
         # cluster in the cluster view.
         if moved_clusters <= set(state.cluster_ids):
             # Request the next similar cluster to the next best cluster.
-            next_similar = self.emit('request_next_similar', cluster_id=state.next_cluster)
-            if next_similar:
-                return Bunch(type='state',
-                             cluster_ids=[state.next_cluster],
-                             similar=[next_similar[0]])
-            else:
-                return Bunch(type='state',
-                             cluster_ids=[state.next_cluster])
+            next_similar_l = self.emit('request_next_similar', cluster_id=state.next_cluster)
+            if state.next_cluster is not None:
+                next_state.cluster_ids = [state.next_cluster]
+            if next_similar_l:
+                next_state.similar = [next_similar_l[0]]
         # Otherwise, select the next one in the similarity view.
         elif moved_clusters <= set(state.similar):
-            return Bunch(type='state', cluster_ids=state.cluster_ids,
-                         similar=[state.next_similar])
+            next_state.cluster_ids = state.cluster_ids
+            if state.next_similar is not None:
+                next_state.similar = [state.next_similar]
+        # Validate the next state.
+        return self._make_state(state=next_state)
 
     def _state_after_undo(self, action):
         return self._previous_state(self._previous_state(action))
@@ -565,7 +590,7 @@ class Supervisor(EventEmitter):
         elif up.description == 'assign':
             self.action_flow.add_split(old_cluster_ids=up.deleted,
                                        new_cluster_ids=up.added)
-        elif up.description == 'metadata_changed':
+        elif up.description == 'metadata_group':
             self._cluster_groups_changed(up.metadata_changed)
             self.action_flow.add_move(up.metadata_changed, up.metadata_value)
         elif up.description == 'undo':
