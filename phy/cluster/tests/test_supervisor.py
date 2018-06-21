@@ -248,6 +248,9 @@ def test_supervisor_select_order(qtbot, supervisor):
     supervisor.select([1, 0])
     _assert_selected(supervisor, [1, 0])
 
+    supervisor.select([0, 1])
+    _assert_selected(supervisor, [0, 1])
+
 
 def test_supervisor_edge_cases(supervisor):
 
@@ -340,7 +343,11 @@ def test_supervisor_merge_move(qtbot, supervisor):
 def test_supervisor_split_0(supervisor):
 
     supervisor.select([1, 2])
+    _assert_selected(supervisor, [1, 2])
+
     supervisor.split([1, 2])
+    _wait_after_action(supervisor)
+
     _assert_selected(supervisor, [31])
 
     supervisor.undo()
