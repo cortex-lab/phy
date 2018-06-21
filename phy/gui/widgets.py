@@ -16,6 +16,7 @@ from six import text_type
 from .qt import WebView, QWebChannel, pyqtSlot, _abs_path, _block
 from phy.utils import EventEmitter
 from phy.utils._misc import _CustomEncoder, _read_text
+from phy.utils._types import _is_integer
 
 logger = logging.getLogger(__name__)
 
@@ -205,6 +206,7 @@ class HTMLWidget(WebView):
 
     def eval_js(self, expr, callback=None):
         """Evaluate a Javascript expression."""
+        logger.debug("%s eval JS %s", self.__class__.__name__, expr)
         return self.page().runJavaScript(expr, callback or (lambda _: _))
 
     @pyqtSlot(str, str)
@@ -293,6 +295,7 @@ class Table(HTMLWidget):
     def select(self, ids, callback=None):
         """Select some rows in the table."""
         ids = _uniq(ids)
+        assert all(_is_integer(_) for _ in ids)
         f = (lambda _: callback(ids)) if callback else None
         self.eval_js('table.select({});'.format(dumps(ids)), callback=f)
 
@@ -300,18 +303,26 @@ class Table(HTMLWidget):
         self.eval_js('table.get("id", {})[0]["_values"]'.format(id), callback=callback)
 
     def add(self, objects):
+        if not objects:
+            return
         self.eval_js('table.add_({});'.format(dumps(objects)))
 
     def change(self, objects):
+        if not objects:
+            return
         self.eval_js('table.change_({});'.format(dumps(objects)))
 
     def remove(self, ids):
+        if not ids:
+            return
         self.eval_js('table.remove_({});'.format(dumps(ids)))
 
     def remove_all(self):
         self.eval_js('table.removeAll();')
 
     def remove_all_and_add(self, objects):
+        if not objects:
+            return self.remove_all()
         self.eval_js('table.removeAllAndAdd({});'.format(dumps(objects)))
 
     def get_selected(self, callback=None):

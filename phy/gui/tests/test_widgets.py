@@ -256,7 +256,12 @@ def test_table_remove_all(qtbot, table):
     _assert(table.get_ids, [])
 
 
-def test_table_remove_all_and_add(qtbot, table):
+def test_table_remove_all_and_add_1(qtbot, table):
+    table.remove_all_and_add([])
+    _assert(table.get_ids, [])
+
+
+def test_table_remove_all_and_add_2(qtbot, table):
     table.remove_all_and_add({"id": 1000})
     _assert(table.get_ids, [1000])
 
