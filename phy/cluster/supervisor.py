@@ -24,7 +24,7 @@ from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 logger = logging.getLogger(__name__)
 
 
-# -----------------------------------------------------------------------------
+# ----------------------------------------------------------------------------
 # Utility functions
 # -----------------------------------------------------------------------------
 
@@ -80,15 +80,15 @@ class ActionFlow(EventEmitter):
         _assert_all_ints(state.cluster_ids)
         _assert_all_ints(state.similar)
 
-        logger.debug("New state %s %s %s %s",
-                     state.cluster_ids, state.next_cluster,
-                     state.similar, state.next_similar)
-
         return state
+
+    def _append(self, state):
+        self._flow.append(Bunch(**state))
+        self.show_last()
 
     def add_state(self, state=None, **kwargs):
         state = state or self._make_state(**kwargs)
-        self._flow.append(state)
+        self._append(state)
         return state
 
     def update_current_state(
@@ -102,13 +102,14 @@ class ActionFlow(EventEmitter):
                          next_cluster=next_cluster, next_similar=next_similar,
                          state=state)
         self._flow[-1] = state
+        assert self.current() == state
 
     def _add_action(self, name, **kwargs):
         action = Bunch(type='action', name=name, **kwargs)
-        self._flow.append(action)
+        self._append(action)
         state = self.state_after(action)
-        logger.debug("New action %s %s", name, kwargs)
-        self._flow.append(state)
+        self.emit('new_state', state)
+        self._append(state)
         return state
 
     def add_merge(self, cluster_ids=None, to=None):
@@ -139,7 +140,7 @@ class ActionFlow(EventEmitter):
 
     def _previous_state(self, obj):
         try:
-            i = self._flow.index(obj)
+            i = self._index(obj)
         except ValueError:
             return
         if i == 0:
@@ -197,6 +198,35 @@ class ActionFlow(EventEmitter):
     def to_json(self):
         # TODO
         return {}
+
+    def _index(self, item):
+        return len(self._flow) - 1 - self._flow[::-1].index(item)
+
+    def _show_state(self, state):
+        s = ('#{i:03d}   {cluster_ids: <8}  ({next_cluster: <3})   '
+             '{similar: <8}  ({next_similar: <3})')
+        s = s.format(
+            i=self._index(state),
+            cluster_ids=str(state.cluster_ids),
+            next_cluster=str(state.next_cluster),
+            similar=str(state.similar),
+            next_similar=str(state.next_similar),
+        )
+        logger.debug(s)
+
+    def _show_action(self, action):
+        s = '  '.join('%s:%s' % (key, val) for key, val in action.items()
+                      if key not in ('name', 'type'))
+        s = '#{i:03d}   {name} {s}'.format(i=self._index(action), name=action.name, s=s)
+        logger.debug(s)
+
+    def show_last(self, n=3):
+        logger.debug("Last %d/%d" % (n, len(self._flow)))
+        for item in self._flow[-n:]:
+            if item.type == 'state':
+                self._show_state(item)
+            elif item.type == 'action':
+                self._show_action(item)
 
 
 # -----------------------------------------------------------------------------
@@ -408,6 +438,7 @@ class Supervisor(EventEmitter):
                  context=None,
                  ):
         super(Supervisor, self).__init__()
+        self._pause_action_flow = None
         self.context = context
         self.quality = quality or self.n_spikes  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
@@ -429,6 +460,9 @@ class Supervisor(EventEmitter):
 
         # Create the Action Flow instance.
         self.action_flow = ActionFlow()
+        # Call _select_after_action when ActionFlow requests a new state
+        # after an action.
+        self.action_flow.connect(self._select_after_action, event='new_state')
 
         # Create The Action Creator instance.
         self.action_creator = ActionCreator()
@@ -548,33 +582,39 @@ class Supervisor(EventEmitter):
 
     def _clusters_selected(self, cluster_ids):
         logger.debug("Clusters selected: %s", cluster_ids)
-        self.action_flow.add_state(cluster_ids=cluster_ids)
-        self.cluster_view.get_next_id(
-            lambda next_cluster: self.action_flow.update_current_state(next_cluster=next_cluster))
+        if not self._pause_action_flow:
+            self.action_flow.add_state(cluster_ids=cluster_ids)
+            self.cluster_view.get_next_id(
+                lambda next_cluster: self.action_flow.update_current_state(
+                    next_cluster=next_cluster))
         self.similarity_view.reset(cluster_ids)
 
     def _similar_selected(self, similar):
         logger.debug("Similar clusters selected: %s", similar)
-        self.action_flow.add_state(similar=similar)
-        self.cluster_view.get_selected(
-            lambda cluster_ids: self.action_flow.update_current_state(cluster_ids=cluster_ids))
-        self.similarity_view.get_next_id(
-            lambda next_similar: self.action_flow.update_current_state(next_similar=next_similar))
-        #self.cluster_view.get_selected(
-        #    lambda cluster_ids: self.emit('select', cluster_ids + similar))
+        if not self._pause_action_flow:
+            self.action_flow.add_state(similar=similar)
+            self.cluster_view.get_selected(
+                lambda cluster_ids: self.action_flow.update_current_state(
+                    cluster_ids=cluster_ids))
+            self.similarity_view.get_next_id(
+                lambda next_similar: self.action_flow.update_current_state(
+                    next_similar=next_similar))
 
     def _on_action(self, name):
         """Bind the 'action' event raised by ActionCreator to methods of this class."""
         return getattr(self, name)()
 
-    def _select_after_action(self):
-        state = self.action_flow.current()
+    def _select_after_action(self, state):
         if state.type != 'state':
             return
+        self._pause_action_flow = True
+
+        def _select_done(_):
+            self._pause_action_flow = False
 
         def _select_similar(_):
             if state.similar:
-                self.similarity_view.select(state.similar)
+                self.similarity_view.select(state.similar, callback=_select_done)
 
         if state.cluster_ids:
             self.cluster_view.select(state.cluster_ids, callback=_select_similar)
@@ -585,7 +625,11 @@ class Supervisor(EventEmitter):
         self._clusters_removed(up.deleted)
 
         # Prepare the next selection after the action.
-        if up.description == 'merge':
+        if up.history == 'undo':
+            self.action_flow.add_undo(up)
+        elif up.history == 'redo':
+            self.action_flow.add_redo(up)
+        elif up.description == 'merge':
             self.action_flow.add_merge(up.deleted, up.added[0])
         elif up.description == 'assign':
             self.action_flow.add_split(old_cluster_ids=up.deleted,
@@ -593,15 +637,10 @@ class Supervisor(EventEmitter):
         elif up.description == 'metadata_group':
             self._cluster_groups_changed(up.metadata_changed)
             self.action_flow.add_move(up.metadata_changed, up.metadata_value)
-        elif up.description == 'undo':
-            self.action_flow.add_undo(up)
-        elif up.description == 'redo':
-            self.action_flow.add_redo(up)
 
         #self.emit('cluster', up)
-
-        # Make the new selection.
-        self._select_after_action()
+        # New selection done by ActionFlow which emits "new_state", connected
+        # to _select_after_action.
 
     def attach(self, gui):
         self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view))
