@@ -169,8 +169,8 @@ class HTMLBuilder(object):
 
 class HTMLWidget(WebView):
     """An HTML widget that is displayed with Qt."""
-    def __init__(self, title=''):
-        super(HTMLWidget, self).__init__()
+    def __init__(self, *args, title=''):
+        super(HTMLWidget, self).__init__(*args)
         self._event = EventEmitter()
 
         self.channel = QWebChannel(self.page())
@@ -226,8 +226,8 @@ def dumps(o):
 class Table(HTMLWidget):
     """A sortable table with support for selection."""
 
-    def __init__(self, columns=None, value_names=None, data=None, title=''):
-        super(Table, self).__init__(title=title)
+    def __init__(self, *args, columns=None, value_names=None, data=None, title=''):
+        super(Table, self).__init__(*args, title=title)
         self._init_table(columns=columns, value_names=value_names, data=data)
 
     def _init_table(self, columns=None, value_names=None, data=None):

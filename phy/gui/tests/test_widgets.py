@@ -59,14 +59,17 @@ def table(qtbot):
 # Test widgets
 #------------------------------------------------------------------------------
 
-def test_widget_empty(qtbot):
-    widget = HTMLWidget()
+def test_widget_empty(qtbot, gui):
+    widget = HTMLWidget(gui)
     widget.build()
     widget.show()
     qtbot.addWidget(widget)
+    gui.show()
+    qtbot.addWidget(gui)
     qtbot.waitForWindowShown(widget)
-    # qtbot.stop()
+    qtbot.waitForWindowShown(gui)
     widget.close()
+    gui.close()
 
 
 def test_widget_html(qtbot):
