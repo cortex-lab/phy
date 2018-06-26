@@ -356,7 +356,7 @@ def test_supervisor_split_0(supervisor):
     _assert_selected(supervisor, [31])
 
 
-def test_supervisor_split_1(gui, supervisor):
+def _test_supervisor_split_1(gui, supervisor):
 
     supervisor.select([1, 2])
 
@@ -368,7 +368,7 @@ def test_supervisor_split_1(gui, supervisor):
     _assert_selected(supervisor, [31])
 
 
-def test_supervisor_split_2(gui, quality, similarity):
+def _test_supervisor_split_2(gui, quality, similarity):
     spike_clusters = np.array([0, 0, 1])
 
     supervisor = Supervisor(spike_clusters,
@@ -383,7 +383,7 @@ def test_supervisor_split_2(gui, quality, similarity):
     _assert_selected(supervisor, [3, 2])
 
 
-def test_supervisor_state(tempdir, qtbot, gui, supervisor):
+def _test_supervisor_state(tempdir, qtbot, gui, supervisor):
 
     cv = supervisor.cluster_view
     cv.sort_by('id')
@@ -393,7 +393,7 @@ def test_supervisor_state(tempdir, qtbot, gui, supervisor):
     assert cv.state['sort_by'] == ('id', 'asc')
 
 
-def test_supervisor_label(supervisor):
+def _test_supervisor_label(supervisor):
 
     supervisor.select([20])
     supervisor.label("my_field", 3.14)
@@ -412,6 +412,7 @@ def test_supervisor_move_1(supervisor):
     assert not supervisor.move('', '')
 
     supervisor.move('noise')
+    _wait_after_action(supervisor)
     _assert_selected(supervisor, [11])
 
     supervisor.undo()
@@ -423,8 +424,15 @@ def test_supervisor_move_1(supervisor):
 
 def test_supervisor_move_2(supervisor):
 
-    supervisor.select([20])
-    supervisor.similarity_view.select([10])
+    b = Barrier()
+    supervisor.cluster_view.select([20], b(1))
+    b.wait()
+    assert b.result(1)[0][0] == [20]
+
+    b = Barrier()
+    supervisor.similarity_view.select([10], b(2))
+    b.wait()
+    assert b.result(2)[0][0] == [10]
 
     _assert_selected(supervisor, [20, 10])
 
@@ -442,7 +450,7 @@ def test_supervisor_move_2(supervisor):
 # Test shortcuts
 #------------------------------------------------------------------------------
 
-def test_supervisor_action_reset(qtbot, supervisor):
+def _test_supervisor_action_reset(qtbot, supervisor):
 
     supervisor.actions.select([10, 11])
 
@@ -471,7 +479,7 @@ def test_supervisor_action_nav(qtbot, supervisor):
     _assert_selected(supervisor, [30])
 
 
-def test_supervisor_action_move_1(qtbot, supervisor):
+def _test_supervisor_action_move_1(qtbot, supervisor):
 
     supervisor.actions.next()
 
@@ -493,7 +501,7 @@ def test_supervisor_action_move_1(qtbot, supervisor):
     # qtbot.stop()
 
 
-def test_supervisor_action_move_2(supervisor):
+def _test_supervisor_action_move_2(supervisor):
 
     supervisor.select([30])
     supervisor.similarity_view.select([20])
@@ -514,7 +522,7 @@ def test_supervisor_action_move_2(supervisor):
     supervisor.cluster_meta.get('group', 2) == 'good'
 
 
-def test_supervisor_action_move_3(supervisor):
+def _test_supervisor_action_move_3(supervisor):
 
     supervisor.select([30])
     supervisor.similarity_view.select([20])

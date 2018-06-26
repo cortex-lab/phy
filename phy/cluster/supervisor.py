@@ -656,6 +656,10 @@ class Supervisor(EventEmitter):
         self.action_creator.attach(gui)
         # TODO: gui should raise events too?
 
+    @property
+    def actions(self):
+        return self.action_creator.actions
+
     # Selection actions
     # -------------------------------------------------------------------------
 
