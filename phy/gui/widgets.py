@@ -206,7 +206,7 @@ class HTMLWidget(WebView):
 
     def eval_js(self, expr, callback=None):
         """Evaluate a Javascript expression."""
-        logger.debug("%s eval JS %s", self.__class__.__name__, expr)
+        logger.log(5, "%s eval JS %s", self.__class__.__name__, expr)
         return self.page().runJavaScript(expr, callback or (lambda _: _))
 
     @pyqtSlot(str, str)
