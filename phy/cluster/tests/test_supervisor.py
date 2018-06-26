@@ -346,7 +346,6 @@ def test_supervisor_split_0(supervisor):
     _assert_selected(supervisor, [1, 2])
 
     supervisor.split([1, 2])
-    _wait_after_action(supervisor)
 
     _assert_selected(supervisor, [31])
 

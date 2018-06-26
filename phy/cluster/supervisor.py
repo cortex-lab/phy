@@ -17,7 +17,6 @@ from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.utils import EventEmitter, Bunch
-from phy.utils._types import _is_integer
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 
@@ -44,10 +43,11 @@ def _process_ups(ups):  # pragma: no cover
         raise NotImplementedError()
 
 
-def _assert_all_ints(l):
-    if not (l is None or l == [] or all(_is_integer(_) for _ in l)):
-        import pdb
-        pdb.set_trace()
+def _ensure_all_ints(l):
+    if (l is None or l == []):
+        return
+    for i in range(len(l)):
+        l[i] = int(l[i])
 
 
 # -----------------------------------------------------------------------------
@@ -77,8 +77,8 @@ class ActionFlow(EventEmitter):
         if state.get('next_similar', None) is None:
             state.next_similar = next_similar
 
-        _assert_all_ints(state.cluster_ids)
-        _assert_all_ints(state.similar)
+        _ensure_all_ints(state.cluster_ids)
+        _ensure_all_ints(state.similar)
 
         return state
 
@@ -220,8 +220,9 @@ class ActionFlow(EventEmitter):
         s = '#{i:03d}   {name} {s}'.format(i=self._index(action), name=action.name, s=s)
         logger.debug(s)
 
-    def show_last(self, n=3):
-        logger.debug("Last %d/%d" % (n, len(self._flow)))
+    def show_last(self, n=5):
+        length = len(self._flow)
+        logger.debug("Last %d/%d" % (min(n, length), length))
         for item in self._flow[-n:]:
             if item.type == 'state':
                 self._show_state(item)
@@ -584,6 +585,8 @@ class Supervisor(EventEmitter):
         logger.debug("Clusters selected: %s", cluster_ids)
         if not self._pause_action_flow:
             self.action_flow.add_state(cluster_ids=cluster_ids)
+        current = self.action_flow.current()
+        if not current.get('next_cluster', None):
             self.cluster_view.get_next_id(
                 lambda next_cluster: self.action_flow.update_current_state(
                     next_cluster=next_cluster))
@@ -593,9 +596,12 @@ class Supervisor(EventEmitter):
         logger.debug("Similar clusters selected: %s", similar)
         if not self._pause_action_flow:
             self.action_flow.add_state(similar=similar)
+        current = self.action_flow.current()
+        if not current.get('cluster_ids', None):
             self.cluster_view.get_selected(
                 lambda cluster_ids: self.action_flow.update_current_state(
                     cluster_ids=cluster_ids))
+        if not current.get('next_similar', None):
             self.similarity_view.get_next_id(
                 lambda next_similar: self.action_flow.update_current_state(
                     next_similar=next_similar))
