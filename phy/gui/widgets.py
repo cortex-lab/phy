@@ -13,7 +13,7 @@ from functools import partial
 
 from six import text_type
 
-from .qt import WebView, QWebChannel, pyqtSlot, _abs_path, _block
+from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block
 from phy.utils import EventEmitter
 from phy.utils._misc import _CustomEncoder, _read_text
 from phy.utils._types import _is_integer
@@ -45,30 +45,34 @@ _DEFAULT_STYLE = """
 
 
 _DEFAULT_SCRIPT = """
+    /*
     window._onWidgetReady_callbacks = [];
 
     onWidgetReady = function (callback) {
         window._onWidgetReady_callbacks.push(callback);
     };
+    */
 
     document.addEventListener("DOMContentLoaded", function () {
         new QWebChannel(qt.webChannelTransport, function (channel) {
-            var widget = channel.objects.widget;
-            window.widget = widget;
+            var eventEmitter = channel.objects.eventEmitter;
+            window.eventEmitter = eventEmitter;
 
             // All phy_events emitted from JS are relayed to
-            // Python's _emit_from_js().
+            // Python's emitJS().
             document.addEventListener("phy_event", function (e) {
                 console.debug("Emit from JS global: " +
                               e.detail.name + " " + e.detail.data);
-                widget._emit_from_js(e.detail.name,
-                                     JSON.stringify(e.detail.data));
+                eventEmitter.emitJS(e.detail.name,
+                                    JSON.stringify(e.detail.data));
             });
 
+            /*
             // Callbacks on the widget.
             for (let callback of window._onWidgetReady_callbacks) {
                 callback(widget);
             }
+            */
 
         });
     });
@@ -167,15 +171,24 @@ class HTMLBuilder(object):
         return self._build_html()
 
 
+class JSEventEmitter(QObject, EventEmitter):
+    @pyqtSlot(str, str)
+    def emitJS(self, name, arg_json):
+        logger.log(5, "Emit from Python %s %s.", name, arg_json)
+        self.emit(text_type(name), json.loads(text_type(arg_json)))
+
+
 class HTMLWidget(WebView):
     """An HTML widget that is displayed with Qt."""
     def __init__(self, *args, title=''):
-        super(HTMLWidget, self).__init__(*args)
-        self._event = EventEmitter()
+        # Due to a limitation of QWebChannel, need to register a Python object
+        # BEFORE this web view is created?!
+        self._event = JSEventEmitter(*args)
+        self.channel = QWebChannel(*args)
+        self.channel.registerObject('eventEmitter', self._event)
 
-        self.channel = QWebChannel(self.page())
+        super(HTMLWidget, self).__init__(*args)
         self.page().setWebChannel(self.channel)
-        self.channel.registerObject('widget', self)
 
         self.builder = HTMLBuilder(title=title)
         self.builder.add_script_src('qrc:///qtwebchannel/qwebchannel.js')
@@ -208,11 +221,6 @@ class HTMLWidget(WebView):
         """Evaluate a Javascript expression."""
         logger.log(5, "%s eval JS %s", self.__class__.__name__, expr)
         return self.page().runJavaScript(expr, callback or (lambda _: _))
-
-    @pyqtSlot(str, str)
-    def _emit_from_js(self, name, arg_json):
-        logger.log(5, "Emit from Python %s %s.", name, arg_json)
-        self.emit(text_type(name), json.loads(text_type(arg_json)))
 
 
 # -----------------------------------------------------------------------------

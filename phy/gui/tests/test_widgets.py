@@ -59,17 +59,13 @@ def table(qtbot):
 # Test widgets
 #------------------------------------------------------------------------------
 
-def test_widget_empty(qtbot, gui):
-    widget = HTMLWidget(gui)
+def test_widget_empty(qtbot):
+    widget = HTMLWidget()
     widget.build()
     widget.show()
     qtbot.addWidget(widget)
-    gui.show()
-    qtbot.addWidget(gui)
     qtbot.waitForWindowShown(widget)
-    qtbot.waitForWindowShown(gui)
     widget.close()
-    gui.close()
 
 
 def test_widget_html(qtbot):
@@ -120,7 +116,7 @@ def test_widget_javascript_1(qtbot):
     widget.close()
 
 
-def test_widget_javascript_2(qtbot):
+def _test_widget_javascript_2(qtbot):
     # TODO: onWidgetReady
     widget = HTMLWidget()
     widget.builder.add_script("var l = [1, 2];")
@@ -231,6 +227,8 @@ def test_table_nav_1(qtbot, table):
     table.eval_js('table.emit("some_event", 123);')
 
     _block(lambda: _sel == [123])
+
+    table.unconnect_(on_some_event)
 
 
 def test_table_sort(qtbot, table):
