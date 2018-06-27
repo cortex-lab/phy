@@ -116,7 +116,7 @@ def test_widget_javascript_1(qtbot):
     widget.close()
 
 
-def _test_widget_javascript_2(qtbot):
+def _test_widget_javascript_2(qtbot):  # pragma: no cover
     # TODO: onWidgetReady
     widget = HTMLWidget()
     widget.builder.add_script("var l = [1, 2];")

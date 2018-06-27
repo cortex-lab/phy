@@ -235,8 +235,8 @@ class ActionFlow(EventEmitter):
 # -----------------------------------------------------------------------------
 
 class ClusterView(Table):
-    def __init__(self, data=None):
-        HTMLWidget.__init__(self, title='ClusterView')
+    def __init__(self, *args, data=None):
+        HTMLWidget.__init__(self, *args, title='ClusterView')
         self._set_styles()
 
         # TODO: custom columns
@@ -273,8 +273,8 @@ class ClusterView(Table):
 
 class SimilarityView(ClusterView):
     """Must connect request_similar_clusters."""
-    def __init__(self, data=None):
-        HTMLWidget.__init__(self, title='SimilarityView')
+    def __init__(self, *args, data=None):
+        HTMLWidget.__init__(self, *args, title='SimilarityView')
         self._set_styles()
         columns = ['id', 'n_spikes', 'quality', 'similarity']
         value_names = columns + [{'data': ['group']}]
@@ -469,9 +469,6 @@ class Supervisor(EventEmitter):
         self.action_creator = ActionCreator()
         self.action_creator.connect(self._on_action, event='action')
 
-        # Create the cluster view and similarity view.
-        self._create_views()
-
         # Log the actions.
         self.clustering.connect(self._log_action, event='cluster')
         self.cluster_meta.connect(self._log_action_meta, event='cluster')
@@ -550,13 +547,13 @@ class Supervisor(EventEmitter):
                 'is_masked': group in ('noise', 'mua'),
                 }
 
-    def _create_views(self):
+    def _create_views(self, gui=None):
         data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
-        self.cluster_view = ClusterView(data)
+        self.cluster_view = ClusterView(gui, data=data)
         # Update the action flow and similarity view when selection changes.
         self.cluster_view.connect_(self._clusters_selected, event='select')
 
-        self.similarity_view = SimilarityView()
+        self.similarity_view = SimilarityView(gui)
         self.similarity_view.connect_(self._get_similar_clusters, event='request_similar_clusters')
         self.similarity_view.connect_(self._similar_selected, event='select')
 
@@ -649,6 +646,10 @@ class Supervisor(EventEmitter):
         # to _select_after_action.
 
     def attach(self, gui):
+
+        # Create the cluster view and similarity view.
+        self._create_views(gui)
+
         self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view))
         gui.add_view(self.cluster_view)
         gui.add_view(self.similarity_view)

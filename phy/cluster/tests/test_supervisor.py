@@ -55,7 +55,7 @@ def gui(tempdir, qtbot):
 def supervisor(qtbot, gui, cluster_ids, cluster_groups,
                quality, similarity,
                tempdir):
-    spike_clusters = np.array(cluster_ids)
+    spike_clusters = np.repeat(cluster_ids, 2)
 
     mc = Supervisor(spike_clusters,
                     cluster_groups=cluster_groups,
@@ -190,7 +190,7 @@ def test_cluster_view_1(qtbot, gui):
              "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
              "is_masked": i in (2, 3, 5),
              } for i in range(10)]
-    cv = ClusterView(data)
+    cv = ClusterView(gui, data=data)
     _wait_until_table_ready(qtbot, cv)
 
     cv.sort_by('n_spikes', 'asc')
@@ -205,7 +205,7 @@ def test_similarity_view_1(qtbot, gui):
              "n_spikes": 100 - 10 * i,
              "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
              } for i in range(10)]
-    sv = SimilarityView(data)
+    sv = SimilarityView(gui, data=data)
     _wait_until_table_ready(qtbot, sv)
 
     @sv.connect_
@@ -347,25 +347,25 @@ def test_supervisor_split_0(supervisor):
 
     supervisor.split([1, 2])
 
-    _assert_selected(supervisor, [31])
+    _assert_selected(supervisor, [31, 32, 33])
 
     supervisor.undo()
     _assert_selected(supervisor, [1, 2])
 
     supervisor.redo()
-    _assert_selected(supervisor, [31])
+    _assert_selected(supervisor, [31, 32, 33])
 
 
-def _test_supervisor_split_1(gui, supervisor):
+def test_supervisor_split_1(supervisor):
 
     supervisor.select([1, 2])
 
-    @gui.connect_
+    @supervisor.connect
     def on_request_split():
-        return supervisor.clustering.spikes_in_clusters([1, 2])
+        return [1, 2]
 
     supervisor.split()
-    _assert_selected(supervisor, [31])
+    _assert_selected(supervisor, [31, 32, 33])
 
 
 def _test_supervisor_split_2(gui, quality, similarity):
