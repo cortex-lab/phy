@@ -174,13 +174,13 @@ class GUI(QMainWindow):
             gs = self.state.get('geometry_state', None)
             self.restore_geometry_state(gs)
 
-        @self.connect_
+        '''@self.connect_
         def on_close():
             logger.debug("Save the geometry state.")
             gs = self.save_geometry_state()
             self.state['geometry_state'] = gs
             # Save the state to disk when closing the GUI.
-            self.state.save()
+            self.state.save()'''
 
     def _set_name(self, name, subtitle):
         if name is None:
@@ -249,6 +249,12 @@ class GUI(QMainWindow):
             return
         super(GUI, self).closeEvent(e)
         self._closed = True
+
+        # Save the state to disk when closing the GUI.
+        logger.debug("Save the geometry state.")
+        gs = self.save_geometry_state()
+        self.state['geometry_state'] = gs
+        self.state.save()
 
     def show(self):
         """Show the window."""

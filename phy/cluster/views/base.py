@@ -109,7 +109,7 @@ class ManualClusteringView(View):
             gui.state.update_view_state(self, self.state)
             # NOTE: create_gui() already saves the state, but the event
             # is registered *before* we add all views.
-            gui.state.save()
+            #gui.state.save()
 
         self.show()
 
