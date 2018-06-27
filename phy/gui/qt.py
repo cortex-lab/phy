@@ -206,7 +206,8 @@ class WebPage(QWebEnginePage):
 class WebView(QWebEngineView):
     def __init__(self, *args):
         super(WebView, self).__init__(*args)
-        self._page = WebPage()
+        assert isinstance(self.window(), QWidget)
+        self._page = WebPage(self)
         self.setPage(self._page)
         self.move(100, 100)
         self.resize(400, 400)

@@ -153,7 +153,7 @@ class GUI(QMainWindow):
 
         # Status bar.
         self._lock_status = False
-        self._status_bar = QStatusBar()
+        self._status_bar = QStatusBar(self)
         self.setStatusBar(self._status_bar)
 
         # List of attached Actions instances.
@@ -336,7 +336,7 @@ class GUI(QMainWindow):
 
     def dialog(self, message):
         """Show a message in a dialog box."""
-        box = QMessageBox()
+        box = QMessageBox(self)
         box.setText(message)
         return box
 
