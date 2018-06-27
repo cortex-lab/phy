@@ -26,15 +26,20 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 _DEFAULT_STYLE = """
+
+    * {
+        font-size: 7pt !important;
+    }
+
     html, body, table {
         background-color: black;
         color: white;
         font-family: sans-serif;
-        font-size: 12pt;
-        margin: 5px 10px;
+        font-size: 10pt;
+        margin: 2px 4px;
     }
 
-    input.search {
+    input.filter {
         width: 100% !important;
     }
 

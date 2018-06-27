@@ -1,5 +1,5 @@
 body, input {
-    margin: 10px;
+    margin: 4px;
     padding: 0;
     background-color: black;
     color: white;
@@ -7,11 +7,11 @@ body, input {
 
 body, p, div, th, td, input {
     font-family: Helvetica;
-    font-size: 8pt;
+    font-size: 10pt;
 }
 
 #table input {
-    margin: 10px 0px;
+    margin: 0px 0px 4px 0px;
     padding: 5px;
     width: 300px;
     border: 1px solid #ddd;
@@ -45,7 +45,7 @@ th.sort { cursor:pointer; }
 }
 
 #table td {
-    padding: 8px 8px 6px 8px;
+    padding: 4px 6px 4px 6px;
     margin: 0;
     border: 0;
 }

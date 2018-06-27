@@ -71,7 +71,7 @@ def test_widget_empty(qtbot):
 def test_widget_html(qtbot):
     widget = HTMLWidget()
     widget.builder.add_style('html, body, p {background-color: purple;}')
-    path = op.join(op.dirname(__file__), '../static/styles.min.css')
+    path = op.join(op.dirname(__file__), '../static/styles.css')
     widget.builder.add_style_src(path)
     widget.builder.add_header('<!-- comment -->')
     widget.builder.set_body('Hello world!')

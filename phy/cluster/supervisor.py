@@ -276,7 +276,7 @@ class SimilarityView(ClusterView):
     def __init__(self, *args, data=None):
         HTMLWidget.__init__(self, *args, title='SimilarityView')
         self._set_styles()
-        columns = ['id', 'n_spikes', 'quality', 'similarity']
+        columns = ['id', 'n_spikes', 'similarity']
         value_names = columns + [{'data': ['group']}]
         self._init_table(columns=columns, value_names=value_names, data=data)
 
@@ -477,6 +477,9 @@ class Supervisor(EventEmitter):
         self.clustering.connect(partial(self.emit, 'cluster'), event='cluster')
         self.cluster_meta.connect(partial(self.emit, 'cluster'), event='cluster')
 
+        # Create the cluster view and similarity view.
+        self._create_views()
+
     # Internal methods
     # -------------------------------------------------------------------------
 
@@ -533,19 +536,21 @@ class Supervisor(EventEmitter):
         sim = self.similarity(cluster_id)
         # Only keep existing clusters.
         clusters_set = set(self.clustering.cluster_ids)
-        data = [dict(similarity=s, **self._get_cluster_info(c))
+        data = [dict(similarity='%.3f' % s,
+                     **self._get_cluster_info(c, exclude=('quality',)))
                 for c, s in sim
                 if c in clusters_set]
         return data
 
-    def _get_cluster_info(self, cluster_id):
+    def _get_cluster_info(self, cluster_id, exclude=()):
         group = self.cluster_meta.get('group', cluster_id)
-        return {'id': cluster_id,
-                'n_spikes': self.n_spikes(cluster_id),
-                'quality': self.quality(cluster_id),
-                'group': group,
-                'is_masked': group in ('noise', 'mua'),
-                }
+        out = {'id': cluster_id,
+               'n_spikes': self.n_spikes(cluster_id),
+               'quality': '%.3f' % self.quality(cluster_id),
+               'group': group,
+               'is_masked': group in ('noise', 'mua'),
+               }
+        return {k: v for k, v in out.items() if k not in exclude}
 
     def _create_views(self, gui=None):
         data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
@@ -646,9 +651,6 @@ class Supervisor(EventEmitter):
         # to _select_after_action.
 
     def attach(self, gui):
-
-        # Create the cluster view and similarity view.
-        self._create_views(gui)
 
         self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view))
         gui.add_view(self.cluster_view)
