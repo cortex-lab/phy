@@ -16,7 +16,7 @@ from six import string_types
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
-from phy.utils import EventEmitter, Bunch
+from phy.utils import EventEmitter, Bunch, emit
 from phy.gui.actions import Actions
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 
@@ -238,9 +238,11 @@ class ClusterView(Table):
     def __init__(self, *args, data=None):
         HTMLWidget.__init__(self, *args, title='ClusterView')
         self._set_styles()
+        emit('cluster_view_init', self)
 
-        # TODO: custom columns
-        columns = ['id', 'n_spikes', 'quality']
+        extra_columns = emit('request_cluster_metrics', self, single=True)
+        columns = ['id', 'n_spikes', 'quality'] + extra_columns
+
         assert columns[0] == 'id'
 
         # Allow to have <tr data_group="good"> etc. which allows for CSS styling.
@@ -276,7 +278,9 @@ class SimilarityView(ClusterView):
     def __init__(self, *args, data=None):
         HTMLWidget.__init__(self, *args, title='SimilarityView')
         self._set_styles()
-        columns = ['id', 'n_spikes', 'similarity']
+        emit('similarity_view_init', self)
+        extra_columns = emit('request_cluster_metrics', self, single=True)
+        columns = ['id', 'n_spikes', 'similarity'] + extra_columns
         value_names = columns + [{'data': ['group']}]
         self._init_table(columns=columns, value_names=value_names, data=data)
 
@@ -650,6 +654,16 @@ class Supervisor(EventEmitter):
         # New selection done by ActionFlow which emits "new_state", connected
         # to _select_after_action.
 
+    @property
+    def state(self):
+        b = Barrier()
+        self.cluster_view.get_state(b(1))
+        self.similarity_view.get_state(b(2))
+        b.wait()
+        sc = b.result(1)[0][0]
+        ss = b.result(2)[0][0]
+        return Bunch({'cluster_view': Bunch(sc), 'similarity_view': Bunch(ss)})
+
     def attach(self, gui):
 
         self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view))
@@ -657,7 +671,6 @@ class Supervisor(EventEmitter):
         gui.add_view(self.similarity_view)
 
         self.action_creator.attach(gui)
-        # TODO: gui should raise events too?
 
     @property
     def actions(self):

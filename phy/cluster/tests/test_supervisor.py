@@ -23,6 +23,7 @@ from phy.gui.widgets import Barrier
 from phy.gui.qt import qInstallMessageHandler
 #from phy.gui.tests.test_qt import _block
 from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
+from phy.utils import connect
 
 
 def handler(msg_type, msg_log_context, msg_string):
@@ -184,12 +185,18 @@ def test_action_flow_move_similar():
 # Test cluster and similarity views
 #------------------------------------------------------------------------------
 
-def test_cluster_view_1(qtbot, gui):
-    data = [{"id": i,
-             "n_spikes": 100 - 10 * i,
-             "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
-             "is_masked": i in (2, 3, 5),
-             } for i in range(10)]
+@fixture
+def data():
+    _data = [{"id": i,
+              "n_spikes": 100 - 10 * i,
+              "quality": 100 - 10 * i,
+              "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
+              "is_masked": i in (2, 3, 5),
+              } for i in range(10)]
+    return _data
+
+
+def test_cluster_view_1(qtbot, gui, data):
     cv = ClusterView(gui, data=data)
     _wait_until_table_ready(qtbot, cv)
 
@@ -200,11 +207,7 @@ def test_cluster_view_1(qtbot, gui):
     _assert(cv.get_state, {'current_sort': ('id', 'desc')})
 
 
-def test_similarity_view_1(qtbot, gui):
-    data = [{"id": i,
-             "n_spikes": 100 - 10 * i,
-             "group": {2: 'noise', 3: 'noise', 5: 'mua', 8: 'good'}.get(i, None),
-             } for i in range(10)]
+def test_similarity_view_1(qtbot, gui, data):
     sv = SimilarityView(gui, data=data)
     _wait_until_table_ready(qtbot, sv)
 
@@ -214,6 +217,19 @@ def test_similarity_view_1(qtbot, gui):
 
     sv.reset([5])
     _assert(sv.get_ids, [105, 115, 107])
+
+
+def test_cluster_view_extra_columns(qtbot, gui, data):
+
+    @connect
+    def on_request_cluster_metrics(_):
+        return ['my_metrics']
+
+    for cl in data:
+        cl['my_metrics'] = cl['id'] * 1000
+
+    cv = ClusterView(gui, data=data)
+    _wait_until_table_ready(qtbot, cv)
 
 
 #------------------------------------------------------------------------------
@@ -368,7 +384,7 @@ def test_supervisor_split_1(supervisor):
     _assert_selected(supervisor, [31, 32, 33])
 
 
-def _test_supervisor_split_2(gui, quality, similarity):
+def test_supervisor_split_2(gui, quality, similarity):
     spike_clusters = np.array([0, 0, 1])
 
     supervisor = Supervisor(spike_clusters,
@@ -376,21 +392,26 @@ def _test_supervisor_split_2(gui, quality, similarity):
                             )
     supervisor.attach(gui)
 
-    supervisor.add_column(quality, name='quality', default=True)
-    supervisor.set_default_sort('quality', 'desc')
+    b = Barrier()
+    supervisor.cluster_view.connect_(b('cluster_view'), event='ready')
+    supervisor.similarity_view.connect_(b('similarity_view'), event='ready')
+    b.wait()
 
     supervisor.split([0])
-    _assert_selected(supervisor, [3, 2])
+    #_wait_after_action(supervisor)
+    _assert_selected(supervisor, [2, 3])
 
 
-def _test_supervisor_state(tempdir, qtbot, gui, supervisor):
+def test_supervisor_state(tempdir, qtbot, gui, supervisor):
 
     cv = supervisor.cluster_view
+    assert supervisor.state.cluster_view.current_sort == ('quality', 'desc')
+
     cv.sort_by('id')
-    gui.close()
-    assert cv.state['sort_by'] == ('id', 'asc')
-    cv.set_state(cv.state)
-    assert cv.state['sort_by'] == ('id', 'asc')
+    assert supervisor.state.cluster_view.current_sort == ('id', 'asc')
+
+    cv.set_state({'current_sort': ('n_spikes', 'desc')})
+    assert supervisor.state.cluster_view.current_sort == ('n_spikes', 'desc')
 
 
 def _test_supervisor_label(supervisor):
