@@ -297,6 +297,10 @@ class Table(HTMLWidget):
         """Get the previous non-skipped row id."""
         self.eval_js('table.getSiblingId(undefined, "previous");', callback=callback)
 
+    def first(self, callback=None):
+        """Select the first item."""
+        self.eval_js('table.selectFirst();', callback=callback)
+
     def next(self, callback=None):
         """Select the next non-skipped row."""
         self.eval_js('table.moveToSibling(undefined, "next");', callback=callback)

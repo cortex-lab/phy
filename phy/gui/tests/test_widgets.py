@@ -195,8 +195,14 @@ def test_table_duplicates(qtbot, table):
     _assert(table.get_selected, [1])
 
 
-def test_table_nav_first(qtbot, table):
+def test_table_nav_first_1(qtbot, table):
     table.next()
+    _assert(table.get_selected, [0])
+    _assert(table.get_next_id, 1)
+
+
+def test_table_nav_first_2(qtbot, table):
+    table.first()
     _assert(table.get_selected, [0])
     _assert(table.get_next_id, 1)
 
