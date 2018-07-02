@@ -295,3 +295,14 @@ class ProgressReporter(EventEmitter):
     def progress(self):
         """Return the current progress as a float value in `[0, 1]`."""
         return self._value / float(self._value_max)
+
+
+#------------------------------------------------------------------------------
+# Global event system
+#------------------------------------------------------------------------------
+
+_EVENT = EventEmitter()
+
+emit = _EVENT.emit
+connect = _EVENT.connect
+unconnect = _EVENT.unconnect
