@@ -313,8 +313,7 @@ class Table(HTMLWidget):
         """Select some rows in the table."""
         ids = _uniq(ids)
         assert all(_is_integer(_) for _ in ids)
-        f = (lambda _: callback(ids)) if callback else None
-        self.eval_js('table.select({});'.format(dumps(ids)), callback=f)
+        self.eval_js('table.select({});'.format(dumps(ids)), callback=callback)
 
     def get(self, id, callback=None):
         self.eval_js('table.get("id", {})[0]["_values"]'.format(id), callback=callback)

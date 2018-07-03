@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from contextlib import contextmanager
+
 from pytest import yield_fixture, fixture
 import numpy as np
 from numpy.testing import assert_array_equal as ae
@@ -72,14 +74,13 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
     return mc
 
 
-def _assert_selected(supervisor, sel):
-    assert supervisor.get_selected() == sel
-
-
-def _wait_after_action(supervisor):
+@contextmanager
+def wait_after_event(supervisor, event):
     b = Barrier()
-    supervisor.connect(b('cluster'), event='cluster')
+    supervisor.connect(b(1), event=event)
+    yield
     b.wait()
+    print("Finished waiting after", event)
 
 
 #------------------------------------------------------------------------------
@@ -157,17 +158,13 @@ def test_action_flow_move_clusters_1():
 def test_action_flow_move_clusters_2():
     af = ActionFlow()
 
-    @af.connect
-    def on_request_next_similar(cluster_id):
-        return 1234
-
     af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
     af.add_move(cluster_ids=[0], group='good')
 
     s = af.current()
     assert s.type == 'state'
     assert s.cluster_ids == [2]
-    assert s.similar == [1234]
+    assert s.similar is None
 
 
 def test_action_flow_move_similar():
@@ -240,32 +237,58 @@ def test_action_creator_1(qtbot, gui):
     ac = ActionCreator()
     ac.attach(gui)
     gui.show()
-    # qtbot.stop()
 
 
 #------------------------------------------------------------------------------
 # Test GUI component
 #------------------------------------------------------------------------------
 
+def _select(supervisor, cluster_ids, similar=None):
+
+    with wait_after_event(supervisor, 'select_clusters_done'):
+        supervisor.cluster_view.select(cluster_ids)
+
+    if similar:
+        with wait_after_event(supervisor, 'select_similar_done'):
+            supervisor.similarity_view.select(similar)
+
+    state = supervisor.action_flow.current()
+    assert state.cluster_ids == cluster_ids
+    if similar:
+        assert state.similar == similar
+
+
+def _assert_selected(supervisor, sel):
+    assert supervisor.selected() == sel
+
+
+@contextmanager
+def wait_selected(supervisor, sel):
+    with wait_after_event(supervisor, 'select_clusters_done'):
+        yield
+    _assert_selected(supervisor, sel)
+
+
+def test_select(qtbot, supervisor):
+    _select(supervisor, [30], [20])
+    _assert_selected(supervisor, [30, 20])
+
+
 def test_supervisor_select_1(qtbot, supervisor):
-    supervisor.cluster_view.select([0])
-    _assert_selected(supervisor, [0])
+    with wait_selected(supervisor, [0]):
+        supervisor.cluster_view.select([0])
 
 
 def test_supervisor_select_2(qtbot, supervisor):
-    supervisor.cluster_view.next()
-    b = Barrier()
-    supervisor.cluster_view.get_selected(b(1))
-    b.wait()
-    assert b.result(1)[0][0] == [30]
+    with wait_selected(supervisor, [30]):
+        supervisor.cluster_view.next()
 
 
 def test_supervisor_select_order(qtbot, supervisor):
-    supervisor.select([1, 0])
-    _assert_selected(supervisor, [1, 0])
-
-    supervisor.select([0, 1])
-    _assert_selected(supervisor, [0, 1])
+    with wait_selected(supervisor, [1, 0]):
+        supervisor.select([1, 0])
+    with wait_selected(supervisor, [0, 1]):
+        supervisor.select([0, 1])
 
 
 def test_supervisor_edge_cases(supervisor):
@@ -273,8 +296,8 @@ def test_supervisor_edge_cases(supervisor):
     # Empty selection at first.
     ae(supervisor.clustering.cluster_ids, [0, 1, 2, 10, 11, 20, 30])
 
-    supervisor.select([0])
-    _assert_selected(supervisor, [0])
+    with wait_selected(supervisor, [0]):
+        supervisor.select([0])
 
     supervisor.undo()
     supervisor.redo()
@@ -306,26 +329,17 @@ def test_supervisor_skip(qtbot, gui, supervisor):
     expected = [30, 20, 11, 2, 1]
 
     for clu in expected:
-        supervisor.cluster_view.next()
+        with wait_after_event(supervisor, 'select_clusters_done'):
+            supervisor.cluster_view.next()
         _assert_selected(supervisor, [clu])
 
 
 def test_supervisor_merge_1(qtbot, supervisor):
 
-    b = Barrier()
-    supervisor.cluster_view.select([30], b(1))
-    b.wait()
-    assert b.result(1)[0][0] == [30]
-
-    b = Barrier()
-    supervisor.similarity_view.select([20], b(2))
-    b.wait()
-    assert b.result(2)[0][0] == [20]
-
+    _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
 
     supervisor.merge()
-    _wait_after_action(supervisor)
 
     _assert_selected(supervisor, [31, 11])
 
@@ -340,25 +354,26 @@ def test_supervisor_merge_move(qtbot, supervisor):
     """Check that merge then move selects the next cluster in the original
     cluster view, not the updated cluster view."""
 
-    supervisor.cluster_view.select([20, 11])
+    _select(supervisor, [20, 11], [])
     _assert_selected(supervisor, [20, 11])
 
-    supervisor.merge()
-    _wait_after_action(supervisor)
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.merge()
     _assert_selected(supervisor, [31])
+    assert supervisor.action_flow.current().next_cluster == 30
 
-    supervisor.move('good')
-    _wait_after_action(supervisor)
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.move('good', 'all')
     _assert_selected(supervisor, [30])
 
-    supervisor.move('good')
-    _wait_after_action(supervisor)
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.move('good', 'all')
     _assert_selected(supervisor, [2])
 
 
 def test_supervisor_split_0(supervisor):
 
-    supervisor.select([1, 2])
+    _select(supervisor, [1, 2])
     _assert_selected(supervisor, [1, 2])
 
     supervisor.split([1, 2])
@@ -398,7 +413,6 @@ def test_supervisor_split_2(gui, quality, similarity):
     b.wait()
 
     supervisor.split([0])
-    #_wait_after_action(supervisor)
     _assert_selected(supervisor, [2, 3])
 
 
@@ -416,7 +430,7 @@ def test_supervisor_state(tempdir, qtbot, gui, supervisor):
 
 def _test_supervisor_label(supervisor):
 
-    supervisor.select([20])
+    _select(supervisor, [20])
     supervisor.label("my_field", 3.14)
 
     supervisor.save()
@@ -427,13 +441,13 @@ def _test_supervisor_label(supervisor):
 
 def test_supervisor_move_1(supervisor):
 
-    supervisor.select([20])
+    _select(supervisor, [20])
     _assert_selected(supervisor, [20])
 
     assert not supervisor.move('', '')
 
-    supervisor.move('noise')
-    _wait_after_action(supervisor)
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.move('noise', 'all')
     _assert_selected(supervisor, [11])
 
     supervisor.undo()
@@ -445,16 +459,7 @@ def test_supervisor_move_1(supervisor):
 
 def test_supervisor_move_2(supervisor):
 
-    b = Barrier()
-    supervisor.cluster_view.select([20], b(1))
-    b.wait()
-    assert b.result(1)[0][0] == [20]
-
-    b = Barrier()
-    supervisor.similarity_view.select([10], b(2))
-    b.wait()
-    assert b.result(2)[0][0] == [10]
-
+    _select(supervisor, [20], [10])
     _assert_selected(supervisor, [20, 10])
 
     supervisor.move('noise', 10)
@@ -471,71 +476,80 @@ def test_supervisor_move_2(supervisor):
 # Test shortcuts
 #------------------------------------------------------------------------------
 
-def _test_supervisor_action_reset(qtbot, supervisor):
+def test_supervisor_action_reset(qtbot, supervisor):
 
     supervisor.actions.select([10, 11])
 
-    supervisor.actions.reset()
+    with wait_after_event(supervisor, 'wizard_done'):
+        supervisor.actions.reset()
     _assert_selected(supervisor, [30])
 
-    supervisor.actions.next()
+    with wait_after_event(supervisor, 'wizard_done'):
+        supervisor.actions.next()
     _assert_selected(supervisor, [30, 20])
 
-    supervisor.actions.next()
+    with wait_after_event(supervisor, 'wizard_done'):
+        supervisor.actions.next()
     _assert_selected(supervisor, [30, 11])
 
-    supervisor.actions.previous()
+    with wait_after_event(supervisor, 'wizard_done'):
+        supervisor.actions.previous()
     _assert_selected(supervisor, [30, 20])
 
 
 def test_supervisor_action_nav(qtbot, supervisor):
 
-    supervisor.actions.reset()
+    with wait_after_event(supervisor, 'wizard_done'):
+        supervisor.actions.reset()
     _assert_selected(supervisor, [30])
 
-    supervisor.actions.next_best()
+    with wait_after_event(supervisor, 'wizard_done'):
+        supervisor.actions.next_best()
     _assert_selected(supervisor, [20])
 
-    supervisor.actions.previous_best()
+    with wait_after_event(supervisor, 'wizard_done'):
+        supervisor.actions.previous_best()
     _assert_selected(supervisor, [30])
 
 
-def _test_supervisor_action_move_1(qtbot, supervisor):
+def test_supervisor_action_move_1(qtbot, supervisor):
 
-    supervisor.actions.next()
-
+    with wait_after_event(supervisor, 'wizard_done'):
+        supervisor.actions.next()
     _assert_selected(supervisor, [30])
-    supervisor.actions.move_best_to_noise()
 
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.actions.move_best_to_noise()
     _assert_selected(supervisor, [20])
-    supervisor.actions.move_best_to_mua()
 
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.actions.move_best_to_mua()
     _assert_selected(supervisor, [11])
-    supervisor.actions.move_best_to_good()
 
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.actions.move_best_to_good()
     _assert_selected(supervisor, [2])
 
     supervisor.cluster_meta.get('group', 30) == 'noise'
     supervisor.cluster_meta.get('group', 20) == 'mua'
     supervisor.cluster_meta.get('group', 11) == 'good'
 
-    # qtbot.stop()
 
+def test_supervisor_action_move_2(supervisor):
 
-def _test_supervisor_action_move_2(supervisor):
-
-    supervisor.select([30])
-    supervisor.similarity_view.select([20])
-
+    _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
-    supervisor.actions.move_similar_to_noise()
 
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.actions.move_similar_to_noise()
     _assert_selected(supervisor, [30, 11])
-    supervisor.actions.move_similar_to_mua()
 
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.actions.move_similar_to_mua()
     _assert_selected(supervisor, [30, 2])
-    supervisor.actions.move_similar_to_good()
 
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.actions.move_similar_to_good()
     _assert_selected(supervisor, [30, 1])
 
     supervisor.cluster_meta.get('group', 20) == 'noise'
@@ -545,18 +559,26 @@ def _test_supervisor_action_move_2(supervisor):
 
 def _test_supervisor_action_move_3(supervisor):
 
-    supervisor.select([30])
-    supervisor.similarity_view.select([20])
-
+    _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
-    supervisor.actions.move_all_to_noise()
-    supervisor.next()
+
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.actions.move_all_to_noise()
+    _assert_selected(supervisor, [11, 2])
+    return
+
+    with wait_after_event(supervisor, 'wizard_done'):
+        supervisor.next()
 
     _assert_selected(supervisor, [11, 2])
-    supervisor.actions.move_all_to_mua()
+
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.actions.move_all_to_mua()
 
     _assert_selected(supervisor, [1])
-    supervisor.actions.move_all_to_good()
+
+    with wait_after_event(supervisor, 'select_after_action_done'):
+        supervisor.actions.move_all_to_good()
 
     _assert_selected(supervisor, [1])
 

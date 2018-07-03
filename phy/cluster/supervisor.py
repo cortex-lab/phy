@@ -84,7 +84,6 @@ class ActionFlow(EventEmitter):
 
     def _append(self, state):
         self._flow.append(Bunch(**state))
-        self.show_last()
 
     def add_state(self, state=None, **kwargs):
         state = state or self._make_state(**kwargs)
@@ -170,21 +169,15 @@ class ActionFlow(EventEmitter):
         state = self._previous_state(action)
         next_state = self._make_state()
         moved_clusters = set(action.cluster_ids)
-        # If all moved clusters are in the cluster view, then move to the next
-        # cluster in the cluster view.
         if moved_clusters <= set(state.cluster_ids):
-            # Request the next similar cluster to the next best cluster.
-            next_similar_l = self.emit('request_next_similar', cluster_id=state.next_cluster)
             if state.next_cluster is not None:
                 next_state.cluster_ids = [state.next_cluster]
-            if next_similar_l:
-                next_state.similar = [next_similar_l[0]]
-        # Otherwise, select the next one in the similarity view.
-        elif moved_clusters <= set(state.similar):
+        elif moved_clusters <= set(state.similar or []):
             next_state.cluster_ids = state.cluster_ids
             if state.next_similar is not None:
                 next_state.similar = [state.next_similar]
-        # Validate the next state.
+        else:
+            next_state.wizard = ['next_best', 'next']
         return self._make_state(state=next_state)
 
     def _state_after_undo(self, action):
@@ -317,14 +310,17 @@ class ActionCreator(EventEmitter):
         'move_best_to_noise': 'alt+n',
         'move_best_to_mua': 'alt+m',
         'move_best_to_good': 'alt+g',
+        'move_best_to_unsorted': 'alt+u',
 
         'move_similar_to_noise': 'ctrl+n',
         'move_similar_to_mua': 'ctrl+m',
         'move_similar_to_good': 'ctrl+g',
+        'move_similar_to_unsorted': 'ctrl+u',
 
         'move_all_to_noise': 'ctrl+alt+n',
         'move_all_to_mua': 'ctrl+alt+m',
         'move_all_to_good': 'ctrl+alt+g',
+        'move_all_to_unsorted': 'ctrl+alt+u',
 
         # Wizard.
         'reset': 'ctrl+alt+space',
@@ -341,7 +337,12 @@ class ActionCreator(EventEmitter):
     }
 
     def add(self, name, **kwargs):
-        self.actions.add(partial(self.emit, 'action', name), name=name, **kwargs)
+        # This special keyword argument lets us use a different name for the
+        # action and the event name/method (used for different move flavors).
+        method_name = kwargs.pop('method_name', name)
+        method_args = kwargs.pop('method_args', ())
+        emit_fun = partial(self.emit, 'action', method_name, *method_args)
+        self.actions.add(emit_fun, name=name, **kwargs)
 
     def separator(self, **kwargs):
         self.actions.separator(**kwargs)
@@ -369,15 +370,12 @@ class ActionCreator(EventEmitter):
         self.add('move', docstring='Move some clusters to a group.')
         self.separator()
 
-        for group in ('noise', 'mua', 'good'):
-            self.add('move_best_to_' + group,
-                     docstring='Move the best clusters to %s.' % group)
-            self.add('move_similar_to_' + group,
-                     docstring='Move the similar clusters to %s.' %
-                     group)
-            self.add('move_all_to_' + group,
-                     docstring='Move all selected clusters to %s.' %
-                     group)
+        for which in ('best', 'similar', 'all'):
+            for group in ('noise', 'mua', 'good', 'unsorted'):
+                self.add('move_%s_to_%s' % (which, group),
+                         method_name='move',
+                         method_args=(group, which),
+                         docstring='Move %s to %s.' % (which, group))
             self.separator()
 
         # Label.
@@ -587,34 +585,37 @@ class Supervisor(EventEmitter):
         self.cluster_view.change(data)
         self.similarity_view.change(data)
 
-    def _clusters_selected(self, cluster_ids):
-        logger.debug("Clusters selected: %s", cluster_ids)
-        if not self._pause_action_flow:
-            self.action_flow.add_state(cluster_ids=cluster_ids)
+    def _update_next_cluster(self, view):
         current = self.action_flow.current()
+        if current.type != 'state':
+            return
         if not current.get('next_cluster', None):
-            self.cluster_view.get_next_id(
-                lambda next_cluster: self.action_flow.update_current_state(
-                    next_cluster=next_cluster))
-        self.similarity_view.reset(cluster_ids)
+            view.get_next_id(
+                lambda next_cluster: current.update(next_cluster=next_cluster))
 
-    def _similar_selected(self, similar):
-        logger.debug("Similar clusters selected: %s", similar)
+    def _clusters_selected(self, cluster_ids_and_next):
+        cluster_ids, next_cluster = cluster_ids_and_next
+        logger.debug("Clusters selected: %s (%s)", cluster_ids, next_cluster)
         if not self._pause_action_flow:
-            self.action_flow.add_state(similar=similar)
-        current = self.action_flow.current()
-        if not current.get('cluster_ids', None):
-            self.cluster_view.get_selected(
-                lambda cluster_ids: self.action_flow.update_current_state(
-                    cluster_ids=cluster_ids))
-        if not current.get('next_similar', None):
-            self.similarity_view.get_next_id(
-                lambda next_similar: self.action_flow.update_current_state(
-                    next_similar=next_similar))
+            self.action_flow.add_state(cluster_ids=cluster_ids, next_cluster=next_cluster)
+        self.similarity_view.reset(cluster_ids)
+        self.emit('select_clusters_done')
+        self.action_flow.show_last()
 
-    def _on_action(self, name):
+    def _similar_selected(self, similar_and_next):
+        similar, next_similar = similar_and_next
+        logger.debug("Similar clusters selected: %s (%s)", similar, next_similar)
+        current = self.action_flow.current()
+        if not self._pause_action_flow:
+            self.action_flow.add_state(
+                cluster_ids=current.cluster_ids, next_cluster=current.next_cluster,
+                similar=similar, next_similar=next_similar)
+        self.emit('select_similar_done')
+        self.action_flow.show_last()
+
+    def _on_action(self, name, *args):
         """Bind the 'action' event raised by ActionCreator to methods of this class."""
-        return getattr(self, name)()
+        return getattr(self, name)(*args)
 
     def _select_after_action(self, state):
         if state.type != 'state':
@@ -622,14 +623,37 @@ class Supervisor(EventEmitter):
         self._pause_action_flow = True
 
         def _select_done(_):
+            similar, next_similar = _
+            if not state.next_similar:
+                self.action_flow.update_current_state(next_similar=next_similar)
+                #state.next_similar = next_similar
             self._pause_action_flow = False
+            self.emit('select_after_action_done')
+            self.action_flow.show_last()
 
         def _select_similar(_):
+            cluster_ids, next_cluster = _
+            if not state.next_cluster:
+                self.action_flow.update_current_state(
+                    cluster_ids=state.cluster_ids or cluster_ids,
+                    next_cluster=next_cluster)
             if state.similar:
                 self.similarity_view.select(state.similar, callback=_select_done)
+            else:
+                _select_done((None, None))
 
         if state.cluster_ids:
             self.cluster_view.select(state.cluster_ids, callback=_select_similar)
+
+        # wizard field is a list of method names to do after the action.
+        wizard = state.get('wizard', [])
+
+        def _next_wizard(w, out):
+            cluster_ids, next_cluster = out
+            # TODO: call _select_similar?
+            getattr(self, w)(callback=partial(_next_wizard, wizard.pop(0)))
+
+        #_next_wizard(wizard.pop(0))  # TODO
 
     def _after_action(self, up):
         # Update the views with the old and new clusters.
@@ -691,20 +715,19 @@ class Supervisor(EventEmitter):
         # Update the cluster view selection.
         self.cluster_view.select(cluster_ids)
 
+    '''
+    def _wait_selected(self, view):
+        b = Barrier()
+        view.get_selected(b(1))
+        b.wait()
+        return b.result(1)[0][0]
+
     def get_selected(self, callback=None):
         """Get the selected clusters in the cluster and similarity views.
         Asynchronous operation if no callback is passed, otherwise synchronous."""
         if callback is None:
-            b = Barrier()
-            self.cluster_view.get_selected(b('cluster_view'))
-            b.wait()
-            cluster_ids = b.result('cluster_view')[0][0]
-
-            b = Barrier()
-            self.similarity_view.get_selected(b('similarity_view'))
-            b.wait()
-            similar = b.result('similarity_view')[0][0]
-
+            cluster_ids = self._wait_selected(self.cluster_view)
+            similar = self._wait_selected(self.similarity_view)
             return _uniq(cluster_ids + similar)
 
         b = Barrier()
@@ -717,14 +740,26 @@ class Supervisor(EventEmitter):
             similar = b.result('similarity_view')[0][0]
             selected = _uniq(cluster_ids + similar)
             callback(selected)
+    '''
 
     # Clustering actions
     # -------------------------------------------------------------------------
 
+    def selected_clusters(self):
+        state = self.action_flow.current()
+        return state.cluster_ids or [] if state else []
+
+    def selected_similar(self):
+        state = self.action_flow.current()
+        return state.similar or [] if state else []
+
+    def selected(self):
+        return _uniq(self.selected_clusters() + self.selected_similar())
+
     def merge(self, cluster_ids=None, to=None):
         """Merge the selected clusters."""
         if cluster_ids is None:
-            return self.get_selected(lambda cl: self.merge(cluster_ids=cl, to=to))
+            cluster_ids = self.selected()
         if len(cluster_ids or []) <= 1:
             return
         self.clustering.merge(cluster_ids, to=to)
@@ -754,7 +789,7 @@ class Supervisor(EventEmitter):
     def fields(self):
         """Tuple of label fields."""
         return tuple(f for f in self.cluster_meta.fields
-                     if f not in ('group', 'next_cluster'))
+                     if f not in ('group',))
 
     def get_labels(self, field):
         """Return the labels of all clusters, for a given field."""
@@ -768,8 +803,7 @@ class Supervisor(EventEmitter):
 
         """
         if cluster_ids is None:
-            return self.cluster_view.get_selected(
-                lambda cl: self.label(name, value, cluster_ids=cl))
+            cluster_ids = self.selected()
         if not hasattr(cluster_ids, '__len__'):
             cluster_ids = [cluster_ids]
         if len(cluster_ids) == 0:
@@ -777,54 +811,52 @@ class Supervisor(EventEmitter):
         self.cluster_meta.set(name, cluster_ids, value)
         self._global_history.action(self.cluster_meta)
 
-    def move(self, group, cluster_ids=None):
-        """Assign a group to some clusters.
-
-        Example: `good`
-
-        """
-        if isinstance(cluster_ids, string_types):
+    def move(self, group, which):
+        """Assign a group to some clusters."""
+        if which == 'all':
+            which = self.selected()
+        elif which == 'best':
+            which = self.selected_clusters()
+        elif which == 'similar':
+            which = self.selected_similar()
+        if isinstance(which, string_types):
             logger.warn("The list of clusters should be a list of integers, "
                         "not a string.")
             return
-        self.label('group', group, cluster_ids=cluster_ids)
-
-    def move_best(self, group=None):
-        """Move all selected best clusters to a group."""
-        self.cluster_view.get_selected(lambda cl: self.move(group, cl))
-
-    def move_similar(self, group=None):
-        """Move all selected similar clusters to a group."""
-        self.similarity_view.get_selected(lambda cl: self.move(group, cl))
-
-    def move_all(self, group=None):
-        """Move all selected clusters to a group."""
-        self.get_selected(lambda cl: self.move(group, cl))
+        if not which:
+            return
+        assert which
+        logger.debug("Move %s to %s.", which, group)
+        if group == 'unsorted':
+            group = None
+        self.label('group', group, cluster_ids=which)
 
     # Wizard actions
     # -------------------------------------------------------------------------
 
-    def reset(self):
+    def reset(self, callback=None):
         """Reset the wizard."""
-        # TODO
-        self.cluster_view.next()
+        self.cluster_view.first(callback=callback or partial(self.emit, 'wizard_done'))
 
-    def next_best(self):
+    def next_best(self, callback=None):
         """Select the next best cluster."""
-        self.cluster_view.next()
+        self.cluster_view.next(callback=callback or partial(self.emit, 'wizard_done'))
 
-    def previous_best(self):
+    def previous_best(self, callback=None):
         """Select the previous best cluster."""
-        self.cluster_view.previous()
+        self.cluster_view.previous(callback=callback or partial(self.emit, 'wizard_done'))
 
-    def next(self):
+    def next(self, callback=None):
         """Select the next cluster."""
-        self.cluster_view.get_selected(
-            lambda _: self.cluster_view.next() if len(_) == 0 else self.similarity_view.next())
+        state = self.action_flow.current()
+        if not state or not state.cluster_ids:
+            self.cluster_view.first(callback=callback or partial(self.emit, 'wizard_done'))
+        else:
+            self.similarity_view.next(callback=callback or partial(self.emit, 'wizard_done'))
 
-    def previous(self):
+    def previous(self, callback=None):
         """Select the previous cluster."""
-        self.similarity_view.previous()
+        self.similarity_view.previous(callback=callback or partial(self.emit, 'wizard_done'))
 
     # Other actions
     # -------------------------------------------------------------------------
