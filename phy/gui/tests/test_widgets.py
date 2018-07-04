@@ -12,7 +12,7 @@ from pytest import yield_fixture
 
 from phy.utils.testing import captured_logging
 from .test_qt import _block
-from ..widgets import HTMLWidget, Table, Barrier
+from ..widgets import HTMLWidget, Table, Barrier, AsyncTasks
 
 
 #------------------------------------------------------------------------------
@@ -53,6 +53,30 @@ def table(qtbot):
     yield table
 
     table.close()
+
+
+#------------------------------------------------------------------------------
+# Test utils
+#------------------------------------------------------------------------------
+
+def test_async_tasks():
+
+    def f1(x, callback=None):
+        out = x + 1
+        if callback:
+            return callback(out)
+
+    def f2(y, callback=None):
+        out = 2 * y
+        if callback:
+            return callback(out)
+        return out
+
+    def f3(z):
+        return z ** 2
+
+    at = AsyncTasks([f1, f2, f3])
+    assert (at(2)) == 36
 
 
 #------------------------------------------------------------------------------

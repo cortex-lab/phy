@@ -133,6 +133,20 @@ class Barrier(object):
         return self._results.get(key, None)
 
 
+class AsyncTasks(object):
+    def __init__(self, funs):
+        self.funs = funs
+
+    def __call__(self, *args):
+        if not self.funs:
+            return
+        fun = self.funs.pop(0)
+        if len(self.funs) > 0:
+            return fun(*args, callback=self)
+        else:
+            return fun(*args)
+
+
 class HTMLBuilder(object):
     def __init__(self, title=''):
         self.title = title
