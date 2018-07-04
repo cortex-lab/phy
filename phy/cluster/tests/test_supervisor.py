@@ -558,7 +558,7 @@ def test_supervisor_action_move_2(supervisor):
 
 
 def _test_supervisor_action_move_3(supervisor):
-
+    # TODO
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
 

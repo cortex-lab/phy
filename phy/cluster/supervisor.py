@@ -18,7 +18,7 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.utils import EventEmitter, Bunch, emit
 from phy.gui.actions import Actions
-from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
+from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier, AsyncTasks
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +177,9 @@ class ActionFlow(EventEmitter):
             if state.next_similar is not None:
                 next_state.similar = [state.next_similar]
         else:
-            next_state.wizard = ['next_best', 'next']
+            # next_best, and then select next similar.
+            next_state.wizard = 'next_best'
+            next_state.similar = [state.next_similar]
         return self._make_state(state=next_state)
 
     def _state_after_undo(self, action):
@@ -399,6 +401,10 @@ class ActionCreator(EventEmitter):
 # Clustering GUI component
 # -----------------------------------------------------------------------------
 
+def _is_group_masked(group):
+    return group in ('noise', 'mua')
+
+
 class Supervisor(EventEmitter):
     """Component that brings manual clustering facilities to a GUI:
 
@@ -550,7 +556,7 @@ class Supervisor(EventEmitter):
                'n_spikes': self.n_spikes(cluster_id),
                'quality': '%.3f' % self.quality(cluster_id),
                'group': group,
-               'is_masked': group in ('noise', 'mua'),
+               'is_masked': _is_group_masked(group),
                }
         return {k: v for k, v in out.items() if k not in exclude}
 
@@ -568,20 +574,24 @@ class Supervisor(EventEmitter):
         self.connect(self._after_action, event='cluster')
 
     def _clusters_added(self, cluster_ids):
-        logger.debug("Clusters added: %s", cluster_ids)
+        logger.log(5, "Clusters added: %s", cluster_ids)
         data = [self._get_cluster_info(cluster_id) for cluster_id in cluster_ids]
         self.cluster_view.add(data)
         self.similarity_view.add(data)
 
     def _clusters_removed(self, cluster_ids):
-        logger.debug("Clusters removed: %s", cluster_ids)
+        logger.log(5, "Clusters removed: %s", cluster_ids)
         self.cluster_view.remove(cluster_ids)
         self.similarity_view.remove(cluster_ids)
 
     def _cluster_groups_changed(self, cluster_ids):
-        logger.debug("Cluster groups changed: %s", cluster_ids)
-        data = [{'id': cluster_id, 'group': self.cluster_meta.get('group', cluster_id)}
+        logger.log(5, "Cluster groups changed: %s", cluster_ids)
+        data = [{'id': cluster_id,
+                 'group': self.cluster_meta.get('group', cluster_id),
+                }
                 for cluster_id in cluster_ids]
+        for _ in data:
+            _['is_masked'] = _is_group_masked(_['group'])
         self.cluster_view.change(data)
         self.similarity_view.change(data)
 
@@ -622,17 +632,16 @@ class Supervisor(EventEmitter):
             return
         self._pause_action_flow = True
 
-        def _select_done(_):
-            similar, next_similar = _
+        def _select_done(similar_and_next=(None, None)):
+            similar, next_similar = similar_and_next
             if not state.next_similar:
                 self.action_flow.update_current_state(next_similar=next_similar)
-                #state.next_similar = next_similar
             self._pause_action_flow = False
             self.emit('select_after_action_done')
             self.action_flow.show_last()
 
-        def _select_similar(_):
-            cluster_ids, next_cluster = _
+        def _select_similar(cluster_ids_and_next=(None, None)):
+            cluster_ids, next_cluster = cluster_ids_and_next
             if not state.next_cluster:
                 self.action_flow.update_current_state(
                     cluster_ids=state.cluster_ids or cluster_ids,
@@ -640,20 +649,16 @@ class Supervisor(EventEmitter):
             if state.similar:
                 self.similarity_view.select(state.similar, callback=_select_done)
             else:
-                _select_done((None, None))
+                _select_done()
 
         if state.cluster_ids:
             self.cluster_view.select(state.cluster_ids, callback=_select_similar)
 
-        # wizard field is a list of method names to do after the action.
-        wizard = state.get('wizard', [])
-
-        def _next_wizard(w, out):
-            cluster_ids, next_cluster = out
-            # TODO: call _select_similar?
-            getattr(self, w)(callback=partial(_next_wizard, wizard.pop(0)))
-
-        #_next_wizard(wizard.pop(0))  # TODO
+        # wizard field is a method name to call after the action.
+        wizard = state.get('wizard', None)
+        if not wizard:
+            return
+        getattr(self, wizard)(callback=_select_similar)
 
     def _after_action(self, up):
         # Update the views with the old and new clusters.
