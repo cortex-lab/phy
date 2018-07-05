@@ -8,6 +8,7 @@
 # -----------------------------------------------------------------------------
 
 from functools import partial
+import inspect
 import logging
 
 import numpy as np
@@ -18,6 +19,7 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.utils import EventEmitter, Bunch, emit
 from phy.gui.actions import Actions
+from phy.gui.qt import _block
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 
 logger = logging.getLogger(__name__)
@@ -59,12 +61,14 @@ class TaskLogger(object):
         self.cluster_view = cluster_view
         self.similarity_view = similarity_view
         self.supervisor = supervisor
+        self._processing = False
         # List of tasks that have completed.
         self._history = []
         # Tasks that have yet to be performed.
         self._queue = []
 
     def enqueue(self, sender, name, *args, output=None):
+        logger.debug("Enqueue %s %s %s (%s)", sender.__class__.__name__, name, args, output)
         self._queue.append((sender, name, args))
         # output keyword allows to bypass the task processor and log
         # directly the task's result.
@@ -87,31 +91,34 @@ class TaskLogger(object):
     def _eval(self, task):
         # Evaluation a task and call a callback function.
         sender, name, args = task
-        getattr(sender, name)(*args, callback=partial(self._callback, task))
+        logger.debug("Calling %s.%s(%s)", sender.__class__.__name__, name, args)
+        f = getattr(sender, name)
+        callback = partial(self._callback, task)
+        if 'callback' in inspect.getargspec(f)[0]:
+            f(*args, callback=callback)
+        else:
+            # HACK: use on_cluster event instead of callback.
+            self.supervisor.connect(callback, event='cluster')
+            f(*args)
+            self.supervisor.unconnect(callback, event='cluster')
 
     def process(self):
+        self._processing = True
         task = self.dequeue()
         if not task:
+            self._processing = False
             return
         # Process the first task in queue, or stop if the queue is empty.
         self._eval(task)
 
     def enqueue_after(self, task, output):
         sender, name, args = task
-        getattr(self, '_after_%s' % name)(task, output)
-
-    def _after_select(self, task, output):
-        pass
-
-    def _after_next(self, task, output):
-        pass
-
-    def _after_previous(self, task, output):
-        pass
+        getattr(self, '_after_%s' % name,
+                lambda *args: logger.debug("No method _after_%s", name))(task, output)
 
     def _after_merge(self, task, output):
         sender, name, args = task
-        merged, to = args
+        merged, to = output.deleted, output.added[0]
         self.enqueue(self.cluster_view, 'select', [to])
         cluster_ids, next_cluster, similar, next_similar = self.last_state()
         if similar is None:
@@ -123,8 +130,7 @@ class TaskLogger(object):
 
     def _after_split(self, task, output):
         sender, name, args = task
-        old_cluster_ids, new_cluster_ids = args
-        self.enqueue(self.cluster_view, 'select', new_cluster_ids)
+        self.enqueue(self.cluster_view, 'select', output.new_cluster_ids)
 
     def _get_clusters(self, which):
         cluster_ids, next_cluster, similar, next_similar = self.last_state()
@@ -138,7 +144,7 @@ class TaskLogger(object):
 
     def _after_move(self, task, output):
         sender, name, args = task
-        which, group = args
+        which, group = output.metadata_changed, output.metadata_value
         moved = set(self._get_clusters(which))
         cluster_ids, next_cluster, similar, next_similar = self.last_state()
         cluster_ids = set(cluster_ids or ())
@@ -173,7 +179,14 @@ class TaskLogger(object):
         sender, name, args = task
         assert sender
         assert name
-        self._history.append((sender, name, args, output))
+        logger.debug("Log %s %s %s (%s)", sender.__class__.__name__, name, args, output)
+        task = (sender, name, args, output)
+        # Avoid successive duplicates (even if sender is different).
+        if not self._history or self._history[-1][1:] != task[1:]:
+            self._history.append(task)
+
+    def log(self, sender, name, *args, output=None):
+        self._log((sender, name, args), output)
 
     def last_task(self, name=None, name_not_in=()):
         for (sender, name_, args, output) in reversed(self._history):
@@ -206,6 +219,9 @@ class TaskLogger(object):
         print("=== History ===")
         for sender, name, args, output in self._history:
             print('{: <24} {: <8}'.format(sender.__class__.__name__, name), *args, output)
+
+    def has_finished(self):
+        return len(self._queue) == 0 and not self._processing
 
 
 # -----------------------------------------------------------------------------
@@ -430,7 +446,6 @@ class Supervisor(EventEmitter):
                  context=None,
                  ):
         super(Supervisor, self).__init__()
-        self._pause_action_flow = None
         self.context = context
         self.quality = quality or self.n_spikes  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
@@ -450,12 +465,6 @@ class Supervisor(EventEmitter):
         # Create the GlobalHistory instance.
         self._global_history = GlobalHistory(process_ups=_process_ups)
 
-        # Create the Action Flow instance.
-        self.action_flow = ActionFlow()
-        # Call _select_after_action when ActionFlow requests a new state
-        # after an action.
-        self.action_flow.connect(self._select_after_action, event='new_state')
-
         # Create The Action Creator instance.
         self.action_creator = ActionCreator()
         self.action_creator.connect(self._on_action, event='action')
@@ -470,6 +479,13 @@ class Supervisor(EventEmitter):
 
         # Create the cluster view and similarity view.
         self._create_views()
+
+        # Create the TaskLogger.
+        self.task_logger = TaskLogger(
+            cluster_view=self.cluster_view,
+            similarity_view=self.similarity_view,
+            supervisor=self,
+        )
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -578,93 +594,36 @@ class Supervisor(EventEmitter):
         self.cluster_view.change(data)
         self.similarity_view.change(data)
 
-    def _update_next_cluster(self, view):
-        current = self.action_flow.current()
-        if current.type != 'state':
-            return
-        if not current.get('next_cluster', None):
-            view.get_next_id(
-                lambda next_cluster: current.update(next_cluster=next_cluster))
-
     def _clusters_selected(self, cluster_ids_and_next):
         cluster_ids, next_cluster = cluster_ids_and_next
         logger.debug("Clusters selected: %s (%s)", cluster_ids, next_cluster)
-        if not self._pause_action_flow:
-            self.action_flow.add_state(cluster_ids=cluster_ids, next_cluster=next_cluster)
+        self.task_logger.log(self.cluster_view, 'select', cluster_ids, output=cluster_ids_and_next)
+        # Update the similarity view when the cluster view selection changes.
         self.similarity_view.reset(cluster_ids)
         self.emit('select_clusters_done')
-        self.action_flow.show_last()
 
     def _similar_selected(self, similar_and_next):
         similar, next_similar = similar_and_next
         logger.debug("Similar clusters selected: %s (%s)", similar, next_similar)
-        current = self.action_flow.current()
-        if not self._pause_action_flow:
-            self.action_flow.add_state(
-                cluster_ids=current.cluster_ids, next_cluster=current.next_cluster,
-                similar=similar, next_similar=next_similar)
+        self.task_logger.log(self.similarity_view, 'select', similar, output=similar_and_next)
         self.emit('select_similar_done')
-        self.action_flow.show_last()
 
     def _on_action(self, name, *args):
         """Bind the 'action' event raised by ActionCreator to methods of this class."""
-        return getattr(self, name)(*args)
-
-    def _select_after_action(self, state):
-        if state.type != 'state':
-            return
-        self._pause_action_flow = True
-
-        def _select_done(similar_and_next=(None, None)):
-            similar, next_similar = similar_and_next
-            if not state.next_similar:
-                self.action_flow.update_current_state(next_similar=next_similar)
-            self._pause_action_flow = False
-            self.emit('select_after_action_done')
-            self.action_flow.show_last()
-
-        def _select_similar(cluster_ids_and_next=(None, None)):
-            cluster_ids, next_cluster = cluster_ids_and_next
-            if not state.next_cluster:
-                self.action_flow.update_current_state(
-                    cluster_ids=state.cluster_ids or cluster_ids,
-                    next_cluster=next_cluster)
-            if state.similar:
-                self.similarity_view.select(state.similar, callback=_select_done)
-            else:
-                _select_done()
-
-        if state.cluster_ids:
-            self.cluster_view.select(state.cluster_ids, callback=_select_similar)
-
-        # wizard field is a method name to call after the action.
-        wizard = state.get('wizard', None)
-        if not wizard:
-            return
-        getattr(self, wizard)(callback=_select_similar)
+        # Enqueue the requested action.
+        self.task_logger.enqueue(self, name, *args)
+        # Perform the action (which calls self.<name>(...)).
+        self.task_logger.process()
 
     def _after_action(self, up):
+        # This is called once the action has completed. We update the tables.
         # Update the views with the old and new clusters.
         self._clusters_added(up.added)
         self._clusters_removed(up.deleted)
-
-        # Prepare the next selection after the action.
-        if up.history == 'undo':
-            self.action_flow.add_undo(up)
-        elif up.history == 'redo':
-            self.action_flow.add_redo(up)
-        elif up.description == 'merge':
-            self.action_flow.add_merge(up.deleted, up.added[0])
-        elif up.description == 'assign':
-            self.action_flow.add_split(old_cluster_ids=up.deleted,
-                                       new_cluster_ids=up.added)
-        elif up.description == 'metadata_group':
-            self._cluster_groups_changed(up.metadata_changed)
-            self.action_flow.add_move(up.metadata_changed, up.metadata_value)
-
-        #self.emit('cluster', up)
-        # New selection done by ActionFlow which emits "new_state", connected
-        # to _select_after_action.
+        self._cluster_groups_changed(up.metadata_changed)
+        # After the action has finished, we process the pending actions,
+        # like selection of new clusters in the tables.
+        self.task_logger.process()
 
     @property
     def state(self):
@@ -691,7 +650,7 @@ class Supervisor(EventEmitter):
     # Selection actions
     # -------------------------------------------------------------------------
 
-    def select(self, *cluster_ids):
+    def select(self, *cluster_ids, callback=None):
         """Select a list of clusters."""
         # HACK: allow for `select(1, 2, 3)` in addition to `select([1, 2, 3])`
         # This makes it more convenient to select multiple clusters with
@@ -701,45 +660,18 @@ class Supervisor(EventEmitter):
         # Remove non-existing clusters from the selection.
         #cluster_ids = self._keep_existing_clusters(cluster_ids)
         # Update the cluster view selection.
-        self.cluster_view.select(cluster_ids)
-
-    '''
-    def _wait_selected(self, view):
-        b = Barrier()
-        view.get_selected(b(1))
-        b.wait()
-        return b.result(1)[0][0]
-
-    def get_selected(self, callback=None):
-        """Get the selected clusters in the cluster and similarity views.
-        Asynchronous operation if no callback is passed, otherwise synchronous."""
-        if callback is None:
-            cluster_ids = self._wait_selected(self.cluster_view)
-            similar = self._wait_selected(self.similarity_view)
-            return _uniq(cluster_ids + similar)
-
-        b = Barrier()
-        self.cluster_view.get_selected(b('cluster_view'))
-        self.similarity_view.get_selected(b('similarity_view'))
-
-        @b.after_all_finished
-        def _callback_after_both():
-            cluster_ids = b.result('cluster_view')[0][0]
-            similar = b.result('similarity_view')[0][0]
-            selected = _uniq(cluster_ids + similar)
-            callback(selected)
-    '''
+        self.cluster_view.select(cluster_ids, callback=callback)
 
     # Clustering actions
     # -------------------------------------------------------------------------
 
     def selected_clusters(self):
-        state = self.action_flow.current()
-        return state.cluster_ids or [] if state else []
+        state = self.task_logger.last_state()
+        return state[0] or [] if state else []
 
     def selected_similar(self):
-        state = self.action_flow.current()
-        return state.similar or [] if state else []
+        state = self.task_logger.last_state()
+        return state[2] or [] if state else []
 
     def selected(self):
         return _uniq(self.selected_clusters() + self.selected_similar())
@@ -870,3 +802,7 @@ class Supervisor(EventEmitter):
         self.emit('request_save', spike_clusters, groups, *labels)
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
+
+    def block(self):
+        """Block until there are no pending actions."""
+        _block(lambda: self.task_logger.has_finished())

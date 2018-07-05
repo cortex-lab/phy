@@ -25,7 +25,7 @@ from phy.gui.widgets import Barrier
 from phy.gui.qt import qInstallMessageHandler
 #from phy.gui.tests.test_qt import _block
 from phy.gui.tests.test_widgets import _assert, _wait_until_table_ready
-from phy.utils import connect
+from phy.utils import connect, Bunch
 
 
 def handler(msg_type, msg_log_context, msg_string):
@@ -74,6 +74,7 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
     return mc
 
 
+'''
 @contextmanager
 def wait_after_event(supervisor, event):
     b = Barrier()
@@ -81,6 +82,7 @@ def wait_after_event(supervisor, event):
     yield
     b.wait()
     print("Finished waiting after", event)
+'''
 
 
 #------------------------------------------------------------------------------
@@ -90,7 +92,7 @@ def wait_after_event(supervisor, event):
 @fixture
 def tl():
     class MockClusterView(object):
-        _selected = None
+        _selected = [0]
 
         def select(self, cl, callback=None):
             self._selected = cl
@@ -107,22 +109,22 @@ def tl():
 
     class MockSupervisor(object):
         def merge(self, cluster_ids, to, callback=None):
-            callback(to)
+            callback(Bunch(deleted=cluster_ids, added=[to]))
 
         def split(self, old_cluster_ids, new_cluster_ids, callback=None):
-            callback(None)
+            callback(Bunch(old_cluster_ids=old_cluster_ids, new_cluster_ids=new_cluster_ids))
 
         def move(self, which, group, callback=None):
-            callback(None)
+            callback(Bunch(metadata_changed=which, metadata_value=group))
 
         def undo(self, callback=None):
-            callback(None)
+            callback(Bunch())
 
         def redo(self, callback=None):
-            callback(None)
+            callback(Bunch())
 
         def next(self, callback=None):
-            callback(None)
+            callback()
 
         def next_best(self, callback=None):
             callback(None)
@@ -282,29 +284,19 @@ def test_action_creator_1(qtbot, gui):
 #------------------------------------------------------------------------------
 
 def _select(supervisor, cluster_ids, similar=None):
+    supervisor.task_logger.enqueue(supervisor.cluster_view, 'select', cluster_ids)
+    if similar is not None:
+        supervisor.task_logger.enqueue(supervisor.similarity_view, 'select', similar)
+    supervisor.task_logger.process()
+    supervisor.block()
+    supervisor.task_logger.show_history()
 
-    with wait_after_event(supervisor, 'select_clusters_done'):
-        supervisor.cluster_view.select(cluster_ids)
-
-    if similar:
-        with wait_after_event(supervisor, 'select_similar_done'):
-            supervisor.similarity_view.select(similar)
-
-    state = supervisor.action_flow.current()
-    assert state.cluster_ids == cluster_ids
-    if similar:
-        assert state.similar == similar
+    assert supervisor.task_logger.last_state()[0] == cluster_ids
+    assert supervisor.task_logger.last_state()[2] == similar
 
 
 def _assert_selected(supervisor, sel):
     assert supervisor.selected() == sel
-
-
-@contextmanager
-def wait_selected(supervisor, sel):
-    with wait_after_event(supervisor, 'select_clusters_done'):
-        yield
-    _assert_selected(supervisor, sel)
 
 
 def test_select(qtbot, supervisor):
@@ -313,20 +305,23 @@ def test_select(qtbot, supervisor):
 
 
 def test_supervisor_select_1(qtbot, supervisor):
-    with wait_selected(supervisor, [0]):
-        supervisor.cluster_view.select([0])
+    supervisor.actions.select([0])
+    supervisor.block()
+    _assert_selected(supervisor, [0])
+    supervisor.task_logger.show_history()
 
 
 def test_supervisor_select_2(qtbot, supervisor):
-    with wait_selected(supervisor, [30]):
-        supervisor.cluster_view.next()
+    supervisor.actions.next_best()
+    supervisor.block()
+    _assert_selected(supervisor, [30])
 
 
 def test_supervisor_select_order(qtbot, supervisor):
-    with wait_selected(supervisor, [1, 0]):
-        supervisor.select([1, 0])
-    with wait_selected(supervisor, [0, 1]):
-        supervisor.select([0, 1])
+    _select(supervisor, [1, 0])
+    _assert_selected(supervisor, [1, 0])
+    _select(supervisor, [0, 1])
+    _assert_selected(supervisor, [0, 1])
 
 
 def test_supervisor_edge_cases(supervisor):
@@ -334,8 +329,7 @@ def test_supervisor_edge_cases(supervisor):
     # Empty selection at first.
     ae(supervisor.clustering.cluster_ids, [0, 1, 2, 10, 11, 20, 30])
 
-    with wait_selected(supervisor, [0]):
-        supervisor.select([0])
+    _select(supervisor, [0])
 
     supervisor.undo()
     supervisor.redo()
@@ -367,8 +361,8 @@ def test_supervisor_skip(qtbot, gui, supervisor):
     expected = [30, 20, 11, 2, 1]
 
     for clu in expected:
-        with wait_after_event(supervisor, 'select_clusters_done'):
-            supervisor.cluster_view.next()
+        supervisor.actions.next_best()
+        supervisor.block()
         _assert_selected(supervisor, [clu])
 
 
@@ -377,14 +371,18 @@ def test_supervisor_merge_1(qtbot, supervisor):
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
 
-    supervisor.merge()
+    supervisor.actions.merge()
+    supervisor.block()
 
     _assert_selected(supervisor, [31, 11])
 
-    supervisor.undo()
+    supervisor.actions.undo()
+    supervisor.block()
     _assert_selected(supervisor, [30, 20])
 
-    supervisor.redo()
+    supervisor.actions.redo()
+    supervisor.block()
+    supervisor.task_logger.show_history()
     _assert_selected(supervisor, [31, 11])
 
 
