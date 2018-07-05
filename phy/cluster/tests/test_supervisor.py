@@ -74,17 +74,6 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
     return mc
 
 
-'''
-@contextmanager
-def wait_after_event(supervisor, event):
-    b = Barrier()
-    supervisor.connect(b(1), event=event)
-    yield
-    b.wait()
-    print("Finished waiting after", event)
-'''
-
-
 #------------------------------------------------------------------------------
 # Test tasks
 #------------------------------------------------------------------------------
@@ -112,7 +101,7 @@ def tl():
             callback(Bunch(deleted=cluster_ids, added=[to]))
 
         def split(self, old_cluster_ids, new_cluster_ids, callback=None):
-            callback(Bunch(old_cluster_ids=old_cluster_ids, new_cluster_ids=new_cluster_ids))
+            callback(Bunch(deleted=old_cluster_ids, added=new_cluster_ids))
 
         def move(self, which, group, callback=None):
             callback(Bunch(metadata_changed=which, metadata_value=group))
