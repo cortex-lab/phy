@@ -132,7 +132,7 @@ class TaskLogger(object):
 
     def _after_split(self, task, output):
         sender, name, args = task
-        self.enqueue(self.cluster_view, 'select', output.new_cluster_ids)
+        self.enqueue(self.cluster_view, 'select', output.added)
 
     def _get_clusters(self, which):
         cluster_ids, next_cluster, similar, next_similar = self.last_state()
@@ -146,7 +146,7 @@ class TaskLogger(object):
 
     def _after_move(self, task, output):
         sender, name, args = task
-        which, group = output.metadata_changed, output.metadata_value
+        which = output.metadata_changed
         moved = set(self._get_clusters(which))
         cluster_ids, next_cluster, similar, next_similar = self.last_state()
         cluster_ids = set(cluster_ids or ())
@@ -163,7 +163,7 @@ class TaskLogger(object):
             self.enqueue(self.similarity_view, 'next')
 
     def _after_undo(self, task, output):
-        last_action = self.last_task(name_not_in=('select', 'undo', 'redo'))
+        last_action = self.last_task(name_not_in=('select', 'next', 'previous', 'undo', 'redo'))
         self._select_state(self.last_state(last_action))
 
     def _after_redo(self, task, output):
@@ -210,11 +210,11 @@ class TaskLogger(object):
             if (sender == self.similarity_view and
                     similarity_state == (None, None) and
                     name in ('select', 'next', 'previous')):
-                similarity_state = output
+                similarity_state = output or (None, None)
             if (sender == self.cluster_view and
                     cluster_state == (None, None) and
                     name in ('select', 'next', 'previous')):
-                cluster_state = output
+                cluster_state = output or (None, None)
                 return (*cluster_state, *similarity_state)
 
     def show_history(self):
@@ -770,8 +770,8 @@ class Supervisor(EventEmitter):
 
     def next(self, callback=None):
         """Select the next cluster."""
-        state = self.action_flow.current()
-        if not state or not state.cluster_ids:
+        state = self.task_logger.last_state()
+        if not state or not state[0]:
             self.cluster_view.first(callback=callback or partial(self.emit, 'wizard_done'))
         else:
             self.similarity_view.next(callback=callback or partial(self.emit, 'wizard_done'))
