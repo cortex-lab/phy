@@ -14,7 +14,7 @@ from numpy.testing import assert_array_equal as ae
 
 from .. import supervisor as _supervisor
 from ..supervisor import (Supervisor,
-                          ActionFlow,
+                          TaskLogger,
                           ClusterView,
                           SimilarityView,
                           ActionCreator,
@@ -84,98 +84,136 @@ def wait_after_event(supervisor, event):
 
 
 #------------------------------------------------------------------------------
-# Test action flow
+# Test tasks
 #------------------------------------------------------------------------------
 
-def test_action_flow_1():
-    assert ActionFlow()._previous_state(None) is None
+@fixture
+def tl():
+    class MockClusterView(object):
+        _selected = None
+
+        def select(self, cl, callback=None):
+            self._selected = cl
+            callback((cl, cl[-1] + 1))
+
+        def next(self, callback=None):
+            callback(([self._selected[-1] + 1], self._selected[-1] + 2))
+
+        def previous(self, callback=None):
+            callback(([self._selected[-1] - 1], self._selected[-1]))
+
+    class MockSimilarityView(MockClusterView):
+        pass
+
+    class MockSupervisor(object):
+        def merge(self, cluster_ids, to, callback=None):
+            callback(to)
+
+        def split(self, old_cluster_ids, new_cluster_ids, callback=None):
+            callback(None)
+
+        def move(self, which, group, callback=None):
+            callback(None)
+
+        def undo(self, callback=None):
+            callback(None)
+
+        def redo(self, callback=None):
+            callback(None)
+
+        def next(self, callback=None):
+            callback(None)
+
+        def next_best(self, callback=None):
+            callback(None)
+
+        def previous(self, callback=None):
+            callback(None)
+
+        def previous_best(self, callback=None):
+            callback(None)
+
+    out = TaskLogger(MockClusterView(), MockSimilarityView(), MockSupervisor())
+
+    return out
 
 
-def test_action_flow_2():
-    af = ActionFlow()
-    af.update_current_state(cluster_ids=[0])
-    assert af.current().cluster_ids == [0]
+def test_task_1(tl):
+    assert tl.last_state(None) is None
 
 
-def test_action_flow_3():
-    af = ActionFlow()
-
-    af.add_state(cluster_ids=[0], similar=[100], next_similar=101)
-    assert af.current().next_cluster is None
-
-    af.update_current_state(next_cluster=1000)
-    assert af.current().next_cluster == 1000
-
-    af.update_current_state(cluster_ids=[1])
-    assert af.current().cluster_ids == [0]
+def test_task_2(tl):
+    tl.enqueue(tl.cluster_view, 'select', [0])
+    tl.process()
+    assert tl.last_state() == ([0], 1, None, None)
 
 
-def test_action_flow_merge():
-    af = ActionFlow()
-    af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
-    af.add_merge(cluster_ids=[0, 100], to=1000)
-
-    s = af.current()
-    assert s.type == 'state'
-    assert s.cluster_ids == [1000]
-    assert s.similar == [101]
-
-    af.add_undo()
-    su = af.current()
-    assert su.type == 'state'
-    assert su.cluster_ids == [0]
-    assert su.similar == [100]
-    assert su.next_cluster == 2
-    assert su.next_similar == 101
-
-    af.add_redo()
-    assert af.current() == s
+def test_task_3(tl):
+    tl.enqueue(tl.cluster_view, 'select', [0])
+    tl.enqueue(tl.similarity_view, 'select', [100])
+    tl.process()
+    assert tl.last_state() == ([0], 1, [100], 101)
 
 
-def test_action_flow_split():
-    af = ActionFlow()
-    af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
-    af.add_split(old_cluster_ids=[0, 100], new_cluster_ids=[1000, 1001])
+def test_task_merge(tl):
+    tl.enqueue(tl.cluster_view, 'select', [0])
+    tl.enqueue(tl.similarity_view, 'select', [100])
+    tl.enqueue(tl.supervisor, 'merge', [0, 100], 1000)
+    tl.process()
 
-    s = af.current()
-    assert s.type == 'state'
-    assert s.cluster_ids == [1000, 1001]
-    assert s.similar is None
+    assert tl.last_state() == ([1000], 1001, [101], 102)
 
+    tl.enqueue(tl.supervisor, 'undo')
+    tl.process()
+    assert tl.last_state() == ([0], 1, [100], 101)
 
-def test_action_flow_move_clusters_1():
-    af = ActionFlow()
-    af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
-    af.add_move(cluster_ids=[0], group='good')
-
-    s = af.current()
-    assert s.type == 'state'
-    assert s.cluster_ids == [2]
-    # No connection to request_next_similar, so no next similar cluster.
-    assert s.similar is None
+    tl.enqueue(tl.supervisor, 'redo')
+    tl.process()
+    assert tl.last_state() == ([1000], 1001, [101], 102)
 
 
-def test_action_flow_move_clusters_2():
-    af = ActionFlow()
+def test_task_split(tl):
+    tl.enqueue(tl.cluster_view, 'select', [0])
+    tl.enqueue(tl.similarity_view, 'select', [100])
+    tl.enqueue(tl.supervisor, 'split', [0, 100], [1000, 1001])
+    tl.process()
 
-    af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
-    af.add_move(cluster_ids=[0], group='good')
-
-    s = af.current()
-    assert s.type == 'state'
-    assert s.cluster_ids == [2]
-    assert s.similar is None
+    assert tl.last_state() == ([1000, 1001], 1002, None, None)
 
 
-def test_action_flow_move_similar():
-    af = ActionFlow()
-    af.add_state(cluster_ids=[0], similar=[100], next_cluster=2, next_similar=101)
-    af.add_move(cluster_ids=[100], group='good')
+def test_task_move_1(tl):
+    tl.enqueue(tl.cluster_view, 'select', [0])
+    tl.enqueue(tl.supervisor, 'move', [0], 'good')
+    tl.process()
 
-    s = af.current()
-    assert s.type == 'state'
-    assert s.cluster_ids == [0]
-    assert s.similar == [101]
+    assert tl.last_state() == ([1], 2, None, None)
+
+
+def test_task_move_best(tl):
+    tl.enqueue(tl.cluster_view, 'select', [0])
+    tl.enqueue(tl.similarity_view, 'select', [100])
+    tl.enqueue(tl.supervisor, 'move', [0], 'good')
+    tl.process()
+
+    assert tl.last_state() == ([1], 2, None, None)
+
+
+def test_task_move_similar(tl):
+    tl.enqueue(tl.cluster_view, 'select', [0])
+    tl.enqueue(tl.similarity_view, 'select', [100])
+    tl.enqueue(tl.supervisor, 'move', [100], 'good')
+    tl.process()
+
+    assert tl.last_state() == ([0], 1, [101], 102)
+
+
+def test_task_move_all(tl):
+    tl.enqueue(tl.cluster_view, 'select', [0])
+    tl.enqueue(tl.similarity_view, 'select', [100])
+    tl.enqueue(tl.supervisor, 'move', 'all', 'good')
+    tl.process()
+
+    assert tl.last_state() == ([1], 2, [101], 102)
 
 
 #------------------------------------------------------------------------------

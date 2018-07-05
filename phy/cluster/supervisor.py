@@ -18,7 +18,7 @@ from ._utils import create_cluster_meta
 from .clustering import Clustering
 from phy.utils import EventEmitter, Bunch, emit
 from phy.gui.actions import Actions
-from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier, AsyncTasks
+from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
 
 logger = logging.getLogger(__name__)
 
@@ -51,178 +51,161 @@ def _ensure_all_ints(l):
 
 
 # -----------------------------------------------------------------------------
-# Action flow
+# Tasks
 # -----------------------------------------------------------------------------
 
-class ActionFlow(EventEmitter):
-    """Keep track of all actions and state changes, and defines how selections change
-    after an action."""
-    def __init__(self):
-        super(ActionFlow, self).__init__()
-        self._flow = []
+class TaskLogger(object):
+    def __init__(self, cluster_view=None, similarity_view=None, supervisor=None):
+        self.cluster_view = cluster_view
+        self.similarity_view = similarity_view
+        self.supervisor = supervisor
+        # List of tasks that have completed.
+        self._history = []
+        # Tasks that have yet to be performed.
+        self._queue = []
 
-    def _make_state(
-            self, cluster_ids=None, similar=None, next_cluster=None, next_similar=None,
-            state=None):
+    def enqueue(self, sender, name, *args, output=None):
+        self._queue.append((sender, name, args))
+        # output keyword allows to bypass the task processor and log
+        # directly the task's result.
+        if output is not None:
+            assert sender
+            assert name
+            self._history.append((sender, name, args, output))
 
-        # Get or create the Bunch instance.
-        state = state or Bunch(type='state')
+    def dequeue(self):
+        return self._queue.pop(0) if self._queue else None
 
-        if state.get('cluster_ids', None) is None:
-            state.cluster_ids = cluster_ids
-        if state.get('similar', None) is None:
-            state.similar = similar
-        if state.get('next_cluster', None) is None:
-            state.next_cluster = next_cluster
-        if state.get('next_similar', None) is None:
-            state.next_similar = next_similar
+    def _callback(self, task, output):
+        # Log the task and its output.
+        self._log(task, output)
+        # Find the post tasks after that task has completed, and enqueue them.
+        self.enqueue_after(task, output)
+        # Loop.
+        self.process()
 
-        _ensure_all_ints(state.cluster_ids)
-        _ensure_all_ints(state.similar)
+    def _eval(self, task):
+        # Evaluation a task and call a callback function.
+        sender, name, args = task
+        getattr(sender, name)(*args, callback=partial(self._callback, task))
 
-        return state
-
-    def _append(self, state):
-        self._flow.append(Bunch(**state))
-
-    def add_state(self, state=None, **kwargs):
-        state = state or self._make_state(**kwargs)
-        self._append(state)
-        return state
-
-    def update_current_state(
-            self, cluster_ids=None, similar=None,
-            next_cluster=None, next_similar=None):
-        state = self.current()
-        if not state or state.type != 'state':
-            state = self._make_state()
-            self.add_state(state)
-        self._make_state(cluster_ids=cluster_ids, similar=similar,
-                         next_cluster=next_cluster, next_similar=next_similar,
-                         state=state)
-        self._flow[-1] = state
-        assert self.current() == state
-
-    def _add_action(self, name, **kwargs):
-        action = Bunch(type='action', name=name, **kwargs)
-        self._append(action)
-        state = self.state_after(action)
-        self.emit('new_state', state)
-        self._append(state)
-        return state
-
-    def add_merge(self, cluster_ids=None, to=None):
-        return self._add_action('merge', cluster_ids=cluster_ids, to=to)
-
-    def add_split(self, old_cluster_ids=None, new_cluster_ids=None):
-        return self._add_action(
-            'split', old_cluster_ids=old_cluster_ids, new_cluster_ids=new_cluster_ids)
-
-    def add_move(self, cluster_ids=None, group=None):
-        return self._add_action(
-            'move', cluster_ids=cluster_ids, group=group)
-
-    def add_undo(self, up=None):
-        return self._add_action('undo', up=up)
-
-    def add_redo(self, up=None):
-        return self._add_action('redo', up=up)
-
-    def current(self):
-        if self._flow:
-            obj = self._flow[-1]
-            logger.log(5, "Current state: %s", obj)
-            return obj
-
-    def state_after(self, action):
-        return getattr(self, '_state_after_%s' % action.name)(action)
-
-    def _previous_state(self, obj):
-        try:
-            i = self._index(obj)
-        except ValueError:
+    def process(self):
+        task = self.dequeue()
+        if not task:
             return
-        if i == 0:
+        # Process the first task in queue, or stop if the queue is empty.
+        self._eval(task)
+
+    def enqueue_after(self, task, output):
+        sender, name, args = task
+        getattr(self, '_after_%s' % name)(task, output)
+
+    def _after_select(self, task, output):
+        pass
+
+    def _after_next(self, task, output):
+        pass
+
+    def _after_previous(self, task, output):
+        pass
+
+    def _after_merge(self, task, output):
+        sender, name, args = task
+        merged, to = args
+        self.enqueue(self.cluster_view, 'select', [to])
+        cluster_ids, next_cluster, similar, next_similar = self.last_state()
+        if similar is None:
             return
-        for k in range(1, 10):
-            previous = self._flow[i - k]
-            if previous.type == 'state':
-                return previous
-
-    def _last_undo(self):
-        for obj in self._flow[::-1]:
-            if obj.type == 'action' and obj.name == 'undo':
-                return obj
-
-    def _state_after_merge(self, action):
-        previous_state = self._previous_state(action)
-        similar = previous_state.next_similar
-        return self._make_state(
-            cluster_ids=[action.to],
-            similar=[similar] if similar is not None else None,
-        )
-
-    def _state_after_split(self, action):
-        return self._make_state(cluster_ids=action.new_cluster_ids)
-
-    def _state_after_move(self, action):
-        state = self._previous_state(action)
-        next_state = self._make_state()
-        moved_clusters = set(action.cluster_ids)
-        if moved_clusters <= set(state.cluster_ids):
-            if state.next_cluster is not None:
-                next_state.cluster_ids = [state.next_cluster]
-        elif moved_clusters <= set(state.similar or []):
-            next_state.cluster_ids = state.cluster_ids
-            if state.next_similar is not None:
-                next_state.similar = [state.next_similar]
+        if set(merged).intersection(similar) and next_similar is not None:
+            self.enqueue(self.similarity_view, 'select', [next_similar])
         else:
-            # next_best, and then select next similar.
-            next_state.wizard = 'next_best'
-            next_state.similar = [state.next_similar]
-        return self._make_state(state=next_state)
+            self.enqueue(self.similarity_view, 'select', similar)
 
-    def _state_after_undo(self, action):
-        return self._previous_state(self._previous_state(action))
+    def _after_split(self, task, output):
+        sender, name, args = task
+        old_cluster_ids, new_cluster_ids = args
+        self.enqueue(self.cluster_view, 'select', new_cluster_ids)
 
-    def _state_after_redo(self, action):
-        undo = self._last_undo()
-        if undo:
-            return self._previous_state(undo)
+    def _get_clusters(self, which):
+        cluster_ids, next_cluster, similar, next_similar = self.last_state()
+        if which == 'all':
+            return _uniq(cluster_ids + similar)
+        elif which == 'best':
+            return cluster_ids
+        elif which == 'similar':
+            return similar
+        return which
 
-    def to_json(self):
-        # TODO
-        return {}
+    def _after_move(self, task, output):
+        sender, name, args = task
+        which, group = args
+        moved = set(self._get_clusters(which))
+        cluster_ids, next_cluster, similar, next_similar = self.last_state()
+        cluster_ids = set(cluster_ids or ())
+        similar = set(similar or ())
+        # Move best.
+        if moved <= cluster_ids:
+            self.enqueue(self.cluster_view, 'next')
+        # Move similar.
+        elif moved <= similar:
+            self.enqueue(self.similarity_view, 'next')
+        # Move all.
+        else:
+            self.enqueue(self.cluster_view, 'next')
+            self.enqueue(self.similarity_view, 'next')
 
-    def _index(self, item):
-        return len(self._flow) - 1 - self._flow[::-1].index(item)
+    def _after_undo(self, task, output):
+        last_action = self.last_task(name_not_in=('select', 'undo', 'redo'))
+        self._select_state(self.last_state(last_action))
 
-    def _show_state(self, state):
-        s = ('#{i:03d}   {cluster_ids: <8}  ({next_cluster: <3})   '
-             '{similar: <8}  ({next_similar: <3})')
-        s = s.format(
-            i=self._index(state),
-            cluster_ids=str(state.cluster_ids),
-            next_cluster=str(state.next_cluster),
-            similar=str(state.similar),
-            next_similar=str(state.next_similar),
-        )
-        logger.debug(s)
+    def _after_redo(self, task, output):
+        last_undo = self.last_task('undo')
+        # Select the last state before the last undo.
+        self._select_state(self.last_state(last_undo))
 
-    def _show_action(self, action):
-        s = '  '.join('%s:%s' % (key, val) for key, val in action.items()
-                      if key not in ('name', 'type'))
-        s = '#{i:03d}   {name} {s}'.format(i=self._index(action), name=action.name, s=s)
-        logger.debug(s)
+    def _select_state(self, state):
+        cluster_ids, next_cluster, similar, next_similar = state
+        self.enqueue(self.cluster_view, 'select', cluster_ids)
+        if similar:
+            self.enqueue(self.similarity_view, 'select', similar)
 
-    def show_last(self, n=5):
-        length = len(self._flow)
-        logger.debug("Last %d/%d" % (min(n, length), length))
-        for item in self._flow[-n:]:
-            if item.type == 'state':
-                self._show_state(item)
-            elif item.type == 'action':
-                self._show_action(item)
+    def _log(self, task, output):
+        sender, name, args = task
+        assert sender
+        assert name
+        self._history.append((sender, name, args, output))
+
+    def last_task(self, name=None, name_not_in=()):
+        for (sender, name_, args, output) in reversed(self._history):
+            if (name and name_ == name) or (name_not_in and name_ and name_ not in name_not_in):
+                assert name_
+                return (sender, name_, args, output)
+
+    def last_state(self, task=None):
+        """Return (cluster_ids, next_cluster, similar, next_similar)."""
+        cluster_state = (None, None)
+        similarity_state = (None, None)
+        h = self._history
+        # Last state until the passed task, if applicable.
+        if task:
+            i = self._history.index(task)
+            h = self._history[:i]
+        for (sender, name, args, output) in reversed(h):
+            # Last selection is cluster view selection: return the state.
+            if (sender == self.similarity_view and
+                    similarity_state == (None, None) and
+                    name in ('select', 'next', 'previous')):
+                similarity_state = output
+            if (sender == self.cluster_view and
+                    cluster_state == (None, None) and
+                    name in ('select', 'next', 'previous')):
+                cluster_state = output
+                return (*cluster_state, *similarity_state)
+
+    def show_history(self):
+        print("=== History ===")
+        for sender, name, args, output in self._history:
+            print('{: <24} {: <8}'.format(sender.__class__.__name__, name), *args, output)
 
 
 # -----------------------------------------------------------------------------
@@ -588,7 +571,7 @@ class Supervisor(EventEmitter):
         logger.log(5, "Cluster groups changed: %s", cluster_ids)
         data = [{'id': cluster_id,
                  'group': self.cluster_meta.get('group', cluster_id),
-                }
+                 }
                 for cluster_id in cluster_ids]
         for _ in data:
             _['is_masked'] = _is_group_masked(_['group'])
