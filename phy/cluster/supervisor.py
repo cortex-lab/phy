@@ -94,13 +94,15 @@ class TaskLogger(object):
         logger.debug("Calling %s.%s(%s)", sender.__class__.__name__, name, args)
         f = getattr(sender, name)
         callback = partial(self._callback, task)
-        if 'callback' in inspect.getargspec(f)[0]:
+        argspec = inspect.getfullargspec(f)
+        argspec = argspec.args + argspec.kwonlyargs
+        if 'callback' in argspec:
             f(*args, callback=callback)
         else:
             # HACK: use on_cluster event instead of callback.
             self.supervisor.connect(callback, event='cluster')
             f(*args)
-            self.supervisor.unconnect(callback, event='cluster')
+            self.supervisor.unconnect(callback)
 
     def process(self):
         self._processing = True
