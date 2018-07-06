@@ -90,7 +90,7 @@ def tl():
         def next(self, callback=None):
             callback(([self._selected[-1] + 1], self._selected[-1] + 2))
 
-        def previous(self, callback=None):
+        def previous(self, callback=None):  # pragma: no cover
             callback(([self._selected[-1] - 1], self._selected[-1]))
 
     class MockSimilarityView(MockClusterView):
@@ -111,18 +111,6 @@ def tl():
 
         def redo(self, callback=None):
             callback(Bunch())
-
-        def next(self, callback=None):
-            callback()
-
-        def next_best(self, callback=None):
-            callback(None)
-
-        def previous(self, callback=None):
-            callback(None)
-
-        def previous_best(self, callback=None):
-            callback(None)
 
     out = TaskLogger(MockClusterView(), MockSimilarityView(), MockSupervisor())
 
@@ -183,7 +171,7 @@ def test_task_move_1(tl):
 def test_task_move_best(tl):
     tl.enqueue(tl.cluster_view, 'select', [0])
     tl.enqueue(tl.similarity_view, 'select', [100])
-    tl.enqueue(tl.supervisor, 'move', [0], 'good')
+    tl.enqueue(tl.supervisor, 'move', 'best', 'good')
     tl.process()
 
     assert tl.last_state() == ([1], 2, None, None)
@@ -192,7 +180,7 @@ def test_task_move_best(tl):
 def test_task_move_similar(tl):
     tl.enqueue(tl.cluster_view, 'select', [0])
     tl.enqueue(tl.similarity_view, 'select', [100])
-    tl.enqueue(tl.supervisor, 'move', [100], 'good')
+    tl.enqueue(tl.supervisor, 'move', 'similar', 'good')
     tl.process()
 
     assert tl.last_state() == ([0], 1, [101], 102)
@@ -461,15 +449,17 @@ def test_supervisor_state(tempdir, qtbot, gui, supervisor):
     assert supervisor.state.cluster_view.current_sort == ('n_spikes', 'desc')
 
 
-def _test_supervisor_label(supervisor):
+def test_supervisor_label(supervisor):
 
     _select(supervisor, [20])
     supervisor.label("my_field", 3.14)
+    supervisor.label("my_field", 1.23, cluster_ids=30)
 
     supervisor.save()
 
     assert 'my_field' in supervisor.fields
     assert supervisor.get_labels('my_field')[20] == 3.14
+    assert supervisor.get_labels('my_field')[30] == 1.23
 
 
 def test_supervisor_move_1(supervisor):
@@ -510,47 +500,7 @@ def test_supervisor_move_2(supervisor):
     _assert_selected(supervisor, [20, 2])
 
 
-#------------------------------------------------------------------------------
-# Test shortcuts
-#------------------------------------------------------------------------------
-
-def test_supervisor_action_reset(qtbot, supervisor):
-
-    supervisor.actions.select([10, 11])
-
-    supervisor.actions.reset()
-    supervisor.block()
-    _assert_selected(supervisor, [30])
-
-    supervisor.actions.next()
-    supervisor.block()
-    _assert_selected(supervisor, [30, 20])
-
-    supervisor.actions.next()
-    supervisor.block()
-    _assert_selected(supervisor, [30, 11])
-
-    supervisor.actions.previous()
-    supervisor.block()
-    _assert_selected(supervisor, [30, 20])
-
-
-def test_supervisor_action_nav(qtbot, supervisor):
-
-    supervisor.actions.reset()
-    supervisor.block()
-    _assert_selected(supervisor, [30])
-
-    supervisor.actions.next_best()
-    supervisor.block()
-    _assert_selected(supervisor, [20])
-
-    supervisor.actions.previous_best()
-    supervisor.block()
-    _assert_selected(supervisor, [30])
-
-
-def test_supervisor_action_move_1(qtbot, supervisor):
+def test_supervisor_move_3(qtbot, supervisor):
 
     supervisor.actions.next()
     supervisor.block()
@@ -573,7 +523,7 @@ def test_supervisor_action_move_1(qtbot, supervisor):
     supervisor.cluster_meta.get('group', 11) == 'good'
 
 
-def test_supervisor_action_move_2(supervisor):
+def test_supervisor_move_4(supervisor):
 
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
@@ -595,7 +545,7 @@ def test_supervisor_action_move_2(supervisor):
     supervisor.cluster_meta.get('group', 2) == 'good'
 
 
-def test_supervisor_action_move_3(supervisor):
+def test_supervisor_move_5(supervisor):
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
 
@@ -623,3 +573,39 @@ def test_supervisor_action_move_3(supervisor):
 
     supervisor.cluster_meta.get('group', 2) == 'good'
     supervisor.cluster_meta.get('group', 1) == 'good'
+
+
+def test_supervisor_reset(qtbot, supervisor):
+
+    supervisor.actions.select([10, 11])
+
+    supervisor.actions.reset()
+    supervisor.block()
+    _assert_selected(supervisor, [30])
+
+    supervisor.actions.next()
+    supervisor.block()
+    _assert_selected(supervisor, [30, 20])
+
+    supervisor.actions.next()
+    supervisor.block()
+    _assert_selected(supervisor, [30, 11])
+
+    supervisor.actions.previous()
+    supervisor.block()
+    _assert_selected(supervisor, [30, 20])
+
+
+def test_supervisor_nav(qtbot, supervisor):
+
+    supervisor.actions.reset()
+    supervisor.block()
+    _assert_selected(supervisor, [30])
+
+    supervisor.actions.next_best()
+    supervisor.block()
+    _assert_selected(supervisor, [20])
+
+    supervisor.actions.previous_best()
+    supervisor.block()
+    _assert_selected(supervisor, [30])

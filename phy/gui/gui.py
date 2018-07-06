@@ -423,6 +423,7 @@ class GUIState(Bunch):
         if view.name not in self:
             self[view.name] = Bunch()
         self[view.name].update(state)
+        logger.debug("Update GUI state for %s", view.name)
 
     @property
     def path(self):

@@ -12,7 +12,6 @@ import inspect
 import logging
 
 import numpy as np
-from six import string_types
 
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
@@ -70,12 +69,6 @@ class TaskLogger(object):
     def enqueue(self, sender, name, *args, output=None):
         logger.debug("Enqueue %s %s %s (%s)", sender.__class__.__name__, name, args, output)
         self._queue.append((sender, name, args))
-        # output keyword allows to bypass the task processor and log
-        # directly the task's result.
-        if output is not None:
-            assert sender
-            assert name
-            self._history.append((sender, name, args, output))
 
     def dequeue(self):
         return self._queue.pop(0) if self._queue else None
@@ -292,7 +285,7 @@ class SimilarityView(ClusterView):
         if similar:
             self.remove_all_and_add(
                 [cl for cl in similar[0] if cl['id'] not in cluster_ids])
-        else:
+        else:  # pragma: no cover
             self.remove_all()
         return similar
 
@@ -479,6 +472,8 @@ class Supervisor(EventEmitter):
         self.clustering.connect(partial(self.emit, 'cluster'), event='cluster')
         self.cluster_meta.connect(partial(self.emit, 'cluster'), event='cluster')
 
+        self.connect(self._save_new_cluster_id, event='cluster')
+
         # Create the cluster view and similarity view.
         self._create_views()
 
@@ -533,10 +528,11 @@ class Supervisor(EventEmitter):
                               dict(new_cluster_id=new_cluster_id))
 
     def _save_gui_state(self, gui):
-        gui.state.update_view_state(self.cluster_view, self.cluster_view.state)
-        # NOTE: create_gui() already saves the state, but the event
-        # is registered *before* we add all views.
-        gui.state.save()
+        b = Barrier()
+        self.cluster_view.get_state(b(1))
+        b.wait()
+        state = b.result(1)[0][0]
+        gui.state.update_view_state(self.cluster_view, state)
 
     def n_spikes(self, cluster_id):
         return len(self.clustering.spikes_per_cluster.get(cluster_id, []))
@@ -638,7 +634,7 @@ class Supervisor(EventEmitter):
         return Bunch({'cluster_view': Bunch(sc), 'similarity_view': Bunch(ss)})
 
     def attach(self, gui):
-
+        gui.connect_(partial(self._save_gui_state, gui), event='close')
         self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view))
         gui.add_view(self.cluster_view)
         gui.add_view(self.similarity_view)
@@ -741,16 +737,13 @@ class Supervisor(EventEmitter):
             which = self.selected_clusters()
         elif which == 'similar':
             which = self.selected_similar()
-        if isinstance(which, string_types):
-            logger.warn("The list of clusters should be a list of integers, "
-                        "not a string.")
-            return
+        if isinstance(which, int):
+            which = [which]
         if not which:
             return
-        assert which
+        _ensure_all_ints(which)
         logger.debug("Move %s to %s.", which, group)
-        if group == 'unsorted':
-            group = None
+        group = 'unsorted' if group is None else group
         self.label('group', group, cluster_ids=which)
 
     # Wizard actions

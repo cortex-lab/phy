@@ -70,7 +70,6 @@ def test_async_tasks():
         out = 2 * y
         if callback:
             return callback(out)
-        return out
 
     def f3(z):
         return z ** 2
