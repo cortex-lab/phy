@@ -6,6 +6,7 @@ dependencies:
   - scipy
   - h5py
   - pyqt
+  - cython
   - pip:
     - pyopengl
     - vispy

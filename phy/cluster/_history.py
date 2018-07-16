@@ -63,9 +63,9 @@ class History(object):
         if end is None:
             end = self._index + 1
         elif end == 0:
-            raise StopIteration()
+            return
         if start >= end:
-            raise StopIteration()
+            return
         # Check arguments.
         assert 0 <= end <= len(self._history)
         assert 0 <= start <= end - 1
