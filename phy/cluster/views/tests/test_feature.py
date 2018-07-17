@@ -15,7 +15,7 @@ from phy.io.array import _spikes_per_cluster
 from phy.io.mock import (artificial_features,
                          artificial_spike_clusters,
                          )
-from phy.utils import Bunch
+from phy.utils import Bunch, emit
 
 from ..feature import FeatureView
 
@@ -66,12 +66,12 @@ def test_feature_view(qtbot, tempdir, n_channels):
     v.attach(gui)
     qtbot.addWidget(gui)
 
-    v.on_select([])
-    v.on_select([0])
-    v.on_select([0, 2, 3])
-    v.on_select([0, 2])
+    v.on_select(cluster_ids=[])
+    v.on_select(cluster_ids=[0])
+    v.on_select(cluster_ids=[0, 2, 3])
+    v.on_select(cluster_ids=[0, 2])
 
-    gui.emit('select', [0, 2])
+    emit('select', gui, [0, 2])
     qtbot.wait(10)
 
     v.increase()

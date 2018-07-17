@@ -11,6 +11,7 @@ import logging
 
 from phy.electrode.layout import probe_layout
 from phy.gui import HTMLWidget
+from phy.utils import connect
 
 logger = logging.getLogger(__name__)
 
@@ -25,7 +26,7 @@ class ProbeView(HTMLWidget):
         self.positions = positions
         self.best_channels = best_channels
 
-    def on_select(self, cluster_ids, **kwargs):
+    def on_select(self, sender=None, cluster_ids=None, **kwargs):
         if not len(cluster_ids):
             return
         cluster_channels = {i: self.best_channels(cl)
@@ -33,6 +34,6 @@ class ProbeView(HTMLWidget):
         self.builder.set_body(probe_layout(self.positions, cluster_channels))
 
     def attach(self, gui):
-        gui.connect_(self.on_select)
+        connect(self.on_select, sender=gui)
         self.show()
         gui.add_view(self)

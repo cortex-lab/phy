@@ -13,7 +13,7 @@ import numpy as np
 from phy.plot.transform import NDC, Range
 from vispy.util.event import Event
 
-from phy.utils import Bunch
+from phy.utils import Bunch, emit
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)
@@ -299,8 +299,8 @@ class TraceView(ManualClusteringView):
         self.build()
         self.update()
 
-    def on_select(self, cluster_ids=None, **kwargs):
-        super(TraceView, self).on_select(cluster_ids, **kwargs)
+    def on_select(self, sender=None, cluster_ids=None, **kwargs):
+        super(TraceView, self).on_select(cluster_ids=cluster_ids, **kwargs)
         self.set_interval(self._interval, change_status=False,
                           force_update=kwargs.get('force_update', None))
 
@@ -326,11 +326,12 @@ class TraceView(ManualClusteringView):
         def on_spike_click(e):
             logger.log(5, "Spike click on channel %s, spike %s, cluster %s.",
                        e.channel_id, e.spike_id, e.cluster_id)
-            gui.emit('spike_click',
-                     channel_id=e.channel_id,
-                     spike_id=e.spike_id,
-                     cluster_id=e.cluster_id,
-                     )
+            emit('spike_click',
+                 self,
+                 channel_id=e.channel_id,
+                 spike_id=e.spike_id,
+                 cluster_id=e.cluster_id,
+                 )
 
     @property
     def state(self):

@@ -14,7 +14,7 @@ from vispy.util.event import Event
 from phy.gui import Actions
 from phy.gui.qt import AsyncCaller, busy_cursor
 from phy.plot import View
-from phy.utils import Bunch
+from phy.utils import Bunch, connect
 
 logger = logging.getLogger(__name__)
 
@@ -59,7 +59,7 @@ class ManualClusteringView(View):
         self.panzoom.reset()
         self.events.add(status=StatusEvent)
 
-    def on_select(self, cluster_ids=None, **kwargs):
+    def on_select(self, sender=None, cluster_ids=None, **kwargs):
         cluster_ids = (cluster_ids if cluster_ids is not None
                        else self.cluster_ids)
         self.cluster_ids = list(cluster_ids) if cluster_ids is not None else []
@@ -82,14 +82,14 @@ class ManualClusteringView(View):
         # cursor.
         self.async_caller = AsyncCaller(delay=self._callback_delay)
 
-        @gui.connect_
-        def on_select(cluster_ids, **kwargs):
+        @connect(sender=gui)
+        def on_select(sender=None, cluster_ids=None, **kwargs):
             # Call this function after a delay unless there is another
             # cluster selection in the meantime.
             @self.async_caller.set
             def update_view():
                 with busy_cursor():
-                    self.on_select(cluster_ids, **kwargs)
+                    self.on_select(cluster_ids=cluster_ids, **kwargs)
 
         self.actions = Actions(gui,
                                name=name or self.__class__.__name__,
@@ -99,13 +99,13 @@ class ManualClusteringView(View):
         # Update the GUI status message when the `self.set_status()` method
         # is called, i.e. when the `status` event is raised by the VisPy
         # view.
-        @self.connect
-        def on_status(e):
+        @connect(sender=self)
+        def on_status(sender=None, e=None):
             gui.status_message = e.message
 
         # Save the view state in the GUI state.
-        @gui.connect_
-        def on_close():
+        @connect(sender=gui)
+        def on_close(sender=None):
             gui.state.update_view_state(self, self.state)
             # NOTE: create_gui() already saves the state, but the event
             # is registered *before* we add all views.

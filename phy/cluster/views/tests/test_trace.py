@@ -14,7 +14,7 @@ from phy.gui import GUI
 from phy.io.mock import (artificial_traces,
                          artificial_spike_clusters,
                          )
-from phy.utils import Bunch
+from phy.utils import Bunch, connect
 from phy.utils._color import ColorSelector
 
 from ..trace import TraceView, select_traces, _iter_spike_waveforms
@@ -82,10 +82,10 @@ def test_trace_view(tempdir, qtbot):
 
     # qtbot.waitForWindowShown(gui)
 
-    v.on_select([])
-    v.on_select([0])
-    v.on_select([0, 2, 3])
-    v.on_select([0, 2])
+    v.on_select(cluster_ids=[])
+    v.on_select(cluster_ids=[0])
+    v.on_select(cluster_ids=[0, 2, 3])
+    v.on_select(cluster_ids=[0, 2])
 
     # ac(v.stacked.box_size, (1., .08181), atol=1e-3)
     v.set_interval((.375, .625))
@@ -132,8 +132,8 @@ def test_trace_view(tempdir, qtbot):
     # Simulate spike selection.
     _clicked = []
 
-    @v.gui.connect_
-    def on_spike_click(channel_id=None, spike_id=None, cluster_id=None):
+    @connect(sender=v)
+    def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
         _clicked.append((channel_id, spike_id, cluster_id))
 
     v.events.key_press(key=keys.Key('Control'))

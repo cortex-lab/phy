@@ -16,7 +16,7 @@ from vispy.util.event import Event
 from phy.io.array import _flatten, _index_of
 from phy.plot import _get_linear_x
 from phy.plot.utils import _get_boxes
-from phy.utils import Bunch
+from phy.utils import Bunch, emit
 from phy.utils._color import _colormap
 from .base import ManualClusteringView
 
@@ -200,8 +200,8 @@ class WaveformView(ManualClusteringView):
                        data_bounds=None,
                        )
 
-    def on_select(self, cluster_ids=None, **kwargs):
-        super(WaveformView, self).on_select(cluster_ids, **kwargs)
+    def on_select(self, sender=None, cluster_ids=None, **kwargs):
+        super(WaveformView, self).on_select(cluster_ids=cluster_ids, **kwargs)
         cluster_ids = self.cluster_ids
         n_clusters = len(cluster_ids)
         if n_clusters == 0:
@@ -259,11 +259,11 @@ class WaveformView(ManualClusteringView):
         # We forward the event from VisPy to the phy GUI.
         @self.connect
         def on_channel_click(e):
-            gui.emit('channel_click',
-                     channel_id=e.channel_id,
-                     key=e.key,
-                     button=e.button,
-                     )
+            emit('channel_click', self,
+                 channel_id=e.channel_id,
+                 key=e.key,
+                 button=e.button,
+                 )
 
     # Overlap
     # -------------------------------------------------------------------------

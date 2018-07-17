@@ -13,7 +13,7 @@ from vispy.util import keys
 from phy.electrode.mea import staggered_positions
 from phy.gui import GUI
 from phy.io.mock import artificial_waveforms
-from phy.utils import Bunch
+from phy.utils import Bunch, connect
 
 from ..waveform import WaveformView
 
@@ -38,10 +38,10 @@ def test_waveform_view(qtbot, tempdir):
     v.attach(gui)
     qtbot.addWidget(gui)
 
-    v.on_select([])
-    v.on_select([0])
-    v.on_select([0, 2, 3])
-    v.on_select([0, 2])
+    v.on_select(cluster_ids=[])
+    v.on_select(cluster_ids=[0])
+    v.on_select(cluster_ids=[0, 2, 3])
+    v.on_select(cluster_ids=[0, 2])
 
     v.toggle_waveform_overlap()
     v.toggle_waveform_overlap()
@@ -82,8 +82,8 @@ def test_waveform_view(qtbot, tempdir):
     # Simulate channel selection.
     _clicked = []
 
-    @v.gui.connect_
-    def on_channel_click(channel_id=None, button=None, key=None):
+    @connect(sender=v)
+    def on_channel_click(sender, channel_id=None, button=None, key=None):
         _clicked.append((channel_id, button, key))
 
     v.events.key_press(key=keys.Key('2'))

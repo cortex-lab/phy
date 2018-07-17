@@ -13,7 +13,7 @@ import re
 import numpy as np
 from six import u
 
-from phy.utils import Bunch
+from phy.utils import Bunch, connect
 from phy.utils._color import _colormap
 from phy.plot.transform import Range
 from .base import ManualClusteringView
@@ -238,8 +238,8 @@ class FeatureView(ManualClusteringView):
         self.channel_ids = None
         self.on_select()
 
-    def on_select(self, cluster_ids=None, **kwargs):
-        super(FeatureView, self).on_select(cluster_ids, **kwargs)
+    def on_select(self, sender=None, cluster_ids=None, **kwargs):
+        super(FeatureView, self).on_select(cluster_ids=cluster_ids, **kwargs)
         cluster_ids = self.cluster_ids
         n_clusters = len(cluster_ids)
         if n_clusters == 0:
@@ -307,14 +307,14 @@ class FeatureView(ManualClusteringView):
         self.actions.add(self.clear_channels)
         self.actions.add(self.toggle_automatic_channel_selection)
 
-        gui.connect_(self.on_channel_click)
-        gui.connect_(self.on_request_split)
+        connect(self.on_channel_click, sender=gui)
+        connect(self.on_request_split, sender=gui)
 
     @property
     def state(self):
         return Bunch(scaling=self.scaling)
 
-    def on_channel_click(self, channel_id=None, key=None, button=None):
+    def on_channel_click(self, sender=None, channel_id=None, key=None, button=None):
         """Respond to the click on a channel."""
         channels = self.channel_ids
         if channels is None:
@@ -343,7 +343,7 @@ class FeatureView(ManualClusteringView):
         # Fix the channels temporarily.
         self.on_select(fixed_channels=True)
 
-    def on_request_split(self):
+    def on_request_split(self, sender=None):
         """Return the spikes enclosed by the lasso."""
         if (self.lasso.count < 3 or
                 not len(self.cluster_ids)):  # pragma: no cover

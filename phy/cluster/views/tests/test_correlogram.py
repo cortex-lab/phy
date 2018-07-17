@@ -33,9 +33,9 @@ def test_correlogram_view(qtbot, tempdir):
     qtbot.addWidget(gui)
 
     v.on_select([])
-    v.on_select([0])
-    v.on_select([0, 2, 3])
-    v.on_select([0, 2])
+    v.on_select(cluster_ids=[0])
+    v.on_select(cluster_ids=[0, 2, 3])
+    v.on_select(cluster_ids=[0, 2])
 
     v.toggle_normalization()
 
