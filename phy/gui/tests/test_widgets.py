@@ -102,7 +102,6 @@ def test_widget_html(qtbot):
     widget.show()
     qtbot.addWidget(widget)
     qtbot.waitForWindowShown(widget)
-
     _block(lambda: 'Hello world!' in str(widget.html))
 
     _out = []
@@ -121,6 +120,7 @@ def test_widget_javascript_1(qtbot):
     widget.show()
     qtbot.addWidget(widget)
     qtbot.waitForWindowShown(widget)
+    _block(lambda: widget.html is not None)
 
     _out = []
 
