@@ -106,6 +106,7 @@ def test_javascript_1(qtbot):
         qtbot.addWidget(view)
         view.show()
         qtbot.waitForWindowShown(view)
+        _block(lambda: view.html is not None)
         view.close()
     assert buf.getvalue() == "[JS:L01] Test.\n"
 
@@ -117,8 +118,9 @@ def test_javascript_2(qtbot):
         qtbot.addWidget(view)
         view.show()
         qtbot.waitForWindowShown(view)
-        assert len(exceptions) >= 1
+        _block(lambda: view.html is not None)
         view.close()
+    assert len(exceptions) >= 1
 
 
 def test_prompt(qtbot):

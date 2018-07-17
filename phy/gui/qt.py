@@ -206,6 +206,7 @@ class WebPage(QWebEnginePage):
 class WebView(QWebEngineView):
     def __init__(self, *args):
         super(WebView, self).__init__(*args)
+        self.html = None
         assert isinstance(self.window(), QWidget)
         self._page = WebPage(self)
         self.setPage(self._page)
@@ -213,7 +214,6 @@ class WebView(QWebEngineView):
         self.resize(400, 400)
 
     def set_html(self, html, callback=None):
-        self.html = None
         self._callback = callback
         self.loadFinished.connect(self._loadFinished)
         static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
