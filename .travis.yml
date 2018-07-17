@@ -9,7 +9,7 @@ python:
 addons:
   apt:
     packages:
-      - &full_apt [libgl1-mesa-dri, libegl1-mesa, cmake, xorg-dev, libglu1-mesa-dev, mercurial, libdbus-1-dev, libgl1-mesa-dev, libglu1-mesa-dev, libpulse-dev, libx11-dev, libxcursor-dev, libxext-dev, libxi-dev, libxinerama-dev, libxrandr-dev, libxss-dev, libxt-dev, libxv-dev, libxxf86vm-dev, libasound2-dev, libts-dev, libudev-dev, libsdl2-2.0-0]
+      #- &full_apt [libgl1-mesa-dri, libegl1-mesa, cmake, xorg-dev, libglu1-mesa-dev, mercurial, libdbus-1-dev, libgl1-mesa-dev, libglu1-mesa-dev, libpulse-dev, libx11-dev, libxcursor-dev, libxext-dev, libxi-dev, libxinerama-dev, libxrandr-dev, libxss-dev, libxt-dev, libxv-dev, libxxf86vm-dev, libasound2-dev, libts-dev, libudev-dev, libsdl2-2.0-0]
 
 before_install:
   - pip install codecov
@@ -20,6 +20,7 @@ before_install:
   - cat /etc/default/apport
   - service --status-all || true
   - initctl list || true
+
 install:
 
   - mkdir ./mason/
@@ -29,33 +30,34 @@ install:
   - curl -sSfL https://github.com/mapbox/logbt/archive/v1.6.0.tar.gz | tar --gunzip --extract --strip-components=2 --exclude="*md" --exclude="test*" --directory=.
   - sudo bash -c "echo '/tmp/logbt-coredumps/core.%p.%E' > /proc/sys/kernel/core_pattern"
 
+  #- wget https://github.com/vispy/demo-data/raw/master/osmesa/osmesa_11.0.0_12.04.tar.bz2 -O /tmp/osmesa.tar.bz2;
+  #- mkdir $HOME/osmesa; tar -xvjf /tmp/osmesa.tar.bz2 -C $HOME/osmesa;
+  #- export LD_LIBRARY_PATH=$HOME/osmesa/lib;
+  #- export LIBRARY_PATH=$HOME/osmesa/lib;
 
-  - wget https://github.com/vispy/demo-data/raw/master/osmesa/osmesa_11.0.0_12.04.tar.bz2 -O /tmp/osmesa.tar.bz2;
-  - mkdir $HOME/osmesa; tar -xvjf /tmp/osmesa.tar.bz2 -C $HOME/osmesa;
-  - export LD_LIBRARY_PATH=$HOME/osmesa/lib;
-  - export LIBRARY_PATH=$HOME/osmesa/lib;
+  #- wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
+  #- bash miniconda.sh -b -p $HOME/miniconda
+  #- export PATH="$HOME/miniconda/bin:$PATH"
+  #- hash -r
 
-  - wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh;
-  - bash miniconda.sh -b -p $HOME/miniconda
-  - export PATH="$HOME/miniconda/bin:$PATH"
-  - hash -r
-
-  - conda config --set always_yes yes --set changeps1 no
-  - conda update -q conda
-  - conda info -a
+  #- conda config --set always_yes yes --set changeps1 no
+  #- conda update -q conda
+  #- conda info -a
   # Create the environment.
-  - conda install pyyaml
-  - conda env create python=$TRAVIS_PYTHON_VERSION
-  - source activate phy
-  # Dev requirements
+  #- conda install pyyaml
+  #- conda env create python=$TRAVIS_PYTHON_VERSION
+  #- source activate phy
+
+  - pip install -r requirements.txt
   - pip install -r requirements-dev.txt
   - pip install -e .
 
-#before_script:
-    #- export DISPLAY=:99.0
-    #- /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render
+before_script:
+    - export DISPLAY=:99.0
+    - /sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -screen 0 1400x900x24 -ac +extension GLX +render
 
 script:
   - ./logbt make test
+
 after_success:
   - codecov
