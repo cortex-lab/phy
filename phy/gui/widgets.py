@@ -14,7 +14,7 @@ from functools import partial
 from six import text_type
 
 from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block
-from phy.utils import EventEmitter
+from phy.utils import emit
 from phy.utils._misc import _CustomEncoder, _read_text
 from phy.utils._types import _is_integer
 
@@ -190,11 +190,13 @@ class HTMLBuilder(object):
         return self._build_html()
 
 
-class JSEventEmitter(QObject, EventEmitter):
+class JSEventEmitter(QObject):
+    _parent = None
+
     @pyqtSlot(str, str)
     def emitJS(self, name, arg_json):
         logger.log(5, "Emit from Python %s %s.", name, arg_json)
-        self.emit(text_type(name), json.loads(text_type(arg_json)))
+        emit(text_type(name), self._parent, json.loads(text_type(arg_json)))
 
 
 class HTMLWidget(WebView):
@@ -203,6 +205,7 @@ class HTMLWidget(WebView):
         # Due to a limitation of QWebChannel, need to register a Python object
         # BEFORE this web view is created?!
         self._event = JSEventEmitter(*args)
+        self._event._parent = self
         self.channel = QWebChannel(*args)
         self.channel.registerObject('eventEmitter', self._event)
 
@@ -219,19 +222,6 @@ class HTMLWidget(WebView):
     def view_source(self, callback=None):
         return self.eval_js("document.getElementsByTagName('html')[0].innerHTML",
                             callback=callback)
-
-    # Events
-    # -------------------------------------------------------------------------
-
-    def emit(self, *args, **kwargs):
-        logger.log(5, "Emit from Python")
-        return self._event.emit(*args, **kwargs)
-
-    def connect_(self, *args, **kwargs):
-        self._event.connect(*args, **kwargs)
-
-    def unconnect_(self, *args, **kwargs):
-        self._event.unconnect(*args, **kwargs)
 
     # Javascript methods
     # -------------------------------------------------------------------------
@@ -269,7 +259,7 @@ class Table(HTMLWidget):
         self.columns = columns
         self.value_names = value_names
 
-        self.emit('pre_build')
+        emit('pre_build', self)
 
         data_json = dumps(self.data)
         columns_json = dumps(self.columns)
@@ -288,7 +278,7 @@ class Table(HTMLWidget):
 
         </script>
         ''' % (data_json, value_names_json, columns_json)
-        self.build(lambda html: self.emit('ready'))
+        self.build(lambda html: emit('ready', self))
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""

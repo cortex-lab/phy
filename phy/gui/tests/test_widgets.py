@@ -10,6 +10,7 @@ from functools import partial
 import os.path as op
 from pytest import yield_fixture
 
+from phy.utils import connect, unconnect
 from phy.utils.testing import captured_logging
 from .test_qt import _block
 from ..widgets import HTMLWidget, Table, Barrier, AsyncTasks
@@ -27,7 +28,7 @@ def _assert(f, expected):
 
 def _wait_until_table_ready(qtbot, table):
     b = Barrier()
-    table.connect_(b(1), event='ready')
+    connect(b(1), event='ready', sender=table)
 
     table.show()
     qtbot.addWidget(table)
@@ -153,8 +154,8 @@ def _test_widget_javascript_2(qtbot):  # pragma: no cover
 
     _out = []
 
-    @widget.connect_
-    def on_test(arg):
+    @connect(sender=widget)
+    def on_test(sender, arg):
         _out.append(arg)
 
     widget.build()
@@ -164,7 +165,7 @@ def _test_widget_javascript_2(qtbot):  # pragma: no cover
 
     _block(lambda: _out == [{'hello': 'world'}])
 
-    widget.unconnect_(on_test)
+    unconnect(on_test)
     # qtbot.stop()
     widget.close()
 
@@ -249,15 +250,15 @@ def test_table_nav_0(qtbot, table):
 def test_table_nav_1(qtbot, table):
     _sel = []
 
-    @table.connect_
-    def on_some_event(items, **kwargs):
+    @connect(sender=table)
+    def on_some_event(sender, items, **kwargs):
         _sel.append(items)
 
     table.eval_js('table.emit("some_event", 123);')
 
     _block(lambda: _sel == [123])
 
-    table.unconnect_(on_some_event)
+    unconnect(on_some_event)
 
 
 def test_table_sort(qtbot, table):

@@ -14,8 +14,7 @@ import os.path as op
 from .qt import (QApplication, QWidget, QDockWidget, QStatusBar, QMainWindow,
                  QMessageBox, Qt, QSize, QMetaObject)
 from .actions import Actions, Snippets
-from phy.utils.event import EventEmitter
-from phy.utils import (Bunch, _bunchify,
+from phy.utils import (Bunch, _bunchify, emit, connect,
                        _load_json, _save_json,
                        _ensure_dir_exists, phy_config_dir,)
 
@@ -50,20 +49,9 @@ def _try_get_matplotlib_canvas(view):
 
 
 class DockWidget(QDockWidget):
-    """A QDockWidget that can emit events."""
-    def __init__(self, *args, **kwargs):
-        super(DockWidget, self).__init__(*args, **kwargs)
-        self._event = EventEmitter()
-
-    def emit(self, *args, **kwargs):
-        return self._event.emit(*args, **kwargs)
-
-    def connect_(self, *args, **kwargs):
-        self._event.connect(*args, **kwargs)
-
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
-        self.emit('close_widget')
+        emit('close_dock_widget', self)
         super(DockWidget, self).closeEvent(e)
 
 
@@ -112,11 +100,6 @@ class GUI(QMainWindow):
     add_view
     close_view
 
-    Note
-    ----
-
-    Use `connect_()`, not `connect()`, because of a name conflict with Qt.
-
     """
     def __init__(self,
                  position=None,
@@ -148,9 +131,6 @@ class GUI(QMainWindow):
         # Mapping {name: menuBar}.
         self._menus = {}
 
-        # We can derive from EventEmitter because of a conflict with connect.
-        self._event = EventEmitter()
-
         # Status bar.
         self._lock_status = False
         self._status_bar = QStatusBar(self)
@@ -168,19 +148,11 @@ class GUI(QMainWindow):
         # Create the state.
         self.state = GUIState(self.name, **kwargs)
 
-        @self.connect_
-        def on_show():
+        @connect(sender=self)
+        def on_show(sender):
             logger.debug("Load the geometry state.")
             gs = self.state.get('geometry_state', None)
             self.restore_geometry_state(gs)
-
-        '''@self.connect_
-        def on_close():
-            logger.debug("Save the geometry state.")
-            gs = self.save_geometry_state()
-            self.state['geometry_state'] = gs
-            # Save the state to disk when closing the GUI.
-            self.state.save()'''
 
     def _set_name(self, name, subtitle):
         if name is None:
@@ -228,20 +200,11 @@ class GUI(QMainWindow):
     # Events
     # -------------------------------------------------------------------------
 
-    def emit(self, *args, **kwargs):
-        return self._event.emit(*args, **kwargs)
-
-    def connect_(self, *args, **kwargs):
-        self._event.connect(*args, **kwargs)
-
-    def unconnect_(self, *args, **kwargs):
-        self._event.unconnect(*args, **kwargs)
-
     def closeEvent(self, e):
         """Qt slot when the window is closed."""
         if self._closed:
             return
-        res = self.emit('close')
+        res = emit('close', self)
         # Discard the close event if False is returned by one of the callback
         # functions.
         if False in res:  # pragma: no cover
@@ -258,7 +221,7 @@ class GUI(QMainWindow):
 
     def show(self):
         """Show the window."""
-        self.emit('show')
+        emit('show', self)
         super(GUI, self).show()
 
     # Views
@@ -298,12 +261,12 @@ class GUI(QMainWindow):
         dock_widget.view = view
 
         # Emit the close_view event when the dock widget is closed.
-        @dock_widget.connect_
-        def on_close_widget():
-            self.emit('close_view', view)
+        @connect(sender=dock_widget)
+        def on_close_dock_widget(sender):
+            emit('close_view', self, view)
 
         dock_widget.show()
-        self.emit('add_view', view)
+        emit('add_view', self, view)
         logger.log(5, "Add %s to GUI.", view.name)
         return dock_widget
 
