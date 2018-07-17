@@ -8,7 +8,7 @@
 
 from pytest import raises
 
-from ..event import EventEmitter, ProgressReporter
+from ..event import EventEmitter, ProgressReporter, connect
 
 
 #------------------------------------------------------------------------------
@@ -23,22 +23,19 @@ def test_event_system():
     with raises(ValueError):
         ev.connect(lambda x: x)
 
-    @ev.connect(set_method=True)
-    def on_my_event(arg, kwarg=None):
+    @ev.connect
+    def on_my_event(sender, arg, kwarg=None):
         _list.append((arg, kwarg))
 
-    with raises(TypeError):
-        ev.my_event()
-
-    ev.my_event('a')
+    ev.emit('my_event', ev, 'a')
     assert _list == [('a', None)]
 
-    ev.my_event('b', 'c')
+    ev.emit('my_event', ev, 'b', 'c')
     assert _list == [('a', None), ('b', 'c')]
 
     ev.unconnect(on_my_event)
 
-    ev.my_event('b', 'c')
+    ev.emit('my_event', ev, 'b', 'c')
     assert _list == [('a', None), ('b', 'c')]
 
 
@@ -48,14 +45,14 @@ def test_event_silent():
     _list = []
 
     @ev.connect()
-    def on_test(x):
+    def on_test(sender, x):
         _list.append(x)
 
-    ev.emit('test', 1)
+    ev.emit('test', ev, 1)
     assert _list == [1]
 
     with ev.silent():
-        ev.emit('test', 1)
+        ev.emit('test', ev, 1)
     assert _list == [1]
 
 
@@ -65,18 +62,18 @@ def test_event_single():
     l = []
 
     @ev.connect
-    def on_test():
+    def on_test(sender):
         l.append(0)
 
     @ev.connect  # noqa
-    def on_test():
+    def on_test(sender):
         l.append(1)
 
-    ev.emit('test')
+    ev.emit('test', ev)
     assert l == [0, 1]
 
-    ev.emit('test', single=True)
-    assert l == [0, 1, 1]
+    ev.emit('test', ev, single=True)
+    assert l == [0, 1, 0]
 
 
 #------------------------------------------------------------------------------
@@ -90,13 +87,13 @@ def test_progress_reporter():
     _reported = []
     _completed = []
 
-    @pr.connect
-    def on_progress(value, value_max):
+    @connect(sender=pr)
+    def on_progress(sender, value, value_max):
         # value is the sum of the values, value_max the sum of the max values
         _reported.append((value, value_max))
 
-    @pr.connect
-    def on_complete():
+    @connect(sender=pr)
+    def on_complete(sender):
         _completed.append(True)
 
     pr.value_max = 10
