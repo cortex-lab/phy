@@ -529,7 +529,7 @@ class Supervisor(object):
             self.context.save('new_cluster_id',
                               dict(new_cluster_id=new_cluster_id))
 
-    def _save_gui_state(self, gui, sender):
+    def _save_gui_state(self, gui):
         b = Barrier()
         self.cluster_view.get_state(b(1))
         b.wait()
@@ -654,7 +654,7 @@ class Supervisor(object):
             supervisor=self,
         )
 
-        connect(partial(self._save_gui_state, gui), event='close', sender=self)
+        connect(self._save_gui_state, event='close', sender=gui)
         self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view))
         gui.add_view(self.cluster_view)
         gui.add_view(self.similarity_view)
