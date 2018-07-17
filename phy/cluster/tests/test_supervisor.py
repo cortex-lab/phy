@@ -68,8 +68,8 @@ def supervisor(qtbot, gui, cluster_ids, cluster_groups,
                     )
     mc.attach(gui)
     b = Barrier()
-    mc.cluster_view.connect_(b('cluster_view'), event='ready')
-    mc.similarity_view.connect_(b('similarity_view'), event='ready')
+    connect(b('cluster_view'), event='ready', sender=mc.cluster_view)
+    connect(b('similarity_view'), event='ready', sender=mc.similarity_view)
     b.wait()
     return mc
 
@@ -225,8 +225,8 @@ def test_similarity_view_1(qtbot, gui, data):
     sv = SimilarityView(gui, data=data)
     _wait_until_table_ready(qtbot, sv)
 
-    @sv.connect_
-    def on_request_similar_clusters(cluster_id):
+    @connect(sender=sv)
+    def on_request_similar_clusters(sender, cluster_id):
         return [{'id': id} for id in (100 + cluster_id, 110 + cluster_id, 102 + cluster_id)]
 
     sv.reset([5])
@@ -236,7 +236,7 @@ def test_similarity_view_1(qtbot, gui, data):
 def test_cluster_view_extra_columns(qtbot, gui, data):
 
     @connect
-    def on_request_cluster_metrics(_):
+    def on_request_cluster_metrics(sender):
         return ['my_metrics']
 
     for cl in data:
@@ -410,8 +410,8 @@ def test_supervisor_split_1(supervisor):
     supervisor.actions.select([1, 2])
     supervisor.block()
 
-    @supervisor.connect
-    def on_request_split():
+    @connect(sender=supervisor)
+    def on_request_split(sender):
         return [1, 2]
 
     supervisor.actions.split()
@@ -428,8 +428,8 @@ def test_supervisor_split_2(gui, quality, similarity):
     supervisor.attach(gui)
 
     b = Barrier()
-    supervisor.cluster_view.connect_(b('cluster_view'), event='ready')
-    supervisor.similarity_view.connect_(b('similarity_view'), event='ready')
+    connect(b('cluster_view'), event='ready', sender=supervisor.cluster_view)
+    connect(b('similarity_view'), event='ready', sender=supervisor.similarity_view)
     b.wait()
 
     supervisor.actions.split([0])

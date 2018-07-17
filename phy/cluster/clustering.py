@@ -17,7 +17,7 @@ from phy.io.array import (_unique,
                           )
 from ._utils import UpdateInfo
 from ._history import History
-from phy.utils.event import EventEmitter
+from phy.utils.event import emit
 
 logger = logging.getLogger(__name__)
 
@@ -106,7 +106,7 @@ def _assign_update_info(spike_ids, old_spike_clusters, new_spike_clusters):
     return update_info
 
 
-class Clustering(EventEmitter):
+class Clustering(object):
     """Handle cluster changes in a set of spikes.
 
     Features
@@ -359,12 +359,12 @@ class Clustering(EventEmitter):
         spike_ids = _spikes_in_clusters(self.spike_clusters, cluster_ids)
 
         up = self._do_merge(spike_ids, cluster_ids, to)
-        undo_state = self.emit('request_undo_state', up)
+        undo_state = emit('request_undo_state', self, up)
 
         # Add to stack.
         self._undo_stack.add((spike_ids, [to], undo_state))
 
-        self.emit('cluster', up)
+        emit('cluster', self, up)
         return up
 
     def assign(self, spike_ids, spike_clusters_rel=0):
@@ -437,12 +437,12 @@ class Clustering(EventEmitter):
                                                     )
 
         up = self._do_assign(spike_ids, cluster_ids)
-        undo_state = self.emit('request_undo_state', up)
+        undo_state = emit('request_undo_state', self, up)
 
         # Add the assignment to the undo stack.
         self._undo_stack.add((spike_ids, cluster_ids, undo_state))
 
-        self.emit('cluster', up)
+        emit('cluster', self, up)
         return up
 
     def split(self, spike_ids, spike_clusters_rel=0):
@@ -504,7 +504,7 @@ class Clustering(EventEmitter):
         # Add the undo_state object from the undone object.
         up.undo_state = undo_state
 
-        self.emit('cluster', up)
+        emit('cluster', self, up)
         return up
 
     def redo(self):
@@ -533,5 +533,5 @@ class Clustering(EventEmitter):
         up = self._do_assign(spike_ids, cluster_ids)
         up.history = 'redo'
 
-        self.emit('cluster', up)
+        emit('cluster', self, up)
         return up

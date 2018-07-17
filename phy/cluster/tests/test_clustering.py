@@ -12,6 +12,7 @@ from pytest import raises
 
 from phy.io.mock import artificial_spike_clusters
 from phy.io.array import (_spikes_in_clusters,)
+from phy.utils import connect
 from ..clustering import (_extend_spikes,
                           _concatenate_spike_clusters,
                           _extend_assignment,
@@ -234,8 +235,8 @@ def test_clustering_merge():
     def _assert_spikes(clusters):
         ae(info.spike_ids, _spikes_in_clusters(spike_clusters, clusters))
 
-    @clustering.connect
-    def on_request_undo_state(up):
+    @connect(sender=clustering)
+    def on_request_undo_state(sender, up):
         return 'hello'
 
     # Checkpoint 0.
@@ -355,8 +356,8 @@ def test_clustering_assign():
     def _assert_is_checkpoint(index):
         ae(clustering.spike_clusters, checkpoints[index])
 
-    @clustering.connect
-    def on_request_undo_state(up):
+    @connect(sender=clustering)
+    def on_request_undo_state(sender, up):
         return 'hello'
 
     # Checkpoint 0.

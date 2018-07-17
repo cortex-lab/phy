@@ -16,7 +16,7 @@ import numpy as np
 from ._history import GlobalHistory
 from ._utils import create_cluster_meta
 from .clustering import Clustering
-from phy.utils import EventEmitter, Bunch, emit
+from phy.utils import Bunch, emit, connect, unconnect
 from phy.gui.actions import Actions
 from phy.gui.qt import _block
 from phy.gui.widgets import Table, HTMLWidget, _uniq, Barrier
@@ -93,9 +93,11 @@ class TaskLogger(object):
             f(*args, callback=callback)
         else:
             # HACK: use on_cluster event instead of callback.
-            self.supervisor.connect(callback, event='cluster')
+            def _cluster_callback(tsender, up):
+                self._callback(task, up)
+            connect(_cluster_callback, event='cluster', sender=self.supervisor)
             f(*args)
-            self.supervisor.unconnect(callback)
+            unconnect(_cluster_callback)
 
     def process(self):
         self._processing = True
@@ -238,9 +240,10 @@ class ClusterView(Table):
         value_names = columns + [{'data': ['group']}]
         self._init_table(columns=columns, value_names=value_names, data=data)
 
-        @self.connect_
-        def on_ready():
-            self.sort_by('quality', 'desc')
+        @connect(sender=self)
+        def on_ready(sender):
+            if sender == self:
+                self.sort_by('quality', 'desc')
 
     def _set_styles(self):
         self.builder.add_style('''
@@ -273,14 +276,15 @@ class SimilarityView(ClusterView):
         value_names = columns + [{'data': ['group']}]
         self._init_table(columns=columns, value_names=value_names, data=data)
 
-        @self.connect_
-        def on_ready():
-            self.sort_by('similarity', 'desc')
+        @connect(sender=self)
+        def on_ready(sender):
+            if sender == self:
+                self.sort_by('similarity', 'desc')
 
     def reset(self, cluster_ids):
         if not len(cluster_ids):
             return
-        similar = self.emit('request_similar_clusters', cluster_ids[-1])
+        similar = emit('request_similar_clusters', self, cluster_ids[-1])
         # Clear the table.
         if similar:
             self.remove_all_and_add(
@@ -294,7 +298,7 @@ class SimilarityView(ClusterView):
 # ActionCreator
 # -----------------------------------------------------------------------------
 
-class ActionCreator(EventEmitter):
+class ActionCreator(object):
     default_shortcuts = {
         # Clustering.
         'merge': 'g',
@@ -337,7 +341,7 @@ class ActionCreator(EventEmitter):
         # action and the event name/method (used for different move flavors).
         method_name = kwargs.pop('method_name', name)
         method_args = kwargs.pop('method_args', ())
-        emit_fun = partial(self.emit, 'action', method_name, *method_args)
+        emit_fun = partial(emit, 'action', self, method_name, *method_args)
         self.actions.add(emit_fun, name=name, **kwargs)
 
     def separator(self, **kwargs):
@@ -399,7 +403,7 @@ def _is_group_masked(group):
     return group in ('noise', 'mua')
 
 
-class Supervisor(EventEmitter):
+class Supervisor(object):
     """Component that brings manual clustering facilities to a GUI:
 
     * Clustering instance: merge, split, undo, redo
@@ -462,17 +466,22 @@ class Supervisor(EventEmitter):
 
         # Create The Action Creator instance.
         self.action_creator = ActionCreator()
-        self.action_creator.connect(self._on_action, event='action')
+        connect(self._on_action, event='action', sender=self.action_creator)
 
         # Log the actions.
-        self.clustering.connect(self._log_action, event='cluster')
-        self.cluster_meta.connect(self._log_action_meta, event='cluster')
+        connect(self._log_action, event='cluster', sender=self.clustering)
+        connect(self._log_action_meta, event='cluster', sender=self.cluster_meta)
 
-        # Raise the global cluster event.
-        self.clustering.connect(partial(self.emit, 'cluster'), event='cluster')
-        self.cluster_meta.connect(partial(self.emit, 'cluster'), event='cluster')
+        # Raise supervisor.cluster
+        @connect(sender=self.clustering)
+        def on_cluster(sender, up):
+            emit('cluster', self, up)
 
-        self.connect(self._save_new_cluster_id, event='cluster')
+        @connect(sender=self.cluster_meta)  # noqa
+        def on_cluster(sender, up):
+            emit('cluster', self, up)
+
+        connect(self._save_new_cluster_id, event='cluster', sender=self)
 
     # Internal methods
     # -------------------------------------------------------------------------
@@ -485,7 +494,9 @@ class Supervisor(EventEmitter):
                           kind='pickle',
                           )
 
-    def _log_action(self, up):
+    def _log_action(self, sender, up):
+        if sender != self.clustering:
+            return
         if up.history:
             logger.info(up.history.title() + " cluster assign.")
         elif up.description == 'merge':
@@ -494,9 +505,10 @@ class Supervisor(EventEmitter):
                         up.added[0])
         else:
             logger.info("Assigned %s spikes.", len(up.spike_ids))
-        #self.emit('cluster', up)
 
-    def _log_action_meta(self, up):
+    def _log_action_meta(self, sender, up):
+        if sender != self.cluster_meta:
+            return
         if up.history:
             logger.info(up.history.title() + " move.")
         else:
@@ -509,7 +521,7 @@ class Supervisor(EventEmitter):
         if up.description != 'metadata_group':
             return
 
-    def _save_new_cluster_id(self, up):
+    def _save_new_cluster_id(self, sender, up):
         # Save the new cluster id on disk.
         new_cluster_id = self.clustering.new_cluster_id()
         if self.context:
@@ -517,7 +529,7 @@ class Supervisor(EventEmitter):
             self.context.save('new_cluster_id',
                               dict(new_cluster_id=new_cluster_id))
 
-    def _save_gui_state(self, gui):
+    def _save_gui_state(self, gui, sender):
         b = Barrier()
         self.cluster_view.get_state(b(1))
         b.wait()
@@ -527,7 +539,7 @@ class Supervisor(EventEmitter):
     def n_spikes(self, cluster_id):
         return len(self.clustering.spikes_per_cluster.get(cluster_id, []))
 
-    def _get_similar_clusters(self, cluster_id):
+    def _get_similar_clusters(self, sender, cluster_id):
         sim = self.similarity(cluster_id)
         # Only keep existing clusters.
         clusters_set = set(self.clustering.cluster_ids)
@@ -552,14 +564,15 @@ class Supervisor(EventEmitter):
 
         self.cluster_view = ClusterView(gui, data=data)
         # Update the action flow and similarity view when selection changes.
-        self.cluster_view.connect_(self._clusters_selected, event='select')
+        connect(self._clusters_selected, event='select', sender=self.cluster_view)
 
         self.similarity_view = SimilarityView(gui)
-        self.similarity_view.connect_(self._get_similar_clusters, event='request_similar_clusters')
-        self.similarity_view.connect_(self._similar_selected, event='select')
+        connect(self._get_similar_clusters, event='request_similar_clusters',
+                sender=self.similarity_view)
+        connect(self._similar_selected, event='select', sender=self.similarity_view)
 
         # Change the state after every clustering action, according to the action flow.
-        self.connect(self._after_action, event='cluster')
+        connect(self._after_action, event='cluster', sender=self)
 
     def _clusters_added(self, cluster_ids):
         logger.log(5, "Clusters added: %s", cluster_ids)
@@ -583,28 +596,34 @@ class Supervisor(EventEmitter):
         self.cluster_view.change(data)
         self.similarity_view.change(data)
 
-    def _clusters_selected(self, cluster_ids_and_next):
+    def _clusters_selected(self, sender, cluster_ids_and_next):
+        if sender != self.cluster_view:
+            return
         cluster_ids, next_cluster = cluster_ids_and_next
         logger.debug("Clusters selected: %s (%s)", cluster_ids, next_cluster)
         self.task_logger.log(self.cluster_view, 'select', cluster_ids, output=cluster_ids_and_next)
         # Update the similarity view when the cluster view selection changes.
         self.similarity_view.reset(cluster_ids)
-        self.emit('select_clusters_done')
+        emit('select_clusters_done', self)
 
-    def _similar_selected(self, similar_and_next):
+    def _similar_selected(self, sender, similar_and_next):
+        if sender != self.similarity_view:
+            return
         similar, next_similar = similar_and_next
         logger.debug("Similar clusters selected: %s (%s)", similar, next_similar)
         self.task_logger.log(self.similarity_view, 'select', similar, output=similar_and_next)
-        self.emit('select_similar_done')
+        emit('select_similar_done', self)
 
-    def _on_action(self, name, *args):
+    def _on_action(self, sender, name, *args):
         """Bind the 'action' event raised by ActionCreator to methods of this class."""
+        if sender != self.action_creator:
+            return
         # Enqueue the requested action.
         self.task_logger.enqueue(self, name, *args)
         # Perform the action (which calls self.<name>(...)).
         self.task_logger.process()
 
-    def _after_action(self, up):
+    def _after_action(self, sender, up):
         # This is called once the action has completed. We update the tables.
         # Update the views with the old and new clusters.
         self._clusters_added(up.added)
@@ -635,7 +654,7 @@ class Supervisor(EventEmitter):
             supervisor=self,
         )
 
-        gui.connect_(partial(self._save_gui_state, gui), event='close')
+        connect(partial(self._save_gui_state, gui), event='close', sender=self)
         self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view))
         gui.add_view(self.cluster_view)
         gui.add_view(self.similarity_view)
@@ -690,7 +709,7 @@ class Supervisor(EventEmitter):
     def split(self, spike_ids=None, spike_clusters_rel=0):
         """Split the selected spikes."""
         if spike_ids is None:
-            spike_ids = self.emit('request_split', single=True)
+            spike_ids = emit('request_split', self, single=True)
             spike_ids = np.asarray(spike_ids, dtype=np.int64)
             assert spike_ids.dtype == np.int64
             assert spike_ids.ndim == 1
@@ -698,7 +717,7 @@ class Supervisor(EventEmitter):
             msg = ("You first need to select spikes in the feature "
                    "view with a few Ctrl+Click around the spikes "
                    "that you want to split.")
-            self.emit('error', msg)
+            emit('error', self, msg)
             return
         self.clustering.split(spike_ids,
                               spike_clusters_rel=spike_clusters_rel)
@@ -755,27 +774,27 @@ class Supervisor(EventEmitter):
 
     def reset(self, callback=None):
         """Reset the wizard."""
-        self.cluster_view.first(callback=callback or partial(self.emit, 'wizard_done'))
+        self.cluster_view.first(callback=callback or partial(emit, 'wizard_done', self))
 
     def next_best(self, callback=None):
         """Select the next best cluster."""
-        self.cluster_view.next(callback=callback or partial(self.emit, 'wizard_done'))
+        self.cluster_view.next(callback=callback or partial(emit, 'wizard_done', self))
 
     def previous_best(self, callback=None):
         """Select the previous best cluster."""
-        self.cluster_view.previous(callback=callback or partial(self.emit, 'wizard_done'))
+        self.cluster_view.previous(callback=callback or partial(emit, 'wizard_done', self))
 
     def next(self, callback=None):
         """Select the next cluster."""
         state = self.task_logger.last_state()
         if not state or not state[0]:
-            self.cluster_view.first(callback=callback or partial(self.emit, 'wizard_done'))
+            self.cluster_view.first(callback=callback or partial(emit, 'wizard_done', self))
         else:
-            self.similarity_view.next(callback=callback or partial(self.emit, 'wizard_done'))
+            self.similarity_view.next(callback=callback or partial(emit, 'wizard_done', self))
 
     def previous(self, callback=None):
         """Select the previous cluster."""
-        self.similarity_view.previous(callback=callback or partial(self.emit, 'wizard_done'))
+        self.similarity_view.previous(callback=callback or partial(emit, 'wizard_done', self))
 
     # Other actions
     # -------------------------------------------------------------------------
@@ -798,7 +817,7 @@ class Supervisor(EventEmitter):
                   for field in self.cluster_meta.fields
                   if field not in ('next_cluster')]
         # TODO: add option in add_field to declare a field unsavable.
-        self.emit('request_save', spike_clusters, groups, *labels)
+        emit('request_save', self, spike_clusters, groups, *labels)
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
 
