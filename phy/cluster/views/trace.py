@@ -299,7 +299,7 @@ class TraceView(ManualClusteringView):
         self.build()
         self.update()
 
-    def on_select(self, sender=None, cluster_ids=None, **kwargs):
+    def on_select(self, cluster_ids=None, **kwargs):
         super(TraceView, self).on_select(cluster_ids=cluster_ids, **kwargs)
         self.set_interval(self._interval, change_status=False,
                           force_update=kwargs.get('force_update', None))

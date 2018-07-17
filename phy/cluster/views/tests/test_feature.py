@@ -62,16 +62,16 @@ def test_feature_view(qtbot, tempdir, n_channels):
     v.set_state(GUIState(scaling=None))
 
     gui = GUI(config_dir=tempdir)
-    gui.show()
     v.attach(gui)
-    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
 
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
 
-    emit('select', gui, [0, 2])
+    emit('select', gui, [[0, 2], None])
     qtbot.wait(10)
 
     v.increase()
@@ -91,13 +91,12 @@ def test_feature_view(qtbot, tempdir, n_channels):
                          modifier=Qt.ControlModifier)
 
     _click(10, 10)
-    _click(10, 100)
-    _click(100, 100)
-    _click(100, 10)
+    _click(10, 300)
+    _click(300, 300)
+    _click(300, 10)
 
     # Split lassoed points.
     spike_ids = v.on_request_split()
     assert len(spike_ids) > 0
 
-    # qtbot.stop()
     gui.close()

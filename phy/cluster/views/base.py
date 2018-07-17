@@ -52,18 +52,16 @@ class ManualClusteringView(View):
         self.gui = None
 
         # Keep track of the selected clusters and spikes.
-        self.cluster_ids = None
+        #self.cluster_ids = None
 
         super(ManualClusteringView, self).__init__(**kwargs)
         self.panzoom._default_zoom = .9
         self.panzoom.reset()
         self.events.add(status=StatusEvent)
 
-    def on_select(self, sender=None, cluster_ids=None, **kwargs):
-        cluster_ids = (cluster_ids if cluster_ids is not None
-                       else self.cluster_ids)
-        self.cluster_ids = list(cluster_ids) if cluster_ids is not None else []
-        self.cluster_ids = [int(c) for c in self.cluster_ids]
+    def on_select(self, cluster_ids=None, **kwargs):
+        # To override.
+        pass
 
     def attach(self, gui, name=None):
         """Attach the view to the GUI."""
@@ -82,8 +80,13 @@ class ManualClusteringView(View):
         # cursor.
         self.async_caller = AsyncCaller(delay=self._callback_delay)
 
-        @connect(sender=gui)
-        def on_select(sender=None, cluster_ids=None, **kwargs):
+        @connect
+        def on_select(sender, selected_and_next, **kwargs):
+            cluster_ids, _ = selected_and_next
+            cluster_ids = [int(c) for c in (cluster_ids if cluster_ids is not None else [])]
+            if not cluster_ids:
+                return
+
             # Call this function after a delay unless there is another
             # cluster selection in the meantime.
             @self.async_caller.set

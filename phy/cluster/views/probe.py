@@ -26,8 +26,8 @@ class ProbeView(HTMLWidget):
         self.positions = positions
         self.best_channels = best_channels
 
-    def on_select(self, sender=None, cluster_ids=None, **kwargs):
-        if not len(cluster_ids):
+    def on_select(self, cluster_ids=(), **kwargs):
+        if not cluster_ids:
             return
         cluster_channels = {i: self.best_channels(cl)
                             for i, cl in enumerate(cluster_ids)}

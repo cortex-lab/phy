@@ -97,11 +97,9 @@ class CorrelogramView(ManualClusteringView):
                                 data_bounds=None,
                                 )
 
-    def on_select(self, sender=None, cluster_ids=None, **kwargs):
-        super(CorrelogramView, self).on_select(cluster_ids=cluster_ids, **kwargs)
-        cluster_ids = self.cluster_ids
+    def on_select(self, cluster_ids=(), **kwargs):
         n_clusters = len(cluster_ids)
-        if n_clusters == 0:
+        if not cluster_ids:
             return
 
         ccg = self.correlograms(cluster_ids,

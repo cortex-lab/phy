@@ -292,3 +292,6 @@ class Lasso(object):
             else:
                 self.clear()
                 self.box = None
+
+    def __repr__(self):
+        return str(self.polygon)

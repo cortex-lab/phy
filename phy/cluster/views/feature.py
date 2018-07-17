@@ -236,13 +236,11 @@ class FeatureView(ManualClusteringView):
     def clear_channels(self):
         """Reset the dimensions."""
         self.channel_ids = None
-        self.on_select()
+        self.on_select(cluster_ids=self.cluster_ids)
 
-    def on_select(self, sender=None, cluster_ids=None, **kwargs):
-        super(FeatureView, self).on_select(cluster_ids=cluster_ids, **kwargs)
-        cluster_ids = self.cluster_ids
-        n_clusters = len(cluster_ids)
-        if n_clusters == 0:
+    def on_select(self, cluster_ids=(), **kwargs):
+        self.cluster_ids = cluster_ids
+        if not cluster_ids:
             return
 
         # Determine whether the channels should be fixed or not.
@@ -320,7 +318,7 @@ class FeatureView(ManualClusteringView):
         if channels is None:
             return
         if len(channels) == 1:
-            self.on_select()
+            self.on_select(cluster_ids=self.cluster_ids)
             return
         assert len(channels) >= 2
         # Get the axis from the pressed button (1, 2, etc.)
@@ -341,7 +339,7 @@ class FeatureView(ManualClusteringView):
         logger.debug("Choose channels %d and %d in feature view.",
                      *channels[:2])
         # Fix the channels temporarily.
-        self.on_select(fixed_channels=True)
+        self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)
 
     def on_request_split(self, sender=None):
         """Return the spikes enclosed by the lasso."""
@@ -405,9 +403,9 @@ class FeatureView(ManualClusteringView):
     def increase(self):
         """Increase the scaling of the features."""
         self.scaling *= 1.2
-        self.on_select(fixed_channels=True)
+        self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)
 
     def decrease(self):
         """Decrease the scaling of the features."""
         self.scaling /= 1.2
-        self.on_select(fixed_channels=True)
+        self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)

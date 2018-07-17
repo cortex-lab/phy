@@ -28,9 +28,9 @@ def test_correlogram_view(qtbot, tempdir):
                         sample_rate=100.,
                         )
     gui = GUI(config_dir=tempdir)
-    gui.show()
     v.attach(gui)
-    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
 
     v.on_select([])
     v.on_select(cluster_ids=[0])

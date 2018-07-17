@@ -34,9 +34,9 @@ def test_waveform_view(qtbot, tempdir):
     v = WaveformView(waveforms=get_waveforms,
                      )
     gui = GUI(config_dir=tempdir)
-    gui.show()
     v.attach(gui)
-    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
 
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
