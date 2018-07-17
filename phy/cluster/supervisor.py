@@ -474,16 +474,6 @@ class Supervisor(EventEmitter):
 
         self.connect(self._save_new_cluster_id, event='cluster')
 
-        # Create the cluster view and similarity view.
-        self._create_views()
-
-        # Create the TaskLogger.
-        self.task_logger = TaskLogger(
-            cluster_view=self.cluster_view,
-            similarity_view=self.similarity_view,
-            supervisor=self,
-        )
-
     # Internal methods
     # -------------------------------------------------------------------------
 
@@ -559,6 +549,7 @@ class Supervisor(EventEmitter):
 
     def _create_views(self, gui=None):
         data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
+
         self.cluster_view = ClusterView(gui, data=data)
         # Update the action flow and similarity view when selection changes.
         self.cluster_view.connect_(self._clusters_selected, event='select')
@@ -634,6 +625,16 @@ class Supervisor(EventEmitter):
         return Bunch({'cluster_view': Bunch(sc), 'similarity_view': Bunch(ss)})
 
     def attach(self, gui):
+        # Create the cluster view and similarity view.
+        self._create_views(gui=gui)
+
+        # Create the TaskLogger.
+        self.task_logger = TaskLogger(
+            cluster_view=self.cluster_view,
+            similarity_view=self.similarity_view,
+            supervisor=self,
+        )
+
         gui.connect_(partial(self._save_gui_state, gui), event='close')
         self.cluster_view.set_state(gui.state.get_view_state(self.cluster_view))
         gui.add_view(self.cluster_view)
@@ -663,21 +664,24 @@ class Supervisor(EventEmitter):
     # Clustering actions
     # -------------------------------------------------------------------------
 
+    @property
     def selected_clusters(self):
         state = self.task_logger.last_state()
         return state[0] or [] if state else []
 
+    @property
     def selected_similar(self):
         state = self.task_logger.last_state()
         return state[2] or [] if state else []
 
+    @property
     def selected(self):
-        return _uniq(self.selected_clusters() + self.selected_similar())
+        return _uniq(self.selected_clusters + self.selected_similar)
 
     def merge(self, cluster_ids=None, to=None):
         """Merge the selected clusters."""
         if cluster_ids is None:
-            cluster_ids = self.selected()
+            cluster_ids = self.selected
         if len(cluster_ids or []) <= 1:
             return
         self.clustering.merge(cluster_ids, to=to)
@@ -721,7 +725,7 @@ class Supervisor(EventEmitter):
 
         """
         if cluster_ids is None:
-            cluster_ids = self.selected()
+            cluster_ids = self.selected
         if not hasattr(cluster_ids, '__len__'):
             cluster_ids = [cluster_ids]
         if len(cluster_ids) == 0:
@@ -732,11 +736,11 @@ class Supervisor(EventEmitter):
     def move(self, group, which):
         """Assign a group to some clusters."""
         if which == 'all':
-            which = self.selected()
+            which = self.selected
         elif which == 'best':
-            which = self.selected_clusters()
+            which = self.selected_clusters
         elif which == 'similar':
-            which = self.selected_similar()
+            which = self.selected_similar
         if isinstance(which, int):
             which = [which]
         if not which:

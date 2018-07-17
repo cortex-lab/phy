@@ -273,7 +273,7 @@ def _select(supervisor, cluster_ids, similar=None):
 
 
 def _assert_selected(supervisor, sel):
-    assert supervisor.selected() == sel
+    assert supervisor.selected == sel
 
 
 def test_select(qtbot, supervisor):
