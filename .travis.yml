@@ -18,7 +18,7 @@ install:
   - mkdir ./mason/
   - curl -sSfL https://github.com/mapbox/mason/archive/v0.2.0.tar.gz | tar --gunzip --extract --strip-components=1 --directory=./mason/
   - ./mason/mason install gdb 7.12
-  - export PATH="./mason/masonprefixgdb7.12/bin:$PATH"
+  - export PATH=$(./mason/mason prefix gdb 7.12)/bin:${PATH}
   - curl -sSfL https://github.com/mapbox/logbt/archive/v1.6.0.tar.gz | tar --gunzip --extract --strip-components=2 --exclude="*md" --exclude="test*" --directory=.
   - sudo bash -c "echo '/tmp/logbt-coredumps/core.%p.%E' > /proc/sys/kernel/core_pattern"
 
