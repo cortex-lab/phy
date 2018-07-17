@@ -11,7 +11,6 @@ from contextlib import contextmanager
 import logging
 import string
 import re
-from collections import defaultdict
 from functools import partial
 
 logger = logging.getLogger(__name__)
