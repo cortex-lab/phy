@@ -42,7 +42,9 @@ from PyQt5.QtWidgets import (QAction, QStatusBar,  # noqa
                              )
 
 # Enable high DPI support.
-QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
+# BUG: uncommenting this create scaling bugs on high DPI screens
+# on Ubuntu.
+#QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 
 
 # -----------------------------------------------------------------------------
