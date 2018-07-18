@@ -102,7 +102,7 @@ _PAGE_TEMPLATE = """
 def _uniq(seq):
     seen = set()
     seen_add = seen.add
-    return [x for x in seq if not (x in seen or seen_add(x))]
+    return [int(x) for x in seq if not (x in seen or seen_add(x))]
 
 
 class Barrier(object):
@@ -286,7 +286,7 @@ class Table(HTMLWidget):
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(lambda: self.update())
         # Note: this event should be raised LAST, after all OpenGL widgets have been updated.
-        connect(event='select', sender=self, func=lambda *args: self._timer.start(20), last=True)
+        connect(event='select', sender=self, func=lambda *args: self._timer.start(100), last=True)
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""

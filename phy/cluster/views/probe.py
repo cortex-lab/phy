@@ -26,6 +26,12 @@ class ProbeView(HTMLWidget):
         self.positions = positions
         self.best_channels = best_channels
 
+        @connect
+        def on_select(sender, cluster_ids):
+            if sender.__class__.__name__ != 'Supervisor':
+                return
+            self.on_select(cluster_ids=cluster_ids)
+
     def on_select(self, cluster_ids=(), **kwargs):
         if not cluster_ids:
             cluster_channels = {0: list(range(len(self.positions)))}
@@ -36,9 +42,6 @@ class ProbeView(HTMLWidget):
         self.build()
 
     def attach(self, gui):
-        @connect
-        def on_select(sender, selected_and_next):
-            self.on_select(cluster_ids=selected_and_next[0])
 
         self.on_select()
         self.show()

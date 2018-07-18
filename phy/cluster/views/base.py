@@ -81,9 +81,11 @@ class ManualClusteringView(View):
         self.async_caller = AsyncCaller(delay=self._callback_delay)
 
         @connect
-        def on_select(sender, selected_and_next, **kwargs):
-            cluster_ids, _ = selected_and_next
-            cluster_ids = [int(c) for c in (cluster_ids if cluster_ids is not None else [])]
+        def on_select(sender, cluster_ids, **kwargs):
+            if sender.__class__.__name__ != 'Supervisor':
+                return
+            assert isinstance(cluster_ids, list)
+            # cluster_ids = [int(c) for c in (cluster_ids if cluster_ids is not None else [])]
             if not cluster_ids:
                 return
 

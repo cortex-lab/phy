@@ -604,7 +604,7 @@ class Supervisor(object):
         self.task_logger.log(self.cluster_view, 'select', cluster_ids, output=cluster_ids_and_next)
         # Update the similarity view when the cluster view selection changes.
         self.similarity_view.reset(cluster_ids)
-        emit('select_clusters_done', self)
+        emit('select', self, self.selected)
 
     def _similar_selected(self, sender, similar_and_next):
         if sender != self.similarity_view:
@@ -612,7 +612,7 @@ class Supervisor(object):
         similar, next_similar = similar_and_next
         logger.debug("Similar clusters selected: %s (%s)", similar, next_similar)
         self.task_logger.log(self.similarity_view, 'select', similar, output=similar_and_next)
-        emit('select_similar_done', self)
+        emit('select', self, self.selected)
 
     def _on_action(self, sender, name, *args):
         """Bind the 'action' event raised by ActionCreator to methods of this class."""
