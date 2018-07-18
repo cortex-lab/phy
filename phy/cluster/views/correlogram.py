@@ -98,6 +98,7 @@ class CorrelogramView(ManualClusteringView):
                                 )
 
     def on_select(self, cluster_ids=(), **kwargs):
+        self.cluster_ids = cluster_ids
         n_clusters = len(cluster_ids)
         if not cluster_ids:
             return
@@ -115,7 +116,7 @@ class CorrelogramView(ManualClusteringView):
     def toggle_normalization(self):
         """Change the normalization of the correlograms."""
         self.uniform_normalization = not self.uniform_normalization
-        self.on_select()
+        self.on_select(cluster_ids=self.cluster_ids)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -139,7 +140,7 @@ class CorrelogramView(ManualClusteringView):
 
         """
         self.set_bin_window(bin_size=bin_size * 1e-3)
-        self.on_select()
+        self.on_select(cluster_ids=self.cluster_ids)
 
     def set_window(self, window_size):
         """Set the correlogram window size (in milliseconds).
@@ -148,4 +149,4 @@ class CorrelogramView(ManualClusteringView):
 
         """
         self.set_bin_window(window_size=window_size * 1e-3)
-        self.on_select()
+        self.on_select(cluster_ids=self.cluster_ids)

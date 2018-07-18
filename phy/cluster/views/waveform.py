@@ -201,6 +201,7 @@ class WaveformView(ManualClusteringView):
                        )
 
     def on_select(self, cluster_ids=(), **kwargs):
+        self.cluster_ids = cluster_ids
         n_clusters = len(cluster_ids)
         if not cluster_ids:
             return
@@ -273,7 +274,7 @@ class WaveformView(ManualClusteringView):
     @overlap.setter
     def overlap(self, value):
         self._overlap = value
-        self.on_select()
+        self.on_select(cluster_ids=self.cluster_ids)
 
     def toggle_waveform_overlap(self):
         """Toggle the overlap of the waveforms."""
@@ -354,7 +355,7 @@ class WaveformView(ManualClusteringView):
 
     def toggle_show_labels(self):
         self.do_show_labels = not self.do_show_labels
-        self.on_select()
+        self.on_select(cluster_ids=self.cluster_ids)
 
     def on_key_press(self, event):
         """Handle key press events."""

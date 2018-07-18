@@ -102,7 +102,7 @@ class ManualClusteringView(View):
         # Update the GUI status message when the `self.set_status()` method
         # is called, i.e. when the `status` event is raised by the VisPy
         # view.
-        @connect(sender=self)
+        @connect(sender=self)  # pragma: no cover
         def on_status(sender=None, e=None):
             gui.status_message = e.message
 
