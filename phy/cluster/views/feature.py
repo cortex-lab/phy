@@ -75,6 +75,7 @@ def _uniq(seq):
 
 class FeatureView(ManualClusteringView):
     _callback_delay = 20
+    cluster_ids = ()
 
     _default_marker_size = 5.
     default_shortcuts = {

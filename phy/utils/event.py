@@ -116,12 +116,15 @@ class EventEmitter(object):
         """
         if self._is_silent:
             return
-        logger.log(5, "Emit event %s.%s", sender.__class__.__name__, event)
+        logger.log(10, "Emit event %s.%s", sender.__class__.__name__, event)
         # Call the last callback if this is a single event.
         single = kwargs.pop('single', None)
         res = []
         for e, s, f in self._callbacks:
             if e == event and (s is None or s == sender):
+                f_name = getattr(f, '__qualname__', getattr(f, '__name__', str(f)))
+                s_name = s.__class__.__name__
+                logger.debug("Event Callback %s (%s).", f_name, s_name)
                 res.append(f(sender, *args, **kwargs))
                 if single:
                     return res[-1]

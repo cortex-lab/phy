@@ -65,6 +65,7 @@ class ChannelClick(Event):
 
 class WaveformView(ManualClusteringView):
     scaling_coeff = 1.1
+    cluster_ids = ()
 
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
