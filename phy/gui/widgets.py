@@ -360,3 +360,7 @@ class Table(HTMLWidget):
     def get_current_sort(self, callback=None):
         """Current sort: a tuple `(name, dir)`."""
         self.eval_js('table._currentSort()', callback=callback)
+
+    def closeEvent(self, e):
+        self._timer.stop()
+        return super(Table, self).closeEvent(e)

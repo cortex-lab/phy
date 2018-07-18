@@ -127,7 +127,7 @@ class EventEmitter(object):
             if e == event and (s is None or s == sender):
                 f_name = getattr(f, '__qualname__', getattr(f, '__name__', str(f)))
                 s_name = s.__class__.__name__
-                logger.debug("Event Callback %s (%s).", f_name, s_name)
+                logger.debug("Event callback %s (%s).", f_name, s_name)
                 res.append(f(sender, *args, **kwargs))
                 if single:
                     return res[-1]
