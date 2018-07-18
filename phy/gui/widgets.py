@@ -13,8 +13,8 @@ from functools import partial
 
 from six import text_type
 
-from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block
-from phy.utils import emit
+from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, QTimer
+from phy.utils import emit, connect
 from phy.utils._misc import _CustomEncoder, _read_text
 from phy.utils._types import _is_integer
 
@@ -279,6 +279,13 @@ class Table(HTMLWidget):
         </script>
         ''' % (data_json, value_names_json, columns_json)
         self.build(lambda html: emit('ready', self))
+
+        # HACK: work-around a Qt bug where this widget is not properly refreshed
+        # when an OpenGL widget is docked to the main window.
+        self._timer = QTimer()
+        self._timer.setSingleShot(True)
+        self._timer.timeout.connect(lambda: self.update())
+        connect(event='select', sender=self, func=lambda *args: self._timer.start(10))
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
