@@ -285,7 +285,8 @@ class Table(HTMLWidget):
         self._timer = QTimer()
         self._timer.setSingleShot(True)
         self._timer.timeout.connect(lambda: self.update())
-        connect(event='select', sender=self, func=lambda *args: self._timer.start(10))
+        # Note: this event should be raised LAST, after all OpenGL widgets have been updated.
+        connect(event='select', sender=self, func=lambda *args: self._timer.start(20), last=True)
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
