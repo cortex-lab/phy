@@ -71,7 +71,10 @@ def test_feature_view(qtbot, tempdir, n_channels):
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
 
-    emit('select', gui, [[0, 2], None])
+    class Supervisor(object):
+        pass
+
+    emit('select', Supervisor(), [0, 2])
     qtbot.wait(10)
 
     v.increase()

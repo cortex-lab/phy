@@ -85,7 +85,6 @@ class ManualClusteringView(View):
             if sender.__class__.__name__ != 'Supervisor':
                 return
             assert isinstance(cluster_ids, list)
-            # cluster_ids = [int(c) for c in (cluster_ids if cluster_ids is not None else [])]
             if not cluster_ids:
                 return
 
