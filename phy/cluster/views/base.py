@@ -14,7 +14,7 @@ from vispy.util.event import Event
 from phy.gui import Actions
 from phy.gui.qt import AsyncCaller, busy_cursor
 from phy.plot import View
-from phy.utils import Bunch, connect
+from phy.utils import Bunch, connect, unconnect
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +58,8 @@ class ManualClusteringView(View):
         self.panzoom._default_zoom = .9
         self.panzoom.reset()
         self.events.add(status=StatusEvent)
+
+    def on_close(self, e):
 
     def on_select(self, cluster_ids=None, **kwargs):
         # To override.
@@ -109,10 +111,9 @@ class ManualClusteringView(View):
         # Save the view state in the GUI state.
         @connect(sender=gui)
         def on_close(sender=None):
+            unconnect(on_select)
             gui.state.update_view_state(self, self.state)
-            # NOTE: create_gui() already saves the state, but the event
-            # is registered *before* we add all views.
-            #gui.state.save()
+            self.close()
 
         self.show()
 
