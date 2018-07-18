@@ -69,7 +69,7 @@ class EventEmitter(object):
         yield
         self._is_silent = not(self._is_silent)
 
-    def connect(self, func=None, event=None, sender=None):
+    def connect(self, func=None, event=None, sender=None, **kwargs):
         """Register a callback function to a given event.
 
         To register a callback function to the `spam` event, where `obj` is
@@ -96,14 +96,14 @@ class EventEmitter(object):
             event = self._get_on_name(func)
 
         # We register the callback function.
-        self._callbacks.append((event, sender, func))
+        self._callbacks.append((event, sender, func, kwargs))
 
         return func
 
     def unconnect(self, *funcs):
         """Unconnect specified callback functions."""
-        self._callbacks = [(event, sender, f)
-                           for (event, sender, f) in self._callbacks if f not in funcs]
+        self._callbacks = [(event, sender, f, kwargs)
+                           for (event, sender, f, kwargs) in self._callbacks if f not in funcs]
 
     def emit(self, event, sender, *args, **kwargs):
         """Call all callback functions registered with an event.
@@ -120,7 +120,10 @@ class EventEmitter(object):
         # Call the last callback if this is a single event.
         single = kwargs.pop('single', None)
         res = []
-        for e, s, f in self._callbacks:
+        # Put `last=True` callbacks at the end.
+        callbacks = [c for c in self._callbacks if not c[-1].get('last', None)]
+        callbacks += [c for c in self._callbacks if c[-1].get('last', None)]
+        for e, s, f, k in callbacks:
             if e == event and (s is None or s == sender):
                 f_name = getattr(f, '__qualname__', getattr(f, '__name__', str(f)))
                 s_name = s.__class__.__name__
