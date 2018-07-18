@@ -59,8 +59,6 @@ class ManualClusteringView(View):
         self.panzoom.reset()
         self.events.add(status=StatusEvent)
 
-    def on_close(self, e):
-
     def on_select(self, cluster_ids=None, **kwargs):
         # To override.
         pass
