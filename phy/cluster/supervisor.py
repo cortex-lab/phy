@@ -668,9 +668,12 @@ class Supervisor(object):
 
         self.action_creator.attach(gui)
 
+        emit('attach_gui', self)
+
     @property
     def actions(self):
-        return self.action_creator.actions
+        """Works only after a GUI has been attached to the supervisor."""
+        return getattr(self.action_creator, 'actions', None)
 
     # Selection actions
     # -------------------------------------------------------------------------
@@ -831,3 +834,4 @@ class Supervisor(object):
     def block(self):
         """Block until there are no pending actions."""
         _block(lambda: self.task_logger.has_finished())
+        self.task_logger.show_history()

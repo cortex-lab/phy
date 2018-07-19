@@ -80,8 +80,6 @@ def test_trace_view(tempdir, qtbot):
     gui.show()
     qtbot.waitForWindowShown(gui)
 
-    # qtbot.waitForWindowShown(gui)
-
     v.on_select(cluster_ids=[])
     v.on_select(cluster_ids=[0])
     v.on_select(cluster_ids=[0, 2, 3])

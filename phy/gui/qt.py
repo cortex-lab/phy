@@ -197,11 +197,13 @@ def _abs_path(rel_path):
 
 
 class WebPage(QWebEnginePage):
+    _raise_on_javascript_error = False
+
     def javaScriptConsoleMessage(self, level, msg, line, source):
         super(WebPage, self).javaScriptConsoleMessage(level, msg, line, source)
         msg = "[JS:L%02d] %s" % (line, msg)
         f = (logger.debug, logger.warn, logger.error)[level]
-        if level >= 2:
+        if self._raise_on_javascript_error and level >= 2:
             raise RuntimeError(msg)
         f(msg)
 

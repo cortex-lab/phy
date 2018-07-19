@@ -37,7 +37,7 @@ class ManualClusteringView(View):
     """
     default_shortcuts = {
     }
-    _callback_delay = 10
+    _callback_delay = 1
 
     def __init__(self, shortcuts=None, **kwargs):
 
@@ -93,6 +93,7 @@ class ManualClusteringView(View):
             @self.async_caller.set
             def update_view():
                 with busy_cursor():
+                    logger.debug("Selecting %s in %s.", cluster_ids, self)
                     self.on_select(cluster_ids=cluster_ids, **kwargs)
 
         self.actions = Actions(gui,

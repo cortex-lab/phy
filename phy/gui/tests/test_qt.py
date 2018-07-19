@@ -113,6 +113,7 @@ def test_javascript_1(qtbot):
 
 def test_javascript_2(qtbot):
     view = WebView()
+    view._page._raise_on_javascript_error = True
     with qtbot.capture_exceptions() as exceptions:
         view.set_html('<script>console.error("Test.");</script>')
         qtbot.addWidget(view)

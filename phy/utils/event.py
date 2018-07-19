@@ -116,7 +116,7 @@ class EventEmitter(object):
         """
         if self._is_silent:
             return
-        logger.log(10, "Emit event %s.%s", sender.__class__.__name__, event)
+        logger.log(10, "Emit event %s.%s(%s)", sender.__class__.__name__, event, args)
         # Call the last callback if this is a single event.
         single = kwargs.pop('single', None)
         res = []
