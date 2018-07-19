@@ -226,14 +226,23 @@ class TaskLogger(object):
 # -----------------------------------------------------------------------------
 
 class ClusterView(Table):
-    def __init__(self, *args, data=None):
-        HTMLWidget.__init__(self, *args, title='ClusterView')
+    _required_columns = ('n_spikes', 'quality')
+    _defaut_sort = ('quality', 'desc')
+    _view_name = 'cluster_view'
+
+    def __init__(self, *args, data=None, columns=()):
+        HTMLWidget.__init__(self, *args, title=self.__class__.__name__)
         self._set_styles()
-        emit('cluster_view_init', self)
-
-        extra_columns = emit('request_cluster_metrics', self, single=True)
-        columns = ['id', 'n_spikes', 'quality'] + extra_columns
-
+        emit(self._view_name + '_init', self)
+        # Ensure 'id' is the first column.
+        if 'id' in columns:
+            columns.remove('id')
+        columns = ['id'] + list(columns)
+        # Add required columns if needed.
+        for col in self._required_columns:
+            if col not in columns:
+                columns += [col]
+            assert col in columns
         assert columns[0] == 'id'
 
         # Allow to have <tr data_group="good"> etc. which allows for CSS styling.
@@ -243,7 +252,7 @@ class ClusterView(Table):
         @connect(sender=self)
         def on_ready(sender):
             if sender == self:
-                self.sort_by('quality', 'desc')
+                self.sort_by(*self._defaut_sort)
 
     def _set_styles(self):
         self.builder.add_style('''
@@ -266,20 +275,9 @@ class ClusterView(Table):
 
 
 class SimilarityView(ClusterView):
-    """Must connect request_similar_clusters."""
-    def __init__(self, *args, data=None):
-        HTMLWidget.__init__(self, *args, title='SimilarityView')
-        self._set_styles()
-        emit('similarity_view_init', self)
-        extra_columns = emit('request_cluster_metrics', self, single=True)
-        columns = ['id', 'n_spikes', 'similarity'] + extra_columns
-        value_names = columns + [{'data': ['group']}]
-        self._init_table(columns=columns, value_names=value_names, data=data)
-
-        @connect(sender=self)
-        def on_ready(sender):
-            if sender == self:
-                self.sort_by('similarity', 'desc')
+    _required_columns = ('n_spikes', 'similarity')
+    _defaut_sort = ('similarity', 'desc')
+    _view_name = 'similarity_view'
 
     def reset(self, cluster_ids):
         if not len(cluster_ids):
@@ -415,7 +413,8 @@ class Supervisor(object):
     ----------
 
     spike_clusters : ndarray
-    cluster_groups : dictionary
+    cluster_groups : dictionary {cluster_id: group_name}
+    cluster_metrics : dictionary {metrics_name: func cluster_id => value}
     quality: func
     similarity: func
     new_cluster_id: func
@@ -424,8 +423,7 @@ class Supervisor(object):
     GUI events
     ----------
 
-    When this component is attached to a GUI, the GUI emits the following
-    events:
+    When this component is attached to a GUI, the following events are emitted:
 
     select(cluster_ids)
         when clusters are selected
@@ -439,6 +437,7 @@ class Supervisor(object):
     def __init__(self,
                  spike_clusters=None,
                  cluster_groups=None,
+                 cluster_metrics=None,
                  quality=None,
                  similarity=None,
                  new_cluster_id=None,
@@ -448,6 +447,9 @@ class Supervisor(object):
         self.context = context
         self.quality = quality or self.n_spikes  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
+        self.cluster_metrics = cluster_metrics or {}  # dict {name: func cluster_id => value}
+        self.columns = ['id', 'n_spikes', 'quality']
+        self.columns += list(self.cluster_metrics.keys())
 
         # Create Clustering and ClusterMeta.
         # Load the cached spikes_per_cluster array.
@@ -455,6 +457,7 @@ class Supervisor(object):
         self.clustering = Clustering(spike_clusters,
                                      spikes_per_cluster=spc,
                                      new_cluster_id=new_cluster_id)
+
         # Cache the spikes_per_cluster array.
         self._save_spikes_per_cluster()
 
@@ -557,16 +560,20 @@ class Supervisor(object):
                'group': group,
                'is_masked': _is_group_masked(group),
                }
+        for key, func in self.cluster_metrics.items():
+            out[key] = func(cluster_id)
         return {k: v for k, v in out.items() if k not in exclude}
 
     def _create_views(self, gui=None):
         data = [self._get_cluster_info(cluster_id) for cluster_id in self.clustering.cluster_ids]
 
-        self.cluster_view = ClusterView(gui, data=data)
+        # Create the cluster view.
+        self.cluster_view = ClusterView(gui, data=data, columns=self.columns)
         # Update the action flow and similarity view when selection changes.
         connect(self._clusters_selected, event='select', sender=self.cluster_view)
 
-        self.similarity_view = SimilarityView(gui)
+        # Create the similarity view.
+        self.similarity_view = SimilarityView(gui, columns=self.columns + ['similarity'])
         connect(self._get_similar_clusters, event='request_similar_clusters',
                 sender=self.similarity_view)
         connect(self._similar_selected, event='select', sender=self.similarity_view)

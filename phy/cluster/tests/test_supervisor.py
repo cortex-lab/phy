@@ -235,14 +235,10 @@ def test_similarity_view_1(qtbot, gui, data):
 
 def test_cluster_view_extra_columns(qtbot, gui, data):
 
-    @connect
-    def on_request_cluster_metrics(sender):
-        return ['my_metrics']
-
     for cl in data:
         cl['my_metrics'] = cl['id'] * 1000
 
-    cv = ClusterView(gui, data=data)
+    cv = ClusterView(gui, data=data, columns=['id', 'n_spikes', 'quality', 'my_metrics'])
     _wait_until_table_ready(qtbot, cv)
 
 
@@ -279,6 +275,31 @@ def _assert_selected(supervisor, sel):
 def test_select(qtbot, supervisor):
     _select(supervisor, [30], [20])
     _assert_selected(supervisor, [30, 20])
+
+
+def test_supervisor_cluster_metrics(
+        qtbot, gui, cluster_ids, cluster_groups, quality, similarity, tempdir):
+    spike_clusters = np.repeat(cluster_ids, 2)
+
+    def my_metrics(cluster_id):
+        return cluster_id ** 2
+
+    cluster_metrics = {'my_metrics': my_metrics}
+
+    mc = Supervisor(spike_clusters,
+                    cluster_groups=cluster_groups,
+                    cluster_metrics=cluster_metrics,
+                    quality=quality,
+                    similarity=similarity,
+                    context=Context(tempdir),
+                    )
+    mc.attach(gui)
+    b = Barrier()
+    connect(b('cluster_view'), event='ready', sender=mc.cluster_view)
+    connect(b('similarity_view'), event='ready', sender=mc.similarity_view)
+    b.wait()
+
+    assert 'my_metrics' in mc.columns
 
 
 def test_supervisor_select_1(qtbot, supervisor):
