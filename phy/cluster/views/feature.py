@@ -306,8 +306,8 @@ class FeatureView(ManualClusteringView):
         self.actions.add(self.clear_channels)
         self.actions.add(self.toggle_automatic_channel_selection)
 
-        connect(self.on_channel_click, sender=gui)
-        connect(self.on_request_split, sender=gui)
+        connect(self.on_channel_click)
+        connect(self.on_request_split)
 
     @property
     def state(self):

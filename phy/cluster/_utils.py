@@ -11,7 +11,7 @@ from collections import defaultdict
 import logging
 
 from ._history import History
-from phy.utils import Bunch, _as_list, _is_list, emit
+from phy.utils import Bunch, _as_list, _is_list, emit, silent
 
 logger = logging.getLogger(__name__)
 
@@ -124,9 +124,11 @@ class ClusterMeta(object):
     def from_dict(self, dic):
         """Import data from a {cluster: {field: value}} dictionary."""
         self._reset_data()
-        for cluster, vals in dic.items():
-            for field, value in vals.items():
-                self.set(field, [cluster], value, add_to_stack=False)
+        # Do not raise events here.
+        with silent():
+            for cluster, vals in dic.items():
+                for field, value in vals.items():
+                    self.set(field, [cluster], value, add_to_stack=False)
         self._data_base = deepcopy(self._data)
 
     def to_dict(self, field):

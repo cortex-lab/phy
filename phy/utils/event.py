@@ -295,3 +295,4 @@ _EVENT = EventEmitter()
 emit = _EVENT.emit
 connect = _EVENT.connect
 unconnect = _EVENT.unconnect
+silent = _EVENT.silent

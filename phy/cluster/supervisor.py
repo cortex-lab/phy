@@ -266,7 +266,7 @@ class ClusterView(Table):
             ''')
 
     def get_state(self, callback=None):
-        self.get_current_sort(lambda sort: callback({'current_sort': tuple(sort)}))
+        self.get_current_sort(lambda sort: callback({'current_sort': tuple(sort or (None, None))}))
 
     def set_state(self, state):
         sort_by, sort_dir = state.get('current_sort', (None, None))
