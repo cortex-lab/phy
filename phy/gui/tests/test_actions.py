@@ -153,8 +153,8 @@ def test_actions_checkable(qtbot, gui, actions):
     def toggle(checked):
         _l.append(checked)
 
-    qtbot.keyPress(gui, 'c')
-    qtbot.keyPress(gui, 'c')
+    actions.get('toggle').trigger()
+    actions.get('toggle').trigger()
     assert _l == [True, False]
 
 
