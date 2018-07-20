@@ -80,9 +80,17 @@ def _wrap_callback_args(f, docstring=None):  # pragma: no cover
         if isinstance(f, partial):
             f_args = f_args[len(f.args):]
             f_args = [arg for arg in f_args if arg not in f.keywords]
-        # If there are no remaining args, we can just run the fu nction.
+        # If there are no remaining args, we can just run the function.
+        if 'checked' in f_args:
+            f_args.remove('checked')
+            checkable = True
+        else:
+            checkable = False
         if not f_args:
-            return f()
+            if checkable:
+                return f(checked)
+            else:
+                return f()
         # There are args, need to display the dialog.
         # Extract Example: `...` in the docstring to put a predefined text
         # in the input dialog.
@@ -157,7 +165,7 @@ def _alias(name):
 
 
 @require_qt
-def _create_qaction(gui, name, callback, shortcut, docstring=None, alias=''):
+def _create_qaction(gui, name, callback, shortcut, docstring=None, checkable=False, alias=''):
     # Create the QAction instance.
     action = QAction(name.capitalize().replace('_', ' '), gui)
 
@@ -175,6 +183,7 @@ def _create_qaction(gui, name, callback, shortcut, docstring=None, alias=''):
     docstring += ' (alias: {})'.format(alias)
     action.setStatusTip(docstring)
     action.setWhatsThis(docstring)
+    action.setCheckable(checkable)
     return action
 
 
@@ -198,12 +207,12 @@ class Actions(object):
         gui.actions.append(self)
 
     def add(self, callback=None, name=None, shortcut=None, alias=None,
-            docstring=None, menu=None, verbose=True):
+            docstring=None, menu=None, verbose=True, checkable=False):
         """Add an action with a keyboard shortcut."""
         if callback is None:
             # Allow to use either add(func) or @add or @add(...).
             return partial(self.add, name=name, shortcut=shortcut,
-                           alias=alias, menu=menu)
+                           alias=alias, menu=menu, checkable=checkable)
         assert callback
 
         # Get the name from the callback function if needed.
@@ -225,8 +234,9 @@ class Actions(object):
                                  shortcut,
                                  docstring=docstring,
                                  alias=alias,
+                                 checkable=checkable,
                                  )
-        action_obj = Bunch(qaction=action, name=name, alias=alias,
+        action_obj = Bunch(qaction=action, name=name, alias=alias, checkable=checkable,
                            shortcut=shortcut, callback=callback, menu=menu)
         if verbose and not name.startswith('_'):
             logger.log(5, "Add action `%s` (%s).", name,
