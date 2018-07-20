@@ -6,6 +6,7 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import logging
 import os.path as op
 from textwrap import dedent
 
@@ -20,6 +21,19 @@ from ..config import (_ensure_dir_exists,
                       load_master_config,
                       save_config,
                       )
+
+logger = logging.getLogger(__name__)
+
+
+#------------------------------------------------------------------------------
+# Test logging
+#------------------------------------------------------------------------------
+
+def test_logging():
+    logger.debug("Debug message")
+    logger.info("Info message")
+    logger.warn("Warn message")
+    logger.error("Error message")
 
 
 #------------------------------------------------------------------------------
