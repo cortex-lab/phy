@@ -100,6 +100,7 @@ class TraceView(ManualClusteringView):
         'widen': 'alt+-',
         'narrow': 'alt++',
     }
+    _freeze = True
 
     def __init__(self,
                  traces=None,
@@ -243,14 +244,13 @@ class TraceView(ManualClusteringView):
     # Public methods
     # -------------------------------------------------------------------------
 
-    def set_interval(self, interval=None, change_status=True,
-                     force_update=False):
+    def set_interval(self, interval=None, change_status=True):
         """Display the traces and spikes in a given interval."""
         if interval is None:
             interval = self._interval
         interval = self._restrict_interval(interval)
-        if not force_update and interval == self._interval:
-            return
+        #if interval == self._interval:
+        #    return
         self._interval = interval
         start, end = interval
         self.clear()
@@ -301,8 +301,7 @@ class TraceView(ManualClusteringView):
 
     def on_select(self, cluster_ids=None, **kwargs):
         super(TraceView, self).on_select(cluster_ids=cluster_ids, **kwargs)
-        self.set_interval(self._interval, change_status=False,
-                          force_update=kwargs.get('force_update', None))
+        self.set_interval(self._interval, change_status=False)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -425,7 +424,7 @@ class TraceView(ManualClusteringView):
 
     def toggle_show_labels(self):
         self.do_show_labels = not self.do_show_labels
-        self.set_interval(force_update=True)
+        self.set_interval()
 
     # Channel scaling
     # -------------------------------------------------------------------------

@@ -38,6 +38,7 @@ class ManualClusteringView(View):
     default_shortcuts = {
     }
     _callback_delay = 1
+    _freeze = False
 
     def __init__(self, shortcuts=None, **kwargs):
 
@@ -82,6 +83,8 @@ class ManualClusteringView(View):
 
         @connect
         def on_select(sender, cluster_ids, **kwargs):
+            if self._freeze:
+                return
             if sender.__class__.__name__ != 'Supervisor':
                 return
             assert isinstance(cluster_ids, list)
@@ -101,6 +104,10 @@ class ManualClusteringView(View):
                                menu=self.__class__.__name__,
                                default_shortcuts=self.shortcuts)
 
+        # Freeze and unfreeze the view when selecting clusters.
+        self.actions.add(self.toggle_freezing)
+        self.actions.separator()
+
         # Update the GUI status message when the `self.set_status()` method
         # is called, i.e. when the `status` event is raised by the VisPy
         # view.
@@ -116,6 +123,11 @@ class ManualClusteringView(View):
             self.close()
 
         self.show()
+
+    def toggle_freezing(self):
+        """Freezing means the view is not updated when the cluster
+        selection changes."""
+        self._freeze = not(self._freeze)
 
     @property
     def state(self):
