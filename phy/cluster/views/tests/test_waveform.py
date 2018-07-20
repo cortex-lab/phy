@@ -43,11 +43,11 @@ def test_waveform_view(qtbot, tempdir):
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
 
-    v.toggle_waveform_overlap()
-    v.toggle_waveform_overlap()
+    v.toggle_waveform_overlap(True)
+    v.toggle_waveform_overlap(False)
 
-    v.toggle_show_labels()
-    v.toggle_show_labels()
+    v.toggle_show_labels(True)
+    v.toggle_show_labels(False)
 
     # Box scaling.
     bs = v.boxed.box_size

@@ -114,15 +114,15 @@ class CorrelogramView(ManualClusteringView):
             self._plot_correlograms(ccg)
             self._plot_labels(cluster_ids)
 
-    def toggle_normalization(self):
+    def toggle_normalization(self, checked):
         """Change the normalization of the correlograms."""
-        self.uniform_normalization = not self.uniform_normalization
+        self.uniform_normalization = checked
         self.on_select(cluster_ids=self.cluster_ids)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(CorrelogramView, self).attach(gui)
-        self.actions.add(self.toggle_normalization, shortcut='n')
+        self.actions.add(self.toggle_normalization, shortcut='n', checkable=True)
         self.actions.separator()
         self.actions.add(self.set_bin, alias='cb')
         self.actions.add(self.set_window, alias='cw')

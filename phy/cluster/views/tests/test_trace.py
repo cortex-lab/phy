@@ -113,10 +113,9 @@ def test_trace_view(tempdir, qtbot):
     v.set_interval((0, duration))
     v.widen()
 
-    v.toggle_show_labels()
-    # v.toggle_show_labels()
+    v.toggle_show_labels(True)
     v.go_right()
-    v.toggle_freezing()
+    v.toggle_freezing(False)
     assert v.do_show_labels
 
     # Change channel scaling.

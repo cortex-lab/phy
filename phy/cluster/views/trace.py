@@ -100,7 +100,6 @@ class TraceView(ManualClusteringView):
         'widen': 'alt+-',
         'narrow': 'alt++',
     }
-    _freeze = True
 
     def __init__(self,
                  traces=None,
@@ -318,7 +317,10 @@ class TraceView(ManualClusteringView):
         self.actions.add(self.widen)
         self.actions.add(self.narrow)
         self.actions.separator()
-        self.actions.add(self.toggle_show_labels)
+        self.actions.add(self.toggle_show_labels, checkable=True)
+
+        # Default: freeze the view for performance reasons.
+        self.actions.get('toggle_freezing').trigger()
 
         # We forward the event from VisPy to the phy GUI.
         @self.connect
@@ -422,8 +424,8 @@ class TraceView(ManualClusteringView):
         h /= self.scaling_coeff_x
         self.set_interval((t - h, t + h))
 
-    def toggle_show_labels(self):
-        self.do_show_labels = not self.do_show_labels
+    def toggle_show_labels(self, checked):
+        self.do_show_labels = checked
         self.set_interval()
 
     # Channel scaling

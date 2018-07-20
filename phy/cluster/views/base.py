@@ -38,7 +38,7 @@ class ManualClusteringView(View):
     default_shortcuts = {
     }
     _callback_delay = 1
-    _freeze = False
+    _freeze = None
 
     def __init__(self, shortcuts=None, **kwargs):
 
@@ -105,7 +105,7 @@ class ManualClusteringView(View):
                                default_shortcuts=self.shortcuts)
 
         # Freeze and unfreeze the view when selecting clusters.
-        self.actions.add(self.toggle_freezing)
+        self.actions.add(self.toggle_freezing, checkable=True)
         self.actions.separator()
 
         # Update the GUI status message when the `self.set_status()` method
@@ -124,10 +124,10 @@ class ManualClusteringView(View):
 
         self.show()
 
-    def toggle_freezing(self):
+    def toggle_freezing(self, checked):
         """Freezing means the view is not updated when the cluster
         selection changes."""
-        self._freeze = not(self._freeze)
+        self._freeze = checked
 
     @property
     def state(self):

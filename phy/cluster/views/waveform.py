@@ -237,8 +237,8 @@ class WaveformView(ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(WaveformView, self).attach(gui)
-        self.actions.add(self.toggle_waveform_overlap)
-        self.actions.add(self.toggle_show_labels)
+        self.actions.add(self.toggle_waveform_overlap, checkable=True)
+        self.actions.add(self.toggle_show_labels, checkable=True)
         self.actions.separator()
 
         # Box scaling.
@@ -277,9 +277,9 @@ class WaveformView(ManualClusteringView):
         self._overlap = value
         self.on_select(cluster_ids=self.cluster_ids)
 
-    def toggle_waveform_overlap(self):
+    def toggle_waveform_overlap(self, checked):
         """Toggle the overlap of the waveforms."""
-        self.overlap = not self.overlap
+        self.overlap = checked
 
     # Box scaling
     # -------------------------------------------------------------------------
@@ -354,8 +354,8 @@ class WaveformView(ManualClusteringView):
     # Navigation
     # -------------------------------------------------------------------------
 
-    def toggle_show_labels(self):
-        self.do_show_labels = not self.do_show_labels
+    def toggle_show_labels(self, checked):
+        self.do_show_labels = checked
         self.on_select(cluster_ids=self.cluster_ids)
 
     def on_key_press(self, event):

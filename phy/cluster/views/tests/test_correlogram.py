@@ -37,7 +37,7 @@ def test_correlogram_view(qtbot, tempdir):
     v.on_select(cluster_ids=[0, 2, 3])
     v.on_select(cluster_ids=[0, 2])
 
-    v.toggle_normalization()
+    v.toggle_normalization(True)
 
     v.set_bin(1)
     v.set_window(100)

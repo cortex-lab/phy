@@ -304,7 +304,7 @@ class FeatureView(ManualClusteringView):
         self.actions.add(self.decrease)
         self.actions.separator()
         self.actions.add(self.clear_channels)
-        self.actions.add(self.toggle_automatic_channel_selection)
+        self.actions.add(self.toggle_automatic_channel_selection, checkable=True)
 
         connect(self.on_channel_click)
         connect(self.on_request_split)
@@ -385,10 +385,10 @@ class FeatureView(ManualClusteringView):
         self.lasso.clear()
         return np.unique(spike_ids[ind])
 
-    def toggle_automatic_channel_selection(self):
+    def toggle_automatic_channel_selection(self, checked):
         """Toggle the automatic selection of channels when the cluster
         selection changes."""
-        self.fixed_channels = not self.fixed_channels
+        self.fixed_channels = checked
 
     # Feature scaling
     # -------------------------------------------------------------------------
