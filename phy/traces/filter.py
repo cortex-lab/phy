@@ -6,6 +6,8 @@
 # Imports
 #------------------------------------------------------------------------------
 
+import warnings
+
 import numpy as np
 from scipy import signal
 
@@ -31,7 +33,9 @@ def apply_filter(x, filter=None, axis=0):
     if x.shape[axis] == 0:
         return x
     b, a = filter
-    return signal.filtfilt(b, a, x, axis=axis)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+        return signal.filtfilt(b, a, x, axis=axis)
 
 
 class Filter(object):
