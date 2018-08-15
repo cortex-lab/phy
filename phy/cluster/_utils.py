@@ -123,7 +123,7 @@ class ClusterMeta(object):
 
     def from_dict(self, dic):
         """Import data from a {cluster: {field: value}} dictionary."""
-        self._reset_data()
+        #self._reset_data()
         # Do not raise events here.
         with silent():
             for cluster, vals in dic.items():
