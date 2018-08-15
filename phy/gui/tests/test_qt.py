@@ -8,7 +8,8 @@
 
 from pytest import raises
 
-from ..qt import (QMessageBox, Qt, QWebView, QTimer,
+from phy.utils.testing import captured_logging
+from ..qt import (QMessageBox, Qt, QWebEngineView, QTimer,
                   _button_name_from_enum,
                   _button_enum_from_name,
                   _prompt,
@@ -16,8 +17,10 @@ from ..qt import (QMessageBox, Qt, QWebView, QTimer,
                   require_qt,
                   create_app,
                   QApplication,
+                  WebView,
                   busy_cursor,
                   AsyncCaller,
+                  _block,
                   )
 
 
@@ -48,9 +51,15 @@ def test_require_qt_without_app(qapp):
 
 def test_qt_app(qtbot):
     create_app()
-    view = QWebView()
+    view = QWebEngineView()
     qtbot.addWidget(view)
     view.close()
+
+
+def test_block(qtbot):
+    create_app()
+    with raises(RuntimeError):
+        _block(lambda: False)
 
 
 def test_wait_signal(qtbot):
@@ -74,31 +83,45 @@ def test_wait_signal(qtbot):
 
 def test_web_view(qtbot):
 
-    view = QWebView()
+    view = WebView()
 
     def _assert(text):
-        html = view.page().mainFrame().toHtml()
-        assert html == '<html><head></head><body>' + text + '</body></html>'
+        return view.html == '<html><head></head><body>%s</body></html>' % text
 
-    view.resize(100, 100)
-    view.setHtml("hello")
+    view.set_html('hello', _assert)
     qtbot.addWidget(view)
+    view.show()
     qtbot.waitForWindowShown(view)
-    view.show()
-    _assert('hello')
+    _block(lambda: _assert('hello'))
 
-    view.setHtml("world")
-    _assert('world')
+    view.set_html("world")
+    _block(lambda: _assert('world'))
     view.close()
 
-    view = QWebView()
-    view.resize(100, 100)
-    view.show()
-    qtbot.addWidget(view)
 
-    view.setHtml("finished")
-    _assert('finished')
-    view.close()
+def test_javascript_1(qtbot):
+    view = WebView()
+    with captured_logging() as buf:
+        view.set_html('<script>console.log("Test.");</script>')
+        qtbot.addWidget(view)
+        view.show()
+        qtbot.waitForWindowShown(view)
+        _block(lambda: view.html is not None)
+        view.close()
+    assert buf.getvalue() == "[JS:L01] Test.\n"
+
+
+def test_javascript_2(qtbot):
+    view = WebView()
+    view._page._raise_on_javascript_error = True
+    with qtbot.capture_exceptions() as exceptions:
+        view.set_html('<script>console.error("Test.");</script>')
+        qtbot.addWidget(view)
+        view.show()
+        qtbot.waitForWindowShown(view)
+        _block(lambda: view.html is not None)
+        view.close()
+    assert len(exceptions) >= 1
 
 
 def test_prompt(qtbot):

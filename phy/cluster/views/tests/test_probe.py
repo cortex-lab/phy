@@ -6,8 +6,9 @@
 # Imports
 #------------------------------------------------------------------------------
 
-from phy.gui import GUI
 from phy.electrode.mea import staggered_positions
+from phy.gui import GUI
+from phy.utils import emit
 
 from ..probe import ProbeView
 
@@ -30,10 +31,13 @@ def test_probe_view(qtbot, tempdir):
     v.attach(gui)
     qtbot.addWidget(gui)
 
-    v.on_select([])
-    v.on_select([0])
-    v.on_select([0, 2, 3])
-    v.on_select([0, 2])
+    class Supervisor(object):
+        pass
+
+    v.on_select(cluster_ids=[])
+    v.on_select(cluster_ids=[0])
+    v.on_select(cluster_ids=[0, 2, 3])
+    emit('select', Supervisor(), cluster_ids=[0, 2])
 
     # qtbot.stop()
     gui.close()

@@ -28,16 +28,16 @@ def test_correlogram_view(qtbot, tempdir):
                         sample_rate=100.,
                         )
     gui = GUI(config_dir=tempdir)
-    gui.show()
     v.attach(gui)
-    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
 
     v.on_select([])
-    v.on_select([0])
-    v.on_select([0, 2, 3])
-    v.on_select([0, 2])
+    v.on_select(cluster_ids=[0])
+    v.on_select(cluster_ids=[0, 2, 3])
+    v.on_select(cluster_ids=[0, 2])
 
-    v.toggle_normalization()
+    v.toggle_normalization(True)
 
     v.set_bin(1)
     v.set_window(100)

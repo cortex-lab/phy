@@ -16,7 +16,7 @@ from vispy.util.event import Event
 from phy.io.array import _flatten, _index_of
 from phy.plot import _get_linear_x
 from phy.plot.utils import _get_boxes
-from phy.utils import Bunch
+from phy.utils import Bunch, emit
 from phy.utils._color import _colormap
 from .base import ManualClusteringView
 
@@ -65,6 +65,7 @@ class ChannelClick(Event):
 
 class WaveformView(ManualClusteringView):
     scaling_coeff = 1.1
+    cluster_ids = ()
 
     default_shortcuts = {
         'toggle_waveform_overlap': 'o',
@@ -200,11 +201,10 @@ class WaveformView(ManualClusteringView):
                        data_bounds=None,
                        )
 
-    def on_select(self, cluster_ids=None, **kwargs):
-        super(WaveformView, self).on_select(cluster_ids, **kwargs)
-        cluster_ids = self.cluster_ids
+    def on_select(self, cluster_ids=(), **kwargs):
+        self.cluster_ids = cluster_ids
         n_clusters = len(cluster_ids)
-        if n_clusters == 0:
+        if not cluster_ids:
             return
 
         # Retrieve the waveform data.
@@ -237,8 +237,8 @@ class WaveformView(ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(WaveformView, self).attach(gui)
-        self.actions.add(self.toggle_waveform_overlap)
-        self.actions.add(self.toggle_show_labels)
+        self.actions.add(self.toggle_waveform_overlap, checkable=True)
+        self.actions.add(self.toggle_show_labels, checkable=True)
         self.actions.separator()
 
         # Box scaling.
@@ -259,11 +259,11 @@ class WaveformView(ManualClusteringView):
         # We forward the event from VisPy to the phy GUI.
         @self.connect
         def on_channel_click(e):
-            gui.emit('channel_click',
-                     channel_id=e.channel_id,
-                     key=e.key,
-                     button=e.button,
-                     )
+            emit('channel_click', self,
+                 channel_id=e.channel_id,
+                 key=e.key,
+                 button=e.button,
+                 )
 
     # Overlap
     # -------------------------------------------------------------------------
@@ -275,11 +275,11 @@ class WaveformView(ManualClusteringView):
     @overlap.setter
     def overlap(self, value):
         self._overlap = value
-        self.on_select()
+        self.on_select(cluster_ids=self.cluster_ids)
 
-    def toggle_waveform_overlap(self):
+    def toggle_waveform_overlap(self, checked):
         """Toggle the overlap of the waveforms."""
-        self.overlap = not self.overlap
+        self.overlap = checked
 
     # Box scaling
     # -------------------------------------------------------------------------
@@ -354,9 +354,9 @@ class WaveformView(ManualClusteringView):
     # Navigation
     # -------------------------------------------------------------------------
 
-    def toggle_show_labels(self):
-        self.do_show_labels = not self.do_show_labels
-        self.on_select()
+    def toggle_show_labels(self, checked):
+        self.do_show_labels = checked
+        self.on_select(cluster_ids=self.cluster_ids)
 
     def on_key_press(self, event):
         """Handle key press events."""

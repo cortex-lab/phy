@@ -14,7 +14,7 @@ from vispy.util.event import Event
 from phy.gui import Actions
 from phy.gui.qt import AsyncCaller, busy_cursor
 from phy.plot import View
-from phy.utils import Bunch
+from phy.utils import Bunch, connect, unconnect
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,8 @@ class ManualClusteringView(View):
     """
     default_shortcuts = {
     }
-    _callback_delay = 10
+    _callback_delay = 1
+    _freeze = None
 
     def __init__(self, shortcuts=None, **kwargs):
 
@@ -52,7 +53,7 @@ class ManualClusteringView(View):
         self.gui = None
 
         # Keep track of the selected clusters and spikes.
-        self.cluster_ids = None
+        #self.cluster_ids = None
 
         super(ManualClusteringView, self).__init__(**kwargs)
         self.panzoom._default_zoom = .9
@@ -60,10 +61,8 @@ class ManualClusteringView(View):
         self.events.add(status=StatusEvent)
 
     def on_select(self, cluster_ids=None, **kwargs):
-        cluster_ids = (cluster_ids if cluster_ids is not None
-                       else self.cluster_ids)
-        self.cluster_ids = list(cluster_ids) if cluster_ids is not None else []
-        self.cluster_ids = [int(c) for c in self.cluster_ids]
+        # To override.
+        pass
 
     def attach(self, gui, name=None):
         """Attach the view to the GUI."""
@@ -82,36 +81,53 @@ class ManualClusteringView(View):
         # cursor.
         self.async_caller = AsyncCaller(delay=self._callback_delay)
 
-        @gui.connect_
-        def on_select(cluster_ids, **kwargs):
+        @connect
+        def on_select(sender, cluster_ids, **kwargs):
+            if self._freeze:
+                return
+            if sender.__class__.__name__ != 'Supervisor':
+                return
+            assert isinstance(cluster_ids, list)
+            if not cluster_ids:
+                return
+
             # Call this function after a delay unless there is another
             # cluster selection in the meantime.
             @self.async_caller.set
             def update_view():
                 with busy_cursor():
-                    self.on_select(cluster_ids, **kwargs)
+                    logger.debug("Selecting %s in %s.", cluster_ids, self)
+                    self.on_select(cluster_ids=cluster_ids, **kwargs)
 
         self.actions = Actions(gui,
                                name=name or self.__class__.__name__,
                                menu=self.__class__.__name__,
                                default_shortcuts=self.shortcuts)
 
+        # Freeze and unfreeze the view when selecting clusters.
+        self.actions.add(self.toggle_freezing, checkable=True)
+        self.actions.separator()
+
         # Update the GUI status message when the `self.set_status()` method
         # is called, i.e. when the `status` event is raised by the VisPy
         # view.
-        @self.connect
-        def on_status(e):
+        @connect(sender=self)  # pragma: no cover
+        def on_status(sender=None, e=None):
             gui.status_message = e.message
 
         # Save the view state in the GUI state.
-        @gui.connect_
-        def on_close():
+        @connect(sender=gui)
+        def on_close(sender=None):
+            unconnect(on_select)
             gui.state.update_view_state(self, self.state)
-            # NOTE: create_gui() already saves the state, but the event
-            # is registered *before* we add all views.
-            gui.state.save()
+            self.close()
 
         self.show()
+
+    def toggle_freezing(self, checked):
+        """Freezing means the view is not updated when the cluster
+        selection changes."""
+        self._freeze = checked
 
     @property
     def state(self):

@@ -13,7 +13,7 @@ import re
 import numpy as np
 from six import u
 
-from phy.utils import Bunch
+from phy.utils import Bunch, connect
 from phy.utils._color import _colormap
 from phy.plot.transform import Range
 from .base import ManualClusteringView
@@ -75,6 +75,7 @@ def _uniq(seq):
 
 class FeatureView(ManualClusteringView):
     _callback_delay = 20
+    cluster_ids = ()
 
     _default_marker_size = 5.
     default_shortcuts = {
@@ -236,13 +237,11 @@ class FeatureView(ManualClusteringView):
     def clear_channels(self):
         """Reset the dimensions."""
         self.channel_ids = None
-        self.on_select()
+        self.on_select(cluster_ids=self.cluster_ids)
 
-    def on_select(self, cluster_ids=None, **kwargs):
-        super(FeatureView, self).on_select(cluster_ids, **kwargs)
-        cluster_ids = self.cluster_ids
-        n_clusters = len(cluster_ids)
-        if n_clusters == 0:
+    def on_select(self, cluster_ids=(), **kwargs):
+        self.cluster_ids = cluster_ids
+        if not cluster_ids:
             return
 
         # Determine whether the channels should be fixed or not.
@@ -305,22 +304,22 @@ class FeatureView(ManualClusteringView):
         self.actions.add(self.decrease)
         self.actions.separator()
         self.actions.add(self.clear_channels)
-        self.actions.add(self.toggle_automatic_channel_selection)
+        self.actions.add(self.toggle_automatic_channel_selection, checkable=True)
 
-        gui.connect_(self.on_channel_click)
-        gui.connect_(self.on_request_split)
+        connect(self.on_channel_click)
+        connect(self.on_request_split)
 
     @property
     def state(self):
         return Bunch(scaling=self.scaling)
 
-    def on_channel_click(self, channel_id=None, key=None, button=None):
+    def on_channel_click(self, sender=None, channel_id=None, key=None, button=None):
         """Respond to the click on a channel."""
         channels = self.channel_ids
         if channels is None:
             return
         if len(channels) == 1:
-            self.on_select()
+            self.on_select(cluster_ids=self.cluster_ids)
             return
         assert len(channels) >= 2
         # Get the axis from the pressed button (1, 2, etc.)
@@ -341,9 +340,9 @@ class FeatureView(ManualClusteringView):
         logger.debug("Choose channels %d and %d in feature view.",
                      *channels[:2])
         # Fix the channels temporarily.
-        self.on_select(fixed_channels=True)
+        self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)
 
-    def on_request_split(self):
+    def on_request_split(self, sender=None):
         """Return the spikes enclosed by the lasso."""
         if (self.lasso.count < 3 or
                 not len(self.cluster_ids)):  # pragma: no cover
@@ -386,10 +385,10 @@ class FeatureView(ManualClusteringView):
         self.lasso.clear()
         return np.unique(spike_ids[ind])
 
-    def toggle_automatic_channel_selection(self):
+    def toggle_automatic_channel_selection(self, checked):
         """Toggle the automatic selection of channels when the cluster
         selection changes."""
-        self.fixed_channels = not self.fixed_channels
+        self.fixed_channels = checked
 
     # Feature scaling
     # -------------------------------------------------------------------------
@@ -405,9 +404,9 @@ class FeatureView(ManualClusteringView):
     def increase(self):
         """Increase the scaling of the features."""
         self.scaling *= 1.2
-        self.on_select(fixed_channels=True)
+        self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)
 
     def decrease(self):
         """Decrease the scaling of the features."""
         self.scaling /= 1.2
-        self.on_select(fixed_channels=True)
+        self.on_select(cluster_ids=self.cluster_ids, fixed_channels=True)

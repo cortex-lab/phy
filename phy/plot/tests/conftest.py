@@ -19,7 +19,7 @@ from ..panzoom import PanZoom
 
 @yield_fixture
 def canvas(qapp):
-    use_app('pyqt4')
+    use_app('pyqt5')
     c = BaseCanvas(keys='interactive')
     yield c
     c.close()

@@ -13,7 +13,7 @@ from ..gui import (GUI, GUIState,
                    _try_get_matplotlib_canvas,
                    _try_get_vispy_canvas,
                    )
-from phy.utils import Bunch
+from phy.utils import Bunch, connect, unconnect
 from phy.utils._color import _random_color
 
 
@@ -66,10 +66,10 @@ def test_gui_1(tempdir, qtbot):
     assert gui.name == 'GUI'
 
     # Increase coverage.
-    @gui.connect_
+    @connect(sender=gui)
     def on_show():
         pass
-    gui.unconnect_(on_show)
+    unconnect(on_show)
     qtbot.keyPress(gui, Qt.Key_Control)
     qtbot.keyRelease(gui, Qt.Key_Control)
 
@@ -87,12 +87,12 @@ def test_gui_1(tempdir, qtbot):
     # closed.
     _close = []
 
-    @view.connect_
-    def on_close_widget():
+    @connect(sender=view)
+    def on_close_dock_widget(sender):
         _close.append(0)
 
-    @gui.connect_
-    def on_close_view(view):
+    @connect(sender=gui)
+    def on_close_view(gui, v):
         _close.append(1)
 
     view.close()
@@ -122,18 +122,18 @@ def test_gui_status_message(gui):
 def test_gui_geometry_state(tempdir, qtbot):
     _gs = []
     gui = GUI(size=(100, 100), config_dir=tempdir)
-    qtbot.addWidget(gui)
+    #qtbot.addWidget(gui)
 
-    gui.add_view(_create_canvas(), 'view1')
-    gui.add_view(_create_canvas(), 'view2')
-    gui.add_view(_create_canvas(), 'view2')
-
-    @gui.connect_
-    def on_close():
+    @connect(sender=gui)
+    def on_close(sender):
         _gs.append(gui.save_geometry_state())
 
     gui.show()
     qtbot.waitForWindowShown(gui)
+
+    gui.add_view(_create_canvas(), 'view1')
+    gui.add_view(_create_canvas(), 'view2')
+    gui.add_view(_create_canvas(), 'view2')
 
     assert len(gui.list_views('view')) == 3
     assert gui.view_count() == {
@@ -150,14 +150,14 @@ def test_gui_geometry_state(tempdir, qtbot):
     gui.add_view(_create_canvas(), 'view2')
     gui.add_view(_create_canvas(), 'view2')
 
-    @gui.connect_
-    def on_show():
+    @connect(sender=gui)
+    def on_show(sender):
         gui.restore_geometry_state(_gs[0])
 
     assert gui.restore_geometry_state(None) is None
 
-    qtbot.addWidget(gui)
     gui.show()
+    qtbot.waitForWindowShown(gui)
 
     assert len(gui.list_views('view')) == 3
     assert gui.view_count() == {

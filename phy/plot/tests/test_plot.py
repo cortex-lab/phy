@@ -226,6 +226,7 @@ def test_lasso_simple(qtbot):
     view.scatter(x, y)
 
     l = view.lasso
+    assert str(l)
     ev = view.events
     ev.mouse_press(pos=(0, 0), button=1, modifiers=(keys.CONTROL,))
     l.add((+1, -1))

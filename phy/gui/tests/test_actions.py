@@ -142,6 +142,22 @@ def test_actions_gui(qtbot, gui, actions):
     assert 'g\n' in stdout.getvalue()
 
 
+def test_actions_checkable(qtbot, gui, actions):
+    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
+
+    _l = []
+
+    @actions.add(shortcut='c', checkable=True, menu='&File')
+    def toggle(checked):
+        _l.append(checked)
+
+    actions.get('toggle').trigger()
+    actions.get('toggle').trigger()
+    assert _l == [True, False]
+
+
 def test_actions_dialog(qtbot, gui, actions):
     qtbot.addWidget(gui)
     gui.show()

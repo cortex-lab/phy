@@ -15,7 +15,7 @@ import subprocess
 from textwrap import dedent
 
 import numpy as np
-from six import string_types, text_type, exec_
+from six import string_types, exec_
 
 from ._types import _is_integer
 
@@ -39,7 +39,6 @@ def _decode_qbytearray(data_b64):
 
 class _CustomEncoder(json.JSONEncoder):
     def default(self, obj):
-        from phy.gui.qt import QString
         if isinstance(obj, np.ndarray):
             obj_contiguous = np.ascontiguousarray(obj)
             data_b64 = base64.b64encode(obj_contiguous.data).decode('utf8')
@@ -50,8 +49,6 @@ class _CustomEncoder(json.JSONEncoder):
             return {'__qbytearray__': _encode_qbytearray(obj)}
         elif isinstance(obj, np.generic):
             return np.asscalar(obj)
-        elif isinstance(obj, QString):  # pragma: no cover
-            return text_type(obj)
         return super(_CustomEncoder, self).default(obj)  # pragma: no cover
 
 

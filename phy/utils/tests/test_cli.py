@@ -84,4 +84,4 @@ def test_add_log_file(tempdir):
     filename = op.join(tempdir, 'phy.log')
     _add_log_file(filename)
     logger.debug("test!")
-    assert _read_text(filename).endswith("test!\n")
+    assert _read_text(filename).endswith("test!\x1b[0m\n")

@@ -29,10 +29,10 @@ def test_scatter_view(qtbot, tempdir):
     v.attach(gui)
     qtbot.addWidget(gui)
 
-    v.on_select([])
-    v.on_select([0])
-    v.on_select([0, 2, 3])
-    v.on_select([0, 2])
+    v.on_select(cluster_ids=[])
+    v.on_select(cluster_ids=[0])
+    v.on_select(cluster_ids=[0, 2, 3])
+    v.on_select(cluster_ids=[0, 2])
 
     # qtbot.stop()
     gui.close()

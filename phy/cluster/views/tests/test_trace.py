@@ -14,7 +14,7 @@ from phy.gui import GUI
 from phy.io.mock import (artificial_traces,
                          artificial_spike_clusters,
                          )
-from phy.utils import Bunch
+from phy.utils import Bunch, connect
 from phy.utils._color import ColorSelector
 
 from ..trace import TraceView, select_traces, _iter_spike_waveforms
@@ -76,16 +76,14 @@ def test_trace_view(tempdir, qtbot):
                   channel_vertical_order=np.arange(nc)[::-1],
                   )
     gui = GUI(config_dir=tempdir)
-    gui.show()
     v.attach(gui)
-    qtbot.addWidget(gui)
+    gui.show()
+    qtbot.waitForWindowShown(gui)
 
-    # qtbot.waitForWindowShown(gui)
-
-    v.on_select([])
-    v.on_select([0])
-    v.on_select([0, 2, 3])
-    v.on_select([0, 2])
+    v.on_select(cluster_ids=[])
+    v.on_select(cluster_ids=[0])
+    v.on_select(cluster_ids=[0, 2, 3])
+    v.on_select(cluster_ids=[0, 2])
 
     # ac(v.stacked.box_size, (1., .08181), atol=1e-3)
     v.set_interval((.375, .625))
@@ -115,9 +113,9 @@ def test_trace_view(tempdir, qtbot):
     v.set_interval((0, duration))
     v.widen()
 
-    v.toggle_show_labels()
-    # v.toggle_show_labels()
+    v.toggle_show_labels(True)
     v.go_right()
+    v.toggle_freezing(False)
     assert v.do_show_labels
 
     # Change channel scaling.
@@ -132,15 +130,15 @@ def test_trace_view(tempdir, qtbot):
     # Simulate spike selection.
     _clicked = []
 
-    @v.gui.connect_
-    def on_spike_click(channel_id=None, spike_id=None, cluster_id=None):
+    @connect(sender=v)
+    def on_spike_click(sender, channel_id=None, spike_id=None, cluster_id=None):
         _clicked.append((channel_id, spike_id, cluster_id))
 
     v.events.key_press(key=keys.Key('Control'))
     v.events.mouse_press(pos=(400., 200.), button=1, modifiers=(keys.CONTROL,))
     v.events.key_release(key=keys.Key('Control'))
 
-    assert _clicked == [(1, 4, 1)]
+    assert len(_clicked[0]) == 3
 
     # qtbot.stop()
     gui.close()

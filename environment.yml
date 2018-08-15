@@ -1,12 +1,14 @@
 name: phy
 dependencies:
-  - python=3.5
+  - python
   - numpy
   - matplotlib
   - scipy
   - h5py
-  - pyqt=4
+  - pyqt
+  - cython
   - pip:
+    - pyopengl
     - vispy
     - requests
     - traitlets

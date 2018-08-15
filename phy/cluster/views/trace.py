@@ -13,7 +13,7 @@ import numpy as np
 from phy.plot.transform import NDC, Range
 from vispy.util.event import Event
 
-from phy.utils import Bunch
+from phy.utils import Bunch, emit
 from .base import ManualClusteringView
 
 logger = logging.getLogger(__name__)
@@ -243,14 +243,13 @@ class TraceView(ManualClusteringView):
     # Public methods
     # -------------------------------------------------------------------------
 
-    def set_interval(self, interval=None, change_status=True,
-                     force_update=False):
+    def set_interval(self, interval=None, change_status=True):
         """Display the traces and spikes in a given interval."""
         if interval is None:
             interval = self._interval
         interval = self._restrict_interval(interval)
-        if not force_update and interval == self._interval:
-            return
+        #if interval == self._interval:
+        #    return
         self._interval = interval
         start, end = interval
         self.clear()
@@ -300,9 +299,8 @@ class TraceView(ManualClusteringView):
         self.update()
 
     def on_select(self, cluster_ids=None, **kwargs):
-        super(TraceView, self).on_select(cluster_ids, **kwargs)
-        self.set_interval(self._interval, change_status=False,
-                          force_update=kwargs.get('force_update', None))
+        super(TraceView, self).on_select(cluster_ids=cluster_ids, **kwargs)
+        self.set_interval(self._interval, change_status=False)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
@@ -319,18 +317,22 @@ class TraceView(ManualClusteringView):
         self.actions.add(self.widen)
         self.actions.add(self.narrow)
         self.actions.separator()
-        self.actions.add(self.toggle_show_labels)
+        self.actions.add(self.toggle_show_labels, checkable=True)
+
+        # Default: freeze the view for performance reasons.
+        self.actions.get('toggle_freezing').trigger()
 
         # We forward the event from VisPy to the phy GUI.
         @self.connect
         def on_spike_click(e):
             logger.log(5, "Spike click on channel %s, spike %s, cluster %s.",
                        e.channel_id, e.spike_id, e.cluster_id)
-            gui.emit('spike_click',
-                     channel_id=e.channel_id,
-                     spike_id=e.spike_id,
-                     cluster_id=e.cluster_id,
-                     )
+            emit('spike_click',
+                 self,
+                 channel_id=e.channel_id,
+                 spike_id=e.spike_id,
+                 cluster_id=e.cluster_id,
+                 )
 
     @property
     def state(self):
@@ -422,9 +424,9 @@ class TraceView(ManualClusteringView):
         h /= self.scaling_coeff_x
         self.set_interval((t - h, t + h))
 
-    def toggle_show_labels(self):
-        self.do_show_labels = not self.do_show_labels
-        self.set_interval(force_update=True)
+    def toggle_show_labels(self, checked):
+        self.do_show_labels = checked
+        self.set_interval()
 
     # Channel scaling
     # -------------------------------------------------------------------------

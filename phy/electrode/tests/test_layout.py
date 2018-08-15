@@ -24,7 +24,7 @@ def test_probe_layout(qtbot):
 
     layout = probe_layout(positions, channel_ids)
     w = HTMLWidget()
-    w.set_body(layout)
+    w.builder.set_body(layout)
     w.show()
     qtbot.waitForWindowShown(w)
     qtbot.addWidget(w)

@@ -1,0 +1,121 @@
+body, input {
+    margin: 4px;
+    padding: 0;
+    background-color: black;
+    color: white;
+}
+
+body, p, div, th, td, input {
+    font-family: Helvetica;
+    font-size: 10pt;
+}
+
+#table input {
+    margin: 0px 0px 4px 0px;
+    padding: 5px;
+    width: 300px;
+    border: 1px solid #ddd;
+}
+
+::-webkit-search-cancel-button{
+    -webkit-appearance: none;
+    display: block;
+    width: 14px;
+    height: 10px;
+    background-image: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAB4AAAAeCAYAAAA7MK6iAAAAn0lEQVR42u3UMQrDMBBEUZ9WfQqDmm22EaTyjRMHAlM5K+Y7lb0wnUZPIKHlnutOa+25Z4D++MRBX98MD1V/trSppLKHqj9TTBWKcoUqffbUcbBBEhTjBOV4ja4l4OIAZThEOV6jHO8ARXD+gPPvKMABinGOrnu6gTNUawrcQKNCAQ7QeTxORzle3+sDfjJpPCqhJh7GixZq4rHcc9l5A9qZ+WeBhgEuAAAAAElFTkSuQmCC);
+    background-repeat: no-repeat;
+    background-size: 10px;
+    background-position: top left;
+}
+
+th.sort::-moz-selection { background:transparent; }
+th.sort::selection  { background:transparent; }
+th.sort { cursor:pointer; }
+
+#table {
+    border-collapse: collapse;
+    border: 0;
+    padding: 0;
+}
+
+#table tbody, #table thead {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+#table td {
+    padding: 4px 6px 4px 6px;
+    margin: 0;
+    border: 0;
+}
+
+#table th {
+    padding: 5px 5px 5px 5px;
+}
+
+#table th.sort:hover:after {
+    visibility: visible;
+    color: #999;
+}
+
+#table th.sort:after {
+    content: "\25B2";
+    margin: 0 3px;
+    visibility: hidden;
+}
+
+#table th.sort.asc:after {
+    content: "\25B2";
+}
+#table th.sort.desc:after {
+    content: "\25BC";
+}
+
+#table th.sort.asc:hover:after, #table th.sort.desc:hover:after {
+    color: #fff;
+}
+
+#table th.sort.asc:after,
+#table th.sort.desc:after,
+#table th.sort.desc:hover:after {
+    visibility: visible;
+}
+
+#table tr {
+    cursor: pointer;
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+#table tr:hover {
+    background-color: #222;
+}
+
+#table tr:hover th {
+    background-color: #000;
+}
+
+#table tr.selected td {
+    background-color: #444;
+}
+
+#table tr.pinned {
+    background-color: #888;
+}
+
+#table tr[data-meta='mask'] {
+    color: #888;
+}
+
+#table tr[data-meta='highlight'] {
+    color: #86D16D;
+}
+
+#table tr, #table td {
+            user-select: none; /* CSS3 (little to no support) */
+        -ms-user-select: none; /* IE 10+ */
+       -moz-user-select: none; /* Gecko (Firefox) */
+    -webkit-user-select: none; /* Webkit (Safari, Chrome) */
+}

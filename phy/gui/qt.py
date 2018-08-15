@@ -9,7 +9,9 @@
 from contextlib import contextmanager
 from functools import wraps
 import logging
+import os.path as op
 import sys
+from timeit import default_timer
 
 logger = logging.getLogger(__name__)
 
@@ -18,23 +20,32 @@ logger = logging.getLogger(__name__)
 # PyQt import
 # -----------------------------------------------------------------------------
 
-from PyQt4.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
+# BUG FIX on Ubuntu, otherwise the canvas is all black:
+# https://riverbankcomputing.com/pipermail/pyqt/2014-January/033681.html
+from OpenGL import GL  # noqa
+
+from PyQt5.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
                           QVariant, QEventLoop, QTimer, QPoint, QTimer,
-                          pyqtSignal, pyqtSlot, QSize, QUrl)
-try:
-    from PyQt4.QtCore import QPyNullVariant  # noqa
-except:  # pragma: no cover
-    QPyNullVariant = None
-try:
-    from PyQt4.QtCore import QString  # noqa
-except:  # pragma: no cover
-    QString = None
-from PyQt4.QtGui import (QKeySequence, QAction, QStatusBar,  # noqa
-                         QMainWindow, QDockWidget, QWidget,
-                         QMessageBox, QApplication, QMenuBar,
-                         QInputDialog,
-                         )
-from PyQt4.QtWebKit import QWebView, QWebPage, QWebSettings   # noqa
+                          pyqtSignal, pyqtSlot, QSize, QUrl,
+                          QEvent, QCoreApplication,
+                          qInstallMessageHandler,
+                          )
+from PyQt5.QtGui import QKeySequence, QColor, QMouseEvent  # noqa
+from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
+                                      QWebEnginePage,
+                                      # QWebSettings,
+                                      )
+from PyQt5.QtWebChannel import QWebChannel  # noqa
+from PyQt5.QtWidgets import (QAction, QStatusBar,  # noqa
+                             QMainWindow, QDockWidget, QWidget,
+                             QMessageBox, QApplication, QMenuBar,
+                             QInputDialog,
+                             )
+
+# Enable high DPI support.
+# BUG: uncommenting this create scaling bugs on high DPI screens
+# on Ubuntu.
+#QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
 
 
 # -----------------------------------------------------------------------------
@@ -84,7 +95,7 @@ def _wait_signal(signal, timeout=None):
     yield
 
     if timeout is not None:
-        QTimer.singleShot(timeout, loop.quit)
+        QTimer.singleShot(timeout, loop.quit)  # pragma: no cover
     loop.exec_()
 
 
@@ -94,6 +105,20 @@ def busy_cursor():
     create_app().setOverrideCursor(Qt.WaitCursor)
     yield
     create_app().restoreOverrideCursor()
+
+
+def _block(until_true):
+    if until_true():
+        return
+    t0 = default_timer()
+    timeout = .5
+
+    while not until_true() and (default_timer() - t0 < timeout):
+        app = QApplication.instance()
+        app.processEvents(QEventLoop.AllEvents,
+                          int(timeout * 1000))
+    if not until_true():
+        raise RuntimeError("Timeout in _block().")
 
 
 # -----------------------------------------------------------------------------
@@ -166,13 +191,56 @@ class AsyncCaller(object):
             self._timer.deleteLater()
 
 
+def _abs_path(rel_path):
+    static_dir = op.join(op.abspath(op.dirname(__file__)), 'static/')
+    return op.join(static_dir, rel_path)
+
+
+class WebPage(QWebEnginePage):
+    _raise_on_javascript_error = False
+
+    def javaScriptConsoleMessage(self, level, msg, line, source):
+        super(WebPage, self).javaScriptConsoleMessage(level, msg, line, source)
+        msg = "[JS:L%02d] %s" % (line, msg)
+        f = (logger.debug, logger.warn, logger.error)[level]
+        if self._raise_on_javascript_error and level >= 2:
+            raise RuntimeError(msg)
+        f(msg)
+
+
+class WebView(QWebEngineView):
+    def __init__(self, *args):
+        super(WebView, self).__init__(*args)
+        self.html = None
+        assert isinstance(self.window(), QWidget)
+        self._page = WebPage(self)
+        self.setPage(self._page)
+        self.move(100, 100)
+        self.resize(400, 400)
+
+    def set_html(self, html, callback=None):
+        self._callback = callback
+        self.loadFinished.connect(self._loadFinished)
+        static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
+        base_url = QUrl().fromLocalFile(static_dir)
+        self.page().setHtml(html, base_url)
+
+    def _callable(self, data):
+        self.html = data
+        if self._callback:
+            self._callback(self.html)
+
+    def _loadFinished(self, result):
+        self.page().toHtml(self._callable)
+
+
 # -----------------------------------------------------------------------------
 # Testing utilities
 # -----------------------------------------------------------------------------
 
 def _debug_trace():  # pragma: no cover
     """Set a tracepoint in the Python debugger that works with Qt."""
-    from PyQt4.QtCore import pyqtRemoveInputHook
+    from PyQt5.QtCore import pyqtRemoveInputHook
     from pdb import set_trace
     pyqtRemoveInputHook()
     set_trace()

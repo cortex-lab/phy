@@ -7,10 +7,13 @@ from __future__ import print_function
 # Imports
 #------------------------------------------------------------------------------
 
+from contextlib import contextmanager
+import logging
 import string
 import re
-from collections import defaultdict
 from functools import partial
+
+logger = logging.getLogger(__name__)
 
 
 #------------------------------------------------------------------------------
@@ -18,10 +21,7 @@ from functools import partial
 #------------------------------------------------------------------------------
 
 class EventEmitter(object):
-    """Class that emits events and accepts registered callbacks.
-
-    Derive from this class to emit events and let other classes know
-    of occurrences of actions and events.
+    """Singleton class that emits events and accepts registered callbacks.
 
     Example
     -------
@@ -44,10 +44,11 @@ class EventEmitter(object):
 
     def __init__(self):
         self._reset()
+        self._is_silent = False
 
     def _reset(self):
         """Remove all registered callbacks."""
-        self._callbacks = defaultdict(list)
+        self._callbacks = []
 
     def _get_on_name(self, func):
         """Return `eventname` when the function name is `on_<eventname>()`."""
@@ -59,25 +60,28 @@ class EventEmitter(object):
                              "`on_<eventname>`().")
         return event
 
-    def _create_emitter(self, event):
-        """Create a method that emits an event of the same name."""
-        if not hasattr(self, event):
-            setattr(self, event,
-                    lambda *args, **kwargs: self.emit(event, *args, **kwargs))
+    @contextmanager
+    def silent(self):
+        """Prevent all callbacks to be called if events are raised
+        in the context manager.
+        """
+        self._is_silent = not(self._is_silent)
+        yield
+        self._is_silent = not(self._is_silent)
 
-    def connect(self, func=None, event=None, set_method=False):
+    def connect(self, func=None, event=None, sender=None, **kwargs):
         """Register a callback function to a given event.
 
         To register a callback function to the `spam` event, where `obj` is
         an instance of a class deriving from `EventEmitter`:
 
         ```python
-        @obj.connect
-        def on_spam(arg1, arg2):
+        @obj.connect(sender=sender)
+        def on_spam(sender, arg1, arg2):
             pass
         ```
 
-        This is called when `obj.emit('spam', arg1, arg2)` is called.
+        This is called when `obj.emit('spam', sender, arg1, arg2)` is called.
 
         Several callback functions can be registered for a given event.
 
@@ -85,29 +89,23 @@ class EventEmitter(object):
 
         """
         if func is None:
-            return partial(self.connect, set_method=set_method)
+            return partial(self.connect, sender=sender)
 
         # Get the event name from the function.
         if event is None:
             event = self._get_on_name(func)
 
         # We register the callback function.
-        self._callbacks[event].append(func)
-
-        # A new method self.event() emitting the event is created.
-        if set_method:
-            self._create_emitter(event)
+        self._callbacks.append((event, sender, func, kwargs))
 
         return func
 
     def unconnect(self, *funcs):
         """Unconnect specified callback functions."""
-        for func in funcs:
-            for callbacks in self._callbacks.values():
-                if func in callbacks:
-                    callbacks.remove(func)
+        self._callbacks = [(event, sender, f, kwargs)
+                           for (event, sender, f, kwargs) in self._callbacks if f not in funcs]
 
-    def emit(self, event, *args, **kwargs):
+    def emit(self, event, sender, *args, **kwargs):
         """Call all callback functions registered with an event.
 
         Any positional and keyword arguments can be passed here, and they will
@@ -116,15 +114,23 @@ class EventEmitter(object):
         Return the list of callback return results.
 
         """
-        callbacks = self._callbacks.get(event, [])
+        if self._is_silent:
+            return
+        logger.log(10, "Emit event %s.%s(%s)", sender.__class__.__name__, event, args)
         # Call the last callback if this is a single event.
         single = kwargs.pop('single', None)
-        if single and callbacks:
-            return callbacks[-1](*args, **kwargs)
-        # Otherwise, return the list of callback outputs.
         res = []
-        for callback in callbacks:
-            res.append(callback(*args, **kwargs))
+        # Put `last=True` callbacks at the end.
+        callbacks = [c for c in self._callbacks if not c[-1].get('last', None)]
+        callbacks += [c for c in self._callbacks if c[-1].get('last', None)]
+        for e, s, f, k in callbacks:
+            if e == event and (s is None or s == sender):
+                f_name = getattr(f, '__qualname__', getattr(f, '__name__', str(f)))
+                s_name = s.__class__.__name__
+                logger.debug("Event callback %s (%s).", f_name, s_name)
+                res.append(f(sender, *args, **kwargs))
+                if single:
+                    return res[-1]
         return res
 
 
@@ -151,7 +157,7 @@ class PartialFormatter(string.Formatter):
             return '?'
 
 
-def _default_on_progress(message, value, value_max, end='\r', **kwargs):
+def _default_on_progress(sender, message, value, value_max, end='\r', **kwargs):
     if value_max == 0:  # pragma: no cover
         return
     if value <= value_max:
@@ -169,7 +175,7 @@ def _default_on_complete(message, end='\n', **kwargs):
     print(fmt.format(message + '\033[K', **kwargs), end=end)
 
 
-class ProgressReporter(EventEmitter):
+class ProgressReporter(object):
     """A class that reports progress done.
 
     Example
@@ -210,25 +216,25 @@ class ProgressReporter(EventEmitter):
 
         end = '\r' if not line_break else None
 
-        @self.connect
-        def on_progress(value, value_max, **kwargs):
+        @connect(sender=self)
+        def on_progress(sender, value, value_max, **kwargs):
             kwargs['end'] = None if value == value_max else end
-            _default_on_progress(message, value, value_max, **kwargs)
+            _default_on_progress(sender, message, value, value_max, **kwargs)
 
     def set_complete_message(self, message):
         """Set a complete message."""
 
-        @self.connect
-        def on_complete(**kwargs):
+        @connect(sender=self)
+        def on_complete(sender, **kwargs):
             _default_on_complete(message, **kwargs)
 
     def _set_value(self, value, **kwargs):
         if value < self._value_max:
             self._has_completed = False
         self._value = value
-        self.emit('progress', self._value, self._value_max, **kwargs)
+        emit('progress', self, self._value, self._value_max, **kwargs)
         if not self._has_completed and self._value >= self._value_max:
-            self.emit('complete', **kwargs)
+            emit('complete', self, **kwargs)
             self._has_completed = True
 
     def increment(self, **kwargs):
@@ -278,3 +284,15 @@ class ProgressReporter(EventEmitter):
     def progress(self):
         """Return the current progress as a float value in `[0, 1]`."""
         return self._value / float(self._value_max)
+
+
+#------------------------------------------------------------------------------
+# Global event system
+#------------------------------------------------------------------------------
+
+_EVENT = EventEmitter()
+
+emit = _EVENT.emit
+connect = _EVENT.connect
+unconnect = _EVENT.unconnect
+silent = _EVENT.silent

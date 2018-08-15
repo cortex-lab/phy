@@ -7,19 +7,16 @@
 # Imports
 # -----------------------------------------------------------------------------
 
-from collections import OrderedDict
 import json
 import logging
-import os.path as op
+from functools import partial
 
 from six import text_type
 
-from .qt import (QWebView, QWebPage, QUrl, QWebSettings,
-                 QVariant, QPyNullVariant, QString,
-                 pyqtSlot, _wait_signal,
-                 )
-from phy.utils import EventEmitter
-from phy.utils._misc import _CustomEncoder
+from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, QTimer
+from phy.utils import emit, connect
+from phy.utils._misc import _CustomEncoder, _read_text
+from phy.utils._types import _is_integer
 
 logger = logging.getLogger(__name__)
 
@@ -28,14 +25,62 @@ logger = logging.getLogger(__name__)
 # HTML widget
 # -----------------------------------------------------------------------------
 
-_DEFAULT_STYLES = """
+_DEFAULT_STYLE = """
+
+    * {
+        font-size: 7pt !important;
+    }
+
     html, body, table {
         background-color: black;
         color: white;
         font-family: sans-serif;
-        font-size: 12pt;
-        margin: 5px 10px;
+        font-size: 10pt;
+        margin: 2px 4px;
     }
+
+    input.filter {
+        width: 100% !important;
+    }
+
+    table tr[data-is_masked='true'] {
+        color: #888;
+    }
+"""
+
+
+_DEFAULT_SCRIPT = """
+    /*
+    window._onWidgetReady_callbacks = [];
+
+    onWidgetReady = function (callback) {
+        window._onWidgetReady_callbacks.push(callback);
+    };
+    */
+
+    document.addEventListener("DOMContentLoaded", function () {
+        new QWebChannel(qt.webChannelTransport, function (channel) {
+            var eventEmitter = channel.objects.eventEmitter;
+            window.eventEmitter = eventEmitter;
+
+            // All phy_events emitted from JS are relayed to
+            // Python's emitJS().
+            document.addEventListener("phy_event", function (e) {
+                console.debug("Emit from JS global: " +
+                              e.detail.name + " " + e.detail.data);
+                eventEmitter.emitJS(e.detail.name,
+                                    JSON.stringify(e.detail.data));
+            });
+
+            /*
+            // Callbacks on the widget.
+            for (let callback of window._onWidgetReady_callbacks) {
+                callback(widget);
+            }
+            */
+
+        });
+    });
 """
 
 
@@ -43,9 +88,6 @@ _PAGE_TEMPLATE = """
 <html>
 <head>
     <title>{title:s}</title>
-    <style>
-    {styles:s}
-    </style>
     {header:s}
 </head>
 <body>
@@ -57,157 +99,137 @@ _PAGE_TEMPLATE = """
 """
 
 
-class WebPage(QWebPage):
-    def javaScriptConsoleMessage(self, msg, line, source):
-        logger.debug("[%d] %s", line, msg)  # pragma: no cover
+def _uniq(seq):
+    seen = set()
+    seen_add = seen.add
+    return [int(x) for x in seq if not (x in seen or seen_add(x))]
 
 
-def _to_py(obj):  # pragma: no cover
-    if isinstance(obj, QVariant):
-        return obj.toPyObject()
-    elif QString and isinstance(obj, QString):
-        return text_type(obj)
-    elif isinstance(obj, QPyNullVariant):
-        return None
-    elif isinstance(obj, list):
-        return [_to_py(_) for _ in obj]
-    elif isinstance(obj, tuple):
-        return tuple(_to_py(_) for _ in obj)
-    else:
-        return obj
-
-
-class HTMLWidget(QWebView):
-    """An HTML widget that is displayed with Qt.
-
-    Python methods can be called from Javascript with `widget.the_method()`.
-    They must be decorated with `pyqtSlot(str)` or similar, depending on
-    the parameters.
-
-    """
-    title = 'Widget'
-    body = ''
-
+class Barrier(object):
     def __init__(self):
-        super(HTMLWidget, self).__init__()
-        self.settings().setAttribute(
-            QWebSettings.LocalContentCanAccessRemoteUrls, True)
-        self.settings().setAttribute(
-            QWebSettings.DeveloperExtrasEnabled, True)
-        self.setPage(WebPage())
-        self._obj = None
-        self._styles = [_DEFAULT_STYLES]
-        self._header = ''
-        self._body = ''
-        self.add_to_js('widget', self)
-        self._event = EventEmitter()
-        self.add_header('''<script>
-                        var emit = function (name, arg) {
-                            widget._emit_from_js(name, JSON.stringify(arg));
-                        };
-                        </script>''')
-        self._pending_js_eval = []
-        self._built = None
+        self._keys = []
+        self._results = {}
+        self._callback_after_all = None
 
-    # Events
-    # -------------------------------------------------------------------------
+    def _callback(self, key, *args, **kwargs):
+        self._results[key] = (args, kwargs)
+        if self._callback_after_all and self.have_all_finished():
+            self._callback_after_all()
 
-    def emit(self, *args, **kwargs):
-        return self._event.emit(*args, **kwargs)
+    def __call__(self, key):
+        self._keys.append(key)
+        return partial(self._callback, key)
 
-    def connect_(self, *args, **kwargs):
-        self._event.connect(*args, **kwargs)
+    def have_all_finished(self):
+        return set(self._keys) == set(self._results.keys())
 
-    def unconnect_(self, *args, **kwargs):
-        self._event.unconnect(*args, **kwargs)
+    def wait(self):
+        _block(self.have_all_finished)
 
-    # Headers
-    # -------------------------------------------------------------------------
+    def after_all_finished(self, callback):
+        self._callback_after_all = callback
 
-    def add_styles(self, s):
-        """Add CSS styles."""
-        self._styles.append(s)
+    def result(self, key):
+        return self._results.get(key, None)
+
+
+class AsyncTasks(object):
+    def __init__(self, funs):
+        self.funs = funs
+
+    def __call__(self, *args):
+        if not self.funs:
+            return
+        fun = self.funs.pop(0)
+        if len(self.funs) > 0:
+            return fun(*args, callback=self)
+        else:
+            return fun(*args)
+
+
+class HTMLBuilder(object):
+    def __init__(self, title=''):
+        self.title = title
+        self.headers = []
+        self.body = ''
+        self.add_style(_DEFAULT_STYLE)
+
+    def add_style(self, s):
+        self.add_header('<style>\n{}\n</style>'.format(s))
 
     def add_style_src(self, filename):
-        """Link a CSS file."""
         self.add_header(('<link rel="stylesheet" type="text/css" '
                          'href="{}" />').format(filename))
 
+    def add_script(self, s):
+        self.add_header('<script>{}</script>'.format(s))
+
     def add_script_src(self, filename):
-        """Link a JS script."""
         self.add_header('<script src="{}"></script>'.format(filename))
 
-    def add_header(self, h):
-        """Add HTML code to the header."""
-        self._header += (h + '\n')
+    def add_header(self, s):
+        self.headers.append(s)
 
-    # HTML methods
-    # -------------------------------------------------------------------------
+    def set_body_src(self, filename):
+        path = _abs_path(filename)
+        self.set_body(_read_text(path))
 
-    def set_body(self, s):
-        """Set the HTML body."""
-        self._body = s
+    def set_body(self, body):
+        self.body = body
 
-    def add_body(self, s):
-        """Add HTML code to the body."""
-        self._body += '\n' + s + '\n'
-
-    def html(self):
-        """Return the full HTML source of the widget."""
-        return self.page().mainFrame().toHtml()
-
-    def rebuild(self):
-        styles = '\n\n'.join(self._styles)
+    def _build_html(self):
+        header = '\n'.join(self.headers)
         html = _PAGE_TEMPLATE.format(title=self.title,
-                                     styles=styles,
-                                     header=self._header,
-                                     body=self._body,
+                                     header=header,
+                                     body=self.body,
                                      )
-        logger.log(5, "Set HTML: %s", html)
-        static_dir = op.join(op.realpath(op.dirname(__file__)), 'static/')
-        base_url = QUrl().fromLocalFile(static_dir)
-        self.setHtml(html, base_url)
+        return html
 
-    def build(self):
-        """Build the full HTML source."""
-        if self.is_built():  # pragma: no cover
-            return
-        with _wait_signal(self.loadFinished, 20):
-            self.rebuild()
-        self._built = True
+    @property
+    def html(self):
+        return self._build_html()
 
-    def is_built(self):
-        return self._built
+
+class JSEventEmitter(QObject):
+    _parent = None
+
+    @pyqtSlot(str, str)
+    def emitJS(self, name, arg_json):
+        logger.log(5, "Emit from Python %s %s.", name, arg_json)
+        emit(text_type(name), self._parent, json.loads(text_type(arg_json)))
+
+
+class HTMLWidget(WebView):
+    """An HTML widget that is displayed with Qt."""
+    def __init__(self, *args, title=''):
+        # Due to a limitation of QWebChannel, need to register a Python object
+        # BEFORE this web view is created?!
+        self._event = JSEventEmitter(*args)
+        self._event._parent = self
+        self.channel = QWebChannel(*args)
+        self.channel.registerObject('eventEmitter', self._event)
+
+        super(HTMLWidget, self).__init__(*args)
+        self.page().setWebChannel(self.channel)
+
+        self.builder = HTMLBuilder(title=title)
+        self.builder.add_script_src('qrc:///qtwebchannel/qwebchannel.js')
+        self.builder.add_script(_DEFAULT_SCRIPT)
+
+    def build(self, callback=None):
+        self.set_html(self.builder.html, callback=callback)
+
+    def view_source(self, callback=None):
+        return self.eval_js("document.getElementsByTagName('html')[0].innerHTML",
+                            callback=callback)
 
     # Javascript methods
     # -------------------------------------------------------------------------
 
-    def add_to_js(self, name, var):
-        """Add an object to Javascript."""
-        frame = self.page().mainFrame()
-        frame.addToJavaScriptWindowObject(name, var)
-
-    def eval_js(self, expr):
+    def eval_js(self, expr, callback=None):
         """Evaluate a Javascript expression."""
-        if not self.is_built():
-            self._pending_js_eval.append(expr)
-            return
-        logger.log(5, "Evaluate Javascript: `%s`.", expr)
-        out = self.page().mainFrame().evaluateJavaScript(expr)
-        return _to_py(out)
-
-    @pyqtSlot(str, str)
-    def _emit_from_js(self, name, arg_json):
-        self.emit(text_type(name), json.loads(text_type(arg_json)))
-
-    def show(self):
-        self.build()
-        super(HTMLWidget, self).show()
-        # Call the pending JS eval calls after the page has been built.
-        assert self.is_built()
-        for expr in self._pending_js_eval:
-            self.eval_js(expr)
-        self._pending_js_eval = []
+        logger.log(5, "%s eval JS %s", self.__class__.__name__, expr)
+        return self.page().runJavaScript(expr, callback or (lambda _: _))
 
 
 # -----------------------------------------------------------------------------
@@ -218,144 +240,127 @@ def dumps(o):
     return json.dumps(o, cls=_CustomEncoder)
 
 
-def _create_json_dict(**kwargs):
-    d = {}
-    # Remove None elements.
-    for k, v in kwargs.items():
-        if v is not None:
-            d[k] = v
-    # The custom encoder serves for NumPy scalars that are non
-    # JSON-serializable (!!).
-    return dumps(d)
-
-
 class Table(HTMLWidget):
     """A sortable table with support for selection."""
 
-    _table_id = 'the-table'
+    def __init__(self, *args, columns=None, value_names=None, data=None, title=''):
+        super(Table, self).__init__(*args, title=title)
+        self._init_table(columns=columns, value_names=value_names, data=data)
 
-    def __init__(self):
-        super(Table, self).__init__()
-        self.add_style_src('table.css')
-        self.add_script_src('tablesort.min.js')
-        self.add_script_src('tablesort.number.js')
-        self.add_script_src('table.js')
-        self.set_body('<table id="{}" class="sort"></table>'.format(
-                      self._table_id))
-        self.add_body('''<script>
-                      var table = new Table(document.getElementById("{}"));
-                      </script>'''.format(self._table_id))
-        self._columns = OrderedDict()
-        self._default_sort = (None, None)
-        self.add_column(lambda _: _, name='id')
+    def _init_table(self, columns=None, value_names=None, data=None):
+        columns = columns or ['id']
+        value_names = value_names or columns
+        data = data or []
 
-    def add_column(self, func, name=None, show=True):
-        """Add a column function which takes an id as argument and
-        returns a value."""
-        assert func
-        name = name or func.__name__
-        if name == '<lambda>':
-            raise ValueError("Please provide a valid name for " + name)
-        d = {'func': func,
-             'show': show,
-             }
-        self._columns[name] = d
+        b = self.builder
+        b.set_body_src('index.html')
 
-        # Update the headers in the widget.
-        data = _create_json_dict(cols=self.column_names,
-                                 )
-        self.eval_js('table.setHeaders({});'.format(data))
+        self.data = data
+        self.columns = columns
+        self.value_names = value_names
 
-        return func
+        emit('pre_build', self)
 
-    @property
-    def column_names(self):
-        """List of column names."""
-        return [name for (name, d) in self._columns.items()
-                if d.get('show', True)]
+        data_json = dumps(self.data)
+        columns_json = dumps(self.columns)
+        value_names_json = dumps(self.value_names)
 
-    def _get_row(self, id):
-        """Create a row dictionary for a given object id."""
-        return {name: d['func'](id) for (name, d) in self._columns.items()}
+        b.body += '''
+        <script>
+            var data = %s;
 
-    def set_rows(self, ids):
-        """Set the rows of the table."""
-        # NOTE: make sure we have integers and not np.generic objects.
-        assert all(isinstance(i, int) for i in ids)
+            var options = {
+              valueNames: %s,
+              columns: %s,
+            };
 
-        # Determine the sort column and dir to set after the rows.
-        sort_col, sort_dir = self.current_sort
-        default_sort_col, default_sort_dir = self.default_sort
+            var table = new Table('table', options, data);
 
-        sort_col = sort_col or default_sort_col
-        sort_dir = sort_dir or default_sort_dir or 'desc'
+        </script>
+        ''' % (data_json, value_names_json, columns_json)
+        self.build(lambda html: emit('ready', self))
 
-        # Set the rows.
-        logger.log(5, "Set %d rows in the table.", len(ids))
-        items = [self._get_row(id) for id in ids]
-        # Sort the rows before passing them to the widget.
-        # if sort_col:
-        #     items = sorted(items, key=itemgetter(sort_col),
-        #                    reverse=(sort_dir == 'desc'))
-        data = _create_json_dict(items=items,
-                                 cols=self.column_names,
-                                 )
-        self.eval_js('table.setData({});'.format(data))
-
-        # Sort.
-        if sort_col:
-            self.sort_by(sort_col, sort_dir)
+        # HACK: work-around a Qt bug where this widget is not properly refreshed
+        # when an OpenGL widget is docked to the main window.
+        self._timer = QTimer()
+        self._timer.setSingleShot(True)
+        self._timer.timeout.connect(lambda: self.update())
+        # Note: this event should be raised LAST, after all OpenGL widgets have been updated.
+        connect(event='select', sender=self, func=lambda *args: self._timer.start(100), last=True)
 
     def sort_by(self, name, sort_dir='asc'):
         """Sort by a given variable."""
         logger.log(5, "Sort by `%s` %s.", name, sort_dir)
-        self.eval_js('table.sortBy("{}", "{}");'.format(name, sort_dir))
+        self.eval_js('table.sort_("{}", "{}");'.format(name, sort_dir))
 
-    def get_next_id(self):
+    def filter(self, text=''):
+        logger.log(5, "Filter table with `%s`.", text)
+        self.eval_js('table.filter_("{}");'.format(text))
+
+    def get_ids(self, callback=None):
+        """Get the list of ids."""
+        self.eval_js('table._getIds();', callback=callback)
+
+    def get_next_id(self, callback=None):
         """Get the next non-skipped row id."""
-        next_id = self.eval_js('table.get_next_id();')
-        return int(next_id) if next_id is not None else None
+        self.eval_js('table.getSiblingId(undefined, "next");', callback=callback)
 
-    def get_previous_id(self):
+    def get_previous_id(self, callback=None):
         """Get the previous non-skipped row id."""
-        previous_id = self.eval_js('table.get_previous_id();')
-        return int(previous_id) if previous_id is not None else None
+        self.eval_js('table.getSiblingId(undefined, "previous");', callback=callback)
 
-    def next(self):
+    def first(self, callback=None):
+        """Select the first item."""
+        self.eval_js('table.selectFirst();', callback=callback)
+
+    def next(self, callback=None):
         """Select the next non-skipped row."""
-        self.eval_js('table.next();')
+        self.eval_js('table.moveToSibling(undefined, "next");', callback=callback)
 
-    def previous(self):
+    def previous(self, callback=None):
         """Select the previous non-skipped row."""
-        self.eval_js('table.previous();')
+        self.eval_js('table.moveToSibling(undefined, "previous");', callback=callback)
 
-    def select(self, ids, do_emit=True, **kwargs):
-        """Select some rows in the table.
+    def select(self, ids, callback=None):
+        """Select some rows in the table."""
+        ids = _uniq(ids)
+        assert all(_is_integer(_) for _ in ids)
+        self.eval_js('table.select({});'.format(dumps(ids)), callback=callback)
 
-        By default, the `select` event is raised, unless `do_emit=False`.
+    def get(self, id, callback=None):
+        self.eval_js('table.get("id", {})[0]["_values"]'.format(id), callback=callback)
 
-        """
-        # Select the rows without emiting the event.
-        self.eval_js('table.select({}, false);'.format(dumps(ids)))
-        if do_emit:
-            # Emit the event manually if needed.
-            self.emit('select', ids, **kwargs)
+    def add(self, objects):
+        if not objects:
+            return
+        self.eval_js('table.add_({});'.format(dumps(objects)))
 
-    @property
-    def default_sort(self):
-        """Default sort as a pair `(name, dir)`."""
-        return self._default_sort
+    def change(self, objects):
+        if not objects:
+            return
+        self.eval_js('table.change_({});'.format(dumps(objects)))
 
-    def set_default_sort(self, name, sort_dir='desc'):
-        """Set the default sort column."""
-        self._default_sort = name, sort_dir
+    def remove(self, ids):
+        if not ids:
+            return
+        self.eval_js('table.remove_({});'.format(dumps(ids)))
 
-    @property
-    def selected(self):
+    def remove_all(self):
+        self.eval_js('table.removeAll();')
+
+    def remove_all_and_add(self, objects):
+        if not objects:
+            return self.remove_all()
+        self.eval_js('table.removeAllAndAdd({});'.format(dumps(objects)))
+
+    def get_selected(self, callback=None):
         """Currently selected rows."""
-        return [int(_) for _ in self.eval_js('table.selected') or ()]
+        self.eval_js('table.selected()', callback=callback)
 
-    @property
-    def current_sort(self):
+    def get_current_sort(self, callback=None):
         """Current sort: a tuple `(name, dir)`."""
-        return tuple(self.eval_js('table.currentSort()') or (None, None))
+        self.eval_js('table._currentSort()', callback=callback)
+
+    def closeEvent(self, e):
+        self._timer.stop()
+        return super(Table, self).closeEvent(e)

@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 
 class CorrelogramView(ManualClusteringView):
     _callback_delay = 30
+    cluster_ids = ()
 
     bin_size = 1e-3
     window_size = 50e-3
@@ -97,11 +98,10 @@ class CorrelogramView(ManualClusteringView):
                                 data_bounds=None,
                                 )
 
-    def on_select(self, cluster_ids=None, **kwargs):
-        super(CorrelogramView, self).on_select(cluster_ids, **kwargs)
-        cluster_ids = self.cluster_ids
+    def on_select(self, cluster_ids=(), **kwargs):
+        self.cluster_ids = cluster_ids
         n_clusters = len(cluster_ids)
-        if n_clusters == 0:
+        if not cluster_ids:
             return
 
         ccg = self.correlograms(cluster_ids,
@@ -114,15 +114,15 @@ class CorrelogramView(ManualClusteringView):
             self._plot_correlograms(ccg)
             self._plot_labels(cluster_ids)
 
-    def toggle_normalization(self):
+    def toggle_normalization(self, checked):
         """Change the normalization of the correlograms."""
-        self.uniform_normalization = not self.uniform_normalization
-        self.on_select()
+        self.uniform_normalization = checked
+        self.on_select(cluster_ids=self.cluster_ids)
 
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(CorrelogramView, self).attach(gui)
-        self.actions.add(self.toggle_normalization, shortcut='n')
+        self.actions.add(self.toggle_normalization, shortcut='n', checkable=True)
         self.actions.separator()
         self.actions.add(self.set_bin, alias='cb')
         self.actions.add(self.set_window, alias='cw')
@@ -141,7 +141,7 @@ class CorrelogramView(ManualClusteringView):
 
         """
         self.set_bin_window(bin_size=bin_size * 1e-3)
-        self.on_select()
+        self.on_select(cluster_ids=self.cluster_ids)
 
     def set_window(self, window_size):
         """Set the correlogram window size (in milliseconds).
@@ -150,4 +150,4 @@ class CorrelogramView(ManualClusteringView):
 
         """
         self.set_bin_window(window_size=window_size * 1e-3)
-        self.on_select()
+        self.on_select(cluster_ids=self.cluster_ids)

@@ -62,11 +62,8 @@ class ScatterView(ManualClusteringView):
                          data_bounds=data_bounds,
                          )
 
-    def on_select(self, cluster_ids=None, **kwargs):
-        super(ScatterView, self).on_select(cluster_ids, **kwargs)
-        cluster_ids = self.cluster_ids
-        n_clusters = len(cluster_ids)
-        if n_clusters == 0:
+    def on_select(self, cluster_ids=(), **kwargs):
+        if not cluster_ids:
             return
 
         # Retrieve the data.

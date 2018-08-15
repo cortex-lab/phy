@@ -1,0 +1,14 @@
+numpy
+matplotlib
+scipy
+h5py
+pyqt5
+cython
+pyopengl
+vispy
+requests
+traitlets
+tqdm
+six
+joblib
+click

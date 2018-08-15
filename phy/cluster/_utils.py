@@ -11,7 +11,7 @@ from collections import defaultdict
 import logging
 
 from ._history import History
-from phy.utils import Bunch, _as_list, _is_list, EventEmitter
+from phy.utils import Bunch, _as_list, _is_list, emit, silent
 
 logger = logging.getLogger(__name__)
 
@@ -94,10 +94,9 @@ class UpdateInfo(Bunch):
 # ClusterMetadataUpdater class
 #------------------------------------------------------------------------------
 
-class ClusterMeta(EventEmitter):
+class ClusterMeta(object):
     """Handle cluster metadata changes."""
     def __init__(self):
-        super(ClusterMeta, self).__init__()
         self._fields = {}
         self._reset_data()
 
@@ -124,10 +123,12 @@ class ClusterMeta(EventEmitter):
 
     def from_dict(self, dic):
         """Import data from a {cluster: {field: value}} dictionary."""
-        self._reset_data()
-        for cluster, vals in dic.items():
-            for field, value in vals.items():
-                self.set(field, [cluster], value, add_to_stack=False)
+        #self._reset_data()
+        # Do not raise events here.
+        with silent():
+            for cluster, vals in dic.items():
+                for field, value in vals.items():
+                    self.set(field, [cluster], value, add_to_stack=False)
         self._data_base = deepcopy(self._data)
 
     def to_dict(self, field):
@@ -154,11 +155,11 @@ class ClusterMeta(EventEmitter):
                         metadata_changed=clusters,
                         metadata_value=value,
                         )
-        undo_state = self.emit('request_undo_state', up)
+        undo_state = emit('request_undo_state', self, up)
 
         if add_to_stack:
             self._undo_stack.add((clusters, field, value, up, undo_state))
-            self.emit('cluster', up)
+            emit('cluster', self, up)
 
         return up
 
@@ -213,7 +214,7 @@ class ClusterMeta(EventEmitter):
         up.history = 'undo'
         up.undo_state = undo_state
 
-        self.emit('cluster', up)
+        emit('cluster', self, up)
         return up
 
     def redo(self):
@@ -233,5 +234,5 @@ class ClusterMeta(EventEmitter):
         # Return the UpdateInfo instance of the redo action.
         up.history = 'redo'
 
-        self.emit('cluster', up)
+        emit('cluster', self, up)
         return up
