@@ -53,7 +53,7 @@ class _Formatter(logging.Formatter):
         return message
 
 
-def add_default_handler(level='INFO'):
+def add_default_handler(level='INFO', logger=logger):
     handler = logging.StreamHandler()
     handler.setLevel(level)
 
