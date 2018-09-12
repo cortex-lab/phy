@@ -86,6 +86,7 @@ class SpikeClick(Event):
 
 
 class TraceView(ManualClusteringView):
+    auto_update = False
     interval_duration = .25  # default duration of the interval
     shift_amount = .1
     scaling_coeff_x = 1.5
@@ -109,7 +110,7 @@ class TraceView(ManualClusteringView):
                  channel_vertical_order=None,
                  **kwargs):
 
-        self.do_show_labels = None
+        self.do_show_labels = True
         self._key_pressed = None
 
         # traces is a function interval => [traces]
@@ -305,6 +306,8 @@ class TraceView(ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(TraceView, self).attach(gui)
+        self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
+        self.actions.separator()
         self.actions.add(self.go_to, alias='tg')
         self.actions.separator()
         self.actions.add(self.shift, alias='ts')
@@ -316,11 +319,9 @@ class TraceView(ManualClusteringView):
         self.actions.separator()
         self.actions.add(self.widen)
         self.actions.add(self.narrow)
-        self.actions.separator()
-        self.actions.add(self.toggle_show_labels, checkable=True)
 
         # Default: freeze the view for performance reasons.
-        self.actions.get('toggle_auto_update').trigger()
+        # self.actions.get('toggle_auto_update').trigger()
 
         # We forward the event from VisPy to the phy GUI.
         @self.connect
@@ -336,11 +337,13 @@ class TraceView(ManualClusteringView):
 
     @property
     def state(self):
-        return Bunch(scaling=self.scaling,
+        state = super(TraceView, self).state
+        state.update(scaling=self.scaling,
                      origin=self.origin,
                      interval=self._interval,
                      do_show_labels=self.do_show_labels,
                      )
+        return state
 
     # Scaling
     # -------------------------------------------------------------------------

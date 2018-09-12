@@ -16,7 +16,7 @@ from vispy.util.event import Event
 from phy.io.array import _flatten, _index_of
 from phy.plot import _get_linear_x
 from phy.plot.utils import _get_boxes
-from phy.utils import Bunch, emit
+from phy.utils import emit
 from phy.utils._color import _colormap
 from .base import ManualClusteringView
 
@@ -239,8 +239,8 @@ class WaveformView(ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(WaveformView, self).attach(gui)
-        self.actions.add(self.toggle_waveform_overlap, checkable=True)
-        self.actions.add(self.toggle_show_labels, checkable=True)
+        self.actions.add(self.toggle_waveform_overlap, checkable=True, checked=self.overlap)
+        self.actions.add(self.toggle_show_labels, checkable=True, checked=self.do_show_labels)
         self.actions.separator()
 
         # Box scaling.

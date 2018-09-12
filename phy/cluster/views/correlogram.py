@@ -11,7 +11,6 @@ import logging
 
 import numpy as np
 
-from phy.utils import Bunch
 from phy.utils._color import _spike_colors
 from .base import ManualClusteringView
 

@@ -76,6 +76,7 @@ def _uniq(seq):
 class FeatureView(ManualClusteringView):
     _callback_delay = 20
     cluster_ids = ()
+    fixed_channels = False  # true to disable automatic selection of channels
 
     _default_marker_size = 5.
     default_shortcuts = {
@@ -97,10 +98,6 @@ class FeatureView(ManualClusteringView):
         self.shape = (self.n_cols, self.n_cols)
 
         self.grid_dim = _get_default_grid()  # [i][j] = '..,..'
-
-        # If this is True, the channels won't be automatically chosen
-        # when new clusters are selected.
-        self.fixed_channels = False
 
         # Channels being shown.
         self.channel_ids = None
@@ -248,9 +245,10 @@ class FeatureView(ManualClusteringView):
         added = kwargs.get('up', {}).get('added', None)
         # Fix the channels if the view updates after a cluster event
         # and there are new clusters.
-        fixed_channels = (self.fixed_channels or
-                          kwargs.get('fixed_channels', None) or
-                          added is not None)
+        fixed_channels = (
+            self.fixed_channels or
+            kwargs.get('fixed_channels', None) or
+            added is not None)
 
         # Get the feature data.
         # Specify the channel ids if these are fixed, otherwise
@@ -300,11 +298,12 @@ class FeatureView(ManualClusteringView):
     def attach(self, gui):
         """Attach the view to the GUI."""
         super(FeatureView, self).attach(gui)
-        self.actions.add(self.increase)
-        self.actions.add(self.decrease)
+        self.actions.add(self.toggle_automatic_channel_selection, checkable=True)
         self.actions.separator()
         self.actions.add(self.clear_channels)
-        self.actions.add(self.toggle_automatic_channel_selection, checkable=True)
+        self.actions.separator()
+        self.actions.add(self.increase)
+        self.actions.add(self.decrease)
 
         connect(self.on_channel_click)
         connect(self.on_request_split)
@@ -312,7 +311,7 @@ class FeatureView(ManualClusteringView):
     @property
     def state(self):
         state = super(FeatureView, self).state
-        state.update(scaling=self.scaling)
+        state.update(scaling=self.scaling, fixed_channels=self.fixed_channels)
         return state
 
     def on_channel_click(self, sender=None, channel_id=None, key=None, button=None):
