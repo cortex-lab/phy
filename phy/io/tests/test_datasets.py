@@ -87,7 +87,7 @@ def _dl(path):
 
 
 def _check(data):
-    ae(np.fromstring(data, np.float32), _DATA)
+    ae(np.frombuffer(data, np.float32), _DATA)
 
 
 #------------------------------------------------------------------------------

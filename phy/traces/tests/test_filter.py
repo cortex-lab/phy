@@ -24,7 +24,7 @@ def test_apply_filter():
     low, high = 100., 200.
 
     # Create a signal with small and high frequencies.
-    t = np.linspace(0., 1., rate)
+    t = np.linspace(0., 1., int(rate))
     x = np.sin(2 * np.pi * low / 2 * t) + np.cos(2 * np.pi * high * 2 * t)
 
     # Filter the signal.

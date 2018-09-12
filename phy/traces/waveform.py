@@ -114,7 +114,7 @@ class WaveformExtractor(object):
             f = interp1d(old_s, waveform, bounds_error=True,
                          kind='cubic', axis=0)
         except ValueError:  # pragma: no cover
-            logger.warn("Interpolation error at time %d", s)
+            logger.warning("Interpolation error at time %d", s)
             return waveform
         return f(new_s)
 
@@ -307,7 +307,7 @@ class WaveformLoader(object):
             try:
                 w = self._load_at(time, channels)
             except ValueError as e:  # pragma: no cover
-                logger.warn("Error while loading waveform: %s", str(e))
+                logger.warning("Error while loading waveform: %s", str(e))
                 continue
 
             assert w.shape == (self._n_samples_extract, nc)

@@ -59,15 +59,13 @@ class Context(object):
         # Try importing joblib.
         try:
             from joblib import Memory
-            self._memory = Memory(cachedir=self.cache_dir,
-                                  mmap_mode=None,
-                                  verbose=self.verbose,
-                                  )
+            self._memory = Memory(
+                location=self.cache_dir, mmap_mode=None, verbose=self.verbose)
             logger.debug("Initialize joblib cache dir at `%s`.",
                          self.cache_dir)
         except ImportError:  # pragma: no cover
-            logger.warn("Joblib is not installed. "
-                        "Install it with `conda install joblib`.")
+            logger.warning(
+                "Joblib is not installed. Install it with `conda install joblib`.")
             self._memory = None
 
     def cache(self, f):
@@ -77,7 +75,7 @@ class Context(object):
             return f
         assert f
         # NOTE: discard self in instance methods.
-        if 'self' in inspect.getargspec(f).args:
+        if 'self' in inspect.getfullargspec(f).args:
             ignore = ['self']
         else:
             ignore = None

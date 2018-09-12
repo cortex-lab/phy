@@ -337,8 +337,9 @@ class ConcatenatedArrays(object):
         # Concatenate all chunks.
         l = [chunk_start]
         if rec_stop - rec_start >= 2:
-            logger.warn("Loading a full virtual array: this might be slow "
-                        "and something might be wrong.")
+            logger.warning(
+                "Loading a full virtual array: this might be slow and "
+                "something might be wrong.")
             l += [self.arrs[r][...] for r in range(rec_start + 1,
                                                    rec_stop)]
         l += [chunk_stop]

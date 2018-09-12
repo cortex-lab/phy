@@ -67,9 +67,9 @@ def _wrap_callback_args(f, docstring=None):  # pragma: no cover
         if args:
             return f(*args)
         if isinstance(f, partial):
-            argspec = inspect.getargspec(f.func)
+            argspec = inspect.getfullargspec(f.func)
         else:
-            argspec = inspect.getargspec(f)
+            argspec = inspect.getfullargspec(f)
         f_args = argspec.args
         if 'self' in f_args:
             f_args.remove('self')
@@ -464,9 +464,9 @@ class Snippets(object):
                     # This Actions instance doesn't contain the requested
                     # snippet, trying the next attached Actions instance.
                     pass
-            logger.warn("Couldn't find action `%s`.", name)
+            logger.warning("Couldn't find action `%s`.", name)
         except Exception as e:
-            logger.warn("Error when executing snippet: \"%s\".", str(e))
+            logger.warning("Error when executing snippet: \"%s\".", str(e))
             logger.debug(''.join(traceback.format_exception(*sys.exc_info())))
 
     def is_mode_on(self):

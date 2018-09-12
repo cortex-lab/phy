@@ -32,7 +32,7 @@ logger = logging.getLogger(__name__)
 def test_logging():
     logger.debug("Debug message")
     logger.info("Info message")
-    logger.warn("Warn message")
+    logger.warning("Warn message")
     logger.error("Error message")
 
 
