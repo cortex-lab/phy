@@ -9,7 +9,9 @@
 import logging
 import numpy as np
 import os
+import warnings
 
+import matplotlib
 from pytest import yield_fixture
 
 from phy import add_default_handler
@@ -25,6 +27,8 @@ add_default_handler(5)
 
 # Fix the random seed in the tests.
 np.random.seed(2015)
+
+warnings.filterwarnings('ignore', category=matplotlib.cbook.mplDeprecation)
 
 
 @yield_fixture
