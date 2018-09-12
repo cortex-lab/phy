@@ -311,7 +311,9 @@ class FeatureView(ManualClusteringView):
 
     @property
     def state(self):
-        return Bunch(scaling=self.scaling)
+        state = super(FeatureView, self).state
+        state.update(scaling=self.scaling)
+        return state
 
     def on_channel_click(self, sender=None, channel_id=None, key=None, button=None):
         """Respond to the click on a channel."""

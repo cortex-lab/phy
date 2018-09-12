@@ -115,7 +115,7 @@ def test_trace_view(tempdir, qtbot):
 
     v.toggle_show_labels(True)
     v.go_right()
-    v.toggle_freezing(False)
+    v.toggle_auto_update(True)
     assert v.do_show_labels
 
     # Change channel scaling.

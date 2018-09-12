@@ -38,7 +38,7 @@ class ManualClusteringView(View):
     default_shortcuts = {
     }
     _callback_delay = 1
-    _freeze = None
+    auto_update = True  # automatically update the view when the cluster selection changes
 
     def __init__(self, shortcuts=None, **kwargs):
 
@@ -83,7 +83,7 @@ class ManualClusteringView(View):
 
         @connect
         def on_select(sender, cluster_ids, **kwargs):
-            if self._freeze:
+            if not self.auto_update:
                 return
             if sender.__class__.__name__ != 'Supervisor':
                 return
@@ -99,13 +99,12 @@ class ManualClusteringView(View):
                     logger.debug("Selecting %s in %s.", cluster_ids, self)
                     self.on_select(cluster_ids=cluster_ids, **kwargs)
 
-        self.actions = Actions(gui,
-                               name=name or self.__class__.__name__,
-                               menu=self.__class__.__name__,
-                               default_shortcuts=self.shortcuts)
+        self.actions = Actions(
+            gui, name=name or self.__class__.__name__,
+            menu=self.__class__.__name__, default_shortcuts=self.shortcuts)
 
         # Freeze and unfreeze the view when selecting clusters.
-        self.actions.add(self.toggle_freezing, checkable=True)
+        self.actions.add(self.toggle_auto_update, checkable=True, checked=self.auto_update)
         self.actions.separator()
 
         # Update the GUI status message when the `self.set_status()` method
@@ -124,10 +123,10 @@ class ManualClusteringView(View):
 
         self.show()
 
-    def toggle_freezing(self, checked):
-        """Freezing means the view is not updated when the cluster
-        selection changes."""
-        self._freeze = checked
+    def toggle_auto_update(self, checked):
+        """Auto update means the view is updated automatically
+        when the cluster selection changes."""
+        self.auto_update = checked
 
     @property
     def state(self):
@@ -139,7 +138,7 @@ class ManualClusteringView(View):
         To be overriden.
 
         """
-        return Bunch()
+        return Bunch(auto_update=self.auto_update)
 
     def set_state(self, state):
         """Set the view state.

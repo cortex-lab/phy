@@ -320,7 +320,7 @@ class TraceView(ManualClusteringView):
         self.actions.add(self.toggle_show_labels, checkable=True)
 
         # Default: freeze the view for performance reasons.
-        self.actions.get('toggle_freezing').trigger()
+        self.actions.get('toggle_auto_update').trigger()
 
         # We forward the event from VisPy to the phy GUI.
         @self.connect

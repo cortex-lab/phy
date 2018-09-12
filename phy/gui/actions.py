@@ -165,7 +165,8 @@ def _alias(name):
 
 
 @require_qt
-def _create_qaction(gui, name, callback, shortcut, docstring=None, checkable=False, alias=''):
+def _create_qaction(gui, name, callback, shortcut, docstring=None,
+                    checkable=False, checked=False, alias=''):
     # Create the QAction instance.
     action = QAction(name.capitalize().replace('_', ' '), gui)
 
@@ -180,10 +181,12 @@ def _create_qaction(gui, name, callback, shortcut, docstring=None, checkable=Fal
         sequence = [sequence]
     action.setShortcuts(sequence)
     assert docstring
+    docstring = re.sub(r'\s+', ' ', docstring)
     docstring += ' (alias: {})'.format(alias)
     action.setStatusTip(docstring)
     action.setWhatsThis(docstring)
     action.setCheckable(checkable)
+    action.setChecked(checked)
     return action
 
 
@@ -207,12 +210,12 @@ class Actions(object):
         gui.actions.append(self)
 
     def add(self, callback=None, name=None, shortcut=None, alias=None,
-            docstring=None, menu=None, verbose=True, checkable=False):
+            docstring=None, menu=None, verbose=True, checkable=False, checked=False):
         """Add an action with a keyboard shortcut."""
         if callback is None:
             # Allow to use either add(func) or @add or @add(...).
             return partial(self.add, name=name, shortcut=shortcut,
-                           alias=alias, menu=menu, checkable=checkable)
+                           alias=alias, menu=menu, checkable=checkable, checked=checked)
         assert callback
 
         # Get the name from the callback function if needed.
@@ -230,17 +233,14 @@ class Actions(object):
         docstring = re.sub(r'[ \t\r\f\v]{2,}', ' ', docstring.strip())
 
         # Create and register the action.
-        action = _create_qaction(self.gui, name, callback,
-                                 shortcut,
-                                 docstring=docstring,
-                                 alias=alias,
-                                 checkable=checkable,
-                                 )
-        action_obj = Bunch(qaction=action, name=name, alias=alias, checkable=checkable,
-                           shortcut=shortcut, callback=callback, menu=menu)
+        action = _create_qaction(
+            self.gui, name, callback, shortcut, docstring=docstring,
+            alias=alias, checkable=checkable, checked=checked)
+        action_obj = Bunch(
+            qaction=action, name=name, alias=alias, checkable=checkable,
+            checked=checked, shortcut=shortcut, callback=callback, menu=menu)
         if verbose and not name.startswith('_'):
-            logger.log(5, "Add action `%s` (%s).", name,
-                       _get_shortcut_string(action.shortcut()))
+            logger.log(5, "Add action `%s` (%s).", name, _get_shortcut_string(action.shortcut()))
         self.gui.addAction(action)
         # Add the action to the menu.
         menu = menu or self.menu

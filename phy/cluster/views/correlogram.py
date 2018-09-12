@@ -129,10 +129,12 @@ class CorrelogramView(ManualClusteringView):
 
     @property
     def state(self):
-        return Bunch(bin_size=self.bin_size,
+        state = super(CorrelogramView, self).state
+        state.update(bin_size=self.bin_size,
                      window_size=self.window_size,
                      uniform_normalization=self.uniform_normalization,
                      )
+        return state
 
     def set_bin(self, bin_size):
         """Set the correlogram bin size (in milliseconds).

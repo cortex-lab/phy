@@ -228,11 +228,13 @@ class WaveformView(ManualClusteringView):
 
     @property
     def state(self):
-        return Bunch(box_scaling=tuple(self.box_scaling),
+        state = super(WaveformView, self).state
+        state.update(box_scaling=tuple(self.box_scaling),
                      probe_scaling=tuple(self.probe_scaling),
                      overlap=self.overlap,
                      do_show_labels=self.do_show_labels,
                      )
+        return state
 
     def attach(self, gui):
         """Attach the view to the GUI."""
