@@ -43,6 +43,9 @@ def _try_get_matplotlib_canvas(view):
         from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
         if isinstance(view, Figure):
             view = FigureCanvasQTAgg(view)
+        # Case where the view has a .figure property which is a matplotlib figure.
+        elif isinstance(getattr(view, 'figure', None), Figure):
+            view = FigureCanvasQTAgg(view.figure)
     except ImportError:  # pragma: no cover
         pass
     return view

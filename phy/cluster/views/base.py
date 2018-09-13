@@ -9,6 +9,8 @@
 
 import logging
 
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_qt5agg import NavigationToolbar2QT as NavigationToolbar
 from vispy.util.event import Event
 
 from phy.gui import Actions
@@ -29,7 +31,7 @@ class StatusEvent(Event):
         self.message = message
 
 
-class ManualClusteringView(View):
+class BaseManualClusteringView(object):
     """Base class for clustering views.
 
     The views take their data with functions `cluster_ids: spike_ids, data`.
@@ -55,10 +57,7 @@ class ManualClusteringView(View):
         # Keep track of the selected clusters and spikes.
         #self.cluster_ids = None
 
-        super(ManualClusteringView, self).__init__(**kwargs)
-        self.panzoom._default_zoom = .9
-        self.panzoom.reset()
-        self.events.add(status=StatusEvent)
+        super(BaseManualClusteringView, self).__init__(**kwargs)
 
     def on_select(self, cluster_ids=None, **kwargs):
         # To override.
@@ -66,10 +65,6 @@ class ManualClusteringView(View):
 
     def attach(self, gui, name=None):
         """Attach the view to the GUI."""
-
-        # Disable keyboard pan so that we can use arrows as global shortcuts
-        # in the GUI.
-        self.panzoom.enable_keyboard_pan = False
 
         gui.add_view(self)
         self.gui = gui
@@ -156,7 +151,90 @@ class ManualClusteringView(View):
         if not message:
             return
         self.status = message
+
+
+class ManualClusteringView(BaseManualClusteringView, View):
+    def __init__(self, *args, **kwargs):
+        super(ManualClusteringView, self).__init__(*args, **kwargs)
+        self.panzoom._default_zoom = .9
+        self.panzoom.reset()
+        self.events.add(status=StatusEvent)
+
+    def attach(self, *args, **kwargs):
+
+        # Disable keyboard pan so that we can use arrows as global shortcuts
+        # in the GUI.
+        self.panzoom.enable_keyboard_pan = False
+
+        super(ManualClusteringView, self).attach(*args, **kwargs)
+
+    def set_status(self, message=None):
+        super(ManualClusteringView, self).set_status(message=message)
         self.events.status(message=message)
 
     def on_mouse_move(self, e):  # pragma: no cover
         self.set_status()
+
+
+# -----------------------------------------------------------------------------
+# Matplotlib view
+# -----------------------------------------------------------------------------
+
+def zoom_fun(ax, event):
+    cur_xlim = ax.get_xlim()
+    cur_ylim = ax.get_ylim()
+    xdata = event.xdata
+    ydata = event.ydata
+    x_left = xdata - cur_xlim[0]
+    x_right = cur_xlim[1] - xdata
+    y_top = ydata - cur_ylim[0]
+    y_bottom = cur_ylim[1] - ydata
+    k = 1.3
+    scale_factor = {'up': 1. / k, 'down': k}.get(event.button, 1.)
+    ax.set_xlim([xdata - x_left * scale_factor,
+                 xdata + x_right * scale_factor])
+    ax.set_ylim([ydata - y_top * scale_factor,
+                 ydata + y_bottom * scale_factor])
+
+
+class ManualClusteringViewMatplotlib(BaseManualClusteringView):
+    def __init__(self, *args, **kwargs):
+        super(ManualClusteringViewMatplotlib, self).__init__(*args, **kwargs)
+        plt.style.use('dark_background')
+        self.figure = plt.figure()
+
+    def subplots(self, nrows=1, ncols=1, **kwargs):
+        self.axes = self.figure.subplots(nrows, ncols, squeeze=False, **kwargs)
+        for ax in self.axes.flat:
+            self.config_ax(ax)
+        return self.axes
+
+    def config_ax(self, ax):
+        xaxis = ax.get_xaxis()
+        yaxis = ax.get_yaxis()
+
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+
+        xaxis.set_ticks_position('bottom')
+        xaxis.set_tick_params(direction='out')
+
+        yaxis.set_ticks_position('left')
+        yaxis.set_tick_params(direction='out')
+
+        def on_zoom(event):  # pragma: no cover
+            zoom_fun(ax, event)
+            self.show()
+
+        self.figure.canvas.mpl_connect('scroll_event', on_zoom)
+
+    def attach(self, gui, **kwargs):
+        super(ManualClusteringViewMatplotlib, self).attach(gui)
+        self.nav = NavigationToolbar(self.figure.canvas, gui, coordinates=False)
+        self.nav.pan()
+
+    def show(self):
+        self.figure.canvas.draw()
+
+    def close(self):
+        self.figure.canvas.close()
