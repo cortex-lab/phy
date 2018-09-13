@@ -226,15 +226,19 @@ class ManualClusteringViewMatplotlib(BaseManualClusteringView):
             zoom_fun(ax, event)
             self.show()
 
-        self.figure.canvas.mpl_connect('scroll_event', on_zoom)
+        self.canvas.mpl_connect('scroll_event', on_zoom)
+
+    @property
+    def canvas(self):
+        return self.figure.canvas
 
     def attach(self, gui, **kwargs):
         super(ManualClusteringViewMatplotlib, self).attach(gui)
-        self.nav = NavigationToolbar(self.figure.canvas, gui, coordinates=False)
+        self.nav = NavigationToolbar(self.canvas, gui, coordinates=False)
         self.nav.pan()
 
     def show(self):
-        self.figure.canvas.draw()
+        self.canvas.draw()
 
     def close(self):
-        self.figure.canvas.close()
+        self.canvas.close()
