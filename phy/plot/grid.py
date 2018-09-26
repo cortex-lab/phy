@@ -10,12 +10,11 @@
 from math import log2
 
 import numpy as np
-from matplotlib.ticker import ScalarFormatter, AutoLocator, MaxNLocator
+from matplotlib.ticker import ScalarFormatter, MaxNLocator
 
 
-from .transform import Range, NDC
+from .transform import NDC
 from .visuals import LineVisual, TextVisual
-from phy.utils import Bunch
 from phy import connect
 
 

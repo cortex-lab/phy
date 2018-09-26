@@ -45,5 +45,9 @@ def test_grid_1(qtbot, canvas_pz):
     c.show()
     qtbot.waitForWindowShown(c.native)
 
+    c.panzoom.zoom = 2
+    c.panzoom.zoom = 8
+    c.panzoom.pan = (3, 3)
+
     # qtbot.stop()
     c.close()
