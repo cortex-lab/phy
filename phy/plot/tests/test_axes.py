@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Test grid."""
+"""Test axes."""
 
 
 #------------------------------------------------------------------------------
@@ -11,11 +11,11 @@ import numpy as np
 from numpy.testing import assert_equal as ae
 from numpy.testing import assert_allclose as ac
 
-from ..grid import AxisLocator, Grid
+from ..axes import AxisLocator, Axes
 
 
 #------------------------------------------------------------------------------
-# Tests grid
+# Tests axes
 #------------------------------------------------------------------------------
 
 def test_locator_1():
@@ -36,10 +36,10 @@ def test_locator_2():
     assert l.format(0.1) == '1e-1'
 
 
-def test_grid_1(qtbot, canvas_pz):
+def test_axes_1(qtbot, canvas_pz):
     c = canvas_pz
 
-    g = Grid()
+    g = Axes()
     g.attach(c)
 
     c.show()

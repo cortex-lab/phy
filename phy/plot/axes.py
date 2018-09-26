@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-"""Grid and axes."""
+"""Axes."""
 
 
 #------------------------------------------------------------------------------
@@ -40,7 +40,7 @@ class AxisLocator(object):
 
 
 #------------------------------------------------------------------------------
-# Grid visual
+# Axes visual
 #------------------------------------------------------------------------------
 
 def _fix_coordinate_in_visual(visual, coord):
@@ -56,7 +56,7 @@ def _set_line_data(xticks, yticks):
     return xdata, ydata
 
 
-class Grid(object):
+class Axes(object):
     default_color = (1, 1, 1, .5)
 
     def __init__(self, color=None):
