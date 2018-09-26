@@ -43,6 +43,7 @@ def test_building(qtbot):
 
     with view.building():
         view.scatter(x, y)
+        view.enable_axes()
 
     view.show()
     qtbot.waitForWindowShown(view.native)
