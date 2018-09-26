@@ -17,6 +17,7 @@ import numpy as np
 
 from phy.io.array import _accumulate, _in_polygon
 from phy.utils._types import _as_tuple
+from .axes import Axes
 from .base import BaseCanvas
 from .interact import Grid, Boxed, Stacked
 from .panzoom import PanZoom
@@ -114,6 +115,10 @@ class View(BaseCanvas):
         self._items = OrderedDict()
         self.visuals = []
         self.update()
+
+    def enable_axes(self):
+        self.axes = Axes()
+        self.axes.attach(self)
 
     def _add_item(self, cls, *args, **kwargs):
         """Add a plot item."""
