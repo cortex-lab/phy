@@ -170,7 +170,8 @@ class GLSLInserter(object):
 
     def __init__(self):
         self._to_insert = defaultdict(list)
-        self.insert_vert('vec2 temp_pos_tr = {{ var }};',
+        self.insert_vert('vec2 temp_pos_tr = {{ var }};\n'
+                         'vec2 pos_orig = temp_pos_tr;\n',  # keep original value.
                          'before_transforms')
         self.insert_vert('gl_Position = vec4(temp_pos_tr, 0., 1.);',
                          'after_transforms')

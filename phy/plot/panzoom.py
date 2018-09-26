@@ -15,6 +15,7 @@ import numpy as np
 from .base import BaseInteract
 from .transform import Translate, Scale, pixels_to_ndc
 from phy.utils._types import _as_array
+from phy.utils import emit
 
 
 #------------------------------------------------------------------------------
@@ -245,8 +246,13 @@ class PanZoom(BaseInteract):
     def pan(self, value):
         """Pan translation."""
         assert len(value) == 2
+        old = tuple(self.pan)
         self._pan[:] = value
         self._constrain_pan()
+
+        new = tuple(self.pan)
+        if new != old:
+            emit('pan', self, new)
         self.update()
 
     @property
@@ -260,12 +266,16 @@ class PanZoom(BaseInteract):
         if isinstance(value, (int, float)):
             value = (value, value)
         assert len(value) == 2
+        old = tuple(self.zoom)
         self._zoom = np.clip(value, self._zmin, self._zmax)
 
         # Constrain bounding box.
         self._constrain_pan()
         self._constrain_zoom()
 
+        new = tuple(self.zoom)
+        if new != old:
+            emit('zoom', self, new)
         self.update()
 
     def pan_delta(self, d):
