@@ -28,7 +28,8 @@ def _package_tree(pkgroot):
 
 
 curdir = op.dirname(op.realpath(__file__))
-readme = open(op.join(curdir, 'README.md')).read()
+with open(op.join(curdir, 'README.md')) as f:
+    readme = f.read()
 
 
 # Find version number from `__init__.py` without executing it.

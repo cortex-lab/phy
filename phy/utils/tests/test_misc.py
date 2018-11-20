@@ -107,10 +107,10 @@ def test_git_version():
     # If this test file is tracked by git, then _git_version() should succeed
     filedir, _ = op.split(__file__)
     try:
-        fnull = open(os.devnull, 'w')
-        subprocess.check_output(['git', '-C', filedir, 'status'],
-                                stderr=fnull)
-        assert v is not "", "git_version failed to return"
-        assert v[:5] == "-git-", "Git version does not begin in -git-"
+        with open(os.devnull, 'w') as fnull:
+            subprocess.check_output(['git', '-C', filedir, 'status'],
+                                    stderr=fnull)
+            assert v is not "", "git_version failed to return"
+            assert v[:5] == "-git-", "Git version does not begin in -git-"
     except (OSError, subprocess.CalledProcessError):  # pragma: no cover
         assert v == ""
