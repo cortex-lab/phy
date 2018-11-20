@@ -10,10 +10,10 @@
 from math import log2
 
 import numpy as np
-from matplotlib.ticker import ScalarFormatter, MaxNLocator
+from matplotlib.ticker import MaxNLocator
 
 
-from .transform import NDC
+from .transform import NDC, Range
 from .visuals import LineVisual, TextVisual
 from phy import connect
 
@@ -23,20 +23,41 @@ from phy import connect
 #------------------------------------------------------------------------------
 
 class AxisLocator(object):
-    def __init__(self, nbins=24):
+    def __init__(self, nbins=24, data_bounds=None):
         self.locator = MaxNLocator(nbins=nbins, steps=[1, 2, 2.5, 5, 10])
-        self.formatter = ScalarFormatter()
+        self.data_bounds = data_bounds
+        self._tr = Range(from_bounds=NDC, to_bounds=self.data_bounds)
+        self._tri = self._tr.inverse()
 
-    def get_ticks(self, bounds):
-        x0, y0, x1, y1 = bounds
+    def _transform_ticks(self, xticks, yticks):
+        """From data coordinates to view coordinates."""
+        nx, ny = len(xticks), len(yticks)
+        arr = np.zeros((nx + ny, 2))
+        arr[:nx, 0] = xticks
+        arr[nx:, 1] = yticks
+        out = self._tri.apply(arr)
+        return out[:nx, 0], out[nx:, 1]
+
+    def set_view_bounds(self, view_bounds):
+        x0, y0, x1, y1 = view_bounds
         dx = x1 - x0
         dy = y1 - y0
-        xticks = self.locator.tick_values(x0 - dx, x1 + dx)
-        yticks = self.locator.tick_values(y0 - dy, y1 + dy)
-        return xticks, yticks
 
-    def format(self, val):
-        return self.formatter.format_data(val).replace('−', '-')
+        # Get the bounds in data coordinates.
+        ((dx0, dy0), (dx1, dy1)) = self._tr.apply([
+            [x0 - dx, y0 - dy],
+            [x1 + dx, y1 + dy]])
+
+        # Compute the ticks in data coordinates.
+        self.xticks = self.locator.tick_values(dx0, dx1)
+        self.yticks = self.locator.tick_values(dy0, dy1)
+
+        # Get the ticks in view coordinates.
+        self.xticks_view, self.yticks_view = self._transform_ticks(self.xticks, self.yticks)
+
+        # Get the text in data coordinates.
+        self.xtext = ['%g' % v for v in self.xticks]
+        self.ytext = ['%g' % v for v in self.yticks]
 
 
 #------------------------------------------------------------------------------
@@ -57,10 +78,10 @@ def _set_line_data(xticks, yticks):
 
 
 class Axes(object):
-    default_color = (1, 1, 1, .5)
+    default_color = (1, 1, 1, .25)
 
-    def __init__(self, color=None):
-        self.locator = AxisLocator()
+    def __init__(self, color=None, data_bounds=None):
+        self.locator = AxisLocator(data_bounds=data_bounds)
         self.color = color or self.default_color
 
         self.xvisual = LineVisual()
@@ -77,19 +98,20 @@ class Axes(object):
         self._last_pan = (0, 0)
 
     def set_bounds(self, bounds):
-        xticks, yticks = self.locator.get_ticks(bounds)
-        xdata, ydata = _set_line_data(xticks, yticks)
-
+        self.locator.set_view_bounds(bounds)
+        # Get the text data.
+        xtext, ytext = self.locator.xtext, self.locator.ytext
+        # GPU data for the grid.
+        xdata, ydata = _set_line_data(self.locator.xticks_view, self.locator.yticks_view)
+        # Position of the text in view coordinates.
         xpos, ypos = xdata[:, :2], ydata[:, 2:]
 
-        xtext = [self.locator.format(_) for _ in xticks]
-        ytext = [self.locator.format(_) for _ in yticks]
-
+        # Set the visuals data.
         self.xvisual.set_data(xdata, color=self.color)
         self.yvisual.set_data(ydata, color=self.color)
 
-        self.txvisual.set_data(pos=xpos, text=xtext, anchor=(0, 1.05))
-        self.tyvisual.set_data(pos=ypos, text=ytext, anchor=(-1.05, 0))
+        self.txvisual.set_data(pos=xpos, text=xtext, anchor=(0, 1.02))
+        self.tyvisual.set_data(pos=ypos, text=ytext, anchor=(-1.02, 0))
 
     def attach(self, canvas):
         canvas.add_visual(self.xvisual)

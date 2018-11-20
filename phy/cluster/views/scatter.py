@@ -105,3 +105,4 @@ class ScatterView(BaseScatterView, ManualClusteringView):
 
         with self.building():
             self._plot_points(bunchs, data_bounds)
+            self.enable_axes(data_bounds=data_bounds)

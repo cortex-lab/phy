@@ -21,25 +21,19 @@ from ..axes import AxisLocator, Axes
 def test_locator_1():
     l = AxisLocator('auto')
 
-    xticks, yticks = l.get_ticks((0, 0, 1, 1))
-    ae(xticks, yticks)
-    ae(xticks, np.linspace(-1., 2., 7))
+    l.set_view_bounds((0., 0., 1., 1.))
+    ae(l.xticks, l.yticks)
+    ae(l.xticks, np.linspace(-1., 2., 7))
 
-    xticks, yticks = l.get_ticks((.101, -201, .201, -101))
-    ac(xticks, np.linspace(0, .35, 8))
-    ae(yticks, np.linspace(-350., 0., 8))
-
-
-def test_locator_2():
-    l = AxisLocator()
-    assert l.format(0) == '0'
-    assert l.format(0.1) == '1e-1'
+    l.set_view_bounds((.101, -201, .201, -101))
+    ac(l.xticks, np.linspace(0, .35, 8))
+    ae(l.yticks, np.linspace(-350., 0., 8))
 
 
 def test_axes_1(qtbot, canvas_pz):
     c = canvas_pz
 
-    g = Axes()
+    g = Axes(data_bounds=(0, -10, 1000, 10))
     g.attach(c)
 
     c.show()
@@ -49,5 +43,5 @@ def test_axes_1(qtbot, canvas_pz):
     c.panzoom.zoom = 8
     c.panzoom.pan = (3, 3)
 
-    # qtbot.stop()
+    # qtbot.stop()
     c.close()

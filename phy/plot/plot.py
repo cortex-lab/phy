@@ -116,8 +116,8 @@ class View(BaseCanvas):
         self.visuals = []
         self.update()
 
-    def enable_axes(self):
-        self.axes = Axes()
+    def enable_axes(self, data_bounds=None):
+        self.axes = Axes(data_bounds=data_bounds)
         self.axes.attach(self)
 
     def _add_item(self, cls, *args, **kwargs):
