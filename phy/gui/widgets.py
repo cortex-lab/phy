@@ -28,14 +28,20 @@ logger = logging.getLogger(__name__)
 _DEFAULT_STYLE = """
 
     * {
-        font-size: 7pt !important;
+        font-size: 8pt !important;
+    }
+
+    /* This is for high-dpi displays. TODO: disable on low-dpi. */
+    body {
+        transform: scale(2);
+        transform-origin: 0 0;
     }
 
     html, body, table {
         background-color: black;
         color: white;
         font-family: sans-serif;
-        font-size: 10pt;
+        font-size: 12pt;
         margin: 2px 4px;
     }
 
