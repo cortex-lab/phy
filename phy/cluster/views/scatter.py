@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------------------------------
 
 class BaseScatterView(object):
-    _default_marker_size = 2.
+    _default_marker_size = 5.
 
     def __init__(self,
                  coords=None,  # function clusters: Bunch(x, y)
@@ -93,7 +93,7 @@ class ScatterView(BaseScatterView, ManualClusteringView):
             assert x.ndim == y.ndim == 1
             assert x.shape == y.shape
             self.scatter(
-                x=x, y=y, color=tuple(_colormap(i)) + (.5,), size=ms, data_bounds=data_bounds)
+                x=x, y=y, color=tuple(_colormap(i)) + (.75,), size=ms, data_bounds=data_bounds)
 
     def on_select(self, cluster_ids=(), **kwargs):
         if not cluster_ids:
