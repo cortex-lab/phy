@@ -445,7 +445,7 @@ class Supervisor(object):
                  ):
         super(Supervisor, self).__init__()
         self.context = context
-        self.quality = quality or self.n_spikes  # function cluster => quality
+        self.quality = quality or self.default_quality  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
         self.cluster_metrics = cluster_metrics or {}  # dict {name: func cluster_id => value}
         self.columns = ['id', 'n_spikes', 'quality']
@@ -542,12 +542,15 @@ class Supervisor(object):
     def n_spikes(self, cluster_id):
         return len(self.clustering.spikes_per_cluster.get(cluster_id, []))
 
+    def default_quality(self, cluster_id):
+        return self.n_spikes(cluster_id) * 1e-3
+
     def _get_similar_clusters(self, sender, cluster_id):
         sim = self.similarity(cluster_id)
         # Only keep existing clusters.
         clusters_set = set(self.clustering.cluster_ids)
         data = [dict(similarity='%.3f' % s,
-                     **self._get_cluster_info(c, exclude=('quality',)))
+                     **self._get_cluster_info(c))
                 for c, s in sim
                 if c in clusters_set]
         return data
