@@ -54,57 +54,24 @@ def _parse_list(s):
 
 def _parse_snippet(s):
     """Parse an entire snippet command."""
-    return list(map(_parse_list, s.split(' ')))
+    return tuple(map(_parse_list, s.split(' ')))
 
 
-def _wrap_callback_args(f, docstring=None):  # pragma: no cover
-    """Display a Qt dialog when a function has arguments.
-
-    The user can write function arguments as if it was a snippet.
-
-    """
-    def wrapped(checked, *args):
-        if args:
-            return f(*args)
-        if isinstance(f, partial):
-            argspec = inspect.getfullargspec(f.func)
-        else:
-            argspec = inspect.getfullargspec(f)
-        f_args = argspec.args
-        if 'self' in f_args:
-            f_args.remove('self')
-        # Remove arguments with defaults from the list.
-        if len(argspec.defaults or ()):
-            f_args = f_args[:-len(argspec.defaults)]
-        # Remove arguments supplied in a partial.
-        if isinstance(f, partial):
-            f_args = f_args[len(f.args):]
-            f_args = [arg for arg in f_args if arg not in f.keywords]
-        # If there are no remaining args, we can just run the function.
-        if 'checked' in f_args:
-            f_args.remove('checked')
-            checkable = True
-        else:
-            checkable = False
-        if not f_args:
-            if checkable:
-                return f(checked)
-            else:
-                return f()
-        # There are args, need to display the dialog.
-        # Extract Example: `...` in the docstring to put a predefined text
-        # in the input dialog.
-        r = re.search('Example: `([^`]+)`', docstring)
-        docstring_ = docstring[:r.start()].strip() if r else docstring
-        text = r.group(1) if r else None
-        s, ok = _input_dialog(getattr(f, '__name__', 'action'),
-                              docstring_, text)
-        if not ok or not s:
-            return
-        # Parse user-supplied arguments and call the function.
-        args = _parse_snippet(s)
-        return f(*args)
-    return wrapped
+def _prompt_args(title, docstring):
+    """Display a prompt dialog requesting function arguments."""
+    # There are args, need to display the dialog.
+    # Extract Example: `...` in the docstring to put a predefined text
+    # in the input dialog.
+    logger.debug("Prompting arguments for %s", title)
+    r = re.search('Example: `([^`]+)`', docstring)
+    docstring_ = docstring[:r.start()].strip() if r else docstring
+    text = r.group(1) if r else None
+    s, ok = _input_dialog(title, docstring_, text)
+    if not ok or not s:
+        return
+    # Parse user-supplied arguments and call the function.
+    args = _parse_snippet(s)
+    return args
 
 
 # -----------------------------------------------------------------------------
@@ -164,18 +131,48 @@ def _alias(name):
     return alias
 
 
+def _expected_args(f):
+    if isinstance(f, partial):
+        argspec = inspect.getfullargspec(f.func)
+    else:
+        argspec = inspect.getfullargspec(f)
+    f_args = argspec.args
+    if 'self' in f_args:
+        f_args.remove('self')
+    # Remove arguments with defaults from the list.
+    if len(argspec.defaults or ()):
+        f_args = f_args[:-len(argspec.defaults)]
+    # Remove arguments supplied in a partial.
+    if isinstance(f, partial):
+        f_args = f_args[len(f.args):]
+        f_args = [arg for arg in f_args if arg not in f.keywords]
+    return tuple(f_args)
+
+
 @require_qt
-def _create_qaction(gui, name, callback, shortcut, docstring=None,
-                    checkable=False, checked=False, alias=''):
+def _create_qaction(
+        gui, name, callback, shortcut, docstring=None,
+        checkable=False, checked=False, prompt=False, n_args=None, alias=''):
     # Create the QAction instance.
     action = QAction(name.capitalize().replace('_', ' '), gui)
 
     # Show an input dialog if there are args.
-    callback = _wrap_callback_args(callback,
-                                   docstring=docstring,
-                                   )
+    title = getattr(callback, '__name__', 'action')
+    # Number of expected arguments.
+    n_args = n_args or len(_expected_args(callback))
 
-    action.triggered.connect(callback)
+    def wrapped(is_checked, *args):
+        if checkable:
+            args = (is_checked,) + args
+        if prompt:
+            args += _prompt_args(title, docstring) or ()
+        if len(args) != n_args:
+            logger.warning("Invalid function arguments: expecting %d but got %d",
+                           n_args, len(args))
+            return
+        return callback(*args)
+
+    action.triggered.connect(wrapped)
     sequence = _get_qkeysequence(shortcut)
     if not isinstance(sequence, (tuple, list)):
         sequence = [sequence]
@@ -209,12 +206,12 @@ class Actions(object):
         self.gui = gui
         gui.actions.append(self)
 
-    def add(self, callback=None, name=None, shortcut=None, alias=None,
+    def add(self, callback=None, name=None, shortcut=None, alias=None, prompt=False, n_args=None,
             docstring=None, menu=None, verbose=True, checkable=False, checked=False):
         """Add an action with a keyboard shortcut."""
         if callback is None:
             # Allow to use either add(func) or @add or @add(...).
-            return partial(self.add, name=name, shortcut=shortcut,
+            return partial(self.add, name=name, shortcut=shortcut, prompt=prompt, n_args=n_args,
                            alias=alias, menu=menu, checkable=checkable, checked=checked)
         assert callback
 
@@ -234,8 +231,8 @@ class Actions(object):
 
         # Create and register the action.
         action = _create_qaction(
-            self.gui, name, callback, shortcut, docstring=docstring,
-            alias=alias, checkable=checkable, checked=checked)
+            self.gui, name, callback, shortcut, docstring=docstring, prompt=prompt,
+            n_args=n_args, alias=alias, checkable=checkable, checked=checked)
         action_obj = Bunch(
             qaction=action, name=name, alias=alias, checkable=checkable,
             checked=checked, shortcut=shortcut, callback=callback, menu=menu)
@@ -290,7 +287,11 @@ class Actions(object):
             raise ValueError("Action `{}` doesn't exist.".format(name))
         if not name.startswith('_'):
             logger.debug("Execute action `%s`.", name)
-        return action.callback(*args)
+        try:
+            return action.callback(*args)
+        except TypeError as e:
+            logger.warning("Invalid action arguments: " + str(e))
+            return
 
     def remove(self, name):
         """Remove an action."""

@@ -6,20 +6,33 @@
 # Imports
 #------------------------------------------------------------------------------
 
+from functools import partial
+
 from pytest import raises
 
 from ..actions import (_show_shortcuts,
                        _get_shortcut_string,
                        _get_qkeysequence,
                        _parse_snippet,
+                       _expected_args,
                        Actions,
                        )
 from phy.utils.testing import captured_output, captured_logging
+from ..qt import mock_dialogs
 
 
 #------------------------------------------------------------------------------
 # Test actions
 #------------------------------------------------------------------------------
+
+def test_expected_args():
+    assert _expected_args(lambda: 0) == ()
+    assert _expected_args(lambda a: 0) == ('a',)
+    assert _expected_args(lambda a, b: 0) == ('a', 'b')
+    assert _expected_args(lambda self, a: 0) == ('a',)
+    assert _expected_args(lambda a, b=0: 0) == ('a',)
+    assert _expected_args(partial(lambda a, b: 0, 0)) == ('b',)
+
 
 def test_shortcuts(qapp):
     assert 'z' in _get_shortcut_string('Undo')
@@ -159,15 +172,25 @@ def test_actions_checkable(qtbot, gui, actions):
 
 
 def test_actions_dialog(qtbot, gui, actions):
+
+    @actions.add(shortcut='a', prompt=True)
+    def hello(arg):
+        print("hello", arg)
+
     qtbot.addWidget(gui)
     gui.show()
     qtbot.waitForWindowShown(gui)
 
-    @actions.add(shortcut='a')
-    def hello(arg):
-        pass
+    with captured_output() as (stdout, stderr):
+        with mock_dialogs(('world', True)):
+            # return string, ok
+            actions.get('hello').trigger()
+    assert 'hello world' in stdout.getvalue()
 
-    # qtbot.stop()
+    with captured_logging() as buf:
+        with mock_dialogs(('world world', True)):
+            actions.get('hello').trigger()
+    assert 'invalid' in buf.getvalue().lower()
 
 
 def test_actions_disable(qtbot, gui, actions):
@@ -234,7 +257,7 @@ def test_snippets_gui(qtbot, gui, actions):
 def test_snippets_parse():
     def _check(args, expected):
         snippet = 'snip ' + args
-        assert _parse_snippet(snippet) == ['snip'] + expected
+        assert _parse_snippet(snippet) == tuple(['snip'] + expected)
 
     _check('a', ['a'])
     _check('abc', ['abc'])
@@ -278,11 +301,11 @@ def test_snippets_errors(actions, snippets):
 
     with captured_logging() as buf:
         snippets.run(':t')
-    assert 'error' in buf.getvalue().lower()
+    assert 'invalid' in buf.getvalue().lower()
 
     with captured_logging() as buf:
         snippets.run(':t 1 2')
-    assert 'error' in buf.getvalue().lower()
+    assert 'invalid' in buf.getvalue().lower()
 
     with captured_logging() as buf:
         snippets.run(':t aa')

@@ -49,13 +49,43 @@ from PyQt5.QtWidgets import (QAction, QStatusBar,  # noqa
 
 
 # -----------------------------------------------------------------------------
+# Testing functions: mock dialogs in automated tests
+# -----------------------------------------------------------------------------
+
+_MOCK = None
+
+
+def mockable(f):
+    def wrapped(*args, **kwargs):
+        if _MOCK is not None:
+            return _MOCK
+        return f(*args, **kwargs)
+    return wrapped
+
+
+@contextmanager
+def mock_dialogs(result):
+    """All mockable functions just return some output instead of prompting a dialog.
+
+    The returned result should not be None.
+
+    """
+    assert result is not None
+    globals()['_MOCK'] = result
+    yield
+    globals()['_MOCK'] = None
+
+
+# -----------------------------------------------------------------------------
 # Utility functions
 # -----------------------------------------------------------------------------
 
+@mockable
 def _button_enum_from_name(name):
     return getattr(QMessageBox, name.capitalize())
 
 
+@mockable
 def _button_name_from_enum(enum):
     names = dir(QMessageBox)
     for name in names:
@@ -63,6 +93,7 @@ def _button_name_from_enum(enum):
             return name.lower()
 
 
+@mockable
 def _prompt(message, buttons=('yes', 'no'), title='Question'):
     buttons = [(button, _button_enum_from_name(button)) for button in buttons]
     arg_buttons = 0
@@ -76,10 +107,12 @@ def _prompt(message, buttons=('yes', 'no'), title='Question'):
     return box
 
 
+@mockable
 def _show_box(box):  # pragma: no cover
     return _button_name_from_enum(box.exec_())
 
 
+@mockable
 def _input_dialog(title, sentence, text=None):
     return QInputDialog.getText(None, title, sentence,
                                 text=text)  # pragma: no cover
