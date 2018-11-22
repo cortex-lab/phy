@@ -365,7 +365,8 @@ class ActionCreator(object):
         self.separator()
 
         # Move.
-        self.add('move', docstring='Move some clusters to a group.')
+        self.add('move', prompt=True, n_args=2,
+                 docstring='Move some clusters to a group.')
         self.separator()
 
         for which in ('best', 'similar', 'all'):
@@ -377,7 +378,8 @@ class ActionCreator(object):
             self.separator()
 
         # Label.
-        self.add('label', alias='l', docstring='Label the selected clusters.')
+        self.add('label', alias='l', prompt=True, n_args=2,
+                 docstring='Label the selected clusters.')
 
         # Others.
         self.add('save', menu='&File', docstring='Save all pending changes.')
