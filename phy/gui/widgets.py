@@ -13,7 +13,7 @@ from functools import partial
 
 from six import text_type
 
-from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, QTimer
+from .qt import WebView, QObject, QWebChannel, pyqtSlot, _abs_path, _block, QTimer, _is_high_dpi
 from phy.utils import emit, connect
 from phy.utils._misc import _CustomEncoder, _read_text
 from phy.utils._types import _is_integer
@@ -29,12 +29,6 @@ _DEFAULT_STYLE = """
 
     * {
         font-size: 8pt !important;
-    }
-
-    /* This is for high-dpi displays. TODO: disable on low-dpi. */
-    body {
-        transform: scale(2);
-        transform-origin: 0 0;
     }
 
     html, body, table {
@@ -260,6 +254,23 @@ class Table(HTMLWidget):
 
         b = self.builder
         b.set_body_src('index.html')
+
+        if _is_high_dpi():
+            b.add_style('''
+
+                /* This is for high-dpi displays. */
+                body {
+                    transform: scale(2);
+                    transform-origin: 0 0;
+                    overflow-y: scroll;
+                    overflow-x: hidden;
+                }
+
+                input.filter {
+                    width: 50% !important;
+                }
+
+            ''')
 
         self.data = data
         self.columns = columns

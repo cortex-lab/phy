@@ -30,7 +30,7 @@ from PyQt5.QtCore import (Qt, QByteArray, QMetaObject, QObject,  # noqa
                           QEvent, QCoreApplication,
                           qInstallMessageHandler,
                           )
-from PyQt5.QtGui import QKeySequence, QColor, QMouseEvent  # noqa
+from PyQt5.QtGui import QKeySequence, QColor, QMouseEvent, QGuiApplication  # noqa
 from PyQt5.QtWebEngineWidgets import (QWebEngineView,  # noqa
                                       QWebEnginePage,
                                       # QWebSettings,
@@ -83,6 +83,16 @@ def _show_box(box):  # pragma: no cover
 def _input_dialog(title, sentence, text=None):
     return QInputDialog.getText(None, title, sentence,
                                 text=text)  # pragma: no cover
+
+
+def _screen_size():
+    screen = QGuiApplication.primaryScreen()
+    geometry = screen.geometry()
+    return (geometry.width(), geometry.height())
+
+
+def _is_high_dpi():
+    return _screen_size()[0] > 3000
 
 
 @contextmanager

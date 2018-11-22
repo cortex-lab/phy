@@ -13,6 +13,8 @@ from ..qt import (QMessageBox, Qt, QWebEngineView, QTimer,
                   _button_name_from_enum,
                   _button_enum_from_name,
                   _prompt,
+                  _screen_size,
+                  _is_high_dpi,
                   _wait_signal,
                   require_qt,
                   create_app,
@@ -54,6 +56,11 @@ def test_qt_app(qtbot):
     view = QWebEngineView()
     qtbot.addWidget(view)
     view.close()
+
+
+def test_screen_size(qtbot):
+    _screen_size()
+    assert _is_high_dpi() in (False, True)
 
 
 def test_block(qtbot):
