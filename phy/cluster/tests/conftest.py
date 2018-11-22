@@ -28,6 +28,11 @@ def cluster_groups():
 
 
 @fixture
+def cluster_labels():
+    return {'test_label': {10: 123, 0: 456}, 'group': {}}
+
+
+@fixture
 def quality():
     def quality(c):
         return c

@@ -55,13 +55,13 @@ def gui(tempdir, qtbot):
 
 
 @fixture
-def supervisor(qtbot, gui, cluster_ids, cluster_groups,
-               quality, similarity,
-               tempdir):
+def supervisor(qtbot, gui, cluster_ids, cluster_groups, cluster_labels,
+               quality, similarity, tempdir):
     spike_clusters = np.repeat(cluster_ids, 2)
 
     mc = Supervisor(spike_clusters,
                     cluster_groups=cluster_groups,
+                    cluster_labels=cluster_labels,
                     quality=quality,
                     similarity=similarity,
                     context=Context(tempdir),

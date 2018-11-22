@@ -438,6 +438,7 @@ class Supervisor(object):
                  spike_clusters=None,
                  cluster_groups=None,
                  cluster_metrics=None,
+                 cluster_labels=None,
                  quality=None,
                  similarity=None,
                  new_cluster_id=None,
@@ -448,7 +449,9 @@ class Supervisor(object):
         self.quality = quality or self.default_quality  # function cluster => quality
         self.similarity = similarity  # function cluster => [(cl, sim), ...]
         self.cluster_metrics = cluster_metrics or {}  # dict {name: func cluster_id => value}
+        self.cluster_labels = cluster_labels or {}  # dict {name: {cl: value}}
         self.columns = ['id', 'n_spikes', 'quality']
+        self.columns += [label for label in self.cluster_labels.keys() if label != 'group']
         self.columns += list(self.cluster_metrics.keys())
 
         # Create Clustering and ClusterMeta.
@@ -463,6 +466,13 @@ class Supervisor(object):
 
         # Create the ClusterMeta instance.
         self.cluster_meta = create_cluster_meta(cluster_groups or {})
+        # Add the labels.
+        for label, values in self.cluster_labels.items():
+            if label == 'group':
+                continue
+            self.cluster_meta.add_field(label)
+            for cl, v in values.items():
+                self.cluster_meta.set(label, [cl], v, add_to_stack=False)
 
         # Create the GlobalHistory instance.
         self._global_history = GlobalHistory(process_ups=_process_ups)
@@ -556,15 +566,16 @@ class Supervisor(object):
         return data
 
     def _get_cluster_info(self, cluster_id, exclude=()):
-        group = self.cluster_meta.get('group', cluster_id)
         out = {'id': cluster_id,
                'n_spikes': self.n_spikes(cluster_id),
                'quality': '%.3f' % self.quality(cluster_id),
-               'group': group,
-               'is_masked': _is_group_masked(group),
                }
         for key, func in self.cluster_metrics.items():
             out[key] = func(cluster_id)
+        for key in self.cluster_meta.fields:
+            # includes group
+            out[key] = self.cluster_meta.get(key, cluster_id)
+        out['is_masked'] = _is_group_masked(out.get('group', None))
         return {k: v for k, v in out.items() if k not in exclude}
 
     def _create_views(self, gui=None):
@@ -595,14 +606,14 @@ class Supervisor(object):
         self.cluster_view.remove(cluster_ids)
         self.similarity_view.remove(cluster_ids)
 
-    def _cluster_groups_changed(self, cluster_ids):
-        logger.log(5, "Cluster groups changed: %s", cluster_ids)
+    def _cluster_metadata_changed(self, field, cluster_ids, value):
+        logger.log(5, "%s changed for %s to %s", field, cluster_ids, value)
         data = [{'id': cluster_id,
-                 'group': self.cluster_meta.get('group', cluster_id),
+                 field: value,  # self.cluster_meta.get(field, cluster_id),
                  }
                 for cluster_id in cluster_ids]
         for _ in data:
-            _['is_masked'] = _is_group_masked(_['group'])
+            _['is_masked'] = _is_group_masked(_.get('group', None))
         self.cluster_view.change(data)
         self.similarity_view.change(data)
 
@@ -638,7 +649,8 @@ class Supervisor(object):
         # Update the views with the old and new clusters.
         self._clusters_added(up.added)
         self._clusters_removed(up.deleted)
-        self._cluster_groups_changed(up.metadata_changed)
+        self._cluster_metadata_changed(
+            up.description.replace('metadata_', ''), up.metadata_changed, up.metadata_value)
         # After the action has finished, we process the pending actions,
         # like selection of new clusters in the tables.
         self.task_logger.process()
