@@ -12,9 +12,9 @@ import os.path as op
 
 import numpy as np
 from six import string_types
-from vispy.gloo import Texture2D
 
 from .base import BaseVisual
+from .gloo import Texture2D
 from .transform import Range, NDC
 from .utils import (_tesselate_histogram,
                     _get_texture,
