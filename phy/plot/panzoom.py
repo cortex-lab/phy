@@ -43,6 +43,15 @@ class PanZoom(BaseInteract):
     canvas.show()
     ```
 
+
+    event.
+    modifiers
+    is_dragging, .press_event.pos, .last_event.pos
+    button 1 2
+    type = pinch, touch, end, pos, last_pos, scale, last_scale
+    wheel: delta[1], pos
+    key
+
     """
 
     _default_zoom_coeff = 1.5
@@ -467,7 +476,7 @@ class PanZoom(BaseInteract):
     @property
     def size(self):
         if self.canvas:
-            return self.canvas.size
+            return self.canvas.size()
         else:
             return (1, 1)
 

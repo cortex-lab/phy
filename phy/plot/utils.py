@@ -12,8 +12,8 @@ import os.path as op
 
 import numpy as np
 from six import string_types
-from vispy import gloo
 
+from . import gloo
 from .transform import Range, NDC
 
 logger = logging.getLogger(__name__)

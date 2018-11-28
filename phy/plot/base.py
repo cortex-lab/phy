@@ -10,11 +10,9 @@
 from collections import defaultdict
 import logging
 import re
+from PyQt5.QtGui import QOpenGLWindow
 
-from vispy import gloo
-from vispy.app import Canvas
-from vispy.util.event import Event
-
+from . import gloo
 from .transform import TransformChain, Clip
 from .utils import _load_shader, _enable_depth_mask
 
@@ -238,20 +236,13 @@ class GLSLInserter(object):
 # Base canvas
 #------------------------------------------------------------------------------
 
-class VisualEvent(Event):
-    def __init__(self, type, visual=None):
-        super(VisualEvent, self).__init__(type)
-        self.visual = visual
-
-
-class BaseCanvas(Canvas):
+class BaseCanvas(QOpenGLWindow):
     """A blank VisPy canvas with a custom event system that keeps the order."""
     def __init__(self, *args, **kwargs):
         super(BaseCanvas, self).__init__(*args, **kwargs)
         self.transforms = TransformChain()
         self.inserter = GLSLInserter()
         self.visuals = []
-        self.events.add(visual_added=VisualEvent)
 
         # Enable transparency.
         _enable_depth_mask()
@@ -281,24 +272,29 @@ class BaseCanvas(Canvas):
         logger.log(5, "Vertex shader: %s", vs)
         logger.log(5, "Fragment shader: %s", fs)
         # Initialize the size.
-        visual.on_resize(self.size)
+        visual.on_resize(self.size())
         # Register the visual in the list of visuals in the canvas.
         self.visuals.append(visual)
         self.events.visual_added(visual=visual)
 
-    def on_resize(self, event):
+    def resizeGL(self, w, h):
         """Resize the OpenGL context."""
-        self.context.set_viewport(0, 0, event.size[0], event.size[1])
         for visual in self.visuals:
-            visual.on_resize(event.size)
+            visual.on_resize((w, h))
         self.update()
 
-    def on_draw(self, e):
+    def on_resize(self, e):
+        return self.resizeGL(e.size.width, e.size.height)
+
+    def paintGL(self, e):
         """Draw all visuals."""
         gloo.clear()
         for visual in self.visuals:
             logger.log(5, "Draw visual `%s`.", visual)
             visual.on_draw()
+
+    def on_draw(self, e):
+        return self.paintGL(e)
 
 
 #------------------------------------------------------------------------------
