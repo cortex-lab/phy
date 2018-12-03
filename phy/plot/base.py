@@ -67,7 +67,7 @@ class BaseVisual(object):
         """Draw the visual."""
         # Skip the drawing if the program hasn't been built yet.
         # The program is built by the interact.
-        if self.program:
+        if self.program is not None:
             # Draw the program.
             self.program.draw(self.gl_primitive_type)
         else:  # pragma: no cover
@@ -77,7 +77,7 @@ class BaseVisual(object):
     def on_resize(self, size):
         # HACK: we check whether u_window_size is used in order to avoid
         # the VisPy warning. We only update it if that uniform is active.
-        s = '\n'.join(self.program.shaders)
+        s = self.program._vertex.code + '\n' + self.program.fragment.code
         s = s.replace('uniform vec2 u_window_size;', '')
         if 'u_window_size' in s:
             self.program['u_window_size'] = size
@@ -317,9 +317,6 @@ class BaseCanvas(QOpenGLWindow):
         self._mouse_press_position = None
         self._mouse_press_button = None
 
-        # Enable transparency. TODO
-        gl.enable_depth_mask()
-
     def add_visual(self, visual):
         """Add a visual to the canvas, and build its program by the same
         occasion.
@@ -348,11 +345,11 @@ class BaseCanvas(QOpenGLWindow):
         visual.on_resize(self.size())
         # Register the visual in the list of visuals in the canvas.
         self.visuals.append(visual)
-        self.events.visual_added(visual=visual)
 
     def initializeGL(self):
         """Create the scene. To be overriden."""
-        pass
+        # Enable transparency.
+        gl.enable_depth_mask()
 
     def resizeGL(self, w, h):
         """Resize the OpenGL context."""
@@ -414,7 +411,7 @@ class BaseCanvas(QOpenGLWindow):
         deltay = delta.y() / 120.0
         pos = e.pos().x(), e.pos().y()
         modifiers = get_modifiers(e)
-        self.emit('wheel', pos=pos, delta=deltay, modifiers=modifiers)
+        self.emit('mouse_wheel', pos=pos, delta=deltay, modifiers=modifiers)
 
     def _key_event(self, name, e):
         key = key_info(e)

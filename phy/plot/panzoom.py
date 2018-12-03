@@ -491,13 +491,7 @@ class PanZoom(BaseInteract):
               'uniform vec2 {};\n'.format(self.zoom_var_name))
         canvas.inserter.insert_vert(vs, 'header')
 
-        canvas.connect(self.on_resize)
-        canvas.connect(self.on_mouse_move)
-        canvas.connect(self.on_touch)
-        canvas.connect(self.on_key_press)
-
-        if self.enable_mouse_wheel:
-            canvas.connect(self.on_mouse_wheel)
+        canvas.attach_events(self)
 
         self._set_canvas_aspect()
 

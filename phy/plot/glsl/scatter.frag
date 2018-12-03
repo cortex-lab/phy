@@ -1,5 +1,5 @@
 #include "markers/%MARKER.glsl"
-#include "filled.glsl"
+#include "utils.glsl"
 
 varying vec4 v_color;
 varying float v_size;
