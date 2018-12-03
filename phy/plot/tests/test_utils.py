@@ -18,7 +18,6 @@ from vispy import config
 from phy.electrode.mea import linear_positions, staggered_positions
 from ..utils import (_load_shader,
                      _tesselate_histogram,
-                     _enable_depth_mask,
                      _get_data_bounds,
                      _boxes_overlap,
                      _binary_search,
@@ -47,16 +46,6 @@ def test_tesselate_histogram():
     ac(thist[0], [0, 0])
     ac(thist[-3], [n, n - 1])
     ac(thist[-1], [n, 0])
-
-
-def test_enable_depth_mask(qtbot, canvas):
-
-    @canvas.connect
-    def on_draw(e):
-        _enable_depth_mask()
-
-    canvas.show()
-    qtbot.waitForWindowShown(canvas.native)
 
 
 def test_get_data_bounds():
