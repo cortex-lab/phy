@@ -28,6 +28,11 @@ class PanZoom(BaseInteract):
     To use it:
 
     ```python
+
+    # Create and attach the PanZoom interact.
+    pz = PanZoom()
+    pz.attach(canvas)
+
     # Create a visual.
     visual = MyVisual(...)
     visual.set_data(...)
@@ -36,21 +41,8 @@ class PanZoom(BaseInteract):
     canvas = BaseCanvas()
     visual.attach(canvas, 'PanZoom')
 
-    # Create and attach the PanZoom interact.
-    pz = PanZoom()
-    pz.attach(canvas)
-
     canvas.show()
     ```
-
-
-    event.
-    modifiers
-    is_dragging, .press_event.pos, .last_event.pos
-    button 1 2
-    type = pinch, touch, end, pos, last_pos, scale, last_scale
-    wheel: delta[1], pos
-    key
 
     """
 
