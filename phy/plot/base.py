@@ -16,6 +16,7 @@ from . import gloo
 from .gloo import gl
 from .transform import TransformChain, Clip
 from .utils import _load_shader
+from phy.utils import connect, emit, Bunch
 
 logger = logging.getLogger(__name__)
 
@@ -316,6 +317,7 @@ class BaseCanvas(QOpenGLWindow):
         self._attached = []
         self._mouse_press_position = None
         self._mouse_press_button = None
+        self._last_mouse_pos = None
 
     def add_visual(self, visual):
         """Add a visual to the canvas, and build its program by the same
@@ -342,14 +344,21 @@ class BaseCanvas(QOpenGLWindow):
         logger.log(5, "Vertex shader: %s", vs)
         logger.log(5, "Fragment shader: %s", fs)
         # Initialize the size.
-        visual.on_resize(self.size())
+        visual.on_resize((self.size().width(), self.size().height()))
         # Register the visual in the list of visuals in the canvas.
         self.visuals.append(visual)
+        emit('visual_added', visual)
+
+    def define_visuals(self):
+        """Define visuals here. To be overriden."""
+        pass
 
     def initializeGL(self):
-        """Create the scene. To be overriden."""
+        """Create the scene."""
         # Enable transparency.
         gl.enable_depth_mask()
+        self.define_visuals()
+        self.update()
 
     def resizeGL(self, w, h):
         """Resize the OpenGL context."""
@@ -371,13 +380,13 @@ class BaseCanvas(QOpenGLWindow):
         """Attached an object that has on_***() methods."""
         self._attached.append(obj)
 
-    def emit(self, name, *args, **kwargs):
+    def emit(self, name, **kwargs):
         """Raise an event and calls on_***() on attached objects."""
         for obj in self._attached:
             f = getattr(obj, 'on_' + name, None)
             if not f:
                 continue
-            f(*args, **kwargs)
+            f(Bunch(kwargs))
 
     def _mouse_event(self, name, e):
         pos, button = mouse_info(e)
@@ -402,9 +411,13 @@ class BaseCanvas(QOpenGLWindow):
     def mouseMoveEvent(self, e):
         pos, button = mouse_info(e)
         modifiers = get_modifiers(e)
-        self.emit('mouse_move', pos=pos, modifiers=modifiers,
+        self.emit('mouse_move',
+                  pos=pos,
+                  last_pos=self._last_mouse_pos,
+                  modifiers=modifiers,
                   button=self._mouse_press_button,
                   mouse_press_position=self._mouse_press_position)
+        self._last_mouse_pos = pos
 
     def wheelEvent(self, e):
         delta = e.angleDelta()
@@ -466,9 +479,9 @@ class BaseInteract(object):
         """Attach this interact to a canvas."""
         self.canvas = canvas
 
-        @canvas.connect
-        def on_visual_added(e):
-            self.update_program(e.visual.program)
+        @connect
+        def on_visual_added(visual):
+            self.update_program(visual.program)
 
     def update_program(self, program):
         """Override this method to update programs when `self.update()`
