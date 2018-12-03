@@ -10,8 +10,8 @@
 from collections import defaultdict
 import logging
 import re
-from PyQt5.QtGui import QOpenGLWindow
 
+from phy.gui.qt import QOpenGLWindow, Qt, QEvent
 from . import gloo
 from .transform import TransformChain, Clip
 from .utils import _load_shader, _enable_depth_mask
@@ -236,6 +236,73 @@ class GLSLInserter(object):
 # Base canvas
 #------------------------------------------------------------------------------
 
+def get_modifiers(e):
+    m = e.modifiers()
+    return tuple(name for name in ('Shift', 'Control', 'Alt', 'Meta')
+                 if m & getattr(Qt, name + 'Modifier'))
+
+
+_BUTTON_MAP = {
+    1: 'Left',
+    2: 'Right',
+    4: 'Middle'
+}
+
+
+_SUPPORTED_KEYS = (
+    'Shift',
+    'Control',
+    'Alt',
+    'AltGr',
+    'Meta',
+    'Left',
+    'Up',
+    'Right',
+    'Down',
+    'PageUp',
+    'PageDown',
+    'Insert',
+    'Delete',
+    'Home',
+    'End',
+    'Escape',
+    'Backspace',
+    'F1',
+    'F2',
+    'F3',
+    'F4',
+    'F5',
+    'F6',
+    'F7',
+    'F8',
+    'F9',
+    'F10',
+    'F11',
+    'F12',
+    'Space',
+    'Enter',
+    'Return',
+    'Tab',
+)
+
+
+def mouse_info(e):
+    p = e.pos()
+    x, y = p.x(), p.y()
+    b = e.button()
+    return (x, y), _BUTTON_MAP.get(b, None)
+
+
+def key_info(e):
+    key = int(e.key())
+    if 32 <= key <= 127:
+        return chr(key)
+    else:
+        for name in _SUPPORTED_KEYS:
+            if key == getattr(Qt, 'Key_' + name, None):
+                return name
+
+
 class BaseCanvas(QOpenGLWindow):
     """A blank VisPy canvas with a custom event system that keeps the order."""
     def __init__(self, *args, **kwargs):
@@ -244,8 +311,13 @@ class BaseCanvas(QOpenGLWindow):
         self.inserter = GLSLInserter()
         self.visuals = []
 
-        # Enable transparency.
-        _enable_depth_mask()
+        # Events.
+        self._attached = []
+        self._mouse_press_position = None
+        self._mouse_press_button = None
+
+        # Enable transparency. TODO
+        #_enable_depth_mask()
 
     def add_visual(self, visual):
         """Add a visual to the canvas, and build its program by the same
@@ -283,18 +355,102 @@ class BaseCanvas(QOpenGLWindow):
             visual.on_resize((w, h))
         self.update()
 
-    def on_resize(self, e):
-        return self.resizeGL(e.size.width, e.size.height)
-
-    def paintGL(self, e):
+    def paintGL(self):
         """Draw all visuals."""
         gloo.clear()
         for visual in self.visuals:
             logger.log(5, "Draw visual `%s`.", visual)
             visual.on_draw()
 
-    def on_draw(self, e):
-        return self.paintGL(e)
+    # Events
+    # ---------------------------------------------------------------------------------------------
+
+    def attach_events(self, obj):
+        """Attached an object that has on_***() methods."""
+        self._attached.append(obj)
+
+    def emit(self, name, *args, **kwargs):
+        """Raise an event and calls on_***() on attached objects."""
+        print(name, args, kwargs)
+        for obj in self._attached:
+            f = getattr(obj, 'on_' + name, None)
+            if not f:
+                continue
+            f(*args, **kwargs)
+
+    def _mouse_event(self, name, e):
+        pos, button = mouse_info(e)
+        modifiers = get_modifiers(e)
+        self.emit(name, pos=pos, button=button, modifiers=modifiers)
+        return pos, button, modifiers
+
+    def mousePressEvent(self, e):
+        pos, button, modifiers = self._mouse_event('mouse_press', e)
+        # Used for dragging.
+        self._mouse_press_position = pos
+        self._mouse_press_button = button
+
+    def mouseReleaseEvent(self, e):
+        self._mouse_event('mouse_release', e)
+        self._mouse_press_position = None
+        self._mouse_press_button = None
+
+    def mouseDoubleClickEvent(self, e):
+        self._mouse_event('mouse_double_click', e)
+
+    def mouseMoveEvent(self, e):
+        pos, button = mouse_info(e)
+        modifiers = get_modifiers(e)
+        self.emit('mouse_move', pos=pos, modifiers=modifiers,
+                  button=self._mouse_press_button,
+                  mouse_press_position=self._mouse_press_position)
+
+    def wheelEvent(self, e):
+        delta = e.angleDelta()
+        deltay = delta.y() / 120.0
+        pos = e.pos().x(), e.pos().y()
+        modifiers = get_modifiers(e)
+        self.emit('wheel', pos=pos, delta=deltay, modifiers=modifiers)
+
+    def _key_event(self, name, e):
+        key = key_info(e)
+        modifiers = get_modifiers(e)
+        print(key, modifiers)
+        self.emit(name, key=key, modifiers=modifiers)
+
+    def keyPressEvent(self, e):
+        self._key_event('key_press', e)
+
+    def keyReleaseEvent(self, e):
+        self._key_event('key_press', e)
+
+    def _event(self, e):
+        out = super(BaseCanvas, self).event(e)
+        t = e.type()
+        # Two-finger pinch.
+        if (t == QEvent.TouchBegin):
+            self.emit('pinch_begin')
+        elif (t == QEvent.TouchEnd):
+            self.emit('pinch_end')
+        elif (t == QEvent.Gesture):
+            gesture = e.gesture(Qt.PinchGesture)
+            if gesture:
+                (x, y) = gesture.centerPoint().x(), gesture.centerPoint().y()
+                scale = gesture.scaleFactor()
+                last_scale = gesture.lastScaleFactor()
+                rotation = gesture.rotationAngle()
+                self.emit(
+                    'pinch', pos=(x, y),
+                    scale=scale, last_scale=last_scale, rotation=rotation)
+        # General touch event.
+        elif (t == QEvent.TouchUpdate):
+            points = e.touchPoints()
+            # These variables are lists of (x, y) coordinates.
+            pos, last_pos = zip(*[
+                ((p.pos().x(), p.pos.y()), (p.lastPos().x(), p.lastPos.y()))
+                for p in points])
+            self.emit('touch', pos=pos, last_pos=last_pos)
+        return out
 
 
 #------------------------------------------------------------------------------
