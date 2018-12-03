@@ -13,8 +13,9 @@ import re
 
 from phy.gui.qt import QOpenGLWindow, Qt, QEvent
 from . import gloo
+from .gloo import gl
 from .transform import TransformChain, Clip
-from .utils import _load_shader, _enable_depth_mask
+from .utils import _load_shader
 
 logger = logging.getLogger(__name__)
 
@@ -317,7 +318,7 @@ class BaseCanvas(QOpenGLWindow):
         self._mouse_press_button = None
 
         # Enable transparency. TODO
-        #_enable_depth_mask()
+        gl.enable_depth_mask()
 
     def add_visual(self, visual):
         """Add a visual to the canvas, and build its program by the same
@@ -349,6 +350,10 @@ class BaseCanvas(QOpenGLWindow):
         self.visuals.append(visual)
         self.events.visual_added(visual=visual)
 
+    def initializeGL(self):
+        """Create the scene. To be overriden."""
+        pass
+
     def resizeGL(self, w, h):
         """Resize the OpenGL context."""
         for visual in self.visuals:
@@ -371,7 +376,6 @@ class BaseCanvas(QOpenGLWindow):
 
     def emit(self, name, *args, **kwargs):
         """Raise an event and calls on_***() on attached objects."""
-        print(name, args, kwargs)
         for obj in self._attached:
             f = getattr(obj, 'on_' + name, None)
             if not f:
@@ -415,11 +419,11 @@ class BaseCanvas(QOpenGLWindow):
     def _key_event(self, name, e):
         key = key_info(e)
         modifiers = get_modifiers(e)
-        print(key, modifiers)
         self.emit(name, key=key, modifiers=modifiers)
+        return key, modifiers
 
     def keyPressEvent(self, e):
-        self._key_event('key_press', e)
+        key, modifiers = self._key_event('key_press', e)
 
     def keyReleaseEvent(self, e):
         self._key_event('key_press', e)
