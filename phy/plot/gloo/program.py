@@ -337,7 +337,7 @@ class Program(GLObject):
             self._attributes[name].set_data(data)
         else:
             raise IndexError(
-                "Unknown item (no corresponding hook, uniform or attribute)")
+                "Unknown item %s (no corresponding hook, uniform or attribute)" % name)
 
     def __getitem__(self, name):
         if name in self._vert_hooks.keys():

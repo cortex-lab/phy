@@ -396,66 +396,66 @@ class PanZoom(BaseInteract):
         self.zoom = self._default_zoom
         self.update()
 
-    def on_resize(self, event):
+    def on_resize(self, e):
         """Resize event."""
         self._set_canvas_aspect()
         # Update zoom level
         self.zoom = self._zoom
 
-    def on_mouse_move(self, event):
+    def on_mouse_move(self, e):
         """Pan and zoom with the mouse."""
-        if event.modifiers:
+        if e.modifiers:
             return
-        if event.is_dragging:
-            x0, y0 = self._normalize(event.press_event.pos)
-            x1, y1 = self._normalize(event.last_event.pos)
-            x, y = self._normalize(event.pos)
+        if e.mouse_press_position:
+            x0, y0 = self._normalize(e.mouse_press_position)
+            x1, y1 = self._normalize(e.last_pos)
+            x, y = self._normalize(e.pos)
             dx, dy = x - x1, y - y1
-            if event.button == 1:
+            if e.button == 'Left':
                 self.pan_delta((dx, dy))
-            elif event.button == 2:
+            elif e.button == 'Right':
                 c = np.sqrt(self.size[0]) * .03
                 self.zoom_delta((dx, dy), (x0, y0), c=c)
 
-    def on_touch(self, event):
-        if event.type == 'end':
+    def on_touch(self, e):
+        if e.type == 'end':
             self._pinch = None
-        elif event.type == 'pinch':
-            if event.scale in (1., self._last_pinch_scale):
+        elif e.type == 'pinch':
+            if e.scale in (1., self._last_pinch_scale):
                 self._pinch = None
                 return
-            self._last_pinch_scale = event.scale
-            x0, y0 = self._normalize(event.pos)
-            s = math.log(event.scale / event.last_scale)
+            self._last_pinch_scale = e.scale
+            x0, y0 = self._normalize(e.pos)
+            s = math.log(e.scale / e.last_scale)
             c = np.sqrt(self.size[0]) * .05
             self.zoom_delta((s, s),
                             (x0, y0),
                             c=c)
             self._pinch = True
-        elif event.type == 'touch':
+        elif e.type == 'touch':
             if self._pinch:
                 return
-            x0, y0 = self._normalize(np.array(event.pos).mean(axis=0))
-            x1, y1 = self._normalize(np.array(event.last_pos).mean(axis=0))
+            x0, y0 = self._normalize(np.array(e.pos).mean(axis=0))
+            x1, y1 = self._normalize(np.array(e.last_pos).mean(axis=0))
             dx, dy = x0 - x1, y0 - y1
             c = 5
             self.pan_delta((c * dx, c * dy))
 
-    def on_mouse_wheel(self, event):
+    def on_mouse_wheel(self, e):
         """Zoom with the mouse wheel."""
         # NOTE: not called on OS X because of touchpad
-        if event.modifiers:
+        if e.modifiers:
             return
-        dx = np.sign(event.delta[1]) * self._wheel_coeff
+        dx = np.sign(e.delta) * self._wheel_coeff
         # Zoom toward the mouse pointer.
-        x0, y0 = self._normalize(event.pos)
+        x0, y0 = self._normalize(e.pos)
         self.zoom_delta((dx, dx), (x0, y0))
 
-    def on_key_press(self, event):
+    def on_key_press(self, e):
         """Pan and zoom with the keyboard."""
         # Zooming with the keyboard.
-        key = event.key
-        if event.modifiers:
+        key = e.key
+        if e.modifiers:
             return
 
         # Pan.
@@ -476,7 +476,7 @@ class PanZoom(BaseInteract):
     @property
     def size(self):
         if self.canvas:
-            return self.canvas.size()
+            return self.canvas.size().width(), self.canvas.size().height()
         else:
             return (1, 1)
 
@@ -484,6 +484,10 @@ class PanZoom(BaseInteract):
         """Attach this interact to a canvas."""
         super(PanZoom, self).attach(canvas)
         canvas.panzoom = self
+
+        # Because the visual shaders must be modified to account for u_pan and u_zoom.
+        if not all(v.program is None for v in canvas.visuals):
+            raise RuntimeError("The PanZoom instance must be attached before the visuals.")
 
         canvas.transforms.add_on_gpu([self._translate, self._scale])
         # Add the variable declarations.
