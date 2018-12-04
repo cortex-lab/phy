@@ -47,6 +47,8 @@ def clear(color=(0, 0, 0, 10)):
 def enable_depth_mask():
     glClearColor(0, 0, 0, 0)  # noqa
     glClearDepth(1.)  # noqa
+
+    glEnable(GL_BLEND)  # noqa
     glDepthRange(0., 1.)  # noqa
     glDepthFunc(GL_EQUAL)  # noqa
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)  # noqa
